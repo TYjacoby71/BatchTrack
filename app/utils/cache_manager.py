@@ -37,8 +37,20 @@ class SimpleCache:
         with self._lock:
             self._cache.clear()
 
+    def delete(self, key):
+        with self._lock:
+            if key in self._cache:
+                del self._cache[key]
+
+    def clear_prefix(self, prefix: str):
+        with self._lock:
+            keys = [k for k in self._cache.keys() if str(k).startswith(prefix)]
+            for k in keys:
+                del self._cache[k]
+
 
 # Global cache instances for the app
 conversion_cache = SimpleCache(max_size=200, default_ttl=3600)
 drawer_request_cache = SimpleCache(max_size=100, default_ttl=30)
+app_cache = SimpleCache(max_size=1000, default_ttl=600)
 

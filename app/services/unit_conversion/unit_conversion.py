@@ -2,6 +2,7 @@ from datetime import datetime
 from flask_login import current_user
 from ...models import db, Unit, CustomUnitMapping, InventoryItem as Ingredient, ConversionLog
 from .drawer_errors import handle_conversion_error
+from ...utils.cache_manager import conversion_cache
 
 class ConversionEngine:
     """
@@ -9,9 +10,7 @@ class ConversionEngine:
     Handles direct conversions, density-based conversions, and custom mappings
     """
 
-    # Simple in-memory cache for conversion results
-    _conversion_cache = {}
-    _cache_max_size = 100
+    # ConversionEngine uses centralized app cache in cache_manager
 
     @staticmethod
     def round_value(value, decimals=3):
@@ -46,18 +45,10 @@ class ConversionEngine:
         # Create cache key
         cache_key = f"{amount}:{from_unit}:{to_unit}:{ingredient_id}:{density}"
 
-        # Check cache first
-        if cache_key in ConversionEngine._conversion_cache:
-            cached_result = ConversionEngine._conversion_cache[cache_key]
-            if cached_result.get('success'):
-                return cached_result
-
-        # Clean cache if it gets too large
-        if len(ConversionEngine._conversion_cache) > ConversionEngine._cache_max_size:
-            # Remove oldest 20% of entries
-            keys_to_remove = list(ConversionEngine._conversion_cache.keys())[:20]
-            for key in keys_to_remove:
-                del ConversionEngine._conversion_cache[key]
+        # Check centralized cache first
+        cached_result = conversion_cache.get(cache_key)
+        if cached_result and cached_result.get('success'):
+            return cached_result
 
         # Input validation
         if not isinstance(amount, (int, float)) or amount < 0:
@@ -392,6 +383,6 @@ class ConversionEngine:
             'requires_attention': conversion_type in ['custom', 'density'] # Adjust this based on desired attention flags
         }
 
-        # Cache successful result
-        ConversionEngine._conversion_cache[cache_key] = result
+        # Cache successful result (1 hour TTL by default via conversion_cache)
+        conversion_cache.set(cache_key, result)
         return result

@@ -1,12 +1,14 @@
 // Global Drawer Interceptor
 // Wrap window.fetch to automatically open drawers when a response contains drawer_payload
+
+import { appCache } from './CacheManager.js';
+
 (function() {
     if (window.__drawerInterceptorInstalled) return;
     window.__drawerInterceptorInstalled = true;
 
     const originalFetch = window.fetch.bind(window);
     const activeCorrelations = new Set();
-    const drawerCache = new Map(); // Cache drawer requests
 
     window.fetch = async function(input, init) {
         const response = await originalFetch(input, init);
@@ -30,22 +32,17 @@
                 console.log('🔍 DRAWER INTERCEPTOR: Correlation ID:', correlationId);
                 console.log('🔍 DRAWER INTERCEPTOR: Active correlations:', Array.from(activeCorrelations));
                 
-                const cacheKey = `${payload.error_type}:${payload.error_code}:${payload.modal_url}`;
-                const now = Date.now();
-                
-                // Check cache first (cache for 30 seconds)
-                if (drawerCache.has(cacheKey)) {
-                    const cached = drawerCache.get(cacheKey);
-                    if (now - cached.timestamp < 30000) {
-                        console.log('🔍 DRAWER INTERCEPTOR: Using cached drawer request');
-                        return response;
-                    }
+                const cacheKey = `drawer:${payload.error_type}:${payload.error_code}:${payload.modal_url}`;
+                const cached = appCache.get(cacheKey);
+                if (cached) {
+                    console.log('🔍 DRAWER INTERCEPTOR: Using cached drawer request');
+                    return response;
                 }
                 
                 if (!activeCorrelations.has(correlationId)) {
                     console.log('🔍 DRAWER INTERCEPTOR: New correlation, dispatching drawer event');
                     activeCorrelations.add(correlationId);
-                    drawerCache.set(cacheKey, { timestamp: now });
+                    appCache.set(cacheKey, true, 30000);
                     
                     const detail = {
                         ...payload,
@@ -57,7 +54,7 @@
                     // Clean up the correlation after some time to allow re-open if needed later
                     setTimeout(() => {
                         activeCorrelations.delete(correlationId);
-                        drawerCache.delete(cacheKey);
+                        appCache.delete(cacheKey);
                     }, 60_000);
                 }
             }
