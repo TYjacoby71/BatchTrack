@@ -15,7 +15,7 @@ class InventoryItem(ScopedModelMixin, db.Model):
     unit = db.Column(db.String(32), nullable=False)
     cost_per_unit = db.Column(db.Float, default=0.0)
     low_stock_threshold = db.Column(db.Float, default=0.0)
-    # Density for unit conversion (g/ml for volume-weight conversions)
+    # Density for unit conversion (g/ml for volume-weight conversions) - should never be 0
     density = db.Column(db.Float, nullable=True)
     type = db.Column(db.String(32), nullable=False, default='ingredient')  # 'ingredient', 'container', 'product', or 'product-reserved'
     is_active = db.Column(db.Boolean, default=True)
@@ -29,8 +29,6 @@ class InventoryItem(ScopedModelMixin, db.Model):
     capacity_unit = db.Column(db.String(32), nullable=True)  # Unit for storage capacity
     created_by = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True)
     created_at = db.Column(db.DateTime, default=TimezoneUtils.utc_now)
-    # Density for unit conversion (g/mL)
-    density = db.Column(db.Float, nullable=True)
 
     # Reference guide integration
     reference_item_name = db.Column(db.String(128), nullable=True)  # Exact match from density_reference.json
