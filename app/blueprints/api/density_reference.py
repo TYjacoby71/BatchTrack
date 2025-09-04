@@ -12,7 +12,9 @@ density_reference_bp = Blueprint('density_reference', __name__)
 def get_density_options():
     """Get all density options for the search modal"""
     try:
-        options = DensityAssignmentService.get_category_options(0)  # Reference data is not org-specific
+        from flask_login import current_user
+        org_id = current_user.organization_id if current_user.organization_id else 0
+        options = DensityAssignmentService.get_category_options(org_id)  # Reference data is not org-specific
         return jsonify(options)
     except Exception as e:
         return jsonify({'error': str(e)}), 500
@@ -24,8 +26,8 @@ def get_density_reference():
     try:
         # Load density reference data - go up to project root
         # Current file is at: app/blueprints/api/density_reference.py
-        # We need to go up 3 levels to reach project root
-        project_root = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
+        # We need to go up 4 levels to reach project root (app/blueprints/api/density_reference.py -> /)
+        project_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(__file__))))
         density_file_path = os.path.join(project_root, 'data', 'density_reference.json')
 
         print(f"Looking for density file at: {density_file_path}")
