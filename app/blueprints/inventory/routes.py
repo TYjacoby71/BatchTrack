@@ -336,6 +336,19 @@ def edit_inventory(id):
         form_data = request.form.to_dict()
         logger.info(f"EDIT INVENTORY - Item: {item.name} (ID: {id})")
 
+        # Enforce global item type validation if linked
+        try:
+            from app.models import GlobalItem
+            new_type = form_data.get('type', item.type)
+            if getattr(item, 'global_item_id', None):
+                gi = db.session.get(GlobalItem, int(item.global_item_id))
+                if gi and gi.item_type != new_type:
+                    flash(f"Type '{new_type}' does not match linked global item type '{gi.item_type}'.", 'error')
+                    return redirect(url_for('inventory.view_inventory', id=id))
+        except Exception as _e:
+            # Fail closed with informative error if validation cannot complete
+            logger.warning(f"Global item type validation skipped due to error: {_e}")
+
         # Check if this is a quantity recount
         new_quantity = form_data.get('quantity')
         recount_performed = False
