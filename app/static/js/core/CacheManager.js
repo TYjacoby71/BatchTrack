@@ -27,6 +27,14 @@ class SimpleCache {
     clear() {
         this.cache.clear();
     }
+
+    clearPrefix(prefix) {
+        for (const key of Array.from(this.cache.keys())) {
+            if (String(key).startsWith(prefix)) {
+                this.cache.delete(key);
+            }
+        }
+    }
 }
 
 export const appCache = new SimpleCache();
