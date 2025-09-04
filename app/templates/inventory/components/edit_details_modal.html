@@ -159,7 +159,7 @@ function openDensityReference() {
 // Load reference guide categories
 async function loadReferenceCategories() {
     try {
-        const response = await fetch('/api/density-reference/options');
+        const response = await fetch('/density-reference/options');
         const data = await response.json();
         
         if (data.success) {

@@ -7,8 +7,8 @@ from app.services.density_assignment_service import DensityAssignmentService
 
 density_reference_bp = Blueprint('density_reference', __name__)
 
-@density_reference_bp.route('/api/density-reference/options')
-@login_required
+@density_reference_bp.route('/density-reference/options')
+@login_required  
 def get_density_options():
     """Get all density options for the search modal"""
     try:
