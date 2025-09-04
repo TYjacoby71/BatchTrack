@@ -1,6 +1,6 @@
 from flask import Blueprint, render_template, request, session, redirect, url_for, flash, jsonify
 from flask_login import login_required, current_user
-from app.models import Organization, User, Permission, Role
+from app.models import Organization, User, Permission, Role, GlobalItem
 from app.extensions import db
 from datetime import datetime, timedelta
 from sqlalchemy import func
@@ -494,6 +494,79 @@ def system_settings():
     }
 
     return render_template('developer/system_settings.html', stats=stats)
+
+@developer_bp.route('/global-items')
+@login_required
+def global_items_admin():
+    """Developer admin page for managing Global Items"""
+    items = GlobalItem.query.order_by(GlobalItem.item_type, GlobalItem.name).limit(200).all()
+    return render_template('developer/global_items.html', items=items)
+
+@developer_bp.route('/global-items/<int:item_id>')
+@login_required
+def global_item_detail(item_id):
+    item = GlobalItem.query.get_or_404(item_id)
+    return render_template('developer/global_item_detail.html', item=item)
+
+@developer_bp.route('/global-items/<int:item_id>/edit', methods=['POST'])
+@login_required
+def global_item_edit(item_id):
+    """Developer edit for GlobalItem with basic audit logging"""
+    item = GlobalItem.query.get_or_404(item_id)
+
+    before = {
+        'name': item.name,
+        'item_type': item.item_type,
+        'default_unit': item.default_unit,
+        'density': item.density,
+        'capacity': item.capacity,
+        'capacity_unit': item.capacity_unit,
+        'default_is_perishable': item.default_is_perishable,
+        'recommended_shelf_life_days': item.recommended_shelf_life_days,
+        'aka_names': item.aka_names,
+    }
+
+    # Apply edits
+    item.name = request.form.get('name', item.name)
+    item.item_type = request.form.get('item_type', item.item_type)
+    item.default_unit = request.form.get('default_unit', item.default_unit)
+    density = request.form.get('density')
+    item.density = float(density) if density not in (None, '',) else None
+    capacity = request.form.get('capacity')
+    item.capacity = float(capacity) if capacity not in (None, '',) else None
+    item.capacity_unit = request.form.get('capacity_unit', item.capacity_unit)
+    item.default_is_perishable = True if request.form.get('default_is_perishable') == 'on' else False
+    rsl = request.form.get('recommended_shelf_life_days')
+    item.recommended_shelf_life_days = int(rsl) if rsl not in (None, '',) else None
+    aka_names = request.form.get('aka_names')  # comma-separated
+    if aka_names is not None:
+        item.aka_names = [n.strip() for n in aka_names.split(',') if n.strip()]
+
+    try:
+        db.session.commit()
+        # Basic audit log
+        import logging
+        logging.info(f"GLOBAL_ITEM_EDIT: user={current_user.id} item_id={item.id} before={before} after={{'name': item.name, 'item_type': item.item_type}}")
+        flash('Global item updated successfully', 'success')
+    except Exception as e:
+        db.session.rollback()
+        flash(f'Error updating global item: {e}', 'error')
+
+    return redirect(url_for('developer.global_item_detail', item_id=item.id))
+
+@developer_bp.route('/global-items/<int:item_id>/stats')
+@login_required
+def global_item_stats_view(item_id):
+    from app.services.statistics.global_item_stats import GlobalItemStatsService
+    item = GlobalItem.query.get_or_404(item_id)
+    stats = GlobalItemStatsService.get_rollup(item_id)
+    return render_template('developer/global_item_stats.html', item=item, stats=stats)
+
+@developer_bp.route('/inventory-analytics')
+@login_required
+def inventory_analytics_stub():
+    """Stub page for global inventory analytics in developer system"""
+    return render_template('developer/inventory_analytics.html')
 
 @developer_bp.route('/waitlist-statistics')
 @require_developer_permission('system_admin')

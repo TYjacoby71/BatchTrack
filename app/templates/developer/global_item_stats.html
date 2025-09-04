@@ -1,0 +1,10 @@
+{% extends 'developer/layout.html' %}
+{% block content %}
+<h2>Global Item Stats: {{ item.name }}</h2>
+<div class="card"><div class="card-body">
+  <div><strong>Average Cost/Unit:</strong> {{ stats.average_cost_per_unit if stats.average_cost_per_unit is not none else '-' }}</div>
+  <div><strong>Average Stock Age (days):</strong> {{ stats.average_stock_age_days if stats.average_stock_age_days is not none else '-' }}</div>
+  <div><strong>Average Expired Quantity:</strong> {{ stats.average_expired_quantity if stats.average_expired_quantity is not none else '-' }}</div>
+  <div><strong>Average Days Past Expiration:</strong> {{ stats.average_days_past_expiration if stats.average_days_past_expiration is not none else '-' }}</div>
+</div></div>
+{% endblock %}

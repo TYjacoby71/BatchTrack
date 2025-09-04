@@ -137,6 +137,66 @@ document.addEventListener('DOMContentLoaded', function() {
     multiple: true
   });
 
+  // Add Ingredient name field - Select2 with AJAX global search and tags for custom entries
+  const $nameSelect = $('#addIngredientNameSelect');
+  if ($nameSelect.length) {
+    $nameSelect.select2({
+      ...select2Config,
+      placeholder: 'Type ingredient name...',
+      tags: true, // allow custom entries
+      ajax: {
+        url: '/api/ingredients/global-items/search',
+        dataType: 'json',
+        delay: 150,
+        data: function (params) {
+          return { q: params.term, type: 'ingredient' };
+        },
+        processResults: function (data) {
+          return data;
+        },
+        cache: true
+      },
+      minimumInputLength: 1,
+      createTag: function (params) {
+        const term = $.trim(params.term);
+        if (term === '') { return null; }
+        return { id: term, text: term, newTag: true };
+      }
+    });
+
+    // Keep a hidden input for global_item_id if a library item is chosen
+    let hiddenGlobalId = document.getElementById('global_item_id');
+    if (!hiddenGlobalId) {
+      hiddenGlobalId = document.createElement('input');
+      hiddenGlobalId.type = 'hidden';
+      hiddenGlobalId.name = 'global_item_id';
+      hiddenGlobalId.id = 'global_item_id';
+      document.getElementById('addIngredientForm')?.appendChild(hiddenGlobalId);
+    }
+
+    $nameSelect.on('select2:select', function (e) {
+      const data = e.params.data || {};
+      // If selecting a global item (numeric id), set hidden FK and update visible name to text
+      if (data.id && !isNaN(Number(data.id))) {
+        hiddenGlobalId.value = data.id;
+        // Ensure the select shows the chosen name
+        const option = new Option(data.text, data.text, true, true);
+        $nameSelect.append(option).trigger('change');
+      } else {
+        hiddenGlobalId.value = '';
+      }
+    });
+
+    // If user clears or changes to a custom name, drop the global link to avoid stale linkage
+    $nameSelect.on('change', function () {
+      const val = $(this).val();
+      // If value is empty or not matching a numeric id selection flow, clear FK
+      if (!val || (typeof val === 'string' && val.trim().length > 0)) {
+        hiddenGlobalId.value = '';
+      }
+    });
+  }
+
   // Bootstrap tooltips
   $('[data-bs-toggle="tooltip"]').tooltip();
 
