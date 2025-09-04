@@ -12,10 +12,15 @@ class GlobalItem(db.Model):
 	# Container/packaging defaults (nullable for packaging per requirement)
 	capacity = db.Column(db.Float, nullable=True)
 	capacity_unit = db.Column(db.String(32), nullable=True)
+	# Perishable defaults
+	default_is_perishable = db.Column(db.Boolean, nullable=True)
+	recommended_shelf_life_days = db.Column(db.Integer, nullable=True)
 	# Category hint: optional linkage to inventory category taxonomy
 	suggested_inventory_category_id = db.Column(db.Integer, db.ForeignKey('inventory_category.id'), nullable=True)
 	# Free-form metadata for future-proofing
 	metadata_json = db.Column(db.JSON, nullable=True)
+	# Synonyms/other names for search and display
+	aka_names = db.Column(db.JSON, nullable=True)  # list of strings
 
 	suggested_inventory_category = db.relationship('InventoryCategory')
 

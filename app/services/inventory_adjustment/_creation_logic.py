@@ -91,6 +91,12 @@ def create_inventory_item(form_data, organization_id, created_by):
 
         # Determine if item is perishable
         is_perishable = bool(shelf_life_days) or form_data.get('is_perishable') == 'on'
+        # Apply perishable defaults from global item if not explicitly set
+        if global_item:
+            if form_data.get('is_perishable') is None and global_item.default_is_perishable is not None:
+                is_perishable = bool(global_item.default_is_perishable)
+            if not shelf_life_days and global_item.recommended_shelf_life_days:
+                shelf_life_days = int(global_item.recommended_shelf_life_days)
 
         # Create the new inventory item with quantity = 0
         # The initial stock will be added via process_inventory_adjustment

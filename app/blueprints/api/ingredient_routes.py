@@ -76,7 +76,14 @@ def search_global_items():
         query = query.filter(GlobalItem.item_type == item_type)
 
     ilike_term = f"%{q}%"
-    items = query.filter(GlobalItem.name.ilike(ilike_term)).order_by(func.length(GlobalItem.name).asc()).limit(20).all()
+    # Match by name or any synonym in aka_names (JSON)
+    name_match = GlobalItem.name.ilike(ilike_term)
+    try:
+        from sqlalchemy import or_
+        aka_match = GlobalItem.aka_names.cast(db.String).ilike(ilike_term)
+        items = query.filter(or_(name_match, aka_match)).order_by(func.length(GlobalItem.name).asc()).limit(20).all()
+    except Exception:
+        items = query.filter(name_match).order_by(func.length(GlobalItem.name).asc()).limit(20).all()
 
     results = []
     for gi in items:
@@ -88,6 +95,9 @@ def search_global_items():
             'density': gi.density,
             'capacity': gi.capacity,
             'capacity_unit': gi.capacity_unit,
+            'aka_names': gi.aka_names,
+            'default_is_perishable': gi.default_is_perishable,
+            'recommended_shelf_life_days': gi.recommended_shelf_life_days,
         })
 
     return jsonify({'results': results})
