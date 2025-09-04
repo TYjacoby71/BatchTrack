@@ -33,7 +33,7 @@ class DensityAssignmentService:
         return SequenceMatcher(None, name1.lower().strip(), name2.lower().strip()).ratio()
     
     @staticmethod
-    def find_best_match(ingredient_name: str, threshold: float = 0.8) -> Tuple[Optional[Dict], Optional[str]]:
+    def find_best_match(ingredient_name: str, threshold: float = 0.7) -> Tuple[Optional[Dict], Optional[str]]:
         """
         Find the best matching reference item or category for an ingredient name
         Returns: (reference_item, match_type) where match_type is 'exact', 'alias', 'similarity', or None
@@ -153,17 +153,24 @@ class DensityAssignmentService:
         """
         Automatically assign density when creating a new ingredient
         """
-        if ingredient.density is not None:
-            return True  # Already has density
+        if ingredient.density is not None and ingredient.density > 0:
+            return True  # Already has valid density
+            
+        # Reset invalid density to None
+        if ingredient.density is not None and ingredient.density <= 0:
+            ingredient.density = None
             
         match_item, match_type = DensityAssignmentService.find_best_match(ingredient.name)
         
         if match_item and match_type in ['exact', 'alias']:
             # High confidence match - auto assign
-            ingredient.density = match_item['density_g_per_ml']
-            ingredient.reference_item_name = match_item['name']
-            ingredient.density_source = 'auto_assigned'
-            return True
+            density_value = match_item['density_g_per_ml']
+            if density_value > 0:  # Ensure we don't assign 0 density
+                ingredient.density = density_value
+                ingredient.reference_item_name = match_item['name']
+                ingredient.density_source = 'auto_assigned'
+                current_app.logger.info(f"Auto-assigned density for '{ingredient.name}': {density_value} g/ml from '{match_item['name']}'")
+                return True
         elif match_item and match_type == 'similarity':
             # Lower confidence - suggest but don't auto-assign
             current_app.logger.info(f"Similarity match found for '{ingredient.name}': '{match_item['name']}' (density: {match_item['density_g_per_ml']})")

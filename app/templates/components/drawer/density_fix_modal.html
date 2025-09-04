@@ -26,7 +26,7 @@
                                value="{% if ingredient.reference_item_name %}{{ ingredient.reference_item_name }}{% endif %}">
                         <div class="form-text">Search for your ingredient in our comprehensive density reference guide</div>
                     </div>
-                    
+
                     <div class="mb-3">
                         <label class="form-label">Density Options</label>
                         <div id="densityOptionsContainer" class="border rounded p-2" style="max-height: 200px; overflow-y: auto;">
@@ -34,7 +34,7 @@
                         </div>
                         <div class="form-text">Select a specific ingredient or category default</div>
                     </div>
-                    
+
                     <input type="hidden" id="selectedDensityType" value="">
                     <input type="hidden" id="selectedDensityValue" value="">
                     <input type="hidden" id="selectedReferenceItem" value="">
@@ -121,7 +121,7 @@
 
         // Initialize density options
         let densityOptions = [];
-        
+
         // Load density options from server
         fetch('/api/density-reference/options')
             .then(response => response.json())
@@ -132,15 +132,15 @@
             .catch(error => {
                 console.error('Failed to load density options:', error);
             });
-        
+
         const searchInput = document.getElementById('densitySearchInput');
         const optionsContainer = document.getElementById('densityOptionsContainer');
-        
+
         function renderDensityOptions(options, searchTerm = '') {
             if (!optionsContainer) return;
-            
+
             optionsContainer.innerHTML = '';
-            
+
             options.forEach(category => {
                 // Filter items based on search
                 let filteredItems = category.items;
@@ -150,11 +150,11 @@
                         item.aliases.some(alias => alias.toLowerCase().includes(searchTerm.toLowerCase()))
                     );
                 }
-                
+
                 if (filteredItems.length === 0 && !category.name.toLowerCase().includes(searchTerm.toLowerCase())) {
                     return; // Skip category if no matches
                 }
-                
+
                 // Category header with default option
                 const categoryDiv = document.createElement('div');
                 categoryDiv.className = 'mb-2';
@@ -171,7 +171,7 @@
                         </label>
                     </div>
                 `;
-                
+
                 // Add specific items
                 filteredItems.forEach(item => {
                     const itemDiv = document.createElement('div');
@@ -189,10 +189,10 @@
                     `;
                     categoryDiv.appendChild(itemDiv);
                 });
-                
+
                 optionsContainer.appendChild(categoryDiv);
             });
-            
+
             // Add manual option at the end
             const manualDiv = document.createElement('div');
             manualDiv.className = 'mt-3 pt-2 border-top';
@@ -206,14 +206,14 @@
                 </div>
             `;
             optionsContainer.appendChild(manualDiv);
-            
+
             // Handle density option selection
             document.querySelectorAll('.density-option').forEach(radio => {
                 radio.addEventListener('change', function() {
                     if (this.checked) {
                         const type = this.value;
                         document.getElementById('selectedDensityType').value = type;
-                        
+
                         if (type === 'reference-item') {
                             const density = this.dataset.density;
                             const referenceItem = this.dataset.referenceItem;
@@ -239,7 +239,7 @@
                 });
             });
         }
-        
+
         // Search functionality
         if (searchInput) {
             searchInput.addEventListener('input', function() {
@@ -357,9 +357,6 @@
 })();
 
 function openDensityReference() {
-    // Open the density reference in the same window
-    window.location.href = '/api/density-reference';
-} manager
     window.open('/api/density-reference', '_blank');
 }
 </script>
