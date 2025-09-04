@@ -10,8 +10,11 @@ density_reference_bp = Blueprint('density_reference', __name__)
 def get_density_reference():
     """Serve density reference data as a formatted page"""
     try:
-        # Load density reference data
-        density_file_path = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), 'data', 'density_reference.json')
+        # Load density reference data - go up to project root
+        # Current file is at: app/blueprints/api/density_reference.py
+        # We need to go up 4 levels to reach project root
+        project_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(__file__))))
+        density_file_path = os.path.join(project_root, 'data', 'density_reference.json')
 
         # Load density data from JSON file - no fallback
         if not os.path.exists(density_file_path):
