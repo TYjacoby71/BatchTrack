@@ -45,15 +45,26 @@
 
           <div class="mb-3" id="categorySection" {% if item.type != 'ingredient' %}style="display: none;"{% endif %}>
             <label for="category">Ingredient Category:</label>
-            <select name="category_id" class="form-select" id="categorySelect">
-              <option value="">-- Custom Category --</option>
-              {% for category in get_ingredient_categories() %}
-              <option value="{{ category.id }}" {% if item.category_id == category.id %}selected{% endif %}
-                      data-density="{{ category.default_density }}">
-                  {{ category.name }} (Density: {{ category.default_density }} g/ml)
-              </option>
-              {% endfor %}
-            </select>
+            <div class="input-group">
+              <select name="category_id" class="form-select" id="categorySelect">
+                <option value="">-- No Category --</option>
+                <optgroup label="Reference Guide Categories" id="referenceCategories">
+                  <!-- Populated via JavaScript -->
+                </optgroup>
+                <optgroup label="Custom Categories">
+                  {% for category in get_ingredient_categories() %}
+                  <option value="{{ category.id }}" {% if item.category_id == category.id %}selected{% endif %}
+                          data-density="{{ category.default_density }}">
+                      {{ category.name }} {% if category.default_density %}({{ category.default_density }} g/ml){% endif %}
+                  </option>
+                  {% endfor %}
+                </optgroup>
+              </select>
+              <button type="button" class="btn btn-outline-info" onclick="openDensityReference()" 
+                      title="Open density reference guide" data-bs-toggle="tooltip">
+                <i class="fas fa-book"></i>
+              </button>
+            </div>
           </div>
 
           {% if item.type == 'container' %}
@@ -142,7 +153,33 @@
 <script>
 // Function to open density reference in new window
 function openDensityReference() {
-    window.open('/api/density-reference', '_blank', 'width=800,height=600,scrollbars=yes,resizable=yes');
+    window.open('/api/density-reference', '_blank', 'width=1000,height=700,scrollbars=yes,resizable=yes');
+}
+
+// Load reference guide categories
+async function loadReferenceCategories() {
+    try {
+        const response = await fetch('/api/density-reference/options');
+        const data = await response.json();
+        
+        if (data.success) {
+            const referenceGroup = document.getElementById('referenceCategories');
+            if (referenceGroup) {
+                referenceGroup.innerHTML = '';
+                
+                data.categories.forEach(category => {
+                    const option = document.createElement('option');
+                    option.value = `ref_${category.name}`;
+                    option.textContent = `${category.name} (${category.items.length} items)`;
+                    option.setAttribute('data-density', category.default_density || '1.0');
+                    option.setAttribute('data-reference-category', 'true');
+                    referenceGroup.appendChild(option);
+                });
+            }
+        }
+    } catch (error) {
+        console.error('Failed to load reference categories:', error);
+    }
 }
 
 document.addEventListener('DOMContentLoaded', function() {
@@ -151,6 +188,9 @@ document.addEventListener('DOMContentLoaded', function() {
     var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
         return new bootstrap.Tooltip(tooltipTriggerEl);
     });
+
+    // Load reference categories when page loads
+    loadReferenceCategories();
 
     const unitSelect = document.getElementById('unitSelect');
     const unitChangeWarning = document.getElementById('unitChangeWarning');
