@@ -1,8 +1,8 @@
 """
 Add reference_category to global_item
 
-Revision ID: 20250904_04
-Revises: 20250904_03
+Revision ID: 20250904_04a
+Revises: 20250904_04
 Create Date: 2025-09-04
 """
 
@@ -10,8 +10,8 @@ from alembic import op
 import sqlalchemy as sa
 
 # revision identifiers, used by Alembic.
-revision = '20250904_04'
-down_revision = '20250904_03'
+revision = '20250904_04a'
+down_revision = '20250904_04'
 branch_labels = None
 depends_on = None
 
