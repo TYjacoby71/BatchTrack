@@ -12,16 +12,21 @@ def get_density_reference():
     try:
         # Load density reference data - go up to project root
         # Current file is at: app/blueprints/api/density_reference.py
-        # We need to go up 4 levels to reach project root
-        project_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(__file__))))
+        # We need to go up 3 levels to reach project root
+        project_root = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
         density_file_path = os.path.join(project_root, 'data', 'density_reference.json')
+
+        print(f"Looking for density file at: {density_file_path}")
+        print(f"File exists: {os.path.exists(density_file_path)}")
 
         # Load density data from JSON file - no fallback
         if not os.path.exists(density_file_path):
-            return jsonify({'error': f'Density reference file not found at {density_file_path}'}), 500
+            return f"<h1>Error: Density reference file not found</h1><p>Expected at: {density_file_path}</p>", 404
             
         with open(density_file_path, 'r') as f:
             density_data = json.load(f)
+
+        print(f"Loaded density data with {len(density_data.get('common_densities', []))} items")
 
         # Group densities by category
         categories = {}
@@ -35,7 +40,9 @@ def get_density_reference():
         for category in categories:
             categories[category].sort(key=lambda x: x['name'])
 
+        print(f"Grouped into {len(categories)} categories: {list(categories.keys())}")
+
         return render_template('density_reference.html', categories=categories, density_data=density_data)
 
     except Exception as e:
-        return jsonify({'error': f'Failed to load density reference: {str(e)}'}), 500
+        return f"<h1>Error loading density reference</h1><p>{str(e)}</p>", 500
