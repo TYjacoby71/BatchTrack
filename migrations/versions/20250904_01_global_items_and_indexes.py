@@ -18,36 +18,61 @@ depends_on = None
 
 
 def upgrade():
+    from sqlalchemy import text
+    
+    connection = op.get_bind()
+    
     # 1) Create global_item table FIRST
     print("Creating global_item table...")
-    op.create_table(
-        'global_item',
-        sa.Column('id', sa.Integer(), primary_key=True),
-        sa.Column('name', sa.String(length=128), nullable=False),
-        sa.Column('item_type', sa.String(length=32), nullable=False),
-        sa.Column('default_unit', sa.String(length=32), nullable=True),
-        sa.Column('density', sa.Float(), nullable=True),
-        sa.Column('capacity', sa.Float(), nullable=True),
-        sa.Column('capacity_unit', sa.String(length=32), nullable=True),
-        sa.Column('suggested_inventory_category_id', sa.Integer(), nullable=True),
-        sa.Column('metadata_json', sa.JSON(), nullable=True),
-        sa.UniqueConstraint('name', 'item_type', name='_global_item_name_type_uc')
-    )
+    try:
+        op.create_table(
+            'global_item',
+            sa.Column('id', sa.Integer(), primary_key=True),
+            sa.Column('name', sa.String(length=128), nullable=False),
+            sa.Column('item_type', sa.String(length=32), nullable=False),
+            sa.Column('default_unit', sa.String(length=32), nullable=True),
+            sa.Column('density', sa.Float(), nullable=True),
+            sa.Column('capacity', sa.Float(), nullable=True),
+            sa.Column('capacity_unit', sa.String(length=32), nullable=True),
+            sa.Column('suggested_inventory_category_id', sa.Integer(), nullable=True),
+            sa.Column('metadata_json', sa.JSON(), nullable=True),
+            sa.UniqueConstraint('name', 'item_type', name='_global_item_name_type_uc')
+        )
+        print("   ✅ Global item table created")
+    except Exception as e:
+        print(f"   ⚠️  Global item table may already exist: {e}")
     
     # Create indexes on global_item
     print("Creating indexes on global_item...")
-    op.create_index('ix_global_item_name', 'global_item', ['name'])
-    op.create_index('ix_global_item_item_type', 'global_item', ['item_type'])
+    try:
+        op.create_index('ix_global_item_name', 'global_item', ['name'])
+        print("   ✅ Created name index")
+    except Exception as e:
+        print(f"   ⚠️  Name index may already exist")
+        
+    try:
+        op.create_index('ix_global_item_item_type', 'global_item', ['item_type'])
+        print("   ✅ Created item_type index")
+    except Exception as e:
+        print(f"   ⚠️  Item type index may already exist")
 
-    # 2) Add global_item_id to inventory_item as NULLABLE (no foreign key constraint yet)
+    # 2) Add global_item_id to inventory_item as NULLABLE
     print("Adding global_item_id column to inventory_item...")
-    op.add_column('inventory_item', sa.Column('global_item_id', sa.Integer(), nullable=True))
+    try:
+        op.add_column('inventory_item', sa.Column('global_item_id', sa.Integer(), nullable=True))
+        print("   ✅ Added global_item_id column")
+    except Exception as e:
+        print(f"   ⚠️  Column may already exist: {e}")
     
     # Create index on the foreign key column
     print("Creating index on inventory_item.global_item_id...")
-    op.create_index('ix_inventory_item_global_item_id', 'inventory_item', ['global_item_id'])
+    try:
+        op.create_index('ix_inventory_item_global_item_id', 'inventory_item', ['global_item_id'])
+        print("   ✅ Created global_item_id index")
+    except Exception as e:
+        print(f"   ⚠️  Index may already exist")
 
-    # 3) NOW add the foreign key constraint (after both tables exist)
+    # 3) Add the foreign key constraint
     print("Adding foreign key constraint...")
     try:
         op.create_foreign_key(
@@ -57,10 +82,9 @@ def upgrade():
             ['global_item_id'], 
             ['id']
         )
-        print("✅ Foreign key constraint added successfully")
+        print("   ✅ Foreign key constraint added successfully")
     except Exception as e:
-        print(f"⚠️  Warning: Could not add foreign key constraint: {e}")
-        print("   This is not critical - the column is still usable")
+        print(f"   ⚠️  Foreign key constraint may already exist: {e}")
 
     # 4) Adjust uniqueness on inventory_item.name to be per-organization
     print("Adjusting inventory_item name constraints...")
@@ -83,15 +107,15 @@ def upgrade():
         op.create_index('ix_inventory_item_name', 'inventory_item', ['name'])
         print("   Created new index on name")
     except Exception:
-        # If index exists, ignore
-        pass
+        connection.execute(text("ROLLBACK"))
+        connection.execute(text("BEGIN"))
         
     try:
         op.create_unique_constraint('_org_name_uc', 'inventory_item', ['organization_id', 'name'])
         print("   Created organization+name unique constraint")
     except Exception:
-        # If constraint exists, ignore
-        pass
+        connection.execute(text("ROLLBACK"))
+        connection.execute(text("BEGIN"))
 
     # 5) Performance indexes on inventory_item
     print("Adding performance indexes...")
