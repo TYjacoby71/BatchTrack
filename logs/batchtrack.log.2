@@ -1,112 +1,118 @@
-2025-09-03 22:40:36,411 [INFO] app.utils.unit_utils: Getting global unit list
-2025-09-03 22:40:59,466 [INFO] app.utils.unit_utils: Getting global unit list
-2025-09-03 22:40:59,521 [INFO] app.utils.unit_utils: Getting global unit list
-2025-09-03 22:40:59,522 [INFO] app.utils.unit_utils: Getting global unit list
-2025-09-03 22:40:59,524 [INFO] app.utils.unit_utils: Getting global unit list
-2025-09-03 22:40:59,525 [INFO] app.utils.unit_utils: Getting global unit list
-2025-09-03 22:40:59,527 [INFO] app.utils.unit_utils: Getting global unit list
-2025-09-03 22:40:59,528 [INFO] app.utils.unit_utils: Getting global unit list
-2025-09-03 22:40:59,529 [INFO] app.utils.unit_utils: Getting global unit list
-2025-09-03 22:40:59,546 [INFO] app.utils.unit_utils: Getting global unit list
-2025-09-03 22:41:03,110 [INFO] app.utils.unit_utils: Getting global unit list
-2025-09-03 22:41:03,138 [INFO] app.utils.unit_utils: Getting global unit list
-2025-09-03 22:41:03,141 [INFO] app.utils.unit_utils: Getting global unit list
-2025-09-03 22:41:31,739 [INFO] app.blueprints.inventory.routes: EDIT INVENTORY - Item: Beeswax (ID: 7)
-2025-09-03 22:41:31,740 [INFO] app.blueprints.inventory.routes: QUANTITY RECOUNT: Target quantity 32.0 for item Beeswax
-2025-09-03 22:41:31,740 [INFO] app.services.inventory_adjustment._core: CENTRAL DELEGATOR: item_id=7, qty=32.0, type=recount
-2025-09-03 22:41:31,743 [INFO] app.services.inventory_adjustment._core: DELEGATING: recount -> routing to operation module
-2025-09-03 22:41:31,743 [INFO] app.services.inventory_adjustment._core: ROUTING: recount -> RECOUNT (special)
-2025-09-03 22:41:31,744 [INFO] app.services.inventory_adjustment._special_ops: RECOUNT: Item 7 current=32.0, target=32.0, delta=0.0
-2025-09-03 22:41:31,744 [INFO] app.services.inventory_adjustment._special_ops: RECOUNT: No adjustment needed for item 7
-2025-09-03 22:41:31,744 [INFO] app.services.inventory_adjustment._core: RECOUNT: Item 7 quantity 32.0 -> 32.0
-2025-09-03 22:41:31,750 [INFO] app.services.inventory_adjustment._core: SUCCESS: recount completed for item 7 (FIFO validated)
-2025-09-03 22:41:31,751 [INFO] app.blueprints.inventory.routes: RECOUNT SUCCESS: Inventory verified at 32.0
-2025-09-03 22:41:31,831 [INFO] app.utils.unit_utils: Getting global unit list
-2025-09-03 22:41:31,861 [INFO] app.utils.unit_utils: Getting global unit list
-2025-09-03 22:41:31,864 [INFO] app.utils.unit_utils: Getting global unit list
-2025-09-03 22:50:52,765 [INFO] app.utils.unit_utils: Getting global unit list
-2025-09-03 22:50:52,819 [INFO] app.utils.unit_utils: Getting global unit list
-2025-09-03 22:50:52,822 [INFO] app.utils.unit_utils: Getting global unit list
-2025-09-03 22:50:52,823 [INFO] app.utils.unit_utils: Getting global unit list
-2025-09-03 22:50:52,825 [INFO] app.utils.unit_utils: Getting global unit list
-2025-09-03 22:50:52,827 [INFO] app.utils.unit_utils: Getting global unit list
-2025-09-03 22:50:52,829 [INFO] app.utils.unit_utils: Getting global unit list
-2025-09-03 22:50:52,831 [INFO] app.utils.unit_utils: Getting global unit list
-2025-09-03 22:50:52,848 [INFO] app.utils.unit_utils: Getting global unit list
-2025-09-03 22:51:59,429 [INFO] app.blueprints.inventory.routes: CREATE NEW INVENTORY ITEM - User: 2, Org: 1
-2025-09-03 22:51:59,430 [INFO] app.services.inventory_adjustment._creation_logic: CREATE INVENTORY ITEM: Organization 1, User 2
-2025-09-03 22:51:59,430 [INFO] app.services.inventory_adjustment._creation_logic: Form data: {'csrf_token': 'IjViNzc2NGZiNWZiOGNiOWM5NDgzMTA4YmFiMTZkZDE5ZjAzZGZmZTEi.aLjGTA.k3V2gnJLedHqZzvff_4w_tV0Gq4', 'type': 'ingredient', 'name': 'Honey', 'quantity': '1', 'unit': 'lb', 'is_perishable': 'on', 'shelf_life_days': '12', 'cost_entry_type': 'per_unit', 'cost_per_unit': '12'}
-2025-09-03 22:51:59,442 [INFO] app.services.inventory_adjustment._creation_logic: CREATED: New inventory item 21 - Honey
-2025-09-03 22:51:59,442 [INFO] app.services.inventory_adjustment._creation_logic: INITIAL_STOCK: Adding 1.0 to new item 21
-2025-09-03 22:51:59,457 [INFO] app.services.inventory_adjustment._fifo_ops: FIFO: Created lot LOT-JPG2L6H with 1.0 lb for item 21 (perishable: True)
-2025-09-03 22:51:59,457 [INFO] app.services.inventory_adjustment._creation_logic: INITIAL_STOCK SUCCESS: Will set item 21 quantity to 1.0
-2025-09-03 22:51:59,595 [INFO] app.utils.unit_utils: Getting global unit list
-2025-09-03 22:51:59,630 [INFO] app.utils.unit_utils: Getting global unit list
-2025-09-03 22:51:59,634 [INFO] app.utils.unit_utils: Getting global unit list
-2025-09-03 22:53:02,052 [INFO] app.utils.unit_utils: Getting global unit list
-2025-09-03 22:53:04,660 [INFO] app.utils.unit_utils: Getting global unit list
-2025-09-03 22:53:04,761 [INFO] app.utils.unit_utils: Getting global unit list
-2025-09-03 22:53:04,781 [INFO] app.utils.unit_utils: Getting global unit list
-2025-09-03 22:53:19,383 [INFO] app.services.recipe_service._core: Updated recipe 4: Milk and Honey Mixture
-2025-09-03 22:53:19,452 [INFO] app.utils.unit_utils: Getting global unit list
-2025-09-03 22:54:15,148 [INFO] app.blueprints.inventory.routes: EDIT INVENTORY - Item: Honey (ID: 21)
-2025-09-03 22:54:15,264 [INFO] app.utils.unit_utils: Getting global unit list
-2025-09-03 22:54:15,316 [INFO] app.utils.unit_utils: Getting global unit list
-2025-09-03 22:54:15,323 [INFO] app.utils.unit_utils: Getting global unit list
-2025-09-03 22:58:46,598 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:28]
-2025-09-03 22:58:57,035 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:28]
-2025-09-03 22:58:58,619 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:28]
-2025-09-03 22:58:59,176 [INFO] app.utils.unit_utils: Getting global unit list
-2025-09-03 23:11:44,020 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:28]
-2025-09-03 23:11:55,479 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:28]
-2025-09-03 23:11:57,135 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:28]
-2025-09-03 23:11:57,640 [INFO] app.utils.unit_utils: Getting global unit list
-2025-09-03 23:12:19,714 [INFO] app.utils.unit_utils: Getting global unit list
-2025-09-03 23:12:19,819 [INFO] app.utils.unit_utils: Getting global unit list
-2025-09-03 23:12:19,821 [INFO] app.utils.unit_utils: Getting global unit list
-2025-09-03 23:12:19,822 [INFO] app.utils.unit_utils: Getting global unit list
-2025-09-03 23:12:19,824 [INFO] app.utils.unit_utils: Getting global unit list
-2025-09-03 23:12:19,825 [INFO] app.utils.unit_utils: Getting global unit list
-2025-09-03 23:12:19,827 [INFO] app.utils.unit_utils: Getting global unit list
-2025-09-03 23:12:19,829 [INFO] app.utils.unit_utils: Getting global unit list
-2025-09-03 23:12:19,850 [INFO] app.utils.unit_utils: Getting global unit list
-2025-09-03 23:13:15,169 [INFO] app.utils.unit_utils: Getting global unit list
-2025-09-03 23:13:15,249 [INFO] app.utils.unit_utils: Getting global unit list
-2025-09-03 23:13:15,331 [INFO] app.utils.unit_utils: Getting global unit list
-2025-09-03 23:25:35,621 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:28]
-2025-09-03 23:25:48,403 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:28]
-2025-09-03 23:25:50,057 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:28]
-2025-09-03 23:25:50,538 [INFO] app.utils.unit_utils: Getting global unit list
-2025-09-03 23:26:20,850 [INFO] app.utils.unit_utils: Getting global unit list
-2025-09-03 23:26:20,934 [INFO] app.utils.unit_utils: Getting global unit list
-2025-09-03 23:26:20,936 [INFO] app.utils.unit_utils: Getting global unit list
-2025-09-03 23:26:20,937 [INFO] app.utils.unit_utils: Getting global unit list
-2025-09-03 23:26:20,938 [INFO] app.utils.unit_utils: Getting global unit list
-2025-09-03 23:26:20,940 [INFO] app.utils.unit_utils: Getting global unit list
-2025-09-03 23:26:20,942 [INFO] app.utils.unit_utils: Getting global unit list
-2025-09-03 23:26:20,944 [INFO] app.utils.unit_utils: Getting global unit list
-2025-09-03 23:26:20,964 [INFO] app.utils.unit_utils: Getting global unit list
-2025-09-03 23:26:22,772 [INFO] app.utils.unit_utils: Getting global unit list
-2025-09-03 23:26:22,830 [INFO] app.utils.unit_utils: Getting global unit list
-2025-09-03 23:26:22,879 [INFO] app.utils.unit_utils: Getting global unit list
-2025-09-03 23:36:22,665 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:28]
-2025-09-03 23:36:29,723 [INFO] app.utils.unit_utils: Getting global unit list
-2025-09-03 23:36:39,902 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:28]
-2025-09-03 23:36:41,729 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:28]
-2025-09-03 23:36:42,183 [INFO] app.utils.unit_utils: Getting global unit list
-2025-09-03 23:53:10,546 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:28]
-2025-09-03 23:53:29,860 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:28]
-2025-09-03 23:53:31,590 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:28]
-2025-09-03 23:53:47,689 [INFO] app.utils.unit_utils: Getting global unit list
-2025-09-03 23:53:47,770 [INFO] app.utils.unit_utils: Getting global unit list
-2025-09-03 23:53:47,860 [INFO] app.utils.unit_utils: Getting global unit list
-2025-09-03 23:53:47,862 [INFO] app.utils.unit_utils: Getting global unit list
-2025-09-03 23:53:47,863 [INFO] app.utils.unit_utils: Getting global unit list
-2025-09-03 23:53:47,865 [INFO] app.utils.unit_utils: Getting global unit list
-2025-09-03 23:53:47,866 [INFO] app.utils.unit_utils: Getting global unit list
-2025-09-03 23:53:47,868 [INFO] app.utils.unit_utils: Getting global unit list
-2025-09-03 23:53:47,869 [INFO] app.utils.unit_utils: Getting global unit list
-2025-09-03 23:53:47,893 [INFO] app.utils.unit_utils: Getting global unit list
-2025-09-03 23:53:51,898 [INFO] app.utils.unit_utils: Getting global unit list
-2025-09-03 23:53:51,982 [INFO] app.utils.unit_utils: Getting global unit list
-2025-09-03 23:53:52,042 [INFO] app.utils.unit_utils: Getting global unit list
+2025-09-03 23:54:44,144 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:28]
+2025-09-03 23:55:03,395 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:28]
+2025-09-03 23:55:05,370 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:28]
+2025-09-03 23:55:05,921 [INFO] app.utils.unit_utils: Getting global unit list
+2025-09-03 23:55:08,761 [INFO] app.utils.unit_utils: Getting global unit list
+2025-09-03 23:55:08,872 [INFO] app.utils.unit_utils: Getting global unit list
+2025-09-03 23:55:08,875 [INFO] app.utils.unit_utils: Getting global unit list
+2025-09-03 23:55:08,878 [INFO] app.utils.unit_utils: Getting global unit list
+2025-09-03 23:55:08,879 [INFO] app.utils.unit_utils: Getting global unit list
+2025-09-03 23:55:08,881 [INFO] app.utils.unit_utils: Getting global unit list
+2025-09-03 23:55:08,889 [INFO] app.utils.unit_utils: Getting global unit list
+2025-09-03 23:55:08,892 [INFO] app.utils.unit_utils: Getting global unit list
+2025-09-03 23:55:08,918 [INFO] app.utils.unit_utils: Getting global unit list
+2025-09-03 23:55:11,357 [INFO] app.utils.unit_utils: Getting global unit list
+2025-09-03 23:55:11,428 [INFO] app.utils.unit_utils: Getting global unit list
+2025-09-03 23:55:11,502 [INFO] app.utils.unit_utils: Getting global unit list
+2025-09-03 23:56:49,809 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:28]
+2025-09-03 23:56:51,796 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:28]
+2025-09-03 23:56:52,198 [INFO] app.utils.unit_utils: Getting global unit list
+2025-09-04 17:39:31,652 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:28]
+2025-09-04 17:39:33,432 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:28]
+2025-09-04 17:39:36,856 [INFO] app.utils.unit_utils: Getting global unit list
+2025-09-04 17:39:41,869 [INFO] app.utils.unit_utils: Getting global unit list
+2025-09-04 17:39:41,968 [INFO] app.utils.unit_utils: Getting global unit list
+2025-09-04 17:39:41,969 [INFO] app.utils.unit_utils: Getting global unit list
+2025-09-04 17:39:41,971 [INFO] app.utils.unit_utils: Getting global unit list
+2025-09-04 17:39:41,972 [INFO] app.utils.unit_utils: Getting global unit list
+2025-09-04 17:39:41,974 [INFO] app.utils.unit_utils: Getting global unit list
+2025-09-04 17:39:41,976 [INFO] app.utils.unit_utils: Getting global unit list
+2025-09-04 17:39:41,978 [INFO] app.utils.unit_utils: Getting global unit list
+2025-09-04 17:39:42,015 [INFO] app.utils.unit_utils: Getting global unit list
+2025-09-04 17:39:45,739 [INFO] app.utils.unit_utils: Getting global unit list
+2025-09-04 17:39:45,804 [INFO] app.utils.unit_utils: Getting global unit list
+2025-09-04 17:39:45,861 [INFO] app.utils.unit_utils: Getting global unit list
+2025-09-04 17:42:25,694 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:28]
+2025-09-04 17:42:38,993 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:28]
+2025-09-04 17:42:40,856 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:28]
+2025-09-04 17:42:41,340 [INFO] app.utils.unit_utils: Getting global unit list
+2025-09-04 17:42:44,212 [INFO] app.utils.unit_utils: Getting global unit list
+2025-09-04 17:42:46,895 [INFO] app.utils.unit_utils: Getting global unit list
+2025-09-04 17:42:47,001 [INFO] app.utils.unit_utils: Getting global unit list
+2025-09-04 17:42:47,003 [INFO] app.utils.unit_utils: Getting global unit list
+2025-09-04 17:42:47,005 [INFO] app.utils.unit_utils: Getting global unit list
+2025-09-04 17:42:47,007 [INFO] app.utils.unit_utils: Getting global unit list
+2025-09-04 17:42:47,008 [INFO] app.utils.unit_utils: Getting global unit list
+2025-09-04 17:42:47,010 [INFO] app.utils.unit_utils: Getting global unit list
+2025-09-04 17:42:47,011 [INFO] app.utils.unit_utils: Getting global unit list
+2025-09-04 17:42:47,032 [INFO] app.utils.unit_utils: Getting global unit list
+2025-09-04 17:42:50,687 [INFO] app.utils.unit_utils: Getting global unit list
+2025-09-04 17:42:50,781 [INFO] app.utils.unit_utils: Getting global unit list
+2025-09-04 17:42:50,866 [INFO] app.utils.unit_utils: Getting global unit list
+2025-09-04 17:44:34,191 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:28]
+2025-09-04 17:44:51,772 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:28]
+2025-09-04 17:44:53,315 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:28]
+2025-09-04 17:44:54,287 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:28]
+2025-09-04 17:44:54,939 [INFO] app.utils.unit_utils: Getting global unit list
+2025-09-04 17:45:09,387 [INFO] app.utils.unit_utils: Getting global unit list
+2025-09-04 17:45:11,074 [INFO] app.utils.unit_utils: Getting global unit list
+2025-09-04 17:45:11,206 [INFO] app.utils.unit_utils: Getting global unit list
+2025-09-04 17:45:11,209 [INFO] app.utils.unit_utils: Getting global unit list
+2025-09-04 17:45:11,213 [INFO] app.utils.unit_utils: Getting global unit list
+2025-09-04 17:45:11,215 [INFO] app.utils.unit_utils: Getting global unit list
+2025-09-04 17:45:11,217 [INFO] app.utils.unit_utils: Getting global unit list
+2025-09-04 17:45:11,227 [INFO] app.utils.unit_utils: Getting global unit list
+2025-09-04 17:45:11,233 [INFO] app.utils.unit_utils: Getting global unit list
+2025-09-04 17:45:11,276 [INFO] app.utils.unit_utils: Getting global unit list
+2025-09-04 17:45:14,066 [INFO] app.utils.unit_utils: Getting global unit list
+2025-09-04 17:45:14,149 [INFO] app.utils.unit_utils: Getting global unit list
+2025-09-04 17:45:14,227 [INFO] app.utils.unit_utils: Getting global unit list
+2025-09-04 17:48:16,622 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:28]
+2025-09-04 17:48:18,593 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:28]
+2025-09-04 17:48:19,128 [INFO] app.utils.unit_utils: Getting global unit list
+2025-09-04 17:48:22,283 [INFO] app.utils.unit_utils: Getting global unit list
+2025-09-04 17:48:22,385 [INFO] app.utils.unit_utils: Getting global unit list
+2025-09-04 17:48:22,387 [INFO] app.utils.unit_utils: Getting global unit list
+2025-09-04 17:48:22,389 [INFO] app.utils.unit_utils: Getting global unit list
+2025-09-04 17:48:22,391 [INFO] app.utils.unit_utils: Getting global unit list
+2025-09-04 17:48:22,393 [INFO] app.utils.unit_utils: Getting global unit list
+2025-09-04 17:48:22,394 [INFO] app.utils.unit_utils: Getting global unit list
+2025-09-04 17:48:22,396 [INFO] app.utils.unit_utils: Getting global unit list
+2025-09-04 17:48:22,422 [INFO] app.utils.unit_utils: Getting global unit list
+2025-09-04 17:48:24,794 [INFO] app.utils.unit_utils: Getting global unit list
+2025-09-04 17:48:24,854 [INFO] app.utils.unit_utils: Getting global unit list
+2025-09-04 17:48:24,914 [INFO] app.utils.unit_utils: Getting global unit list
+2025-09-04 17:48:51,351 [INFO] app.utils.unit_utils: Getting global unit list
+2025-09-04 17:48:51,401 [INFO] app.utils.unit_utils: Getting global unit list
+2025-09-04 17:48:51,402 [INFO] app.utils.unit_utils: Getting global unit list
+2025-09-04 17:48:51,404 [INFO] app.utils.unit_utils: Getting global unit list
+2025-09-04 17:48:51,405 [INFO] app.utils.unit_utils: Getting global unit list
+2025-09-04 17:48:51,407 [INFO] app.utils.unit_utils: Getting global unit list
+2025-09-04 17:48:51,408 [INFO] app.utils.unit_utils: Getting global unit list
+2025-09-04 17:48:51,410 [INFO] app.utils.unit_utils: Getting global unit list
+2025-09-04 17:48:51,431 [INFO] app.utils.unit_utils: Getting global unit list
+2025-09-04 17:48:53,744 [INFO] app.utils.unit_utils: Getting global unit list
+2025-09-04 17:48:53,777 [INFO] app.utils.unit_utils: Getting global unit list
+2025-09-04 17:48:53,781 [INFO] app.utils.unit_utils: Getting global unit list
+2025-09-04 17:49:34,918 [INFO] app.blueprints.inventory.routes: EDIT INVENTORY - Item: Beeswax (ID: 7)
+2025-09-04 17:49:34,919 [INFO] app.blueprints.inventory.routes: QUANTITY RECOUNT: Target quantity 32.0 for item Beeswax
+2025-09-04 17:49:34,919 [INFO] app.services.inventory_adjustment._core: CENTRAL DELEGATOR: item_id=7, qty=32.0, type=recount
+2025-09-04 17:49:34,927 [INFO] app.services.inventory_adjustment._core: DELEGATING: recount -> routing to operation module
+2025-09-04 17:49:34,928 [INFO] app.services.inventory_adjustment._core: ROUTING: recount -> RECOUNT (special)
+2025-09-04 17:49:34,928 [INFO] app.services.inventory_adjustment._special_ops: RECOUNT: Item 7 current=32.0, target=32.0, delta=0.0
+2025-09-04 17:49:34,928 [INFO] app.services.inventory_adjustment._special_ops: RECOUNT: No adjustment needed for item 7
+2025-09-04 17:49:34,928 [INFO] app.services.inventory_adjustment._core: RECOUNT: Item 7 quantity 32.0 -> 32.0
+2025-09-04 17:49:34,934 [INFO] app.services.inventory_adjustment._core: SUCCESS: recount completed for item 7 (FIFO validated)
+2025-09-04 17:49:34,934 [INFO] app.blueprints.inventory.routes: RECOUNT SUCCESS: Inventory verified at 32.0
+2025-09-04 17:49:35,059 [INFO] app.utils.unit_utils: Getting global unit list
+2025-09-04 17:49:35,113 [INFO] app.utils.unit_utils: Getting global unit list
+2025-09-04 17:49:35,122 [INFO] app.utils.unit_utils: Getting global unit list
+2025-09-04 17:49:37,617 [INFO] app.utils.unit_utils: Getting global unit list
+2025-09-04 17:55:05,593 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:28]
+2025-09-04 17:55:17,598 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:28]
+2025-09-04 17:55:23,344 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:28]
+2025-09-04 17:55:25,234 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:28]
+2025-09-04 17:55:25,781 [INFO] app.utils.unit_utils: Getting global unit list
+2025-09-04 17:58:33,265 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:28]
+2025-09-04 17:58:35,260 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:28]
+2025-09-04 17:58:35,769 [INFO] app.utils.unit_utils: Getting global unit list
