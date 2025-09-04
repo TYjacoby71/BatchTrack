@@ -1,5 +1,6 @@
 from datetime import datetime
 import logging
+from flask import session
 from flask_login import current_user
 from ...models import db, Unit, CustomUnitMapping, InventoryItem as Ingredient, ConversionLog
 from .drawer_errors import handle_conversion_error
@@ -43,8 +44,20 @@ class ConversionEngine:
         }
         """
 
-        # Create cache key
-        cache_key = f"{amount}:{from_unit}:{to_unit}:{ingredient_id}:{density}"
+        # Determine effective organization for scoping (developer view respected)
+        effective_org_id = organization_id
+        try:
+            if effective_org_id is None and current_user and current_user.is_authenticated:
+                if getattr(current_user, 'user_type', None) == 'developer':
+                    effective_org_id = session.get('dev_selected_org_id')
+                else:
+                    effective_org_id = current_user.organization_id
+        except Exception:
+            # Fallback to provided organization_id only
+            pass
+
+        # Create cache key (org-scoped)
+        cache_key = f"org:{effective_org_id or 'public'}:{amount}:{from_unit}:{to_unit}:{ingredient_id}:{density}"
 
         # Check centralized cache first
         cached_result = conversion_cache.get(cache_key)

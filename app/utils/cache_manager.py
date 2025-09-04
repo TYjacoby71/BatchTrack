@@ -1,5 +1,12 @@
 import time
+import os
+import pickle
 from threading import Lock
+
+try:
+    import redis  # type: ignore
+except Exception:  # optional dependency
+    redis = None
 
 
 class SimpleCache:
@@ -49,8 +56,60 @@ class SimpleCache:
                 del self._cache[k]
 
 
+class RedisCache:
+    """Redis-backed cache with TTL and namespace scoping."""
+
+    def __init__(self, namespace: str, default_ttl: int = 300, url: str | None = None) -> None:
+        if redis is None:
+            raise RuntimeError("redis package not available")
+        self._namespace = namespace.strip(":")
+        self._default_ttl = default_ttl
+        self._client = redis.Redis.from_url(url or os.environ.get("REDIS_URL", "redis://localhost:6379/0"), decode_responses=False)
+
+    def _k(self, key: str) -> str:
+        return f"bt:{self._namespace}:{key}"
+
+    def get(self, key):
+        raw = self._client.get(self._k(key))
+        if raw is None:
+            return None
+        try:
+            return pickle.loads(raw)
+        except Exception:
+            return None
+
+    def set(self, key, value, ttl: int | None = None):
+        raw = pickle.dumps(value, protocol=pickle.HIGHEST_PROTOCOL)
+        self._client.set(self._k(key), raw, ex=(ttl if ttl is not None else self._default_ttl))
+
+    def delete(self, key):
+        self._client.delete(self._k(key))
+
+    def clear(self):
+        self.clear_prefix("")
+
+    def clear_prefix(self, prefix: str):
+        match = f"bt:{self._namespace}:{prefix}*"
+        cursor = 0
+        pipe = self._client.pipeline()
+        while True:
+            cursor, keys = self._client.scan(cursor=cursor, match=match, count=500)
+            if keys:
+                pipe.delete(*keys)
+            if cursor == 0:
+                break
+        pipe.execute()
+
+
 # Global cache instances for the app
-conversion_cache = SimpleCache(max_size=200, default_ttl=3600)
-drawer_request_cache = SimpleCache(max_size=100, default_ttl=30)
-app_cache = SimpleCache(max_size=1000, default_ttl=600)
+USE_REDIS = bool(os.environ.get("REDIS_URL")) and redis is not None
+
+if USE_REDIS:
+    conversion_cache = RedisCache(namespace="conversion", default_ttl=3600)
+    drawer_request_cache = RedisCache(namespace="drawer", default_ttl=30)
+    app_cache = RedisCache(namespace="app", default_ttl=600)
+else:
+    conversion_cache = SimpleCache(max_size=200, default_ttl=3600)
+    drawer_request_cache = SimpleCache(max_size=100, default_ttl=30)
+    app_cache = SimpleCache(max_size=1000, default_ttl=600)
 

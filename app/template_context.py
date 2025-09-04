@@ -23,18 +23,34 @@ def register_template_context(app):
         from .utils.unit_utils import get_global_unit_list
         from .models import IngredientCategory
 
-        # Centralized cache for units and ingredient categories
-        units = app_cache.get("template:units")
+        # Determine effective organization for scoping units (categories are global)
+        try:
+            if current_user and current_user.is_authenticated:
+                if getattr(current_user, 'user_type', None) == 'developer':
+                    effective_org_id = session.get('dev_selected_org_id')
+                else:
+                    effective_org_id = current_user.organization_id
+            else:
+                effective_org_id = None
+        except Exception:
+            effective_org_id = None
+
+        units_cache_key = f"template:units:{effective_org_id or 'public'}"
+        units = app_cache.get(units_cache_key)
         categories = app_cache.get("template:ingredient_categories")
-        if units is None or categories is None:
+
+        if units is None:
             try:
                 units = get_global_unit_list()
-                categories = IngredientCategory.query.order_by(IngredientCategory.name).all()
-                # Cache for 1 hour
-                app_cache.set("template:units", units, ttl=3600)
-                app_cache.set("template:ingredient_categories", categories, ttl=3600)
+                app_cache.set(units_cache_key, units, ttl=3600)
             except Exception:
                 units = []
+
+        if categories is None:
+            try:
+                categories = IngredientCategory.query.order_by(IngredientCategory.name).all()
+                app_cache.set("template:ingredient_categories", categories, ttl=3600)
+            except Exception:
                 categories = []
 
         return dict(
@@ -56,7 +72,19 @@ def register_template_context(app):
             if not inventory_item_id:
                 return {'available': 0.0, 'reserved': 0.0, 'total': 0.0, 'reservations': []}
 
-            cache_key = f'template:reservation_summary:{inventory_item_id}'
+            # Scope by organization to avoid cross-tenant leakage
+            try:
+                if current_user and current_user.is_authenticated:
+                    if getattr(current_user, 'user_type', None) == 'developer':
+                        effective_org_id = session.get('dev_selected_org_id')
+                    else:
+                        effective_org_id = current_user.organization_id
+                else:
+                    effective_org_id = None
+            except Exception:
+                effective_org_id = None
+
+            cache_key = f'template:reservation_summary:{effective_org_id or "public"}:{inventory_item_id}'
             cached = app_cache.get(cache_key)
             if cached is not None:
                 return cached
