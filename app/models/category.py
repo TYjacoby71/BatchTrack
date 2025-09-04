@@ -13,6 +13,22 @@ class IngredientCategory(ScopedModelMixin, db.Model):
     is_active = db.Column(db.Boolean, default=True)
     created_by = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True)
 
+class InventoryCategory(ScopedModelMixin, db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(64), nullable=False)
+    description = db.Column(db.Text)
+    # item_type delineates which inventory item type this category applies to
+    # Expected values include: 'ingredient', 'container', 'packaging', 'consumable'
+    item_type = db.Column(db.String(32), nullable=False)
+    is_active = db.Column(db.Boolean, default=True)
+    created_by = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True)
+    created_at = db.Column(db.DateTime, default=TimezoneUtils.utc_now)
+
+    __table_args__ = (
+        # Unique per organization and type to avoid duplicates
+        db.UniqueConstraint('name', 'item_type', 'organization_id', name='_invcat_name_type_org_uc'),
+    )
+
 class Tag(ScopedModelMixin, db.Model):
     """Tags for categorizing batches, products, etc."""
     id = db.Column(db.Integer, primary_key=True)

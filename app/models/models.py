@@ -52,6 +52,7 @@ _export([
     ("unit", "CustomUnitMapping", None),
     ("unit", "ConversionLog", None),
     ("category", "IngredientCategory", None),
+    ("category", "InventoryCategory", None),
     ("category", "Tag", None),
 ])
 

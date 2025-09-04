@@ -10,7 +10,10 @@ class InventoryItem(ScopedModelMixin, db.Model):
     __tablename__ = 'inventory_item'
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(128), unique=True, nullable=False)
+    # Ingredient-specific category (for density defaults, etc.)
     category_id = db.Column(db.Integer, db.ForeignKey('ingredient_category.id'))
+    # Inventory category (separate taxonomy aligned to item type)
+    inventory_category_id = db.Column(db.Integer, db.ForeignKey('inventory_category.id'), nullable=True)
     quantity = db.Column(db.Float, default=0.0)
     unit = db.Column(db.String(32), nullable=False)
     cost_per_unit = db.Column(db.Float, default=0.0)
@@ -40,6 +43,7 @@ class InventoryItem(ScopedModelMixin, db.Model):
     organization = db.relationship('Organization', backref='inventory_items')
 
     category = db.relationship('IngredientCategory', backref='inventory_items')
+    inventory_category = db.relationship('InventoryCategory', backref='inventory_items')
 
     def belongs_to_user(self):
         """Check if this record belongs to the current user's organization"""

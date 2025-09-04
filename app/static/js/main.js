@@ -137,6 +137,39 @@ document.addEventListener('DOMContentLoaded', function() {
     multiple: true
   });
 
+  // Add Ingredient name field - Select2 with AJAX search and tags for custom entries
+  const $nameSelect = $('#addIngredientNameSelect');
+  if ($nameSelect.length) {
+    $nameSelect.select2({
+      ...select2Config,
+      placeholder: 'Type ingredient name...',
+      tags: true, // allow custom entries
+      ajax: {
+        url: '/api/ingredients/search',
+        dataType: 'json',
+        delay: 150,
+        data: function (params) {
+          return { q: params.term };
+        },
+        processResults: function (data) {
+          return data;
+        },
+        cache: true
+      },
+      minimumInputLength: 1,
+      createTag: function (params) {
+        const term = $.trim(params.term);
+        if (term === '') { return null; }
+        return { id: term, text: term, newTag: true };
+      }
+    });
+
+    // Ensure the selected value is posted as the name input
+    $nameSelect.on('select2:select', function () {
+      // nothing else needed; select name is submitted directly
+    });
+  }
+
   // Bootstrap tooltips
   $('[data-bs-toggle="tooltip"]').tooltip();
 
