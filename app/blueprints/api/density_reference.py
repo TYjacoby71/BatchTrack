@@ -1,12 +1,23 @@
+
+import os
+import json
 from flask import Blueprint, jsonify, render_template
 from flask_login import login_required
-import json
-import os
+from app.services.density_assignment_service import DensityAssignmentService
 
 density_reference_bp = Blueprint('density_reference', __name__)
 
-@density_reference_bp.route('/')
+@density_reference_bp.route('/api/density-reference/options')
 @login_required
+def get_density_options():
+    """Get all density options for the search modal"""
+    try:
+        options = DensityAssignmentService.get_category_options(0)  # Reference data is not org-specific
+        return jsonify(options)
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@density_reference_bp.route('/api/density-reference')
 def get_density_reference():
     """Serve density reference data as a formatted page"""
     try:
