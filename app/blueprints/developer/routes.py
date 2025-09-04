@@ -1,6 +1,6 @@
 from flask import Blueprint, render_template, request, session, redirect, url_for, flash, jsonify
 from flask_login import login_required, current_user
-from app.models import Organization, User, Permission, Role
+from app.models import Organization, User, Permission, Role, GlobalItem
 from app.extensions import db
 from datetime import datetime, timedelta
 from sqlalchemy import func
@@ -494,6 +494,33 @@ def system_settings():
     }
 
     return render_template('developer/system_settings.html', stats=stats)
+
+@developer_bp.route('/global-items')
+@login_required
+def global_items_admin():
+    """Developer admin page for managing Global Items"""
+    items = GlobalItem.query.order_by(GlobalItem.item_type, GlobalItem.name).limit(200).all()
+    return render_template('developer/global_items.html', items=items)
+
+@developer_bp.route('/global-items/<int:item_id>')
+@login_required
+def global_item_detail(item_id):
+    item = GlobalItem.query.get_or_404(item_id)
+    return render_template('developer/global_item_detail.html', item=item)
+
+@developer_bp.route('/global-items/<int:item_id>/stats')
+@login_required
+def global_item_stats_view(item_id):
+    from app.services.statistics.global_item_stats import GlobalItemStatsService
+    item = GlobalItem.query.get_or_404(item_id)
+    stats = GlobalItemStatsService.get_rollup(item_id)
+    return render_template('developer/global_item_stats.html', item=item, stats=stats)
+
+@developer_bp.route('/inventory-analytics')
+@login_required
+def inventory_analytics_stub():
+    """Stub page for global inventory analytics in developer system"""
+    return render_template('developer/inventory_analytics.html')
 
 @developer_bp.route('/waitlist-statistics')
 @require_developer_permission('system_admin')

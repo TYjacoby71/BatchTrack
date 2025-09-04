@@ -1,0 +1,16 @@
+{% extends 'developer/layout.html' %}
+{% block content %}
+<h2>Global Item: {{ item.name }}</h2>
+<div class="card"><div class="card-body">
+  <div><strong>Type:</strong> {{ item.item_type }}</div>
+  <div><strong>Default Unit:</strong> {{ item.default_unit or '-' }}</div>
+  <div><strong>Density:</strong> {{ item.density or '-' }}</div>
+  <div><strong>Capacity:</strong> {{ item.capacity or '-' }} {{ item.capacity_unit or '' }}</div>
+  <div><strong>Perishable Default:</strong> {{ 'Yes' if item.default_is_perishable else 'No' }}</div>
+  <div><strong>Recommended Shelf Life (days):</strong> {{ item.recommended_shelf_life_days or '-' }}</div>
+  <div><strong>Synonyms:</strong> {{ (item.aka_names or []) | join(', ') }}</div>
+  <div class="mt-3">
+    <a class="btn btn-sm btn-outline-secondary" href="{{ url_for('developer.global_item_stats_view', item_id=item.id) }}">View Stats</a>
+  </div>
+</div></div>
+{% endblock %}

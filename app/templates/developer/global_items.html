@@ -1,0 +1,28 @@
+{% extends 'developer/layout.html' %}
+{% block content %}
+<h2>Global Items</h2>
+<table class="table table-striped">
+  <thead>
+    <tr>
+      <th>Name</th>
+      <th>Type</th>
+      <th>Density</th>
+      <th>Capacity</th>
+      <th>Perishable</th>
+      <th></th>
+    </tr>
+  </thead>
+  <tbody>
+  {% for gi in items %}
+    <tr>
+      <td>{{ gi.name }}</td>
+      <td>{{ gi.item_type }}</td>
+      <td>{{ gi.density or '-' }}</td>
+      <td>{{ gi.capacity or '-' }} {{ gi.capacity_unit or '' }}</td>
+      <td>{{ 'Yes' if gi.default_is_perishable else 'No' }}</td>
+      <td><a href="{{ url_for('developer.global_item_detail', item_id=gi.id) }}" class="btn btn-sm btn-outline-primary">View</a></td>
+    </tr>
+  {% endfor %}
+  </tbody>
+</table>
+{% endblock %}

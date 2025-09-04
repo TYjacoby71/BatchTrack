@@ -23,7 +23,11 @@ def create_inventory_item(form_data, organization_id, created_by):
         if not name:
             return False, "Item name is required", None
 
-        item_type = form_data.get('type', 'ingredient')
+        # Determine item type, preferring global item if provided
+        item_type = form_data.get('type') or (global_item.item_type if global_item else 'ingredient')
+        # Validate type against global item
+        if global_item and item_type != global_item.item_type:
+            return False, f"Selected global item type '{global_item.item_type}' does not match item type '{item_type}'.", None
 
         # If provided, load global item for defaults
         global_item_id = form_data.get('global_item_id')
