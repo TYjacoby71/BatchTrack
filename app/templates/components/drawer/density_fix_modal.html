@@ -18,18 +18,27 @@
                 <form id="densityFixForm">
                     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                     <div class="mb-3">
-                        <label for="drawerCategorySelect" class="form-label">Ingredient Category</label>
-                        <select class="form-select" id="drawerCategorySelect" name="category_id">
-                            <option value="" {% if not ingredient.category_id %}selected{% endif %}>-- Custom Category --</option>
-                            {% for category in categories %}
-                            <option value="{{ category.id }}" {% if ingredient.category_id == category.id %}selected{% endif %}
-                                    data-density="{{ category.default_density }}">
-                                {{ category.name }}{% if category.default_density is not none %} (Density: {{ category.default_density }} g/ml){% endif %}
-                            </option>
-                            {% endfor %}
-                        </select>
-                        <div class="form-text">Select a category to auto-fill density. Choose Custom to enter your own.</div>
+                        <label for="densitySearchInput" class="form-label">Search Reference Guide</label>
+                        <input type="text" 
+                               class="form-control" 
+                               id="densitySearchInput" 
+                               placeholder="Search for specific ingredient or category..."
+                               value="{% if ingredient.reference_item_name %}{{ ingredient.reference_item_name }}{% endif %}">
+                        <div class="form-text">Search for your ingredient in our comprehensive density reference guide</div>
                     </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label">Density Options</label>
+                        <div id="densityOptionsContainer" class="border rounded p-2" style="max-height: 200px; overflow-y: auto;">
+                            <!-- Populated by JavaScript -->
+                        </div>
+                        <div class="form-text">Select a specific ingredient or category default</div>
+                    </div>
+                    
+                    <input type="hidden" id="selectedDensityType" value="">
+                    <input type="hidden" id="selectedDensityValue" value="">
+                    <input type="hidden" id="selectedReferenceItem" value="">
+                    <input type="hidden" id="selectedCategoryName" value="">
                     <div class="mb-3">
                         <label for="densityInput" class="form-label">
                             Density (g/ml):
@@ -110,23 +119,133 @@
     if (saveBtn) {
         console.log('🔧 DENSITY MODAL: Save button found and attaching listener');
 
-        // Handle category change: auto-fill and lock density unless custom
-        if (categorySelect) {
-            categorySelect.addEventListener('change', function() {
-                const selectedValue = this.value;
-                if (selectedValue === '') {
-                    densityInput.disabled = false;
-                    densityInput.value = densityInput.value || '';
-                } else {
-                    const selectedOption = this.options[this.selectedIndex];
-                    const defaultDensity = selectedOption.dataset.density;
-                    densityInput.value = defaultDensity || '';
-                    densityInput.disabled = true;
-                }
+        // Initialize density options
+        let densityOptions = [];
+        
+        // Load density options from server
+        fetch('/api/density-reference/options')
+            .then(response => response.json())
+            .then(data => {
+                densityOptions = data;
+                renderDensityOptions(densityOptions);
+            })
+            .catch(error => {
+                console.error('Failed to load density options:', error);
             });
-
-            // Trigger once on load to set initial state
-            categorySelect.dispatchEvent(new Event('change'));
+        
+        const searchInput = document.getElementById('densitySearchInput');
+        const optionsContainer = document.getElementById('densityOptionsContainer');
+        
+        function renderDensityOptions(options, searchTerm = '') {
+            if (!optionsContainer) return;
+            
+            optionsContainer.innerHTML = '';
+            
+            options.forEach(category => {
+                // Filter items based on search
+                let filteredItems = category.items;
+                if (searchTerm) {
+                    filteredItems = category.items.filter(item => 
+                        item.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                        item.aliases.some(alias => alias.toLowerCase().includes(searchTerm.toLowerCase()))
+                    );
+                }
+                
+                if (filteredItems.length === 0 && !category.name.toLowerCase().includes(searchTerm.toLowerCase())) {
+                    return; // Skip category if no matches
+                }
+                
+                // Category header with default option
+                const categoryDiv = document.createElement('div');
+                categoryDiv.className = 'mb-2';
+                categoryDiv.innerHTML = `
+                    <h6 class="text-primary mb-1">${category.name}</h6>
+                    <div class="form-check mb-1">
+                        <input class="form-check-input density-option" type="radio" name="densityOption" 
+                               value="category-default" 
+                               data-density="${category.default_density.toFixed(3)}"
+                               data-category="${category.name}"
+                               id="cat-${category.name.replace(/\s+/g, '-')}">
+                        <label class="form-check-label" for="cat-${category.name.replace(/\s+/g, '-')}">
+                            <strong>${category.name} (Default)</strong> - ${category.default_density.toFixed(3)} g/ml
+                        </label>
+                    </div>
+                `;
+                
+                // Add specific items
+                filteredItems.forEach(item => {
+                    const itemDiv = document.createElement('div');
+                    itemDiv.className = 'form-check ms-3 mb-1';
+                    itemDiv.innerHTML = `
+                        <input class="form-check-input density-option" type="radio" name="densityOption" 
+                               value="reference-item" 
+                               data-density="${item.density_g_per_ml}"
+                               data-reference-item="${item.name}"
+                               id="item-${item.name.replace(/\s+/g, '-')}">
+                        <label class="form-check-label" for="item-${item.name.replace(/\s+/g, '-')}">
+                            ${item.name} - ${item.density_g_per_ml} g/ml
+                            ${item.aliases.length > 0 ? `<small class="text-muted">(${item.aliases.join(', ')})</small>` : ''}
+                        </label>
+                    `;
+                    categoryDiv.appendChild(itemDiv);
+                });
+                
+                optionsContainer.appendChild(categoryDiv);
+            });
+            
+            // Add manual option at the end
+            const manualDiv = document.createElement('div');
+            manualDiv.className = 'mt-3 pt-2 border-top';
+            manualDiv.innerHTML = `
+                <div class="form-check">
+                    <input class="form-check-input density-option" type="radio" name="densityOption" 
+                           value="manual" id="manual-density">
+                    <label class="form-check-label" for="manual-density">
+                        <strong>Manual Entry</strong> - Enter custom density
+                    </label>
+                </div>
+            `;
+            optionsContainer.appendChild(manualDiv);
+            
+            // Handle density option selection
+            document.querySelectorAll('.density-option').forEach(radio => {
+                radio.addEventListener('change', function() {
+                    if (this.checked) {
+                        const type = this.value;
+                        document.getElementById('selectedDensityType').value = type;
+                        
+                        if (type === 'reference-item') {
+                            const density = this.dataset.density;
+                            const referenceItem = this.dataset.referenceItem;
+                            document.getElementById('selectedDensityValue').value = density;
+                            document.getElementById('selectedReferenceItem').value = referenceItem;
+                            densityInput.value = density;
+                            densityInput.disabled = true;
+                        } else if (type === 'category-default') {
+                            const density = this.dataset.density;
+                            const categoryName = this.dataset.category;
+                            document.getElementById('selectedDensityValue').value = density;
+                            document.getElementById('selectedCategoryName').value = categoryName;
+                            densityInput.value = density;
+                            densityInput.disabled = true;
+                        } else if (type === 'manual') {
+                            document.getElementById('selectedDensityValue').value = '';
+                            document.getElementById('selectedReferenceItem').value = '';
+                            document.getElementById('selectedCategoryName').value = '';
+                            densityInput.disabled = false;
+                            densityInput.focus();
+                        }
+                    }
+                });
+            });
+        }
+        
+        // Search functionality
+        if (searchInput) {
+            searchInput.addEventListener('input', function() {
+                const searchTerm = this.value.trim();
+                renderDensityOptions(densityOptions, searchTerm);
+            });
         }
 
         saveBtn.addEventListener('click', function(e) {

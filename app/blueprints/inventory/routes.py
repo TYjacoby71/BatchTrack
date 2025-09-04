@@ -1,4 +1,4 @@
-from flask import Blueprint, request, jsonify, render_template, redirect, url_for, flash, session
+from flask import Blueprint, request, jsonify, render_template, redirect, flash, session
 from flask_login import login_required, current_user
 from app.models import db, InventoryItem, UnifiedInventoryHistory, Unit, IngredientCategory, User
 from app.utils.permissions import permission_required, role_required
@@ -14,6 +14,7 @@ from ...utils.fifo_generator import int_to_base36
 from sqlalchemy import and_, or_, func
 from sqlalchemy.orm import joinedload
 from app.models.inventory_lot import InventoryLot
+from app.services.density_assignment_service import DensityAssignmentService # Added for density assignment
 
 # Import the blueprint from __init__.py instead of creating a new one
 from . import inventory_bp
@@ -116,7 +117,7 @@ def view_inventory(id):
     if current_user.organization_id:
         query = query.filter_by(organization_id=current_user.organization_id)
     item = query.filter_by(id=id).first()
-    
+
     if not item:
         flash('Inventory item not found or access denied.', 'error')
         return redirect(url_for('inventory.list_inventory'))
