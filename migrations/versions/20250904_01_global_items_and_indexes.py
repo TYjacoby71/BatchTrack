@@ -41,9 +41,6 @@ def upgrade():
         print("   ✅ Global item table created")
     except Exception as e:
         print(f"   ⚠️  Global item table may already exist: {e}")
-        # Rollback the failed transaction
-        connection.execute(text("ROLLBACK"))
-        connection.execute(text("BEGIN"))
     
     # Create indexes on global_item
     print("Creating indexes on global_item...")
@@ -52,16 +49,12 @@ def upgrade():
         print("   ✅ Created name index")
     except Exception as e:
         print(f"   ⚠️  Name index may already exist")
-        connection.execute(text("ROLLBACK"))
-        connection.execute(text("BEGIN"))
         
     try:
         op.create_index('ix_global_item_item_type', 'global_item', ['item_type'])
         print("   ✅ Created item_type index")
     except Exception as e:
         print(f"   ⚠️  Item type index may already exist")
-        connection.execute(text("ROLLBACK"))
-        connection.execute(text("BEGIN"))
 
     # 2) Add global_item_id to inventory_item as NULLABLE
     print("Adding global_item_id column to inventory_item...")
@@ -70,8 +63,6 @@ def upgrade():
         print("   ✅ Added global_item_id column")
     except Exception as e:
         print(f"   ⚠️  Column may already exist: {e}")
-        connection.execute(text("ROLLBACK"))
-        connection.execute(text("BEGIN"))
     
     # Create index on the foreign key column
     print("Creating index on inventory_item.global_item_id...")
@@ -80,8 +71,6 @@ def upgrade():
         print("   ✅ Created global_item_id index")
     except Exception as e:
         print(f"   ⚠️  Index may already exist")
-        connection.execute(text("ROLLBACK"))
-        connection.execute(text("BEGIN"))
 
     # 3) Add the foreign key constraint
     print("Adding foreign key constraint...")
@@ -96,8 +85,6 @@ def upgrade():
         print("   ✅ Foreign key constraint added successfully")
     except Exception as e:
         print(f"   ⚠️  Foreign key constraint may already exist: {e}")
-        connection.execute(text("ROLLBACK"))
-        connection.execute(text("BEGIN"))
 
     # 4) Adjust uniqueness on inventory_item.name to be per-organization
     print("Adjusting inventory_item name constraints...")
@@ -107,15 +94,13 @@ def upgrade():
         op.drop_constraint('inventory_item_name_key', 'inventory_item', type_='unique')
         print("   Dropped old unique constraint on name")
     except Exception:
-        connection.execute(text("ROLLBACK"))
-        connection.execute(text("BEGIN"))
+        pass
         
     try:
         op.drop_index('ix_inventory_item_name', table_name='inventory_item')
         print("   Dropped old index on name")
     except Exception:
-        connection.execute(text("ROLLBACK"))
-        connection.execute(text("BEGIN"))
+        pass
 
     # Ensure name is indexed (non-unique) and add composite unique
     try:
@@ -147,8 +132,6 @@ def upgrade():
             print(f"   ✅ Created index: {idx_name}")
         except Exception as e:
             print(f"   ⚠️  Index may already exist: {idx_name}")
-            connection.execute(text("ROLLBACK"))
-            connection.execute(text("BEGIN"))
 
     # 6) Index on user.organization_id for multi-tenant performance
     print("Adding user.organization_id index...")
@@ -157,8 +140,6 @@ def upgrade():
         print("   ✅ Created user organization index")
     except Exception:
         print("   ⚠️  User organization index may already exist")
-        connection.execute(text("ROLLBACK"))
-        connection.execute(text("BEGIN"))
 
     print("✅ Migration completed successfully")
 
