@@ -51,7 +51,11 @@ def upgrade():
         pass
 
     # Ensure name is indexed (non-unique) and add composite unique
-    op.create_index('ix_inventory_item_name', 'inventory_item', ['name'])
+    try:
+        op.create_index('ix_inventory_item_name', 'inventory_item', ['name'])
+    except Exception:
+        # If index exists, ignore
+        pass
     try:
         op.create_unique_constraint('_org_name_uc', 'inventory_item', ['organization_id', 'name'])
     except Exception:
