@@ -12,6 +12,10 @@ class IngredientCategory(ScopedModelMixin, db.Model):
     default_density = db.Column(db.Float, nullable=True)  # Default density for category in g/ml
     is_active = db.Column(db.Boolean, default=True)
     created_by = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True)
+    
+    # Reference guide integration
+    reference_category_name = db.Column(db.String(64), nullable=True)  # Maps to density_reference.json categories
+    is_reference_category = db.Column(db.Boolean, default=False)  # True if this is a reference guide category
 
 class Tag(ScopedModelMixin, db.Model):
     """Tags for categorizing batches, products, etc."""

@@ -32,6 +32,10 @@ class InventoryItem(ScopedModelMixin, db.Model):
     # Density for unit conversion (g/mL)
     density = db.Column(db.Float, nullable=True)
 
+    # Reference guide integration
+    reference_item_name = db.Column(db.String(128), nullable=True)  # Exact match from density_reference.json
+    density_source = db.Column(db.String(32), default='manual')  # 'manual', 'reference_item', 'category_default', 'auto_assigned'
+
     # Intermediate ingredient flag
     intermediate = db.Column(db.Boolean, default=False)
 
