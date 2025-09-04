@@ -137,7 +137,7 @@ document.addEventListener('DOMContentLoaded', function() {
     multiple: true
   });
 
-  // Add Ingredient name field - Select2 with AJAX search and tags for custom entries
+  // Add Ingredient name field - Select2 with AJAX global search and tags for custom entries
   const $nameSelect = $('#addIngredientNameSelect');
   if ($nameSelect.length) {
     $nameSelect.select2({
@@ -145,11 +145,11 @@ document.addEventListener('DOMContentLoaded', function() {
       placeholder: 'Type ingredient name...',
       tags: true, // allow custom entries
       ajax: {
-        url: '/api/ingredients/search',
+        url: '/api/ingredients/global-items/search',
         dataType: 'json',
         delay: 150,
         data: function (params) {
-          return { q: params.term };
+          return { q: params.term, type: 'ingredient' };
         },
         processResults: function (data) {
           return data;
@@ -164,9 +164,27 @@ document.addEventListener('DOMContentLoaded', function() {
       }
     });
 
-    // Ensure the selected value is posted as the name input
-    $nameSelect.on('select2:select', function () {
-      // nothing else needed; select name is submitted directly
+    // Keep a hidden input for global_item_id if a library item is chosen
+    let hiddenGlobalId = document.getElementById('global_item_id');
+    if (!hiddenGlobalId) {
+      hiddenGlobalId = document.createElement('input');
+      hiddenGlobalId.type = 'hidden';
+      hiddenGlobalId.name = 'global_item_id';
+      hiddenGlobalId.id = 'global_item_id';
+      document.getElementById('addIngredientForm')?.appendChild(hiddenGlobalId);
+    }
+
+    $nameSelect.on('select2:select', function (e) {
+      const data = e.params.data || {};
+      // If selecting a global item (numeric id), set hidden FK and update visible name to text
+      if (data.id && !isNaN(Number(data.id))) {
+        hiddenGlobalId.value = data.id;
+        // Ensure the select shows the chosen name
+        const option = new Option(data.text, data.text, true, true);
+        $nameSelect.append(option).trigger('change');
+      } else {
+        hiddenGlobalId.value = '';
+      }
     });
   }
 

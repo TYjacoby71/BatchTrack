@@ -4,7 +4,7 @@ This handler should work with the centralized quantity update system.
 """
 
 import logging
-from app.models import db, InventoryItem, IngredientCategory, Unit, UnifiedInventoryHistory
+from app.models import db, InventoryItem, IngredientCategory, Unit, UnifiedInventoryHistory, GlobalItem
 from ._fifo_ops import create_new_fifo_lot
 
 logger = logging.getLogger(__name__)
@@ -25,8 +25,20 @@ def create_inventory_item(form_data, organization_id, created_by):
 
         item_type = form_data.get('type', 'ingredient')
 
-        # Handle unit - get from form or default
+        # If provided, load global item for defaults
+        global_item_id = form_data.get('global_item_id')
+        global_item = None
+        if global_item_id:
+            try:
+                global_item = db.session.get(GlobalItem, int(global_item_id))
+            except Exception:
+                global_item = None
+
+        # Handle unit - get from form or default (prefer global item default)
         unit_input = form_data.get('unit', '').strip()
+        if not unit_input and global_item and global_item.default_unit:
+            unit_input = global_item.default_unit
+
         if unit_input:
             # Try to find existing unit or create/validate
             unit = db.session.query(Unit).filter_by(name=unit_input).first()
@@ -46,6 +58,10 @@ def create_inventory_item(form_data, organization_id, created_by):
             category = db.session.query(IngredientCategory).filter_by(name=category_name).first()
             if category:
                 category_id = category.id
+        # No explicit category provided; attempt from global item suggested inventory category
+        if category_id is None and global_item and global_item.suggested_inventory_category_id:
+            # Note: this is inventory category taxonomy; keep ingredient category separate
+            pass
 
         # Extract numeric fields with defaults
         cost_per_unit = 0.0
@@ -87,8 +103,20 @@ def create_inventory_item(form_data, organization_id, created_by):
             is_perishable=is_perishable,
             shelf_life_days=shelf_life_days,
             organization_id=organization_id,
-            category_id=category_id
+            category_id=category_id,
+            global_item_id=(global_item.id if global_item else None)
         )
+
+        # Apply global item defaults after instance is created
+        if global_item:
+            # Density for ingredients
+            if global_item.density is not None and item_type == 'ingredient':
+                new_item.density = global_item.density
+            # Capacity for containers/packaging (nullable by design)
+            if global_item.capacity is not None:
+                new_item.capacity = global_item.capacity
+            if global_item.capacity_unit is not None:
+                new_item.capacity_unit = global_item.capacity_unit
 
         # Save the new item
         db.session.add(new_item)

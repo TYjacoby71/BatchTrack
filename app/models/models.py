@@ -54,6 +54,7 @@ _export([
     ("category", "IngredientCategory", None),
     ("category", "InventoryCategory", None),
     ("category", "Tag", None),
+    ("global_item", "GlobalItem", None),
 ])
 
 # Build __all__ from whatever successfully imported

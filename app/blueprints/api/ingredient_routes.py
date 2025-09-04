@@ -2,7 +2,7 @@
 from flask import Blueprint, jsonify, request
 from flask_login import login_required, current_user
 from sqlalchemy import or_, func
-from ...models import IngredientCategory, InventoryItem, db
+from ...models import IngredientCategory, InventoryItem, GlobalItem, db
 
 ingredient_api_bp = Blueprint('ingredient_api', __name__)
 
@@ -52,12 +52,42 @@ def search_ingredients():
     payload = []
     for item in results:
         payload.append({
-            'id': item.name,  # select2 will write name directly; not selecting by id here
+            'id': item.name,  # legacy behavior; writing name directly
             'text': item.name,
             'category': item.category.name if item.category else None,
             'unit': item.unit,
             'density': item.density,
-            'type': item.type
+            'type': item.type,
+            'global_item_id': item.global_item_id
         })
 
     return jsonify({'results': payload})
+
+@ingredient_api_bp.route('/global-items/search', methods=['GET'])
+@login_required
+def search_global_items():
+    q = (request.args.get('q') or '').strip()
+    item_type = (request.args.get('type') or '').strip()  # optional: ingredient, container, packaging, consumable
+    if not q:
+        return jsonify({'results': []})
+
+    query = GlobalItem.query
+    if item_type:
+        query = query.filter(GlobalItem.item_type == item_type)
+
+    ilike_term = f"%{q}%"
+    items = query.filter(GlobalItem.name.ilike(ilike_term)).order_by(func.length(GlobalItem.name).asc()).limit(20).all()
+
+    results = []
+    for gi in items:
+        results.append({
+            'id': gi.id,
+            'text': gi.name,
+            'item_type': gi.item_type,
+            'default_unit': gi.default_unit,
+            'density': gi.density,
+            'capacity': gi.capacity,
+            'capacity_unit': gi.capacity_unit,
+        })
+
+    return jsonify({'results': results})

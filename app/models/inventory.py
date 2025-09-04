@@ -41,12 +41,16 @@ class InventoryItem(ScopedModelMixin, db.Model):
     # Intermediate ingredient flag
     intermediate = db.Column(db.Boolean, default=False)
 
+    # Global library linkage (nullable)
+    global_item_id = db.Column(db.Integer, db.ForeignKey('global_item.id'), nullable=True, index=True)
+
     # Organization relationship
     organization_id = db.Column(db.Integer, db.ForeignKey('organization.id'), nullable=True, index=True)
     organization = db.relationship('Organization', backref='inventory_items')
 
     category = db.relationship('IngredientCategory', backref='inventory_items')
     inventory_category = db.relationship('InventoryCategory', backref='inventory_items')
+    global_item = db.relationship('GlobalItem')
 
     # Aliases for legacy fields used by routes/templates
     @property
