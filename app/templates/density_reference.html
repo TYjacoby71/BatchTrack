@@ -1,4 +1,3 @@
-
 {% extends "layout.html" %}
 
 {% block content %}
@@ -54,12 +53,12 @@
             </div>
             <div class="card-body">
                 <div class="table-responsive">
-                    <table class="table table-hover">
-                        <thead>
+                    <table class="table table-striped table-hover table-bordered">
+                        <thead class="table-dark">
                             <tr>
-                                <th>Ingredient</th>
-                                <th class="text-center">Density (g/ml)</th>
-                                <th>Notes</th>
+                                <th style="width: 40%; min-width: 200px;">Ingredient</th>
+                                <th style="width: 20%; min-width: 120px; text-align: center;">Density (g/ml)</th>
+                                <th style="width: 40%; min-width: 150px;">Notes</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -67,11 +66,16 @@
                             <tr class="ingredient-row" 
                                 data-name="{{ item.name|lower }}" 
                                 data-category="{{ category_name|lower }}">
-                                <td><strong>{{ item.name }}</strong></td>
-                                <td class="text-center">
-                                    <span class="badge bg-primary">{{ "%.3f"|format(item.density_g_per_ml) }}</span>
+                                <td style="vertical-align: middle; padding: 12px;">
+                                    <strong>{{ item.name }}</strong>
+                                    {% if item.aliases %}
+                                    <br><small class="text-muted">Also known as: {{ item.aliases|join(', ') }}</small>
+                                    {% endif %}
                                 </td>
-                                <td>
+                                <td style="vertical-align: middle; text-align: center; padding: 12px;">
+                                    <span class="badge bg-primary fs-6" style="min-width: 60px;">{{ "%.3f"|format(item.density_g_per_ml) }}</span>
+                                </td>
+                                <td style="vertical-align: middle; padding: 12px;">
                                     <small class="text-muted">
                                         {% if item.notes %}{{ item.notes }}{% else %}Standard density{% endif %}
                                     </small>
@@ -112,7 +116,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
             // Check if category matches filter
             const categoryMatches = !selectedCategory || categoryName === selectedCategory;
-            
+
             if (categoryMatches) {
                 // Check each ingredient in this category
                 const rows = section.querySelectorAll('.ingredient-row');
@@ -179,7 +183,7 @@ document.addEventListener('DOMContentLoaded', function() {
     .table-responsive {
         font-size: 0.875rem;
     }
-    
+
     .card-header h4 {
         font-size: 1.1rem;
     }
