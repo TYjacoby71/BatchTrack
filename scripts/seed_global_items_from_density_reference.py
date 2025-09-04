@@ -11,7 +11,7 @@ from app.models import db, GlobalItem, InventoryCategory
 
 def load_density_json():
 	base = os.path.dirname(os.path.dirname(__file__))
-	path = os.path.join(base, 'app', 'data', 'density_reference.json')
+	path = os.path.join(base, 'data', 'density_reference.json')
 	if not os.path.exists(path):
 		return None
 	with open(path, 'r') as f:
