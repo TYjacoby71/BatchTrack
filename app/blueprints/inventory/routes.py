@@ -383,7 +383,26 @@ def edit_inventory(id):
         if item.type == 'ingredient':
             category_id = form_data.get('category_id')
             if category_id:
-                item.category_id = int(category_id)
+                if category_id.startswith('ref_'):
+                    # This is a reference category selection
+                    reference_category_name = category_id.replace('ref_', '')
+                    item.reference_item_name = None  # Clear specific item
+                    item.density_source = 'category_default'
+                    
+                    # Set density from reference guide via service
+                    try:
+                        DensityAssignmentService.assign_density_from_reference(item, reference_category_name)
+                    except Exception as e:
+                        logger.warning(f"Failed to assign reference density: {e}")
+                    
+                    item.category_id = None  # Clear regular category
+                else:
+                    # Regular category selection
+                    item.category_id = int(category_id)
+                    item.density_source = 'category_default'
+            else:
+                item.category_id = None
+                item.density_source = 'manual'
         else:
             item.category_id = None
 

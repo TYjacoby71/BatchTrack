@@ -15,17 +15,8 @@ class FallbackUnit:
 logger = logging.getLogger(__name__)
 
 def setup_logging(app):
-    if not os.path.exists('logs'):
-        os.makedirs('logs')
-
-    file_handler = RotatingFileHandler('logs/batchtrack.log', maxBytes=10240, backupCount=10)
-    file_handler.setFormatter(logging.Formatter(
-        '%(asctime)s %(levelname)s: %(message)s [in %(pathname)s:%(lineno)d]'
-    ))
-    file_handler.setLevel(logging.INFO)
-    app.logger.addHandler(file_handler)
-    app.logger.setLevel(logging.INFO)
-    app.logger.info('BatchTrack startup')
+    """Deprecated: logging is configured via app.logging_config.configure_logging."""
+    logger.debug('setup_logging called (deprecated). Using centralized logging_config instead.')
 
 def get_global_unit_list():
     """Get list of all active units, including both standard and organization-specific custom units"""
