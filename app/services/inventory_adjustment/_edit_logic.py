@@ -4,6 +4,7 @@ from app.models.inventory_lot import InventoryLot
 from app.models.unit import Unit
 from app.services.unit_conversion import ConversionEngine
 from flask import session
+from app.services.density_assignment_service import DensityAssignmentService
 from sqlalchemy import and_
 import logging
 
@@ -27,8 +28,8 @@ def update_inventory_item(item_id: int, form_data: dict) -> tuple[bool, str]:
         is_global_locked = getattr(item, 'global_item_id', None) is not None
 
         if is_global_locked:
-            # Prevent changes to name, unit, category, density
-            for forbidden_key in ['name', 'unit', 'category_id', 'density', 'item_density']:
+            # Prevent changes to name, category, density for globally-managed items (unit is user-editable)
+            for forbidden_key in ['name', 'category_id', 'density', 'item_density']:
                 if forbidden_key in form_data and str(form_data.get(forbidden_key)).strip() != str(getattr(item, 'name' if forbidden_key=='name' else forbidden_key, '')):
                     return False, "This item is managed by the global catalog. Identity fields cannot be edited."
 
@@ -104,15 +105,28 @@ def update_inventory_item(item_id: int, form_data: dict) -> tuple[bool, str]:
         if 'category_id' in form_data and not is_global_locked:
             raw_category = form_data.get('category_id')
             if raw_category in [None, '', 'null']:
-                # Custom category selected: clear category and allow manual density
+                # No category selected: clear linkage and allow manual density
                 item.category_id = None
             else:
-                try:
-                    item.category_id = int(raw_category)
-                    # When a category is selected, always clear manual density to use category default
-                    item.density = None
-                except (ValueError, TypeError):
-                    return False, "Invalid category ID"
+                # Support reference-guide categories passed as values like 'ref_<CategoryName>'
+                if isinstance(raw_category, str) and raw_category.startswith('ref_'):
+                    reference_category_name = raw_category.split('ref_', 1)[1]
+                    # Clear custom category linkage and assign density from reference category default
+                    item.category_id = None
+                    assigned = DensityAssignmentService.assign_density_to_ingredient(
+                        ingredient=item,
+                        use_category_default=True,
+                        category_name=reference_category_name
+                    )
+                    if not assigned:
+                        return False, f"Unable to assign density from reference category '{reference_category_name}'"
+                else:
+                    try:
+                        item.category_id = int(raw_category)
+                        # When a custom category is selected, use category default by clearing manual density
+                        item.density = None
+                    except (ValueError, TypeError):
+                        return False, "Invalid category ID"
 
         if 'low_stock_threshold' in form_data:
             try:
@@ -135,7 +149,9 @@ def update_inventory_item(item_id: int, form_data: dict) -> tuple[bool, str]:
 
         # Handle density updates for ingredients and any item supporting density
         # Accept keys: 'density' or 'item_density' from forms
-        if (('density' in form_data) or ('item_density' in form_data)) and not is_global_locked:
+        if (('density' in form_data) or ('item_density' in form_data)):
+            if is_global_locked:
+                return False, "This item is managed by the global catalog. Density cannot be edited."
             density_value = form_data.get('density', form_data.get('item_density'))
             try:
                 if density_value in [None, "", "null"]:
@@ -145,6 +161,12 @@ def update_inventory_item(item_id: int, form_data: dict) -> tuple[bool, str]:
                     if parsed <= 0:
                         return False, "Density must be greater than 0 g/mL"
                     item.density = parsed
+                # Mark source as manual when explicitly set
+                if 'density' in form_data or 'item_density' in form_data:
+                    try:
+                        setattr(item, 'density_source', 'manual')
+                    except Exception:
+                        pass
             except (ValueError, TypeError):
                 return False, "Invalid density value; please provide a numeric g/mL value"
 

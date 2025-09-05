@@ -84,6 +84,6 @@ from .reservation_routes import reservation_api_bp
 
 # Register sub-blueprints
 
-api_bp.register_blueprint(ingredient_api_bp)
+api_bp.register_blueprint(ingredient_api_bp, url_prefix='/ingredients')
 api_bp.register_blueprint(container_api_bp)
 api_bp.register_blueprint(reservation_api_bp)

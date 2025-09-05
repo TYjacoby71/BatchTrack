@@ -42,29 +42,8 @@
             </div>
           </div>
 
-          <div class="mb-3" id="categorySection" {% if item.type != 'ingredient' %}style="display: none;"{% endif %}>
-            <label for="category">Ingredient Category:</label>
-            <div class="input-group">
-              <select name="category_id" class="form-select" id="categorySelect" {% if item.global_item_id %}disabled{% endif %}>
-                <option value="">-- No Category --</option>
-                <optgroup label="Reference Guide Categories" id="referenceCategories">
-                  <!-- Populated via JavaScript -->
-                </optgroup>
-                <optgroup label="Custom Categories">
-                  {% for category in get_ingredient_categories() %}
-                  <option value="{{ category.id }}" {% if item.category_id == category.id %}selected{% endif %}
-                          data-density="{{ category.default_density }}">
-                      {{ category.name }} {% if category.default_density %}({{ category.default_density }} g/ml){% endif %}
-                  </option>
-                  {% endfor %}
-                </optgroup>
-              </select>
-              <button type="button" class="btn btn-outline-info" onclick="openDensityReference()" 
-                      title="Open density reference guide" data-bs-toggle="tooltip">
-                <i class="fas fa-book"></i>
-              </button>
-            </div>
-          </div>
+          <!-- Category selection removed; category/density assigned automatically at creation.
+               Users can override density below if desired. -->
 
           {% if item.type == 'container' %}
           <div class="mb-3">
@@ -83,7 +62,7 @@
           {% else %}
           <div class="mb-3">
             <label for="unit">Unit:</label>
-            <select name="unit" class="form-select select2" data-unit-select id="unitSelect" required {% if item.global_item_id %}disabled{% endif %}>
+            <select name="unit" class="form-select select2" data-unit-select id="unitSelect" required>
               {% for unit in get_global_unit_list() %}
                 <option value="{{ unit.name }}" {% if unit.name == item.unit %}selected{% endif %}>{{ unit.name }}</option>
               {% endfor %}
@@ -100,9 +79,7 @@
             </label>
             <div class="input-group">
               <input type="number" step="0.001" name="density" id="density" 
-                     class="form-control" value="{{ item.density or 0.0 }}"
-                     {% if item.category_id and not item.density %}disabled{% endif %}
-                     {% if item.global_item_id %}readonly{% endif %}>
+                     class="form-control" value="{{ item.density or '' }}" {% if item.global_item_id %}readonly{% endif %}>
             </div>
             <small class="text-muted">Used for volume ↔ weight conversions. Locked when using category default.</small>
           </div>
@@ -156,29 +133,6 @@ function openDensityReference() {
     window.open('/api/density-reference', '_blank', 'width=1000,height=700,scrollbars=yes,resizable=yes');
 }
 
-// Load reference guide categories
-async function loadReferenceCategories() {
-    try {
-        const response = await fetch('/api/density-reference/options');
-        const categories = await response.json();
-
-        const referenceGroup = document.getElementById('referenceCategories');
-        if (referenceGroup && Array.isArray(categories)) {
-            referenceGroup.innerHTML = '';
-            categories.forEach(category => {
-                const option = document.createElement('option');
-                option.value = `ref_${category.name}`;
-                option.textContent = `${category.name} (${(category.items || []).length} items)`;
-                option.setAttribute('data-density', category.default_density || '1.0');
-                option.setAttribute('data-reference-category', 'true');
-                referenceGroup.appendChild(option);
-            });
-        }
-    } catch (error) {
-        console.error('Failed to load reference categories:', error);
-    }
-}
-
 document.addEventListener('DOMContentLoaded', function() {
     // Initialize Bootstrap tooltips
     var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
@@ -186,8 +140,7 @@ document.addEventListener('DOMContentLoaded', function() {
         return new bootstrap.Tooltip(tooltipTriggerEl);
     });
 
-    // Load reference categories when page loads
-    loadReferenceCategories();
+    // No category selection to load
 
     const unitSelect = document.getElementById('unitSelect');
     const unitChangeWarning = document.getElementById('unitChangeWarning');
