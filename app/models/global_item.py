@@ -9,7 +9,9 @@ class GlobalItem(db.Model):
 	default_unit = db.Column(db.String(32), nullable=True)
 	# Ingredient-specific
 	density = db.Column(db.Float, nullable=True)  # g/ml
-	# Reference grouping for density categories (e.g., Oils, Waxes)
+	# Curated category relation (single source of truth)
+	ingredient_category_id = db.Column(db.Integer, db.ForeignKey('ingredient_category.id'), nullable=True, index=True)
+	# Deprecated: previous string-based category
 	reference_category = db.Column(db.String(64), nullable=True)
 	# Container/packaging defaults (nullable for packaging per requirement)
 	capacity = db.Column(db.Float, nullable=True)
@@ -30,6 +32,7 @@ class GlobalItem(db.Model):
 	archived_by = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True)
 
 	suggested_inventory_category = db.relationship('InventoryCategory')
+	ingredient_category = db.relationship('IngredientCategory')
 	archived_by_user = db.relationship('User', foreign_keys=[archived_by])
 
 	__table_args__ = (
