@@ -5,6 +5,7 @@ This handler should work with the centralized quantity update system.
 
 import logging
 from app.models import db, InventoryItem, IngredientCategory, Unit, UnifiedInventoryHistory, GlobalItem
+from app.services.density_assignment_service import DensityAssignmentService
 from ._fifo_ops import create_new_fifo_lot
 
 logger = logging.getLogger(__name__)
@@ -55,17 +56,33 @@ def create_inventory_item(form_data, organization_id, created_by):
         else:
             final_unit = 'count'  # Default unit
 
-        # Handle category
+        # Handle base category selector and custom density
         category_id = None
-        category_name = form_data.get('category')
-        if category_name:
-            category = db.session.query(IngredientCategory).filter_by(name=category_name).first()
-            if category:
-                category_id = category.id
-        # No explicit category provided; attempt from global item suggested inventory category
-        if category_id is None and global_item and global_item.suggested_inventory_category_id:
-            # Note: this is inventory category taxonomy; keep ingredient category separate
-            pass
+        raw_category_id = form_data.get('category_id')
+        custom_density = form_data.get('density')
+        if raw_category_id:
+            # Reference category e.g. 'ref_Waxes'
+            if isinstance(raw_category_id, str) and raw_category_id.startswith('ref_'):
+                ref_name = raw_category_id.split('ref_', 1)[1]
+                # Assign category default density now; if custom density present, it will override below
+                # Do not set IngredientCategory linkage for reference categories
+                try:
+                    DensityAssignmentService.assign_density_to_ingredient(
+                        ingredient=new_item if 'new_item' in locals() else None,
+                        use_category_default=True,
+                        category_name=ref_name
+                    )
+                except Exception:
+                    pass
+            elif raw_category_id == 'custom':
+                # no-op here; custom density handled below
+                pass
+            else:
+                # Legacy custom IngredientCategory by id
+                try:
+                    category_id = int(raw_category_id)
+                except Exception:
+                    category_id = None
 
         # Extract numeric fields with defaults
         cost_per_unit = 0.0
@@ -128,6 +145,23 @@ def create_inventory_item(form_data, organization_id, created_by):
                 new_item.capacity = global_item.capacity
             if global_item.capacity_unit is not None:
                 new_item.capacity_unit = global_item.capacity_unit
+
+        # If no density provided and no global item, try auto-assign based on name/category
+        if (not global_item) and (not custom_density):
+            try:
+                DensityAssignmentService.auto_assign_density_on_creation(new_item)
+            except Exception:
+                pass
+
+        # If user provided custom density, override
+        if custom_density not in [None, '', 'null']:
+            try:
+                parsed = float(custom_density)
+                if parsed > 0:
+                    new_item.density = parsed
+                    new_item.density_source = 'manual'
+            except Exception:
+                pass
 
         # Save the new item
         db.session.add(new_item)

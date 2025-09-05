@@ -187,6 +187,25 @@ document.addEventListener('DOMContentLoaded', function() {
       }
     });
 
+    // Load base categories into the Add Ingredient form's category select
+    fetch('/api/density-reference/options').then(r => r.json()).then(categories => {
+      const sel = document.getElementById('baseCategorySelect');
+      if (!sel || !Array.isArray(categories)) return;
+      // Insert reference categories as ref_<name> options
+      categories.sort((a,b) => (a.name||'').localeCompare(b.name||''));
+      categories.forEach(cat => {
+        const opt = document.createElement('option');
+        opt.value = `ref_${cat.name}`;
+        opt.textContent = `${cat.name}`;
+        sel.appendChild(opt);
+      });
+      // Custom option for manual density
+      const customOpt = document.createElement('option');
+      customOpt.value = 'custom';
+      customOpt.textContent = 'Custom density…';
+      sel.appendChild(customOpt);
+    }).catch(() => {});
+
     // If user clears or changes to a custom name, drop the global link to avoid stale linkage
     $nameSelect.on('change', function () {
       const val = $(this).val();
