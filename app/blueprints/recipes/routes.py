@@ -3,6 +3,8 @@ from flask_login import login_required, current_user
 from . import recipes_bp
 from app.extensions import db
 from app.models import Recipe, InventoryItem
+from app.services.inventory_adjustment import create_inventory_item
+from app.models.global_item import GlobalItem
 from app.utils.permissions import require_permission
 
 from app.services.recipe_service import (
@@ -327,20 +329,86 @@ def _extract_ingredients_from_form(form):
     """Extract ingredient data from form submission"""
     ingredients = []
     ingredient_ids = form.getlist('ingredient_ids[]')
+    ingredient_names = form.getlist('ingredient_names[]') or []
+    global_item_ids = form.getlist('global_item_ids[]') or []
     amounts = form.getlist('amounts[]')
     units = form.getlist('units[]')
 
-    for ing_id, amt, unit in zip(ingredient_ids, amounts, units):
-        if ing_id and amt and unit:
+    # Normalize lengths by padding lists
+    max_len = max(len(ingredient_ids), len(ingredient_names), len(global_item_ids), len(amounts), len(units))
+    def _safe_get(lst, idx):
+        try:
+            return lst[idx]
+        except Exception:
+            return ''
+
+    for idx in range(max_len):
+        ing_id_raw = _safe_get(ingredient_ids, idx)
+        name_raw = (_safe_get(ingredient_names, idx) or '').strip()
+        glob_id_raw = _safe_get(global_item_ids, idx)
+        amt_raw = _safe_get(amounts, idx)
+        unit_raw = _safe_get(units, idx)
+
+        if not amt_raw or not unit_raw:
+            continue
+
+        # Resolve or create inventory item
+        resolved_item_id = None
+        if ing_id_raw:
             try:
-                ingredients.append({
-                    'item_id': int(ing_id),
-                    'quantity': float(amt.strip()),
-                    'unit': unit.strip()
-                })
-            except (ValueError, TypeError) as e:
-                logger.error(f"Invalid ingredient data: {e}")
-                continue
+                resolved_item_id = int(ing_id_raw)
+            except Exception:
+                resolved_item_id = None
+        elif glob_id_raw:
+            try:
+                gi_id = int(glob_id_raw)
+            except Exception:
+                gi_id = None
+            if gi_id:
+                # Try to find existing org inventory linked to this global item
+                existing = InventoryItem.query.filter_by(
+                    organization_id=current_user.organization_id,
+                    global_item_id=gi_id
+                ).first()
+                if existing:
+                    resolved_item_id = existing.id
+                else:
+                    # Create a new zero-qty inventory item linked to this global item
+                    # Prefer global item name if not provided
+                    gi = db.session.get(GlobalItem, gi_id)
+                    new_name = name_raw or (gi.name if gi else f"Item {gi_id}")
+                    success, message, new_item_id = create_inventory_item(
+                        form_data={
+                            'name': new_name,
+                            'type': 'ingredient',
+                            'global_item_id': str(gi_id),
+                            'quantity': '0',
+                            'cost_per_unit': '0'
+                        },
+                        organization_id=current_user.organization_id,
+                        created_by=current_user.id
+                    )
+                    if success and new_item_id:
+                        resolved_item_id = new_item_id
+                    else:
+                        logger.error(f"Failed to create inventory for global item {gi_id}: {message}")
+                        resolved_item_id = None
+        else:
+            # Free-text only without selection: skip to enforce explicit add
+            continue
+
+        if resolved_item_id is None:
+            continue
+
+        try:
+            ingredients.append({
+                'item_id': int(resolved_item_id),
+                'quantity': float(str(amt_raw).strip()),
+                'unit': str(unit_raw).strip()
+            })
+        except (ValueError, TypeError) as e:
+            logger.error(f"Invalid ingredient data at index {idx}: {e}")
+            continue
 
     return ingredients
 
@@ -357,10 +425,35 @@ def _get_recipe_form_data():
     units = Unit.query.filter_by(is_active=True).order_by(Unit.unit_type, Unit.name).all()
     inventory_units = get_global_unit_list()
 
+    # Build simplified list for client-side search
+    all_ingredients_simple = [
+        {
+            'id': item.id,
+            'name': item.name,
+            'unit': item.unit,
+            'type': item.type,
+            'global_item_id': getattr(item, 'global_item_id', None)
+        }
+        for item in all_ingredients
+    ]
+
+    # Map global item id to existing org inventory item
+    global_to_inventory = {}
+    for item in all_ingredients:
+        gi_id = getattr(item, 'global_item_id', None)
+        if gi_id and gi_id not in global_to_inventory:
+            global_to_inventory[gi_id] = {
+                'id': item.id,
+                'name': item.name,
+                'unit': item.unit
+            }
+
     return {
         'all_ingredients': all_ingredients,
         'units': units,
-        'inventory_units': inventory_units
+        'inventory_units': inventory_units,
+        'all_ingredients_simple': all_ingredients_simple,
+        'global_to_inventory': global_to_inventory
     }
 
 def _format_stock_results(ingredients):

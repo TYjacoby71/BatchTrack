@@ -175,19 +175,12 @@
             {% if recipe and recipe.recipe_ingredients %}
                     {% for assoc in recipe.recipe_ingredients %}
                     <div class="ingredient-entry row mb-3 p-3 border rounded" data-ingredient-id="{{ assoc.inventory_item_id }}">
-                        <div class="col-md-4">
+                        <div class="col-md-4 position-relative">
                             <label class="form-label">Ingredient</label>
-                            <select name="ingredient_ids[]" class="form-select ingredient-select" required onchange="updateConversionWarning(this)">
-                                <option value="">Select ingredient...</option>
-                                {% for ingredient in all_ingredients %}
-                                <option value="{{ ingredient.id }}" 
-                                        data-unit="{{ ingredient.unit }}" 
-                                        data-type="{{ ingredient.type }}"
-                                        {% if ingredient.id == assoc.inventory_item_id %}selected{% endif %}>
-                                    {{ ingredient.name }}
-                                </option>
-                                {% endfor %}
-                            </select>
+                            <input type="text" name="ingredient_names[]" class="form-control ingredient-name-input" value="{{ assoc.inventory_item.name }}" autocomplete="off" required>
+                            <input type="hidden" name="ingredient_ids[]" value="{{ assoc.inventory_item_id }}">
+                            <input type="hidden" name="global_item_ids[]" value="">
+                            <div class="ingredient-suggestions position-absolute w-100" style="z-index: 1000; max-height: 220px; overflow-y: auto; display: none; background-color: white; border: 1px solid #dee2e6; border-radius: 0.375rem; box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);"></div>
                         </div>
                         <div class="col-md-3">
                             <label class="form-label">Amount</label>
@@ -216,14 +209,12 @@
                 {% elif ingredient_prefill %}
                     {% for ing_id, amount, unit in ingredient_prefill %}
                     <div class="ingredient-entry row mb-3 p-3 border rounded">
-                        <div class="col-md-4">
+                        <div class="col-md-4 position-relative">
                             <label class="form-label small">Ingredient</label>
-                            <select name="ingredient_ids[]" class="form-select" required>
-                                <option value="">Select an ingredient</option>
-                                {% for available_ing in all_ingredients if available_ing.type != 'container' %}
-                                <option value="{{ available_ing.id }}" {% if available_ing.id == ing_id %}selected{% endif %}>{{ available_ing.name }}</option>
-                                {% endfor %}
-                            </select>
+                            <input type="text" name="ingredient_names[]" class="form-control ingredient-name-input" value="{{ (all_ingredients|selectattr('id', 'equalto', ing_id)|list)[0].name if ing_id else '' }}" autocomplete="off" required>
+                            <input type="hidden" name="ingredient_ids[]" value="{{ ing_id }}">
+                            <input type="hidden" name="global_item_ids[]" value="">
+                            <div class="ingredient-suggestions position-absolute w-100" style="z-index: 1000; max-height: 220px; overflow-y: auto; display: none; background-color: white; border: 1px solid #dee2e6; border-radius: 0.375rem; box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);"></div>
                         </div>
                         <div class="col-md-3">
                             <label class="form-label small">Amount</label>
@@ -294,6 +285,10 @@ let ingredientReturnContext = 'main';
 {% if edit_mode and existing_batches and existing_batches > 0 %}
 let originalYieldUnit = '{{ recipe.predicted_yield_unit if recipe else '' }}';
 {% endif %}
+// Data for typeahead and unit warnings
+const ORG_INGREDIENTS = {{ (all_ingredients_simple or [])|tojson }};
+const ORG_INGREDIENTS_MAP_BY_ID = Object.fromEntries((ORG_INGREDIENTS || []).map(i => [i.id, i]));
+const GLOBAL_TO_INVENTORY = {{ (global_to_inventory or {})|tojson }};
 
 document.addEventListener('DOMContentLoaded', function() {
     // Initialize Bootstrap popovers
@@ -341,6 +336,12 @@ document.addEventListener('DOMContentLoaded', function() {
         addIngredient(PRESELECT_INGREDIENT_ID);
     }
 
+    // Attach typeahead to existing entries
+    document.querySelectorAll('.ingredient-entry').forEach(entry => {
+        attachIngredientTypeahead(entry);
+        updateConversionWarningForEntry(entry);
+    });
+
     {% if edit_mode and existing_batches and existing_batches > 0 %}
     // Show warning when yield unit is changed
     const yieldUnitSelect = document.getElementById('predicted_yield_unit');
@@ -370,14 +371,12 @@ function addIngredient(preselectId = null, presetUnit = null) {
     const entry = document.createElement('div');
     entry.classList.add('ingredient-entry', 'row', 'mb-3', 'p-3', 'border', 'rounded');
     entry.innerHTML = `
-        <div class="col-md-4">
+        <div class="col-md-4 position-relative">
             <label class="form-label small">Ingredient</label>
-            <select name="ingredient_ids[]" class="form-select" required>
-                <option value="">Select an ingredient</option>
-                {% for ing in all_ingredients if ing.type != 'container' %}
-                <option value="{{ ing.id }}">{{ ing.name }}</option>
-                {% endfor %}
-            </select>
+            <input type="text" name="ingredient_names[]" class="form-control ingredient-name-input" placeholder="Start typing to search..." autocomplete="off" required>
+            <input type="hidden" name="ingredient_ids[]" value="">
+            <input type="hidden" name="global_item_ids[]" value="">
+            <div class="ingredient-suggestions position-absolute w-100" style="z-index: 1000; max-height: 220px; overflow-y: auto; display: none; background-color: white; border: 1px solid #dee2e6; border-radius: 0.375rem; box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);"></div>
         </div>
         <div class="col-md-3">
             <label class="form-label small">Amount</label>
@@ -405,11 +404,18 @@ function addIngredient(preselectId = null, presetUnit = null) {
     container.appendChild(entry);
 
     if (preselectId) {
-        const select = entry.querySelector('select[name="ingredient_ids[]"]');
-        if (select) select.value = preselectId;
+        // If preselectId is provided, set ingredient_ids and name if available from mapping
+        try {
+            const found = ORG_INGREDIENTS.find(i => i.id === parseInt(preselectId));
+            if (found) {
+                entry.querySelector('input[name="ingredient_ids[]"]').value = String(found.id);
+                entry.querySelector('input[name="ingredient_names[]"]').value = found.name;
+            }
+        } catch (e) { /* no-op */ }
     }
 
     entry.scrollIntoView({ behavior: 'smooth' });
+    attachIngredientTypeahead(entry);
     return entry;
 }
 
@@ -443,29 +449,120 @@ function setIngredientReturnContext(context) {
     ingredientReturnContext = context;
 }
 
-function updateConversionWarning(selectElement) {
-    // Get the selected ingredient data
-    const selectedOption = selectElement.selectedOptions[0];
-    if (!selectedOption) return;
-
-    const ingredientType = selectedOption.dataset.type;
-    const ingredientUnit = selectedOption.dataset.unit;
-
-    // Find the corresponding unit dropdown and warning div
-    const ingredientEntry = selectElement.closest('.ingredient-entry');
+function updateConversionWarningForEntry(ingredientEntry) {
     const unitSelect = ingredientEntry.querySelector('select[name="units[]"]');
     const warningDiv = ingredientEntry.querySelector('.conversion-warning');
-
-    if (!unitSelect || !warningDiv) return;
+    const ingredientIdInput = ingredientEntry.querySelector('input[name="ingredient_ids[]"]');
+    if (!unitSelect || !warningDiv || !ingredientIdInput) return;
 
     const selectedUnit = unitSelect.value;
-
-    // Clear previous warnings
+    const ingredientId = parseInt(ingredientIdInput.value || '0');
+    const inv = ORG_INGREDIENTS_MAP_BY_ID[ingredientId];
+    const inventoryUnit = inv ? inv.unit : null;
     warningDiv.innerHTML = '';
+    if (inventoryUnit && selectedUnit && inventoryUnit !== selectedUnit) {
+        warningDiv.innerHTML = `<span class="text-warning"><i class="fas fa-exclamation-triangle"></i> Will convert from ${selectedUnit} to ${inventoryUnit}</span>`;
+    }
+}
 
-    // Show conversion warning if units don't match
-    if (ingredientUnit && selectedUnit && ingredientUnit !== selectedUnit) {
-        warningDiv.innerHTML = `<span class="text-warning"><i class="fas fa-exclamation-triangle"></i> Will convert from ${selectedUnit} to ${ingredientUnit}</span>`;
+function attachIngredientTypeahead(ingredientEntry) {
+    const input = ingredientEntry.querySelector('.ingredient-name-input');
+    const suggestionsDiv = ingredientEntry.querySelector('.ingredient-suggestions');
+    const ingredientIdInput = ingredientEntry.querySelector('input[name="ingredient_ids[]"]');
+    const globalItemIdInput = ingredientEntry.querySelector('input[name="global_item_ids[]"]');
+
+    if (!input || !suggestionsDiv || !ingredientIdInput || !globalItemIdInput) return;
+
+    let searchTimeout;
+    input.addEventListener('input', function() {
+        const query = this.value.trim();
+        ingredientIdInput.value = '';
+        globalItemIdInput.value = '';
+        suggestionsDiv.innerHTML = '';
+        if (query.length < 2) {
+            suggestionsDiv.style.display = 'none';
+            return;
+        }
+
+        clearTimeout(searchTimeout);
+        searchTimeout = setTimeout(() => {
+            // Local inventory suggestions (org-scoped)
+            const invMatches = ORG_INGREDIENTS.filter(i => i.type !== 'container' && i.name.toLowerCase().includes(query.toLowerCase())).slice(0, 6);
+
+            // Fetch global items
+            fetch(`/api/ingredients/global-items/search?q=${encodeURIComponent(query)}&type=ingredient`)
+                .then(r => r.json())
+                .then(data => {
+                    const globalResults = Array.isArray(data.results) ? data.results : [];
+                    suggestionsDiv.innerHTML = '';
+
+                    if (invMatches.length > 0) {
+                        const header = document.createElement('div');
+                        header.className = 'px-3 py-1 text-muted small';
+                        header.textContent = 'Your Inventory';
+                        suggestionsDiv.appendChild(header);
+                        invMatches.forEach(item => {
+                            const el = document.createElement('div');
+                            el.className = 'px-3 py-2';
+                            el.style.cssText = 'cursor: pointer; border-bottom: 1px solid #e9ecef;';
+                            el.textContent = item.name;
+                            el.addEventListener('click', function() {
+                                input.value = item.name;
+                                ingredientIdInput.value = String(item.id);
+                                globalItemIdInput.value = '';
+                                suggestionsDiv.style.display = 'none';
+                                updateConversionWarningForEntry(ingredientEntry);
+                            });
+                            suggestionsDiv.appendChild(el);
+                        });
+                    }
+
+                    if (globalResults.length > 0) {
+                        const header2 = document.createElement('div');
+                        header2.className = 'px-3 py-1 text-muted small';
+                        header2.textContent = 'Global Library';
+                        suggestionsDiv.appendChild(header2);
+                        globalResults.forEach(gi => {
+                            const el = document.createElement('div');
+                            el.className = 'px-3 py-2';
+                            el.style.cssText = 'cursor: pointer; border-bottom: 1px solid #e9ecef;';
+                            el.textContent = gi.text;
+                            el.addEventListener('click', function() {
+                                // If org already has item linked to this global item, use it
+                                const mapped = GLOBAL_TO_INVENTORY[gi.id];
+                                input.value = gi.text;
+                                if (mapped) {
+                                    ingredientIdInput.value = String(mapped.id);
+                                    globalItemIdInput.value = '';
+                                } else {
+                                    ingredientIdInput.value = '';
+                                    globalItemIdInput.value = String(gi.id);
+                                }
+                                suggestionsDiv.style.display = 'none';
+                                updateConversionWarningForEntry(ingredientEntry);
+                            });
+                            suggestionsDiv.appendChild(el);
+                        });
+                    }
+
+                    suggestionsDiv.style.display = (suggestionsDiv.children.length > 0) ? 'block' : 'none';
+                })
+                .catch(() => { suggestionsDiv.style.display = 'none'; });
+        }, 250);
+    });
+
+    document.addEventListener('click', function(e) {
+        if (!ingredientEntry.contains(e.target)) {
+            suggestionsDiv.style.display = 'none';
+        }
+    });
+
+    // Update conversion warning when unit changes
+    const unitSelect = ingredientEntry.querySelector('select[name="units[]"]');
+    if (unitSelect) {
+        unitSelect.addEventListener('change', function() {
+            updateConversionWarningForEntry(ingredientEntry);
+        });
     }
 }
 </script>
