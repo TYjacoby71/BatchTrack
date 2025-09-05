@@ -1,8 +1,8 @@
 """
 add consumables tables for recipes and batches
 
-Revision ID: 20250905_02_add_consumables_models
-Revises: 20250905_01_global_item_soft_delete_and_inventory_ownership
+Revision ID: 2025090502
+Revises: 2025090501
 Create Date: 2025-09-05
 """
 
@@ -10,8 +10,8 @@ from alembic import op
 import sqlalchemy as sa
 
 # revision identifiers, used by Alembic.
-revision = '20250905_02_add_consumables_models'
-down_revision = '20250905_01_global_item_soft_delete_and_inventory_ownership'
+revision = '2025090502'
+down_revision = '2025090501'
 branch_labels = None
 depends_on = None
 
