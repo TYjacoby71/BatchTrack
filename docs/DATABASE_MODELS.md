@@ -63,17 +63,23 @@
 
 ## Inventory Models
 
+### GlobalItem
+- **Purpose**: Curated global item library (read-only to orgs)
+- **Scoping**: System-wide (platform-owned)
+- **Key Fields**: `name`, `item_type`, `default_unit`, `density`, `capacity`, `synonyms`, perishables
+- **Relationships**: Referenced by `InventoryItem.global_item_id`
+
 ### Ingredient
-- **Purpose**: Raw materials catalog
+- **Purpose**: Raw materials catalog (legacy/local)
 - **Scoping**: `organization_id`
 - **Key Fields**: `density`, `category_id`, `is_active`
 - **Relationships**: InventoryItems, Category
 
 ### InventoryItem
-- **Purpose**: Stock tracking with FIFO
+- **Purpose**: Organization-owned stock with FIFO
 - **Scoping**: `organization_id`
-- **Key Fields**: `quantity`, `cost_per_unit`, `expiration_date`
-- **Relationships**: Ingredient, InventoryHistory
+- **Key Fields**: `quantity`, `cost_per_unit`, `expiration_date`, `type`, `global_item_id` (nullable), `ownership`
+- **Relationships**: GlobalItem (nullable FK), Ingredient (legacy), InventoryHistory
 
 ### InventoryHistory
 - **Purpose**: All inventory movements
@@ -169,7 +175,10 @@ Batch
 
 ### Inventory Management
 ```
-Ingredient
+GlobalItem (curated)
+└── InventoryItems (org-owned)
+
+Ingredient (legacy/local)
 ├── InventoryItems (multiple lots)
 ├── InventoryHistory (all changes)
 └── RecipeIngredients (usage)

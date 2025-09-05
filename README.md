@@ -65,6 +65,8 @@ For detailed development information, see:
 - **[Database Models](docs/DATABASE_MODELS.md)** - Model relationships and migrations
 - **[Development Guide](docs/DEVELOPMENT_GUIDE.md)** - How to add features safely
 - **[API Reference](docs/API_REFERENCE.md)** - Endpoint documentation
+ - **[Global Item Library](docs/GLOBAL_ITEM_LIBRARY.md)** - Library & Shelf model and global-locked rules
+ - **[Wall of Drawers Protocol](docs/WALL_OF_DRAWERS_PROTOCOL.md)** - In-context error resolution pattern
 
 ## 🔒 Development Guardrails
 
@@ -73,7 +75,9 @@ For detailed development information, see:
 3. **NO hardcoded permissions** - Use `has_permission(user, permission_name)`
 4. **Follow service authority** - Each service owns its domain completely
 5. **Reference FIFO lots consistently** - Use `fifo_code` (never just ID)
-6. **Update docs when adding services** - Maintain documentation accuracy
+6. **Use drawers for user-fixable errors** - Return `drawer_payload` instead of hard-blocking
+7. **Respect Global-Locked identity** - Do not mutate identity on items linked to `GlobalItem`
+8. **Update docs when adding services** - Maintain documentation accuracy
 
 ## 🐛 Current Issues
 

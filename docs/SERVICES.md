@@ -4,6 +4,8 @@
 
 BatchTrack uses a service-oriented architecture where each service has complete authority over its domain. **Never bypass these services** - always use the proper service for any operation in its domain.
 
+For in-context user-fixable errors, services should return a `drawer_payload` (see `docs/WALL_OF_DRAWERS_PROTOCOL.md`).
+
 ## Core Services
 
 ### 1. FIFO Service (`app/blueprints/fifo/services.py`)
@@ -69,6 +71,7 @@ adjust_inventory(
 
 **Class:** `ConversionEngine`
 **Location:** `app/services/unit_conversion.py`
+**Drawer Mapping:** `app/services/unit_conversion/drawer_errors.py` (e.g., `MISSING_DENSITY`, `MISSING_CUSTOM_MAPPING`)
 
 Handles all unit conversions with support for:
 - Direct conversions (same unit type)
@@ -125,6 +128,7 @@ availability = check_recipe_availability(
 - Accounts for reserved inventory
 - Provides detailed shortage information
 - Supports recipe scaling calculations
+- Returns drawer payloads from dependent services when appropriate
 
 ### 5. Expiration Service (`app/blueprints/expiration/services.py`)
 
@@ -285,11 +289,10 @@ adjust_inventory(
 
 ### Error Response Patterns
 ```python
-try:
-    result = service_function(**params)
-    return {"success": True, "data": result}
-except ServiceError as e:
-    return {"success": False, "error": str(e)}
+result = service_function(**params)
+if result.get('drawer_payload'):
+    return {"success": False, **result}
+return {"success": True, "data": result}
 ```
 
 ## Testing Services
@@ -336,4 +339,4 @@ def test_batch_production_flow():
 
 ---
 
-**Next:** See [USERS_AND_PERMISSIONS.md](USERS_AND_PERMISSIONS.md) for user management details.
+**Next:** See [USERS_AND_PERMISSIONS.md](USERS_AND_PERMISSIONS.md) for user management details. Also see [WALL_OF_DRAWERS_PROTOCOL.md](WALL_OF_DRAWERS_PROTOCOL.md).

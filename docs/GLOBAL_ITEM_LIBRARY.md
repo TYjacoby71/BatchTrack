@@ -70,3 +70,7 @@ The Global Item Library separates platform-managed knowledge from organization-o
 - Category-level density hints refined by product category.
 - Regional variants of `GlobalItem` via locale-scoped curation.
 - Versioned `GlobalItem` releases with migration helpers.
+
+## On the "Global Inventory List"
+
+There is no separate "Global Inventory List" document. The function of a global list is fulfilled by the curated `GlobalItem` library plus links from `InventoryItem`. Keeping this together avoids duplication and drift; any global catalog changes belong here and in migrations/seeders.

@@ -13,6 +13,7 @@ Each service is the **single source of truth** for its domain:
 - **Unit Conversion Service** (`app/services/unit_conversion.py`) - All unit conversions
 - **Stock Check Service** (`app/services/stock_check.py`) - Availability validation
 - **Expiration Service** (`app/blueprints/expiration/services.py`) - Shelf-life management
+ - **Global Item Library** (`GlobalItem` → `InventoryItem`) - Curated identity data with global-locked linkage
 
 ### 2. Multi-Tenant Data Scoping
 - All data is scoped by `organization_id`
@@ -87,6 +88,7 @@ Subscription Tier → Available Features → User Limits → Team Members → Ac
 - Stock checks fail-safe (show warnings, don't block)
 - FIFO deduction attempts to find available inventory
 - Unit conversions fall back to base units
+ - Drawer Protocol for user-fixable errors (see `docs/WALL_OF_DRAWERS_PROTOCOL.md`)
 
 ## Performance Considerations
 
@@ -126,9 +128,10 @@ Subscription Tier → Available Features → User Limits → Team Members → Ac
 ### Modifying Existing Features
 1. Check service authority - don't bypass services
 2. Maintain organization scoping
-3. Preserve audit trails
+3. Preserve audit trails; never mutate identity on global-locked `InventoryItem`
 4. Test multi-tenant scenarios
-5. Update related documentation
+5. Use the drawer protocol for in-context fixes; avoid blocking errors when possible
+6. Update related documentation (Library & Drawers)
 
 ### Database Changes
 1. Use Alembic migrations
@@ -177,4 +180,4 @@ Subscription Tier → Available Features → User Limits → Team Members → Ac
 
 ---
 
-**Next:** See [SERVICES.md](SERVICES.md) for detailed service specifications.
+**Next:** See [SERVICES.md](SERVICES.md) for detailed service specifications. Also see [GLOBAL_ITEM_LIBRARY.md](GLOBAL_ITEM_LIBRARY.md) and [WALL_OF_DRAWERS_PROTOCOL.md](WALL_OF_DRAWERS_PROTOCOL.md).
