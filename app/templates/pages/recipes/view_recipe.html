@@ -68,6 +68,17 @@
         {% endfor %}
     </ul>
 
+    <h3>Consumables</h3>
+    <ul>
+        {% if recipe.recipe_consumables %}
+            {% for assoc in recipe.recipe_consumables %}
+            <li>{{ assoc.inventory_item.name if assoc.inventory_item else assoc.inventory_item_id }}: {{ assoc.quantity }} {{ assoc.unit }}</li>
+            {% endfor %}
+        {% else %}
+            <li class="text-muted">No consumables configured</li>
+        {% endif %}
+    </ul>
+
     {% if recipe.instructions %}
     <h3>Instructions</h3>
     <p>{{ recipe.instructions }}</p>

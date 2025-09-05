@@ -65,6 +65,20 @@ class BatchContainer(ScopedModelMixin, db.Model):
     batch = db.relationship('Batch', backref='containers')
     container = db.relationship('InventoryItem')
 
+class BatchConsumable(ScopedModelMixin, db.Model):
+    __tablename__ = 'batch_consumable'
+    id = db.Column(db.Integer, primary_key=True)
+    batch_id = db.Column(db.Integer, db.ForeignKey('batch.id'), nullable=False)
+    inventory_item_id = db.Column(db.Integer, db.ForeignKey('inventory_item.id'), nullable=False)
+    quantity_used = db.Column(db.Float, nullable=False)
+    unit = db.Column(db.String(32), nullable=False)
+    cost_per_unit = db.Column(db.Float)
+    total_cost = db.Column(db.Float)
+    organization_id = db.Column(db.Integer, db.ForeignKey('organization.id'), nullable=True)
+
+    batch = db.relationship('Batch', backref='consumables')
+    inventory_item = db.relationship('InventoryItem')
+
 class ExtraBatchContainer(ScopedModelMixin, db.Model):
     __tablename__ = 'extra_batch_container'
     id = db.Column(db.Integer, primary_key=True)
@@ -106,3 +120,18 @@ class ExtraBatchIngredient(ScopedModelMixin, db.Model):
 
     batch = db.relationship('Batch', backref='extra_ingredients')
     inventory_item = db.relationship('InventoryItem', backref='extra_batch_usages')
+
+class ExtraBatchConsumable(ScopedModelMixin, db.Model):
+    __tablename__ = 'extra_batch_consumable'
+    id = db.Column(db.Integer, primary_key=True)
+    batch_id = db.Column(db.Integer, db.ForeignKey('batch.id'), nullable=False)
+    inventory_item_id = db.Column(db.Integer, db.ForeignKey('inventory_item.id'), nullable=False)
+    quantity_used = db.Column(db.Float, nullable=False)
+    unit = db.Column(db.String(32), nullable=False)
+    cost_per_unit = db.Column(db.Float)
+    total_cost = db.Column(db.Float)
+    reason = db.Column(db.String(20), nullable=False, default='extra_use')
+    organization_id = db.Column(db.Integer, db.ForeignKey('organization.id'), nullable=True)
+
+    batch = db.relationship('Batch', backref='extra_consumables')
+    inventory_item = db.relationship('InventoryItem')

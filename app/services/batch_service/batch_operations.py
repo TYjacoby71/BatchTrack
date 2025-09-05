@@ -5,6 +5,7 @@ from sqlalchemy import extract
 from flask_login import current_user
 
 from app.models import db, Batch, Recipe, InventoryItem, BatchContainer, BatchIngredient
+from app.models.batch import BatchConsumable
 from app.models import ExtraBatchIngredient, ExtraBatchContainer, Product, ProductVariant
 from app.services.unit_conversion import ConversionEngine
 from app.services.inventory_adjustment import process_inventory_adjustment
@@ -62,8 +63,11 @@ class BatchOperationsService(BaseService):
             # Process ingredient deductions
             ingredient_errors = cls._process_batch_ingredients(batch, recipe, scale, defer_commit=True)
 
+            # Process consumable deductions
+            consumable_errors = cls._process_batch_consumables(batch, recipe, scale, defer_commit=True)
+
             # Combine all errors
-            all_errors = container_errors + ingredient_errors
+            all_errors = container_errors + ingredient_errors + consumable_errors
 
             if all_errors:
                 # Any deduction failure should abort the entire start
@@ -187,6 +191,67 @@ class BatchOperationsService(BaseService):
         return errors
 
     @classmethod
+    def _process_batch_consumables(cls, batch, recipe, scale, defer_commit=False):
+        """Process consumable deductions and snapshot for batch start"""
+        errors = []
+        try:
+            # If recipe has no consumables relationship, skip gracefully
+            consumables = getattr(recipe, 'recipe_consumables', []) or []
+            for assoc in consumables:
+                item = assoc.inventory_item
+                if not item:
+                    continue
+
+                required_amount = assoc.quantity * scale
+
+                try:
+                    # Align units to inventory unit
+                    from app.services.unit_conversion import ConversionEngine
+                    conversion_result = ConversionEngine.convert_units(
+                        required_amount,
+                        assoc.unit,
+                        item.unit,
+                        ingredient_id=item.id,
+                        density=item.density or (item.category.default_density if item.category else None)
+                    )
+                    required_converted = conversion_result['converted_value']
+
+                    success, message = process_inventory_adjustment(
+                        item_id=item.id,
+                        quantity=-required_converted,
+                        change_type='batch',
+                        unit=item.unit,
+                        notes=f"Consumable used in batch {batch.label_code}",
+                        batch_id=batch.id,
+                        created_by=current_user.id,
+                        defer_commit=defer_commit
+                    )
+
+                    if not success:
+                        errors.append(message or f"Not enough {item.name} in stock (consumable).")
+                        continue
+
+                    # Snapshot
+                    snap = BatchConsumable(
+                        batch_id=batch.id,
+                        inventory_item_id=item.id,
+                        quantity_used=required_converted,
+                        unit=item.unit,
+                        cost_per_unit=item.cost_per_unit,
+                        organization_id=current_user.organization_id
+                    )
+                    db.session.add(snap)
+
+                except ValueError as e:
+                    errors.append(f"Error converting units for {item.name}: {str(e)}")
+
+        except Exception as e:
+            logger.error(f"Error processing batch consumables: {str(e)}")
+            errors.append(f"Error processing consumables: {str(e)}")
+
+        return errors
+
+    @classmethod
     def cancel_batch(cls, batch_id):
         """Cancel a batch and restore inventory"""
         try:
@@ -208,6 +273,9 @@ class BatchOperationsService(BaseService):
             batch_containers = BatchContainer.query.filter_by(batch_id=batch.id).all()
             extra_ingredients = ExtraBatchIngredient.query.filter_by(batch_id=batch.id).all()
             extra_containers = ExtraBatchContainer.query.filter_by(batch_id=batch.id).all()
+            from app.models.batch import BatchConsumable, ExtraBatchConsumable
+            batch_consumables = BatchConsumable.query.filter_by(batch_id=batch.id).all()
+            extra_consumables = ExtraBatchConsumable.query.filter_by(batch_id=batch.id).all()
 
             # Pre-validate FIFO sync for all ingredients
             for batch_ingredient in batch_ingredients:
@@ -270,6 +338,35 @@ class BatchOperationsService(BaseService):
 
             # Restore extra containers
             for extra_container in extra_containers:
+            # Restore consumables
+            for cons in batch_consumables:
+                item = cons.inventory_item
+                if item:
+                    process_inventory_adjustment(
+                        item_id=item.id,
+                        quantity=cons.quantity_used,
+                        change_type='refunded',
+                        unit=cons.unit,
+                        notes=f"Consumable refunded from cancelled batch {batch.label_code}",
+                        batch_id=batch.id,
+                        created_by=current_user.id
+                    )
+                    restoration_summary.append(f"{cons.quantity_used} {cons.unit} of {item.name}")
+
+            # Restore extra consumables
+            for extra_cons in extra_consumables:
+                item = extra_cons.inventory_item
+                if item:
+                    process_inventory_adjustment(
+                        item_id=item.id,
+                        quantity=extra_cons.quantity_used,
+                        change_type='refunded',
+                        unit=extra_cons.unit,
+                        notes=f"Extra consumable refunded from cancelled batch {batch.label_code}",
+                        batch_id=batch.id,
+                        created_by=current_user.id
+                    )
+                    restoration_summary.append(f"{extra_cons.quantity_used} {extra_cons.unit} of {item.name}")
                 container = extra_container.container
                 if container:
                     process_inventory_adjustment(
@@ -320,8 +417,8 @@ class BatchOperationsService(BaseService):
             return False, str(e)
 
     @classmethod
-    def add_extra_items_to_batch(cls, batch_id, extra_ingredients=None, extra_containers=None):
-        """Add extra ingredients and containers to an in-progress batch"""
+    def add_extra_items_to_batch(cls, batch_id, extra_ingredients=None, extra_containers=None, extra_consumables=None):
+        """Add extra ingredients, containers, and consumables to an in-progress batch"""
         try:
             batch = Batch.query.get(batch_id)
             if not batch:
@@ -332,6 +429,7 @@ class BatchOperationsService(BaseService):
 
             extra_ingredients = extra_ingredients or []
             extra_containers = extra_containers or []
+            extra_consumables = extra_consumables or []
             errors = []
 
             # Process extra containers

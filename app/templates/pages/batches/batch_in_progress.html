@@ -123,6 +123,9 @@
                     <button type="button" class="btn btn-sm btn-secondary" onclick="addExtraItemRow('container')">
                         <i class="fas fa-plus"></i> Add Extra Container
                     </button>
+                    <button type="button" class="btn btn-sm btn-secondary" onclick="addExtraItemRow('consumable')">
+                        <i class="fas fa-plus"></i> Add Extra Consumable
+                    </button>
                     <button type="button" class="btn btn-primary" onclick="saveExtras()">
                         <i class="fas fa-save"></i> Save All Extras
                     </button>
@@ -195,6 +198,21 @@
                             <td colspan="4" class="text-end"><em>Containers Subtotal:</em></td>
                             <td><strong>${{ "%.2f"|format(ns.container_total) }}</strong></td>
                         </tr>
+                        {% endif %}
+
+                        {% if batch.consumables %}
+                        <tr><th colspan="5" class="table-secondary">Consumables</th></tr>
+                        {% for cons in batch.consumables %}
+                            {% set line_cost = (cons.quantity_used|float or 0) * (cons.cost_per_unit|float or 0) %}
+                            <tr>
+                                <td>{{ cons.inventory_item.name }}</td>
+                                <td>{{ "%.3f"|format(cons.quantity_used|float or 0) }}</td>
+                                <td>{{ cons.unit }}</td>
+                                <td>${{ "%.2f"|format(cons.cost_per_unit|float or 0) }}</td>
+                                <td>${{ "%.2f"|format(line_cost) }}</td>
+                            </tr>
+                            {% set ns.ingredient_total = ns.ingredient_total + line_cost %}
+                        {% endfor %}
                         {% endif %}
 
                         {% if batch.extra_ingredients %}
@@ -365,6 +383,37 @@
             <input type="number" class="form-control cost" placeholder="Cost each" step="0.01" readonly />
         </div>
         <div class="col-md-2">
+            <button type="button" class="btn btn-danger btn-sm" onclick="this.parentElement.parentElement.remove()">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+    </div>
+</template>
+
+<template id="extra-consumable-template">
+    <div class="extra-row row g-2 mb-3 align-items-center p-2 border rounded" data-type="consumable">
+        <div class="col-md-4">
+            <select class="form-select item-select" onchange="updateRowCost(this)">
+                <option value="">Select consumable</option>
+                {% for item in all_ingredients if item.type == 'consumable' %}
+                    <option value="{{ item.id }}" data-cost="{{ item.cost_per_unit or 0 }}" data-unit="{{ item.unit }}">{{ item.name }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="col-md-2">
+            <input type="number" class="form-control qty" placeholder="Quantity" step="0.01" />
+        </div>
+        <div class="col-md-2">
+            <select class="form-select unit">
+                {% for unit in units %}
+                    <option value="{{ unit.name }}">{{ unit.name }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="col-md-3">
+            <input type="number" class="form-control cost" placeholder="Cost per unit" step="0.01" readonly />
+        </div>
+        <div class="col-md-1">
             <button type="button" class="btn btn-danger btn-sm" onclick="this.parentElement.parentElement.remove()">
                 <i class="fas fa-times"></i>
             </button>

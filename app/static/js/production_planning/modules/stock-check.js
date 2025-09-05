@@ -124,7 +124,7 @@ export class StockCheckManager {
         }
 
         let html = '<div class="table-responsive"><table class="table table-sm table-striped">';
-        html += '<thead><tr><th>Ingredient</th><th>Required</th><th>Available</th><th>Unit</th><th>Status</th></tr></thead><tbody>';
+        html += '<thead><tr><th>Item</th><th>Required</th><th>Available</th><th>Unit</th><th>Status</th></tr></thead><tbody>';
 
         let allIngredientsAvailable = true;
 
