@@ -1,0 +1,93 @@
+
+{% extends 'layout.html' %}
+{% block content %}
+<h2>Create Global Item</h2>
+
+<div class="row">
+  <div class="col-lg-8">
+    <div class="card">
+      <div class="card-body">
+        <form method="post">
+          <div class="row g-3">
+            <div class="col-md-6">
+              <label class="form-label">Name *</label>
+              <input type="text" name="name" class="form-control" required>
+            </div>
+            <div class="col-md-3">
+              <label class="form-label">Item Type *</label>
+              <select name="item_type" class="form-select" required>
+                <option value="ingredient">Ingredient</option>
+                <option value="container">Container</option>
+                <option value="packaging">Packaging</option>
+                <option value="consumable">Consumable</option>
+              </select>
+            </div>
+            <div class="col-md-3">
+              <label class="form-label">Default Unit</label>
+              <input type="text" name="default_unit" class="form-control" placeholder="g, ml, oz, etc.">
+            </div>
+            <div class="col-md-4">
+              <label class="form-label">Reference Category</label>
+              <input type="text" name="reference_category" class="form-control" placeholder="e.g. Oils, Waxes, Dairy">
+              <small class="text-muted">For grouping similar items</small>
+            </div>
+            <div class="col-md-4">
+              <label class="form-label">Density (g/ml)</label>
+              <input type="number" step="0.001" name="density" class="form-control" placeholder="1.0">
+              <small class="text-muted">For weight/volume conversions</small>
+            </div>
+            <div class="col-md-4">
+              <label class="form-label">Capacity</label>
+              <input type="number" step="0.01" name="capacity" class="form-control" placeholder="500">
+              <small class="text-muted">For containers/packaging</small>
+            </div>
+            <div class="col-md-4">
+              <label class="form-label">Capacity Unit</label>
+              <input type="text" name="capacity_unit" class="form-control" placeholder="ml, oz, g">
+            </div>
+            <div class="col-md-4">
+              <label class="form-label">Shelf Life (days)</label>
+              <input type="number" name="recommended_shelf_life_days" class="form-control" placeholder="365">
+            </div>
+            <div class="col-md-4">
+              <div class="form-check mt-4">
+                <input type="checkbox" name="default_is_perishable" class="form-check-input" id="perishable">
+                <label class="form-check-label" for="perishable">
+                  Default as Perishable
+                </label>
+              </div>
+            </div>
+            <div class="col-12">
+              <label class="form-label">Alternative Names (AKA)</label>
+              <input type="text" name="aka_names" class="form-control" placeholder="synonym1, synonym2, synonym3">
+              <small class="text-muted">Comma-separated list of alternative names for search</small>
+            </div>
+          </div>
+          
+          <div class="mt-4">
+            <button type="submit" class="btn btn-primary">Create Global Item</button>
+            <a href="{{ url_for('developer.global_items_admin') }}" class="btn btn-secondary">Cancel</a>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+  
+  <div class="col-lg-4">
+    <div class="card">
+      <div class="card-header">
+        <h5>Guidelines</h5>
+      </div>
+      <div class="card-body">
+        <ul class="list-unstyled">
+          <li><strong>Name:</strong> Use clear, standard names that organizations will recognize</li>
+          <li><strong>Type:</strong> Choose the primary category this item fits</li>
+          <li><strong>Density:</strong> Critical for ingredients that need weight/volume conversion</li>
+          <li><strong>Capacity:</strong> For containers and packaging items</li>
+          <li><strong>AKA Names:</strong> Include common synonyms to improve searchability</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

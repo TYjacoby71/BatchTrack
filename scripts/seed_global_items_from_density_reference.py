@@ -1,12 +1,17 @@
 import json
 import os
+import sys
+
+# Add the parent directory to the Python path so we can import app
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
 from app import create_app
 from app.models import db, GlobalItem, InventoryCategory
 
 
 def load_density_json():
 	base = os.path.dirname(os.path.dirname(__file__))
-	path = os.path.join(base, 'app', 'data', 'density_reference.json')
+	path = os.path.join(base, 'data', 'density_reference.json')
 	if not os.path.exists(path):
 		return None
 	with open(path, 'r') as f:

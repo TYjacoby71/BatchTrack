@@ -1,11 +1,62 @@
-{% extends 'developer/layout.html' %}
+{% extends 'layout.html' %}
 {% block content %}
-<h2>Global Items</h2>
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <h2>Global Items</h2>
+  <a href="{{ url_for('developer.create_global_item') }}" class="btn btn-primary">
+    <i class="fas fa-plus"></i> Add Global Item
+  </a>
+</div>
+
+<!-- Filter Controls -->
+<div class="row mb-3">
+  <div class="col-md-6">
+    <form method="GET" class="row g-2">
+      <div class="col-auto">
+        <label for="typeFilter" class="form-label">Item Type:</label>
+        <select name="type" id="typeFilter" class="form-select" onchange="this.form.submit()">
+          <option value="">All Types</option>
+          <option value="ingredient" {% if selected_type == 'ingredient' %}selected{% endif %}>Ingredients</option>
+          <option value="container" {% if selected_type == 'container' %}selected{% endif %}>Containers</option>
+          <option value="packaging" {% if selected_type == 'packaging' %}selected{% endif %}>Packaging</option>
+          <option value="consumable" {% if selected_type == 'consumable' %}selected{% endif %}>Consumables</option>
+        </select>
+      </div>
+
+      <div class="col-auto" id="categoryFilterDiv" {% if selected_type != 'ingredient' %}style="display: none;"{% endif %}>
+        <label for="categoryFilter" class="form-label">Category:</label>
+        <select name="category" id="categoryFilter" class="form-select" onchange="this.form.submit()">
+          <option value="">All Categories</option>
+          {% for category in categories %}
+          <option value="{{ category }}" {% if selected_category == category %}selected{% endif %}>{{ category }}</option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <div class="col-auto">
+        <label class="form-label">&nbsp;</label>
+        <div>
+          <button type="submit" class="btn btn-primary btn-sm">Filter</button>
+          <a href="{{ url_for('developer.global_items_admin') }}" class="btn btn-outline-secondary btn-sm">Clear</a>
+        </div>
+      </div>
+
+      <!-- Preserve category filter when changing type -->
+      {% if selected_category %}
+      <input type="hidden" name="category" value="{{ selected_category }}">
+      {% endif %}
+    </form>
+  </div>
+  <div class="col-md-6 text-end">
+    <small class="text-muted">Showing {{ items|length }} items</small>
+  </div>
+</div>
+
 <table class="table table-striped">
   <thead>
     <tr>
       <th>Name</th>
       <th>Type</th>
+      <th>Category</th>
       <th>Density</th>
       <th>Capacity</th>
       <th>Perishable</th>
@@ -16,13 +67,219 @@
   {% for gi in items %}
     <tr>
       <td>{{ gi.name }}</td>
-      <td>{{ gi.item_type }}</td>
+      <td>
+        <span class="badge bg-secondary">{{ gi.item_type }}</span>
+      </td>
+      <td>{{ gi.reference_category or '-' }}</td>
       <td>{{ gi.density or '-' }}</td>
       <td>{{ gi.capacity or '-' }} {{ gi.capacity_unit or '' }}</td>
       <td>{{ 'Yes' if gi.default_is_perishable else 'No' }}</td>
-      <td><a href="{{ url_for('developer.global_item_detail', item_id=gi.id) }}" class="btn btn-sm btn-outline-primary">View</a></td>
+      <td>
+      <a href="{{ url_for('developer.global_item_detail', item_id=gi.id) }}" class="btn btn-sm btn-outline-primary">View</a>
+      <button class="btn btn-sm btn-outline-danger ms-1" onclick="confirmDelete({{ gi.id }}, '{{ gi.name }}')">Delete</button>
+    </td>
     </tr>
   {% endfor %}
   </tbody>
 </table>
+{% endblock %}
+
+<!-- Delete Confirmation Modal -->
+<div class="modal fade" id="deleteModal" tabindex="-1">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">Confirm Deletion</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <div id="deleteWarning" class="alert alert-warning d-none">
+          <strong>Warning:</strong> This global item is connected to <span id="connectedCount"></span> inventory items across <span id="orgCount"></span> organizations.
+          <br><br>
+          <strong>Organizations affected:</strong>
+          <ul id="orgList"></ul>
+          <p>These inventory items will be <strong>disconnected</strong> and converted to organization-owned items. They will remain in the organizations' inventories but lose the global connection.</p>
+        </div>
+        <p>Type the item name <strong><span id="itemNameToConfirm"></span></strong> to confirm deletion:</p>
+        <input type="text" id="deleteConfirmInput" class="form-control" placeholder="Enter item name exactly">
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+        <button type="button" class="btn btn-danger" id="confirmDeleteBtn" disabled>Delete Global Item</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+{% block scripts %}
+<script>
+let currentDeleteItemId = null;
+let currentDeleteItemName = null;
+let requiresForceDelete = false;
+
+document.addEventListener('DOMContentLoaded', function() {
+    const typeFilter = document.getElementById('typeFilter');
+    const categoryFilterDiv = document.getElementById('categoryFilterDiv');
+    const categoryFilter = document.getElementById('categoryFilter');
+
+    function toggleCategoryFilter() {
+        if (typeFilter.value === 'ingredient') {
+            categoryFilterDiv.style.display = 'block';
+        } else {
+            categoryFilterDiv.style.display = 'none';
+            categoryFilter.value = ''; // Clear category when not ingredients
+        }
+    }
+
+    // Handle type filter change
+    typeFilter.addEventListener('change', function() {
+        toggleCategoryFilter();
+
+        // If switching away from ingredients, submit form to clear category filter
+        if (typeFilter.value !== 'ingredient' && '{{ selected_category }}') {
+            this.form.submit();
+        }
+    });
+
+    // Initialize on page load
+    toggleCategoryFilter();
+
+    // Delete confirmation handling
+    const deleteModal = new bootstrap.Modal(document.getElementById('deleteModal'));
+    const confirmInput = document.getElementById('deleteConfirmInput');
+    const confirmBtn = document.getElementById('confirmDeleteBtn');
+
+    confirmInput.addEventListener('input', function() {
+        confirmBtn.disabled = this.value.trim() !== currentDeleteItemName;
+    });
+
+    confirmBtn.addEventListener('click', function() {
+        if (confirmInput.value.trim() === currentDeleteItemName) {
+            executeDelete();
+        }
+    });
+});
+
+function confirmDelete(itemId, itemName) {
+    currentDeleteItemId = itemId;
+    currentDeleteItemName = itemName;
+    requiresForceDelete = false;
+    
+    document.getElementById('itemNameToConfirm').textContent = itemName;
+    document.getElementById('deleteConfirmInput').value = '';
+    document.getElementById('confirmDeleteBtn').disabled = true;
+    document.getElementById('deleteWarning').classList.add('d-none');
+    
+    const deleteModal = new bootstrap.Modal(document.getElementById('deleteModal'));
+    deleteModal.show();
+}
+
+function executeDelete() {
+    fetch(`/developer/global-items/${currentDeleteItemId}/delete`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+            confirm_name: currentDeleteItemName,
+            force_delete: requiresForceDelete
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            // Success - reload page
+            location.reload();
+        } else if (data.requires_confirmation) {
+            // Show warning about connected items
+            document.getElementById('connectedCount').textContent = data.connected_count;
+            document.getElementById('orgCount').textContent = data.organizations.length;
+            
+            const orgList = document.getElementById('orgList');
+            orgList.innerHTML = '';
+            data.organizations.forEach(org => {
+                const li = document.createElement('li');
+                li.textContent = org;
+                orgList.appendChild(li);
+            });
+            
+            document.getElementById('deleteWarning').classList.remove('d-none');
+            document.getElementById('confirmDeleteBtn').textContent = 'Force Delete & Disconnect';
+            requiresForceDelete = true;
+        } else {
+            // Error
+            alert('Error: ' + data.error);
+        }
+    })
+    .catch(error => {
+        alert('Error: ' + error.message);
+    });
+}
+</script>
+<script>
+function applyFilters() {
+    const typeFilter = document.getElementById('typeFilter').value;
+    const categoryFilter = document.getElementById('categoryFilter').value;
+    const searchInput = document.getElementById('searchInput').value;
+
+    // Enable/disable category filter based on type selection
+    const categorySelect = document.getElementById('categoryFilter');
+    if (typeFilter === 'ingredient') {
+        categorySelect.disabled = false;
+    } else {
+        categorySelect.disabled = true;
+        categorySelect.value = '';
+    }
+
+    // Build URL with filters
+    const url = new URL(window.location);
+
+    if (searchInput.trim()) {
+        url.searchParams.set('search', searchInput.trim());
+    } else {
+        url.searchParams.delete('search');
+    }
+
+    if (typeFilter) {
+        url.searchParams.set('type', typeFilter);
+    } else {
+        url.searchParams.delete('type');
+    }
+
+    if (categoryFilter && typeFilter === 'ingredient') {
+        url.searchParams.set('category', categoryFilter);
+    } else {
+        url.searchParams.delete('category');
+    }
+
+    window.location.href = url.toString();
+}
+
+function handleSearchKeyup(event) {
+    // Apply search on Enter key or after a short delay
+    if (event.key === 'Enter') {
+        applyFilters();
+    } else {
+        // Clear any existing timeout
+        if (window.searchTimeout) {
+            clearTimeout(window.searchTimeout);
+        }
+
+        // Set a new timeout to search after 500ms of no typing
+        window.searchTimeout = setTimeout(() => {
+            applyFilters();
+        }, 500);
+    }
+}
+
+function clearFilters() {
+    // Clear all filter inputs
+    document.getElementById('searchInput').value = '';
+    document.getElementById('typeFilter').value = '';
+    document.getElementById('categoryFilter').value = '';
+
+    // Redirect to base URL without filters
+    window.location.href = window.location.pathname;
+}
+</script>
 {% endblock %}
