@@ -119,32 +119,25 @@ class DensityAssignmentService:
     
     @staticmethod
     def get_category_options(organization_id: int) -> List[Dict]:
-        """Get all available density options grouped by category"""
-        reference_data = DensityAssignmentService._load_reference_data_from_db()
-        items = reference_data.get('common_densities', [])
-        
-        # Group reference items by category
-        categories = {}
-        for item in items:
-            category_name = item.get('category', 'Other')
-            if category_name not in categories:
-                categories[category_name] = {
-                    'name': category_name,
-                    'items': [],
-                    'default_density': None
+        """Get base ingredient categories with their default densities.
+        Source of truth: IngredientCategory.default_density.
+        """
+        from ..models import IngredientCategory
+        try:
+            categories = IngredientCategory.query
+            if organization_id:
+                categories = categories.filter_by(organization_id=organization_id)
+            cats = categories.order_by(IngredientCategory.name.asc()).all()
+            return [
+                {
+                    'name': c.name,
+                    'items': [],  # optional; not needed for fallback
+                    'default_density': c.default_density
                 }
-            categories[category_name]['items'].append(item)
-        
-        # Calculate default densities for each category (average of items)
-        for category_name, category_data in categories.items():
-            densities = [item['density_g_per_ml'] for item in category_data['items']]
-            category_data['default_density'] = sum(densities) / len(densities)
-        
-        # Sort items within each category
-        for category_data in categories.values():
-            category_data['items'].sort(key=lambda x: x['name'])
-        
-        return list(categories.values())
+                for c in cats
+            ]
+        except Exception:
+            return []
     
     @staticmethod
     def assign_density_to_ingredient(ingredient: InventoryItem, reference_item_name: str = None, 

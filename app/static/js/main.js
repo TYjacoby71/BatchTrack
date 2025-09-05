@@ -188,14 +188,13 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 
     // Load base categories into the Add Ingredient form's category select
-    fetch('/api/density-reference/options').then(r => r.json()).then(categories => {
+    fetch('/api/ingredients/categories').then(r => r.json()).then(categories => {
       const sel = document.getElementById('baseCategorySelect');
       if (!sel || !Array.isArray(categories)) return;
-      // Insert reference categories as ref_<name> options
       categories.sort((a,b) => (a.name||'').localeCompare(b.name||''));
       categories.forEach(cat => {
         const opt = document.createElement('option');
-        opt.value = `ref_${cat.name}`;
+        opt.value = `ref_${cat.name}`; // treat base category selections as ref_<name>
         opt.textContent = `${cat.name}`;
         sel.appendChild(opt);
       });

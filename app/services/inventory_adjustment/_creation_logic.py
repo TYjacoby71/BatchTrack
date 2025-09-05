@@ -56,33 +56,16 @@ def create_inventory_item(form_data, organization_id, created_by):
         else:
             final_unit = 'count'  # Default unit
 
-        # Handle base category selector and custom density
+        # Handle base category selector and custom density (defer density application until after item exists)
         category_id = None
         raw_category_id = form_data.get('category_id')
         custom_density = form_data.get('density')
-        if raw_category_id:
-            # Reference category e.g. 'ref_Waxes'
-            if isinstance(raw_category_id, str) and raw_category_id.startswith('ref_'):
-                ref_name = raw_category_id.split('ref_', 1)[1]
-                # Assign category default density now; if custom density present, it will override below
-                # Do not set IngredientCategory linkage for reference categories
-                try:
-                    DensityAssignmentService.assign_density_to_ingredient(
-                        ingredient=new_item if 'new_item' in locals() else None,
-                        use_category_default=True,
-                        category_name=ref_name
-                    )
-                except Exception:
-                    pass
-            elif raw_category_id == 'custom':
-                # no-op here; custom density handled below
-                pass
-            else:
-                # Legacy custom IngredientCategory by id
-                try:
-                    category_id = int(raw_category_id)
-                except Exception:
-                    category_id = None
+        if raw_category_id and not (isinstance(raw_category_id, str) and raw_category_id.startswith('ref_')) and raw_category_id != 'custom':
+            # Legacy custom IngredientCategory by id
+            try:
+                category_id = int(raw_category_id)
+            except Exception:
+                category_id = None
 
         # Extract numeric fields with defaults
         cost_per_unit = 0.0
@@ -146,14 +129,40 @@ def create_inventory_item(form_data, organization_id, created_by):
             if global_item.capacity_unit is not None:
                 new_item.capacity_unit = global_item.capacity_unit
 
-        # If no density provided and no global item, try auto-assign based on name/category
-        if (not global_item) and (not custom_density):
+        # Resolve category linkage and density precedence
+        # 1) If a reference category was chosen, set category_id to matching IngredientCategory and assign its default density
+        if raw_category_id and isinstance(raw_category_id, str) and raw_category_id.startswith('ref_'):
+            ref_name = raw_category_id.split('ref_', 1)[1]
+            try:
+                cat = db.session.query(IngredientCategory).filter_by(name=ref_name, organization_id=organization_id).first()
+                if cat:
+                    new_item.category_id = cat.id
+                # Assign category default density (will be overridden by custom density below if provided)
+                DensityAssignmentService.assign_density_to_ingredient(
+                    ingredient=new_item,
+                    use_category_default=True,
+                    category_name=ref_name
+                )
+            except Exception:
+                pass
+
+        # 2) If a global item was selected, ensure category linkage to matching IngredientCategory by name
+        if global_item and getattr(global_item, 'reference_category', None):
+            try:
+                cat = db.session.query(IngredientCategory).filter_by(name=global_item.reference_category, organization_id=organization_id).first()
+                if cat:
+                    new_item.category_id = cat.id
+            except Exception:
+                pass
+
+        # 3) If no density provided and no global item and no ref category assignment, try auto-assign based on name/category
+        if (not global_item) and (not custom_density) and not (raw_category_id and isinstance(raw_category_id, str) and raw_category_id.startswith('ref_')):
             try:
                 DensityAssignmentService.auto_assign_density_on_creation(new_item)
             except Exception:
                 pass
 
-        # If user provided custom density, override
+        # 4) If user provided custom density, override
         if custom_density not in [None, '', 'null']:
             try:
                 parsed = float(custom_density)

@@ -9,36 +9,17 @@ ingredient_api_bp = Blueprint('ingredient_api', __name__)
 
 @ingredient_api_bp.route('/categories', methods=['GET'])
 def get_categories():
-    """
-    DEPRECATED: Previously returned org-scoped IngredientCategory.
-    Now returns reference categories derived from GlobalItem.reference_category
-    with computed default densities.
-    """
-    # Aggregate by GlobalItem.reference_category for ingredients only
-    items = GlobalItem.query.filter_by(item_type='ingredient').all()
-    categories = {}
-    for gi in items:
-        cat = gi.reference_category or 'Other'
-        if cat not in categories:
-            categories[cat] = {
-                'name': cat,
-                'densities': [],
-            }
-        if isinstance(gi.density, (int, float)) and gi.density:
-            categories[cat]['densities'].append(float(gi.density))
-
-    payload = []
-    for cat_name, data in categories.items():
-        densities = data['densities']
-        default_density = (sum(densities) / len(densities)) if densities else None
-        payload.append({
-            'id': f'ref_{cat_name}',
-            'name': cat_name,
-            'default_density': default_density
-        })
-
-    payload.sort(key=lambda x: x['name'])
-    return jsonify(payload)
+    """Return base ingredient categories with their default densities."""
+    # Categories are org-scoped; expose current org's categories sorted by name
+    categories = IngredientCategory.query.order_by(IngredientCategory.name.asc()).all()
+    return jsonify([
+        {
+            'id': cat.id,
+            'name': cat.name,
+            'default_density': cat.default_density
+        }
+        for cat in categories
+    ])
 
 @ingredient_api_bp.route('/ingredient/<int:id>/density', methods=['GET'])
 def get_ingredient_density(id):
