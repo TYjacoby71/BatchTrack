@@ -16,7 +16,7 @@
           <option value="consumable" {% if selected_type == 'consumable' %}selected{% endif %}>Consumables</option>
         </select>
       </div>
-      
+
       <div class="col-auto" id="categoryFilterDiv" {% if selected_type != 'ingredient' %}style="display: none;"{% endif %}>
         <label for="categoryFilter" class="form-label">Category:</label>
         <select name="category" id="categoryFilter" class="form-select" onchange="this.form.submit()">
@@ -26,7 +26,7 @@
           {% endfor %}
         </select>
       </div>
-      
+
       <div class="col-auto">
         <label class="form-label">&nbsp;</label>
         <div>
@@ -34,7 +34,7 @@
           <a href="{{ url_for('developer.global_items_admin') }}" class="btn btn-outline-secondary btn-sm">Clear</a>
         </div>
       </div>
-      
+
       <!-- Preserve category filter when changing type -->
       {% if selected_category %}
       <input type="hidden" name="category" value="{{ selected_category }}">
@@ -82,7 +82,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const typeFilter = document.getElementById('typeFilter');
     const categoryFilterDiv = document.getElementById('categoryFilterDiv');
     const categoryFilter = document.getElementById('categoryFilter');
-    
+
     function toggleCategoryFilter() {
         if (typeFilter.value === 'ingredient') {
             categoryFilterDiv.style.display = 'block';
@@ -91,19 +91,85 @@ document.addEventListener('DOMContentLoaded', function() {
             categoryFilter.value = ''; // Clear category when not ingredients
         }
     }
-    
+
     // Handle type filter change
     typeFilter.addEventListener('change', function() {
         toggleCategoryFilter();
-        
+
         // If switching away from ingredients, submit form to clear category filter
         if (typeFilter.value !== 'ingredient' && '{{ selected_category }}') {
             this.form.submit();
         }
     });
-    
+
     // Initialize on page load
     toggleCategoryFilter();
 });
+</script>
+<script>
+function applyFilters() {
+    const typeFilter = document.getElementById('typeFilter').value;
+    const categoryFilter = document.getElementById('categoryFilter').value;
+    const searchInput = document.getElementById('searchInput').value;
+
+    // Enable/disable category filter based on type selection
+    const categorySelect = document.getElementById('categoryFilter');
+    if (typeFilter === 'ingredient') {
+        categorySelect.disabled = false;
+    } else {
+        categorySelect.disabled = true;
+        categorySelect.value = '';
+    }
+
+    // Build URL with filters
+    const url = new URL(window.location);
+
+    if (searchInput.trim()) {
+        url.searchParams.set('search', searchInput.trim());
+    } else {
+        url.searchParams.delete('search');
+    }
+
+    if (typeFilter) {
+        url.searchParams.set('type', typeFilter);
+    } else {
+        url.searchParams.delete('type');
+    }
+
+    if (categoryFilter && typeFilter === 'ingredient') {
+        url.searchParams.set('category', categoryFilter);
+    } else {
+        url.searchParams.delete('category');
+    }
+
+    window.location.href = url.toString();
+}
+
+function handleSearchKeyup(event) {
+    // Apply search on Enter key or after a short delay
+    if (event.key === 'Enter') {
+        applyFilters();
+    } else {
+        // Clear any existing timeout
+        if (window.searchTimeout) {
+            clearTimeout(window.searchTimeout);
+        }
+
+        // Set a new timeout to search after 500ms of no typing
+        window.searchTimeout = setTimeout(() => {
+            applyFilters();
+        }, 500);
+    }
+}
+
+function clearFilters() {
+    // Clear all filter inputs
+    document.getElementById('searchInput').value = '';
+    document.getElementById('typeFilter').value = '';
+    document.getElementById('categoryFilter').value = '';
+
+    // Redirect to base URL without filters
+    window.location.href = window.location.pathname;
+}
 </script>
 {% endblock %}

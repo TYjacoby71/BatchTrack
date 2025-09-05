@@ -502,6 +502,7 @@ def global_items_admin():
     # Get filter parameters
     item_type = request.args.get('type', '')
     category_filter = request.args.get('category', '')
+    search_query = request.args.get('search', '').strip()
     
     # Build base query
     query = GlobalItem.query
@@ -513,6 +514,16 @@ def global_items_admin():
     # Filter by reference category if specified
     if category_filter:
         query = query.filter(GlobalItem.reference_category == category_filter)
+    
+    # Add search functionality
+    if search_query:
+        search_term = f"%{search_query}%"
+        query = query.filter(
+            db.or_(
+                GlobalItem.name.ilike(search_term),
+                GlobalItem.aka_names.op('::text').ilike(search_term)
+            )
+        )
     
     # Get filtered results
     items = query.order_by(GlobalItem.item_type, GlobalItem.name).limit(500).all()
@@ -528,7 +539,8 @@ def global_items_admin():
                          items=items, 
                          categories=categories,
                          selected_type=item_type,
-                         selected_category=category_filter)
+                         selected_category=category_filter,
+                         search_query=search_query)
 
 @developer_bp.route('/global-items/<int:item_id>')
 @login_required
