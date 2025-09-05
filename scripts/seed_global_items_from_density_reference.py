@@ -11,10 +11,13 @@ from app.models import db, GlobalItem, IngredientCategory
 
 def load_density_json():
 	base = os.path.dirname(os.path.dirname(__file__))
-	path = os.path.join(base, 'data', 'density_reference.json')
-	if not os.path.exists(path):
+	# Prefer curated categories file if present
+	preferred = os.path.join(base, 'data', 'global_items_curated.json')
+	legacy = os.path.join(base, 'data', 'density_reference.json')
+	load_path = preferred if os.path.exists(preferred) else legacy
+	if not os.path.exists(load_path):
 		return None
-	with open(path, 'r') as f:
+	with open(load_path, 'r') as f:
 		return json.load(f)
 
 
