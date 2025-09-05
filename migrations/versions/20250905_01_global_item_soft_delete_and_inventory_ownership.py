@@ -1,16 +1,16 @@
 """
 Add soft-delete fields to global_item and ownership to inventory_item
 
-Revision ID: 20250905_01
-Revises: 20250904_04a
+Revision ID: 2025090501
+Revises: 2025090404
 Create Date: 2025-09-05
 """
 
 from alembic import op
 import sqlalchemy as sa
 
-revision = '20250905_01'
-down_revision = '20250904_04a'
+revision = '2025090501'
+down_revision = '2025090404'
 branch_labels = None
 depends_on = None
 

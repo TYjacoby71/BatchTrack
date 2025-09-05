@@ -195,6 +195,52 @@ class UniversalStockCheckService:
                 elif result.status == StockStatus.LOW:
                     has_low_stock = True
 
+            # Also check consumables if defined on the recipe
+            if hasattr(recipe, 'recipe_consumables') and recipe.recipe_consumables:
+                for rc in recipe.recipe_consumables:
+                    scaled_quantity = rc.quantity * scale
+
+                    result = self.check_single_item(
+                        item_id=rc.inventory_item_id,
+                        quantity_needed=scaled_quantity,
+                        unit=rc.unit,
+                        category=InventoryCategory.INGREDIENT
+                    )
+
+                    result_dict = {
+                        'item_id': result.item_id,
+                        'item_name': result.item_name,
+                        'needed_quantity': result.needed_quantity,
+                        'needed_unit': result.needed_unit,
+                        'available_quantity': result.available_quantity,
+                        'available_unit': result.available_unit,
+                        'status': result.status.value,
+                        'formatted_needed': result.formatted_needed,
+                        'formatted_available': result.formatted_available
+                    }
+
+                    if hasattr(result, 'error_message') and result.error_message:
+                        result_dict['error_message'] = result.error_message
+                        has_errors = True
+
+                    if hasattr(result, 'conversion_details') and result.conversion_details:
+                        result_dict['conversion_details'] = result.conversion_details
+                        if result.conversion_details.get('needs_unit_mapping'):
+                            conversion_alerts.append({
+                                'item_name': result.item_name,
+                                'message': f"Custom unit mapping needed for {result.item_name}",
+                                'unit_manager_link': result.conversion_details.get('unit_manager_link')
+                            })
+                        if not bubbled_drawer_payload and result.conversion_details.get('drawer_payload'):
+                            bubbled_drawer_payload = result.conversion_details.get('drawer_payload')
+
+                    stock_results.append(result_dict)
+
+                    if result.status in [StockStatus.NEEDED, StockStatus.OUT_OF_STOCK]:
+                        has_insufficient = True
+                    elif result.status == StockStatus.LOW:
+                        has_low_stock = True
+
             # Determine overall recipe status
             if has_errors:
                 overall_status = 'error'

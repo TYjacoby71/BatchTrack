@@ -10,7 +10,7 @@ from ._special_ops import handle_cost_override, handle_unit_conversion, handle_r
 
 logger = logging.getLogger(__name__)
 
-def process_inventory_adjustment(item_id, change_type, quantity, notes=None, created_by=None, cost_override=None, custom_expiration_date=None, custom_shelf_life_days=None, customer=None, sale_price=None, order_id=None, target_quantity=None, unit=None):
+def process_inventory_adjustment(item_id, change_type, quantity, notes=None, created_by=None, cost_override=None, custom_expiration_date=None, custom_shelf_life_days=None, customer=None, sale_price=None, order_id=None, target_quantity=None, unit=None, defer_commit=False):
     """
     CENTRAL DELEGATOR - The single entry point for ALL inventory adjustments.
 
@@ -119,11 +119,15 @@ def process_inventory_adjustment(item_id, change_type, quantity, notes=None, cre
             db.session.rollback()
             return False, f"FIFO validation error: {str(e)}"
 
-        # Commit database changes
+        # Commit database changes unless caller defers commit for an outer transaction
         try:
-            db.session.commit()
-            logger.info(f"SUCCESS: {change_type} completed for item {item.id} (FIFO validated)")
-            return True, message
+            if defer_commit:
+                logger.info(f"SUCCESS (DEFERRED): {change_type} prepared for item {item.id} (FIFO validated)")
+                return True, message
+            else:
+                db.session.commit()
+                logger.info(f"SUCCESS: {change_type} completed for item {item.id} (FIFO validated)")
+                return True, message
 
         except Exception as e:
             logger.error(f"FAILED: Database commit failed for item {item_id}: {str(e)}")

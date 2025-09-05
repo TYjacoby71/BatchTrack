@@ -34,8 +34,10 @@ def analyze_container_options(
             raise ValueError("Organization ID required")
 
         # Get recipe requirements
-        total_yield = (recipe.predicted_yield or 0) * scale
-        yield_unit = recipe.predicted_yield_unit or 'ml'
+        if recipe is None:
+            raise ValueError("Recipe is required for container analysis")
+        total_yield = (getattr(recipe, 'predicted_yield', 0) or 0) * scale
+        yield_unit = getattr(recipe, 'predicted_yield_unit', None) or 'ml'
 
         if total_yield <= 0:
             raise ValueError(f"Recipe '{recipe.name}' has no predicted yield configured")
@@ -78,7 +80,8 @@ def analyze_container_options(
             return strategy, []
         raise
     except Exception as e:
-        logger.error(f"Container analysis failed for recipe {recipe.id}: {e}")
+        rid = getattr(recipe, 'id', 'unknown')
+        logger.error(f"Container analysis failed for recipe {rid}: {e}")
         if api_format:
             return None, []
         raise
