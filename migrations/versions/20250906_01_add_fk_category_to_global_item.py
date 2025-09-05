@@ -2,8 +2,8 @@ from alembic import op
 import sqlalchemy as sa
 
 # revision identifiers, used by Alembic.
-revision = '20250906_01_add_fk_category_to_global_item'
-down_revision = '20250905_01_global_item_soft_delete_and_inventory_ownership'
+revision = '20250906_01'
+down_revision = '20250905_01'
 branch_labels = None
 depends_on = None
 
