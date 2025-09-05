@@ -23,12 +23,6 @@ def create_inventory_item(form_data, organization_id, created_by):
         if not name:
             return False, "Item name is required", None
 
-        # Determine item type, preferring global item if provided
-        item_type = form_data.get('type') or (global_item.item_type if global_item else 'ingredient')
-        # Validate type against global item
-        if global_item and item_type != global_item.item_type:
-            return False, f"Selected global item type '{global_item.item_type}' does not match item type '{item_type}'.", None
-
         # If provided, load global item for defaults
         global_item_id = form_data.get('global_item_id')
         global_item = None
@@ -37,6 +31,12 @@ def create_inventory_item(form_data, organization_id, created_by):
                 global_item = db.session.get(GlobalItem, int(global_item_id))
             except Exception:
                 global_item = None
+
+        # Determine item type, preferring global item if provided
+        item_type = form_data.get('type') or (global_item.item_type if global_item else 'ingredient')
+        # Validate type against global item
+        if global_item and item_type != global_item.item_type:
+            return False, f"Selected global item type '{global_item.item_type}' does not match item type '{item_type}'.", None
 
         # Handle unit - get from form or default (prefer global item default)
         unit_input = form_data.get('unit', '').strip()
@@ -114,7 +114,8 @@ def create_inventory_item(form_data, organization_id, created_by):
             shelf_life_days=shelf_life_days,
             organization_id=organization_id,
             category_id=category_id,
-            global_item_id=(global_item.id if global_item else None)
+            global_item_id=(global_item.id if global_item else None),
+            ownership=('global' if global_item else 'org')
         )
 
         # Apply global item defaults after instance is created

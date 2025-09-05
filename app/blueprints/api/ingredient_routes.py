@@ -72,7 +72,7 @@ def search_global_items():
     if not q:
         return jsonify({'results': []})
 
-    query = GlobalItem.query
+    query = GlobalItem.query.filter(GlobalItem.is_archived != True)
     if item_type:
         query = query.filter(GlobalItem.item_type == item_type)
 

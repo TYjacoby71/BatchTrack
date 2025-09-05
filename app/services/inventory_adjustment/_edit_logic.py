@@ -23,6 +23,15 @@ def update_inventory_item(item_id: int, form_data: dict) -> tuple[bool, str]:
         if not item:
             return False, "Inventory item not found"
 
+        # Disallow identity edits when globally managed
+        is_global_locked = getattr(item, 'global_item_id', None) is not None
+
+        if is_global_locked:
+            # Prevent changes to name, unit, category, density
+            for forbidden_key in ['name', 'unit', 'category_id', 'density', 'item_density']:
+                if forbidden_key in form_data and str(form_data.get(forbidden_key)).strip() != str(getattr(item, 'name' if forbidden_key=='name' else forbidden_key, '')):
+                    return False, "This item is managed by the global catalog. Identity fields cannot be edited."
+
         # Handle base unit change with conversion of existing inventory
         if 'unit' in form_data and form_data['unit'] and form_data['unit'] != item.unit:
             new_unit = form_data['unit']
@@ -82,7 +91,7 @@ def update_inventory_item(item_id: int, form_data: dict) -> tuple[bool, str]:
             item.unit = new_unit
 
         # Update basic item details (excluding quantity)
-        if 'name' in form_data:
+        if 'name' in form_data and not is_global_locked:
             item.name = form_data['name'].strip()
 
         if 'cost_per_unit' in form_data and form_data['cost_per_unit']:
@@ -92,7 +101,7 @@ def update_inventory_item(item_id: int, form_data: dict) -> tuple[bool, str]:
                 return False, "Invalid cost per unit value"
 
         # Handle category selection and clearing
-        if 'category_id' in form_data:
+        if 'category_id' in form_data and not is_global_locked:
             raw_category = form_data.get('category_id')
             if raw_category in [None, '', 'null']:
                 # Custom category selected: clear category and allow manual density
@@ -126,7 +135,7 @@ def update_inventory_item(item_id: int, form_data: dict) -> tuple[bool, str]:
 
         # Handle density updates for ingredients and any item supporting density
         # Accept keys: 'density' or 'item_density' from forms
-        if 'density' in form_data or 'item_density' in form_data:
+        if (('density' in form_data) or ('item_density' in form_data)) and not is_global_locked:
             density_value = form_data.get('density', form_data.get('item_density'))
             try:
                 if density_value in [None, "", "null"]:

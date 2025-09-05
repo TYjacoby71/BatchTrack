@@ -24,7 +24,13 @@ class GlobalItem(db.Model):
 	# Synonyms/other names for search and display
 	aka_names = db.Column(db.JSON, nullable=True)  # list of strings
 
+	# Soft-delete/archive flags
+	is_archived = db.Column(db.Boolean, nullable=False, default=False)
+	archived_at = db.Column(db.DateTime, nullable=True)
+	archived_by = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True)
+
 	suggested_inventory_category = db.relationship('InventoryCategory')
+	archived_by_user = db.relationship('User', foreign_keys=[archived_by])
 
 	__table_args__ = (
 		db.UniqueConstraint('name', 'item_type', name='_global_item_name_type_uc'),
