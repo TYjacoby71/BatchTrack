@@ -245,25 +245,39 @@ def api_start_batch():
     try:
         data = request.get_json()
         recipe_id = data.get('recipe_id')
-        product_quantity = data.get('product_quantity')
-        user_id = current_user.id
+        scale = float(data.get('scale', 1.0))
+        batch_type = data.get('batch_type', 'ingredient')
+        notes = data.get('notes', '')
+        requires_containers = bool(data.get('requires_containers', False))
+        containers_data = data.get('containers', [])
 
-        if not recipe_id or not product_quantity:
-            return jsonify({'success': False, 'message': 'Recipe ID and product quantity are required.'}), 400
+        if not recipe_id:
+            return jsonify({'success': False, 'message': 'Recipe ID is required.'}), 400
 
-        batch_id, success, message = BatchOperationsService.start_batch(recipe_id, product_quantity, user_id)
+        batch, errors = BatchOperationsService.start_batch(
+            recipe_id=recipe_id,
+            scale=scale,
+            batch_type=batch_type,
+            notes=notes,
+            containers_data=containers_data,
+            requires_containers=requires_containers
+        )
 
-        if success:
-            return jsonify({'success': True, 'message': message, 'batch_id': batch_id})
-        else:
-            return jsonify({'success': False, 'message': message}), 500
+        if not batch:
+            return jsonify({'success': False, 'message': '; '.join(errors) if isinstance(errors, list) else str(errors)}), 400
+
+        message = 'Batch started successfully'
+        if errors:
+            message = f"Batch started with warnings: {'; '.join(errors)}"
+
+        return jsonify({'success': True, 'message': message, 'batch_id': batch.id})
 
     except Exception as e:
         logger.error(f"Error starting batch via API: {str(e)}")
         return jsonify({'success': False, 'message': str(e)}), 500
 
 # Register sub-blueprints
-batches_bp.register_blueprint(start_batch_bp, url_prefix='/batches')
+batches_bp.register_blueprint(start_batch_bp, url_prefix='/start-batch')
 batches_bp.register_blueprint(cancel_batch_bp, url_prefix='/batches')
 batches_bp.register_blueprint(add_extra_bp, url_prefix='/batches/add-extra')
 batches_bp.register_blueprint(finish_batch_bp, url_prefix='/batches/finish-batch')

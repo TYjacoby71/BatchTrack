@@ -18,7 +18,7 @@ class BatchOperationsService(BaseService):
     
     @classmethod
     def start_batch(cls, recipe_id, scale=1.0, batch_type='ingredient', notes='', containers_data=None, requires_containers=False):
-        """Start a new batch with inventory deductions"""
+        """Start a new batch with inventory deductions atomically. Rolls back on any failure."""
         try:
             recipe = Recipe.query.get(recipe_id)
             if not recipe:
@@ -53,24 +53,24 @@ class BatchOperationsService(BaseService):
             )
 
             db.session.add(batch)
-            db.session.commit()
 
             # Handle containers if required
             container_errors = []
             if requires_containers:
-                container_errors = cls._process_batch_containers(batch, containers_data)
+                container_errors = cls._process_batch_containers(batch, containers_data, defer_commit=True)
 
             # Process ingredient deductions
-            ingredient_errors = cls._process_batch_ingredients(batch, recipe, scale)
+            ingredient_errors = cls._process_batch_ingredients(batch, recipe, scale, defer_commit=True)
 
             # Combine all errors
             all_errors = container_errors + ingredient_errors
 
             if all_errors:
-                # Still commit the batch but return warnings
-                db.session.commit()
-                return batch, all_errors
+                # Any deduction failure should abort the entire start
+                db.session.rollback()
+                return None, all_errors
             else:
+                # All deductions validated; commit once atomically
                 db.session.commit()
                 return batch, []
 
@@ -80,7 +80,7 @@ class BatchOperationsService(BaseService):
             return None, [str(e)]
 
     @classmethod
-    def _process_batch_containers(cls, batch, containers_data):
+    def _process_batch_containers(cls, batch, containers_data, defer_commit=False):
         """Process container deductions for batch start"""
         errors = []
         try:
@@ -95,17 +95,18 @@ class BatchOperationsService(BaseService):
                             # Handle container unit
                             container_unit = 'count' if not container_item.unit or container_item.unit == '' else container_item.unit
                             
-                            result = process_inventory_adjustment(
+                            success, message = process_inventory_adjustment(
                                 item_id=container_id,
                                 quantity=-quantity,
                                 change_type='batch',
                                 unit=container_unit,
                                 notes=f"Used in batch {batch.label_code}",
                                 batch_id=batch.id,
-                                created_by=current_user.id
+                                created_by=current_user.id,
+                                defer_commit=defer_commit
                             )
 
-                            if result:
+                            if success:
                                 # Create BatchContainer record
                                 bc = BatchContainer(
                                     batch_id=batch.id,
@@ -117,7 +118,7 @@ class BatchOperationsService(BaseService):
                                 )
                                 db.session.add(bc)
                             else:
-                                errors.append(f"Not enough {container_item.name} in stock.")
+                                errors.append(message or f"Not enough {container_item.name} in stock.")
                         except Exception as e:
                             errors.append(f"Error adjusting inventory for {container_item.name}: {str(e)}")
 
@@ -128,7 +129,7 @@ class BatchOperationsService(BaseService):
         return errors
 
     @classmethod
-    def _process_batch_ingredients(cls, batch, recipe, scale):
+    def _process_batch_ingredients(cls, batch, recipe, scale, defer_commit=False):
         """Process ingredient deductions for batch start"""
         errors = []
         try:
@@ -150,18 +151,19 @@ class BatchOperationsService(BaseService):
                     required_converted = conversion_result['converted_value']
 
                     # Use centralized inventory adjustment
-                    result = process_inventory_adjustment(
+                    success, message = process_inventory_adjustment(
                         item_id=ingredient.id,
                         quantity=-required_converted,
                         change_type='batch',
                         unit=ingredient.unit,
                         notes=f"Used in batch {batch.label_code}",
                         batch_id=batch.id,
-                        created_by=current_user.id
+                        created_by=current_user.id,
+                        defer_commit=defer_commit
                     )
 
-                    if not result:
-                        errors.append(f"Not enough {ingredient.name} in stock.")
+                    if not success:
+                        errors.append(message or f"Not enough {ingredient.name} in stock.")
                         continue
 
                     # Create BatchIngredient record
