@@ -292,7 +292,7 @@
                     <span class="text-muted">Non-perishable</span>
                   {% endif %}
                 </td>
-                <td class="col-category">{{ item.category.name if item.category else 'None' }}</td>
+                <td class="col-category">{{ (item.global_item.reference_category if item.global_item and item.global_item.reference_category else (item.category.name if item.category else 'None')) }}</td>
                 <td class="col-status">
                   {% if item.is_archived %}
                     <span class="badge bg-warning text-dark">Archived</span>

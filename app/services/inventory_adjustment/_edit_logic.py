@@ -4,6 +4,7 @@ from app.models.inventory_lot import InventoryLot
 from app.models.unit import Unit
 from app.services.unit_conversion import ConversionEngine
 from flask import session
+from app.services.density_assignment_service import DensityAssignmentService
 from sqlalchemy import and_
 import logging
 
@@ -104,15 +105,28 @@ def update_inventory_item(item_id: int, form_data: dict) -> tuple[bool, str]:
         if 'category_id' in form_data and not is_global_locked:
             raw_category = form_data.get('category_id')
             if raw_category in [None, '', 'null']:
-                # Custom category selected: clear category and allow manual density
+                # No category selected: clear linkage and allow manual density
                 item.category_id = None
             else:
-                try:
-                    item.category_id = int(raw_category)
-                    # When a category is selected, always clear manual density to use category default
-                    item.density = None
-                except (ValueError, TypeError):
-                    return False, "Invalid category ID"
+                # Support reference-guide categories passed as values like 'ref_<CategoryName>'
+                if isinstance(raw_category, str) and raw_category.startswith('ref_'):
+                    reference_category_name = raw_category.split('ref_', 1)[1]
+                    # Clear custom category linkage and assign density from reference category default
+                    item.category_id = None
+                    assigned = DensityAssignmentService.assign_density_to_ingredient(
+                        ingredient=item,
+                        use_category_default=True,
+                        category_name=reference_category_name
+                    )
+                    if not assigned:
+                        return False, f"Unable to assign density from reference category '{reference_category_name}'"
+                else:
+                    try:
+                        item.category_id = int(raw_category)
+                        # When a custom category is selected, use category default by clearing manual density
+                        item.density = None
+                    except (ValueError, TypeError):
+                        return False, "Invalid category ID"
 
         if 'low_stock_threshold' in form_data:
             try:

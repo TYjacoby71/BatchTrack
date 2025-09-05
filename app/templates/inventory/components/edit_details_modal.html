@@ -50,14 +50,6 @@
                 <optgroup label="Reference Guide Categories" id="referenceCategories">
                   <!-- Populated via JavaScript -->
                 </optgroup>
-                <optgroup label="Custom Categories">
-                  {% for category in get_ingredient_categories() %}
-                  <option value="{{ category.id }}" {% if item.category_id == category.id %}selected{% endif %}
-                          data-density="{{ category.default_density }}">
-                      {{ category.name }} {% if category.default_density %}({{ category.default_density }} g/ml){% endif %}
-                  </option>
-                  {% endfor %}
-                </optgroup>
               </select>
               <button type="button" class="btn btn-outline-info" onclick="openDensityReference()" 
                       title="Open density reference guide" data-bs-toggle="tooltip">
@@ -173,6 +165,19 @@ async function loadReferenceCategories() {
                 option.setAttribute('data-reference-category', 'true');
                 referenceGroup.appendChild(option);
             });
+
+            // If the current item is linked to a global item with a reference category, preselect it
+            try {
+                const currentRef = {{ (item.global_item.reference_category|tojson) if item.global_item and item.global_item.reference_category else 'null' }};
+                if (currentRef) {
+                    const categorySelect = document.getElementById('categorySelect');
+                    const refValue = `ref_${currentRef}`;
+                    const matching = Array.from(referenceGroup.children).find(opt => opt.value === refValue);
+                    if (matching) {
+                        categorySelect.value = refValue;
+                    }
+                }
+            } catch (e) { /* ignore */ }
         }
     } catch (error) {
         console.error('Failed to load reference categories:', error);
