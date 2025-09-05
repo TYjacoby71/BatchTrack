@@ -10,8 +10,8 @@ BatchTrack is a multi-tenant SaaS application built on a service-oriented archit
 Each service is the **single source of truth** for its domain:
 - **FIFO Service** (`app/blueprints/fifo/services.py`) - Controls inventory deduction order
 - **Inventory Adjustment Service** (`app/services/inventory_adjustment.py`) - All inventory changes
-- **Unit Conversion Service** (`app/services/unit_conversion.py`) - All unit conversions
-- **Stock Check Service** (`app/services/stock_check.py`) - Availability validation
+- **Unit Conversion Service** (`app/services/unit_conversion/unit_conversion.py`) - All unit conversions
+- **Stock Check Service** (package: `app/services/stock_check/`) - Availability validation
 - **Expiration Service** (`app/blueprints/expiration/services.py`) - Shelf-life management
  - **Global Item Library** (`GlobalItem` → `InventoryItem`) - Curated identity data with global-locked linkage
 

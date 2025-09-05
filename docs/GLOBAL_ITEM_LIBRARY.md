@@ -59,6 +59,20 @@ The Global Item Library separates platform-managed knowledge from organization-o
 - Ownership backfill: set ownership to 'global' when linked, else 'org'.
 - Seeding: `scripts/seed_global_items_from_density_reference.py` populates curated items from `data/density_reference.json`.
 
+### Seeding Commands
+
+Run inside the project root with a configured app environment:
+
+```bash
+python scripts/seed_global_items_from_density_reference.py
+```
+
+Or, if exposed via Flask CLI (example):
+
+```bash
+flask seed-global-items
+```
+
 ## Integration Points
 
 - Inventory Adjustment Creation: Applies `GlobalItem` defaults; enforces type alignment and global-locked edits.

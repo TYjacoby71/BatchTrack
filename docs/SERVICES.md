@@ -12,23 +12,23 @@ For in-context user-fixable errors, services should return a `drawer_payload` (s
 
 **Authority:** All inventory deduction order and batch lot management
 
-**Key Functions:**
-- `deduct_inventory_fifo(inventory_id, amount, unit_id, reason, batch_id=None)`
-- `get_fifo_details(inventory_id)`
-- `get_available_quantity(inventory_id)`
+**Key Endpoints / Modules:**
+- API: `app/blueprints/api/fifo_routes.py` (details, summaries)
+- Ops: `app/services/inventory_adjustment/_fifo_ops.py` (deductions)
 
 **Usage Examples:**
 ```python
-# Deduct ingredients for batch production
-from app.blueprints.fifo.services import deduct_inventory_fifo
+# Deduct via Inventory Adjustment service (authoritative path)
+from app.services.inventory_adjustment import process_inventory_adjustment
 
-result = deduct_inventory_fifo(
-    inventory_id=ingredient.inventory_id,
-    amount=required_amount,
-    unit_id=ingredient.unit_id,
-    reason="batch",
-    batch_id=batch.id
-)
+process_inventory_adjustment({
+    "inventory_item_id": ingredient.inventory_item_id,
+    "change_type": "deduct",
+    "quantity": required_amount,
+    "unit": ingredient.unit,
+    "reason": "batch",
+    "batch_id": batch.id
+})
 ```
 
 **Rules:**
@@ -70,7 +70,7 @@ adjust_inventory(
 ### 3. Unit Conversion Service
 
 **Class:** `ConversionEngine`
-**Location:** `app/services/unit_conversion.py`
+**Location:** `app/services/unit_conversion/unit_conversion.py`
 **Drawer Mapping:** `app/services/unit_conversion/drawer_errors.py` (e.g., `MISSING_DENSITY`, `MISSING_CUSTOM_MAPPING`)
 
 Handles all unit conversions with support for:
@@ -103,11 +103,15 @@ converted = convert_units(
 - Maintains custom unit mappings
 - Validates conversion paths
 
-### 4. Stock Check Service (`app/services/stock_check.py`)
+### 4. Stock Check Service (package: `app/services/stock_check/`)
 
 **Authority:** Real-time availability validation
 
-**Key Functions:**
+**Key Modules:**
+- Core logic: `app/services/stock_check/core.py`
+- Handlers: `app/services/stock_check/handlers/*.py`
+
+**Common Calls:**
 - `check_recipe_availability(recipe_id, scale_factor=1.0)`
 - `check_ingredient_availability(ingredient_id, required_amount, unit_id)`
 - `get_available_inventory_summary()`
@@ -115,7 +119,7 @@ converted = convert_units(
 **Usage Examples:**
 ```python
 # Check if recipe can be made
-from app.services.stock_check import check_recipe_availability
+from app.services.stock_check.core import check_recipe_availability
 
 availability = check_recipe_availability(
     recipe_id=recipe.id,

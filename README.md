@@ -67,6 +67,9 @@ For detailed development information, see:
 - **[API Reference](docs/API_REFERENCE.md)** - Endpoint documentation
  - **[Global Item Library](docs/GLOBAL_ITEM_LIBRARY.md)** - Library & Shelf model and global-locked rules
  - **[Wall of Drawers Protocol](docs/WALL_OF_DRAWERS_PROTOCOL.md)** - In-context error resolution pattern
+ - **[Deployment & Migrations](deploy_migration_guide.md)** - Runbook for production changes
+ - **[Global Item Library](docs/GLOBAL_ITEM_LIBRARY.md)** - Library & Shelf model and global-locked rules
+ - **[Wall of Drawers Protocol](docs/WALL_OF_DRAWERS_PROTOCOL.md)** - In-context error resolution pattern
 
 ## 🔒 Development Guardrails
 
@@ -78,6 +81,15 @@ For detailed development information, see:
 6. **Use drawers for user-fixable errors** - Return `drawer_payload` instead of hard-blocking
 7. **Respect Global-Locked identity** - Do not mutate identity on items linked to `GlobalItem`
 8. **Update docs when adding services** - Maintain documentation accuracy
+
+## 🛠️ Maintenance Scripts
+
+Run with the app environment active:
+
+```bash
+python scripts/clear_inventory_history.py
+python scripts/dev_test_runner.py
+```
 
 ## 🐛 Current Issues
 

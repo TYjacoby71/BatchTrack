@@ -80,6 +80,7 @@
 - **Scoping**: `organization_id`
 - **Key Fields**: `quantity`, `cost_per_unit`, `expiration_date`, `type`, `global_item_id` (nullable), `ownership`
 - **Relationships**: GlobalItem (nullable FK), Ingredient (legacy), InventoryHistory
+- See: `docs/GLOBAL_ITEM_LIBRARY.md` for global-locked rules
 
 ### InventoryHistory
 - **Purpose**: All inventory movements

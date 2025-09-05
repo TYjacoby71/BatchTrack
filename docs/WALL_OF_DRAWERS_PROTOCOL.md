@@ -41,6 +41,12 @@ Example modal: `app/templates/components/drawer/density_fix_modal.html`
 - Unit Conversion: `app/services/unit_conversion/drawer_errors.py` handles `MISSING_DENSITY`, `MISSING_CUSTOM_MAPPING`, unknown units.
 - Container Planning: `app/services/production_planning/drawer_errors.py` handles `MISSING_PRODUCT_DENSITY` (redirect).
 
+### Drawer Actions API
+
+Controller for serving drawer modals:
+
+- `app/blueprints/api/drawer_actions.py`
+
 Minimal API usage:
 
 ```python
