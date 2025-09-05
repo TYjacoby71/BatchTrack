@@ -28,8 +28,8 @@ def update_inventory_item(item_id: int, form_data: dict) -> tuple[bool, str]:
         is_global_locked = getattr(item, 'global_item_id', None) is not None
 
         if is_global_locked:
-            # Prevent changes to name, unit, category (density may be overridden per item)
-            for forbidden_key in ['name', 'unit', 'category_id']:
+            # Prevent changes to name, unit, category, density for globally-managed items
+            for forbidden_key in ['name', 'unit', 'category_id', 'density', 'item_density']:
                 if forbidden_key in form_data and str(form_data.get(forbidden_key)).strip() != str(getattr(item, 'name' if forbidden_key=='name' else forbidden_key, '')):
                     return False, "This item is managed by the global catalog. Identity fields cannot be edited."
 
@@ -150,6 +150,8 @@ def update_inventory_item(item_id: int, form_data: dict) -> tuple[bool, str]:
         # Handle density updates for ingredients and any item supporting density
         # Accept keys: 'density' or 'item_density' from forms
         if (('density' in form_data) or ('item_density' in form_data)):
+            if is_global_locked:
+                return False, "This item is managed by the global catalog. Density cannot be edited."
             density_value = form_data.get('density', form_data.get('item_density'))
             try:
                 if density_value in [None, "", "null"]:
