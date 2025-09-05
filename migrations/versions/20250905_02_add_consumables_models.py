@@ -2,7 +2,7 @@
 add consumables tables for recipes and batches
 
 Revision ID: 2025090502
-Revises: 2025090501
+Revises: 20250906_01
 Create Date: 2025-09-05
 """
 
@@ -11,7 +11,7 @@ import sqlalchemy as sa
 
 # revision identifiers, used by Alembic.
 revision = '2025090502'
-down_revision = '2025090501'
+down_revision = '20250906_01'
 branch_labels = None
 depends_on = None
 
