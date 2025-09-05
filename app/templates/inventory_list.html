@@ -214,24 +214,7 @@
             </div>
           </div>
         </div>
-        <div class="col-md-3">
-          <div x-data="{ customDensity: false }" id="baseCategorySection">
-            <label class="form-label">Base Category</label>
-            <div class="input-group">
-              <select class="form-select" id="baseCategorySelect" name="category_id" @change="customDensity = ($event.target.value === 'custom')">
-                <option value="">Auto (best match)</option>
-              </select>
-              <button type="button" class="btn btn-outline-info" onclick="openDensityReference()" title="Open density reference guide" data-bs-toggle="tooltip">
-                <i class="fas fa-book"></i>
-              </button>
-            </div>
-            <div class="mt-2" x-show="customDensity">
-              <label class="form-label">Custom Density (g/ml)</label>
-              <input type="number" step="0.001" name="density" class="form-control" placeholder="e.g., 0.930">
-              <small class="text-muted">Overrides auto/category density.</small>
-            </div>
-          </div>
-        </div>
+        
         <div class="col-md-2">
           <label class="form-label">Cost Entry Type</label>
           <select name="cost_entry_type" class="form-select" id="addIngredientCostType" onchange="updateAddIngredientCostHelp()">

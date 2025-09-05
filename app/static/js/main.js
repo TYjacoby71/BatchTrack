@@ -187,23 +187,7 @@ document.addEventListener('DOMContentLoaded', function() {
       }
     });
 
-    // Load base categories into the Add Ingredient form's category select
-    fetch('/api/ingredients/categories').then(r => r.json()).then(categories => {
-      const sel = document.getElementById('baseCategorySelect');
-      if (!sel || !Array.isArray(categories)) return;
-      categories.sort((a,b) => (a.name||'').localeCompare(b.name||''));
-      categories.forEach(cat => {
-        const opt = document.createElement('option');
-        opt.value = `ref_${cat.name}`; // treat base category selections as ref_<name>
-        opt.textContent = `${cat.name}`;
-        sel.appendChild(opt);
-      });
-      // Custom option for manual density
-      const customOpt = document.createElement('option');
-      customOpt.value = 'custom';
-      customOpt.textContent = 'Custom density…';
-      sel.appendChild(customOpt);
-    }).catch(() => {});
+    // No base category selection in add form; density/category auto-assigned on creation
 
     // If user clears or changes to a custom name, drop the global link to avoid stale linkage
     $nameSelect.on('change', function () {
