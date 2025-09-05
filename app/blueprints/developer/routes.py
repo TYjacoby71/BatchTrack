@@ -499,8 +499,36 @@ def system_settings():
 @login_required
 def global_items_admin():
     """Developer admin page for managing Global Items"""
-    items = GlobalItem.query.order_by(GlobalItem.item_type, GlobalItem.name).limit(200).all()
-    return render_template('developer/global_items.html', items=items)
+    # Get filter parameters
+    item_type = request.args.get('type', '')
+    category_filter = request.args.get('category', '')
+    
+    # Build base query
+    query = GlobalItem.query
+    
+    # Filter by item type if specified
+    if item_type:
+        query = query.filter(GlobalItem.item_type == item_type)
+    
+    # Filter by reference category if specified
+    if category_filter:
+        query = query.filter(GlobalItem.reference_category == category_filter)
+    
+    # Get filtered results
+    items = query.order_by(GlobalItem.item_type, GlobalItem.name).limit(500).all()
+    
+    # Get unique categories for filter dropdown (only from ingredients)
+    categories = db.session.query(GlobalItem.reference_category).filter(
+        GlobalItem.reference_category.isnot(None),
+        GlobalItem.item_type == 'ingredient'
+    ).distinct().order_by(GlobalItem.reference_category).all()
+    categories = [cat[0] for cat in categories if cat[0]]
+    
+    return render_template('developer/global_items.html', 
+                         items=items, 
+                         categories=categories,
+                         selected_type=item_type,
+                         selected_category=category_filter)
 
 @developer_bp.route('/global-items/<int:item_id>')
 @login_required
