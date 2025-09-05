@@ -259,6 +259,61 @@
         </div>
     </div>
 
+    <!-- Consumables Card -->
+    <div class="card mb-4">
+        <div class="card-header d-flex justify-content-between align-items-center">
+            <h5 class="card-title mb-0">
+                <i class="fas fa-tools"></i> Consumables
+            </h5>
+            <div>
+                <button type="button" class="btn btn-sm btn-primary" onclick="addConsumable()">
+                    <i class="fas fa-plus"></i> Add Consumable
+                </button>
+            </div>
+        </div>
+        <div class="card-body">
+            <div id="consumables-container">
+            {% if recipe and recipe.recipe_consumables %}
+                {% for assoc in recipe.recipe_consumables %}
+                <div class="consumable-entry row mb-3 p-3 border rounded" data-consumable-id="{{ assoc.inventory_item_id }}">
+                    <div class="col-md-4">
+                        <label class="form-label">Consumable</label>
+                        <select name="consumable_ids[]" class="form-select consumable-select" required>
+                            <option value="">Select consumable...</option>
+                            {% for item in all_ingredients if item.type == 'consumable' %}
+                            <option value="{{ item.id }}" data-unit="{{ item.unit }}" {% if item.id == assoc.inventory_item_id %}selected{% endif %}>{{ item.name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label small">Amount</label>
+                        <input type="number" step="0.01" name="consumable_amounts[]" class="form-control" value="{{ assoc.quantity or '' }}" required>
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label small">Unit</label>
+                        <select name="consumable_units[]" class="form-select" required>
+                            {% for unit in inventory_units %}
+                            <option value="{{ unit.name }}" {% if unit.name == assoc.unit %}selected{% endif %}>{{ unit.name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-md-2 d-flex align-items-end">
+                        <button type="button" class="btn btn-outline-danger btn-sm remove-consumable w-100">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    </div>
+                </div>
+                {% endfor %}
+            {% else %}
+                <div class="text-center text-muted py-4">
+                    <i class="fas fa-plus-circle fa-2x mb-2"></i>
+                    <p>No consumables added yet. Click "Add Consumable" to get started.</p>
+                </div>
+            {% endif %}
+            </div>
+        </div>
+    </div>
+
     <!-- Form Actions -->
     <div class="card">
         <div class="card-body">
@@ -468,6 +523,56 @@ function updateConversionWarning(selectElement) {
         warningDiv.innerHTML = `<span class="text-warning"><i class="fas fa-exclamation-triangle"></i> Will convert from ${selectedUnit} to ${ingredientUnit}</span>`;
     }
 }
+
+function addConsumable(preselectId = null) {
+    const container = document.getElementById('consumables-container');
+    const emptyState = container.querySelector('.text-center.text-muted');
+    if (emptyState) emptyState.remove();
+
+    const entry = document.createElement('div');
+    entry.classList.add('consumable-entry', 'row', 'mb-3', 'p-3', 'border', 'rounded');
+    entry.innerHTML = `
+        <div class="col-md-4">
+            <label class="form-label small">Consumable</label>
+            <select name="consumable_ids[]" class="form-select" required>
+                <option value="">Select a consumable</option>
+                {% for item in all_ingredients if item.type == 'consumable' %}
+                <option value="{{ item.id }}">{{ item.name }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="col-md-3">
+            <label class="form-label small">Amount</label>
+            <input type="number" step="0.01" name="consumable_amounts[]" class="form-control" required>
+        </div>
+        <div class="col-md-3">
+            <label class="form-label small">Unit</label>
+            <select name="consumable_units[]" class="form-select" required>
+                {% for unit in inventory_units %}
+                <option value="{{ unit.name }}">{{ unit.name }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="col-md-2 d-flex align-items-end">
+            <button type="button" class="btn btn-outline-danger btn-sm remove-consumable w-100">
+                <i class="fas fa-trash"></i>
+            </button>
+        </div>
+    `;
+    container.appendChild(entry);
+
+    if (preselectId) {
+        const select = entry.querySelector('select[name="consumable_ids[]"]');
+        if (select) select.value = preselectId;
+    }
+}
+
+document.addEventListener('click', function(e) {
+    if (e.target.closest('.remove-consumable')) {
+        const entry = e.target.closest('.consumable-entry');
+        if (entry) entry.remove();
+    }
+});
 </script>
 
 {% endblock %}

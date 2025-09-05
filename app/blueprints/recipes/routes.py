@@ -31,6 +31,7 @@ def new_recipe():
                 yield_amount=float(request.form.get('predicted_yield') or 0.0),
                 yield_unit=request.form.get('predicted_yield_unit') or "",
                 ingredients=ingredients,
+                consumables=_extract_consumables_from_form(request.form),
                 allowed_containers=[int(id) for id in request.form.getlist('allowed_containers[]') if id] or [],
                 label_prefix=request.form.get('label_prefix')
             )
@@ -106,6 +107,7 @@ def create_variation(recipe_id):
                 yield_amount=float(request.form.get('predicted_yield') or parent.predicted_yield or 0.0),
                 yield_unit=request.form.get('predicted_yield_unit') or parent.predicted_yield_unit or "",
                 ingredients=ingredients,
+                consumables=_extract_consumables_from_form(request.form),
                 parent_id=parent.id,
                 allowed_containers=[int(id) for id in request.form.getlist('allowed_containers[]') if id] or [],
                 label_prefix=request.form.get('label_prefix')
@@ -156,6 +158,7 @@ def edit_recipe(recipe_id):
                 yield_amount=float(request.form.get('predicted_yield') or 0.0),
                 yield_unit=request.form.get('predicted_yield_unit') or "",
                 ingredients=ingredients,
+                consumables=_extract_consumables_from_form(request.form),
                 allowed_containers=[int(id) for id in request.form.getlist('allowed_containers[]') if id] or [],
                 label_prefix=request.form.get('label_prefix')
             )
@@ -343,6 +346,25 @@ def _extract_ingredients_from_form(form):
                 continue
 
     return ingredients
+
+def _extract_consumables_from_form(form):
+    """Extract consumable data from form submission"""
+    consumables = []
+    ids = form.getlist('consumable_ids[]')
+    amounts = form.getlist('consumable_amounts[]')
+    units = form.getlist('consumable_units[]')
+    for item_id, amt, unit in zip(ids, amounts, units):
+        if item_id and amt and unit:
+            try:
+                consumables.append({
+                    'item_id': int(item_id),
+                    'quantity': float(amt.strip()),
+                    'unit': unit.strip()
+                })
+            except (ValueError, TypeError) as e:
+                logger.error(f"Invalid consumable data: {e}")
+                continue
+    return consumables
 
 def _get_recipe_form_data():
     """Get common data needed for recipe forms"""

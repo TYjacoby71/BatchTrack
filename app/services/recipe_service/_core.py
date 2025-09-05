@@ -10,6 +10,7 @@ from typing import Dict, List, Any, Optional, Tuple
 from flask_login import current_user
 
 from ...models import Recipe, RecipeIngredient, InventoryItem
+from ...models.recipe import RecipeConsumable
 from ...extensions import db
 from ._validation import validate_recipe_data
 
@@ -19,7 +20,8 @@ logger = logging.getLogger(__name__)
 def create_recipe(name: str, description: str = "", instructions: str = "",
                  yield_amount: float = 0.0, yield_unit: str = "",
                  ingredients: List[Dict] = None, parent_id: int = None,
-                 allowed_containers: List[int] = None, label_prefix: str = "") -> Tuple[bool, Any]:
+                 allowed_containers: List[int] = None, label_prefix: str = "",
+                 consumables: List[Dict] = None) -> Tuple[bool, Any]:
     """
     Create a new recipe with ingredients and UI fields.
     
@@ -76,6 +78,16 @@ def create_recipe(name: str, description: str = "", instructions: str = "",
             )
             db.session.add(recipe_ingredient)
 
+        # Add consumables
+        for consumable in consumables or []:
+            recipe_consumable = RecipeConsumable(
+                recipe_id=recipe.id,
+                inventory_item_id=consumable['item_id'],
+                quantity=consumable['quantity'],
+                unit=consumable['unit']
+            )
+            db.session.add(recipe_consumable)
+
         db.session.commit()
         logger.info(f"Created recipe {recipe.id}: {name}")
         
@@ -90,7 +102,8 @@ def create_recipe(name: str, description: str = "", instructions: str = "",
 def update_recipe(recipe_id: int, name: str = None, description: str = None,
                  instructions: str = None, yield_amount: float = None,
                  yield_unit: str = None, ingredients: List[Dict] = None,
-                 allowed_containers: List[int] = None, label_prefix: str = None) -> Tuple[bool, Any]:
+                 allowed_containers: List[int] = None, label_prefix: str = None,
+                 consumables: List[Dict] = None) -> Tuple[bool, Any]:
     """
     Update an existing recipe.
     
@@ -163,6 +176,18 @@ def update_recipe(recipe_id: int, name: str = None, description: str = None,
                 )
                 db.session.add(recipe_ingredient)
 
+        # Update consumables if provided
+        if consumables is not None:
+            from ...models.recipe import RecipeConsumable
+            RecipeConsumable.query.filter_by(recipe_id=recipe_id).delete()
+            for item in consumables:
+                db.session.add(RecipeConsumable(
+                    recipe_id=recipe.id,
+                    inventory_item_id=item['item_id'],
+                    quantity=item['quantity'],
+                    unit=item['unit']
+                ))
+
         db.session.commit()
         logger.info(f"Updated recipe {recipe_id}: {recipe.name}")
         
@@ -232,7 +257,8 @@ def get_recipe_details(recipe_id: int) -> Optional[Recipe]:
     """
     try:
         recipe = Recipe.query.options(
-            db.joinedload(Recipe.recipe_ingredients).joinedload(RecipeIngredient.inventory_item)
+            db.joinedload(Recipe.recipe_ingredients).joinedload(RecipeIngredient.inventory_item),
+            db.joinedload(Recipe.recipe_consumables)
         ).get(recipe_id)
         
         # Organization access is handled by middleware

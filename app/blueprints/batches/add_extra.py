@@ -13,12 +13,14 @@ def add_extra_to_batch(batch_id):
         data = request.get_json()
         extra_ingredients = data.get("extra_ingredients", [])
         extra_containers = data.get("extra_containers", [])
+        extra_consumables = data.get("extra_consumables", [])
 
         # Delegate to service
         success, message, errors = BatchOperationsService.add_extra_items_to_batch(
             batch_id=batch_id,
             extra_ingredients=extra_ingredients,
-            extra_containers=extra_containers
+            extra_containers=extra_containers,
+            extra_consumables=extra_consumables
         )
 
         if not success:

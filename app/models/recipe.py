@@ -19,6 +19,8 @@ class Recipe(ScopedModelMixin, db.Model):
     created_by = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True)
     parent = db.relationship('Recipe', remote_side=[id], backref='variations')
     recipe_ingredients = db.relationship('RecipeIngredient', backref='recipe', cascade="all, delete-orphan")
+    # Consumables used during production (e.g., gloves, filters). Snapshot at batch start.
+    recipe_consumables = db.relationship('RecipeConsumable', backref='recipe', cascade="all, delete-orphan")
 
 class RecipeIngredient(ScopedModelMixin, db.Model):
     __tablename__ = 'recipe_ingredient'
@@ -31,3 +33,16 @@ class RecipeIngredient(ScopedModelMixin, db.Model):
     order_position = db.Column(db.Integer, default=0)
 
     inventory_item = db.relationship('InventoryItem', backref='recipe_usages')
+
+
+class RecipeConsumable(ScopedModelMixin, db.Model):
+    __tablename__ = 'recipe_consumable'
+    id = db.Column(db.Integer, primary_key=True)
+    recipe_id = db.Column(db.Integer, db.ForeignKey('recipe.id'), nullable=False)
+    inventory_item_id = db.Column(db.Integer, db.ForeignKey('inventory_item.id'), nullable=False)
+    quantity = db.Column(db.Float, nullable=False)
+    unit = db.Column(db.String(32), nullable=False)
+    notes = db.Column(db.Text)
+    order_position = db.Column(db.Integer, default=0)
+
+    inventory_item = db.relationship('InventoryItem', backref='recipe_consumable_usages')
