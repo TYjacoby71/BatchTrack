@@ -184,7 +184,9 @@
       <div class="row g-3 align-items-end">
         <div class="col-md-3">
           <label class="form-label">Name</label>
-          <input type="text" name="name" class="form-control" placeholder="Enter ingredient name" required>
+          <input type="text" name="name" class="form-control" placeholder="Enter ingredient name" required id="ingredientNameInput">
+          <div id="ingredientSuggestions" class="list-group position-absolute" style="z-index: 1000; max-height: 200px; overflow-y: auto; display: none;"></div>
+          <input type="hidden" name="global_item_id" id="selectedGlobalItemId">
         </div>
         <div class="col-md-2">
           <label class="form-label">Quantity</label>
@@ -950,6 +952,78 @@ document.addEventListener('DOMContentLoaded', function() {
 
     if (containerQtyInput) {
         containerQtyInput.addEventListener('input', updateAddContainerCostHelp);
+    }
+});
+
+// Ingredient name search functionality
+document.addEventListener('DOMContentLoaded', function() {
+    const nameInput = document.getElementById('ingredientNameInput');
+    const suggestionsDiv = document.getElementById('ingredientSuggestions');
+    const globalItemIdInput = document.getElementById('selectedGlobalItemId');
+    let searchTimeout;
+
+    if (nameInput) {
+        nameInput.addEventListener('input', function() {
+            clearTimeout(searchTimeout);
+            const query = this.value.trim();
+            
+            if (query.length < 2) {
+                suggestionsDiv.style.display = 'none';
+                globalItemIdInput.value = '';
+                return;
+            }
+
+            searchTimeout = setTimeout(() => {
+                fetch(`/api/ingredients/global-items/search?q=${encodeURIComponent(query)}&type=ingredient`)
+                    .then(response => response.json())
+                    .then(data => {
+                        suggestionsDiv.innerHTML = '';
+                        
+                        if (data.results && data.results.length > 0) {
+                            data.results.forEach(item => {
+                                const suggestionItem = document.createElement('button');
+                                suggestionItem.type = 'button';
+                                suggestionItem.className = 'list-group-item list-group-item-action';
+                                suggestionItem.innerHTML = `
+                                    <div class="d-flex justify-content-between">
+                                        <span><strong>${item.text}</strong></span>
+                                        <small class="text-muted">${item.category || 'No category'}</small>
+                                    </div>
+                                `;
+                                
+                                suggestionItem.addEventListener('click', function() {
+                                    nameInput.value = item.text;
+                                    globalItemIdInput.value = item.id;
+                                    suggestionsDiv.style.display = 'none';
+                                });
+                                
+                                suggestionsDiv.appendChild(suggestionItem);
+                            });
+                            suggestionsDiv.style.display = 'block';
+                        } else {
+                            suggestionsDiv.style.display = 'none';
+                        }
+                    })
+                    .catch(() => {
+                        suggestionsDiv.style.display = 'none';
+                    });
+            }, 300);
+        });
+
+        // Hide suggestions when clicking outside
+        document.addEventListener('click', function(e) {
+            if (!nameInput.contains(e.target) && !suggestionsDiv.contains(e.target)) {
+                suggestionsDiv.style.display = 'none';
+            }
+        });
+
+        // Clear global item ID when user types custom name
+        nameInput.addEventListener('input', function() {
+            // Only clear if the current value doesn't match any suggestion
+            if (globalItemIdInput.value && this.value !== nameInput.dataset.selectedText) {
+                globalItemIdInput.value = '';
+            }
+        });
     }
 });
 
