@@ -602,6 +602,145 @@ def global_item_stats_view(item_id):
     stats = GlobalItemStatsService.get_rollup(item_id)
     return render_template('developer/global_item_stats.html', item=item, stats=stats)
 
+@developer_bp.route('/global-items/create', methods=['GET', 'POST'])
+@login_required
+def create_global_item():
+    """Create a new global item"""
+    if request.method == 'POST':
+        try:
+            # Extract form data
+            name = request.form.get('name', '').strip()
+            item_type = request.form.get('item_type', 'ingredient')
+            default_unit = request.form.get('default_unit', '').strip() or None
+            reference_category = request.form.get('reference_category', '').strip() or None
+            
+            # Validation
+            if not name:
+                flash('Name is required', 'error')
+                return redirect(url_for('developer.create_global_item'))
+            
+            # Check for duplicate
+            existing = GlobalItem.query.filter_by(name=name, item_type=item_type).first()
+            if existing:
+                flash(f'A {item_type} with the name "{name}" already exists', 'error')
+                return redirect(url_for('developer.create_global_item'))
+            
+            # Create new global item
+            new_item = GlobalItem(
+                name=name,
+                item_type=item_type,
+                default_unit=default_unit,
+                reference_category=reference_category
+            )
+            
+            # Add optional fields
+            density = request.form.get('density')
+            if density:
+                try:
+                    new_item.density = float(density)
+                except ValueError:
+                    pass
+            
+            capacity = request.form.get('capacity')
+            if capacity:
+                try:
+                    new_item.capacity = float(capacity)
+                except ValueError:
+                    pass
+            
+            new_item.capacity_unit = request.form.get('capacity_unit', '').strip() or None
+            new_item.default_is_perishable = request.form.get('default_is_perishable') == 'on'
+            
+            shelf_life = request.form.get('recommended_shelf_life_days')
+            if shelf_life:
+                try:
+                    new_item.recommended_shelf_life_days = int(shelf_life)
+                except ValueError:
+                    pass
+            
+            # Handle aka_names (comma-separated)
+            aka_names = request.form.get('aka_names', '').strip()
+            if aka_names:
+                new_item.aka_names = [n.strip() for n in aka_names.split(',') if n.strip()]
+            
+            db.session.add(new_item)
+            db.session.commit()
+            
+            flash(f'Global item "{name}" created successfully', 'success')
+            return redirect(url_for('developer.global_item_detail', item_id=new_item.id))
+            
+        except Exception as e:
+            db.session.rollback()
+            flash(f'Error creating global item: {str(e)}', 'error')
+            return redirect(url_for('developer.create_global_item'))
+    
+    # GET request - show form
+    return render_template('developer/create_global_item.html')
+
+@developer_bp.route('/global-items/<int:item_id>/delete', methods=['POST'])
+@login_required
+def delete_global_item(item_id):
+    """Delete a global item, handling organization inventory disconnection"""
+    try:
+        data = request.get_json()
+        confirm_name = data.get('confirm_name', '').strip()
+        force_delete = data.get('force_delete', False)
+        
+        item = GlobalItem.query.get_or_404(item_id)
+        
+        # Validate confirmation
+        if confirm_name != item.name:
+            return jsonify({
+                'success': False, 
+                'error': f'Confirmation text must match exactly: "{item.name}"'
+            })
+        
+        # Check for connected inventory items
+        from app.models.inventory import InventoryItem
+        connected_items = InventoryItem.query.filter_by(global_item_id=item.id).all()
+        
+        if connected_items and not force_delete:
+            # Return info about connected items for user decision
+            org_names = list(set([inv_item.organization.name for inv_item in connected_items if inv_item.organization]))
+            return jsonify({
+                'success': False,
+                'requires_confirmation': True,
+                'connected_count': len(connected_items),
+                'organizations': org_names,
+                'message': f'This global item is connected to {len(connected_items)} inventory items across {len(org_names)} organizations. These will be disconnected and become organization-owned items.'
+            })
+        
+        # Proceed with deletion
+        item_name = item.name
+        connected_count = len(connected_items)
+        
+        # Disconnect all inventory items (set global_item_id to NULL)
+        for inv_item in connected_items:
+            inv_item.global_item_id = None
+            # The inventory item remains in the organization but loses global connection
+        
+        # Delete the global item
+        db.session.delete(item)
+        db.session.commit()
+        
+        # Log the deletion for audit purposes
+        import logging
+        logging.warning(f"GLOBAL_ITEM_DELETED: Developer {current_user.username} deleted global item '{item_name}' (ID: {item_id}). {connected_count} inventory items disconnected and converted to organization-owned.")
+        
+        return jsonify({
+            'success': True,
+            'message': f'Global item "{item_name}" deleted successfully. {connected_count} connected inventory items converted to organization-owned items.'
+        })
+        
+    except Exception as e:
+        db.session.rollback()
+        import logging
+        logging.error(f"GLOBAL_ITEM_DELETE_FAILED: Error deleting global item {item_id}: {str(e)}")
+        return jsonify({
+            'success': False, 
+            'error': f'Failed to delete global item: {str(e)}'
+        })
+
 @developer_bp.route('/inventory-analytics')
 @login_required
 def inventory_analytics_stub():
