@@ -11,7 +11,10 @@
           <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
           <div class="mb-3">
             <label for="name">Name:</label>
-            <input type="text" name="name" value="{{ item.name }}" class="form-control" required>
+            <input type="text" name="name" value="{{ item.name }}" class="form-control" required {% if item.global_item_id %}readonly{% endif %}>
+            {% if item.global_item_id %}
+              <small class="text-muted">Managed by global catalog</small>
+            {% endif %}
           </div>
 
           <div class="mb-3">
@@ -42,7 +45,7 @@
           <div class="mb-3" id="categorySection" {% if item.type != 'ingredient' %}style="display: none;"{% endif %}>
             <label for="category">Ingredient Category:</label>
             <div class="input-group">
-              <select name="category_id" class="form-select" id="categorySelect">
+              <select name="category_id" class="form-select" id="categorySelect" {% if item.global_item_id %}disabled{% endif %}>
                 <option value="">-- No Category --</option>
                 <optgroup label="Reference Guide Categories" id="referenceCategories">
                   <!-- Populated via JavaScript -->
@@ -80,7 +83,7 @@
           {% else %}
           <div class="mb-3">
             <label for="unit">Unit:</label>
-            <select name="unit" class="form-select select2" data-unit-select id="unitSelect" required>
+            <select name="unit" class="form-select select2" data-unit-select id="unitSelect" required {% if item.global_item_id %}disabled{% endif %}>
               {% for unit in get_global_unit_list() %}
                 <option value="{{ unit.name }}" {% if unit.name == item.unit %}selected{% endif %}>{{ unit.name }}</option>
               {% endfor %}
@@ -98,7 +101,8 @@
             <div class="input-group">
               <input type="number" step="0.001" name="density" id="density" 
                      class="form-control" value="{{ item.density or 0.0 }}"
-                     {% if item.category_id and not item.density %}disabled{% endif %}>
+                     {% if item.category_id and not item.density %}disabled{% endif %}
+                     {% if item.global_item_id %}readonly{% endif %}>
             </div>
             <small class="text-muted">Used for volume ↔ weight conversions. Locked when using category default.</small>
           </div>

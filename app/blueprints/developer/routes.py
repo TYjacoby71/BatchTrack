@@ -505,7 +505,7 @@ def global_items_admin():
     search_query = request.args.get('search', '').strip()
 
     # Build base query
-    query = GlobalItem.query
+    query = GlobalItem.query.filter(GlobalItem.is_archived != True)
 
     # Filter by item type if specified
     if item_type:
@@ -722,23 +722,39 @@ def delete_global_item(item_id):
         item_name = item.name
         connected_count = len(connected_items)
 
-        # Disconnect all inventory items (set global_item_id to NULL)
-        for inv_item in connected_items:
-            inv_item.global_item_id = None
-            # The inventory item remains in the organization but loses global connection
-
-        # Delete the global item
-        db.session.delete(item)
-        db.session.commit()
+        # Default behavior: soft-delete (archive) the global item
+        if not force_delete:
+            from datetime import datetime
+            item.is_archived = True
+            item.archived_at = datetime.utcnow()
+            item.archived_by = current_user.id
+            db.session.commit()
+        else:
+            # Hard delete: Disconnect all inventory items (set global_item_id to NULL and ownership='org')
+            for inv_item in connected_items:
+                inv_item.global_item_id = None
+                try:
+                    inv_item.ownership = 'org'
+                except Exception:
+                    pass
+            # Delete the global item
+            db.session.delete(item)
+            db.session.commit()
 
         # Log the deletion for audit purposes
         import logging
         logging.warning(f"GLOBAL_ITEM_DELETED: Developer {current_user.username} deleted global item '{item_name}' (ID: {item_id}). {connected_count} inventory items disconnected and converted to organization-owned.")
 
-        return jsonify({
-            'success': True,
-            'message': f'Global item "{item_name}" deleted successfully. {connected_count} connected inventory items converted to organization-owned items.'
-        })
+        if not force_delete:
+            return jsonify({
+                'success': True,
+                'message': f'Global item "{item_name}" archived successfully.'
+            })
+        else:
+            return jsonify({
+                'success': True,
+                'message': f'Global item "{item_name}" deleted successfully. {connected_count} connected inventory items converted to organization-owned items.'
+            })
 
     except Exception as e:
         db.session.rollback()
