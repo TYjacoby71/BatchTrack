@@ -1,0 +1,158 @@
+{
+  "categories": [
+    {
+      "name": "Waxes",
+      "default_density": 0.93,
+      "items": [
+        { "name": "Beeswax", "density_g_per_ml": 0.96, "aka": ["white beeswax", "yellow beeswax"], "default_unit": "gram" },
+        { "name": "Soy Wax", "density_g_per_ml": 0.93 },
+        { "name": "Paraffin Wax", "density_g_per_ml": 0.90 }
+      ]
+    },
+    {
+      "name": "Oils",
+      "default_density": 0.92,
+      "items": [
+        { "name": "Olive Oil", "density_g_per_ml": 0.91, "aka": ["extra virgin olive oil", "EVOO"], "default_unit": "milliliter" },
+        { "name": "Vegetable Oil", "density_g_per_ml": 0.92 },
+        { "name": "Coconut Oil", "density_g_per_ml": 0.924 }
+      ]
+    },
+    {
+      "name": "Dairy",
+      "default_density": 1.02,
+      "items": [
+        { "name": "Whole Milk", "density_g_per_ml": 1.03, "aka": ["milk", "cow milk"], "default_unit": "milliliter" },
+        { "name": "Skim Milk", "density_g_per_ml": 1.035 }
+      ]
+    },
+    {
+      "name": "Syrups",
+      "default_density": 1.40,
+      "items": [
+        { "name": "Honey", "density_g_per_ml": 1.42 },
+        { "name": "Maple Syrup", "density_g_per_ml": 1.37 }
+      ]
+    },
+    {
+      "name": "Flours",
+      "default_density": 0.60,
+      "items": [
+        { "name": "All-Purpose Flour", "density_g_per_ml": 0.60, "aka": ["AP flour"] }
+      ]
+    },
+    {
+      "name": "Starches",
+      "default_density": 0.63,
+      "items": [
+        { "name": "Cornstarch", "density_g_per_ml": 0.64 }
+      ]
+    },
+    {
+      "name": "Sugars",
+      "default_density": 0.85,
+      "items": [
+        { "name": "White Sugar", "density_g_per_ml": 0.85 }
+      ]
+    },
+    {
+      "name": "Salts",
+      "default_density": 2.16,
+      "items": [
+        { "name": "Table Salt", "density_g_per_ml": 2.16 }
+      ]
+    },
+    {
+      "name": "Chocolate",
+      "default_density": 0.71,
+      "items": [
+        { "name": "Cocoa Powder", "density_g_per_ml": 0.64 }
+      ]
+    },
+    {
+      "name": "Spices",
+      "default_density": 0.57,
+      "items": [
+        { "name": "Ground Cinnamon", "density_g_per_ml": 0.56 }
+      ]
+    },
+    {
+      "name": "Herbs",
+      "default_density": 0.32,
+      "items": [
+        { "name": "Dried Basil", "density_g_per_ml": 0.32 }
+      ]
+    },
+    {
+      "name": "Extracts",
+      "default_density": 0.86,
+      "items": [
+        { "name": "Vanilla Extract", "density_g_per_ml": 0.87 }
+      ]
+    },
+    {
+      "name": "Acids",
+      "default_density": 1.03,
+      "items": [
+        { "name": "Lemon Juice", "density_g_per_ml": 1.03 }
+      ]
+    },
+    {
+      "name": "Grains",
+      "default_density": 0.72,
+      "items": [
+        { "name": "Rolled Oats", "density_g_per_ml": 0.41 }
+      ]
+    },
+    {
+      "name": "Nuts",
+      "default_density": 0.55,
+      "items": [
+        { "name": "Whole Almonds", "density_g_per_ml": 0.54 }
+      ]
+    },
+    {
+      "name": "Seeds",
+      "default_density": 0.61,
+      "items": [
+        { "name": "Sunflower Seeds", "density_g_per_ml": 0.56 }
+      ]
+    },
+    {
+      "name": "Dried Fruits",
+      "default_density": 0.69,
+      "items": [
+        { "name": "Raisins", "density_g_per_ml": 0.67 }
+      ]
+    },
+    {
+      "name": "Clays",
+      "default_density": 2.45,
+      "items": [
+        { "name": "Bentonite Clay", "density_g_per_ml": 2.35 }
+      ]
+    },
+    {
+      "name": "Essential Oils",
+      "default_density": 0.89,
+      "items": [
+        { "name": "Lavender Essential Oil", "density_g_per_ml": 0.885 }
+      ]
+    },
+    {
+      "name": "Cosmetic Ingredients",
+      "default_density": 1.08,
+      "items": [
+        { "name": "Glycerin", "density_g_per_ml": 1.26 }
+      ]
+    },
+    {
+      "name": "Alcohols",
+      "default_density": 0.85,
+      "items": [
+        { "name": "Ethanol", "density_g_per_ml": 0.789 },
+        { "name": "Vodka", "density_g_per_ml": 0.94 }
+      ]
+    }
+  ]
+}

@@ -385,9 +385,19 @@ def edit_inventory(id):
         if recount_performed:
             update_form_data.pop('quantity', None)
 
+        # Enforce immutability for globally-managed identity fields
+        is_global_locked = getattr(item, 'global_item_id', None) is not None
+
         # Update basic fields
-        item.name = form_data.get('name', item.name)
-        item.unit = form_data.get('unit', item.unit)
+        if not is_global_locked:
+            item.name = form_data.get('name', item.name)
+        else:
+            # Ignore attempted name changes
+            form_data['name'] = item.name
+
+        # Unit can be changed only if not global locked
+        if not is_global_locked:
+            item.unit = form_data.get('unit', item.unit)
         item.cost_per_unit = float(form_data.get('cost_per_unit', item.cost_per_unit or 0))
         item.low_stock_threshold = float(form_data.get('low_stock_threshold', item.low_stock_threshold or 0))
         item.type = form_data.get('type', item.type)
@@ -395,7 +405,7 @@ def edit_inventory(id):
         # Handle category (only for ingredients)
         if item.type == 'ingredient':
             category_id = form_data.get('category_id')
-            if category_id:
+            if category_id and not is_global_locked:
                 if category_id.startswith('ref_'):
                     # This is a reference category selection
                     reference_category_name = category_id.replace('ref_', '')
@@ -437,6 +447,12 @@ def edit_inventory(id):
             item.unit = 'count'
             logger.info(f"Container unit set to 'count' (capacity unit is {item.capacity_unit})")
 
+        # Prevent density changes if globally locked
+        if is_global_locked:
+            update_form_data.pop('density', None)
+            update_form_data.pop('item_density', None)
+            update_form_data.pop('category_id', None)
+            update_form_data.pop('unit', None)
         success, message = update_inventory_item(id, update_form_data)
         flash(message, 'success' if success else 'error')
         return redirect(url_for('inventory.view_inventory', id=id))

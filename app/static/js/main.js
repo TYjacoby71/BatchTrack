@@ -182,10 +182,28 @@ document.addEventListener('DOMContentLoaded', function() {
         // Ensure the select shows the chosen name
         const option = new Option(data.text, data.text, true, true);
         $nameSelect.append(option).trigger('change');
+        // Apply suggested defaults when available
+        try {
+          if (data.default_unit) {
+            const unitSelect = document.querySelector('#addIngredientForm select[name="unit"]');
+            if (unitSelect) unitSelect.value = data.default_unit;
+          }
+          // Perishable defaults
+          const perishableCheckbox = document.getElementById('addIngredientPerishable');
+          if (typeof data.default_is_perishable !== 'undefined' && perishableCheckbox) {
+            perishableCheckbox.checked = !!data.default_is_perishable;
+          }
+          const shelfLifeInput = document.querySelector('#addIngredientForm input[name="shelf_life_days"]');
+          if (shelfLifeInput && data.recommended_shelf_life_days) {
+            shelfLifeInput.value = data.recommended_shelf_life_days;
+          }
+        } catch (_) {}
       } else {
         hiddenGlobalId.value = '';
       }
     });
+
+    // No base category selection in add form; density/category auto-assigned on creation
 
     // If user clears or changes to a custom name, drop the global link to avoid stale linkage
     $nameSelect.on('change', function () {
@@ -240,6 +258,13 @@ document.addEventListener('DOMContentLoaded', function() {
         hiddenGlobalIdContainer.value = data.id;
         const option = new Option(data.text, data.text, true, true);
         $containerNameSelect.append(option).trigger('change');
+        // Apply suggested capacity unit when available
+        try {
+          if (data.capacity_unit) {
+            const sel = document.querySelector('#addContainerForm select[name="capacity_unit"]');
+            if (sel) sel.value = data.capacity_unit;
+          }
+        } catch (_) {}
       } else {
         hiddenGlobalIdContainer.value = '';
       }

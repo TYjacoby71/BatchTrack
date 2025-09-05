@@ -1,5 +1,25 @@
 # API Reference
 
+## Production Planning
+
+- POST `/production/stock/check` — Recipe stock check
+  - Body: `{ recipe_id: number, scale_factor?: number }`
+  - Returns: `{ success: boolean, shortages?: [...], drawer_payload?: {...} }`
+  - Notes: May include `drawer_payload` for user-fixable issues (see `docs/WALL_OF_DRAWERS_PROTOCOL.md`).
+
+## FIFO & Inventory
+
+- GET `/api/fifo-details/:inventory_id` — FIFO entries for an inventory item
+- GET `/api/batch-inventory-summary/:batch_id` — Batch usage summary
+
+## Drawer Actions
+
+- GET `/api/drawer-actions/conversion/density-modal/:ingredient_id` — Density fix modal
+- GET `/api/drawer-actions/conversion/unit-mapping-modal` — Unit mapping modal
+
+See controller: `app/blueprints/api/drawer_actions.py`.
+# API Reference
+
 This document provides a comprehensive reference for all API endpoints available in BatchTrack.
 
 ## Authentication

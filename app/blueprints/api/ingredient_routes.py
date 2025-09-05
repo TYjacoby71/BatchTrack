@@ -9,12 +9,17 @@ ingredient_api_bp = Blueprint('ingredient_api', __name__)
 
 @ingredient_api_bp.route('/categories', methods=['GET'])
 def get_categories():
-    categories = IngredientCategory.query.all()
-    return jsonify([{
-        'id': cat.id,
-        'name': cat.name,
-        'default_density': cat.default_density
-    } for cat in categories])
+    """Return base ingredient categories with their default densities."""
+    # Categories are org-scoped; expose current org's categories sorted by name
+    categories = IngredientCategory.query.order_by(IngredientCategory.name.asc()).all()
+    return jsonify([
+        {
+            'id': cat.id,
+            'name': cat.name,
+            'default_density': cat.default_density
+        }
+        for cat in categories
+    ])
 
 @ingredient_api_bp.route('/ingredient/<int:id>/density', methods=['GET'])
 def get_ingredient_density(id):
@@ -72,7 +77,7 @@ def search_global_items():
     if not q:
         return jsonify({'results': []})
 
-    query = GlobalItem.query
+    query = GlobalItem.query.filter(GlobalItem.is_archived != True)
     if item_type:
         query = query.filter(GlobalItem.item_type == item_type)
 

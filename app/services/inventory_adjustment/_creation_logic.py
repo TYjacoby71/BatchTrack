@@ -5,6 +5,7 @@ This handler should work with the centralized quantity update system.
 
 import logging
 from app.models import db, InventoryItem, IngredientCategory, Unit, UnifiedInventoryHistory, GlobalItem
+from app.services.density_assignment_service import DensityAssignmentService
 from ._fifo_ops import create_new_fifo_lot
 
 logger = logging.getLogger(__name__)
@@ -23,12 +24,6 @@ def create_inventory_item(form_data, organization_id, created_by):
         if not name:
             return False, "Item name is required", None
 
-        # Determine item type, preferring global item if provided
-        item_type = form_data.get('type') or (global_item.item_type if global_item else 'ingredient')
-        # Validate type against global item
-        if global_item and item_type != global_item.item_type:
-            return False, f"Selected global item type '{global_item.item_type}' does not match item type '{item_type}'.", None
-
         # If provided, load global item for defaults
         global_item_id = form_data.get('global_item_id')
         global_item = None
@@ -37,6 +32,12 @@ def create_inventory_item(form_data, organization_id, created_by):
                 global_item = db.session.get(GlobalItem, int(global_item_id))
             except Exception:
                 global_item = None
+
+        # Determine item type, preferring global item if provided
+        item_type = form_data.get('type') or (global_item.item_type if global_item else 'ingredient')
+        # Validate type against global item
+        if global_item and item_type != global_item.item_type:
+            return False, f"Selected global item type '{global_item.item_type}' does not match item type '{item_type}'.", None
 
         # Handle unit - get from form or default (prefer global item default)
         unit_input = form_data.get('unit', '').strip()
@@ -55,17 +56,16 @@ def create_inventory_item(form_data, organization_id, created_by):
         else:
             final_unit = 'count'  # Default unit
 
-        # Handle category
+        # Handle base category selector and custom density (defer density application until after item exists)
         category_id = None
-        category_name = form_data.get('category')
-        if category_name:
-            category = db.session.query(IngredientCategory).filter_by(name=category_name).first()
-            if category:
-                category_id = category.id
-        # No explicit category provided; attempt from global item suggested inventory category
-        if category_id is None and global_item and global_item.suggested_inventory_category_id:
-            # Note: this is inventory category taxonomy; keep ingredient category separate
-            pass
+        raw_category_id = form_data.get('category_id')
+        custom_density = form_data.get('density')
+        if raw_category_id and not (isinstance(raw_category_id, str) and raw_category_id.startswith('ref_')) and raw_category_id != 'custom':
+            # Legacy custom IngredientCategory by id
+            try:
+                category_id = int(raw_category_id)
+            except Exception:
+                category_id = None
 
         # Extract numeric fields with defaults
         cost_per_unit = 0.0
@@ -114,7 +114,8 @@ def create_inventory_item(form_data, organization_id, created_by):
             shelf_life_days=shelf_life_days,
             organization_id=organization_id,
             category_id=category_id,
-            global_item_id=(global_item.id if global_item else None)
+            global_item_id=(global_item.id if global_item else None),
+            ownership=('global' if global_item else 'org')
         )
 
         # Apply global item defaults after instance is created
@@ -127,6 +128,49 @@ def create_inventory_item(form_data, organization_id, created_by):
                 new_item.capacity = global_item.capacity
             if global_item.capacity_unit is not None:
                 new_item.capacity_unit = global_item.capacity_unit
+
+        # Resolve category linkage and density precedence
+        # 1) If a reference category was chosen, set category_id to matching IngredientCategory and assign its default density
+        if raw_category_id and isinstance(raw_category_id, str) and raw_category_id.startswith('ref_'):
+            ref_name = raw_category_id.split('ref_', 1)[1]
+            try:
+                cat = db.session.query(IngredientCategory).filter_by(name=ref_name, organization_id=organization_id).first()
+                if cat:
+                    new_item.category_id = cat.id
+                # Assign category default density (will be overridden by custom density below if provided)
+                DensityAssignmentService.assign_density_to_ingredient(
+                    ingredient=new_item,
+                    use_category_default=True,
+                    category_name=ref_name
+                )
+            except Exception:
+                pass
+
+        # 2) If a global item was selected, ensure category linkage to matching IngredientCategory by name
+        if global_item and getattr(global_item, 'reference_category', None):
+            try:
+                cat = db.session.query(IngredientCategory).filter_by(name=global_item.reference_category, organization_id=organization_id).first()
+                if cat:
+                    new_item.category_id = cat.id
+            except Exception:
+                pass
+
+        # 3) If no density provided and no global item and no ref category assignment, try auto-assign based on name/category
+        if (not global_item) and (not custom_density) and not (raw_category_id and isinstance(raw_category_id, str) and raw_category_id.startswith('ref_')):
+            try:
+                DensityAssignmentService.auto_assign_density_on_creation(new_item)
+            except Exception:
+                pass
+
+        # 4) If user provided custom density, override
+        if custom_density not in [None, '', 'null']:
+            try:
+                parsed = float(custom_density)
+                if parsed > 0:
+                    new_item.density = parsed
+                    new_item.density_source = 'manual'
+            except Exception:
+                pass
 
         # Save the new item
         db.session.add(new_item)

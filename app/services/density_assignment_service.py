@@ -46,6 +46,42 @@ class DensityAssignmentService:
         items = reference_data.get('common_densities', [])
         
         ingredient_lower = ingredient_name.lower().strip()
+
+        # High-trust keyword heuristic mapping
+        # 1) Exact density overrides for certain well-known names
+        keyword_to_exact_density = {
+            'beeswax': 0.96,
+        }
+        for keyword, exact_density in keyword_to_exact_density.items():
+            if keyword in ingredient_lower:
+                return {
+                    'name': keyword,
+                    'density_g_per_ml': exact_density,
+                    'aliases': [],
+                    'category': 'Waxes'
+                }, 'exact_keyword_density'
+
+        # 2) Category-level defaults
+        keyword_to_category = {
+            'wax': 'Waxes',
+            'oil': 'Oils',
+            'syrup': 'Syrups',
+            'flour': 'Flours',
+            'sugar': 'Sugars',
+            'salt': 'Salts',
+            'starch': 'Starches',
+            'butter': 'Fats',
+            'alcohol': 'Alcohols',
+        }
+        for keyword, category in keyword_to_category.items():
+            if keyword in ingredient_lower:
+                # synthesize a category pseudo-item to signal category default usage
+                return {
+                    'name': None,
+                    'density_g_per_ml': None,
+                    'aliases': [],
+                    'category': category
+                }, 'category_keyword'
         
         # First: Try exact name match
         for item in items:
@@ -83,32 +119,25 @@ class DensityAssignmentService:
     
     @staticmethod
     def get_category_options(organization_id: int) -> List[Dict]:
-        """Get all available density options grouped by category"""
-        reference_data = DensityAssignmentService._load_reference_data_from_db()
-        items = reference_data.get('common_densities', [])
-        
-        # Group reference items by category
-        categories = {}
-        for item in items:
-            category_name = item.get('category', 'Other')
-            if category_name not in categories:
-                categories[category_name] = {
-                    'name': category_name,
-                    'items': [],
-                    'default_density': None
+        """Get base ingredient categories with their default densities.
+        Source of truth: IngredientCategory.default_density.
+        """
+        from ..models import IngredientCategory
+        try:
+            categories = IngredientCategory.query
+            if organization_id:
+                categories = categories.filter_by(organization_id=organization_id)
+            cats = categories.order_by(IngredientCategory.name.asc()).all()
+            return [
+                {
+                    'name': c.name,
+                    'items': [],  # optional; not needed for fallback
+                    'default_density': c.default_density
                 }
-            categories[category_name]['items'].append(item)
-        
-        # Calculate default densities for each category (average of items)
-        for category_name, category_data in categories.items():
-            densities = [item['density_g_per_ml'] for item in category_data['items']]
-            category_data['default_density'] = sum(densities) / len(densities)
-        
-        # Sort items within each category
-        for category_data in categories.values():
-            category_data['items'].sort(key=lambda x: x['name'])
-        
-        return list(categories.values())
+                for c in cats
+            ]
+        except Exception:
+            return []
     
     @staticmethod
     def assign_density_to_ingredient(ingredient: InventoryItem, reference_item_name: str = None, 
@@ -163,7 +192,7 @@ class DensityAssignmentService:
             
         match_item, match_type = DensityAssignmentService.find_best_match(ingredient.name)
         
-        if match_item and match_type in ['exact', 'alias']:
+        if match_item and match_type in ['exact', 'alias', 'exact_keyword_density']:
             # High confidence match - auto assign
             density_value = match_item['density_g_per_ml']
             if density_value > 0:  # Ensure we don't assign 0 density
@@ -172,6 +201,17 @@ class DensityAssignmentService:
                 ingredient.density_source = 'auto_assigned'
                 current_app.logger.info(f"Auto-assigned density for '{ingredient.name}': {density_value} g/ml from '{match_item['name']}'")
                 return True
+        elif match_item and match_type == 'category_keyword':
+            # Assign category default density based on aggregated category defaults
+            categories = DensityAssignmentService.get_category_options(ingredient.organization_id)
+            category_name = match_item.get('category')
+            for cat in categories:
+                if cat['name'].lower() == category_name.lower():
+                    ingredient.density = cat['default_density']
+                    ingredient.reference_item_name = None
+                    ingredient.density_source = 'category_default'
+                    current_app.logger.info(f"Auto-assigned category default density for '{ingredient.name}': {cat['default_density']} g/ml from category '{category_name}'")
+                    return True
         elif match_item and match_type == 'similarity':
             # Lower confidence - suggest but don't auto-assign
             current_app.logger.info(f"Similarity match found for '{ingredient.name}': '{match_item['name']}' (density: {match_item['density_g_per_ml']})")

@@ -47,6 +47,8 @@ class InventoryItem(ScopedModelMixin, db.Model):
 
     # Global library linkage (nullable)
     global_item_id = db.Column(db.Integer, db.ForeignKey('global_item.id', ondelete='SET NULL'), nullable=True, index=True)
+    # Ownership semantics: 'global' when linked, 'org' when unlinked/customized
+    ownership = db.Column(db.String(16), nullable=True, index=True)
 
     # Organization relationship
     organization_id = db.Column(db.Integer, db.ForeignKey('organization.id'), nullable=True, index=True)

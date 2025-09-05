@@ -85,136 +85,160 @@
 {% endblock %}
 
 <!-- Delete Confirmation Modal -->
-<div class="modal fade" id="deleteModal" tabindex="-1">
-  <div class="modal-dialog">
-    <div class="modal-content">
-      <div class="modal-header">
-        <h5 class="modal-title">Confirm Deletion</h5>
-        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-      </div>
-      <div class="modal-body">
-        <div id="deleteWarning" class="alert alert-warning d-none">
-          <strong>Warning:</strong> This global item is connected to <span id="connectedCount"></span> inventory items across <span id="orgCount"></span> organizations.
-          <br><br>
-          <strong>Organizations affected:</strong>
-          <ul id="orgList"></ul>
-          <p>These inventory items will be <strong>disconnected</strong> and converted to organization-owned items. They will remain in the organizations' inventories but lose the global connection.</p>
+<div class="modal fade" id="deleteGlobalItemModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Delete Global Item</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="alert alert-warning">
+                    <i class="fas fa-exclamation-triangle"></i>
+                    <strong>Warning:</strong> You are about to delete the global item <strong id="deleteItemName"></strong>.
+                </div>
+
+                <div class="mb-3">
+                    <label for="confirmItemName" class="form-label">Type the item name to confirm deletion:</label>
+                    <input type="text" id="confirmItemName" class="form-control" placeholder="Enter item name">
+                </div>
+
+                <div id="deleteConfirmationSection" style="display: none;">
+                    <div class="alert alert-info">
+                        <strong>Impact:</strong> This item is connected to <span id="connectedItemsCount"></span> inventory items across the following organizations:
+                        <br><strong>Organizations:</strong> <span id="affectedOrganizations"></span>
+                        <br><br>
+                        These inventory items will be disconnected and become organization-owned.
+                    </div>
+
+                    <div class="form-check">
+                        <input type="checkbox" id="forceDelete" class="form-check-input">
+                        <label for="forceDelete" class="form-check-label">
+                            I understand the impact and want to proceed with deletion
+                        </label>
+                    </div>
+                </div>
+
+                <input type="hidden" id="deleteItemId">
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-danger" onclick="confirmDeleteGlobalItem()">Delete Item</button>
+            </div>
         </div>
-        <p>Type the item name <strong><span id="itemNameToConfirm"></span></strong> to confirm deletion:</p>
-        <input type="text" id="deleteConfirmInput" class="form-control" placeholder="Enter item name exactly">
-      </div>
-      <div class="modal-footer">
-        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-        <button type="button" class="btn btn-danger" id="confirmDeleteBtn" disabled>Delete Global Item</button>
-      </div>
     </div>
-  </div>
 </div>
 
 {% block scripts %}
 <script>
-let currentDeleteItemId = null;
-let currentDeleteItemName = null;
-let requiresForceDelete = false;
-
-document.addEventListener('DOMContentLoaded', function() {
-    const typeFilter = document.getElementById('typeFilter');
-    const categoryFilterDiv = document.getElementById('categoryFilterDiv');
-    const categoryFilter = document.getElementById('categoryFilter');
-
-    function toggleCategoryFilter() {
-        if (typeFilter.value === 'ingredient') {
-            categoryFilterDiv.style.display = 'block';
-        } else {
-            categoryFilterDiv.style.display = 'none';
-            categoryFilter.value = ''; // Clear category when not ingredients
-        }
+function deleteGlobalItem(itemId, itemName) {
+    try {
+        const modal = new bootstrap.Modal(document.getElementById('deleteGlobalItemModal'));
+        document.getElementById('deleteItemId').value = itemId;
+        document.getElementById('deleteItemName').textContent = itemName;
+        document.getElementById('confirmItemName').value = '';
+        document.getElementById('forceDelete').checked = false;
+        document.getElementById('deleteConfirmationSection').style.display = 'none';
+        modal.show();
+    } catch (error) {
+        console.error('Error showing delete modal:', error);
+        alert('Failed to show delete modal');
     }
-
-    // Handle type filter change
-    typeFilter.addEventListener('change', function() {
-        toggleCategoryFilter();
-
-        // If switching away from ingredients, submit form to clear category filter
-        if (typeFilter.value !== 'ingredient' && '{{ selected_category }}') {
-            this.form.submit();
-        }
-    });
-
-    // Initialize on page load
-    toggleCategoryFilter();
-
-    // Delete confirmation handling
-    const deleteModal = new bootstrap.Modal(document.getElementById('deleteModal'));
-    const confirmInput = document.getElementById('deleteConfirmInput');
-    const confirmBtn = document.getElementById('confirmDeleteBtn');
-
-    confirmInput.addEventListener('input', function() {
-        confirmBtn.disabled = this.value.trim() !== currentDeleteItemName;
-    });
-
-    confirmBtn.addEventListener('click', function() {
-        if (confirmInput.value.trim() === currentDeleteItemName) {
-            executeDelete();
-        }
-    });
-});
-
-function confirmDelete(itemId, itemName) {
-    currentDeleteItemId = itemId;
-    currentDeleteItemName = itemName;
-    requiresForceDelete = false;
-    
-    document.getElementById('itemNameToConfirm').textContent = itemName;
-    document.getElementById('deleteConfirmInput').value = '';
-    document.getElementById('confirmDeleteBtn').disabled = true;
-    document.getElementById('deleteWarning').classList.add('d-none');
-    
-    const deleteModal = new bootstrap.Modal(document.getElementById('deleteModal'));
-    deleteModal.show();
 }
 
-function executeDelete() {
-    fetch(`/developer/global-items/${currentDeleteItemId}/delete`, {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-            confirm_name: currentDeleteItemName,
-            force_delete: requiresForceDelete
+function confirmDeleteGlobalItem() {
+    try {
+        const itemId = document.getElementById('deleteItemId').value;
+        const itemName = document.getElementById('deleteItemName').textContent;
+        const confirmName = document.getElementById('confirmItemName').value;
+        const forceDelete = document.getElementById('forceDelete').checked;
+
+        if (!confirmName) {
+            alert('Please enter the item name to confirm deletion');
+            return;
+        }
+
+        const data = {
+            confirm_name: confirmName,
+            force_delete: forceDelete
+        };
+
+        fetch(`/developer/global-items/${itemId}/delete`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': getCSRFToken()
+            },
+            body: JSON.stringify(data)
         })
-    })
-    .then(response => response.json())
-    .then(data => {
-        if (data.success) {
-            // Success - reload page
-            location.reload();
-        } else if (data.requires_confirmation) {
-            // Show warning about connected items
-            document.getElementById('connectedCount').textContent = data.connected_count;
-            document.getElementById('orgCount').textContent = data.organizations.length;
-            
-            const orgList = document.getElementById('orgList');
-            orgList.innerHTML = '';
-            data.organizations.forEach(org => {
-                const li = document.createElement('li');
-                li.textContent = org;
-                orgList.appendChild(li);
-            });
-            
-            document.getElementById('deleteWarning').classList.remove('d-none');
-            document.getElementById('confirmDeleteBtn').textContent = 'Force Delete & Disconnect';
-            requiresForceDelete = true;
-        } else {
-            // Error
-            alert('Error: ' + data.error);
-        }
-    })
-    .catch(error => {
-        alert('Error: ' + error.message);
-    });
+        .then(response => {
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            return response.json();
+        })
+        .then(result => {
+            if (result.success) {
+                const modalInstance = bootstrap.Modal.getInstance(document.getElementById('deleteGlobalItemModal'));
+                if (modalInstance) modalInstance.hide();
+                location.reload();
+            } else if (result.requires_confirmation) {
+                // Show additional confirmation info
+                document.getElementById('deleteConfirmationSection').style.display = 'block';
+                document.getElementById('connectedItemsCount').textContent = result.connected_count;
+                document.getElementById('affectedOrganizations').textContent = result.organizations.join(', ');
+            } else {
+                alert(result.error || 'Unknown error occurred');
+            }
+        })
+        .catch(error => {
+            console.error('Error deleting global item:', error);
+            alert('Failed to delete global item: ' + error.message);
+        });
+    } catch (error) {
+        console.error('Error in confirmDeleteGlobalItem:', error);
+        alert('An unexpected error occurred');
+    }
 }
+
+function getCSRFToken() {
+    try {
+        const csrfInput = document.querySelector('input[name="csrf_token"]');
+        return csrfInput ? csrfInput.value : '';
+    } catch (error) {
+        console.error('Error getting CSRF token:', error);
+        return '';
+    }
+}
+
+// Add search functionality
+function filterItems() {
+    try {
+        const searchTerm = document.getElementById('searchInput').value.toLowerCase();
+        const rows = document.querySelectorAll('tbody tr');
+
+        rows.forEach(row => {
+            const text = row.textContent.toLowerCase();
+            if (text.includes(searchTerm)) {
+                row.style.display = '';
+            } else {
+                row.style.display = 'none';
+            }
+        });
+    } catch (error) {
+        console.error('Error filtering items:', error);
+    }
+}
+
+// Initialize page functionality
+document.addEventListener('DOMContentLoaded', function() {
+    try {
+        // Add any initialization code here if needed
+        console.log('Global items page loaded successfully');
+    } catch (error) {
+        console.error('Error initializing page:', error);
+    }
+});
 </script>
 <script>
 function applyFilters() {
