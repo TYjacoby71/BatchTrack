@@ -28,8 +28,8 @@ def update_inventory_item(item_id: int, form_data: dict) -> tuple[bool, str]:
         is_global_locked = getattr(item, 'global_item_id', None) is not None
 
         if is_global_locked:
-            # Prevent changes to name, unit, category, density for globally-managed items
-            for forbidden_key in ['name', 'unit', 'category_id', 'density', 'item_density']:
+            # Prevent changes to name, category, density for globally-managed items (unit is user-editable)
+            for forbidden_key in ['name', 'category_id', 'density', 'item_density']:
                 if forbidden_key in form_data and str(form_data.get(forbidden_key)).strip() != str(getattr(item, 'name' if forbidden_key=='name' else forbidden_key, '')):
                     return False, "This item is managed by the global catalog. Identity fields cannot be edited."
 
