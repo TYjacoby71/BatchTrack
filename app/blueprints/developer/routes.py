@@ -503,18 +503,18 @@ def global_items_admin():
     item_type = request.args.get('type', '')
     category_filter = request.args.get('category', '')
     search_query = request.args.get('search', '').strip()
-    
+
     # Build base query
     query = GlobalItem.query
-    
+
     # Filter by item type if specified
     if item_type:
         query = query.filter(GlobalItem.item_type == item_type)
-    
+
     # Filter by reference category if specified
     if category_filter:
         query = query.filter(GlobalItem.reference_category == category_filter)
-    
+
     # Add search functionality
     if search_query:
         search_term = f"%{search_query}%"
@@ -524,17 +524,17 @@ def global_items_admin():
                 GlobalItem.aka_names.op('::text').ilike(search_term)
             )
         )
-    
+
     # Get filtered results
     items = query.order_by(GlobalItem.item_type, GlobalItem.name).limit(500).all()
-    
+
     # Get unique categories for filter dropdown (only from ingredients)
     categories = db.session.query(GlobalItem.reference_category).filter(
         GlobalItem.reference_category.isnot(None),
         GlobalItem.item_type == 'ingredient'
     ).distinct().order_by(GlobalItem.reference_category).all()
     categories = [cat[0] for cat in categories if cat[0]]
-    
+
     return render_template('developer/global_items.html', 
                          items=items, 
                          categories=categories,
@@ -552,6 +552,14 @@ def global_item_detail(item_id):
 @login_required
 def global_item_edit(item_id):
     """Developer edit for GlobalItem with basic audit logging"""
+    # Add CSRF protection
+    from flask_wtf.csrf import validate_csrf
+    try:
+        validate_csrf(request.form.get('csrf_token'))
+    except Exception as e:
+        flash(f"CSRF validation failed: {e}", "error")
+        return redirect(url_for('developer.global_item_detail', item_id=item_id))
+
     item = GlobalItem.query.get_or_404(item_id)
 
     before = {
@@ -613,18 +621,18 @@ def create_global_item():
             item_type = request.form.get('item_type', 'ingredient')
             default_unit = request.form.get('default_unit', '').strip() or None
             reference_category = request.form.get('reference_category', '').strip() or None
-            
+
             # Validation
             if not name:
                 flash('Name is required', 'error')
                 return redirect(url_for('developer.create_global_item'))
-            
+
             # Check for duplicate
             existing = GlobalItem.query.filter_by(name=name, item_type=item_type).first()
             if existing:
                 flash(f'A {item_type} with the name "{name}" already exists', 'error')
                 return redirect(url_for('developer.create_global_item'))
-            
+
             # Create new global item
             new_item = GlobalItem(
                 name=name,
@@ -632,7 +640,7 @@ def create_global_item():
                 default_unit=default_unit,
                 reference_category=reference_category
             )
-            
+
             # Add optional fields
             density = request.form.get('density')
             if density:
@@ -640,40 +648,40 @@ def create_global_item():
                     new_item.density = float(density)
                 except ValueError:
                     pass
-            
+
             capacity = request.form.get('capacity')
             if capacity:
                 try:
                     new_item.capacity = float(capacity)
                 except ValueError:
                     pass
-            
+
             new_item.capacity_unit = request.form.get('capacity_unit', '').strip() or None
             new_item.default_is_perishable = request.form.get('default_is_perishable') == 'on'
-            
+
             shelf_life = request.form.get('recommended_shelf_life_days')
             if shelf_life:
                 try:
                     new_item.recommended_shelf_life_days = int(shelf_life)
                 except ValueError:
                     pass
-            
+
             # Handle aka_names (comma-separated)
             aka_names = request.form.get('aka_names', '').strip()
             if aka_names:
                 new_item.aka_names = [n.strip() for n in aka_names.split(',') if n.strip()]
-            
+
             db.session.add(new_item)
             db.session.commit()
-            
+
             flash(f'Global item "{name}" created successfully', 'success')
             return redirect(url_for('developer.global_item_detail', item_id=new_item.id))
-            
+
         except Exception as e:
             db.session.rollback()
             flash(f'Error creating global item: {str(e)}', 'error')
             return redirect(url_for('developer.create_global_item'))
-    
+
     # GET request - show form
     return render_template('developer/create_global_item.html')
 
@@ -685,20 +693,20 @@ def delete_global_item(item_id):
         data = request.get_json()
         confirm_name = data.get('confirm_name', '').strip()
         force_delete = data.get('force_delete', False)
-        
+
         item = GlobalItem.query.get_or_404(item_id)
-        
+
         # Validate confirmation
         if confirm_name != item.name:
             return jsonify({
                 'success': False, 
                 'error': f'Confirmation text must match exactly: "{item.name}"'
             })
-        
+
         # Check for connected inventory items
         from app.models.inventory import InventoryItem
         connected_items = InventoryItem.query.filter_by(global_item_id=item.id).all()
-        
+
         if connected_items and not force_delete:
             # Return info about connected items for user decision
             org_names = list(set([inv_item.organization.name for inv_item in connected_items if inv_item.organization]))
@@ -709,29 +717,29 @@ def delete_global_item(item_id):
                 'organizations': org_names,
                 'message': f'This global item is connected to {len(connected_items)} inventory items across {len(org_names)} organizations. These will be disconnected and become organization-owned items.'
             })
-        
+
         # Proceed with deletion
         item_name = item.name
         connected_count = len(connected_items)
-        
+
         # Disconnect all inventory items (set global_item_id to NULL)
         for inv_item in connected_items:
             inv_item.global_item_id = None
             # The inventory item remains in the organization but loses global connection
-        
+
         # Delete the global item
         db.session.delete(item)
         db.session.commit()
-        
+
         # Log the deletion for audit purposes
         import logging
         logging.warning(f"GLOBAL_ITEM_DELETED: Developer {current_user.username} deleted global item '{item_name}' (ID: {item_id}). {connected_count} inventory items disconnected and converted to organization-owned.")
-        
+
         return jsonify({
             'success': True,
             'message': f'Global item "{item_name}" deleted successfully. {connected_count} connected inventory items converted to organization-owned items.'
         })
-        
+
     except Exception as e:
         db.session.rollback()
         import logging

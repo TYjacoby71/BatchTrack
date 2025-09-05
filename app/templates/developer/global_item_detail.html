@@ -3,6 +3,7 @@
 <h2>Global Item: {{ item.name }}</h2>
 <div class="card"><div class="card-body">
   <form method="post" action="{{ url_for('developer.global_item_edit', item_id=item.id) }}">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
     <div class="row g-3">
       <div class="col-md-6">
         <label class="form-label">Name</label>
