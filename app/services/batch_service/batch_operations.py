@@ -10,6 +10,7 @@ from app.models import ExtraBatchIngredient, ExtraBatchContainer, Product, Produ
 from app.services.unit_conversion import ConversionEngine
 from app.services.inventory_adjustment import process_inventory_adjustment
 from app.utils.timezone_utils import TimezoneUtils
+from app.utils.code_generator import generate_batch_label_code
 from app.services.base_service import BaseService
 
 logger = logging.getLogger(__name__)
@@ -28,14 +29,9 @@ class BatchOperationsService(BaseService):
             scale = float(scale)
             containers_data = containers_data or []
 
-            # Generate batch label
-            current_year = datetime.now().year
-            year_batches = Batch.query.filter(
-                Batch.recipe_id == recipe.id,
-                extract('year', Batch.started_at) == current_year
-            ).count()
+            # Generate batch label via centralized generator
+            label_code = generate_batch_label_code(recipe)
 
-            label_code = f"{recipe.label_prefix or 'BTH'}-{current_year}-{year_batches + 1:03d}"
             projected_yield = scale * recipe.predicted_yield
 
             # Create the batch
@@ -346,7 +342,6 @@ class BatchOperationsService(BaseService):
                         change_type='refunded',
                         unit=container.unit,
                         notes=f"Extra container refunded from cancelled batch {batch.label_code}",
-                        batch_id=batch.id,
                         created_by=current_user.id
                     )
                     restoration_summary.append(f"{extra_container.quantity_used} {container.unit} of {container.name}")
@@ -388,7 +383,6 @@ class BatchOperationsService(BaseService):
                         change_type='refunded',
                         unit=container.unit,
                         notes=f"Extra container refunded from cancelled batch {batch.label_code}",
-                        batch_id=batch.id,
                         created_by=current_user.id
                     )
                     restoration_summary.append(f"{extra_container.quantity_used} {container.unit} of {container.name}")
