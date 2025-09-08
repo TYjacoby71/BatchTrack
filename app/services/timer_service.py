@@ -4,6 +4,7 @@ from flask_login import current_user
 from ..models import db, BatchTimer, Batch
 from ..utils.timezone_utils import TimezoneUtils
 import logging
+from sqlalchemy import text
 
 logger = logging.getLogger(__name__)
 
@@ -195,38 +196,48 @@ class TimerService:
 
     @staticmethod
     def complete_expired_timers():
-        """Automatically complete all expired timers"""
+        """Complete all expired timers"""
         try:
+            from ..models import BatchTimer
+            from ..utils.timezone_utils import TimezoneUtils
+            from datetime import timedelta
+            from sqlalchemy import text
+
             current_time = TimezoneUtils.utc_now()
 
-            # Find all active timers that have expired
+            # Get expired timers with proper SQL syntax
             expired_timers = BatchTimer.query.filter(
-                BatchTimer.status == 'active',
-                BatchTimer.start_time.isnot(None),
-                BatchTimer.duration_seconds.isnot(None)
+                BatchTimer.status == 'active'
             ).all()
 
+            # Filter expired timers in Python to avoid SQL syntax issues
             completed_count = 0
             for timer in expired_timers:
-                # Calculate when this timer should have ended
-                expected_end_time = timer.start_time + timedelta(seconds=timer.duration_seconds)
-
-                if current_time >= expected_end_time:
-                    timer.status = 'completed'
-                    timer.end_time = expected_end_time  # Use the actual end time, not current time
-                    completed_count += 1
-                    logger.info(f"Auto-completed expired timer '{timer.name}' for batch {timer.batch_id}")
+                if timer.start_time and timer.duration_seconds:
+                    end_time = timer.start_time + timedelta(seconds=timer.duration_seconds)
+                    if current_time > end_time:
+                        timer.status = 'completed'
+                        timer.completed_at = current_time
+                        completed_count += 1
 
             if completed_count > 0:
                 db.session.commit()
-                logger.info(f"Auto-completed {completed_count} expired timers")
 
-            return completed_count
+            return {
+                'success': True,
+                'completed_count': completed_count,
+                'message': f'Completed {completed_count} expired timers'
+            }
 
         except Exception as e:
             db.session.rollback()
-            logger.error(f"Error completing expired timers: {str(e)}")
-            return 0
+            print(f"Timer service error: {e}")
+            return {
+                'success': False,
+                'error': str(e),
+                'completed_count': 0,
+                'message': 'Error completing expired timers'
+            }
 
     @staticmethod
     def get_expired_timers():
