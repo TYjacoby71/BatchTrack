@@ -5,56 +5,73 @@ export class ValidationManager {
     }
 
     bindEvents() {
-        // No specific events for validation currently
+        // No specific events to bind for validation
     }
 
     updateValidation() {
-        // Form validation check
+        const validationStatus = document.getElementById('validationStatus');
+        const batchActionsCard = document.getElementById('batchActionsCard');
+        const startBatchBtn = document.getElementById('startBatchBtn');
+        const startBatchText = document.getElementById('startBatchText');
+
+        if (!validationStatus || !batchActionsCard || !startBatchBtn) return;
 
         const issues = [];
-        const warnings = [];
 
-        // Check batch type
+        // Check basic configuration
         if (!this.main.batchType) {
-            issues.push('Select batch type');
+            issues.push('Please select a batch type');
         }
 
-        // Check container requirements if enabled
-        if (this.main.requiresContainers && this.main.containerManager.containerPlan) {
-            const containmentPercentage = this.main.containerManager.containerPlan.containment_percentage || 0;
-            if (containmentPercentage < 50) {
-                warnings.push('Low container coverage');
+        if (this.main.scale <= 0) {
+            issues.push('Please enter a valid batch scale');
+        }
+
+        // Check container requirements
+        if (this.main.requiresContainers) {
+            if (!this.main.containerManager?.hasValidContainerSelection()) {
+                issues.push('Please configure containers for this batch');
             }
         }
 
-        const isValid = issues.length === 0;
+        // Always show the batch actions card
+        batchActionsCard.style.display = 'block';
 
-        this.updateValidationUI(isValid, issues, warnings);
-        return isValid;
-    }
-
-    updateValidationUI(isValid, issues, warnings) {
-        const startBatchBtn = document.getElementById('startBatchBtn');
-        if (startBatchBtn) {
-            startBatchBtn.disabled = !isValid;
-
-            if (!isValid) {
-                startBatchBtn.title = 'Issues: ' + issues.join(', ');
+        // Determine button state based on validation and stock check
+        if (issues.length === 0) {
+            if (this.main.stockChecked) {
+                if (this.main.stockCheckPassed) {
+                    // Stock check passed - ready to go
+                    validationStatus.innerHTML = '<div class="alert alert-success"><i class="fas fa-check-circle"></i> Ready to start batch</div>';
+                    startBatchBtn.disabled = false;
+                    startBatchBtn.className = 'btn btn-success';
+                    startBatchText.textContent = 'Start Batch';
+                } else {
+                    // Stock check failed - ingredients needed
+                    validationStatus.innerHTML = '<div class="alert alert-danger"><i class="fas fa-exclamation-circle"></i> Ingredients needed - stock check failed</div>';
+                    startBatchBtn.disabled = true;
+                    startBatchBtn.className = 'btn btn-danger';
+                    startBatchText.textContent = 'Ingredients Needed';
+                }
             } else {
-                startBatchBtn.title = warnings.length > 0 ? 'Warnings: ' + warnings.join(', ') : '';
+                // Configuration valid but no stock check yet
+                validationStatus.innerHTML = '<div class="alert alert-info"><i class="fas fa-info-circle"></i> Configuration complete - run stock check to proceed</div>';
+                startBatchBtn.disabled = true;
+                startBatchBtn.className = 'btn btn-secondary';
+                startBatchText.textContent = 'Check Stock First';
             }
-        }
-
-        // Update validation message display
-        const validationMsg = document.getElementById('validationMessage');
-        if (validationMsg) {
-            if (!isValid) {
-                validationMsg.innerHTML = `<div class="alert alert-warning"><i class="fas fa-exclamation-triangle"></i> ${issues.join(', ')}</div>`;
-            } else if (warnings.length > 0) {
-                validationMsg.innerHTML = `<div class="alert alert-info"><i class="fas fa-info-circle"></i> ${warnings.join(', ')}</div>`;
-            } else {
-                validationMsg.innerHTML = '';
-            }
+        } else {
+            // Missing requirements
+            const issueList = issues.map(issue => `<li>${issue}</li>`).join('');
+            validationStatus.innerHTML = `
+                <div class="alert alert-warning">
+                    <i class="fas fa-exclamation-triangle"></i> Please complete the following:
+                    <ul class="mb-0 mt-2">${issueList}</ul>
+                </div>
+            `;
+            startBatchBtn.disabled = true;
+            startBatchBtn.className = 'btn btn-secondary';
+            startBatchText.textContent = 'Complete Setup';
         }
     }
 }

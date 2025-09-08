@@ -12,6 +12,8 @@ class PlanProductionApp {
         this.scale = this._readScale();
         this.batchType = '';
         this.requiresContainers = false;
+        this.stockChecked = false;
+        this.stockCheckPassed = false;
 
         this.containerManager = new ContainerManager(this);
         this.stockChecker = new StockChecker(this);
