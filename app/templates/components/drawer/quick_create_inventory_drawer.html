@@ -205,7 +205,7 @@
                 if (!data || !data.success) throw new Error(data && data.error || 'Create failed');
 
                 // Emit event for inline insert
-                window.dispatchEvent(new CustomEvent('inventory.created', { detail: { item: data.item } }));
+                window.dispatchEvent(new CustomEvent('inventory.quickCreated', { detail: { item: data.item } }));
 
                 // Close modal
                 const instance = bootstrap.Modal.getInstance(modalEl);
