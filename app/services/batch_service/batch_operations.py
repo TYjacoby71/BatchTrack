@@ -10,6 +10,7 @@ from app.models import ExtraBatchIngredient, ExtraBatchContainer, Product, Produ
 from app.services.unit_conversion import ConversionEngine
 from app.services.inventory_adjustment import process_inventory_adjustment
 from app.utils.timezone_utils import TimezoneUtils
+from app.utils.code_generator import generate_batch_label_code
 from app.services.base_service import BaseService
 
 logger = logging.getLogger(__name__)
@@ -28,14 +29,8 @@ class BatchOperationsService(BaseService):
             scale = float(scale)
             containers_data = containers_data or []
 
-            # Generate batch label
-            current_year = datetime.now().year
-            year_batches = Batch.query.filter(
-                Batch.recipe_id == recipe.id,
-                extract('year', Batch.started_at) == current_year
-            ).count()
-
-            label_code = f"{recipe.label_prefix or 'BTH'}-{current_year}-{year_batches + 1:03d}"
+            # Generate batch label via centralized generator
+            label_code = generate_batch_label_code(recipe)
             projected_yield = scale * recipe.predicted_yield
 
             # Create the batch
