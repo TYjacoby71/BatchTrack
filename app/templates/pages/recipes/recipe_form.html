@@ -331,6 +331,7 @@
 
 <!-- Drawer modals will be loaded dynamically via DrawerProtocol -->
 
+<script src="{{ url_for('static', filename='js/components/suggestions.js') }}"></script>
 <script>
 const formEl = document.getElementById('recipeForm');
 let PRESELECT_INGREDIENT_ID = (formEl.getAttribute('data-preselect-ingredient-id') || '').trim();
@@ -627,103 +628,16 @@ document.getElementById('recipeForm').addEventListener('submit', function(e) {
         const list = container.querySelector('[data-role="suggestions"]');
         if (!input || !invHidden || !giHidden || !list) return;
 
-        let timer = null;
-        input.addEventListener('input', function() {
-            invHidden.value = '';
-            giHidden.value = '';
-            const q = input.value.trim();
-            if (timer) clearTimeout(timer);
-            if (!q) { list.classList.add('d-none'); list.innerHTML=''; return; }
-            timer = setTimeout(async () => {
-                try {
-                    const [invRes, giRes] = await Promise.all([
-                        fetch(`/api/ingredients/ingredients/search?q=${encodeURIComponent(q)}`),
-                        fetch(`/api/ingredients/global-items/search?q=${encodeURIComponent(q)}&type=ingredient`)
-                    ]);
-                    const inv = await invRes.json();
-                    const gi = await giRes.json();
-                    const invResults = (inv && inv.results) || [];
-                    const giResults = (gi && gi.results) || [];
-                    list.innerHTML='';
-
-                    // Build lookup maps for dedupe by global_item_id and by normalized name
-                    const normalized = (s) => (s || '').trim().toLowerCase();
-                    const invByGlobalId = new Map();
-                    const invByName = new Map();
-                    invResults.forEach(r => {
-                        if (r.global_item_id) invByGlobalId.set(String(r.global_item_id), r);
-                        invByName.set(normalized(r.text), r);
-                    });
-
-                    // Compose merged list while suppressing global duplicates
-                    const merged = [];
-                    // 1) Add inventory results first (preferred)
-                    invResults.forEach(r => merged.push({ source: 'inventory', item: r }));
-                    // 2) Add global results only if not represented by inventory via link or name match
-                    giResults.forEach(r => {
-                        const isCoveredByGlobalId = invByGlobalId.has(String(r.id));
-                        const isCoveredByName = invByName.has(normalized(r.text));
-                        if (!isCoveredByGlobalId && !isCoveredByName) {
-                            merged.push({ source: 'global', item: r });
-                        }
-                    });
-
-                    function addHeader(text){
-                        const h = document.createElement('div');
-                        h.className = 'list-group-item text-muted small';
-                        h.textContent = text;
-                        list.appendChild(h);
-                    }
-
-                    // Render grouped results preserving source sections only if they have entries
-                    const invOnly = merged.filter(m => m.source === 'inventory');
-                    const giOnly = merged.filter(m => m.source === 'global');
-
-                    if (invOnly.length) addHeader('Your Inventory');
-                    invOnly.forEach(function(m){
-                        var r = m.item;
-                        const a = document.createElement('a');
-                        a.href = '#';
-                        a.className = 'list-group-item list-group-item-action';
-                        a.textContent = r.text;
-                        a.addEventListener('click', (e) => {
-                            e.preventDefault();
-                            input.value = r.text;
-                            invHidden.value = r.id_numeric || r.id || '';
-                            giHidden.value = '';
-                            list.classList.add('d-none');
-                            list.innerHTML='';
-                        });
-                        list.appendChild(a);
-                    });
-
-                    if (giOnly.length) addHeader('Global Library');
-                    giOnly.forEach(function(m){
-                        var r = m.item;
-                        const a = document.createElement('a');
-                        a.href = '#';
-                        a.className = 'list-group-item list-group-item-action';
-                        a.textContent = r.text;
-                        a.addEventListener('click', (e) => {
-                            e.preventDefault();
-                            input.value = r.text;
-                            giHidden.value = r.id;
-                            invHidden.value = '';
-                            list.classList.add('d-none');
-                            list.innerHTML='';
-                        });
-                        list.appendChild(a);
-                    });
-
-                    list.classList.toggle('d-none', !(invOnly.length || giOnly.length));
-                } catch (_) {}
-            }, 250);
-        });
-        document.addEventListener('click', function(e){
-            if (!container.contains(e.target)) {
-                list.classList.add('d-none');
-            }
-        });
+        // Use shared helper for consistent behavior and styling
+        if (window.attachMergedInventoryGlobalTypeahead) {
+            window.attachMergedInventoryGlobalTypeahead({
+                inputEl: input,
+                invHiddenEl: invHidden,
+                giHiddenEl: giHidden,
+                listEl: list,
+                mode: 'recipe'
+            });
+        }
     }
     // Attach to existing entries
     document.querySelectorAll('.ingredient-entry').forEach(entry => {

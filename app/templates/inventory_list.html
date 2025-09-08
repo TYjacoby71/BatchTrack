@@ -645,6 +645,7 @@
   </div>
 </div>
 
+<script src="{{ url_for('static', filename='js/components/suggestions.js') }}"></script>
 <script>
 document.addEventListener('DOMContentLoaded', function() {
   // Initialize pagination for both tables
@@ -962,7 +963,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const globalItemIdInput = document.getElementById('selectedGlobalItemId');
     let searchTimeout;
 
-    if (nameInput && suggestionsDiv && globalItemIdInput) {
+    if (nameInput && suggestionsDiv && globalItemIdInput && !window.attachMergedInventoryGlobalTypeahead) {
         nameInput.addEventListener('input', function() {
             const query = this.value.trim();
             suggestionsDiv.innerHTML = ''; // Clear previous suggestions
@@ -1066,6 +1067,14 @@ document.addEventListener('DOMContentLoaded', function() {
             if (this.value === '') {
                 globalItemIdInput.value = '';
             }
+        });
+    } else if (nameInput && suggestionsDiv && globalItemIdInput && window.attachMergedInventoryGlobalTypeahead) {
+        window.attachMergedInventoryGlobalTypeahead({
+            inputEl: nameInput,
+            invHiddenEl: null,
+            giHiddenEl: globalItemIdInput,
+            listEl: suggestionsDiv,
+            mode: 'inventory_create'
         });
     }
 });
