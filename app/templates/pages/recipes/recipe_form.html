@@ -449,8 +449,8 @@ function addIngredient(preselectId = null, presetUnit = null) {
     container.appendChild(entry);
 
     if (preselectId) {
-        const select = entry.querySelector('select[name="ingredient_ids[]"]');
-        if (select) select.value = preselectId;
+        const hidden = entry.querySelector('input[name="ingredient_ids[]"]');
+        if (hidden) hidden.value = String(preselectId);
     }
 
     entry.scrollIntoView({ behavior: 'smooth' });
@@ -594,30 +594,25 @@ window.addEventListener('inventory.created', function(e) {
         if (!entry) {
             entry = addIngredient();
         }
-        const select = entry.querySelector('select[name="ingredient_ids[]"]');
-        if (select) {
-            // Add option if missing, then select
-            let opt = Array.from(select.options).find(o => o.value == String(item.id));
-            if (!opt) {
-                opt = document.createElement('option');
-                opt.value = item.id;
-                opt.textContent = item.name;
-                opt.dataset.unit = item.unit || '';
-                select.appendChild(opt);
-            }
-            select.value = String(item.id);
-        }
+        const hidden = entry.querySelector('input[name="ingredient_ids[]"]');
+        const input = entry.querySelector('input.recipe-ingredient-typeahead');
+        if (hidden) hidden.value = String(item.id);
+        if (input) input.value = item.name;
     } catch (_) {}
 });
 
 // Client-side validation: ensure each ingredient line has a selected item
 document.getElementById('recipeForm').addEventListener('submit', function(e) {
-    const selects = document.querySelectorAll('select[name="ingredient_ids[]"]');
-    for (const sel of selects) {
-        if (!sel.value) {
+    const rows = document.querySelectorAll('.ingredient-entry');
+    for (const row of rows) {
+        const inv = row.querySelector('input[name="ingredient_ids[]"]').value.trim();
+        const gi = row.querySelector('input[name="global_item_ids[]"]').value.trim();
+        const hasSelection = inv || gi;
+        if (!hasSelection) {
             e.preventDefault();
-            alert('Please select an ingredient for each line or remove empty lines.');
-            sel.focus();
+            alert('Each ingredient must be selected from Inventory or Global.');
+            const input = row.querySelector('input.recipe-ingredient-typeahead');
+            if (input) input.focus();
             return false;
         }
     }
