@@ -331,6 +331,7 @@
 
 <!-- Drawer modals will be loaded dynamically via DrawerProtocol -->
 
+<script src="{{ url_for('static', filename='js/components/suggestions.js') }}"></script>
 <script>
 const formEl = document.getElementById('recipeForm');
 let PRESELECT_INGREDIENT_ID = (formEl.getAttribute('data-preselect-ingredient-id') || '').trim();
@@ -627,71 +628,16 @@ document.getElementById('recipeForm').addEventListener('submit', function(e) {
         const list = container.querySelector('[data-role="suggestions"]');
         if (!input || !invHidden || !giHidden || !list) return;
 
-        let timer = null;
-        input.addEventListener('input', function() {
-            invHidden.value = '';
-            giHidden.value = '';
-            const q = input.value.trim();
-            if (timer) clearTimeout(timer);
-            if (!q) { list.classList.add('d-none'); list.innerHTML=''; return; }
-            timer = setTimeout(async () => {
-                try {
-                    const [invRes, giRes] = await Promise.all([
-                        fetch(`/api/ingredients/ingredients/search?q=${encodeURIComponent(q)}`),
-                        fetch(`/api/ingredients/global-items/search?q=${encodeURIComponent(q)}&type=ingredient`)
-                    ]);
-                    const inv = await invRes.json();
-                    const gi = await giRes.json();
-                    const invResults = (inv && inv.results) || [];
-                    const giResults = (gi && gi.results) || [];
-                    list.innerHTML='';
-
-                    function addHeader(text){
-                        const h = document.createElement('div');
-                        h.className = 'list-group-item text-muted small';
-                        h.textContent = text;
-                        list.appendChild(h);
-                    }
-                    if (invResults.length) addHeader('Your Inventory');
-                    invResults.forEach(r => {
-                        const a = document.createElement('a');
-                        a.href = '#';
-                        a.className = 'list-group-item list-group-item-action';
-                        a.textContent = r.text;
-                        a.addEventListener('click', (e) => {
-                            e.preventDefault();
-                            input.value = r.text;
-                            invHidden.value = r.id_numeric || ''; // fallback if provided
-                            // If API used name as id, we cannot set numeric here; leave for backend match only when using selects
-                            list.classList.add('d-none');
-                            list.innerHTML='';
-                        });
-                        list.appendChild(a);
-                    });
-                    if (giResults.length) addHeader('Global Library');
-                    giResults.forEach(r => {
-                        const a = document.createElement('a');
-                        a.href = '#';
-                        a.className = 'list-group-item list-group-item-action';
-                        a.textContent = r.text;
-                        a.addEventListener('click', (e) => {
-                            e.preventDefault();
-                            input.value = r.text;
-                            giHidden.value = r.id;
-                            list.classList.add('d-none');
-                            list.innerHTML='';
-                        });
-                        list.appendChild(a);
-                    });
-                    list.classList.toggle('d-none', !(invResults.length || giResults.length));
-                } catch (_) {}
-            }, 250);
-        });
-        document.addEventListener('click', function(e){
-            if (!container.contains(e.target)) {
-                list.classList.add('d-none');
-            }
-        });
+        // Use shared helper for consistent behavior and styling
+        if (window.attachMergedInventoryGlobalTypeahead) {
+            window.attachMergedInventoryGlobalTypeahead({
+                inputEl: input,
+                invHiddenEl: invHidden,
+                giHiddenEl: giHidden,
+                listEl: list,
+                mode: 'recipe'
+            });
+        }
     }
     // Attach to existing entries
     document.querySelectorAll('.ingredient-entry').forEach(entry => {

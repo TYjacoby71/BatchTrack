@@ -645,6 +645,7 @@
   </div>
 </div>
 
+<script src="{{ url_for('static', filename='js/components/suggestions.js') }}"></script>
 <script>
 document.addEventListener('DOMContentLoaded', function() {
   // Initialize pagination for both tables
@@ -962,14 +963,13 @@ document.addEventListener('DOMContentLoaded', function() {
     const globalItemIdInput = document.getElementById('selectedGlobalItemId');
     let searchTimeout;
 
-    if (nameInput && suggestionsDiv && globalItemIdInput) {
+    if (nameInput && suggestionsDiv && globalItemIdInput && !window.attachMergedInventoryGlobalTypeahead) {
         nameInput.addEventListener('input', function() {
             const query = this.value.trim();
             suggestionsDiv.innerHTML = ''; // Clear previous suggestions
 
             if (query.length < 2) {
                 suggestionsDiv.style.display = 'none';
-                // Also reset selected global item ID if the input is cleared or too short
                 if (query.length === 0) {
                     globalItemIdInput.value = '';
                 }
@@ -978,41 +978,73 @@ document.addEventListener('DOMContentLoaded', function() {
 
             clearTimeout(searchTimeout);
             searchTimeout = setTimeout(() => {
-                fetch(`/api/ingredients/global-items/search?q=${encodeURIComponent(query)}&type=ingredient`)
-                    .then(response => response.json())
-                    .then(data => {
-                        if (data.results && data.results.length > 0) {
-                            data.results.forEach(item => {
-                                const suggestionItem = document.createElement('div');
-                                suggestionItem.className = 'px-3 py-2 cursor-pointer';
-                                suggestionItem.style.cssText = 'cursor: pointer; border-bottom: 1px solid #e9ecef;';
-                                suggestionItem.innerHTML = `${item.text}`;
+                Promise.all([
+                    fetch(`/api/ingredients/ingredients/search?q=${encodeURIComponent(query)}`).then(r => r.json()).catch(() => ({ results: [] })),
+                    fetch(`/api/ingredients/global-items/search?q=${encodeURIComponent(query)}&type=ingredient`).then(r => r.json()).catch(() => ({ results: [] }))
+                ])
+                .then(([inv, gi]) => {
+                    const invResults = (inv && inv.results) || [];
+                    const giResults = (gi && gi.results) || [];
 
-                                suggestionItem.addEventListener('click', function() {
-                                    nameInput.value = item.text;
-                                    globalItemIdInput.value = item.id;
-                                    suggestionsDiv.style.display = 'none';
-                                });
-
-                                suggestionItem.addEventListener('mouseenter', function() {
-                                    this.style.backgroundColor = '#f8f9fa';
-                                });
-
-                                suggestionItem.addEventListener('mouseleave', function() {
-                                    this.style.backgroundColor = 'white';
-                                });
-
-                                suggestionsDiv.appendChild(suggestionItem);
-                            });
-                            suggestionsDiv.style.display = 'block';
-                        } else {
-                            suggestionsDiv.style.display = 'none';
-                        }
-                    })
-                    .catch(error => {
-                        console.error('Error fetching ingredient suggestions:', error);
-                        suggestionsDiv.style.display = 'none';
+                    // Build maps for dedupe
+                    const normalized = (s) => (s || '').trim().toLowerCase();
+                    const invByGlobalId = new Map();
+                    const invByName = new Map();
+                    invResults.forEach(r => {
+                        if (r.global_item_id) invByGlobalId.set(String(r.global_item_id), r);
+                        invByName.set(normalized(r.text), r);
                     });
+
+                    // We only allow choosing global entries here to seed a new item.
+                    // So suppress any global that already exists in inventory (by link or name).
+                    const giFiltered = giResults.filter(r => {
+                        const coveredByGlobalId = invByGlobalId.has(String(r.id));
+                        const coveredByName = invByName.has(normalized(r.text));
+                        return !(coveredByGlobalId || coveredByName);
+                    });
+
+                    // Render suggestions styled consistently
+                    suggestionsDiv.innerHTML = '';
+                    if (giFiltered.length === 0) {
+                        suggestionsDiv.style.display = 'none';
+                        return;
+                    }
+
+                    const header = document.createElement('div');
+                    header.className = 'list-group-item text-muted small';
+                    header.textContent = 'Global Library';
+                    const listFragment = document.createDocumentFragment();
+                    listFragment.appendChild(header);
+
+                    giFiltered.forEach(item => {
+                        const a = document.createElement('a');
+                        a.href = '#';
+                        a.className = 'list-group-item list-group-item-action';
+                        a.textContent = item.text;
+                        a.addEventListener('click', function(e) {
+                            e.preventDefault();
+                            nameInput.value = item.text;
+                            globalItemIdInput.value = item.id;
+                            suggestionsDiv.style.display = 'none';
+                        });
+                        listFragment.appendChild(a);
+                    });
+
+                    // Apply Bootstrap list-group styling
+                    suggestionsDiv.className = 'list-group position-absolute w-100';
+                    suggestionsDiv.style.display = 'block';
+                    suggestionsDiv.style.maxHeight = '260px';
+                    suggestionsDiv.style.overflowY = 'auto';
+                    suggestionsDiv.style.zIndex = '1000';
+                    suggestionsDiv.style.top = '100%';
+                    suggestionsDiv.style.marginTop = '2px';
+
+                    suggestionsDiv.appendChild(listFragment);
+                })
+                .catch(error => {
+                    console.error('Error fetching ingredient suggestions:', error);
+                    suggestionsDiv.style.display = 'none';
+                });
             }, 300);
         });
 
@@ -1035,6 +1067,14 @@ document.addEventListener('DOMContentLoaded', function() {
             if (this.value === '') {
                 globalItemIdInput.value = '';
             }
+        });
+    } else if (nameInput && suggestionsDiv && globalItemIdInput && window.attachMergedInventoryGlobalTypeahead) {
+        window.attachMergedInventoryGlobalTypeahead({
+            inputEl: nameInput,
+            invHiddenEl: null,
+            giHiddenEl: globalItemIdInput,
+            listEl: suggestionsDiv,
+            mode: 'inventory_create'
         });
     }
 });
