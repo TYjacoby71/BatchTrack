@@ -465,7 +465,7 @@ function openQuickCreateInventory() {
         error_type: 'inventory',
         error_code: 'quick_create'
     };
-    window.dispatchEvent(new CustomEvent('openDrawer', { detail }));
+    window.dispatchEvent(new CustomEvent('openDrawer', { detail: detail }));
 }
 
 function openQuickCreateUnit() {
@@ -475,7 +475,7 @@ function openQuickCreateUnit() {
         error_type: 'units',
         error_code: 'quick_create'
     };
-    window.dispatchEvent(new CustomEvent('openDrawer', { detail }));
+    window.dispatchEvent(new CustomEvent('openDrawer', { detail: detail }));
 }
 
 function confirmDelete(recipeId, isVariation, variationCount) {
