@@ -14,6 +14,7 @@ from app.utils.unit_utils import get_global_unit_list
 from app.services.inventory_adjustment import create_inventory_item
 from app.models.unit import Unit
 import logging
+from sqlalchemy import func
 
 logger = logging.getLogger(__name__)
 
@@ -361,7 +362,7 @@ def _extract_ingredients_from_form(form):
             except (ValueError, TypeError):
                 item_id = None
 
-        # If no inventory item selected but a global item is selected, create it now (zero qty)
+        # If no inventory item selected but a global item is selected, try to map to an existing inventory item
         if not item_id and gi_id:
             try:
                 gi = db.session.get(GlobalItem, int(gi_id)) if gi_id else None
@@ -369,23 +370,61 @@ def _extract_ingredients_from_form(form):
                 gi = None
 
             if gi:
-                # Form-like payload for creation service
-                form_like = {
-                    'name': gi.name,
-                    'type': gi.item_type,
-                    'unit': gi.default_unit or '',
-                    'global_item_id': gi.id
-                }
+                # 1) Prefer existing inventory item already linked to this global item
+                try:
+                    existing = InventoryItem.query.filter_by(
+                        organization_id=current_user.organization_id,
+                        global_item_id=gi.id,
+                        type=gi.item_type
+                    ).order_by(InventoryItem.id.asc()).first()
+                except Exception:
+                    existing = None
 
-                success, message, created_id = create_inventory_item(
-                    form_data=form_like,
-                    organization_id=current_user.organization_id,
-                    created_by=current_user.id
-                )
-                if not success:
-                    logger.error(f"Failed to auto-create inventory for global item {gi.id}: {message}")
+                if existing:
+                    item_id = int(existing.id)
                 else:
-                    item_id = int(created_id)
+                    # 2) Fall back to name match within org and same type
+                    try:
+                        name_match = (
+                            InventoryItem.query
+                            .filter(
+                                InventoryItem.organization_id == current_user.organization_id,
+                                func.lower(InventoryItem.name) == func.lower(db.literal(gi.name)),
+                                InventoryItem.type == gi.item_type
+                            )
+                            .order_by(InventoryItem.id.asc())
+                            .first()
+                        )
+                    except Exception:
+                        name_match = None
+
+                    if name_match:
+                        # Optionally link it for future dedupe
+                        try:
+                            name_match.global_item_id = gi.id
+                            name_match.ownership = 'global'
+                            db.session.flush()
+                        except Exception:
+                            db.session.rollback()
+                        item_id = int(name_match.id)
+                    else:
+                        # 3) Create a new zero-qty inventory item linked to global
+                        form_like = {
+                            'name': gi.name,
+                            'type': gi.item_type,
+                            'unit': gi.default_unit or '',
+                            'global_item_id': gi.id
+                        }
+
+                        success, message, created_id = create_inventory_item(
+                            form_data=form_like,
+                            organization_id=current_user.organization_id,
+                            created_by=current_user.id
+                        )
+                        if not success:
+                            logger.error(f"Failed to auto-create inventory for global item {gi.id}: {message}")
+                        else:
+                            item_id = int(created_id)
             else:
                 logger.error(f"Global item not found for id {gi_id}")
 
