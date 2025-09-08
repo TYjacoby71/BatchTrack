@@ -27,8 +27,8 @@ def test_generate_batch_label_code_with_prefix_and_sequence(app):
         db.session.flush()
 
         # Create two batches to simulate existing ones this year
-        b1 = Batch(recipe_id=recipe.id, label_code=f"SOAP-{current_year}-001")
-        b2 = Batch(recipe_id=recipe.id, label_code=f"SOAP-{current_year}-002")
+        b1 = Batch(recipe_id=recipe.id, label_code=f"SOAP-{current_year}-001", batch_type='ingredient')
+        b2 = Batch(recipe_id=recipe.id, label_code=f"SOAP-{current_year}-002", batch_type='ingredient')
         b1.started_at = TimezoneUtils.utc_now()
         b2.started_at = TimezoneUtils.utc_now()
         db.session.add_all([b1, b2])
