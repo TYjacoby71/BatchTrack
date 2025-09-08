@@ -27,7 +27,8 @@ import { appCache } from './CacheManager.js';
             console.log('🔍 DRAWER INTERCEPTOR: Extracted drawer payload:', payload);
 
             // Handle timer completion responses
-            if (url.includes('/timers/complete-expired')) {
+            const requestUrl = typeof input === 'string' ? input : input.url;
+            if (requestUrl && requestUrl.includes('/timers/complete-expired')) {
                 console.log('🔍 DRAWER INTERCEPTOR: Inspecting response data:', data);
                 if (data && data.drawer_payload) {
                     console.log('🔍 DRAWER INTERCEPTOR: Extracted drawer payload:', data.drawer_payload);
