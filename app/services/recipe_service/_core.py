@@ -264,9 +264,11 @@ def get_recipe_details(recipe_id: int) -> Optional[Recipe]:
     try:
         from sqlalchemy.orm import joinedload
 
+        from ...models import RecipeIngredient, RecipeConsumable, InventoryItem
+        
         recipe = db.session.query(Recipe).options(
-            joinedload(Recipe.recipe_ingredients).joinedload('inventory_item'),
-            joinedload(Recipe.recipe_consumables).joinedload('inventory_item')
+            joinedload(Recipe.recipe_ingredients).joinedload(RecipeIngredient.inventory_item),
+            joinedload(Recipe.recipe_consumables).joinedload(RecipeConsumable.inventory_item)
         ).filter(Recipe.id == recipe_id).first()
 
         if not recipe:
