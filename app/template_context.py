@@ -214,11 +214,15 @@ def register_template_context(app):
 
         # Marketing messages (review asks day 1/3/5)
         messages = {'day_1': '', 'day_3': '', 'day_5': ''}
+        marketing_settings = {'promo_codes': [], 'demo_url': '', 'demo_videos': []}
         try:
             if os.path.exists('settings.json'):
                 with open('settings.json', 'r') as f:
                     cfg = json.load(f) or {}
                     messages.update(cfg.get('marketing_messages', {}))
+                    marketing_settings['promo_codes'] = cfg.get('promo_codes', []) or []
+                    marketing_settings['demo_url'] = cfg.get('demo_url', '') or ''
+                    marketing_settings['demo_videos'] = cfg.get('demo_videos', []) or []
         except Exception:
             pass
 
@@ -227,6 +231,7 @@ def register_template_context(app):
             marketing_spotlights=spotlights,
             marketing_stats=dict(total_active_users=total_active_users, lifetime_left=lifetime_left, lifetime_total=lifetime_total),
             marketing_messages=messages,
+            marketing_settings=marketing_settings,
         )
 
     app.jinja_env.globals.update({
