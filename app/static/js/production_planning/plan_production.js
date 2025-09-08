@@ -49,8 +49,9 @@ class PlanProductionApp {
 
         const batchTypeSelect = document.getElementById('batchType');
         if (batchTypeSelect) {
-            batchTypeSelect.addEventListener('change', () => {
-                this.batchType = batchTypeSelect.value;
+            batchTypeSelect.addEventListener('change', (e) => {
+                this.batchType = e.target.value;
+                console.log('Batch type selected:', this.batchType);
                 this.updateValidation();
             });
         }
