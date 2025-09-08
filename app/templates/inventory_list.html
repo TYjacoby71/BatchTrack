@@ -645,7 +645,6 @@
   </div>
 </div>
 
-<script src="{{ url_for('static', filename='js/components/suggestions.js') }}"></script>
 <script>
 document.addEventListener('DOMContentLoaded', function() {
   // Initialize pagination for both tables
@@ -958,125 +957,131 @@ document.addEventListener('DOMContentLoaded', function() {
 
 // Ingredient name search functionality
 document.addEventListener('DOMContentLoaded', function() {
-    const nameInput = document.getElementById('ingredientNameInput');
-    const suggestionsDiv = document.getElementById('ingredientSuggestions');
+    const ingredientNameInput = document.getElementById('ingredientNameInput');
+    const ingredientSuggestions = document.getElementById('ingredientSuggestions');
     const globalItemIdInput = document.getElementById('selectedGlobalItemId');
-    let searchTimeout;
 
-    if (nameInput && suggestionsDiv && globalItemIdInput && !window.attachMergedInventoryGlobalTypeahead) {
-        nameInput.addEventListener('input', function() {
-            const query = this.value.trim();
-            suggestionsDiv.innerHTML = ''; // Clear previous suggestions
+    // Check if all required elements exist before setting up event listeners
+    if (!ingredientNameInput || !ingredientSuggestions || !globalItemIdInput) {
+        console.log('Ingredient suggestion elements not found, skipping initialization');
+        return;
+    }
 
-            if (query.length < 2) {
-                suggestionsDiv.style.display = 'none';
-                if (query.length === 0) {
-                    globalItemIdInput.value = '';
-                }
-                return;
-            }
+    ingredientNameInput.addEventListener('input', function() {
+        const query = this.value.trim();
+        if (query.length < 2) {
+            ingredientSuggestions.style.display = 'none';
+            return;
+        }
 
-            clearTimeout(searchTimeout);
-            searchTimeout = setTimeout(() => {
-                Promise.all([
-                    fetch(`/api/ingredients/ingredients/search?q=${encodeURIComponent(query)}`).then(r => r.json()).catch(() => ({ results: [] })),
-                    fetch(`/api/ingredients/global-items/search?q=${encodeURIComponent(query)}&type=ingredient`).then(r => r.json()).catch(() => ({ results: [] }))
-                ])
-                .then(([inv, gi]) => {
-                    const invResults = (inv && inv.results) || [];
-                    const giResults = (gi && gi.results) || [];
+        // Search both inventory items and global items
+        Promise.all([
+            fetch(`/api/ingredients/ingredients/search?q=${encodeURIComponent(query)}`).then(r => r.json()).catch(() => ({results: []})),
+            fetch(`/api/ingredients/global-items/search?q=${encodeURIComponent(query)}&type=ingredient`).then(r => r.json()).catch(() => ({results: []}))
+        ]).then(([invResults, globalResults]) => {
+            const suggestions = [];
 
-                    // Build maps for dedupe
-                    const normalized = (s) => (s || '').trim().toLowerCase();
-                    const invByGlobalId = new Map();
-                    const invByName = new Map();
-                    invResults.forEach(r => {
-                        if (r.global_item_id) invByGlobalId.set(String(r.global_item_id), r);
-                        invByName.set(normalized(r.text), r);
+            // Add inventory results first
+            if (invResults && invResults.results) {
+                invResults.results.forEach(item => {
+                    suggestions.push({
+                        type: 'inventory',
+                        id: item.id,
+                        name: item.text,
+                        unit: item.unit || 'count',
+                        density: item.density || null,
+                        global_item_id: item.global_item_id || null
                     });
-
-                    // We only allow choosing global entries here to seed a new item.
-                    // So suppress any global that already exists in inventory (by link or name).
-                    const giFiltered = giResults.filter(r => {
-                        const coveredByGlobalId = invByGlobalId.has(String(r.id));
-                        const coveredByName = invByName.has(normalized(r.text));
-                        return !(coveredByGlobalId || coveredByName);
-                    });
-
-                    // Render suggestions styled consistently
-                    suggestionsDiv.innerHTML = '';
-                    if (giFiltered.length === 0) {
-                        suggestionsDiv.style.display = 'none';
-                        return;
-                    }
-
-                    const header = document.createElement('div');
-                    header.className = 'list-group-item text-muted small';
-                    header.textContent = 'Global Library';
-                    const listFragment = document.createDocumentFragment();
-                    listFragment.appendChild(header);
-
-                    giFiltered.forEach(item => {
-                        const a = document.createElement('a');
-                        a.href = '#';
-                        a.className = 'list-group-item list-group-item-action';
-                        a.textContent = item.text;
-                        a.addEventListener('click', function(e) {
-                            e.preventDefault();
-                            nameInput.value = item.text;
-                            globalItemIdInput.value = item.id;
-                            suggestionsDiv.style.display = 'none';
-                        });
-                        listFragment.appendChild(a);
-                    });
-
-                    // Apply Bootstrap list-group styling
-                    suggestionsDiv.className = 'list-group position-absolute w-100';
-                    suggestionsDiv.style.display = 'block';
-                    suggestionsDiv.style.maxHeight = '260px';
-                    suggestionsDiv.style.overflowY = 'auto';
-                    suggestionsDiv.style.zIndex = '1000';
-                    suggestionsDiv.style.top = '100%';
-                    suggestionsDiv.style.marginTop = '2px';
-
-                    suggestionsDiv.appendChild(listFragment);
-                })
-                .catch(error => {
-                    console.error('Error fetching ingredient suggestions:', error);
-                    suggestionsDiv.style.display = 'none';
                 });
-            }, 300);
-        });
-
-        // Hide suggestions when clicking outside
-        document.addEventListener('click', function(e) {
-            if (!nameInput.contains(e.target) && !suggestionsDiv.contains(e.target)) {
-                suggestionsDiv.style.display = 'none';
             }
-        });
 
-        // Optionally, set the global item ID when the input loses focus if a selection was made
-        nameInput.addEventListener('blur', function() {
-            // If the input value is not empty and no global item ID is set, it means the user typed something
-            // that didn't match any suggestions or they didn't select anything.
-            // We might want to clear the input or set a flag here depending on desired behavior.
-            // For now, we'll just ensure the ID is correct if a selection was made.
-            // If the input value has changed and it's not an exact match for an existing suggestion, clear the ID.
-            // This requires checking against the fetched `data.results` which is not readily available here.
-            // A simpler approach: if the input is cleared, clear the ID.
-            if (this.value === '') {
-                globalItemIdInput.value = '';
+            // Add global results that aren't already in inventory
+            if (globalResults && globalResults.results) {
+                globalResults.results.forEach(item => {
+                    const alreadyExists = suggestions.some(s => 
+                        s.global_item_id === item.id || 
+                        s.name.toLowerCase() === item.text.toLowerCase()
+                    );
+                    if (!alreadyExists) {
+                        suggestions.push({
+                            type: 'global',
+                            id: item.id,
+                            name: item.text,
+                            unit: item.default_unit || 'count',
+                            density: item.density || null,
+                            global_item_id: item.id
+                        });
+                    }
+                });
             }
+
+            displaySuggestions(suggestions);
+        }).catch(err => {
+            console.error('Search error:', err);
+            ingredientSuggestions.style.display = 'none';
         });
-    } else if (nameInput && suggestionsDiv && globalItemIdInput && window.attachMergedInventoryGlobalTypeahead) {
-        window.attachMergedInventoryGlobalTypeahead({
-            inputEl: nameInput,
-            invHiddenEl: null,
-            giHiddenEl: globalItemIdInput,
-            listEl: suggestionsDiv,
-            mode: 'inventory_create'
+    });
+
+    function displaySuggestions(suggestions) {
+        if (suggestions.length === 0) {
+            ingredientSuggestions.style.display = 'none';
+            return;
+        }
+
+        const html = suggestions.map(item => `
+            <div class="suggestion-item p-2 border-bottom" style="cursor: pointer;" 
+                 data-type="${item.type}" 
+                 data-id="${item.id}" 
+                 data-name="${item.name}"
+                 data-unit="${item.unit}"
+                 data-density="${item.density || ''}"
+                 data-global-item-id="${item.global_item_id || ''}">
+                <div class="fw-bold">${item.name}</div>
+                <small class="text-muted">
+                    ${item.type === 'inventory' ? 'In Inventory' : 'From Global Library'} • 
+                    Unit: ${item.unit}
+                    ${item.density ? ` • Density: ${item.density}` : ''}
+                </small>
+            </div>
+        `).join('');
+
+        ingredientSuggestions.innerHTML = html;
+        ingredientSuggestions.style.display = 'block';
+
+        // Add click handlers
+        ingredientSuggestions.querySelectorAll('.suggestion-item').forEach(item => {
+            item.addEventListener('click', function() {
+                const name = this.dataset.name;
+                const unit = this.dataset.unit;
+                const density = this.dataset.density;
+                const globalItemId = this.dataset.globalItemId;
+
+                ingredientNameInput.value = name;
+                globalItemIdInput.value = globalItemId || '';
+
+                // Set unit if there's a unit select
+                const unitSelect = document.querySelector('select[name="unit"]');
+                if (unitSelect && unit) {
+                    unitSelect.value = unit;
+                }
+
+                // Set density if there's a density field
+                const densityInput = document.querySelector('input[name="density"]');
+                if (densityInput && density) {
+                    densityInput.value = density;
+                }
+
+                ingredientSuggestions.style.display = 'none';
+            });
         });
     }
+
+    // Hide suggestions when clicking outside
+    document.addEventListener('click', function(e) {
+        if (!ingredientNameInput.contains(e.target) && !ingredientSuggestions.contains(e.target)) {
+            ingredientSuggestions.style.display = 'none';
+        }
+    });
 });
 
 

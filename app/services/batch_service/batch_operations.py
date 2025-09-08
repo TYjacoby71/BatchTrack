@@ -342,7 +342,6 @@ class BatchOperationsService(BaseService):
                         change_type='refunded',
                         unit=container.unit,
                         notes=f"Extra container refunded from cancelled batch {batch.label_code}",
-                        batch_id=batch.id,
                         created_by=current_user.id
                     )
                     restoration_summary.append(f"{extra_container.quantity_used} {container.unit} of {container.name}")
@@ -384,7 +383,6 @@ class BatchOperationsService(BaseService):
                         change_type='refunded',
                         unit=container.unit,
                         notes=f"Extra container refunded from cancelled batch {batch.label_code}",
-                        batch_id=batch.id,
                         created_by=current_user.id
                     )
                     restoration_summary.append(f"{extra_container.quantity_used} {container.unit} of {container.name}")
