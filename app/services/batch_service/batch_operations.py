@@ -35,7 +35,7 @@ class BatchOperationsService(BaseService):
                 extract('year', Batch.started_at) == current_year
             ).count()
 
-            label_code = f"{recipe.label_prefix or 'BTH'}-{current_year}-{year_batches + 1:03d}"
+            label_code = f"{recipe.label_prefix if recipe.label_prefix else 'BTH'}-{current_year}-{year_batches + 1:03d}"
             projected_yield = scale * recipe.predicted_yield
 
             # Create the batch
