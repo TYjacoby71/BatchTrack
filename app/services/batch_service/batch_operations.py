@@ -22,26 +22,26 @@ class BatchOperationsService(BaseService):
     def start_batch(cls, recipe_id, scale=1.0, batch_type='ingredient', notes='', containers_data=None, requires_containers=False):
         """Start a new batch with inventory deductions atomically. Rolls back on any failure."""
         try:
-    recipe = Recipe.query.get(recipe_id)
-    if not recipe:
-        return None, "Recipe not found"
+            recipe = Recipe.query.get(recipe_id)
+            if not recipe:
+                return None, "Recipe not found"
 
-    scale = float(scale)
-    containers_data = containers_data or []
+            scale = float(scale)
+            containers_data = containers_data or []
 
-    # Generate batch label via centralized generator
-    label_code = generate_batch_label_code(recipe)
+            # Generate batch label via centralized generator
+            label_code = generate_batch_label_code(recipe)
 
-    projected_yield = scale * recipe.predicted_yield
+            projected_yield = scale * recipe.predicted_yield
 
-    # Create the batch
-    batch = Batch(
-        recipe_id=recipe_id,
-        label_code=label_code,
-        batch_type=batch_type,
-        projected_yield=projected_yield,
-        projected_yield_unit=recipe.predicted_yield_unit,
-        scale=scale,
+            # Create the batch
+            batch = Batch(
+                recipe_id=recipe_id,
+                label_code=label_code,
+                batch_type=batch_type,
+                projected_yield=projected_yield,
+                projected_yield_unit=recipe.predicted_yield_unit,
+                scale=scale,
                 status='in_progress',
                 notes=notes,
                 created_by=current_user.id,
