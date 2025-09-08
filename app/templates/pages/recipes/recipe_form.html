@@ -162,11 +162,11 @@
                 <button type="button" class="btn btn-sm btn-primary" onclick="addIngredient()">
                     <i class="fas fa-plus"></i> Add Ingredient
                 </button>
-                <button type="button" class="btn btn-sm btn-secondary" data-bs-toggle="modal" data-bs-target="#quickAddIngredientModal" onclick="setIngredientReturnContext('main')">
-                    <i class="fas fa-bolt"></i> Quick Add Ingredient
+                <button type="button" class="btn btn-sm btn-secondary" onclick="openQuickCreateInventory()">
+                    <i class="fas fa-bolt"></i> Quick Create Inventory
                 </button>
-                <button type="button" class="btn btn-sm btn-secondary" data-bs-toggle="modal" data-bs-target="#quickAddContainerModal" onclick="setIngredientReturnContext('main')">
-                    <i class="fas fa-box-open"></i> Quick Add Container
+                <button type="button" class="btn btn-sm btn-outline-secondary" onclick="openQuickCreateUnit()">
+                    <i class="fas fa-ruler"></i> Quick Create Unit
                 </button>
             </div>
         </div>
@@ -337,14 +337,11 @@
     </div>
 </form>
 
-<!-- Quick Add Modals -->
-{% include 'components/shared/quick_add_ingredient_modal.html' %}
-{% include 'components/shared/quick_add_unit_modal.html' %}
-{% include 'components/shared/quick_add_container_modal.html' %}
+<!-- Drawer modals will be loaded dynamically via DrawerProtocol -->
 
 <script>
-let PRESELECT_INGREDIENT_ID = {{ preselect_ingredient_id or 'null' }};
-let SHOULD_ADD_LINE = {{ 'true' if add_ingredient_line else 'false' }};
+let PRESELECT_INGREDIENT_ID = {{ preselect_ingredient_id|tojson }};
+let SHOULD_ADD_LINE = {{ add_ingredient_line|tojson }};
 let ingredientReturnContext = 'main';
 {% if edit_mode and existing_batches and existing_batches > 0 %}
 let originalYieldUnit = '{{ recipe.predicted_yield_unit if recipe else '' }}';
@@ -468,6 +465,27 @@ function addIngredient(preselectId = null, presetUnit = null) {
     return entry;
 }
 
+// Open drawers via DrawerProtocol
+function openQuickCreateInventory() {
+    const detail = {
+        modal_url: '/api/drawer-actions/inventory/quick-create-modal',
+        success_event: 'inventory.created',
+        error_type: 'inventory',
+        error_code: 'quick_create'
+    };
+    window.dispatchEvent(new CustomEvent('openDrawer', { detail }));
+}
+
+function openQuickCreateUnit() {
+    const detail = {
+        modal_url: '/api/drawer-actions/units/quick-create-modal',
+        success_event: 'unit.created',
+        error_type: 'units',
+        error_code: 'quick_create'
+    };
+    window.dispatchEvent(new CustomEvent('openDrawer', { detail }));
+}
+
 function confirmDelete(recipeId, isVariation, variationCount) {
     let msg;
     if (isVariation) {
@@ -571,6 +589,45 @@ document.addEventListener('click', function(e) {
     if (e.target.closest('.remove-consumable')) {
         const entry = e.target.closest('.consumable-entry');
         if (entry) entry.remove();
+    }
+});
+
+// Inline insertion after quick-create
+window.addEventListener('inventory.created', function(e) {
+    try {
+        const item = e.detail && e.detail.item;
+        if (!item) return;
+        // Find last ingredient-entry or create one
+        let entry = document.querySelector('.ingredient-entry:last-of-type');
+        if (!entry) {
+            entry = addIngredient();
+        }
+        const select = entry.querySelector('select[name="ingredient_ids[]"]');
+        if (select) {
+            // Add option if missing, then select
+            let opt = Array.from(select.options).find(o => o.value == String(item.id));
+            if (!opt) {
+                opt = document.createElement('option');
+                opt.value = item.id;
+                opt.textContent = item.name;
+                opt.dataset.unit = item.unit || '';
+                select.appendChild(opt);
+            }
+            select.value = String(item.id);
+        }
+    } catch (_) {}
+});
+
+// Client-side validation: ensure each ingredient line has a selected item
+document.getElementById('recipeForm').addEventListener('submit', function(e) {
+    const selects = document.querySelectorAll('select[name="ingredient_ids[]"]');
+    for (const sel of selects) {
+        if (!sel.value) {
+            e.preventDefault();
+            alert('Please select an ingredient for each line or remove empty lines.');
+            sel.focus();
+            return false;
+        }
     }
 });
 </script>
