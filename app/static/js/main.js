@@ -281,14 +281,7 @@ document.addEventListener('DOMContentLoaded', function() {
   // Bootstrap tooltips
   $('[data-bs-toggle="tooltip"]').tooltip();
 
-  // Quick add modal transitions
-  document.getElementById('cancelQuickUnit')?.addEventListener('click', () => {
-    handleModalTransition('quickAddUnitModal', 'quickAddIngredientModal', 'ingredientName');
-  });
-
-  document.getElementById('cancelQuickIngredient')?.addEventListener('click', () => {
-    handleModalTransition('quickAddIngredientModal');
-  });
+  // Removed legacy quick-add modal transition handlers
 
   // Container form logic
   const recipeForm = document.getElementById('recipeForm');

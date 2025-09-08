@@ -1,0 +1,80 @@
+<div class="modal fade" id="quickCreateUnitModal" tabindex="-1" aria-labelledby="quickCreateUnitLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="quickCreateUnitLabel">
+                    <i class="fas fa-ruler text-primary"></i>
+                    Quick Create Unit
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <form id="quickCreateUnitForm">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <div class="mb-3">
+                        <label class="form-label">Unit Name</label>
+                        <input type="text" class="form-control" id="qcUnitName" placeholder="e.g., pinch">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Type</label>
+                        <select class="form-select" id="qcUnitType">
+                            <option value="weight">Weight</option>
+                            <option value="volume">Volume</option>
+                            <option value="count">Count</option>
+                            <option value="length">Length</option>
+                            <option value="area">Area</option>
+                        </select>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-primary" id="qcUnitSubmit">
+                    <i class="fas fa-save"></i> Create
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+(function(){
+    const init = function(){
+        const name = document.getElementById('qcUnitName');
+        const type = document.getElementById('qcUnitType');
+        const submitBtn = document.getElementById('qcUnitSubmit');
+        const modalEl = document.getElementById('quickCreateUnitModal');
+        if (!modalEl) return;
+
+        submitBtn.addEventListener('click', async function(){
+            submitBtn.disabled = true;
+            submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Creating...';
+            try {
+                const payload = { name: name.value.trim(), type: type.value };
+                const res = await fetch('/recipes/units/quick-add', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                const data = await res.json();
+                if (data && data.error) throw new Error(data.error);
+                // Emit event for any listeners to refresh units
+                window.dispatchEvent(new CustomEvent('unit.created', { detail: { unit: data } }));
+                const instance = bootstrap.Modal.getInstance(modalEl);
+                if (instance) instance.hide();
+            } catch (e) {
+                alert(e.message || 'Failed to create unit');
+            } finally {
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = '<i class="fas fa-save"></i> Create';
+            }
+        });
+    };
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', init, { once: true });
+    } else {
+        init();
+    }
+})();
+</script>
+

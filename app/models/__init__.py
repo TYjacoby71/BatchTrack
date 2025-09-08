@@ -8,6 +8,7 @@ from .models import (
     db, Organization, User, InventoryItem, InventoryHistory, BatchInventoryLog,
     Recipe, RecipeIngredient
 )
+from .recipe import RecipeConsumable
 from .batch import Batch, BatchIngredient, BatchContainer, ExtraBatchContainer, BatchTimer, ExtraBatchIngredient
 from .unit import Unit, CustomUnitMapping, ConversionLog
 from .category import IngredientCategory, Tag

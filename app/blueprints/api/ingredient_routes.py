@@ -58,7 +58,7 @@ def search_ingredients():
     payload = []
     for item in results:
         payload.append({
-            'id': item.name,  # legacy behavior; writing name directly
+            'id': item.id,
             'text': item.name,
             'category': item.category.name if item.category else None,
             'unit': item.unit,
