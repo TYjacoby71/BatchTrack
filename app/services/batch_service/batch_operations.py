@@ -338,6 +338,19 @@ class BatchOperationsService(BaseService):
 
             # Restore extra containers
             for extra_container in extra_containers:
+                container = extra_container.container
+                if container:
+                    process_inventory_adjustment(
+                        item_id=container.id,
+                        quantity=extra_container.quantity_used,
+                        change_type='refunded',
+                        unit=container.unit,
+                        notes=f"Extra container refunded from cancelled batch {batch.label_code}",
+                        batch_id=batch.id,
+                        created_by=current_user.id
+                    )
+                    restoration_summary.append(f"{extra_container.quantity_used} {container.unit} of {container.name}")
+
             # Restore consumables
             for cons in batch_consumables:
                 item = cons.inventory_item
