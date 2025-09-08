@@ -12,6 +12,7 @@ from ...models import Recipe, RecipeIngredient, InventoryItem
 from ...models.recipe import RecipeConsumable
 from ...extensions import db
 from ._validation import validate_recipe_data
+from ...utils.code_generator import generate_recipe_prefix
 
 logger = logging.getLogger(__name__)
 
@@ -49,7 +50,28 @@ def create_recipe(name: str, description: str = "", instructions: str = "",
         if not validation_result['valid']:
             return False, validation_result['error']
 
-        # Create recipe
+        # Create recipe with proper label prefix
+        final_label_prefix = label_prefix
+        if not final_label_prefix:
+            # Generate prefix from recipe name if not provided
+            final_label_prefix = generate_recipe_prefix(name)
+            
+            # For variations, ensure unique prefix
+            if parent_id:
+                parent_recipe = Recipe.query.get(parent_id)
+                if parent_recipe and parent_recipe.label_prefix:
+                    # Use parent prefix with variation suffix
+                    base_prefix = parent_recipe.label_prefix
+                    # Check for existing variations with same base prefix
+                    existing_variations = Recipe.query.filter(
+                        Recipe.parent_id == parent_id,
+                        Recipe.label_prefix.like(f"{base_prefix}%")
+                    ).count()
+                    if existing_variations > 0:
+                        final_label_prefix = f"{base_prefix}V{existing_variations + 1}"
+                    else:
+                        final_label_prefix = f"{base_prefix}V1"
+
         recipe = Recipe(
             name=name,
             instructions=instructions,
@@ -57,7 +79,7 @@ def create_recipe(name: str, description: str = "", instructions: str = "",
             predicted_yield_unit=yield_unit,
             organization_id=current_user.organization_id,
             parent_id=parent_id,
-            label_prefix=label_prefix or ""
+            label_prefix=final_label_prefix
         )
 
         # Set allowed containers
@@ -310,16 +332,31 @@ def duplicate_recipe(recipe_id: int) -> Tuple[bool, Any]:
             for ri in original.recipe_ingredients
         ]
 
+        # Extract consumable data
+        consumables = [
+            {
+                'item_id': rc.inventory_item_id,
+                'quantity': rc.quantity,
+                'unit': rc.unit
+            }
+            for rc in original.recipe_consumables
+        ]
+
+        # Generate new prefix for clone (don't reuse original prefix)
+        clone_name = f"{original.name} (Copy)"
+        clone_prefix = generate_recipe_prefix(clone_name)
+
         # Create new recipe
         return create_recipe(
-            name=f"{original.name} (Copy)",
+            name=clone_name,
             description=original.instructions,
             instructions=original.instructions,
             yield_amount=original.predicted_yield or 0.0,
             yield_unit=original.predicted_yield_unit or "",
             ingredients=ingredients,
+            consumables=consumables,
             allowed_containers=getattr(original, 'allowed_containers', []),
-            label_prefix=getattr(original, 'label_prefix', "")
+            label_prefix=clone_prefix
         )
 
     except Exception as e:
