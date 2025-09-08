@@ -33,7 +33,7 @@ def _get_operation_group(change_type):
             return group_name, group_config
     return None, None
 
-def _universal_additive_handler(item, quantity, change_type, notes=None, created_by=None, cost_override=None, custom_expiration_date=None, custom_shelf_life_days=None, **kwargs):
+def _universal_additive_handler(item, quantity, change_type, notes=None, created_by=None, cost_override=None, custom_expiration_date=None, custom_shelf_life_days=None, unit=None, batch_id=None):
     """
     Universal handler for all additive operations.
     Processes operations based on their group classification.
@@ -50,7 +50,7 @@ def _universal_additive_handler(item, quantity, change_type, notes=None, created
         logger.info(f"{change_type.upper()}: Classified as {group_name} operation")
 
         # Use item's unit if not specified in kwargs
-        unit = kwargs.get('unit') or item.unit or 'count'
+        unit = unit or item.unit or 'count'
 
         # Use provided cost or item's default cost
         final_cost = cost_override if cost_override is not None else item.cost_per_unit
@@ -68,14 +68,15 @@ def _universal_additive_handler(item, quantity, change_type, notes=None, created
                 cost_override=cost_override,
                 custom_expiration_date=custom_expiration_date,
                 custom_shelf_life_days=custom_shelf_life_days,
-                operation_unit=unit
+                operation_unit=unit,
+                batch_id=batch_id  # Pass batch_id here
             )
 
         elif group_name == 'lot_crediting':
             # Operations that credit back to existing lots (returned, refunded, release_reservation)
             success, message, lot_id = _handle_lot_crediting_operation(
                 item, quantity, change_type, unit, notes, final_cost, 
-                created_by, **kwargs
+                created_by, batch_id=batch_id, **kwargs # Pass batch_id here
             )
 
         else:
@@ -105,7 +106,7 @@ def _universal_additive_handler(item, quantity, change_type, notes=None, created
 
 
 
-def _handle_lot_creation_operation(item, quantity, change_type, notes, created_by, cost_override, custom_expiration_date, custom_shelf_life_days, operation_unit):
+def _handle_lot_creation_operation(item, quantity, change_type, notes, created_by, cost_override, custom_expiration_date, custom_shelf_life_days, operation_unit, batch_id=None):
     """
     Handle operations that create new lots (restock, returns, etc.)
     Returns (success, message, quantity_delta)
@@ -126,7 +127,8 @@ def _handle_lot_creation_operation(item, quantity, change_type, notes, created_b
             cost_per_unit=final_cost,
             created_by=created_by,
             custom_expiration_date=custom_expiration_date,
-            custom_shelf_life_days=custom_shelf_life_days
+            custom_shelf_life_days=custom_shelf_life_days,
+            batch_id=batch_id # Pass batch_id here
         )
 
         if not success:
@@ -142,7 +144,7 @@ def _handle_lot_creation_operation(item, quantity, change_type, notes, created_b
         logger.error(f"Error in lot creation operation: {str(e)}")
         return False, f"Lot creation failed: {str(e)}", 0
 
-def _handle_lot_crediting_operation(item, quantity, change_type, unit, notes, final_cost, created_by, **kwargs):
+def _handle_lot_crediting_operation(item, quantity, change_type, unit, notes, final_cost, created_by, batch_id=None, **kwargs):
     """Handle operations that credit back to existing FIFO lots"""
     from ._fifo_ops import process_fifo_deduction
 
@@ -160,7 +162,8 @@ def _handle_lot_crediting_operation(item, quantity, change_type, unit, notes, fi
             unit=unit,
             notes=notes,
             cost_per_unit=final_cost,
-            created_by=created_by
+            created_by=created_by,
+            batch_id=batch_id # Pass batch_id here
         )
 
         if not success:
