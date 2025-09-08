@@ -175,7 +175,7 @@
                         <div class="col-md-4">
                             <label class="form-label">Ingredient</label>
                             <div class="position-relative">
-                                <input type="text" class="form-control recipe-ingredient-typeahead" placeholder="Search inventory and global..." autocomplete="off" value="">
+                                <input type="text" class="form-control recipe-ingredient-typeahead" placeholder="Search inventory and global..." autocomplete="off" value="{{ assoc.inventory_item.name if assoc.inventory_item else '' }}">
                                 <input type="hidden" name="ingredient_ids[]" value="{{ assoc.inventory_item_id or '' }}">
                                 <input type="hidden" name="global_item_ids[]" value="">
                                 <div class="list-group position-absolute w-100 d-none" data-role="suggestions"></div>

@@ -1,4 +1,3 @@
-
 """
 Recipe Core Operations
 
@@ -24,7 +23,7 @@ def create_recipe(name: str, description: str = "", instructions: str = "",
                  consumables: List[Dict] = None) -> Tuple[bool, Any]:
     """
     Create a new recipe with ingredients and UI fields.
-    
+
     Args:
         name: Recipe name
         description: Recipe description  
@@ -35,7 +34,7 @@ def create_recipe(name: str, description: str = "", instructions: str = "",
         parent_id: Parent recipe ID for variations
         allowed_containers: List of container IDs
         label_prefix: Label prefix for batches
-        
+
     Returns:
         Tuple of (success: bool, recipe_or_error: Recipe|str)
     """
@@ -46,7 +45,7 @@ def create_recipe(name: str, description: str = "", instructions: str = "",
             ingredients=ingredients or [],
             yield_amount=yield_amount
         )
-        
+
         if not validation_result['valid']:
             return False, validation_result['error']
 
@@ -60,7 +59,7 @@ def create_recipe(name: str, description: str = "", instructions: str = "",
             parent_id=parent_id,
             label_prefix=label_prefix or ""
         )
-        
+
         # Set allowed containers
         if allowed_containers:
             recipe.allowed_containers = allowed_containers
@@ -90,7 +89,7 @@ def create_recipe(name: str, description: str = "", instructions: str = "",
 
         db.session.commit()
         logger.info(f"Created recipe {recipe.id}: {name}")
-        
+
         return True, recipe
 
     except Exception as e:
@@ -106,7 +105,7 @@ def update_recipe(recipe_id: int, name: str = None, description: str = None,
                  consumables: List[Dict] = None) -> Tuple[bool, Any]:
     """
     Update an existing recipe.
-    
+
     Args:
         recipe_id: Recipe to update
         name: New name (optional)
@@ -117,7 +116,7 @@ def update_recipe(recipe_id: int, name: str = None, description: str = None,
         ingredients: New ingredients list (optional)
         allowed_containers: New container list (optional)
         label_prefix: New label prefix (optional)
-        
+
     Returns:
         Tuple of (success: bool, recipe_or_error: Recipe|str)
     """
@@ -159,13 +158,13 @@ def update_recipe(recipe_id: int, name: str = None, description: str = None,
                 yield_amount=recipe.predicted_yield,
                 recipe_id=recipe_id
             )
-            
+
             if not validation_result['valid']:
                 return False, validation_result['error']
 
             # Remove existing ingredients
             RecipeIngredient.query.filter_by(recipe_id=recipe_id).delete()
-            
+
             # Add new ingredients
             for ingredient_data in ingredients:
                 recipe_ingredient = RecipeIngredient(
@@ -190,7 +189,7 @@ def update_recipe(recipe_id: int, name: str = None, description: str = None,
 
         db.session.commit()
         logger.info(f"Updated recipe {recipe_id}: {recipe.name}")
-        
+
         return True, recipe
 
     except Exception as e:
@@ -202,10 +201,10 @@ def update_recipe(recipe_id: int, name: str = None, description: str = None,
 def delete_recipe(recipe_id: int) -> Tuple[bool, str]:
     """
     Delete a recipe and its ingredients.
-    
+
     Args:
         recipe_id: Recipe to delete
-        
+
     Returns:
         Tuple of (success: bool, message: str)
     """
@@ -223,19 +222,19 @@ def delete_recipe(recipe_id: int) -> Tuple[bool, str]:
             recipe_id=recipe_id, 
             status='in_progress'
         ).count()
-        
+
         if active_batches > 0:
             return False, "Cannot delete recipe with active batches"
 
         recipe_name = recipe.name
-        
+
         # Delete ingredients first (foreign key constraint)
         RecipeIngredient.query.filter_by(recipe_id=recipe_id).delete()
-        
+
         # Delete recipe
         db.session.delete(recipe)
         db.session.commit()
-        
+
         logger.info(f"Deleted recipe {recipe_id}: {recipe_name}")
         return True, f"Recipe '{recipe_name}' deleted successfully"
 
@@ -247,35 +246,50 @@ def delete_recipe(recipe_id: int) -> Tuple[bool, str]:
 
 def get_recipe_details(recipe_id: int) -> Optional[Recipe]:
     """
-    Get recipe with all related data loaded.
-    
+    Get detailed recipe information with all relationships loaded.
+
     Args:
-        recipe_id: Recipe to retrieve
-        
+        recipe_id: ID of the recipe to retrieve
+
     Returns:
-        Recipe object or None if not found
+        Recipe object with relationships loaded, or None if not found
+
+    Raises:
+        ValueError: If recipe_id is invalid
+        PermissionError: If user doesn't have access to recipe
     """
+    if not recipe_id or recipe_id <= 0:
+        raise ValueError("Invalid recipe ID")
+
     try:
-        recipe = Recipe.query.options(
-            db.joinedload(Recipe.recipe_ingredients).joinedload(RecipeIngredient.inventory_item),
-            db.joinedload(Recipe.recipe_consumables)
-        ).get(recipe_id)
-        
-        # Organization access is handled by middleware
+        from sqlalchemy.orm import joinedload
+
+        recipe = db.session.query(Recipe).options(
+            joinedload(Recipe.recipe_ingredients).joinedload('inventory_item'),
+            joinedload(Recipe.recipe_consumables).joinedload('inventory_item')
+        ).filter(Recipe.id == recipe_id).first()
+
+        if not recipe:
+            return None
+
+        # Check organization access
+        if current_user.organization_id and recipe.organization_id != current_user.organization_id:
+            raise PermissionError("Access denied to recipe")
+
         return recipe
-        
+
     except Exception as e:
-        logger.error(f"Error getting recipe details {recipe_id}: {e}")
-        return None
+        logger.error(f"Error retrieving recipe {recipe_id}: {str(e)}")
+        raise
 
 
 def duplicate_recipe(recipe_id: int) -> Tuple[bool, Any]:
     """
     Create a copy of an existing recipe.
-    
+
     Args:
         recipe_id: Recipe to duplicate
-        
+
     Returns:
         Tuple of (success: bool, recipe_or_error: Recipe|str)
     """
