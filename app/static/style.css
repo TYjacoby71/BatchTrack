@@ -942,3 +942,30 @@ input:checked + .toggle-label:before {
 .position-relative {
     position: relative;
 }
+
+/* Production Planning Styles */
+.production-card {
+    transition: border-color 0.3s ease;
+}
+
+.production-card.ready {
+    border-color: #28a745;
+}
+
+.production-card.error {
+    border-color: #dc3545;
+}
+
+/* Batch Actions Styling */
+#batchActionsContainer .btn {
+    margin-bottom: 0.5rem;
+}
+
+#batchActionsContainer .btn:last-of-type {
+    margin-bottom: 0;
+}
+
+/* Prevent duplicate batch action displays */
+.batch-actions-duplicate {
+    display: none !important;
+}
