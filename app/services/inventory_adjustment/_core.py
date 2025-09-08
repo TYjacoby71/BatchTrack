@@ -10,7 +10,7 @@ from ._special_ops import handle_cost_override, handle_unit_conversion, handle_r
 
 logger = logging.getLogger(__name__)
 
-def process_inventory_adjustment(item_id, change_type, quantity, notes=None, created_by=None, cost_override=None, custom_expiration_date=None, custom_shelf_life_days=None, customer=None, sale_price=None, order_id=None, target_quantity=None, unit=None, defer_commit=False):
+def process_inventory_adjustment(item_id, change_type, quantity, notes=None, created_by=None, cost_override=None, custom_expiration_date=None, custom_shelf_life_days=None, customer=None, sale_price=None, order_id=None, target_quantity=None, unit=None, batch_id=None, defer_commit=False):
     """
     CENTRAL DELEGATOR - The single entry point for ALL inventory adjustments.
 
@@ -71,7 +71,8 @@ def process_inventory_adjustment(item_id, change_type, quantity, notes=None, cre
             sale_price=sale_price,
             order_id=order_id,
             target_quantity=target_quantity,
-            unit=item.unit or unit
+            unit=item.unit or unit,
+            batch_id=batch_id
         )
 
         # Handle different return formats for backwards compatibility
@@ -140,7 +141,7 @@ def process_inventory_adjustment(item_id, change_type, quantity, notes=None, cre
         return False, "A critical internal error occurred."
 
 
-def _delegate_to_operation_module(effective_change_type, original_change_type, item, quantity, notes, created_by, cost_override, custom_expiration_date, custom_shelf_life_days, customer, sale_price, order_id, target_quantity, unit):
+def _delegate_to_operation_module(effective_change_type, original_change_type, item, quantity, notes, created_by, cost_override, custom_expiration_date, custom_shelf_life_days, customer, sale_price, order_id, target_quantity, unit, batch_id):
     """
     DELEGATION LOGIC - Routes to appropriate operation module based on change type
     """
@@ -159,7 +160,8 @@ def _delegate_to_operation_module(effective_change_type, original_change_type, i
                 cost_override=cost_override,
                 custom_expiration_date=custom_expiration_date,
                 custom_shelf_life_days=custom_shelf_life_days,
-                unit=unit
+                unit=unit,
+                batch_id=batch_id
             )
 
     # Check if it's a deductive operation
@@ -174,7 +176,8 @@ def _delegate_to_operation_module(effective_change_type, original_change_type, i
                 created_by=created_by,
                 customer=customer,
                 sale_price=sale_price,
-                order_id=order_id
+                order_id=order_id,
+                batch_id=batch_id
             )
 
     # Check for special operations
@@ -187,7 +190,8 @@ def _delegate_to_operation_module(effective_change_type, original_change_type, i
             notes=notes,
             created_by=created_by,
             target_quantity=target_quantity,
-            unit=unit
+            unit=unit,
+            batch_id=batch_id
         )
     elif effective_change_type == 'cost_override':
         logger.info(f"ROUTING: {effective_change_type} -> COST_OVERRIDE (special)")
@@ -198,7 +202,8 @@ def _delegate_to_operation_module(effective_change_type, original_change_type, i
             notes=notes,
             created_by=created_by,
             cost_override=cost_override,
-            unit=unit
+            unit=unit,
+            batch_id=batch_id
         )
     elif effective_change_type == 'unit_conversion':
         logger.info(f"ROUTING: {effective_change_type} -> UNIT_CONVERSION (special)")
@@ -208,7 +213,8 @@ def _delegate_to_operation_module(effective_change_type, original_change_type, i
             change_type=original_change_type,
             notes=notes,
             created_by=created_by,
-            unit=unit
+            unit=unit,
+            batch_id=batch_id
         )
 
     # Handle initial_stock as special additive case
@@ -223,7 +229,8 @@ def _delegate_to_operation_module(effective_change_type, original_change_type, i
             cost_override=cost_override,
             custom_expiration_date=custom_expiration_date,
             custom_shelf_life_days=custom_shelf_life_days,
-            unit=unit
+            unit=unit,
+            batch_id=batch_id
         )
 
     # Unknown operation type
