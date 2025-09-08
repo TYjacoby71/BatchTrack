@@ -10,7 +10,6 @@ export class ValidationManager {
 
     updateValidation() {
         // Form validation check
-
         const issues = [];
         const warnings = [];
 
@@ -38,10 +37,14 @@ export class ValidationManager {
         if (startBatchBtn) {
             startBatchBtn.disabled = !isValid;
 
-            if (!isValid) {
-                startBatchBtn.title = 'Issues: ' + issues.join(', ');
-            } else {
+            if (isValid) {
+                startBatchBtn.innerHTML = '<i class="fas fa-play me-2"></i>Start Batch';
+                startBatchBtn.className = 'btn btn-primary btn-lg w-100';
                 startBatchBtn.title = warnings.length > 0 ? 'Warnings: ' + warnings.join(', ') : '';
+            } else {
+                startBatchBtn.innerHTML = '<i class="fas fa-play me-2"></i>' + issues[0];
+                startBatchBtn.className = 'btn btn-secondary btn-lg w-100';
+                startBatchBtn.title = 'Issues: ' + issues.join(', ');
             }
         }
 
