@@ -1,0 +1,16 @@
+Subject: We’re live — Make more, think less with BatchTrack
+
+Today’s the day.
+
+BatchTrack is live for early access. If you received this email, you’re first in line.
+
+Start here:
+1) Create your organization
+2) Add inventory using the Global Item Library
+3) Create your first recipe (choose the Portioning mode)
+4) Start a batch and finish to create products
+
+Docs: /docs/getting-started
+Need help? Reply to this email.
+
+— The BatchTrack team
