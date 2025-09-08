@@ -1,4 +1,3 @@
-
 """
 Deductive operations handler - operations that decrease inventory quantity.
 Unified to use single handler with operation type delegation.
@@ -55,7 +54,7 @@ def _get_operation_group(change_type):
             return group_name, group_config
     return None, None
 
-def _handle_deductive_operation(item, quantity, change_type, notes=None, created_by=None, **kwargs):
+def _handle_deductive_operation(item, quantity, change_type, notes, created_by, customer=None, sale_price=None, order_id=None, batch_id=None):
     """
     Universal handler for all deductive operations.
     Returns (success, message, quantity_delta) - does NOT modify item.quantity

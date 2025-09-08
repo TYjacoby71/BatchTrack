@@ -296,9 +296,9 @@ class BatchOperationsService(BaseService):
                         quantity=batch_ing.quantity_used,
                         change_type='refunded',
                         unit=batch_ing.unit,
-                        notes=f"Refunded from cancelled batch {batch.label_code}",
-                        batch_id=batch.id,
-                        created_by=current_user.id
+                        notes=f"Ingredient refunded from cancelled batch {batch.label_code}",
+                        created_by=current_user.id,
+                        batch_id=batch.id
                     )
                     restoration_summary.append(f"{batch_ing.quantity_used} {batch_ing.unit} of {ingredient.name}")
 
@@ -312,8 +312,8 @@ class BatchOperationsService(BaseService):
                         change_type='refunded',
                         unit=extra_ing.unit,
                         notes=f"Extra ingredient refunded from cancelled batch {batch.label_code}",
-                        batch_id=batch.id,
-                        created_by=current_user.id
+                        created_by=current_user.id,
+                        batch_id=batch.id
                     )
                     restoration_summary.append(f"{extra_ing.quantity_used} {extra_ing.unit} of {ingredient.name}")
 
@@ -327,8 +327,8 @@ class BatchOperationsService(BaseService):
                         change_type='refunded',
                         unit=container.unit,
                         notes=f"Container refunded from cancelled batch {batch.label_code}",
-                        batch_id=batch.id,
-                        created_by=current_user.id
+                        created_by=current_user.id,
+                        batch_id=batch.id
                     )
                     restoration_summary.append(f"{batch_container.quantity_used} {container.unit} of {container.name}")
 
@@ -342,7 +342,8 @@ class BatchOperationsService(BaseService):
                         change_type='refunded',
                         unit=container.unit,
                         notes=f"Extra container refunded from cancelled batch {batch.label_code}",
-                        created_by=current_user.id
+                        created_by=current_user.id,
+                        batch_id=batch.id
                     )
                     restoration_summary.append(f"{extra_container.quantity_used} {container.unit} of {container.name}")
 
@@ -356,8 +357,8 @@ class BatchOperationsService(BaseService):
                         change_type='refunded',
                         unit=cons.unit,
                         notes=f"Consumable refunded from cancelled batch {batch.label_code}",
-                        batch_id=batch.id,
-                        created_by=current_user.id
+                        created_by=current_user.id,
+                        batch_id=batch.id
                     )
                     restoration_summary.append(f"{cons.quantity_used} {cons.unit} of {item.name}")
 
@@ -370,9 +371,9 @@ class BatchOperationsService(BaseService):
                         quantity=extra_cons.quantity_used,
                         change_type='refunded',
                         unit=extra_cons.unit,
-                        notes=f"Extra consumable refunded from cancelled batch {batch.label_code}",
-                        batch_id=batch.id,
-                        created_by=current_user.id
+                        notes=f"Extra ingredient refunded from cancelled batch {batch.label_code}",
+                        created_by=current_user.id,
+                        batch_id=batch.id
                     )
                     restoration_summary.append(f"{extra_cons.quantity_used} {extra_cons.unit} of {item.name}")
                 container = extra_container.container
@@ -383,7 +384,8 @@ class BatchOperationsService(BaseService):
                         change_type='refunded',
                         unit=container.unit,
                         notes=f"Extra container refunded from cancelled batch {batch.label_code}",
-                        created_by=current_user.id
+                        created_by=current_user.id,
+                        batch_id=batch.id
                     )
                     restoration_summary.append(f"{extra_container.quantity_used} {container.unit} of {container.name}")
 
