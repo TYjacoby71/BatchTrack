@@ -1,6 +1,6 @@
 from flask import Blueprint, request, jsonify, render_template
 from flask_login import login_required, current_user
-from app.models import db, InventoryItem
+from app.models import db, InventoryItem, IngredientCategory
 from app.services.unit_conversion import ConversionEngine
 from app.utils.permissions import require_permission
 from app.models.recipe import Recipe
@@ -160,3 +160,28 @@ def retry_conversion_operation(data):
 # ==================== CONTAINER PLANNING ERRORS ====================
 
 # Removed product density modal routes; a single ingredient density modal remains
+
+# ==================== INVENTORY QUICK-CREATE DRAWER ====================
+
+@drawer_actions_bp.route('/inventory/quick-create-modal', methods=['GET'])
+@login_required
+def inventory_quick_create_modal_get():
+    try:
+        from app.utils.unit_utils import get_global_unit_list
+        units = get_global_unit_list()
+        categories = IngredientCategory.query.order_by(IngredientCategory.name.asc()).all()
+        modal_html = render_template('components/drawer/quick_create_inventory_drawer.html',
+                                     inventory_units=units,
+                                     categories=categories)
+        return jsonify({ 'success': True, 'modal_html': modal_html })
+    except Exception as e:
+        return jsonify({'success': False, 'error': f'Failed to load modal: {str(e)}'}), 500
+
+@drawer_actions_bp.route('/units/quick-create-modal', methods=['GET'])
+@login_required
+def units_quick_create_modal_get():
+    try:
+        modal_html = render_template('components/drawer/quick_create_unit_drawer.html')
+        return jsonify({ 'success': True, 'modal_html': modal_html })
+    except Exception as e:
+        return jsonify({'success': False, 'error': f'Failed to load modal: {str(e)}'}), 500

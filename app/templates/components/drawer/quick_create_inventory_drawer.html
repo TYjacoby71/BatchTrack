@@ -1,0 +1,228 @@
+<div class="modal fade" id="quickCreateInventoryModal" tabindex="-1" aria-labelledby="quickCreateInventoryLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="quickCreateInventoryLabel">
+                    <i class="fas fa-bolt text-primary"></i>
+                    Quick Create Inventory
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <form id="quickCreateInventoryForm">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label class="form-label">Name</label>
+                            <input type="text" class="form-control" id="qcInvName" placeholder="Search global or enter custom..." autocomplete="off">
+                            <div class="form-text">Start typing to search the Global Library. Selecting a global item will be added to your inventory.</div>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Type</label>
+                            <select class="form-select" id="qcInvType">
+                                <option value="ingredient">Ingredient</option>
+                                <option value="container">Container</option>
+                                <option value="consumable">Consumable</option>
+                                <option value="packaging">Packaging</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Unit</label>
+                            <select class="form-select" id="qcInvUnit">
+                                {% for unit in inventory_units %}
+                                <option value="{{ unit.name }}">{{ unit.name }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-6 d-none" id="qcContainerFields">
+                            <div class="row g-2">
+                                <div class="col-6">
+                                    <label class="form-label">Capacity</label>
+                                    <input type="number" step="0.01" class="form-control" id="qcInvCapacity" placeholder="0.00">
+                                </div>
+                                <div class="col-6">
+                                    <label class="form-label">Capacity Unit</label>
+                                    <select class="form-select" id="qcInvCapacityUnit">
+                                        {% for unit in inventory_units %}
+                                        <option value="{{ unit.name }}">{{ unit.name }}</option>
+                                        {% endfor %}
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="form-text">Containers are counted in "count". Capacity helps planning.</div>
+                        </div>
+                        <div class="col-md-12">
+                            <button class="btn btn-link p-0" type="button" data-bs-toggle="collapse" data-bs-target="#qcAdvanced" aria-expanded="false">
+                                Advanced
+                            </button>
+                            <div class="collapse mt-2" id="qcAdvanced">
+                                <div class="row g-2">
+                                    <div class="col-md-6">
+                                        <label class="form-label">Base Category</label>
+                                        <select class="form-select" id="qcInvCategory">
+                                            <option value="">None</option>
+                                            {% for cat in categories %}
+                                            <option value="ref_{{ cat.name }}" data-density="{{ '%.3f'|format(cat.default_density or 0) }}">{{ cat.name }}</option>
+                                            {% endfor %}
+                                        </select>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label class="form-label">Density (g/ml)</label>
+                                        <input type="number" step="0.001" min="0" class="form-control" id="qcInvDensity" placeholder="Auto from category or global">
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <input type="hidden" id="qcInvGlobalItemId" value="">
+                </form>
+                <div class="mt-2 small text-muted" id="qcGlobalHint" style="display:none;">
+                    <i class="fas fa-info-circle"></i> This global item will be added to your inventory and inserted into the recipe.
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-primary" id="qcInvSubmit">
+                    <i class="fas fa-save"></i> Create
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+(function(){
+    const init = function(){
+        const nameInput = document.getElementById('qcInvName');
+        const typeSelect = document.getElementById('qcInvType');
+        const unitSelect = document.getElementById('qcInvUnit');
+        const catSelect = document.getElementById('qcInvCategory');
+        const densityInput = document.getElementById('qcInvDensity');
+        const capacityWrap = document.getElementById('qcContainerFields');
+        const capInput = document.getElementById('qcInvCapacity');
+        const capUnit = document.getElementById('qcInvCapacityUnit');
+        const globalIdField = document.getElementById('qcInvGlobalItemId');
+        const submitBtn = document.getElementById('qcInvSubmit');
+        const globalHint = document.getElementById('qcGlobalHint');
+
+        const modalEl = document.getElementById('quickCreateInventoryModal');
+        if (!modalEl) return;
+
+        function updateTypeVisibility(){
+            const isContainer = typeSelect.value === 'container';
+            if (isContainer) {
+                capacityWrap.classList.remove('d-none');
+            } else {
+                capacityWrap.classList.add('d-none');
+            }
+        }
+        typeSelect.addEventListener('change', updateTypeVisibility);
+        updateTypeVisibility();
+
+        // Category default density autofill
+        catSelect.addEventListener('change', function(){
+            const opt = catSelect.options[catSelect.selectedIndex];
+            const d = parseFloat(opt && opt.dataset && opt.dataset.density || '0');
+            if (d > 0) {
+                densityInput.value = d.toFixed(3);
+            }
+        });
+
+        // Global search: debounce typing and fetch suggestions
+        let debounceTimer = null;
+        nameInput.addEventListener('input', function(){
+            globalIdField.value = '';
+            globalHint.style.display = 'none';
+            const q = nameInput.value.trim();
+            if (debounceTimer) clearTimeout(debounceTimer);
+            if (!q) return;
+            debounceTimer = setTimeout(async () => {
+                const itemType = typeSelect.value;
+                try {
+                    const res = await fetch(`/api/ingredients/global-items/search?q=${encodeURIComponent(q)}&type=${encodeURIComponent(itemType)}`);
+                    const data = await res.json();
+                    const results = (data && data.results) || [];
+                    // Simple inline suggestion dropdown
+                    let list = document.getElementById('qcInvSuggestions');
+                    if (!list) {
+                        list = document.createElement('div');
+                        list.id = 'qcInvSuggestions';
+                        list.className = 'list-group position-absolute w-100';
+                        nameInput.parentElement.appendChild(list);
+                        nameInput.parentElement.style.position = 'relative';
+                    }
+                    list.innerHTML = '';
+                    results.forEach(item => {
+                        const a = document.createElement('a');
+                        a.href = '#';
+                        a.className = 'list-group-item list-group-item-action';
+                        a.textContent = item.text;
+                        a.addEventListener('click', (e) => {
+                            e.preventDefault();
+                            nameInput.value = item.text;
+                            globalIdField.value = item.id;
+                            if (item.default_unit) {
+                                unitSelect.value = item.default_unit;
+                            }
+                            if (item.item_type === 'container') {
+                                if (item.capacity) capInput.value = item.capacity;
+                                if (item.capacity_unit) capUnit.value = item.capacity_unit;
+                            }
+                            globalHint.style.display = 'block';
+                            list.innerHTML = '';
+                        });
+                        list.appendChild(a);
+                    });
+                } catch (err) {
+                    console.warn('Global search failed', err);
+                }
+            }, 250);
+        });
+
+        submitBtn.addEventListener('click', async function(){
+            submitBtn.disabled = true;
+            submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Creating...';
+            try {
+                const payload = {
+                    name: nameInput.value.trim(),
+                    type: typeSelect.value,
+                    unit: unitSelect.value,
+                    category_id: catSelect.value || '',
+                    density: densityInput.value || '',
+                };
+                if (globalIdField.value) payload.global_item_id = globalIdField.value;
+                if (typeSelect.value === 'container') {
+                    if (capInput.value) payload.capacity = capInput.value;
+                    if (capUnit.value) payload.capacity_unit = capUnit.value;
+                }
+
+                const res = await fetch('/inventory/api/quick-create', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                const data = await res.json();
+                if (!data || !data.success) throw new Error(data && data.error || 'Create failed');
+
+                // Emit event for inline insert
+                window.dispatchEvent(new CustomEvent('inventory.created', { detail: { item: data.item } }));
+
+                // Close modal
+                const instance = bootstrap.Modal.getInstance(modalEl);
+                if (instance) instance.hide();
+            } catch (e) {
+                alert(e.message || 'Failed to create');
+            } finally {
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = '<i class="fas fa-save"></i> Create';
+            }
+        });
+    };
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', init, { once: true });
+    } else {
+        init();
+    }
+})();
+</script>
+

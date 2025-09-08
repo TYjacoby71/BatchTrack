@@ -31,7 +31,7 @@
 </div>
 {% endif %}
 
-<form method="post" action="{% if is_clone %}{{ url_for('recipes.new_recipe') }}{% elif is_variation %}{{ url_for('recipes.create_variation', recipe_id=recipe.parent_id) }}{% elif recipe and edit_mode %}{{ url_for('recipes.edit_recipe', recipe_id=recipe.id) }}{% else %}{{ url_for('recipes.new_recipe') }}{% endif %}" id="recipeForm">
+<form method="post" action="{% if is_clone %}{{ url_for('recipes.new_recipe') }}{% elif is_variation %}{{ url_for('recipes.create_variation', recipe_id=recipe.parent_id) }}{% elif recipe and edit_mode %}{{ url_for('recipes.edit_recipe', recipe_id=recipe.id) }}{% else %}{{ url_for('recipes.new_recipe') }}{% endif %}" id="recipeForm" data-preselect-ingredient-id="{{ preselect_ingredient_id if preselect_ingredient_id else '' }}" data-should-add-line="{{ 'true' if add_ingredient_line else 'false' }}" data-original-yield-unit="{{ recipe.predicted_yield_unit if recipe else '' }}">
     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
     {% if is_clone %}<input type="hidden" name="is_clone" value="true">{% endif %}
 
@@ -149,10 +149,7 @@
             <h5 class="card-title mb-0">
                 <i class="fas fa-list"></i> Ingredients
             </h5>
-            {% if recipe and recipe.allowed_containers %}
-    <!-- Debug: Show allowed containers -->
-    <script>console.log('Recipe allowed containers:', {{ recipe.allowed_containers|tojson }});</script>
-    {% endif %}
+            {% if false %}{% endif %}
             {% if recipe and recipe.parent_id or is_variation %}
     <button type="button" class="btn btn-sm btn-primary" onclick="addIngredient()">
         <i class="fas fa-plus"></i> Add Ingredient
@@ -162,11 +159,11 @@
                 <button type="button" class="btn btn-sm btn-primary" onclick="addIngredient()">
                     <i class="fas fa-plus"></i> Add Ingredient
                 </button>
-                <button type="button" class="btn btn-sm btn-secondary" data-bs-toggle="modal" data-bs-target="#quickAddIngredientModal" onclick="setIngredientReturnContext('main')">
-                    <i class="fas fa-bolt"></i> Quick Add Ingredient
+                <button type="button" class="btn btn-sm btn-secondary" onclick="openQuickCreateInventory()">
+                    <i class="fas fa-bolt"></i> Quick Create Inventory
                 </button>
-                <button type="button" class="btn btn-sm btn-secondary" data-bs-toggle="modal" data-bs-target="#quickAddContainerModal" onclick="setIngredientReturnContext('main')">
-                    <i class="fas fa-box-open"></i> Quick Add Container
+                <button type="button" class="btn btn-sm btn-outline-secondary" onclick="openQuickCreateUnit()">
+                    <i class="fas fa-ruler"></i> Quick Create Unit
                 </button>
             </div>
         </div>
@@ -177,17 +174,12 @@
                     <div class="ingredient-entry row mb-3 p-3 border rounded" data-ingredient-id="{{ assoc.inventory_item_id }}">
                         <div class="col-md-4">
                             <label class="form-label">Ingredient</label>
-                            <select name="ingredient_ids[]" class="form-select ingredient-select" required onchange="updateConversionWarning(this)">
-                                <option value="">Select ingredient...</option>
-                                {% for ingredient in all_ingredients %}
-                                <option value="{{ ingredient.id }}" 
-                                        data-unit="{{ ingredient.unit }}" 
-                                        data-type="{{ ingredient.type }}"
-                                        {% if ingredient.id == assoc.inventory_item_id %}selected{% endif %}>
-                                    {{ ingredient.name }}
-                                </option>
-                                {% endfor %}
-                            </select>
+                            <div class="position-relative">
+                                <input type="text" class="form-control recipe-ingredient-typeahead" placeholder="Search inventory and global..." autocomplete="off" value="">
+                                <input type="hidden" name="ingredient_ids[]" value="{{ assoc.inventory_item_id or '' }}">
+                                <input type="hidden" name="global_item_ids[]" value="">
+                                <div class="list-group position-absolute w-100 d-none" data-role="suggestions"></div>
+                            </div>
                         </div>
                         <div class="col-md-3">
                             <label class="form-label">Amount</label>
@@ -218,12 +210,12 @@
                     <div class="ingredient-entry row mb-3 p-3 border rounded">
                         <div class="col-md-4">
                             <label class="form-label small">Ingredient</label>
-                            <select name="ingredient_ids[]" class="form-select" required>
-                                <option value="">Select an ingredient</option>
-                                {% for available_ing in all_ingredients if available_ing.type != 'container' %}
-                                <option value="{{ available_ing.id }}" {% if available_ing.id == ing_id %}selected{% endif %}>{{ available_ing.name }}</option>
-                                {% endfor %}
-                            </select>
+                            <div class="position-relative">
+                                <input type="text" class="form-control recipe-ingredient-typeahead" placeholder="Search inventory and global..." autocomplete="off" value="">
+                                <input type="hidden" name="ingredient_ids[]" value="{{ ing_id or '' }}">
+                                <input type="hidden" name="global_item_ids[]" value="">
+                                <div class="list-group position-absolute w-100 d-none" data-role="suggestions"></div>
+                            </div>
                         </div>
                         <div class="col-md-3">
                             <label class="form-label small">Amount</label>
@@ -337,18 +329,15 @@
     </div>
 </form>
 
-<!-- Quick Add Modals -->
-{% include 'components/shared/quick_add_ingredient_modal.html' %}
-{% include 'components/shared/quick_add_unit_modal.html' %}
-{% include 'components/shared/quick_add_container_modal.html' %}
+<!-- Drawer modals will be loaded dynamically via DrawerProtocol -->
 
 <script>
-let PRESELECT_INGREDIENT_ID = {{ preselect_ingredient_id or 'null' }};
-let SHOULD_ADD_LINE = {{ 'true' if add_ingredient_line else 'false' }};
+const formEl = document.getElementById('recipeForm');
+let PRESELECT_INGREDIENT_ID = (formEl.getAttribute('data-preselect-ingredient-id') || '').trim();
+PRESELECT_INGREDIENT_ID = PRESELECT_INGREDIENT_ID ? (parseInt(PRESELECT_INGREDIENT_ID, 10) || null) : null;
+let SHOULD_ADD_LINE = (formEl.getAttribute('data-should-add-line') || 'false') === 'true';
 let ingredientReturnContext = 'main';
-{% if edit_mode and existing_batches and existing_batches > 0 %}
-let originalYieldUnit = '{{ recipe.predicted_yield_unit if recipe else '' }}';
-{% endif %}
+let originalYieldUnit = (formEl.getAttribute('data-original-yield-unit') || '').trim();
 
 document.addEventListener('DOMContentLoaded', function() {
     // Initialize Bootstrap popovers
@@ -427,12 +416,12 @@ function addIngredient(preselectId = null, presetUnit = null) {
     entry.innerHTML = `
         <div class="col-md-4">
             <label class="form-label small">Ingredient</label>
-            <select name="ingredient_ids[]" class="form-select" required>
-                <option value="">Select an ingredient</option>
-                {% for ing in all_ingredients if ing.type != 'container' %}
-                <option value="{{ ing.id }}">{{ ing.name }}</option>
-                {% endfor %}
-            </select>
+            <div class="position-relative">
+                <input type="text" class="form-control recipe-ingredient-typeahead" placeholder="Search inventory and global..." autocomplete="off">
+                <input type="hidden" name="ingredient_ids[]" value="">
+                <input type="hidden" name="global_item_ids[]" value="">
+                <div class="list-group position-absolute w-100 d-none" data-role="suggestions"></div>
+            </div>
         </div>
         <div class="col-md-3">
             <label class="form-label small">Amount</label>
@@ -460,12 +449,33 @@ function addIngredient(preselectId = null, presetUnit = null) {
     container.appendChild(entry);
 
     if (preselectId) {
-        const select = entry.querySelector('select[name="ingredient_ids[]"]');
-        if (select) select.value = preselectId;
+        const hidden = entry.querySelector('input[name="ingredient_ids[]"]');
+        if (hidden) hidden.value = String(preselectId);
     }
 
     entry.scrollIntoView({ behavior: 'smooth' });
     return entry;
+}
+
+// Open drawers via DrawerProtocol
+function openQuickCreateInventory() {
+    const detail = {
+        modal_url: '/api/drawer-actions/inventory/quick-create-modal',
+        success_event: 'inventory.created',
+        error_type: 'inventory',
+        error_code: 'quick_create'
+    };
+    window.dispatchEvent(new CustomEvent('openDrawer', { detail: detail }));
+}
+
+function openQuickCreateUnit() {
+    const detail = {
+        modal_url: '/api/drawer-actions/units/quick-create-modal',
+        success_event: 'unit.created',
+        error_type: 'units',
+        error_code: 'quick_create'
+    };
+    window.dispatchEvent(new CustomEvent('openDrawer', { detail: detail }));
 }
 
 function confirmDelete(recipeId, isVariation, variationCount) {
@@ -573,6 +583,130 @@ document.addEventListener('click', function(e) {
         if (entry) entry.remove();
     }
 });
+
+// Inline insertion after quick-create
+window.addEventListener('inventory.created', function(e) {
+    try {
+        const item = e.detail && e.detail.item;
+        if (!item) return;
+        // Find last ingredient-entry or create one
+        let entry = document.querySelector('.ingredient-entry:last-of-type');
+        if (!entry) {
+            entry = addIngredient();
+        }
+        const hidden = entry.querySelector('input[name="ingredient_ids[]"]');
+        const input = entry.querySelector('input.recipe-ingredient-typeahead');
+        if (hidden) hidden.value = String(item.id);
+        if (input) input.value = item.name;
+    } catch (_) {}
+});
+
+// Client-side validation: ensure each ingredient line has a selected item
+document.getElementById('recipeForm').addEventListener('submit', function(e) {
+    const rows = document.querySelectorAll('.ingredient-entry');
+    for (const row of rows) {
+        const inv = row.querySelector('input[name="ingredient_ids[]"]').value.trim();
+        const gi = row.querySelector('input[name="global_item_ids[]"]').value.trim();
+        const hasSelection = inv || gi;
+        if (!hasSelection) {
+            e.preventDefault();
+            alert('Each ingredient must be selected from Inventory or Global.');
+            const input = row.querySelector('input.recipe-ingredient-typeahead');
+            if (input) input.focus();
+            return false;
+        }
+    }
+});
+
+// Simple typeahead wiring for inventory + global search
+(function(){
+    function setupTypeahead(container) {
+        const input = container.querySelector('input.recipe-ingredient-typeahead');
+        const invHidden = container.querySelector('input[name="ingredient_ids[]"]');
+        const giHidden = container.querySelector('input[name="global_item_ids[]"]');
+        const list = container.querySelector('[data-role="suggestions"]');
+        if (!input || !invHidden || !giHidden || !list) return;
+
+        let timer = null;
+        input.addEventListener('input', function() {
+            invHidden.value = '';
+            giHidden.value = '';
+            const q = input.value.trim();
+            if (timer) clearTimeout(timer);
+            if (!q) { list.classList.add('d-none'); list.innerHTML=''; return; }
+            timer = setTimeout(async () => {
+                try {
+                    const [invRes, giRes] = await Promise.all([
+                        fetch(`/api/ingredients/ingredients/search?q=${encodeURIComponent(q)}`),
+                        fetch(`/api/ingredients/global-items/search?q=${encodeURIComponent(q)}&type=ingredient`)
+                    ]);
+                    const inv = await invRes.json();
+                    const gi = await giRes.json();
+                    const invResults = (inv && inv.results) || [];
+                    const giResults = (gi && gi.results) || [];
+                    list.innerHTML='';
+
+                    function addHeader(text){
+                        const h = document.createElement('div');
+                        h.className = 'list-group-item text-muted small';
+                        h.textContent = text;
+                        list.appendChild(h);
+                    }
+                    if (invResults.length) addHeader('Your Inventory');
+                    invResults.forEach(r => {
+                        const a = document.createElement('a');
+                        a.href = '#';
+                        a.className = 'list-group-item list-group-item-action';
+                        a.textContent = r.text;
+                        a.addEventListener('click', (e) => {
+                            e.preventDefault();
+                            input.value = r.text;
+                            invHidden.value = r.id_numeric || ''; // fallback if provided
+                            // If API used name as id, we cannot set numeric here; leave for backend match only when using selects
+                            list.classList.add('d-none');
+                            list.innerHTML='';
+                        });
+                        list.appendChild(a);
+                    });
+                    if (giResults.length) addHeader('Global Library');
+                    giResults.forEach(r => {
+                        const a = document.createElement('a');
+                        a.href = '#';
+                        a.className = 'list-group-item list-group-item-action';
+                        a.textContent = r.text;
+                        a.addEventListener('click', (e) => {
+                            e.preventDefault();
+                            input.value = r.text;
+                            giHidden.value = r.id;
+                            list.classList.add('d-none');
+                            list.innerHTML='';
+                        });
+                        list.appendChild(a);
+                    });
+                    list.classList.toggle('d-none', !(invResults.length || giResults.length));
+                } catch (_) {}
+            }, 250);
+        });
+        document.addEventListener('click', function(e){
+            if (!container.contains(e.target)) {
+                list.classList.add('d-none');
+            }
+        });
+    }
+    // Attach to existing entries
+    document.querySelectorAll('.ingredient-entry').forEach(entry => {
+        const container = entry.querySelector('.position-relative');
+        if (container) setupTypeahead(container);
+    });
+    // Hook into dynamic addIngredient
+    const originalAdd = addIngredient;
+    window.addIngredient = function(preselectId, presetUnit){
+        const entry = originalAdd(preselectId, presetUnit);
+        const container = entry.querySelector('.position-relative');
+        if (container) setupTypeahead(container);
+        return entry;
+    };
+})();
 </script>
 
 {% endblock %}

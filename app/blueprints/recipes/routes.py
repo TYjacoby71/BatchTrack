@@ -2,7 +2,7 @@ from flask import render_template, request, redirect, url_for, flash, jsonify
 from flask_login import login_required, current_user
 from . import recipes_bp
 from app.extensions import db
-from app.models import Recipe, InventoryItem
+from app.models import Recipe, InventoryItem, GlobalItem
 from app.utils.permissions import require_permission
 
 from app.services.recipe_service import (
@@ -11,6 +11,7 @@ from app.services.recipe_service import (
 )
 
 from app.utils.unit_utils import get_global_unit_list
+from app.services.inventory_adjustment import create_inventory_item
 from app.models.unit import Unit
 import logging
 
@@ -327,23 +328,73 @@ def quick_add_ingredient():
 
 # Helper functions to keep controllers clean
 def _extract_ingredients_from_form(form):
-    """Extract ingredient data from form submission"""
+    """Extract ingredient data from form submission.
+    Supports inventory items and selected global items (auto-creates zero-qty inventory when needed).
+    """
     ingredients = []
     ingredient_ids = form.getlist('ingredient_ids[]')
+    global_item_ids = form.getlist('global_item_ids[]')
     amounts = form.getlist('amounts[]')
     units = form.getlist('units[]')
 
-    for ing_id, amt, unit in zip(ingredient_ids, amounts, units):
-        if ing_id and amt and unit:
+    # Normalize lengths
+    max_len = max(len(ingredient_ids), len(global_item_ids), len(amounts), len(units))
+    ingredient_ids += [''] * (max_len - len(ingredient_ids))
+    global_item_ids += [''] * (max_len - len(global_item_ids))
+    amounts += [''] * (max_len - len(amounts))
+    units += [''] * (max_len - len(units))
+
+    for ing_id, gi_id, amt, unit in zip(ingredient_ids, global_item_ids, amounts, units):
+        if not amt or not unit:
+            continue
+
+        try:
+            quantity = float(str(amt).strip())
+        except (ValueError, TypeError):
+            logger.error(f"Invalid quantity provided for ingredient line: {amt}")
+            continue
+
+        item_id = None
+        if ing_id:
             try:
-                ingredients.append({
-                    'item_id': int(ing_id),
-                    'quantity': float(amt.strip()),
-                    'unit': unit.strip()
-                })
-            except (ValueError, TypeError) as e:
-                logger.error(f"Invalid ingredient data: {e}")
-                continue
+                item_id = int(ing_id)
+            except (ValueError, TypeError):
+                item_id = None
+
+        # If no inventory item selected but a global item is selected, create it now (zero qty)
+        if not item_id and gi_id:
+            try:
+                gi = db.session.get(GlobalItem, int(gi_id)) if gi_id else None
+            except Exception:
+                gi = None
+
+            if gi:
+                # Form-like payload for creation service
+                form_like = {
+                    'name': gi.name,
+                    'type': gi.item_type,
+                    'unit': gi.default_unit or '',
+                    'global_item_id': gi.id
+                }
+
+                success, message, created_id = create_inventory_item(
+                    form_data=form_like,
+                    organization_id=current_user.organization_id,
+                    created_by=current_user.id
+                )
+                if not success:
+                    logger.error(f"Failed to auto-create inventory for global item {gi.id}: {message}")
+                else:
+                    item_id = int(created_id)
+            else:
+                logger.error(f"Global item not found for id {gi_id}")
+
+        if item_id:
+            ingredients.append({
+                'item_id': item_id,
+                'quantity': quantity,
+                'unit': (unit or '').strip()
+            })
 
     return ingredients
 

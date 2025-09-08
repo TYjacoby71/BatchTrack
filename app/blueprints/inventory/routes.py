@@ -29,6 +29,53 @@ def can_edit_inventory_item(item):
         return True
     return item.organization_id == current_user.organization_id
 
+@inventory_bp.route('/api/quick-create', methods=['POST'])
+@login_required
+def api_quick_create_inventory():
+    """JSON endpoint to quickly create an inventory item (zero qty) and return it.
+    Uses existing create_inventory_item service. Org-scoped.
+    Expected JSON:
+      { name, type, unit?, global_item_id?, category_id?/ref_*, density?, capacity?, capacity_unit? }
+    """
+    try:
+        data = request.get_json(force=True, silent=True) or {}
+
+        # Normalize form-like dict for service
+        form_like = {}
+        for key, value in (data.items() if hasattr(data, 'items') else []):
+            form_like[str(key)] = value if value is not None else ''
+
+        success, message, item_id = create_inventory_item(
+            form_data=form_like,
+            organization_id=current_user.organization_id,
+            created_by=current_user.id
+        )
+
+        if not success or not item_id:
+            return jsonify({
+                'success': False,
+                'error': message or 'Failed to create inventory item'
+            }), 400
+
+        item = db.session.get(InventoryItem, int(item_id))
+        if not item:
+            return jsonify({'success': False, 'error': 'Created item not found'}), 500
+
+        return jsonify({
+            'success': True,
+            'item': {
+                'id': item.id,
+                'name': item.name,
+                'unit': item.unit,
+                'type': item.type,
+                'global_item_id': getattr(item, 'global_item_id', None),
+            }
+        })
+
+    except Exception as e:
+        logging.exception('Quick-create inventory failed')
+        return jsonify({'success': False, 'error': str(e)}), 500
+
 @inventory_bp.route('/')
 @login_required
 def list_inventory():
