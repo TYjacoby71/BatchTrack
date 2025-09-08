@@ -10,6 +10,7 @@ from app.models import ExtraBatchIngredient, ExtraBatchContainer, Product, Produ
 from app.services.unit_conversion import ConversionEngine
 from app.services.inventory_adjustment import process_inventory_adjustment
 from app.utils.timezone_utils import TimezoneUtils
+from app.utils.code_generator import generate_batch_label_code
 from app.services.base_service import BaseService
 
 logger = logging.getLogger(__name__)
@@ -21,31 +22,26 @@ class BatchOperationsService(BaseService):
     def start_batch(cls, recipe_id, scale=1.0, batch_type='ingredient', notes='', containers_data=None, requires_containers=False):
         """Start a new batch with inventory deductions atomically. Rolls back on any failure."""
         try:
-            recipe = Recipe.query.get(recipe_id)
-            if not recipe:
-                return None, "Recipe not found"
+    recipe = Recipe.query.get(recipe_id)
+    if not recipe:
+        return None, "Recipe not found"
 
-            scale = float(scale)
-            containers_data = containers_data or []
+    scale = float(scale)
+    containers_data = containers_data or []
 
-            # Generate batch label
-            current_year = datetime.now().year
-            year_batches = Batch.query.filter(
-                Batch.recipe_id == recipe.id,
-                extract('year', Batch.started_at) == current_year
-            ).count()
+    # Generate batch label via centralized generator
+    label_code = generate_batch_label_code(recipe)
 
-            label_code = f"{recipe.label_prefix if recipe.label_prefix else 'BTH'}-{current_year}-{year_batches + 1:03d}"
-            projected_yield = scale * recipe.predicted_yield
+    projected_yield = scale * recipe.predicted_yield
 
-            # Create the batch
-            batch = Batch(
-                recipe_id=recipe_id,
-                label_code=label_code,
-                batch_type=batch_type,
-                projected_yield=projected_yield,
-                projected_yield_unit=recipe.predicted_yield_unit,
-                scale=scale,
+    # Create the batch
+    batch = Batch(
+        recipe_id=recipe_id,
+        label_code=label_code,
+        batch_type=batch_type,
+        projected_yield=projected_yield,
+        projected_yield_unit=recipe.predicted_yield_unit,
+        scale=scale,
                 status='in_progress',
                 notes=notes,
                 created_by=current_user.id,
