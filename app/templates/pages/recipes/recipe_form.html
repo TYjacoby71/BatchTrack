@@ -174,17 +174,12 @@
                     <div class="ingredient-entry row mb-3 p-3 border rounded" data-ingredient-id="{{ assoc.inventory_item_id }}">
                         <div class="col-md-4">
                             <label class="form-label">Ingredient</label>
-                            <select name="ingredient_ids[]" class="form-select ingredient-select" required onchange="updateConversionWarning(this)">
-                                <option value="">Select ingredient...</option>
-                                {% for ingredient in all_ingredients %}
-                                <option value="{{ ingredient.id }}" 
-                                        data-unit="{{ ingredient.unit }}" 
-                                        data-type="{{ ingredient.type }}"
-                                        {% if ingredient.id == assoc.inventory_item_id %}selected{% endif %}>
-                                    {{ ingredient.name }}
-                                </option>
-                                {% endfor %}
-                            </select>
+                            <div class="position-relative">
+                                <input type="text" class="form-control recipe-ingredient-typeahead" placeholder="Search inventory and global..." autocomplete="off" value="">
+                                <input type="hidden" name="ingredient_ids[]" value="{{ assoc.inventory_item_id or '' }}">
+                                <input type="hidden" name="global_item_ids[]" value="">
+                                <div class="list-group position-absolute w-100 d-none" data-role="suggestions"></div>
+                            </div>
                         </div>
                         <div class="col-md-3">
                             <label class="form-label">Amount</label>
@@ -215,12 +210,12 @@
                     <div class="ingredient-entry row mb-3 p-3 border rounded">
                         <div class="col-md-4">
                             <label class="form-label small">Ingredient</label>
-                            <select name="ingredient_ids[]" class="form-select" required>
-                                <option value="">Select an ingredient</option>
-                                {% for available_ing in all_ingredients if available_ing.type != 'container' %}
-                                <option value="{{ available_ing.id }}" {% if available_ing.id == ing_id %}selected{% endif %}>{{ available_ing.name }}</option>
-                                {% endfor %}
-                            </select>
+                            <div class="position-relative">
+                                <input type="text" class="form-control recipe-ingredient-typeahead" placeholder="Search inventory and global..." autocomplete="off" value="">
+                                <input type="hidden" name="ingredient_ids[]" value="{{ ing_id or '' }}">
+                                <input type="hidden" name="global_item_ids[]" value="">
+                                <div class="list-group position-absolute w-100 d-none" data-role="suggestions"></div>
+                            </div>
                         </div>
                         <div class="col-md-3">
                             <label class="form-label small">Amount</label>
@@ -421,12 +416,12 @@ function addIngredient(preselectId = null, presetUnit = null) {
     entry.innerHTML = `
         <div class="col-md-4">
             <label class="form-label small">Ingredient</label>
-            <select name="ingredient_ids[]" class="form-select" required>
-                <option value="">Select an ingredient</option>
-                {% for ing in all_ingredients if ing.type != 'container' %}
-                <option value="{{ ing.id }}">{{ ing.name }}</option>
-                {% endfor %}
-            </select>
+            <div class="position-relative">
+                <input type="text" class="form-control recipe-ingredient-typeahead" placeholder="Search inventory and global..." autocomplete="off">
+                <input type="hidden" name="ingredient_ids[]" value="">
+                <input type="hidden" name="global_item_ids[]" value="">
+                <div class="list-group position-absolute w-100 d-none" data-role="suggestions"></div>
+            </div>
         </div>
         <div class="col-md-3">
             <label class="form-label small">Amount</label>
@@ -627,6 +622,96 @@ document.getElementById('recipeForm').addEventListener('submit', function(e) {
         }
     }
 });
+
+// Simple typeahead wiring for inventory + global search
+(function(){
+    function setupTypeahead(container) {
+        const input = container.querySelector('input.recipe-ingredient-typeahead');
+        const invHidden = container.querySelector('input[name="ingredient_ids[]"]');
+        const giHidden = container.querySelector('input[name="global_item_ids[]"]');
+        const list = container.querySelector('[data-role="suggestions"]');
+        if (!input || !invHidden || !giHidden || !list) return;
+
+        let timer = null;
+        input.addEventListener('input', function() {
+            invHidden.value = '';
+            giHidden.value = '';
+            const q = input.value.trim();
+            if (timer) clearTimeout(timer);
+            if (!q) { list.classList.add('d-none'); list.innerHTML=''; return; }
+            timer = setTimeout(async () => {
+                try {
+                    const [invRes, giRes] = await Promise.all([
+                        fetch(`/api/ingredients/ingredients/search?q=${encodeURIComponent(q)}`),
+                        fetch(`/api/ingredients/global-items/search?q=${encodeURIComponent(q)}&type=ingredient`)
+                    ]);
+                    const inv = await invRes.json();
+                    const gi = await giRes.json();
+                    const invResults = (inv && inv.results) || [];
+                    const giResults = (gi && gi.results) || [];
+                    list.innerHTML='';
+
+                    function addHeader(text){
+                        const h = document.createElement('div');
+                        h.className = 'list-group-item text-muted small';
+                        h.textContent = text;
+                        list.appendChild(h);
+                    }
+                    if (invResults.length) addHeader('Your Inventory');
+                    invResults.forEach(r => {
+                        const a = document.createElement('a');
+                        a.href = '#';
+                        a.className = 'list-group-item list-group-item-action';
+                        a.textContent = r.text;
+                        a.addEventListener('click', (e) => {
+                            e.preventDefault();
+                            input.value = r.text;
+                            invHidden.value = r.id_numeric || ''; // fallback if provided
+                            // If API used name as id, we cannot set numeric here; leave for backend match only when using selects
+                            list.classList.add('d-none');
+                            list.innerHTML='';
+                        });
+                        list.appendChild(a);
+                    });
+                    if (giResults.length) addHeader('Global Library');
+                    giResults.forEach(r => {
+                        const a = document.createElement('a');
+                        a.href = '#';
+                        a.className = 'list-group-item list-group-item-action';
+                        a.textContent = r.text;
+                        a.addEventListener('click', (e) => {
+                            e.preventDefault();
+                            input.value = r.text;
+                            giHidden.value = r.id;
+                            list.classList.add('d-none');
+                            list.innerHTML='';
+                        });
+                        list.appendChild(a);
+                    });
+                    list.classList.toggle('d-none', !(invResults.length || giResults.length));
+                } catch (_) {}
+            }, 250);
+        });
+        document.addEventListener('click', function(e){
+            if (!container.contains(e.target)) {
+                list.classList.add('d-none');
+            }
+        });
+    }
+    // Attach to existing entries
+    document.querySelectorAll('.ingredient-entry').forEach(entry => {
+        const container = entry.querySelector('.position-relative');
+        if (container) setupTypeahead(container);
+    });
+    // Hook into dynamic addIngredient
+    const originalAdd = addIngredient;
+    window.addIngredient = function(preselectId, presetUnit){
+        const entry = originalAdd(preselectId, presetUnit);
+        const container = entry.querySelector('.position-relative');
+        if (container) setupTypeahead(container);
+        return entry;
+    };
+})();
 </script>
 
 {% endblock %}
