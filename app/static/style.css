@@ -375,6 +375,69 @@ a:hover {
   padding: 6px 8px !important;
 }
 
+/* Custom typeahead/autocomplete dropdown styling */
+.position-absolute[style*="z-index"] {
+  background-color: #fff !important;
+  border: 1px solid #dee2e6 !important;
+  box-shadow: var(--shadow-3) !important;
+}
+
+/* Ingredient suggestions dropdown */
+#ingredientSuggestions {
+  background-color: #fff !important;
+  border: 1px solid #dee2e6 !important;
+  box-shadow: var(--shadow-3) !important;
+}
+
+#ingredientSuggestions .suggestion-item,
+#ingredientSuggestions .dropdown-item {
+  background-color: #fff !important;
+  color: #333 !important;
+  padding: 8px 12px !important;
+  border: none !important;
+}
+
+#ingredientSuggestions .suggestion-item:hover,
+#ingredientSuggestions .dropdown-item:hover {
+  background-color: #f8f9fa !important;
+  color: #000 !important;
+}
+
+/* General autocomplete/typeahead styling */
+.autocomplete-suggestions,
+.typeahead-dropdown,
+.suggestions-dropdown {
+  background-color: #fff !important;
+  border: 1px solid #dee2e6 !important;
+  box-shadow: var(--shadow-3) !important;
+  border-radius: var(--radius-2) !important;
+}
+
+.autocomplete-suggestions .suggestion,
+.typeahead-dropdown .suggestion,
+.suggestions-dropdown .suggestion {
+  background-color: #fff !important;
+  color: #333 !important;
+  padding: 8px 12px !important;
+  border-bottom: 1px solid #f1f3f4 !important;
+}
+
+.autocomplete-suggestions .suggestion:hover,
+.typeahead-dropdown .suggestion:hover,
+.suggestions-dropdown .suggestion:hover,
+.autocomplete-suggestions .suggestion.active,
+.typeahead-dropdown .suggestion.active,
+.suggestions-dropdown .suggestion.active {
+  background-color: #f8f9fa !important;
+  color: #000 !important;
+}
+
+.autocomplete-suggestions .suggestion:last-child,
+.typeahead-dropdown .suggestion:last-child,
+.suggestions-dropdown .suggestion:last-child {
+  border-bottom: none !important;
+}
+
 .flow-container {
   margin-top: var(--space-8);
   padding: var(--space-6);
