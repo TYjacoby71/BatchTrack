@@ -267,55 +267,61 @@
             <div class="row">
                 <div class="col-lg-4">
                     <div class="testimonial-card">
-                        <div class="placeholder-img mb-3" style="height: 80px;">
-                            [Customer Logo]
-                        </div>
-                        <p class="fst-italic">"BatchTrack has revolutionized our production process. We've reduced waste by 30% and improved our batch tracking accuracy."</p>
+                        {% set r = (marketing_reviews[0] if marketing_reviews|length > 0 else None) %}
+                        {% if r %}
+                        <div class="placeholder-img mb-3" style="height: 80px;">{{ r.logo or '[Logo]' }}</div>
+                        <p class="fst-italic">"{{ r.quote }}"</p>
                         <div class="d-flex align-items-center">
-                            <div class="placeholder-img me-3" style="width: 50px; height: 50px; border-radius: 50%;">
-                                [Photo]
-                            </div>
+                            <div class="placeholder-img me-3" style="width: 50px; height: 50px; border-radius: 50%;">{{ r.photo or '[Photo]' }}</div>
                             <div>
-                                <strong>Sarah Johnson</strong><br>
-                                <small class="text-muted">Production Manager, Artisan Foods</small>
+                                <strong>{{ r.name }}</strong><br>
+                                <small class="text-muted">{{ r.title }}</small>
                             </div>
                         </div>
+                        {% else %}
+                        <div class="placeholder-img mb-3" style="height: 80px;">[Your brand here]</div>
+                        <p class="fst-italic">“Your review could be featured here.”</p>
+                        {% endif %}
                     </div>
                 </div>
 
                 <div class="col-lg-4">
                     <div class="testimonial-card">
-                        <div class="placeholder-img mb-3" style="height: 80px;">
-                            [Customer Logo]
-                        </div>
-                        <p class="fst-italic">"The FIFO system is exactly what we needed. No more expired ingredients and our cost tracking is spot on."</p>
+                        {% set r = (marketing_reviews[1] if marketing_reviews|length > 1 else None) %}
+                        {% if r %}
+                        <div class="placeholder-img mb-3" style="height: 80px;">{{ r.logo or '[Logo]' }}</div>
+                        <p class="fst-italic">"{{ r.quote }}"</p>
                         <div class="d-flex align-items-center">
-                            <div class="placeholder-img me-3" style="width: 50px; height: 50px; border-radius: 50%;">
-                                [Photo]
-                            </div>
+                            <div class="placeholder-img me-3" style="width: 50px; height: 50px; border-radius: 50%;">{{ r.photo or '[Photo]' }}</div>
                             <div>
-                                <strong>Mike Chen</strong><br>
-                                <small class="text-muted">Owner, Craft Brewery Co.</small>
+                                <strong>{{ r.name }}</strong><br>
+                                <small class="text-muted">{{ r.title }}</small>
                             </div>
                         </div>
+                        {% else %}
+                        <div class="placeholder-img mb-3" style="height: 80px;">[Your brand here]</div>
+                        <p class="fst-italic">“Your review could be featured here.”</p>
+                        {% endif %}
                     </div>
                 </div>
 
                 <div class="col-lg-4">
                     <div class="testimonial-card">
-                        <div class="placeholder-img mb-3" style="height: 80px;">
-                            [Customer Logo]
-                        </div>
-                        <p class="fst-italic">"Easy to use, powerful features, and excellent support. BatchTrack scales with our growing business."</p>
+                        {% set r = (marketing_reviews[2] if marketing_reviews|length > 2 else None) %}
+                        {% if r %}
+                        <div class="placeholder-img mb-3" style="height: 80px;">{{ r.logo or '[Logo]' }}</div>
+                        <p class="fst-italic">"{{ r.quote }}"</p>
                         <div class="d-flex align-items-center">
-                            <div class="placeholder-img me-3" style="width: 50px; height: 50px; border-radius: 50%;">
-                                [Photo]
-                            </div>
+                            <div class="placeholder-img me-3" style="width: 50px; height: 50px; border-radius: 50%;">{{ r.photo or '[Photo]' }}</div>
                             <div>
-                                <strong>Emily Rodriguez</strong><br>
-                                <small class="text-muted">COO, Natural Cosmetics Inc.</small>
+                                <strong>{{ r.name }}</strong><br>
+                                <small class="text-muted">{{ r.title }}</small>
                             </div>
                         </div>
+                        {% else %}
+                        <div class="placeholder-img mb-3" style="height: 80px;">[Your brand here]</div>
+                        <p class="fst-italic">“Your review could be featured here.”</p>
+                        {% endif %}
                     </div>
                 </div>
             </div>
@@ -328,14 +334,14 @@
             <div class="row">
                 <div class="col-lg-3 col-md-6">
                     <div class="stat-item">
-                        <div class="stat-number">10,000+</div>
-                        <p>Batches Tracked</p>
+                        <div class="stat-number">{{ marketing_stats.total_active_users or 0 }}</div>
+                        <p>Active Users</p>
                     </div>
                 </div>
                 <div class="col-lg-3 col-md-6">
                     <div class="stat-item">
-                        <div class="stat-number">500+</div>
-                        <p>Active Users</p>
+                        <div class="stat-number">{{ marketing_stats.lifetime_left }}/{{ marketing_stats.lifetime_total }}</div>
+                        <p>Premium Lifetime Seats Left</p>
                     </div>
                 </div>
                 <div class="col-lg-3 col-md-6">

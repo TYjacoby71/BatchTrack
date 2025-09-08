@@ -101,6 +101,62 @@ def dashboard():
                          problem_orgs=problem_orgs,
                          waitlist_count=waitlist_count)
 
+@developer_bp.route('/marketing-admin')
+@login_required
+def marketing_admin():
+    """Manage homepage marketing content (reviews, spotlights, messages)."""
+    import json, os
+    reviews = []
+    spotlights = []
+    messages = {'day_1': '', 'day_3': '', 'day_5': ''}
+    try:
+        if os.path.exists('data/reviews.json'):
+            with open('data/reviews.json', 'r') as f:
+                reviews = json.load(f) or []
+    except Exception:
+        reviews = []
+    try:
+        if os.path.exists('data/spotlights.json'):
+            with open('data/spotlights.json', 'r') as f:
+                spotlights = json.load(f) or []
+    except Exception:
+        spotlights = []
+    try:
+        if os.path.exists('settings.json'):
+            with open('settings.json', 'r') as f:
+                cfg = json.load(f) or {}
+                messages.update(cfg.get('marketing_messages', {}))
+    except Exception:
+        pass
+    return render_template('developer/marketing_admin.html', reviews=reviews, spotlights=spotlights, messages=messages)
+
+@developer_bp.route('/marketing-admin/save', methods=['POST'])
+@login_required
+def marketing_admin_save():
+    """Save reviews, spotlights, and marketing messages (simple JSON persistence)."""
+    try:
+        import json
+        data = request.get_json() or {}
+        if 'reviews' in data:
+            with open('data/reviews.json', 'w') as f:
+                json.dump(data['reviews'], f, indent=2)
+        if 'spotlights' in data:
+            with open('data/spotlights.json', 'w') as f:
+                json.dump(data['spotlights'], f, indent=2)
+        if 'messages' in data:
+            # merge into settings.json under marketing_messages
+            try:
+                with open('settings.json', 'r') as f:
+                    cfg = json.load(f) or {}
+            except FileNotFoundError:
+                cfg = {}
+            cfg['marketing_messages'] = data['messages']
+            with open('settings.json', 'w') as f:
+                json.dump(cfg, f, indent=2)
+        return jsonify({'success': True})
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
 @developer_bp.route('/organizations')
 @login_required
 def organizations():
