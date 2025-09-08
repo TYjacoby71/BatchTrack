@@ -178,7 +178,7 @@
                                 <input type="text" class="form-control recipe-ingredient-typeahead" placeholder="Search inventory and global..." autocomplete="off" value="{{ assoc.inventory_item.name if assoc.inventory_item else '' }}">
                                 <input type="hidden" name="ingredient_ids[]" value="{{ assoc.inventory_item_id or '' }}">
                                 <input type="hidden" name="global_item_ids[]" value="">
-                                <div class="list-group position-absolute w-100 d-none" data-role="suggestions"></div>
+                                <div class="list-group position-absolute w-100 d-none" data-role="suggestions" style="z-index: 1050;"></div>
                             </div>
                         </div>
                         <div class="col-md-3">
@@ -214,7 +214,7 @@
                                 <input type="text" class="form-control recipe-ingredient-typeahead" placeholder="Search inventory and global..." autocomplete="off" value="">
                                 <input type="hidden" name="ingredient_ids[]" value="{{ ing_id or '' }}">
                                 <input type="hidden" name="global_item_ids[]" value="">
-                                <div class="list-group position-absolute w-100 d-none" data-role="suggestions"></div>
+                                <div class="list-group position-absolute w-100 d-none" data-role="suggestions" style="z-index: 1050;"></div>
                             </div>
                         </div>
                         <div class="col-md-3">
@@ -421,7 +421,7 @@ function addIngredient(preselectId = null, presetUnit = null) {
                 <input type="text" class="form-control recipe-ingredient-typeahead" placeholder="Search inventory and global..." autocomplete="off">
                 <input type="hidden" name="ingredient_ids[]" value="">
                 <input type="hidden" name="global_item_ids[]" value="">
-                <div class="list-group position-absolute w-100 d-none" data-role="suggestions"></div>
+                <div class="list-group position-absolute w-100 d-none" data-role="suggestions" style="z-index: 1050;"></div>
             </div>
         </div>
         <div class="col-md-3">
