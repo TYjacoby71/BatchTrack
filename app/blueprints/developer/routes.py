@@ -700,7 +700,23 @@ def reference_categories():
     
     categories = [cat[0] for cat in existing_categories if cat[0]]
     
-    return render_template('developer/reference_categories.html', categories=categories)
+    # Get global items by category for counting
+    global_items_by_category = {}
+    category_densities = {}
+    
+    for category in categories:
+        items = GlobalItem.query.filter_by(reference_category=category, is_archived=False).all()
+        global_items_by_category[category] = items
+        
+        # Calculate average density for category (excluding None values)
+        densities = [item.density for item in items if item.density is not None and item.density > 0]
+        if densities:
+            category_densities[category] = sum(densities) / len(densities)
+    
+    return render_template('developer/reference_categories.html', 
+                         categories=categories,
+                         global_items_by_category=global_items_by_category,
+                         category_densities=category_densities)
 
 @developer_bp.route('/reference-categories/add', methods=['POST'])
 @login_required
@@ -777,6 +793,72 @@ def delete_reference_category():
         
     except Exception as e:
         db.session.rollback()
+        return jsonify({'success': False, 'error': str(e)})
+
+@developer_bp.route('/reference-categories/update-density', methods=['POST'])
+@login_required
+def update_category_density():
+    """Update the default density for a reference category"""
+    try:
+        data = request.get_json()
+        category_name = data.get('category', '').strip()
+        density = data.get('density')
+        
+        if not category_name:
+            return jsonify({'success': False, 'error': 'Category name is required'})
+        
+        # For now, we'll store this in a simple way by updating all items in the category
+        # In a future enhancement, you could add a separate CategoryDensity model
+        if density is not None and density > 0:
+            # Update all items in this category with the new default density
+            items = GlobalItem.query.filter_by(reference_category=category_name, is_archived=False).all()
+            for item in items:
+                if item.density is None or item.density == 0:  # Only update if no specific density set
+                    item.density = density
+        
+        db.session.commit()
+        
+        return jsonify({
+            'success': True, 
+            'message': f'Density updated for category "{category_name}"',
+            'density': density
+        })
+        
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'success': False, 'error': str(e)})
+
+@developer_bp.route('/reference-categories/calculate-density', methods=['POST'])
+@login_required
+def calculate_category_density():
+    """Calculate average density for a category based on its items"""
+    try:
+        data = request.get_json()
+        category_name = data.get('category', '').strip()
+        
+        if not category_name:
+            return jsonify({'success': False, 'error': 'Category name is required'})
+        
+        # Get all items in this category with valid densities
+        items = GlobalItem.query.filter_by(reference_category=category_name, is_archived=False).all()
+        densities = [item.density for item in items if item.density is not None and item.density > 0]
+        
+        if not densities:
+            return jsonify({
+                'success': False, 
+                'error': 'No items with valid density values found in this category'
+            })
+        
+        calculated_density = sum(densities) / len(densities)
+        
+        return jsonify({
+            'success': True, 
+            'calculated_density': calculated_density,
+            'items_count': len(densities),
+            'message': f'Calculated density: {calculated_density:.3f} g/ml from {len(densities)} items'
+        })
+        
+    except Exception as e:
         return jsonify({'success': False, 'error': str(e)})
 
 @developer_bp.route('/global-items/create', methods=['GET', 'POST'])

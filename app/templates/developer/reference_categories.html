@@ -1,4 +1,3 @@
-
 {% extends 'layout.html' %}
 {% block content %}
 <div class="d-flex justify-content-between align-items-center mb-3">
@@ -32,7 +31,7 @@
       </div>
     </div>
   </div>
-  
+
   <div class="col-lg-4">
     <div class="card">
       <div class="card-header">
@@ -51,7 +50,7 @@
         </form>
       </div>
     </div>
-    
+
     <div class="card mt-3">
       <div class="card-header">
         <h5>Guidelines</h5>
@@ -71,10 +70,10 @@
 <script>
 document.getElementById('addCategoryForm').addEventListener('submit', async function(e) {
   e.preventDefault();
-  
+
   const categoryName = document.getElementById('categoryName').value.trim();
   if (!categoryName) return;
-  
+
   try {
     const response = await fetch('{{ url_for("developer.add_reference_category") }}', {
       method: 'POST',
@@ -84,9 +83,9 @@ document.getElementById('addCategoryForm').addEventListener('submit', async func
       },
       body: JSON.stringify({ name: categoryName })
     });
-    
+
     const result = await response.json();
-    
+
     if (result.success) {
       location.reload(); // Reload to show the new category
     } else {
@@ -98,30 +97,96 @@ document.getElementById('addCategoryForm').addEventListener('submit', async func
 });
 
 async function deleteCategory(categoryName) {
-  if (!confirm(`Are you sure you want to delete the category "${categoryName}"?`)) {
+  if (!confirm(`Are you sure you want to delete the category "${categoryName}"? This action cannot be undone.`)) {
     return;
   }
-  
+
   try {
-    const response = await fetch('{{ url_for("developer.delete_reference_category") }}', {
+    const response = await fetch('{{ url_for('developer.delete_reference_category') }}', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'X-CSRFToken': '{{ csrf_token() }}'
       },
       body: JSON.stringify({ name: categoryName })
     });
-    
+
     const result = await response.json();
-    
+
     if (result.success) {
-      location.reload(); // Reload to remove the deleted category
+      alert(result.message);
+      location.reload();
     } else {
-      alert('Error: ' + result.error);
+      alert(`Error: ${result.error}`);
     }
   } catch (error) {
-    alert('Error deleting category: ' + error.message);
+    alert(`Error deleting category: ${error.message}`);
   }
 }
+
+async function saveCategoryDensity(categoryName) {
+    const input = document.querySelector(`input[data-category="${categoryName}"]`);
+    const density = input.value ? parseFloat(input.value) : null;
+
+    try {
+        const response = await fetch('{{ url_for('developer.update_category_density') }}', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ 
+                category: categoryName,
+                density: density
+            })
+        });
+
+        const result = await response.json();
+
+        if (result.success) {
+            alert(`✅ Density saved for "${categoryName}"`);
+            // Update the input with the saved value
+            input.value = result.density || '';
+        } else {
+            alert(`Error: ${result.error}`);
+        }
+    } catch (error) {
+        alert(`Error saving density: ${error.message}`);
+    }
+}
+
+async function calculateCategoryDensity(categoryName) {
+    try {
+        const response = await fetch('{{ url_for('developer.calculate_category_density') }}', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ category: categoryName })
+        });
+
+        const result = await response.json();
+
+        if (result.success) {
+            const input = document.querySelector(`input[data-category="${categoryName}"]`);
+            input.value = result.calculated_density.toFixed(3);
+            alert(`✅ Auto-calculated density: ${result.calculated_density.toFixed(3)} g/ml (from ${result.items_count} items)`);
+        } else {
+            alert(`Error: ${result.error}`);
+        }
+    } catch (error) {
+        alert(`Error calculating density: ${error.message}`);
+    }
+}
+
+// Save density on Enter key
+document.addEventListener('DOMContentLoaded', function() {
+    document.querySelectorAll('.density-input').forEach(input => {
+        input.addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                const category = this.dataset.category;
+                saveCategoryDensity(category);
+            }
+        });
+    });
+});
 </script>
 {% endblock %}
