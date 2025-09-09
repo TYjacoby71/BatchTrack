@@ -94,14 +94,37 @@ function marketingAdmin() {
     async saveAll() {
       if (this.saving) return; this.saving = true;
       try {
+        const csrfToken = document.querySelector('meta[name="csrf-token"]')?.content;
         const res = await fetch('{{ url_for('developer.marketing_admin_save') }}', {
-          method: 'POST', headers: {'Content-Type':'application/json'},
-          body: JSON.stringify({reviews:this.reviews, spotlights:this.spotlights, messages:this.messages, promo_codes:this.promo_codes, demo_url:this.demo_url, demo_videos:this.demo_videos})
+          method: 'POST', 
+          headers: {
+            'Content-Type':'application/json',
+            'X-CSRFToken': csrfToken || ''
+          },
+          body: JSON.stringify({
+            reviews: this.reviews, 
+            spotlights: this.spotlights, 
+            messages: this.messages, 
+            promo_codes: this.promo_codes, 
+            demo_url: this.demo_url, 
+            demo_videos: this.demo_videos
+          })
         });
+        
+        if (!res.ok) {
+          throw new Error(`HTTP ${res.status}: ${res.statusText}`);
+        }
+        
         const out = await res.json();
-        if (!out.success) throw new Error(out.error||'Save failed');
-        alert('Saved');
-      } catch (e) { alert(e.message); }
+        if (!out.success) {
+          throw new Error(out.error || 'Save failed');
+        }
+        
+        alert('✅ Marketing content saved successfully');
+      } catch (e) { 
+        console.error('Marketing admin save error:', e);
+        alert(`❌ Save failed: ${e.message}`); 
+      }
       this.saving = false;
     }
   }
