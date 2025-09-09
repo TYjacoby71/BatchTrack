@@ -615,7 +615,16 @@ def global_items_admin():
 @login_required
 def global_item_detail(item_id):
     item = GlobalItem.query.get_or_404(item_id)
-    return render_template('developer/global_item_detail.html', item=item)
+    
+    # Get available reference categories for the edit form
+    existing_categories = db.session.query(GlobalItem.reference_category).filter(
+        GlobalItem.reference_category.isnot(None),
+        GlobalItem.reference_category != ''
+    ).distinct().order_by(GlobalItem.reference_category).all()
+    
+    reference_categories = sorted([cat[0] for cat in existing_categories if cat[0]])
+    
+    return render_template('developer/global_item_detail.html', item=item, reference_categories=reference_categories)
 
 @developer_bp.route('/global-items/<int:item_id>/edit', methods=['POST'])
 @login_required
@@ -678,6 +687,97 @@ def global_item_stats_view(item_id):
     item = GlobalItem.query.get_or_404(item_id)
     stats = GlobalItemStatsService.get_rollup(item_id)
     return render_template('developer/global_item_stats.html', item=item, stats=stats)
+
+@developer_bp.route('/reference-categories')
+@login_required
+def reference_categories():
+    """Manage reference categories for global items"""
+    # Get existing reference categories from global items
+    existing_categories = db.session.query(GlobalItem.reference_category).filter(
+        GlobalItem.reference_category.isnot(None),
+        GlobalItem.reference_category != ''
+    ).distinct().order_by(GlobalItem.reference_category).all()
+    
+    categories = [cat[0] for cat in existing_categories if cat[0]]
+    
+    return render_template('developer/reference_categories.html', categories=categories)
+
+@developer_bp.route('/reference-categories/add', methods=['POST'])
+@login_required
+def add_reference_category():
+    """Add a new reference category"""
+    try:
+        data = request.get_json()
+        category_name = data.get('name', '').strip()
+        
+        if not category_name:
+            return jsonify({'success': False, 'error': 'Category name is required'})
+        
+        # Check if category already exists
+        existing = db.session.query(GlobalItem).filter(
+            GlobalItem.reference_category == category_name
+        ).first()
+        
+        if existing:
+            return jsonify({'success': False, 'error': 'Category already exists'})
+        
+        # Create a placeholder global item to establish the category
+        # This ensures the category appears in our dropdown
+        placeholder_item = GlobalItem(
+            name=f"_category_placeholder_{category_name.lower().replace(' ', '_')}",
+            item_type='ingredient',
+            reference_category=category_name,
+            is_archived=True  # Archive it so it doesn't appear in regular listings
+        )
+        
+        db.session.add(placeholder_item)
+        db.session.commit()
+        
+        return jsonify({'success': True, 'message': f'Category "{category_name}" added successfully'})
+        
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'success': False, 'error': str(e)})
+
+@developer_bp.route('/reference-categories/delete', methods=['POST'])
+@login_required
+def delete_reference_category():
+    """Delete a reference category"""
+    try:
+        data = request.get_json()
+        category_name = data.get('name', '').strip()
+        
+        if not category_name:
+            return jsonify({'success': False, 'error': 'Category name is required'})
+        
+        # Count items using this category
+        items_count = db.session.query(GlobalItem).filter(
+            GlobalItem.reference_category == category_name,
+            GlobalItem.is_archived != True
+        ).count()
+        
+        if items_count > 0:
+            return jsonify({
+                'success': False, 
+                'error': f'Cannot delete category. {items_count} active items are using this category.'
+            })
+        
+        # Delete any placeholder items for this category
+        placeholders = db.session.query(GlobalItem).filter(
+            GlobalItem.reference_category == category_name,
+            GlobalItem.name.like('_category_placeholder_%')
+        ).all()
+        
+        for placeholder in placeholders:
+            db.session.delete(placeholder)
+        
+        db.session.commit()
+        
+        return jsonify({'success': True, 'message': f'Category "{category_name}" deleted successfully'})
+        
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'success': False, 'error': str(e)})
 
 @developer_bp.route('/global-items/create', methods=['GET', 'POST'])
 @login_required
@@ -752,7 +852,15 @@ def create_global_item():
             return redirect(url_for('developer.create_global_item'))
 
     # GET request - show form
-    return render_template('developer/create_global_item.html')
+    # Get available reference categories
+    existing_categories = db.session.query(GlobalItem.reference_category).filter(
+        GlobalItem.reference_category.isnot(None),
+        GlobalItem.reference_category != ''
+    ).distinct().order_by(GlobalItem.reference_category).all()
+    
+    reference_categories = sorted([cat[0] for cat in existing_categories if cat[0]])
+    
+    return render_template('developer/create_global_item.html', reference_categories=reference_categories)
 
 @developer_bp.route('/global-items/<int:item_id>/delete', methods=['POST'])
 @login_required

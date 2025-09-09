@@ -33,7 +33,17 @@
             </div>
             <div class="col-md-4">
               <label class="form-label">Reference Category</label>
-              <input type="text" name="reference_category" class="form-control" placeholder="e.g. Oils, Waxes, Dairy">
+              <div class="input-group">
+                <select name="reference_category" class="form-select">
+                  <option value="">Select Category</option>
+                  {% for category in reference_categories %}
+                    <option value="{{ category }}">{{ category }}</option>
+                  {% endfor %}
+                </select>
+                <a href="{{ url_for('developer.reference_categories') }}" class="btn btn-outline-secondary" title="Manage Categories">
+                  <i class="fas fa-cog"></i>
+                </a>
+              </div>
               <small class="text-muted">For grouping similar items</small>
             </div>
             <div class="col-md-4">
