@@ -16,8 +16,8 @@ def generate_batch_label_code(recipe: Recipe) -> str:
     """
     prefix = recipe.label_prefix
     if not prefix:
-        # Generate prefix from recipe name initials if missing
-        prefix = generate_recipe_prefix(recipe.name)
+        # Use standard default prefix when none provided
+        prefix = 'BTH'
     
     prefix = prefix.upper()
     current_year = TimezoneUtils.utc_now().year
