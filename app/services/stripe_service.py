@@ -21,10 +21,12 @@ class StripeService:
         """Initialize Stripe with API key"""
         api_key = current_app.config.get('STRIPE_SECRET_KEY')
         if not api_key:
-            raise ValueError("STRIPE_SECRET_KEY not configured")
+            logger.warning("STRIPE_SECRET_KEY not configured")
+            return False
 
         stripe.api_key = api_key
         logger.info("Stripe service initialized")
+        return True
 
     @staticmethod
     def construct_event(payload: bytes, sig_header: str, webhook_secret: str):
@@ -108,23 +110,35 @@ class StripeService:
     @staticmethod
     def _handle_checkout_completed(event):
         """Handle checkout.session.completed event"""
-        # Implementation moved from routes - this would contain the signup completion logic
-        pass
+        # Delegate to subscription handler if subscription is present
+        data = event.get('data', {})
+        obj = data.get('object', {})
+        subscription_id = obj.get('subscription')
+        if subscription_id:
+            try:
+                subscription = stripe.Subscription.retrieve(subscription_id)
+                return StripeService.handle_subscription_webhook({
+                    'type': 'customer.subscription.updated',
+                    'data': {'object': subscription}
+                })
+            except Exception as e:
+                logger.error(f"Failed to retrieve subscription {subscription_id}: {e}")
+        return True
 
     @staticmethod
     def _handle_subscription_created(event):
         """Handle customer.subscription.created event"""
-        pass
+        return StripeService.handle_subscription_webhook(event)
 
     @staticmethod
     def _handle_subscription_updated(event):
         """Handle customer.subscription.updated event"""
-        pass
+        return StripeService.handle_subscription_webhook(event)
 
     @staticmethod
     def _handle_subscription_deleted(event):
         """Handle customer.subscription.deleted event"""
-        pass
+        return StripeService.handle_subscription_webhook(event)
 
     @staticmethod
     def _handle_payment_succeeded(event):
@@ -238,7 +252,7 @@ class StripeService:
 
     @staticmethod
     def sync_product_from_stripe(lookup_key):
-        """Sync a single product from Stripe to local database"""
+        """Sync a single product from Stripe and update pricing snapshot only"""
         if not StripeService.initialize_stripe():
             return False
 
@@ -257,23 +271,11 @@ class StripeService:
             price = prices.data[0]
             product = stripe.Product.retrieve(price.product)
 
-            # Update local tier with Stripe data
-            tier_obj = SubscriptionTier.query.filter_by(stripe_lookup_key=lookup_key).first()
-            if tier_obj:
-                # Update pricing info
-                tier_obj.fallback_price = f"${price.unit_amount / 100:.0f}"
-                tier_obj.last_billing_sync = TimezoneUtils.utc_now()
-
-                # Store Stripe metadata
-                if hasattr(tier_obj, 'stripe_metadata'):
-                    tier_obj.stripe_metadata = {
-                        'product_id': product.id,
-                        'price_id': price.id,
-                        'last_synced': TimezoneUtils.utc_now().isoformat()
-                    }
-
-                db.session.commit()
-                logger.info(f"Synced tier {tier_obj.key} with Stripe product {product.name}")
+            # Update PricingSnapshot for resilience
+            from app.models.pricing_snapshot import PricingSnapshot
+            snapshot = PricingSnapshot.update_from_stripe_data(price, product)
+            if snapshot:
+                logger.info(f"Updated pricing snapshot for lookup_key={lookup_key} price_id={price.id}")
                 return True
 
         except stripe.error.StripeError as e:

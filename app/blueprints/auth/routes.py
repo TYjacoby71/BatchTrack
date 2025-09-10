@@ -329,11 +329,11 @@ def signup_data():
             except:
                 live_pricing = None
 
-        # Use live pricing if available, otherwise fallback
+        # Use live pricing if available, otherwise show N/A to avoid drift
         if live_pricing:
             price_display = live_pricing['formatted_price']
         else:
-            price_display = tier_obj.fallback_price
+            price_display = 'N/A'
 
         available_tiers[tier_obj.key] = {
             'name': tier_obj.name,
@@ -397,11 +397,11 @@ def signup():
             except:
                 live_pricing = None
 
-        # Use live pricing if available, otherwise fallback
+        # Use live pricing if available, otherwise show N/A to avoid drift
         if live_pricing:
             price_display = live_pricing['formatted_price']
         else:
-            price_display = tier_obj.fallback_price
+            price_display = 'N/A'
 
         available_tiers[tier_obj.key] = {
             'name': tier_obj.name,
