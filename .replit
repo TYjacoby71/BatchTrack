@@ -41,5 +41,4 @@ mode = "sequential"
 task = "shell.exec"
 args = "python run.py"
 
-[agent]
-expertMode = true
+
