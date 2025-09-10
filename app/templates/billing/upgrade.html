@@ -89,7 +89,14 @@
         </div>
     </div>
 
-    <div class="pricing-cards row">
+    <div class="d-flex justify-content-end align-items-center mb-2">
+        <div class="form-check form-switch">
+            <input class="form-check-input" type="checkbox" id="billingCycleToggle">
+            <label class="form-check-label" for="billingCycleToggle">Yearly billing</label>
+        </div>
+    </div>
+
+    <div class="pricing-cards row" id="pricingCards">
         {% for tier_name, tier_data in pricing_data.items() %}
         <div class="col-md-4 mb-4">
             <div class="card pricing-card h-100 {% if tier_name == 'team' %}border-primary{% endif %}">
@@ -107,11 +114,11 @@
                     {% endif %}
 
                     <div class="pricing">
-                        <h3 class="price text-primary">{{ tier_data.price }}</h3>
-                        <small class="text-muted">/month</small>
+                        <h3 class="price text-primary monthly-price" data-monthly="{{ tier_data.price }}">{{ tier_data.price }}</h3>
+                        <h3 class="price text-primary yearly-price d-none" data-yearly="{{ tier_data.get('price_yearly') or '' }}">{{ tier_data.get('price_yearly') or '' }}</h3>
+                        <small class="text-muted cycle-label">/month</small>
                         {% if tier_data.get('price_yearly') %}
-                        <div class="yearly-price mt-2">
-                            <span class="text-success">{{ tier_data.price_yearly }}/year</span>
+                        <div class="yearly-note mt-2 d-none" id="yearlyNote">
                             <small class="d-block">Save with yearly billing</small>
                         </div>
                         {% endif %}
@@ -140,18 +147,13 @@
                     {% if current_tier != tier_name %}
                     {% if has_permission(current_user, 'organization.manage_billing') %}
                       <!-- Standard billing flow for all paid tiers -->
-                      <form method="POST" action="{{ url_for('billing.checkout', tier=tier_name) }}" class="d-inline">
+                      <form method="POST" action="{{ url_for('billing.checkout', tier=tier_name) }}" class="d-inline checkout-form">
                         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+                        <input type="hidden" name="billing_cycle" value="monthly"/>
                         <button type="submit" class="btn btn-primary btn-lg w-100 mb-2">
                           <i class="fas fa-credit-card"></i> Upgrade to {{ tier_data.get('name', tier_name.title()) }}
                         </button>
                       </form>
-                      {% if tier_data.get('price_yearly') and tier_data.get('price_yearly') != '$0' %}
-                      <a href="{{ url_for('billing.checkout', tier=tier_name, billing_cycle='yearly') }}" 
-                         class="btn btn-outline-success btn-sm mt-2">
-                          Choose Yearly
-                      </a>
-                      {% endif %}
                     {% else %}
                       <button class="btn btn-secondary btn-lg w-100" disabled>
                         Contact Admin to Upgrade
@@ -171,6 +173,33 @@
 <script>
 document.addEventListener('DOMContentLoaded', function() {
     // Cancel subscription functionality removed
+    const toggle = document.getElementById('billingCycleToggle');
+    const cards = document.querySelectorAll('#pricingCards .card');
+    const forms = document.querySelectorAll('.checkout-form input[name="billing_cycle"]');
+
+    function applyCycle(isYearly) {
+        cards.forEach(card => {
+            const monthlyEl = card.querySelector('.monthly-price');
+            const yearlyEl = card.querySelector('.yearly-price');
+            const labelEl = card.querySelector('.cycle-label');
+            const noteEl = card.querySelector('.yearly-note');
+
+            if (isYearly && yearlyEl && yearlyEl.dataset.yearly) {
+                monthlyEl.classList.add('d-none');
+                yearlyEl.classList.remove('d-none');
+                if (labelEl) labelEl.textContent = '/year';
+                if (noteEl) noteEl.classList.remove('d-none');
+            } else {
+                yearlyEl && yearlyEl.classList.add('d-none');
+                monthlyEl && monthlyEl.classList.remove('d-none');
+                if (labelEl) labelEl.textContent = '/month';
+                if (noteEl) noteEl.classList.add('d-none');
+            }
+        });
+        forms.forEach(f => { f.value = isYearly ? 'yearly' : 'monthly'; });
+    }
+
+    toggle && toggle.addEventListener('change', (e) => applyCycle(e.target.checked));
 });
 
 function debugCheckout(tierKey, tierName) {

@@ -14,7 +14,8 @@ def test_generate_batch_label_code_defaults(app):
         db.session.commit()
 
         code = generate_batch_label_code(recipe)
-        assert code.startswith(f"BTH-{current_year}-")
+        # Default prefix derives from recipe name
+        assert code.startswith(f"TEST-{current_year}-")
         assert code.endswith("001")
 
 

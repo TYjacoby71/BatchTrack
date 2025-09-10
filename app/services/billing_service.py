@@ -108,14 +108,15 @@ class BillingService:
                 elif tier.billing_provider == 'stripe':
                     # Get live Stripe pricing
                     from .stripe_service import StripeService
-                    stripe_pricing = StripeService.get_live_pricing_for_tier(tier)
+                    cycles = StripeService.get_pricing_for_tier_all_cycles(tier)
                     
                     pricing_data['tiers'][tier.key] = {
                         'name': tier.name,
                         'description': getattr(tier, 'description', ''),
-                        'price': stripe_pricing['formatted_price'] if stripe_pricing else 'N/A',
-                        'billing_cycle': stripe_pricing['billing_cycle'] if stripe_pricing else 'monthly',
-                        'available': stripe_pricing is not None,
+                        'price': (cycles['monthly']['formatted_price'] if cycles['monthly'] else 'N/A'),
+                        'price_yearly': (cycles['yearly']['formatted_price'] if cycles['yearly'] else None),
+                        'billing_cycle': 'monthly',
+                        'available': (cycles['monthly'] is not None or cycles['yearly'] is not None),
                         'provider': 'stripe',
                         'features': getattr(tier, 'features', [])
                     }

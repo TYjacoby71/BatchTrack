@@ -66,8 +66,8 @@ def upgrade():
                          current_tier=current_tier,
                          subscription_details=subscription_details)
 
-@billing_bp.route('/checkout/<tier>')
-@billing_bp.route('/checkout/<tier>/<billing_cycle>')
+@billing_bp.route('/checkout/<tier>', methods=['GET', 'POST'])
+@billing_bp.route('/checkout/<tier>/<billing_cycle>', methods=['GET'])
 @login_required
 def checkout(tier, billing_cycle='month'):
     """Initiate checkout process"""
@@ -78,13 +78,15 @@ def checkout(tier, billing_cycle='month'):
 
     try:
         # Use unified billing service for checkout
+        # Allow POST with hidden billing_cycle from UI toggle
+        selected_cycle = request.form.get('billing_cycle') or billing_cycle
         checkout_session = BillingService.create_checkout_session(
             tier,
             current_user.email,
             f"{current_user.first_name} {current_user.last_name}",
             url_for('billing.complete_signup_from_stripe', _external=True),
             url_for('billing.upgrade', _external=True),
-            metadata={'tier': tier, 'billing_cycle': billing_cycle}
+            metadata={'tier': tier, 'billing_cycle': 'yearly' if selected_cycle == 'yearly' else 'monthly'}
         )
         
         if checkout_session:

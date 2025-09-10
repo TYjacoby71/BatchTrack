@@ -206,13 +206,72 @@ class StripeService:
             return None
 
     @staticmethod
+    def get_live_pricing_for_lookup_key(lookup_key: str):
+        """Get live pricing given a specific lookup key"""
+        if not StripeService.initialize_stripe():
+            return None
+
+        if not lookup_key:
+            return None
+
+        try:
+            prices = stripe.Price.list(
+                lookup_keys=[lookup_key],
+                active=True,
+                limit=1
+            )
+            if not prices.data:
+                return None
+            price = prices.data[0]
+            amount = price.unit_amount / 100
+            currency = price.currency.upper()
+            billing_cycle = 'one-time'
+            if price.recurring:
+                billing_cycle = 'yearly' if price.recurring.interval == 'year' else 'monthly'
+            return {
+                'price_id': price.id,
+                'amount': amount,
+                'formatted_price': f'${amount:.0f}',
+                'currency': currency,
+                'billing_cycle': billing_cycle,
+                'lookup_key': lookup_key
+            }
+        except stripe.error.StripeError as e:
+            logger.error(f"Stripe error fetching price for {lookup_key}: {e}")
+            return None
+
+    @staticmethod
+    def get_pricing_for_tier_all_cycles(tier_obj):
+        """Return both monthly and yearly formatted prices if available"""
+        if not tier_obj or not tier_obj.stripe_lookup_key:
+            return {'monthly': None, 'yearly': None}
+        base_key = tier_obj.stripe_lookup_key
+        monthly = StripeService.get_live_pricing_for_lookup_key(base_key)
+        # Derive yearly key by convention if present
+        yearly_key = base_key.replace('monthly', 'yearly') if 'monthly' in base_key else None
+        yearly = StripeService.get_live_pricing_for_lookup_key(yearly_key) if yearly_key else None
+        return {'monthly': monthly, 'yearly': yearly}
+
+    @staticmethod
     def create_checkout_session_for_tier(tier_obj, customer_email, customer_name, success_url, cancel_url, metadata=None):
         """Create checkout session using tier's lookup key - industry standard"""
         if not StripeService.initialize_stripe():
             return None
 
-        # Get live pricing first
-        pricing = StripeService.get_live_pricing_for_tier(tier_obj)
+        # Select lookup key based on requested billing cycle (default monthly)
+        requested_cycle = None
+        if metadata and isinstance(metadata, dict):
+            requested_cycle = metadata.get('billing_cycle')
+
+        lookup_key = tier_obj.stripe_lookup_key
+        if requested_cycle == 'yearly' and lookup_key and 'monthly' in lookup_key:
+            alt_key = lookup_key.replace('monthly', 'yearly')
+            pricing = StripeService.get_live_pricing_for_lookup_key(alt_key)
+            if not pricing:
+                pricing = StripeService.get_live_pricing_for_lookup_key(lookup_key)
+        else:
+            # Get live pricing first
+            pricing = StripeService.get_live_pricing_for_lookup_key(lookup_key)
         if not pricing:
             logger.error(f"No pricing found for tier {tier_obj.key}")
             return None
