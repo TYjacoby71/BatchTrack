@@ -310,11 +310,12 @@
                     </button>
                 </div>
                 <div class="d-flex gap-2">
-                    <form method="post" action="{{ url_for('batches.cancel_batch.cancel_batch', batch_id=batch.id) }}" onsubmit="console.log('🔥 CANCEL FORM: Form submitted for batch {{ batch.id }}'); return confirm('Are you sure you want to cancel this batch? This will restore all ingredients to inventory.');">
-                                <button type="submit" class="btn btn-warning" onclick="console.log('🔥 CANCEL BUTTON: Cancel button clicked for batch {{ batch.id }}');">
-                                    <i class="fas fa-ban"></i> Cancel Batch
-                                </button>
-                            </form>
+                    <form method="post" action="{{ url_for('batches.cancel_batch.cancel_batch', batch_id=batch.id) }}" id="cancelBatchForm">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        <button type="button" class="btn btn-warning" onclick="confirmCancelBatch();">
+                            <i class="fas fa-ban"></i> Cancel Batch
+                        </button>
+                    </form>
                     <button type="button" class="btn btn-danger" onclick="markBatchFailed()">
                         <i class="fas fa-exclamation-triangle"></i> Mark Failed
                     </button>
@@ -517,6 +518,14 @@ function checkAndCompleteExpiredTimers() {
 
 // Check for expired timers every 30 seconds
 setInterval(checkAndCompleteExpiredTimers, 30000);
+
+function confirmCancelBatch() {
+    console.log('🔥 CANCEL BUTTON: Cancel button clicked for batch {{ batch.id }}');
+    if (confirm('Are you sure you want to cancel this batch? This will restore all ingredients to inventory.')) {
+        console.log('🔥 CANCEL FORM: Form submission confirmed for batch {{ batch.id }}');
+        document.getElementById('cancelBatchForm').submit();
+    }
+}
 </script>
 
 {% endblock %}
