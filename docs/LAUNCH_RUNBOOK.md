@@ -12,55 +12,31 @@ Window: 10-14 days. Source of truth for blockers: docs/CRITICAL_PRELAUNCH.md.
 
 ## Daily Plan
 
+Each day references the canonical checklist items in [CRITICAL_PRELAUNCH.md](CRITICAL_PRELAUNCH.md). Do not maintain checklists here.
+
 ### Day 1 - Infra and Billing setup
-- [ ] Stripe products (lookup keys) created and match subscription_tiers.json
-- [ ] Stripe live keys and webhook endpoint configured
-- [ ] Production database and env vars loaded; backups enabled
-- [ ] Domain and SSL configured
-- [ ] Error monitoring (Sentry or similar) wired
+- See: STRIPE INTEGRATION, PRODUCTION INFRASTRUCTURE
 
 ### Day 2 - Email and Auth
-- [ ] Choose providers: Resend/Postmark (transactional), ConvertKit/Beehiiv (marketing)
-- [ ] DNS: SPF, DKIM, DMARC (start with p=none)
-- [ ] Email verification and password reset flows working
-- [ ] Welcome emails templated
+- See: EMAIL SYSTEM, SECURITY HARDENING (auth hardening)
 
 ### Day 3 - Signup to Payment E2E
-- [ ] Account creation -> email verify -> org creation
-- [ ] Subscribe -> Stripe checkout -> webhook grants access
-- [ ] Failed payment path and grace period
-- [ ] Subscription tier enforcement
+- See: STRIPE INTEGRATION, CORE FUNCTIONALITY VALIDATION (subscription, permissions)
 
 ### Day 4 - Core flows QA
-- [ ] Inventory FIFO and adjustments
-- [ ] Recipe creation and portioning
-- [ ] Start batch -> finish -> product creation
-- [ ] Permissions and org isolation
+- See: CORE FUNCTIONALITY VALIDATION
 
 ### Day 5 - Onboarding and Help
-- [ ] In-app onboarding checklist mirrors Getting Started
-- [ ] Trigger day 0/3/7 emails on key events
-- [ ] Help center linked from empty states
-- [ ] Contact route and basic SLA
+- See: LEGAL COMPLIANCE (policies) and relevant product docs
 
 ### Day 6 - Security and Polish
-- [ ] Rate limits, lockouts, security headers
-- [ ] Analytics script and cookie notice if required
-- [ ] Legal pages in footer
-- [ ] Performance pass (N+1, slow queries)
+- See: SECURITY HARDENING, ERROR HANDLING
 
 ### Day 7 - Soft launch rehearsal
-- [ ] Full dry run on production
-- [ ] Multi-device/browser sanity
-- [ ] Backup and restore test
-- [ ] Go / No-Go review
+- See: LAUNCH READINESS (Phase 4: Final Validation) in CRITICAL_PRELAUNCH.md
 
-## Go / No-Go Criteria
-- Stripe live flow passes 3 consecutive end-to-end tests
-- Email verification and password reset succeed reliably
-- Batch finish creates products and COGS reliably
-- Error rate < 1% on core endpoints in rehearsal
-- No P0/P1 bugs open
+## Go / No-Go
+- Use the criteria in [CRITICAL_PRELAUNCH.md](CRITICAL_PRELAUNCH.md) under LAUNCH READINESS and BLOCKERS status.
 
 ## Rollback Plan
 - Feature flags to disable signup/billing

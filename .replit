@@ -2,6 +2,9 @@
 entrypoint = "main.py"
 modules = ["python-3.11"]
 
+[agent]
+expertMode = true
+
 [nix]
 channel = "stable-24_05"
 packages = ["cargo", "libiconv", "nano", "rustc"]
