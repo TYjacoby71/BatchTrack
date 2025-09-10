@@ -310,7 +310,7 @@
                     </button>
                 </div>
                 <div class="d-flex gap-2">
-                    <form method="post" action="{{ url_for('cancel_batch.cancel_batch', batch_id=batch.id) }}" onsubmit="console.log('🔥 CANCEL FORM: Form submitted for batch {{ batch.id }}'); return confirm('Are you sure you want to cancel this batch? This will restore all ingredients to inventory.');">
+                    <form method="post" action="{{ url_for('batches.cancel_batch.cancel_batch', batch_id=batch.id) }}" onsubmit="console.log('🔥 CANCEL FORM: Form submitted for batch {{ batch.id }}'); return confirm('Are you sure you want to cancel this batch? This will restore all ingredients to inventory.');">
                                 <button type="submit" class="btn btn-warning" onclick="console.log('🔥 CANCEL BUTTON: Cancel button clicked for batch {{ batch.id }}');">
                                     <i class="fas fa-ban"></i> Cancel Batch
                                 </button>
