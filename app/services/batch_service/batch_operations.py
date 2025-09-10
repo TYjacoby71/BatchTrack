@@ -8,7 +8,7 @@ from app.models.batch import BatchConsumable
 from app import models
 from app.models import ExtraBatchIngredient, ExtraBatchContainer, Product, ProductVariant
 from app.services.unit_conversion import ConversionEngine
-from app.services.inventory_adjustment import process_inventory_adjustment, validate_inventory_fifo_sync
+from app.services.inventory_adjustment import process_inventory_adjustment
 from app.utils.timezone_utils import TimezoneUtils
 from app.utils.code_generator import generate_batch_label_code
 from app.services.base_service import BaseService
@@ -251,33 +251,20 @@ class BatchOperationsService(BaseService):
     def cancel_batch(cls, batch_id):
         """Cancel a batch and restore inventory"""
         try:
-            logger.info(f"🚀 CANCEL BATCH DEBUG: Starting cancel process for batch_id={batch_id}")
-            logger.info(f"🚀 CANCEL BATCH DEBUG: Current user ID={current_user.id}, org_id={current_user.organization_id}")
+            from app.services.inventory_adjustment import validate_inventory_fifo_sync
 
-            batch = Batch.query.filter_by(
-                id=batch_id,
-                organization_id=current_user.organization_id
-            ).first()
-
+            batch = Batch.scoped().filter_by(id=batch_id).first()
             if not batch:
-                logger.error(f"🚀 CANCEL BATCH DEBUG: Batch {batch_id} not found in organization {current_user.organization_id}")
                 return False, "Batch not found"
 
-            logger.info(f"🚀 CANCEL BATCH DEBUG: Found batch {batch.label_code}, status={batch.status}, created_by={batch.created_by}")
-
-            # Validate access and ownership
-            if batch.created_by != current_user.id:
-                logger.error(f"🚀 CANCEL BATCH DEBUG: Permission denied - batch created by {batch.created_by}, current user {current_user.id}")
+            # Validate access
+            if batch.created_by != current_user.id and batch.organization_id != current_user.organization_id:
                 return False, "Permission denied"
 
             if batch.status != 'in_progress':
-                logger.error(f"🚀 CANCEL BATCH DEBUG: Invalid status - batch status is {batch.status}, expected 'in_progress'")
                 return False, "Only in-progress batches can be cancelled"
 
-            logger.info(f"🚀 CANCEL BATCH DEBUG: All initial checks passed, proceeding with cancellation")
-
             # Get all items to restore
-            logger.info(f"🚀 CANCEL BATCH DEBUG: Getting items to restore...")
             batch_ingredients = BatchIngredient.query.filter_by(batch_id=batch.id).all()
             batch_containers = BatchContainer.query.filter_by(batch_id=batch.id).all()
             extra_ingredients = ExtraBatchIngredient.query.filter_by(batch_id=batch.id).all()
@@ -286,31 +273,16 @@ class BatchOperationsService(BaseService):
             batch_consumables = BatchConsumable.query.filter_by(batch_id=batch.id).all()
             extra_consumables = ExtraBatchConsumable.query.filter_by(batch_id=batch.id).all()
 
-            logger.info(f"🚀 CANCEL BATCH DEBUG: Items found:")
-            logger.info(f"  - Batch ingredients: {len(batch_ingredients)}")
-            logger.info(f"  - Batch containers: {len(batch_containers)}")
-            logger.info(f"  - Extra ingredients: {len(extra_ingredients)}")
-            logger.info(f"  - Extra containers: {len(extra_containers)}")
-            logger.info(f"  - Batch consumables: {len(batch_consumables)}")
-            logger.info(f"  - Extra consumables: {len(extra_consumables)}")
-
             # Pre-validate FIFO sync for all ingredients
-            logger.info(f"🚀 CANCEL BATCH DEBUG: Starting FIFO validation...")
-            for i, batch_ingredient in enumerate(batch_ingredients):
-                logger.info(f"🚀 CANCEL BATCH DEBUG: Validating batch ingredient {i+1}/{len(batch_ingredients)}: {batch_ingredient.inventory_item.name}")
+            for batch_ingredient in batch_ingredients:
                 is_valid, error_msg, inv_qty, fifo_total = validate_inventory_fifo_sync(batch_ingredient.inventory_item_id)
                 if not is_valid:
-                    logger.error(f"🚀 CANCEL BATCH DEBUG: FIFO validation failed for {batch_ingredient.inventory_item.name}: {error_msg}")
                     return False, f'Inventory sync error for {batch_ingredient.inventory_item.name}: {error_msg}'
 
-            for i, extra_ingredient in enumerate(extra_ingredients):
-                logger.info(f"🚀 CANCEL BATCH DEBUG: Validating extra ingredient {i+1}/{len(extra_ingredients)}: {extra_ingredient.inventory_item.name}")
+            for extra_ingredient in extra_ingredients:
                 is_valid, error_msg, inv_qty, fifo_total = validate_inventory_fifo_sync(extra_ingredient.inventory_item_id)
                 if not is_valid:
-                    logger.error(f"🚀 CANCEL BATCH DEBUG: FIFO validation failed for {extra_ingredient.inventory_item.name}: {error_msg}")
                     return False, f'Inventory sync error for {extra_ingredient.inventory_item.name}: {error_msg}'
-
-            logger.info(f"🚀 CANCEL BATCH DEBUG: All FIFO validations passed, proceeding with restoration...")
 
             # Restore all inventory
             restoration_summary = []
@@ -399,30 +371,34 @@ class BatchOperationsService(BaseService):
                         quantity=extra_cons.quantity_used,
                         change_type='refunded',
                         unit=extra_cons.unit,
-                        notes=f"Extra consumable refunded from cancelled batch {batch.label_code}",
+                        notes=f"Extra ingredient refunded from cancelled batch {batch.label_code}",
                         created_by=current_user.id,
                         batch_id=batch.id
                     )
                     restoration_summary.append(f"{extra_cons.quantity_used} {extra_cons.unit} of {item.name}")
+                container = extra_container.container
+                if container:
+                    process_inventory_adjustment(
+                        item_id=container.id,
+                        quantity=extra_container.quantity_used,
+                        change_type='refunded',
+                        unit=container.unit,
+                        notes=f"Extra container refunded from cancelled batch {batch.label_code}",
+                        created_by=current_user.id,
+                        batch_id=batch.id
+                    )
+                    restoration_summary.append(f"{extra_container.quantity_used} {container.unit} of {container.name}")
 
             # Update batch status
-            logger.info(f"🚀 CANCEL BATCH DEBUG: Updating batch status to cancelled...")
             batch.status = 'cancelled'
             batch.cancelled_at = datetime.utcnow()
-            
-            logger.info(f"🚀 CANCEL BATCH DEBUG: Committing database changes...")
             db.session.commit()
 
-            logger.info(f"🚀 CANCEL BATCH DEBUG: ✅ Batch cancellation completed successfully!")
-            logger.info(f"🚀 CANCEL BATCH DEBUG: Restoration summary: {restoration_summary}")
             return True, restoration_summary
 
         except Exception as e:
             db.session.rollback()
-            logger.error(f"🚀 CANCEL BATCH DEBUG: ❌ Exception occurred during cancellation: {str(e)}")
-            logger.error(f"🚀 CANCEL BATCH DEBUG: Exception type: {type(e).__name__}")
-            import traceback
-            logger.error(f"🚀 CANCEL BATCH DEBUG: Full traceback: {traceback.format_exc()}")
+            logger.error(f"Error cancelling batch: {str(e)}")
             return False, str(e)
 
     @classmethod
