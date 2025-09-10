@@ -102,6 +102,12 @@ def create_variation(recipe_id):
             # Extract ingredients and delegate to service
             ingredients = _extract_ingredients_from_form(request.form)
 
+            # Get label prefix or generate from parent
+            label_prefix = request.form.get('label_prefix')
+            if not label_prefix and parent.label_prefix:
+                # Auto-generate variation prefix from parent
+                label_prefix = ""  # Let the service handle variation prefix generation
+
             success, result = create_recipe(
                 name=request.form.get('name'),
                 description=request.form.get('instructions'),
@@ -112,7 +118,7 @@ def create_variation(recipe_id):
                 consumables=_extract_consumables_from_form(request.form),
                 parent_id=parent.id,
                 allowed_containers=[int(id) for id in request.form.getlist('allowed_containers[]') if id] or [],
-                label_prefix=request.form.get('label_prefix')
+                label_prefix=label_prefix
             )
 
             if success:
@@ -193,17 +199,35 @@ def clone_recipe(recipe_id):
         success, result = duplicate_recipe(recipe_id)
 
         if success:
-            new_recipe = result
-            ingredients = [(ri.inventory_item_id, ri.quantity, ri.unit) for ri in new_recipe.recipe_ingredients]
+            # Get the recipe data but don't commit yet
+            cloned_recipe = result
+            
+            # Extract data before rollback
+            clone_data = {
+                'name': cloned_recipe.name,
+                'instructions': cloned_recipe.instructions,
+                'label_prefix': cloned_recipe.label_prefix,
+                'predicted_yield': cloned_recipe.predicted_yield,
+                'predicted_yield_unit': cloned_recipe.predicted_yield_unit,
+                'allowed_containers': cloned_recipe.allowed_containers
+            }
+            
+            ingredients = [(ri.inventory_item_id, ri.quantity, ri.unit) for ri in cloned_recipe.recipe_ingredients]
+            consumables = [(rc.inventory_item_id, rc.quantity, rc.unit) for rc in cloned_recipe.recipe_consumables]
+            
+            # Rollback the transaction - user will edit and save properly
+            db.session.rollback()
+            
+            # Create template object with extracted data
+            template_recipe = Recipe(**clone_data)
+            
             form_data = _get_recipe_form_data()
 
-            # Don't save to DB yet - let user edit first
-            db.session.rollback()
-
             return render_template('pages/recipes/recipe_form.html',
-                                recipe=new_recipe,
+                                recipe=template_recipe,
                                 is_clone=True,
                                 ingredient_prefill=ingredients,
+                                consumable_prefill=consumables,
                                 **form_data)
         else:
             flash(f"Error cloning recipe: {result}", "error")
@@ -492,10 +516,17 @@ def _format_stock_results(ingredients):
 
 def _create_variation_template(parent):
     """Create a template variation object for the form"""
+    # Generate variation prefix suggestion
+    variation_prefix = ""
+    if parent.label_prefix:
+        # Count existing variations to suggest next number
+        existing_variations = Recipe.query.filter_by(parent_id=parent.id).count()
+        variation_prefix = f"{parent.label_prefix}V{existing_variations + 1}"
+    
     return Recipe(
         name=f"{parent.name} Variation",
         instructions=parent.instructions,
-        label_prefix=parent.label_prefix,
+        label_prefix=variation_prefix,
         parent_id=parent.id,
         predicted_yield=parent.predicted_yield,
         predicted_yield_unit=parent.predicted_yield_unit

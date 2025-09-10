@@ -152,6 +152,88 @@ def register_template_context(app):
             current_time=TimezoneUtils.utc_now,
         )
 
+    @app.context_processor
+    def _inject_marketing_content():
+        """Inject public marketing content and stats for homepage."""
+        import json, os
+        from sqlalchemy import func
+        try:
+            from .models import Organization, User
+            from .models.subscription_tier import SubscriptionTier
+        except Exception:
+            Organization = None
+            User = None
+            SubscriptionTier = None
+
+        # Load reviews
+        reviews = []
+        try:
+            if os.path.exists('data/reviews.json'):
+                with open('data/reviews.json', 'r') as f:
+                    reviews = json.load(f) or []
+        except Exception:
+            reviews = []
+
+        # Load business spotlights
+        spotlights = []
+        try:
+            if os.path.exists('data/spotlights.json'):
+                with open('data/spotlights.json', 'r') as f:
+                    all_spotlights = json.load(f) or []
+                    # Only show approved
+                    spotlights = [s for s in all_spotlights if s.get('approved')]
+        except Exception:
+            spotlights = []
+
+        # Stats
+        total_active_users = 0
+        lifetime_total = 500
+        lifetime_used = 0
+        if User and Organization and SubscriptionTier:
+            try:
+                total_active_users = User.query.filter(
+                    User.user_type != 'developer',
+                    User.is_active == True
+                ).count()
+
+                # Lifetime seats: orgs on a tier with name like 'lifetime' OR whop_product_tier == 'lifetime'
+                lifetime_tiers = SubscriptionTier.query.filter(SubscriptionTier.name.ilike('%lifetime%')).all()
+                lifetime_tier_ids = [t.id for t in lifetime_tiers]
+                lifetime_used = 0
+                if lifetime_tier_ids:
+                    lifetime_used += Organization.query.filter(Organization.subscription_tier_id.in_(lifetime_tier_ids)).count()
+                # Include orgs flagged by whop tier
+                try:
+                    lifetime_used += Organization.query.filter(Organization.whop_product_tier == 'lifetime').count()
+                except Exception:
+                    pass
+            except Exception:
+                pass
+
+        lifetime_left = max(0, lifetime_total - int(lifetime_used or 0))
+
+        # Marketing messages (review asks day 1/3/5)
+        messages = {'day_1': '', 'day_3': '', 'day_5': ''}
+        marketing_settings = {'promo_codes': [], 'demo_url': '', 'demo_videos': []}
+        try:
+            if os.path.exists('settings.json'):
+                with open('settings.json', 'r') as f:
+                    cfg = json.load(f) or {}
+                    messages.update(cfg.get('marketing_messages', {}))
+                    marketing_settings['promo_codes'] = cfg.get('promo_codes', []) or []
+                    marketing_settings['demo_url'] = cfg.get('demo_url', '') or ''
+                    marketing_settings['demo_videos'] = cfg.get('demo_videos', []) or []
+        except Exception:
+            pass
+
+        return dict(
+            marketing_reviews=reviews,
+            marketing_spotlights=spotlights,
+            marketing_stats=dict(total_active_users=total_active_users, lifetime_left=lifetime_left, lifetime_total=lifetime_total),
+            marketing_messages=messages,
+            marketing_settings=marketing_settings,
+        )
+
     app.jinja_env.globals.update({
         'get_global_unit_list': get_global_unit_list
     })

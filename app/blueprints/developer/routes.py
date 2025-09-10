@@ -101,6 +101,75 @@ def dashboard():
                          problem_orgs=problem_orgs,
                          waitlist_count=waitlist_count)
 
+@developer_bp.route('/marketing-admin')
+@login_required
+def marketing_admin():
+    """Manage homepage marketing content (reviews, spotlights, messages)."""
+    import json, os
+    reviews = []
+    spotlights = []
+    messages = {'day_1': '', 'day_3': '', 'day_5': ''}
+    promo_codes = []
+    demo_url = ''
+    demo_videos = []
+    try:
+        if os.path.exists('data/reviews.json'):
+            with open('data/reviews.json', 'r') as f:
+                reviews = json.load(f) or []
+    except Exception:
+        reviews = []
+    try:
+        if os.path.exists('data/spotlights.json'):
+            with open('data/spotlights.json', 'r') as f:
+                spotlights = json.load(f) or []
+    except Exception:
+        spotlights = []
+    try:
+        if os.path.exists('settings.json'):
+            with open('settings.json', 'r') as f:
+                cfg = json.load(f) or {}
+                messages.update(cfg.get('marketing_messages', {}))
+                promo_codes = cfg.get('promo_codes', []) or []
+                demo_url = cfg.get('demo_url', '') or ''
+                demo_videos = cfg.get('demo_videos', []) or []
+    except Exception:
+        pass
+    return render_template('developer/marketing_admin.html', reviews=reviews, spotlights=spotlights, messages=messages, promo_codes=promo_codes, demo_url=demo_url, demo_videos=demo_videos)
+
+@developer_bp.route('/marketing-admin/save', methods=['POST'])
+@login_required
+def marketing_admin_save():
+    """Save reviews, spotlights, and marketing messages (simple JSON persistence)."""
+    try:
+        import json
+        data = request.get_json() or {}
+        if 'reviews' in data:
+            with open('data/reviews.json', 'w') as f:
+                json.dump(data['reviews'], f, indent=2)
+        if 'spotlights' in data:
+            with open('data/spotlights.json', 'w') as f:
+                json.dump(data['spotlights'], f, indent=2)
+        if 'messages' in data or 'promo_codes' in data or 'demo_url' in data or 'demo_videos' in data:
+            # merge into settings.json under marketing_messages
+            try:
+                with open('settings.json', 'r') as f:
+                    cfg = json.load(f) or {}
+            except FileNotFoundError:
+                cfg = {}
+            if 'messages' in data:
+                cfg['marketing_messages'] = data['messages']
+            if 'promo_codes' in data:
+                cfg['promo_codes'] = data['promo_codes']
+            if 'demo_url' in data:
+                cfg['demo_url'] = data['demo_url']
+            if 'demo_videos' in data:
+                cfg['demo_videos'] = data['demo_videos']
+            with open('settings.json', 'w') as f:
+                json.dump(cfg, f, indent=2)
+        return jsonify({'success': True})
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
 @developer_bp.route('/organizations')
 @login_required
 def organizations():
@@ -546,7 +615,16 @@ def global_items_admin():
 @login_required
 def global_item_detail(item_id):
     item = GlobalItem.query.get_or_404(item_id)
-    return render_template('developer/global_item_detail.html', item=item)
+    
+    # Get available reference categories for the edit form
+    existing_categories = db.session.query(GlobalItem.reference_category).filter(
+        GlobalItem.reference_category.isnot(None),
+        GlobalItem.reference_category != ''
+    ).distinct().order_by(GlobalItem.reference_category).all()
+    
+    reference_categories = sorted([cat[0] for cat in existing_categories if cat[0]])
+    
+    return render_template('developer/global_item_detail.html', item=item, reference_categories=reference_categories)
 
 @developer_bp.route('/global-items/<int:item_id>/edit', methods=['POST'])
 @login_required
@@ -609,6 +687,179 @@ def global_item_stats_view(item_id):
     item = GlobalItem.query.get_or_404(item_id)
     stats = GlobalItemStatsService.get_rollup(item_id)
     return render_template('developer/global_item_stats.html', item=item, stats=stats)
+
+@developer_bp.route('/reference-categories')
+@login_required
+def reference_categories():
+    """Manage reference categories for global items"""
+    # Get existing reference categories from global items
+    existing_categories = db.session.query(GlobalItem.reference_category).filter(
+        GlobalItem.reference_category.isnot(None),
+        GlobalItem.reference_category != ''
+    ).distinct().order_by(GlobalItem.reference_category).all()
+    
+    categories = [cat[0] for cat in existing_categories if cat[0]]
+    
+    # Get global items by category for counting
+    global_items_by_category = {}
+    category_densities = {}
+    
+    for category in categories:
+        items = GlobalItem.query.filter_by(reference_category=category, is_archived=False).all()
+        global_items_by_category[category] = items
+        
+        # Calculate average density for category (excluding None values)
+        densities = [item.density for item in items if item.density is not None and item.density > 0]
+        if densities:
+            category_densities[category] = sum(densities) / len(densities)
+    
+    return render_template('developer/reference_categories.html', 
+                         categories=categories,
+                         global_items_by_category=global_items_by_category,
+                         category_densities=category_densities)
+
+@developer_bp.route('/reference-categories/add', methods=['POST'])
+@login_required
+def add_reference_category():
+    """Add a new reference category"""
+    try:
+        data = request.get_json()
+        category_name = data.get('name', '').strip()
+        
+        if not category_name:
+            return jsonify({'success': False, 'error': 'Category name is required'})
+        
+        # Check if category already exists
+        existing = db.session.query(GlobalItem).filter(
+            GlobalItem.reference_category == category_name
+        ).first()
+        
+        if existing:
+            return jsonify({'success': False, 'error': 'Category already exists'})
+        
+        # Create a placeholder global item to establish the category
+        # This ensures the category appears in our dropdown
+        placeholder_item = GlobalItem(
+            name=f"_category_placeholder_{category_name.lower().replace(' ', '_')}",
+            item_type='ingredient',
+            reference_category=category_name,
+            is_archived=True  # Archive it so it doesn't appear in regular listings
+        )
+        
+        db.session.add(placeholder_item)
+        db.session.commit()
+        
+        return jsonify({'success': True, 'message': f'Category "{category_name}" added successfully'})
+        
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'success': False, 'error': str(e)})
+
+@developer_bp.route('/reference-categories/delete', methods=['POST'])
+@login_required
+def delete_reference_category():
+    """Delete a reference category"""
+    try:
+        data = request.get_json()
+        category_name = data.get('name', '').strip()
+        
+        if not category_name:
+            return jsonify({'success': False, 'error': 'Category name is required'})
+        
+        # Count items using this category
+        items_count = db.session.query(GlobalItem).filter(
+            GlobalItem.reference_category == category_name,
+            GlobalItem.is_archived != True
+        ).count()
+        
+        if items_count > 0:
+            return jsonify({
+                'success': False, 
+                'error': f'Cannot delete category. {items_count} active items are using this category.'
+            })
+        
+        # Delete any placeholder items for this category
+        placeholders = db.session.query(GlobalItem).filter(
+            GlobalItem.reference_category == category_name,
+            GlobalItem.name.like('_category_placeholder_%')
+        ).all()
+        
+        for placeholder in placeholders:
+            db.session.delete(placeholder)
+        
+        db.session.commit()
+        
+        return jsonify({'success': True, 'message': f'Category "{category_name}" deleted successfully'})
+        
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'success': False, 'error': str(e)})
+
+@developer_bp.route('/reference-categories/update-density', methods=['POST'])
+@login_required
+def update_category_density():
+    """Update the default density for a reference category"""
+    try:
+        data = request.get_json()
+        category_name = data.get('category', '').strip()
+        density = data.get('density')
+        
+        if not category_name:
+            return jsonify({'success': False, 'error': 'Category name is required'})
+        
+        # For now, we'll store this in a simple way by updating all items in the category
+        # In a future enhancement, you could add a separate CategoryDensity model
+        if density is not None and density > 0:
+            # Update all items in this category with the new default density
+            items = GlobalItem.query.filter_by(reference_category=category_name, is_archived=False).all()
+            for item in items:
+                if item.density is None or item.density == 0:  # Only update if no specific density set
+                    item.density = density
+        
+        db.session.commit()
+        
+        return jsonify({
+            'success': True, 
+            'message': f'Density updated for category "{category_name}"',
+            'density': density
+        })
+        
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'success': False, 'error': str(e)})
+
+@developer_bp.route('/reference-categories/calculate-density', methods=['POST'])
+@login_required
+def calculate_category_density():
+    """Calculate average density for a category based on its items"""
+    try:
+        data = request.get_json()
+        category_name = data.get('category', '').strip()
+        
+        if not category_name:
+            return jsonify({'success': False, 'error': 'Category name is required'})
+        
+        # Get all items in this category with valid densities
+        items = GlobalItem.query.filter_by(reference_category=category_name, is_archived=False).all()
+        densities = [item.density for item in items if item.density is not None and item.density > 0]
+        
+        if not densities:
+            return jsonify({
+                'success': False, 
+                'error': 'No items with valid density values found in this category'
+            })
+        
+        calculated_density = sum(densities) / len(densities)
+        
+        return jsonify({
+            'success': True, 
+            'calculated_density': calculated_density,
+            'items_count': len(densities),
+            'message': f'Calculated density: {calculated_density:.3f} g/ml from {len(densities)} items'
+        })
+        
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)})
 
 @developer_bp.route('/global-items/create', methods=['GET', 'POST'])
 @login_required
@@ -683,7 +934,15 @@ def create_global_item():
             return redirect(url_for('developer.create_global_item'))
 
     # GET request - show form
-    return render_template('developer/create_global_item.html')
+    # Get available reference categories
+    existing_categories = db.session.query(GlobalItem.reference_category).filter(
+        GlobalItem.reference_category.isnot(None),
+        GlobalItem.reference_category != ''
+    ).distinct().order_by(GlobalItem.reference_category).all()
+    
+    reference_categories = sorted([cat[0] for cat in existing_categories if cat[0]])
+    
+    return render_template('developer/create_global_item.html', reference_categories=reference_categories)
 
 @developer_bp.route('/global-items/<int:item_id>/delete', methods=['POST'])
 @login_required
