@@ -523,7 +523,13 @@ function confirmCancelBatch() {
     console.log('🔥 CANCEL BUTTON: Cancel button clicked for batch {{ batch.id }}');
     if (confirm('Are you sure you want to cancel this batch? This will restore all ingredients to inventory.')) {
         console.log('🔥 CANCEL FORM: Form submission confirmed for batch {{ batch.id }}');
-        document.getElementById('cancelBatchForm').submit();
+        const form = document.getElementById('cancelBatchForm');
+        if (form) {
+            form.submit();
+        } else {
+            console.error('🔥 CANCEL ERROR: Cancel form not found');
+            alert('Error: Cancel form not found. Please refresh the page and try again.');
+        }
     }
 }
 </script>
