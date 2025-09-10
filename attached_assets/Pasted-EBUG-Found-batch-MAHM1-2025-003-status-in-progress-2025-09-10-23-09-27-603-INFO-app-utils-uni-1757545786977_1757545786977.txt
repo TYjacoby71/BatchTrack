@@ -1,0 +1,55 @@
+EBUG: Found batch: MAHM1-2025-003, status: in_progress
+2025-09-10 23:09:27,603 [INFO] app.utils.unit_utils: Getting global unit list
+2025-09-10 23:09:27,603 INFO: Getting global unit list
+2025-09-10 23:09:27,620 [INFO] app.services.batch_service.core: Found 0 timers for batch 12
+2025-09-10 23:09:27,620 INFO: Found 0 timers for batch 12
+2025-09-10 23:09:27,669 [DEBUG] app.utils.permissions: Permission tags.manage not allowed by tier exempt
+2025-09-10 23:09:27,669 DEBUG: Permission tags.manage not allowed by tier exempt
+2025-09-10 23:09:27,670 [DEBUG] app.utils.permissions: Permission dev.system_admin not allowed by tier exempt
+2025-09-10 23:09:27,670 DEBUG: Permission dev.system_admin not allowed by tier exempt
+2025-09-10 23:09:27,697 [ERROR] app.blueprints.batches.routes: Error in view_batch_in_progress: Could not build url for endpoint 'cancel_batch.cancel_batch' with values ['batch_id']. Did you mean 'batches.cancel_batch.cancel_batch' instead?
+2025-09-10 23:09:27,697 ERROR: Error in view_batch_in_progress: Could not build url for endpoint 'cancel_batch.cancel_batch' with values ['batch_id']. Did you mean 'batches.cancel_batch.cancel_batch' instead?
+2025-09-10 23:09:28,036 [DEBUG] app.utils.permissions: Permission tags.manage not allowed by tier exempt
+2025-09-10 23:09:28,036 DEBUG: Permission tags.manage not allowed by tier exempt
+2025-09-10 23:09:28,036 [DEBUG] app.utils.permissions: Permission dev.system_admin not allowed by tier exempt
+2025-09-10 23:09:28,036 DEBUG: Permission dev.system_admin not allowed by tier exempt
+DEBUG: Looking for batch 12
+DEBUG: get_batch_by_identifier called with: 12
+DEBUG: Current user organization_id: 1
+DEBUG: Batch exists (unscoped): True
+DEBUG: Batch organization_id: 1
+DEBUG: Found batch: MAHM1-2025-003, status: in_progress
+2025-09-10 23:09:30,220 [INFO] app.utils.unit_utils: Getting global unit list
+2025-09-10 23:09:30,220 INFO: Getting global unit list
+2025-09-10 23:09:30,234 [INFO] app.services.batch_service.core: Found 0 timers for batch 12
+2025-09-10 23:09:30,234 INFO: Found 0 timers for batch 12
+2025-09-10 23:09:30,283 [DEBUG] app.utils.permissions: Permission tags.manage not allowed by tier exempt
+2025-09-10 23:09:30,283 DEBUG: Permission tags.manage not allowed by tier exempt
+2025-09-10 23:09:30,284 [DEBUG] app.utils.permissions: Permission dev.system_admin not allowed by tier exempt
+2025-09-10 23:09:30,284 DEBUG: Permission dev.system_admin not allowed by tier exempt
+2025-09-10 23:09:30,328 [ERROR] app.blueprints.batches.routes: Error in view_batch_in_progress: Could not build url for endpoint 'cancel_batch.cancel_batch' with values ['batch_id']. Did you mean 'batches.cancel_batch.cancel_batch' instead?
+2025-09-10 23:09:30,328 ERROR: Error in view_batch_in_progress: Could not build url for endpoint 'cancel_batch.cancel_batch' with values ['batch_id']. Did you mean 'batches.cancel_batch.cancel_batch' instead?
+2025-09-10 23:09:30,598 [DEBUG] app.utils.permissions: Permission tags.manage not allowed by tier exempt
+2025-09-10 23:09:30,598 DEBUG: Permission tags.manage not allowed by tier exempt
+2025-09-10 23:09:30,599 [DEBUG] app.utils.permissions: Permission dev.system_admin not allowed by tier exempt
+2025-09-10 23:09:30,599 DEBUG: Permission dev.system_admin not allowed by tier exempt
+DEBUG: Looking for batch 11
+DEBUG: get_batch_by_identifier called with: 11
+DEBUG: Current user organization_id: 1
+DEBUG: Batch exists (unscoped): True
+DEBUG: Batch organization_id: 1
+DEBUG: Found batch: NONE-2025-002, status: in_progress
+2025-09-10 23:09:32,132 [INFO] app.utils.unit_utils: Getting global unit list
+2025-09-10 23:09:32,132 INFO: Getting global unit list
+2025-09-10 23:09:32,154 [INFO] app.services.batch_service.core: Found 0 timers for batch 11
+2025-09-10 23:09:32,154 INFO: Found 0 timers for batch 11
+2025-09-10 23:09:32,220 [DEBUG] app.utils.permissions: Permission tags.manage not allowed by tier exempt
+2025-09-10 23:09:32,220 DEBUG: Permission tags.manage not allowed by tier exempt
+2025-09-10 23:09:32,221 [DEBUG] app.utils.permissions: Permission dev.system_admin not allowed by tier exempt
+2025-09-10 23:09:32,221 DEBUG: Permission dev.system_admin not allowed by tier exempt
+2025-09-10 23:09:32,250 [ERROR] app.blueprints.batches.routes: Error in view_batch_in_progress: Could not build url for endpoint 'cancel_batch.cancel_batch' with values ['batch_id']. Did you mean 'batches.cancel_batch.cancel_batch' instead?
+2025-09-10 23:09:32,250 ERROR: Error in view_batch_in_progress: Could not build url for endpoint 'cancel_batch.cancel_batch' with values ['batch_id']. Did you mean 'batches.cancel_batch.cancel_batch' instead?
+2025-09-10 23:09:32,427 [DEBUG] app.utils.permissions: Permission tags.manage not allowed by tier exempt
+2025-09-10 23:09:32,427 DEBUG: Permission tags.manage not allowed by tier exempt
+2025-09-10 23:09:32,428 [DEBUG] app.utils.permissions: Permission dev.system_admin not allowed by tier exempt
+2025-09-10 23:09:32,428 DEBUG: Permission dev.system_admin not allowed by tier exempt
