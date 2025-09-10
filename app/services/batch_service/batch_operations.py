@@ -8,7 +8,7 @@ from app.models.batch import BatchConsumable
 from app import models
 from app.models import ExtraBatchIngredient, ExtraBatchContainer, Product, ProductVariant
 from app.services.unit_conversion import ConversionEngine
-from app.services.inventory_adjustment import process_inventory_adjustment
+from app.services.inventory_adjustment import process_inventory_adjustment, validate_inventory_fifo_sync
 from app.utils.timezone_utils import TimezoneUtils
 from app.utils.code_generator import generate_batch_label_code
 from app.services.base_service import BaseService
@@ -251,13 +251,14 @@ class BatchOperationsService(BaseService):
     def cancel_batch(cls, batch_id):
         """Cancel a batch and restore inventory"""
         try:
-            from app.services.inventory_adjustment import validate_inventory_fifo_sync
+            # Removed the import from here as it is now at the top of the file.
+            # from app.services.inventory_adjustment import validate_inventory_fifo_sync
 
             batch = Batch.query.filter_by(
                 id=batch_id,
                 organization_id=current_user.organization_id
             ).first()
-            
+
             if not batch:
                 return False, "Batch not found"
 
