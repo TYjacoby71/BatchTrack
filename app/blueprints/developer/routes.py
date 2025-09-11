@@ -582,7 +582,10 @@ def global_items_admin():
 
     # Filter by reference category if specified
     if category_filter:
-        query = query.filter(GlobalItem.reference_category == category_filter)
+        from app.models.category import IngredientCategory
+        query = query.join(IngredientCategory, GlobalItem.ingredient_category_id == IngredientCategory.id).filter(
+            IngredientCategory.name == category_filter
+        )
 
     # Add search functionality
     if search_query:
@@ -598,10 +601,12 @@ def global_items_admin():
     items = query.order_by(GlobalItem.item_type, GlobalItem.name).limit(500).all()
 
     # Get unique categories for filter dropdown (only from ingredients)
-    categories = db.session.query(GlobalItem.reference_category).filter(
-        GlobalItem.reference_category.isnot(None),
+    from app.models.category import IngredientCategory
+    categories = db.session.query(IngredientCategory.name).join(
+        GlobalItem, GlobalItem.ingredient_category_id == IngredientCategory.id
+    ).filter(
         GlobalItem.item_type == 'ingredient'
-    ).distinct().order_by(GlobalItem.reference_category).all()
+    ).distinct().order_by(IngredientCategory.name).all()
     categories = [cat[0] for cat in categories if cat[0]]
 
     return render_template('developer/global_items.html', 
