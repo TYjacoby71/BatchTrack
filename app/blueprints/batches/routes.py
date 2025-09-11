@@ -108,7 +108,7 @@ def list_batches():
 @batches_bp.route('/<batch_identifier>')
 @login_required
 def view_batch(batch_identifier):
-    """View a specific batch"""
+    """View a specific batch - handles completed, failed, and cancelled batches"""
     try:
         print(f"DEBUG: view_batch called with batch_identifier: {batch_identifier}")
 
@@ -125,14 +125,15 @@ def view_batch(batch_identifier):
 
         print(f"DEBUG: Found batch: {batch.label_code}, status: {batch.status}")
 
+        # Redirect in-progress batches to the editable view
         if batch.status == 'in_progress':
             print(f"DEBUG: Redirecting to in_progress view")
             return redirect(url_for('batches.view_batch_in_progress', batch_identifier=batch.id))
 
-        # Get navigation data
+        # Get navigation data for completed, failed, or cancelled batches
         nav_data = BatchManagementService.get_batch_navigation_data(batch)
 
-        print(f"DEBUG: Rendering view_batch.html template for {batch.status} batch")
+        print(f"DEBUG: Rendering batch record view for {batch.status} batch")
         return render_template('pages/batches/view_batch.html',
             batch=batch,
             current_time=datetime.now(),
@@ -176,12 +177,12 @@ def update_batch_notes(batch_id):
 @batches_bp.route('/in-progress/<batch_identifier>')
 @login_required
 def view_batch_in_progress(batch_identifier):
-    """View batch in progress with full editing capabilities"""
+    """View active batch with full editing capabilities"""
     try:
         if not isinstance(batch_identifier, int):
             batch_identifier = int(batch_identifier)
 
-        print(f"DEBUG: Looking for batch {batch_identifier}")
+        print(f"DEBUG: Looking for active batch {batch_identifier}")
 
         batch = BatchService.get_batch_by_identifier(batch_identifier)
         if not batch:
@@ -194,8 +195,15 @@ def view_batch_in_progress(batch_identifier):
             flash(error_msg, 'error')
             return redirect(url_for('batches.list_batches'))
 
+        # If batch is no longer in progress, redirect to the batch record view
         if batch.status != 'in_progress':
-            flash('This batch is no longer in progress and cannot be edited.', 'warning')
+            status_message = {
+                'completed': 'This batch has been completed.',
+                'failed': 'This batch has failed.',
+                'cancelled': 'This batch has been cancelled.'
+            }.get(batch.status, 'This batch is no longer active.')
+            
+            flash(f'{status_message} Viewing batch record.', 'info')
             return redirect(url_for('batches.view_batch', batch_identifier=batch_identifier))
 
         # Get navigation data
