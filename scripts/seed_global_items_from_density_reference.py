@@ -18,65 +18,117 @@ def load_density_json():
 		return json.load(f)
 
 
+def load_category_files():
+	"""Load category files from app/seeders/globallist/ingredients/categories/"""
+	import os
+	import json
+	
+	base_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'app', 'seeders', 'globallist', 'ingredients', 'categories')
+	categories = []
+	
+	if not os.path.exists(base_path):
+		print(f"Category path not found: {base_path}")
+		return categories
+	
+	for filename in os.listdir(base_path):
+		if filename.endswith('.json'):
+			filepath = os.path.join(base_path, filename)
+			try:
+				with open(filepath, 'r') as f:
+					category_data = json.load(f)
+					categories.append(category_data)
+			except Exception as e:
+				print(f"Error loading {filename}: {e}")
+	
+	return categories
+
 def seed():
 	app = create_app()
 	with app.app_context():
-		payload = load_density_json()
-		if not payload:
-			print('No density_reference.json found; skipping seeding')
-			return
-
 		created_categories = 0
 		created_items = 0
 		updated_items = 0
 
-		# New structure: { "categories": [ { name, default_density, items: [ { name, density_g_per_ml, aka, default_unit } ] } ] }
-		if 'categories' in payload:
-			for cat in payload['categories']:
-				cat_name = (cat.get('name') or '').strip()
-				if not cat_name:
+		# Load categories from individual JSON files
+		categories = load_category_files()
+		
+		for cat_data in categories:
+			cat_name = cat_data.get('category_name', '').strip()
+			if not cat_name:
+				continue
+				
+			default_density = cat_data.get('default_density')
+			description = cat_data.get('description', '')
+			reference_category_name = cat_data.get('reference_category_name')
+			
+			# Create or update category
+			curated_cat = IngredientCategory.query.filter_by(name=cat_name, organization_id=None).first()
+			if not curated_cat:
+				curated_cat = IngredientCategory(
+					name=cat_name,
+					description=description,
+					default_density=default_density,
+					reference_category_name=reference_category_name,
+					is_reference_category=True,
+					organization_id=None,
+					is_active=True
+				)
+				db.session.add(curated_cat)
+				db.session.flush()
+				created_categories += 1
+			else:
+				# Update existing category
+				if default_density is not None:
+					curated_cat.default_density = default_density
+				if description:
+					curated_cat.description = description
+				if reference_category_name:
+					curated_cat.reference_category_name = reference_category_name
+
+			# Process items in the category
+			for item_data in cat_data.get('items', []):
+				name = item_data.get('name', '').strip()
+				if not name:
 					continue
-				default_density = cat.get('default_density')
-				curated_cat = IngredientCategory.query.filter_by(name=cat_name, organization_id=None).first()
-				if not curated_cat:
-					curated_cat = IngredientCategory(name=cat_name, default_density=default_density, organization_id=None, is_active=True)
-					db.session.add(curated_cat)
-					db.session.flush()
-					created_categories += 1
+					
+				density = item_data.get('density_g_per_ml')
+				aka = item_data.get('aka', [])
+				default_unit = item_data.get('default_unit')
+				perishable = item_data.get('perishable', False)
+				shelf_life_days = item_data.get('shelf_life_days')
+				
+				# Create or update global item
+				existing = GlobalItem.query.filter_by(name=name, item_type='ingredient').first()
+				if existing:
+					existing.density = density
+					existing.aka_names = aka
+					existing.default_unit = default_unit
+					existing.ingredient_category_id = curated_cat.id
+					existing.reference_category = reference_category_name
+					existing.default_is_perishable = perishable
+					existing.recommended_shelf_life_days = shelf_life_days
+					updated_items += 1
 				else:
-					if default_density is not None:
-						curated_cat.default_density = default_density
+					gi = GlobalItem(
+						name=name,
+						item_type='ingredient',
+						default_unit=default_unit,
+						density=density,
+						ingredient_category_id=curated_cat.id,
+						reference_category=reference_category_name,
+						aka_names=aka,
+						default_is_perishable=perishable,
+						recommended_shelf_life_days=shelf_life_days,
+					)
+					db.session.add(gi)
+					created_items += 1
 
-				for it in cat.get('items', []):
-					name = (it.get('name') or '').strip()
-					if not name:
-						continue
-					density = it.get('density_g_per_ml')
-					aka = it.get('aka') or []
-					default_unit = it.get('default_unit') or None
-					existing = GlobalItem.query.filter_by(name=name, item_type='ingredient').first()
-					if existing:
-						existing.density = density
-						existing.aka_names = aka
-						existing.default_unit = default_unit
-						existing.ingredient_category_id = curated_cat.id
-						updated_items += 1
-					else:
-						gi = GlobalItem(
-							name=name,
-							item_type='ingredient',
-							default_unit=default_unit,
-							density=density,
-							ingredient_category_id=curated_cat.id,
-							suggested_inventory_category_id=None,
-							aka_names=aka,
-						)
-						db.session.add(gi)
-						created_items += 1
-
-			db.session.commit()
-			print(f'Categories created: {created_categories}; Items created: {created_items}; Items updated: {updated_items}')
-			return
+		db.session.commit()
+		print(f'Categories created: {created_categories}; Items created: {created_items}; Items updated: {updated_items}')
+		
+		# Also process legacy density_reference.json if it exists
+		payload = load_density_json()
+		if payload and 'common_densities' in payload:
 
 		# Use existing list; ensure curated categories exist and attach FK to all items
 		created_categories = 0

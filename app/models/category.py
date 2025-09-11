@@ -7,14 +7,16 @@ from ..utils.timezone_utils import TimezoneUtils
 class IngredientCategory(ScopedModelMixin, db.Model):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(64), nullable=False)
-    description = db.Column(db.Text)
-    color = db.Column(db.String(7), default='#6c757d')  # Bootstrap secondary color
+    description = db.Column(db.Text, nullable=True)
+    color = db.Column(db.String(7), default='#6c757d')  # Bootstrap secondary color (hex)
     default_density = db.Column(db.Float, nullable=True)  # Default density for category in g/ml
     is_active = db.Column(db.Boolean, default=True)
     created_by = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True)
+    created_at = db.Column(db.DateTime, default=TimezoneUtils.utc_now, nullable=False)
+    updated_at = db.Column(db.DateTime, default=TimezoneUtils.utc_now, onupdate=TimezoneUtils.utc_now, nullable=False)
     
-    # Reference guide integration
-    reference_category_name = db.Column(db.String(64), nullable=True)  # Maps to density_reference.json categories
+    # Reference guide integration - maps to density_reference.json categories
+    reference_category_name = db.Column(db.String(64), nullable=True, index=True)  # String name from reference data
     is_reference_category = db.Column(db.Boolean, default=False)  # True if this is a reference guide category
 
 class InventoryCategory(ScopedModelMixin, db.Model):

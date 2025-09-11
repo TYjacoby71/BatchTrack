@@ -1,7 +1,8 @@
 
 {
-  "name": "Clays",
+  "category_name": "Clays",
   "default_density": 2.50,
-  "description": "For all cosmetic and crafting clays (e.g., Kaolin Clay, Bentonite Clay, Rhassoul Clay).",
+  "description": "For all cosmetic and crafting clays.",
+  "reference_category_name": "Clays",
   "items": []
 }

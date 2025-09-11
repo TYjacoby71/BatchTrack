@@ -1,7 +1,8 @@
 
 {
-  "name": "Extracts & Alcohols (Solvents)",
+  "category_name": "Extracts & Alcohols (Solvents)",
   "default_density": 0.88,
-  "description": "For concentrated extracts and pure alcohols (e.g., Vanilla Extract, Ethanol, Isopropyl Alcohol).",
+  "description": "For concentrated liquid extracts and pure alcohols.",
+  "reference_category_name": "Extracts & Alcohols (Solvents)",
   "items": []
 }

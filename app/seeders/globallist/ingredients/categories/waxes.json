@@ -1,7 +1,8 @@
 
 {
-  "name": "Waxes",
+  "category_name": "Waxes",
   "default_density": 0.94,
-  "description": "For all true waxes (e.g., Beeswax, Soy Wax, Carnauba Wax).",
+  "description": "For all true waxes.",
+  "reference_category_name": "Waxes",
   "items": []
 }

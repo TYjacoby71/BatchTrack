@@ -1,7 +1,8 @@
 
 {
-  "name": "Flours & Powders (Organic)",
+  "category_name": "Flours & Powders (Organic)",
   "default_density": 0.58,
-  "description": "For all fine powders derived from organic matter (e.g., All-Purpose Flour, Almond Flour, Cocoa Powder, Colloidal Oatmeal).",
+  "description": "For fine powders derived from organic matter.",
+  "reference_category_name": "Flours & Powders (Organic)",
   "items": []
 }

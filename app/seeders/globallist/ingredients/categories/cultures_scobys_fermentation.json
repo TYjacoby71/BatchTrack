@@ -1,7 +1,8 @@
 
 {
-  "name": "Cultures & Scobys (Fermentation)",
-  "default_density": 1.00,
-  "description": "For makers of kombucha, kefir, or sourdough - living cultures and starter organisms.",
+  "category_name": "Yeast & Cultures",
+  "default_density": 0.55,
+  "description": "For all active biological cultures and yeasts used in baking and fermentation. Examples: Active Dry Yeast, Lager Yeast, Kombucha SCOBY, Sourdough Starter.",
+  "reference_category_name": "Yeast & Cultures",
   "items": []
 }

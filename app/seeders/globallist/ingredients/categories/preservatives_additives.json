@@ -1,7 +1,8 @@
 
 {
-  "name": "Preservatives & Additives",
+  "category_name": "Preservatives & Additives",
   "default_density": 1.15,
-  "description": "A catch-all for functional, non-bulk chemical ingredients (e.g., Optiphen, Vitamin E Oil, Yeast Nutrient).",
+  "description": "A catch-all for functional, non-bulk chemical ingredients.",
+  "reference_category_name": "Preservatives & Additives",
   "items": []
 }

@@ -1,7 +1,8 @@
 
 {
-  "name": "Butters & Solid Fats",
+  "category_name": "Butters & Solid Fats",
   "default_density": 0.91,
-  "description": "For all solid-at-room-temperature fats (e.g., Shea Butter, Cocoa Butter, Lard, Tallow, Shortening).",
+  "description": "For solid-at-room-temperature fats.",
+  "reference_category_name": "Butters & Solid Fats",
   "items": []
 }
