@@ -7,7 +7,7 @@ expertMode = true
 
 [nix]
 channel = "stable-24_05"
-packages = ["cargo", "libiconv", "nano", "rustc"]
+packages = ["cargo", "libiconv", "nano", "rustc", "run"]
 
 [unitTest]
 language = "python3"
