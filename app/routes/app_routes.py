@@ -34,36 +34,56 @@ def dashboard():
             flash('Selected organization no longer exists. Masquerade cleared.', 'error')
             return redirect(url_for('developer.dashboard'))
 
-    recipes_query = Recipe.query
-    if current_user.organization_id:
-        recipes_query = recipes_query.filter_by(organization_id=current_user.organization_id)
-    recipes = recipes_query.all()
+    try:
+        # Ensure we start with a clean transaction
+        from ..extensions import db
+        db.session.rollback()
 
-    batch_query = Batch.query.filter_by(status='in_progress')
-    if current_user.organization_id:
-        batch_query = batch_query.filter_by(organization_id=current_user.organization_id)
-    active_batch = batch_query.first()
+        # Get recent recipes with explicit error handling
+        recent_recipes = []
+        try:
+            recent_recipes = Recipe.query.filter_by(
+                organization_id=current_user.organization_id
+            ).order_by(Recipe.id.desc()).limit(5).all()
+        except Exception as recipe_error:
+            logger.error(f"Error loading recent recipes: {recipe_error}")
+            db.session.rollback()
 
-    # Get unified dashboard alerts with dismissed alerts from session
-    dismissed_alerts = session.get('dismissed_alerts', [])
-    alert_data = DashboardAlertService.get_dashboard_alerts(
-        max_alerts=3,
-        dismissed_alerts=dismissed_alerts
-    )
+        # Get recent batches with explicit error handling
+        recent_batches = []
+        try:
+            recent_batches = Batch.query.filter_by(
+                organization_id=current_user.organization_id
+            ).order_by(Batch.id.desc()).limit(5).all()
+        except Exception as batch_error:
+            logger.error(f"Error loading recent batches: {batch_error}")
+            db.session.rollback()
 
-    # Get additional alert data for compatibility
-    low_stock_ingredients = CombinedInventoryAlertService.get_low_stock_ingredients()
-    expiration_summary = ExpirationService.get_expiration_summary()
+        # Get inventory alerts with explicit error handling
+        alerts = []
+        try:
+            alerts = CombinedInventoryAlertService.get_low_stock_ingredients()
+        except Exception as alert_error:
+            logger.error(f"Error loading alerts: {alert_error}")
+            db.session.rollback()
 
-    # Dashboard stock checking removed - users should use recipe planning page
-
-    return render_template("dashboard.html",
-                         recipes=recipes,
-                         active_batch=active_batch,
-                         current_user=current_user,
-                         alert_data=alert_data,
-                         low_stock_ingredients=low_stock_ingredients,
-                         expiration_summary=expiration_summary)
+        return render_template("dashboard.html",
+                             recent_recipes=recent_recipes,
+                             recent_batches=recent_batches,
+                             alerts=alerts,
+                             current_user=current_user,
+                             alert_data=DashboardAlertService.get_dashboard_alerts(
+                                 max_alerts=3,
+                                 dismissed_alerts=session.get('dismissed_alerts', [])
+                             ),
+                             low_stock_ingredients=CombinedInventoryAlertService.get_low_stock_ingredients(),
+                             expiration_summary=ExpirationService.get_expiration_summary())
+    except Exception as e:
+        logger.error(f"Dashboard error: {e}")
+        from ..extensions import db
+        db.session.rollback()
+        flash('Error loading dashboard', 'error')
+        return redirect(url_for('auth.login'))
 
 
 @app_routes_bp.route('/unit-manager')

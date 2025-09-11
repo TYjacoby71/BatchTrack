@@ -119,3 +119,40 @@ def register_middleware(app):
                 "X-XSS-Protection": "1; mode=block",
             })
         return response
+
+    @app.before_request
+    def ensure_clean_transaction():
+        """Ensure we start each request with a clean database transaction"""
+        try:
+            from .extensions import db
+            if db.session.is_active:
+                db.session.rollback()
+        except Exception as e:
+            logger.error(f"Error cleaning transaction: {e}")
+
+    @app.after_request
+    def after_request(response):
+        # Clean up database session after each request
+        try:
+            from .extensions import db
+            if response.status_code >= 400:
+                db.session.rollback()
+            else:
+                db.session.commit()
+        except Exception as e:
+            logger.error(f"Error in after_request cleanup: {e}")
+            try:
+                from .extensions import db
+                db.session.rollback()
+            except:
+                pass
+        return response
+
+    @app.teardown_appcontext
+    def cleanup_db(error):
+        """Clean up database session on teardown"""
+        try:
+            from .extensions import db
+            db.session.remove()
+        except Exception as e:
+            logger.error(f"Error in teardown cleanup: {e}")
