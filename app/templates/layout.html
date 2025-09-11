@@ -89,9 +89,6 @@
                     <i class="fas fa-user"></i> Customer Menu
                 </button>
                 <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="customerDropdown">
-                    <!-- Organization Dashboard -->
-                    <li><a class="dropdown-item" href="{{ url_for('organization.dashboard') }}"><i class="fas fa-users-cog"></i> Organization Dashboard</a></li>
-
                     <!-- User Dashboard -->
                     <li><a class="dropdown-item" href="{{ url_for('app_routes.dashboard') }}">User Dashboard</a></li>
 
@@ -110,26 +107,24 @@
                     <li><h6 class="dropdown-header">Production Tools</h6></li>
                     <li>
                         <a class="dropdown-item d-flex justify-content-between align-items-center" href="{{ url_for('expiration.alerts') }}">
-                            Expiration Management
+                            Expiration
                             <span id="expiration-badge" class="badge bg-danger" style="display: none;">0</span>
                         </a>
                     </li>
-                    <li><a class="dropdown-item" href="{{ url_for('timers.list_timers') }}">Timer Management</a></li>
+                    <li><a class="dropdown-item" href="{{ url_for('timers.list_timers') }}">Timers</a></li>
                     <li><a class="dropdown-item" href="{{ url_for('reservations.list_reservations') }}">Reservations</a></li>
                     <li><a class="dropdown-item" href="{{ url_for('bulk_stock.bulk_stock_check') }}">Bulk Stock Check</a></li>
 
                     <li><hr class="dropdown-divider"></li>
 
-                    <!-- Admin Tools -->
-                    <li><h6 class="dropdown-header">Admin Tools</h6></li>
-                    <li><a class="dropdown-item" href="{{ url_for('organization.dashboard') }}"><i class="fas fa-crown"></i> Organization Home</a></li>
+                    <!-- Admin -->
+                    <li><h6 class="dropdown-header">Admin</h6></li>
+                    <li><a class="dropdown-item" href="{{ url_for('organization.dashboard') }}">Organization Dashboard</a></li>
+                    <li><a class="dropdown-item" href="{{ url_for('settings.index') }}">Settings</a></li>
 
                     <li><hr class="dropdown-divider"></li>
 
-                    <!-- Settings & Account -->
-                    <li><h6 class="dropdown-header">Settings & Account</h6></li>
-                    <li><a class="dropdown-item" href="{{ url_for('settings.index') }}">Settings</a></li>
-                    <li><a class="dropdown-item" href="{{ url_for('tag_manager.tag_manager') }}">Tag Manager</a></li>
+                    <li><a class="dropdown-item" href="{{ url_for('auth.logout') }}">Logout</a></li>
                 </ul>
             </div>
             {% endif %}
@@ -220,13 +215,6 @@
                     <i class="fas fa-bars"></i> Menu
                 </button>
                 <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="directoryDropdown">
-                    <!-- Organization Dashboard (if applicable) -->
-                    {% if current_user.is_authenticated and has_permission(current_user, 'organization.view') %}
-                    {% if current_user.user_type != 'developer' or session.get('dev_selected_org_id') %}
-                    <li><a class="dropdown-item" href="{{ url_for('organization.dashboard') }}"><i class="fas fa-users-cog"></i> Organization Dashboard</a></li>
-                    {% endif %}
-                    {% endif %}
-
                     <!-- User Dashboard -->
                     <li><a class="dropdown-item" href="{{ url_for('app_routes.dashboard') }}">User Dashboard</a></li>
 
@@ -253,12 +241,12 @@
                     <li><h6 class="dropdown-header">Production Tools</h6></li>
                     <li>
                         <a class="dropdown-item d-flex justify-content-between align-items-center" href="{{ url_for('expiration.alerts') }}">
-                            Expiration Management
+                            Expiration
                             <span id="expiration-badge" class="badge bg-danger" style="display: none;">0</span>
                         </a>
                     </li>
                     {% if current_user.is_authenticated and has_permission(current_user, 'batches.view') %}
-                    <li><a class="dropdown-item" href="{{ url_for('timers.list_timers') }}">Timer Management</a></li>
+                    <li><a class="dropdown-item" href="{{ url_for('timers.list_timers') }}">Timers</a></li>
                     {% endif %}
                     {% if has_role('developer') or has_role('organization_owner') or has_permission(current_user, 'organization.manage') %}
                     <li><a class="dropdown-item" href="{{ url_for('reservations.list_reservations') }}">Reservations</a></li>
@@ -269,23 +257,15 @@
 
                     <li><hr class="dropdown-divider"></li>
 
-                    <!-- Admin Tools -->
+                    <!-- Admin -->
+                    <li><h6 class="dropdown-header">Admin</h6></li>
                     {% if current_user.is_authenticated and has_permission(current_user, 'organization.view') %}
                     {% if current_user.user_type != 'developer' or session.get('dev_selected_org_id') %}
-                    <li><h6 class="dropdown-header">Admin Tools</h6></li>
-                    <li><a class="dropdown-item" href="{{ url_for('organization.dashboard') }}"><i class="fas fa-crown"></i> Organization Home</a></li>
+                    <li><a class="dropdown-item" href="{{ url_for('organization.dashboard') }}">Organization Dashboard</a></li>
                     {% endif %}
                     {% endif %}
-
-                    <li><hr class="dropdown-divider"></li>
-
-                    <!-- Settings & Account -->
-                    <li><h6 class="dropdown-header">Settings & Account</h6></li>
                     {% if current_user.is_authenticated %}
                     <li><a class="dropdown-item" href="{{ url_for('settings.index') }}">Settings</a></li>
-                    {% endif %}
-                    {% if current_user.is_authenticated and has_permission(current_user, 'tags.manage') %}
-                    <li><a class="dropdown-item" href="{{ url_for('tag_manager.tag_manager') }}">Tag Manager</a></li>
                     {% endif %}
 
                     <li><hr class="dropdown-divider"></li>
