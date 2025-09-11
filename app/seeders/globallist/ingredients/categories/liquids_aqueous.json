@@ -1,8 +1,6 @@
-
 {
   "category_name": "Liquids (Aqueous)",
-  "default_density": 1.01,
-  "description": "For all water-based liquids like milks, juices, hydrosols, and vinegars.",
-  "reference_category_name": "Liquids (Aqueous)",
+  "default_density": 1.0,
+  "description": "For water-based liquids and hydrosols.",
   "items": []
 }

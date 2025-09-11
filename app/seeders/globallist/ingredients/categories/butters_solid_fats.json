@@ -1,8 +1,6 @@
-
 {
   "category_name": "Butters & Solid Fats",
   "default_density": 0.91,
-  "description": "For solid-at-room-temperature fats.",
-  "reference_category_name": "Butters & Solid Fats",
+  "description": "For solid fats at room temperature, including butters and solid oils.",
   "items": []
 }
