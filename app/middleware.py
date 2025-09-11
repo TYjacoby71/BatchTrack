@@ -15,6 +15,18 @@ def register_middleware(app):
         The single, unified security checkpoint for every request.
         Checks are performed in order from least to most expensive.
         """
+        # Ensure database session is clean at the start of each request
+        from .extensions import db
+        try:
+            # Force a simple query to test the session state
+            db.session.execute("SELECT 1")
+        except Exception as e:
+            logger.warning(f"Database session in failed state, rolling back: {str(e)}")
+            try:
+                db.session.rollback()
+            except Exception:
+                pass
+
         # 1. Fast-path for completely public endpoints.
         public_endpoints = [
             'static', 'auth.login', 'auth.signup', 'auth.logout',
@@ -65,10 +77,16 @@ def register_middleware(app):
             # If an org is selected, set it as the effective org for the request
             effective_org_id = selected_org_id or masquerade_org_id
             if effective_org_id:
-                from .models import Organization
-                from .extensions import db
-                g.effective_org = db.session.get(Organization, effective_org_id)
-                g.is_developer_masquerade = True
+                try:
+                    from .models import Organization
+                    g.effective_org = db.session.get(Organization, effective_org_id)
+                    g.is_developer_masquerade = True
+                except Exception as e:
+                    logger.error(f"Error loading developer organization: {str(e)}")
+                    try:
+                        db.session.rollback()
+                    except Exception:
+                        pass
 
             # IMPORTANT: Developers bypass the billing check below.
             return
@@ -77,7 +95,6 @@ def register_middleware(app):
         if fresh_current_user.is_authenticated and getattr(fresh_current_user, 'user_type', None) != 'developer':
             # CRITICAL FIX: Force completely fresh database query to avoid session isolation issues
             from .models import User, Organization
-            from .extensions import db
             from .services.billing_service import BillingService # Import BillingService
 
             try:
@@ -127,6 +144,25 @@ def register_middleware(app):
             pass
         logger.error(f"Internal server error: {error}")
         return "Internal server error. Please try again.", 500
+
+    @app.errorhandler(Exception)
+    def handle_database_errors(error):
+        """Handle all database-related errors"""
+        from .extensions import db
+        error_str = str(error).lower()
+        
+        # Check if this is a database transaction error
+        if 'infailedsqltransaction' in error_str or 'transaction is aborted' in error_str:
+            logger.error(f"Database transaction error: {error}")
+            try:
+                db.session.rollback()
+            except Exception:
+                pass
+            # Return a user-friendly error page
+            return "Database error occurred. Please refresh the page and try again.", 500
+        
+        # Re-raise non-database errors
+        raise error
 
     @app.after_request
     def add_security_headers(response):
