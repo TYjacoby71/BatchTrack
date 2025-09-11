@@ -1,7 +1,7 @@
 """Fix inventory item name constraint to be organization-scoped
 
-Revision ID: 20250911_06_fix_inventory_name_constraint
-Revises: 20250911_04_add_missing_timestamp_columns_to_ingredient_category
+Revision ID: 20250911_06
+Revises: 20250911_05
 Create Date: 2025-09-11 19:40:00.000000
 
 """
@@ -10,8 +10,8 @@ import sqlalchemy as sa
 from sqlalchemy import text
 
 # revision identifiers, used by Alembic.
-revision = '20250911_06_fix_inventory_name_constraint'
-down_revision = '20250911_04_add_missing_timestamp_columns_to_ingredient_category'
+revision = '20250911_06'
+down_revision = '20250911_05'
 branch_labels = None
 depends_on = None
 
