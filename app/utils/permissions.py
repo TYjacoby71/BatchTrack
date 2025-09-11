@@ -212,6 +212,12 @@ def get_effective_organization():
     """Get the effective organization for the current user context"""
     from ..extensions import db
     
+    # Always rollback any pending failed transaction first
+    try:
+        db.session.rollback()
+    except:
+        pass
+    
     try:
         if current_user.user_type == 'developer':
             # Developers can view organizations via session
@@ -230,7 +236,10 @@ def get_effective_organization():
                     print(f"---!!! DEVELOPER ORG QUERY ERROR !!!---")
                     print(f"Error: {e}")
                     print("--------------------------------------")
-                    db.session.rollback()
+                    try:
+                        db.session.rollback()
+                    except:
+                        pass
                     return None
             return None
         else:
@@ -241,7 +250,10 @@ def get_effective_organization():
                 print(f"---!!! USER ORGANIZATION QUERY ERROR !!!---")
                 print(f"Error: {e}")
                 print("-------------------------------------------")
-                db.session.rollback()
+                try:
+                    db.session.rollback()
+                except:
+                    pass
                 return None
     except Exception as e:
         print(f"---!!! GENERAL ORGANIZATION ACCESS ERROR !!!---")
@@ -367,6 +379,12 @@ class AuthorizationHierarchy:
         """
         from ..extensions import db
         
+        # Always rollback any pending failed transaction first
+        try:
+            db.session.rollback()
+        except:
+            pass
+        
         try:
             # Developers have full access - they are super admins
             if user.user_type == 'developer':
@@ -413,7 +431,10 @@ class AuthorizationHierarchy:
                 print(f"---!!! USER ROLES ERROR IN AUTHORIZATION !!!---")
                 print(f"Error: {role_error}")
                 print("----------------------------------------------")
-                db.session.rollback()
+                try:
+                    db.session.rollback()
+                except:
+                    pass
                 return False
 
             return False
