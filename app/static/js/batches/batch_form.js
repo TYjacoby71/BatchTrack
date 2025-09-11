@@ -137,17 +137,16 @@ function showAlert(message, type) {
 }
 
 function saveExtras() {
-    const extraRows = document.querySelectorAll('.extra-row');
     const extraIngredients = [];
     const extraContainers = [];
     const extraConsumables = [];
 
-    extraRows.forEach(row => {
+    document.querySelectorAll('.extra-row').forEach(row => {
         const type = row.dataset.type;
         const itemSelect = row.querySelector('.item-select');
         const qtyInput = row.querySelector('.qty');
 
-        if (!itemSelect.value || !qtyInput.value) {
+        if (!itemSelect || !qtyInput || !itemSelect.value || !qtyInput.value) {
             return; // Skip incomplete rows
         }
 
@@ -156,7 +155,7 @@ function saveExtras() {
             extraIngredients.push({
                 item_id: parseInt(itemSelect.value),
                 quantity: parseFloat(qtyInput.value),
-                unit: unitSelect.value
+                unit: unitSelect ? unitSelect.value : ''
             });
         } else if (type === 'container') {
             const reasonSelect = row.querySelector('.reason');
@@ -173,7 +172,7 @@ function saveExtras() {
             extraConsumables.push({
                 item_id: parseInt(itemSelect.value),
                 quantity: parseFloat(qtyInput.value),
-                unit: unitSelect.value,
+                unit: unitSelect ? unitSelect.value : '',
                 reason: 'extra_use'
             });
         }
