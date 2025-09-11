@@ -68,7 +68,7 @@ def seed():
 					name=cat_name,
 					description=description,
 					default_density=default_density,
-					reference_category_name=reference_category_name,
+					reference_category_name=cat_name,  # Same as name since this IS a reference category
 					is_reference_category=True,
 					organization_id=None,
 					is_active=True
@@ -82,8 +82,7 @@ def seed():
 					curated_cat.default_density = default_density
 				if description:
 					curated_cat.description = description
-				if reference_category_name:
-					curated_cat.reference_category_name = reference_category_name
+				curated_cat.reference_category_name = cat_name  # Ensure consistency
 
 			# Process items in the category
 			for item_data in cat_data.get('items', []):
@@ -115,7 +114,7 @@ def seed():
 						default_unit=default_unit,
 						density=density,
 						ingredient_category_id=curated_cat.id,
-						reference_category=reference_category_name,
+						reference_category=cat_name,  # Use the category name directly
 						aka_names=aka,
 						default_is_perishable=perishable,
 						recommended_shelf_life_days=shelf_life_days,
