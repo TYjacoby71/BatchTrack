@@ -254,11 +254,12 @@ function cancelBatch() {
     form.method = 'POST';
     form.action = `/batches/cancel/${batchId}`;
 
-    const csrf = document.querySelector('.csrf-token').value;
+    // Get CSRF token from the form input element
+    const csrfToken = document.querySelector('input[name="csrf_token"]').value;
     const csrfInput = document.createElement('input');
     csrfInput.type = 'hidden';
     csrfInput.name = 'csrf_token';
-    csrfInput.value = csrf;
+    csrfInput.value = csrfToken;
 
     form.appendChild(csrfInput);
     document.body.appendChild(form);
