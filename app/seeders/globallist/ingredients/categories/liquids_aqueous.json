@@ -1,0 +1,7 @@
+
+{
+  "name": "Liquids (Aqueous)",
+  "default_density": 1.01,
+  "description": "For all water-based liquids (e.g., Distilled Water, Goat Milk, Hydrosols, Juices, Vinegars).",
+  "items": []
+}

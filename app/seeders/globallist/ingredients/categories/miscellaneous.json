@@ -1,0 +1,7 @@
+
+{
+  "name": "Miscellaneous",
+  "default_density": 1.0,
+  "description": "A generic fallback for items that truly do not fit elsewhere.",
+  "items": []
+}
