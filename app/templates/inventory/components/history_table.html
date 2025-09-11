@@ -97,13 +97,13 @@
                         {% if entry.used_for_batch.status == 'in_progress' %}
                           <a href="{{ url_for('batches.view_batch_in_progress', batch_identifier=entry.used_for_batch.id) }}">{{ entry.used_for_batch.label_code }}</a>
                         {% else %}
-                          <a href="{{ url_for('batches.view_batch', batch_identifier=entry.used_for_batch.id) }}">{{ entry.used_for_batch.label_code }}</a>
+                          <a href="{{ url_for('batches.view_batch_record', batch_identifier=entry.used_for_batch.id) }}">{{ entry.used_for_batch.label_code }}</a>
                         {% endif %}
                       {% elif entry.quantity_change < 0 and entry.change_type in ['batch', 'spoil', 'trash', 'refunded'] and entry.batch %}
                         {% if entry.batch.status == 'in_progress' %}
                           <a href="{{ url_for('batches.view_batch_in_progress', batch_identifier=entry.batch.id) }}">{{ entry.batch.label_code }}</a>
                         {% else %}
-                          <a href="{{ url_for('batches.view_batch', batch_identifier=entry.batch.id) }}">{{ entry.batch.label_code }}</a>
+                          <a href="{{ url_for('batches.view_batch_record', batch_identifier=entry.batch.id) }}">{{ entry.batch.label_code }}</a>
                         {% endif %}
                       {% else %}
                         NA
@@ -140,13 +140,13 @@
                         {% if entry.batch.status == 'in_progress' %}
                           <a href="{{ url_for('batches.view_batch_in_progress', batch_identifier=entry.batch.id) }}">{{ entry.batch.label_code }}</a>
                         {% else %}
-                          <a href="{{ url_for('batches.view_batch', batch_identifier=entry.batch.id) }}">{{ entry.batch.label_code }}</a>
+                          <a href="{{ url_for('batches.view_batch_record', batch_id=entry.batch.id) }}">{{ entry.batch.label_code }}</a>
                         {% endif %}
                       {% elif entry.batch %}
                         {% if entry.batch.status == 'in_progress' %}
                           <a href="{{ url_for('batches.view_batch_in_progress', batch_identifier=entry.batch.id) }}">{{ entry.batch.label_code }}</a>
                         {% else %}
-                          <a href="{{ url_for('batches.view_batch', batch_identifier=entry.batch.id) }}">{{ entry.batch.label_code }}</a>
+                          <a href="{{ url_for('batches.view_batch_record', batch_id=entry.batch.id) }}">{{ entry.batch.label_code }}</a>
                         {% endif %}
                       {% else %}
                         {% if entry.fifo_code %}

@@ -326,7 +326,7 @@
                             <td>{{ batch.tags if batch.tags else '—' }}</td>
                             {% endif %}
                             <td>
-                                <a href="{{ url_for('batches.view_batch', batch_identifier=batch.id) }}" class="btn btn-sm btn-primary">View</a>
+                                <a href="{{ url_for('batches.view_batch_record', batch_identifier=batch.id) }}" class="btn btn-sm btn-primary">View Details</a>
                             </td>
                         </tr>
                         {% endfor %}
@@ -384,7 +384,7 @@
                                 <p class="card-text"><small class="text-muted">{{ batch.tags }}</small></p>
                                 {% endif %}
                                 <div class="mt-auto">
-                                    <a href="{{ url_for('batches.view_batch', batch_identifier=batch.id) }}" class="btn btn-primary w-100">View</a>
+                                    <a href="{{ url_for('batches.view_batch_record', batch_identifier=batch.id) }}" class="btn btn-primary w-100">View Details</a>
                                 </div>
                             </div>
                         </div>
@@ -498,9 +498,9 @@ async function showRemainingDetails(labelCode, batchId) {
     try {
         const response = await fetch(`/api/batch-remaining-details/${batchId}`);
         const data = await response.json();
-        
+
         remainingList.innerHTML = ''; // Clear loading message
-        
+
         if (response.ok && data.remaining_items && data.remaining_items.length > 0) {
             data.remaining_items.forEach(item => {
                 const itemDiv = document.createElement('div');

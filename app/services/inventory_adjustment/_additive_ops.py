@@ -33,7 +33,7 @@ def _get_operation_group(change_type):
             return group_name, group_config
     return None, None
 
-def _universal_additive_handler(item, quantity, change_type, notes=None, created_by=None, cost_override=None, custom_expiration_date=None, custom_shelf_life_days=None, unit=None, batch_id=None):
+def _universal_additive_handler(item, quantity, change_type, notes=None, created_by=None, cost_override=None, custom_expiration_date=None, custom_shelf_life_days=None, unit=None, batch_id=None, **kwargs):
     """
     Universal handler for all additive operations.
     Processes operations based on their group classification.
@@ -144,37 +144,98 @@ def _handle_lot_creation_operation(item, quantity, change_type, notes, created_b
         logger.error(f"Error in lot creation operation: {str(e)}")
         return False, f"Lot creation failed: {str(e)}", 0
 
-def _handle_lot_crediting_operation(item, quantity, change_type, unit, notes, final_cost, created_by, batch_id=None, **kwargs):
+def _handle_lot_crediting_operation(item, quantity, change_type, unit, notes, final_cost, created_by, batch_id=None, customer=None, order_id=None, **kwargs):
     """Handle operations that credit back to existing FIFO lots"""
-    from ._fifo_ops import process_fifo_deduction
+    from app.models.inventory_lot import InventoryLot
+    from app.utils.fifo_generator import generate_fifo_code
+    from sqlalchemy import and_
 
-    logger.info(f"LOT_CREDITING: Processing {change_type} credit operation")
+    logger.info(f"LOT_CREDITING: Processing {change_type} credit operation for {quantity} {unit}")
 
-    # For crediting operations, we need to add inventory back using FIFO logic
-    # This will credit the oldest lots first (reverse FIFO for returns)
     try:
-        # For now, treat crediting operations as lot creation
-        # TODO: Implement proper FIFO crediting logic that finds and credits existing lots
-        success, message, lot_id = create_new_fifo_lot(
-            item_id=item.id,
-            quantity=quantity,
-            change_type=change_type,
-            unit=unit,
-            notes=notes,
-            cost_per_unit=final_cost,
-            created_by=created_by,
-            batch_id=batch_id # Pass batch_id here
-        )
+        # For refunds and returns, we want to credit back to existing lots using FIFO order (oldest first)
+        # This simulates returning inventory to the lots it originally came from
 
-        if not success:
-            return False, f"Failed to credit inventory: {message}", None
+        # Get depleted or partially depleted lots ordered by FIFO (oldest received first)
+        lots_to_credit = InventoryLot.query.filter(
+            and_(
+                InventoryLot.inventory_item_id == item.id,
+                InventoryLot.organization_id == item.organization_id,
+                InventoryLot.remaining_quantity < InventoryLot.original_quantity  # Lots that have been consumed from
+            )
+        ).order_by(InventoryLot.received_date.asc()).all()
 
-        logger.info(f"LOT_CREDITING: Successfully credited {quantity} {unit} for {change_type}")
-        return True, message, lot_id
+        remaining_to_credit = float(quantity)
+        lots_credited = 0
+
+        # Credit back to existing lots first (FIFO order)
+        for lot in lots_to_credit:
+            if remaining_to_credit <= 0:
+                break
+
+            # Calculate how much space is available in this lot
+            space_available = float(lot.original_quantity) - float(lot.remaining_quantity)
+
+            if space_available > 0:
+                # Credit back up to the available space
+                credit_amount = min(space_available, remaining_to_credit)
+                lot.remaining_quantity = float(lot.remaining_quantity) + credit_amount
+
+                # Create audit record for this credit
+                credit_fifo_code = generate_fifo_code(change_type, item.id, is_lot_creation=False)
+
+                history_record = UnifiedInventoryHistory(
+                    inventory_item_id=item.id,
+                    change_type=change_type,
+                    quantity_change=credit_amount,
+                    unit=lot.unit,
+                    unit_cost=lot.unit_cost,
+                    notes=f"{change_type.title()}: Credited {credit_amount} back to lot {lot.fifo_code}" + (f" | {notes}" if notes else ""),
+                    created_by=created_by,
+                    organization_id=item.organization_id,
+                    affected_lot_id=lot.id,  # Link to the specific lot that was credited
+                    batch_id=batch_id,
+                    fifo_code=credit_fifo_code
+                )
+                db.session.add(history_record)
+
+                remaining_to_credit -= credit_amount
+                lots_credited += 1
+
+                logger.info(f"LOT_CREDITING: Credited {credit_amount} back to lot {lot.id} ({lot.fifo_code}), new remaining: {lot.remaining_quantity}")
+
+        # If there's still quantity to credit after filling existing lots, create a new lot
+        if remaining_to_credit > 0:
+            logger.info(f"LOT_CREDITING: Creating new lot for overflow {remaining_to_credit} {unit}")
+
+            success, message, overflow_lot_id = create_new_fifo_lot(
+                item_id=item.id,
+                quantity=remaining_to_credit,
+                change_type=change_type,
+                unit=unit,
+                notes=f"{change_type.title()} overflow: {remaining_to_credit}" + (f" | {notes}" if notes else ""),
+                cost_per_unit=final_cost,
+                created_by=created_by,
+                batch_id=batch_id
+            )
+
+            if not success:
+                return False, f"Failed to create overflow lot: {message}", None
+
+        # Generate success message
+        if lots_credited > 0 and remaining_to_credit > 0:
+            success_msg = f"Credited to {lots_credited} existing lots and created overflow lot"
+        elif lots_credited > 0:
+            success_msg = f"Credited back to {lots_credited} existing lots using FIFO order"
+        else:
+            success_msg = f"Created new lot for {change_type}"
+
+        logger.info(f"LOT_CREDITING SUCCESS: {success_msg}")
+        return True, success_msg, float(quantity)
 
     except Exception as e:
         logger.error(f"Error in lot crediting operation {change_type}: {str(e)}")
-        return False, f"Failed to credit inventory: {str(e)}", None
+        return False, f"Failed to credit inventory: {str(e)}", 0
 
 # All additive operations now go through _universal_additive_handler
 

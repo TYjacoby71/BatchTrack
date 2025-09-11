@@ -5,24 +5,24 @@
 {% block content %}
 <div class="d-flex justify-content-between align-items-center mb-3 no-print">
     <div class="d-flex align-items-center">
-        <h2>Batch Details</h2>
+        <h2>Batch Record</h2>
         <div class="ms-3">
             {% if prev_batch %}
-            <a href="{{ url_for('batches.view_batch', batch_identifier=prev_batch.id) }}" class="btn btn-outline-secondary btn-sm me-1" title="Previous {{ batch.status }} batch">
+            <a href="{{ url_for('batches.view_batch_record', batch_identifier=prev_batch.id) }}" class="btn btn-outline-secondary btn-sm me-1" title="Previous batch">
                 <i class="fas fa-chevron-left"></i>
             </a>
             {% else %}
-            <button class="btn btn-outline-secondary btn-sm me-1" disabled title="No previous {{ batch.status }} batch">
+            <button class="btn btn-outline-secondary btn-sm me-1" disabled title="No previous batch">
                 <i class="fas fa-chevron-left"></i>
             </button>
             {% endif %}
 
             {% if next_batch %}
-            <a href="{{ url_for('batches.view_batch', batch_identifier=next_batch.id) }}" class="btn btn-outline-secondary btn-sm" title="Next {{ batch.status }} batch">
+            <a href="{{ url_for('batches.view_batch_record', batch_identifier=next_batch.id) }}" class="btn btn-outline-secondary btn-sm" title="Next batch">
                 <i class="fas fa-chevron-right"></i>
             </a>
             {% else %}
-            <button class="btn btn-outline-secondary btn-sm" disabled title="No next {{ batch.status }} batch">
+            <button class="btn btn-outline-secondary btn-sm" disabled title="No next batch">
                 <i class="fas fa-chevron-right"></i>
             </button>
             {% endif %}
@@ -378,7 +378,7 @@
 </div>
 
 <!-- Print Notes Section (only visible when printing) -->
-<div class="print-only notes-section" style="display: none;">
+<div class="print-only" style="display: none;">
     <div class="section-header">Batch Notes</div>
     {% if batch.notes %}
     <div class="notes-content">

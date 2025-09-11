@@ -91,24 +91,21 @@ def list_batches():
     except Exception as e:
         logger.error(f"Error in list_batches: {str(e)}")
         flash(f'Error loading batches: {str(e)}', 'error')
-        # Assuming there's a route for the dashboard, e.g., 'app_routes.dashboard'
-        # If not, you might redirect to a more generic error page or the list itself.
-        # For this example, let's assume 'app_routes.dashboard' exists.
-        # If 'app_routes' is not imported or defined, this will fail.
-        # Replace with a valid redirect if necessary.
-        try:
-            # Attempt to import app_routes for redirection
-            from . import app_routes # Assuming app_routes is another blueprint
-            return redirect(url_for('app_routes.dashboard'))
-        except ImportError:
-            logger.warning("Could not import 'app_routes' to redirect to dashboard. Redirecting to list_batches.")
-            return redirect(url_for('batches.list_batches'))
+        # Return empty batch data to prevent template errors
+        return render_template('pages/batches/batches_list.html',
+            batches=[],
+            all_recipes=[],
+            in_progress_pagination=None,
+            completed_pagination=None,
+            InventoryItem=InventoryItem,
+            TimezoneUtils=TimezoneUtils,
+            visible_columns=['recipe', 'timestamp', 'total_cost', 'product_quantity', 'tags'])
 
 
 @batches_bp.route('/<batch_identifier>')
 @login_required
-def view_batch(batch_identifier):
-    """View a specific batch"""
+def view_batch_record(batch_identifier):
+    """View a specific batch record - handles completed, failed, and cancelled batches"""
     try:
         print(f"DEBUG: view_batch called with batch_identifier: {batch_identifier}")
 
@@ -125,14 +122,15 @@ def view_batch(batch_identifier):
 
         print(f"DEBUG: Found batch: {batch.label_code}, status: {batch.status}")
 
+        # Redirect in-progress batches to the editable view
         if batch.status == 'in_progress':
             print(f"DEBUG: Redirecting to in_progress view")
             return redirect(url_for('batches.view_batch_in_progress', batch_identifier=batch.id))
 
-        # Get navigation data
+        # Get navigation data for completed, failed, or cancelled batches
         nav_data = BatchManagementService.get_batch_navigation_data(batch)
 
-        print(f"DEBUG: Rendering view_batch.html template for {batch.status} batch")
+        print(f"DEBUG: Rendering batch record view for {batch.status} batch")
         return render_template('pages/batches/view_batch.html',
             batch=batch,
             current_time=datetime.now(),
@@ -158,7 +156,7 @@ def update_batch_notes(batch_id):
             if success:
                 return jsonify({'message': message, 'redirect': url_for('batches.list_batches')})
             else:
-                return jsonify({'error': message}), 403 if 'Permission' in message else 500
+                return jsonify({'error': message}), 500 if 'Permission' not in message else 403
 
         if success:
             flash(message, 'success')
@@ -176,12 +174,12 @@ def update_batch_notes(batch_id):
 @batches_bp.route('/in-progress/<batch_identifier>')
 @login_required
 def view_batch_in_progress(batch_identifier):
-    """View batch in progress with full editing capabilities"""
+    """View active batch with full editing capabilities"""
     try:
         if not isinstance(batch_identifier, int):
             batch_identifier = int(batch_identifier)
 
-        print(f"DEBUG: Looking for batch {batch_identifier}")
+        print(f"DEBUG: Looking for active batch {batch_identifier}")
 
         batch = BatchService.get_batch_by_identifier(batch_identifier)
         if not batch:
@@ -194,9 +192,16 @@ def view_batch_in_progress(batch_identifier):
             flash(error_msg, 'error')
             return redirect(url_for('batches.list_batches'))
 
+        # If batch is no longer in progress, redirect to the batch record view
         if batch.status != 'in_progress':
-            flash('This batch is no longer in progress and cannot be edited.', 'warning')
-            return redirect(url_for('batches.view_batch', batch_identifier=batch_identifier))
+            status_message = {
+                'completed': 'This batch has been completed.',
+                'failed': 'This batch has failed.',
+                'cancelled': 'This batch has been cancelled.'
+            }.get(batch.status, 'This batch is no longer active.')
+
+            flash(f'{status_message} Viewing batch record.', 'info')
+            return redirect(url_for('batches.view_batch_record', batch_identifier=batch_identifier))
 
         # Get navigation data
         nav_data = BatchManagementService.get_batch_navigation_data(batch)
@@ -277,7 +282,7 @@ def api_start_batch():
         return jsonify({'success': False, 'message': str(e)}), 500
 
 # Register sub-blueprints
-batches_bp.register_blueprint(start_batch_bp, url_prefix='/start-batch')
-batches_bp.register_blueprint(cancel_batch_bp, url_prefix='/batches')
-batches_bp.register_blueprint(add_extra_bp, url_prefix='/batches/add-extra')
-batches_bp.register_blueprint(finish_batch_bp, url_prefix='/batches/finish-batch')
+batches_bp.register_blueprint(start_batch_bp, url_prefix='/start')
+batches_bp.register_blueprint(finish_batch_bp, url_prefix='/finish-batch')
+batches_bp.register_blueprint(cancel_batch_bp, url_prefix='')
+batches_bp.register_blueprint(add_extra_bp, url_prefix='/add-extra')

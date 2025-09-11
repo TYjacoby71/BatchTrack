@@ -16,7 +16,7 @@ def cancel_batch(batch_id):
 
         if not success:
             flash(result, "error")
-            return redirect(url_for('batches.view_batch_in_progress', batch_identifier=batch_id))
+            return redirect(url_for('batches.view_batch_record', batch_identifier=batch_id))
 
         # result is restoration_summary on success
         restoration_summary = result
@@ -33,4 +33,4 @@ def cancel_batch(batch_id):
 
     except Exception as e:
         flash(f"Error cancelling batch: {str(e)}", "error")
-        return redirect(url_for('batches.view_batch_in_progress', batch_identifier=batch_id))
+        return redirect(url_for('batches.view_batch_record', batch_identifier=batch_id))
