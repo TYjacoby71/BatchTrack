@@ -1,0 +1,33 @@
+Core Substance Categories
+Oils (Liquid Fats): (Default Density: 0.92)
+For all liquid-at-room-temperature oils, regardless of use (e.g., Olive, Avocado, Sunflower, Fragrance).
+Butters & Solid Fats: (Default Density: 0.91)
+For all solid-at-room-temperature fats (e.g., Shea Butter, Cocoa Butter, Lard, Tallow, Shortening).
+Waxes: (Default Density: 0.94)
+For all true waxes (e.g., Beeswax, Soy Wax, Carnauba Wax).
+Liquids (Aqueous): (Default Density: 1.01)
+For all water-based liquids (e.g., Distilled Water, Goat Milk, Hydrosols, Juices, Vinegars).
+Sugars & Syrups: (Default Density: 1.10)
+For all forms of sugar and viscous syrups (e.g., Granulated Sugar, Honey, Maple Syrup, Malt Extract).
+Flours & Powders (Organic): (Default Density: 0.58)
+For all fine powders derived from organic matter (e.g., All-Purpose Flour, Almond Flour, Cocoa Powder, Colloidal Oatmeal).
+Starches & Thickeners: (Default Density: 0.70)
+For refined starches and gums used for thickening (e.g., Cornstarch, Arrowroot, Pectin, Xanthan Gum).
+Salts & Minerals (Crystalline): (Default Density: 1.80)
+For all crystalline salts and minerals (e.g., Table Salt, Epsom Salt, Citric Acid, Lye, Gypsum).
+Clays: (Default Density: 2.50)
+For all cosmetic and crafting clays (e.g., Kaolin Clay, Bentonite Clay, Rhassoul Clay).
+Colorants (Pigments): (Default Density: 3.50)
+For all inert pigment powders (e.g., Mica, Titanium Dioxide, Iron Oxides).
+Herbs & Spices (Dried Botanicals): (Default Density: 0.45)
+For all dried, plant-based seasonings and additives (e.g., Ground Cinnamon, Dried Oregano, Hops).
+Fruits, Nuts & Seeds (Whole/Chopped): (Default Density: 0.65)
+For non-powdered, whole or partial botanicals (e.g., Strawberries, Almonds, Flaked Oats).
+Extracts & Alcohols (Solvents): (Default Density: 0.88)
+For concentrated extracts and pure alcohols (e.g., Vanilla Extract, Ethanol, Isopropyl Alcohol).
+Surfactants & Emulsifiers: (Default Density: 1.00)
+For cosmetic ingredients that interact with oil and water (e.g., Emulsifying Wax NF, SLSa, Cetyl Alcohol).
+Preservatives & Additives: (Default Density: 1.15)
+A catch-all for functional, non-bulk chemical ingredients (e.g., Optiphen, Vitamin E Oil, Yeast Nutrient).
+Miscellaneous: (Default Density: 1.0)
+A generic fallback for items that truly do not fit elsewhere.
