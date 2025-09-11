@@ -39,24 +39,57 @@ def upgrade():
     # 3. Ensure the proper organization+name constraint exists
     print("2. Ensuring proper organization+name constraint...")
     try:
-        op.create_unique_constraint('_org_name_uc', 'inventory_item', ['organization_id', 'name'])
-        print("   ✅ Created _org_name_uc constraint")
+        # Check if constraint already exists before creating
+        constraint_exists = connection.execute(text("""
+            SELECT COUNT(*) 
+            FROM information_schema.table_constraints 
+            WHERE table_name = 'inventory_item' 
+            AND constraint_name = '_org_name_uc'
+        """)).scalar()
+        
+        if constraint_exists == 0:
+            op.create_unique_constraint('_org_name_uc', 'inventory_item', ['organization_id', 'name'])
+            print("   ✅ Created _org_name_uc constraint")
+        else:
+            print("   ✅ _org_name_uc constraint already exists")
     except Exception as e:
-        print(f"   ⚠️  Constraint may already exist: {e}")
+        print(f"   ⚠️  Error with constraint: {e}")
 
     # 4. Ensure proper indexes exist
     print("3. Ensuring proper indexes...")
     try:
-        op.create_index('ix_inventory_item_name', 'inventory_item', ['name'])
-        print("   ✅ Created name index")
+        # Check if name index exists
+        name_index_exists = connection.execute(text("""
+            SELECT COUNT(*) 
+            FROM pg_indexes 
+            WHERE tablename = 'inventory_item' 
+            AND indexname = 'ix_inventory_item_name'
+        """)).scalar()
+        
+        if name_index_exists == 0:
+            op.create_index('ix_inventory_item_name', 'inventory_item', ['name'])
+            print("   ✅ Created name index")
+        else:
+            print("   ✅ Name index already exists")
     except Exception as e:
-        print(f"   ⚠️  Index may already exist")
+        print(f"   ⚠️  Error with name index: {e}")
 
     try:
-        op.create_index('ix_inventory_item_organization_id', 'inventory_item', ['organization_id'])
-        print("   ✅ Created organization_id index")
+        # Check if organization_id index exists
+        org_index_exists = connection.execute(text("""
+            SELECT COUNT(*) 
+            FROM pg_indexes 
+            WHERE tablename = 'inventory_item' 
+            AND indexname = 'ix_inventory_item_organization_id'
+        """)).scalar()
+        
+        if org_index_exists == 0:
+            op.create_index('ix_inventory_item_organization_id', 'inventory_item', ['organization_id'])
+            print("   ✅ Created organization_id index")
+        else:
+            print("   ✅ Organization_id index already exists")
     except Exception as e:
-        print(f"   ⚠️  Index may already exist")
+        print(f"   ⚠️  Error with organization_id index: {e}")
 
     print("=== INVENTORY CONSTRAINT FIX COMPLETE ===")
 
