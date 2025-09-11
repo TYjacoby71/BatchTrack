@@ -210,21 +210,48 @@ def get_effective_organization_id():
 
 def get_effective_organization():
     """Get the effective organization for the current user context"""
-    if current_user.user_type == 'developer':
-        # Developers can view organizations via session
-        org_id = session.get('dev_selected_org_id')
-        if org_id:
-            org = Organization.query.get(org_id)
-            if not org:
-                # Organization was deleted - clear masquerade
-                session.pop('dev_selected_org_id', None)
-                session.pop('dev_masquerade_context', None)
+    from ..extensions import db
+    
+    try:
+        if current_user.user_type == 'developer':
+            # Developers can view organizations via session
+            org_id = session.get('dev_selected_org_id')
+            if org_id:
+                try:
+                    from ..models import Organization
+                    org = Organization.query.get(org_id)
+                    if not org:
+                        # Organization was deleted - clear masquerade
+                        session.pop('dev_selected_org_id', None)
+                        session.pop('dev_masquerade_context', None)
+                        return None
+                    return org
+                except Exception as e:
+                    print(f"---!!! DEVELOPER ORG QUERY ERROR !!!---")
+                    print(f"Error: {e}")
+                    print("--------------------------------------")
+                    db.session.rollback()
+                    return None
+            return None
+        else:
+            # Regular users use their organization
+            try:
+                return current_user.organization
+            except Exception as e:
+                print(f"---!!! USER ORGANIZATION QUERY ERROR !!!---")
+                print(f"Error: {e}")
+                print("-------------------------------------------")
+                db.session.rollback()
                 return None
-            return org
+    except Exception as e:
+        print(f"---!!! GENERAL ORGANIZATION ACCESS ERROR !!!---")
+        print(f"Error: {e}")
+        print("-----------------------------------------------")
+        try:
+            db.session.rollback()
+        except:
+            pass
         return None
-    else:
-        # Regular users use their organization
-        return current_user.organization
 
 def is_organization_owner():
     """Check if current user is organization owner"""
@@ -338,49 +365,68 @@ class AuthorizationHierarchy:
         2. Check if tier allows permission
         3. Check if user role grants permission
         """
+        from ..extensions import db
+        
+        try:
+            # Developers have full access - they are super admins
+            if user.user_type == 'developer':
+                # For developer permissions, check if they have the specific developer permission
+                if permission_name.startswith('developer.'):
+                    return True  # All developers get all developer permissions
 
-        # Developers have full access - they are super admins
-        if user.user_type == 'developer':
-            # For developer permissions, check if they have the specific developer permission
-            if permission_name.startswith('developer.'):
-                return True  # All developers get all developer permissions
+                # For organization permissions when in customer view mode
+                selected_org_id = session.get('dev_selected_org_id')
+                if not selected_org_id:
+                    return True  # Developer mode - full access to all organization permissions too
+                # If viewing a specific organization, continue with organization checks
 
-            # For organization permissions when in customer view mode
-            selected_org_id = session.get('dev_selected_org_id')
-            if not selected_org_id:
-                return True  # Developer mode - full access to all organization permissions too
-            # If viewing a specific organization, continue with organization checks
+            # Get organization (handle developer customer view)
+            organization = get_effective_organization()
 
-        # Get organization (handle developer customer view)
-        organization = get_effective_organization()
+            if not organization:
+                return False
 
-        if not organization:
-            return False
+            # Step 1: Check subscription standing
+            subscription_ok, reason = AuthorizationHierarchy.check_subscription_standing(organization)
+            if not subscription_ok:
+                logger.warning(f"Subscription check failed for org {organization.id}: {reason}")
+                return False
 
-        # Step 1: Check subscription standing
-        subscription_ok, reason = AuthorizationHierarchy.check_subscription_standing(organization)
-        if not subscription_ok:
-            logger.warning(f"Subscription check failed for org {organization.id}: {reason}")
-            return False
+            # Step 2: Check if subscription tier allows this permission
+            tier_permissions = AuthorizationHierarchy.get_tier_allowed_permissions(organization)
+            if permission_name not in tier_permissions:
+                logger.debug(f"Permission {permission_name} not allowed by tier {organization.effective_subscription_tier}")
+                return False
 
-        # Step 2: Check if subscription tier allows this permission
-        tier_permissions = AuthorizationHierarchy.get_tier_allowed_permissions(organization)
-        if permission_name not in tier_permissions:
-            logger.debug(f"Permission {permission_name} not allowed by tier {organization.effective_subscription_tier}")
-            return False
-
-        # Step 3: Check user role permissions
-        # Organization owners get all tier-allowed permissions
-        if user.user_type == 'organization_owner' or user.user_type == 'developer':
-            return True
-
-        # Other users need role-based permissions
-        user_roles = user.get_active_roles()
-        for role in user_roles:
-            if role.has_permission(permission_name):
+            # Step 3: Check user role permissions
+            # Organization owners get all tier-allowed permissions
+            if user.user_type == 'organization_owner' or user.user_type == 'developer':
                 return True
 
-        return False
+            # Other users need role-based permissions
+            try:
+                user_roles = user.get_active_roles()
+                for role in user_roles:
+                    if role.has_permission(permission_name):
+                        return True
+            except Exception as role_error:
+                print(f"---!!! USER ROLES ERROR IN AUTHORIZATION !!!---")
+                print(f"Error: {role_error}")
+                print("----------------------------------------------")
+                db.session.rollback()
+                return False
+
+            return False
+            
+        except Exception as e:
+            print(f"---!!! AUTHORIZATION CHECK ERROR !!!---")
+            print(f"Error: {e}")
+            print("--------------------------------------")
+            try:
+                db.session.rollback()
+            except:
+                pass
+            return False
 
     @staticmethod
     def get_user_effective_permissions(user):
