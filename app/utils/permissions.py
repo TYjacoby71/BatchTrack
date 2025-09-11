@@ -211,13 +211,13 @@ def get_effective_organization_id():
 def get_effective_organization():
     """Get the effective organization for the current user context"""
     from ..extensions import db
-    
+
     # Always rollback any pending failed transaction first
     try:
         db.session.rollback()
     except:
         pass
-    
+
     try:
         if current_user.user_type == 'developer':
             # Developers can view organizations via session
@@ -378,13 +378,13 @@ class AuthorizationHierarchy:
         3. Check if user role grants permission
         """
         from ..extensions import db
-        
+
         # Always rollback any pending failed transaction first
         try:
             db.session.rollback()
         except:
             pass
-        
+
         try:
             # Developers have full access - they are super admins
             if user.user_type == 'developer':
@@ -428,9 +428,7 @@ class AuthorizationHierarchy:
                     if role.has_permission(permission_name):
                         return True
             except Exception as role_error:
-                print(f"---!!! USER ROLES ERROR IN AUTHORIZATION !!!---")
-                print(f"Error: {role_error}")
-                print("----------------------------------------------")
+                logger.warning(f"User roles error in authorization: {role_error}")
                 try:
                     db.session.rollback()
                 except:
@@ -438,7 +436,7 @@ class AuthorizationHierarchy:
                 return False
 
             return False
-            
+
         except Exception as e:
             print(f"---!!! AUTHORIZATION CHECK ERROR !!!---")
             print(f"Error: {e}")

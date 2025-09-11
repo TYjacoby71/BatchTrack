@@ -64,9 +64,7 @@ def dashboard():
                 recipes_query = recipes_query.filter_by(organization_id=current_user.organization_id)
             recipes = recipes_query.all()
         except Exception as recipe_error:
-            print("---!!! RECIPE QUERY ERROR (ORIGINAL SIN?) !!!---")
-            print(f"Error: {recipe_error}")
-            print("------------------------------------------------")
+            logger.warning(f"Recipe query error: {recipe_error}")
             db.session.rollback()
             recipes = []
 
