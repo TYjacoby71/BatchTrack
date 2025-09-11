@@ -51,26 +51,26 @@ def upgrade():
             # Update reference_category to match the category name for items that have ingredient_category_id
             bind.execute(text("""
                 UPDATE global_item 
-                SET reference_category = category.name
-                FROM category 
-                WHERE global_item.ingredient_category_id = category.id 
+                SET reference_category = ingredient_category.name
+                FROM ingredient_category 
+                WHERE global_item.ingredient_category_id = ingredient_category.id 
                 AND (global_item.reference_category IS NULL 
-                     OR global_item.reference_category != category.name)
+                     OR global_item.reference_category != ingredient_category.name)
             """))
             print("   ✅ Updated reference_category from category relationships")
             
         except Exception as e:
             print(f"   ⚠️  Could not update reference_category: {e}")
     
-    # 2) Drop reference_category_name from category table if it exists
-    if table_exists('category') and column_exists('category', 'reference_category_name'):
-        print("   Removing redundant reference_category_name from category table...")
+    # 2) Drop reference_category_name from ingredient_category table if it exists
+    if table_exists('ingredient_category') and column_exists('ingredient_category', 'reference_category_name'):
+        print("   Removing redundant reference_category_name from ingredient_category table...")
         try:
-            with op.batch_alter_table('category', schema=None) as batch_op:
+            with op.batch_alter_table('ingredient_category', schema=None) as batch_op:
                 batch_op.drop_column('reference_category_name')
-            print("   ✅ Removed reference_category_name from category table")
+            print("   ✅ Removed reference_category_name from ingredient_category table")
         except Exception as e:
-            print(f"   ⚠️  Could not drop reference_category_name from category: {e}")
+            print(f"   ⚠️  Could not drop reference_category_name from ingredient_category: {e}")
     
     # 3) Ensure all global items have proper reference_category values
     if table_exists('global_item'):
@@ -82,7 +82,7 @@ def upgrade():
             bind.execute(text("""
                 UPDATE global_item 
                 SET reference_category = COALESCE(
-                    (SELECT category.name FROM category WHERE category.id = global_item.ingredient_category_id),
+                    (SELECT ingredient_category.name FROM ingredient_category WHERE ingredient_category.id = global_item.ingredient_category_id),
                     'Miscellaneous'
                 )
                 WHERE reference_category IS NULL
@@ -101,21 +101,21 @@ def downgrade():
     """
     print("🔄 Restoring reference_category_name field...")
     
-    # Add back reference_category_name to category table
-    if table_exists('category') and not column_exists('category', 'reference_category_name'):
-        print("   Adding reference_category_name back to category table...")
+    # Add back reference_category_name to ingredient_category table
+    if table_exists('ingredient_category') and not column_exists('ingredient_category', 'reference_category_name'):
+        print("   Adding reference_category_name back to ingredient_category table...")
         try:
-            with op.batch_alter_table('category', schema=None) as batch_op:
+            with op.batch_alter_table('ingredient_category', schema=None) as batch_op:
                 batch_op.add_column(sa.Column('reference_category_name', sa.String(length=255), nullable=True))
             
             # Populate it with the category name
             bind = op.get_bind()
             bind.execute(text("""
-                UPDATE category 
+                UPDATE ingredient_category 
                 SET reference_category_name = name 
                 WHERE reference_category_name IS NULL
             """))
-            print("   ✅ Restored reference_category_name to category table")
+            print("   ✅ Restored reference_category_name to ingredient_category table")
             
         except Exception as e:
             print(f"   ⚠️  Could not restore reference_category_name: {e}")
