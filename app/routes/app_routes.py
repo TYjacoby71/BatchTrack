@@ -4,7 +4,7 @@ from flask_login import login_required, current_user
 from app.utils.permissions import require_permission, get_effective_organization_id, permission_required, any_permission_required
 from app.services.combined_inventory_alerts import CombinedInventoryAlertService
 from app.services.dashboard_alerts import DashboardAlertService
-from app.blueprints.expiration.services import ExpirationService
+from app.services.expiration.services import ExpirationService
 import logging
 
 logger = logging.getLogger(__name__)
@@ -27,35 +27,102 @@ def dashboard():
 
         # Verify the organization still exists
         from app.models import Organization
-        selected_org = Organization.query.get(selected_org_id)
-        if not selected_org:
-            session.pop('dev_selected_org_id', None)
-            session.pop('dev_masquerade_context', None)
-            flash('Selected organization no longer exists. Masquerade cleared.', 'error')
+        from ..extensions import db
+
+        try:
+            selected_org = Organization.query.get(selected_org_id)
+            if not selected_org:
+                session.pop('dev_selected_org_id', None)
+                session.pop('dev_masquerade_context', None)
+                flash('Selected organization no longer exists. Masquerade cleared.', 'error')
+                return redirect(url_for('developer.dashboard'))
+        except Exception as org_error:
+            print("---!!! ORGANIZATION QUERY ERROR (ORIGINAL SIN?) !!!---")
+            print(f"Error: {org_error}")
+            print("----------------------------------------------------")
+            db.session.rollback()
+            flash('Database error accessing organization. Please try again.', 'error')
             return redirect(url_for('developer.dashboard'))
 
-    recipes_query = Recipe.query
-    if current_user.organization_id:
-        recipes_query = recipes_query.filter_by(organization_id=current_user.organization_id)
-    recipes = recipes_query.all()
+    from ..extensions import db
 
-    batch_query = Batch.query.filter_by(status='in_progress')
-    if current_user.organization_id:
-        batch_query = batch_query.filter_by(organization_id=current_user.organization_id)
-    active_batch = batch_query.first()
+    # Initialize with safe defaults
+    recipes = []
+    active_batch = None
+    alert_data = {'alerts': [], 'total_alerts': 0, 'hidden_count': 0}
+    low_stock_ingredients = []
+    expiration_summary = {'expired_fifo': 0, 'expiring_fifo': 0, 'expired_products': 0, 'expiring_products': 0}
 
-    # Get unified dashboard alerts with dismissed alerts from session
-    dismissed_alerts = session.get('dismissed_alerts', [])
-    alert_data = DashboardAlertService.get_dashboard_alerts(
-        max_alerts=3,
-        dismissed_alerts=dismissed_alerts
-    )
+    try:
+        # Force clean state
+        db.session.rollback()
 
-    # Get additional alert data for compatibility
-    low_stock_ingredients = CombinedInventoryAlertService.get_low_stock_ingredients()
-    expiration_summary = ExpirationService.get_expiration_summary()
+        # Get recipes with explicit error catching
+        try:
+            recipes_query = Recipe.query
+            if current_user.organization_id:
+                recipes_query = recipes_query.filter_by(organization_id=current_user.organization_id)
+            recipes = recipes_query.all()
+        except Exception as recipe_error:
+            print("---!!! RECIPE QUERY ERROR (ORIGINAL SIN?) !!!---")
+            print(f"Error: {recipe_error}")
+            print("------------------------------------------------")
+            db.session.rollback()
+            recipes = []
 
-    # Dashboard stock checking removed - users should use recipe planning page
+        # Get active batch with explicit error catching
+        try:
+            batch_query = Batch.query.filter_by(status='in_progress')
+            if current_user.organization_id:
+                batch_query = batch_query.filter_by(organization_id=current_user.organization_id)
+            active_batch = batch_query.first()
+        except Exception as batch_error:
+            print("---!!! BATCH QUERY ERROR (ORIGINAL SIN?) !!!---")
+            print(f"Error: {batch_error}")
+            print("-----------------------------------------------")
+            db.session.rollback()
+            active_batch = None
+
+        # Get dashboard alerts with explicit error catching
+        try:
+            dismissed_alerts = session.get('dismissed_alerts', [])
+            alert_data = DashboardAlertService.get_dashboard_alerts(
+                max_alerts=3,
+                dismissed_alerts=dismissed_alerts
+            )
+        except Exception as alert_error:
+            print("---!!! DASHBOARD ALERTS ERROR (ORIGINAL SIN?) !!!---")
+            print(f"Error: {alert_error}")
+            print("----------------------------------------------------")
+            db.session.rollback()
+            alert_data = {'alerts': [], 'total_alerts': 0, 'hidden_count': 0}
+
+        # Get inventory alerts with explicit error catching
+        try:
+            low_stock_ingredients = CombinedInventoryAlertService.get_low_stock_ingredients()
+        except Exception as inv_error:
+            print("---!!! INVENTORY ALERTS ERROR (ORIGINAL SIN?) !!!---")
+            print(f"Error: {inv_error}")
+            print("----------------------------------------------------")
+            db.session.rollback()
+            low_stock_ingredients = []
+
+        # Get expiration summary with explicit error catching
+        try:
+            expiration_summary = ExpirationService.get_expiration_summary()
+        except Exception as exp_error:
+            print("---!!! EXPIRATION SERVICE ERROR (ORIGINAL SIN?) !!!---")
+            print(f"Error: {exp_error}")
+            print("------------------------------------------------------")
+            db.session.rollback()
+            expiration_summary = {'expired_fifo': 0, 'expiring_fifo': 0, 'expired_products': 0, 'expiring_products': 0}
+
+    except Exception as e:
+        print("---!!! GENERAL DASHBOARD ERROR !!!---")
+        print(f"Error: {e}")
+        print("------------------------------------")
+        db.session.rollback()
+        flash('Dashboard temporarily unavailable. Please try refreshing the page.', 'error')
 
     return render_template("dashboard.html",
                          recipes=recipes,

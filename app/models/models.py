@@ -334,6 +334,10 @@ class User(UserMixin, db.Model):
             from .user_role_assignment import UserRoleAssignment
             from .role import Role
             from .developer_role import DeveloperRole
+            from ..extensions import db
+
+            # Force rollback before attempting query
+            db.session.rollback()
 
             assignments = UserRoleAssignment.query.filter_by(
                 user_id=self.id,
@@ -355,7 +359,19 @@ class User(UserMixin, db.Model):
 
             return roles
         except Exception as e:
+            print("---!!! USER ROLE ASSIGNMENT ERROR (POTENTIAL ORIGINAL SIN?) !!!---")
             print(f"Error getting active roles for user {self.id}: {e}")
+            print(f"Error type: {type(e).__name__}")
+            print(f"Error details: {str(e)}")
+            print("------------------------------------------------------------------")
+            
+            # Try to rollback and clean up
+            try:
+                from ..extensions import db
+                db.session.rollback()
+            except:
+                pass
+            
             return []
 
     def has_permission(self, permission_name):
