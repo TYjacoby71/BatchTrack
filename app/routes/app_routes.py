@@ -4,7 +4,7 @@ from flask_login import login_required, current_user
 from app.utils.permissions import require_permission, get_effective_organization_id, permission_required, any_permission_required
 from app.services.combined_inventory_alerts import CombinedInventoryAlertService
 from app.services.dashboard_alerts import DashboardAlertService
-from app.services.expiration.services import ExpirationService
+from app.blueprints.expiration.services import ExpirationService
 import logging
 
 logger = logging.getLogger(__name__)
