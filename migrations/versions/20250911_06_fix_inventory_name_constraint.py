@@ -11,7 +11,7 @@ from sqlalchemy import text
 
 # revision identifiers, used by Alembic.
 revision = '20250911_06_fix_inventory_name_constraint'
-down_revision = '20250911_04_add_missing_timestamp_columns_to_ingredient_category'
+down_revision = '20250911_05_add_missing_timestamp_columns_to_global_item'
 branch_labels = None
 depends_on = None
 
