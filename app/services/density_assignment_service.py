@@ -21,7 +21,7 @@ class DensityAssignmentService:
                     'name': gi.name,
                     'density_g_per_ml': gi.density,
                     'aliases': gi.aka_names or [],
-                    'category': gi.reference_category or 'Other'
+                    'category': gi.ingredient_category.name if gi.ingredient_category else 'Other'
                 })
             return {'common_densities': payload_items}
         except Exception as e:
