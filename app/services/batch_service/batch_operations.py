@@ -371,23 +371,11 @@ class BatchOperationsService(BaseService):
                         quantity=extra_cons.quantity_used,
                         change_type='refunded',
                         unit=extra_cons.unit,
-                        notes=f"Extra ingredient refunded from cancelled batch {batch.label_code}",
+                        notes=f"Extra consumable refunded from cancelled batch {batch.label_code}",
                         created_by=current_user.id,
                         batch_id=batch.id
                     )
                     restoration_summary.append(f"{extra_cons.quantity_used} {extra_cons.unit} of {item.name}")
-                container = extra_container.container
-                if container:
-                    process_inventory_adjustment(
-                        item_id=container.id,
-                        quantity=extra_container.quantity_used,
-                        change_type='refunded',
-                        unit=container.unit,
-                        notes=f"Extra container refunded from cancelled batch {batch.label_code}",
-                        created_by=current_user.id,
-                        batch_id=batch.id
-                    )
-                    restoration_summary.append(f"{extra_container.quantity_used} {container.unit} of {container.name}")
 
             # Update batch status
             batch.status = 'cancelled'
@@ -457,33 +445,40 @@ class BatchOperationsService(BaseService):
                     errors.append({"item": container_item.name, "message": f"Invalid reason: {reason}"})
                     continue
 
-                # Check stock
-                if container_item.quantity < needed_amount:
+                # Check stock using FIFO-aware availability
+                try:
+                    from app.services.inventory_adjustment._fifo_ops import calculate_total_available_inventory
+                    available_qty = calculate_total_available_inventory(container_item.id)
+                except Exception:
+                    available_qty = float(container_item.quantity or 0)
+
+                if available_qty < needed_amount:
                     errors.append({
                         "item": container_item.name,
-                        "message": f"Not enough in stock. Available: {container_item.quantity}, Needed: {needed_amount}",
+                        "message": f"Not enough in stock. Available: {available_qty}, Needed: {needed_amount}",
                         "needed": needed_amount,
-                        "available": container_item.quantity,
+                        "available": available_qty,
                         "needed_unit": "units"
                     })
                     continue
 
                 # Deduct inventory
                 adjustment_type = "damaged" if reason == "damaged" else "batch"
-                result = process_inventory_adjustment(
+                success, message = process_inventory_adjustment(
                     item_id=container_item.id,
                     quantity=-needed_amount,
                     change_type=adjustment_type,
-                    unit=container_item.unit,
+                    unit=(container_item.unit or 'count'),
                     notes=f"Extra container for batch {batch.label_code} - {reason}",
                     batch_id=batch.id,
-                    created_by=current_user.id
+                    created_by=current_user.id,
+                    defer_commit=True
                 )
 
-                if not result:
+                if not success:
                     errors.append({
                         "item": container_item.name,
-                        "message": "Failed to deduct from inventory",
+                        "message": message or "Failed to deduct from inventory",
                         "needed": needed_amount,
                         "needed_unit": "units"
                     })
@@ -508,32 +503,49 @@ class BatchOperationsService(BaseService):
                     continue
 
                 try:
-                    # Handle ingredient conversion
+                    # Convert needed amount into the inventory unit for accurate stock check
                     conversion = ConversionEngine.convert_units(
                         item["quantity"],
-                        item["unit"],
+                        item.get("unit") or inventory_item.unit,
                         inventory_item.unit,
                         ingredient_id=inventory_item.id,
                         density=inventory_item.density or (inventory_item.category.default_density if inventory_item.category else None)
                     )
-                    needed_amount = conversion['converted_value']
+                    needed_amount = float(conversion['converted_value'])
+
+                    # FIFO-aware stock check
+                    try:
+                        from app.services.inventory_adjustment._fifo_ops import calculate_total_available_inventory
+                        available_qty = calculate_total_available_inventory(inventory_item.id)
+                    except Exception:
+                        available_qty = float(inventory_item.quantity or 0)
+
+                    if available_qty < needed_amount:
+                        errors.append({
+                            "item": inventory_item.name,
+                            "message": f"Not enough in stock. Available: {available_qty}, Needed: {needed_amount}",
+                            "needed": needed_amount,
+                            "needed_unit": inventory_item.unit
+                        })
+                        continue
 
                     # Use centralized inventory adjustment
-                    result = process_inventory_adjustment(
+                    success, message = process_inventory_adjustment(
                         item_id=inventory_item.id,
                         quantity=-needed_amount,
                         change_type='batch',
                         unit=inventory_item.unit,
                         notes=f"Extra ingredient for batch {batch.label_code}",
                         batch_id=batch.id,
-                        created_by=current_user.id
+                        created_by=current_user.id,
+                        defer_commit=True
                     )
 
-                    if not result:
+                    if not success:
                         errors.append({
                             "item": inventory_item.name,
-                            "message": "Not enough in stock",
-                            "needed": needed_amount,
+                            "message": message or "Not enough in stock",
+                            "needed": float(needed_amount),
                             "needed_unit": inventory_item.unit
                         })
                     else:
@@ -541,7 +553,7 @@ class BatchOperationsService(BaseService):
                         new_extra = ExtraBatchIngredient(
                             batch_id=batch.id,
                             inventory_item_id=inventory_item.id,
-                            quantity_used=needed_amount,
+                            quantity_used=float(needed_amount),
                             unit=inventory_item.unit,
                             cost_per_unit=inventory_item.cost_per_unit,
                             organization_id=current_user.organization_id
@@ -551,6 +563,79 @@ class BatchOperationsService(BaseService):
                 except ValueError as e:
                     errors.append({
                         "item": inventory_item.name,
+                        "message": str(e)
+                    })
+
+            # Process extra consumables
+            for cons in extra_consumables:
+                consumable_item = InventoryItem.query.get(cons["item_id"])
+                if not consumable_item:
+                    errors.append({"item": "Unknown", "message": "Consumable not found"})
+                    continue
+
+                try:
+                    # Convert to inventory unit for check
+                    conversion = ConversionEngine.convert_units(
+                        cons["quantity"],
+                        cons.get("unit") or consumable_item.unit,
+                        consumable_item.unit,
+                        ingredient_id=consumable_item.id,
+                        density=consumable_item.density or (consumable_item.category.default_density if consumable_item.category else None)
+                    )
+                    needed_amount = float(conversion['converted_value'])
+
+                    # FIFO-aware stock check
+                    try:
+                        from app.services.inventory_adjustment._fifo_ops import calculate_total_available_inventory
+                        available_qty = calculate_total_available_inventory(consumable_item.id)
+                    except Exception:
+                        available_qty = float(consumable_item.quantity or 0)
+
+                    if available_qty < needed_amount:
+                        errors.append({
+                            "item": consumable_item.name,
+                            "message": f"Not enough in stock. Available: {available_qty}, Needed: {needed_amount}",
+                            "needed": needed_amount,
+                            "needed_unit": consumable_item.unit
+                        })
+                        continue
+
+                    # Deduct inventory
+                    success, message = process_inventory_adjustment(
+                        item_id=consumable_item.id,
+                        quantity=-needed_amount,
+                        change_type='batch',
+                        unit=consumable_item.unit,
+                        notes=f"Extra consumable for batch {batch.label_code}",
+                        batch_id=batch.id,
+                        created_by=current_user.id,
+                        defer_commit=True
+                    )
+
+                    if not success:
+                        errors.append({
+                            "item": consumable_item.name,
+                            "message": message or "Failed to deduct from inventory",
+                            "needed": needed_amount,
+                            "needed_unit": consumable_item.unit
+                        })
+                        continue
+
+                    # Snapshot extra consumable
+                    from app.models.batch import ExtraBatchConsumable
+                    extra_rec = ExtraBatchConsumable(
+                        batch_id=batch.id,
+                        inventory_item_id=consumable_item.id,
+                        quantity_used=needed_amount,
+                        unit=consumable_item.unit,
+                        cost_per_unit=consumable_item.cost_per_unit,
+                        organization_id=current_user.organization_id
+                    )
+                    db.session.add(extra_rec)
+
+                except ValueError as e:
+                    errors.append({
+                        "item": consumable_item.name,
                         "message": str(e)
                     })
 

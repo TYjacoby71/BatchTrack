@@ -214,8 +214,16 @@ def deduct_fifo_inventory(item_id, quantity_to_deduct, change_type, notes=None, 
             # Create audit record linking to the specific lot
             from app.utils.fifo_generator import generate_fifo_code
 
-            # Generate appropriate FIFO code for this deduction event
-            deduction_fifo_code = generate_fifo_code(change_type, item_id, is_lot_creation=False)
+            # Generate appropriate FIFO code for this deduction event; prefer batch label when available
+            if change_type == 'batch' and batch_id:
+                try:
+                    from app.models import Batch
+                    batch = db.session.get(Batch, batch_id)
+                    deduction_fifo_code = f"BCH-{batch.label_code}" if batch and batch.label_code else generate_fifo_code(change_type, item_id, is_lot_creation=False)
+                except Exception:
+                    deduction_fifo_code = generate_fifo_code(change_type, item_id, is_lot_creation=False)
+            else:
+                deduction_fifo_code = generate_fifo_code(change_type, item_id, is_lot_creation=False)
 
             history_record = UnifiedInventoryHistory(
                 inventory_item_id=item_id,
