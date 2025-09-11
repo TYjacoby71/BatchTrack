@@ -1,0 +1,39 @@
+
+Model response
+That is the perfect and most critical question. You are right to connect this failure directly to the recent changes. A system that was working and now is not has a clear cause.
+Based on the timing and the nature of the error, the most likely cause is a database schema mismatch related to the User or Role models that occurred during the complex migrations for the GlobalItem refactor.
+Let's trace the likely chain of events. This is a classic "accidental side effect" scenario.
+The Most Probable Cause: A Flaw in an Older Migration
+The InFailedSqlTransaction error is a domino effect. The "original sin" is an error that happens before the role query. Since this happens on every request, it's almost certainly in a @before_request handler or a middleware.
+Here is the most likely scenario:
+The "Expiration Alerts" Check: Your logs show that right before the errors start, this line runs:
+INFO: Expiration alerts debug: expired_fifo=11, expired_products=0, ...
+This suggests there is a function that runs on every request to check for expired inventory. Let's call it check_expirations().
+A Hidden Dependency in check_expirations(): This function likely queries the InventoryItem or InventoryLot tables. Crucially, these tables have a created_by field, which is a foreign key that points to the user.id.
+The Flawed Migration: During the massive refactoring of the GlobalItem and InventoryItem models, it's highly probable that an Alembic migration file was created or edited that had a subtle flaw.
+For example, a migration that was supposed to add a column to InventoryItem might have incorrectly redefined the entire User table in its upgrade() function, but did so based on an older, incomplete version of the User model at that time.
+Or, a migration might have tried to create an index on a User table column that no longer exists in the current model.
+The "Original Sin": Now, when your check_expirations() function runs, SQLAlchemy tries to execute a query that joins InventoryItem with User. However, the actual User table in the database is now slightly different from what your current User model in your Python code expects.
+Perhaps a column is missing, or a data type is different.
+This mismatch causes the very first database query in the request to fail with a ProgrammingError.
+The Domino Effect: The application code doesn't properly handle this initial ProgrammingError. The database transaction is now in a failed state. Every subsequent query in the request—including the one to get the user's roles—is rejected with the InFailedSqlTransaction error that you are seeing.
+Why Didn't This Happen Before?
+It was working before because the database schema (the actual tables) and your SQLAlchemy models (your Python code) were perfectly in sync. The recent, complex series of migrations introduced a subtle inconsistency.
+How to Confirm and Fix This
+The fix is the one I described previously, but now you know why you're doing it. You are hunting for the "original sin" that was introduced during the recent changes.
+Find the check_expirations() function. It's the most likely culprit.
+Wrap its database logic in a try...except block with a db.session.rollback().
+code
+Python
+try:
+    # All the code that calculates expiration alerts...
+    db.session.commit()
+except Exception as e:
+    print("---!!! THE ORIGINAL ERROR IS HERE !!!---")
+    print(e)
+    print("-----------------------------------------")
+    db.session.rollback()
+Restart your app and reload the page.
+The InFailedSqlTransaction errors will vanish, and your console will now print the true, underlying error.
+The error you see will likely be a ProgrammingError from SQLAlchemy, saying something like "column users.some_new_column does not exist" or "relation 'old_user_table' does not exist".
+Once you see that specific error, you will know exactly which part of your database schema is out of sync with your models, and you can create a new, small migration to fix it. This is a very common part of the development cycle after a major refactor.
