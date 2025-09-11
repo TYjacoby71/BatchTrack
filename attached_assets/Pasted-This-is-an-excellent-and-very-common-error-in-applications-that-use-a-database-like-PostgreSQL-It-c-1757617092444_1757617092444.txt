@@ -1,0 +1,56 @@
+This is an excellent and very common error in applications that use a database like PostgreSQL. It can be confusing because the error message you're seeing is often the symptom, not the actual disease.
+Let's break down exactly what this error means, what is causing it, and how to fix it.
+What The Error Means: "The Domino Effect"
+The key error message is:
+(psycopg2.errors.InFailedSqlTransaction) current transaction is aborted, commands ignored until end of transaction block
+Think of a database "transaction" like checking out at a grocery store. You put all your items on the belt, and the cashier scans them one by one. The entire process is one transaction.
+The First Error (The "Hidden" Problem): Imagine the cashier scans your first item, and the barcode is invalid. The register throws an error. At this point, the entire checkout process (the "transaction") is in a failed state.
+The Domino Effect (The Error You're Seeing): The cashier, ignoring the first error, tries to scan your second, third, and fourth items. The register will refuse to do anything. For every subsequent item, it will effectively say, "The current transaction is aborted! I will ignore all new commands until you deal with the first problem!"
+This is exactly what's happening in your application. An initial, unseen database error is occurring somewhere at the beginning of your request. Because that first error isn't being handled correctly, the database session enters an "aborted" state. Every single database query that your application tries to run after that initial failure will be rejected with the InFailedSqlTransaction error.
+The final traceback you see is just the last domino to fall—the query for recipe.variations in your dashboard.html template. That query itself is probably perfectly fine, but it failed because the database was already refusing to listen.
+What is the Cause? The "Original Sin"
+The log doesn't show the original error, but it gives us a huge clue about where to look. The error starts happening immediately after these log lines:
+2025-09-11 18:56:15,246 INFO: Expiration alerts debug: expired_fifo=11, expired_products=0, ...
+2025-09-11 18:56:15,289 [INFO] app.utils.unit_utils: Getting global unit list
+This tells us that the first, hidden error is likely happening in a piece of code that runs on every request, such as a @before_request handler, a middleware, or a function that's called at the beginning of many of your routes (like your permission checks or the expiration alert check).
+This initial piece of code is making a database call that is failing for some reason (maybe a missing table, a bad query, a data type mismatch, etc.). The application code does not catch this failure and roll back the transaction.
+How to Fix It: The Definitive Solution
+The solution is a two-step process:
+Find and handle the original error to prevent the domino effect.
+This will reveal the true underlying problem for you to fix.
+You need to find the very first database operation that runs when a request comes in and wrap it in a try...except block with a session rollback.
+A prime suspect is whatever code is running your "Expiration alerts debug". Find that function. It probably looks something like this:
+The Current, Broken Code (Simplified):
+code
+Python
+@app.before_request
+def check_for_stuff():
+    # This line might be failing for some reason
+    expired_count = db.session.query(SomeTable).filter(...).count() 
+    
+    # The code continues, even though the session is now broken
+    user_roles = db.session.query(UserRoles).filter(...).all() # This will fail with InFailedSqlTransaction
+The Correct, Fixed Code:
+You must wrap the initial operation and explicitly roll back the session if it fails.
+code
+Python
+@app.before_request
+def check_for_stuff():
+    try:
+        # This is the operation we suspect is the "original sin"
+        expired_count = db.session.query(SomeTable).filter(...).count()
+        db.session.commit() # Or .flush() if you're not changing data
+    except Exception as e:
+        # This is the most important part!
+        print(f"THE REAL ERROR IS: {e}") # Log the true error to the console
+        db.session.rollback() # Tell the database: "Okay, that failed. Let's start fresh."
+        # Optionally, you can re-raise the exception or handle it gracefully
+        # For now, just rolling back is enough to fix the domino effect.
+
+    # Now, subsequent queries in the same request will work because the session is no longer aborted.
+    user_roles = db.session.query(UserRoles).filter(...).all()
+Your Action Plan:
+Locate the first piece of code that runs a database query when you load the dashboard (the expiration alert check is the most likely candidate).
+Wrap that code in a try...except Exception as e: block.
+Inside the except block, add two lines: print(f"THE REAL ERROR IS: {e}") and db.session.rollback().
+Restart your application and load the page again. The InFailedSqlTransaction errors will disappear, and your console will now show you the true, original error that was causing the entire problem. That is the error you need to solve.
