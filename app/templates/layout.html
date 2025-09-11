@@ -256,7 +256,7 @@
                     </li>
                     <li><hr class="dropdown-divider"></li>
 
-                    {% if has_role('developer') or has_role('organization_owner') or has_manager('manager') %}
+                    {% if has_role('developer') or has_role('organization_owner') or has_permission(current_user, 'organization.manage') %}
                     <li><h6 class="dropdown-header">Admin Tools</h6></li>
                     <li><a class="dropdown-item" href="{{ url_for('reservations.list_reservations') }}"><i class="fas fa-clock"></i> Reservations</a></li>
                     {% endif %}

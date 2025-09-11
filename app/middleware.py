@@ -80,33 +80,53 @@ def register_middleware(app):
             from .extensions import db
             from .services.billing_service import BillingService # Import BillingService
 
-            # Get fresh user and organization data from current session
-            fresh_user = db.session.get(User, fresh_current_user.id)
-            if fresh_user and fresh_user.organization_id:
-                # Force fresh load of organization to get latest billing_status
-                organization = db.session.get(Organization, fresh_user.organization_id)
-            else:
-                organization = None
+            try:
+                # Get fresh user and organization data from current session
+                fresh_user = db.session.get(User, fresh_current_user.id)
+                if fresh_user and fresh_user.organization_id:
+                    # Force fresh load of organization to get latest billing_status
+                    organization = db.session.get(Organization, fresh_user.organization_id)
+                else:
+                    organization = None
 
-            if organization and organization.subscription_tier:
-                tier = organization.subscription_tier
+                if organization and organization.subscription_tier:
+                    tier = organization.subscription_tier
 
-                # SIMPLE BILLING LOGIC:
-                # If billing bypass is NOT enabled, require active billing status
-                if not tier.is_billing_exempt:
-                    # Check tier access using unified billing service
-                    access_valid, access_reason = BillingService.validate_tier_access(organization)
-                    if not access_valid:
-                        logger.warning(f"Billing access denied for org {organization.id}: {access_reason}")
+                    # SIMPLE BILLING LOGIC:
+                    # If billing bypass is NOT enabled, require active billing status
+                    if not tier.is_billing_exempt:
+                        # Check tier access using unified billing service
+                        access_valid, access_reason = BillingService.validate_tier_access(organization)
+                        if not access_valid:
+                            logger.warning(f"Billing access denied for org {organization.id}: {access_reason}")
 
-                        if access_reason in ['payment_required', 'subscription_canceled']:
-                            return redirect(url_for('billing.upgrade'))
-                        elif access_reason == 'organization_suspended':
-                            flash('Your organization has been suspended. Please contact support.', 'error')
-                            return redirect(url_for('billing.upgrade'))
+                            if access_reason in ['payment_required', 'subscription_canceled']:
+                                return redirect(url_for('billing.upgrade'))
+                            elif access_reason == 'organization_suspended':
+                                flash('Your organization has been suspended. Please contact support.', 'error')
+                                return redirect(url_for('billing.upgrade'))
+            except Exception as e:
+                logger.error(f"Database error in middleware: {str(e)}")
+                # Rollback any failed transactions
+                try:
+                    db.session.rollback()
+                except Exception:
+                    pass
+                # Continue processing - don't block the user due to database issues
 
         # 5. If all checks pass, do nothing and allow the request to proceed.
         return None
+
+    @app.errorhandler(500)
+    def handle_internal_error(error):
+        """Handle 500 errors by rolling back database transactions"""
+        from .extensions import db
+        try:
+            db.session.rollback()
+        except Exception:
+            pass
+        logger.error(f"Internal server error: {error}")
+        return "Internal server error. Please try again.", 500
 
     @app.after_request
     def add_security_headers(response):
