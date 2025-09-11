@@ -102,7 +102,7 @@ def list_batches():
             visible_columns=['recipe', 'timestamp', 'total_cost', 'product_quantity', 'tags'])
 
 
-@batches_bp.route('/view/<batch_identifier>')
+@batches_bp.route('/<batch_identifier>')
 @login_required
 def view_batch_record(batch_identifier):
     """View a specific batch record - handles completed, failed, and cancelled batches"""
@@ -125,7 +125,7 @@ def view_batch_record(batch_identifier):
         # Redirect in-progress batches to the editable view
         if batch.status == 'in_progress':
             print(f"DEBUG: Redirecting to in_progress view")
-            return redirect(url_for('batches.view_batch_in_progress', batch_identifier=batch_identifier))
+            return redirect(url_for('batches.view_batch_in_progress', batch_identifier=batch.id))
 
         # Get navigation data for completed, failed, or cancelled batches
         nav_data = BatchManagementService.get_batch_navigation_data(batch)
