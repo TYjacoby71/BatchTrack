@@ -33,7 +33,7 @@ def _get_operation_group(change_type):
             return group_name, group_config
     return None, None
 
-def _universal_additive_handler(item, quantity, change_type, notes=None, created_by=None, cost_override=None, custom_expiration_date=None, custom_shelf_life_days=None, unit=None, batch_id=None):
+def _universal_additive_handler(item, quantity, change_type, notes=None, created_by=None, cost_override=None, custom_expiration_date=None, custom_shelf_life_days=None, unit=None, batch_id=None, **kwargs):
     """
     Universal handler for all additive operations.
     Processes operations based on their group classification.

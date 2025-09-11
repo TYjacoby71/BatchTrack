@@ -91,18 +91,15 @@ def list_batches():
     except Exception as e:
         logger.error(f"Error in list_batches: {str(e)}")
         flash(f'Error loading batches: {str(e)}', 'error')
-        # Assuming there's a route for the dashboard, e.g., 'app_routes.dashboard'
-        # If not, you might redirect to a more generic error page or the list itself.
-        # For this example, let's assume 'app_routes.dashboard' exists.
-        # If 'app_routes' is not imported or defined, this will fail.
-        # Replace with a valid redirect if necessary.
-        try:
-            # Attempt to import app_routes for redirection
-            from . import app_routes # Assuming app_routes is another blueprint
-            return redirect(url_for('app_routes.dashboard'))
-        except ImportError:
-            logger.warning("Could not import 'app_routes' to redirect to dashboard. Redirecting to list_batches.")
-            return redirect(url_for('batches.list_batches'))
+        # Return empty batch data to prevent template errors
+        return render_template('pages/batches/batches_list.html',
+            batches=[],
+            all_recipes=[],
+            in_progress_pagination=None,
+            completed_pagination=None,
+            InventoryItem=InventoryItem,
+            TimezoneUtils=TimezoneUtils,
+            visible_columns=['recipe', 'timestamp', 'total_cost', 'product_quantity', 'tags'])
 
 
 @batches_bp.route('/<batch_identifier>')
@@ -159,7 +156,7 @@ def update_batch_notes(batch_id):
             if success:
                 return jsonify({'message': message, 'redirect': url_for('batches.list_batches')})
             else:
-                return jsonify({'error': message}), 403 if 'Permission' in message else 500
+                return jsonify({'error': message}), 500 if 'Permission' not in message else 403
 
         if success:
             flash(message, 'success')
