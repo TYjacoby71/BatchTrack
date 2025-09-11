@@ -1,16 +1,15 @@
-
 import os
 import json
-from flask import Blueprint, jsonify, render_template
+from flask import Blueprint, render_template, jsonify
+from app.models import GlobalItem, IngredientCategory
 from flask_login import login_required
 from app.services.density_assignment_service import DensityAssignmentService
-from app.models import GlobalItem
 from sqlalchemy import func
 
 density_reference_bp = Blueprint('density_reference', __name__)
 
 @density_reference_bp.route('/density-reference/options')
-@login_required  
+@login_required
 def get_density_options():
     """Get all density options (DB-backed) for the search modal"""
     try:

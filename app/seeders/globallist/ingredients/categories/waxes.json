@@ -1,7 +1,6 @@
-
 {
-  "name": "Waxes",
-  "default_density": 0.94,
-  "description": "For all true waxes (e.g., Beeswax, Soy Wax, Carnauba Wax).",
+  "category_name": "Waxes",
+  "default_density": 0.93,
+  "description": "For natural and synthetic waxes used in cosmetics and candle making.",
   "items": []
 }

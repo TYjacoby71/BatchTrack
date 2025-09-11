@@ -1,7 +1,8 @@
 
 {
-  "name": "Starches & Thickeners",
+  "category_name": "Starches & Thickeners",
   "default_density": 0.70,
-  "description": "For refined starches and gums used for thickening (e.g., Cornstarch, Arrowroot, Pectin, Xanthan Gum).",
+  "description": "For refined starches and gums.",
+  "reference_category_name": "Starches & Thickeners",
   "items": []
 }

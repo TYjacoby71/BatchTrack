@@ -1,7 +1,7 @@
 
 {
-  "name": "Oils (Liquid Fats)",
+  "category_name": "Oils (Carrier & Fixed)",
   "default_density": 0.92,
-  "description": "For all liquid-at-room-temperature oils, regardless of use (e.g., Olive, Avocado, Sunflower, Fragrance).",
+  "description": "For base/carrier oils from nuts, seeds, and vegetables.",
   "items": []
 }

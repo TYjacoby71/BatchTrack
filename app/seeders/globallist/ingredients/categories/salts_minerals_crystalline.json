@@ -1,7 +1,8 @@
 
 {
-  "name": "Salts & Minerals (Crystalline)",
+  "category_name": "Salts & Minerals (Crystalline)",
   "default_density": 1.80,
-  "description": "For all crystalline salts and minerals (e.g., Table Salt, Epsom Salt, Citric Acid, Lye, Gypsum).",
+  "description": "For all crystalline salts, minerals, and chemical reactants like Lye.",
+  "reference_category_name": "Salts & Minerals (Crystalline)",
   "items": []
 }

@@ -1,7 +1,8 @@
 
 {
-  "name": "Herbs & Spices (Dried Botanicals)",
+  "category_name": "Herbs & Spices (Dried & Ground)",
   "default_density": 0.45,
-  "description": "For all dried, plant-based seasonings and additives (e.g., Ground Cinnamon, Dried Oregano, Hops).",
+  "description": "For dried and ground plant-based seasonings and additives.",
+  "reference_category_name": "Herbs & Spices (Dried & Ground)",
   "items": []
 }

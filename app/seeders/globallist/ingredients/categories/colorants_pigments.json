@@ -1,7 +1,8 @@
 
 {
-  "name": "Colorants (Pigments)",
+  "category_name": "Colorants (Pigments)",
   "default_density": 3.50,
-  "description": "For all inert pigment powders (e.g., Mica, Titanium Dioxide, Iron Oxides).",
+  "description": "For all inert pigment powders like Micas and Oxides.",
+  "reference_category_name": "Colorants (Pigments)",
   "items": []
 }
