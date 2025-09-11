@@ -107,8 +107,8 @@ def list_batches():
 
 @batches_bp.route('/<batch_identifier>')
 @login_required
-def view_batch(batch_identifier):
-    """View a specific batch - handles completed, failed, and cancelled batches"""
+def view_batch_record(batch_identifier):
+    """View a specific batch record - handles completed, failed, and cancelled batches"""
     try:
         print(f"DEBUG: view_batch called with batch_identifier: {batch_identifier}")
 
@@ -204,7 +204,7 @@ def view_batch_in_progress(batch_identifier):
             }.get(batch.status, 'This batch is no longer active.')
             
             flash(f'{status_message} Viewing batch record.', 'info')
-            return redirect(url_for('batches.view_batch', batch_identifier=batch_identifier))
+            return redirect(url_for('batches.view_batch_record', batch_identifier=batch_identifier))
 
         # Get navigation data
         nav_data = BatchManagementService.get_batch_navigation_data(batch)
