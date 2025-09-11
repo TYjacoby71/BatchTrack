@@ -22,14 +22,14 @@ def load_category_files():
 	"""Load category files from app/seeders/globallist/ingredients/categories/"""
 	import os
 	import json
-	
+
 	base_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'app', 'seeders', 'globallist', 'ingredients', 'categories')
 	categories = []
-	
+
 	if not os.path.exists(base_path):
 		print(f"Category path not found: {base_path}")
 		return categories
-	
+
 	for filename in os.listdir(base_path):
 		if filename.endswith('.json'):
 			filepath = os.path.join(base_path, filename)
@@ -39,7 +39,7 @@ def load_category_files():
 					categories.append(category_data)
 			except Exception as e:
 				print(f"Error loading {filename}: {e}")
-	
+
 	return categories
 
 def seed():
@@ -51,16 +51,16 @@ def seed():
 
 		# Load categories from individual JSON files
 		categories = load_category_files()
-		
+
 		for cat_data in categories:
 			cat_name = cat_data.get('category_name', '').strip()
 			if not cat_name:
 				continue
-				
+
 			default_density = cat_data.get('default_density')
 			description = cat_data.get('description', '')
 			reference_category_name = cat_data.get('reference_category_name')
-			
+
 			# Create or update category
 			curated_cat = IngredientCategory.query.filter_by(name=cat_name, organization_id=None).first()
 			if not curated_cat:
@@ -89,13 +89,13 @@ def seed():
 				name = item_data.get('name', '').strip()
 				if not name:
 					continue
-					
+
 				density = item_data.get('density_g_per_ml')
 				aka = item_data.get('aka', [])
 				default_unit = item_data.get('default_unit')
 				perishable = item_data.get('perishable', False)
 				shelf_life_days = item_data.get('shelf_life_days')
-				
+
 				# Create or update global item
 				existing = GlobalItem.query.filter_by(name=name, item_type='ingredient').first()
 				if existing:
@@ -103,7 +103,6 @@ def seed():
 					existing.aka_names = aka
 					existing.default_unit = default_unit
 					existing.ingredient_category_id = curated_cat.id
-					existing.reference_category = reference_category_name
 					existing.default_is_perishable = perishable
 					existing.recommended_shelf_life_days = shelf_life_days
 					updated_items += 1
@@ -114,7 +113,6 @@ def seed():
 						default_unit=default_unit,
 						density=density,
 						ingredient_category_id=curated_cat.id,
-						reference_category=cat_name,  # Use the category name directly
 						aka_names=aka,
 						default_is_perishable=perishable,
 						recommended_shelf_life_days=shelf_life_days,
@@ -124,7 +122,7 @@ def seed():
 
 		db.session.commit()
 		print(f'Categories created: {created_categories}; Items created: {created_items}; Items updated: {updated_items}')
-		
+
 		# Also process legacy density_reference.json if it exists
 		payload = load_density_json()
 		if payload and 'common_densities' in payload:
@@ -214,4 +212,3 @@ def seed():
 
 if __name__ == '__main__':
 	seed()
-

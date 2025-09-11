@@ -692,26 +692,26 @@ def global_item_stats_view(item_id):
 @login_required
 def reference_categories():
     """Manage reference categories for global items"""
-    # Get existing reference categories from global items
-    existing_categories = db.session.query(GlobalItem.reference_category).filter(
-        GlobalItem.reference_category.isnot(None),
-        GlobalItem.reference_category != ''
-    ).distinct().order_by(GlobalItem.reference_category).all()
+    # Get existing ingredient categories that are reference categories
+    existing_categories = IngredientCategory.query.filter_by(
+        is_reference_category=True,
+        organization_id=None,
+        is_active=True
+    ).order_by(IngredientCategory.name).all()
     
-    categories = [cat[0] for cat in existing_categories if cat[0]]
+    categories = [cat.name for cat in existing_categories]
     
     # Get global items by category for counting
     global_items_by_category = {}
     category_densities = {}
     
-    for category in categories:
-        items = GlobalItem.query.filter_by(reference_category=category, is_archived=False).all()
-        global_items_by_category[category] = items
+    for category_obj in existing_categories:
+        items = GlobalItem.query.filter_by(ingredient_category_id=category_obj.id, is_archived=False).all()
+        global_items_by_category[category_obj.name] = items
         
-        # Calculate average density for category (excluding None values)
-        densities = [item.density for item in items if item.density is not None and item.density > 0]
-        if densities:
-            category_densities[category] = sum(densities) / len(densities)
+        # Use the category's default density
+        if category_obj.default_density:
+            category_densities[category_obj.name] = category_obj.default_density
     
     return render_template('developer/reference_categories.html', 
                          categories=categories,
@@ -730,23 +730,23 @@ def add_reference_category():
             return jsonify({'success': False, 'error': 'Category name is required'})
         
         # Check if category already exists
-        existing = db.session.query(GlobalItem).filter(
-            GlobalItem.reference_category == category_name
+        existing = IngredientCategory.query.filter_by(
+            name=category_name,
+            organization_id=None
         ).first()
         
         if existing:
             return jsonify({'success': False, 'error': 'Category already exists'})
         
-        # Create a placeholder global item to establish the category
-        # This ensures the category appears in our dropdown
-        placeholder_item = GlobalItem(
-            name=f"_category_placeholder_{category_name.lower().replace(' ', '_')}",
-            item_type='ingredient',
-            reference_category=category_name,
-            is_archived=True  # Archive it so it doesn't appear in regular listings
+        # Create new ingredient category
+        new_category = IngredientCategory(
+            name=category_name,
+            is_reference_category=True,
+            organization_id=None,
+            is_active=True
         )
         
-        db.session.add(placeholder_item)
+        db.session.add(new_category)
         db.session.commit()
         
         return jsonify({'success': True, 'message': f'Category "{category_name}" added successfully'})
@@ -766,10 +766,19 @@ def delete_reference_category():
         if not category_name:
             return jsonify({'success': False, 'error': 'Category name is required'})
         
+        # Find the category
+        category = IngredientCategory.query.filter_by(
+            name=category_name,
+            organization_id=None
+        ).first()
+        
+        if not category:
+            return jsonify({'success': False, 'error': 'Category not found'})
+        
         # Count items using this category
-        items_count = db.session.query(GlobalItem).filter(
-            GlobalItem.reference_category == category_name,
-            GlobalItem.is_archived != True
+        items_count = GlobalItem.query.filter_by(
+            ingredient_category_id=category.id,
+            is_archived=False
         ).count()
         
         if items_count > 0:
@@ -778,15 +787,8 @@ def delete_reference_category():
                 'error': f'Cannot delete category. {items_count} active items are using this category.'
             })
         
-        # Delete any placeholder items for this category
-        placeholders = db.session.query(GlobalItem).filter(
-            GlobalItem.reference_category == category_name,
-            GlobalItem.name.like('_category_placeholder_%')
-        ).all()
-        
-        for placeholder in placeholders:
-            db.session.delete(placeholder)
-        
+        # Delete the category
+        db.session.delete(category)
         db.session.commit()
         
         return jsonify({'success': True, 'message': f'Category "{category_name}" deleted successfully'})
@@ -807,13 +809,23 @@ def update_category_density():
         if not category_name:
             return jsonify({'success': False, 'error': 'Category name is required'})
         
-        # For now, we'll store this in a simple way by updating all items in the category
-        # In a future enhancement, you could add a separate CategoryDensity model
+        # Find the category
+        category = IngredientCategory.query.filter_by(
+            name=category_name,
+            organization_id=None
+        ).first()
+        
+        if not category:
+            return jsonify({'success': False, 'error': 'Category not found'})
+        
+        # Update the category's default density
         if density is not None and density > 0:
-            # Update all items in this category with the new default density
-            items = GlobalItem.query.filter_by(reference_category=category_name, is_archived=False).all()
+            category.default_density = density
+            
+            # Optionally update items that don't have specific densities
+            items = GlobalItem.query.filter_by(ingredient_category_id=category.id, is_archived=False).all()
             for item in items:
-                if item.density is None or item.density == 0:  # Only update if no specific density set
+                if item.density is None or item.density == 0:
                     item.density = density
         
         db.session.commit()

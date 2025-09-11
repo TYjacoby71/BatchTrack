@@ -15,8 +15,7 @@ class IngredientCategory(ScopedModelMixin, db.Model):
     created_at = db.Column(db.DateTime, default=TimezoneUtils.utc_now, nullable=False)
     updated_at = db.Column(db.DateTime, default=TimezoneUtils.utc_now, onupdate=TimezoneUtils.utc_now, nullable=False)
     
-    # Reference guide integration - maps to density_reference.json categories
-    reference_category_name = db.Column(db.String(64), nullable=True, index=True)  # String name from reference data
+    # Reference guide integration
     is_reference_category = db.Column(db.Boolean, default=False)  # True if this is a reference guide category
 
 class InventoryCategory(ScopedModelMixin, db.Model):

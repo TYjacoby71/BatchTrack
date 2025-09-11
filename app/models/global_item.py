@@ -13,9 +13,6 @@ class GlobalItem(db.Model):
 	# Category relationship - proper FK to IngredientCategory
 	ingredient_category_id = db.Column(db.Integer, db.ForeignKey('ingredient_category.id'), nullable=True, index=True)
 	
-	# Reference category name - maps directly to density_reference.json categories
-	reference_category = db.Column(db.String(64), nullable=True, index=True)
-	
 	# Perishable information
 	default_is_perishable = db.Column(db.Boolean, nullable=True, default=False)
 	recommended_shelf_life_days = db.Column(db.Integer, nullable=True)
