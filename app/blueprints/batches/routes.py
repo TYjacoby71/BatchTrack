@@ -202,7 +202,7 @@ def view_batch_in_progress(batch_identifier):
                 'failed': 'This batch has failed.',
                 'cancelled': 'This batch has been cancelled.'
             }.get(batch.status, 'This batch is no longer active.')
-            
+
             flash(f'{status_message} Viewing batch record.', 'info')
             return redirect(url_for('batches.view_batch_record', batch_identifier=batch_identifier))
 
@@ -285,7 +285,7 @@ def api_start_batch():
         return jsonify({'success': False, 'message': str(e)}), 500
 
 # Register sub-blueprints
-batches_bp.register_blueprint(start_batch_bp, url_prefix='/start-batch')
-batches_bp.register_blueprint(cancel_batch_bp, url_prefix='/batches')
-batches_bp.register_blueprint(add_extra_bp, url_prefix='/batches/add-extra')
-batches_bp.register_blueprint(finish_batch_bp, url_prefix='/batches/finish-batch')
+batches_bp.register_blueprint(start_batch_bp, url_prefix='/start')
+batches_bp.register_blueprint(finish_batch_bp, url_prefix='/finish-batch')
+batches_bp.register_blueprint(cancel_batch_bp, url_prefix='')
+batches_bp.register_blueprint(add_extra_bp, url_prefix='/add-extra')

@@ -83,14 +83,14 @@ function updateRowCost(selectElement) {
   const row = selectElement.closest('.extra-row');
   const cost = selectElement.options[selectElement.selectedIndex].dataset.cost;
   const unit = selectElement.options[selectElement.selectedIndex].dataset.unit;
-  
+
   const costInput = row.querySelector('.cost');
   const unitSelect = row.querySelector('.unit');
-  
+
   if (costInput) {
     costInput.value = cost || 0;
   }
-  
+
   if (unitSelect && unit) {
     unitSelect.value = unit;
   }
