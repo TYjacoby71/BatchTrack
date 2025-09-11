@@ -371,23 +371,11 @@ class BatchOperationsService(BaseService):
                         quantity=extra_cons.quantity_used,
                         change_type='refunded',
                         unit=extra_cons.unit,
-                        notes=f"Extra ingredient refunded from cancelled batch {batch.label_code}",
+                        notes=f"Extra consumable refunded from cancelled batch {batch.label_code}",
                         created_by=current_user.id,
                         batch_id=batch.id
                     )
                     restoration_summary.append(f"{extra_cons.quantity_used} {extra_cons.unit} of {item.name}")
-                container = extra_container.container
-                if container:
-                    process_inventory_adjustment(
-                        item_id=container.id,
-                        quantity=extra_container.quantity_used,
-                        change_type='refunded',
-                        unit=container.unit,
-                        notes=f"Extra container refunded from cancelled batch {batch.label_code}",
-                        created_by=current_user.id,
-                        batch_id=batch.id
-                    )
-                    restoration_summary.append(f"{extra_container.quantity_used} {container.unit} of {container.name}")
 
             # Update batch status
             batch.status = 'cancelled'
