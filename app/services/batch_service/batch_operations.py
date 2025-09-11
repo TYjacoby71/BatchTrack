@@ -457,20 +457,36 @@ class BatchOperationsService(BaseService):
                     errors.append({"item": container_item.name, "message": f"Invalid reason: {reason}"})
                     continue
 
-                # Check stock
-                if container_item.quantity < needed_amount:
+                # Check stock availability first using USCS
+                from ...services.stock_check import UniversalStockCheckService
+                from ...services.stock_check.types import InventoryCategory, StockStatus
+
+                stock_service = UniversalStockCheckService()
+                stock_result = stock_service.check_single_item(
+                    item_id=container_item.id,
+                    quantity_needed=needed_amount,
+                    unit=container_item.unit or "units",
+                    category=InventoryCategory.CONTAINER
+                )
+
+                # Check if there's sufficient stock
+                if stock_result.status in [StockStatus.NEEDED, StockStatus.OUT_OF_STOCK, StockStatus.ERROR]:
+                    error_msg = f"Insufficient stock: need {needed_amount} {container_item.unit or 'units'}, have {stock_result.available_quantity} {stock_result.available_unit}"
+                    if stock_result.status == StockStatus.ERROR and hasattr(stock_result, 'error_message'):
+                        error_msg = stock_result.error_message
+                    
                     errors.append({
                         "item": container_item.name,
-                        "message": f"Not enough in stock. Available: {container_item.quantity}, Needed: {needed_amount}",
+                        "message": error_msg,
                         "needed": needed_amount,
-                        "available": container_item.quantity,
-                        "needed_unit": "units"
+                        "available": stock_result.available_quantity,
+                        "needed_unit": container_item.unit or "units"
                     })
                     continue
 
                 # Deduct inventory
                 adjustment_type = "damaged" if reason == "damaged" else "batch"
-                result = process_inventory_adjustment(
+                success, message = process_inventory_adjustment(
                     item_id=container_item.id,
                     quantity=-needed_amount,
                     change_type=adjustment_type,
@@ -480,12 +496,12 @@ class BatchOperationsService(BaseService):
                     created_by=current_user.id
                 )
 
-                if not result:
+                if not success:
                     errors.append({
                         "item": container_item.name,
-                        "message": "Failed to deduct from inventory",
+                        "message": message or "Failed to deduct from inventory",
                         "needed": needed_amount,
-                        "needed_unit": "units"
+                        "needed_unit": container_item.unit or "units"
                     })
                     continue
 
@@ -518,35 +534,64 @@ class BatchOperationsService(BaseService):
                     )
                     needed_amount = conversion['converted_value']
 
-                    # Use centralized inventory adjustment
-                    result = process_inventory_adjustment(
-                        item_id=inventory_item.id,
-                        quantity=-needed_amount,
-                        change_type='batch',
-                        unit=inventory_item.unit,
-                        notes=f"Extra ingredient for batch {batch.label_code}",
-                        batch_id=batch.id,
-                        created_by=current_user.id
-                    )
+                    # Check stock availability first using USCS
+                from ...services.stock_check import UniversalStockCheckService
+                from ...services.stock_check.types import InventoryCategory
 
-                    if not result:
-                        errors.append({
-                            "item": inventory_item.name,
-                            "message": "Not enough in stock",
-                            "needed": needed_amount,
-                            "needed_unit": inventory_item.unit
-                        })
-                    else:
-                        # Create ExtraBatchIngredient record
-                        new_extra = ExtraBatchIngredient(
-                            batch_id=batch.id,
-                            inventory_item_id=inventory_item.id,
-                            quantity_used=needed_amount,
-                            unit=inventory_item.unit,
-                            cost_per_unit=inventory_item.cost_per_unit,
-                            organization_id=current_user.organization_id
-                        )
-                        db.session.add(new_extra)
+                stock_service = UniversalStockCheckService()
+                stock_result = stock_service.check_single_item(
+                    item_id=inventory_item.id,
+                    quantity_needed=needed_amount,
+                    unit=inventory_item.unit,
+                    category=InventoryCategory.INGREDIENT
+                )
+
+                # Check if there's sufficient stock
+                from ...services.stock_check.types import StockStatus
+                if stock_result.status in [StockStatus.NEEDED, StockStatus.OUT_OF_STOCK, StockStatus.ERROR]:
+                    error_msg = f"Insufficient stock: need {needed_amount} {inventory_item.unit}, have {stock_result.available_quantity} {stock_result.available_unit}"
+                    if stock_result.status == StockStatus.ERROR and hasattr(stock_result, 'error_message'):
+                        error_msg = stock_result.error_message
+                    
+                    errors.append({
+                        "item": inventory_item.name,
+                        "message": error_msg,
+                        "needed": needed_amount,
+                        "needed_unit": inventory_item.unit,
+                        "available": stock_result.available_quantity,
+                        "available_unit": stock_result.available_unit
+                    })
+                    continue
+
+                # Use centralized inventory adjustment
+                success, message = process_inventory_adjustment(
+                    item_id=inventory_item.id,
+                    quantity=-needed_amount,
+                    change_type='batch',
+                    unit=inventory_item.unit,
+                    notes=f"Extra ingredient for batch {batch.label_code}",
+                    batch_id=batch.id,
+                    created_by=current_user.id
+                )
+
+                if not success:
+                    errors.append({
+                        "item": inventory_item.name,
+                        "message": message or "Failed to process inventory adjustment",
+                        "needed": needed_amount,
+                        "needed_unit": inventory_item.unit
+                    })
+                else:
+                    # Create ExtraBatchIngredient record
+                    new_extra = ExtraBatchIngredient(
+                        batch_id=batch.id,
+                        inventory_item_id=inventory_item.id,
+                        quantity_used=needed_amount,
+                        unit=inventory_item.unit,
+                        cost_per_unit=inventory_item.cost_per_unit,
+                        organization_id=current_user.organization_id
+                    )
+                    db.session.add(new_extra)
 
                 except ValueError as e:
                     errors.append({
