@@ -7,6 +7,10 @@ document.addEventListener('DOMContentLoaded', function() {
 
         // Prevent closing modal by clicking outside or escape key
         initialModal.addEventListener('hide.bs.modal', function (e) {
+            // Allow closing if we're switching to edit modal
+            if (e.relatedTarget && e.relatedTarget.getAttribute('data-bs-target') === '#editDetailsModal') {
+                return;
+            }
             e.preventDefault();
             return false;
         });
@@ -14,6 +18,18 @@ document.addEventListener('DOMContentLoaded', function() {
         // Focus on quantity input when modal is shown
         initialModal.addEventListener('shown.bs.modal', function () {
             document.getElementById('initial_quantity').focus();
+        });
+    }
+
+    // Handle returning from edit modal to initial inventory modal
+    const editModal = document.getElementById('editDetailsModal');
+    if (editModal && initialModal) {
+        editModal.addEventListener('hidden.bs.modal', function () {
+            // If we came from initial inventory modal, show it again
+            if (document.getElementById('initialInventoryModal')) {
+                const initialModalInstance = new bootstrap.Modal(initialModal);
+                initialModalInstance.show();
+            }
         });
     }
 
