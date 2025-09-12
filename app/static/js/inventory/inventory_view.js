@@ -25,42 +25,85 @@ document.addEventListener('DOMContentLoaded', function() {
     const editModal = document.getElementById('editDetailsModal');
     if (editModal && initialModal) {
         let returnToInitialModal = false;
+        let isTransitioning = false;
 
         // Track when we're switching from initial to edit modal
         const editButton = initialModal.querySelector('[data-bs-target="#editDetailsModal"]');
         if (editButton) {
             editButton.addEventListener('click', function(e) {
                 e.preventDefault();
+                
+                if (isTransitioning) return; // Prevent multiple transitions
+                isTransitioning = true;
                 returnToInitialModal = true;
 
-                // Hide initial modal first, then show edit modal
+                // Get the current modal instance
                 const initialModalInstance = bootstrap.Modal.getInstance(initialModal);
+                
                 if (initialModalInstance) {
-                    // Listen for when initial modal is fully hidden
-                    initialModal.addEventListener('hidden.bs.modal', function showEditOnce() {
-                        // Remove this listener after first use
-                        initialModal.removeEventListener('hidden.bs.modal', showEditOnce);
+                    // Create one-time event listener for when initial modal is fully hidden
+                    const handleInitialHidden = function() {
+                        initialModal.removeEventListener('hidden.bs.modal', handleInitialHidden);
+                        
+                        // Add delay to ensure DOM is ready
+                        setTimeout(() => {
+                            // Force z-index reset and show edit modal
+                            editModal.style.zIndex = '1055';
+                            const editModalInstance = new bootstrap.Modal(editModal, {
+                                backdrop: 'static',
+                                keyboard: false
+                            });
+                            editModalInstance.show();
+                            isTransitioning = false;
+                        }, 100);
+                    };
 
-                        // Now show edit modal
-                        const editModalInstance = new bootstrap.Modal(editModal);
-                        editModalInstance.show();
-                    });
-
+                    initialModal.addEventListener('hidden.bs.modal', handleInitialHidden);
                     initialModalInstance.hide();
                 } else {
-                    // Fallback if no instance found
-                    const editModalInstance = new bootstrap.Modal(editModal);
-                    editModalInstance.show();
+                    // Fallback - force hide initial modal
+                    initialModal.style.display = 'none';
+                    initialModal.classList.remove('show');
+                    document.body.classList.remove('modal-open');
+                    
+                    // Remove any existing backdrop
+                    const existingBackdrop = document.querySelector('.modal-backdrop');
+                    if (existingBackdrop) {
+                        existingBackdrop.remove();
+                    }
+                    
+                    setTimeout(() => {
+                        editModal.style.zIndex = '1055';
+                        const editModalInstance = new bootstrap.Modal(editModal, {
+                            backdrop: 'static',
+                            keyboard: false
+                        });
+                        editModalInstance.show();
+                        isTransitioning = false;
+                    }, 100);
                 }
             });
         }
 
+        // Listen for successful form submission to prevent return
+        const editForm = editModal.querySelector('form');
+        if (editForm) {
+            editForm.addEventListener('submit', function() {
+                returnToInitialModal = false;
+            });
+        }
+
         editModal.addEventListener('hidden.bs.modal', function () {
+            // Reset z-index
+            editModal.style.zIndex = '';
+            
             // Only return to initial modal if we didn't submit the form
             if (returnToInitialModal && document.getElementById('initialInventoryModal')) {
-                const initialModalInstance = new bootstrap.Modal(initialModal);
-                initialModalInstance.show();
-                returnToInitialModal = false;
+                setTimeout(() => {
+                    const initialModalInstance = new bootstrap.Modal(initialModal);
+                    initialModalInstance.show();
+                    returnToInitialModal = false;
+                }, 100);
             }
         });
     }
