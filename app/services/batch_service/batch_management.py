@@ -228,11 +228,20 @@ class BatchManagementService(BaseService):
                 sort_by=sort_by
             )
             
-            completed_pagination = BatchService.get_paginated_batches(
-                'completed',  # This will include all non-in-progress statuses
-                per_page=pagination_config['table_per_page'],
-                page=pagination_config['completed_page'],
+            # Archived = any non-in-progress status (completed, failed, cancelled)
+            # Build via generic filter + exclude in_progress to include cancelled as well
+            archived_query = BatchService.get_batches_with_filters(
+                status=None,
+                recipe_id=recipe_id,
+                start_date=start_date,
+                end_date=end_date,
                 sort_by=sort_by
+            ).filter(Batch.status != 'in_progress')
+
+            completed_pagination = archived_query.paginate(
+                page=pagination_config['completed_page'],
+                per_page=pagination_config['table_per_page'],
+                error_out=False
             )
 
             # Calculate costs for all batches
