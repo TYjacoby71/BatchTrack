@@ -67,6 +67,7 @@ except ImportError:
 # Import unified inventory history model
 from .unified_inventory_history import UnifiedInventoryHistory
 from .domain_event import DomainEvent
+from .freshness_snapshot import FreshnessSnapshot
 
 # Import inventory lot model 
 from .inventory_lot import InventoryLot

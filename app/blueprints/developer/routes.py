@@ -1069,7 +1069,7 @@ def analytics_catalog():
         {
             'name': 'Inventory',
             'description': 'Movements, spoilage, waste, usage, value held',
-            'sources': ['UnifiedInventoryHistory', 'domain_event: inventory_adjusted', 'InventoryItem', 'InventoryLot'],
+            'sources': ['UnifiedInventoryHistory', 'InventoryLot', 'InventoryItem', 'FreshnessSnapshot', 'domain_event: inventory_adjusted'],
             'events': ['inventory_adjusted'],
             'data_points': [
                 'Quantity delta by change_type (restock, batch, use, spoil, expired, damaged, trash, recount, returned, refunded, release_reservation)',
