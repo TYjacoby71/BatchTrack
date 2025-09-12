@@ -75,12 +75,12 @@ def _handle_deductive_operation(item, quantity, change_type, notes, created_by, 
 
         # Add operation-specific details for sales
         if change_type == 'sale':
-            if kwargs.get('customer'):
-                enhanced_notes += f" (Customer: {kwargs['customer']})"
-            if kwargs.get('sale_price'):
-                enhanced_notes += f" (Sale Price: ${kwargs['sale_price']})"
-            if kwargs.get('order_id'):
-                enhanced_notes += f" (Order: {kwargs['order_id']})"
+            if customer:
+                enhanced_notes += f" (Customer: {customer})"
+            if sale_price is not None:
+                enhanced_notes += f" (Sale Price: ${sale_price})"
+            if order_id:
+                enhanced_notes += f" (Order: {order_id})"
 
         # Use FIFO deduction logic
         success, message = deduct_fifo_inventory(
@@ -88,7 +88,8 @@ def _handle_deductive_operation(item, quantity, change_type, notes, created_by, 
             quantity_to_deduct=quantity,
             change_type=change_type,
             notes=enhanced_notes,
-            created_by=created_by
+            created_by=created_by,
+            batch_id=batch_id
         )
 
         if not success:
