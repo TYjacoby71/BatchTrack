@@ -1030,6 +1030,50 @@ def inventory_analytics_stub():
     """Stub page for global inventory analytics in developer system"""
     return render_template('developer/inventory_analytics.html')
 
+@developer_bp.route('/analytics-catalog')
+@login_required
+def analytics_catalog():
+    """Developer catalog of analytics data points and domains."""
+    domains = [
+        {
+            'name': 'Inventory',
+            'description': 'Movements, spoilage, waste, usage, value held',
+            'sources': ['UnifiedInventoryHistory', 'domain_event: inventory_adjusted'],
+        },
+        {
+            'name': 'Batches',
+            'description': 'Lifecycle, efficiency, costs, yield',
+            'sources': ['Batch', 'BatchIngredient', 'BatchContainer', 'domain_event: batch_*'],
+        },
+        {
+            'name': 'Products & SKUs',
+            'description': 'On-hand, reservations, sales, unit costs',
+            'sources': ['Product', 'ProductSKU', 'InventoryItem (type=product)'],
+        },
+        {
+            'name': 'Recipes',
+            'description': 'Success rates, averages, cost baselines',
+            'sources': ['Recipe', 'RecipeIngredient', 'RecipeStats'],
+        },
+        {
+            'name': 'Timers',
+            'description': 'Task durations for batches/tasks',
+            'sources': ['BatchTimer', 'domain_event: timer_*'],
+        },
+        {
+            'name': 'Global Item Library',
+            'description': 'Canonical items, adoption across orgs',
+            'sources': ['GlobalItem'],
+        },
+        {
+            'name': 'Organizations & Users',
+            'description': 'Tenancy, active users, tiers',
+            'sources': ['Organization', 'User', 'OrganizationStats', 'UserStats'],
+        },
+    ]
+
+    return render_template('developer/analytics_catalog.html', domains=domains)
+
 @developer_bp.route('/waitlist-statistics')
 @require_developer_permission('system_admin')
 def waitlist_statistics():
