@@ -19,7 +19,8 @@ def register_middleware(app):
         public_endpoints = [
             'static', 'auth.login', 'auth.signup', 'auth.logout',
             'homepage', 'index', 'legal.privacy_policy', 'legal.terms_of_service',
-            'billing.webhook'  # Stripe webhook is a critical public endpoint
+            # Stripe webhook endpoint name
+            'billing.stripe_webhook'
         ]
 
         # Frequent endpoints that should have minimal logging
@@ -47,6 +48,11 @@ def register_middleware(app):
         # 2. Authentication check - if we get here, user must be authenticated
         if not current_user.is_authenticated:
             logger.info(f"Unauthenticated access attempt to {request.endpoint}")
+            # Return JSON 401 for API or JSON-accepting requests
+            accept = request.accept_mimetypes
+            wants_json = request.path.startswith('/api/') or ("application/json" in accept and not accept.accept_html)
+            if wants_json:
+                return jsonify({"error": "Authentication required"}), 401
             return redirect(url_for('auth.login', next=request.url))
 
         # Force reload current_user to ensure fresh session data
