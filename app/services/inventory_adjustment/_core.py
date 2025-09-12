@@ -7,6 +7,7 @@ from ._validation import validate_inventory_fifo_sync
 from ._additive_ops import _universal_additive_handler, ADDITIVE_OPERATION_GROUPS
 from ._deductive_ops import _handle_deductive_operation, DEDUCTIVE_OPERATION_GROUPS
 from ._special_ops import handle_cost_override, handle_unit_conversion, handle_recount
+from app.services.event_emitter import EventEmitter
 
 logger = logging.getLogger(__name__)
 
@@ -128,6 +129,33 @@ def process_inventory_adjustment(item_id, change_type, quantity, notes=None, cre
             else:
                 db.session.commit()
                 logger.info(f"SUCCESS: {change_type} completed for item {item.id} (FIFO validated)")
+
+                # Emit domain event (non-blocking best-effort; don't fail the operation on emitter errors)
+                try:
+                    EventEmitter.emit(
+                        event_name='inventory_adjusted',
+                        properties={
+                            'change_type': change_type,
+                            'quantity_delta': quantity_delta if quantity_delta is not None else (target_quantity - original_quantity if change_type == 'recount' and target_quantity is not None else None),
+                            'unit': item.unit,
+                            'notes': notes,
+                            'cost_override': cost_override,
+                            'original_quantity': original_quantity,
+                            'new_quantity': float(item.quantity),
+                            'item_name': item.name,
+                            'item_type': item.type,
+                            'batch_id': batch_id,
+                            'is_initial_stock': is_initial_stock,
+                        },
+                        organization_id=item.organization_id,
+                        user_id=created_by,
+                        entity_type='inventory_item',
+                        entity_id=item.id,
+                        auto_commit=False
+                    )
+                except Exception:
+                    pass
+
                 return True, message
 
         except Exception as e:
