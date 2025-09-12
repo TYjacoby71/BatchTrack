@@ -73,3 +73,8 @@ class TestStripeWebhookCharacterization:
                 # Don't require all methods to exist yet, but document what should be there
                 # This test will guide our refactoring
                 pass  # TODO: Assert methods exist once interface is standardized
+
+    def test_derive_interval_lookup_key(self, app):
+        with app.app_context():
+            assert StripeService.derive_interval_lookup_key('batchtrack_solo_monthly', 'yearly') == 'batchtrack_solo_yearly'
+            assert StripeService.derive_interval_lookup_key('batchtrack_team_yearly', 'monthly') == 'batchtrack_team_monthly'
