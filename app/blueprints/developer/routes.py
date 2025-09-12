@@ -925,6 +925,24 @@ def create_global_item():
             db.session.add(new_item)
             db.session.commit()
 
+            # Emit event
+            try:
+                from app.services.event_emitter import EventEmitter
+                from flask_login import current_user
+                EventEmitter.emit(
+                    event_name='global_item_created',
+                    properties={
+                        'name': name,
+                        'item_type': item_type,
+                        'reference_category': reference_category
+                    },
+                    user_id=getattr(current_user, 'id', None),
+                    entity_type='global_item',
+                    entity_id=new_item.id
+                )
+            except Exception:
+                pass
+
             flash(f'Global item "{name}" created successfully', 'success')
             return redirect(url_for('developer.global_item_detail', item_id=new_item.id))
 
@@ -1003,6 +1021,19 @@ def delete_global_item(item_id):
         # Log the deletion for audit purposes
         import logging
         logging.warning(f"GLOBAL_ITEM_DELETED: Developer {current_user.username} deleted global item '{item_name}' (ID: {item_id}). {connected_count} inventory items disconnected and converted to organization-owned.")
+
+        # Emit event
+        try:
+            from app.services.event_emitter import EventEmitter
+            EventEmitter.emit(
+                event_name='global_item_deleted' if force_delete else 'global_item_archived',
+                properties={'name': item_name, 'connected_count': connected_count},
+                user_id=getattr(current_user, 'id', None),
+                entity_type='global_item',
+                entity_id=item_id
+            )
+        except Exception:
+            pass
 
         if not force_delete:
             return jsonify({
