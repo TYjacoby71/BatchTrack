@@ -7,6 +7,10 @@ document.addEventListener('DOMContentLoaded', function() {
 
         // Prevent closing modal by clicking outside or escape key
         initialModal.addEventListener('hide.bs.modal', function (e) {
+            // Allow closing if we're switching to edit modal
+            if (e.relatedTarget && e.relatedTarget.getAttribute('data-bs-target') === '#editDetailsModal') {
+                return;
+            }
             e.preventDefault();
             return false;
         });
@@ -17,12 +21,56 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
+    // Handle returning from edit modal to initial inventory modal
+    const editModal = document.getElementById('editDetailsModal');
+    if (editModal && initialModal) {
+        let returnToInitialModal = false;
+
+        // Track when we're switching from initial to edit modal
+        const editButton = initialModal.querySelector('[data-bs-target="#editDetailsModal"]');
+        if (editButton) {
+            editButton.addEventListener('click', function(e) {
+                e.preventDefault();
+                returnToInitialModal = true;
+
+                // Hide initial modal first, then show edit modal
+                const initialModalInstance = bootstrap.Modal.getInstance(initialModal);
+                if (initialModalInstance) {
+                    // Listen for when initial modal is fully hidden
+                    initialModal.addEventListener('hidden.bs.modal', function showEditOnce() {
+                        // Remove this listener after first use
+                        initialModal.removeEventListener('hidden.bs.modal', showEditOnce);
+
+                        // Now show edit modal
+                        const editModalInstance = new bootstrap.Modal(editModal);
+                        editModalInstance.show();
+                    });
+
+                    initialModalInstance.hide();
+                } else {
+                    // Fallback if no instance found
+                    const editModalInstance = new bootstrap.Modal(editModal);
+                    editModalInstance.show();
+                }
+            });
+        }
+
+        editModal.addEventListener('hidden.bs.modal', function () {
+            // Only return to initial modal if we didn't submit the form
+            if (returnToInitialModal && document.getElementById('initialInventoryModal')) {
+                const initialModalInstance = new bootstrap.Modal(initialModal);
+                initialModalInstance.show();
+                returnToInitialModal = false;
+            }
+        });
+    }
+
     const form = document.querySelector('#editDetailsModal form');
     if (form) {
         const quantityInput = form.querySelector('input[name="quantity"]');
         const originalQuantity = quantityInput ? parseFloat(quantityInput.value) : 0;
         const recountModalEl = document.getElementById('recountConfirmModal');
-        
+
         if (recountModalEl) {
             const recountModal = new bootstrap.Modal(recountModalEl);
 
@@ -38,44 +86,59 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
 
-    document.getElementById('confirmRecount').addEventListener('click', function() {
-        const hiddenInput = document.createElement('input');
-        hiddenInput.type = 'hidden';
-        hiddenInput.name = 'change_type';
-        hiddenInput.value = 'recount';
-        form.appendChild(hiddenInput);
-        recountModal.hide();
-        form.submit();
-    });
+    const confirmRecountBtn = document.getElementById('confirmRecount');
+    if (confirmRecountBtn) {
+        confirmRecountBtn.addEventListener('click', function() {
+            const hiddenInput = document.createElement('input');
+            hiddenInput.type = 'hidden';
+            hiddenInput.name = 'change_type';
+            hiddenInput.value = 'recount';
+            form.appendChild(hiddenInput);
+            recountModal.hide();
+            form.submit();
+        });
+    }
 
     const overrideCostCheckbox = document.getElementById('modal_override_cost');
     const costPerUnitInput = document.getElementById('modal_cost_per_unit');
-    const costOverrideModal = new bootstrap.Modal(document.getElementById('costOverrideWarningModal'));
+    const costOverrideWarningModalEl = document.getElementById('costOverrideWarningModal');
 
-    overrideCostCheckbox.addEventListener('change', function() {
-        if (this.checked) {
-            costOverrideModal.show();
-        } else {
-            costPerUnitInput.readOnly = true;
+    if (overrideCostCheckbox && costPerUnitInput && costOverrideWarningModalEl) {
+        const costOverrideModal = new bootstrap.Modal(costOverrideWarningModalEl);
+
+        overrideCostCheckbox.addEventListener('change', function() {
+            if (this.checked) {
+                costOverrideModal.show();
+            } else {
+                costPerUnitInput.readOnly = true;
+            }
+        });
+
+        const confirmCostOverrideBtn = document.getElementById('confirmCostOverride');
+        if (confirmCostOverrideBtn) {
+            confirmCostOverrideBtn.addEventListener('click', function() {
+                costPerUnitInput.readOnly = false;
+                costOverrideModal.hide();
+            });
         }
-    });
 
-    document.getElementById('confirmCostOverride').addEventListener('click', function() {
-        costPerUnitInput.readOnly = false;
-        costOverrideModal.hide();
-    });
-
-    document.getElementById('costOverrideWarningModal').addEventListener('hidden.bs.modal', function() {
-        if (costPerUnitInput.readOnly) {
-            overrideCostCheckbox.checked = false;
-        }
-    });
+        costOverrideWarningModalEl.addEventListener('hidden.bs.modal', function() {
+            if (costPerUnitInput.readOnly) {
+                overrideCostCheckbox.checked = false;
+            }
+        });
+    }
 
     // Type change handler
-    document.querySelector('select[name="type"]').addEventListener('change', function() {
-        document.getElementById('categorySection').style.display =
-            this.value === 'ingredient' ? 'block' : 'none';
-    });
+    const typeSelect = document.querySelector('select[name="type"]');
+    if (typeSelect) {
+        typeSelect.addEventListener('change', function() {
+            const categorySection = document.getElementById('categorySection');
+            if (categorySection) {
+                categorySection.style.display = this.value === 'ingredient' ? 'block' : 'none';
+            }
+        });
+    }
 
     // Category change handler
     const categorySelect = document.getElementById('categorySelect');
