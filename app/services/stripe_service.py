@@ -25,6 +25,7 @@ class StripeService:
 
         stripe.api_key = api_key
         logger.info("Stripe service initialized")
+        return True
 
     @staticmethod
     def construct_event(payload: bytes, sig_header: str, webhook_secret: str):
@@ -108,33 +109,146 @@ class StripeService:
     @staticmethod
     def _handle_checkout_completed(event):
         """Handle checkout.session.completed event"""
-        # Implementation moved from routes - this would contain the signup completion logic
-        pass
+        try:
+            session = event['data']['object']
+            customer_id = session.get('customer')
+            metadata = session.get('metadata', {})
+
+            # If an organization_id is present in metadata, link customer to org
+            organization_id = metadata.get('organization_id')
+            if organization_id and customer_id:
+                org = Organization.query.get(int(organization_id))
+                if org:
+                    org.stripe_customer_id = customer_id
+                    # Set provisional status
+                    org.billing_status = 'active'
+                    db.session.commit()
+                    logger.info(f"Linked Stripe customer {customer_id} to organization {org.id}")
+        except Exception as e:
+            logger.error(f"checkout.session.completed handling error: {e}")
 
     @staticmethod
     def _handle_subscription_created(event):
         """Handle customer.subscription.created event"""
-        pass
+        StripeService._upsert_subscription_from_event(event)
 
     @staticmethod
     def _handle_subscription_updated(event):
         """Handle customer.subscription.updated event"""
-        pass
+        StripeService._upsert_subscription_from_event(event)
 
     @staticmethod
     def _handle_subscription_deleted(event):
         """Handle customer.subscription.deleted event"""
-        pass
+        try:
+            subscription = event['data']['object']
+            customer_id = subscription.get('customer')
+            if not customer_id:
+                return
+            org = Organization.query.filter_by(stripe_customer_id=customer_id).first()
+            if not org:
+                logger.warning(f"Org not found for customer {customer_id} on subscription.deleted")
+                return
+            org.subscription_status = 'canceled'
+            org.billing_status = 'canceled'
+            db.session.commit()
+        except Exception as e:
+            logger.error(f"subscription.deleted handling error: {e}")
 
     @staticmethod
     def _handle_payment_succeeded(event):
         """Handle invoice.payment_succeeded event"""
-        pass
+        try:
+            invoice = event['data']['object']
+            customer_id = invoice.get('customer')
+            if not customer_id:
+                return
+            org = Organization.query.filter_by(stripe_customer_id=customer_id).first()
+            if not org:
+                return
+            org.billing_status = 'active'
+            db.session.commit()
+        except Exception as e:
+            logger.error(f"invoice.payment_succeeded handling error: {e}")
 
     @staticmethod
     def _handle_payment_failed(event):
         """Handle invoice.payment_failed event"""
-        pass
+        try:
+            invoice = event['data']['object']
+            customer_id = invoice.get('customer')
+            if not customer_id:
+                return
+            org = Organization.query.filter_by(stripe_customer_id=customer_id).first()
+            if not org:
+                return
+            org.billing_status = 'payment_failed'
+            db.session.commit()
+        except Exception as e:
+            logger.error(f"invoice.payment_failed handling error: {e}")
+
+    @staticmethod
+    def _upsert_subscription_from_event(event):
+        """Create or update org subscription status and tier from a subscription event."""
+        try:
+            subscription = event['data']['object']
+            customer_id = subscription.get('customer')
+            if not customer_id:
+                return
+
+            org = Organization.query.filter_by(stripe_customer_id=customer_id).first()
+            # If org not linked yet but customer has metadata with organization_id, link it
+            if not org:
+                customer = stripe.Customer.retrieve(customer_id)
+                org_id_meta = None
+                try:
+                    org_id_meta = customer.metadata.get('organization_id') if hasattr(customer, 'metadata') else None
+                except Exception:
+                    org_id_meta = None
+                if org_id_meta:
+                    candidate = Organization.query.get(int(org_id_meta))
+                    if candidate:
+                        candidate.stripe_customer_id = customer_id
+                        org = candidate
+
+            if not org:
+                logger.warning(f"Organization not found for customer {customer_id}")
+                return
+
+            # Map tier by price lookup_key
+            items = subscription.get('items', {}).get('data', [])
+            price_lookup_key = None
+            if items:
+                price = items[0].get('price', {})
+                price_lookup_key = price.get('lookup_key')
+            tier_to_set = None
+            if price_lookup_key:
+                # Normalize to monthly key for mapping
+                base_lookup = StripeService.derive_interval_lookup_key(price_lookup_key, target_interval='monthly')
+                tier_to_set = SubscriptionTier.query.filter_by(stripe_lookup_key=base_lookup).first()
+
+            if tier_to_set:
+                org.subscription_tier_id = tier_to_set.id
+
+            # Update status fields
+            status = subscription.get('status')
+            if status:
+                org.subscription_status = status
+                if status in ['active', 'trialing']:
+                    org.billing_status = 'active'
+                    org.is_active = True
+                elif status in ['past_due', 'unpaid']:
+                    org.billing_status = 'payment_failed'
+                elif status in ['canceled', 'incomplete_expired']:
+                    org.billing_status = 'canceled'
+
+            # Persist subscription id
+            if subscription.get('id'):
+                org.stripe_subscription_id = subscription['id']
+
+            db.session.commit()
+        except Exception as e:
+            logger.error(f"subscription upsert handling error: {e}")
 
     @staticmethod
     def initialize_stripe():
@@ -268,43 +382,34 @@ class StripeService:
 
     @staticmethod
     def sync_product_from_stripe(lookup_key):
-        """Sync a single product from Stripe to local database"""
+        """Sync a single product from Stripe to local PricingSnapshot entries."""
         if not StripeService.initialize_stripe():
             return False
 
         try:
-            # Get product by lookup key
-            prices = stripe.Price.list(
-                lookup_keys=[lookup_key],
-                active=True,
-                limit=1
-            )
+            # Import here to avoid circular imports
+            from app.models.pricing_snapshot import PricingSnapshot
 
+            # Get all active prices for the lookup key (both intervals)
+            prices = stripe.Price.list(lookup_keys=[lookup_key, StripeService.derive_interval_lookup_key(lookup_key, 'yearly')], active=True, limit=10)
             if not prices.data:
-                logger.warning(f"No Stripe product found for lookup key: {lookup_key}")
+                logger.warning(f"No Stripe prices found for lookup key(s): {lookup_key}")
                 return False
 
-            price = prices.data[0]
-            product = stripe.Product.retrieve(price.product)
+            updated_any = False
+            for price in prices.auto_paging_iter():
+                try:
+                    product = stripe.Product.retrieve(price.product)
+                    snapshot = PricingSnapshot.update_from_stripe_data(price, product)
+                    updated_any = True or updated_any
+                except Exception as inner:
+                    logger.error(f"Failed to create snapshot for price {price.id}: {inner}")
 
-            # Update local tier with Stripe data
-            tier_obj = SubscriptionTier.query.filter_by(stripe_lookup_key=lookup_key).first()
-            if tier_obj:
-                # Update pricing info
-                tier_obj.fallback_price = f"${price.unit_amount / 100:.0f}"
-                tier_obj.last_billing_sync = TimezoneUtils.utc_now()
-
-                # Store Stripe metadata
-                if hasattr(tier_obj, 'stripe_metadata'):
-                    tier_obj.stripe_metadata = {
-                        'product_id': product.id,
-                        'price_id': price.id,
-                        'last_synced': TimezoneUtils.utc_now().isoformat()
-                    }
-
+            if updated_any:
                 db.session.commit()
-                logger.info(f"Synced tier {tier_obj.key} with Stripe product {product.name}")
+                logger.info(f"Pricing snapshots updated for lookup key(s) starting with {lookup_key}")
                 return True
+            return False
 
         except stripe.error.StripeError as e:
             logger.error(f"Error syncing product from Stripe: {e}")
