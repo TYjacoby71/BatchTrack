@@ -28,31 +28,24 @@
               </ul>
             </div>
 
+            {% if d.events and d.events|length %}
+            <div class="mb-2">
+              <small class="text-uppercase text-muted">Events</small>
+              <ul class="mb-2">
+                {% for e in d.events %}
+                  <li><code>{{ e }}</code></li>
+                {% endfor %}
+              </ul>
+            </div>
+            {% endif %}
+
             <div>
               <small class="text-uppercase text-muted">Placeholders</small>
               <ul class="mb-0">
-                {% if d.name == 'Inventory' %}
-                  <li>Total cost held (warehouse)</li>
-                  <li>Usage last 30 days (warehouse)</li>
-                  <li>Spoilage rate (warehouse)</li>
-                {% elif d.name == 'Batches' %}
-                  <li>Avg batch duration p50/p90</li>
-                  <li>Avg cost variance</li>
-                {% elif d.name == 'Products & SKUs' %}
-                  <li>On-hand by SKU</li>
-                  <li>Reservations and sales velocity</li>
-                {% elif d.name == 'Recipes' %}
-                  <li>Success rate</li>
-                  <li>Avg efficiency</li>
-                {% elif d.name == 'Timers' %}
-                  <li>Active timers</li>
-                  <li>Expired timers</li>
-                {% elif d.name == 'Global Item Library' %}
-                  <li>Adoption across orgs</li>
-                  <li>Missing density/capacity data quality</li>
-                {% elif d.name == 'Organizations & Users' %}
-                  <li>Active users by tier</li>
-                  <li>Org activity last 30 days</li>
+                {% if d.data_points and d.data_points|length %}
+                  {% for p in d.data_points %}
+                    <li>{{ p }}</li>
+                  {% endfor %}
                 {% endif %}
               </ul>
             </div>
