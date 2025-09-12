@@ -68,7 +68,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Type change handler
     document.querySelector('select[name="type"]').addEventListener('change', function() {
-        document.getElementById('categorySection').style.display = 
+        document.getElementById('categorySection').style.display =
             this.value === 'ingredient' ? 'block' : 'none';
     });
 
@@ -110,21 +110,28 @@ document.addEventListener('DOMContentLoaded', function() {
         document.getElementById('fifoFilter').checked = true;
         // Don't call toggleFifoFilter() here as it would cause a reload loop
     }
+
+    const initialStockBtn = document.getElementById('initial-stock-btn');
+    if (initialStockBtn) {
+        initialStockBtn.addEventListener('click', function() {
+        });
+        });
+    }
 });
 
 function toggleFifoFilter() {
     const fifoFilter = document.getElementById('fifoFilter');
-    
+
     // Build new URL with filter parameter and reset to page 1
     const url = new URL(window.location);
     url.searchParams.delete('page'); // Reset to page 1
-    
+
     if (fifoFilter.checked) {
         url.searchParams.set('fifo', 'true');
     } else {
         url.searchParams.delete('fifo');
     }
-    
+
     // Redirect to apply filter at backend level
     window.location.href = url.toString();
 }
