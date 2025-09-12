@@ -58,7 +58,7 @@
           <select name="reference_category" class="form-select">
             <option value="">Select Category</option>
             {% for category in reference_categories %}
-              <option value="{{ category }}" {% if item.reference_category == category %}selected{% endif %}>{{ category }}</option>
+              <option value="{{ category }}" {% if item.ingredient_category and item.ingredient_category.name == category %}selected{% endif %}>{{ category }}</option>
             {% endfor %}
           </select>
           <a href="{{ url_for('developer.reference_categories') }}" class="btn btn-outline-secondary" title="Manage Categories">

@@ -622,13 +622,15 @@ def global_items_admin():
 def global_item_detail(item_id):
     item = GlobalItem.query.get_or_404(item_id)
 
-    # Get available reference categories for the edit form
-    existing_categories = db.session.query(GlobalItem.reference_category).filter(
-        GlobalItem.reference_category.isnot(None),
-        GlobalItem.reference_category != ''
-    ).distinct().order_by(GlobalItem.reference_category).all()
+    # Get available reference categories from IngredientCategory table
+    from app.models.category import IngredientCategory
+    existing_categories = IngredientCategory.query.filter_by(
+        organization_id=None,
+        is_reference_category=True,
+        is_active=True
+    ).order_by(IngredientCategory.name).all()
 
-    reference_categories = sorted([cat[0] for cat in existing_categories if cat[0]])
+    reference_categories = sorted([cat.name for cat in existing_categories if cat.name])
 
     return render_template('developer/global_item_detail.html', item=item, reference_categories=reference_categories)
 
@@ -673,6 +675,22 @@ def global_item_edit(item_id):
     aka_names = request.form.get('aka_names')  # comma-separated
     if aka_names is not None:
         item.aka_names = [n.strip() for n in aka_names.split(',') if n.strip()]
+
+    # Handle reference category assignment
+    reference_category_name = request.form.get('reference_category')
+    if reference_category_name:
+        from app.models.category import IngredientCategory
+        category = IngredientCategory.query.filter_by(
+            name=reference_category_name,
+            organization_id=None,
+            is_reference_category=True
+        ).first()
+        if category:
+            item.ingredient_category_id = category.id
+        else:
+            item.ingredient_category_id = None
+    else:
+        item.ingredient_category_id = None
 
     try:
         db.session.commit()
@@ -935,7 +953,6 @@ def create_global_item():
                 name=name,
                 item_type=item_type,
                 default_unit=default_unit,
-                # Assign the ingredient_category_id
                 ingredient_category_id=ingredient_category_id
             )
 
