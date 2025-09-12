@@ -38,44 +38,59 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
 
-    document.getElementById('confirmRecount').addEventListener('click', function() {
-        const hiddenInput = document.createElement('input');
-        hiddenInput.type = 'hidden';
-        hiddenInput.name = 'change_type';
-        hiddenInput.value = 'recount';
-        form.appendChild(hiddenInput);
-        recountModal.hide();
-        form.submit();
-    });
+    const confirmRecountBtn = document.getElementById('confirmRecount');
+    if (confirmRecountBtn) {
+        confirmRecountBtn.addEventListener('click', function() {
+            const hiddenInput = document.createElement('input');
+            hiddenInput.type = 'hidden';
+            hiddenInput.name = 'change_type';
+            hiddenInput.value = 'recount';
+            form.appendChild(hiddenInput);
+            recountModal.hide();
+            form.submit();
+        });
+    }
 
     const overrideCostCheckbox = document.getElementById('modal_override_cost');
     const costPerUnitInput = document.getElementById('modal_cost_per_unit');
-    const costOverrideModal = new bootstrap.Modal(document.getElementById('costOverrideWarningModal'));
+    const costOverrideWarningModalEl = document.getElementById('costOverrideWarningModal');
+    
+    if (overrideCostCheckbox && costPerUnitInput && costOverrideWarningModalEl) {
+        const costOverrideModal = new bootstrap.Modal(costOverrideWarningModalEl);
 
-    overrideCostCheckbox.addEventListener('change', function() {
-        if (this.checked) {
-            costOverrideModal.show();
-        } else {
-            costPerUnitInput.readOnly = true;
+        overrideCostCheckbox.addEventListener('change', function() {
+            if (this.checked) {
+                costOverrideModal.show();
+            } else {
+                costPerUnitInput.readOnly = true;
+            }
+        });
+
+        const confirmCostOverrideBtn = document.getElementById('confirmCostOverride');
+        if (confirmCostOverrideBtn) {
+            confirmCostOverrideBtn.addEventListener('click', function() {
+                costPerUnitInput.readOnly = false;
+                costOverrideModal.hide();
+            });
         }
-    });
 
-    document.getElementById('confirmCostOverride').addEventListener('click', function() {
-        costPerUnitInput.readOnly = false;
-        costOverrideModal.hide();
-    });
-
-    document.getElementById('costOverrideWarningModal').addEventListener('hidden.bs.modal', function() {
-        if (costPerUnitInput.readOnly) {
-            overrideCostCheckbox.checked = false;
-        }
-    });
+        costOverrideWarningModalEl.addEventListener('hidden.bs.modal', function() {
+            if (costPerUnitInput.readOnly) {
+                overrideCostCheckbox.checked = false;
+            }
+        });
+    }
 
     // Type change handler
-    document.querySelector('select[name="type"]').addEventListener('change', function() {
-        document.getElementById('categorySection').style.display =
-            this.value === 'ingredient' ? 'block' : 'none';
-    });
+    const typeSelect = document.querySelector('select[name="type"]');
+    if (typeSelect) {
+        typeSelect.addEventListener('change', function() {
+            const categorySection = document.getElementById('categorySection');
+            if (categorySection) {
+                categorySection.style.display = this.value === 'ingredient' ? 'block' : 'none';
+            }
+        });
+    }
 
     // Category change handler
     const categorySelect = document.getElementById('categorySelect');
