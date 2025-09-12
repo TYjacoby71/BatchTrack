@@ -1,0 +1,74 @@
+
+🎉 All blueprints registered successfully!
+2025-09-12 16:35:19,056 WARNING:  * Debugger is active!
+2025-09-12 16:35:19,382 [INFO] app.middleware: Unauthenticated access attempt to None
+2025-09-12 16:35:19,382 INFO: Unauthenticated access attempt to None
+2025-09-12 16:35:19,385 [INFO] app.middleware: Unauthenticated access attempt to None
+2025-09-12 16:35:19,385 INFO: Unauthenticated access attempt to None
+2025-09-12 16:35:19,387 [INFO] app.middleware: Unauthenticated access attempt to None
+2025-09-12 16:35:19,387 INFO: Unauthenticated access attempt to None
+2025-09-12 16:35:19,392 [INFO] app.middleware: Unauthenticated access attempt to None
+2025-09-12 16:35:19,392 INFO: Unauthenticated access attempt to None
+2025-09-12 16:35:19,395 [INFO] app.middleware: Unauthenticated access attempt to None
+2025-09-12 16:35:19,395 INFO: Unauthenticated access attempt to None
+2025-09-12 16:35:19,411 [DEBUG] app.services.oauth_service: OAuth is properly configured
+2025-09-12 16:35:19,411 DEBUG: OAuth is properly configured
+2025-09-12 16:35:19,412 [DEBUG] app.services.oauth_service: OAuth is properly configured
+2025-09-12 16:35:19,412 DEBUG: OAuth is properly configured
+2025-09-12 16:35:19,565 [INFO] app.utils.unit_utils: Getting global unit list
+2025-09-12 16:35:19,565 INFO: Getting global unit list
+2025-09-12 16:35:19,560 [INFO] app.utils.unit_utils: Getting global unit list
+2025-09-12 16:35:19,560 INFO: Getting global unit list
+2025-09-12 16:35:19,823 [INFO] app.middleware: Unauthenticated access attempt to None
+2025-09-12 16:35:19,823 INFO: Unauthenticated access attempt to None
+2025-09-12 16:35:19,827 [DEBUG] app.services.oauth_service: OAuth is properly configured
+2025-09-12 16:35:19,827 DEBUG: OAuth is properly configured
+2025-09-12 16:35:19,828 [INFO] app.utils.unit_utils: Getting global unit list
+2025-09-12 16:35:19,828 INFO: Getting global unit list
+2025-09-12 16:35:20,324 [INFO] app.middleware: Unauthenticated access attempt to None
+2025-09-12 16:35:20,324 INFO: Unauthenticated access attempt to None
+2025-09-12 16:35:20,335 [DEBUG] app.services.oauth_service: OAuth is properly configured
+2025-09-12 16:35:20,335 DEBUG: OAuth is properly configured
+2025-09-12 16:35:20,335 [INFO] app.utils.unit_utils: Getting global unit list
+2025-09-12 16:35:20,335 INFO: Getting global unit list
+2025-09-12 16:35:20,822 [INFO] app.middleware: Unauthenticated access attempt to None
+2025-09-12 16:35:20,822 INFO: Unauthenticated access attempt to None
+2025-09-12 16:35:20,825 [DEBUG] app.services.oauth_service: OAuth is properly configured
+2025-09-12 16:35:20,825 DEBUG: OAuth is properly configured
+2025-09-12 16:35:20,825 [INFO] app.utils.unit_utils: Getting global unit list
+2025-09-12 16:35:20,825 INFO: Getting global unit list
+2025-09-12 16:35:21,323 [INFO] app.middleware: Unauthenticated access attempt to None
+2025-09-12 16:35:21,323 INFO: Unauthenticated access attempt to None
+2025-09-12 16:35:21,330 [DEBUG] app.services.oauth_service: OAuth is properly configured
+2025-09-12 16:35:21,330 DEBUG: OAuth is properly configured
+2025-09-12 16:35:21,331 [INFO] app.utils.unit_utils: Getting global unit list
+2025-09-12 16:35:21,331 INFO: Getting global unit list
+2025-09-12 16:35:21,824 [INFO] app.middleware: Unauthenticated access attempt to None
+2025-09-12 16:35:21,824 INFO: Unauthenticated access attempt to None
+2025-09-12 16:35:21,828 [DEBUG] app.services.oauth_service: OAuth is properly configured
+2025-09-12 16:35:21,828 DEBUG: OAuth is properly configured
+2025-09-12 16:35:22,123 INFO: Expiration alerts debug: expired_fifo=11, expired_products=0, expiring_fifo=5, expiring_products=0
+2025-09-12 16:35:22,124 INFO: Current time: 2025-09-12 16:35:22.092028, cutoff: 2025-09-19 16:35:22.092028
+2025-09-12 16:35:22,181 [INFO] app.utils.unit_utils: Getting global unit list
+2025-09-12 16:35:22,181 INFO: Getting global unit list
+2025-09-12 16:35:22,325 [INFO] app.middleware: Unauthenticated access attempt to None
+2025-09-12 16:35:22,325 INFO: Unauthenticated access attempt to None
+2025-09-12 16:35:22,333 [DEBUG] app.services.oauth_service: OAuth is properly configured
+2025-09-12 16:35:22,333 DEBUG: OAuth is properly configured
+2025-09-12 16:35:22,828 [INFO] app.middleware: Unauthenticated access attempt to None
+2025-09-12 16:35:22,828 INFO: Unauthenticated access attempt to None
+2025-09-12 16:35:22,837 [DEBUG] app.services.oauth_service: OAuth is properly configured
+2025-09-12 16:35:22,837 DEBUG: OAuth is properly configured
+2025-09-12 16:35:23,177 INFO: Expiration alerts debug: expired_fifo=11, expired_products=0, expiring_fifo=5, expiring_products=0
+2025-09-12 16:35:23,177 INFO: Current time: 2025-09-12 16:35:23.170003, cutoff: 2025-09-19 16:35:23.170003
+2025-09-12 16:35:23,187 INFO: Dashboard alerts requested - found 3 alerts
+2025-09-12 16:35:23,326 [INFO] app.middleware: Unauthenticated access attempt to None
+2025-09-12 16:35:23,326 INFO: Unauthenticated access attempt to None
+2025-09-12 16:35:23,330 [DEBUG] app.services.oauth_service: OAuth is properly configured
+2025-09-12 16:35:23,330 DEBUG: OAuth is properly configured
+2025-09-12 16:35:23,827 [INFO] app.middleware: Unauthenticated access attempt to None
+2025-09-12 16:35:23,827 INFO: Unauthenticated access attempt to None
+2025-09-12 16:35:23,834 [DEBUG] app.services.oauth_service: OAuth is properly configured
+2025-09-12 16:35:23,834 DEBUG: OAuth is properly configured
+2025-09-12 16:35:24,328 [INFO] app.middleware: Unauthenticated access attempt to None
+2025-09-12 16:35:24,328 INFO: Unauthenticated access attempt to None
