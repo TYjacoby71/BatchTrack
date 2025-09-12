@@ -77,6 +77,8 @@ def checkout(tier, billing_cycle='month'):
         return redirect(url_for('billing.upgrade'))
 
     try:
+        # Allow override via query or form (so the pricing toggle can post it)
+        selected_cycle = request.values.get('billing_cycle', billing_cycle)
         # Use unified billing service for checkout
         checkout_session = BillingService.create_checkout_session(
             tier,
@@ -84,7 +86,7 @@ def checkout(tier, billing_cycle='month'):
             f"{current_user.first_name} {current_user.last_name}",
             url_for('billing.complete_signup_from_stripe', _external=True),
             url_for('billing.upgrade', _external=True),
-            metadata={'tier': tier, 'billing_cycle': billing_cycle}
+            metadata={'tier': tier, 'billing_cycle': selected_cycle}
         )
         
         if checkout_session:

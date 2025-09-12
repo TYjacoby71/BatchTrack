@@ -157,35 +157,35 @@ class StripeService:
             return None
 
         try:
-            # Use lookup_key to find the price - this is the industry standard
-            prices = stripe.Price.list(
-                lookup_keys=[tier_obj.stripe_lookup_key],
-                active=True,
-                limit=1
-            )
+            # Use lookup_key to find the price - prefer monthly; include yearly if present
+            monthly_key = tier_obj.stripe_lookup_key
+            yearly_key = StripeService.derive_interval_lookup_key(monthly_key, target_interval='yearly')
 
-            if not prices.data:
-                logger.warning(f"No active Stripe price found for lookup key: {tier_obj.stripe_lookup_key}")
+            monthly_price = StripeService._get_price_by_lookup_key(monthly_key)
+            yearly_price = StripeService._get_price_by_lookup_key(yearly_key) if yearly_key != monthly_key else None
+
+            if not monthly_price and not yearly_price:
+                logger.warning(f"No active Stripe price found for lookup keys: {monthly_key} / {yearly_key}")
                 return None
 
-            price = prices.data[0]
+            def _fmt(price_obj):
+                amt = price_obj.unit_amount / 100
+                return f'${amt:.0f}'
 
-            # Format pricing data
-            amount = price.unit_amount / 100
-            currency = price.currency.upper()
-
-            billing_cycle = 'one-time'
-            if price.recurring:
-                billing_cycle = 'yearly' if price.recurring.interval == 'year' else 'monthly'
-
-            return {
-                'price_id': price.id,
-                'amount': amount,
-                'formatted_price': f'${amount:.0f}',
-                'currency': currency,
-                'billing_cycle': billing_cycle,
-                'lookup_key': tier_obj.stripe_lookup_key
+            result = {
+                'lookup_key_monthly': monthly_key,
+                'lookup_key_yearly': yearly_key if yearly_price else None,
+                'currency': (monthly_price.currency if monthly_price else yearly_price.currency).upper(),
+                'billing_cycle': 'monthly' if monthly_price else 'yearly'
             }
+            if monthly_price:
+                result['price_id_monthly'] = monthly_price.id
+                result['price_monthly'] = _fmt(monthly_price)
+            if yearly_price:
+                result['price_id_yearly'] = yearly_price.id
+                result['price_yearly'] = _fmt(yearly_price)
+
+            return result
 
         except stripe.error.StripeError as e:
             logger.error(f"Stripe error fetching price for {tier_obj.stripe_lookup_key}: {e}")
@@ -212,11 +212,18 @@ class StripeService:
             )
 
             # Create checkout session with live price ID
+            # Choose price by requested billing_cycle metadata if present
+            requested_cycle = (metadata or {}).get('billing_cycle')
+            if requested_cycle == 'yearly' and pricing.get('price_id_yearly'):
+                selected_price_id = pricing['price_id_yearly']
+            else:
+                selected_price_id = pricing.get('price_id_monthly') or pricing.get('price_id_yearly')
+
             session = stripe.checkout.Session.create(
                 customer=customer.id,
                 payment_method_types=['card'],
                 line_items=[{
-                    'price': pricing['price_id'],
+                    'price': selected_price_id,
                     'quantity': 1,
                 }],
                 mode='subscription',
@@ -224,7 +231,9 @@ class StripeService:
                 cancel_url=cancel_url,
                 metadata={
                     'tier_key': tier_obj.key,
-                    'lookup_key': tier_obj.stripe_lookup_key,
+                    'lookup_key_monthly': pricing.get('lookup_key_monthly'),
+                    'lookup_key_yearly': pricing.get('lookup_key_yearly'),
+                    'selected_billing_cycle': 'yearly' if selected_price_id == pricing.get('price_id_yearly') else 'monthly',
                     **(metadata or {})
                 }
             )
@@ -235,6 +244,27 @@ class StripeService:
         except stripe.error.StripeError as e:
             logger.error(f"Failed to create checkout session for tier {tier_obj.key}: {e}")
             return None
+
+    @staticmethod
+    def _get_price_by_lookup_key(lookup_key: str):
+        """Return the first active Price for a lookup key, or None."""
+        if not lookup_key:
+            return None
+        prices = stripe.Price.list(lookup_keys=[lookup_key], active=True, limit=1)
+        return prices.data[0] if prices.data else None
+
+    @staticmethod
+    def derive_interval_lookup_key(base_lookup_key: str, target_interval: str = 'yearly') -> str:
+        """Derive a yearly or monthly lookup key from a monthly base name.
+        Convention: replace suffix '_monthly' with '_yearly' and vice versa.
+        """
+        if not base_lookup_key:
+            return base_lookup_key
+        if target_interval == 'yearly':
+            return base_lookup_key.replace('_monthly', '_yearly')
+        if target_interval == 'monthly':
+            return base_lookup_key.replace('_yearly', '_monthly')
+        return base_lookup_key
 
     @staticmethod
     def sync_product_from_stripe(lookup_key):

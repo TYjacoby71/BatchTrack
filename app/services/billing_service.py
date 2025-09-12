@@ -106,19 +106,32 @@ class BillingService:
                         'features': getattr(tier, 'features', [])
                     }
                 elif tier.billing_provider == 'stripe':
-                    # Get live Stripe pricing
+                    # Get live Stripe pricing (monthly and yearly when available)
                     from .stripe_service import StripeService
                     stripe_pricing = StripeService.get_live_pricing_for_tier(tier)
-                    
-                    pricing_data['tiers'][tier.key] = {
+
+                    pricing_entry = {
                         'name': tier.name,
                         'description': getattr(tier, 'description', ''),
-                        'price': stripe_pricing['formatted_price'] if stripe_pricing else 'N/A',
-                        'billing_cycle': stripe_pricing['billing_cycle'] if stripe_pricing else 'monthly',
+                        'price': 'N/A',
+                        'price_yearly': None,
+                        'billing_cycle': 'monthly',
                         'available': stripe_pricing is not None,
                         'provider': 'stripe',
                         'features': getattr(tier, 'features', [])
                     }
+
+                    if stripe_pricing:
+                        if stripe_pricing.get('price_monthly'):
+                            pricing_entry['price'] = stripe_pricing['price_monthly']
+                        elif stripe_pricing.get('price_yearly'):
+                            # Fall back to yearly if monthly missing
+                            pricing_entry['price'] = stripe_pricing['price_yearly']
+                            pricing_entry['billing_cycle'] = 'yearly'
+                        if stripe_pricing.get('price_yearly'):
+                            pricing_entry['price_yearly'] = stripe_pricing['price_yearly']
+
+                    pricing_data['tiers'][tier.key] = pricing_entry
                 elif tier.billing_provider == 'whop':
                     # Whop is stubbed for now
                     pricing_data['tiers'][tier.key] = {

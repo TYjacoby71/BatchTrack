@@ -89,7 +89,14 @@
         </div>
     </div>
 
-    <div class="pricing-cards row">
+    <div class="d-flex align-items-center mb-3">
+        <div class="form-check form-switch ms-auto">
+            <input class="form-check-input" type="checkbox" id="yearlyToggle">
+            <label class="form-check-label" for="yearlyToggle">Yearly billing</label>
+        </div>
+    </div>
+
+    <div class="pricing-cards row" id="pricingCards">
         {% for tier_name, tier_data in pricing_data.items() %}
         <div class="col-md-4 mb-4">
             <div class="card pricing-card h-100 {% if tier_name == 'team' %}border-primary{% endif %}">
@@ -106,13 +113,17 @@
                     <p class="text-muted">{{ tier_data.description }}</p>
                     {% endif %}
 
-                    <div class="pricing">
-                        <h3 class="price text-primary">{{ tier_data.price }}</h3>
-                        <small class="text-muted">/month</small>
+                    <div class="pricing" data-tier="{{ tier_name }}">
+                        <h3 class="price text-primary">
+                            <span class="price-monthly">{{ tier_data.price }}</span>
+                            {% if tier_data.get('price_yearly') %}
+                            <span class="price-yearly d-none">{{ tier_data.price_yearly }}</span>
+                            {% endif %}
+                        </h3>
+                        <small class="text-muted interval-label">/month</small>
                         {% if tier_data.get('price_yearly') %}
-                        <div class="yearly-price mt-2">
-                            <span class="text-success">{{ tier_data.price_yearly }}/year</span>
-                            <small class="d-block">Save with yearly billing</small>
+                        <div class="yearly-savings mt-2 d-none">
+                            <small class="d-block text-success">Save with yearly billing</small>
                         </div>
                         {% endif %}
                     </div>
@@ -140,15 +151,16 @@
                     {% if current_tier != tier_name %}
                     {% if has_permission(current_user, 'organization.manage_billing') %}
                       <!-- Standard billing flow for all paid tiers -->
-                      <form method="POST" action="{{ url_for('billing.checkout', tier=tier_name) }}" class="d-inline">
+                      <form method="POST" action="{{ url_for('billing.checkout', tier=tier_name) }}" class="d-inline checkout-form" data-tier="{{ tier_name }}">
                         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+                        <input type="hidden" name="billing_cycle" value="monthly"/>
                         <button type="submit" class="btn btn-primary btn-lg w-100 mb-2">
                           <i class="fas fa-credit-card"></i> Upgrade to {{ tier_data.get('name', tier_name.title()) }}
                         </button>
                       </form>
                       {% if tier_data.get('price_yearly') and tier_data.get('price_yearly') != '$0' %}
                       <a href="{{ url_for('billing.checkout', tier=tier_name, billing_cycle='yearly') }}" 
-                         class="btn btn-outline-success btn-sm mt-2">
+                         class="btn btn-outline-success btn-sm mt-2 choose-yearly d-none">
                           Choose Yearly
                       </a>
                       {% endif %}
@@ -170,7 +182,42 @@
 
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-    // Cancel subscription functionality removed
+    var yearlyToggle = document.getElementById('yearlyToggle');
+    yearlyToggle.addEventListener('change', function() {
+        var wantYearly = yearlyToggle.checked;
+        document.querySelectorAll('#pricingCards .pricing').forEach(function(pricing) {
+            var monthly = pricing.querySelector('.price-monthly');
+            var yearly = pricing.querySelector('.price-yearly');
+            var interval = pricing.parentElement.querySelector('.interval-label');
+            var savings = pricing.parentElement.querySelector('.yearly-savings');
+            if (wantYearly && yearly) {
+                monthly.classList.add('d-none');
+                yearly.classList.remove('d-none');
+                interval.textContent = '/year';
+                if (savings) savings.classList.remove('d-none');
+            } else {
+                if (monthly) monthly.classList.remove('d-none');
+                if (yearly) yearly.classList.add('d-none');
+                interval.textContent = '/month';
+                if (savings) savings.classList.add('d-none');
+            }
+        });
+
+        // Update checkout forms hidden input and toggle alternate link
+        document.querySelectorAll('.checkout-form').forEach(function(form) {
+            var input = form.querySelector('input[name="billing_cycle"]');
+            if (input) input.value = wantYearly ? 'yearly' : 'monthly';
+            var card = form.closest('.pricing-card');
+            var chooseYearly = card.querySelector('.choose-yearly');
+            if (chooseYearly) {
+                if (wantYearly) {
+                    chooseYearly.classList.remove('d-none');
+                } else {
+                    chooseYearly.classList.add('d-none');
+                }
+            }
+        });
+    });
 });
 
 function debugCheckout(tierKey, tierName) {
