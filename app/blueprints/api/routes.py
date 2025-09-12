@@ -9,6 +9,13 @@ logger = logging.getLogger(__name__)
 
 api_bp = Blueprint('api', __name__, url_prefix='/api')
 
+@api_bp.route('/', methods=['GET', 'HEAD'])
+def health_check():
+    """Health check endpoint for monitoring services"""
+    if request.method == 'HEAD':
+        return '', 200
+    return jsonify({'status': 'ok', 'timestamp': datetime.utcnow().isoformat()})
+
 @api_bp.route('/server-time')
 def server_time():
     """Get current server time in user's timezone"""

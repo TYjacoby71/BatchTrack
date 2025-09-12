@@ -25,6 +25,20 @@ def register_middleware(app):
         # Frequent endpoints that should have minimal logging
         frequent_endpoints = ['server_time.get_server_time', 'api.get_dashboard_alerts']
 
+        # Skip middleware for static files and monitoring endpoints
+        if request.path.startswith('/static/'):
+            return
+
+        # Skip logging for monitoring/health check requests from node/system
+        is_monitoring_request = (
+            request.headers.get('User-Agent', '').lower() == 'node' and 
+            request.method == 'HEAD' and 
+            request.path in ['/api', '/health', '/ping']
+        )
+
+        if is_monitoring_request:
+            return
+
         # Pattern-based public paths for flexibility
         public_paths = [
             '/homepage',
