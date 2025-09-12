@@ -462,6 +462,10 @@ class BatchOperationsService(BaseService):
             if success:
                 try:
                     refreshed = Batch.query.get(batch_id)
+                    # Compute containment efficiency if BatchStats exists
+                    from app.models.statistics import BatchStats as _BatchStats
+                    stats = _BatchStats.query.filter_by(batch_id=batch_id).first()
+                    containment_efficiency = getattr(stats, 'actual_fill_efficiency', None) if stats else None
                     EventEmitter.emit(
                         event_name='batch_completed',
                         properties={
@@ -469,6 +473,7 @@ class BatchOperationsService(BaseService):
                             'final_quantity': refreshed.final_quantity,
                             'output_unit': refreshed.output_unit,
                             'completed_at': (refreshed.completed_at.isoformat() if refreshed.completed_at else None),
+                            'containment_efficiency': containment_efficiency
                         },
                         organization_id=refreshed.organization_id,
                         user_id=refreshed.created_by,

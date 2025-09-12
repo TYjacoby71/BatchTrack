@@ -106,15 +106,25 @@ class InventoryStatisticsService:
                 'freshness_efficiency_score': 100.0
             }
             
+            # Helper to compute age in days from lot received_date
+            def _age_days_for_event(e):
+                try:
+                    if getattr(e, 'affected_lot', None) and getattr(e.affected_lot, 'received_date', None) and getattr(e, 'timestamp', None):
+                        delta = e.timestamp - e.affected_lot.received_date
+                        return max(0, delta.days)
+                except Exception:
+                    return None
+                return None
+
             # Calculate average days to spoilage
             if spoilage_events:
-                spoilage_days = [getattr(log, 'item_age_days', None) for log in spoilage_events if getattr(log, 'item_age_days', None)]
+                spoilage_days = [d for d in (_age_days_for_event(ev) for ev in spoilage_events) if d is not None]
                 if spoilage_days:
                     freshness_analysis['avg_days_to_spoilage'] = sum(spoilage_days) / len(spoilage_days)
             
             # Calculate average days to usage
             if usage_events:
-                usage_days = [getattr(log, 'item_age_days', None) for log in usage_events if getattr(log, 'item_age_days', None)]
+                usage_days = [d for d in (_age_days_for_event(ev) for ev in usage_events) if d is not None]
                 if usage_days:
                     freshness_analysis['avg_days_to_usage'] = sum(usage_days) / len(usage_days)
             
