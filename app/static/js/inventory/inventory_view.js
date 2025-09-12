@@ -24,11 +24,30 @@ document.addEventListener('DOMContentLoaded', function() {
     // Handle returning from edit modal to initial inventory modal
     const editModal = document.getElementById('editDetailsModal');
     if (editModal && initialModal) {
+        let returnToInitialModal = false;
+        
+        // Track when we're switching from initial to edit modal
+        const editButton = initialModal.querySelector('[data-bs-target="#editDetailsModal"]');
+        if (editButton) {
+            editButton.addEventListener('click', function() {
+                returnToInitialModal = true;
+            });
+        }
+        
+        // Listen for successful form submission to prevent return
+        const editForm = editModal.querySelector('form');
+        if (editForm) {
+            editForm.addEventListener('submit', function() {
+                returnToInitialModal = false;
+            });
+        }
+        
         editModal.addEventListener('hidden.bs.modal', function () {
-            // If we came from initial inventory modal, show it again
-            if (document.getElementById('initialInventoryModal')) {
+            // Only return to initial modal if we didn't submit the form
+            if (returnToInitialModal && document.getElementById('initialInventoryModal')) {
                 const initialModalInstance = new bootstrap.Modal(initialModal);
                 initialModalInstance.show();
+                returnToInitialModal = false;
             }
         });
     }
