@@ -29,11 +29,11 @@ def register_middleware(app):
         if request.path.startswith('/static/'):
             return
 
-        # Skip logging for monitoring/health check requests from node/system
+        # Skip ALL middleware processing for monitoring/health check requests from node/system
         is_monitoring_request = (
             request.headers.get('User-Agent', '').lower() == 'node' and 
             request.method == 'HEAD' and 
-            request.path in ['/api', '/health', '/ping']
+            request.path in ['/api', '/api/', '/health', '/ping']
         )
 
         if is_monitoring_request:

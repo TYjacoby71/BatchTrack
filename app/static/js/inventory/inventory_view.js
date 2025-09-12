@@ -68,22 +68,25 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Type change handler
     document.querySelector('select[name="type"]').addEventListener('change', function() {
-        document.getElementById('categorySection').style.display = 
+        document.getElementById('categorySection').style.display =
             this.value === 'ingredient' ? 'block' : 'none';
     });
 
     // Category change handler
-    document.getElementById('categorySelect').addEventListener('change', function() {
-        const densityInput = document.getElementById('density');
-        if (this.value === '') {
-            densityInput.disabled = false;
-        } else {
-            const selectedOption = this.options[this.selectedIndex];
-            const defaultDensity = selectedOption.dataset.density;
-            densityInput.value = defaultDensity;
-            densityInput.disabled = true;
-        }
-    });
+    const categorySelect = document.getElementById('categorySelect');
+    if (categorySelect) {
+        categorySelect.addEventListener('change', function() {
+            const densityInput = document.getElementById('density');
+            if (this.value === '') {
+                densityInput.disabled = false;
+            } else {
+                const selectedOption = this.options[this.selectedIndex];
+                const defaultDensity = selectedOption.dataset.density;
+                densityInput.value = defaultDensity;
+                densityInput.disabled = true;
+            }
+        });
+    }
 
     // Initialize popovers for FIFO ID helper
     setTimeout(function() {
@@ -110,21 +113,28 @@ document.addEventListener('DOMContentLoaded', function() {
         document.getElementById('fifoFilter').checked = true;
         // Don't call toggleFifoFilter() here as it would cause a reload loop
     }
+
+    const initialStockBtn = document.getElementById('initial-stock-btn');
+    if (initialStockBtn) {
+        initialStockBtn.addEventListener('click', function() {
+            // Initial stock button functionality can be added here if needed
+        });
+    }
 });
 
 function toggleFifoFilter() {
     const fifoFilter = document.getElementById('fifoFilter');
-    
+
     // Build new URL with filter parameter and reset to page 1
     const url = new URL(window.location);
     url.searchParams.delete('page'); // Reset to page 1
-    
+
     if (fifoFilter.checked) {
         url.searchParams.set('fifo', 'true');
     } else {
         url.searchParams.delete('fifo');
     }
-    
+
     // Redirect to apply filter at backend level
     window.location.href = url.toString();
 }
