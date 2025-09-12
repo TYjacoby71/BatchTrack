@@ -46,7 +46,12 @@ def register_middleware(app):
 
         # 2. Authentication check - if we get here, user must be authenticated
         if not current_user.is_authenticated:
-            logger.info(f"Unauthenticated access attempt to {request.endpoint}")
+            # Better debugging: log the actual path and method being requested
+            endpoint_info = f"endpoint={request.endpoint}, path={request.path}, method={request.method}"
+            if request.endpoint is None:
+                logger.warning(f"Unauthenticated request to UNKNOWN endpoint: {endpoint_info}, user_agent={request.headers.get('User-Agent', 'Unknown')[:100]}")
+            elif not request.path.startswith('/static/'):
+                logger.info(f"Unauthenticated access attempt: {endpoint_info}")
             return redirect(url_for('auth.login', next=request.url))
 
         # Force reload current_user to ensure fresh session data
