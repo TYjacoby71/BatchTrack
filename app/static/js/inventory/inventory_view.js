@@ -73,17 +73,20 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 
     // Category change handler
-    document.getElementById('categorySelect').addEventListener('change', function() {
-        const densityInput = document.getElementById('density');
-        if (this.value === '') {
-            densityInput.disabled = false;
-        } else {
-            const selectedOption = this.options[this.selectedIndex];
-            const defaultDensity = selectedOption.dataset.density;
-            densityInput.value = defaultDensity;
-            densityInput.disabled = true;
-        }
-    });
+    const categorySelect = document.getElementById('categorySelect');
+    if (categorySelect) {
+        categorySelect.addEventListener('change', function() {
+            const densityInput = document.getElementById('density');
+            if (this.value === '') {
+                densityInput.disabled = false;
+            } else {
+                const selectedOption = this.options[this.selectedIndex];
+                const defaultDensity = selectedOption.dataset.density;
+                densityInput.value = defaultDensity;
+                densityInput.disabled = true;
+            }
+        });
+    }
 
     // Initialize popovers for FIFO ID helper
     setTimeout(function() {
@@ -114,7 +117,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const initialStockBtn = document.getElementById('initial-stock-btn');
     if (initialStockBtn) {
         initialStockBtn.addEventListener('click', function() {
-        });
+            // Initial stock button functionality can be added here if needed
         });
     }
 });
