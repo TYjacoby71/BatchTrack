@@ -281,5 +281,114 @@ function getCSRFToken() {
 
     return '';
 }
+
+// JavaScript for Edit Details Modal
+document.addEventListener('DOMContentLoaded', function() {
+    const editDetailsModal = document.getElementById('editDetailsModal');
+    if (editDetailsModal) {
+        editDetailsModal.addEventListener('show.bs.modal', function(event) {
+            const button = event.relatedTarget; // Button that triggered the modal
+            const itemId = button.getAttribute('data-item-id');
+
+            fetch(`/inventory/api/get-item/${itemId}`)
+                .then(response => response.json())
+                .then(item => {
+                    // Populate form fields
+                    document.getElementById('editName').value = item.name;
+                    document.getElementById('editQuantity').value = item.quantity;
+                    document.getElementById('editUnit').value = item.unit;
+                    document.getElementById('editCostPerUnit').value = item.cost_per_unit;
+                    document.getElementById('editNotes').value = item.notes;
+                    document.getElementById('editItemForm').setAttribute('action', `/inventory/adjust/${itemId}`);
+
+                    // Handle global locking indicators and states
+                    const nameInput = document.getElementById('editName');
+                    const unitSelect = document.getElementById('editUnit');
+                    const costPerUnitInput = document.getElementById('editCostPerUnit');
+
+                    // Toggle readonly/disabled and add visual indicators
+                    if (item.global_item_id) {
+                        // Name field
+                        nameInput.readOnly = true;
+                        const nameLabel = nameInput.previousElementSibling;
+                        if (nameLabel && !nameLabel.querySelector('.badge')) {
+                            nameLabel.innerHTML += `
+                                <span class="badge bg-secondary ms-1" title="Locked to global item definition">
+                                    <i class="fas fa-lock"></i> Global
+                                </span>
+                            `;
+                        }
+                        if (!nameInput.nextElementSibling || !nameInput.nextElementSibling.classList.contains('text-muted')) {
+                            const small = document.createElement('small');
+                            small.className = 'text-muted';
+                            small.textContent = 'This field is locked because this item is linked to the global library.';
+                            nameInput.parentNode.insertBefore(small, nameInput.nextSibling);
+                        }
+
+                        // Unit field
+                        unitSelect.disabled = true;
+                        const unitLabel = unitSelect.previousElementSibling;
+                        if (unitLabel && !unitLabel.querySelector('.badge')) {
+                            unitLabel.innerHTML += `
+                                <span class="badge bg-secondary ms-1" title="Locked to global item definition">
+                                    <i class="fas fa-lock"></i> Global
+                                </span>
+                            `;
+                        }
+                         if (!unitSelect.nextElementSibling || !unitSelect.nextElementSibling.classList.contains('text-muted')) {
+                            const small = document.createElement('small');
+                            small.className = 'text-muted';
+                            small.textContent = 'This field is locked because this item is linked to the global library.';
+                            unitSelect.parentNode.insertBefore(small, unitSelect.nextSibling);
+                        }
+
+                        // Cost Per Unit field - can be modified even if global, unless it's a container
+                        if (item.type === 'container') {
+                            costPerUnitInput.readOnly = true;
+                             const costLabel = costPerUnitInput.previousElementSibling;
+                            if (costLabel && !costLabel.querySelector('.badge')) {
+                                costLabel.innerHTML += `
+                                    <span class="badge bg-secondary ms-1" title="Locked to global item definition">
+                                        <i class="fas fa-lock"></i> Global
+                                    </span>
+                                `;
+                            }
+                             if (!costPerUnitInput.nextElementSibling || !costPerUnitInput.nextElementSibling.classList.contains('text-muted')) {
+                                const small = document.createElement('small');
+                                small.className = 'text-muted';
+                                small.textContent = 'This field is locked because this item is linked to the global library.';
+                                costPerUnitInput.parentNode.insertBefore(small, costPerUnitInput.nextSibling);
+                            }
+                        }
+
+                        // If unit is locked, ensure the hidden input has the correct value
+                        const hiddenUnitInput = document.querySelector('input[name="unit"][type="hidden"]');
+                        if (hiddenUnitInput) {
+                            hiddenUnitInput.value = item.unit;
+                        }
+
+                    } else {
+                        // Ensure fields are not read-only/disabled if not global
+                        nameInput.readOnly = false;
+                        unitSelect.disabled = false;
+                        // Cost per unit is generally editable unless it's a container type
+                        if (item.type !== 'container') {
+                            costPerUnitInput.readOnly = false;
+                        } else {
+                             costPerUnitInput.readOnly = true; // Ensure containers remain locked for cost
+                        }
+
+                        // Remove any existing locked indicators and text
+                        document.querySelectorAll('.badge .fa-lock').forEach(icon => icon.closest('.badge').remove());
+                        document.querySelectorAll('.text-muted small').forEach(small => small.remove());
+                    }
+                })
+                .catch(error => {
+                    console.error('Error fetching item details:', error);
+                    alert('Failed to load item details for editing.');
+                });
+        });
+    }
+});
 </script>
 {% endblock %}
