@@ -1,4 +1,3 @@
-
 document.addEventListener('DOMContentLoaded', function() {
     // Check if initial inventory modal exists and show it
     const initialModal = document.getElementById('initialInventoryModal');
@@ -20,70 +19,58 @@ document.addEventListener('DOMContentLoaded', function() {
         initialModal.addEventListener('shown.bs.modal', function () {
             document.getElementById('initial_quantity').focus();
         });
-
-        // Handle edit button click to properly transition modals
-        const editButton = initialModal.querySelector('[data-bs-target="#editDetailsModal"]');
-        if (editButton) {
-            editButton.addEventListener('click', function(e) {
-                e.preventDefault();
-                
-                // Hide initial modal first
-                modal.hide();
-                
-                // Wait for initial modal to be fully hidden before showing edit modal
-                initialModal.addEventListener('hidden.bs.modal', function showEditModal() {
-                    const editModal = document.getElementById('editDetailsModal');
-                    if (editModal) {
-                        const editModalInstance = new bootstrap.Modal(editModal);
-                        editModalInstance.show();
-                    }
-                    // Remove the event listener to prevent multiple bindings
-                    initialModal.removeEventListener('hidden.bs.modal', showEditModal);
-                }, { once: true });
-            });
-        }
     }
 
-    // Handle edit modal form validation and submission
+    // Handle returning from edit modal to initial inventory modal
+    const editModal = document.getElementById('editDetailsModal');
+    if (editModal && initialModal) {
+        editModal.addEventListener('hidden.bs.modal', function () {
+            // If we came from initial inventory modal, show it again
+            if (document.getElementById('initialInventoryModal')) {
+                const initialModalInstance = new bootstrap.Modal(initialModal);
+                initialModalInstance.show();
+            }
+        });
+    }
+
     const form = document.querySelector('#editDetailsModal form');
     if (form) {
         const quantityInput = form.querySelector('input[name="quantity"]');
         const originalQuantity = quantityInput ? parseFloat(quantityInput.value) : 0;
         const recountModalEl = document.getElementById('recountConfirmModal');
-
+        
         if (recountModalEl) {
             const recountModal = new bootstrap.Modal(recountModalEl);
 
             form.addEventListener('submit', function(e) {
-                e.preventDefault();
-                const newQuantity = parseFloat(quantityInput.value);
-                if (newQuantity !== originalQuantity) {
-                    recountModal.show();
-                } else {
-                    form.submit();
-                }
-            });
-
-            const confirmRecountBtn = document.getElementById('confirmRecount');
-            if (confirmRecountBtn) {
-                confirmRecountBtn.addEventListener('click', function() {
-                    const hiddenInput = document.createElement('input');
-                    hiddenInput.type = 'hidden';
-                    hiddenInput.name = 'change_type';
-                    hiddenInput.value = 'recount';
-                    form.appendChild(hiddenInput);
-                    recountModal.hide();
-                    form.submit();
-                });
+        e.preventDefault();
+        const newQuantity = parseFloat(quantityInput.value);
+        if (newQuantity !== originalQuantity) {
+                recountModal.show();
+            } else {
+                form.submit();
             }
+        });
         }
     }
 
-    // Cost override handling
+    const confirmRecountBtn = document.getElementById('confirmRecount');
+    if (confirmRecountBtn) {
+        confirmRecountBtn.addEventListener('click', function() {
+            const hiddenInput = document.createElement('input');
+            hiddenInput.type = 'hidden';
+            hiddenInput.name = 'change_type';
+            hiddenInput.value = 'recount';
+            form.appendChild(hiddenInput);
+            recountModal.hide();
+            form.submit();
+        });
+    }
+
     const overrideCostCheckbox = document.getElementById('modal_override_cost');
     const costPerUnitInput = document.getElementById('modal_cost_per_unit');
     const costOverrideWarningModalEl = document.getElementById('costOverrideWarningModal');
-
+    
     if (overrideCostCheckbox && costPerUnitInput && costOverrideWarningModalEl) {
         const costOverrideModal = new bootstrap.Modal(costOverrideWarningModalEl);
 
@@ -160,6 +147,14 @@ document.addEventListener('DOMContentLoaded', function() {
     const urlParams = new URLSearchParams(window.location.search);
     if (urlParams.get('fifo') === 'true') {
         document.getElementById('fifoFilter').checked = true;
+        // Don't call toggleFifoFilter() here as it would cause a reload loop
+    }
+
+    const initialStockBtn = document.getElementById('initial-stock-btn');
+    if (initialStockBtn) {
+        initialStockBtn.addEventListener('click', function() {
+            // Initial stock button functionality can be added here if needed
+        });
     }
 });
 
