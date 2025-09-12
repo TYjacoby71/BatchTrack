@@ -18,20 +18,25 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     const form = document.querySelector('#editDetailsModal form');
-    const quantityInput = form.querySelector('input[name="quantity"]');
-    const originalQuantity = parseFloat(quantityInput.value);
-    const recountModalEl = document.getElementById('recountConfirmModal');
-    const recountModal = new bootstrap.Modal(recountModalEl);
+    if (form) {
+        const quantityInput = form.querySelector('input[name="quantity"]');
+        const originalQuantity = quantityInput ? parseFloat(quantityInput.value) : 0;
+        const recountModalEl = document.getElementById('recountConfirmModal');
+        
+        if (recountModalEl) {
+            const recountModal = new bootstrap.Modal(recountModalEl);
 
-    form.addEventListener('submit', function(e) {
+            form.addEventListener('submit', function(e) {
         e.preventDefault();
         const newQuantity = parseFloat(quantityInput.value);
         if (newQuantity !== originalQuantity) {
-            recountModal.show();
-        } else {
-            form.submit();
+                recountModal.show();
+            } else {
+                form.submit();
+            }
+        });
         }
-    });
+    }
 
     document.getElementById('confirmRecount').addEventListener('click', function() {
         const hiddenInput = document.createElement('input');
