@@ -429,6 +429,10 @@ class BatchOperationsService(BaseService):
             extra_consumables = extra_consumables or []
             errors = []
 
+            from app.services.stock_check import UniversalStockCheckService
+            from app.services.stock_check.types import InventoryCategory
+            uscs = UniversalStockCheckService()
+
             # Process extra containers
             for container in extra_containers:
                 container_item = InventoryItem.query.get(container["item_id"])
@@ -445,17 +449,19 @@ class BatchOperationsService(BaseService):
                     errors.append({"item": container_item.name, "message": f"Invalid reason: {reason}"})
                     continue
 
-                # Check stock using FIFO-aware availability
-                try:
-                    from app.services.inventory_adjustment._fifo_ops import calculate_total_available_inventory
-                    available_qty = calculate_total_available_inventory(container_item.id)
-                except Exception:
-                    available_qty = float(container_item.quantity or 0)
+                # Check stock via USCS (single item)
+                sc_result = uscs.check_single_item(
+                    item_id=container_item.id,
+                    quantity_needed=needed_amount,
+                    unit=(container_item.unit or 'count'),
+                    category=InventoryCategory.CONTAINER
+                )
 
-                if available_qty < needed_amount:
+                available_qty = sc_result.available_quantity if hasattr(sc_result, 'available_quantity') else float(container_item.quantity or 0)
+                if sc_result.status.name in ['NEEDED', 'OUT_OF_STOCK', 'ERROR'] or available_qty < needed_amount:
                     errors.append({
                         "item": container_item.name,
-                        "message": f"Not enough in stock. Available: {available_qty}, Needed: {needed_amount}",
+                        "message": sc_result.error_message or f"Not enough in stock. Available: {available_qty}, Needed: {needed_amount}",
                         "needed": needed_amount,
                         "available": available_qty,
                         "needed_unit": "units"
@@ -503,38 +509,32 @@ class BatchOperationsService(BaseService):
                     continue
 
                 try:
-                    # Convert needed amount into the inventory unit for accurate stock check
-                    conversion = ConversionEngine.convert_units(
-                        item["quantity"],
-                        item.get("unit") or inventory_item.unit,
-                        inventory_item.unit,
-                        ingredient_id=inventory_item.id,
-                        density=inventory_item.density or (inventory_item.category.default_density if inventory_item.category else None)
+                    needed_quantity = float(item["quantity"])
+                    requested_unit = item.get("unit") or inventory_item.unit
+
+                    # USCS single-item stock check handles conversion + FIFO availability
+                    sc_result = uscs.check_single_item(
+                        item_id=inventory_item.id,
+                        quantity_needed=needed_quantity,
+                        unit=requested_unit,
+                        category=InventoryCategory.INGREDIENT
                     )
-                    needed_amount = float(conversion['converted_value'])
 
-                    # FIFO-aware stock check
-                    try:
-                        from app.services.inventory_adjustment._fifo_ops import calculate_total_available_inventory
-                        available_qty = calculate_total_available_inventory(inventory_item.id)
-                    except Exception:
-                        available_qty = float(inventory_item.quantity or 0)
-
-                    if available_qty < needed_amount:
+                    if sc_result.status.value in ['needed', 'out_of_stock', 'error']:
                         errors.append({
                             "item": inventory_item.name,
-                            "message": f"Not enough in stock. Available: {available_qty}, Needed: {needed_amount}",
-                            "needed": needed_amount,
-                            "needed_unit": inventory_item.unit
+                            "message": sc_result.error_message or "Not enough in stock",
+                            "needed": sc_result.needed_quantity,
+                            "needed_unit": sc_result.needed_unit
                         })
                         continue
 
-                    # Use centralized inventory adjustment
+                    # Use centralized inventory adjustment (USCS already normalized unit for availability; core will normalize unit for deduction)
                     success, message = process_inventory_adjustment(
                         item_id=inventory_item.id,
-                        quantity=-needed_amount,
+                        quantity=-float(sc_result.needed_quantity),
                         change_type='batch',
-                        unit=inventory_item.unit,
+                        unit=requested_unit,
                         notes=f"Extra ingredient for batch {batch.label_code}",
                         batch_id=batch.id,
                         created_by=current_user.id,
@@ -553,7 +553,7 @@ class BatchOperationsService(BaseService):
                         new_extra = ExtraBatchIngredient(
                             batch_id=batch.id,
                             inventory_item_id=inventory_item.id,
-                            quantity_used=float(needed_amount),
+                            quantity_used=float(sc_result.needed_quantity),
                             unit=inventory_item.unit,
                             cost_per_unit=inventory_item.cost_per_unit,
                             organization_id=current_user.organization_id
@@ -574,38 +574,31 @@ class BatchOperationsService(BaseService):
                     continue
 
                 try:
-                    # Convert to inventory unit for check
-                    conversion = ConversionEngine.convert_units(
-                        cons["quantity"],
-                        cons.get("unit") or consumable_item.unit,
-                        consumable_item.unit,
-                        ingredient_id=consumable_item.id,
-                        density=consumable_item.density or (consumable_item.category.default_density if consumable_item.category else None)
+                    needed_quantity = float(cons["quantity"])
+                    requested_unit = cons.get("unit") or consumable_item.unit
+
+                    sc_result = uscs.check_single_item(
+                        item_id=consumable_item.id,
+                        quantity_needed=needed_quantity,
+                        unit=requested_unit,
+                        category=InventoryCategory.INGREDIENT
                     )
-                    needed_amount = float(conversion['converted_value'])
 
-                    # FIFO-aware stock check
-                    try:
-                        from app.services.inventory_adjustment._fifo_ops import calculate_total_available_inventory
-                        available_qty = calculate_total_available_inventory(consumable_item.id)
-                    except Exception:
-                        available_qty = float(consumable_item.quantity or 0)
-
-                    if available_qty < needed_amount:
+                    if sc_result.status.value in ['needed', 'out_of_stock', 'error']:
                         errors.append({
                             "item": consumable_item.name,
-                            "message": f"Not enough in stock. Available: {available_qty}, Needed: {needed_amount}",
-                            "needed": needed_amount,
-                            "needed_unit": consumable_item.unit
+                            "message": sc_result.error_message or "Not enough in stock",
+                            "needed": sc_result.needed_quantity,
+                            "needed_unit": sc_result.needed_unit
                         })
                         continue
 
                     # Deduct inventory
                     success, message = process_inventory_adjustment(
                         item_id=consumable_item.id,
-                        quantity=-needed_amount,
+                        quantity=-float(sc_result.needed_quantity),
                         change_type='batch',
-                        unit=consumable_item.unit,
+                        unit=requested_unit,
                         notes=f"Extra consumable for batch {batch.label_code}",
                         batch_id=batch.id,
                         created_by=current_user.id,
@@ -626,7 +619,7 @@ class BatchOperationsService(BaseService):
                     extra_rec = ExtraBatchConsumable(
                         batch_id=batch.id,
                         inventory_item_id=consumable_item.id,
-                        quantity_used=needed_amount,
+                        quantity_used=float(sc_result.needed_quantity),
                         unit=consumable_item.unit,
                         cost_per_unit=consumable_item.cost_per_unit,
                         organization_id=current_user.organization_id
