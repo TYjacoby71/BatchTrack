@@ -20,6 +20,28 @@ document.addEventListener('DOMContentLoaded', function() {
         initialModal.addEventListener('shown.bs.modal', function () {
             document.getElementById('initial_quantity').focus();
         });
+
+        // Handle edit button click to properly transition modals
+        const editButton = initialModal.querySelector('[data-bs-target="#editDetailsModal"]');
+        if (editButton) {
+            editButton.addEventListener('click', function(e) {
+                e.preventDefault();
+                
+                // Hide initial modal first
+                modal.hide();
+                
+                // Wait for initial modal to be fully hidden before showing edit modal
+                initialModal.addEventListener('hidden.bs.modal', function showEditModal() {
+                    const editModal = document.getElementById('editDetailsModal');
+                    if (editModal) {
+                        const editModalInstance = new bootstrap.Modal(editModal);
+                        editModalInstance.show();
+                    }
+                    // Remove the event listener to prevent multiple bindings
+                    initialModal.removeEventListener('hidden.bs.modal', showEditModal);
+                }, { once: true });
+            });
+        }
     }
 
     // Handle edit modal form validation and submission
