@@ -53,18 +53,21 @@
         <input type="text" name="aka_names" class="form-control" value="{{ (item.aka_names or []) | join(', ') }}">
       </div>
       <div class="col-md-6">
-        <label class="form-label">Reference Category</label>
+        <label class="form-label">Ingredient Category</label>
         <div class="input-group">
-          <select name="reference_category" class="form-select">
+          <select name="ingredient_category_id" class="form-select">
             <option value="">Select Category</option>
             {% for category in reference_categories %}
-              <option value="{{ category }}" {% if item.ingredient_category and item.ingredient_category.name == category %}selected{% endif %}>{{ category }}</option>
+              <option value="{{ category.id if category.id else category }}" {% if item.ingredient_category and item.ingredient_category.name == category %}selected{% endif %}>{{ category }}</option>
             {% endfor %}
           </select>
           <a href="{{ url_for('developer.reference_categories') }}" class="btn btn-outline-secondary" title="Manage Categories">
             <i class="fas fa-cog"></i>
           </a>
         </div>
+        {% if item.ingredient_category %}
+          <small class="text-muted">Current: {{ item.ingredient_category.name }}</small>
+        {% endif %}
       </div>
     </div>
     <div class="mt-3 d-flex gap-2">

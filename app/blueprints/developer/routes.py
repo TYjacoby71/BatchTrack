@@ -637,7 +637,7 @@ def global_item_detail(item_id):
 @developer_bp.route('/global-items/<int:item_id>/edit', methods=['POST'])
 @login_required
 def global_item_edit(item_id):
-    """Developer edit for GlobalItem with basic audit logging"""
+    """Edit existing global item"""
     # Add CSRF protection
     from flask_wtf.csrf import validate_csrf
     try:
@@ -676,13 +676,14 @@ def global_item_edit(item_id):
     if aka_names is not None:
         item.aka_names = [n.strip() for n in aka_names.split(',') if n.strip()]
 
-    # Handle reference category assignment
-    reference_category_name = request.form.get('reference_category')
-    if reference_category_name:
+    # Handle ingredient category - use the ID directly
+    ingredient_category_id = request.form.get('ingredient_category_id', '').strip()
+    if ingredient_category_id and ingredient_category_id.isdigit():
+        # Verify the category exists and is a reference category
         from app.models.category import IngredientCategory
         category = IngredientCategory.query.filter_by(
-            name=reference_category_name,
-            organization_id=None,
+            id=int(ingredient_category_id),
+            organization_id=None,  # Reference categories are global
             is_reference_category=True
         ).first()
         if category:
@@ -919,33 +920,38 @@ def create_global_item():
             name = request.form.get('name', '').strip()
             item_type = request.form.get('item_type', 'ingredient')
             default_unit = request.form.get('default_unit', '').strip() or None
-            # Get reference category name from form
-            reference_category_name = request.form.get('reference_category', '').strip() or None
+            # Get ingredient category id from form
+            ingredient_category_id_str = request.form.get('ingredient_category_id', '').strip() or None
 
             # Validation
             if not name:
                 flash('Name is required', 'error')
                 return redirect(url_for('developer.create_global_item'))
 
-            # Find the IngredientCategory ID if a reference category was provided
+            # Validate ingredient_category_id
             ingredient_category_id = None
-            if reference_category_name:
-                from app.models.category import IngredientCategory
-                category = IngredientCategory.query.filter_by(
-                    name=reference_category_name, 
-                    organization_id=None, 
-                    is_reference_category=True
-                ).first()
-                if category:
-                    ingredient_category_id = category.id
+            if ingredient_category_id_str:
+                if ingredient_category_id_str.isdigit():
+                    # Verify the category exists and is a reference category
+                    from app.models.category import IngredientCategory
+                    category = IngredientCategory.query.filter_by(
+                        id=int(ingredient_category_id_str),
+                        organization_id=None,  # Reference categories are global
+                        is_reference_category=True
+                    ).first()
+                    if category:
+                        ingredient_category_id = category.id
+                    else:
+                        flash(f'Ingredient category ID "{ingredient_category_id_str}" not found or is not a valid reference category.', 'error')
+                        return redirect(url_for('developer.create_global_item'))
                 else:
-                    flash(f'Reference category "{reference_category_name}" not found or is not a valid reference category.', 'error')
+                    flash(f'Invalid Ingredient Category ID format: "{ingredient_category_id_str}"', 'error')
                     return redirect(url_for('developer.create_global_item'))
 
             # Check for duplicate
             existing = GlobalItem.query.filter_by(name=name, item_type=item_type).first()
-            if existing:
-                flash(f'A {item_type} with the name "{name}" already exists', 'error')
+            if existing and not existing.is_archived:
+                flash(f'Global item "{name}" of type "{item_type}" already exists', 'error')
                 return redirect(url_for('developer.create_global_item'))
 
             # Create new global item
@@ -1009,7 +1015,12 @@ def create_global_item():
         is_active=True
     ).order_by(IngredientCategory.name).all()
 
-    reference_categories = sorted([cat.name for cat in reference_categories_list if cat.name])
+    reference_categories = []
+    for cat in reference_categories_list:
+        reference_categories.append({
+            'id': cat.id,
+            'name': cat.name
+        })
 
     return render_template('developer/create_global_item.html', reference_categories=reference_categories)
 
