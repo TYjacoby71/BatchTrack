@@ -278,5 +278,26 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         });
     }
+
+    // Category change handler
+    const categorySelect = document.getElementById('categorySelect');
+    if (categorySelect) {
+        categorySelect.addEventListener('change', function() {
+            const densityInput = document.getElementById('density');
+            if (this.value === '') {
+                densityInput.disabled = false;
+                densityInput.value = '';
+            } else {
+                const selectedOption = this.options[this.selectedIndex];
+                const defaultDensity = selectedOption.dataset.density;
+                if (defaultDensity) {
+                    densityInput.value = defaultDensity;
+                    densityInput.disabled = true;
+                } else {
+                    densityInput.disabled = false;
+                }
+            }
+        });
+    }
 });
 </script>
