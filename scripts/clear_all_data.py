@@ -11,11 +11,17 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
 from app import create_app
 from app.models import db
 from app.models.models import (
-    User, Organization, InventoryItem, Batch, Recipe, Product, 
-    UnifiedInventoryHistory, InventoryLot,
-    UserRoleAssignment, UserStats, OrganizationStats, BillingSnapshot
+    User, Organization
 )
-from app.models.product import ProductVariant, ProductSKU
+from app.models.inventory import InventoryItem
+from app.models.batch import Batch
+from app.models.recipe import Recipe
+from app.models.product import Product, ProductVariant, ProductSKU
+from app.models.unified_inventory_history import UnifiedInventoryHistory
+from app.models.inventory_lot import InventoryLot
+from app.models.user_role_assignment import UserRoleAssignment
+from app.models.statistics import UserStats, OrganizationStats
+from app.models.billing_snapshot import BillingSnapshot
 from app.models.user_preferences import UserPreferences
 from app.models.reservation import Reservation
 
