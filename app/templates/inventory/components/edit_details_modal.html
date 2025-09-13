@@ -42,8 +42,24 @@
             </div>
           </div>
 
-          <!-- Category selection removed; category/density assigned automatically at creation.
-               Users can override density below if desired. -->
+          <!-- Category Selection (for custom ingredients only) -->
+                    {% if not item.global_item_id and item.type != 'container' %}
+                    <div class="mb-3">
+                        <label for="categorySelect" class="form-label">Category</label>
+                        <select class="form-select" id="categorySelect" name="category_id">
+                            <option value="">No Category</option>
+                            {% for category in organization_categories %}
+                                <option value="{{ category.id }}" 
+                                        data-density="{{ category.default_density if category.default_density else '' }}"
+                                        {% if item.category_id == category.id %}selected{% endif %}>
+                                    {{ category.name }}
+                                    {% if category.default_density %}({{ "%.3f"|format(category.default_density) }} g/ml){% endif %}
+                                </option>
+                            {% endfor %}
+                        </select>
+                        <small class="text-muted">Select a category to auto-apply default density</small>
+                    </div>
+                    {% endif %}
 
           {% if item.type == 'container' %}
           <div class="mb-3">
