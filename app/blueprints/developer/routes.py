@@ -720,7 +720,7 @@ def reference_categories():
     # Get existing ingredient categories that are reference categories
     from app.models.category import IngredientCategory
     existing_categories = IngredientCategory.query.filter_by(
-        is_reference_category=True,
+        is_global_category=True,
         organization_id=None,
         is_active=True
     ).order_by(IngredientCategory.name).all()
@@ -936,8 +936,8 @@ def create_global_item():
                     from app.models.category import IngredientCategory
                     category = IngredientCategory.query.filter_by(
                         id=int(ingredient_category_id_str),
-                        organization_id=None,  # Reference categories are global
-                        is_reference_category=True
+                        organization_id=None,  # Global categories are global
+                        is_global_category=True
                     ).first()
                     if category:
                         ingredient_category_id = category.id

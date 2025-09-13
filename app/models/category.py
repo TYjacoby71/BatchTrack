@@ -15,8 +15,8 @@ class IngredientCategory(ScopedModelMixin, db.Model):
     created_at = db.Column(db.DateTime, default=TimezoneUtils.utc_now, nullable=False)
     updated_at = db.Column(db.DateTime, default=TimezoneUtils.utc_now, onupdate=TimezoneUtils.utc_now, nullable=False)
     
-    # Reference guide integration
-    is_reference_category = db.Column(db.Boolean, default=False)  # True if this is a reference guide category
+    # Global category integration  
+    is_global_category = db.Column(db.Boolean, default=False)  # True if this is a global/reference category (seeded from JSON)
 
 class InventoryCategory(ScopedModelMixin, db.Model):
     id = db.Column(db.Integer, primary_key=True)
