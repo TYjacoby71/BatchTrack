@@ -13,6 +13,7 @@ from ...models.recipe import RecipeConsumable
 from ...extensions import db
 from ._validation import validate_recipe_data
 from ...utils.code_generator import generate_recipe_prefix
+from ...services.event_emitter import EventEmitter
 
 logger = logging.getLogger(__name__)
 
@@ -111,6 +112,19 @@ def create_recipe(name: str, description: str = "", instructions: str = "",
 
         db.session.commit()
         logger.info(f"Created recipe {recipe.id}: {name}")
+
+        # Emit recipe_created
+        try:
+            EventEmitter.emit(
+                event_name='recipe_created',
+                properties={'name': name, 'yield_amount': yield_amount, 'yield_unit': yield_unit},
+                organization_id=recipe.organization_id,
+                user_id=current_user.id,
+                entity_type='recipe',
+                entity_id=recipe.id
+            )
+        except Exception:
+            pass
 
         return True, recipe
 
@@ -212,6 +226,19 @@ def update_recipe(recipe_id: int, name: str = None, description: str = None,
         db.session.commit()
         logger.info(f"Updated recipe {recipe_id}: {recipe.name}")
 
+        # Emit recipe_updated
+        try:
+            EventEmitter.emit(
+                event_name='recipe_updated',
+                properties={'recipe_id': recipe_id},
+                organization_id=recipe.organization_id,
+                user_id=current_user.id,
+                entity_type='recipe',
+                entity_id=recipe.id
+            )
+        except Exception:
+            pass
+
         return True, recipe
 
     except Exception as e:
@@ -258,6 +285,18 @@ def delete_recipe(recipe_id: int) -> Tuple[bool, str]:
         db.session.commit()
 
         logger.info(f"Deleted recipe {recipe_id}: {recipe_name}")
+        # Emit recipe_deleted
+        try:
+            EventEmitter.emit(
+                event_name='recipe_deleted',
+                properties={'name': recipe_name},
+                organization_id=recipe.organization_id,
+                user_id=current_user.id,
+                entity_type='recipe',
+                entity_id=recipe_id
+            )
+        except Exception:
+            pass
         return True, f"Recipe '{recipe_name}' deleted successfully"
 
     except Exception as e:
