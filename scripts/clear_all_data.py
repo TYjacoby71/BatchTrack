@@ -54,7 +54,8 @@ def clear_all_data():
             print(f"   - History entries: {history_count}")
             print(f"   - FIFO lots: {lot_count}")
 
-            # Clear in dependency order to avoid foreign key violations
+            # Clear in proper dependency order to avoid foreign key violations
+            # CRITICAL: Clear child tables before parent tables
 
             # 1. Clear inventory history first (references many other tables)
             if history_count > 0:
@@ -72,20 +73,37 @@ def clear_all_data():
                 print(f"🗑️  Clearing {reservation_count} reservations...")
                 db.session.query(Reservation).delete()
 
-            # 4. Clear product-related data
+            # 4. Clear product-related data (in dependency order)
             if product_count > 0:
                 print(f"🗑️  Clearing product data...")
                 db.session.query(ProductSKU).delete()
                 db.session.query(ProductVariant).delete()
                 db.session.query(Product).delete()
 
-            # 5. Clear batches
+            # 5. Clear batch-related data (child tables first!)
             if batch_count > 0:
+                print(f"🗑️  Clearing batch ingredients...")
+                # Import and clear batch_ingredient table
+                from app.models.batch import BatchIngredient
+                db.session.query(BatchIngredient).delete()
+                
+                print(f"🗑️  Clearing batch consumables...")
+                from app.models.batch import BatchConsumable
+                db.session.query(BatchConsumable).delete()
+                
                 print(f"🗑️  Clearing {batch_count} batches...")
                 db.session.query(Batch).delete()
 
-            # 6. Clear recipes
+            # 6. Clear recipe-related data (child tables first!)
             if recipe_count > 0:
+                print(f"🗑️  Clearing recipe ingredients...")
+                from app.models.recipe import RecipeIngredient
+                db.session.query(RecipeIngredient).delete()
+                
+                print(f"🗑️  Clearing recipe consumables...")
+                from app.models.recipe import RecipeConsumable
+                db.session.query(RecipeConsumable).delete()
+                
                 print(f"🗑️  Clearing {recipe_count} recipes...")
                 db.session.query(Recipe).delete()
 
