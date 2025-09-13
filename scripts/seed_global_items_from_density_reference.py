@@ -59,7 +59,6 @@ def seed():
 
 			default_density = cat_data.get('default_density')
 			description = cat_data.get('description', '')
-			reference_category_name = cat_data.get('reference_category_name')
 
 			# Create or update category
 			curated_cat = IngredientCategory.query.filter_by(name=cat_name, organization_id=None).first()

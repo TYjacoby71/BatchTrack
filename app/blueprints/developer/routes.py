@@ -626,7 +626,8 @@ def global_item_detail(item_id):
     from app.models.category import IngredientCategory
     existing_categories = IngredientCategory.query.filter_by(
         organization_id=None,
-        is_active=True
+        is_active=True,
+        is_global_category=True
     ).order_by(IngredientCategory.name).all()
 
     reference_categories = sorted([cat.name for cat in existing_categories if cat.name])
@@ -682,7 +683,8 @@ def global_item_edit(item_id):
         from app.models.category import IngredientCategory
         category = IngredientCategory.query.filter_by(
             id=int(ingredient_category_id),
-            organization_id=None  # Global categories are global-scoped
+            organization_id=None,
+            is_global_category=True
         ).first()
         if category:
             item.ingredient_category_id = category.id
@@ -719,7 +721,8 @@ def reference_categories():
     from app.models.category import IngredientCategory
     existing_categories = IngredientCategory.query.filter_by(
         organization_id=None,
-        is_active=True
+        is_active=True,
+        is_global_category=True
     ).order_by(IngredientCategory.name).all()
 
     categories = [cat.name for cat in existing_categories]
@@ -1039,7 +1042,8 @@ def create_global_item():
     from app.models.category import IngredientCategory
     reference_categories_list = IngredientCategory.query.filter_by(
         organization_id=None, 
-        is_active=True
+        is_active=True,
+        is_global_category=True
     ).order_by(IngredientCategory.name).all()
 
     reference_categories = []

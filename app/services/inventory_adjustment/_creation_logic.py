@@ -60,7 +60,7 @@ def create_inventory_item(form_data, organization_id, created_by):
         category_id = None
         raw_category_id = form_data.get('category_id')
         custom_density = form_data.get('density')
-        if raw_category_id and not (isinstance(raw_category_id, str) and raw_category_id.startswith('ref_')) and raw_category_id != 'custom':
+        if raw_category_id and raw_category_id != 'custom':
             # Legacy custom IngredientCategory by id
             try:
                 category_id = int(raw_category_id)
@@ -130,19 +130,18 @@ def create_inventory_item(form_data, organization_id, created_by):
                 new_item.capacity_unit = global_item.capacity_unit
 
         # Resolve category linkage and density precedence
-        # 1) If a reference category was chosen, set category_id to matching IngredientCategory and assign its default density
-        if raw_category_id and isinstance(raw_category_id, str) and raw_category_id.startswith('ref_'):
-            ref_name = raw_category_id.split('ref_', 1)[1]
+        # 1) If a category ID was chosen, link and assign its default density
+        if category_id:
             try:
-                cat = db.session.query(IngredientCategory).filter_by(name=ref_name, organization_id=organization_id).first()
+                cat = db.session.get(IngredientCategory, int(category_id))
                 if cat:
                     new_item.category_id = cat.id
-                # Assign category default density (will be overridden by custom density below if provided)
-                DensityAssignmentService.assign_density_to_ingredient(
-                    ingredient=new_item,
-                    use_category_default=True,
-                    category_name=ref_name
-                )
+                    # Assign category default density (overridden by custom density below if provided)
+                    DensityAssignmentService.assign_density_to_ingredient(
+                        ingredient=new_item,
+                        use_category_default=True,
+                        category_name=cat.name
+                    )
             except Exception:
                 pass
 
@@ -156,7 +155,7 @@ def create_inventory_item(form_data, organization_id, created_by):
                 pass
 
         # 3) If no density provided and no global item and no ref category assignment, try auto-assign based on name/category
-        if (not global_item) and (not custom_density) and not (raw_category_id and isinstance(raw_category_id, str) and raw_category_id.startswith('ref_')):
+        if (not global_item) and (not custom_density) and not category_id:
             try:
                 DensityAssignmentService.auto_assign_density_on_creation(new_item)
             except Exception:

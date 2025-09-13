@@ -108,25 +108,19 @@ def update_inventory_item(item_id: int, form_data: dict) -> tuple[bool, str]:
                 # No category selected: clear linkage and allow manual density
                 item.category_id = None
             else:
-                # Support reference-guide categories passed as values like 'ref_<CategoryName>'
-                if isinstance(raw_category, str) and raw_category.startswith('ref_'):
-                    reference_category_name = raw_category.split('ref_', 1)[1]
-                    # Clear custom category linkage and assign density from reference category default
-                    item.category_id = None
-                    assigned = DensityAssignmentService.assign_density_to_ingredient(
-                        ingredient=item,
-                        use_category_default=True,
-                        category_name=reference_category_name
-                    )
-                    if not assigned:
-                        return False, f"Unable to assign density from reference category '{reference_category_name}'"
-                else:
-                    try:
-                        item.category_id = int(raw_category)
-                        # When a custom category is selected, use category default by clearing manual density
-                        item.density = None
-                    except (ValueError, TypeError):
-                        return False, "Invalid category ID"
+                try:
+                    category_id = int(raw_category)
+                    item.category_id = category_id
+                    # Apply chosen category default density if category exists
+                    cat = db.session.get(IngredientCategory, category_id)
+                    if cat and cat.default_density:
+                        item.density = cat.default_density
+                        try:
+                            setattr(item, 'density_source', 'category_default')
+                        except Exception:
+                            pass
+                except (ValueError, TypeError):
+                    return False, "Invalid category ID"
 
         if 'low_stock_threshold' in form_data:
             try:
