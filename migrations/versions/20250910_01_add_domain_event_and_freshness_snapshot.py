@@ -1,8 +1,8 @@
 """
 Add domain_event and freshness_snapshot tables
 
-Revision ID: 20250910_01
-Revises: 20250908_01
+Revision ID: 20250912_01
+Revises: 20250913014500
 Create Date: 2025-09-10
 """
 
@@ -11,8 +11,8 @@ import sqlalchemy as sa
 
 
 # revision identifiers, used by Alembic.
-revision = '20250910_01'
-down_revision = '20250908_01'
+revision = '20250912_01'
+down_revision = '20250913014500'
 branch_labels = None
 depends_on = None
 
