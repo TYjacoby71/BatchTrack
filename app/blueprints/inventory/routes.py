@@ -256,7 +256,6 @@ def view_inventory(id):
                          expired_total=expired_total,
                          units=get_global_unit_list(),
                          get_global_unit_list=get_global_unit_list,
-                         get_ingredient_categories=IngredientCategory.query.order_by(IngredientCategory.name).all,
                          User=User,
                          UnifiedInventoryHistory=UnifiedInventoryHistory,
                          now=datetime.utcnow(),
