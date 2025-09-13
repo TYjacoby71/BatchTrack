@@ -145,6 +145,13 @@ def clear_all_data():
                         UserRoleAssignment.user_id.in_(customer_user_ids)
                     ).delete(synchronize_session=False)
 
+                    # Clear conversion logs that reference these users
+                    print(f"🗑️  Clearing conversion logs...")
+                    from app.models.unit import ConversionLog
+                    db.session.query(ConversionLog).filter(
+                        ConversionLog.user_id.in_(customer_user_ids)
+                    ).delete(synchronize_session=False)
+
                 print(f"🗑️  Clearing {user_count} customer users...")
                 db.session.query(User).filter_by(user_type='customer').delete()
 
