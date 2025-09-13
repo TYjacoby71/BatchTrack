@@ -83,13 +83,32 @@ def clear_all_data():
             # 5. Clear batch-related data (child tables first!)
             if batch_count > 0:
                 print(f"🗑️  Clearing batch ingredients...")
-                # Import and clear batch_ingredient table
                 from app.models.batch import BatchIngredient
                 db.session.query(BatchIngredient).delete()
                 
                 print(f"🗑️  Clearing batch consumables...")
                 from app.models.batch import BatchConsumable
                 db.session.query(BatchConsumable).delete()
+                
+                print(f"🗑️  Clearing batch containers...")
+                from app.models.batch import BatchContainer
+                db.session.query(BatchContainer).delete()
+                
+                print(f"🗑️  Clearing extra batch containers...")
+                from app.models.batch import ExtraBatchContainer
+                db.session.query(ExtraBatchContainer).delete()
+                
+                print(f"🗑️  Clearing batch timers...")
+                from app.models.batch import BatchTimer
+                db.session.query(BatchTimer).delete()
+                
+                print(f"🗑️  Clearing extra batch ingredients...")
+                from app.models.batch import ExtraBatchIngredient
+                db.session.query(ExtraBatchIngredient).delete()
+                
+                print(f"🗑️  Clearing extra batch consumables...")
+                from app.models.batch import ExtraBatchConsumable
+                db.session.query(ExtraBatchConsumable).delete()
                 
                 print(f"🗑️  Clearing {batch_count} batches...")
                 db.session.query(Batch).delete()

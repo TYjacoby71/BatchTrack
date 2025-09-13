@@ -1,0 +1,128 @@
+⚠️  This will clear ALL user data (users, orgs, inventory, batches, etc.)
+✅ Global items, permissions, and schema will be preserved
+Type 'CLEAR ALL DATA' to confirm: CLEAR ALL DATA
+/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask_limiter/extension.py:333: UserWarning: Using the in-memory storage for tracking rate limits as no storage was explicitly specified. This is not recommended for production use. See: https://flask-limiter.readthedocs.io#configuring-a-storage-backend for documentation about configuring the storage backend.
+  warnings.warn(
+
+=== Blueprint Registration Summary ===
+✅ Successful: 29
+   - Authentication
+   - Admin
+   - Developer
+   - Inventory
+   - Recipes
+   - Batches
+   - Organization
+   - Billing
+   - Settings
+   - Timers
+   - Expiration
+   - Conversion
+   - Products Main
+   - Product Inventory
+   - Reservations
+   - SKU Management
+   - Product Variants
+   - Product Alerts
+   - Public API
+   - Main API
+   - Drawer Actions
+   - Density Reference
+   - App Routes
+   - Legal Routes
+   - Bulk Stock
+   - Fault Log
+   - Tag Manager
+   - Waitlist
+   - Production Planning
+
+🎉 All blueprints registered successfully!
+🧹 Starting complete data cleanup...
+📊 Current state:
+   - Customer users: 3
+   - Organizations: 1
+   - Inventory items: 25
+   - Batches: 12
+   - Recipes: 7
+   - Products: 0
+   - History entries: 121
+   - FIFO lots: 44
+🗑️  Clearing 121 inventory history entries...
+🗑️  Clearing 44 FIFO lots...
+🗑️  Clearing batch ingredients...
+🗑️  Clearing batch consumables...
+🗑️  Clearing batch containers...
+🗑️  Clearing extra batch containers...
+🗑️  Clearing batch timers...
+🗑️  Clearing extra batch ingredients...
+🗑️  Clearing extra batch consumables...
+🗑️  Clearing 12 batches...
+🗑️  Clearing recipe ingredients...
+🗑️  Clearing recipe consumables...
+🗑️  Clearing 7 recipes...
+🗑️  Clearing 25 inventory items...
+🗑️  Clearing user preferences and role assignments...
+🗑️  Clearing 3 customer users...
+❌ Error during cleanup: (psycopg2.errors.ForeignKeyViolation) update or delete on table "user" violates foreign key constraint "conversion_log_user_id_fkey" on table "conversion_log"
+DETAIL:  Key (id)=(2) is still referenced from table "conversion_log".
+
+[SQL: DELETE FROM "user" WHERE "user".user_type = %(user_type_1)s]
+[parameters: {'user_type_1': 'customer'}]
+(Background on this error at: https://sqlalche.me/e/20/gkpj)
+Traceback (most recent call last):
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/engine/base.py", line 1964, in _exec_single_context
+    self.dialect.do_execute(
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/engine/default.py", line 945, in do_execute
+    cursor.execute(statement, parameters)
+psycopg2.errors.ForeignKeyViolation: update or delete on table "user" violates foreign key constraint "conversion_log_user_id_fkey" on table "conversion_log"
+DETAIL:  Key (id)=(2) is still referenced from table "conversion_log".
+
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/home/runner/workspace/scripts/clear_all_data.py", line 221, in <module>
+    clear_all_data()
+  File "/home/runner/workspace/scripts/clear_all_data.py", line 149, in clear_all_data
+    db.session.query(User).filter_by(user_type='customer').delete()
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/query.py", line 3209, in delete
+    result: CursorResult[Any] = self.session.execute(
+                                ^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/session.py", line 2365, in execute
+    return self._execute_internal(
+           ^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/session.py", line 2251, in _execute_internal
+    result: Result[Any] = compile_state_cls.orm_execute_statement(
+                          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/bulk_persistence.py", line 2021, in orm_execute_statement
+    return super().orm_execute_statement(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/context.py", line 306, in orm_execute_statement
+    result = conn.execute(
+             ^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/engine/base.py", line 1416, in execute
+    return meth(
+           ^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/sql/elements.py", line 523, in _execute_on_connection
+    return connection._execute_clauseelement(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/engine/base.py", line 1638, in _execute_clauseelement
+    ret = self._execute_context(
+          ^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/engine/base.py", line 1843, in _execute_context
+    return self._exec_single_context(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/engine/base.py", line 1983, in _exec_single_context
+    self._handle_dbapi_exception(
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/engine/base.py", line 2352, in _handle_dbapi_exception
+    raise sqlalchemy_exception.with_traceback(exc_info[2]) from e
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/engine/base.py", line 1964, in _exec_single_context
+    self.dialect.do_execute(
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/engine/default.py", line 945, in do_execute
+    cursor.execute(statement, parameters)
+sqlalchemy.exc.IntegrityError: (psycopg2.errors.ForeignKeyViolation) update or delete on table "user" violates foreign key constraint "conversion_log_user_id_fkey" on table "conversion_log"
+DETAIL:  Key (id)=(2) is still referenced from table "conversion_log".
+
+[SQL: DELETE FROM "user" WHERE "user".user_type = %(user_type_1)s]
+[parameters: {'user_type_1': 'customer'}]
+(Background on this error at: https://sqlalche.me/e/20/gkpj)
