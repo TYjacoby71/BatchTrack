@@ -42,24 +42,8 @@
             </div>
           </div>
 
-          <!-- Category Selection (for custom ingredients only) -->
-                    {% if not item.global_item_id and item.type != 'container' %}
-                    <div class="mb-3">
-                        <label for="categorySelect" class="form-label">Category</label>
-                        <select class="form-select" id="categorySelect" name="category_id">
-                            <option value="">No Category</option>
-                            {% for category in organization_categories %}
-                                <option value="{{ category.id }}" 
-                                        data-density="{{ category.default_density if category.default_density else '' }}"
-                                        {% if item.category_id == category.id %}selected{% endif %}>
-                                    {{ category.name }}
-                                    {% if category.default_density %}({{ "%.3f"|format(category.default_density) }} g/ml){% endif %}
-                                </option>
-                            {% endfor %}
-                        </select>
-                        <small class="text-muted">Select a category to auto-apply default density</small>
-                    </div>
-                    {% endif %}
+          <!-- Category selection removed; category/density assigned automatically at creation.
+               Users can override density below if desired. -->
 
           {% if item.type == 'container' %}
           <div class="mb-3">
@@ -290,27 +274,6 @@ document.addEventListener('DOMContentLoaded', function() {
                 if (shelfLifeInput) {
                     shelfLifeInput.required = false;
                     shelfLifeInput.value = '';
-                }
-            }
-        });
-    }
-
-    // Category change handler
-    const categorySelect = document.getElementById('categorySelect');
-    if (categorySelect) {
-        categorySelect.addEventListener('change', function() {
-            const densityInput = document.getElementById('density');
-            if (this.value === '') {
-                densityInput.disabled = false;
-                densityInput.value = '';
-            } else {
-                const selectedOption = this.options[this.selectedIndex];
-                const defaultDensity = selectedOption.dataset.density;
-                if (defaultDensity) {
-                    densityInput.value = defaultDensity;
-                    densityInput.disabled = true;
-                } else {
-                    densityInput.disabled = false;
                 }
             }
         });

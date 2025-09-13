@@ -168,7 +168,13 @@ def seed():
 				continue
 			cur = IngredientCategory.query.filter_by(name=cat_name, organization_id=None).first()
 			if not cur:
-				cur = IngredientCategory(name=cat_name, default_density=default_map.get(cat_name), organization_id=None, is_active=True)
+				# Create category without default density - let JSON files handle that
+				cur = IngredientCategory(
+					name=cat_name, 
+					organization_id=None, 
+					is_active=True,
+					is_global_category=True
+				)
 				db.session.add(cur)
 				db.session.flush()
 				created_categories += 1

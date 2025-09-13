@@ -5,7 +5,6 @@ from .utils.permissions import has_permission
 from .utils.timezone_utils import TimezoneUtils
 from app.utils.unit_utils import get_global_unit_list
 from app.utils.cache_manager import app_cache
-from .models import IngredientCategory
 
 
 def register_template_context(app):
@@ -235,26 +234,6 @@ def register_template_context(app):
             marketing_settings=marketing_settings,
         )
 
-    @app.context_processor
-    def _inject_ingredient_categories():
-        def get_ingredient_categories():
-            """Get ingredient categories for current user's organization"""
-            from flask_login import current_user
-            if not current_user.is_authenticated:
-                return []
-            return IngredientCategory.query.filter_by(
-                organization_id=current_user.organization_id,
-                is_active=True
-            ).order_by(IngredientCategory.name).all()
-
-        return dict(
-            get_ingredient_categories=get_ingredient_categories
-        )
-
     app.jinja_env.globals.update({
-        'get_global_unit_list': get_global_unit_list,
-        'get_ingredient_categories': lambda: IngredientCategory.query.filter_by(
-            organization_id=current_user.organization_id if current_user.is_authenticated else None,
-            is_active=True
-        ).order_by(IngredientCategory.name).all() if current_user.is_authenticated else []
+        'get_global_unit_list': get_global_unit_list
     })
