@@ -49,8 +49,13 @@ def process_inventory_adjustment(item_id, change_type, quantity, notes=None, cre
                     ingredient_id=item.id,
                     density=item.density
                 )
-                normalized_quantity = conv['converted_value']
-                logger.info(f"UNIT NORMALIZATION: {quantity} {unit} -> {normalized_quantity} {item.unit} for item {item.id}")
+                if conv and conv.get('converted_value') is not None:
+                    normalized_quantity = conv['converted_value']
+                    logger.info(f"UNIT NORMALIZATION: {quantity} {unit} -> {normalized_quantity} {item.unit} for item {item.id}")
+                else:
+                    db.session.rollback()
+                    logger.error(f"Unit conversion returned None for item {item.id}: {unit} -> {item.unit}")
+                    return False, f"Cannot convert {unit} to {item.unit}. Please check unit compatibility or use the item's default unit ({item.unit})."
             except Exception as e:
                 db.session.rollback()
                 logger.error(f"Unit conversion failed for item {item.id}: {e}")

@@ -24,43 +24,11 @@ document.addEventListener('DOMContentLoaded', function() {
     // Handle returning from edit modal to initial inventory modal
     const editModal = document.getElementById('editDetailsModal');
     if (editModal && initialModal) {
-        let returnToInitialModal = false;
-
-        // Track when we're switching from initial to edit modal
-        const editButton = initialModal.querySelector('[data-bs-target="#editDetailsModal"]');
-        if (editButton) {
-            editButton.addEventListener('click', function(e) {
-                e.preventDefault();
-                returnToInitialModal = true;
-
-                // Hide initial modal first, then show edit modal
-                const initialModalInstance = bootstrap.Modal.getInstance(initialModal);
-                if (initialModalInstance) {
-                    // Listen for when initial modal is fully hidden
-                    initialModal.addEventListener('hidden.bs.modal', function showEditOnce() {
-                        // Remove this listener after first use
-                        initialModal.removeEventListener('hidden.bs.modal', showEditOnce);
-
-                        // Now show edit modal
-                        const editModalInstance = new bootstrap.Modal(editModal);
-                        editModalInstance.show();
-                    });
-
-                    initialModalInstance.hide();
-                } else {
-                    // Fallback if no instance found
-                    const editModalInstance = new bootstrap.Modal(editModal);
-                    editModalInstance.show();
-                }
-            });
-        }
-
         editModal.addEventListener('hidden.bs.modal', function () {
-            // Only return to initial modal if we didn't submit the form
-            if (returnToInitialModal && document.getElementById('initialInventoryModal')) {
+            // If we came from initial inventory modal, show it again
+            if (document.getElementById('initialInventoryModal')) {
                 const initialModalInstance = new bootstrap.Modal(initialModal);
                 initialModalInstance.show();
-                returnToInitialModal = false;
             }
         });
     }
@@ -70,7 +38,7 @@ document.addEventListener('DOMContentLoaded', function() {
         const quantityInput = form.querySelector('input[name="quantity"]');
         const originalQuantity = quantityInput ? parseFloat(quantityInput.value) : 0;
         const recountModalEl = document.getElementById('recountConfirmModal');
-
+        
         if (recountModalEl) {
             const recountModal = new bootstrap.Modal(recountModalEl);
 
@@ -102,7 +70,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const overrideCostCheckbox = document.getElementById('modal_override_cost');
     const costPerUnitInput = document.getElementById('modal_cost_per_unit');
     const costOverrideWarningModalEl = document.getElementById('costOverrideWarningModal');
-
+    
     if (overrideCostCheckbox && costPerUnitInput && costOverrideWarningModalEl) {
         const costOverrideModal = new bootstrap.Modal(costOverrideWarningModalEl);
 

@@ -147,9 +147,9 @@ def create_inventory_item(form_data, organization_id, created_by):
                 pass
 
         # 2) If a global item was selected, ensure category linkage to matching IngredientCategory by name
-        if global_item and getattr(global_item, 'reference_category', None):
+        if global_item and global_item.ingredient_category:
             try:
-                cat = db.session.query(IngredientCategory).filter_by(name=global_item.reference_category, organization_id=organization_id).first()
+                cat = db.session.query(IngredientCategory).filter_by(name=global_item.ingredient_category.name, organization_id=organization_id).first()
                 if cat:
                     new_item.category_id = cat.id
             except Exception:

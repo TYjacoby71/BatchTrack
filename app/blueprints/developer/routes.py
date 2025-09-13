@@ -583,6 +583,7 @@ def global_items_admin():
     # Filter by reference category if specified
     if category_filter:
         from app.models.category import IngredientCategory
+        # Use ingredient_category_id to join with IngredientCategory
         query = query.join(IngredientCategory, GlobalItem.ingredient_category_id == IngredientCategory.id).filter(
             IngredientCategory.name == category_filter
         )
@@ -620,21 +621,23 @@ def global_items_admin():
 @login_required
 def global_item_detail(item_id):
     item = GlobalItem.query.get_or_404(item_id)
-    
-    # Get available reference categories for the edit form
-    existing_categories = db.session.query(GlobalItem.reference_category).filter(
-        GlobalItem.reference_category.isnot(None),
-        GlobalItem.reference_category != ''
-    ).distinct().order_by(GlobalItem.reference_category).all()
-    
-    reference_categories = sorted([cat[0] for cat in existing_categories if cat[0]])
-    
+
+    # Get available reference categories from IngredientCategory table
+    from app.models.category import IngredientCategory
+    existing_categories = IngredientCategory.query.filter_by(
+        organization_id=None,
+        is_reference_category=True,
+        is_active=True
+    ).order_by(IngredientCategory.name).all()
+
+    reference_categories = sorted([cat.name for cat in existing_categories if cat.name])
+
     return render_template('developer/global_item_detail.html', item=item, reference_categories=reference_categories)
 
 @developer_bp.route('/global-items/<int:item_id>/edit', methods=['POST'])
 @login_required
 def global_item_edit(item_id):
-    """Developer edit for GlobalItem with basic audit logging"""
+    """Edit existing global item"""
     # Add CSRF protection
     from flask_wtf.csrf import validate_csrf
     try:
@@ -673,6 +676,23 @@ def global_item_edit(item_id):
     if aka_names is not None:
         item.aka_names = [n.strip() for n in aka_names.split(',') if n.strip()]
 
+    # Handle ingredient category - use the ID directly
+    ingredient_category_id = request.form.get('ingredient_category_id', '').strip()
+    if ingredient_category_id and ingredient_category_id.isdigit():
+        # Verify the category exists and is a reference category
+        from app.models.category import IngredientCategory
+        category = IngredientCategory.query.filter_by(
+            id=int(ingredient_category_id),
+            organization_id=None,  # Reference categories are global
+            is_reference_category=True
+        ).first()
+        if category:
+            item.ingredient_category_id = category.id
+        else:
+            item.ingredient_category_id = None
+    else:
+        item.ingredient_category_id = None
+
     try:
         db.session.commit()
         # Basic audit log
@@ -698,26 +718,28 @@ def global_item_stats_view(item_id):
 def reference_categories():
     """Manage reference categories for global items"""
     # Get existing ingredient categories that are reference categories
+    from app.models.category import IngredientCategory
     existing_categories = IngredientCategory.query.filter_by(
         is_reference_category=True,
         organization_id=None,
         is_active=True
     ).order_by(IngredientCategory.name).all()
-    
+
     categories = [cat.name for cat in existing_categories]
-    
+
     # Get global items by category for counting
     global_items_by_category = {}
     category_densities = {}
-    
+
     for category_obj in existing_categories:
+        # Correctly filter GlobalItems using ingredient_category_id
         items = GlobalItem.query.filter_by(ingredient_category_id=category_obj.id, is_archived=False).all()
         global_items_by_category[category_obj.name] = items
-        
+
         # Use the category's default density
         if category_obj.default_density:
             category_densities[category_obj.name] = category_obj.default_density
-    
+
     return render_template('developer/reference_categories.html', 
                          categories=categories,
                          global_items_by_category=global_items_by_category,
@@ -730,19 +752,20 @@ def add_reference_category():
     try:
         data = request.get_json()
         category_name = data.get('name', '').strip()
-        
+
         if not category_name:
             return jsonify({'success': False, 'error': 'Category name is required'})
-        
+
         # Check if category already exists
+        from app.models.category import IngredientCategory
         existing = IngredientCategory.query.filter_by(
             name=category_name,
             organization_id=None
         ).first()
-        
+
         if existing:
             return jsonify({'success': False, 'error': 'Category already exists'})
-        
+
         # Create new ingredient category
         new_category = IngredientCategory(
             name=category_name,
@@ -750,12 +773,12 @@ def add_reference_category():
             organization_id=None,
             is_active=True
         )
-        
+
         db.session.add(new_category)
         db.session.commit()
-        
+
         return jsonify({'success': True, 'message': f'Category "{category_name}" added successfully'})
-        
+
     except Exception as e:
         db.session.rollback()
         return jsonify({'success': False, 'error': str(e)})
@@ -767,37 +790,38 @@ def delete_reference_category():
     try:
         data = request.get_json()
         category_name = data.get('name', '').strip()
-        
+
         if not category_name:
             return jsonify({'success': False, 'error': 'Category name is required'})
-        
+
         # Find the category
+        from app.models.category import IngredientCategory
         category = IngredientCategory.query.filter_by(
             name=category_name,
             organization_id=None
         ).first()
-        
+
         if not category:
             return jsonify({'success': False, 'error': 'Category not found'})
-        
+
         # Count items using this category
         items_count = GlobalItem.query.filter_by(
-            ingredient_category_id=category.id,
+            ingredient_category_id=category.id, # Use the correct foreign key
             is_archived=False
         ).count()
-        
+
         if items_count > 0:
             return jsonify({
                 'success': False, 
                 'error': f'Cannot delete category. {items_count} active items are using this category.'
             })
-        
+
         # Delete the category
         db.session.delete(category)
         db.session.commit()
-        
+
         return jsonify({'success': True, 'message': f'Category "{category_name}" deleted successfully'})
-        
+
     except Exception as e:
         db.session.rollback()
         return jsonify({'success': False, 'error': str(e)})
@@ -810,37 +834,38 @@ def update_category_density():
         data = request.get_json()
         category_name = data.get('category', '').strip()
         density = data.get('density')
-        
+
         if not category_name:
             return jsonify({'success': False, 'error': 'Category name is required'})
-        
+
         # Find the category
+        from app.models.category import IngredientCategory
         category = IngredientCategory.query.filter_by(
             name=category_name,
             organization_id=None
         ).first()
-        
+
         if not category:
             return jsonify({'success': False, 'error': 'Category not found'})
-        
+
         # Update the category's default density
-        if density is not None and density > 0:
+        if density is not None and density >= 0: # Allow 0 density
             category.default_density = density
-            
+
             # Optionally update items that don't have specific densities
             items = GlobalItem.query.filter_by(ingredient_category_id=category.id, is_archived=False).all()
             for item in items:
                 if item.density is None or item.density == 0:
                     item.density = density
-        
+
         db.session.commit()
-        
+
         return jsonify({
             'success': True, 
             'message': f'Density updated for category "{category_name}"',
             'density': density
         })
-        
+
     except Exception as e:
         db.session.rollback()
         return jsonify({'success': False, 'error': str(e)})
@@ -852,29 +877,36 @@ def calculate_category_density():
     try:
         data = request.get_json()
         category_name = data.get('category', '').strip()
-        
+
         if not category_name:
             return jsonify({'success': False, 'error': 'Category name is required'})
-        
+
+        # Get the category object to find its ID
+        from app.models.category import IngredientCategory
+        category = IngredientCategory.query.filter_by(name=category_name, organization_id=None).first()
+
+        if not category:
+            return jsonify({'success': False, 'error': 'Category not found'})
+
         # Get all items in this category with valid densities
-        items = GlobalItem.query.filter_by(reference_category=category_name, is_archived=False).all()
+        items = GlobalItem.query.filter_by(ingredient_category_id=category.id, is_archived=False).all()
         densities = [item.density for item in items if item.density is not None and item.density > 0]
-        
+
         if not densities:
             return jsonify({
                 'success': False, 
                 'error': 'No items with valid density values found in this category'
             })
-        
+
         calculated_density = sum(densities) / len(densities)
-        
+
         return jsonify({
             'success': True, 
             'calculated_density': calculated_density,
             'items_count': len(densities),
             'message': f'Calculated density: {calculated_density:.3f} g/ml from {len(densities)} items'
         })
-        
+
     except Exception as e:
         return jsonify({'success': False, 'error': str(e)})
 
@@ -888,17 +920,38 @@ def create_global_item():
             name = request.form.get('name', '').strip()
             item_type = request.form.get('item_type', 'ingredient')
             default_unit = request.form.get('default_unit', '').strip() or None
-            reference_category = request.form.get('reference_category', '').strip() or None
+            # Get ingredient category id from form
+            ingredient_category_id_str = request.form.get('ingredient_category_id', '').strip() or None
 
             # Validation
             if not name:
                 flash('Name is required', 'error')
                 return redirect(url_for('developer.create_global_item'))
 
+            # Validate ingredient_category_id
+            ingredient_category_id = None
+            if ingredient_category_id_str:
+                if ingredient_category_id_str.isdigit():
+                    # Verify the category exists and is a reference category
+                    from app.models.category import IngredientCategory
+                    category = IngredientCategory.query.filter_by(
+                        id=int(ingredient_category_id_str),
+                        organization_id=None,  # Reference categories are global
+                        is_reference_category=True
+                    ).first()
+                    if category:
+                        ingredient_category_id = category.id
+                    else:
+                        flash(f'Ingredient category ID "{ingredient_category_id_str}" not found or is not a valid reference category.', 'error')
+                        return redirect(url_for('developer.create_global_item'))
+                else:
+                    flash(f'Invalid Ingredient Category ID format: "{ingredient_category_id_str}"', 'error')
+                    return redirect(url_for('developer.create_global_item'))
+
             # Check for duplicate
             existing = GlobalItem.query.filter_by(name=name, item_type=item_type).first()
-            if existing:
-                flash(f'A {item_type} with the name "{name}" already exists', 'error')
+            if existing and not existing.is_archived:
+                flash(f'Global item "{name}" of type "{item_type}" already exists', 'error')
                 return redirect(url_for('developer.create_global_item'))
 
             # Create new global item
@@ -906,7 +959,7 @@ def create_global_item():
                 name=name,
                 item_type=item_type,
                 default_unit=default_unit,
-                reference_category=reference_category
+                ingredient_category_id=ingredient_category_id
             )
 
             # Add optional fields
@@ -915,14 +968,16 @@ def create_global_item():
                 try:
                     new_item.density = float(density)
                 except ValueError:
-                    pass
+                    flash('Invalid density value', 'error')
+                    return redirect(url_for('developer.create_global_item'))
 
             capacity = request.form.get('capacity')
             if capacity:
                 try:
                     new_item.capacity = float(capacity)
                 except ValueError:
-                    pass
+                    flash('Invalid capacity value', 'error')
+                    return redirect(url_for('developer.create_global_item'))
 
             new_item.capacity_unit = request.form.get('capacity_unit', '').strip() or None
             new_item.default_is_perishable = request.form.get('default_is_perishable') == 'on'
@@ -932,7 +987,8 @@ def create_global_item():
                 try:
                     new_item.recommended_shelf_life_days = int(shelf_life)
                 except ValueError:
-                    pass
+                    flash('Invalid shelf life value', 'error')
+                    return redirect(url_for('developer.create_global_item'))
 
             # Handle aka_names (comma-separated)
             aka_names = request.form.get('aka_names', '').strip()
@@ -951,14 +1007,21 @@ def create_global_item():
             return redirect(url_for('developer.create_global_item'))
 
     # GET request - show form
-    # Get available reference categories
-    existing_categories = db.session.query(GlobalItem.reference_category).filter(
-        GlobalItem.reference_category.isnot(None),
-        GlobalItem.reference_category != ''
-    ).distinct().order_by(GlobalItem.reference_category).all()
-    
-    reference_categories = sorted([cat[0] for cat in existing_categories if cat[0]])
-    
+    # Get available reference categories from IngredientCategory table
+    from app.models.category import IngredientCategory
+    reference_categories_list = IngredientCategory.query.filter_by(
+        organization_id=None, 
+        is_reference_category=True, 
+        is_active=True
+    ).order_by(IngredientCategory.name).all()
+
+    reference_categories = []
+    for cat in reference_categories_list:
+        reference_categories.append({
+            'id': cat.id,
+            'name': cat.name
+        })
+
     return render_template('developer/create_global_item.html', reference_categories=reference_categories)
 
 @developer_bp.route('/global-items/<int:item_id>/delete', methods=['POST'])
