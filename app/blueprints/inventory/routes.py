@@ -240,7 +240,12 @@ def view_inventory(id):
 
         expired_total = sum(float(lot.remaining_quantity) for lot in expired_entries)
 
-    from ...utils.timezone_utils import TimezoneUtils
+    # Get organization categories for the edit modal
+    organization_categories = IngredientCategory.query.filter_by(
+        organization_id=current_user.organization_id,
+        is_active=True
+    ).order_by(IngredientCategory.name).all()
+
     return render_template('pages/inventory/view.html',
                          abs=abs,
                          item=item,
@@ -251,13 +256,13 @@ def view_inventory(id):
                          expired_total=expired_total,
                          units=get_global_unit_list(),
                          get_global_unit_list=get_global_unit_list,
-                         get_ingredient_categories=IngredientCategory.query.order_by(IngredientCategory.name).all,
                          User=User,
                          UnifiedInventoryHistory=UnifiedInventoryHistory,
                          now=datetime.utcnow(),
                          int_to_base36=int_to_base36,
                          fifo_filter=fifo_filter,
-                         TimezoneUtils=TimezoneUtils)
+                         TimezoneUtils=TimezoneUtils,
+                         organization_categories=organization_categories)
 
 @inventory_bp.route('/add', methods=['POST'])
 @login_required
@@ -458,13 +463,13 @@ def edit_inventory(id):
                     reference_category_name = category_id.replace('ref_', '')
                     item.reference_item_name = None  # Clear specific item
                     item.density_source = 'category_default'
-                    
+
                     # Set density from reference guide via service
                     try:
                         DensityAssignmentService.assign_density_from_reference(item, reference_category_name)
                     except Exception as e:
                         logger.warning(f"Failed to assign reference density: {e}")
-                    
+
                     item.category_id = None  # Clear regular category
                 else:
                     # Regular category selection

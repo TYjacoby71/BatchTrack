@@ -155,6 +155,31 @@ def create_inventory_item(form_data, organization_id, created_by):
             except Exception:
                 pass
 
+        # 3) Auto-link to matching category by name if no category was explicitly set
+        if not new_item.category_id and new_item.name:
+            try:
+                # Look for exact match or case-insensitive match
+                matching_cat = db.session.query(IngredientCategory).filter_by(
+                    name=new_item.name, 
+                    organization_id=organization_id
+                ).first()
+                
+                if not matching_cat:
+                    # Try case-insensitive match
+                    matching_cat = db.session.query(IngredientCategory).filter(
+                        db.func.lower(IngredientCategory.name) == db.func.lower(new_item.name),
+                        IngredientCategory.organization_id == organization_id
+                    ).first()
+                
+                if matching_cat:
+                    new_item.category_id = matching_cat.id
+                    # Apply category default density if available
+                    if matching_cat.default_density and not new_item.density:
+                        new_item.density = matching_cat.default_density
+                        new_item.density_source = 'category_default'
+            except Exception:
+                pass
+
         # 3) If no density provided and no global item and no ref category assignment, try auto-assign based on name/category
         if (not global_item) and (not custom_density) and not (raw_category_id and isinstance(raw_category_id, str) and raw_category_id.startswith('ref_')):
             try:
