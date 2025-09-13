@@ -1,4 +1,4 @@
-from flask import Blueprint, request, jsonify, render_template, redirect, flash, session, url_for
+THIS SHOULD BE A LINTER ERRORfrom flask import Blueprint, request, jsonify, render_template, redirect, flash, session, url_for
 from flask_login import login_required, current_user
 from app.models import db, InventoryItem, UnifiedInventoryHistory, Unit, IngredientCategory, User
 from app.utils.permissions import permission_required, role_required
@@ -28,6 +28,36 @@ def can_edit_inventory_item(item):
     if current_user.user_type == 'developer':
         return True
     return item.organization_id == current_user.organization_id
+
+@inventory_bp.route('/api/get-item/<int:item_id>')
+@login_required
+def api_get_inventory_item(item_id):
+    """Return inventory item details for the edit modal (org-scoped)."""
+    try:
+        query = InventoryItem.query
+        if current_user.organization_id:
+            query = query.filter_by(organization_id=current_user.organization_id)
+        item = query.filter_by(id=item_id).first()
+        if not item:
+            return jsonify({'error': 'Item not found'}), 404
+
+        return jsonify({
+            'id': item.id,
+            'name': item.name,
+            'quantity': float(item.quantity or 0),
+            'unit': item.unit,
+            'cost_per_unit': float(item.cost_per_unit or 0),
+            'type': item.type,
+            'global_item_id': getattr(item, 'global_item_id', None),
+            'category_id': getattr(item, 'category_id', None),
+            'density': item.density,
+            'is_perishable': bool(item.is_perishable),
+            'shelf_life_days': item.shelf_life_days,
+            'notes': ''
+        })
+    except Exception as e:
+        logger.exception('Failed to load inventory item for edit modal')
+        return jsonify({'error': str(e)}), 500
 
 @inventory_bp.route('/api/quick-create', methods=['POST'])
 @login_required
