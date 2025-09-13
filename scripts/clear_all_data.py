@@ -85,31 +85,31 @@ def clear_all_data():
                 print(f"🗑️  Clearing batch ingredients...")
                 from app.models.batch import BatchIngredient
                 db.session.query(BatchIngredient).delete()
-                
+
                 print(f"🗑️  Clearing batch consumables...")
                 from app.models.batch import BatchConsumable
                 db.session.query(BatchConsumable).delete()
-                
+
                 print(f"🗑️  Clearing batch containers...")
                 from app.models.batch import BatchContainer
                 db.session.query(BatchContainer).delete()
-                
+
                 print(f"🗑️  Clearing extra batch containers...")
                 from app.models.batch import ExtraBatchContainer
                 db.session.query(ExtraBatchContainer).delete()
-                
+
                 print(f"🗑️  Clearing batch timers...")
                 from app.models.batch import BatchTimer
                 db.session.query(BatchTimer).delete()
-                
+
                 print(f"🗑️  Clearing extra batch ingredients...")
                 from app.models.batch import ExtraBatchIngredient
                 db.session.query(ExtraBatchIngredient).delete()
-                
+
                 print(f"🗑️  Clearing extra batch consumables...")
                 from app.models.batch import ExtraBatchConsumable
                 db.session.query(ExtraBatchConsumable).delete()
-                
+
                 print(f"🗑️  Clearing {batch_count} batches...")
                 db.session.query(Batch).delete()
 
@@ -118,11 +118,11 @@ def clear_all_data():
                 print(f"🗑️  Clearing recipe ingredients...")
                 from app.models.recipe import RecipeIngredient
                 db.session.query(RecipeIngredient).delete()
-                
+
                 print(f"🗑️  Clearing recipe consumables...")
                 from app.models.recipe import RecipeConsumable
                 db.session.query(RecipeConsumable).delete()
-                
+
                 print(f"🗑️  Clearing {recipe_count} recipes...")
                 db.session.query(Recipe).delete()
 
@@ -161,16 +161,15 @@ def clear_all_data():
 
                 if org_ids:
                     print(f"🗑️  Clearing organization statistics...")
-                    db.session.query(OrganizationStats).filter(
-                        OrganizationStats.organization_id.in_(org_ids)
-                    ).delete(synchronize_session=False)
+                    db.session.query(OrganizationStats).delete()
 
-                    db.session.query(BillingSnapshot).filter(
-                        BillingSnapshot.organization_id.in_(org_ids)
-                    ).delete(synchronize_session=False)
+                    # Clear ingredient categories before organizations (foreign key dependency)
+                    print(f"🗑️  Clearing ingredient categories...")
+                    from app.models.category import IngredientCategory
+                    db.session.query(IngredientCategory).delete()
 
-                print(f"🗑️  Clearing {org_count} organizations...")
-                db.session.query(Organization).delete()
+                    print(f"🗑️  Clearing {org_count} organizations...")
+                    db.session.query(Organization).delete()
 
             # 10. Clear remaining user stats
             user_stats_count = UserStats.query.count()

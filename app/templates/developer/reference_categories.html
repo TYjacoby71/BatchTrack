@@ -1,3 +1,4 @@
+
 {% extends 'layout.html' %}
 {% block content %}
 <div class="d-flex justify-content-between align-items-center mb-3">
@@ -17,11 +18,59 @@
         {% if categories %}
           <div class="list-group" id="categoriesList">
             {% for category in categories %}
-            <div class="list-group-item d-flex justify-content-between align-items-center">
-              <span>{{ category }}</span>
-              <button class="btn btn-sm btn-outline-danger" onclick="deleteCategory('{{ category }}')">
-                <i class="fas fa-trash"></i> Delete
-              </button>
+            <div class="list-group-item">
+              <div class="d-flex justify-content-between align-items-center mb-2">
+                <div class="d-flex align-items-center flex-grow-1">
+                  <a href="{{ url_for('developer.global_items_admin', category=category) }}" class="text-decoration-none me-2">
+                    <strong>{{ category }}</strong>
+                  </a>
+                  {% if global_items_by_category.get(category) %}
+                    <span class="badge bg-secondary">{{ global_items_by_category[category]|length }} items</span>
+                  {% else %}
+                    <span class="badge bg-light text-muted">0 items</span>
+                  {% endif %}
+                </div>
+                <button class="btn btn-sm btn-outline-danger" onclick="deleteCategory('{{ category }}')">
+                  <i class="fas fa-trash"></i> Delete
+                </button>
+              </div>
+              
+              <!-- Category Properties Form -->
+              <div class="row g-2">
+                <div class="col-md-4">
+                  <label class="form-label small">Default Density (g/ml)</label>
+                  <div class="input-group input-group-sm">
+                    <input type="number" 
+                           class="form-control density-input" 
+                           data-category="{{ category }}"
+                           step="0.001" 
+                           min="0"
+                           placeholder="Auto-calc"
+                           value="{% if category_densities.get(category) %}{{ '%.3f'|format(category_densities[category]) }}{% endif %}">
+                    <button class="btn btn-outline-secondary" type="button" onclick="calculateCategoryDensity('{{ category }}')">
+                      <i class="fas fa-calculator"></i>
+                    </button>
+                    <button class="btn btn-outline-primary" type="button" onclick="saveCategoryDensity('{{ category }}')">
+                      <i class="fas fa-save"></i>
+                    </button>
+                  </div>
+                  <small class="text-muted">Auto-calculated from items or manual entry</small>
+                </div>
+                <div class="col-md-8">
+                  <label class="form-label small">Category Info</label>
+                  <div class="small text-muted">
+                    {% if global_items_by_category.get(category) %}
+                      Contains {{ global_items_by_category[category]|length }} items
+                      {% set items_with_density = global_items_by_category[category]|selectattr('density')|list %}
+                      {% if items_with_density %}
+                        • {{ items_with_density|length }} have density values
+                      {% endif %}
+                    {% else %}
+                      No items in this category yet
+                    {% endif %}
+                  </div>
+                </div>
+              </div>
             </div>
             {% endfor %}
           </div>
@@ -61,6 +110,7 @@
           <li><strong>Naming:</strong> Use clear, descriptive names</li>
           <li><strong>Examples:</strong> Oils, Waxes, Dairy, Containers, Essential Oils</li>
           <li><strong>Deletion:</strong> Categories with active items cannot be deleted</li>
+          <li><strong>Density:</strong> Set default density values for new items in category</li>
         </ul>
       </div>
     </div>
