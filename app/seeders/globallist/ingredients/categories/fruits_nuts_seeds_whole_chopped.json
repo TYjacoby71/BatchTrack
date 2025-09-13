@@ -1,8 +1,7 @@
 
 {
   "category_name": "Fruits, Nuts & Seeds (Whole/Chopped)",
-  "default_density": 0.65,
-  "description": "For non-powdered, whole or partial botanicals that are typically heavier than leafy herbs.",
-  "reference_category_name": "Fruits, Nuts & Seeds (Whole/Chopped)",
+  "default_density": 0.60,
+  "description": "Whole dried fruits, nuts and large seeds.",
   "items": []
 }

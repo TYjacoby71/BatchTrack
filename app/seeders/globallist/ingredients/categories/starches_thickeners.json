@@ -1,8 +1,7 @@
 
 {
   "category_name": "Starches & Thickeners",
-  "default_density": 0.70,
-  "description": "For refined starches and gums.",
-  "reference_category_name": "Starches & Thickeners",
+  "default_density": 0.63,
+  "description": "For starches and common thickeners.",
   "items": []
 }

@@ -1,8 +1,7 @@
 
 {
   "category_name": "Extracts & Alcohols (Solvents)",
-  "default_density": 0.88,
-  "description": "For concentrated liquid extracts and pure alcohols.",
-  "reference_category_name": "Extracts & Alcohols (Solvents)",
+  "default_density": 0.86,
+  "description": "Extracts and solvent alcohols.",
   "items": []
 }

@@ -1,8 +1,7 @@
 
 {
   "category_name": "Clays",
-  "default_density": 2.50,
-  "description": "For all cosmetic and crafting clays.",
-  "reference_category_name": "Clays",
+  "default_density": 2.45,
+  "description": "Mineral clays used for cosmetics.",
   "items": []
 }

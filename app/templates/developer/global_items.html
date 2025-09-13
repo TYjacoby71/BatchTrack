@@ -75,7 +75,7 @@
       <td>
         <span class="badge bg-secondary">{{ gi.item_type }}</span>
       </td>
-      <td>{{ gi.reference_category or '-' }}</td>
+      <td>{{ gi.ingredient_category.name if gi.ingredient_category else '-' }}</td>
       <td>{{ gi.density or '-' }}</td>
       <td>{{ gi.capacity or '-' }} {{ gi.capacity_unit or '' }}</td>
       <td>{{ 'Yes' if gi.default_is_perishable else 'No' }}</td>

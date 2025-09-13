@@ -59,7 +59,6 @@ def seed():
 
 			default_density = cat_data.get('default_density')
 			description = cat_data.get('description', '')
-			reference_category_name = cat_data.get('reference_category_name')
 
 			# Create or update category
 			curated_cat = IngredientCategory.query.filter_by(name=cat_name, organization_id=None).first()
@@ -68,8 +67,7 @@ def seed():
 					name=cat_name,
 					description=description,
 					default_density=default_density,
-					reference_category_name=cat_name,  # Same as name since this IS a reference category
-					is_reference_category=True,
+					is_global_category=True,
 					organization_id=None,
 					is_active=True
 				)
@@ -82,7 +80,8 @@ def seed():
 					curated_cat.default_density = default_density
 				if description:
 					curated_cat.description = description
-				curated_cat.reference_category_name = cat_name  # Ensure consistency
+				# Ensure global category flag is set
+				curated_cat.is_global_category = True
 
 			# Process items in the category
 			for item_data in cat_data.get('items', []):
