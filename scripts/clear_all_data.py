@@ -12,10 +12,10 @@ from app import create_app
 from app.models import db
 from app.models.models import (
     User, Organization, InventoryItem, Batch, Recipe, Product, 
-    ProductSku, UnifiedInventoryHistory, InventoryLot,
+    UnifiedInventoryHistory, InventoryLot,
     UserRoleAssignment, UserStats, OrganizationStats, BillingSnapshot
 )
-from app.models.product import ProductVariant
+from app.models.product import ProductVariant, ProductSKU
 from app.models.user_preferences import UserPreferences
 from app.models.reservation import Reservation
 
@@ -69,7 +69,7 @@ def clear_all_data():
             # 4. Clear product-related data
             if product_count > 0:
                 print(f"🗑️  Clearing product data...")
-                db.session.query(ProductSku).delete()
+                db.session.query(ProductSKU).delete()
                 db.session.query(ProductVariant).delete()
                 db.session.query(Product).delete()
 
