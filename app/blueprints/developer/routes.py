@@ -622,11 +622,10 @@ def global_items_admin():
 def global_item_detail(item_id):
     item = GlobalItem.query.get_or_404(item_id)
 
-    # Get available global ingredient categories from IngredientCategory table
+    # Get available global ingredient categories from IngredientCategory table (not org-scoped; ignore legacy flags)
     from app.models.category import IngredientCategory
     existing_categories = IngredientCategory.query.filter_by(
         organization_id=None,
-        is_global_category=True,
         is_active=True
     ).order_by(IngredientCategory.name).all()
 
@@ -679,12 +678,11 @@ def global_item_edit(item_id):
     # Handle ingredient category - use the ID directly
     ingredient_category_id = request.form.get('ingredient_category_id', '').strip()
     if ingredient_category_id and ingredient_category_id.isdigit():
-        # Verify the category exists and is a global ingredient category
+        # Verify the category exists (global scope)
         from app.models.category import IngredientCategory
         category = IngredientCategory.query.filter_by(
             id=int(ingredient_category_id),
-            organization_id=None,  # Global categories are global-scoped
-            is_global_category=True
+            organization_id=None  # Global categories are global-scoped
         ).first()
         if category:
             item.ingredient_category_id = category.id
@@ -717,10 +715,9 @@ def global_item_stats_view(item_id):
 @login_required
 def reference_categories():
     """Manage reference categories for global items"""
-    # Get existing ingredient categories that are global ingredient categories
+    # Get existing ingredient categories in global scope (ignore legacy flag)
     from app.models.category import IngredientCategory
     existing_categories = IngredientCategory.query.filter_by(
-        is_global_category=True,
         organization_id=None,
         is_active=True
     ).order_by(IngredientCategory.name).all()
@@ -1038,11 +1035,10 @@ def create_global_item():
             return redirect(url_for('developer.create_global_item'))
 
     # GET request - show form
-    # Get available global ingredient categories from IngredientCategory table
+    # Get available global ingredient categories from IngredientCategory table (ignore legacy flag)
     from app.models.category import IngredientCategory
     reference_categories_list = IngredientCategory.query.filter_by(
         organization_id=None, 
-        is_global_category=True, 
         is_active=True
     ).order_by(IngredientCategory.name).all()
 
