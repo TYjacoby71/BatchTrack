@@ -36,7 +36,7 @@
                 <select name="ingredient_category_id" class="form-select">
                   <option value="">Select Category</option>
                   {% for category in reference_categories %}
-                    <option value="{{ category.id if category.id else category }}">{{ category }}</option>
+                    <option value="{{ category.id }}">{{ category.name }}</option>
                   {% endfor %}
                 </select>
                 <a href="{{ url_for('developer.reference_categories') }}" class="btn btn-outline-secondary" title="Manage Categories">

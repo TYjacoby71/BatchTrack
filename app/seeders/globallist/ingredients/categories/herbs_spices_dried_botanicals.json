@@ -1,8 +1,7 @@
 
 {
   "category_name": "Herbs & Spices (Dried & Ground)",
-  "default_density": 0.45,
-  "description": "For dried and ground plant-based seasonings and additives.",
-  "reference_category_name": "Herbs & Spices (Dried & Ground)",
+  "default_density": 0.57,
+  "description": "Dried ground herbs and spices.",
   "items": []
 }

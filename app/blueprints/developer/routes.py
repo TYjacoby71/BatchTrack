@@ -580,7 +580,7 @@ def global_items_admin():
     if item_type:
         query = query.filter(GlobalItem.item_type == item_type)
 
-    # Filter by reference category if specified
+    # Filter by ingredient category if specified
     if category_filter:
         from app.models.category import IngredientCategory
         # Use ingredient_category_id to join with IngredientCategory
@@ -716,7 +716,7 @@ def global_item_stats_view(item_id):
 @developer_bp.route('/reference-categories')
 @login_required
 def reference_categories():
-    """Manage reference categories for global items"""
+    """Manage global ingredient categories"""
     # Get existing ingredient categories in global scope (ignore legacy flag)
     from app.models.category import IngredientCategory
     existing_categories = IngredientCategory.query.filter_by(
@@ -748,7 +748,7 @@ def reference_categories():
 @developer_bp.route('/reference-categories/add', methods=['POST'])
 @login_required
 def add_reference_category():
-    """Add a new reference category"""
+    """Add a new global ingredient category"""
     try:
         data = request.get_json()
         category_name = data.get('name', '').strip()
@@ -788,7 +788,7 @@ def add_reference_category():
 @developer_bp.route('/reference-categories/delete', methods=['POST'])
 @login_required
 def delete_reference_category():
-    """Delete a reference category"""
+    """Delete a global ingredient category"""
     try:
         data = request.get_json()
         category_name = data.get('name', '').strip()
@@ -831,7 +831,7 @@ def delete_reference_category():
 @developer_bp.route('/reference-categories/update-density', methods=['POST'])
 @login_required
 def update_category_density():
-    """Update the default density for a reference category"""
+    """Update the default density for a global ingredient category"""
     try:
         data = request.get_json()
         category_name = data.get('category', '').strip()

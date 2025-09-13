@@ -1,8 +1,7 @@
 
 {
   "category_name": "Salts & Minerals (Crystalline)",
-  "default_density": 1.80,
-  "description": "For all crystalline salts, minerals, and chemical reactants like Lye.",
-  "reference_category_name": "Salts & Minerals (Crystalline)",
+  "default_density": 2.16,
+  "description": "Crystalline salts and minerals.",
   "items": []
 }
