@@ -215,7 +215,7 @@ def _create_product_output(batch, product_id, variant_id, final_quantity, output
         # Calculate total product volume used in containers
         total_container_volume = 0
         for sku_info in container_skus:
-            # Each container holds storage_amount * number of containers
+            # Each container holds capacity * number of containers
             container_capacity = sku_info.get('container_capacity', 1)
             container_count = sku_info.get('quantity', 0)
             total_container_volume += container_capacity * container_count

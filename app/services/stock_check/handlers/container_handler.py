@@ -109,9 +109,9 @@ class ContainerHandler(BaseInventoryHandler):
                 formatted_available=self._format_quantity_display(len(available_containers), "count"),
                 conversion_details={
                     **(conversion_details or {}),
-                    'storage_capacity': storage_capacity,
-                    'storage_unit': storage_unit,
-                    'storage_capacity_in_recipe_units': storage_capacity_in_recipe_units,
+                    'capacity': storage_capacity,
+                    'capacity_unit': storage_unit,
+                    'capacity_in_recipe_units': storage_capacity_in_recipe_units,
                     'recipe_yield_needed': request.quantity_needed,
                     'recipe_yield_unit': request.unit
                 }
@@ -156,8 +156,8 @@ class ContainerHandler(BaseInventoryHandler):
             'name': container.name,
             'unit': container.unit,
             'quantity': container.quantity,
-            'storage_amount': getattr(container, 'storage_amount', 0),
-            'storage_unit': getattr(container, 'storage_unit', 'ml'),
+            'capacity': getattr(container, 'capacity', 0),
+            'capacity_unit': getattr(container, 'capacity_unit', 'ml'),
             'cost_per_unit': container.cost_per_unit,
             'type': container.type
         }
@@ -226,8 +226,8 @@ class ContainerHandler(BaseInventoryHandler):
                 status=status,
                 category=InventoryCategory.CONTAINER,
                 conversion_details={
-                    'storage_capacity': getattr(container, 'capacity', 0),
-                    'storage_unit': getattr(container, 'capacity_unit', 'ml'),
+                    'capacity': getattr(container, 'capacity', 0),
+                    'capacity_unit': getattr(container, 'capacity_unit', 'ml'),
                     'item_id': container.id,
                     'item_name': container.name,
                     'stock_qty': available_quantity
