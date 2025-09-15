@@ -14,7 +14,6 @@ from .start_batch import start_batch_bp
 from .cancel_batch import cancel_batch_bp
 from .add_extra import add_extra_bp
 from .finish_batch import finish_batch_bp
-from .fail_batch import fail_batch_bp
 
 import logging
 logger = logging.getLogger(__name__)
@@ -287,4 +286,3 @@ batches_bp.register_blueprint(start_batch_bp, url_prefix='/start')
 batches_bp.register_blueprint(finish_batch_bp, url_prefix='/finish-batch')
 batches_bp.register_blueprint(cancel_batch_bp, url_prefix='')
 batches_bp.register_blueprint(add_extra_bp, url_prefix='/add-extra')
-batches_bp.register_blueprint(fail_batch_bp, url_prefix='')
