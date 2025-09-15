@@ -91,6 +91,18 @@ def update_inventory_item(item_id: int, form_data: dict) -> tuple[bool, str]:
             # Persist the unit change on the item after converting all data
             item.unit = new_unit
 
+        # Capacity fields (canonical only)
+        if 'capacity' in form_data:
+            try:
+                cap_value = form_data.get('capacity')
+                if cap_value not in [None, '', 'null']:
+                    item.capacity = float(cap_value)
+            except (ValueError, TypeError):
+                return False, "Invalid capacity value"
+
+        if 'capacity_unit' in form_data and form_data.get('capacity_unit'):
+            item.capacity_unit = form_data.get('capacity_unit')
+
         # Update basic item details (excluding quantity)
         if 'name' in form_data and not is_global_locked:
             item.name = form_data['name'].strip()

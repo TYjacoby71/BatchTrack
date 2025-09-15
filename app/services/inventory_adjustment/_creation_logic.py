@@ -118,6 +118,22 @@ def create_inventory_item(form_data, organization_id, created_by):
             ownership=('global' if global_item else 'org')
         )
 
+        # Capacity fields (canonical only)
+        try:
+            raw_capacity = form_data.get('capacity')
+            if raw_capacity not in [None, '', 'null']:
+                new_item.capacity = float(raw_capacity)
+        except (ValueError, TypeError):
+            pass
+
+        cap_unit = form_data.get('capacity_unit')
+        if cap_unit:
+            new_item.capacity_unit = cap_unit
+
+        # Containers are always counted by "count"; ensure unit is correct
+        if item_type == 'container':
+            new_item.unit = 'count'
+
         # Apply global item defaults after instance is created
         if global_item:
             # Density for ingredients

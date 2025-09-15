@@ -119,6 +119,6 @@ def get_inventory_item(item_id):
         'global_item_id': item.global_item_id,
         'is_perishable': item.is_perishable,
         'shelf_life_days': item.shelf_life_days,
-        'storage_amount': getattr(item, 'storage_amount', None),
-        'storage_unit': getattr(item, 'storage_unit', None)
+        'capacity': getattr(item, 'capacity', None),
+        'capacity_unit': getattr(item, 'capacity_unit', None)
     })
