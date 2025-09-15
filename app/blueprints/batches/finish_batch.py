@@ -37,6 +37,30 @@ def complete_batch(batch_id):
         return redirect(url_for('batches.view_batch_in_progress', batch_identifier=batch_id))
 
 
+@finish_batch_bp.route('/batches/<int:batch_id>/fail', methods=['POST'])
+@login_required
+def fail_batch(batch_id):
+    """Mark an in-progress batch as failed - thin controller"""
+    try:
+        from ...services.batch_service import BatchOperationsService
+
+        failure_reason = request.form.get('failure_reason') or None
+
+        success, message = BatchOperationsService.fail_batch(batch_id, failure_reason)
+
+        if success:
+            flash(message or 'Batch marked as failed', 'success')
+            return redirect(url_for('batches.list_batches'))
+        else:
+            flash(message or 'Unable to mark batch as failed', 'error')
+            return redirect(url_for('batches.view_batch_in_progress', batch_identifier=batch_id))
+
+    except Exception as e:
+        db.session.rollback()
+        logger.error(f"Error failing batch {batch_id}: {str(e)}")
+        flash(f'Error failing batch: {str(e)}', 'error')
+        return redirect(url_for('batches.view_batch_in_progress', batch_identifier=batch_id))
+
 def _complete_batch_internal(batch_id, form_data):
     """Internal batch completion logic - called by service"""
     try:

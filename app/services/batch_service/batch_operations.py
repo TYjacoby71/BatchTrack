@@ -478,6 +478,71 @@ class BatchOperationsService(BaseService):
             return False, str(e)
 
     @classmethod
+    def fail_batch(cls, batch_id, failure_reason: str = None):
+        """Mark an in-progress batch as failed and stop progress."""
+        try:
+            batch = Batch.scoped().filter_by(id=batch_id).first()
+            if not batch:
+                return False, "Batch not found"
+
+            # Validate access
+            if batch.created_by != current_user.id and batch.organization_id != current_user.organization_id:
+                return False, "Permission denied"
+
+            if batch.status != 'in_progress':
+                return False, "Only in-progress batches can be marked failed"
+
+            # Update status and timestamps
+            batch.status = 'failed'
+            batch.failed_at = TimezoneUtils.utc_now()
+            if failure_reason:
+                batch.status_reason = failure_reason
+
+            db.session.commit()
+
+            # Update statistics (best-effort)
+            try:
+                from app.services.statistics import StatisticsService
+                StatisticsService.update_batch_status(
+                    user_id=batch.created_by,
+                    organization_id=batch.organization_id,
+                    old_status='in_progress',
+                    new_status='failed'
+                )
+            except Exception:
+                pass
+
+            # Mark in detailed batch stats (best-effort)
+            try:
+                from app.services.statistics._batch_stats import BatchStatisticsService
+                BatchStatisticsService.mark_batch_failed(batch_id, failure_reason)
+            except Exception:
+                pass
+
+            # Emit domain event (best-effort)
+            try:
+                EventEmitter.emit(
+                    event_name='batch_failed',
+                    properties={
+                        'label_code': batch.label_code,
+                        'failure_reason': failure_reason
+                    },
+                    organization_id=batch.organization_id,
+                    user_id=batch.created_by,
+                    entity_type='batch',
+                    entity_id=batch.id
+                )
+            except Exception:
+                pass
+
+            return True, "Batch marked as failed"
+
+        except Exception as e:
+            db.session.rollback()
+            logger.error(f"Error failing batch: {str(e)}")
+            return False, str(e)
+
+    @classmethod
     def add_extra_items_to_batch(cls, batch_id, extra_ingredients=None, extra_containers=None, extra_consumables=None):
         """Add extra ingredients, containers, and consumables to an in-progress batch"""
         try:
