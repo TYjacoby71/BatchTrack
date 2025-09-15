@@ -136,12 +136,13 @@ def create_inventory_item(form_data, organization_id, created_by):
                 cat = db.session.get(IngredientCategory, int(category_id))
                 if cat:
                     new_item.category_id = cat.id
-                    # Assign category default density (overridden by custom density below if provided)
-                    DensityAssignmentService.assign_density_to_ingredient(
-                        ingredient=new_item,
-                        use_category_default=True,
-                        category_name=cat.name
-                    )
+                    # Assign category default density only for custom items
+                    if not global_item:
+                        DensityAssignmentService.assign_density_to_ingredient(
+                            ingredient=new_item,
+                            use_category_default=True,
+                            category_name=cat.name
+                        )
             except Exception:
                 pass
 
@@ -157,7 +158,34 @@ def create_inventory_item(form_data, organization_id, created_by):
         # 3) If no density provided and no global item and no ref category assignment, try auto-assign based on name/category
         if (not global_item) and (not custom_density) and not category_id:
             try:
+                # Assign density via reference or category keyword
                 DensityAssignmentService.auto_assign_density_on_creation(new_item)
+                # If density came from a category default, also set category_id when possible
+                match_item, match_type = DensityAssignmentService.find_best_match(new_item.name)
+                inferred_category_name = None
+                if match_item and match_type == 'category_keyword':
+                    inferred_category_name = match_item.get('category')
+                elif match_item and match_type in ['exact', 'alias', 'similarity']:
+                    # Use the category tied to the matched reference item if available
+                    inferred_category_name = match_item.get('category')
+
+                if inferred_category_name:
+                    try:
+                        cat = db.session.query(IngredientCategory).filter_by(
+                            name=inferred_category_name,
+                            organization_id=organization_id
+                        ).first()
+                        if cat:
+                            new_item.category_id = cat.id
+                            # Ensure density aligns with category default when available
+                            if cat.default_density and cat.default_density > 0:
+                                new_item.density = cat.default_density
+                                try:
+                                    setattr(new_item, 'density_source', 'category_default')
+                                except Exception:
+                                    pass
+                    except Exception:
+                        pass
             except Exception:
                 pass
 

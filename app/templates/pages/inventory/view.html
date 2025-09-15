@@ -197,7 +197,7 @@
       </div>
       <div class="modal-footer">
         <a href="{{ url_for('inventory.list_inventory') }}" class="btn btn-secondary">Back to Inventory List</a>
-        <button type="button" class="btn btn-outline-secondary" data-bs-target="#editDetailsModal" data-bs-toggle="modal" data-bs-dismiss="modal">Edit Item Details</button>
+        <button type="button" class="btn btn-outline-secondary" data-bs-target="#editDetailsModal" data-bs-toggle="modal" data-bs-dismiss="modal" data-item-id="{{ item.id }}">Edit Item Details</button>
         <button type="submit" form="initialInventoryForm" class="btn btn-primary">Add Initial Inventory</button>
       </div>
     </div>
@@ -401,11 +401,17 @@ document.addEventListener('DOMContentLoaded', function() {
                             const applyCategoryDensityLock = function(){
                                 const opt = categorySelect.options[categorySelect.selectedIndex];
                                 const dd = opt && opt.dataset && opt.dataset.density ? parseFloat(opt.dataset.density) : 0;
-                                if (categorySelect.value && dd > 0) {
-                                    densityInput.value = dd.toFixed(3);
+                                if (categorySelect.value !== '') {
+                                    // Any selected category locks density; prefill if default provided
+                                    if (!isNaN(dd) && dd > 0) {
+                                        densityInput.value = dd.toFixed(3);
+                                    }
                                     densityInput.readOnly = true;
+                                    densityInput.disabled = true;
                                 } else {
+                                    // Custom category unlocks manual density
                                     densityInput.readOnly = false;
+                                    densityInput.disabled = false;
                                 }
                             };
                             categorySelect.addEventListener('change', applyCategoryDensityLock);

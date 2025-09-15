@@ -119,14 +119,33 @@
         typeSelect.addEventListener('change', updateTypeVisibility);
         updateTypeVisibility();
 
-        // Category default density autofill
+        // Category default density autofill and lock behavior
         catSelect.addEventListener('change', function(){
             const opt = catSelect.options[catSelect.selectedIndex];
             const d = parseFloat(opt && opt.dataset && opt.dataset.density || '0');
-            if (d > 0) {
-                densityInput.value = d.toFixed(3);
+            if (catSelect.value !== '') {
+                if (d > 0) {
+                    densityInput.value = d.toFixed(3);
+                }
+                densityInput.readOnly = true;
+                densityInput.disabled = true;
+            } else {
+                densityInput.readOnly = false;
+                densityInput.disabled = false;
             }
         });
+        // Initialize lock state on open
+        (function(){
+            const opt = catSelect.options[catSelect.selectedIndex];
+            const d = parseFloat(opt && opt.dataset && opt.dataset.density || '0');
+            if (catSelect.value !== '') {
+                if (d > 0) {
+                    densityInput.value = d.toFixed(3);
+                }
+                densityInput.readOnly = true;
+                densityInput.disabled = true;
+            }
+        })();
 
         // Global search: debounce typing and fetch suggestions
         let debounceTimer = null;

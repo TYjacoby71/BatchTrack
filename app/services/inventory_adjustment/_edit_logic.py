@@ -144,6 +144,20 @@ def update_inventory_item(item_id: int, form_data: dict) -> tuple[bool, str]:
         # Handle density updates for ingredients and any item supporting density
         # Accept keys: 'density' or 'item_density' from forms
         if (('density' in form_data) or ('item_density' in form_data)):
+            # If any category is selected (not Custom), ignore manual density edits
+            try:
+                if item.category_id:
+                    form_data.pop('density', None)
+                    form_data.pop('item_density', None)
+                    try:
+                        setattr(item, 'density_source', 'category_default')
+                    except Exception:
+                        pass
+                    # Skip manual density handling since category selection governs density
+                    pass
+            except Exception:
+                # Fall back to manual handling below if any error
+                pass
             if is_global_locked:
                 return False, "This item is managed by the global catalog. Density cannot be edited."
             density_value = form_data.get('density', form_data.get('item_density'))
