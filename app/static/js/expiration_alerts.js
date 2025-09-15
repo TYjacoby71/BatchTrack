@@ -107,7 +107,7 @@ function showAlert(type, message) {
 function safeJsonParse(data, fallback = {}) {
     try {
         return typeof data === 'string' ? JSON.parse(data) : data;
-    } catch {
+    } catch (error) {
         return fallback;
     }
 }

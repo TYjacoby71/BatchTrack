@@ -361,14 +361,14 @@ async function archiveExpired() {
             method: 'POST',
             headers: { 'X-CSRFToken': getCSRFToken() }
         });
-        const data = await response.json();
-
-        if (response.ok) {
-            alert(`Archived ${data.archived_count} expired items`);
-            location.reload();
-        } else {
-            alert('Error archiving items');
+        
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
         }
+        
+        const data = await response.json();
+        alert(`Archived ${data.archived_count} expired items`);
+        location.reload();
     } catch (error) {
         console.error('Archive error:', error);
         alert('Network error occurred');
@@ -408,15 +408,14 @@ async function markAsExpired(type, id) {
             body: JSON.stringify({ type: type, id: id })
         });
 
-        const data = await response.json();
-
-        if (response.ok) {
-            alert(`Marked ${data.expired_count} item as expired`);
-            // Stay on expiration page by reloading the current URL
-            window.location.href = '/expiration/alerts';
-        } else {
-            alert(`Error: ${data.error}`);
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
         }
+
+        const data = await response.json();
+        alert(`Marked ${data.expired_count} item as expired`);
+        // Stay on expiration page by reloading the current URL
+        window.location.href = '/expiration/alerts';
     } catch (error) {
         console.error('Expiration error:', error);
         alert('Network error occurred');
