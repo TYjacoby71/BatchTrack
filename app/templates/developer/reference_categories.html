@@ -23,7 +23,7 @@
                 <div class="col-md-4">
                   <div class="input-group">
                     <span class="input-group-text">Default Density (g/ml)</span>
-                    <input type="number" step="0.001" min="0" name="density" class="form-control density-input" data-category="{{ category }}" value="{{ '%.3f'|format(category_densities.get(category) or 0) if category_densities.get(category) is not none else '' }}" placeholder="e.g. 0.920">
+                    <input type="text" name="density" class="form-control density-input" data-category="{{ category }}" value="{{ '%.3f'|format(category_densities.get(category) or 0) if category_densities.get(category) is not none else '' }}" placeholder="e.g. 0.920">
                   </div>
                 </div>
                 <div class="col-md-4 text-end">
@@ -62,7 +62,7 @@
           </div>
           <div class="mb-3">
             <label class="form-label">Default Density (g/ml)</label>
-            <input type="number" step="0.001" min="0" id="categoryDensity" class="form-control" placeholder="e.g. 0.920">
+            <input type="text" id="categoryDensity" class="form-control" placeholder="e.g. 0.920">
             <small class="text-muted">Optional: Default density for items in this category</small>
           </div>
           <button type="submit" class="btn btn-primary">
