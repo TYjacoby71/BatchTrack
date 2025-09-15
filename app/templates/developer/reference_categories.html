@@ -121,6 +121,12 @@ document.getElementById('addCategoryForm').addEventListener('submit', async func
   }
 });
 
+// Get CSRF token function
+function getCSRFToken() {
+    const tokenMeta = document.querySelector('meta[name=csrf-token]');
+    return tokenMeta ? tokenMeta.getAttribute('content') : '';
+}
+
 async function deleteCategory(categoryName) {
   if (!confirm(`Are you sure you want to delete the category "${categoryName}"? This action cannot be undone.`)) {
     return;
@@ -131,6 +137,7 @@ async function deleteCategory(categoryName) {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
+        'X-CSRFToken': getCSRFToken()
       },
       body: JSON.stringify({ name: categoryName })
     });
@@ -157,6 +164,7 @@ async function saveCategoryDensity(categoryName) {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
+                'X-CSRFToken': getCSRFToken()
             },
             body: JSON.stringify({ 
                 category: categoryName,
@@ -184,6 +192,7 @@ async function calculateCategoryDensity(categoryName) {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
+                'X-CSRFToken': getCSRFToken()
             },
             body: JSON.stringify({ category: categoryName })
         });
