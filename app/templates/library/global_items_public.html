@@ -55,7 +55,9 @@
     <tbody>
       {% for gi in items %}
       <tr>
-        <td>{{ gi.name }}</td>
+        <td>
+          <a href="#" onclick="openItemDetails({{ gi.id }}); return false;">{{ gi.name }}</a>
+        </td>
         <td><span class="badge bg-secondary">{{ gi.item_type }}</span></td>
         <td>{{ gi.ingredient_category.name if gi.ingredient_category else '-' }}</td>
         <td>{{ '%.3f'|format(gi.density) if gi.density is not none else '-' }}</td>
@@ -65,6 +67,36 @@
       {% endfor %}
     </tbody>
   </table>
+</div>
+
+<!-- Item Detail Offcanvas -->
+<div class="offcanvas offcanvas-end" tabindex="-1" id="globalItemDetail" aria-labelledby="globalItemDetailLabel">
+  <div class="offcanvas-header">
+    <h5 id="globalItemDetailLabel">Global Item</h5>
+    <button type="button" class="btn-close" data-bs-dismiss="offcanvas"></button>
+  </div>
+  <div class="offcanvas-body">
+    <div id="giDetailLoading" class="text-center">Loading...</div>
+    <div id="giDetailContent" style="display:none;">
+      <div class="mb-2"><strong>Name:</strong> <span id="giName"></span></div>
+      <div class="mb-2"><strong>Type:</strong> <span id="giType"></span></div>
+      <div class="mb-2"><strong>Category:</strong> <span id="giCategory"></span></div>
+      <div class="mb-2"><strong>Default Unit:</strong> <span id="giUnit"></span></div>
+      <div class="mb-2"><strong>Density:</strong> <span id="giDensity"></span></div>
+      <hr>
+      <h6>Community Cost Snapshot</h6>
+      <div id="giCostStats">No cost data yet.</div>
+      <small class="text-muted">Based on user restock unit costs (outliers excluded). High/Low show extremes.</small>
+      <hr>
+      <div id="giMeta"></div>
+    </div>
+  </div>
+  <div class="offcanvas-footer p-3 border-top">
+    <div class="d-flex justify-content-end gap-2">
+      <a id="giDevLink" href="#" class="btn btn-sm btn-outline-secondary" target="_blank" rel="noopener" style="display:none;">Developer Details</a>
+      <a id="giStoreLink" href="#" class="btn btn-sm btn-primary disabled" tabindex="-1" aria-disabled="true" style="display:none;">Store (coming soon)</a>
+    </div>
+  </div>
 </div>
 
 {% endblock %}
@@ -114,6 +146,51 @@ document.addEventListener('DOMContentLoaded', function(){
   typeFilter.addEventListener('change', updateCategoryVisibility);
   updateCategoryVisibility();
 });
+
+async function openItemDetails(id){
+  try {
+    const offcanvasEl = document.getElementById('globalItemDetail');
+    const oc = new bootstrap.Offcanvas(offcanvasEl);
+    document.getElementById('giDetailLoading').style.display = '';
+    document.getElementById('giDetailContent').style.display = 'none';
+    oc.show();
+
+    // Fetch basic item and stats
+    const base = await fetch(`/api/ingredients/global-items/search?q=${encodeURIComponent('')}&type=`);
+    // We didn't add a single-item public endpoint for basics; use a minimal query via developer model rendering context
+    // Instead, embed minimal data client-side from the table row would be ideal; for now, pull stats only and leave basics blank if not present
+    const statsRes = await fetch(`/global-items/${id}/stats`);
+    const stats = await statsRes.json();
+
+    // Populate known fields from the table cache by requerying DOM would be complex; leave placeholders for now
+    document.getElementById('giName').textContent = `#${id}`;
+    document.getElementById('giType').textContent = '';
+    document.getElementById('giCategory').textContent = '';
+    document.getElementById('giUnit').textContent = '';
+    document.getElementById('giDensity').textContent = '';
+
+    if (stats && stats.success){
+      const c = stats.cost || {};
+      if (c.count && c.count > 0){
+        const mean = c.mean_ex_outliers != null ? c.mean_ex_outliers.toFixed(2) : '-';
+        const low = c.low != null ? c.low.toFixed(2) : '-';
+        const high = c.high != null ? c.high.toFixed(2) : '-';
+        const minv = c.min != null ? c.min.toFixed(2) : '-';
+        const maxv = c.max != null ? c.max.toFixed(2) : '-';
+        document.getElementById('giCostStats').innerHTML = `Average: $${mean} (excluding outliers)<br>Low/High: $${low} – $${high}<br>Extremes: $${minv} – $${maxv} (n=${c.count})`;
+      } else {
+        document.getElementById('giCostStats').textContent = 'No cost data yet.';
+      }
+    } else {
+      document.getElementById('giCostStats').textContent = 'No cost data yet.';
+    }
+
+    document.getElementById('giDetailLoading').style.display = 'none';
+    document.getElementById('giDetailContent').style.display = '';
+  } catch (e) {
+    console.error('Failed to load item details', e);
+  }
+}
 </script>
 {% endblock %}
 

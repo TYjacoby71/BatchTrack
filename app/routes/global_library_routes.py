@@ -1,5 +1,6 @@
 from flask import Blueprint, render_template, request
 from app.models import db, GlobalItem
+from app.services.statistics.global_item_stats import GlobalItemStatsService
 
 global_library_bp = Blueprint('global_library_bp', __name__)
 
@@ -61,4 +62,19 @@ def global_library():
         selected_category=category_filter,
         search_query=search_query,
     )
+
+
+@global_library_bp.route('/global-items/<int:item_id>/stats')
+def global_library_item_stats(item_id: int):
+    """Public stats endpoint for a GlobalItem, including cost distribution and rollup."""
+    try:
+        rollup = GlobalItemStatsService.get_rollup(item_id)
+        cost = GlobalItemStatsService.get_cost_distribution(item_id)
+        return {
+            'success': True,
+            'rollup': rollup,
+            'cost': cost,
+        }
+    except Exception as e:
+        return {'success': False, 'error': str(e)}, 500
 
