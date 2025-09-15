@@ -478,6 +478,55 @@ class BatchOperationsService(BaseService):
             return False, str(e)
 
     @classmethod
+    def fail_batch(cls, batch_id, reason: str | None = None):
+        """Mark an in-progress batch as failed. Does not attempt inventory restoration.
+
+        Sets status to 'failed', clears in-progress state, and timestamps failure.
+        """
+        try:
+            batch = Batch.query.filter_by(
+                id=batch_id,
+                organization_id=current_user.organization_id
+            ).first()
+
+            if not batch:
+                return False, "Batch not found"
+
+            if batch.status != 'in_progress':
+                return False, "Only in-progress batches can be marked as failed"
+
+            batch.status = 'failed'
+            batch.failed_at = TimezoneUtils.utc_now()
+            if reason:
+                # Preserve any prior reason content by appending
+                batch.status_reason = (batch.status_reason + "\n" if batch.status_reason else "") + str(reason)
+
+            db.session.commit()
+
+            # Emit domain event (best-effort)
+            try:
+                EventEmitter.emit(
+                    event_name='batch_failed',
+                    properties={
+                        'label_code': batch.label_code,
+                        'reason': reason
+                    },
+                    organization_id=batch.organization_id,
+                    user_id=batch.created_by,
+                    entity_type='batch',
+                    entity_id=batch.id
+                )
+            except Exception:
+                pass
+
+            return True, f"Batch {batch.label_code} marked as failed"
+
+        except Exception as e:
+            db.session.rollback()
+            logger.error(f"Error failing batch: {str(e)}")
+            return False, str(e)
+
+    @classmethod
     def add_extra_items_to_batch(cls, batch_id, extra_ingredients=None, extra_containers=None, extra_consumables=None):
         """Add extra ingredients, containers, and consumables to an in-progress batch"""
         try:
