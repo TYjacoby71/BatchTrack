@@ -404,8 +404,10 @@ document.addEventListener('DOMContentLoaded', function() {
                                 if (categorySelect.value && dd > 0) {
                                     densityInput.value = dd.toFixed(3);
                                     densityInput.readOnly = true;
+                                    densityInput.disabled = true;
                                 } else {
                                     densityInput.readOnly = false;
+                                    densityInput.disabled = false;
                                 }
                             };
                             categorySelect.addEventListener('change', applyCategoryDensityLock);
