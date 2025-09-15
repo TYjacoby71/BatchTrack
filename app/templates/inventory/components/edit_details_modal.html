@@ -72,13 +72,17 @@
           {% if item.type == 'ingredient' %}
           <div class="mb-3" id="categorySection">
             <label for="editCategory">Ingredient Category:</label>
-            <select name="category_id" id="editCategory" class="form-select">
+            <select name="category_id" id="editCategory" class="form-select" {% if item.global_item_id %}disabled{% endif %}>
               <option value="">Custom</option>
               {% for cat in get_ingredient_categories() %}
                 <option value="{{ cat.id }}" data-density="{{ '%.3f'|format(cat.default_density or 0) }}" {% if item.category_id == cat.id %}selected{% endif %}>{{ cat.name }}</option>
               {% endfor %}
             </select>
+            {% if item.global_item_id %}
+            <small class="text-muted">Category is locked because this item is linked to the global library.</small>
+            {% else %}
             <small class="text-muted">Choose a category to use its default density, or select Custom to enter a specific density.</small>
+            {% endif %}
           </div>
           {% endif %}
 
