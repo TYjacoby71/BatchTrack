@@ -25,6 +25,7 @@ class StripeService:
 
         stripe.api_key = api_key
         logger.info("Stripe service initialized")
+        return True
 
     @staticmethod
     def construct_event(payload: bytes, sig_header: str, webhook_secret: str):
@@ -108,33 +109,146 @@ class StripeService:
     @staticmethod
     def _handle_checkout_completed(event):
         """Handle checkout.session.completed event"""
-        # Implementation moved from routes - this would contain the signup completion logic
-        pass
+        try:
+            session = event['data']['object']
+            customer_id = session.get('customer')
+            metadata = session.get('metadata', {})
+
+            # If an organization_id is present in metadata, link customer to org
+            organization_id = metadata.get('organization_id')
+            if organization_id and customer_id:
+                org = Organization.query.get(int(organization_id))
+                if org:
+                    org.stripe_customer_id = customer_id
+                    # Set provisional status
+                    org.billing_status = 'active'
+                    db.session.commit()
+                    logger.info(f"Linked Stripe customer {customer_id} to organization {org.id}")
+        except Exception as e:
+            logger.error(f"checkout.session.completed handling error: {e}")
 
     @staticmethod
     def _handle_subscription_created(event):
         """Handle customer.subscription.created event"""
-        pass
+        StripeService._upsert_subscription_from_event(event)
 
     @staticmethod
     def _handle_subscription_updated(event):
         """Handle customer.subscription.updated event"""
-        pass
+        StripeService._upsert_subscription_from_event(event)
 
     @staticmethod
     def _handle_subscription_deleted(event):
         """Handle customer.subscription.deleted event"""
-        pass
+        try:
+            subscription = event['data']['object']
+            customer_id = subscription.get('customer')
+            if not customer_id:
+                return
+            org = Organization.query.filter_by(stripe_customer_id=customer_id).first()
+            if not org:
+                logger.warning(f"Org not found for customer {customer_id} on subscription.deleted")
+                return
+            org.subscription_status = 'canceled'
+            org.billing_status = 'canceled'
+            db.session.commit()
+        except Exception as e:
+            logger.error(f"subscription.deleted handling error: {e}")
 
     @staticmethod
     def _handle_payment_succeeded(event):
         """Handle invoice.payment_succeeded event"""
-        pass
+        try:
+            invoice = event['data']['object']
+            customer_id = invoice.get('customer')
+            if not customer_id:
+                return
+            org = Organization.query.filter_by(stripe_customer_id=customer_id).first()
+            if not org:
+                return
+            org.billing_status = 'active'
+            db.session.commit()
+        except Exception as e:
+            logger.error(f"invoice.payment_succeeded handling error: {e}")
 
     @staticmethod
     def _handle_payment_failed(event):
         """Handle invoice.payment_failed event"""
-        pass
+        try:
+            invoice = event['data']['object']
+            customer_id = invoice.get('customer')
+            if not customer_id:
+                return
+            org = Organization.query.filter_by(stripe_customer_id=customer_id).first()
+            if not org:
+                return
+            org.billing_status = 'payment_failed'
+            db.session.commit()
+        except Exception as e:
+            logger.error(f"invoice.payment_failed handling error: {e}")
+
+    @staticmethod
+    def _upsert_subscription_from_event(event):
+        """Create or update org subscription status and tier from a subscription event."""
+        try:
+            subscription = event['data']['object']
+            customer_id = subscription.get('customer')
+            if not customer_id:
+                return
+
+            org = Organization.query.filter_by(stripe_customer_id=customer_id).first()
+            # If org not linked yet but customer has metadata with organization_id, link it
+            if not org:
+                customer = stripe.Customer.retrieve(customer_id)
+                org_id_meta = None
+                try:
+                    org_id_meta = customer.metadata.get('organization_id') if hasattr(customer, 'metadata') else None
+                except Exception:
+                    org_id_meta = None
+                if org_id_meta:
+                    candidate = Organization.query.get(int(org_id_meta))
+                    if candidate:
+                        candidate.stripe_customer_id = customer_id
+                        org = candidate
+
+            if not org:
+                logger.warning(f"Organization not found for customer {customer_id}")
+                return
+
+            # Map tier by price lookup_key
+            items = subscription.get('items', {}).get('data', [])
+            price_lookup_key = None
+            if items:
+                price = items[0].get('price', {})
+                price_lookup_key = price.get('lookup_key')
+            tier_to_set = None
+            if price_lookup_key:
+                # Normalize to monthly key for mapping
+                base_lookup = StripeService.derive_interval_lookup_key(price_lookup_key, target_interval='monthly')
+                tier_to_set = SubscriptionTier.query.filter_by(stripe_lookup_key=base_lookup).first()
+
+            if tier_to_set:
+                org.subscription_tier_id = tier_to_set.id
+
+            # Update status fields
+            status = subscription.get('status')
+            if status:
+                org.subscription_status = status
+                if status in ['active', 'trialing']:
+                    org.billing_status = 'active'
+                    org.is_active = True
+                elif status in ['past_due', 'unpaid']:
+                    org.billing_status = 'payment_failed'
+                elif status in ['canceled', 'incomplete_expired']:
+                    org.billing_status = 'canceled'
+
+            # Persist subscription id
+            if subscription.get('id'):
+                org.stripe_subscription_id = subscription['id']
+
+            db.session.commit()
+        except Exception as e:
+            logger.error(f"subscription upsert handling error: {e}")
 
     @staticmethod
     def initialize_stripe():
@@ -157,35 +271,35 @@ class StripeService:
             return None
 
         try:
-            # Use lookup_key to find the price - this is the industry standard
-            prices = stripe.Price.list(
-                lookup_keys=[tier_obj.stripe_lookup_key],
-                active=True,
-                limit=1
-            )
+            # Use lookup_key to find the price - prefer monthly; include yearly if present
+            monthly_key = tier_obj.stripe_lookup_key
+            yearly_key = StripeService.derive_interval_lookup_key(monthly_key, target_interval='yearly')
 
-            if not prices.data:
-                logger.warning(f"No active Stripe price found for lookup key: {tier_obj.stripe_lookup_key}")
+            monthly_price = StripeService._get_price_by_lookup_key(monthly_key)
+            yearly_price = StripeService._get_price_by_lookup_key(yearly_key) if yearly_key != monthly_key else None
+
+            if not monthly_price and not yearly_price:
+                logger.warning(f"No active Stripe price found for lookup keys: {monthly_key} / {yearly_key}")
                 return None
 
-            price = prices.data[0]
+            def _fmt(price_obj):
+                amt = price_obj.unit_amount / 100
+                return f'${amt:.0f}'
 
-            # Format pricing data
-            amount = price.unit_amount / 100
-            currency = price.currency.upper()
-
-            billing_cycle = 'one-time'
-            if price.recurring:
-                billing_cycle = 'yearly' if price.recurring.interval == 'year' else 'monthly'
-
-            return {
-                'price_id': price.id,
-                'amount': amount,
-                'formatted_price': f'${amount:.0f}',
-                'currency': currency,
-                'billing_cycle': billing_cycle,
-                'lookup_key': tier_obj.stripe_lookup_key
+            result = {
+                'lookup_key_monthly': monthly_key,
+                'lookup_key_yearly': yearly_key if yearly_price else None,
+                'currency': (monthly_price.currency if monthly_price else yearly_price.currency).upper(),
+                'billing_cycle': 'monthly' if monthly_price else 'yearly'
             }
+            if monthly_price:
+                result['price_id_monthly'] = monthly_price.id
+                result['price_monthly'] = _fmt(monthly_price)
+            if yearly_price:
+                result['price_id_yearly'] = yearly_price.id
+                result['price_yearly'] = _fmt(yearly_price)
+
+            return result
 
         except stripe.error.StripeError as e:
             logger.error(f"Stripe error fetching price for {tier_obj.stripe_lookup_key}: {e}")
@@ -212,11 +326,18 @@ class StripeService:
             )
 
             # Create checkout session with live price ID
+            # Choose price by requested billing_cycle metadata if present
+            requested_cycle = (metadata or {}).get('billing_cycle')
+            if requested_cycle == 'yearly' and pricing.get('price_id_yearly'):
+                selected_price_id = pricing['price_id_yearly']
+            else:
+                selected_price_id = pricing.get('price_id_monthly') or pricing.get('price_id_yearly')
+
             session = stripe.checkout.Session.create(
                 customer=customer.id,
                 payment_method_types=['card'],
                 line_items=[{
-                    'price': pricing['price_id'],
+                    'price': selected_price_id,
                     'quantity': 1,
                 }],
                 mode='subscription',
@@ -224,7 +345,9 @@ class StripeService:
                 cancel_url=cancel_url,
                 metadata={
                     'tier_key': tier_obj.key,
-                    'lookup_key': tier_obj.stripe_lookup_key,
+                    'lookup_key_monthly': pricing.get('lookup_key_monthly'),
+                    'lookup_key_yearly': pricing.get('lookup_key_yearly'),
+                    'selected_billing_cycle': 'yearly' if selected_price_id == pricing.get('price_id_yearly') else 'monthly',
                     **(metadata or {})
                 }
             )
@@ -237,44 +360,56 @@ class StripeService:
             return None
 
     @staticmethod
+    def _get_price_by_lookup_key(lookup_key: str):
+        """Return the first active Price for a lookup key, or None."""
+        if not lookup_key:
+            return None
+        prices = stripe.Price.list(lookup_keys=[lookup_key], active=True, limit=1)
+        return prices.data[0] if prices.data else None
+
+    @staticmethod
+    def derive_interval_lookup_key(base_lookup_key: str, target_interval: str = 'yearly') -> str:
+        """Derive a yearly or monthly lookup key from a monthly base name.
+        Convention: replace suffix '_monthly' with '_yearly' and vice versa.
+        """
+        if not base_lookup_key:
+            return base_lookup_key
+        if target_interval == 'yearly':
+            return base_lookup_key.replace('_monthly', '_yearly')
+        if target_interval == 'monthly':
+            return base_lookup_key.replace('_yearly', '_monthly')
+        return base_lookup_key
+
+    @staticmethod
     def sync_product_from_stripe(lookup_key):
-        """Sync a single product from Stripe to local database"""
+        """Sync a single product from Stripe to local PricingSnapshot entries."""
         if not StripeService.initialize_stripe():
             return False
 
         try:
-            # Get product by lookup key
-            prices = stripe.Price.list(
-                lookup_keys=[lookup_key],
-                active=True,
-                limit=1
-            )
+            # Import here to avoid circular imports
+            from app.models.pricing_snapshot import PricingSnapshot
 
+            # Get all active prices for the lookup key (both intervals)
+            prices = stripe.Price.list(lookup_keys=[lookup_key, StripeService.derive_interval_lookup_key(lookup_key, 'yearly')], active=True, limit=10)
             if not prices.data:
-                logger.warning(f"No Stripe product found for lookup key: {lookup_key}")
+                logger.warning(f"No Stripe prices found for lookup key(s): {lookup_key}")
                 return False
 
-            price = prices.data[0]
-            product = stripe.Product.retrieve(price.product)
+            updated_any = False
+            for price in prices.auto_paging_iter():
+                try:
+                    product = stripe.Product.retrieve(price.product)
+                    snapshot = PricingSnapshot.update_from_stripe_data(price, product)
+                    updated_any = True or updated_any
+                except Exception as inner:
+                    logger.error(f"Failed to create snapshot for price {price.id}: {inner}")
 
-            # Update local tier with Stripe data
-            tier_obj = SubscriptionTier.query.filter_by(stripe_lookup_key=lookup_key).first()
-            if tier_obj:
-                # Update pricing info
-                tier_obj.fallback_price = f"${price.unit_amount / 100:.0f}"
-                tier_obj.last_billing_sync = TimezoneUtils.utc_now()
-
-                # Store Stripe metadata
-                if hasattr(tier_obj, 'stripe_metadata'):
-                    tier_obj.stripe_metadata = {
-                        'product_id': product.id,
-                        'price_id': price.id,
-                        'last_synced': TimezoneUtils.utc_now().isoformat()
-                    }
-
+            if updated_any:
                 db.session.commit()
-                logger.info(f"Synced tier {tier_obj.key} with Stripe product {product.name}")
+                logger.info(f"Pricing snapshots updated for lookup key(s) starting with {lookup_key}")
                 return True
+            return False
 
         except stripe.error.StripeError as e:
             logger.error(f"Error syncing product from Stripe: {e}")
