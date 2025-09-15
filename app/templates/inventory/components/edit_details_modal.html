@@ -87,11 +87,10 @@
           {% endif %}
 
           <div class="mb-3">
-            <label for="density">
-              Density (g/ml):
-              <button type="button" class="btn btn-link btn-sm p-0 ms-1" onclick="openDensityReference()" 
-                      title="Open density reference guide" data-bs-toggle="tooltip">
-                <i class="fas fa-book text-info"></i>
+            <label for="density" class="d-flex align-items-center">
+              <span>Density (g/ml)</span>
+              <button type="button" class="btn btn-link btn-sm p-0 ms-2" onclick="openGlobalLibraryForIngredients()" title="Browse Global Library (Ingredients)" data-bs-toggle="tooltip">
+                <i class="fas fa-book-open text-info"></i>
               </button>
             </label>
             <div class="input-group">
@@ -148,6 +147,12 @@
 // Function to open density reference in new window
 function openDensityReference() {
     window.open('/density-reference', '_blank', 'width=1000,height=700,scrollbars=yes,resizable=yes');
+}
+
+function openGlobalLibraryForIngredients() {
+    const url = new URL(window.location.origin + '/global-items');
+    url.searchParams.set('type', 'ingredient');
+    window.open(url.toString(), '_blank', 'width=1000,height=700,scrollbars=yes,resizable=yes');
 }
 
 document.addEventListener('DOMContentLoaded', function() {
