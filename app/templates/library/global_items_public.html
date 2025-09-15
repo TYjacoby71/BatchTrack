@@ -47,7 +47,7 @@
         <th>Name</th>
         <th>Type</th>
         <th>Category</th>
-        <th>Density</th>
+        <th>Density (default if category)</th>
         <th>Capacity</th>
         <th>Perishable</th>
       </tr>
@@ -60,7 +60,13 @@
         </td>
         <td><span class="badge bg-secondary">{{ gi.item_type }}</span></td>
         <td>{{ gi.ingredient_category.name if gi.ingredient_category else '-' }}</td>
-        <td>{{ '%.3f'|format(gi.density) if gi.density is not none else '-' }}</td>
+        <td>
+          {% if gi.density is not none %}
+            {{ '%.3f'|format(gi.density) }}
+          {% elif gi.ingredient_category and gi.ingredient_category.default_density is not none %}
+            {{ '%.3f'|format(gi.ingredient_category.default_density) }}
+          {% else %}-{% endif %}
+        </td>
         <td>{{ gi.capacity or '-' }} {{ gi.capacity_unit or '' }}</td>
         <td>{{ 'Yes' if gi.default_is_perishable else 'No' }}</td>
       </tr>
