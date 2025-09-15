@@ -10,7 +10,7 @@ from app.utils.permissions import role_required
 finish_batch_bp = Blueprint('finish_batch', __name__)
 logger = logging.getLogger(__name__)
 
-@finish_batch_bp.route('/batches/<int:batch_id>/complete', methods=['POST'])
+@finish_batch_bp.route('/<int:batch_id>/complete', methods=['POST'])
 @login_required
 def complete_batch(batch_id):
     """Complete a batch and create final products/ingredients - thin controller"""
@@ -34,6 +34,39 @@ def complete_batch(batch_id):
         db.session.rollback()
         logger.error(f"Error completing batch {batch_id}: {str(e)}")
         flash(f'Error completing batch: {str(e)}', 'error')
+        return redirect(url_for('batches.view_batch_in_progress', batch_identifier=batch_id))
+
+
+@finish_batch_bp.route('/<int:batch_id>/fail', methods=['POST'])
+@login_required
+def fail_batch(batch_id):
+    """Mark a batch as failed via service. Thin controller.
+
+    Ensures the batch is no longer in progress and sets status to failed.
+    """
+    try:
+        from ...services.batch_service import BatchOperationsService
+
+        reason = request.form.get('reason') or request.json.get('reason') if request.is_json else None
+        success, message = BatchOperationsService.fail_batch(batch_id, reason)
+
+        if request.is_json:
+            status_code = 200 if success else 400
+            return jsonify({'success': success, 'message': message}), status_code
+
+        if success:
+            flash(message, 'success')
+            return redirect(url_for('batches.list_batches'))
+        else:
+            flash(message, 'error')
+            return redirect(url_for('batches.view_batch_in_progress', batch_identifier=batch_id))
+
+    except Exception as e:
+        db.session.rollback()
+        logger.error(f"Error failing batch {batch_id}: {str(e)}")
+        if request.is_json:
+            return jsonify({'success': False, 'message': str(e)}), 500
+        flash(f'Error failing batch: {str(e)}', 'error')
         return redirect(url_for('batches.view_batch_in_progress', batch_identifier=batch_id))
 
 
