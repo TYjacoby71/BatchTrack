@@ -9,8 +9,8 @@
         containerRows.forEach(row => {
             const id = row.querySelector('input[name$="[id]"]')?.value;
             const name = row.querySelector('input[name$="[name]"]')?.value;
-            const storageAmount = row.querySelector('input[name$="[capacity]"]')?.value || row.querySelector('input[name$="[storage_amount]"]')?.value;
-            const storageUnit = row.querySelector('select[name$="[capacity_unit]"]')?.value || row.querySelector('select[name$="[storage_unit]"]')?.value;
+            const storageAmount = row.querySelector('input[name$="[capacity]"]')?.value;
+            const storageUnit = row.querySelector('select[name$="[capacity_unit]"]')?.value;
             const costPerUnit = row.querySelector('input[name$="[cost_per_unit]"]')?.value;
 
             if (id && name) {

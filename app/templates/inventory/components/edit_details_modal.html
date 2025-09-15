@@ -225,8 +225,8 @@ document.addEventListener('DOMContentLoaded', function() {
 
             // For containers, validate capacity fields only (unit is always 'count')
             if (isContainer) {
-                const capAmount = this.querySelector('input[name="capacity"]') || this.querySelector('input[name="storage_amount"]');
-                const capUnit = this.querySelector('select[name="capacity_unit"]') || this.querySelector('select[name="storage_unit"]');
+                const capAmount = this.querySelector('input[name="capacity"]');
+                const capUnit = this.querySelector('select[name="capacity_unit"]');
 
                 if (capAmount && !capAmount.value) {
                     e.preventDefault();

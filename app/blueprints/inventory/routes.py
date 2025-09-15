@@ -504,14 +504,10 @@ def edit_inventory(id):
         else:
             item.category_id = None
 
-        # Handle container-specific fields (accept legacy storage_* keys)
+        # Handle container-specific fields
         if item.type == 'container':
             capacity = form_data.get('capacity')
-            if capacity in [None, '', 'null']:
-                capacity = form_data.get('storage_amount')
             capacity_unit = form_data.get('capacity_unit')
-            if capacity_unit in [None, '', 'null']:
-                capacity_unit = form_data.get('storage_unit')
             logger.info(f"Container update - capacity: {capacity}, capacity_unit: {capacity_unit}")
             if capacity:
                 old_capacity = item.capacity

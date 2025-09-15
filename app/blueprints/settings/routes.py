@@ -390,15 +390,11 @@ def bulk_update_containers():
             container = InventoryItem.query.get(container_data['id'])
             if container and container.type == 'container':
                 container.name = container_data['name']
-                # Accept both canonical and legacy keys
+                # Canonical keys only
                 if 'capacity' in container_data:
                     container.capacity = container_data.get('capacity')
                 if 'capacity_unit' in container_data:
                     container.capacity_unit = container_data.get('capacity_unit')
-                if 'storage_amount' in container_data and container_data.get('storage_amount') is not None:
-                    container.capacity = container_data.get('storage_amount')
-                if 'storage_unit' in container_data and container_data.get('storage_unit'):
-                    container.capacity_unit = container_data.get('storage_unit')
                 container.cost_per_unit = container_data['cost_per_unit']
                 updated_count += 1
 

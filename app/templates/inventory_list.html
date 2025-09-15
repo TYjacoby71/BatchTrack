@@ -576,8 +576,8 @@
                     {{ item.name }}
                   </a>
                 </td>
-                <td class="col-storage">{{ item.capacity or item.storage_amount or 'N/A' }}</td>
-                <td class="col-storage_unit">{{ item.capacity_unit or item.storage_unit or 'N/A' }}</td>
+                <td class="col-storage">{{ item.capacity or 'N/A' }}</td>
+                <td class="col-storage_unit">{{ item.capacity_unit or 'N/A' }}</td>
                 <td class="col-quantity">
                   <span class="badge bg-{{ 'danger' if item.available_quantity == 0 else 'warning' if item.low_stock_threshold and item.available_quantity <= item.low_stock_threshold else 'success' }}">
                     {{ "%.2f"|format(item.available_quantity) }} {{ item.unit or 'count' }}
