@@ -54,6 +54,7 @@
           <div class="mb-3">
             <label for="capacity_unit">Capacity Unit:</label>
             <select name="capacity_unit" class="form-select select2" data-unit-select required>
+              <option value="">Select Unit</option>
               {% for unit in get_global_unit_list() %}
                 <option value="{{ unit.name }}" {% if unit.name == item.capacity_unit %}selected{% endif %}>{{ unit.name }}</option>
               {% endfor %}
