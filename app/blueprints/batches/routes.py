@@ -37,7 +37,12 @@ def get_batch_inventory_summary(batch_id):
     """Get batch inventory summary for FIFO modal"""
     try:
         from ..api.fifo_routes import get_batch_inventory_summary as fifo_summary
-        return fifo_summary(batch_id)
+        # Call the function directly
+        result = fifo_summary(batch_id)
+        return result
+    except ImportError as e:
+        logger.error(f"Failed to import batch inventory summary function: {str(e)}")
+        return jsonify({'success': False, 'error': 'Batch inventory summary function not available'}), 500
     except Exception as e:
         logger.error(f"Error in get_batch_inventory_summary: {str(e)}")
         return jsonify({'success': False, 'error': str(e)}), 500
