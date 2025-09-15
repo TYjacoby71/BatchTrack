@@ -308,7 +308,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     const costEl = document.getElementById('modal_cost_per_unit');
                     if (costEl) costEl.value = item.cost_per_unit;
                     const formEl = document.getElementById('editModalForm');
-                    if (formEl) formEl.setAttribute('action', `/inventory/adjust/${itemId}`);
+                    if (formEl) formEl.setAttribute('action', `/inventory/edit/${itemId}`);
 
                     // Handle global locking indicators and states
                     const nameInput = nameEl;
