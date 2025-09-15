@@ -94,3 +94,31 @@ from .reservation_routes import reservation_api_bp
 api_bp.register_blueprint(ingredient_api_bp, url_prefix='/ingredients')
 api_bp.register_blueprint(container_api_bp)
 api_bp.register_blueprint(reservation_api_bp)
+
+@api_bp.route('/inventory/item/<int:item_id>', methods=['GET'])
+@login_required
+def get_inventory_item(item_id):
+    """Get inventory item details for editing"""
+    from ...models import InventoryItem
+    
+    item = InventoryItem.query.filter_by(
+        id=item_id,
+        organization_id=current_user.organization_id
+    ).first_or_404()
+
+    return jsonify({
+        'id': item.id,
+        'name': item.name,
+        'quantity': item.quantity,
+        'unit': item.unit,
+        'type': item.type,
+        'cost_per_unit': item.cost_per_unit,
+        'notes': getattr(item, 'notes', None),
+        'density': item.density,
+        'category_id': item.category_id,
+        'global_item_id': item.global_item_id,
+        'is_perishable': item.is_perishable,
+        'shelf_life_days': item.shelf_life_days,
+        'storage_amount': getattr(item, 'storage_amount', None),
+        'storage_unit': getattr(item, 'storage_unit', None)
+    })
