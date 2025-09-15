@@ -31,6 +31,17 @@ def get_batch_remaining_details(batch_id):
         logger.error(f"Error in get_batch_remaining_details: {str(e)}")
         return jsonify({'success': False, 'error': str(e)}), 500
 
+@batches_bp.route('/api/batch-inventory-summary/<int:batch_id>')
+@login_required
+def get_batch_inventory_summary(batch_id):
+    """Get batch inventory summary for FIFO modal"""
+    try:
+        from ..api.fifo_routes import get_batch_inventory_summary as fifo_summary
+        return fifo_summary(batch_id)
+    except Exception as e:
+        logger.error(f"Error in get_batch_inventory_summary: {str(e)}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
 @batches_bp.route('/columns', methods=['POST'])
 @login_required
 def set_column_visibility():
