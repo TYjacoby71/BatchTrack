@@ -108,7 +108,7 @@ def _universal_additive_handler(item, quantity, change_type, notes=None, created
 
 
 
-def _handle_lot_creation_operation(item, quantity, change_type, notes, created_by, custom_expiration_date, custom_shelf_life_days, operation_unit, batch_id=None):
+def _handle_lot_creation_operation(item, quantity, change_type, notes, created_by, custom_expiration_date, custom_shelf_life_days, operation_unit, batch_id=None, cost_override=None):
     """
     Handle operations that create new lots (restock, returns, etc.)
     Returns (success, message, quantity_delta)

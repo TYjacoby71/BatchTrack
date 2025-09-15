@@ -12,8 +12,8 @@ from datetime import datetime, date
 from flask_login import current_user
 
 from ...extensions import db
-from ...models.statistics import InventoryEfficiencyStats, InventoryChangeLog
-from ...models import InventoryItem, InventoryLot
+from ...models.statistics import InventoryEfficiencyStats
+from ...models import InventoryItem, InventoryLot, UnifiedInventoryHistory
 from ...utils.timezone_utils import TimezoneUtils
 
 logger = logging.getLogger(__name__)
@@ -24,36 +24,20 @@ class InventoryStatisticsService:
     
     @staticmethod
     def log_inventory_change(inventory_item_id: int, change_type: str, quantity_change: float, **context):
-        """Log detailed inventory change with full context"""
+        """Deprecated: Inventory changes are already logged in UnifiedInventoryHistory via canonical adjustment flows.
+        This method now only updates efficiency projections.
+        """
         try:
-            # Create change log entry
-            change_log = InventoryChangeLog.log_change(
-                inventory_item_id=inventory_item_id,
-                organization_id=current_user.organization_id if current_user.is_authenticated else context.get('organization_id'),
-                change_type=change_type,
-                quantity_change=quantity_change,
-                user_id=current_user.id if current_user.is_authenticated else None,
-                change_category=context.get('change_category', 'unknown'),
-                cost_impact=context.get('cost_impact', 0.0),
-                related_batch_id=context.get('batch_id'),
-                related_lot_id=context.get('lot_id'),
-                reason_code=context.get('reason_code'),
-                notes=context.get('notes'),
-                item_age_days=context.get('item_age_days'),
-                expiration_date=context.get('expiration_date'),
-                freshness_score=context.get('freshness_score', 100.0)
-            )
-            
-            # Update efficiency stats
+            # Update efficiency stats projection only
             InventoryStatisticsService._update_efficiency_stats(
                 inventory_item_id, change_type, quantity_change, context.get('cost_impact', 0.0)
             )
-            
+
             db.session.commit()
-            logger.info(f"Logged inventory change: {change_type} {quantity_change} for item {inventory_item_id}")
-            
+            logger.info(f"Updated efficiency stats for item {inventory_item_id} ({change_type} {quantity_change})")
+
         except Exception as e:
-            logger.error(f"Error logging inventory change: {e}")
+            logger.error(f"Error updating inventory stats: {e}")
             db.session.rollback()
     
     @staticmethod
@@ -102,17 +86,17 @@ class InventoryStatisticsService:
     def calculate_freshness_impact(inventory_item_id: int) -> Dict[str, Any]:
         """Calculate freshness impact on inventory efficiency"""
         try:
-            # Get all change logs for this item
-            change_logs = InventoryChangeLog.query.filter_by(
+            # Get all events for this item from UnifiedInventoryHistory
+            change_logs = UnifiedInventoryHistory.query.filter_by(
                 inventory_item_id=inventory_item_id
-            ).order_by(InventoryChangeLog.change_date.desc()).all()
+            ).order_by(UnifiedInventoryHistory.timestamp.desc()).all()
             
             if not change_logs:
                 return {}
             
             # Analyze freshness patterns
-            spoilage_events = [log for log in change_logs if log.change_type in ['spoilage', 'expired']]
-            usage_events = [log for log in change_logs if log.change_type in ['use', 'production']]
+            spoilage_events = [log for log in change_logs if log.change_type in ['spoil', 'expired', 'damaged', 'trash']]
+            usage_events = [log for log in change_logs if log.change_type in ['use', 'production', 'batch']]
             
             freshness_analysis = {
                 'total_spoilage_events': len(spoilage_events),
@@ -122,15 +106,25 @@ class InventoryStatisticsService:
                 'freshness_efficiency_score': 100.0
             }
             
+            # Helper to compute age in days from lot received_date
+            def _age_days_for_event(e):
+                try:
+                    if getattr(e, 'affected_lot', None) and getattr(e.affected_lot, 'received_date', None) and getattr(e, 'timestamp', None):
+                        delta = e.timestamp - e.affected_lot.received_date
+                        return max(0, delta.days)
+                except Exception:
+                    return None
+                return None
+
             # Calculate average days to spoilage
             if spoilage_events:
-                spoilage_days = [log.item_age_days for log in spoilage_events if log.item_age_days]
+                spoilage_days = [d for d in (_age_days_for_event(ev) for ev in spoilage_events) if d is not None]
                 if spoilage_days:
                     freshness_analysis['avg_days_to_spoilage'] = sum(spoilage_days) / len(spoilage_days)
             
             # Calculate average days to usage
             if usage_events:
-                usage_days = [log.item_age_days for log in usage_events if log.item_age_days]
+                usage_days = [d for d in (_age_days_for_event(ev) for ev in usage_events) if d is not None]
                 if usage_days:
                     freshness_analysis['avg_days_to_usage'] = sum(usage_days) / len(usage_days)
             
@@ -153,10 +147,10 @@ class InventoryStatisticsService:
             
             since_date = datetime.now() - timedelta(days=days)
             
-            spoilage_logs = InventoryChangeLog.query.filter(
-                InventoryChangeLog.organization_id == organization_id,
-                InventoryChangeLog.change_type.in_(['spoilage', 'expired']),
-                InventoryChangeLog.change_date >= since_date
+            spoilage_logs = UnifiedInventoryHistory.query.filter(
+                UnifiedInventoryHistory.organization_id == organization_id,
+                UnifiedInventoryHistory.change_type.in_(['spoil', 'expired', 'damaged', 'trash']),
+                UnifiedInventoryHistory.timestamp >= since_date
             ).all()
             
             total_spoilage_cost = sum(log.cost_impact for log in spoilage_logs)
@@ -165,7 +159,7 @@ class InventoryStatisticsService:
             # Group by inventory item
             spoilage_by_item = {}
             for log in spoilage_logs:
-                item_name = log.inventory_item.name if log.inventory_item else 'Unknown'
+                item_name = log.inventory_item.name if getattr(log, 'inventory_item', None) else 'Unknown'
                 if item_name not in spoilage_by_item:
                     spoilage_by_item[item_name] = {
                         'quantity': 0,

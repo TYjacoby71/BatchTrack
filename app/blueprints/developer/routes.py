@@ -580,7 +580,7 @@ def global_items_admin():
     if item_type:
         query = query.filter(GlobalItem.item_type == item_type)
 
-    # Filter by reference category if specified
+    # Filter by ingredient category if specified
     if category_filter:
         from app.models.category import IngredientCategory
         # Use ingredient_category_id to join with IngredientCategory
@@ -622,12 +622,12 @@ def global_items_admin():
 def global_item_detail(item_id):
     item = GlobalItem.query.get_or_404(item_id)
 
-    # Get available reference categories from IngredientCategory table
+    # Get available global ingredient categories from IngredientCategory table (not org-scoped; ignore legacy flags)
     from app.models.category import IngredientCategory
     existing_categories = IngredientCategory.query.filter_by(
         organization_id=None,
-        is_reference_category=True,
-        is_active=True
+        is_active=True,
+        is_global_category=True
     ).order_by(IngredientCategory.name).all()
 
     reference_categories = sorted([cat.name for cat in existing_categories if cat.name])
@@ -679,12 +679,12 @@ def global_item_edit(item_id):
     # Handle ingredient category - use the ID directly
     ingredient_category_id = request.form.get('ingredient_category_id', '').strip()
     if ingredient_category_id and ingredient_category_id.isdigit():
-        # Verify the category exists and is a reference category
+        # Verify the category exists (global scope)
         from app.models.category import IngredientCategory
         category = IngredientCategory.query.filter_by(
             id=int(ingredient_category_id),
-            organization_id=None,  # Reference categories are global
-            is_reference_category=True
+            organization_id=None,
+            is_global_category=True
         ).first()
         if category:
             item.ingredient_category_id = category.id
@@ -716,13 +716,13 @@ def global_item_stats_view(item_id):
 @developer_bp.route('/reference-categories')
 @login_required
 def reference_categories():
-    """Manage reference categories for global items"""
-    # Get existing ingredient categories that are reference categories
+    """Manage global ingredient categories"""
+    # Get existing ingredient categories in global scope (ignore legacy flag)
     from app.models.category import IngredientCategory
     existing_categories = IngredientCategory.query.filter_by(
-        is_global_category=True,
         organization_id=None,
-        is_active=True
+        is_active=True,
+        is_global_category=True
     ).order_by(IngredientCategory.name).all()
 
     categories = [cat.name for cat in existing_categories]
@@ -748,10 +748,11 @@ def reference_categories():
 @developer_bp.route('/reference-categories/add', methods=['POST'])
 @login_required
 def add_reference_category():
-    """Add a new reference category"""
+    """Add a new global ingredient category"""
     try:
         data = request.get_json()
         category_name = data.get('name', '').strip()
+        default_density = data.get('default_density', None)
 
         if not category_name:
             return jsonify({'success': False, 'error': 'Category name is required'})
@@ -769,9 +770,10 @@ def add_reference_category():
         # Create new ingredient category
         new_category = IngredientCategory(
             name=category_name,
-            is_reference_category=True,
+            is_global_category=True,
             organization_id=None,
-            is_active=True
+            is_active=True,
+            default_density=default_density if isinstance(default_density, (int, float)) else None
         )
 
         db.session.add(new_category)
@@ -786,7 +788,7 @@ def add_reference_category():
 @developer_bp.route('/reference-categories/delete', methods=['POST'])
 @login_required
 def delete_reference_category():
-    """Delete a reference category"""
+    """Delete a global ingredient category"""
     try:
         data = request.get_json()
         category_name = data.get('name', '').strip()
@@ -829,7 +831,7 @@ def delete_reference_category():
 @developer_bp.route('/reference-categories/update-density', methods=['POST'])
 @login_required
 def update_category_density():
-    """Update the default density for a reference category"""
+    """Update the default density for a global ingredient category"""
     try:
         data = request.get_json()
         category_name = data.get('category', '').strip()
@@ -849,8 +851,13 @@ def update_category_density():
             return jsonify({'success': False, 'error': 'Category not found'})
 
         # Update the category's default density
-        if density is not None and density >= 0: # Allow 0 density
-            category.default_density = density
+        try:
+            density_value = float(density) if density is not None else None
+        except (TypeError, ValueError):
+            return jsonify({'success': False, 'error': 'Invalid density value'}), 400
+
+        if density_value is not None and density_value >= 0: # Allow 0 density
+            category.default_density = density_value
 
             # Optionally update items that don't have specific densities
             items = GlobalItem.query.filter_by(ingredient_category_id=category.id, is_archived=False).all()
@@ -863,7 +870,7 @@ def update_category_density():
         return jsonify({
             'success': True, 
             'message': f'Density updated for category "{category_name}"',
-            'density': density
+            'density': category.default_density
         })
 
     except Exception as e:
@@ -932,7 +939,7 @@ def create_global_item():
             ingredient_category_id = None
             if ingredient_category_id_str:
                 if ingredient_category_id_str.isdigit():
-                    # Verify the category exists and is a reference category
+                    # Verify the category exists and is a global ingredient category
                     from app.models.category import IngredientCategory
                     category = IngredientCategory.query.filter_by(
                         id=int(ingredient_category_id_str),
@@ -998,6 +1005,30 @@ def create_global_item():
             db.session.add(new_item)
             db.session.commit()
 
+            # Emit event
+            try:
+                from app.services.event_emitter import EventEmitter
+                from flask_login import current_user
+                # Resolve category name for telemetry
+                category_name = None
+                if ingredient_category_id:
+                    from app.models.category import IngredientCategory
+                    cat_obj = IngredientCategory.query.get(ingredient_category_id)
+                    category_name = cat_obj.name if cat_obj else None
+                EventEmitter.emit(
+                    event_name='global_item_created',
+                    properties={
+                        'name': name,
+                        'item_type': item_type,
+                        'ingredient_category': category_name
+                    },
+                    user_id=getattr(current_user, 'id', None),
+                    entity_type='global_item',
+                    entity_id=new_item.id
+                )
+            except Exception:
+                pass
+
             flash(f'Global item "{name}" created successfully', 'success')
             return redirect(url_for('developer.global_item_detail', item_id=new_item.id))
 
@@ -1007,12 +1038,12 @@ def create_global_item():
             return redirect(url_for('developer.create_global_item'))
 
     # GET request - show form
-    # Get available reference categories from IngredientCategory table
+    # Get available global ingredient categories from IngredientCategory table (ignore legacy flag)
     from app.models.category import IngredientCategory
     reference_categories_list = IngredientCategory.query.filter_by(
         organization_id=None, 
-        is_reference_category=True, 
-        is_active=True
+        is_active=True,
+        is_global_category=True
     ).order_by(IngredientCategory.name).all()
 
     reference_categories = []
@@ -1084,6 +1115,19 @@ def delete_global_item(item_id):
         import logging
         logging.warning(f"GLOBAL_ITEM_DELETED: Developer {current_user.username} deleted global item '{item_name}' (ID: {item_id}). {connected_count} inventory items disconnected and converted to organization-owned.")
 
+        # Emit event
+        try:
+            from app.services.event_emitter import EventEmitter
+            EventEmitter.emit(
+                event_name='global_item_deleted' if force_delete else 'global_item_archived',
+                properties={'name': item_name, 'connected_count': connected_count},
+                user_id=getattr(current_user, 'id', None),
+                entity_type='global_item',
+                entity_id=item_id
+            )
+        except Exception:
+            pass
+
         if not force_delete:
             return jsonify({
                 'success': True,
@@ -1109,6 +1153,100 @@ def delete_global_item(item_id):
 def inventory_analytics_stub():
     """Stub page for global inventory analytics in developer system"""
     return render_template('developer/inventory_analytics.html')
+
+@developer_bp.route('/analytics-catalog')
+@login_required
+def analytics_catalog():
+    """Developer catalog of analytics data points and domains."""
+    domains = [
+        {
+            'name': 'Inventory',
+            'description': 'Movements, spoilage, waste, usage, value held',
+            'sources': ['UnifiedInventoryHistory', 'InventoryLot', 'InventoryItem', 'FreshnessSnapshot', 'domain_event: inventory_adjusted'],
+            'events': ['inventory_adjusted'],
+            'data_points': [
+                'Quantity delta by change_type (restock, batch, use, spoil, expired, damaged, trash, recount, returned, refunded, release_reservation)',
+                'Unit and normalized unit conversions',
+                'Cost impact per movement (when provided)',
+                'Freshness: avg days-to-usage, avg days-to-spoilage, freshness efficiency score',
+                'Total cost held (derived, warehouse-level)',
+                'Spoilage rate and waste rate (derived from movements)'
+            ]
+        },
+        {
+            'name': 'Batches',
+            'description': 'Lifecycle, efficiency, costs, yield',
+            'sources': ['Batch', 'BatchIngredient', 'BatchContainer', 'Extra*', 'BatchStats', 'domain_event: batch_started|batch_completed|batch_cancelled'],
+            'events': ['batch_started', 'batch_completed', 'batch_cancelled'],
+            'data_points': [
+                'Planned vs actual fill efficiency (containment efficiency)',
+                'Yield variance %',
+                'Cost variance % (planned vs actual)',
+                'Total planned/actual cost',
+                'Batch duration (minutes)',
+                'Status (completed, failed, cancelled)'
+            ]
+        },
+        {
+            'name': 'Products & SKUs',
+            'description': 'On-hand, reservations, sales, unit costs',
+            'sources': ['Product', 'ProductVariant', 'ProductSKU', 'InventoryItem (type=product)'],
+            'events': ['product_created', 'product_variant_created', 'sku_created'],
+            'data_points': [
+                'On-hand quantity by SKU',
+                'Unit cost (when available)',
+                'Low stock threshold status',
+                'Reservations/sales velocity (when integrated)'
+            ]
+        },
+        {
+            'name': 'Recipes',
+            'description': 'Success rates, averages, cost baselines',
+            'sources': ['Recipe', 'RecipeIngredient', 'RecipeStats'],
+            'events': ['recipe_created', 'recipe_updated', 'recipe_deleted'],
+            'data_points': [
+                'Total/completed/failed batches per recipe',
+                'Average fill efficiency, yield variance, cost variance',
+                'Average cost per batch, per unit',
+                'Success rate %'
+            ]
+        },
+        {
+            'name': 'Timers',
+            'description': 'Task durations for batches/tasks',
+            'sources': ['BatchTimer'],
+            'events': ['timer_started', 'timer_stopped'],
+            'data_points': [
+                'Timer durations (seconds)',
+                'Active, expired, completed timers',
+                'Per-batch timing aggregates (p50/p90 to compute in warehouse)'
+            ]
+        },
+        {
+            'name': 'Global Item Library',
+            'description': 'Canonical items, adoption across orgs',
+            'sources': ['GlobalItem'],
+            'events': ['global_item_created', 'global_item_archived', 'global_item_deleted'],
+            'data_points': [
+                'Adoption across organizations (count of org-linked items)',
+                'Data quality: missing density/capacity/shelf-life'
+            ]
+        },
+        {
+            'name': 'Organizations & Users',
+            'description': 'Tenancy, active users, tiers',
+            'sources': ['Organization', 'User', 'OrganizationStats', 'UserStats'],
+            'events': [],
+            'data_points': [
+                'Org totals: batches, completed/failed/cancelled',
+                'Users: total and active',
+                'Inventory: total items and total value',
+                'Products: total products, total made'
+            ]
+        }
+    ]
+
+    return render_template('developer/analytics_catalog.html', domains=domains)
 
 @developer_bp.route('/waitlist-statistics')
 @require_developer_permission('system_admin')

@@ -1,8 +1,7 @@
 
 {
   "category_name": "Flours & Powders (Organic)",
-  "default_density": 0.58,
-  "description": "For fine powders derived from organic matter.",
-  "reference_category_name": "Flours & Powders (Organic)",
+  "default_density": 0.60,
+  "description": "Organic flours and plant-based powders.",
   "items": []
 }

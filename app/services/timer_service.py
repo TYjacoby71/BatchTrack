@@ -5,6 +5,7 @@ from ..models import db, BatchTimer, Batch
 from ..utils.timezone_utils import TimezoneUtils
 import logging
 from sqlalchemy import text
+from .event_emitter import EventEmitter
 
 logger = logging.getLogger(__name__)
 
@@ -31,6 +32,22 @@ class TimerService:
 
             db.session.add(timer)
             db.session.commit()
+            # Emit timer_started event
+            try:
+                EventEmitter.emit(
+                    event_name='timer_started',
+                    properties={
+                        'batch_id': batch_id,
+                        'duration_seconds': duration_seconds,
+                        'description': description
+                    },
+                    organization_id=batch.organization_id,
+                    user_id=getattr(current_user, 'id', None),
+                    entity_type='timer',
+                    entity_id=timer.id
+                )
+            except Exception:
+                pass
             return timer
         except Exception as e:
             db.session.rollback()
@@ -46,6 +63,21 @@ class TimerService:
         timer.end_time = TimezoneUtils.utc_now()
         timer.status = 'completed'
         db.session.commit()
+        # Emit timer_stopped event
+        try:
+            EventEmitter.emit(
+                event_name='timer_stopped',
+                properties={
+                    'batch_id': timer.batch_id,
+                    'duration_seconds': timer.duration_seconds
+                },
+                organization_id=timer.batch.organization_id if timer.batch else None,
+                user_id=getattr(current_user, 'id', None),
+                entity_type='timer',
+                entity_id=timer.id
+            )
+        except Exception:
+            pass
         return True
 
     @staticmethod

@@ -12,6 +12,7 @@ from app.services.inventory_adjustment import process_inventory_adjustment
 from app.utils.timezone_utils import TimezoneUtils
 from app.utils.code_generator import generate_batch_label_code
 from app.services.base_service import BaseService
+from app.services.event_emitter import EventEmitter
 
 logger = logging.getLogger(__name__)
 
@@ -72,6 +73,27 @@ class BatchOperationsService(BaseService):
             else:
                 # All deductions validated; commit once atomically
                 db.session.commit()
+
+                # Emit domain event for batch start (best-effort)
+                try:
+                    EventEmitter.emit(
+                        event_name='batch_started',
+                        properties={
+                            'recipe_id': recipe_id,
+                            'scale': scale,
+                            'batch_type': batch_type,
+                            'projected_yield': projected_yield,
+                            'projected_yield_unit': recipe.predicted_yield_unit,
+                            'label_code': label_code
+                        },
+                        organization_id=batch.organization_id,
+                        user_id=batch.created_by,
+                        entity_type='batch',
+                        entity_id=batch.id
+                    )
+                except Exception:
+                    pass
+
                 return batch, []
 
         except Exception as e:
@@ -382,6 +404,22 @@ class BatchOperationsService(BaseService):
             batch.cancelled_at = datetime.utcnow()
             db.session.commit()
 
+            # Emit domain event (best-effort)
+            try:
+                EventEmitter.emit(
+                    event_name='batch_cancelled',
+                    properties={
+                        'label_code': batch.label_code,
+                        'restoration_summary': restoration_summary
+                    },
+                    organization_id=batch.organization_id,
+                    user_id=batch.created_by,
+                    entity_type='batch',
+                    entity_id=batch.id
+                )
+            except Exception:
+                pass
+
             return True, restoration_summary
 
         except Exception as e:
@@ -407,7 +445,33 @@ class BatchOperationsService(BaseService):
 
             # Delegate to internal finish batch logic
             # This maintains the existing complex logic while keeping it out of routes
-            return _complete_batch_internal(batch_id, form_data)
+            success, message = _complete_batch_internal(batch_id, form_data)
+
+            if success:
+                try:
+                    refreshed = Batch.query.get(batch_id)
+                    # Compute containment efficiency if BatchStats exists
+                    from app.models.statistics import BatchStats as _BatchStats
+                    stats = _BatchStats.query.filter_by(batch_id=batch_id).first()
+                    containment_efficiency = getattr(stats, 'actual_fill_efficiency', None) if stats else None
+                    EventEmitter.emit(
+                        event_name='batch_completed',
+                        properties={
+                            'label_code': refreshed.label_code,
+                            'final_quantity': refreshed.final_quantity,
+                            'output_unit': refreshed.output_unit,
+                            'completed_at': (refreshed.completed_at.isoformat() if refreshed.completed_at else None),
+                            'containment_efficiency': containment_efficiency
+                        },
+                        organization_id=refreshed.organization_id,
+                        user_id=refreshed.created_by,
+                        entity_type='batch',
+                        entity_id=refreshed.id
+                    )
+                except Exception:
+                    pass
+
+            return success, message
 
         except Exception as e:
             logger.error(f"Error completing batch: {str(e)}")

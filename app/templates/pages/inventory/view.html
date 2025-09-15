@@ -293,18 +293,26 @@ document.addEventListener('DOMContentLoaded', function() {
             fetch(`/inventory/api/get-item/${itemId}`)
                 .then(response => response.json())
                 .then(item => {
-                    // Populate form fields
-                    document.getElementById('editName').value = item.name;
-                    document.getElementById('editQuantity').value = item.quantity;
-                    document.getElementById('editUnit').value = item.unit;
-                    document.getElementById('editCostPerUnit').value = item.cost_per_unit;
-                    document.getElementById('editNotes').value = item.notes;
-                    document.getElementById('editItemForm').setAttribute('action', `/inventory/adjust/${itemId}`);
+                    // Populate form fields (guard against missing elements)
+                    const nameEl = document.getElementById('editName');
+                    if (nameEl) nameEl.value = item.name;
+                    const qtyEl = document.getElementById('editQuantity');
+                    if (qtyEl) qtyEl.value = item.quantity;
+                    const unitEl = document.getElementById('editUnit');
+                    if (unitEl) unitEl.value = item.unit;
+                    const costEl = document.getElementById('editCostPerUnit');
+                    if (costEl) costEl.value = item.cost_per_unit;
+                    const notesEl = document.getElementById('editNotes');
+                    if (notesEl) notesEl.value = item.notes || '';
+                    const formEl = document.getElementById('editItemForm');
+                    if (formEl) formEl.setAttribute('action', `/inventory/adjust/${itemId}`);
 
                     // Handle global locking indicators and states
                     const nameInput = document.getElementById('editName');
                     const unitSelect = document.getElementById('editUnit');
                     const costPerUnitInput = document.getElementById('editCostPerUnit');
+                    const categorySelect = document.getElementById('editCategory');
+                    const densityInput = document.getElementById('density');
 
                     // Toggle readonly/disabled and add visual indicators
                     if (item.global_item_id) {
@@ -381,6 +389,23 @@ document.addEventListener('DOMContentLoaded', function() {
                         // Remove any existing locked indicators and text
                         document.querySelectorAll('.badge .fa-lock').forEach(icon => icon.closest('.badge').remove());
                         document.querySelectorAll('.text-muted small').forEach(small => small.remove());
+
+                        // Custom items: allow category selection and density edits.
+                        // If a category is selected and has default density, lock density to that value.
+                        if (categorySelect && densityInput) {
+                            const applyCategoryDensityLock = function(){
+                                const opt = categorySelect.options[categorySelect.selectedIndex];
+                                const dd = opt && opt.dataset && opt.dataset.density ? parseFloat(opt.dataset.density) : 0;
+                                if (categorySelect.value && dd > 0) {
+                                    densityInput.value = dd.toFixed(3);
+                                    densityInput.readOnly = true;
+                                } else {
+                                    densityInput.readOnly = false;
+                                }
+                            };
+                            categorySelect.addEventListener('change', applyCategoryDensityLock);
+                            applyCategoryDensityLock();
+                        }
                     }
                 })
                 .catch(error => {
