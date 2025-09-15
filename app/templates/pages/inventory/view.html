@@ -401,11 +401,15 @@ document.addEventListener('DOMContentLoaded', function() {
                             const applyCategoryDensityLock = function(){
                                 const opt = categorySelect.options[categorySelect.selectedIndex];
                                 const dd = opt && opt.dataset && opt.dataset.density ? parseFloat(opt.dataset.density) : 0;
-                                if (categorySelect.value && dd > 0) {
-                                    densityInput.value = dd.toFixed(3);
+                                if (categorySelect.value !== '') {
+                                    // Any selected category locks density; prefill if default provided
+                                    if (!isNaN(dd) && dd > 0) {
+                                        densityInput.value = dd.toFixed(3);
+                                    }
                                     densityInput.readOnly = true;
                                     densityInput.disabled = true;
                                 } else {
+                                    // Custom category unlocks manual density
                                     densityInput.readOnly = false;
                                     densityInput.disabled = false;
                                 }
