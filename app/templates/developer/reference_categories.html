@@ -21,10 +21,8 @@
               <div class="row align-items-center g-2">
                 <div class="col-md-4"><strong>{{ category }}</strong></div>
                 <div class="col-md-4">
-                  <div class="input-group">
-                    <span class="input-group-text">Default Density (g/ml)</span>
-                    <input type="text" name="density" class="form-control density-input" data-category="{{ category }}" value="{{ '%.3f'|format(category_densities.get(category) or 0) if category_densities.get(category) is not none else '' }}" placeholder="e.g. 0.920">
-                  </div>
+                  <label class="form-label small">Default Density (g/ml)</label>
+                  <input type="text" name="density" class="form-control density-input" data-category="{{ category }}" value="{{ '%.3f'|format(category_densities.get(category) or 0) if category_densities.get(category) is not none else '' }}" placeholder="e.g. 0.920">
                 </div>
                 <div class="col-md-4 text-end">
                   <button class="btn btn-sm btn-outline-primary me-2" onclick="saveCategoryDensity('{{ category }}')">
