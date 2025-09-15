@@ -9,16 +9,16 @@
         containerRows.forEach(row => {
             const id = row.querySelector('input[name$="[id]"]')?.value;
             const name = row.querySelector('input[name$="[name]"]')?.value;
-            const storageAmount = row.querySelector('input[name$="[storage_amount]"]')?.value;
-            const storageUnit = row.querySelector('select[name$="[storage_unit]"]')?.value;
+            const storageAmount = row.querySelector('input[name$="[capacity]"]')?.value || row.querySelector('input[name$="[storage_amount]"]')?.value;
+            const storageUnit = row.querySelector('select[name$="[capacity_unit]"]')?.value || row.querySelector('select[name$="[storage_unit]"]')?.value;
             const costPerUnit = row.querySelector('input[name$="[cost_per_unit]"]')?.value;
 
             if (id && name) {
                 containers.push({
                     id: parseInt(id),
                     name: name.trim(),
-                    storage_amount: parseFloat(storageAmount) || 0,
-                    storage_unit: storageUnit,
+                    capacity: parseFloat(storageAmount) || 0,
+                    capacity_unit: storageUnit,
                     cost_per_unit: parseFloat(costPerUnit) || 0
                 });
             }
@@ -53,6 +53,4 @@
         }
     }
 
-    window.saveAllSettings = saveAllSettings;
-    window.saveAllContainers = saveAllContainers;
-});
+window.saveAllContainers = saveAllContainers;

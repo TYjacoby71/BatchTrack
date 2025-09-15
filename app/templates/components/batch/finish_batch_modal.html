@@ -8,6 +8,7 @@
       <div class="modal-body">
         <form id="finishBatchModalForm" method="post" action="{{ url_for('batches.finish_batch.complete_batch', batch_id=batch.id) }}">
           <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <div id="batchMeta" data-has-containers="{{ 'true' if (batch.containers or batch.extra_containers) else 'false' }}" style="display:none;"></div>
 
           <!-- Basic Batch Information Section -->
           <div class="basic-info-section">
@@ -185,7 +186,7 @@
                           <small class="text-muted">(includes extra)</small>
                         {% endif %}
                       </td>
-                      <td>{{ data.container.storage_amount or 0 }} {{ data.container.storage_unit or 'count' }}</td>
+                      <td>{{ data.container.capacity or data.container.storage_amount or 0 }} {{ data.container.capacity_unit or data.container.storage_unit or 'count' }}</td>
                       <td>{{ data.total_used }}</td>
                       <td>
                         <input type="number"
@@ -195,7 +196,7 @@
                                min="0"
                                max="{{ data.max_available }}"
                                data-container-id="{{ container_id }}"
-                               data-container-size="{{ data.container.storage_amount or 0 }}"
+                               data-container-size="{{ data.container.capacity or data.container.storage_amount or 0 }}"
                                data-used-quantity="{{ data.total_used }}"
                                onchange="updateContainerSummary()">
                         <input type="hidden" name="container_type_{{ container_id }}" value="combined">
@@ -204,7 +205,7 @@
                         {% endif %}
                       </td>
                       <td class="container-capacity">
-                        {{ (data.container.storage_amount or 0) * data.total_used }} {{ data.container.storage_unit or 'count' }}
+                        {{ ((data.container.capacity or data.container.storage_amount or 0) * data.total_used) }} {{ data.container.capacity_unit or data.container.storage_unit or 'count' }}
                       </td>
                     </tr>
                     {% endfor %}
@@ -348,7 +349,8 @@ function loadVariants() {
 function validateYield() {
   const finalQuantityInput = document.getElementById('final_quantity');
   const alertsContainer = document.getElementById('yield-validation-alerts');
-  const hasContainers = {{ 'true' if batch.containers or batch.extra_containers else 'false' }};
+  const batchMeta = document.getElementById('batchMeta');
+  const hasContainers = (batchMeta && batchMeta.dataset && batchMeta.dataset.hasContainers === 'true');
 
   if (!finalQuantityInput) {
     return;
