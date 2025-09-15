@@ -109,15 +109,19 @@
         if (!modalEl) return;
 
         function updateTypeVisibility(){
-            const isContainer = typeSelect.value === 'container';
-            if (isContainer) {
-                capacityWrap.classList.remove('d-none');
-            } else {
-                capacityWrap.classList.add('d-none');
+            const isContainer = typeSelect ? (typeSelect.value === 'container') : false;
+            if (capacityWrap) {
+                if (isContainer) {
+                    capacityWrap.classList.remove('d-none');
+                } else {
+                    capacityWrap.classList.add('d-none');
+                }
             }
         }
-        typeSelect.addEventListener('change', updateTypeVisibility);
-        updateTypeVisibility();
+        if (typeSelect) {
+            typeSelect.addEventListener('change', updateTypeVisibility);
+            updateTypeVisibility();
+        }
 
         // Category default density autofill and lock behavior
         catSelect.addEventListener('change', function(){
@@ -149,71 +153,76 @@
 
         // Global search: debounce typing and fetch suggestions
         let debounceTimer = null;
-        nameInput.addEventListener('input', function(){
-            globalIdField.value = '';
-            globalHint.style.display = 'none';
-            const q = nameInput.value.trim();
-            if (debounceTimer) clearTimeout(debounceTimer);
-            if (!q) return;
-            debounceTimer = setTimeout(async () => {
-                const itemType = typeSelect.value;
-                try {
-                    const res = await fetch(`/api/ingredients/global-items/search?q=${encodeURIComponent(q)}&type=${encodeURIComponent(itemType)}`);
-                    const data = await res.json();
-                    const results = (data && data.results) || [];
-                    // Simple inline suggestion dropdown
-                    let list = document.getElementById('qcInvSuggestions');
-                    if (!list) {
-                        list = document.createElement('div');
-                        list.id = 'qcInvSuggestions';
-                        list.className = 'list-group position-absolute w-100';
-                        nameInput.parentElement.appendChild(list);
-                        nameInput.parentElement.style.position = 'relative';
-                    }
-                    list.innerHTML = '';
-                    results.forEach(item => {
-                        const a = document.createElement('a');
-                        a.href = '#';
-                        a.className = 'list-group-item list-group-item-action';
-                        a.textContent = item.text;
-                        a.addEventListener('click', (e) => {
-                            e.preventDefault();
-                            nameInput.value = item.text;
-                            globalIdField.value = item.id;
-                            if (item.default_unit) {
-                                unitSelect.value = item.default_unit;
+        if (nameInput) {
+            nameInput.addEventListener('input', function(){
+                if (globalIdField) globalIdField.value = '';
+                if (globalHint) globalHint.style.display = 'none';
+                const q = nameInput.value ? nameInput.value.trim() : '';
+                if (debounceTimer) clearTimeout(debounceTimer);
+                if (!q) return;
+                debounceTimer = setTimeout(async () => {
+                    const itemType = typeSelect ? typeSelect.value : 'ingredient';
+                    try {
+                        const res = await fetch(`/api/ingredients/global-items/search?q=${encodeURIComponent(q)}&type=${encodeURIComponent(itemType)}`);
+                        const data = await res.json();
+                        const results = (data && data.results) || [];
+                        // Simple inline suggestion dropdown
+                        let list = document.getElementById('qcInvSuggestions');
+                        if (!list) {
+                            list = document.createElement('div');
+                            list.id = 'qcInvSuggestions';
+                            list.className = 'list-group position-absolute w-100';
+                            if (nameInput.parentElement) {
+                                nameInput.parentElement.appendChild(list);
+                                nameInput.parentElement.style.position = 'relative';
                             }
-                            if (item.item_type === 'container') {
-                                if (item.capacity) capInput.value = item.capacity;
-                                if (item.capacity_unit) capUnit.value = item.capacity_unit;
-                            }
-                            globalHint.style.display = 'block';
-                            list.innerHTML = '';
+                        }
+                        if (list) list.innerHTML = '';
+                        results.forEach(item => {
+                            const a = document.createElement('a');
+                            a.href = '#';
+                            a.className = 'list-group-item list-group-item-action';
+                            a.textContent = item.text;
+                            a.addEventListener('click', (e) => {
+                                e.preventDefault();
+                                nameInput.value = item.text;
+                                if (globalIdField) globalIdField.value = item.id;
+                                if (item.default_unit && unitSelect) {
+                                    unitSelect.value = item.default_unit;
+                                }
+                                if (item.item_type === 'container') {
+                                    if (item.capacity && capInput) capInput.value = item.capacity;
+                                    if (item.capacity_unit && capUnit) capUnit.value = item.capacity_unit;
+                                }
+                                if (globalHint) globalHint.style.display = 'block';
+                                if (list) list.innerHTML = '';
+                            });
+                            if (list) list.appendChild(a);
                         });
-                        list.appendChild(a);
-                    });
-                } catch (err) {
-                    console.warn('Global search failed', err);
-                }
-            }, 250);
-        });
+                    } catch (err) {
+                        console.warn('Global search failed', err);
+                    }
+                }, 250);
+            });
+        }
 
-        submitBtn.addEventListener('click', async function(){
-            submitBtn.disabled = true;
-            submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Creating...';
-            try {
-                const payload = {
-                    name: nameInput.value.trim(),
-                    type: typeSelect.value,
-                    unit: unitSelect.value,
-                    category_id: catSelect.value || '',
-                    density: densityInput.value || '',
-                };
-                if (globalIdField.value) payload.global_item_id = globalIdField.value;
-                if (typeSelect.value === 'container') {
-                    if (capInput.value) payload.capacity = capInput.value;
-                    if (capUnit.value) payload.capacity_unit = capUnit.value;
-                }
+        if (submitBtn) {
+            submitBtn.addEventListener('click', async function(){
+                submitBtn.disabled = true;
+                submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Creating...';
+                try {
+                    const payload = {
+                        name: nameInput ? nameInput.value.trim() : '',
+                        type: typeSelect ? typeSelect.value : 'ingredient',
+                        unit: unitSelect ? unitSelect.value : 'count',
+                        category_id: catSelect ? (catSelect.value || '') : '',
+                        density: densityInput ? (densityInput.value || '') : '',
+                    };
+                    if (globalIdField && globalIdField.value) payload.global_item_id = globalIdField.value;
+                    if (typeSelect && typeSelect.value === 'container') {
+                        if (capInput && capInput.value) payload.capacity = capInput.value;
+                        if (capUnit && capUnit.value) payload.capacity_unit = capUnit.value;
+                    }
 
                 const res = await fetch('/inventory/api/quick-create', {
                     method: 'POST',
@@ -227,15 +236,16 @@
                 window.dispatchEvent(new CustomEvent('inventory.quickCreated', { detail: { item: data.item } }));
 
                 // Close modal
-                const instance = bootstrap.Modal.getInstance(modalEl);
-                if (instance) instance.hide();
-            } catch (e) {
-                alert(e.message || 'Failed to create');
-            } finally {
-                submitBtn.disabled = false;
-                submitBtn.innerHTML = '<i class="fas fa-save"></i> Create';
-            }
-        });
+                    const instance = bootstrap.Modal.getInstance(modalEl);
+                    if (instance) instance.hide();
+                } catch (e) {
+                    alert(e.message || 'Failed to create');
+                } finally {
+                    submitBtn.disabled = false;
+                    submitBtn.innerHTML = '<i class="fas fa-save"></i> Create';
+                }
+            });
+        }
     };
     if (document.readyState === 'loading') {
         document.addEventListener('DOMContentLoaded', init, { once: true });
