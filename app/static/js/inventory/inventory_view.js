@@ -109,17 +109,20 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     // Category change handler
-    const categorySelect = document.getElementById('categorySelect');
+    const categorySelect = document.getElementById('editCategory');
     if (categorySelect) {
         categorySelect.addEventListener('change', function() {
             const densityInput = document.getElementById('density');
+            if (!densityInput) return;
             if (this.value === '') {
                 densityInput.disabled = false;
+                densityInput.readOnly = false;
             } else {
                 const selectedOption = this.options[this.selectedIndex];
-                const defaultDensity = selectedOption.dataset.density;
-                densityInput.value = defaultDensity;
+                const defaultDensity = selectedOption && selectedOption.dataset ? selectedOption.dataset.density : '';
+                if (defaultDensity) densityInput.value = defaultDensity;
                 densityInput.disabled = true;
+                densityInput.readOnly = true;
             }
         });
     }

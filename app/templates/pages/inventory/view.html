@@ -299,78 +299,82 @@ document.addEventListener('DOMContentLoaded', function() {
                 })
                 .then(item => {
                     // Populate form fields (guard against missing elements)
-                    const nameEl = document.getElementById('editName');
+                    const nameEl = document.querySelector('#editDetailsModal input[name="name"]');
                     if (nameEl) nameEl.value = item.name;
-                    const qtyEl = document.getElementById('editQuantity');
+                    const qtyEl = document.querySelector('#editDetailsModal input[name="quantity"]');
                     if (qtyEl) qtyEl.value = item.quantity;
-                    const unitEl = document.getElementById('editUnit');
+                    const unitEl = document.getElementById('unitSelect');
                     if (unitEl) unitEl.value = item.unit;
-                    const costEl = document.getElementById('editCostPerUnit');
+                    const costEl = document.getElementById('modal_cost_per_unit');
                     if (costEl) costEl.value = item.cost_per_unit;
-                    const notesEl = document.getElementById('editNotes');
-                    if (notesEl) notesEl.value = item.notes || '';
-                    const formEl = document.getElementById('editItemForm');
-                    if (formEl) formEl.setAttribute('action', `/inventory/adjust/${itemId}`);
+                    const formEl = document.getElementById('editModalForm');
+                    if (formEl) formEl.setAttribute('action', `/inventory/edit/${itemId}`);
 
                     // Handle global locking indicators and states
-                    const nameInput = document.getElementById('editName');
-                    const unitSelect = document.getElementById('editUnit');
-                    const costPerUnitInput = document.getElementById('editCostPerUnit');
+                    const nameInput = nameEl;
+                    const unitSelect = document.getElementById('unitSelect');
+                    const costPerUnitInput = document.getElementById('modal_cost_per_unit');
                     const categorySelect = document.getElementById('editCategory');
                     const densityInput = document.getElementById('density');
 
                     // Toggle readonly/disabled and add visual indicators
                     if (item.global_item_id) {
                         // Name field
-                        nameInput.readOnly = true;
-                        const nameLabel = nameInput.previousElementSibling;
-                        if (nameLabel && !nameLabel.querySelector('.badge')) {
-                            nameLabel.innerHTML += `
-                                <span class="badge bg-secondary ms-1" title="Locked to global item definition">
-                                    <i class="fas fa-lock"></i> Global
-                                </span>
-                            `;
-                        }
-                        if (!nameInput.nextElementSibling || !nameInput.nextElementSibling.classList.contains('text-muted')) {
-                            const small = document.createElement('small');
-                            small.className = 'text-muted';
-                            small.textContent = 'This field is locked because this item is linked to the global library.';
-                            nameInput.parentNode.insertBefore(small, nameInput.nextSibling);
-                        }
-
-                        // Unit field
-                        unitSelect.disabled = true;
-                        const unitLabel = unitSelect.previousElementSibling;
-                        if (unitLabel && !unitLabel.querySelector('.badge')) {
-                            unitLabel.innerHTML += `
-                                <span class="badge bg-secondary ms-1" title="Locked to global item definition">
-                                    <i class="fas fa-lock"></i> Global
-                                </span>
-                            `;
-                        }
-                         if (!unitSelect.nextElementSibling || !unitSelect.nextElementSibling.classList.contains('text-muted')) {
-                            const small = document.createElement('small');
-                            small.className = 'text-muted';
-                            small.textContent = 'This field is locked because this item is linked to the global library.';
-                            unitSelect.parentNode.insertBefore(small, unitSelect.nextSibling);
-                        }
-
-                        // Cost Per Unit field - can be modified even if global, unless it's a container
-                        if (item.type === 'container') {
-                            costPerUnitInput.readOnly = true;
-                             const costLabel = costPerUnitInput.previousElementSibling;
-                            if (costLabel && !costLabel.querySelector('.badge')) {
-                                costLabel.innerHTML += `
+                        if (nameInput) {
+                            nameInput.readOnly = true;
+                            const nameLabel = nameInput.previousElementSibling;
+                            if (nameLabel && !nameLabel.querySelector('.badge')) {
+                                nameLabel.innerHTML += `
                                     <span class="badge bg-secondary ms-1" title="Locked to global item definition">
                                         <i class="fas fa-lock"></i> Global
                                     </span>
                                 `;
                             }
-                             if (!costPerUnitInput.nextElementSibling || !costPerUnitInput.nextElementSibling.classList.contains('text-muted')) {
+                            if (!nameInput.nextElementSibling || !nameInput.nextElementSibling.classList.contains('text-muted')) {
                                 const small = document.createElement('small');
                                 small.className = 'text-muted';
                                 small.textContent = 'This field is locked because this item is linked to the global library.';
-                                costPerUnitInput.parentNode.insertBefore(small, costPerUnitInput.nextSibling);
+                                nameInput.parentNode.insertBefore(small, nameInput.nextSibling);
+                            }
+                        }
+
+                        // Unit field
+                        if (unitSelect) {
+                            unitSelect.disabled = true;
+                            const unitLabel = unitSelect.previousElementSibling;
+                            if (unitLabel && !unitLabel.querySelector('.badge')) {
+                                unitLabel.innerHTML += `
+                                    <span class="badge bg-secondary ms-1" title="Locked to global item definition">
+                                        <i class="fas fa-lock"></i> Global
+                                    </span>
+                                `;
+                            }
+                            if (!unitSelect.nextElementSibling || !unitSelect.nextElementSibling.classList.contains('text-muted')) {
+                                const small = document.createElement('small');
+                                small.className = 'text-muted';
+                                small.textContent = 'This field is locked because this item is linked to the global library.';
+                                unitSelect.parentNode.insertBefore(small, unitSelect.nextSibling);
+                            }
+                        }
+
+                        // Cost Per Unit field - can be modified even if global, unless it's a container
+                        if (item.type === 'container') {
+                            if (costPerUnitInput) {
+                                costPerUnitInput.readOnly = true;
+                                const costLabel = costPerUnitInput.previousElementSibling;
+                                if (costLabel && !costLabel.querySelector('.badge')) {
+                                    costLabel.innerHTML += `
+                                        <span class="badge bg-secondary ms-1" title="Locked to global item definition">
+                                            <i class="fas fa-lock"></i> Global
+                                        </span>
+                                    `;
+                                }
+                                if (!costPerUnitInput.nextElementSibling || !costPerUnitInput.nextElementSibling.classList.contains('text-muted')) {
+                                    const small = document.createElement('small');
+                                    small.className = 'text-muted';
+                                    small.textContent = 'This field is locked because this item is linked to the global library.';
+                                    costPerUnitInput.parentNode.insertBefore(small, costPerUnitInput.nextSibling);
+                                }
                             }
                         }
 
@@ -382,13 +386,13 @@ document.addEventListener('DOMContentLoaded', function() {
 
                     } else {
                         // Ensure fields are not read-only/disabled if not global
-                        nameInput.readOnly = false;
-                        unitSelect.disabled = false;
+                        if (nameInput) nameInput.readOnly = false;
+                        if (unitSelect) unitSelect.disabled = false;
                         // Cost per unit is generally editable unless it's a container type
                         if (item.type !== 'container') {
-                            costPerUnitInput.readOnly = false;
+                            if (costPerUnitInput) costPerUnitInput.readOnly = false;
                         } else {
-                             costPerUnitInput.readOnly = true; // Ensure containers remain locked for cost
+                             if (costPerUnitInput) costPerUnitInput.readOnly = true; // Ensure containers remain locked for cost
                         }
 
                         // Remove any existing locked indicators and text

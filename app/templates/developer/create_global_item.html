@@ -36,11 +36,11 @@
               <div class="input-group">
                 <select name="ingredient_category_id" class="form-select">
                   <option value="">Select Category</option>
-                  {% for category in reference_categories %}
+                  {% for category in global_ingredient_categories %}
                     <option value="{{ category.id }}">{{ category.name }}</option>
                   {% endfor %}
                 </select>
-                <a href="{{ url_for('developer.reference_categories') }}" class="btn btn-outline-secondary" title="Manage Categories">
+                <a href="{{ url_for('developer.reference_categories') }}" class="btn btn-outline-secondary" title="Manage Global Categories">
                   <i class="fas fa-cog"></i>
                 </a>
               </div>

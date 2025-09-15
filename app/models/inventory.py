@@ -58,22 +58,7 @@ class InventoryItem(ScopedModelMixin, db.Model):
     inventory_category = db.relationship('InventoryCategory', backref='inventory_items')
     global_item = db.relationship('GlobalItem')
 
-    # Aliases for legacy fields used by routes/templates
-    @property
-    def storage_amount(self):
-        return self.capacity
-
-    @storage_amount.setter
-    def storage_amount(self, value):
-        self.capacity = value
-
-    @property
-    def storage_unit(self):
-        return self.capacity_unit
-
-    @storage_unit.setter
-    def storage_unit(self, value):
-        self.capacity_unit = value
+    # Legacy aliases removed: use capacity and capacity_unit exclusively
 
     def belongs_to_user(self):
         """Check if this record belongs to the current user's organization"""

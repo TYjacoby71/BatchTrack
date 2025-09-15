@@ -622,17 +622,15 @@ def global_items_admin():
 def global_item_detail(item_id):
     item = GlobalItem.query.get_or_404(item_id)
 
-    # Get available global ingredient categories from IngredientCategory table (not org-scoped; ignore legacy flags)
+    # Get available global ingredient categories from IngredientCategory table
     from app.models.category import IngredientCategory
-    existing_categories = IngredientCategory.query.filter_by(
+    global_ingredient_categories = IngredientCategory.query.filter_by(
         organization_id=None,
         is_active=True,
         is_global_category=True
     ).order_by(IngredientCategory.name).all()
 
-    reference_categories = sorted([cat.name for cat in existing_categories if cat.name])
-
-    return render_template('developer/global_item_detail.html', item=item, reference_categories=reference_categories)
+    return render_template('developer/global_item_detail.html', item=item, global_ingredient_categories=global_ingredient_categories)
 
 @developer_bp.route('/global-items/<int:item_id>/edit', methods=['POST'])
 @login_required
@@ -1038,22 +1036,15 @@ def create_global_item():
             return redirect(url_for('developer.create_global_item'))
 
     # GET request - show form
-    # Get available global ingredient categories from IngredientCategory table (ignore legacy flag)
+    # Get available global ingredient categories from IngredientCategory table
     from app.models.category import IngredientCategory
-    reference_categories_list = IngredientCategory.query.filter_by(
+    global_ingredient_categories = IngredientCategory.query.filter_by(
         organization_id=None, 
         is_active=True,
         is_global_category=True
     ).order_by(IngredientCategory.name).all()
 
-    reference_categories = []
-    for cat in reference_categories_list:
-        reference_categories.append({
-            'id': cat.id,
-            'name': cat.name
-        })
-
-    return render_template('developer/create_global_item.html', reference_categories=reference_categories)
+    return render_template('developer/create_global_item.html', global_ingredient_categories=global_ingredient_categories)
 
 @developer_bp.route('/global-items/<int:item_id>/delete', methods=['POST'])
 @login_required
