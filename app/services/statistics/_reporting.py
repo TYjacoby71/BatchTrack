@@ -167,16 +167,6 @@ class ReportingService:
             return 0
     
     @staticmethod
-    def _calculate_success_rate(organization_id: int) -> float:
-        """Calculate overall success rate for organization"""
-        try:
-            org_stats = OrganizationStats.get_or_create(organization_id)
-            total_batches = org_stats.completed_batches + org_stats.failed_batches
-            
-            if total_batches > 0:
-                return round((org_stats.completed_batches / total_batches) * 100, 2)
-            return 0.0
-    @staticmethod
     def _get_recent_avg_item_freshness(organization_id: int) -> float:
         """Get recent average freshness efficiency score from snapshots (last 7 days)."""
         try:
