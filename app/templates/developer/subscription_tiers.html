@@ -91,6 +91,23 @@
                             </span>
                         </div>
 
+                        {% if tier_data.data_retention_days or tier_data.retention_notice_days %}
+                        <div class="d-flex align-items-center mb-2">
+                            <i class="fas fa-database me-2 text-info"></i>
+                            <strong>Retention:</strong>
+                            <span class="ms-2">
+                                {% if tier_data.data_retention_days %}
+                                    {{ tier_data.data_retention_days }} days
+                                {% else %}
+                                    Indefinite
+                                {% endif %}
+                                {% if tier_data.retention_notice_days %}
+                                    <small class="text-muted">(notice {{ tier_data.retention_notice_days }} days)</small>
+                                {% endif %}
+                            </span>
+                        </div>
+                        {% endif %}
+
                         {% if tier_data.get('permissions') %}
                         <div class="d-flex align-items-center mb-3">
                             <i class="fas fa-key me-2 text-warning"></i>

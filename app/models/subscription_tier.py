@@ -27,6 +27,12 @@ class SubscriptionTier(db.Model):
     max_batchbot_requests = db.Column(db.Integer, nullable=True)  # Future AI feature
     max_monthly_batches = db.Column(db.Integer, nullable=True)  # Monthly batch limit
 
+    # Data retention policy (tier-driven)
+    # Number of days to retain long-term data (recipes, batches, etc.) before hard delete (None = indefinite)
+    data_retention_days = db.Column(db.Integer, nullable=True)
+    # Days before deletion to start user notification campaign (e.g., 30)
+    retention_notice_days = db.Column(db.Integer, nullable=True)
+
     # Visibility control
     is_customer_facing = db.Column(db.Boolean, default=True, nullable=False)
 

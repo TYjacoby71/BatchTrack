@@ -79,7 +79,9 @@ def manage_tiers():
             'max_batches': tier.max_batches,
             'max_products': tier.max_products,
             'max_batchbot_requests': tier.max_batchbot_requests,
-            'max_monthly_batches': tier.max_monthly_batches
+            'max_monthly_batches': tier.max_monthly_batches,
+            'data_retention_days': tier.data_retention_days,
+            'retention_notice_days': tier.retention_notice_days
         }
 
     return render_template('developer/subscription_tiers.html',
@@ -104,6 +106,8 @@ def create_tier():
         max_products = request.form.get('max_products', None)
         max_batchbot_requests = request.form.get('max_batchbot_requests', None)
         max_monthly_batches = request.form.get('max_monthly_batches', None)
+        data_retention_days_raw = request.form.get('data_retention_days', '').strip()
+        retention_notice_days_raw = request.form.get('retention_notice_days', '').strip()
 
         billing_provider = request.form.get('billing_provider', 'exempt')
         stripe_key = request.form.get('stripe_lookup_key', '').strip()
@@ -116,6 +120,8 @@ def create_tier():
         max_products = int(max_products) if max_products and max_products.isdigit() else None
         max_batchbot_requests = int(max_batchbot_requests) if max_batchbot_requests and max_batchbot_requests.isdigit() else None
         max_monthly_batches = int(max_monthly_batches) if max_monthly_batches and max_monthly_batches.isdigit() else None
+        data_retention_days = int(data_retention_days_raw) if data_retention_days_raw.isdigit() else None
+        retention_notice_days = int(retention_notice_days_raw) if retention_notice_days_raw.isdigit() else None
 
         # Validation
         if not name:
@@ -149,6 +155,8 @@ def create_tier():
             max_products=max_products,
             max_batchbot_requests=max_batchbot_requests,
             max_monthly_batches=max_monthly_batches,
+            data_retention_days=data_retention_days,
+            retention_notice_days=retention_notice_days,
             billing_provider=billing_provider,
             stripe_lookup_key=stripe_key if stripe_key else None,
             whop_product_key=whop_key if whop_key else None
