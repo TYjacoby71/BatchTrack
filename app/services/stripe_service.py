@@ -108,8 +108,115 @@ class StripeService:
     @staticmethod
     def _handle_checkout_completed(event):
         """Handle checkout.session.completed event"""
-        # Implementation moved from routes - this would contain the signup completion logic
-        pass
+        try:
+            obj = event.get('data', {}).get('object', {})
+            session_id = obj.get('id')
+            customer_email = (obj.get('customer_details') or {}).get('email')
+            if not StripeService.initialize_stripe():
+                return
+            import stripe
+            # Expand line items to read price lookup keys
+            checkout = stripe.checkout.Session.retrieve(session_id, expand=['line_items.data.price'])
+            line_items = checkout.get('line_items', {}).get('data', [])
+            price = line_items[0]['price'] if line_items else None
+            lookup_key = price.get('id') if price else None  # In real Stripe, lookup_key is on Price; id used if lookup_key not accessible here
+
+            # Identify organization by customer email
+            from flask import current_app
+            from ..extensions import db
+            from ..models.models import Organization, User
+            from ..models.subscription_tier import SubscriptionTier
+            from ..models.retention import StorageAddonPurchase
+
+            org = None
+            try:
+                user = User.query.filter_by(email=customer_email).first()
+                org = user.organization if user else None
+            except Exception:
+                org = None
+            if not org:
+                return
+
+            # Check if purchase matches tier's storage add-on
+            tier: SubscriptionTier = org.subscription_tier
+            if tier and getattr(tier, 'stripe_storage_lookup_key', None) in [lookup_key, price.get('lookup_key') if price else None]:
+                # Determine extension days; default to 365 if configured, else 365
+                extension_days = getattr(tier, 'storage_addon_retention_days', None) or 365
+                purchase = StorageAddonPurchase(
+                    organization_id=org.id,
+                    stripe_session_id=session_id,
+                    stripe_price_lookup_key=lookup_key,
+                    retention_extension_days=extension_days
+                )
+                db.session.add(purchase)
+                db.session.commit()
+        except Exception as e:
+            logger.error(f"Error handling checkout.session.completed: {e}")
+            return
+
+    @staticmethod
+    def _handle_subscription_created(event):
+        try:
+            obj = event.get('data', {}).get('object', {})
+            customer_id = obj.get('customer')
+            status = obj.get('status')
+            items = obj.get('items', {}).get('data', [])
+            price = items[0]['price'] if items else None
+            lookup_key = price.get('id') if price else None
+
+            from ..extensions import db
+            from ..models.models import Organization, User
+            from ..models.subscription_tier import SubscriptionTier
+            from ..models.retention import StorageAddonSubscription
+
+            # Resolve org by Stripe customer_id via Organization.stripe_customer_id
+            org = Organization.query.filter_by(stripe_customer_id=customer_id).first()
+            if not org:
+                return
+
+            tier: SubscriptionTier = org.subscription_tier
+            if tier and getattr(tier, 'stripe_storage_lookup_key', None) in [lookup_key, price.get('lookup_key') if price else None]:
+                sub = StorageAddonSubscription(
+                    organization_id=org.id,
+                    stripe_subscription_id=obj.get('id'),
+                    price_lookup_key=lookup_key,
+                    status=status,
+                    current_period_end=datetime.utcfromtimestamp(obj.get('current_period_end')) if obj.get('current_period_end') else None
+                )
+                db.session.add(sub)
+                db.session.commit()
+        except Exception as e:
+            logger.error(f"Error handling subscription.created: {e}")
+
+    @staticmethod
+    def _handle_subscription_updated(event):
+        try:
+            obj = event.get('data', {}).get('object', {})
+            sub_id = obj.get('id')
+            status = obj.get('status')
+            from ..extensions import db
+            from ..models.retention import StorageAddonSubscription
+            rec = StorageAddonSubscription.query.filter_by(stripe_subscription_id=sub_id).first()
+            if rec:
+                rec.status = status
+                rec.current_period_end = datetime.utcfromtimestamp(obj.get('current_period_end')) if obj.get('current_period_end') else rec.current_period_end
+                db.session.commit()
+        except Exception as e:
+            logger.error(f"Error handling subscription.updated: {e}")
+
+    @staticmethod
+    def _handle_subscription_deleted(event):
+        try:
+            obj = event.get('data', {}).get('object', {})
+            sub_id = obj.get('id')
+            from ..extensions import db
+            from ..models.retention import StorageAddonSubscription
+            rec = StorageAddonSubscription.query.filter_by(stripe_subscription_id=sub_id).first()
+            if rec:
+                rec.status = 'canceled'
+                db.session.commit()
+        except Exception as e:
+            logger.error(f"Error handling subscription.deleted: {e}")
 
     @staticmethod
     def _handle_subscription_created(event):
@@ -380,3 +487,49 @@ class StripeService:
             }
 
         return pricing_data
+
+    @staticmethod
+    def create_one_time_checkout_by_lookup_key(lookup_key, customer_email, success_url, cancel_url, metadata=None):
+        """Create a one-time checkout session for an add-on using a price lookup key."""
+        if not StripeService.initialize_stripe():
+            return None
+
+    @staticmethod
+    def create_subscription_checkout_by_lookup_key(lookup_key, customer_email, success_url, cancel_url, metadata=None):
+        """Create a subscription checkout session for a recurring add-on using price lookup key."""
+        if not StripeService.initialize_stripe():
+            return None
+        import stripe
+        try:
+            session = stripe.checkout.Session.create(
+                mode='subscription',
+                line_items=[{
+                    'price': lookup_key,
+                    'quantity': 1
+                }],
+                customer_email=customer_email,
+                success_url=success_url,
+                cancel_url=cancel_url,
+                metadata=metadata or {}
+            )
+            return session
+        except Exception as e:
+            logger.error(f"Stripe subscription checkout error: {e}")
+            return None
+        import stripe
+        try:
+            session = stripe.checkout.Session.create(
+                mode='payment',
+                line_items=[{
+                    'price': lookup_key,
+                    'quantity': 1
+                }],
+                customer_email=customer_email,
+                success_url=success_url,
+                cancel_url=cancel_url,
+                metadata=metadata or {}
+            )
+            return session
+        except Exception as e:
+            logger.error(f"Stripe one-time checkout error: {e}")
+            return None

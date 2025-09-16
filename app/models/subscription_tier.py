@@ -27,6 +27,14 @@ class SubscriptionTier(db.Model):
     max_batchbot_requests = db.Column(db.Integer, nullable=True)  # Future AI feature
     max_monthly_batches = db.Column(db.Integer, nullable=True)  # Monthly batch limit
 
+    # Data retention policy (tier-driven)
+    # Number of days to retain long-term data (recipes, batches, etc.) before hard delete (None = indefinite)
+    data_retention_days = db.Column(db.Integer, nullable=True)
+    # Days before deletion to start user notification campaign (e.g., 30)
+    retention_notice_days = db.Column(db.Integer, nullable=True)
+    # Optional: number of days a storage add-on purchase extends retention
+    storage_addon_retention_days = db.Column(db.Integer, nullable=True)
+
     # Visibility control
     is_customer_facing = db.Column(db.Boolean, default=True, nullable=False)
 
@@ -35,6 +43,8 @@ class SubscriptionTier(db.Model):
 
     # The ONLY external product links - stable lookup keys
     stripe_lookup_key = db.Column(db.String(128), nullable=True)
+    # Optional storage add-on product (Stripe price lookup key) for retention extension
+    stripe_storage_lookup_key = db.Column(db.String(128), nullable=True)
     whop_product_key = db.Column(db.String(128), nullable=True)
 
     # Metadata
@@ -48,6 +58,7 @@ class SubscriptionTier(db.Model):
     # Explicitly named constraints to avoid SQLite batch mode issues
     __table_args__ = (
         db.UniqueConstraint('stripe_lookup_key', name='uq_subscription_tier_stripe_lookup_key'),
+        db.UniqueConstraint('stripe_storage_lookup_key', name='uq_subscription_tier_stripe_storage_lookup_key'),
         db.UniqueConstraint('whop_product_key', name='uq_subscription_tier_whop_product_key'),
     )
 

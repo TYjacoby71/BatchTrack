@@ -1,4 +1,18 @@
 /**
+ * DrawerProtocol: Centralized drawer event handler
+ *
+ * - Listens for window 'openDrawer' events from anywhere in the app
+ * - Opens a modal by fetching modal_url (expects JSON: { success, modal_html })
+ * - Tracks active drawers to avoid duplicates and cleans up on close
+ * - Supports retry callbacks/operations fired on a provided success_event
+ * - Supports redirect-only flows (redirect_url)
+ *
+ * Usage:
+ *   window.dispatchEvent(new CustomEvent('openDrawer', {
+ *     detail: { modal_url: '/path/to/modal', success_event: 'event.name', ... }
+ *   }))
+ */
+/**
  * Universal Drawer Protocol
  * Simple listener that handles ANY drawer request from ANY service
  */

@@ -1,3 +1,13 @@
+// DrawerInterceptor: Fetch response watcher that auto-opens drawers
+//
+// - Wraps window.fetch; inspects JSON responses for drawer_payload
+// - If payload found, dispatches 'openDrawer' to DrawerProtocol with deduplication
+// - Uses a correlation set and small cache to prevent duplicate opens
+// - Transparent pass-through for non-JSON or responses without drawer_payload
+//
+// Expected server response:
+//   { drawer_payload: { modal_url, error_type, error_code, success_event, correlation_id?, retry_callback? } }
+//
 // Global Drawer Interceptor
 // Wrap window.fetch to automatically open drawers when a response contains drawer_payload
 
