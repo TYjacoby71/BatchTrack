@@ -65,6 +65,7 @@ def manage_tiers():
             'billing_provider': tier.billing_provider,
             'is_billing_exempt': tier.is_billing_exempt,
             'stripe_lookup_key': tier.stripe_lookup_key,
+            'stripe_storage_lookup_key': getattr(tier, 'stripe_storage_lookup_key', None),
             'whop_product_key': tier.whop_product_key,
             'stripe_price': price_display,  # Now shows actual pricing
             'last_synced': None,  # TODO: Add sync tracking
@@ -111,6 +112,7 @@ def create_tier():
 
         billing_provider = request.form.get('billing_provider', 'exempt')
         stripe_key = request.form.get('stripe_lookup_key', '').strip()
+        stripe_storage_key = request.form.get('stripe_storage_lookup_key', '').strip()
         whop_key = request.form.get('whop_product_key', '').strip()
 
         # Convert limit fields to integers or None if empty
@@ -159,6 +161,7 @@ def create_tier():
             retention_notice_days=retention_notice_days,
             billing_provider=billing_provider,
             stripe_lookup_key=stripe_key if stripe_key else None,
+            stripe_storage_lookup_key=stripe_storage_key or None,
             whop_product_key=whop_key if whop_key else None
         )
 
@@ -239,6 +242,7 @@ def edit_tier(tier_id):
             tier.billing_provider = billing_provider
             # tier.is_billing_exempt is removed from updates as it's derived from billing_provider
             tier.stripe_lookup_key = stripe_key or None
+            tier.stripe_storage_lookup_key = request.form.get('stripe_storage_lookup_key', '').strip() or None
             tier.whop_product_key = whop_key or None
 
             # Retention fields

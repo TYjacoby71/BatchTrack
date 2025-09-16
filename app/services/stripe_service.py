@@ -380,3 +380,26 @@ class StripeService:
             }
 
         return pricing_data
+
+    @staticmethod
+    def create_one_time_checkout_by_lookup_key(lookup_key, customer_email, success_url, cancel_url, metadata=None):
+        """Create a one-time checkout session for an add-on using a price lookup key."""
+        if not StripeService.initialize_stripe():
+            return None
+        import stripe
+        try:
+            session = stripe.checkout.Session.create(
+                mode='payment',
+                line_items=[{
+                    'price': lookup_key,
+                    'quantity': 1
+                }],
+                customer_email=customer_email,
+                success_url=success_url,
+                cancel_url=cancel_url,
+                metadata=metadata or {}
+            )
+            return session
+        except Exception as e:
+            logger.error(f"Stripe one-time checkout error: {e}")
+            return None
