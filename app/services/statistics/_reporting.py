@@ -192,7 +192,17 @@ class ReportingService:
         except Exception as e:
             logger.error(f"Error computing avg item freshness: {e}")
             return 0.0
+
+    @staticmethod
+    def _calculate_success_rate(organization_id: int) -> float:
+        """Calculate overall success rate for organization"""
+        try:
+            org_stats = OrganizationStats.get_or_create(organization_id)
+            total_batches = org_stats.completed_batches + org_stats.failed_batches
             
+            if total_batches > 0:
+                return round((org_stats.completed_batches / total_batches) * 100, 2)
+            return 0.0
         except Exception as e:
             logger.error(f"Error calculating success rate: {e}")
             return 0.0
