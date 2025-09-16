@@ -2,7 +2,7 @@
 """add domain_event and freshness_snapshot tables
 
 Revision ID: 20250912_01
-Revises: 20250911_06
+Revises: 20250916203500
 Create Date: 2025-09-12 01:00:00.000000
 
 """
@@ -12,7 +12,7 @@ from sqlalchemy import inspect, text
 
 # revision identifiers, used by Alembic.
 revision = '20250912_01'
-down_revision = '20250911_06'
+down_revision = '20250916203500'
 branch_labels = None
 depends_on = None
 
