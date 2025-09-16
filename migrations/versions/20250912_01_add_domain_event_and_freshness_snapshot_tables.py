@@ -2,7 +2,7 @@
 """add domain_event and freshness_snapshot tables
 
 Revision ID: 20250912_01
-Revises: 20250916203500
+Revises: 20250911_06
 Create Date: 2025-09-12 01:00:00.000000
 
 """
