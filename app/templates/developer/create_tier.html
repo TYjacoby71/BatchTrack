@@ -43,6 +43,27 @@
                                     <input type="text" class="form-control" id="fallback_price" name="fallback_price" 
                                            value="$0" placeholder="$0">
                                 </div>
+
+                                <div class="mb-3">
+                                    <label for="data_retention_days" class="form-label">Data Retention (days)</label>
+                                    <input type="number" class="form-control" id="data_retention_days" name="data_retention_days" 
+                                           min="0" placeholder="e.g., 365 for 1 year (leave blank for indefinite)">
+                                    <div class="form-text">How long to retain long-term data before hard delete. Blank = indefinite.</div>
+                                </div>
+
+                                <div class="mb-3">
+                                    <label for="retention_notice_days" class="form-label">Notice Period (days)</label>
+                                    <input type="number" class="form-control" id="retention_notice_days" name="retention_notice_days" 
+                                           min="0" placeholder="e.g., 30">
+                                    <div class="form-text">How many days before deletion to start notifying users.</div>
+                                </div>
+
+                                <div class="mb-3">
+                                    <label for="storage_addon_retention_days" class="form-label">Storage Add-on Retention Extension (days)</label>
+                                    <input type="number" class="form-control" id="storage_addon_retention_days" name="storage_addon_retention_days" 
+                                           min="0" placeholder="e.g., 365">
+                                    <div class="form-text">How many days the storage add-on extends retention for this tier.</div>
+                                </div>
                             </div>
 
                             <div class="col-md-6">
@@ -84,6 +105,13 @@
                                     <input type="text" class="form-control" id="stripe_lookup_key" name="stripe_lookup_key" 
                                            placeholder="batchtrack_team_monthly">
                                     <div class="form-text">Must match a Stripe price lookup key</div>
+                                </div>
+
+                                <div id="stripe_storage_fields" class="mb-3" style="display: none;">
+                                    <label for="stripe_storage_lookup_key" class="form-label">Stripe Storage Add-on Lookup Key</label>
+                                    <input type="text" class="form-control" id="stripe_storage_lookup_key" name="stripe_storage_lookup_key" 
+                                           placeholder="batchtrack_storage_addon_1yr">
+                                    <div class="form-text">Optional. If set, the retention drawer will link to a storage add-on checkout.</div>
                                 </div>
 
                                 <div id="whop_fields" class="mb-3" style="display: none;">
@@ -131,16 +159,19 @@ function toggleBillingFields() {
     const isExempt = document.getElementById('is_billing_exempt').checked;
 
     const stripeFields = document.getElementById('stripe_fields');
+    const stripeStorageFields = document.getElementById('stripe_storage_fields');
     const whopFields = document.getElementById('whop_fields');
 
     // Hide all fields by default
     stripeFields.style.display = 'none';
+    stripeStorageFields.style.display = 'none';
     whopFields.style.display = 'none';
 
     // Show relevant fields if not exempt
     if (!isExempt) {
         if (provider === 'stripe') {
             stripeFields.style.display = 'block';
+            stripeStorageFields.style.display = 'block';
         } else if (provider === 'whop') {
             whopFields.style.display = 'block';
         }

@@ -2,6 +2,7 @@
 from flask import Blueprint, jsonify, request
 from flask_login import login_required
 from ...models import db, InventoryItem, InventoryHistory, Batch, BatchIngredient, ExtraBatchIngredient, BatchContainer, ExtraBatchContainer
+from ...services.freshness_service import FreshnessService
 from datetime import datetime, date
 from ...utils.fifo_generator import int_to_base36
 
@@ -82,6 +83,7 @@ def get_batch_inventory_summary(batch_id):
             
             ingredient_summary.append({
                 'name': batch_ing.inventory_item.name,
+                'inventory_item_id': batch_ing.inventory_item_id,
                 'total_used': total_used,
                 'unit': batch_ing.unit,
                 'fifo_usage': usage_data
@@ -95,6 +97,7 @@ def get_batch_inventory_summary(batch_id):
             
             ingredient_summary.append({
                 'name': extra_ing.inventory_item.name,
+                'inventory_item_id': extra_ing.inventory_item_id,
                 'total_used': total_used,
                 'unit': extra_ing.unit,
                 'fifo_usage': usage_data
@@ -121,6 +124,29 @@ def get_batch_inventory_summary(batch_id):
                 'type': 'extra'
             })
         
+        # Compute freshness summary to surface in modal
+        try:
+            freshness = FreshnessService.compute_batch_freshness(batch)
+            freshness_payload = {
+                'overall_freshness_percent': getattr(freshness, 'overall_freshness_percent', None),
+                'items': [
+                    {
+                        'inventory_item_id': i.inventory_item_id,
+                        'item_name': i.item_name,
+                        'weighted_freshness_percent': i.weighted_freshness_percent,
+                        'lots_contributed': i.lots_contributed,
+                        'total_used': i.total_used,
+                        'unit': i.unit,
+                    }
+                    for i in getattr(freshness, 'items', [])
+                ]
+            }
+        except Exception as e:
+            freshness_payload = {
+                'overall_freshness_percent': None,
+                'items': []
+            }
+
         return jsonify({
             'batch': {
                 'label_code': batch.label_code,
@@ -128,7 +154,8 @@ def get_batch_inventory_summary(batch_id):
                 'scale': batch.scale
             },
             'ingredient_summary': ingredient_summary,
-            'container_summary': container_summary
+            'container_summary': container_summary,
+            'freshness_summary': freshness_payload
         })
         
     except Exception as e:

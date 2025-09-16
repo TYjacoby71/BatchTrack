@@ -66,6 +66,43 @@ def upgrade():
                          current_tier=current_tier,
                          subscription_details=subscription_details)
 
+@billing_bp.route('/storage')
+@login_required
+def storage_addon():
+    """Redirect to Stripe subscription checkout for storage add-on if configured on the tier."""
+    organization = current_user.organization
+    if not organization or not organization.subscription_tier:
+        flash('No organization or tier found', 'error')
+        return redirect(url_for('app_routes.dashboard'))
+
+    tier = organization.subscription_tier
+    lookup_key = getattr(tier, 'stripe_storage_lookup_key', None)
+    if not lookup_key:
+        flash('Storage add-on is not available for your tier. Please upgrade instead.', 'warning')
+        return redirect(url_for('billing.upgrade'))
+
+    try:
+        if not StripeService.initialize_stripe():
+            flash('Billing temporarily unavailable', 'error')
+            return redirect(url_for('billing.upgrade'))
+
+        # Create a subscription checkout session for the storage add-on price lookup key
+        session = StripeService.create_subscription_checkout_by_lookup_key(
+            lookup_key,
+            current_user.email,
+            success_url=url_for('billing.upgrade', _external=True),
+            cancel_url=url_for('billing.upgrade', _external=True),
+            metadata={'addon': 'storage'}
+        )
+        if session and getattr(session, 'url', None):
+            return redirect(session.url)
+        flash('Unable to start storage checkout', 'error')
+        return redirect(url_for('billing.upgrade'))
+    except Exception as e:
+        logger.error(f"Storage add-on checkout error: {e}")
+        flash('Checkout failed. Please try again later.', 'error')
+        return redirect(url_for('billing.upgrade'))
+
 @billing_bp.route('/checkout/<tier>')
 @billing_bp.route('/checkout/<tier>/<billing_cycle>')
 @login_required

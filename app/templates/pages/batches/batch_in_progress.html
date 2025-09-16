@@ -149,11 +149,6 @@
             </div>
             <div class="collapse show" id="batchSummaryCollapse">
                 <div class="card-body">
-                {% if freshness_summary and freshness_summary.overall_freshness_percent is not none %}
-                <div class="alert alert-info mb-3">
-                    <strong>Freshness (Overall):</strong> {{ freshness_summary.overall_freshness_percent }}%
-                </div>
-                {% endif %}
                 <table class="table">
                     <thead>
                         <tr>
@@ -162,13 +157,12 @@
                             <th>Unit</th>
                             <th>Cost/Unit</th>
                             <th>Line Cost</th>
-                            <th>Freshness</th>
                         </tr>
                     </thead>
                     {% set ns = namespace(ingredient_total=0, container_total=0, extras_total=0, extra_container_total=0) %}
                     <tbody>
                         {% if batch.batch_ingredients %}
-                        <tr><th colspan="6" class="table-secondary">Ingredients</th></tr>
+                        <tr><th colspan="5" class="table-secondary">Ingredients</th></tr>
                         {% for ing in batch.batch_ingredients %}
                             {% set amount = ing.quantity_used|float or 0 %}
                             {% set cost = ing.cost_per_unit|float or 0 %}
@@ -179,29 +173,17 @@
                                 <td>{{ ing.unit }}</td>
                                 <td>${{ "%.2f"|format(cost) }}</td>
                                 <td>${{ "%.2f"|format(line_cost) }}</td>
-                                <td>
-                                    {% if freshness_summary and freshness_summary.items %}
-                                        {% set f = (freshness_summary.items | selectattr('inventory_item_id', 'equalto', ing.inventory_item_id) | list | first) %}
-                                        {% if f and f.weighted_freshness_percent is not none %}
-                                            {{ f.weighted_freshness_percent }}%
-                                        {% else %}
-                                            &mdash;
-                                        {% endif %}
-                                    {% else %}
-                                        &mdash;
-                                    {% endif %}
-                                </td>
                             </tr>
                             {% set ns.ingredient_total = ns.ingredient_total + line_cost %}
                         {% endfor %}
                         <tr>
-                            <td colspan="5" class="text-end"><em>Ingredients Subtotal:</em></td>
+                            <td colspan="4" class="text-end"><em>Ingredients Subtotal:</em></td>
                             <td><strong>${{ "%.2f"|format(ns.ingredient_total) }}</strong></td>
                         </tr>
                         {% endif %}
 
                         {% if batch.containers %}
-                        <tr><th colspan="6" class="table-secondary">Containers</th></tr>
+                        <tr><th colspan="5" class="table-secondary">Containers</th></tr>
                         {% for container in batch.containers %}
                             {% set line_cost = (container.quantity_used|float or 0) * (container.cost_each|float or 0) %}
                             <tr>
@@ -210,18 +192,17 @@
                                 <td></td>
                                 <td>${{ "%.2f"|format(container.cost_each|float or 0) }}</td>
                                 <td>${{ "%.2f"|format(line_cost) }}</td>
-                                <td>&mdash;</td>
                             </tr>
                             {% set ns.container_total = ns.container_total + line_cost %}
                         {% endfor %}
                         <tr>
-                            <td colspan="5" class="text-end"><em>Containers Subtotal:</em></td>
+                            <td colspan="4" class="text-end"><em>Containers Subtotal:</em></td>
                             <td><strong>${{ "%.2f"|format(ns.container_total) }}</strong></td>
                         </tr>
                         {% endif %}
 
                         {% if batch.consumables %}
-                        <tr><th colspan="6" class="table-secondary">Consumables</th></tr>
+                        <tr><th colspan="5" class="table-secondary">Consumables</th></tr>
                         {% for cons in batch.consumables %}
                             {% set line_cost = (cons.quantity_used|float or 0) * (cons.cost_per_unit|float or 0) %}
                             <tr>
@@ -230,14 +211,13 @@
                                 <td>{{ cons.unit }}</td>
                                 <td>${{ "%.2f"|format(cons.cost_per_unit|float or 0) }}</td>
                                 <td>${{ "%.2f"|format(line_cost) }}</td>
-                                <td>&mdash;</td>
                             </tr>
                             {% set ns.ingredient_total = ns.ingredient_total + line_cost %}
                         {% endfor %}
                         {% endif %}
 
                         {% if batch.extra_ingredients %}
-                        <tr><th colspan="6" class="table-secondary">Extra Ingredients</th></tr>
+                        <tr><th colspan="5" class="table-secondary">Extra Ingredients</th></tr>
                         {% for extra in batch.extra_ingredients %}
                             {% set line_cost = (extra.quantity_used|float or 0) * (extra.cost_per_unit|float or 0) %}
                             <tr>
@@ -246,29 +226,17 @@
                                 <td>{{ extra.unit }}</td>
                                 <td>${{ "%.2f"|format(extra.cost_per_unit|float or 0) }}</td>
                                 <td>${{ "%.2f"|format(line_cost) }}</td>
-                                <td>
-                                    {% if freshness_summary and freshness_summary.items %}
-                                        {% set f = (freshness_summary.items | selectattr('inventory_item_id', 'equalto', extra.inventory_item_id) | list | first) %}
-                                        {% if f and f.weighted_freshness_percent is not none %}
-                                            {{ f.weighted_freshness_percent }}%
-                                        {% else %}
-                                            &mdash;
-                                        {% endif %}
-                                    {% else %}
-                                        &mdash;
-                                    {% endif %}
-                                </td>
                             </tr>
                             {% set ns.extras_total = ns.extras_total + line_cost %}
                         {% endfor %}
                         <tr>
-                            <td colspan="5" class="text-end"><em>Extra Ingredients Subtotal:</em></td>
+                            <td colspan="4" class="text-end"><em>Extra Ingredients Subtotal:</em></td>
                             <td><strong>${{ "%.2f"|format(ns.extras_total) }}</strong></td>
                         </tr>
                         {% endif %}
 
                         {% if batch.extra_containers %}
-                        <tr><th colspan="6" class="table-secondary">Extra Containers</th></tr>
+                        <tr><th colspan="5" class="table-secondary">Extra Containers</th></tr>
                         {% for container in batch.extra_containers %}
                             {% set line_cost = (container.quantity_used|float or 0) * (container.cost_each|float or 0) %}
                             <tr>
@@ -277,12 +245,11 @@
                                 <td></td>
                                 <td>${{ "%.2f"|format(container.cost_each|float or 0) }}</td>
                                 <td>${{ "%.2f"|format(line_cost) }}</td>
-                                <td>&mdash;</td>
                             </tr>
                             {% set ns.extra_container_total = ns.extra_container_total + line_cost %}
                         {% endfor %}
                         <tr>
-                            <td colspan="5" class="text-end"><em>Extra Containers Subtotal:</em></td>
+                            <td colspan="4" class="text-end"><em>Extra Containers Subtotal:</em></td>
                             <td><strong>${{ "%.2f"|format(ns.extra_container_total) }}</strong></td>
                         </tr>
                         {% endif %}
@@ -299,7 +266,7 @@
                                     <i class="fas fa-list-alt"></i> View Batch Source List
                                 </button>
                             </td>
-                            <td colspan="2" class="text-end"><strong>Total Batch Cost:</strong></td>
+                            <td colspan="1" class="text-end"><strong>Total Batch Cost:</strong></td>
                             <td><strong>${{ "%.2f"|format(total_cost) }}</strong></td>
                         </tr>
                     </tfoot>
