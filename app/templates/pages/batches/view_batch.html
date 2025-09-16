@@ -147,8 +147,8 @@
                 <p><strong>Projected Yield:</strong> {{ batch.projected_yield }} {{ batch.projected_yield_unit }}</p>
                 <p><strong>Final Yield:</strong> {% if batch.final_quantity %}{{ batch.final_quantity }} {{ batch.output_unit }}{% else %}N/A{% endif %}</p>
                 {% if batch.projected_yield and batch.final_quantity %}
-                    {% set acc = ((batch.final_quantity - batch.projected_yield) / batch.projected_yield * 100) if batch.projected_yield else None %}
-                    <p><strong>Batch Accuracy:</strong> {{ acc|round(1) }}% vs plan</p>
+                    {% set acc = (batch.final_quantity / batch.projected_yield * 100) if batch.projected_yield else None %}
+                    <p><strong>Batch Accuracy:</strong> {{ acc|round(1) }}%</p>
                 {% endif %}
                            {% if batch.is_perishable %}
                     <p><strong>Shelf Life:</strong> {{ batch.shelf_life_days }} days</p>
