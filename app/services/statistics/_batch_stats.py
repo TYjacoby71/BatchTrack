@@ -14,6 +14,7 @@ from ...extensions import db
 from ...models.statistics import BatchStats
 from ...models import Batch
 from ...utils.timezone_utils import TimezoneUtils
+from ...services.freshness_service import FreshnessService
 
 logger = logging.getLogger(__name__)
 
@@ -80,7 +81,34 @@ class BatchStatisticsService:
                 duration = batch.completed_at - batch.started_at
                 batch_stats.actual_duration_minutes = int(duration.total_seconds() / 60)
             
+            # Compute and emit freshness metrics for analytics/warehouse
+            batch = Batch.query.get(batch_id)
+            freshness_summary = FreshnessService.compute_batch_freshness(batch) if batch else None
+
+            # Attach lightweight metrics to stats for downstream reporting (not persisted fields)
+            overall_freshness = getattr(freshness_summary, 'overall_freshness_percent', None) if freshness_summary else None
+
             db.session.commit()
+
+            # Emit domain event for analytics pipeline
+            try:
+                from ...services.event_emitter import EventEmitter
+                EventEmitter.emit(
+                    event_name='batch_metrics_computed',
+                    properties={
+                        'batch_id': batch_id,
+                        'actual_fill_efficiency': batch_stats.actual_fill_efficiency,
+                        'yield_variance_percentage': batch_stats.yield_variance_percentage,
+                        'cost_variance_percentage': batch_stats.cost_variance_percentage,
+                        'overall_freshness_percent': overall_freshness
+                    },
+                    organization_id=batch.organization_id if batch else None,
+                    user_id=batch.created_by if batch else None,
+                    entity_type='batch',
+                    entity_id=batch_id
+                )
+            except Exception:
+                pass
             logger.info(f"Updated batch stats for completed batch {batch_id}")
             return batch_stats
             

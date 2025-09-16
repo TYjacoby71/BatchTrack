@@ -36,8 +36,78 @@ def get_batch_remaining_details(batch_id):
 def get_batch_inventory_summary(batch_id):
     """Get batch inventory summary for FIFO modal"""
     try:
-        from ..api.fifo_routes import get_batch_inventory_summary as fifo_summary
-        return fifo_summary(batch_id)
+        batch = Batch.scoped().filter_by(id=batch_id).first()
+        if not batch:
+            return jsonify({'success': False, 'error': 'Batch not found'}), 404
+
+        # Validate access
+        is_valid, error_msg = BatchService.validate_batch_access(batch, 'view')
+        if not is_valid:
+            return jsonify({'success': False, 'error': error_msg}), 403
+
+        # Collect all inventory items used in this batch
+        inventory_items = []
+        
+        # Regular batch ingredients
+        for ing in batch.batch_ingredients:
+            inventory_items.append({
+                'inventory_id': ing.inventory_item_id,
+                'name': ing.inventory_item.name,
+                'quantity_used': float(ing.quantity_used or 0),
+                'unit': ing.unit,
+                'cost_per_unit': float(ing.cost_per_unit or 0),
+                'total_cost': float(ing.quantity_used or 0) * float(ing.cost_per_unit or 0),
+                'type': 'ingredient'
+            })
+        
+        # Extra ingredients
+        for extra in batch.extra_ingredients:
+            inventory_items.append({
+                'inventory_id': extra.inventory_item_id,
+                'name': extra.inventory_item.name,
+                'quantity_used': float(extra.quantity_used or 0),
+                'unit': extra.unit,
+                'cost_per_unit': float(extra.cost_per_unit or 0),
+                'total_cost': float(extra.quantity_used or 0) * float(extra.cost_per_unit or 0),
+                'type': 'extra_ingredient'
+            })
+        
+        # Regular containers
+        for container in batch.containers:
+            inventory_items.append({
+                'inventory_id': container.container_id,
+                'name': container.container.name,
+                'quantity_used': float(container.quantity_used or 0),
+                'unit': 'count',
+                'cost_per_unit': float(container.cost_each or 0),
+                'total_cost': float(container.quantity_used or 0) * float(container.cost_each or 0),
+                'type': 'container'
+            })
+        
+        # Extra containers
+        for extra_container in batch.extra_containers:
+            inventory_items.append({
+                'inventory_id': extra_container.container_id,
+                'name': extra_container.container.name,
+                'quantity_used': float(extra_container.quantity_used or 0),
+                'unit': 'count',
+                'cost_per_unit': float(extra_container.cost_each or 0),
+                'total_cost': float(extra_container.quantity_used or 0) * float(extra_container.cost_each or 0),
+                'type': 'extra_container'
+            })
+
+        # Calculate totals
+        total_cost = sum(item['total_cost'] for item in inventory_items)
+        
+        return jsonify({
+            'success': True,
+            'batch_label': batch.label_code,
+            'batch_status': batch.status,
+            'inventory_items': inventory_items,
+            'total_items': len(inventory_items),
+            'total_cost': total_cost
+        })
+
     except Exception as e:
         logger.error(f"Error in get_batch_inventory_summary: {str(e)}")
         return jsonify({'success': False, 'error': str(e)}), 500
@@ -142,9 +212,12 @@ def view_batch_record(batch_identifier):
         nav_data = BatchManagementService.get_batch_navigation_data(batch)
 
         print(f"DEBUG: Rendering batch record view for {batch.status} batch")
+        from ...services.freshness_service import FreshnessService
+        freshness_summary = FreshnessService.compute_batch_freshness(batch)
         return render_template('pages/batches/view_batch.html',
             batch=batch,
             current_time=datetime.now(),
+            freshness_summary=freshness_summary,
             **nav_data)
 
     except Exception as e:

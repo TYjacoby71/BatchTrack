@@ -143,7 +143,26 @@ def _complete_batch_internal(batch_id, form_data):
             if not product_id or not variant_id:
                 return False, 'Product and variant selection required'
 
-            _create_product_output(batch, product_id, variant_id, final_quantity, output_unit, expiration_date, form_data)
+            output_metrics = _create_product_output(batch, product_id, variant_id, final_quantity, output_unit, expiration_date, form_data)
+
+        # Persist fill efficiency to BatchStats if available (post output creation)
+        try:
+            from app.models.statistics import BatchStats as _BatchStats
+            stats = _BatchStats.query.filter_by(batch_id=batch.id).first()
+            if stats and batch.final_quantity and output_unit:
+                # If product output path computed container volume, use it
+                total_container_volume = None
+                if isinstance(locals().get('output_metrics'), dict):
+                    total_container_volume = output_metrics.get('total_container_volume')
+
+                if total_container_volume and total_container_volume > 0:
+                    actual_in_containers = min(float(batch.final_quantity), float(total_container_volume))
+                    stats.actual_fill_efficiency = (actual_in_containers / float(total_container_volume)) * 100.0
+                else:
+                    # Fallback: if no containers involved, treat as N/A (leave default)
+                    pass
+        except Exception:
+            pass
 
         try:
             db.session.commit()
@@ -265,6 +284,7 @@ def _create_product_output(batch, product_id, variant_id, final_quantity, output
             _create_bulk_sku(product, variant, bulk_quantity, bulk_unit, expiration_date, batch, ingredient_unit_cost)
 
         logger.info(f"Created product output for batch {batch.label_code}: {len(container_skus)} container SKUs, {bulk_quantity} {bulk_unit if bulk_quantity > 0 else ''} bulk")
+        return {'total_container_volume': total_container_volume}
 
     except Exception as e:
         logger.error(f"Error creating product output: {str(e)}")

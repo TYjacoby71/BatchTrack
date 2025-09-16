@@ -67,16 +67,21 @@ async function fetchFifoDetails(inventoryId, batchId) {
 async function fetchBatchInventorySummary(batchId) {
     try {
         const response = await fetch(`/api/batch-inventory-summary/${batchId}`);
-        const data = await response.json();
-
-        if (response.ok) {
-            renderBatchSummary(data);
-        } else {
-            showFifoError(data.error || 'Failed to load batch summary');
+        
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
         }
+        
+        const contentType = response.headers.get('content-type');
+        if (!contentType || !contentType.includes('application/json')) {
+            throw new Error('Response is not JSON');
+        }
+        
+        const data = await response.json();
+        renderBatchSummary(data);
     } catch (error) {
         console.error('Error fetching batch summary:', error);
-        showFifoError('Failed to load batch source list');
+        showFifoError('Failed to load batch inventory summary');
     }
 }
 
