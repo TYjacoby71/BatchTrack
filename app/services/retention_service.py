@@ -4,7 +4,7 @@ from flask_login import current_user
 
 from ..extensions import db
 from ..models import Recipe, Batch, Organization
-from ..models.retention import RetentionDeletionQueue, StorageAddonPurchase
+from ..models.retention import RetentionDeletionQueue, StorageAddonPurchase, StorageAddonSubscription
 
 
 class RetentionService:
@@ -15,13 +15,19 @@ class RetentionService:
         if not org or not org.tier:
             return None
         base = org.tier.data_retention_days or 0
-        # Sum active storage add-on days
-        addon_days = 0
-        try:
-            addon_days = sum(p.retention_extension_days for p in StorageAddonPurchase.query.filter_by(organization_id=org.id).all())
-        except Exception:
+        # Subscription add-on active? If so, treat as unlimited add-on days (or use tier extension days)
+        sub_active = StorageAddonSubscription.query.filter_by(organization_id=org.id, status='active').first()
+        if sub_active:
+            extension_days = getattr(org.tier, 'storage_addon_retention_days', None) or 365
+            total = base + extension_days
+        else:
+            # Sum one-time purchases as fallback
             addon_days = 0
-        total = base + addon_days
+            try:
+                addon_days = sum(p.retention_extension_days for p in StorageAddonPurchase.query.filter_by(organization_id=org.id).all())
+            except Exception:
+                addon_days = 0
+            total = base + addon_days
         return total if total > 0 else None
 
     @staticmethod

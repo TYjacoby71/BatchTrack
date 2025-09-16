@@ -69,7 +69,7 @@ def upgrade():
 @billing_bp.route('/storage')
 @login_required
 def storage_addon():
-    """Redirect to Stripe checkout for storage add-on if configured on the tier."""
+    """Redirect to Stripe subscription checkout for storage add-on if configured on the tier."""
     organization = current_user.organization
     if not organization or not organization.subscription_tier:
         flash('No organization or tier found', 'error')
@@ -86,8 +86,8 @@ def storage_addon():
             flash('Billing temporarily unavailable', 'error')
             return redirect(url_for('billing.upgrade'))
 
-        # Create a one-time checkout session for the storage add-on price lookup key
-        session = StripeService.create_one_time_checkout_by_lookup_key(
+        # Create a subscription checkout session for the storage add-on price lookup key
+        session = StripeService.create_subscription_checkout_by_lookup_key(
             lookup_key,
             current_user.email,
             success_url=url_for('billing.upgrade', _external=True),

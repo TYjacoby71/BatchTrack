@@ -42,3 +42,18 @@ class StorageAddonPurchase(db.Model):
 
     organization = db.relationship('Organization')
 
+
+class StorageAddonSubscription(db.Model):
+    __tablename__ = 'storage_addon_subscription'
+
+    id = db.Column(db.Integer, primary_key=True)
+    organization_id = db.Column(db.Integer, db.ForeignKey('organization.id'), nullable=False)
+    stripe_subscription_id = db.Column(db.String(255), nullable=False, unique=True)
+    price_lookup_key = db.Column(db.String(128), nullable=True)
+    status = db.Column(db.String(32), nullable=False, default='active')  # active, trialing, past_due, canceled
+    current_period_end = db.Column(db.DateTime, nullable=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    organization = db.relationship('Organization')
+
