@@ -269,10 +269,24 @@
                     <div class="testimonial-card">
                         {% set r = (marketing_reviews[0] if marketing_reviews|length > 0 else None) %}
                         {% if r %}
-                        <div class="placeholder-img mb-3" style="height: 80px;">{{ r.logo or '[Logo]' }}</div>
+                        <div class="mb-3" style="height: 80px; display: flex; align-items: center; justify-content: center;">
+                            {% if r.logo %}
+                            <img src="{{ url_for('static', filename='images/homepage/testimonials/customer-1-logo.png') }}" 
+                                 alt="{{ r.name }} Logo" class="img-fluid" style="max-height: 60px;"
+                                 onerror="this.style.display='none'; this.nextElementSibling.style.display='flex'">
+                            {% endif %}
+                            <div class="placeholder-img" style="{% if r.logo %}display: none;{% endif %}">{{ r.logo or '[Logo]' }}</div>
+                        </div>
                         <p class="fst-italic">"{{ r.quote }}"</p>
                         <div class="d-flex align-items-center">
-                            <div class="placeholder-img me-3" style="width: 50px; height: 50px; border-radius: 50%;">{{ r.photo or '[Photo]' }}</div>
+                            <div class="me-3" style="width: 50px; height: 50px;">
+                                {% if r.photo %}
+                                <img src="{{ url_for('static', filename='images/homepage/testimonials/customer-1-photo.jpg') }}" 
+                                     alt="{{ r.name }}" class="rounded-circle img-fluid" style="width: 50px; height: 50px; object-fit: cover;"
+                                     onerror="this.style.display='none'; this.nextElementSibling.style.display='flex'">
+                                {% endif %}
+                                <div class="placeholder-img rounded-circle" style="width: 50px; height: 50px; {% if r.photo %}display: none;{% endif %}">{{ r.photo or '[Photo]' }}</div>
+                            </div>
                             <div>
                                 <strong>{{ r.name }}</strong><br>
                                 <small class="text-muted">{{ r.title }}</small>
@@ -280,7 +294,7 @@
                         </div>
                         {% else %}
                         <div class="placeholder-img mb-3" style="height: 80px;">[Your brand here]</div>
-                        <p class="fst-italic">“Your review could be featured here.”</p>
+                        <p class="fst-italic">"Your review could be featured here."</p>
                         {% endif %}
                     </div>
                 </div>
@@ -289,10 +303,24 @@
                     <div class="testimonial-card">
                         {% set r = (marketing_reviews[1] if marketing_reviews|length > 1 else None) %}
                         {% if r %}
-                        <div class="placeholder-img mb-3" style="height: 80px;">{{ r.logo or '[Logo]' }}</div>
+                        <div class="mb-3" style="height: 80px; display: flex; align-items: center; justify-content: center;">
+                            {% if r.logo %}
+                            <img src="{{ url_for('static', filename='images/homepage/testimonials/customer-2-logo.png') }}" 
+                                 alt="{{ r.name }} Logo" class="img-fluid" style="max-height: 60px;"
+                                 onerror="this.style.display='none'; this.nextElementSibling.style.display='flex'">
+                            {% endif %}
+                            <div class="placeholder-img" style="{% if r.logo %}display: none;{% endif %}">{{ r.logo or '[Logo]' }}</div>
+                        </div>
                         <p class="fst-italic">"{{ r.quote }}"</p>
                         <div class="d-flex align-items-center">
-                            <div class="placeholder-img me-3" style="width: 50px; height: 50px; border-radius: 50%;">{{ r.photo or '[Photo]' }}</div>
+                            <div class="me-3" style="width: 50px; height: 50px;">
+                                {% if r.photo %}
+                                <img src="{{ url_for('static', filename='images/homepage/testimonials/customer-2-photo.jpg') }}" 
+                                     alt="{{ r.name }}" class="rounded-circle img-fluid" style="width: 50px; height: 50px; object-fit: cover;"
+                                     onerror="this.style.display='none'; this.nextElementSibling.style.display='flex'">
+                                {% endif %}
+                                <div class="placeholder-img rounded-circle" style="width: 50px; height: 50px; {% if r.photo %}display: none;{% endif %}">{{ r.photo or '[Photo]' }}</div>
+                            </div>
                             <div>
                                 <strong>{{ r.name }}</strong><br>
                                 <small class="text-muted">{{ r.title }}</small>
@@ -300,7 +328,7 @@
                         </div>
                         {% else %}
                         <div class="placeholder-img mb-3" style="height: 80px;">[Your brand here]</div>
-                        <p class="fst-italic">“Your review could be featured here.”</p>
+                        <p class="fst-italic">"Your review could be featured here."</p>
                         {% endif %}
                     </div>
                 </div>
@@ -309,10 +337,24 @@
                     <div class="testimonial-card">
                         {% set r = (marketing_reviews[2] if marketing_reviews|length > 2 else None) %}
                         {% if r %}
-                        <div class="placeholder-img mb-3" style="height: 80px;">{{ r.logo or '[Logo]' }}</div>
+                        <div class="mb-3" style="height: 80px; display: flex; align-items: center; justify-content: center;">
+                            {% if r.logo %}
+                            <img src="{{ url_for('static', filename='images/homepage/testimonials/customer-3-logo.png') }}" 
+                                 alt="{{ r.name }} Logo" class="img-fluid" style="max-height: 60px;"
+                                 onerror="this.style.display='none'; this.nextElementSibling.style.display='flex'">
+                            {% endif %}
+                            <div class="placeholder-img" style="{% if r.logo %}display: none;{% endif %}">{{ r.logo or '[Logo]' }}</div>
+                        </div>
                         <p class="fst-italic">"{{ r.quote }}"</p>
                         <div class="d-flex align-items-center">
-                            <div class="placeholder-img me-3" style="width: 50px; height: 50px; border-radius: 50%;">{{ r.photo or '[Photo]' }}</div>
+                            <div class="me-3" style="width: 50px; height: 50px;">
+                                {% if r.photo %}
+                                <img src="{{ url_for('static', filename='images/homepage/testimonials/customer-3-photo.jpg') }}" 
+                                     alt="{{ r.name }}" class="rounded-circle img-fluid" style="width: 50px; height: 50px; object-fit: cover;"
+                                     onerror="this.style.display='none'; this.nextElementSibling.style.display='flex'">
+                                {% endif %}
+                                <div class="placeholder-img rounded-circle" style="width: 50px; height: 50px; {% if r.photo %}display: none;{% endif %}">{{ r.photo or '[Photo]' }}</div>
+                            </div>
                             <div>
                                 <strong>{{ r.name }}</strong><br>
                                 <small class="text-muted">{{ r.title }}</small>
@@ -320,7 +362,7 @@
                         </div>
                         {% else %}
                         <div class="placeholder-img mb-3" style="height: 80px;">[Your brand here]</div>
-                        <p class="fst-italic">“Your review could be featured here.”</p>
+                        <p class="fst-italic">"Your review could be featured here."</p>
                         {% endif %}
                     </div>
                 </div>
@@ -562,7 +604,7 @@
                         <h5 class="fw-bold">Site Under Development</h5>
                         <p class="text-muted">BatchTrack is currently in active development. You're welcome to try signing up in the interim!</p>
                     </div>
-                    
+
                     <div class="d-grid gap-2">
                         <a href="{{ url_for('auth.signup', source='homepage_trial') }}" class="btn btn-primary btn-lg">
                             <i class="fas fa-rocket me-2"></i>Try Signing Up Anyway
@@ -672,15 +714,15 @@
         // Waitlist form submission
         async function submitWaitlist(event) {
             event.preventDefault();
-            
+
             const submitBtn = document.getElementById('waitlistSubmitBtn');
             const form = document.getElementById('waitlistForm');
             const successDiv = document.getElementById('waitlistSuccess');
-            
+
             // Disable submit button
             submitBtn.disabled = true;
             submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Joining...';
-            
+
             try {
                 const formData = new FormData(form);
                 const response = await fetch('/api/waitlist', {
@@ -695,9 +737,9 @@
                         business_type: formData.get('business_type')
                     })
                 });
-                
+
                 const result = await response.json();
-                
+
                 if (response.ok) {
                     form.style.display = 'none';
                     successDiv.style.display = 'block';
@@ -707,7 +749,7 @@
             } catch (error) {
                 alert('Sorry, there was an error joining the waitlist. Please try again.');
                 console.error('Waitlist error:', error);
-                
+
                 // Re-enable submit button
                 submitBtn.disabled = false;
                 submitBtn.innerHTML = '<i class="fas fa-paper-plane me-2"></i>Join Waitlist';
@@ -718,7 +760,7 @@
         document.addEventListener('DOMContentLoaded', function() {
             const developmentModal = document.getElementById('developmentModal');
             const waitlistModal = document.getElementById('waitlistModal');
-            
+
             developmentModal.addEventListener('hidden.bs.modal', function () {
                 // Check if we should open the waitlist modal
                 const waitlistTrigger = document.querySelector('[data-bs-target="#waitlistModal"]');
@@ -728,7 +770,7 @@
                     waitlistTrigger.removeAttribute('data-triggered');
                 }
             });
-            
+
             // Mark trigger when waitlist button is clicked from development modal
             document.querySelector('#developmentModal [data-bs-target="#waitlistModal"]').addEventListener('click', function() {
                 this.setAttribute('data-triggered', 'true');
