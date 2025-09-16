@@ -494,9 +494,61 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 });
 
-let currentContainerId = null;
-let currentContainerItemId = null;
-let currentQuantity = 0;
+// Function to open the batch inventory summary modal
+function openBatchInventorySummary(batchId) {
+    loadBatchInventorySummary(batchId);
+    $('#batchInventorySummaryModal').modal('show');
+}
+
+// Load batch inventory summary
+async function loadBatchInventorySummary(batchId) {
+    try {
+        const response = await fetch(`/batches/api/batch-inventory-summary/${batchId}`);
+
+        if (!response.ok) {
+            const errorText = await response.text();
+            console.error('Error fetching batch summary:', response.status, errorText);
+            return;
+        }
+
+        const data = await response.json();
+
+        if (!data.success) {
+            console.error('Error fetching batch summary:', data.error || 'Unknown error');
+            return;
+        }
+
+        // Process the data and update the UI
+        updateInventorySummaryUI(data);
+    } catch (error) {
+        console.error('Error fetching batch summary:', error);
+    }
+}
+
+// Placeholder for the UI update function
+function updateInventorySummaryUI(data) {
+    const tbody = document.querySelector('#batchInventorySummaryModal tbody');
+    tbody.innerHTML = ''; // Clear existing rows
+
+    if (data.summary && data.summary.length > 0) {
+        data.summary.forEach(item => {
+            const row = document.createElement('tr');
+            row.innerHTML = `
+                <td>${item.item_name}</td>
+                <td>${item.amount_used}</td>
+                <td>${item.unit}</td>
+                <td>${item.cost_per_unit ? '$' + parseFloat(item.cost_per_unit).toFixed(2) : '&mdash;'}</td>
+                <td>${item.line_cost ? '$' + parseFloat(item.line_cost).toFixed(2) : '&mdash;'}</td>
+                <td>${item.freshness_percent ? item.freshness_percent + '%' : '&mdash;'}</td>
+            `;
+            tbody.appendChild(row);
+        });
+    } else {
+        const row = document.createElement('tr');
+        row.innerHTML = '<td colspan="6" class="text-center">No inventory summary data available.</td>';
+        tbody.appendChild(row);
+    }
+}
 
 // Timer management functions
 function startTimer(name, duration) {
