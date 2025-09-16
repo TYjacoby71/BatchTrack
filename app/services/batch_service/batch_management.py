@@ -9,6 +9,7 @@ from app.services.stock_check.core import UniversalStockCheckService
 from app.services.stock_check.types import StockCheckRequest, InventoryCategory
 from app.models.recipe import RecipeIngredient
 from app.utils.unit_utils import get_global_unit_list
+from app.services.freshness_service import FreshnessService
 
 logger = logging.getLogger(__name__)
 
@@ -164,12 +165,16 @@ class BatchManagementService(BaseService):
                             'original_used': container_usage.quantity_used or 0
                         })
 
+            # Freshness summary (smart report) for inventory used in this batch
+            freshness_summary = FreshnessService.compute_batch_freshness(batch)
+
             return {
                 'ingredients': ingredients,
                 'containers': containers,
                 'recipe': recipe,
                 'units': units,
                 'cost_summary': cost_summary,
+                'freshness_summary': freshness_summary,
                 'all_ingredients': all_ingredients,
                 'inventory_items': inventory_items,
                 'products': products,

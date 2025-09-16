@@ -147,9 +147,12 @@ def view_batch_record(batch_identifier):
         nav_data = BatchManagementService.get_batch_navigation_data(batch)
 
         print(f"DEBUG: Rendering batch record view for {batch.status} batch")
+        from ...services.freshness_service import FreshnessService
+        freshness_summary = FreshnessService.compute_batch_freshness(batch)
         return render_template('pages/batches/view_batch.html',
             batch=batch,
             current_time=datetime.now(),
+            freshness_summary=freshness_summary,
             **nav_data)
 
     except Exception as e:
@@ -228,12 +231,15 @@ def view_batch_in_progress(batch_identifier):
         # Get timers with proper organization scoping
         timers, has_active_timers = BatchService.get_batch_timers(batch.id)
 
+        from ...services.freshness_service import FreshnessService
+        freshness_summary = FreshnessService.compute_batch_freshness(batch)
         return render_template('pages/batches/batch_in_progress.html',
             batch=batch,
             timers=timers,
             now=TimezoneUtils.utc_now(),
             has_active_timers=has_active_timers,
             timedelta=timedelta,
+            freshness_summary=freshness_summary,
             **nav_data,
             **context_data)
 

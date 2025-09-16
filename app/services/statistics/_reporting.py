@@ -14,6 +14,7 @@ from ...models.statistics import (
     UserStats, OrganizationStats, BatchStats, RecipeStats,
     InventoryEfficiencyStats, OrganizationLeaderboardStats
 )
+from ...models.freshness_snapshot import FreshnessSnapshot
 
 logger = logging.getLogger(__name__)
 
@@ -54,7 +55,8 @@ class ReportingService:
                 'performance_metrics': {
                     'recent_avg_efficiency': round(avg_efficiency, 2),
                     'total_batches_this_month': ReportingService._get_monthly_batch_count(organization_id),
-                    'success_rate': ReportingService._calculate_success_rate(organization_id)
+                    'success_rate': ReportingService._calculate_success_rate(organization_id),
+                    'avg_item_freshness_score': ReportingService._get_recent_avg_item_freshness(organization_id)
                 },
                 'top_recipes': [
                     {
@@ -173,6 +175,22 @@ class ReportingService:
             
             if total_batches > 0:
                 return round((org_stats.completed_batches / total_batches) * 100, 2)
+            return 0.0
+    @staticmethod
+    def _get_recent_avg_item_freshness(organization_id: int) -> float:
+        """Get recent average freshness efficiency score from snapshots (last 7 days)."""
+        try:
+            since = datetime.utcnow() - timedelta(days=7)
+            snaps = FreshnessSnapshot.query.filter(
+                FreshnessSnapshot.organization_id == organization_id,
+                FreshnessSnapshot.snapshot_date >= since.date()
+            ).all()
+            scores = [s.freshness_efficiency_score for s in snaps if s.freshness_efficiency_score is not None]
+            if not scores:
+                return 0.0
+            return round(sum(scores) / len(scores), 2)
+        except Exception as e:
+            logger.error(f"Error computing avg item freshness: {e}")
             return 0.0
             
         except Exception as e:

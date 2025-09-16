@@ -454,6 +454,21 @@ class BatchOperationsService(BaseService):
                     from app.models.statistics import BatchStats as _BatchStats
                     stats = _BatchStats.query.filter_by(batch_id=batch_id).first()
                     containment_efficiency = getattr(stats, 'actual_fill_efficiency', None) if stats else None
+                    # Compute accuracy (projected vs final yield)
+                    accuracy_pct = None
+                    if refreshed and refreshed.projected_yield and refreshed.final_quantity:
+                        try:
+                            if float(refreshed.projected_yield) > 0:
+                                accuracy_pct = ((float(refreshed.final_quantity) - float(refreshed.projected_yield)) / float(refreshed.projected_yield)) * 100.0
+                        except Exception:
+                            accuracy_pct = None
+                    # Compute overall freshness for event payload
+                    try:
+                        from app.services.freshness_service import FreshnessService
+                        freshness_summary = FreshnessService.compute_batch_freshness(refreshed)
+                        overall_freshness = getattr(freshness_summary, 'overall_freshness_percent', None)
+                    except Exception:
+                        overall_freshness = None
                     EventEmitter.emit(
                         event_name='batch_completed',
                         properties={
@@ -461,7 +476,9 @@ class BatchOperationsService(BaseService):
                             'final_quantity': refreshed.final_quantity,
                             'output_unit': refreshed.output_unit,
                             'completed_at': (refreshed.completed_at.isoformat() if refreshed.completed_at else None),
-                            'containment_efficiency': containment_efficiency
+                            'containment_efficiency': containment_efficiency,
+                            'yield_accuracy_variance_pct': accuracy_pct,
+                            'overall_freshness_percent': overall_freshness
                         },
                         organization_id=refreshed.organization_id,
                         user_id=refreshed.created_by,
