@@ -241,6 +241,12 @@ def edit_tier(tier_id):
             tier.stripe_lookup_key = stripe_key or None
             tier.whop_product_key = whop_key or None
 
+            # Retention fields
+            data_retention_days_raw = request.form.get('data_retention_days', '').strip()
+            retention_notice_days_raw = request.form.get('retention_notice_days', '').strip()
+            tier.data_retention_days = int(data_retention_days_raw) if data_retention_days_raw.isdigit() else None
+            tier.retention_notice_days = int(retention_notice_days_raw) if retention_notice_days_raw.isdigit() else None
+
             # Update permissions
             permission_ids = request.form.getlist('permissions', type=int)
             tier.permissions = Permission.query.filter(Permission.id.in_(permission_ids)).all()
