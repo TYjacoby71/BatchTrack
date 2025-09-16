@@ -66,18 +66,21 @@ async function fetchFifoDetails(inventoryId, batchId) {
 
 async function fetchBatchInventorySummary(batchId) {
     try {
-        const response = await fetch(`/api/batch-inventory-summary/${batchId}`);
+        // Use the batches-scoped API route (blueprint is mounted at /batches)
+        const response = await fetch(`/batches/api/batch-inventory-summary/${batchId}`);
         
         if (!response.ok) {
-            throw new Error(`HTTP error! status: ${response.status}`);
+            // Attempt to extract error body if available
+            let errorText = `HTTP ${response.status}`;
+            try { errorText = await response.text(); } catch (_) { /* ignore */ }
+            throw new Error(`Failed to fetch batch inventory summary: ${errorText}`);
         }
-        
-        const contentType = response.headers.get('content-type');
-        if (!contentType || !contentType.includes('application/json')) {
-            throw new Error('Response is not JSON');
-        }
-        
+
+        // Defensive: still try to parse JSON even if header is missing/mis-set
         const data = await response.json();
+        if (!data || typeof data !== 'object') {
+            throw new Error('Invalid response payload');
+        }
         renderBatchSummary(data);
     } catch (error) {
         console.error('Error fetching batch summary:', error);
