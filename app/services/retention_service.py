@@ -4,7 +4,7 @@ from flask_login import current_user
 
 from ..extensions import db
 from ..models import Recipe, Batch, Organization
-from ..models.retention import RetentionDeletionQueue
+from ..models.retention import RetentionDeletionQueue, StorageAddonPurchase
 
 
 class RetentionService:
@@ -14,7 +14,15 @@ class RetentionService:
     def get_org_retention_days(org: Organization) -> int | None:
         if not org or not org.tier:
             return None
-        return org.tier.data_retention_days
+        base = org.tier.data_retention_days or 0
+        # Sum active storage add-on days
+        addon_days = 0
+        try:
+            addon_days = sum(p.retention_extension_days for p in StorageAddonPurchase.query.filter_by(organization_id=org.id).all())
+        except Exception:
+            addon_days = 0
+        total = base + addon_days
+        return total if total > 0 else None
 
     @staticmethod
     def find_at_risk_recipes(org: Organization) -> List[Recipe]:

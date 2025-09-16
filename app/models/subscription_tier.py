@@ -32,6 +32,8 @@ class SubscriptionTier(db.Model):
     data_retention_days = db.Column(db.Integer, nullable=True)
     # Days before deletion to start user notification campaign (e.g., 30)
     retention_notice_days = db.Column(db.Integer, nullable=True)
+    # Optional: number of days a storage add-on purchase extends retention
+    storage_addon_retention_days = db.Column(db.Integer, nullable=True)
 
     # Visibility control
     is_customer_facing = db.Column(db.Boolean, default=True, nullable=False)

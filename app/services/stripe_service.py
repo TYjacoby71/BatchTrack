@@ -108,8 +108,51 @@ class StripeService:
     @staticmethod
     def _handle_checkout_completed(event):
         """Handle checkout.session.completed event"""
-        # Implementation moved from routes - this would contain the signup completion logic
-        pass
+        try:
+            obj = event.get('data', {}).get('object', {})
+            session_id = obj.get('id')
+            customer_email = (obj.get('customer_details') or {}).get('email')
+            if not StripeService.initialize_stripe():
+                return
+            import stripe
+            # Expand line items to read price lookup keys
+            checkout = stripe.checkout.Session.retrieve(session_id, expand=['line_items.data.price'])
+            line_items = checkout.get('line_items', {}).get('data', [])
+            price = line_items[0]['price'] if line_items else None
+            lookup_key = price.get('id') if price else None  # In real Stripe, lookup_key is on Price; id used if lookup_key not accessible here
+
+            # Identify organization by customer email
+            from flask import current_app
+            from ..extensions import db
+            from ..models.models import Organization, User
+            from ..models.subscription_tier import SubscriptionTier
+            from ..models.retention import StorageAddonPurchase
+
+            org = None
+            try:
+                user = User.query.filter_by(email=customer_email).first()
+                org = user.organization if user else None
+            except Exception:
+                org = None
+            if not org:
+                return
+
+            # Check if purchase matches tier's storage add-on
+            tier: SubscriptionTier = org.subscription_tier
+            if tier and getattr(tier, 'stripe_storage_lookup_key', None) in [lookup_key, price.get('lookup_key') if price else None]:
+                # Determine extension days; default to 365 if configured, else 365
+                extension_days = getattr(tier, 'storage_addon_retention_days', None) or 365
+                purchase = StorageAddonPurchase(
+                    organization_id=org.id,
+                    stripe_session_id=session_id,
+                    stripe_price_lookup_key=lookup_key,
+                    retention_extension_days=extension_days
+                )
+                db.session.add(purchase)
+                db.session.commit()
+        except Exception as e:
+            logger.error(f"Error handling checkout.session.completed: {e}")
+            return
 
     @staticmethod
     def _handle_subscription_created(event):

@@ -29,3 +29,16 @@ class RetentionDeletionQueue(db.Model):
         db.UniqueConstraint('organization_id', 'recipe_id', name='uq_retention_queue_org_recipe'),
     )
 
+
+class StorageAddonPurchase(db.Model):
+    __tablename__ = 'storage_addon_purchase'
+
+    id = db.Column(db.Integer, primary_key=True)
+    organization_id = db.Column(db.Integer, db.ForeignKey('organization.id'), nullable=False)
+    stripe_session_id = db.Column(db.String(255), nullable=True)
+    stripe_price_lookup_key = db.Column(db.String(128), nullable=True)
+    retention_extension_days = db.Column(db.Integer, default=0)
+    purchased_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+    organization = db.relationship('Organization')
+
