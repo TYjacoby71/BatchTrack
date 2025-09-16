@@ -148,13 +148,15 @@ function renderFifoDetails(data) {
 }
 
 function renderBatchSummary(data) {
-    const { batch, ingredient_summary } = data;
+    const { batch, ingredient_summary, freshness_summary } = data;
 
     let html = `
         <div class="mb-3">
             <h6>Batch: ${batch.label_code}</h6>
             <p class="text-muted">Recipe: ${batch.recipe_name} • Scale: ${batch.scale}</p>
         </div>
+
+        ${renderOverallFreshness(freshness_summary)}
 
         <div class="mb-3">
             <h6>Inventory Sources Summary</h6>
@@ -171,12 +173,14 @@ function renderBatchSummary(data) {
                         <th>Used</th>
                         <th>Age</th>
                         <th>Life Remaining</th>
+                        <th>Weighted Freshness</th>
                     </tr>
                 </thead>
                 <tbody>
         `;
 
         ingredient_summary.forEach(ingredient => {
+            const itemFreshness = getItemFreshnessPercent(freshness_summary, ingredient.inventory_item_id);
             ingredient.fifo_usage.forEach(usage => {
                 const ageText = usage.age_days ? `${usage.age_days} days` : 'N/A';
                 const lifeRemainingDisplay = usage.life_remaining_percent !== null
@@ -191,6 +195,7 @@ function renderBatchSummary(data) {
                         <td>${usage.quantity_used} ${usage.unit}</td>
                         <td>${ageText}</td>
                         <td>${lifeRemainingDisplay}</td>
+                        <td>${itemFreshness !== null ? `${itemFreshness}%` : '&mdash;'}</td>
                     </tr>
                 `;
             });
@@ -208,6 +213,30 @@ function renderBatchSummary(data) {
     html += '</div>';
 
     document.getElementById('fifoModalContent').innerHTML = html;
+}
+
+function renderOverallFreshness(freshness_summary) {
+    if (!freshness_summary || freshness_summary.overall_freshness_percent === null || freshness_summary.overall_freshness_percent === undefined) {
+        return '';
+    }
+    const pct = freshness_summary.overall_freshness_percent;
+    const badge = `<span class="badge ${getLifeBadgeClass(pct)}">${pct}%</span>`;
+    return `
+        <div class="alert alert-info mb-3">
+            <strong>Overall Freshness:</strong> ${badge}
+        </div>
+    `;
+}
+
+function getItemFreshnessPercent(freshness_summary, inventory_item_id) {
+    try {
+        if (!freshness_summary || !freshness_summary.items || !Array.isArray(freshness_summary.items)) return null;
+        const match = freshness_summary.items.find(i => i.inventory_item_id === inventory_item_id);
+        if (!match) return null;
+        return match.weighted_freshness_percent ?? null;
+    } catch (e) {
+        return null;
+    }
 }
 
 function getLifeBadgeClass(percent) {
