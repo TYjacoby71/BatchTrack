@@ -330,6 +330,27 @@
     <script src="{{ url_for('static', filename='js/utils/utils.js') }}"></script>
     <script src="{{ url_for('static', filename='js/inventory/inventory_adjust.js') }}"></script>
     <script src="{{ url_for('static', filename='js/conversion/unit_converter.js') }}"></script>
+    <script>
+    document.addEventListener('DOMContentLoaded', async function() {
+        try {
+            if (!window.drawerProtocol) return;
+            const res = await fetch('/retention/api/check');
+            if (!res.ok) return;
+            const data = await res.json();
+            if (data.needs_drawer) {
+                window.dispatchEvent(new CustomEvent('openDrawer', {
+                    detail: {
+                        modal_url: '/retention/api/modal',
+                        success_event: 'retention.acknowledged',
+                        error_type: 'retention_notice'
+                    }
+                }));
+            }
+        } catch (e) {
+            console.warn('Retention drawer check failed', e);
+        }
+    });
+    </script>
 {% block scripts %}{% endblock %}
     <script src="{{ url_for('static', filename='js/expiration_alerts.js') }}"></script>
     </body>
