@@ -66,7 +66,7 @@ async function fetchFifoDetails(inventoryId, batchId) {
 
 async function fetchBatchInventorySummary(batchId) {
     try {
-        const response = await fetch(`/api/batch-inventory-summary/${batchId}`);
+        const response = await fetch(`/batches/api/batch-inventory-summary/${batchId}`);
 
         if (!response.ok) {
             const errorText = await response.text();
