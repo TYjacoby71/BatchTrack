@@ -13,7 +13,7 @@ logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
 
 class ExpirationService:
-    """Centralized service for expiration calculations and data fetching"""
+    """Centralized service for expiration calculations and data fetching using InventoryLot objects where possible"""
 
     @staticmethod
     def calculate_expiration_date(start_date: datetime, shelf_life_days: int) -> datetime:
@@ -176,78 +176,58 @@ class ExpirationService:
 
     @staticmethod
     def _query_fifo_entries(expired=False, days_ahead: int = None):
-        """Query FIFO entries based on expiration criteria - only perishable items"""
+        """Query inventory lots based on expiration criteria for perishable items"""
         from ...utils.timezone_utils import TimezoneUtils
-        from datetime import timezone
+        from app.models.inventory_lot import InventoryLot
 
-        # Use UTC for all time comparisons
         now_utc = TimezoneUtils.utc_now()
 
-        base_filter = [
-            InventoryHistory.is_perishable == True,  # Only perishable items
-            InventoryHistory.remaining_quantity > 0,
-            InventoryItem.organization_id == current_user.organization_id if current_user.is_authenticated and current_user.organization_id else True
-        ]
+        # Base lot query with remaining quantity and org scoping
+        query = db.session.query(InventoryLot).join(InventoryItem).filter(
+            and_(
+                InventoryLot.remaining_quantity > 0,
+                InventoryItem.is_perishable == True,
+                InventoryItem.organization_id == current_user.organization_id if current_user.is_authenticated and current_user.organization_id else True
+            )
+        )
 
-        # Get FIFO entries
-        fifo_entries = db.session.query(InventoryHistory).join(InventoryItem).filter(and_(*base_filter)).all()
+        # Apply time-based filtering
+        if expired:
+            query = query.filter(
+                and_(
+                    InventoryLot.expiration_date.isnot(None),
+                    InventoryLot.expiration_date < now_utc
+                )
+            )
+        elif days_ahead:
+            future_date_utc = now_utc + timedelta(days=days_ahead)
+            query = query.filter(
+                and_(
+                    InventoryLot.expiration_date.isnot(None),
+                    InventoryLot.expiration_date >= now_utc,
+                    InventoryLot.expiration_date <= future_date_utc
+                )
+            )
 
-        # Filter and calculate expiration dates using the new logic
-        filtered_entries = []
-        for entry in fifo_entries:
-            # Calculate expiration date using proper hierarchy
-            expiration_date = ExpirationService.get_effective_expiration_date(entry)
+        lots = query.order_by(InventoryLot.expiration_date.asc()).all()
 
-            if not expiration_date:
-                continue
+        # Format lot entries for compatibility with templates that expect FIFO-like objects
+        formatted_entries = []
+        for lot in lots:
+            entry_obj = type('Entry', (), {
+                'inventory_item_id': lot.inventory_item_id,
+                'ingredient_name': lot.inventory_item.name if lot.inventory_item else 'Unknown Ingredient',
+                'remaining_quantity': lot.remaining_quantity,
+                'unit': lot.unit,
+                'expiration_date': lot.expiration_date,
+                'fifo_id': lot.id,
+                'fifo_code': lot.fifo_code or f"LOT-{lot.id}",
+                'lot_number': lot.fifo_code or f"LOT-{lot.id}",
+                'expiration_time': lot.expiration_date.strftime('%H:%M:%S') if lot.expiration_date else '00:00:00'
+            })()
+            formatted_entries.append(entry_obj)
 
-            # Ensure both dates are timezone-aware for comparison
-            try:
-                # Convert expiration date to UTC for comparison
-                if expiration_date.tzinfo:
-                    expiration_utc = expiration_date.astimezone(timezone.utc)
-                else:
-                    expiration_utc = expiration_date.replace(tzinfo=timezone.utc)
-
-                # Ensure now_utc is timezone-aware
-                if now_utc.tzinfo is None:
-                    now_utc = now_utc.replace(tzinfo=timezone.utc)
-
-                # Apply time-based filtering using UTC
-                if expired and expiration_utc < now_utc:
-                    # Create entry object for compatibility
-                    entry_obj = type('Entry', (), {
-                        'inventory_item_id': entry.inventory_item_id,
-                        'ingredient_name': entry.inventory_item.name,
-                        'remaining_quantity': entry.remaining_quantity,
-                        'unit': entry.unit,
-                        'expiration_date': expiration_date,  # Keep original for display
-                        'fifo_id': entry.id,
-                        'fifo_code': entry.fifo_code,
-                        'lot_number': entry.fifo_code,
-                        'expiration_time': '00:00:00'
-                    })()
-                    filtered_entries.append(entry_obj)
-                elif days_ahead:
-                    future_date_utc = now_utc + timedelta(days=days_ahead)
-                    if now_utc <= expiration_utc <= future_date_utc:
-                        entry_obj = type('Entry', (), {
-                            'inventory_item_id': entry.inventory_item_id,
-                            'ingredient_name': entry.inventory_item.name,
-                            'remaining_quantity': entry.remaining_quantity,
-                            'unit': entry.unit,
-                            'expiration_date': expiration_date,  # Keep original for display
-                            'fifo_id': entry.id,
-                            'fifo_code': entry.fifo_code,
-                            'lot_number': entry.fifo_code,
-                            'expiration_time': '00:00:00'
-                        })()
-                        filtered_entries.append(entry_obj)
-            except (TypeError, ValueError) as e:
-                logger.warning(f"Timezone comparison error for entry {entry.id}: {e}")
-                continue
-
-        return filtered_entries
+        return formatted_entries
 
     @staticmethod
     def _query_sku_entries(expired=False, days_ahead: int = None):
@@ -338,8 +318,7 @@ class ExpirationService:
 
     @staticmethod
     def get_expired_inventory_items() -> Dict:
-        """Get all expired inventory items across the system using dynamic expiration calculation"""
-        # Use the same logic as the private methods but for expired items
+        """Get all expired inventory items using InventoryLot objects and legacy SKU history for products"""
         expired_fifo_entries = ExpirationService._query_fifo_entries(expired=True)
         expired_sku_entries = ExpirationService._query_sku_entries(expired=True)
 
@@ -357,8 +336,7 @@ class ExpirationService:
 
     @staticmethod
     def get_expiring_soon_items(days_ahead: int = 7) -> Dict:
-        """Get items expiring within specified days using dynamic expiration calculation"""
-        # Use the same logic as the private methods but for expiring soon items
+        """Get items expiring within specified days using InventoryLot objects and legacy SKU history for products"""
         expiring_fifo_entries = ExpirationService._query_fifo_entries(days_ahead=days_ahead)
         expiring_sku_entries = ExpirationService._query_sku_entries(days_ahead=days_ahead)
 
@@ -376,37 +354,31 @@ class ExpirationService:
 
     @staticmethod
     def update_fifo_expiration_data(inventory_item_id: int, shelf_life_days: int):
-        """Update expiration data for all FIFO entries with remaining quantity"""
-        # Note: This should NOT set expiration_date directly on FIFO entries
-        # The expiration date should be calculated dynamically using get_effective_expiration_date
-
+        """Update expiration data for inventory item - updates master item and existing lots metadata"""
         # Update the master inventory item
         item = InventoryItem.query.get(inventory_item_id)
         if item:
             item.is_perishable = True
             item.shelf_life_days = shelf_life_days
 
-        # Update FIFO entries to mark as perishable but let expiration be calculated dynamically
-        entries = InventoryHistory.query.filter(
+        # Update existing lots to reflect perishable status and set expiration if missing
+        lots = InventoryLot.query.filter(
             and_(
-                InventoryHistory.inventory_item_id == inventory_item_id,
-                InventoryHistory.remaining_quantity > 0
+                InventoryLot.inventory_item_id == inventory_item_id,
+                InventoryLot.remaining_quantity > 0
             )
         ).all()
 
-        for entry in entries:
-            entry.is_perishable = True
-            entry.shelf_life_days = shelf_life_days
-            # Do NOT set expiration_date here - it should be calculated dynamically
+        for lot in lots:
+            lot.shelf_life_days = shelf_life_days
+            if not lot.expiration_date and lot.received_date:
+                lot.expiration_date = ExpirationService.calculate_expiration_date(lot.received_date, shelf_life_days)
 
         db.session.commit()
 
     @staticmethod
     def get_expiration_date_for_new_entry(inventory_item_id: int, batch_id: Optional[int] = None) -> Optional[datetime]:
-        """
-        Calculate expiration date for a new FIFO entry being created
-        This is used when creating new inventory history entries
-        """
+        """Calculate expiration date for a new lot being created (for InventoryLot creation)"""
         inventory_item = InventoryItem.query.get(inventory_item_id)
         if not inventory_item or not inventory_item.is_perishable:
             return None
@@ -445,79 +417,68 @@ class ExpirationService:
 
     @staticmethod
     def get_inventory_item_expiration_status(inventory_item_id: int):
-        """Get expiration status for a specific inventory item"""
+        """Get expiration status for a specific inventory item using InventoryLot"""
         from ...utils.timezone_utils import TimezoneUtils
-        from datetime import timezone
+        from app.models.inventory_lot import InventoryLot
 
-        # Use UTC for all time comparisons
         now_utc = TimezoneUtils.utc_now()
         future_date_utc = now_utc + timedelta(days=7)
 
-        # Get all FIFO entries for this item with organization scoping
-        entries = db.session.query(InventoryHistory).join(InventoryItem).filter(
-            and_(
-                InventoryHistory.inventory_item_id == inventory_item_id,
-                InventoryHistory.remaining_quantity > 0,
-                InventoryHistory.is_perishable == True,
-                InventoryItem.organization_id == current_user.organization_id if current_user.is_authenticated and current_user.organization_id else True
-            )
-        ).all()
+        # Query lots for this item with org scoping
+        base_filter = [
+            InventoryLot.inventory_item_id == inventory_item_id,
+            InventoryLot.remaining_quantity > 0,
+            InventoryLot.expiration_date.isnot(None)
+        ]
 
-        expired_entries = []
-        expiring_soon_entries = []
+        if current_user.is_authenticated and current_user.organization_id:
+            base_filter.append(InventoryLot.organization_id == current_user.organization_id)
 
-        for entry in entries:
-            expiration_date = ExpirationService.get_effective_expiration_date(entry)
-            if expiration_date:
-                # Convert expiration date to UTC for comparison
-                if expiration_date.tzinfo:
-                    expiration_utc = expiration_date.astimezone(timezone.utc)
-                else:
-                    expiration_utc = expiration_date.replace(tzinfo=timezone.utc)
+        lots = db.session.query(InventoryLot).filter(and_(*base_filter)).all()
 
-                if expiration_utc < now_utc:
-                    expired_entries.append(entry)
-                elif expiration_utc <= future_date_utc:
-                    expiring_soon_entries.append(entry)
+        expired_lots = []
+        expiring_soon_lots = []
+
+        for lot in lots:
+            if lot.expiration_date:
+                if lot.expiration_date < now_utc:
+                    expired_lots.append(lot)
+                elif lot.expiration_date <= future_date_utc:
+                    expiring_soon_lots.append(lot)
 
         return {
-            'expired_entries': expired_entries,
-            'expiring_soon_entries': expiring_soon_entries,
-            'has_expiration_issues': len(expired_entries) > 0 or len(expiring_soon_entries) > 0
+            'expired_entries': expired_lots,
+            'expiring_soon_entries': expiring_soon_lots,
+            'has_expiration_issues': len(expired_lots) > 0 or len(expiring_soon_lots) > 0
         }
 
     @staticmethod
     def get_weighted_average_freshness(inventory_item_id: int) -> Optional[float]:
-        """Calculate weighted average freshness for an inventory item based on FIFO entries"""
-        # Get all FIFO entries with remaining quantity - with explicit organization scoping for security
-        entries = db.session.query(InventoryHistory).join(InventoryItem).filter(
+        """Calculate weighted average freshness for an inventory item based on InventoryLot objects"""
+        from app.models.inventory_lot import InventoryLot
+
+        lots = db.session.query(InventoryLot).filter(
             and_(
-                InventoryHistory.inventory_item_id == inventory_item_id,
-                InventoryHistory.remaining_quantity > 0,
-                InventoryHistory.is_perishable == True,
-                InventoryItem.organization_id == current_user.organization_id if current_user.is_authenticated and current_user.organization_id else True
+                InventoryLot.inventory_item_id == inventory_item_id,
+                InventoryLot.remaining_quantity > 0,
+                InventoryLot.expiration_date.isnot(None)
             )
         ).all()
 
-        if not entries:
+        if not lots:
             return None
 
         total_weighted_freshness = 0.0
         total_quantity = 0.0
 
-        for entry in entries:
-            expiration_date = ExpirationService.get_effective_expiration_date(entry)
-            if expiration_date and entry.timestamp:
-                # Calculate freshness percentage
+        for lot in lots:
+            if lot.expiration_date and lot.received_date and lot.shelf_life_days:
                 life_remaining_percent = ExpirationService.get_life_remaining_percent(
-                    entry.timestamp, entry.inventory_item.shelf_life_days
+                    lot.received_date, lot.shelf_life_days
                 )
-
                 if life_remaining_percent is not None:
-                    # Weight by quantity
-                    weighted_freshness = life_remaining_percent * entry.remaining_quantity
-                    total_weighted_freshness += weighted_freshness
-                    total_quantity += entry.remaining_quantity
+                    total_weighted_freshness += life_remaining_percent * float(lot.remaining_quantity)
+                    total_quantity += float(lot.remaining_quantity)
 
         if total_quantity == 0:
             return None
@@ -538,20 +499,36 @@ class ExpirationService:
         }
 
     @staticmethod
-    def mark_as_expired(kind, entry_id, quantity, notes=""):
-        """Mark inventory as expired and remove from stock"""
+    def mark_as_expired(kind, entry_id, quantity=None, notes=""):
+        """Mark inventory as expired and remove from stock - supports lots and legacy entries"""
         try:
-            if kind == "fifo":
+            if kind in ("fifo", "raw"):
+                # Prefer InventoryLot (new system)
+                lot = InventoryLot.query.get(entry_id)
+                if lot:
+                    if quantity is None:
+                        quantity = lot.remaining_quantity
+                    result = process_inventory_adjustment(
+                        item_id=lot.inventory_item_id,
+                        quantity=-float(quantity),
+                        change_type="spoil",
+                        unit=lot.unit,
+                        notes=f"Expired lot disposal #{entry_id}: {notes}",
+                        created_by=current_user.id if getattr(current_user, "is_authenticated", False) else None,
+                    )
+                    return result, "Successfully marked lot as expired"
+                # Fallback to legacy InventoryHistory
                 entry = InventoryHistory.query.get(entry_id)
                 if not entry:
-                    return False, "FIFO entry not found"
-
+                    return False, "Lot or FIFO entry not found"
+                if quantity is None:
+                    quantity = entry.remaining_quantity
                 result = process_inventory_adjustment(
                     item_id=entry.inventory_item_id,
-                    quantity=-quantity,
+                    quantity=-float(quantity),
                     change_type="spoil",
                     unit=entry.unit,
-                    notes=f"Expired lot disposal #{entry_id}: {notes}",
+                    notes=f"Expired FIFO entry disposal #{entry_id}: {notes}",
                     created_by=current_user.id if getattr(current_user, "is_authenticated", False) else None,
                 )
                 return result, "Successfully marked FIFO entry as expired"
@@ -579,30 +556,24 @@ class ExpirationService:
 
     @staticmethod
     def get_expiring_within_days(days_ahead: int = 7) -> List[Dict]:
-        """Get items expiring within specified days with proper organization scoping"""
+        """Get items expiring within specified days using InventoryLot with org scoping"""
         try:
-            # Calculate the future date
-            future_date = datetime.now(timezone.utc) + timedelta(days=days_ahead)
+            from ...utils.timezone_utils import TimezoneUtils
+            now_utc = TimezoneUtils.utc_now()
+            future_date = now_utc + timedelta(days=days_ahead)
 
-            # Query inventory lots with organization scoping
-            query = db.session.query(InventoryLot).filter(
-                InventoryLot.expiration_date.isnot(None),
-                InventoryLot.expiration_date <= future_date,
-                InventoryLot.remaining_quantity > 0,
-                InventoryLot.is_perishable == True,
+            # Query inventory lots with organization scoping and perishable via InventoryItem
+            query = db.session.query(InventoryLot).join(InventoryItem).filter(
+                and_(
+                    InventoryLot.expiration_date.isnot(None),
+                    InventoryLot.expiration_date >= now_utc,
+                    InventoryLot.expiration_date <= future_date,
+                    InventoryLot.remaining_quantity > 0,
+                    InventoryItem.is_perishable == True,
+                    InventoryItem.organization_id == current_user.organization_id if current_user.is_authenticated and current_user.organization_id else True
+                )
             )
 
-            # Apply organization scoping
-            if current_user.is_authenticated and current_user.organization_id:
-                query = query.filter(InventoryLot.organization_id == current_user.organization_id)
-            elif current_user.user_type == 'developer':
-                # Developers can see all or selected org
-                from flask import session
-                selected_org_id = session.get('dev_selected_org_id')
-                if selected_org_id:
-                    query = query.filter(InventoryLot.organization_id == selected_org_id)
-
-            # Order by expiration date
             lots = query.order_by(InventoryLot.expiration_date.asc()).all()
 
             results = []
@@ -635,63 +606,38 @@ class ExpirationService:
 
     @staticmethod
     def get_expired_inventory():
-        """Get all expired inventory items using lots"""
-        from datetime import datetime
-        from sqlalchemy import and_
-        from app.models import InventoryLot
+        """Get all expired inventory items using InventoryLot with org scoping"""
         from ...utils.timezone_utils import TimezoneUtils
-
         now_utc = TimezoneUtils.utc_now()
 
-        # Get all lots that are expired and still have remaining quantity
-        expired_lots = db.session.query(InventoryLot).filter(
+        query = db.session.query(InventoryLot).join(InventoryItem).filter(
             and_(
                 InventoryLot.remaining_quantity > 0,
-                InventoryLot.expiration_date != None,
+                InventoryLot.expiration_date.isnot(None),
                 InventoryLot.expiration_date < now_utc,
-                InventoryLot.is_perishable == True
+                InventoryItem.is_perishable == True,
+                InventoryItem.organization_id == current_user.organization_id if current_user.is_authenticated and current_user.organization_id else True
             )
         )
 
-        # Apply organization scoping
-        if current_user.is_authenticated and current_user.organization_id:
-            expired_lots = expired_lots.filter(InventoryLot.organization_id == current_user.organization_id)
-        elif current_user.user_type == 'developer':
-            from flask import session
-            selected_org_id = session.get('dev_selected_org_id')
-            if selected_org_id:
-                expired_lots = expired_lots.filter(InventoryLot.organization_id == selected_org_id)
-
-        return expired_lots.all()
+        return query.all()
 
     @staticmethod
     def get_expiring_soon(days_ahead=7):
-        """Get inventory expiring within the specified days using lots"""
-        from datetime import datetime, timedelta
-        from sqlalchemy import and_
-        from app.models import InventoryLot
+        """Get inventory expiring within the specified days using InventoryLot with org scoping"""
         from ...utils.timezone_utils import TimezoneUtils
-
         now_utc = TimezoneUtils.utc_now()
         cutoff_date_utc = now_utc + timedelta(days=days_ahead)
 
-        expiring_lots = db.session.query(InventoryLot).filter(
+        query = db.session.query(InventoryLot).join(InventoryItem).filter(
             and_(
                 InventoryLot.remaining_quantity > 0,
-                InventoryLot.expiration_date != None,
+                InventoryLot.expiration_date.isnot(None),
                 InventoryLot.expiration_date > now_utc,
                 InventoryLot.expiration_date <= cutoff_date_utc,
-                InventoryLot.is_perishable == True
+                InventoryItem.is_perishable == True,
+                InventoryItem.organization_id == current_user.organization_id if current_user.is_authenticated and current_user.organization_id else True
             )
         )
 
-        # Apply organization scoping
-        if current_user.is_authenticated and current_user.organization_id:
-            expiring_lots = expiring_lots.filter(InventoryLot.organization_id == current_user.organization_id)
-        elif current_user.user_type == 'developer':
-            from flask import session
-            selected_org_id = session.get('dev_selected_org_id')
-            if selected_org_id:
-                expiring_lots = expiring_lots.filter(InventoryLot.organization_id == selected_org_id)
-
-        return expiring_lots.all()
+        return query.all()
