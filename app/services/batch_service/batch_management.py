@@ -26,19 +26,33 @@ class BatchManagementService(BaseService):
             # Regular containers
             container_total = sum((c.quantity_used or 0) * (c.cost_each or 0) for c in batch.containers)
             
+            # Consumables
+            try:
+                consumable_total = sum((c.quantity_used or 0) * (c.cost_per_unit or 0) for c in getattr(batch, 'consumables', []) or [])
+            except Exception:
+                consumable_total = 0
+
             # Extra ingredients
-            extras_total = sum((e.quantity_used or 0) * (e.cost_per_unit or 0) for e in batch.extra_ingredients)
+            extra_ingredient_total = sum((e.quantity_used or 0) * (e.cost_per_unit or 0) for e in batch.extra_ingredients)
             
             # Extra containers
             extra_container_total = sum((e.quantity_used or 0) * (e.cost_each or 0) for e in batch.extra_containers)
+
+            # Extra consumables
+            try:
+                extra_consumable_total = sum((e.quantity_used or 0) * (e.cost_per_unit or 0) for e in getattr(batch, 'extra_consumables', []) or [])
+            except Exception:
+                extra_consumable_total = 0
             
-            total_cost = ingredient_total + container_total + extras_total + extra_container_total
+            total_cost = ingredient_total + container_total + consumable_total + extra_ingredient_total + extra_container_total + extra_consumable_total
 
             return {
                 'ingredient_total': ingredient_total,
                 'container_total': container_total,
-                'extras_total': extras_total,
+                'consumable_total': consumable_total,
+                'extra_ingredient_total': extra_ingredient_total,
                 'extra_container_total': extra_container_total,
+                'extra_consumable_total': extra_consumable_total,
                 'total_cost': total_cost
             }
 
@@ -47,8 +61,10 @@ class BatchManagementService(BaseService):
             return {
                 'ingredient_total': 0,
                 'container_total': 0,
-                'extras_total': 0,
+                'consumable_total': 0,
+                'extra_ingredient_total': 0,
                 'extra_container_total': 0,
+                'extra_consumable_total': 0,
                 'total_cost': 0
             }
 
