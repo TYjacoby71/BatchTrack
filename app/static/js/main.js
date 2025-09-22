@@ -114,13 +114,15 @@ document.addEventListener('DOMContentLoaded', function() {
       });
     }
   });
+  // Define select2Config outside conditional blocks to avoid scoping issues
+  const select2Config = {
+    placeholder: 'Select...',
+    allowClear: true,
+    width: '100%'
+  };
+
   // Initialize all Select2 dropdowns (only if jQuery and Select2 are available)
   if (typeof $ !== 'undefined' && $.fn.select2) {
-    const select2Config = {
-      placeholder: 'Select...',
-      allowClear: true,
-      width: '100%'
-    };
 
     $('select[data-unit-select]').select2({
       ...select2Config,
