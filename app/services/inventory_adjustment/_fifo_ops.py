@@ -173,6 +173,7 @@ def deduct_fifo_inventory(item_id, quantity_to_deduct, change_type, notes=None, 
     """
     try:
         from app.models.inventory_lot import InventoryLot
+        from app.utils.timezone_utils import TimezoneUtils
 
         # Get the inventory item for validation
         item = db.session.get(InventoryItem, item_id)
@@ -180,13 +181,22 @@ def deduct_fifo_inventory(item_id, quantity_to_deduct, change_type, notes=None, 
             return False, "Inventory item not found"
 
         # Get active lots ordered by FIFO (oldest received first)
-        active_lots = InventoryLot.query.filter(
+        lot_query = InventoryLot.query.filter(
             and_(
                 InventoryLot.inventory_item_id == item_id,
                 InventoryLot.organization_id == item.organization_id,
                 InventoryLot.remaining_quantity > 0
             )
-        ).order_by(InventoryLot.received_date.asc()).all()
+        )
+
+        # For perishable items, skip expired lots for consumption operations
+        if item.is_perishable and change_type in ['use', 'sale', 'sample', 'tester', 'gift', 'batch']:
+            now_utc = TimezoneUtils.utc_now()
+            lot_query = lot_query.filter(
+                (InventoryLot.expiration_date == None) | (InventoryLot.expiration_date >= now_utc)
+            )
+
+        active_lots = lot_query.order_by(InventoryLot.received_date.asc()).all()
 
         # Calculate total available quantity from actual lots
         total_available = sum(float(lot.remaining_quantity) for lot in active_lots)

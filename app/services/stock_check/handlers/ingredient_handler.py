@@ -7,6 +7,7 @@ Integrates with FIFO operations and unit conversion engine.
 import logging
 from typing import Optional
 from datetime import datetime
+from app.utils.timezone_utils import TimezoneUtils
 
 from app.models import InventoryItem
 from app.models.inventory_lot import InventoryLot
@@ -47,10 +48,11 @@ class IngredientHandler(BaseInventoryHandler):
 
         # Filter out expired lots if item is perishable
         if ingredient.is_perishable:
-            today = datetime.now().date()
+            # Use UTC and compare DateTime to DateTime
+            now_utc = TimezoneUtils.utc_now()
             available_lots = available_lots.filter(
-                (InventoryLot.expiration_date == None) | 
-                (InventoryLot.expiration_date >= today)
+                (InventoryLot.expiration_date == None) |
+                (InventoryLot.expiration_date >= now_utc)
             )
 
         available_lots = available_lots.order_by(InventoryLot.received_date.asc()).all()
@@ -93,8 +95,8 @@ class IngredientHandler(BaseInventoryHandler):
 
                 # Check if enough stock (compare in stock units)
                 status = self._determine_status_with_thresholds(
-                    needed_in_stock_units, 
                     total_available,
+                    needed_in_stock_units,
                     ingredient
                 )
 
