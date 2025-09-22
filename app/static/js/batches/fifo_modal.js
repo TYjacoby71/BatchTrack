@@ -114,7 +114,7 @@ function renderFifoDetails(data) {
         `;
 
         batch_usage.forEach(usage => {
-            const ageText = usage.age_days ? `${usage.age_days} days` : 'N/A';
+            const ageText = usage.age_days ? `${usage.age_days} days` : '1 day';
             const freshnessDisplay = usage.life_remaining_percent !== null
                 ? `<span class="badge ${getLifeBadgeClass(usage.life_remaining_percent)}">${usage.life_remaining_percent}%</span>`
                 : '<span class="text-muted">Non-perishable</span>';
@@ -209,7 +209,7 @@ function renderBatchSummary(data) {
                 `;
 
                 ingredient.fifo_usage.forEach(usage => {
-                    const ageText = usage.age_days ? `${usage.age_days} days` : 'N/A';
+                    const ageText = usage.age_days ? `${usage.age_days} days` : '1 day';
                     const lifeRemainingDisplay = usage.life_remaining_percent !== null && usage.life_remaining_percent !== undefined
                         ? `<span class="badge ${getLifeBadgeClass(usage.life_remaining_percent)}">${usage.life_remaining_percent}%</span>`
                         : '<span class="text-muted">Non-perishable</span>';
