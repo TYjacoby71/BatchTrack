@@ -145,15 +145,16 @@ def view_batch_record(batch_identifier):
 
         # Get navigation data for completed, failed, or cancelled batches
         nav_data = BatchManagementService.get_batch_navigation_data(batch)
+        
+        # Get comprehensive batch context data (includes freshness_summary)
+        context_data = BatchManagementService.get_batch_context_data(batch)
 
         print(f"DEBUG: Rendering batch record view for {batch.status} batch")
-        from ...services.freshness_service import FreshnessService
-        freshness_summary = FreshnessService.compute_batch_freshness(batch)
         return render_template('pages/batches/view_batch.html',
             batch=batch,
             current_time=datetime.now(),
-            freshness_summary=freshness_summary,
-            **nav_data)
+            **nav_data,
+            **context_data)
 
     except Exception as e:
         print(f"DEBUG: Error in view_batch: {str(e)}")
