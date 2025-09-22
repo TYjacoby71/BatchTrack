@@ -169,7 +169,6 @@ function renderBatchSummary(data) {
             <table class="table table-sm align-middle" id="batch-inv-summary">
                 <thead>
                     <tr>
-                        <th style="width: 36px;"></th>
                         <th>Item</th>
                         <th>Total Used</th>
                         <th>Weighted Freshness</th>
@@ -182,15 +181,14 @@ function renderBatchSummary(data) {
             const itemFreshness = getItemFreshnessPercent(freshness_summary, ingredient.inventory_item_id);
             const hasMultipleLots = Array.isArray(ingredient.fifo_usage) && ingredient.fifo_usage.length > 1;
             const caretBtn = hasMultipleLots
-                ? `<button type="button" class="btn btn-link btn-sm p-0" data-item-id="${ingredient.inventory_item_id}" aria-label="Toggle lots" onclick="toggleLotsRow(${ingredient.inventory_item_id})">
-                        <i id="caret-${ingredient.inventory_item_id}" class="fas fa-caret-right"></i>
+                ? `<button type="button" class="btn btn-link btn-sm p-0 me-1 align-baseline" data-item-id="${ingredient.inventory_item_id}" aria-label="Toggle lots" onclick="toggleLotsRow(${ingredient.inventory_item_id})">
+                        <i id="caret-${ingredient.inventory_item_id}" class="fas fa-chevron-right"></i>
                    </button>`
                 : '';
 
             html += `
                 <tr id="item-row-${ingredient.inventory_item_id}">
-                    <td>${caretBtn}</td>
-                    <td>${ingredient.name}</td>
+                    <td>${caretBtn}<span>${ingredient.name}</span></td>
                     <td><strong>${ingredient.total_used} ${ingredient.unit}</strong></td>
                     <td>${itemFreshness !== null ? `<span class="badge ${getLifeBadgeClass(itemFreshness)}">${itemFreshness}%</span>` : '&mdash;'}</td>
                 </tr>
@@ -200,20 +198,12 @@ function renderBatchSummary(data) {
                 // Build hidden lots detail row
                 let lotsHtml = `
                     <tr id="lots-row-${ingredient.inventory_item_id}" class="d-none">
-                        <td></td>
                         <td colspan="3">
-                            <div class="table-responsive">
-                                <table class="table table-sm table-hover mb-0">
-                                    <thead>
-                                        <tr>
-                                            <th>Lot</th>
-                                            <th>Used</th>
-                                            <th>Age</th>
-                                            <th>Life Remaining</th>
-                                            <th>Unit Cost</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
+                            <div class="bg-light border rounded p-2">
+                                <div class="d-flex text-muted small fw-semibold pb-1">
+                                    <div class="flex-grow-1">Lot</div>
+                                    <div class="text-end" style="width: 300px;">Used • Age • Life • Unit Cost</div>
+                                </div>
                 `;
 
                 ingredient.fifo_usage.forEach(usage => {
@@ -224,20 +214,22 @@ function renderBatchSummary(data) {
                     const unitCost = typeof usage.unit_cost === 'number' ? `$${Number(usage.unit_cost).toFixed(2)}` : '&mdash;';
 
                     lotsHtml += `
-                        <tr>
-                            <td><small class="text-muted">${usage.fifo_id}</small></td>
-                            <td>${usage.quantity_used} ${usage.unit}</td>
-                            <td>${ageText}</td>
-                            <td>${lifeRemainingDisplay}</td>
-                            <td>${unitCost}</td>
-                        </tr>
+                        <div class="d-flex align-items-center py-1 border-top">
+                            <div class="flex-grow-1">
+                                <small class="text-muted">#${usage.fifo_id}</small>
+                            </div>
+                            <div class="text-end" style="width: 300px;">
+                                <span class="me-3">${usage.quantity_used} ${usage.unit}</span>
+                                <span class="me-3">${ageText}</span>
+                                ${lifeRemainingDisplay}
+                                <span class="ms-3">${unitCost}</span>
+                            </div>
+                        </div>
                     `;
                 });
 
                 lotsHtml += `
-                                    </tbody>
-                                </table>
-                            </div>
+                                </div>
                         </td>
                     </tr>
                 `;
@@ -267,12 +259,12 @@ function toggleLotsRow(inventoryItemId) {
         const isHidden = row.classList.contains('d-none');
         if (isHidden) {
             row.classList.remove('d-none');
-            caret.classList.remove('fa-caret-right');
-            caret.classList.add('fa-caret-down');
+            caret.classList.remove('fa-chevron-right');
+            caret.classList.add('fa-chevron-down');
         } else {
             row.classList.add('d-none');
-            caret.classList.remove('fa-caret-down');
-            caret.classList.add('fa-caret-right');
+            caret.classList.remove('fa-chevron-down');
+            caret.classList.add('fa-chevron-right');
         }
     } catch (e) {
         // no-op
