@@ -36,91 +36,13 @@ def get_batch_remaining_details(batch_id):
 def get_batch_inventory_summary(batch_id):
     """Get batch inventory summary for FIFO modal"""
     try:
-        batch = Batch.query.get_or_404(batch_id)
-        
-        # Validate access
-        is_valid, error_msg = BatchService.validate_batch_access(batch, 'view')
-        if not is_valid:
-            return jsonify({'success': False, 'error': error_msg}), 403
-
-        # Get all ingredients used in this batch
-        batch_ingredients = BatchIngredient.query.filter_by(batch_id=batch_id).all()
-        extra_ingredients = ExtraBatchIngredient.query.filter_by(batch_id=batch_id).all()
-        
-        # Get all containers used in this batch
-        batch_containers = BatchContainer.query.filter_by(batch_id=batch_id).all()
-        extra_containers = ExtraBatchContainer.query.filter_by(batch_id=batch_id).all()
-
-        ingredients_data = []
-        
-        # Process regular batch ingredients
-        for batch_ingredient in batch_ingredients:
-            inv_item = batch_ingredient.inventory_item
-            ingredients_data.append({
-                'name': inv_item.name,
-                'type': 'ingredient',
-                'category': 'recipe',
-                'quantity_used': batch_ingredient.quantity_used,
-                'unit': batch_ingredient.unit,
-                'cost_per_unit': batch_ingredient.cost_per_unit or 0,
-                'total_cost': batch_ingredient.total_cost or 0,
-                'expiration_date': inv_item.expiration_date.strftime('%Y-%m-%d') if inv_item.expiration_date else None
-            })
-
-        # Process extra ingredients
-        for extra_ingredient in extra_ingredients:
-            inv_item = extra_ingredient.inventory_item
-            ingredients_data.append({
-                'name': inv_item.name,
-                'type': 'ingredient',
-                'category': 'extra',
-                'quantity_used': extra_ingredient.quantity_used,
-                'unit': extra_ingredient.unit,
-                'cost_per_unit': extra_ingredient.cost_per_unit or 0,
-                'total_cost': extra_ingredient.total_cost or 0,
-                'expiration_date': inv_item.expiration_date.strftime('%Y-%m-%d') if inv_item.expiration_date else None
-            })
-
-        # Process regular containers
-        for batch_container in batch_containers:
-            container = batch_container.container
-            ingredients_data.append({
-                'name': container.name,
-                'type': 'container',
-                'category': 'recipe',
-                'quantity_used': batch_container.container_quantity,
-                'unit': 'units',
-                'cost_per_unit': batch_container.cost_each or 0,
-                'total_cost': (batch_container.cost_each or 0) * (batch_container.container_quantity or 0),
-                'fill_quantity': batch_container.fill_quantity,
-                'fill_unit': batch_container.fill_unit
-            })
-
-        # Process extra containers
-        for extra_container in extra_containers:
-            container = extra_container.container
-            ingredients_data.append({
-                'name': container.name,
-                'type': 'container',
-                'category': 'extra',
-                'quantity_used': extra_container.container_quantity,
-                'unit': 'units',
-                'cost_per_unit': extra_container.cost_each or 0,
-                'total_cost': (extra_container.cost_each or 0) * (extra_container.container_quantity or 0),
-                'fill_quantity': extra_container.fill_quantity,
-                'fill_unit': extra_container.fill_unit,
-                'reason': extra_container.reason
-            })
-
-        return jsonify({
-            'success': True,
-            'batch_id': batch_id,
-            'batch_label': batch.label_code,
-            'recipe_name': batch.recipe.name,
-            'ingredients': ingredients_data,
-            'total_items': len(ingredients_data)
-        })
-
+        from ..api.fifo_routes import get_batch_inventory_summary as fifo_summary
+        # Call the function directly
+        result = fifo_summary(batch_id)
+        return result
+    except ImportError as e:
+        logger.error(f"Failed to import batch inventory summary function: {str(e)}")
+        return jsonify({'success': False, 'error': 'Batch inventory summary function not available'}), 500
     except Exception as e:
         logger.error(f"Error in get_batch_inventory_summary: {str(e)}")
         return jsonify({'success': False, 'error': str(e)}), 500
@@ -309,12 +231,15 @@ def view_batch_in_progress(batch_identifier):
         # Get timers with proper organization scoping
         timers, has_active_timers = BatchService.get_batch_timers(batch.id)
 
+        from ...services.freshness_service import FreshnessService
+        freshness_summary = FreshnessService.compute_batch_freshness(batch)
         return render_template('pages/batches/batch_in_progress.html',
             batch=batch,
             timers=timers,
             now=TimezoneUtils.utc_now(),
             has_active_timers=has_active_timers,
             timedelta=timedelta,
+            freshness_summary=freshness_summary,
             **nav_data,
             **context_data)
 
