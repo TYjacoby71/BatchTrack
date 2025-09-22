@@ -1,12 +1,12 @@
 // FIFO Modal functionality
 let currentInventoryId = null;
 
-function openFifoModal(inventoryId, ingredientName, batchId) {
+function openFifoModal(inventoryId, batchId) {
     currentInventoryId = inventoryId;
     const modal = new bootstrap.Modal(document.getElementById('fifoInsightModal'));
 
     // Set modal title
-    document.getElementById('fifoModalTitle').textContent = `FIFO Details: ${ingredientName}`;
+    document.getElementById('fifoModalTitle').textContent = `FIFO Details for Inventory ID: ${inventoryId}`;
 
     // Show loading content
     document.getElementById('fifoModalContent').innerHTML = `
@@ -204,6 +204,8 @@ function renderBatchSummary(data) {
                                     <div class="flex-grow-1">Lot</div>
                                     <div class="text-end" style="width: 300px;">Used • Age • Life • Unit Cost</div>
                                 </div>
+                                <table class="table table-sm borderless m-0">
+                                    <tbody>
                 `;
 
                 ingredient.fifo_usage.forEach(usage => {
@@ -229,7 +231,11 @@ function renderBatchSummary(data) {
                 });
 
                 lotsHtml += `
+                                            </tbody>
+                                        </table>
+                                    </div>
                                 </div>
+                            </div>
                         </td>
                     </tr>
                 `;
