@@ -121,6 +121,10 @@ class BatchService(BaseService):
                 container_total = sum((c.quantity_used or 0) * (c.cost_each or 0) for c in batch.containers)
                 extras_total = sum((e.quantity_used or 0) * (e.cost_per_unit or 0) for e in batch.extra_ingredients)
                 extra_container_total = sum((e.quantity_used or 0) * (e.cost_each or 0) for e in batch.extra_containers)
+                try:
+                    extra_consumable_total = sum((e.quantity_used or 0) * (e.cost_per_unit or 0) for e in getattr(batch, 'extra_consumables', []) or [])
+                except Exception:
+                    extra_consumable_total = 0
                 batch.total_cost = ingredient_total + container_total + extras_total + extra_container_total
 
             return batches

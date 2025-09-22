@@ -9,7 +9,16 @@ from .models import (
     Recipe, RecipeIngredient
 )
 from .recipe import RecipeConsumable
-from .batch import Batch, BatchIngredient, BatchContainer, ExtraBatchContainer, BatchTimer, ExtraBatchIngredient
+from .batch import (
+    Batch,
+    BatchIngredient,
+    BatchContainer,
+    ExtraBatchContainer,
+    BatchTimer,
+    ExtraBatchIngredient,
+    BatchConsumable,
+    ExtraBatchConsumable,
+)
 from .unit import Unit, CustomUnitMapping, ConversionLog
 from .category import IngredientCategory, Tag
 from .stripe_event import StripeEvent
