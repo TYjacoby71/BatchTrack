@@ -161,20 +161,17 @@ function renderBatchSummary(data) {
         ${renderOverallFreshness(freshness_summary)}
 
         <div class="mb-3">
-            <h6>Inventory Sources Summary</h6>
+            <h6>Inventory Summary</h6>
     `;
 
     if (ingredient_summary && ingredient_summary.length > 0) {
         html += `
-            <table class="table table-sm">
+            <table class="table table-sm align-middle" id="batch-inv-summary">
                 <thead>
                     <tr>
-                        <th>Ingredient</th>
+                        <th style="width: 36px;"></th>
+                        <th>Item</th>
                         <th>Total Used</th>
-                        <th>FIFO Entry</th>
-                        <th>Used</th>
-                        <th>Age</th>
-                        <th>Life Remaining</th>
                         <th>Weighted Freshness</th>
                     </tr>
                 </thead>
@@ -183,25 +180,70 @@ function renderBatchSummary(data) {
 
         ingredient_summary.forEach(ingredient => {
             const itemFreshness = getItemFreshnessPercent(freshness_summary, ingredient.inventory_item_id);
-            ingredient.fifo_usage.forEach(usage => {
-                const ageText = usage.age_days ? `${usage.age_days} days` : 'N/A';
-                const lifeRemainingDisplay = usage.life_remaining_percent !== null
-                    ? `<span class="badge ${getLifeBadgeClass(usage.life_remaining_percent)}">${usage.life_remaining_percent}% remaining</span>`
-                    : '<span class="text-muted">Non-perishable</span>';
+            const hasMultipleLots = Array.isArray(ingredient.fifo_usage) && ingredient.fifo_usage.length > 1;
+            const caretBtn = hasMultipleLots
+                ? `<button type="button" class="btn btn-link btn-sm p-0" data-item-id="${ingredient.inventory_item_id}" aria-label="Toggle lots" onclick="toggleLotsRow(${ingredient.inventory_item_id})">
+                        <i id="caret-${ingredient.inventory_item_id}" class="fas fa-caret-right"></i>
+                   </button>`
+                : '';
 
-                html += `
-                    <tr>
-                        <td>${ingredient.name}</td>
-                        <td>${ingredient.total_used} ${ingredient.unit}</td>
-                        <td><small class="text-muted">#${usage.fifo_id}</small></td>
-                        <td>${usage.quantity_used} ${usage.unit}</td>
-                        <td>${ageText}</td>
-                        <td>${lifeRemainingDisplay}</td>
-                        <td>${itemFreshness !== null ? `${itemFreshness}%` : '&mdash;'}</td>
+            html += `
+                <tr id="item-row-${ingredient.inventory_item_id}">
+                    <td>${caretBtn}</td>
+                    <td>${ingredient.name}</td>
+                    <td><strong>${ingredient.total_used} ${ingredient.unit}</strong></td>
+                    <td>${itemFreshness !== null ? `<span class="badge ${getLifeBadgeClass(itemFreshness)}">${itemFreshness}%</span>` : '&mdash;'}</td>
+                </tr>
+            `;
+
+            if (hasMultipleLots) {
+                // Build hidden lots detail row
+                let lotsHtml = `
+                    <tr id="lots-row-${ingredient.inventory_item_id}" class="d-none">
+                        <td></td>
+                        <td colspan="3">
+                            <div class="table-responsive">
+                                <table class="table table-sm table-hover mb-0">
+                                    <thead>
+                                        <tr>
+                                            <th>Lot</th>
+                                            <th>Used</th>
+                                            <th>Age</th>
+                                            <th>Life Remaining</th>
+                                            <th>Unit Cost</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                `;
+
+                ingredient.fifo_usage.forEach(usage => {
+                    const ageText = usage.age_days ? `${usage.age_days} days` : 'N/A';
+                    const lifeRemainingDisplay = usage.life_remaining_percent !== null && usage.life_remaining_percent !== undefined
+                        ? `<span class="badge ${getLifeBadgeClass(usage.life_remaining_percent)}">${usage.life_remaining_percent}%</span>`
+                        : '<span class="text-muted">Non-perishable</span>';
+                    const unitCost = typeof usage.unit_cost === 'number' ? `$${Number(usage.unit_cost).toFixed(2)}` : '&mdash;';
+
+                    lotsHtml += `
+                        <tr>
+                            <td><small class="text-muted">${usage.fifo_id}</small></td>
+                            <td>${usage.quantity_used} ${usage.unit}</td>
+                            <td>${ageText}</td>
+                            <td>${lifeRemainingDisplay}</td>
+                            <td>${unitCost}</td>
+                        </tr>
+                    `;
+                });
+
+                lotsHtml += `
+                                    </tbody>
+                                </table>
+                            </div>
+                        </td>
                     </tr>
                 `;
-            });
 
+                html += lotsHtml;
+            }
         });
 
         html += `
@@ -215,6 +257,26 @@ function renderBatchSummary(data) {
     html += '</div>';
 
     document.getElementById('fifoModalContent').innerHTML = html;
+}
+
+function toggleLotsRow(inventoryItemId) {
+    try {
+        const row = document.getElementById(`lots-row-${inventoryItemId}`);
+        const caret = document.getElementById(`caret-${inventoryItemId}`);
+        if (!row || !caret) return;
+        const isHidden = row.classList.contains('d-none');
+        if (isHidden) {
+            row.classList.remove('d-none');
+            caret.classList.remove('fa-caret-right');
+            caret.classList.add('fa-caret-down');
+        } else {
+            row.classList.add('d-none');
+            caret.classList.remove('fa-caret-down');
+            caret.classList.add('fa-caret-right');
+        }
+    } catch (e) {
+        // no-op
+    }
 }
 
 function renderOverallFreshness(freshness_summary) {

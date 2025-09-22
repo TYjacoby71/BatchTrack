@@ -1,7 +1,17 @@
 
 from flask import Blueprint, jsonify, request
 from flask_login import login_required
-from ...models import db, InventoryItem, InventoryHistory, Batch, BatchIngredient, ExtraBatchIngredient, BatchContainer, ExtraBatchContainer
+from ...models import (
+    db,
+    InventoryItem,
+    Batch,
+    BatchIngredient,
+    ExtraBatchIngredient,
+    BatchContainer,
+    ExtraBatchContainer,
+)
+from ...models.unified_inventory_history import UnifiedInventoryHistory
+from ...models.inventory_lot import InventoryLot
 from ...services.freshness_service import FreshnessService
 from datetime import datetime, date
 from ...utils.fifo_generator import int_to_base36
@@ -72,36 +82,8 @@ def get_batch_inventory_summary(batch_id):
         # Get batch
         batch = Batch.query.get_or_404(batch_id)
         
-        # Get all ingredients used in this batch
-        ingredient_summary = []
-        
-        # Regular batch ingredients
-        batch_ingredients = BatchIngredient.query.filter_by(batch_id=batch_id).all()
-        for batch_ing in batch_ingredients:
-            usage_data = get_batch_fifo_usage(batch_ing.inventory_item_id, batch_id)
-            total_used = sum(usage['quantity_used'] for usage in usage_data)
-            
-            ingredient_summary.append({
-                'name': batch_ing.inventory_item.name,
-                'inventory_item_id': batch_ing.inventory_item_id,
-                'total_used': total_used,
-                'unit': batch_ing.unit,
-                'fifo_usage': usage_data
-            })
-        
-        # Extra ingredients
-        extra_ingredients = ExtraBatchIngredient.query.filter_by(batch_id=batch_id).all()
-        for extra_ing in extra_ingredients:
-            usage_data = get_batch_fifo_usage(extra_ing.inventory_item_id, batch_id)
-            total_used = sum(usage['quantity_used'] for usage in usage_data)
-            
-            ingredient_summary.append({
-                'name': extra_ing.inventory_item.name,
-                'inventory_item_id': extra_ing.inventory_item_id,
-                'total_used': total_used,
-                'unit': extra_ing.unit,
-                'fifo_usage': usage_data
-            })
+        # Build merged ingredient summary from unified inventory events (covers regular and extra usage)
+        ingredient_summary = build_merged_ingredient_summary(batch)
         
         # Add containers
         batch_containers = BatchContainer.query.filter_by(batch_id=batch_id).all()
@@ -162,67 +144,145 @@ def get_batch_inventory_summary(batch_id):
         return jsonify({'error': str(e)}), 500
 
 def get_batch_fifo_usage(inventory_id, batch_id):
-    """Get FIFO usage data for a specific ingredient in a specific batch"""
-    # Get deduction history entries for this batch
-    deduction_entries = InventoryHistory.query.filter_by(
-        inventory_item_id=inventory_id,
-        used_for_batch_id=batch_id
-    ).filter(
-        InventoryHistory.quantity_change < 0  # Only deductions
-    ).all()
-    
+    """Get lot-level usage data for a specific ingredient in a specific batch using unified events."""
+    events = UnifiedInventoryHistory.query.filter(
+        UnifiedInventoryHistory.inventory_item_id == inventory_id,
+        UnifiedInventoryHistory.batch_id == batch_id,
+        UnifiedInventoryHistory.change_type == 'batch',
+        UnifiedInventoryHistory.quantity_change < 0
+    ).order_by(UnifiedInventoryHistory.timestamp.asc()).all()
+
+    # Build usage entries; aggregate by affected lot when possible
     usage_data = []
-    for entry in deduction_entries:
+
+    for ev in events:
         age_days = None
         life_remaining_percent = None
-        
-        # Get the source FIFO entry to calculate age from its creation date
-        source_entry = None
-        if entry.fifo_reference_id:
-            source_entry = InventoryHistory.query.get(entry.fifo_reference_id)
-        
-        if source_entry and source_entry.timestamp:
-            # Get the batch to use its start timestamp for age calculation
-            batch = Batch.query.get(batch_id)
-            batch_start = batch.started_at if batch else datetime.utcnow()
-            
-            # Calculate age from the source entry's creation date to when batch started
-            age_timedelta = batch_start - source_entry.timestamp
-            age_days = age_timedelta.days
-            age_hours = age_timedelta.total_seconds() / 3600
-            
-            if source_entry.is_perishable and source_entry.expiration_date:
-                # Use expiration date for more precise calculation
-                total_life_seconds = (source_entry.expiration_date - source_entry.timestamp).total_seconds()
-                used_life_seconds = (batch_start - source_entry.timestamp).total_seconds()
-                
-                if total_life_seconds > 0:
-                    life_remaining_percent = max(0, 100 - ((used_life_seconds / total_life_seconds) * 100))
-                    life_remaining_percent = round(life_remaining_percent, 1)
-                else:
-                    life_remaining_percent = 0.0
-            elif source_entry.is_perishable and source_entry.shelf_life_days:
-                # Fallback to shelf life days calculation with hours precision
-                shelf_life_hours = source_entry.shelf_life_days * 24
-                life_remaining_percent = max(0, 100 - ((age_hours / shelf_life_hours) * 100))
-                life_remaining_percent = round(life_remaining_percent, 1)
-        elif entry.timestamp:
-            # Fallback to using the deduction entry's timestamp if no source found
-            batch = Batch.query.get(batch_id)
-            batch_start = batch.started_at if batch else datetime.utcnow()
-            age_days = (batch_start - entry.timestamp).days
-            
-            if entry.is_perishable and entry.shelf_life_days:
-                life_remaining_percent = max(0, 100 - ((age_days / entry.shelf_life_days) * 100))
-                life_remaining_percent = round(life_remaining_percent, 1)
-        
+        lot_display_id = None
+
+        when = ev.timestamp or datetime.utcnow()
+
+        if ev.affected_lot_id:
+            lot = db.session.get(InventoryLot, ev.affected_lot_id)
+            lot_display_id = lot.lot_number if getattr(lot, 'lot_number', None) else int_to_base36(ev.affected_lot_id)
+
+            if lot and getattr(lot, 'received_date', None):
+                try:
+                    age_days = max(0, (when - lot.received_date).days)
+                except Exception:
+                    age_days = None
+
+            # Compute freshness percent using shared logic
+            try:
+                life_remaining_percent = FreshnessService._compute_lot_freshness_percent_at_time(lot, when)  # type: ignore
+            except Exception:
+                life_remaining_percent = None
+
+        # Fallback freshness computation if lot is missing but item has shelf life
+        if life_remaining_percent is None:
+            try:
+                item = db.session.get(InventoryItem, inventory_id)
+                if item and item.is_perishable and item.shelf_life_days:
+                    from datetime import timedelta
+                    received_guess = when - timedelta(days=int(item.shelf_life_days))
+                    class _FakeLot:
+                        received_date = received_guess
+                        expiration_date = when
+                        shelf_life_days = item.shelf_life_days
+                        inventory_item = item
+                    life_remaining_percent = FreshnessService._compute_lot_freshness_percent_at_time(_FakeLot, when)  # type: ignore
+                    age_days = (when - received_guess).days
+            except Exception:
+                pass
+
         usage_data.append({
-            'fifo_id': int_to_base36(entry.id),
-            'quantity_used': abs(entry.quantity_change),  # Use absolute value for deductions
-            'unit': entry.unit,
+            'fifo_id': lot_display_id or int_to_base36(ev.id),
+            'quantity_used': abs(float(ev.quantity_change or 0.0)),
+            'unit': ev.unit,
             'age_days': age_days,
             'life_remaining_percent': life_remaining_percent,
-            'unit_cost': entry.unit_cost
+            'unit_cost': float(ev.unit_cost or 0.0)
         })
-    
+
     return usage_data
+
+
+def build_merged_ingredient_summary(batch: Batch):
+    """Return merged ingredient summary across regular and extra usage, grouped by inventory item.
+
+    Uses UnifiedInventoryHistory events to ensure all deductions are included.
+    """
+    # Gather all deduction events for this batch
+    events = UnifiedInventoryHistory.query.filter(
+        UnifiedInventoryHistory.batch_id == batch.id,
+        UnifiedInventoryHistory.change_type == 'batch',
+        UnifiedInventoryHistory.quantity_change < 0
+    ).order_by(UnifiedInventoryHistory.timestamp.asc()).all()
+
+    per_item = {}
+    for ev in events:
+        per_item.setdefault(ev.inventory_item_id, []).append(ev)
+
+    ingredient_summary = []
+    for inventory_item_id, evs in per_item.items():
+        item = db.session.get(InventoryItem, inventory_item_id)
+        if not item:
+            continue
+
+        usage_data = []
+        for ev in evs:
+            # Reuse the same computation as get_batch_fifo_usage for each event
+            # but avoid re-querying by inventory id; inline minimal logic
+            age_days = None
+            life_remaining_percent = None
+            lot_display_id = None
+            when = ev.timestamp or datetime.utcnow()
+
+            if ev.affected_lot_id:
+                lot = db.session.get(InventoryLot, ev.affected_lot_id)
+                lot_display_id = lot.lot_number if getattr(lot, 'lot_number', None) else int_to_base36(ev.affected_lot_id)
+                if lot and getattr(lot, 'received_date', None):
+                    try:
+                        age_days = max(0, (when - lot.received_date).days)
+                    except Exception:
+                        age_days = None
+                try:
+                    life_remaining_percent = FreshnessService._compute_lot_freshness_percent_at_time(lot, when)  # type: ignore
+                except Exception:
+                    life_remaining_percent = None
+
+            if life_remaining_percent is None and item and item.is_perishable and item.shelf_life_days:
+                try:
+                    from datetime import timedelta
+                    received_guess = when - timedelta(days=int(item.shelf_life_days))
+                    class _FakeLot:
+                        received_date = received_guess
+                        expiration_date = when
+                        shelf_life_days = item.shelf_life_days
+                        inventory_item = item
+                    life_remaining_percent = FreshnessService._compute_lot_freshness_percent_at_time(_FakeLot, when)  # type: ignore
+                    age_days = (when - received_guess).days
+                except Exception:
+                    pass
+
+            usage_data.append({
+                'fifo_id': lot_display_id or int_to_base36(ev.id),
+                'quantity_used': abs(float(ev.quantity_change or 0.0)),
+                'unit': ev.unit,
+                'age_days': age_days,
+                'life_remaining_percent': life_remaining_percent,
+                'unit_cost': float(ev.unit_cost or 0.0)
+            })
+
+        total_used = sum(u['quantity_used'] for u in usage_data)
+        ingredient_summary.append({
+            'name': item.name,
+            'inventory_item_id': inventory_item_id,
+            'total_used': total_used,
+            'unit': item.unit,
+            'fifo_usage': usage_data
+        })
+
+    # Sort alphabetically by item name
+    ingredient_summary.sort(key=lambda x: x['name'].lower())
+    return ingredient_summary
