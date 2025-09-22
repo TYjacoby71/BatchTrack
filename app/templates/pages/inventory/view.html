@@ -131,12 +131,12 @@
             <div class="col-md-6">
               <div class="form-group mb-3">
                 <label for="initial_quantity" class="form-label">Initial Quantity *</label>
-                <input type="number"
-                       class="form-control"
-                       id="initial_quantity"
-                       name="quantity"
-                       min="0.01"
-                       step="0.01"
+                <input type="number" 
+                       class="form-control" 
+                       id="initial_quantity" 
+                       name="quantity" 
+                       min="0.01" 
+                       step="0.01" 
                        required>
               </div>
             </div>
@@ -164,12 +164,12 @@
             <div class="col-md-6">
               <div class="form-group mb-3">
                 <label for="initial_cost_per_unit" class="form-label">Cost Per Unit</label>
-                <input type="number"
-                       class="form-control"
-                       id="initial_cost_per_unit"
-                       name="cost_per_unit"
-                       min="0"
-                       step="0.01"
+                <input type="number" 
+                       class="form-control" 
+                       id="initial_cost_per_unit" 
+                       name="cost_per_unit" 
+                       min="0" 
+                       step="0.01" 
                        value="{{ item.cost_per_unit or 0 }}">
               </div>
             </div>
@@ -187,10 +187,10 @@
 
           <div class="form-group mb-3">
             <label for="initial_notes" class="form-label">Notes</label>
-            <textarea class="form-control"
-                      id="initial_notes"
-                      name="notes"
-                      rows="2"
+            <textarea class="form-control" 
+                      id="initial_notes" 
+                      name="notes" 
+                      rows="2" 
                       placeholder="Initial stock entry...">Initial stock entry</textarea>
           </div>
         </form>
@@ -215,9 +215,9 @@ async function markAsSpoiled(type, id) {
     try {
         const response = await fetch('/expiration/api/mark-spoiled', {
             method: 'POST',
-            headers: {
+            headers: { 
                 'Content-Type': 'application/json',
-                'X-CSRFToken': getCSRFToken()
+                'X-CSRFToken': getCSRFToken() 
             },
             body: JSON.stringify({ type: type, id: id })
         });
@@ -245,9 +245,9 @@ async function markAsExpired(type, id) {
     try {
         const response = await fetch('/expiration/api/mark-expired', {
             method: 'POST',
-            headers: {
+            headers: { 
                 'Content-Type': 'application/json',
-                'X-CSRFToken': getCSRFToken()
+                'X-CSRFToken': getCSRFToken() 
             },
             body: JSON.stringify({ type: type, id: id })
         });
