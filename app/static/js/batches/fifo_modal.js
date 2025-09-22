@@ -66,22 +66,24 @@ async function fetchFifoDetails(inventoryId, batchId) {
 
 async function fetchBatchInventorySummary(batchId) {
     try {
-        const response = await fetch(`/api/batch-inventory-summary/${batchId}`);
-        
+        const response = await fetch(`/batches/api/batch-inventory-summary/${batchId}`);
+
         if (!response.ok) {
-            throw new Error(`HTTP error! status: ${response.status}`);
+            const errorText = await response.text();
+            throw new Error(`HTTP error! status: ${response.status}, message: ${errorText}`);
         }
-        
+
         const contentType = response.headers.get('content-type');
         if (!contentType || !contentType.includes('application/json')) {
-            throw new Error('Response is not JSON');
+            const responseText = await response.text();
+            throw new Error(`Response is not JSON. Content: ${responseText}`);
         }
-        
+
         const data = await response.json();
         renderBatchSummary(data);
     } catch (error) {
         console.error('Error fetching batch summary:', error);
-        showFifoError('Failed to load batch inventory summary');
+        showFifoError(`Failed to load batch inventory summary: ${error.message}`);
     }
 }
 
@@ -113,7 +115,7 @@ function renderFifoDetails(data) {
 
         batch_usage.forEach(usage => {
             const ageText = usage.age_days ? `${usage.age_days} days` : 'N/A';
-            const freshnessDisplay = usage.life_remaining_percent !== null 
+            const freshnessDisplay = usage.life_remaining_percent !== null
                 ? `<span class="badge ${getLifeBadgeClass(usage.life_remaining_percent)}">${usage.life_remaining_percent}%</span>`
                 : '<span class="text-muted">Non-perishable</span>';
 
@@ -122,7 +124,7 @@ function renderFifoDetails(data) {
             html += `
                 <tr>
                     <td>
-                        <a href="/inventory/view/${inventory_item.id}#fifo-entry-${usage.fifo_id}" 
+                        <a href="/inventory/view/${inventory_item.id}#fifo-entry-${usage.fifo_id}"
                            target="_blank" class="fifo-ingredient-link">
                             #${usage.fifo_id}
                         </a>
