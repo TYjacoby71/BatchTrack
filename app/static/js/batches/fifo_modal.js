@@ -218,7 +218,12 @@ function renderBatchSummary(data) {
                     lotsHtml += `
                         <div class="d-flex align-items-center py-1 border-top">
                             <div class="flex-grow-1">
-                                <small class="text-muted">#${usage.fifo_id}</small>
+                                <small class="text-muted">
+                                    <a href="/inventory/view/${ingredient.inventory_item_id}#fifo-entry-${usage.fifo_id}"
+                                       target="_blank" class="fifo-ingredient-link">
+                                        #${usage.fifo_id}
+                                    </a>
+                                </small>
                             </div>
                             <div class="text-end" style="width: 300px;">
                                 <span class="me-3">${usage.quantity_used} ${usage.unit}</span>
