@@ -1,12 +1,12 @@
 // FIFO Modal functionality
 let currentInventoryId = null;
 
-function openFifoModal(inventoryId, ingredientName, batchId) {
+function openFifoModal(inventoryId, batchId) {
     currentInventoryId = inventoryId;
     const modal = new bootstrap.Modal(document.getElementById('fifoInsightModal'));
 
     // Set modal title
-    document.getElementById('fifoModalTitle').textContent = `FIFO Details: ${ingredientName}`;
+    document.getElementById('fifoModalTitle').textContent = `FIFO Details for Inventory ID: ${inventoryId}`;
 
     // Show loading content
     document.getElementById('fifoModalContent').innerHTML = `
@@ -114,7 +114,7 @@ function renderFifoDetails(data) {
         `;
 
         batch_usage.forEach(usage => {
-            const ageText = usage.age_days ? `${usage.age_days} days` : 'N/A';
+            const ageText = usage.age_days ? `${usage.age_days} days` : '1 day';
             const freshnessDisplay = usage.life_remaining_percent !== null
                 ? `<span class="badge ${getLifeBadgeClass(usage.life_remaining_percent)}">${usage.life_remaining_percent}%</span>`
                 : '<span class="text-muted">Non-perishable</span>';
@@ -204,10 +204,12 @@ function renderBatchSummary(data) {
                                     <div class="flex-grow-1">Lot</div>
                                     <div class="text-end" style="width: 300px;">Used • Age • Life • Unit Cost</div>
                                 </div>
+                                <table class="table table-sm borderless m-0">
+                                    <tbody>
                 `;
 
                 ingredient.fifo_usage.forEach(usage => {
-                    const ageText = usage.age_days ? `${usage.age_days} days` : 'N/A';
+                    const ageText = usage.age_days ? `${usage.age_days} days` : '1 day';
                     const lifeRemainingDisplay = usage.life_remaining_percent !== null && usage.life_remaining_percent !== undefined
                         ? `<span class="badge ${getLifeBadgeClass(usage.life_remaining_percent)}">${usage.life_remaining_percent}%</span>`
                         : '<span class="text-muted">Non-perishable</span>';
@@ -216,7 +218,12 @@ function renderBatchSummary(data) {
                     lotsHtml += `
                         <div class="d-flex align-items-center py-1 border-top">
                             <div class="flex-grow-1">
-                                <small class="text-muted">#${usage.fifo_id}</small>
+                                <small class="text-muted">
+                                    <a href="/inventory/view/${ingredient.inventory_item_id}#fifo-entry-${usage.fifo_id}"
+                                       target="_blank" class="fifo-ingredient-link">
+                                        #${usage.fifo_id}
+                                    </a>
+                                </small>
                             </div>
                             <div class="text-end" style="width: 300px;">
                                 <span class="me-3">${usage.quantity_used} ${usage.unit}</span>
@@ -229,7 +236,11 @@ function renderBatchSummary(data) {
                 });
 
                 lotsHtml += `
+                                            </tbody>
+                                        </table>
+                                    </div>
                                 </div>
+                            </div>
                         </td>
                     </tr>
                 `;
