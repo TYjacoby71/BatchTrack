@@ -554,6 +554,10 @@ class BatchOperationsService(BaseService):
             if batch.status != 'in_progress':
                 return False, "Can only add items to in-progress batches", []
 
+            # Enforce organization ownership for security
+            if batch.organization_id != current_user.organization_id:
+                return False, "Permission denied", []
+
             extra_ingredients = extra_ingredients or []
             extra_containers = extra_containers or []
             extra_consumables = extra_consumables or []

@@ -180,13 +180,23 @@ def deduct_fifo_inventory(item_id, quantity_to_deduct, change_type, notes=None, 
             return False, "Inventory item not found"
 
         # Get active lots ordered by FIFO (oldest received first)
-        active_lots = InventoryLot.query.filter(
+        query = InventoryLot.query.filter(
             and_(
                 InventoryLot.inventory_item_id == item_id,
                 InventoryLot.organization_id == item.organization_id,
                 InventoryLot.remaining_quantity > 0
             )
-        ).order_by(InventoryLot.received_date.asc()).all()
+        )
+
+        # For consumption operations, exclude expired lots if the item is perishable
+        consumption_ops = {'use', 'sale', 'sample', 'tester', 'gift', 'batch', 'pos_sale', 'pos_return_neg'}
+        if item.is_perishable and (str(change_type).lower() in consumption_ops):
+            now_utc = TimezoneUtils.utc_now()
+            query = query.filter(
+                (InventoryLot.expiration_date == None) | (InventoryLot.expiration_date >= now_utc)
+            )
+
+        active_lots = query.order_by(InventoryLot.received_date.asc()).all()
 
         # Calculate total available quantity from actual lots
         total_available = sum(float(lot.remaining_quantity) for lot in active_lots)
