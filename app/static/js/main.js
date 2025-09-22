@@ -114,32 +114,35 @@ document.addEventListener('DOMContentLoaded', function() {
       });
     }
   });
-  // Initialize all Select2 dropdowns
-  const select2Config = {
-    placeholder: 'Select...',
-    allowClear: true,
-    width: '100%'
-  };
+  // Initialize all Select2 dropdowns (only if jQuery and Select2 are available)
+  if (typeof $ !== 'undefined' && $.fn.select2) {
+    const select2Config = {
+      placeholder: 'Select...',
+      allowClear: true,
+      width: '100%'
+    };
 
-  $('select[data-unit-select]').select2({
-    ...select2Config,
-    placeholder: 'Select a unit'
-  });
+    $('select[data-unit-select]').select2({
+      ...select2Config,
+      placeholder: 'Select a unit'
+    });
 
-  $('.ingredient-select').select2({
-    ...select2Config,
-    placeholder: 'Select ingredients'
-  });
+    $('.ingredient-select').select2({
+      ...select2Config,
+      placeholder: 'Select ingredients'
+    });
 
-  $('.container-select:not([x-data])').select2({
-    ...select2Config,
-    placeholder: 'Select containers',
-    multiple: true
-  });
+    $('.container-select:not([x-data])').select2({
+      ...select2Config,
+      placeholder: 'Select containers',
+      multiple: true
+    });
+  }
 
   // Add Ingredient name field - Select2 with AJAX global search and tags for custom entries
-  const $nameSelect = $('#addIngredientNameSelect');
-  if ($nameSelect.length) {
+  if (typeof $ !== 'undefined' && $.fn.select2) {
+    const $nameSelect = $('#addIngredientNameSelect');
+    if ($nameSelect.length) {
     $nameSelect.select2({
       ...select2Config,
       placeholder: 'Type ingredient name...',
@@ -213,11 +216,13 @@ document.addEventListener('DOMContentLoaded', function() {
         hiddenGlobalId.value = '';
       }
     });
+    }
   }
 
   // Add Container name field - Select2 with AJAX global search and tags for custom entries
-  const $containerNameSelect = $('#addContainerNameSelect');
-  if ($containerNameSelect.length) {
+  if (typeof $ !== 'undefined' && $.fn.select2) {
+    const $containerNameSelect = $('#addContainerNameSelect');
+    if ($containerNameSelect.length) {
     $containerNameSelect.select2({
       ...select2Config,
       placeholder: 'Type container name...',
@@ -276,10 +281,13 @@ document.addEventListener('DOMContentLoaded', function() {
         hiddenGlobalIdContainer.value = '';
       }
     });
+    }
   }
 
-  // Bootstrap tooltips
-  $('[data-bs-toggle="tooltip"]').tooltip();
+  // Bootstrap tooltips (only if jQuery is available)
+  if (typeof $ !== 'undefined' && $.fn.tooltip) {
+    $('[data-bs-toggle="tooltip"]').tooltip();
+  }
 
   // Removed legacy quick-add modal transition handlers
 
