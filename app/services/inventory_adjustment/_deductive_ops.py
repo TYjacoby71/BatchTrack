@@ -82,7 +82,7 @@ def _handle_deductive_operation(item, quantity, change_type, notes, created_by, 
             if order_id:
                 enhanced_notes += f" (Order: {order_id})"
 
-        # Use FIFO deduction logic
+        # Use FIFO deduction logic (valuation handled inside based on org/batch method)
         success, message = deduct_fifo_inventory(
             item_id=item.id,
             quantity_to_deduct=quantity,
