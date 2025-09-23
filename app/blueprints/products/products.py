@@ -200,10 +200,14 @@ def new_product():
     if request.method == 'POST':
         name = request.form.get('name')
         unit = request.form.get('product_base_unit')
+        category_id = request.form.get('category_id')
         low_stock_threshold = request.form.get('low_stock_threshold', 0)
 
         if not name or not unit:
             flash('Name and product base unit are required', 'error')
+            return redirect(url_for('products.new_product'))
+        if not category_id or not str(category_id).isdigit():
+            flash('Product category is required', 'error')
             return redirect(url_for('products.new_product'))
 
         # Check if product already exists (check both new Product model and legacy ProductSKU)
@@ -228,6 +232,7 @@ def new_product():
             product = Product(
                 name=name,
                 base_unit=unit,
+                category_id=int(category_id),
                 low_stock_threshold=float(low_stock_threshold) if low_stock_threshold else 0,
                 organization_id=current_user.organization_id,
                 created_by=current_user.id
@@ -296,7 +301,13 @@ def new_product():
             return redirect(url_for('products.new_product'))
 
     units = get_global_unit_list()
-    return render_template('pages/products/new_product.html', units=units)
+    # Load product categories for selection if template supports it later
+    try:
+        from ...models.product_category import ProductCategory
+        categories = ProductCategory.query.order_by(ProductCategory.name.asc()).all()
+    except Exception:
+        categories = []
+    return render_template('pages/products/new_product.html', units=units, product_categories=categories)
 
 @products_bp.route('/<int:product_id>')
 @login_required

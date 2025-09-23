@@ -33,6 +33,7 @@ class Batch(ScopedModelMixin, db.Model):
     shelf_life_days = db.Column(db.Integer)
     expiration_date = db.Column(db.DateTime)
     remaining_quantity = db.Column(db.Float, nullable=True)
+    portioning_data = db.Column(db.JSON, nullable=True)
 
     recipe = db.relationship('Recipe', backref='batches')
     sku = db.relationship('ProductSKU', foreign_keys=[sku_id], backref='batches')

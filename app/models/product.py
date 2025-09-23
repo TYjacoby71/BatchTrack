@@ -20,7 +20,7 @@ class Product(ScopedModelMixin, db.Model):
     base_unit = db.Column(db.String(32), nullable=False, default='g')
 
     # Product-level settings
-    category = db.Column(db.String(64), nullable=True)
+    category_id = db.Column(db.Integer, db.ForeignKey('product_category.id'), nullable=False)
     subcategory = db.Column(db.String(64), nullable=True)
     tags = db.Column(db.Text, nullable=True)
     low_stock_threshold = db.Column(db.Float, default=10.0)
@@ -39,6 +39,7 @@ class Product(ScopedModelMixin, db.Model):
     # Relationships
     variants = db.relationship('ProductVariant', back_populates='product', lazy='dynamic', cascade='all, delete-orphan')
     skus = db.relationship('ProductSKU', back_populates='product', lazy='dynamic', cascade='all, delete-orphan')
+    product_category = db.relationship('ProductCategory')
 
     # Unique constraint on name per organization
     __table_args__ = (

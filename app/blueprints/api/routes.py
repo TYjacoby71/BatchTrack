@@ -88,6 +88,8 @@ def get_dashboard_alerts():
 from .ingredient_routes import ingredient_api_bp
 from .container_routes import container_api_bp
 from .reservation_routes import reservation_api_bp
+from app.models.product_category import ProductCategory
+from app.models.unit import Unit
 
 # Register sub-blueprints
 
@@ -122,3 +124,24 @@ def get_inventory_item(item_id):
         'capacity': getattr(item, 'capacity', None),
         'capacity_unit': getattr(item, 'capacity_unit', None)
     })
+
+
+@api_bp.route('/categories/<int:cat_id>', methods=['GET'])
+@login_required
+def get_category(cat_id):
+    c = ProductCategory.query.get_or_404(cat_id)
+    return jsonify({'id': c.id, 'name': c.name, 'is_typically_portioned': bool(c.is_typically_portioned)})
+
+
+@api_bp.route('/unit-search', methods=['GET'])
+@login_required
+def list_units():
+    unit_type = request.args.get('type')
+    q = (request.args.get('q') or '').strip()
+    qry = Unit.scoped()
+    if unit_type:
+        qry = qry.filter_by(unit_type=unit_type)
+    if q:
+        qry = qry.filter(Unit.name.ilike(f"%{q}%"))
+    units = qry.order_by(Unit.unit_type, Unit.name).limit(50).all()
+    return jsonify({'success': True, 'data': [{'id': u.id, 'name': u.name, 'unit_type': u.unit_type} for u in units]})

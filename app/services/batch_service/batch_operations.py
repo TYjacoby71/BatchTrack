@@ -52,6 +52,13 @@ class BatchOperationsService(BaseService):
 
             db.session.add(batch)
 
+            # Snapshot portioning data from recipe if present
+            try:
+                if getattr(recipe, 'portioning_data', None):
+                    batch.portioning_data = dict(recipe.portioning_data)
+            except Exception:
+                pass
+
             # Handle containers if required
             container_errors = []
             if requires_containers:
