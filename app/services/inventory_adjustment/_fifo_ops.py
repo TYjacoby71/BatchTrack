@@ -102,12 +102,12 @@ def create_new_fifo_lot(item_id, quantity, change_type, unit=None, notes=None, c
         # Import the proper FIFO generator
         from app.utils.fifo_generator import generate_fifo_code
 
-        # For finished_batch operations, use batch-specific code if batch_id exists
+        # For finished_batch operations, use batch-specific label if batch_id exists
         if change_type == 'finished_batch' and batch_id:
             from app.models import Batch
             batch = db.session.get(Batch, batch_id)
             if batch and batch.label_code:
-                fifo_code = f"BCH-{batch.label_code}"
+                fifo_code = batch.label_code
             else:
                 fifo_code = generate_fifo_code(change_type, item_id, is_lot_creation=True)
         else:
@@ -241,16 +241,16 @@ def deduct_fifo_inventory(item_id, quantity_to_deduct, change_type, notes=None, 
             # Create audit record linking to the specific lot
             from app.utils.fifo_generator import generate_fifo_code
 
-            # Generate appropriate FIFO code for this deduction event; prefer batch label when available
+            # Generate appropriate event code for this deduction event; prefer batch label when available
             if change_type == 'batch' and batch_id:
                 try:
                     from app.models import Batch
                     batch = db.session.get(Batch, batch_id)
-                    deduction_fifo_code = f"BCH-{batch.label_code}" if batch and batch.label_code else generate_fifo_code(change_type, item_id, is_lot_creation=False)
+                    deduction_event_code = batch.label_code if batch and batch.label_code else generate_fifo_code(change_type, item_id, is_lot_creation=False)
                 except Exception:
-                    deduction_fifo_code = generate_fifo_code(change_type, item_id, is_lot_creation=False)
+                    deduction_event_code = generate_fifo_code(change_type, item_id, is_lot_creation=False)
             else:
-                deduction_fifo_code = generate_fifo_code(change_type, item_id, is_lot_creation=False)
+                deduction_event_code = generate_fifo_code(change_type, item_id, is_lot_creation=False)
 
             # Choose unit cost according to valuation method
             event_unit_cost = float(item.cost_per_unit or 0.0) if valuation_method == 'average' else float(lot.unit_cost or 0.0)
@@ -269,6 +269,7 @@ def deduct_fifo_inventory(item_id, quantity_to_deduct, change_type, notes=None, 
                 batch_id=batch_id,
                 fifo_code=deduction_fifo_code,  # RCN-xxx for recount, other prefixes for other operations
                 valuation_method=valuation_method
+
             )
             db.session.add(history_record)
 
