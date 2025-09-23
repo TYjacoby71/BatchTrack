@@ -16,7 +16,7 @@
                     <th style="white-space: nowrap;">Total Cost</th>
                     <th style="white-space: nowrap;">Used For</th>
                     <th style="white-space: nowrap;">Credited/Debited To</th>
-                    <th style="white-space: nowrap;">FIFO ID</th>
+                    <th style="white-space: nowrap;">Event Code</th>
                     <th style="white-space: nowrap;">Exp Date</th>
                     <th style="white-space: nowrap;">Quantity Used</th>
                     <th style="white-space: nowrap;">Created By</th>
@@ -112,52 +112,25 @@
                     <td>
                       {% if entry.affected_lot and entry.affected_lot.fifo_code %}
                         {{ entry.affected_lot.fifo_code }}
-                      {% elif entry.fifo_reference_id %}
-                        {% set ref_entry = history|selectattr('id', 'equalto', entry.fifo_reference_id)|first %}
-                        {% if ref_entry and ref_entry.change_type == 'finished_batch' and ref_entry.batch %}
-                          <a href="{{ url_for('inventory.view_inventory', id=item.id) }}#entry-{{ entry.fifo_reference_id }}">
-                            {{ ref_entry.batch.label_code }}
-                          </a>
-                        {% elif ref_entry and ref_entry.fifo_code %}
-                          <a href="{{ url_for('inventory.view_inventory', id=item.id) }}#entry-{{ entry.fifo_reference_id }}">
-                            {{ ref_entry.fifo_code }}
-                          </a>
-                        {% elif ref_entry %}
-                          <a href="{{ url_for('inventory.view_inventory', id=item.id) }}#entry-{{ entry.fifo_reference_id }}">
-                            {{ get_change_type_prefix(ref_entry.change_type) }}-{{ int_to_base36(ref_entry.id).zfill(6) }}
-                          </a>
-                        {% else %}
-                          <a href="{{ url_for('inventory.view_inventory', id=item.id) }}#entry-{{ entry.fifo_reference_id }}">
-                            {{ get_change_type_prefix('restock') }}-{{ int_to_base36(entry.fifo_reference_id).zfill(6) }}
-                          </a>
-                        {% endif %}
                       {% else %}
                         -
                       {% endif %}
                     </td>
                     <td>
-                      {% if entry.change_type == 'finished_batch' and entry.batch %}
-                        {% if entry.batch.status == 'in_progress' %}
-                          <a href="{{ url_for('batches.view_batch_in_progress', batch_identifier=entry.batch.id) }}">{{ entry.batch.label_code }}</a>
-                        {% else %}
-                          <a href="{{ url_for('batches.view_batch_record', batch_identifier=entry.batch.id) }}">{{ entry.batch.label_code }}</a>
-                        {% endif %}
-                      {% elif entry.batch %}
-                        {% if entry.batch.status == 'in_progress' %}
-                          <a href="{{ url_for('batches.view_batch_in_progress', batch_identifier=entry.batch.id) }}">{{ entry.batch.label_code }}</a>
-                        {% else %}
-                          <a href="{{ url_for('batches.view_batch_record', batch_identifier=entry.batch.id) }}">{{ entry.batch.label_code }}</a>
-                        {% endif %}
+                      {% if entry.fifo_code %}
+                        <a href="{{ url_for('inventory.view_inventory', id=item.id) }}#entry-{{ entry.id }}" class="text-decoration-none">
+                          {{ entry.fifo_code }}
+                        </a>
+                      {% elif entry.change_type == 'finished_batch' and entry.batch and entry.batch.label_code %}
+                        <a href="{{ url_for('inventory.view_inventory', id=item.id) }}#entry-{{ entry.id }}" class="text-decoration-none">
+                          {{ entry.batch.label_code }}
+                        </a>
+                      {% elif entry.affected_lot and entry.affected_lot.fifo_code %}
+                        <a href="{{ url_for('inventory.view_inventory', id=item.id) }}#entry-{{ entry.id }}" class="text-decoration-none">
+                          {{ entry.affected_lot.fifo_code }}
+                        </a>
                       {% else %}
-                        {% if entry.fifo_code %}
-                          <a href="{{ url_for('inventory.view_inventory', id=item.id) }}#entry-{{ entry.id }}" class="text-decoration-none">
-                            {{ entry.fifo_code }}
-                          </a>
-                        {% else %}
-                          <a href="{{ url_for('inventory.view_inventory', id=item.id) }}#entry-{{ entry.id }}" class="text-decoration-none">
-                            {{ get_change_type_prefix(entry.change_type) }}-{{ int_to_base36(entry.id).zfill(6) }}
-                          </a>
-                        {% endif %}
+                        -
                       {% endif %}
                     </td>
                     <td>

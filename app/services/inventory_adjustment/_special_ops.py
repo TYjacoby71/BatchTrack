@@ -138,7 +138,7 @@ def handle_recount(item, quantity, change_type, notes=None, created_by=None, tar
                 db.session.add(lot)
 
                 # Create RECOUNT-SPECIFIC event history with RCN-xxx code
-                recount_fifo_code = generate_fifo_code(change_type, item.id, is_lot_creation=False)
+                event_code = generate_fifo_code(change_type, item.id, is_lot_creation=False)
                 
                 deduction_history = UnifiedInventoryHistory(
                     inventory_item_id=item.id,
@@ -150,7 +150,7 @@ def handle_recount(item, quantity, change_type, notes=None, created_by=None, tar
                     created_by=created_by,
                     organization_id=item.organization_id,
                     affected_lot_id=lot.id,  # ALWAYS reference the affected lot
-                    fifo_code=recount_fifo_code  # RECOUNT's own event code (RCN-xxx)
+                    fifo_code=event_code  # RECOUNT's own event code (RCN-xxx)
                 )
                 db.session.add(deduction_history)
 
@@ -187,7 +187,7 @@ def handle_recount(item, quantity, change_type, notes=None, created_by=None, tar
                     db.session.add(lot)
 
                     # Create recount event history for this refill with RCN-xxx code
-                    recount_fifo_code = generate_fifo_code(change_type, item.id, is_lot_creation=False)
+                    event_code = generate_fifo_code(change_type, item.id, is_lot_creation=False)
                     
                     refill_history = UnifiedInventoryHistory(
                         inventory_item_id=item.id,
@@ -199,7 +199,7 @@ def handle_recount(item, quantity, change_type, notes=None, created_by=None, tar
                         created_by=created_by,
                         organization_id=item.organization_id,
                         affected_lot_id=lot.id,  # ALWAYS reference the affected lot
-                        fifo_code=recount_fifo_code  # RECOUNT's own event code (RCN-xxx)
+                        fifo_code=event_code  # RECOUNT's own event code (RCN-xxx)
                     )
                     db.session.add(refill_history)
 

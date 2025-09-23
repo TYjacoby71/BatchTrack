@@ -86,3 +86,31 @@ class UnifiedInventoryHistory(ScopedModelMixin, db.Model):
 
     def __repr__(self):
         return f'<UnifiedInventoryHistory {self.id} | Item {self.inventory_item_id} | {self.change_type}: {self.quantity_change}>'
+
+    # --- Naming clarity aliases ---
+    @property
+    def event_code(self):
+        """Alias for fifo_code: customer-facing event identifier string."""
+        return self.fifo_code
+
+    @event_code.setter
+    def event_code(self, value):
+        self.fifo_code = value
+
+    @property
+    def reference_event_id(self):
+        """Alias for fifo_reference_id: references another inventory event id."""
+        return self.fifo_reference_id
+
+    @reference_event_id.setter
+    def reference_event_id(self, value):
+        self.fifo_reference_id = value
+
+    @property
+    def reference_lot_id(self):
+        """Preferred alias for affected_lot_id: references the lot involved in this event."""
+        return self.affected_lot_id
+
+    @reference_lot_id.setter
+    def reference_lot_id(self, value):
+        self.affected_lot_id = value
