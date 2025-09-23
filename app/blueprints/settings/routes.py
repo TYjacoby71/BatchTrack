@@ -134,7 +134,7 @@ def get_user_preferences():
     """Get user preferences for current user"""
     try:
         user_prefs = UserPreferences.get_for_user(current_user.id)
-        
+
         if user_prefs:
             return jsonify({
                 'max_dashboard_alerts': user_prefs.max_dashboard_alerts,
@@ -222,7 +222,7 @@ def update_system_settings():
 def save_profile():
     try:
         print(f"Profile save request from user: {current_user.id}")
-        
+
         # Handle both JSON and form data
         if request.is_json:
             data = request.get_json()
@@ -277,7 +277,7 @@ def save_profile():
 
         db.session.rollback()
         error_msg = f'Error updating profile: {str(e)}'
-        
+
         if request.is_json:
             return jsonify({'success': False, 'error': error_msg}), 500
         else:
@@ -325,29 +325,29 @@ def set_backup_password():
         # Only allow OAuth users who don't have a password yet
         if not current_user.oauth_provider:
             return jsonify({'error': 'This feature is only for OAuth users'}), 400
-            
+
         if current_user.password_hash:
             return jsonify({'error': 'You already have a password set'}), 400
 
         data = request.get_json()
         password = data.get('password')
         confirm_password = data.get('confirm_password')
-        
+
         if not password or not confirm_password:
             return jsonify({'error': 'Both password fields are required'}), 400
-        
+
         if password != confirm_password:
             return jsonify({'error': 'Passwords do not match'}), 400
-        
+
         if len(password) < 8:
             return jsonify({'error': 'Password must be at least 8 characters'}), 400
-        
+
         # Set the password
         current_user.set_password(password)
         db.session.commit()
-        
+
         return jsonify({'success': True, 'message': 'Backup password set successfully'})
-        
+
     except Exception as e:
         db.session.rollback()
         return jsonify({'error': str(e)}), 500
