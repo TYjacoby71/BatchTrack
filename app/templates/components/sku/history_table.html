@@ -49,22 +49,7 @@
                             </span>
                         </td>
                         <td>
-                            {% if entry.fifo_reference_id %}
-                                {% set ref_entry = history|selectattr('id', 'equalto', entry.fifo_reference_id)|first %}
-                                {% if ref_entry and ref_entry.fifo_code %}
-                                    <a href="#entry-{{ entry.fifo_reference_id }}" class="text-primary">
-                                        <small class="font-monospace">{{ ref_entry.fifo_code }}</small>
-                                    </a>
-                                {% elif entry.fifo_source %}
-                                    <a href="#entry-{{ entry.fifo_reference_id }}" class="text-primary">
-                                        {{ entry.fifo_source }}
-                                    </a>
-                                {% else %}
-                                    <a href="#entry-{{ entry.fifo_reference_id }}" class="text-primary">
-                                        Ref #{{ entry.fifo_reference_id }}
-                                    </a>
-                                {% endif %}
-                            {% elif entry.batch_id %}
+                            {% if entry.batch_id %}
                                 <span class="text-info">
                                     {% if entry.batch and entry.batch.label_code %}
                                         {{ entry.batch.label_code }}

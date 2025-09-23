@@ -9,7 +9,8 @@ Core entities:
 
 Identifiers:
 - Event Code: Customer-facing identifier string for an inventory event. Stored in DB as `fifo_code`. Aliased in code as `event_code`.
-- Reference Event Id: A link from one event to another event’s id. Stored in DB as `fifo_reference_id`. Aliased in code as `reference_event_id`.
+- Reference Lot Id: Preferred pointer to the lot involved in the event. Stored in DB as `affected_lot_id`. Aliased in code as `reference_lot_id`.
+- Legacy: `fifo_reference_id` (reference to another event). Deprecated in favor of `affected_lot_id`.
 
 Generation:
 - Event codes are generated in `app/utils/fifo_generator.py` based on `change_type`.

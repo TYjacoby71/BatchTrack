@@ -105,3 +105,12 @@ class UnifiedInventoryHistory(ScopedModelMixin, db.Model):
     @reference_event_id.setter
     def reference_event_id(self, value):
         self.fifo_reference_id = value
+
+    @property
+    def reference_lot_id(self):
+        """Preferred alias for affected_lot_id: references the lot involved in this event."""
+        return self.affected_lot_id
+
+    @reference_lot_id.setter
+    def reference_lot_id(self, value):
+        self.affected_lot_id = value
