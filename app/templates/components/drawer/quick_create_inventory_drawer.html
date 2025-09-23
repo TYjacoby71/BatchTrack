@@ -51,28 +51,7 @@
                             </div>
                             <div class="form-text">Containers are counted in "count". Capacity helps planning.</div>
                         </div>
-                        <div class="col-md-12">
-                            <button class="btn btn-link p-0" type="button" data-bs-toggle="collapse" data-bs-target="#qcAdvanced" aria-expanded="false">
-                                Advanced
-                            </button>
-                            <div class="collapse mt-2" id="qcAdvanced">
-                                <div class="row g-2">
-                                    <div class="col-md-6">
-                                        <label class="form-label">Base Category</label>
-                                        <select class="form-select" id="qcInvCategory">
-                                            <option value="">None</option>
-                                            {% for cat in categories %}
-                                            <option value="{{ cat.id }}" data-density="{{ '%.3f'|format(cat.default_density or 0) }}">{{ cat.name }}</option>
-                                            {% endfor %}
-                                        </select>
-                                    </div>
-                                    <div class="col-md-6">
-                                        <label class="form-label">Density (g/ml)</label>
-                                        <input type="number" step="0.001" min="0" class="form-control" id="qcInvDensity" placeholder="Auto from category or global">
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
+                        <!-- Quick Create does not need category/density; auto-assignment or advanced tools handle density later. -->
                     </div>
                     <input type="hidden" id="qcInvGlobalItemId" value="">
                 </form>
@@ -96,8 +75,7 @@
         const nameInput = document.getElementById('qcInvName');
         const typeSelect = document.getElementById('qcInvType');
         const unitSelect = document.getElementById('qcInvUnit');
-        const catSelect = document.getElementById('qcInvCategory');
-        const densityInput = document.getElementById('qcInvDensity');
+                    // Category/density removed from Quick Create; density will be auto-assigned or edited later via advanced tools
         const capacityWrap = document.getElementById('qcContainerFields');
         const capInput = document.getElementById('qcInvCapacity');
         const capUnit = document.getElementById('qcInvCapacityUnit');
@@ -123,33 +101,7 @@
             updateTypeVisibility();
         }
 
-        // Category default density autofill and lock behavior
-        catSelect.addEventListener('change', function(){
-            const opt = catSelect.options[catSelect.selectedIndex];
-            const d = parseFloat(opt && opt.dataset && opt.dataset.density || '0');
-            if (catSelect.value !== '') {
-                if (d > 0) {
-                    densityInput.value = d.toFixed(3);
-                }
-                densityInput.readOnly = true;
-                densityInput.disabled = true;
-            } else {
-                densityInput.readOnly = false;
-                densityInput.disabled = false;
-            }
-        });
-        // Initialize lock state on open
-        (function(){
-            const opt = catSelect.options[catSelect.selectedIndex];
-            const d = parseFloat(opt && opt.dataset && opt.dataset.density || '0');
-            if (catSelect.value !== '') {
-                if (d > 0) {
-                    densityInput.value = d.toFixed(3);
-                }
-                densityInput.readOnly = true;
-                densityInput.disabled = true;
-            }
-        })();
+        // No category/density handling in Quick Create
 
         // Global search: debounce typing and fetch suggestions
         let debounceTimer = null;
@@ -214,9 +166,7 @@
                     const payload = {
                         name: nameInput ? nameInput.value.trim() : '',
                         type: typeSelect ? typeSelect.value : 'ingredient',
-                        unit: unitSelect ? unitSelect.value : 'count',
-                        category_id: catSelect ? (catSelect.value || '') : '',
-                        density: densityInput ? (densityInput.value || '') : '',
+                        unit: unitSelect ? unitSelect.value : 'count'
                     };
                     if (globalIdField && globalIdField.value) payload.global_item_id = globalIdField.value;
                     if (typeSelect && typeSelect.value === 'container') {
