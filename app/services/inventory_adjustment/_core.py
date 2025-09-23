@@ -2,6 +2,7 @@ import logging
 from app.models import db, InventoryItem, UnifiedInventoryHistory
 from app.services.unit_conversion import ConversionEngine
 from ._validation import validate_inventory_fifo_sync
+from app.services.costing_engine import weighted_average_cost_for_item
 
 # Import operation modules directly
 from ._additive_ops import _universal_additive_handler, ADDITIVE_OPERATION_GROUPS
@@ -125,6 +126,20 @@ def process_inventory_adjustment(item_id, change_type, quantity, notes=None, cre
             logger.error(f"FIFO VALIDATION ERROR for item {item_id}: {str(e)}")
             db.session.rollback()
             return False, f"FIFO validation error: {str(e)}"
+
+        # Update master item's moving average cost (WAC) based on active lots regardless of FIFO or Average toggle
+        try:
+            new_wac = weighted_average_cost_for_item(item.id)
+            # Only update if it materially changed to avoid noisy writes
+            try:
+                current = float(item.cost_per_unit or 0.0)
+            except Exception:
+                current = 0.0
+            if abs((new_wac or 0.0) - current) > 1e-9:
+                item.cost_per_unit = float(new_wac or 0.0)
+        except Exception:
+            # Do not fail the adjustment because of WAC recompute issues
+            pass
 
         # Commit database changes unless caller defers commit for an outer transaction
         try:

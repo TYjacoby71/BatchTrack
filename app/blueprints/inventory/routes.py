@@ -354,11 +354,22 @@ def adjust_inventory(item_id):
 
         # Extract optional parameters
         cost_override = None
-        if form_data.get('cost_per_unit'):
+        # Support either per-unit or total cost entry; if total, convert to per-unit
+        raw_cost = form_data.get('cost_per_unit')
+        cost_entry_type = (form_data.get('cost_entry_type') or 'no_change').strip().lower()
+        if raw_cost not in (None, ''):
             try:
-                cost_override = float(form_data.get('cost_per_unit'))
+                parsed_cost = float(raw_cost)
+                if cost_entry_type == 'total':
+                    qty_val = float(form_data.get('quantity', 0.0) or 0.0)
+                    if qty_val <= 0:
+                        flash("Total cost requires a positive quantity.", "error")
+                        return redirect(url_for('.view_inventory', id=item_id))
+                    cost_override = parsed_cost / qty_val
+                else:
+                    cost_override = parsed_cost
             except (ValueError, TypeError):
-                flash("Invalid cost per unit provided.", "error")
+                flash("Invalid cost provided.", "error")
                 return redirect(url_for('.view_inventory', id=item_id))
 
         custom_expiration_date = form_data.get('custom_expiration_date')
