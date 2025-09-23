@@ -531,7 +531,7 @@ class ExpirationService:
                     quantity=-float(quantity),
                     change_type="spoil",
                     unit=entry.unit,
-                    notes=f"Expired FIFO entry disposal #{entry_id}: {notes}",
+                    notes=f"Expired lot disposal #{entry_id}: {notes}",
                     created_by=current_user.id if getattr(current_user, "is_authenticated", False) else None,
                 )
                 return result, "Successfully marked FIFO entry as expired"
