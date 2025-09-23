@@ -1,7 +1,7 @@
 """Add inventory cost method toggle and valuation method fields
 
-Revision ID: 20250922_02_inventory_cost_method_toggle
-Revises: 20250922_01_align_extras_naming_and_consumables
+Revision ID: 20250922_02
+Revises: 20250922_01_align_extras
 Create Date: 2025-09-22 12:00:00.000000
 
 """
@@ -10,8 +10,8 @@ import sqlalchemy as sa
 
 
 # revision identifiers, used by Alembic.
-revision = '20250922_02_inventory_cost_method_toggle'
-down_revision = '20250922_01_align_extras_naming_and_consumables'
+revision = '20250922_02'
+down_revision = '20250922_01_align_extras'
 branch_labels = None
 depends_on = None
 
