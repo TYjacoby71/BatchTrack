@@ -138,16 +138,12 @@ class BatchOperationsService(BaseService):
                             )
 
                             if success:
-                                # Create BatchContainer record with cost per selected method
-                                method = getattr(batch, 'cost_method', None) or 'fifo'
-                                if method == 'average':
+                                # Create BatchContainer record - cost via history aggregation (DRY)
+                                try:
+                                    from app.services.costing_engine import weighted_unit_cost_for_batch_item
+                                    container_cost_snapshot = weighted_unit_cost_for_batch_item(container_item.id, batch.id)
+                                except Exception:
                                     container_cost_snapshot = float(container_item.cost_per_unit or 0.0)
-                                else:
-                                    try:
-                                        from app.services.inventory_adjustment._fifo_ops import estimate_fifo_issue_unit_cost
-                                        container_cost_snapshot = estimate_fifo_issue_unit_cost(container_item.id, float(quantity), 'batch')
-                                    except Exception:
-                                        container_cost_snapshot = float(container_item.cost_per_unit or 0.0)
 
                                 bc = BatchContainer(
                                     batch_id=batch.id,
@@ -207,17 +203,12 @@ class BatchOperationsService(BaseService):
                         errors.append(message or f"Not enough {ingredient.name} in stock.")
                         continue
 
-                    # Create BatchIngredient record with cost per selected method
-                    cost_per_unit_snapshot = None
-                    method = getattr(batch, 'cost_method', None) or 'fifo'
-                    if method == 'average':
+                    # Create BatchIngredient record - cost via history aggregation (DRY)
+                    try:
+                        from app.services.costing_engine import weighted_unit_cost_for_batch_item
+                        cost_per_unit_snapshot = weighted_unit_cost_for_batch_item(ingredient.id, batch.id)
+                    except Exception:
                         cost_per_unit_snapshot = float(ingredient.cost_per_unit or 0.0)
-                    else:
-                        try:
-                            from app.services.inventory_adjustment._fifo_ops import estimate_fifo_issue_unit_cost
-                            cost_per_unit_snapshot = estimate_fifo_issue_unit_cost(ingredient.id, required_converted, 'batch')
-                        except Exception:
-                            cost_per_unit_snapshot = float(ingredient.cost_per_unit or 0.0)
 
                     batch_ingredient = BatchIngredient(
                         batch_id=batch.id,
@@ -279,16 +270,12 @@ class BatchOperationsService(BaseService):
                         errors.append(message or f"Not enough {item.name} in stock (consumable).")
                         continue
 
-                    # Snapshot consumable cost per selected method
-                    method = getattr(batch, 'cost_method', None) or 'fifo'
-                    if method == 'average':
+                    # Snapshot consumable cost via history aggregation (DRY)
+                    try:
+                        from app.services.costing_engine import weighted_unit_cost_for_batch_item
+                        consumable_cost_snapshot = weighted_unit_cost_for_batch_item(item.id, batch.id)
+                    except Exception:
                         consumable_cost_snapshot = float(item.cost_per_unit or 0.0)
-                    else:
-                        try:
-                            from app.services.inventory_adjustment._fifo_ops import estimate_fifo_issue_unit_cost
-                            consumable_cost_snapshot = estimate_fifo_issue_unit_cost(item.id, required_converted, 'batch')
-                        except Exception:
-                            consumable_cost_snapshot = float(item.cost_per_unit or 0.0)
 
                     snap = BatchConsumable(
                         batch_id=batch.id,
@@ -664,16 +651,12 @@ class BatchOperationsService(BaseService):
                     })
                     continue
 
-                # Snapshot extra container cost per selected method
-                method = getattr(batch, 'cost_method', None) or 'fifo'
-                if method == 'average':
+                # Snapshot extra container cost via history aggregation (DRY)
+                try:
+                    from app.services.costing_engine import weighted_unit_cost_for_batch_item
+                    extra_container_cost = weighted_unit_cost_for_batch_item(container_item.id, batch.id)
+                except Exception:
                     extra_container_cost = float(container_item.cost_per_unit or 0.0)
-                else:
-                    try:
-                        from app.services.inventory_adjustment._fifo_ops import estimate_fifo_issue_unit_cost
-                        extra_container_cost = estimate_fifo_issue_unit_cost(container_item.id, float(needed_amount), 'batch')
-                    except Exception:
-                        extra_container_cost = float(container_item.cost_per_unit or 0.0)
 
                 new_extra = ExtraBatchContainer(
                     batch_id=batch.id,
@@ -733,16 +716,12 @@ class BatchOperationsService(BaseService):
                             "needed_unit": inventory_item.unit
                         })
                     else:
-                        # Snapshot extra ingredient cost per selected method
-                        method = getattr(batch, 'cost_method', None) or 'fifo'
-                        if method == 'average':
+                        # Snapshot extra ingredient cost via history aggregation (DRY)
+                        try:
+                            from app.services.costing_engine import weighted_unit_cost_for_batch_item
+                            extra_ing_cost = weighted_unit_cost_for_batch_item(inventory_item.id, batch.id)
+                        except Exception:
                             extra_ing_cost = float(inventory_item.cost_per_unit or 0.0)
-                        else:
-                            try:
-                                from app.services.inventory_adjustment._fifo_ops import estimate_fifo_issue_unit_cost
-                                extra_ing_cost = estimate_fifo_issue_unit_cost(inventory_item.id, float(sc_result.needed_quantity), 'batch')
-                            except Exception:
-                                extra_ing_cost = float(inventory_item.cost_per_unit or 0.0)
 
                         new_extra = ExtraBatchIngredient(
                             batch_id=batch.id,
@@ -808,17 +787,13 @@ class BatchOperationsService(BaseService):
                         })
                         continue
 
-                    # Snapshot extra consumable per selected method
+                    # Snapshot extra consumable per costing engine (DRY)
                     from app.models.batch import ExtraBatchConsumable
-                    method = getattr(batch, 'cost_method', None) or 'fifo'
-                    if method == 'average':
+                    try:
+                        from app.services.costing_engine import weighted_unit_cost_for_batch_item
+                        extra_cons_cost = weighted_unit_cost_for_batch_item(consumable_item.id, batch.id)
+                    except Exception:
                         extra_cons_cost = float(consumable_item.cost_per_unit or 0.0)
-                    else:
-                        try:
-                            from app.services.inventory_adjustment._fifo_ops import estimate_fifo_issue_unit_cost
-                            extra_cons_cost = estimate_fifo_issue_unit_cost(consumable_item.id, float(sc_result.needed_quantity), 'batch')
-                        except Exception:
-                            extra_cons_cost = float(consumable_item.cost_per_unit or 0.0)
 
                     extra_rec = ExtraBatchConsumable(
                         batch_id=batch.id,
