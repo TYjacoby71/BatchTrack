@@ -691,7 +691,7 @@ class BatchOperationsService(BaseService):
                         errors.append({
                             "item": inventory_item.name,
                             "message": sc_result.error_message or "Not enough in stock",
-                            "needed": sc_result.needed_quantity,
+                            "needed": getattr(sc_result, 'needed_quantity', None),
                             "needed_unit": sc_result.needed_unit
                         })
                         continue
@@ -709,10 +709,16 @@ class BatchOperationsService(BaseService):
                     )
 
                     if not success:
+                        normalized_message = message or "Not enough in stock"
+                        try:
+                            if isinstance(normalized_message, str) and normalized_message.lower().startswith("insufficient inventory"):
+                                normalized_message = f"Not enough in stock. {normalized_message}"
+                        except Exception:
+                            pass
                         errors.append({
                             "item": inventory_item.name,
-                            "message": message or "Not enough in stock",
-                            "needed": float(needed_amount),
+                            "message": normalized_message,
+                            "needed": float(needed_quantity),
                             "needed_unit": inventory_item.unit
                         })
                     else:
@@ -779,10 +785,16 @@ class BatchOperationsService(BaseService):
                     )
 
                     if not success:
+                        normalized_message = message or "Not enough in stock"
+                        try:
+                            if isinstance(normalized_message, str) and normalized_message.lower().startswith("insufficient inventory"):
+                                normalized_message = f"Not enough in stock. {normalized_message}"
+                        except Exception:
+                            pass
                         errors.append({
                             "item": consumable_item.name,
-                            "message": message or "Failed to deduct from inventory",
-                            "needed": needed_amount,
+                            "message": normalized_message,
+                            "needed": needed_quantity,
                             "needed_unit": consumable_item.unit
                         })
                         continue

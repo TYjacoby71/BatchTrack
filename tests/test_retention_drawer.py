@@ -8,7 +8,9 @@ def test_retention_flow_ack_to_delete(client, db_session, app):
     from app.models.recipe import Recipe
     from app.services.retention_service import RetentionService
 
-    tier = SubscriptionTier(name='Test Tier', billing_provider='exempt', user_limit=5, data_retention_days=365)
+    import time
+    unique_suffix = str(int(time.time() * 1000))[-6:]
+    tier = SubscriptionTier(name=f'Test Tier {unique_suffix}', billing_provider='exempt', user_limit=5, data_retention_days=365)
     db_session.add(tier)
     org = Organization(name='Retention Org')
     db_session.add(org)

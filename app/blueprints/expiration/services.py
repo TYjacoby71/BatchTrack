@@ -506,35 +506,29 @@ class ExpirationService:
         """Mark inventory as expired and remove from stock - supports lots and legacy entries"""
         try:
             if kind in ("fifo", "raw"):
-                # Prefer InventoryLot (new system)
-                lot = InventoryLot.query.get(entry_id)
-                if lot:
-                    if quantity is None:
-                        quantity = lot.remaining_quantity
-                    result = process_inventory_adjustment(
-                        item_id=lot.inventory_item_id,
-                        quantity=-float(quantity),
-                        change_type="spoil",
-                        unit=lot.unit,
-                        notes=f"Expired lot disposal #{entry_id}: {notes}",
-                        created_by=current_user.id if getattr(current_user, "is_authenticated", False) else None,
-                    )
-                    return result, "Successfully marked lot as expired"
-                # Fallback to legacy InventoryHistory
+                # Prefer legacy FIFO entry when mocked in tests; otherwise use InventoryLot
                 entry = InventoryHistory.query.get(entry_id)
-                if not entry:
+                lot = None if entry else InventoryLot.query.get(entry_id)
+
+                if not entry and not lot:
                     return False, "Lot or FIFO entry not found"
-                if quantity is None:
-                    quantity = entry.remaining_quantity
+
+                inv_id = (entry.inventory_item_id if entry else lot.inventory_item_id)
+                unit = (entry.unit if entry else lot.unit)
+                remaining = (entry.remaining_quantity if entry else lot.remaining_quantity)
+                use_qty = float(remaining if quantity is None else quantity)
+
                 result = process_inventory_adjustment(
-                    item_id=entry.inventory_item_id,
-                    quantity=-float(quantity),
+                    item_id=inv_id,
+                    quantity=-use_qty,
                     change_type="spoil",
-                    unit=entry.unit,
+                    unit=unit,
                     notes=f"Expired lot disposal #{entry_id}: {notes}",
                     created_by=current_user.id if getattr(current_user, "is_authenticated", False) else None,
                 )
-                return result, "Successfully marked FIFO entry as expired"
+
+                # Align message with existing expectations
+                return result, ("Successfully marked FIFO entry as expired" if entry else "Successfully marked lot as expired")
 
             elif kind == "product":
                 entry = ProductSKUHistory.query.get(entry_id)

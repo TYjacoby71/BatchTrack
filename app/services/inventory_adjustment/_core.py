@@ -36,8 +36,13 @@ def process_inventory_adjustment(item_id, change_type, quantity, notes=None, cre
     # Check if this is the first entry for this item
     is_initial_stock = UnifiedInventoryHistory.query.filter_by(inventory_item_id=item.id).count() == 0
 
-    # Route to initial_stock handler ONLY if it's the first entry, otherwise use original change_type
-    effective_change_type = 'initial_stock' if is_initial_stock else change_type
+    # Route to initial_stock handler ONLY if it's the first entry and the quantity is positive (additive)
+    # Otherwise, preserve the original change_type to avoid creating negative lots
+    try:
+        qty_float = float(quantity)
+    except Exception:
+        qty_float = 0.0
+    effective_change_type = 'initial_stock' if (is_initial_stock and qty_float > 0) else change_type
 
     try:
         # Normalize quantity to the item's canonical unit if a different unit was provided
