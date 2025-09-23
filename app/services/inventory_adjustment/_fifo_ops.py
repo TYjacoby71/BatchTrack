@@ -102,12 +102,12 @@ def create_new_fifo_lot(item_id, quantity, change_type, unit=None, notes=None, c
         # Import the proper FIFO generator
         from app.utils.fifo_generator import generate_fifo_code
 
-        # For finished_batch operations, use batch-specific code if batch_id exists
+        # For finished_batch operations, use batch-specific label if batch_id exists
         if change_type == 'finished_batch' and batch_id:
             from app.models import Batch
             batch = db.session.get(Batch, batch_id)
             if batch and batch.label_code:
-                fifo_code = f"BCH-{batch.label_code}"
+                fifo_code = batch.label_code
             else:
                 fifo_code = generate_fifo_code(change_type, item_id, is_lot_creation=True)
         else:
@@ -179,6 +179,23 @@ def deduct_fifo_inventory(item_id, quantity_to_deduct, change_type, notes=None, 
         if not item:
             return False, "Inventory item not found"
 
+        # Determine valuation method for this deduction event
+        valuation_method = None
+        try:
+            if str(change_type).lower() == 'batch' and batch_id:
+                from app.models import Batch
+                b = db.session.get(Batch, batch_id)
+                if b and getattr(b, 'cost_method', None):
+                    valuation_method = b.cost_method
+            if not valuation_method:
+                org = getattr(item, 'organization', None)
+                org_method = getattr(org, 'inventory_cost_method', None) if org else None
+                valuation_method = org_method or 'fifo'
+            if valuation_method not in ('fifo', 'average'):
+                valuation_method = 'fifo'
+        except Exception:
+            valuation_method = 'fifo'
+
         # Get active lots ordered by FIFO (oldest received first)
         query = InventoryLot.query.filter(
             and_(
@@ -224,16 +241,19 @@ def deduct_fifo_inventory(item_id, quantity_to_deduct, change_type, notes=None, 
             # Create audit record linking to the specific lot
             from app.utils.fifo_generator import generate_fifo_code
 
-            # Generate appropriate FIFO code for this deduction event; prefer batch label when available
+            # Generate appropriate event code for this deduction event; prefer batch label when available
             if change_type == 'batch' and batch_id:
                 try:
                     from app.models import Batch
                     batch = db.session.get(Batch, batch_id)
-                    deduction_fifo_code = f"BCH-{batch.label_code}" if batch and batch.label_code else generate_fifo_code(change_type, item_id, is_lot_creation=False)
+                    deduction_event_code = batch.label_code if batch and batch.label_code else generate_fifo_code(change_type, item_id, is_lot_creation=False)
                 except Exception:
-                    deduction_fifo_code = generate_fifo_code(change_type, item_id, is_lot_creation=False)
+                    deduction_event_code = generate_fifo_code(change_type, item_id, is_lot_creation=False)
             else:
-                deduction_fifo_code = generate_fifo_code(change_type, item_id, is_lot_creation=False)
+                deduction_event_code = generate_fifo_code(change_type, item_id, is_lot_creation=False)
+
+            # Choose unit cost according to valuation method
+            event_unit_cost = float(item.cost_per_unit or 0.0) if valuation_method == 'average' else float(lot.unit_cost or 0.0)
 
             history_record = UnifiedInventoryHistory(
                 inventory_item_id=item_id,
@@ -241,13 +261,15 @@ def deduct_fifo_inventory(item_id, quantity_to_deduct, change_type, notes=None, 
                 quantity_change=-deduct_from_lot,
                 remaining_quantity=None,  # N/A - this is an event record
                 unit=lot.unit,
-                unit_cost=lot.unit_cost,
+                unit_cost=event_unit_cost,
                 notes=f"FIFO deduction: -{deduct_from_lot} from lot {lot.fifo_code}" + (f" | {notes}" if notes else ""),
                 created_by=created_by,
                 organization_id=item.organization_id,
                 affected_lot_id=lot.id,  # Link to the specific lot that was affected
                 batch_id=batch_id,
-                fifo_code=deduction_fifo_code  # RCN-xxx for recount, other prefixes for other operations
+                fifo_code=deduction_fifo_code,  # RCN-xxx for recount, other prefixes for other operations
+                valuation_method=valuation_method
+
             )
             db.session.add(history_record)
 
@@ -292,6 +314,56 @@ def calculate_total_available_inventory(item_id):
     logger.info(f"FIFO CALC: Item {item_id} has {total_available} units available across {len(active_lots)} active lots")
 
     return total_available
+
+
+def estimate_fifo_issue_unit_cost(item_id: int, quantity_to_deduct: float, change_type: str | None = None) -> float:
+    """
+    Estimate the weighted average unit cost for a prospective FIFO deduction without mutating state.
+
+    Uses the same lot selection filters as deduct_fifo_inventory (including skipping expired for consumption ops).
+    Returns 0.0 if no quantity or no active lots.
+    """
+    try:
+        from app.models.inventory_lot import InventoryLot
+
+        item = db.session.get(InventoryItem, item_id)
+        if not item:
+            return 0.0
+
+        query = InventoryLot.query.filter(
+            and_(
+                InventoryLot.inventory_item_id == item_id,
+                InventoryLot.organization_id == item.organization_id,
+                InventoryLot.remaining_quantity > 0
+            )
+        )
+
+        consumption_ops = {'use', 'sale', 'sample', 'tester', 'gift', 'batch', 'pos_sale', 'pos_return_neg'}
+        if item.is_perishable and (str(change_type).lower() in consumption_ops if change_type else True):
+            now_utc = TimezoneUtils.utc_now()
+            query = query.filter(
+                (InventoryLot.expiration_date == None) | (InventoryLot.expiration_date >= now_utc)
+            )
+
+        active_lots = query.order_by(InventoryLot.received_date.asc()).all()
+
+        remaining = max(0.0, float(quantity_to_deduct or 0.0))
+        if remaining <= 0 or not active_lots:
+            return float(item.cost_per_unit or 0.0)  # reasonable fallback
+
+        cost_sum = 0.0
+        qty_sum = 0.0
+        for lot in active_lots:
+            if remaining <= 0:
+                break
+            take = min(float(lot.remaining_quantity), remaining)
+            cost_sum += take * float(lot.unit_cost or 0.0)
+            qty_sum += take
+            remaining -= take
+
+        return (cost_sum / qty_sum) if qty_sum > 0 else float(item.cost_per_unit or 0.0)
+    except Exception:
+        return 0.0
 
 
 def credit_specific_lot(lot_id, quantity, notes=None, created_by=None):

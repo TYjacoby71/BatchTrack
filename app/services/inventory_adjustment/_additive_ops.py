@@ -186,7 +186,7 @@ def _handle_lot_crediting_operation(item, quantity, change_type, unit, notes, fi
                 lot.remaining_quantity = float(lot.remaining_quantity) + credit_amount
 
                 # Create audit record for this credit
-                credit_fifo_code = generate_fifo_code(change_type, item.id, is_lot_creation=False)
+                event_code = generate_fifo_code(change_type, item.id, is_lot_creation=False)
 
                 history_record = UnifiedInventoryHistory(
                     inventory_item_id=item.id,
@@ -199,7 +199,7 @@ def _handle_lot_crediting_operation(item, quantity, change_type, unit, notes, fi
                     organization_id=item.organization_id,
                     affected_lot_id=lot.id,  # Link to the specific lot that was credited
                     batch_id=batch_id,
-                    fifo_code=credit_fifo_code
+                    fifo_code=event_code
                 )
                 db.session.add(history_record)
 

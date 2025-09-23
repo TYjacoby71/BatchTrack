@@ -37,3 +37,37 @@
         </div>
     </div>
 </div>
+
+<div class="row mt-3">
+    <div class="col-lg-6">
+        <div class="card">
+            <div class="card-header">
+                <h6 class="mb-0"><i class="fas fa-calculator"></i> Inventory Cost Method</h6>
+            </div>
+            <div class="card-body">
+                <div class="mb-2">
+                    <label class="form-label">Cost Valuation Method</label>
+                    <select class="form-select" x-model="organization.inventory_cost_method" @change="saveOrgCostMethod($event.target.value)">
+                        <option value="fifo">FIFO (lot cost)</option>
+                        <option value="average">Moving Average</option>
+                    </select>
+                </div>
+                <small class="text-muted">Affects new events and batches started after change. Existing events and in-progress batches are not changed.</small>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    function saveOrgCostMethod(method) {
+        fetch('/organization/update-settings', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ inventory_cost_method: method })
+        }).then(r => r.json()).then(resp => {
+            if (!resp.success) {
+                alert(resp.error || 'Failed to update cost method');
+            }
+        }).catch(() => alert('Failed to update cost method'));
+    }
+</script>

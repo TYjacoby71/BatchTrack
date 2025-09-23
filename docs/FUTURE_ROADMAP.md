@@ -25,7 +25,7 @@
 - AI recommendation logs with confidence scoring
 
 ### **Integration Points**
-- Connect with existing FIFO inventory system
+- Connect with existing inventory events and lot system
 - Link to batch production cost calculations
 - Interface with product pricing and sales data
 - Integrate with inventory adjustment workflows
@@ -34,6 +34,10 @@
 
 ### **Microservice-Style Separation**
 - **Inventory Service Module**: Extract inventory management into separate service layer
+- **Inventory/Event Naming Migration**: 
+  - Consider DB column rename `fifo_code` -> `event_code`, `fifo_reference_id` -> `reference_event_id` with backward-compatible migrations
+  - Audit UI copy to replace "FIFO event" with "Inventory event"; standardize on "Event Code"
+  - Align displays: Used For = Batch label; Credited/Debited = Affected lot event code; Event Code = Event’s code (batch label when finished batch)
 - **Recipe Calculation Service**: Dedicated scaling and conversion engine with caching
 - **Event-Driven Processing**: Batch status changes trigger automated workflows
 - **Service Communication**: Internal API for efficient service-to-service calls

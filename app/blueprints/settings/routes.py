@@ -123,6 +123,7 @@ def index():
                          system_settings=system_settings,
                          grouped_timezones=grouped_timezones,
                          is_org_owner=is_org_owner,
+                         organization=current_user.organization,
                          has_permission=has_permission,
                          TimezoneUtils=TimezoneUtils,
                          pricing_data=pricing_data)

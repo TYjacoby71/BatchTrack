@@ -178,6 +178,17 @@ def update_organization_settings():
         if 'timezone' in data:
             organization.timezone = data['timezone']
 
+        # Inventory cost method toggle (org owners only)
+        method = data.get('inventory_cost_method')
+        if method in ['fifo', 'average']:
+            # Only allow if current user is org owner
+            if current_user.is_organization_owner or current_user.user_type == 'developer':
+                # Only update if changed
+                if getattr(organization, 'inventory_cost_method', None) != method:
+                    organization.inventory_cost_method = method
+                    from app.utils.timezone_utils import TimezoneUtils as _TZ
+                    organization.inventory_cost_method_changed_at = _TZ.utc_now()
+
         db.session.commit()
 
         return jsonify({'success': True, 'message': 'Organization settings updated successfully'})

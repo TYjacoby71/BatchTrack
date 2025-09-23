@@ -1,6 +1,7 @@
 from datetime import datetime, timedelta, date, timezone
 from ...models import db, InventoryItem, InventoryHistory, ProductSKU, ProductSKUHistory, Batch, InventoryLot
 from sqlalchemy import and_, or_
+from sqlalchemy.orm import joinedload
 from typing import List, Dict, Optional, Tuple
 from flask_login import current_user
 import logging
@@ -182,8 +183,10 @@ class ExpirationService:
 
         now_utc = TimezoneUtils.utc_now()
 
-        # Base lot query with remaining quantity and org scoping
-        query = db.session.query(InventoryLot).join(InventoryItem).filter(
+        # Base lot query with remaining quantity and org scoping - ensure relationship is loaded
+        query = db.session.query(InventoryLot).join(InventoryItem).options(
+            joinedload(InventoryLot.inventory_item)
+        ).filter(
             and_(
                 InventoryLot.remaining_quantity > 0,
                 InventoryItem.is_perishable == True,
