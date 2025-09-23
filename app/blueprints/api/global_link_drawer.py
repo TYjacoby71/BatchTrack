@@ -71,10 +71,12 @@ def confirm_link():
             if getattr(inv, 'global_item_id', None):
                 skipped += 1
                 continue
-            # Ensure unit is convertible gate already filtered by service; double-check here
-            from ...models.unit import Unit
-            u = db.session.query(Unit).filter_by(name=inv.unit).first()
-            if not u or u.unit_type not in ['weight', 'volume']:
+            # Ensure pair compatibility with global default unit
+            if not gi.default_unit:
+                skipped += 1
+                continue
+            from ...services.global_link_suggestions import GlobalLinkSuggestionService
+            if not GlobalLinkSuggestionService.is_pair_compatible(gi.default_unit, inv.unit):
                 skipped += 1
                 continue
 

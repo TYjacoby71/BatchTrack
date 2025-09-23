@@ -9,15 +9,24 @@ class GlobalLinkSuggestionService:
     """Builds suggestions to link org-owned inventory items to curated GlobalItems."""
 
     @staticmethod
-    def _is_unit_convertible(unit_name: Optional[str]) -> bool:
-        if not unit_name:
+    def is_pair_compatible(global_unit_name: Optional[str], item_unit_name: Optional[str]) -> bool:
+        """Return True if unit classes match or are convertible (weight↔volume). Count↔(weight|volume) is disallowed."""
+        if not global_unit_name or not item_unit_name:
             return False
         try:
-            unit: Optional[Unit] = db.session.query(Unit).filter_by(name=unit_name).first()
-            if not unit:
+            gunit: Optional[Unit] = db.session.query(Unit).filter_by(name=global_unit_name).first()
+            iunit: Optional[Unit] = db.session.query(Unit).filter_by(name=item_unit_name).first()
+            if not gunit or not iunit:
                 return False
-            # Only allow weight or volume families; exclude count and other non-convertible types
-            return unit.unit_type in ['weight', 'volume']
+            gtype = (gunit.unit_type or '').lower()
+            itype = (iunit.unit_type or '').lower()
+            if gtype == itype:
+                return True
+            # Allow density-based convertibility between weight and volume
+            if {gtype, itype} == {'weight', 'volume'}:
+                return True
+            # Otherwise, not compatible (e.g., count vs volume/weight)
+            return False
         except Exception:
             return False
 
@@ -60,7 +69,8 @@ class GlobalLinkSuggestionService:
 
         candidates: List[Tuple[InventoryItem, float]] = []
         for item in query.limit(500).all():
-            if not GlobalLinkSuggestionService._is_unit_convertible(item.unit):
+            # Require known global unit and pair compatibility
+            if not gi.default_unit or not GlobalLinkSuggestionService.is_pair_compatible(gi.default_unit, item.unit):
                 continue
             conf = GlobalLinkSuggestionService._name_match_confidence(item.name, gi)
             if conf >= threshold:
