@@ -118,6 +118,11 @@ function settingsData() {
     return {
         userPrefs: {{ user_prefs | tojson }},
         systemSettings: {{ system_settings | tojson }},
+        organization: {{ ({
+            'id': organization.id if organization else None,
+            'name': organization.name if organization else '',
+            'inventory_cost_method': organization.inventory_cost_method if organization else 'fifo'
+        }) | tojson }},
         profile: {
             first_name: {{ (current_user.first_name or "") | tojson }},
             last_name: {{ (current_user.last_name or "") | tojson }},
@@ -324,6 +329,30 @@ function settingsData() {
                 }
             } catch (error) {
                 this.showToast('Error saving preferences', 'error');
+                console.error('Error:', error);
+            }
+        },
+
+        async saveOrgCostMethod(method) {
+            try {
+                const response = await fetch('/organization/update-settings', {
+                    method: 'POST',
+                    headers: { 
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': document.querySelector('meta[name=csrf-token]').getAttribute('content')
+                    },
+                    body: JSON.stringify({ inventory_cost_method: method })
+                });
+                
+                const result = await response.json();
+                if (result.success) {
+                    this.organization.inventory_cost_method = method;
+                    this.showToast('Cost method updated successfully', 'success');
+                } else {
+                    this.showToast(result.error || 'Failed to update cost method', 'error');
+                }
+            } catch (error) {
+                this.showToast('Error updating cost method', 'error');
                 console.error('Error:', error);
             }
         },
