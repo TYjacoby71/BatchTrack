@@ -34,6 +34,10 @@ class Batch(ScopedModelMixin, db.Model):
     expiration_date = db.Column(db.DateTime)
     remaining_quantity = db.Column(db.Float, nullable=True)
 
+    # Costing policy snapshot
+    cost_method = db.Column(db.String(16), nullable=True)  # 'fifo' | 'average'
+    cost_method_locked_at = db.Column(db.DateTime, nullable=True)
+
     recipe = db.relationship('Recipe', backref='batches')
     sku = db.relationship('ProductSKU', foreign_keys=[sku_id], backref='batches')
 

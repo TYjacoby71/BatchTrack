@@ -23,6 +23,7 @@ class UnifiedInventoryHistory(ScopedModelMixin, db.Model):
     # Legacy FIFO fields (deprecated - use InventoryLot instead)
     remaining_quantity = db.Column(db.Float, nullable=True, default=0.0)  # DEPRECATED
     unit_cost = db.Column(db.Float, nullable=True, default=0.0)
+    valuation_method = db.Column(db.String(16), nullable=True)  # 'fifo' | 'average'
     fifo_reference_id = db.Column(db.Integer, db.ForeignKey('unified_inventory_history.id'), nullable=True)
     fifo_code = db.Column(db.String(32), nullable=True)
 
