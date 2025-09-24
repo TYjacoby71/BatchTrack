@@ -30,28 +30,11 @@ def upgrade():
             batch_op.add_column(sa.Column('portioning_data', sa.JSON(), nullable=True))
         except Exception:
             pass
-        # Add denormalized hints if missing
-        try:
-            batch_op.add_column(sa.Column('portion_count', sa.Integer(), nullable=True))
-        except Exception:
-            pass
-        try:
-            batch_op.add_column(sa.Column('portion_name', sa.String(length=64), nullable=True))
-        except Exception:
-            pass
 
 
 def downgrade():
     try:
         with op.batch_alter_table('batch') as batch_op:
-            try:
-                batch_op.drop_column('portion_name')
-            except Exception:
-                pass
-            try:
-                batch_op.drop_column('portion_count')
-            except Exception:
-                pass
             batch_op.drop_column('portioning_data')
     except Exception:
         pass

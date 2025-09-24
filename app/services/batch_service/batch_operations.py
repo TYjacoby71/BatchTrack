@@ -35,35 +35,8 @@ class BatchOperationsService(BaseService):
 
             projected_yield = scale * recipe.predicted_yield
 
-            # Compute portioning snapshot prior to batch creation so it's set at instantiation
-            portion_snap = None
-            try:
-                if portioning_data and isinstance(portioning_data, dict):
-                    portion_snap = dict(portioning_data)
-                elif getattr(recipe, 'portioning_data', None):
-                    portion_snap = dict(recipe.portioning_data)
-                if portion_snap is not None and 'is_portioned' in portion_snap:
-                    portion_snap['is_portioned'] = bool(portion_snap.get('is_portioned'))
-                # Enrich snapshot with raw, directly-usable fields at batch level semantics
-                if portion_snap and portion_snap.get('is_portioned'):
-                    try:
-                        base_count = float(portion_snap.get('portion_count') or 0)
-                        projected_portions = int(round(base_count * float(scale))) if base_count > 0 else None
-                    except Exception:
-                        projected_portions = None
-                    portion_snap['projected_portions'] = projected_portions
-                    # Portion unit defaults to bulk yield unit; per-portion size = projected_yield / projected_portions
-                    portion_unit = recipe.predicted_yield_unit
-                    portion_snap['portion_unit'] = portion_unit
-                    try:
-                        if projected_portions and projected_portions > 0 and projected_yield:
-                            ps_val = float(projected_yield) / float(projected_portions)
-                            portion_snap['portion_size_value'] = ps_val
-                            portion_snap['portion_size_unit'] = portion_unit
-                    except Exception:
-                        pass
-            except Exception:
-                portion_snap = None
+            # Ask Recipe to generate a clean portioning snapshot for this scale
+            portion_snap = recipe.get_portioned_snapshot(scale=scale)
 
             # Create the batch
             batch = Batch(
@@ -76,8 +49,6 @@ class BatchOperationsService(BaseService):
                 status='in_progress',
                 notes=notes,
                 portioning_data=portion_snap,
-                portion_count=(portion_snap.get('portion_count') if portion_snap else None),
-                portion_name=(portion_snap.get('portion_name') if portion_snap else None),
                 created_by=current_user.id,
                 organization_id=current_user.organization_id,
                 started_at=TimezoneUtils.utc_now()

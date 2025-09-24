@@ -28,6 +28,39 @@ class Recipe(ScopedModelMixin, db.Model):
     recipe_consumables = db.relationship('RecipeConsumable', backref='recipe', cascade="all, delete-orphan")
     portioning_data = db.Column(db.JSON, nullable=True)
 
+    def get_portioned_snapshot(self, scale: float = 1.0):
+        """Return a clean, projected portioning snapshot for a given scale.
+
+        The snapshot is ready to be stored on a Batch as the source of truth.
+        """
+        data = getattr(self, 'portioning_data', None)
+        if not data or not data.get('is_portioned'):
+            return None
+
+        try:
+            base_portion_count = int(data.get('portion_count') or 0)
+            portion_name = data.get('portion_name')
+            bulk_yield_quantity = float(data.get('bulk_yield_quantity') or (self.predicted_yield or 0))
+            bulk_yield_unit = data.get('bulk_yield_unit') or self.predicted_yield_unit
+
+            projected_portions = int(round(base_portion_count * float(scale))) if base_portion_count > 0 else None
+            derivative_weight = None
+            if projected_portions and projected_portions > 0:
+                derivative_weight = (bulk_yield_quantity * float(scale)) / float(projected_portions)
+
+            snapshot = {
+                'is_portioned': True,
+                'portion_name': portion_name,
+                'portion_count': base_portion_count,
+                'projected_portions': projected_portions,
+                'derivative_weight': round(derivative_weight, 3) if isinstance(derivative_weight, (int, float)) else None,
+                'bulk_yield_quantity': bulk_yield_quantity * float(scale),
+                'bulk_yield_unit': bulk_yield_unit,
+            }
+            return snapshot
+        except (ValueError, TypeError):
+            return None
+
 class RecipeIngredient(ScopedModelMixin, db.Model):
     __tablename__ = 'recipe_ingredient'
     id = db.Column(db.Integer, primary_key=True)
