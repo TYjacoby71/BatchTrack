@@ -23,9 +23,8 @@ export class BatchManager {
                 notes: document.getElementById('batchNotes')?.value || '',
                 requires_containers: !!this.main.requiresContainers,
                 containers: this.getSelectedContainers(),
-                // Portioning snapshot is compiled server-side in the plan; client forwards it unchanged if present
-                // Keep this field null here; a dedicated plan endpoint or page-embedded data should supply it when ready
-                portioning_data: null
+                // Include portioning data if recipe is portioned
+                portioning_data: this.getPortioningData()
             };
 
             const result = await this.main.apiCall('/batches/api/start-batch', payload);
@@ -68,6 +67,23 @@ export class BatchManager {
         const plan = this.main.containerManager?.containerPlan;
         if (!plan?.container_selection?.length) return [];
         return plan.container_selection.map(c => ({ id: c.container_id, quantity: c.containers_needed || c.quantity || 0 })).filter(c => c.quantity > 0);
+    }
+
+    getPortioningData() {
+        // Check if recipe has portioning data
+        if (!this.main.recipe?.portioning_data) return null;
+        
+        const portioning = this.main.recipe.portioning_data;
+        if (!portioning.is_portioned) return null;
+
+        // Return the portioning data scaled for the batch
+        return {
+            is_portioned: true,
+            portion_name: portioning.portion_name,
+            portion_count: Math.round(portioning.portion_count * this.main.scale),
+            bulk_yield_quantity: portioning.bulk_yield_quantity * this.main.scale,
+            bulk_yield_unit_id: portioning.bulk_yield_unit_id
+        };
     }
 
     showSuccessMessage(message) {
