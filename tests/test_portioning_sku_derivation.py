@@ -70,6 +70,10 @@ def test_portioning_sku_labels_differ(client):
     assert sku_a is not None
     size_a = sku_a.size_label
     assert 'Bar' in size_a
+    # Soaps template should render sku_name with size_label
+    assert 'Salt Soap' in sku_a.sku_name
+    assert 'Lavender' in sku_a.sku_name
+    assert '(' in sku_a.sku_name and ')' in sku_a.sku_name
 
     # Start second batch
     batch2, errs2 = BatchOperationsService.start_batch(recipe_id=recipe.id, scale=1.0, batch_type='product', notes='Test batch 2')
@@ -91,4 +95,5 @@ def test_portioning_sku_labels_differ(client):
     size_b = sku_b.size_label
 
     assert size_a != size_b, f"Expected different size labels, got {size_a} == {size_b}"
+    assert sku_a.sku_name != sku_b.sku_name
 

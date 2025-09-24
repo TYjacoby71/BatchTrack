@@ -482,6 +482,21 @@ def _create_container_sku(product, variant, container_item, quantity, batch, exp
             unit='count'  # Containers are always counted as individual units
         )
 
+        # Ensure sku_name follows category template for container flows
+        try:
+            from ...services.sku_name_builder import SKUNameBuilder
+            from ...models.product_category import ProductCategory
+            category = ProductCategory.query.get(product.category_id) if getattr(product, 'category_id', None) else None
+            template = (category.sku_name_template if category and category.sku_name_template else None) or '{variant} {product} ({container})'
+            product_sku.sku_name = SKUNameBuilder.render(template, {
+                'product': product.name,
+                'variant': variant.name,
+                'container': size_label,
+                'size_label': None
+            })
+        except Exception:
+            pass
+
         # Set perishable data at the inventory_item level from batch
         if product_sku.inventory_item and batch.is_perishable:
             product_sku.inventory_item.is_perishable = True

@@ -1255,6 +1255,7 @@ def create_product_category():
     if request.method == 'POST':
         name = (request.form.get('name') or '').strip()
         is_typically_portioned = True if request.form.get('is_typically_portioned') == 'on' else False
+        sku_name_template = (request.form.get('sku_name_template') or '').strip() or None
         if not name:
             flash('Name is required', 'error')
             return redirect(url_for('developer.create_product_category'))
@@ -1262,7 +1263,7 @@ def create_product_category():
         if exists:
             flash('Category name already exists', 'error')
             return redirect(url_for('developer.create_product_category'))
-        cat = ProductCategory(name=name, is_typically_portioned=is_typically_portioned)
+        cat = ProductCategory(name=name, is_typically_portioned=is_typically_portioned, sku_name_template=sku_name_template)
         from app.extensions import db
         db.session.add(cat)
         db.session.commit()
@@ -1278,6 +1279,7 @@ def edit_product_category(cat_id):
     if request.method == 'POST':
         name = (request.form.get('name') or '').strip()
         is_typically_portioned = True if request.form.get('is_typically_portioned') == 'on' else False
+        sku_name_template = (request.form.get('sku_name_template') or '').strip() or None
         if not name:
             flash('Name is required', 'error')
             return redirect(url_for('developer.edit_product_category', cat_id=cat_id))
@@ -1287,6 +1289,7 @@ def edit_product_category(cat_id):
             return redirect(url_for('developer.edit_product_category', cat_id=cat_id))
         cat.name = name
         cat.is_typically_portioned = is_typically_portioned
+        cat.sku_name_template = sku_name_template
         from app.extensions import db
         db.session.commit()
         flash('Product category updated', 'success')
