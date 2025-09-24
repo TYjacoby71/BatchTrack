@@ -34,7 +34,9 @@ def prepare_batch_data(production_plan: ProductionPlan) -> Dict[str, Any]:
             'estimated_yield': {
                 'amount': production_plan.cost_breakdown.yield_amount,
                 'unit': production_plan.cost_breakdown.yield_unit
-            }
+            },
+            # Include portioning snapshot as part of the canonical plan
+            'portioning_data': None
         }
         
         # Prepare ingredient data
@@ -54,6 +56,22 @@ def prepare_batch_data(production_plan: ProductionPlan) -> Dict[str, Any]:
                     'quantity_needed': container.containers_needed,
                     'estimated_cost_each': container.cost_each
                 })
+
+        # Include portioning snapshot (raw, scaled) if plan indicates portioned recipe
+        try:
+            if getattr(production_plan, 'portioning', None) and getattr(production_plan.portioning, 'is_portioned', False):
+                # Expect planning to have already scaled these values
+                snap = {
+                    'is_portioned': True,
+                    'portion_name': getattr(production_plan.portioning, 'portion_name', None),
+                    'portion_count': getattr(production_plan.portioning, 'portion_count', None),
+                    'bulk_yield_quantity': production_plan.cost_breakdown.yield_amount,
+                    'bulk_yield_unit': production_plan.cost_breakdown.yield_unit,
+                }
+                batch_data['portioning_data'] = snap
+        except Exception:
+            # Do not fail overall plan prep because of optional portioning
+            pass
         
         logger.info(f"Prepared batch data for recipe {production_plan.request.recipe_id}")
         return batch_data

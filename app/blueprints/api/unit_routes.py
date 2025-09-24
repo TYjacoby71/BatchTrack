@@ -4,6 +4,7 @@ from flask_login import login_required, current_user
 from app.services.unit_conversion import ConversionEngine
 from app.utils.unit_utils import get_global_unit_list
 from app.models.models import Unit
+from sqlalchemy import func
 
 unit_api_bp = Blueprint('unit_api', __name__, url_prefix='/api')
 
@@ -27,6 +28,51 @@ def get_units():
             ]
         })
         
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@unit_api_bp.route('/unit-search')
+@login_required
+def unit_search():
+    """Search units by type and optional query, scoped to org for custom units.
+
+    Query params:
+      - type: unit_type to filter (e.g., 'count')
+      - q: substring match on name (optional)
+    """
+    try:
+        unit_type = (request.args.get('type') or request.args.get('unit_type') or '').strip()
+        q = (request.args.get('q') or '').strip()
+
+        # Reuse the same source of truth as other unit lists
+        units = get_global_unit_list() or []
+
+        # Filter by type if provided
+        if unit_type:
+            units = [u for u in units if (getattr(u, 'unit_type', None) == unit_type)]
+
+        # Filter by query (case-insensitive substring on name)
+        if q:
+            q_lower = q.lower()
+            units = [u for u in units if (getattr(u, 'name', '') or '').lower().find(q_lower) != -1]
+
+        # Sort like other lists
+        units.sort(key=lambda u: (str(getattr(u, 'unit_type', '') or ''), str(getattr(u, 'name', '') or '')))
+
+        results = units[:25]
+        return jsonify({
+            'success': True,
+            'data': [
+                {
+                    'id': getattr(u, 'id', None),
+                    'name': getattr(u, 'name', ''),
+                    'unit_type': getattr(u, 'unit_type', None),
+                    'symbol': getattr(u, 'symbol', None),
+                    'is_custom': getattr(u, 'is_custom', False)
+                } for u in results
+            ]
+        })
     except Exception as e:
         return jsonify({'success': False, 'error': str(e)}), 500
 

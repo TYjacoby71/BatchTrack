@@ -20,6 +20,28 @@ def start_batch():
         requires_containers = data.get('requires_containers', False)
         portioning_data = data.get('portioning_data')
 
+        # 🔍 COMPREHENSIVE PORTIONING DEBUG
+        print(f"🔍 START_BATCH DEBUG: Full request payload: {data}")
+        print(f"🔍 START_BATCH DEBUG: Raw portioning_data from request: {portioning_data}")
+        print(f"🔍 START_BATCH DEBUG: Type of portioning_data: {type(portioning_data)}")
+        
+        if portioning_data:
+            print(f"🔍 START_BATCH DEBUG: Portioning data keys: {list(portioning_data.keys()) if isinstance(portioning_data, dict) else 'NOT A DICT'}")
+            if isinstance(portioning_data, dict):
+                for key, value in portioning_data.items():
+                    print(f"🔍 START_BATCH DEBUG: portioning_data[{key}] = {value} (type: {type(value)})")
+        else:
+            print("🔍 START_BATCH DEBUG: No portioning_data in request")
+
+        # Check if batch_data contains portioning info as fallback
+        batch_data = data.get('batch_data')
+        if batch_data and isinstance(batch_data, dict):
+            batch_portioning = batch_data.get('portioning_data')
+            print(f"🔍 START_BATCH DEBUG: batch_data.portioning_data: {batch_portioning}")
+            if batch_portioning and not portioning_data:
+                print("🔍 START_BATCH DEBUG: Using portioning_data from batch_data as fallback")
+                portioning_data = batch_portioning
+
         # Delegate to service
         batch, errors = BatchOperationsService.start_batch(
             recipe_id=recipe_id,

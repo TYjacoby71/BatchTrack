@@ -8,7 +8,7 @@
       <div class="modal-body">
         <form id="finishBatchModalForm" method="post" action="{{ url_for('batches.finish_batch.complete_batch', batch_id=batch.id) }}">
           <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-          <div id="batchMeta" data-has-containers="{{ 'true' if (batch.containers or batch.extra_containers) else 'false' }}" style="display:none;"></div>
+          <div id="batchMeta" data-has-containers="{{ 'true' if (batch.containers or batch.extra_containers) else 'false' }}" data-is-portioned="{{ 'true' if (batch.portioning_data and batch.portioning_data.get('is_portioned')) else 'false' }}" style="display:none;"></div>
 
           <!-- Basic Batch Information Section -->
           <div class="basic-info-section">
@@ -55,7 +55,7 @@
             {% if batch.portioning_data and batch.portioning_data.get('is_portioned') %}
             <div class="form-group mb-3">
               <label for="final_portions">Final number of portions created</label>
-              <input type="number" id="final_portions" name="final_portions" class="form-control" min="0" step="1" placeholder="e.g., {{ batch.portioning_data.get('portion_count') }}">
+              <input type="number" id="final_portions" name="final_portions" class="form-control" min="0" step="1" placeholder="e.g., {{ batch.portioning_data.get('portion_count') }}" required>
               <div class="form-text">Portion name: {{ batch.portioning_data.get('portion_name') or 'unit' }}</div>
             </div>
             {% endif %}
@@ -115,7 +115,7 @@
             </div>
           </div>
 
-          <!-- Container Management Section - Only show if batch has containers -->
+          <!-- Container Management Section - Only show if batch has containers and is not portioned -->
           {% if (batch.containers or batch.extra_containers) and not (batch.portioning_data and batch.portioning_data.get('is_portioned')) %}
           <div class="card mb-3">
             <div class="card-header">
@@ -499,17 +499,25 @@ document.addEventListener('DOMContentLoaded', function() {
 document.addEventListener('DOMContentLoaded', function(){
   var form = document.getElementById('finishBatchModalForm');
   if (!form) return;
+  
+  // Check if this is a portioned batch
+  var isPortioned = {{ 'true' if batch.portioning_data and batch.portioning_data.get('is_portioned') else 'false' }};
+  
   form.addEventListener('submit', function(e){
-    {% if batch.portioning_data and batch.portioning_data.get('is_portioned') %}
-    var portionsEl = document.getElementById('final_portions');
-    var val = portionsEl && portionsEl.value ? parseInt(portionsEl.value, 10) : 0;
-    if (!val || val <= 0){
-      e.preventDefault();
-      alert('Please enter the final number of portions (must be greater than 0).');
-      if (portionsEl) portionsEl.focus();
-      return false;
+
+    var meta = document.getElementById('batchMeta');
+    var isPortioned = meta && meta.dataset && meta.dataset.isPortioned === 'true';
+
+    if (isPortioned) {
+      var portionsEl = document.getElementById('final_portions');
+      var val = portionsEl && portionsEl.value ? parseInt(portionsEl.value, 10) : 0;
+      if (!val || val <= 0){
+        e.preventDefault();
+        alert('Please enter the final number of portions (must be greater than 0).');
+        if (portionsEl) portionsEl.focus();
+        return false;
+      }
     }
-    {% endif %}
   });
 });
 </script>

@@ -16,7 +16,7 @@
 		container.style.position = 'relative';
 		container.appendChild(list);
 
-		function render(items){
+        function render(items){
 			list.innerHTML='';
 			var any = false;
 			if (items && items.length){
@@ -24,7 +24,7 @@
 					var a = document.createElement('a');
 					a.href = '#';
 					a.className = 'list-group-item list-group-item-action';
-					a.textContent = u.name;
+                    a.textContent = u.name;
 					a.addEventListener('click', function(ev){ ev.preventDefault(); input.value = u.name; list.classList.add('d-none'); });
 					list.appendChild(a);
 				});
@@ -39,9 +39,9 @@
 				create.textContent = 'Create "' + q + '"';
 				create.addEventListener('click', function(ev){
 					ev.preventDefault();
-					fetch('/api/units', {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({name:q, unit_type:'count'})})
-					.then(function(r){return r.json();})
-					.then(function(data){ if (data && data.success){ input.value = q; list.classList.add('d-none'); }});
+                    fetch('/recipes/units/quick-add', {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({name:q, type:'count'})})
+                    .then(function(r){return r.json();})
+                    .then(function(data){ if (data && !data.error){ input.value = data.name || q; list.classList.add('d-none'); }});
 				});
 				list.appendChild(create);
 				any = true;
@@ -52,9 +52,9 @@
 		var search = debounce(function(){
 			var q = (input.value||'').trim();
 			if (!q){ list.classList.add('d-none'); list.innerHTML=''; return; }
-			fetch('/api/unit-search?type=count&q=' + encodeURIComponent(q), { headers: { 'X-Requested-With': 'XMLHttpRequest' }})
-				.then(function(r){ return r.ok ? r.json() : { data: [] }; })
-				.then(function(data){ render((data && data.data) || []); })
+            fetch('/api/unit-search?type=count&q=' + encodeURIComponent(q), { headers: { 'X-Requested-With': 'XMLHttpRequest' }})
+                .then(function(r){ return r.ok ? r.json() : { data: [] }; })
+                .then(function(data){ render((data && data.data) || []); })
 				.catch(function(){ list.classList.add('d-none'); });
 		}, 200);
 

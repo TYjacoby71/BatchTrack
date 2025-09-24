@@ -32,12 +32,23 @@ def new_recipe():
             try:
                 is_portioned = request.form.get('is_portioned', '') == 'true'
                 if is_portioned:
+                    # Derive bulk yield from projected yield fields to keep DRY
+                    projected_qty = float(request.form.get('predicted_yield') or 0.0)
+                    projected_unit_name = (request.form.get('predicted_yield_unit') or '').strip()
+                    bulk_unit_id = None
+                    if projected_unit_name:
+                        try:
+                            bulk_unit = Unit.query.filter(Unit.name == projected_unit_name).order_by((Unit.organization_id == current_user.organization_id).desc()).first()
+                            if bulk_unit:
+                                bulk_unit_id = int(bulk_unit.id)
+                        except Exception:
+                            bulk_unit_id = None
                     portioning_payload = {
                         'is_portioned': True,
                         'portion_count': int(request.form.get('portion_count') or 0),
                         'portion_name': (request.form.get('portion_name') or '').strip() or None,
-                        'bulk_yield_quantity': float(request.form.get('bulk_yield_quantity') or 0.0),
-                        'bulk_yield_unit_id': int(request.form.get('bulk_yield_unit_id') or 0) or None
+                        'bulk_yield_quantity': projected_qty,
+                        'bulk_yield_unit_id': bulk_unit_id
                     }
             except Exception:
                 portioning_payload = None
@@ -180,12 +191,22 @@ def edit_recipe(recipe_id):
             try:
                 is_portioned = request.form.get('is_portioned', '') == 'true'
                 if is_portioned:
+                    projected_qty = float(request.form.get('predicted_yield') or 0.0)
+                    projected_unit_name = (request.form.get('predicted_yield_unit') or '').strip()
+                    bulk_unit_id = None
+                    if projected_unit_name:
+                        try:
+                            bulk_unit = Unit.query.filter(Unit.name == projected_unit_name).order_by((Unit.organization_id == current_user.organization_id).desc()).first()
+                            if bulk_unit:
+                                bulk_unit_id = int(bulk_unit.id)
+                        except Exception:
+                            bulk_unit_id = None
                     portioning_payload = {
                         'is_portioned': True,
                         'portion_count': int(request.form.get('portion_count') or 0),
                         'portion_name': (request.form.get('portion_name') or '').strip() or None,
-                        'bulk_yield_quantity': float(request.form.get('bulk_yield_quantity') or 0.0),
-                        'bulk_yield_unit_id': int(request.form.get('bulk_yield_unit_id') or 0) or None
+                        'bulk_yield_quantity': projected_qty,
+                        'bulk_yield_unit_id': bulk_unit_id
                     }
             except Exception:
                 portioning_payload = None
@@ -314,17 +335,55 @@ def unlock_recipe(recipe_id):
     return redirect(url_for('recipes.view_recipe', recipe_id=recipe_id))
 
 @recipes_bp.route('/units/quick-add', methods=['POST'])
+@login_required
 def quick_add_unit():
-    # Simple database operation
-    data = request.get_json()
-    name = data.get('name')
-    type = data.get('type', 'volume')
-
+    """Create an org-scoped custom unit (e.g., portion count name)."""
     try:
-        unit = Unit(name=name, type=type)
+        data = request.get_json() or {}
+        name = (data.get('name') or '').strip()
+        unit_type = (data.get('type') or data.get('unit_type') or 'count').strip()
+
+        if not name:
+            return jsonify({'error': 'Unit name is required'}), 400
+
+        # Enforce count type for portion names
+        if unit_type != 'count':
+            unit_type = 'count'
+
+        # Check existing within org or standard
+        existing = Unit.query.filter(
+            func.lower(Unit.name) == func.lower(db.literal(name)),
+            ((Unit.is_custom == False) | (Unit.organization_id == current_user.organization_id))
+        ).first()
+        if existing:
+            return jsonify({
+                'id': existing.id,
+                'name': existing.name,
+                'unit_type': existing.unit_type,
+                'symbol': existing.symbol,
+                'is_custom': existing.is_custom
+            })
+
+        unit = Unit(
+            name=name,
+            unit_type=unit_type,
+            base_unit='count',
+            conversion_factor=1.0,
+            is_active=True,
+            is_custom=True,
+            is_mapped=False,
+            organization_id=current_user.organization_id,
+            created_by=current_user.id
+        )
         db.session.add(unit)
         db.session.commit()
-        return jsonify({'name': unit.name, 'type': unit.type})
+        return jsonify({
+            'id': unit.id,
+            'name': unit.name,
+            'unit_type': unit.unit_type,
+            'symbol': unit.symbol,
+            'is_custom': True
+        })
     except Exception as e:
         db.session.rollback()
         return jsonify({'error': str(e)}), 400

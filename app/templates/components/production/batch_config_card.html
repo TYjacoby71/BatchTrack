@@ -24,6 +24,21 @@
                     <div class="form-control bg-light border-0 d-flex align-items-center fw-normal" style="height: 38px;" id="projectedYield">{{ recipe.predicted_yield or 0 }} {{ recipe.predicted_yield_unit or 'units' }}</div>
                 </div>
             </div>
+            {% if recipe.portioning_data and recipe.portioning_data.get('is_portioned') %}
+            <div class="col-md-6">
+                <div class="form-group">
+                    <label class="form-label fw-semibold">Portioning</label>
+                    <div class="form-control bg-light border-0" style="height: auto;">
+                        <div class="d-flex flex-wrap align-items-center gap-3 py-1">
+                            <span><i class="fas fa-layer-group me-1"></i> Portions: <strong>{{ recipe.portioning_data.get('portion_count') }}</strong></span>
+                            <span><i class="fas fa-tag me-1"></i> Name: <strong>{{ recipe.portioning_data.get('portion_name') or 'Unit' }}</strong></span>
+                            <span><i class="fas fa-balance-scale me-1"></i> Bulk Yield: <strong>{{ recipe.portioning_data.get('bulk_yield_quantity') or recipe.predicted_yield }} {{ recipe.predicted_yield_unit }}</strong></span>
+                        </div>
+                        <small class="text-muted">Configured on this recipe; category is only a guide.</small>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
             <div class="col-md-3">
                 <div class="form-group">
                     <label class="form-label fw-semibold">Batch Type <span class="text-danger">*</span></label>
@@ -52,8 +67,17 @@
                             </label>
                         </div>
                     </div>
+                    <div class="alert alert-info mt-2 d-none" id="portioningContainerNotice">
+                        <i class="fas fa-info-circle me-1"></i>
+                        This recipe is portioned. Containers can be added after the batch is started.
+                        If packaging is needed, it will be added after the batch is finished.
+                    </div>
                 </div>
             </div>
         </div>
     </div>
 </div>
+<style>
+@keyframes subtle-bounce { 0%, 100% { transform: translateY(0); } 30% { transform: translateY(-4px); } 60% { transform: translateY(2px); } }
+.bounce { animation: subtle-bounce 450ms ease-out; }
+</style>

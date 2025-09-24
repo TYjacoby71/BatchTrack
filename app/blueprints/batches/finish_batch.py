@@ -286,8 +286,7 @@ def _create_product_output(batch, product_id, variant_id, final_quantity, output
         # Create bulk SKU if there's remaining quantity and not portioned
         if bulk_quantity > 0 and not (batch.portioning_data and batch.portioning_data.get('is_portioned')):
             bulk_unit = output_unit
-            if bulk_unit != product.base_unit:
-                logger.warning(f"Bulk unit {bulk_unit} differs from product base unit {product.base_unit}")
+            # No product base unit; units are defined at SKU/Inventory level
 
             _create_bulk_sku(product, variant, bulk_quantity, bulk_unit, expiration_date, batch, ingredient_unit_cost)
 
@@ -296,11 +295,20 @@ def _create_product_output(batch, product_id, variant_id, final_quantity, output
             try:
                 size_label = _derive_size_label_from_portions(batch, final_quantity, output_unit, final_portions)
                 from ...services.product_service import ProductService
+                # Build naming context derived from batch snapshot
+                portion_name = (batch.portioning_data.get('portion_name') if batch.portioning_data else None) or 'Unit'
+                naming_context = {
+                    'yield_value': final_quantity,
+                    'yield_unit': output_unit,
+                    'portion_name': portion_name,
+                    'portion_count': final_portions,
+                }
                 product_sku = ProductService.get_or_create_sku(
                     product_name=product.name,
                     variant_name=variant.name,
                     size_label=size_label,
-                    unit='count'
+                    unit='count',
+                    naming_context=naming_context
                 )
                 # Ensure sku_name matches category template for portioned flows
                 try:
@@ -308,12 +316,14 @@ def _create_product_output(batch, product_id, variant_id, final_quantity, output
                     from ...models.product_category import ProductCategory
                     category = ProductCategory.query.get(product.category_id) if getattr(product, 'category_id', None) else None
                     template = (category.sku_name_template if category and category.sku_name_template else None) or '{variant} {product} ({size_label})'
-                    product_sku.sku_name = SKUNameBuilder.render(template, {
+                    base_context = {
                         'product': product.name,
                         'variant': variant.name,
                         'container': None,
-                        'size_label': size_label
-                    })
+                        'size_label': size_label,
+                    }
+                    base_context.update(naming_context)
+                    product_sku.sku_name = SKUNameBuilder.render(template, base_context)
                 except Exception:
                     pass
                 # Credit inventory as number of portions
@@ -342,33 +352,17 @@ def _create_product_output(batch, product_id, variant_id, final_quantity, output
 
 
 def _derive_size_label_from_portions(batch, final_bulk_quantity, bulk_unit, final_portions):
-    """Derive size label like '4 oz Bar' from bulk and portion count using unit conversion.
+    """Derive size label like '4 oz Bar' from bulk and portion count with simple division.
 
-    final_bulk_quantity: numeric quantity in bulk_unit
-    bulk_unit: string unit of final bulk quantity (e.g., 'lb', 'oz')
-    final_portions: integer number of portions
+    Uses the batch output unit directly; no implicit conversions here.
     """
     try:
         if not final_portions or final_portions <= 0:
             return 'Portion'
-
-        # Convert bulk to ounces if weight-like; fallback to bulk_unit
-        target_unit = 'oz'
-        from app.services.unit_conversion import ConversionEngine
-        try:
-            conv = ConversionEngine.convert_units(final_bulk_quantity, bulk_unit, target_unit)
-            converted = conv['converted_value']
-            per_portion = converted / float(final_portions)
-            per_portion = round(per_portion, 2)
-            portion_name = None
-            if batch.portioning_data:
-                portion_name = batch.portioning_data.get('portion_name') or 'Unit'
-            return f"{per_portion} {target_unit} {portion_name}"
-        except Exception:
-            # Fallback: no conversion available, use bulk_unit
-            per_portion = round(float(final_bulk_quantity) / float(final_portions), 2)
-            portion_name = batch.portioning_data.get('portion_name') if batch.portioning_data else 'Unit'
-            return f"{per_portion} {bulk_unit} {portion_name}"
+        per_portion = round(float(final_bulk_quantity) / float(final_portions), 2)
+        portion_name = (batch.portioning_data.get('portion_name') if batch.portioning_data else None) or 'Unit'
+        unit = bulk_unit
+        return f"{per_portion} {unit} {portion_name}"
     except Exception:
         return 'Portion'
 
@@ -459,7 +453,7 @@ def _create_container_sku(product, variant, container_item, quantity, batch, exp
         logger.info(f"Creating container SKU with container: {container_item.name}, quantity: {quantity}")
 
         # Create size label format: "[capacity] [capacity_unit] [container_name]"
-        # Example: "4 floz Admin 4oz Glass Jars"
+        # Example: "8 fl oz Bottle"
         if container_item.capacity and container_item.capacity_unit:
             size_label = f"{container_item.capacity} {container_item.capacity_unit} {container_item.name}"
         else:
@@ -475,11 +469,18 @@ def _create_container_sku(product, variant, container_item, quantity, batch, exp
 
         # Use ProductService to get or create the SKU - this handles existing SKUs properly
         from ...services.product_service import ProductService
+        naming_context = {
+            'container': size_label,
+            'yield_value': batch.final_quantity,
+            'yield_unit': batch.output_unit,
+        }
+
         product_sku = ProductService.get_or_create_sku(
             product_name=product.name,
             variant_name=variant.name,
             size_label=size_label,
-            unit='count'  # Containers are always counted as individual units
+            unit='count',  # Containers are always counted as individual units
+            naming_context=naming_context
         )
 
         # Ensure sku_name follows category template for container flows
@@ -488,12 +489,14 @@ def _create_container_sku(product, variant, container_item, quantity, batch, exp
             from ...models.product_category import ProductCategory
             category = ProductCategory.query.get(product.category_id) if getattr(product, 'category_id', None) else None
             template = (category.sku_name_template if category and category.sku_name_template else None) or '{variant} {product} ({container})'
-            product_sku.sku_name = SKUNameBuilder.render(template, {
+            base_context = {
                 'product': product.name,
                 'variant': variant.name,
                 'container': size_label,
                 'size_label': None
-            })
+            }
+            base_context.update(naming_context)
+            product_sku.sku_name = SKUNameBuilder.render(template, base_context)
         except Exception:
             pass
 

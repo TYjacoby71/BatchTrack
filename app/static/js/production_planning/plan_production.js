@@ -34,11 +34,11 @@ class PlanProductionApp {
         this.updateValidation();
 
         // Hide containers if recipe is portioned
-        if (data.is_portioned === true || data.is_portioned === 'true') {
+        const initData = window.recipeData || {};
+        if (initData.is_portioned === true || initData.is_portioned === 'true') {
             const requiresContainersCheckbox = document.getElementById('requiresContainers');
             if (requiresContainersCheckbox) {
                 requiresContainersCheckbox.checked = false;
-                requiresContainersCheckbox.disabled = true;
             }
             const card = document.getElementById('containerManagementCard');
             if (card) {
@@ -72,6 +72,21 @@ class PlanProductionApp {
         const requiresContainersCheckbox = document.getElementById('requiresContainers');
         if (requiresContainersCheckbox) {
             requiresContainersCheckbox.addEventListener('change', () => {
+                const portioned = (window.recipeData?.is_portioned === true || window.recipeData?.is_portioned === 'true');
+                if (portioned && requiresContainersCheckbox.checked) {
+                    // Show info card with bounce instead of enabling containers
+                    const notice = document.getElementById('portioningContainerNotice');
+                    if (notice) {
+                        notice.classList.remove('d-none');
+                        // retrigger bounce
+                        notice.classList.remove('bounce');
+                        void notice.offsetWidth;
+                        notice.classList.add('bounce');
+                    }
+                    requiresContainersCheckbox.checked = false;
+                    return;
+                }
+
                 this.requiresContainers = !!requiresContainersCheckbox.checked;
                 const card = document.getElementById('containerManagementCard');
                 if (card) {
