@@ -8,7 +8,7 @@
       <div class="modal-body">
         <form id="finishBatchModalForm" method="post" action="{{ url_for('batches.finish_batch.complete_batch', batch_id=batch.id) }}">
           <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-          <div id="batchMeta" data-has-containers="{{ 'true' if (batch.containers or batch.extra_containers) else 'false' }}" style="display:none;"></div>
+          <div id="batchMeta" data-has-containers="{{ 'true' if (batch.containers or batch.extra_containers) else 'false' }}" data-is-portioned="{{ 'true' if (batch.portioning_data and batch.portioning_data.get('is_portioned')) else 'false' }}" style="display:none;"></div>
 
           <!-- Basic Batch Information Section -->
           <div class="basic-info-section">
@@ -500,16 +500,18 @@ document.addEventListener('DOMContentLoaded', function(){
   var form = document.getElementById('finishBatchModalForm');
   if (!form) return;
   form.addEventListener('submit', function(e){
-    {% if batch.portioning_data and batch.portioning_data.get('is_portioned') %}
-    var portionsEl = document.getElementById('final_portions');
-    var val = portionsEl && portionsEl.value ? parseInt(portionsEl.value, 10) : 0;
-    if (!val || val <= 0){
-      e.preventDefault();
-      alert('Please enter the final number of portions (must be greater than 0).');
-      if (portionsEl) portionsEl.focus();
-      return false;
+    var meta = document.getElementById('batchMeta');
+    var isPortioned = meta && meta.dataset && meta.dataset.isPortioned === 'true';
+    if (isPortioned) {
+      var portionsEl = document.getElementById('final_portions');
+      var val = portionsEl && portionsEl.value ? parseInt(portionsEl.value, 10) : 0;
+      if (!val || val <= 0){
+        e.preventDefault();
+        alert('Please enter the final number of portions (must be greater than 0).');
+        if (portionsEl) portionsEl.focus();
+        return false;
+      }
     }
-    {% endif %}
   });
 });
 </script>
