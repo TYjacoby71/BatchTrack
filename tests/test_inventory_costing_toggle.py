@@ -72,9 +72,9 @@ class TestInventoryCostingToggleAndWAC:
             db_session.commit()
 
             # Remaining quantities: 50 ml from $1 lot and 100 ml from $3 lot => total 150
-            # New WAC = (50*1 + 100*3) / 150 = (50 + 300) / 150 = 350/150 ≈ 2.333333...
+            # In FIFO mode we do NOT persist WAC on deductions. The master cost remains last additive WAC (2.0)
             fresh_item = db_session.get(InventoryItem, item.id)
-            assert pytest.approx(fresh_item.cost_per_unit, rel=1e-9) == pytest.approx(350.0 / 150.0, rel=1e-9)
+            assert pytest.approx(fresh_item.cost_per_unit, rel=1e-9) == 2.0
 
     def test_wac_updates_after_restock_average_mode(self, app, db_session, test_user, test_org):
         with app.test_request_context():
