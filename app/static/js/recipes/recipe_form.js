@@ -18,16 +18,35 @@
 
 		function render(items){
 			list.innerHTML='';
-			if (!items || !items.length){ list.classList.add('d-none'); return; }
-			items.forEach(function(u){
-				var a = document.createElement('a');
-				a.href = '#';
-				a.className = 'list-group-item list-group-item-action';
-				a.textContent = u.name;
-				a.addEventListener('click', function(ev){ ev.preventDefault(); input.value = u.name; list.classList.add('d-none'); });
-				list.appendChild(a);
-			});
-			list.classList.remove('d-none');
+			var any = false;
+			if (items && items.length){
+				items.forEach(function(u){
+					var a = document.createElement('a');
+					a.href = '#';
+					a.className = 'list-group-item list-group-item-action';
+					a.textContent = u.name;
+					a.addEventListener('click', function(ev){ ev.preventDefault(); input.value = u.name; list.classList.add('d-none'); });
+					list.appendChild(a);
+				});
+				any = true;
+			}
+			// Add create-new action
+			var q = (input.value||'').trim();
+			if (q){
+				var create = document.createElement('a');
+				create.href = '#';
+				create.className = 'list-group-item list-group-item-action text-primary';
+				create.textContent = 'Create "' + q + '"';
+				create.addEventListener('click', function(ev){
+					ev.preventDefault();
+					fetch('/api/units', {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({name:q, unit_type:'count'})})
+					.then(function(r){return r.json();})
+					.then(function(data){ if (data && data.success){ input.value = q; list.classList.add('d-none'); }});
+				});
+				list.appendChild(create);
+				any = true;
+			}
+			list.classList.toggle('d-none', !any);
 		}
 
 		var search = debounce(function(){

@@ -420,10 +420,11 @@ def edit_product(product_id):
 
     name = request.form.get('name')
     unit = request.form.get('base_unit')  # Updated to match template form field name
+    category_id = request.form.get('category_id')
     low_stock_threshold = request.form.get('low_stock_threshold', 0)
 
-    if not name or not unit:
-        flash('Name and product base unit are required', 'error')
+    if not name or not unit or not category_id:
+        flash('Name, product base unit, and category are required', 'error')
         return redirect(url_for('products.view_product', product_id=product_id))
 
     # Check if another product has this name
@@ -440,6 +441,10 @@ def edit_product(product_id):
     product.name = name
     product.base_unit = unit
     product.low_stock_threshold = float(low_stock_threshold) if low_stock_threshold else 0
+    try:
+        product.category_id = int(category_id)
+    except Exception:
+        pass
 
     # Update all SKUs for this product
     skus = ProductSKU.query.filter_by(product_id=product.id).all()
