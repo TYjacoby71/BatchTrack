@@ -33,7 +33,7 @@
             <!-- Batch Configuration Card -->
             {% include 'components/production/batch_config_card.html' %}
 
-            <!-- Container Management Card - Hidden by default, shown when requiresContainers is true -->
+            <!-- Container Management Card - Hidden by default; JS will also hide for portioned recipes -->
             {% include 'components/production/container_management_card.html' %}
 
             <!-- Stock Check Card -->
@@ -74,7 +74,8 @@ window.recipeData = {
     id: {{ recipe.id }},
     name: "{{ recipe.name }}",
     yield_amount: {{ recipe.predicted_yield or 0 }},
-    yield_unit: "{{ recipe.predicted_yield_unit or 'units' }}"
+    yield_unit: "{{ recipe.predicted_yield_unit or 'units' }}",
+    is_portioned: {{ 'true' if recipe.portioning_data and recipe.portioning_data.get('is_portioned') else 'false' }}
 };
 </script>
 <script type="module" src="{{ url_for('static', filename='js/production_planning/plan_production.js') }}"></script>

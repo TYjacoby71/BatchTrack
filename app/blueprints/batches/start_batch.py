@@ -18,6 +18,7 @@ def start_batch():
         notes = data.get('notes', '')
         containers_data = data.get('containers', [])
         requires_containers = data.get('requires_containers', False)
+        portioning_data = data.get('portioning_data')
 
         # Delegate to service
         batch, errors = BatchOperationsService.start_batch(
@@ -26,7 +27,8 @@ def start_batch():
             batch_type=batch_type,
             notes=notes,
             containers_data=containers_data,
-            requires_containers=requires_containers
+            requires_containers=requires_containers,
+            portioning_data=portioning_data
         )
 
         if not batch:
