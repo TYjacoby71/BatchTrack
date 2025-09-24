@@ -1,6 +1,7 @@
 from flask import Blueprint, jsonify, render_template, request
 from flask_login import login_required, current_user
 from ...models import db, InventoryItem, GlobalItem, UnifiedInventoryHistory
+from ...services.drawers.payloads import build_drawer_payload
 from ...services.global_link_suggestions import GlobalLinkSuggestionService
 from ...utils.permissions import require_permission
 
@@ -21,12 +22,12 @@ def check_needed():
     needs = bool(gi and items)
     payload = None
     if needs:
-        payload = {
-            'modal_url': f"/global-link/api/modal?global_item_id={gi.id}",
-            'success_event': 'globalLinking.completed',
-            'error_type': 'global_link',
-            'error_code': 'SUGGESTIONS_FOUND'
-        }
+        payload = build_drawer_payload(
+            modal_url=f"/global-link/api/modal?global_item_id={gi.id}",
+            error_type='global_link',
+            error_code='SUGGESTIONS_FOUND',
+            success_event='globalLinking.completed'
+        )
     return jsonify({'needs_drawer': needs, 'drawer_payload': payload})
 
 

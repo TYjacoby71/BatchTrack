@@ -1,4 +1,4 @@
-<div class="modal fade" id="globalLinkModal" tabindex="-1" aria-labelledby="globalLinkModalLabel" aria-hidden="true" data-global-item-id="{{ global_item.id }}">
+<div class="modal fade" id="globalLinkModal" tabindex="-1" aria-labelledby="globalLinkModalLabel" aria-hidden="true" data-global-item-id="{{ global_item.id }}" role="dialog" aria-modal="true">
   <div class="modal-dialog modal-lg">
     <div class="modal-content">
       <div class="modal-header">
@@ -49,7 +49,7 @@
         <small class="text-muted">Deselect all if you do not want to link any items.</small>
       </div>
       <div class="modal-footer">
-        <button type="button" class="btn btn-primary" id="glConfirmBtn">
+        <button type="button" class="btn btn-primary" id="glConfirmBtn" aria-label="Confirm linking selected items to {{ global_item.name }}">
           Continue
         </button>
       </div>
