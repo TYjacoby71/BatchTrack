@@ -145,3 +145,26 @@ def list_units():
         qry = qry.filter(Unit.name.ilike(f"%{q}%"))
     units = qry.order_by(Unit.unit_type, Unit.name).limit(50).all()
     return jsonify({'success': True, 'data': [{'id': u.id, 'name': u.name, 'unit_type': u.unit_type} for u in units]})
+
+@api_bp.route('/units', methods=['POST'])
+@login_required
+def create_unit():
+    try:
+        data = request.get_json() or {}
+        name = (data.get('name') or '').strip()
+        unit_type = (data.get('unit_type') or 'count').strip()
+        if not name:
+            return jsonify({'success': False, 'error': 'Name is required'}), 400
+        # Prevent duplicates within standard scope
+        existing = Unit.query.filter(Unit.name.ilike(name)).first()
+        if existing:
+            return jsonify({'success': True, 'data': {'id': existing.id, 'name': existing.name, 'unit_type': existing.unit_type}})
+        u = Unit(name=name, unit_type=unit_type, conversion_factor=1.0, base_unit='Piece', is_active=True, is_custom=False, is_mapped=True, organization_id=None)
+        from ...extensions import db
+        db.session.add(u)
+        db.session.commit()
+        return jsonify({'success': True, 'data': {'id': u.id, 'name': u.name, 'unit_type': u.unit_type}})
+    except Exception as e:
+        from ...extensions import db
+        db.session.rollback()
+        return jsonify({'success': False, 'error': str(e)}), 500
