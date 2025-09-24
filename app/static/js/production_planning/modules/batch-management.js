@@ -16,23 +16,6 @@ export class BatchManager {
         if (!this.main.recipe) return;
 
         try {
-            // Build portioning snapshot from recipe data (scaled)
-            const rp = (window.recipeData && window.recipeData.portioning) ? window.recipeData.portioning : null;
-            let portioningSnapshot = null;
-            if (rp && (rp.is_portioned === true || rp.is_portioned === 'true')) {
-                const baseCount = parseFloat(rp.portion_count || 0);
-                const scaledPortions = isNaN(baseCount) ? null : Math.round(baseCount * (this.main.scale || 1));
-                const baseYield = Number(this.main.baseYield || 0);
-                const scaledBulkYield = baseYield * (this.main.scale || 1);
-                portioningSnapshot = {
-                    is_portioned: true,
-                    portion_name: rp.portion_name || 'Unit',
-                    portion_count: scaledPortions, // scaled count
-                    bulk_yield_quantity: scaledBulkYield,
-                    bulk_yield_unit: (window.recipeData && window.recipeData.yield_unit) || rp.bulk_yield_unit || ''
-                };
-            }
-
             const payload = {
                 recipe_id: this.main.recipe.id,
                 scale: this.main.scale,
@@ -40,8 +23,9 @@ export class BatchManager {
                 notes: document.getElementById('batchNotes')?.value || '',
                 requires_containers: !!this.main.requiresContainers,
                 containers: this.getSelectedContainers(),
-                // Pass compiled, scaled portioning snapshot (or null)
-                portioning_data: portioningSnapshot
+                // Portioning snapshot is compiled server-side in the plan; client forwards it unchanged if present
+                // Keep this field null here; a dedicated plan endpoint or page-embedded data should supply it when ready
+                portioning_data: null
             };
 
             const result = await this.main.apiCall('/batches/api/start-batch', payload);

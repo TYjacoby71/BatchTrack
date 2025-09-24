@@ -275,7 +275,8 @@ def api_start_batch():
         notes = data.get('notes', '')
         requires_containers = bool(data.get('requires_containers', False))
         containers_data = data.get('containers', [])
-        portioning_data = data.get('portioning_data')
+        # Prefer canonical portioning snapshot if a plan payload was sent
+        portioning_data = data.get('portioning_data') or (data.get('batch_data', {}) or {}).get('portioning_data')
 
         if not recipe_id:
             return jsonify({'success': False, 'message': 'Recipe ID is required.'}), 400
