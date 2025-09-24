@@ -42,35 +42,34 @@ def unit_search():
       - q: substring match on name (optional)
     """
     try:
-        unit_type = (request.args.get('type') or '').strip()
+        unit_type = (request.args.get('type') or request.args.get('unit_type') or '').strip()
         q = (request.args.get('q') or '').strip()
 
-        query = Unit.query.filter(Unit.is_active == True)
+        # Reuse the same source of truth as other unit lists
+        units = get_global_unit_list() or []
 
+        # Filter by type if provided
         if unit_type:
-            query = query.filter(Unit.unit_type == unit_type)
+            units = [u for u in units if (getattr(u, 'unit_type', None) == unit_type)]
 
-        # Scope: include standard OR current org's custom
-        if current_user.organization_id:
-            query = query.filter(
-                (Unit.is_custom == False) | (Unit.organization_id == current_user.organization_id)
-            )
-        else:
-            query = query.filter(Unit.is_custom == False)
-
+        # Filter by query (case-insensitive substring on name)
         if q:
-            query = query.filter(func.lower(Unit.name).like(func.lower(f"%{q}%")))
+            q_lower = q.lower()
+            units = [u for u in units if (getattr(u, 'name', '') or '').lower().find(q_lower) != -1]
 
-        results = query.order_by(Unit.unit_type, Unit.name).limit(25).all()
+        # Sort like other lists
+        units.sort(key=lambda u: (str(getattr(u, 'unit_type', '') or ''), str(getattr(u, 'name', '') or '')))
+
+        results = units[:25]
         return jsonify({
             'success': True,
             'data': [
                 {
-                    'id': u.id,
-                    'name': u.name,
-                    'unit_type': u.unit_type,
-                    'symbol': u.symbol,
-                    'is_custom': u.is_custom
+                    'id': getattr(u, 'id', None),
+                    'name': getattr(u, 'name', ''),
+                    'unit_type': getattr(u, 'unit_type', None),
+                    'symbol': getattr(u, 'symbol', None),
+                    'is_custom': getattr(u, 'is_custom', False)
                 } for u in results
             ]
         })
