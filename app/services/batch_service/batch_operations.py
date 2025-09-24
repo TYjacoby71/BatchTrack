@@ -35,13 +35,8 @@ class BatchOperationsService(BaseService):
 
             projected_yield = scale * recipe.predicted_yield
 
-            # Snapshot raw portioning JSON if recipe is portioned; otherwise leave null
-            portion_snap = None
-            try:
-                if getattr(recipe, 'portioning_data', None) and recipe.portioning_data.get('is_portioned'):
-                    portion_snap = dict(recipe.portioning_data)
-            except Exception:
-                portion_snap = None
+            # Snapshot: accept the compiled portioning payload from Plan Production only (no computation here)
+            portion_snap = dict(portioning_data) if portioning_data and isinstance(portioning_data, dict) else None
 
             # Create the batch
             batch = Batch(
