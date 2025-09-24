@@ -52,21 +52,13 @@ class BatchOperationsService(BaseService):
 
             db.session.add(batch)
 
-            # Snapshot portioning data: MERGE plan payload onto recipe snapshot to keep batch fully independent
+            # Snapshot portioning data: take the full payload from Plan Production as single source of truth
             try:
-                merged_snapshot = {}
-                # Start from recipe's portioning data if present
-                if getattr(recipe, 'portioning_data', None) and isinstance(recipe.portioning_data, dict):
-                    merged_snapshot.update(dict(recipe.portioning_data))
-                # Overlay any plan-provided portioning_data (takes precedence)
                 if portioning_data and isinstance(portioning_data, dict):
-                    merged_snapshot.update(dict(portioning_data))
-                # Only set on batch if we have something meaningful
-                if merged_snapshot:
-                    # Normalize boolean flag
-                    if 'is_portioned' in merged_snapshot:
-                        merged_snapshot['is_portioned'] = bool(merged_snapshot.get('is_portioned'))
-                    batch.portioning_data = merged_snapshot
+                    snap = dict(portioning_data)
+                    if 'is_portioned' in snap:
+                        snap['is_portioned'] = bool(snap.get('is_portioned'))
+                    batch.portioning_data = snap
             except Exception:
                 pass
 
