@@ -494,4 +494,23 @@ document.addEventListener('DOMContentLoaded', function() {
   }
 });
 </script>
+<script>
+// Require final_portions when batch is portioned
+document.addEventListener('DOMContentLoaded', function(){
+  var form = document.getElementById('finishBatchModalForm');
+  if (!form) return;
+  form.addEventListener('submit', function(e){
+    {% if batch.portioning_data and batch.portioning_data.get('is_portioned') %}
+    var portionsEl = document.getElementById('final_portions');
+    var val = portionsEl && portionsEl.value ? parseInt(portionsEl.value, 10) : 0;
+    if (!val || val <= 0){
+      e.preventDefault();
+      alert('Please enter the final number of portions (must be greater than 0).');
+      if (portionsEl) portionsEl.focus();
+      return false;
+    }
+    {% endif %}
+  });
+});
+</script>
 </div>

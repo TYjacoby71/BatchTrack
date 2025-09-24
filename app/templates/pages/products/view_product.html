@@ -303,7 +303,7 @@
           <div class="mb-3">
             <label class="form-label">Product Category</label>
             <select name="category_id" class="form-select" required>
-              {% for c in ProductCategory.query.order_by(ProductCategory.name.asc()).all() %}
+              {% for c in product_categories %}
                 <option value="{{ c.id }}" {% if product.category_id == c.id %}selected{% endif %}>{{ c.name }}</option>
               {% endfor %}
             </select>

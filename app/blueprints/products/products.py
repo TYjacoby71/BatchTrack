@@ -376,12 +376,20 @@ def view_product(product_id):
     # Also add skus to product for template compatibility
     product.skus = skus
 
+    # Load product categories for edit modal
+    try:
+        from ...models.product_category import ProductCategory
+        product_categories = ProductCategory.query.order_by(ProductCategory.name.asc()).all()
+    except Exception:
+        product_categories = []
+
     return render_template('pages/products/view_product.html',
                          product=product,
                          variants=variants,
                          available_containers=available_containers,
                          get_global_unit_list=get_global_unit_list,
-                         inventory_groups={})
+                         inventory_groups={},
+                         product_categories=product_categories)
 
 # Keep the old route for backward compatibility
 @products_bp.route('/<product_name>')
