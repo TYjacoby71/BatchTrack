@@ -75,7 +75,14 @@ window.recipeData = {
     name: "{{ recipe.name }}",
     yield_amount: {{ recipe.predicted_yield or 0 }},
     yield_unit: "{{ recipe.predicted_yield_unit or 'units' }}",
-    is_portioned: {{ 'true' if recipe.portioning_data and recipe.portioning_data.get('is_portioned') else 'false' }}
+    is_portioned: {{ 'true' if recipe.portioning_data and recipe.portioning_data.get('is_portioned') else 'false' }},
+    portioning: {
+        is_portioned: {{ 'true' if recipe.portioning_data and recipe.portioning_data.get('is_portioned') else 'false' }},
+        portion_count: {{ recipe.portioning_data.get('portion_count') if recipe.portioning_data and recipe.portioning_data.get('portion_count') else 'null' }},
+        portion_name: "{{ recipe.portioning_data.get('portion_name') if recipe.portioning_data and recipe.portioning_data.get('portion_name') else '' }}",
+        bulk_yield_quantity: {{ recipe.portioning_data.get('bulk_yield_quantity') if recipe.portioning_data and recipe.portioning_data.get('bulk_yield_quantity') else 'null' }},
+        bulk_yield_unit_id: {{ recipe.portioning_data.get('bulk_yield_unit_id') if recipe.portioning_data and recipe.portioning_data.get('bulk_yield_unit_id') else 'null' }}
+    }
 };
 </script>
 <script type="module" src="{{ url_for('static', filename='js/production_planning/plan_production.js') }}"></script>

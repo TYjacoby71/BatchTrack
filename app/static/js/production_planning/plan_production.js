@@ -34,7 +34,8 @@ class PlanProductionApp {
         this.updateValidation();
 
         // Hide containers if recipe is portioned
-        if (data.is_portioned === true || data.is_portioned === 'true') {
+        const initData = window.recipeData || {};
+        if (initData.is_portioned === true || initData.is_portioned === 'true') {
             const requiresContainersCheckbox = document.getElementById('requiresContainers');
             if (requiresContainersCheckbox) {
                 requiresContainersCheckbox.checked = false;
