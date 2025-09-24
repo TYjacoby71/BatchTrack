@@ -35,6 +35,10 @@ class Batch(ScopedModelMixin, db.Model):
     remaining_quantity = db.Column(db.Float, nullable=True)
     portioning_data = db.Column(db.JSON, nullable=True)
 
+    # Costing policy snapshot
+    cost_method = db.Column(db.String(16), nullable=True)  # 'fifo' | 'average'
+    cost_method_locked_at = db.Column(db.DateTime, nullable=True)
+
     recipe = db.relationship('Recipe', backref='batches')
     sku = db.relationship('ProductSKU', foreign_keys=[sku_id], backref='batches')
 

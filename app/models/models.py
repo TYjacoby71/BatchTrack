@@ -106,6 +106,10 @@ class Organization(db.Model):
     last_online_sync = db.Column(db.DateTime, nullable=True)
     offline_tier_cache = db.Column(db.JSON, nullable=True)  # Cached tier permissions for offline use
 
+    # Inventory costing policy
+    inventory_cost_method = db.Column(db.String(16), nullable=True)  # 'fifo' | 'average' (default handled in logic)
+    inventory_cost_method_changed_at = db.Column(db.DateTime, nullable=True)
+
     # Relationships
     users = db.relationship('User', backref='organization')
     subscription_tier = db.relationship('SubscriptionTier', foreign_keys=[subscription_tier_id])

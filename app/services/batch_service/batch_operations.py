@@ -77,6 +77,7 @@ class BatchOperationsService(BaseService):
                 except Exception:
                     pass
 
+
             # Handle containers if required
             container_errors = []
             if requires_containers:
@@ -154,13 +155,19 @@ class BatchOperationsService(BaseService):
                             )
 
                             if success:
-                                # Create BatchContainer record
+                                # Create BatchContainer record - cost via history aggregation (DRY)
+                                try:
+                                    from app.services.costing_engine import weighted_unit_cost_for_batch_item
+                                    container_cost_snapshot = weighted_unit_cost_for_batch_item(container_item.id, batch.id)
+                                except Exception:
+                                    container_cost_snapshot = float(container_item.cost_per_unit or 0.0)
+
                                 bc = BatchContainer(
                                     batch_id=batch.id,
                                     container_id=container_id,
                                     container_quantity=quantity,
                                     quantity_used=quantity,
-                                    cost_each=container_item.cost_per_unit or 0.0,
+                                    cost_each=container_cost_snapshot,
                                     organization_id=current_user.organization_id
                                 )
                                 db.session.add(bc)
@@ -213,13 +220,19 @@ class BatchOperationsService(BaseService):
                         errors.append(message or f"Not enough {ingredient.name} in stock.")
                         continue
 
-                    # Create BatchIngredient record
+                    # Create BatchIngredient record - cost via history aggregation (DRY)
+                    try:
+                        from app.services.costing_engine import weighted_unit_cost_for_batch_item
+                        cost_per_unit_snapshot = weighted_unit_cost_for_batch_item(ingredient.id, batch.id)
+                    except Exception:
+                        cost_per_unit_snapshot = float(ingredient.cost_per_unit or 0.0)
+
                     batch_ingredient = BatchIngredient(
                         batch_id=batch.id,
                         inventory_item_id=ingredient.id,
                         quantity_used=required_converted,
                         unit=ingredient.unit,
-                        cost_per_unit=ingredient.cost_per_unit,
+                        cost_per_unit=cost_per_unit_snapshot,
                         organization_id=current_user.organization_id
                     )
                     db.session.add(batch_ingredient)
@@ -274,13 +287,19 @@ class BatchOperationsService(BaseService):
                         errors.append(message or f"Not enough {item.name} in stock (consumable).")
                         continue
 
-                    # Snapshot
+                    # Snapshot consumable cost via history aggregation (DRY)
+                    try:
+                        from app.services.costing_engine import weighted_unit_cost_for_batch_item
+                        consumable_cost_snapshot = weighted_unit_cost_for_batch_item(item.id, batch.id)
+                    except Exception:
+                        consumable_cost_snapshot = float(item.cost_per_unit or 0.0)
+
                     snap = BatchConsumable(
                         batch_id=batch.id,
                         inventory_item_id=item.id,
                         quantity_used=required_converted,
                         unit=item.unit,
-                        cost_per_unit=item.cost_per_unit,
+                        cost_per_unit=consumable_cost_snapshot,
                         organization_id=current_user.organization_id
                     )
                     db.session.add(snap)
@@ -649,13 +668,19 @@ class BatchOperationsService(BaseService):
                     })
                     continue
 
-                # Create ExtraBatchContainer record
+                # Snapshot extra container cost via history aggregation (DRY)
+                try:
+                    from app.services.costing_engine import weighted_unit_cost_for_batch_item
+                    extra_container_cost = weighted_unit_cost_for_batch_item(container_item.id, batch.id)
+                except Exception:
+                    extra_container_cost = float(container_item.cost_per_unit or 0.0)
+
                 new_extra = ExtraBatchContainer(
                     batch_id=batch.id,
                     container_id=container_item.id,
                     container_quantity=int(needed_amount),
                     quantity_used=int(needed_amount),
-                    cost_each=container_item.cost_per_unit,
+                    cost_each=extra_container_cost,
                     reason=reason,
                     organization_id=current_user.organization_id
                 )
@@ -708,13 +733,19 @@ class BatchOperationsService(BaseService):
                             "needed_unit": inventory_item.unit
                         })
                     else:
-                        # Create ExtraBatchIngredient record
+                        # Snapshot extra ingredient cost via history aggregation (DRY)
+                        try:
+                            from app.services.costing_engine import weighted_unit_cost_for_batch_item
+                            extra_ing_cost = weighted_unit_cost_for_batch_item(inventory_item.id, batch.id)
+                        except Exception:
+                            extra_ing_cost = float(inventory_item.cost_per_unit or 0.0)
+
                         new_extra = ExtraBatchIngredient(
                             batch_id=batch.id,
                             inventory_item_id=inventory_item.id,
                             quantity_used=float(sc_result.needed_quantity),
                             unit=inventory_item.unit,
-                            cost_per_unit=inventory_item.cost_per_unit,
+                            cost_per_unit=extra_ing_cost,
                             organization_id=current_user.organization_id
                         )
                         db.session.add(new_extra)
@@ -773,14 +804,20 @@ class BatchOperationsService(BaseService):
                         })
                         continue
 
-                    # Snapshot extra consumable
+                    # Snapshot extra consumable per costing engine (DRY)
                     from app.models.batch import ExtraBatchConsumable
+                    try:
+                        from app.services.costing_engine import weighted_unit_cost_for_batch_item
+                        extra_cons_cost = weighted_unit_cost_for_batch_item(consumable_item.id, batch.id)
+                    except Exception:
+                        extra_cons_cost = float(consumable_item.cost_per_unit or 0.0)
+
                     extra_rec = ExtraBatchConsumable(
                         batch_id=batch.id,
                         inventory_item_id=consumable_item.id,
                         quantity_used=float(sc_result.needed_quantity),
                         unit=consumable_item.unit,
-                        cost_per_unit=consumable_item.cost_per_unit,
+                        cost_per_unit=extra_cons_cost,
                         organization_id=current_user.organization_id
                     )
                     db.session.add(extra_rec)
