@@ -34,6 +34,9 @@ class Batch(ScopedModelMixin, db.Model):
     expiration_date = db.Column(db.DateTime)
     remaining_quantity = db.Column(db.Float, nullable=True)
     portioning_data = db.Column(db.JSON, nullable=True)
+    # Denormalized portioning hints for simpler UI/logic
+    portion_count = db.Column(db.Integer, nullable=True)
+    portion_name = db.Column(db.String(64), nullable=True)
 
     # Costing policy snapshot
     cost_method = db.Column(db.String(16), nullable=True)  # 'fifo' | 'average'

@@ -76,6 +76,8 @@ class BatchOperationsService(BaseService):
                 status='in_progress',
                 notes=notes,
                 portioning_data=portion_snap,
+                portion_count=(portion_snap.get('portion_count') if portion_snap else None),
+                portion_name=(portion_snap.get('portion_name') if portion_snap else None),
                 created_by=current_user.id,
                 organization_id=current_user.organization_id,
                 started_at=TimezoneUtils.utc_now()
