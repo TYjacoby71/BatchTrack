@@ -20,7 +20,7 @@ class BatchOperationsService(BaseService):
     """Service for batch lifecycle operations: start, finish, cancel"""
 
     @classmethod
-    def start_batch(cls, recipe_id, scale=1.0, batch_type='ingredient', notes='', containers_data=None, requires_containers=False):
+    def start_batch(cls, recipe_id, scale=1.0, batch_type='ingredient', notes='', containers_data=None, requires_containers=False, portioning_data=None):
         """Start a new batch with inventory deductions atomically. Rolls back on any failure."""
         try:
             recipe = Recipe.query.get(recipe_id)
@@ -52,9 +52,11 @@ class BatchOperationsService(BaseService):
 
             db.session.add(batch)
 
-            # Snapshot portioning data from recipe if present
+            # Snapshot portioning data: prefer explicit payload from plan, else recipe snapshot
             try:
-                if getattr(recipe, 'portioning_data', None):
+                if portioning_data and isinstance(portioning_data, dict):
+                    batch.portioning_data = dict(portioning_data)
+                elif getattr(recipe, 'portioning_data', None):
                     batch.portioning_data = dict(recipe.portioning_data)
             except Exception:
                 pass
