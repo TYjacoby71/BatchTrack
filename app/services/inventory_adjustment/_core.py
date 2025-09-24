@@ -132,16 +132,21 @@ def process_inventory_adjustment(item_id, change_type, quantity, notes=None, cre
             db.session.rollback()
             return False, f"FIFO validation error: {str(e)}"
 
-        # Update master item's moving average cost (WAC) based on active lots regardless of FIFO or Average toggle
+        # Update master item's moving average cost (WAC) only for additive ops; skip for deductions/spoilage
         try:
-            new_wac = weighted_average_cost_for_item(item.id)
-            # Only update if it materially changed to avoid noisy writes
-            try:
-                current = float(item.cost_per_unit or 0.0)
-            except Exception:
-                current = 0.0
-            if abs((new_wac or 0.0) - current) > 1e-9:
-                item.cost_per_unit = float(new_wac or 0.0)
+            is_additive = False
+            for group_name, group_cfg in ADDITIVE_OPERATION_GROUPS.items():
+                if effective_change_type in group_cfg['operations']:
+                    is_additive = True
+                    break
+            if is_additive:
+                new_wac = weighted_average_cost_for_item(item.id)
+                try:
+                    current = float(item.cost_per_unit or 0.0)
+                except Exception:
+                    current = 0.0
+                if abs((new_wac or 0.0) - current) > 1e-9:
+                    item.cost_per_unit = float(new_wac or 0.0)
         except Exception:
             # Do not fail the adjustment because of WAC recompute issues
             pass

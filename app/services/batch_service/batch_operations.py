@@ -52,14 +52,15 @@ class BatchOperationsService(BaseService):
 
             db.session.add(batch)
 
-            # Lock costing method for this batch at start based on organization setting
+            # Lock costing method for this batch. Products should use average costing for outputs and snapshots
             try:
                 org = current_user.organization
-                method = (org.inventory_cost_method or 'fifo') if org else 'fifo'
-                batch.cost_method = method if method in ('fifo', 'average') else 'fifo'
+                org_method = (org.inventory_cost_method or 'fifo') if org else 'fifo'
+                # Force average method for batch snapshots to ensure consistent product costing
+                batch.cost_method = 'average'
                 batch.cost_method_locked_at = TimezoneUtils.utc_now()
             except Exception:
-                batch.cost_method = 'fifo'
+                batch.cost_method = 'average'
 
             # Handle containers if required
             container_errors = []
