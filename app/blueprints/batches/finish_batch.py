@@ -286,8 +286,7 @@ def _create_product_output(batch, product_id, variant_id, final_quantity, output
         # Create bulk SKU if there's remaining quantity and not portioned
         if bulk_quantity > 0 and not (batch.portioning_data and batch.portioning_data.get('is_portioned')):
             bulk_unit = output_unit
-            if bulk_unit != product.base_unit:
-                logger.warning(f"Bulk unit {bulk_unit} differs from product base unit {product.base_unit}")
+            # No product base unit; units are defined at SKU/Inventory level
 
             _create_bulk_sku(product, variant, bulk_quantity, bulk_unit, expiration_date, batch, ingredient_unit_cost)
 

@@ -16,8 +16,7 @@ class Product(ScopedModelMixin, db.Model):
     name = db.Column(db.String(128), nullable=False)
     description = db.Column(db.Text, nullable=True)
 
-    # Base unit that all variants inherit
-    base_unit = db.Column(db.String(32), nullable=False, default='g')
+    # Removed base_unit; units are defined at SKU/Inventory level
 
     # Product-level settings
     category_id = db.Column(db.Integer, db.ForeignKey('product_category.id'), nullable=False)
@@ -202,8 +201,8 @@ class ProductSKU(db.Model, ScopedModelMixin):
 
     @property
     def product_base_unit(self):
-        """Get the base unit from the parent product"""
-        return self.product.base_unit if self.product else self.unit
+        """Deprecated: prefer SKU or inventory item unit."""
+        return self.unit or (self.inventory_item.unit if self.inventory_item else None)
 
     @hybrid_property
     def quantity(self):

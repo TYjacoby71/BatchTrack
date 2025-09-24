@@ -25,7 +25,6 @@ class ProductService:
         if not product:
             product = Product(
                 name=product_name,
-                base_unit=unit,
                 organization_id=current_user.organization_id,
                 created_by=current_user.id
             )
@@ -35,7 +34,7 @@ class ProductService:
             try:
                 EventEmitter.emit(
                     event_name='product_created',
-                    properties={'product_name': product_name, 'base_unit': unit},
+                    properties={'product_name': product_name},
                     organization_id=product.organization_id,
                     user_id=product.created_by,
                     entity_type='product',
@@ -187,7 +186,7 @@ class ProductService:
         product_summaries = db.session.query(
             Product.id.label('product_id'),
             Product.name.label('product_name'),
-            Product.base_unit.label('product_base_unit'),
+            # Removed product_base_unit; summary at product level no longer exposes a unit
             func.sum(InventoryItem.quantity).label('total_quantity'),
             func.count(ProductSKU.inventory_item_id).label('sku_count'),
             func.min(ProductSKU.low_stock_threshold).label('low_stock_threshold'),
@@ -203,7 +202,7 @@ class ProductService:
         ).group_by(
             Product.id,
             Product.name,
-            Product.base_unit
+            # No product base unit in grouping
         ).all()
 
         products = []
@@ -211,7 +210,7 @@ class ProductService:
             products.append({
                 'product_id': summary.product_id,
                 'product_name': summary.product_name,
-                'product_base_unit': summary.product_base_unit,
+                'product_base_unit': None,
                 'total_quantity': float(summary.total_quantity or 0),
                 'sku_count': summary.sku_count,
                 'low_stock_threshold': float(summary.low_stock_threshold or 0),
