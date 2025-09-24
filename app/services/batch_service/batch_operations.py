@@ -42,7 +42,7 @@ class BatchOperationsService(BaseService):
             print(f"🔍 BATCH_SERVICE DEBUG: Received portioning_data type: {type(portioning_data)}")
             print(f"🔍 BATCH_SERVICE DEBUG: Scale: {scale}, Projected yield: {projected_yield}")
 
-            # Snapshot: accept the compiled portioning payload from Plan Production only (no computation here)
+            # Snapshot: accept the compiled portioning payload from Plan Production if provided
             # Strict schema validation for portioning snapshot
             portion_snap = None
             if portioning_data is not None:
@@ -56,7 +56,7 @@ class BatchOperationsService(BaseService):
                 
                 if portioning_data.get('is_portioned'):
                     print(f"🔍 BATCH_SERVICE DEBUG: Recipe IS portioned, validating required fields...")
-                    required_keys = ['portion_name', 'portion_count', 'bulk_yield_quantity', 'bulk_yield_unit']
+                    required_keys = ['portion_name', 'portion_count', 'bulk_yield_quantity']
                     missing = [k for k in required_keys if portioning_data.get(k) in (None, '')]
                     if missing:
                         print(f"🔍 BATCH_SERVICE DEBUG: ERROR - Missing portioning fields: {missing}")
@@ -67,12 +67,19 @@ class BatchOperationsService(BaseService):
                     if not isinstance(portioning_data.get('bulk_yield_quantity'), (int, float)) or portioning_data.get('bulk_yield_quantity') < 0:
                         print(f"🔍 BATCH_SERVICE DEBUG: ERROR - Invalid bulk_yield_quantity: {portioning_data.get('bulk_yield_quantity')}")
                         raise ValueError("bulk_yield_quantity must be a non-negative number")
+                    # Unit can be provided as bulk_yield_unit_id or bulk_yield_unit (string); at least one is required
+                    if portioning_data.get('bulk_yield_unit_id') in (None, '') and portioning_data.get('bulk_yield_unit') in (None, ''):
+                        print("🔍 BATCH_SERVICE DEBUG: ERROR - Missing bulk_yield unit (id or name)")
+                        raise ValueError("Missing bulk_yield unit (id or name)")
                     
                     print(f"🔍 BATCH_SERVICE DEBUG: Portioning validation PASSED")
                 else:
                     print(f"🔍 BATCH_SERVICE DEBUG: Recipe is NOT portioned (is_portioned = {portioning_data.get('is_portioned')})")
                 
+                # Normalize keys to include bulk_yield_unit_id when possible
                 portion_snap = dict(portioning_data)
+                if 'bulk_yield_unit_id' not in portion_snap and 'bulk_yield_unit' in portion_snap:
+                    portion_snap['bulk_yield_unit_id'] = portion_snap.get('bulk_yield_unit')
                 print(f"🔍 BATCH_SERVICE DEBUG: Created portion_snap: {portion_snap}")
             else:
                 print(f"🔍 BATCH_SERVICE DEBUG: No portioning_data provided, checking recipe for portioning info...")
@@ -80,7 +87,23 @@ class BatchOperationsService(BaseService):
                 recipe_portioning = getattr(recipe, 'portioning_data', None)
                 if recipe_portioning:
                     print(f"🔍 BATCH_SERVICE DEBUG: Found recipe.portioning_data: {recipe_portioning}")
-                    # Could potentially use recipe portioning data as fallback here
+                    # Use recipe portioning data as fallback, scaled to this batch
+                    if isinstance(recipe_portioning, dict) and recipe_portioning.get('is_portioned'):
+                        try:
+                            scaled_portion_count = None
+                            if isinstance(recipe_portioning.get('portion_count'), (int, float)):
+                                scaled_portion_count = round(float(recipe_portioning.get('portion_count')) * float(scale))
+                            portion_snap = {
+                                'is_portioned': True,
+                                'portion_name': recipe_portioning.get('portion_name'),
+                                'portion_count': scaled_portion_count,
+                                # Per requirement: projected_yield becomes bulk yield of the batch
+                                'bulk_yield_quantity': float(projected_yield),
+                                'bulk_yield_unit_id': recipe_portioning.get('bulk_yield_unit_id')
+                            }
+                            print(f"🔍 BATCH_SERVICE DEBUG: Fallback portion_snap from recipe (scaled): {portion_snap}")
+                        except Exception as e:
+                            print(f"🔍 BATCH_SERVICE DEBUG: ERROR building fallback portion_snap: {e}")
                 else:
                     print(f"🔍 BATCH_SERVICE DEBUG: No portioning data in recipe either")
 
