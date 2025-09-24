@@ -353,33 +353,17 @@ def _create_product_output(batch, product_id, variant_id, final_quantity, output
 
 
 def _derive_size_label_from_portions(batch, final_bulk_quantity, bulk_unit, final_portions):
-    """Derive size label like '4 oz Bar' from bulk and portion count using unit conversion.
+    """Derive size label like '4 oz Bar' from bulk and portion count with simple division.
 
-    final_bulk_quantity: numeric quantity in bulk_unit
-    bulk_unit: string unit of final bulk quantity (e.g., 'lb', 'oz')
-    final_portions: integer number of portions
+    Uses the batch output unit directly; no implicit conversions here.
     """
     try:
         if not final_portions or final_portions <= 0:
             return 'Portion'
-
-        # Convert bulk to ounces if weight-like; fallback to bulk_unit
-        target_unit = 'oz'
-        from app.services.unit_conversion import ConversionEngine
-        try:
-            conv = ConversionEngine.convert_units(final_bulk_quantity, bulk_unit, target_unit)
-            converted = conv['converted_value']
-            per_portion = converted / float(final_portions)
-            per_portion = round(per_portion, 2)
-            portion_name = None
-            if batch.portioning_data:
-                portion_name = batch.portioning_data.get('portion_name') or 'Unit'
-            return f"{per_portion} {target_unit} {portion_name}"
-        except Exception:
-            # Fallback: no conversion available, use bulk_unit
-            per_portion = round(float(final_bulk_quantity) / float(final_portions), 2)
-            portion_name = batch.portioning_data.get('portion_name') if batch.portioning_data else 'Unit'
-            return f"{per_portion} {bulk_unit} {portion_name}"
+        per_portion = round(float(final_bulk_quantity) / float(final_portions), 2)
+        portion_name = (batch.portioning_data.get('portion_name') if batch.portioning_data else None) or 'Unit'
+        unit = bulk_unit
+        return f"{per_portion} {unit} {portion_name}"
     except Exception:
         return 'Portion'
 
