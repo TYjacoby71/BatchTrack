@@ -302,6 +302,20 @@ def _create_product_output(batch, product_id, variant_id, final_quantity, output
                     size_label=size_label,
                     unit='count'
                 )
+                # Ensure sku_name matches category template for portioned flows
+                try:
+                    from ...services.sku_name_builder import SKUNameBuilder
+                    from ...models.product_category import ProductCategory
+                    category = ProductCategory.query.get(product.category_id) if getattr(product, 'category_id', None) else None
+                    template = (category.sku_name_template if category and category.sku_name_template else None) or '{variant} {product} ({size_label})'
+                    product_sku.sku_name = SKUNameBuilder.render(template, {
+                        'product': product.name,
+                        'variant': variant.name,
+                        'container': None,
+                        'size_label': size_label
+                    })
+                except Exception:
+                    pass
                 # Credit inventory as number of portions
                 success = process_inventory_adjustment(
                     item_id=product_sku.inventory_item_id,
