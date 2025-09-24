@@ -282,6 +282,7 @@ def seed_product_categories_command():
     """Seed product categories, including 'Uncategorized'"""
     try:
         print("🔧 Seeding product categories...")
+        from .seeders.product_category_seeder import seed_product_categories
         seed_product_categories()
         print("✅ Product categories seeded successfully")
     except Exception as e:
