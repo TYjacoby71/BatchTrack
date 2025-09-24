@@ -22,7 +22,9 @@ export class BatchManager {
                 batch_type: this.main.batchType || 'ingredient',
                 notes: document.getElementById('batchNotes')?.value || '',
                 requires_containers: !!this.main.requiresContainers,
-                containers: this.getSelectedContainers()
+                containers: this.getSelectedContainers(),
+                // Pass portioning snapshot from recipe data as source of truth
+                portioning_data: (window.recipeData && window.recipeData.portioning) ? window.recipeData.portioning : (window.recipeData && typeof window.recipeData.is_portioned !== 'undefined' ? { is_portioned: window.recipeData.is_portioned } : null)
             };
 
             const result = await this.main.apiCall('/batches/api/start-batch', payload);

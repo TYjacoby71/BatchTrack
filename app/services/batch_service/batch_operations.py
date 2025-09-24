@@ -52,10 +52,16 @@ class BatchOperationsService(BaseService):
 
             db.session.add(batch)
 
-            # Snapshot portioning data: take the full payload from Plan Production as single source of truth
+            # Snapshot portioning data: prefer payload from Plan Production; fallback to recipe.portioning_data
             try:
+                snap = None
                 if portioning_data and isinstance(portioning_data, dict):
                     snap = dict(portioning_data)
+                elif getattr(recipe, 'portioning_data', None):
+                    snap = dict(recipe.portioning_data)
+
+                if snap is not None:
+                    # Normalize boolean and expected fields
                     if 'is_portioned' in snap:
                         snap['is_portioned'] = bool(snap.get('is_portioned'))
                     batch.portioning_data = snap

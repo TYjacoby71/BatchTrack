@@ -275,6 +275,7 @@ def api_start_batch():
         notes = data.get('notes', '')
         requires_containers = bool(data.get('requires_containers', False))
         containers_data = data.get('containers', [])
+        portioning_data = data.get('portioning_data')
 
         if not recipe_id:
             return jsonify({'success': False, 'message': 'Recipe ID is required.'}), 400
@@ -285,7 +286,8 @@ def api_start_batch():
             batch_type=batch_type,
             notes=notes,
             containers_data=containers_data,
-            requires_containers=requires_containers
+            requires_containers=requires_containers,
+            portioning_data=portioning_data
         )
 
         if not batch:
