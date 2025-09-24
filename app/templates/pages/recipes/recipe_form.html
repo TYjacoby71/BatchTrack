@@ -149,7 +149,7 @@
                     <div class="col-md-4">
                         <div class="form-group mb-3">
                             <label class="form-label">What do you call a portion?</label>
-                            <input type="text" class="form-control" id="portion_name" name="portion_name" placeholder="e.g., bars, cookies, bottles" value="{{ recipe.portioning_data.get('portion_name') if recipe and recipe.portioning_data else '' }}">
+                            <input type="text" class="form-control" id="portion_name" name="portion_name" placeholder="e.g., bars, cookies, bottles" value="{% if recipe and recipe.portioning_data and recipe.portioning_data.get('portion_name') %}{{ recipe.portioning_data.get('portion_name') }}{% endif %}">
                             <div class="form-text">Start typing to see common count units. New terms allowed.</div>
                         </div>
                     </div>
