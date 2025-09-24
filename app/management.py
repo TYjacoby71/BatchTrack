@@ -13,6 +13,8 @@ from .seeders import (
     seed_subscriptions,
     seed_global_items,
 )
+from .seeders.product_category_seeder import seed_product_categories
+from .seeders.unit_count_seeder import seed_count_units
 from .seeders.consolidated_permission_seeder import seed_consolidated_permissions
 from .seeders.user_seeder import seed_users_and_organization
 
@@ -82,6 +84,8 @@ def init_production_command():
         try:
             seed_units()                     # Independent - can run anytime
             print("✅ Units seeded")
+            seed_count_units()               # Additional count units
+            print("✅ Count units seeded")
         except Exception as e:
             print(f"⚠️  Unit seeding issue: {e}")
             print("   Continuing with remaining steps...")
@@ -107,10 +111,13 @@ def init_production_command():
                 # Seed curated global ingredient list and link categories
                 seed_global_items()
                 print("✅ Global items seeded/updated")
+                # Product categories (global)
+                seed_product_categories()
+                print("✅ Product categories seeded")
             else:
                 print("⚠️  No organization found, categories not seeded")
         except Exception as e:
-            print(f"⚠️  Category seeding issue: {e}")
+            print(f"⚠️  Category/global items/product categories seeding issue: {e}")
 
         print('✅ Production seeding complete!')
         print('🔒 Login: admin/admin (CHANGE IMMEDIATELY)')
@@ -915,3 +922,16 @@ def register_commands(app):
     app.cli.add_command(update_permissions_command)
     app.cli.add_command(update_subscription_tiers_command)
     app.cli.add_command(activate_users)
+
+    # Convenience
+    @app.cli.command('seed-product-categories')
+    @with_appcontext
+    def _seed_product_categories_cmd():
+        seed_product_categories()
+        print('✅ Product categories seeded')
+
+    @app.cli.command('seed-count-units')
+    @with_appcontext
+    def _seed_count_units_cmd():
+        seed_count_units()
+        print('✅ Count units seeded')

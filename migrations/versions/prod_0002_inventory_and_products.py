@@ -17,6 +17,17 @@ depends_on = None
 
 
 def upgrade():
+    # Product category (portioning system)
+    op.create_table(
+        'product_category',
+        sa.Column('id', sa.Integer(), primary_key=True),
+        sa.Column('name', sa.String(length=64), nullable=False, unique=True),
+        sa.Column('is_typically_portioned', sa.Boolean(), nullable=False, server_default=sa.text('false')),
+        sa.Column('sku_name_template', sa.String(length=256), nullable=True),
+        sa.Column('created_at', sa.DateTime(), nullable=True),
+        sa.Column('updated_at', sa.DateTime(), nullable=True),
+    )
+
     # Global library
     op.create_table(
         'global_item',
@@ -91,7 +102,7 @@ def upgrade():
         sa.Column('name', sa.String(length=128), nullable=False),
         sa.Column('description', sa.Text(), nullable=True),
         sa.Column('base_unit', sa.String(length=32), nullable=False, server_default='g'),
-        sa.Column('category', sa.String(length=64), nullable=True),
+        sa.Column('category_id', sa.Integer(), nullable=True),
         sa.Column('subcategory', sa.String(length=64), nullable=True),
         sa.Column('tags', sa.Text(), nullable=True),
         sa.Column('low_stock_threshold', sa.Float(), nullable=True, server_default='10.0'),
@@ -105,8 +116,10 @@ def upgrade():
         sa.Column('organization_id', sa.Integer(), nullable=True),
         sa.ForeignKeyConstraint(['created_by'], ['user.id']),
         sa.ForeignKeyConstraint(['organization_id'], ['organization.id']),
+        sa.ForeignKeyConstraint(['category_id'], ['product_category.id'], name='fk_product_category'),
         sa.UniqueConstraint('name', 'organization_id', name='unique_product_name_per_org'),
     )
+    op.create_index('ix_product_category_id', 'product', ['category_id'])
 
     op.create_table(
         'product_variant',
@@ -234,6 +247,7 @@ def upgrade():
 
 
 def downgrade():
+    # Drop product first due to FK to product_category
     op.drop_table('billing_snapshots')
     op.drop_table('pricing_snapshots')
     op.drop_index('idx_inventory_item', table_name='product_sku')
@@ -242,6 +256,7 @@ def downgrade():
     op.drop_table('product_sku')
     op.drop_table('product_variant')
     op.drop_table('product')
+    op.drop_table('product_category')
     op.drop_index('ix_inventory_item_organization_id', table_name='inventory_item')
     op.drop_index('ix_inventory_item_global_item_id', table_name='inventory_item')
     op.drop_index('ix_inventory_item_is_archived', table_name='inventory_item')

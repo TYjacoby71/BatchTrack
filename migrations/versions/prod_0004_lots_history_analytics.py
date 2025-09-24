@@ -138,6 +138,56 @@ def upgrade():
         sa.ForeignKeyConstraint(['organization_id'], ['organization.id']),
     )
 
+    # Product SKU FIFO history
+    op.create_table(
+        'product_sku_history',
+        sa.Column('id', sa.Integer(), primary_key=True),
+        sa.Column('inventory_item_id', sa.Integer(), nullable=False),
+        sa.Column('timestamp', sa.DateTime(), nullable=True),
+        sa.Column('change_type', sa.String(length=32), nullable=False),
+        sa.Column('quantity_change', sa.Float(), nullable=False),
+        sa.Column('remaining_quantity', sa.Float(), nullable=True, server_default='0.0'),
+        sa.Column('unit', sa.String(length=32), nullable=False),
+        sa.Column('unit_cost', sa.Float(), nullable=True),
+        sa.Column('sale_price', sa.Float(), nullable=True),
+        sa.Column('customer', sa.String(length=128), nullable=True),
+        sa.Column('fifo_code', sa.String(length=64), nullable=True),
+        sa.Column('fifo_reference_id', sa.Integer(), nullable=True),
+        sa.Column('fifo_source', sa.String(length=128), nullable=True),
+        sa.Column('is_perishable', sa.Boolean(), nullable=True, server_default=sa.text('false')),
+        sa.Column('shelf_life_days', sa.Integer(), nullable=True),
+        sa.Column('expiration_date', sa.DateTime(), nullable=True),
+        sa.Column('batch_id', sa.Integer(), nullable=True),
+        sa.Column('container_id', sa.Integer(), nullable=True),
+        sa.Column('notes', sa.Text(), nullable=True),
+        sa.Column('note', sa.Text(), nullable=True),
+        sa.Column('created_by', sa.Integer(), nullable=True),
+        sa.Column('order_id', sa.String(length=64), nullable=True),
+        sa.Column('reservation_id', sa.String(length=64), nullable=True),
+        sa.Column('is_reserved', sa.Boolean(), nullable=True, server_default=sa.text('false')),
+        sa.Column('sale_location', sa.String(length=64), nullable=True),
+        sa.Column('quantity_used', sa.Float(), nullable=True, server_default='0.0'),
+        sa.Column('batch_number', sa.String(length=128), nullable=True),
+        sa.Column('lot_number', sa.String(length=128), nullable=True),
+        sa.Column('temperature_at_time', sa.Float(), nullable=True),
+        sa.Column('location_id', sa.String(length=128), nullable=True),
+        sa.Column('location_name', sa.String(length=128), nullable=True),
+        sa.Column('quality_status', sa.String(length=32), nullable=True),
+        sa.Column('compliance_status', sa.String(length=32), nullable=True),
+        sa.Column('quality_checked_by', sa.Integer(), nullable=True),
+        sa.Column('marketplace_order_id', sa.String(length=128), nullable=True),
+        sa.Column('marketplace_source', sa.String(length=32), nullable=True),
+        sa.ForeignKeyConstraint(['inventory_item_id'], ['inventory_item.id']),
+        sa.ForeignKeyConstraint(['fifo_reference_id'], ['product_sku_history.id']),
+        sa.ForeignKeyConstraint(['batch_id'], ['batch.id']),
+        sa.ForeignKeyConstraint(['container_id'], ['inventory_item.id']),
+        sa.ForeignKeyConstraint(['created_by'], ['user.id']),
+    )
+    op.create_index('idx_change_type', 'product_sku_history', ['change_type'])
+    op.create_index('idx_fifo_code', 'product_sku_history', ['fifo_code'])
+    op.create_index('idx_inventory_item_timestamp', 'product_sku_history', ['inventory_item_id', 'timestamp'])
+    op.create_index('idx_inventory_item_remaining', 'product_sku_history', ['inventory_item_id', 'remaining_quantity'])
+
     # Domain events and freshness snapshot
     op.create_table(
         'domain_event',
@@ -317,6 +367,11 @@ def upgrade():
 
 
 def downgrade():
+    op.drop_index('idx_inventory_item_remaining', table_name='product_sku_history')
+    op.drop_index('idx_inventory_item_timestamp', table_name='product_sku_history')
+    op.drop_index('idx_fifo_code', table_name='product_sku_history')
+    op.drop_index('idx_change_type', table_name='product_sku_history')
+    op.drop_table('product_sku_history')
     op.drop_table('inventory_change_log')
     op.drop_table('recipe_stats')
     op.drop_table('batch_stats')
