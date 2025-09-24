@@ -3,14 +3,17 @@ from app.models.product_category import ProductCategory
 
 
 DEFAULT_CATEGORIES = [
-    {"name": "Soaps", "is_portioned": True,  "template": "{variant} {product} ({size_label})"},
+    # Portioned categories use derivative portion size attributes
+    {"name": "Soaps", "is_portioned": True,  "template": "{variant} {product} ({portion_size_value} {portion_size_unit} {portion_name})"},
+    {"name": "Baked Goods", "is_portioned": True,  "template": "{variant} {product} ({portion_size_value} {portion_size_unit} {portion_name})"},
+    {"name": "Confectionery", "is_portioned": True,  "template": "{variant} {product} ({portion_size_value} {portion_size_unit} {portion_name})"},
+
+    # Container-defined categories use the container-derived label
     {"name": "Candles", "is_portioned": False, "template": "{variant} {product} ({container})"},
-    {"name": "Cosmetics", "is_portioned": False, "template": "{container} of {variant} {product}"},
-    {"name": "Baked Goods", "is_portioned": True,  "template": "{variant} {product} ({size_label})"},
-    {"name": "Preserves", "is_portioned": False, "template": "{container} of {variant} {product}"},
-    {"name": "Beverages", "is_portioned": False, "template": "{container} of {variant} {product}"},
-    {"name": "Confectionery", "is_portioned": True,  "template": "{variant} {product} ({size_label})"},
-    {"name": "Miscellaneous", "is_portioned": False, "template": "{container} of {variant} {product}"},
+    {"name": "Cosmetics", "is_portioned": False, "template": "{variant} {product} ({container})"},
+    {"name": "Preserves", "is_portioned": False, "template": "{variant} {product} ({container})"},
+    {"name": "Beverages", "is_portioned": False, "template": "{variant} {product} ({container})"},
+    {"name": "Miscellaneous", "is_portioned": False, "template": "{variant} {product} ({container})"},
 ]
 
 

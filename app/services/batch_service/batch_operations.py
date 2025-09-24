@@ -35,6 +35,23 @@ class BatchOperationsService(BaseService):
 
             projected_yield = scale * recipe.predicted_yield
 
+            # Snapshot: accept the compiled portioning payload from Plan Production only (no computation here)
+            # Strict schema validation for portioning snapshot
+            portion_snap = None
+            if portioning_data is not None:
+                if not isinstance(portioning_data, dict):
+                    raise ValueError("Invalid portioning_data format: expected object")
+                if portioning_data.get('is_portioned'):
+                    required_keys = ['portion_name', 'portion_count', 'bulk_yield_quantity', 'bulk_yield_unit']
+                    missing = [k for k in required_keys if portioning_data.get(k) in (None, '')]
+                    if missing:
+                        raise ValueError(f"Missing portioning fields: {', '.join(missing)}")
+                    if not isinstance(portioning_data.get('portion_count'), (int, float)) or portioning_data.get('portion_count') < 0:
+                        raise ValueError("portion_count must be a non-negative number")
+                    if not isinstance(portioning_data.get('bulk_yield_quantity'), (int, float)) or portioning_data.get('bulk_yield_quantity') < 0:
+                        raise ValueError("bulk_yield_quantity must be a non-negative number")
+                portion_snap = dict(portioning_data)
+
             # Create the batch
             batch = Batch(
                 recipe_id=recipe_id,
@@ -45,22 +62,13 @@ class BatchOperationsService(BaseService):
                 scale=scale,
                 status='in_progress',
                 notes=notes,
+                portioning_data=portion_snap,
                 created_by=current_user.id,
                 organization_id=current_user.organization_id,
                 started_at=TimezoneUtils.utc_now()
             )
 
             db.session.add(batch)
-
-            # Snapshot portioning data: take the full payload from Plan Production as single source of truth
-            try:
-                if portioning_data and isinstance(portioning_data, dict):
-                    snap = dict(portioning_data)
-                    if 'is_portioned' in snap:
-                        snap['is_portioned'] = bool(snap.get('is_portioned'))
-                    batch.portioning_data = snap
-            except Exception:
-                pass
 
             # Lock costing method for this batch at start based on organization setting (preserve original behavior)
             try:

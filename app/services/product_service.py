@@ -13,7 +13,7 @@ class ProductService:
         """Generate a unique SKU code"""
         return f"{product_name[:3].upper()}-{variant_name[:3].upper()}-{size_label[:3].upper()}-{str(uuid.uuid4())[:8].upper()}"
     @staticmethod
-    def get_or_create_sku(product_name: str, variant_name: str = 'Base', size_label: str = 'Bulk', unit: str = 'g'):
+    def get_or_create_sku(product_name: str, variant_name: str = 'Base', size_label: str = 'Bulk', unit: str = 'g', naming_context: dict | None = None):
         """Get or create a ProductSKU with proper Product/Variant relationships"""
 
         # Get or create Product
@@ -25,7 +25,6 @@ class ProductService:
         if not product:
             product = Product(
                 name=product_name,
-                base_unit=unit,
                 organization_id=current_user.organization_id,
                 created_by=current_user.id
             )
@@ -35,7 +34,7 @@ class ProductService:
             try:
                 EventEmitter.emit(
                     event_name='product_created',
-                    properties={'product_name': product_name, 'base_unit': unit},
+                    properties={'product_name': product_name},
                     organization_id=product.organization_id,
                     user_id=product.created_by,
                     entity_type='product',
@@ -107,12 +106,16 @@ class ProductService:
                 except Exception:
                     category = None
                 template = (category.sku_name_template if category and category.sku_name_template else None) or '{variant} {product} ({size_label})'
-                sku_name = SKUNameBuilder.render(template, {
+                base_context = {
                     'product': product.name,
                     'variant': variant.name,
                     'container': None,
-                    'size_label': size_label
-                })
+                    'size_label': size_label,
+                }
+                # Merge any provided naming context (from recipe/batch/container)
+                if naming_context and isinstance(naming_context, dict):
+                    base_context.update({k: ('' if v is None else str(v)) for k, v in naming_context.items()})
+                sku_name = SKUNameBuilder.render(template, base_context)
             except Exception:
                 sku_name = f"{product.name} - {variant.name} - {size_label}"
             
@@ -148,6 +151,31 @@ class ProductService:
             except Exception:
                 pass
 
+            return product_sku
+
+        # If existing SKU found, optionally update its human name if a template exists and naming context provided
+        try:
+            if naming_context:
+                from ..services.sku_name_builder import SKUNameBuilder
+                from ..models.product_category import ProductCategory
+                category = None
+                try:
+                    category = ProductCategory.query.get(sku.product.category_id) if getattr(sku.product, 'category_id', None) else None
+                except Exception:
+                    category = None
+                template = (category.sku_name_template if category and category.sku_name_template else None)
+                if template:
+                    base_context = {
+                        'product': sku.product.name if sku.product else '',
+                        'variant': sku.variant.name if sku.variant else '',
+                        'container': None,
+                        'size_label': sku.size_label or '',
+                    }
+                    base_context.update({k: ('' if v is None else str(v)) for k, v in naming_context.items()})
+                    sku.sku_name = SKUNameBuilder.render(template, base_context)
+        except Exception:
+            pass
+
         return sku
 
     @staticmethod
@@ -158,7 +186,7 @@ class ProductService:
         product_summaries = db.session.query(
             Product.id.label('product_id'),
             Product.name.label('product_name'),
-            Product.base_unit.label('product_base_unit'),
+            # Removed product_base_unit; summary at product level no longer exposes a unit
             func.sum(InventoryItem.quantity).label('total_quantity'),
             func.count(ProductSKU.inventory_item_id).label('sku_count'),
             func.min(ProductSKU.low_stock_threshold).label('low_stock_threshold'),
@@ -174,7 +202,7 @@ class ProductService:
         ).group_by(
             Product.id,
             Product.name,
-            Product.base_unit
+            # No product base unit in grouping
         ).all()
 
         products = []
@@ -182,7 +210,7 @@ class ProductService:
             products.append({
                 'product_id': summary.product_id,
                 'product_name': summary.product_name,
-                'product_base_unit': summary.product_base_unit,
+                'product_base_unit': None,
                 'total_quantity': float(summary.total_quantity or 0),
                 'sku_count': summary.sku_count,
                 'low_stock_threshold': float(summary.low_stock_threshold or 0),

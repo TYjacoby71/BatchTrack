@@ -22,7 +22,10 @@ export class BatchManager {
                 batch_type: this.main.batchType || 'ingredient',
                 notes: document.getElementById('batchNotes')?.value || '',
                 requires_containers: !!this.main.requiresContainers,
-                containers: this.getSelectedContainers()
+                containers: this.getSelectedContainers(),
+                // Portioning snapshot is compiled server-side in the plan; client forwards it unchanged if present
+                // Keep this field null here; a dedicated plan endpoint or page-embedded data should supply it when ready
+                portioning_data: null
             };
 
             const result = await this.main.apiCall('/batches/api/start-batch', payload);

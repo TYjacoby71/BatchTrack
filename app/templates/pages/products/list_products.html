@@ -56,7 +56,7 @@
               <div class="col-4">
                 <div class="border-end">
                   <h5 class="mb-0">{{ product.total_bulk|round(1) }}</h5>
-                  <small class="text-muted">Bulk {{ product.product_base_unit }}</small>
+                  <small class="text-muted">&nbsp;</small>
                 </div>
               </div>
               <div class="col-4">
@@ -125,7 +125,7 @@
             <div class="mt-3 d-flex justify-content-between align-items-end">
               <div>
                 <small class="text-muted">
-                  Default Unit: {{ product.product_base_unit }}<br>
+                  &nbsp;<br>
                   {% if not product.variations and product.created_at %}Created: {{ product.created_at.strftime('%Y-%m-%d') }}{% endif %}
                 </small>
               </div>
@@ -176,7 +176,7 @@
                     <strong>{{ product.name }}</strong>
                   </a>
                 </td>
-                <td>{{ product.product_base_unit }}</td>
+                <td>—</td>
                 <td>
                   {{ product.total_bulk|round(1) }}
                 </td>
@@ -209,7 +209,7 @@
                       <li><a class="dropdown-item" href="{{ url_for('products.view_product', product_id=product.id) }}">
                         <i class="fas fa-eye"></i> View Details
                       </a></li>
-                      <li><a class="dropdown-item" href="#" onclick="editProduct({{ product.id }})">
+                      <li><a class="dropdown-item" href="/products/{{ product.id }}/edit">
                         <i class="fas fa-edit"></i> Edit Product
                       </a></li>
                     </ul>
@@ -272,7 +272,7 @@
                                   <li><a class="dropdown-item" href="{{ url_for('products.view_product', product_id=product.id) }}">
                                     <i class="fas fa-eye"></i> View Details
                                   </a></li>
-                                  <li><a class="dropdown-item" href="#" onclick="editVariation('{{ product.name }}', {{ variation.id }})">
+                                  <li><a class="dropdown-item" href="{{ url_for('products.view_product', product_id=product.id) }}#edit-variant-{{ variation.id }}">
                                     <i class="fas fa-edit"></i> Edit Variation
                                   </a></li>
                                   {% endif %}
