@@ -488,8 +488,6 @@ def _create_container_sku(product, variant, container_item, quantity, batch, exp
         from ...services.product_service import ProductService
         naming_context = {
             'container': size_label,
-            'container_capacity_value': container_item.capacity or '',
-            'container_capacity_unit': container_item.capacity_unit or '',
             'yield_value': batch.final_quantity,
             'yield_unit': batch.output_unit,
         }

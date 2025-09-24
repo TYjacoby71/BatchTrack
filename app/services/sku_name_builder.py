@@ -19,8 +19,6 @@ class SKUNameBuilder:
             'portion_count': s(context.get('portion_count')),
             'portion_size_value': s(context.get('portion_size_value')),
             'portion_size_unit': s(context.get('portion_size_unit')),
-            'container_capacity_value': s(context.get('container_capacity_value')),
-            'container_capacity_unit': s(context.get('container_capacity_unit')),
         }
         out = template
         for key, val in values.items():
