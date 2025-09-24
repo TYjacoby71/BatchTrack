@@ -12,7 +12,7 @@ import sqlalchemy as sa
 
 # revision identifiers, used by Alembic.
 revision = '20250923_01_create_product_category'
-down_revision = '20250922_01_align_extras'
+down_revision = '20250922_02'
 branch_labels = None
 depends_on = None
 
