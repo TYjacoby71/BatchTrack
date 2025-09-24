@@ -282,19 +282,10 @@ def seed_product_categories_command():
     """Seed product categories, including 'Uncategorized'"""
     try:
         print("🔧 Seeding product categories...")
-        from .models import Organization
-        from .seeders.product_category_seeder import seed_product_categories
-
-        org = Organization.query.first()
-        if not org:
-            print("❌ No organization found. Run 'flask seed-production' first.")
-            return
-
-        seed_product_categories(organization_id=org.id)
+        seed_product_categories()
         print("✅ Product categories seeded successfully")
     except Exception as e:
-        print(f'❌ Product category seeding failed: {str(e)}')
-        db.session.rollback()
+        print(f'❌ Product category seeding failed: {e}')
         raise
 
 @click.command('seed-permission-categories')
