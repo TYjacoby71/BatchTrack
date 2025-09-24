@@ -20,7 +20,7 @@ class BatchOperationsService(BaseService):
     """Service for batch lifecycle operations: start, finish, cancel"""
 
     @classmethod
-    def start_batch(cls, recipe_id, scale=1.0, batch_type='ingredient', notes='', containers_data=None, requires_containers=False):
+    def start_batch(cls, recipe_id, scale=1.0, batch_type='ingredient', notes='', containers_data=None, requires_containers=False, portioning_data=None):
         """Start a new batch with inventory deductions atomically. Rolls back on any failure."""
         try:
             recipe = Recipe.query.get(recipe_id)
@@ -52,15 +52,28 @@ class BatchOperationsService(BaseService):
 
             db.session.add(batch)
 
-            # Lock costing method for this batch. Products should use average costing for outputs and snapshots
+            # Snapshot portioning data from Plan Production if available (preserve main behavior)
             try:
-                org = current_user.organization
-                org_method = (org.inventory_cost_method or 'fifo') if org else 'fifo'
-                # Force average method for batch snapshots to ensure consistent product costing
-                batch.cost_method = 'average'
-                batch.cost_method_locked_at = TimezoneUtils.utc_now()
+                if portioning_data and isinstance(portioning_data, dict) and hasattr(batch, 'portioning_data'):
+                    snap = dict(portioning_data)
+                    if 'is_portioned' in snap:
+                        snap['is_portioned'] = bool(snap.get('is_portioned'))
+                    batch.portioning_data = snap
             except Exception:
-                batch.cost_method = 'average'
+                pass
+
+            # Lock costing method for this batch (force average for consistent product costing)
+            try:
+                if hasattr(batch, 'cost_method'):
+                    batch.cost_method = 'average'
+                    if hasattr(batch, 'cost_method_locked_at'):
+                        batch.cost_method_locked_at = TimezoneUtils.utc_now()
+            except Exception:
+                try:
+                    if hasattr(batch, 'cost_method'):
+                        batch.cost_method = 'average'
+                except Exception:
+                    pass
 
             # Handle containers if required
             container_errors = []
