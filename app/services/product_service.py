@@ -97,8 +97,24 @@ class ProductService:
             # Generate SKU code
             sku_code = ProductService.generate_sku_code(product.name, variant.name, size_label)
 
-            # Generate SKU name - never leave it empty
-            sku_name = f"{product.name} - {variant.name} - {size_label}"
+            # Generate SKU name using category template
+            try:
+                from ..services.sku_name_builder import SKUNameBuilder
+                from ..models.product_category import ProductCategory
+                category = None
+                try:
+                    category = ProductCategory.query.get(product.category_id) if getattr(product, 'category_id', None) else None
+                except Exception:
+                    category = None
+                template = (category.sku_name_template if category and category.sku_name_template else None) or '{variant} {product} ({size_label})'
+                sku_name = SKUNameBuilder.render(template, {
+                    'product': product.name,
+                    'variant': variant.name,
+                    'container': None,
+                    'size_label': size_label
+                })
+            except Exception:
+                sku_name = f"{product.name} - {variant.name} - {size_label}"
             
             # Create the ProductSKU entry - ensure sku field is properly set
             # Note: Don't pass id parameter to let SQLAlchemy auto-generate it

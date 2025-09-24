@@ -80,6 +80,27 @@
                 <label for="instructions" class="form-label">Instructions</label>
                 <textarea name="instructions" class="form-control" rows="4" placeholder="Enter detailed instructions for this recipe...">{{ recipe.instructions if recipe else '' }}</textarea>
             </div>
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="form-group mb-3">
+                        <label for="category_id" class="form-label">Product Category <span class="text-danger">*</span></label>
+                        <select id="category_id" name="category_id" class="form-select" required>
+                            <option value="">Select category</option>
+                            {% set selected_cat = recipe.category_id if recipe else None %}
+                            {% for c in product_categories %}
+                            <option value="{{ c.id }}" data-is-portioned="{{ 'true' if c.is_typically_portioned else 'false' }}" {% if selected_cat and selected_cat == c.id %}selected{% endif %}>{{ c.name }}</option>
+                            {% endfor %}
+                        </select>
+                        <div class="form-text" id="categoryHint" style="display:none;"></div>
+                    </div>
+                </div>
+                <div class="col-md-6 d-flex align-items-end">
+                    <div class="form-check form-switch">
+                        <input class="form-check-input" type="checkbox" id="is_portioned_toggle" name="is_portioned" value="true">
+                        <label class="form-check-label" for="is_portioned_toggle">This recipe is portioned into discrete units</label>
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
 
@@ -91,7 +112,7 @@
             </h5>
         </div>
         <div class="card-body">
-            <div class="row">
+            <div class="row" id="bulkYieldRow">
                 <div class="col-md-6">
                     <div class="form-group mb-3">
                         <label for="predicted_yield" class="form-label">Projected Yield Amount</label>
@@ -112,6 +133,39 @@
                             <small><strong>⚠️ Warning:</strong> You have already made {{ existing_batches }} batch{{ 'es' if existing_batches > 1 else '' }} using this recipe. If you change the yield unit, future batch outputs will be converted to match the storage unit in the inventory manager when creating intermediate ingredients.</small>
                         </div>
                         {% endif %}
+                    </div>
+                </div>
+            </div>
+
+            <!-- Portioning Section -->
+            <div id="portioningSection" class="mt-3" style="display:none;">
+                <div class="row">
+                    <div class="col-md-4">
+                        <div class="form-group mb-3">
+                            <label class="form-label">This recipe makes how many portions?</label>
+                            <input type="number" min="1" step="1" class="form-control" id="portion_count" name="portion_count" placeholder="e.g., 20">
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="form-group mb-3">
+                            <label class="form-label">What do you call a portion?</label>
+                            <input type="text" class="form-control" id="portion_name" name="portion_name" placeholder="e.g., Bar">
+                            <div class="form-text">Start typing to see common count units. New terms allowed.</div>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="form-group mb-3">
+                            <label class="form-label">For costing, what is the total bulk yield?</label>
+                            <div class="input-group">
+                                <input type="number" class="form-control" id="bulk_yield_quantity" name="bulk_yield_quantity" step="0.01" min="0" placeholder="e.g., 5">
+                                <select class="form-select" id="bulk_yield_unit_id" name="bulk_yield_unit_id">
+                                    <option value="">Unit</option>
+                                    {% for unit in inventory_units %}
+                                    <option value="{{ unit.id }}">{{ unit.name }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -332,6 +386,7 @@
 <!-- Drawer modals will be loaded dynamically via DrawerProtocol -->
 
 <script src="{{ url_for('static', filename='js/components/suggestions.js') }}"></script>
+<script src="{{ url_for('static', filename='js/recipes/recipe_form.js') }}"></script>
 <script>
 const formEl = document.getElementById('recipeForm');
 let PRESELECT_INGREDIENT_ID = (formEl.getAttribute('data-preselect-ingredient-id') || '').trim();
@@ -401,6 +456,46 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
     {% endif %}
+
+    // Category-driven portioning guidance
+    const categorySelect = document.getElementById('category_id');
+    const isPortionedToggle = document.getElementById('is_portioned_toggle');
+    const portioningSection = document.getElementById('portioningSection');
+    const bulkYieldRow = document.getElementById('bulkYieldRow');
+    const categoryHint = document.getElementById('categoryHint');
+
+    function syncPortioningUI() {
+        const on = isPortionedToggle.checked;
+        portioningSection.style.display = on ? 'block' : 'none';
+        bulkYieldRow.querySelector('label[for="predicted_yield"]').textContent = on ? 'Projected Portion Count (optional override)' : 'Projected Yield Amount';
+        bulkYieldRow.querySelector('label[for="predicted_yield_unit"]').textContent = on ? 'Projected Portion Name (unit optional)' : 'Projected Yield Unit';
+    }
+
+    function onCategoryChange() {
+        const sel = categorySelect.options[categorySelect.selectedIndex];
+        const hint = sel ? (sel.getAttribute('data-is-portioned') === 'true') : false;
+        if (hint) {
+            isPortionedToggle.checked = true;
+            categoryHint.style.display = 'block';
+            categoryHint.innerHTML = '<small class="text-info">This category is typically portioned. Toggle can be changed.</small>';
+        } else {
+            if (!isPortionedToggle.dataset.userToggled) {
+                isPortionedToggle.checked = false;
+            }
+            categoryHint.style.display = 'none';
+            categoryHint.innerHTML = '';
+        }
+        syncPortioningUI();
+    }
+
+    if (categorySelect && isPortionedToggle) {
+        categorySelect.addEventListener('change', onCategoryChange);
+        isPortionedToggle.addEventListener('change', () => {
+            isPortionedToggle.dataset.userToggled = 'true';
+            syncPortioningUI();
+        });
+        onCategoryChange();
+    }
 });
 
 function addIngredient(preselectId = null, presetUnit = null) {

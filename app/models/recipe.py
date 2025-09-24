@@ -16,6 +16,8 @@ class Recipe(ScopedModelMixin, db.Model):
     predicted_yield = db.Column(db.Float, default=0.0)
     predicted_yield_unit = db.Column(db.String(50), default="oz")
     allowed_containers = db.Column(db.PickleType, default=list)
+    category_id = db.Column(db.Integer, db.ForeignKey('product_category.id'), nullable=False)
+    product_category = db.relationship('ProductCategory')
     created_by = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True)
     # Timestamps for retention calculations
     created_at = db.Column(db.DateTime, default=TimezoneUtils.utc_now)
@@ -24,6 +26,7 @@ class Recipe(ScopedModelMixin, db.Model):
     recipe_ingredients = db.relationship('RecipeIngredient', backref='recipe', cascade="all, delete-orphan")
     # Consumables used during production (e.g., gloves, filters). Snapshot at batch start.
     recipe_consumables = db.relationship('RecipeConsumable', backref='recipe', cascade="all, delete-orphan")
+    portioning_data = db.Column(db.JSON, nullable=True)
 
 class RecipeIngredient(ScopedModelMixin, db.Model):
     __tablename__ = 'recipe_ingredient'

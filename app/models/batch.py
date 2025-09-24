@@ -33,6 +33,7 @@ class Batch(ScopedModelMixin, db.Model):
     shelf_life_days = db.Column(db.Integer)
     expiration_date = db.Column(db.DateTime)
     remaining_quantity = db.Column(db.Float, nullable=True)
+    portioning_data = db.Column(db.JSON, nullable=True)
 
     # Costing policy snapshot
     cost_method = db.Column(db.String(16), nullable=True)  # 'fifo' | 'average'

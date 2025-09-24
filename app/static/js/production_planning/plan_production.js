@@ -32,6 +32,19 @@ class PlanProductionApp {
         // Initial UI sync
         this._updateProjectedYield();
         this.updateValidation();
+
+        // Hide containers if recipe is portioned
+        if (data.is_portioned === true || data.is_portioned === 'true') {
+            const requiresContainersCheckbox = document.getElementById('requiresContainers');
+            if (requiresContainersCheckbox) {
+                requiresContainersCheckbox.checked = false;
+                requiresContainersCheckbox.disabled = true;
+            }
+            const card = document.getElementById('containerManagementCard');
+            if (card) {
+                card.style.display = 'none';
+            }
+        }
     }
 
     _bindCoreEvents() {

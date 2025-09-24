@@ -54,6 +54,7 @@ _export([
     ("category", "IngredientCategory", None),
     ("category", "InventoryCategory", None),
     ("category", "Tag", None),
+    ("product_category", "ProductCategory", None),
     ("global_item", "GlobalItem", None),
 ])
 
