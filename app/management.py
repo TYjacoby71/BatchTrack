@@ -10,7 +10,8 @@ from .models import User, Organization, Permission
 from .seeders import (
     seed_units,
     seed_categories,
-    seed_subscriptions
+    seed_subscriptions,
+    seed_global_items,
 )
 from .seeders.consolidated_permission_seeder import seed_consolidated_permissions
 from .seeders.user_seeder import seed_users_and_organization
@@ -95,14 +96,17 @@ def init_production_command():
             print(f"⚠️  User/organization seeding issue: {e}")
             print("   Continuing with remaining steps...")
 
-        # Setup default categories for the organization
-        print("=== Step 3: Organization-specific data ===")
+        # Setup default categories and global items
+        print("=== Step 3: Organization-specific data (categories, global items) ===")
         try:
             from .models import Organization
             org = Organization.query.first()
             if org:
                 seed_categories(organization_id=org.id)
                 print("✅ Categories seeded for organization")
+                # Seed curated global ingredient list and link categories
+                seed_global_items()
+                print("✅ Global items seeded/updated")
             else:
                 print("⚠️  No organization found, categories not seeded")
         except Exception as e:
