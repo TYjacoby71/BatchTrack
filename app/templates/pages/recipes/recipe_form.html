@@ -96,7 +96,7 @@
                 </div>
                 <div class="col-md-6 d-flex align-items-end">
                     <div class="form-check form-switch">
-                        <input class="form-check-input" type="checkbox" id="is_portioned_toggle" name="is_portioned" value="true">
+                        <input class="form-check-input" type="checkbox" id="is_portioned_toggle" name="is_portioned" value="true" {% if recipe and recipe.portioning_data and recipe.portioning_data.get('is_portioned') %}checked{% endif %}>
                         <label class="form-check-label" for="is_portioned_toggle">This recipe is portioned into discrete units</label>
                     </div>
                 </div>
@@ -143,13 +143,13 @@
                     <div class="col-md-4">
                         <div class="form-group mb-3">
                             <label class="form-label">This recipe makes how many portions?</label>
-                            <input type="number" min="1" step="1" class="form-control" id="portion_count" name="portion_count" placeholder="e.g., 20">
+                            <input type="number" min="1" step="1" class="form-control" id="portion_count" name="portion_count" placeholder="e.g., 20" value="{{ recipe.portioning_data.get('portion_count') if recipe and recipe.portioning_data else '' }}">
                         </div>
                     </div>
                     <div class="col-md-4">
                         <div class="form-group mb-3">
                             <label class="form-label">What do you call a portion?</label>
-                            <input type="text" class="form-control" id="portion_name" name="portion_name" placeholder="e.g., Bar">
+                            <input type="text" class="form-control" id="portion_name" name="portion_name" placeholder="e.g., bars, cookies, bottles" value="{% if recipe and recipe.portioning_data and recipe.portioning_data.get('portion_name') %}{{ recipe.portioning_data.get('portion_name') }}{% endif %}">
                             <div class="form-text">Start typing to see common count units. New terms allowed.</div>
                         </div>
                     </div>

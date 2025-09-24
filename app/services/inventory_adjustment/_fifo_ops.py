@@ -267,7 +267,7 @@ def deduct_fifo_inventory(item_id, quantity_to_deduct, change_type, notes=None, 
                 organization_id=item.organization_id,
                 affected_lot_id=lot.id,  # Link to the specific lot that was affected
                 batch_id=batch_id,
-                fifo_code=deduction_fifo_code,  # RCN-xxx for recount, other prefixes for other operations
+                fifo_code=deduction_event_code,  # RCN-xxx for recount, other prefixes for other operations
                 valuation_method=valuation_method
 
             )

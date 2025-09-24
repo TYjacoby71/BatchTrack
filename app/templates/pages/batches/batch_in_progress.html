@@ -58,6 +58,7 @@
                                     </div>
                                 </div>
                                 {% endif %}
+
                     </div>
                     <div class="col-md-6">
                         <p><strong>Started:</strong> {{ batch.started_at.strftime('%Y-%m-%d %H:%M') }}</p>
@@ -65,6 +66,9 @@
                             <span class="badge bg-warning">In Progress</span>
                         </p>
                         <p><strong>Projected Yield:</strong> {{ batch.projected_yield }} {{ batch.projected_yield_unit }}</p>
+                        {% if batch.portioning_data and batch.portioning_data.get('is_portioned') %}
+                        <p><strong>Projected Portions:</strong> {{ batch.portioning_data.get('portion_count', 'Unknown') }} {{ batch.portioning_data.get('portion_name', 'portions') }}</p>
+                        {% endif %}
                     </div>
                 </div>
             </div>
