@@ -689,9 +689,14 @@ document.getElementById('recipeForm').addEventListener('submit', function(e) {
         const hasSelection = inv || gi;
         if (!hasSelection) {
             e.preventDefault();
-            alert('Each ingredient must be selected from Inventory or Global.');
+            // Freeze and guide: highlight row and scroll into view instead of alert/reset
+            row.classList.add('border-danger');
+            row.scrollIntoView({ behavior: 'smooth', block: 'center' });
             const input = row.querySelector('input.recipe-ingredient-typeahead');
             if (input) input.focus();
+            // Inline helper
+            const warning = row.querySelector('.conversion-warning');
+            if (warning) warning.innerHTML = '<span class="text-danger"><i class="fas fa-exclamation-triangle"></i> Select an ingredient from Inventory or Global.</span>';
             return false;
         }
     }
