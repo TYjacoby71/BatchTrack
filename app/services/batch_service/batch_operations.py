@@ -59,6 +59,21 @@ class BatchOperationsService(BaseService):
             except Exception:
                 pass
 
+            # Lock costing method for this batch at start based on organization setting (preserve original behavior)
+            try:
+                if hasattr(batch, 'cost_method'):
+                    org = getattr(current_user, 'organization', None)
+                    method = (getattr(org, 'inventory_cost_method', None) or 'fifo') if org else 'fifo'
+                    batch.cost_method = method if method in ('fifo', 'average') else 'fifo'
+                    if hasattr(batch, 'cost_method_locked_at'):
+                        batch.cost_method_locked_at = TimezoneUtils.utc_now()
+            except Exception:
+                try:
+                    if hasattr(batch, 'cost_method'):
+                        batch.cost_method = 'fifo'
+                except Exception:
+                    pass
+
             # Handle containers if required
             container_errors = []
             if requires_containers:
