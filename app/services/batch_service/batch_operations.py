@@ -82,30 +82,7 @@ class BatchOperationsService(BaseService):
                     portion_snap['bulk_yield_unit_id'] = portion_snap.get('bulk_yield_unit')
                 print(f"🔍 BATCH_SERVICE DEBUG: Created portion_snap: {portion_snap}")
             else:
-                print(f"🔍 BATCH_SERVICE DEBUG: No portioning_data provided, checking recipe for portioning info...")
-                # Check if recipe itself has portioning data
-                recipe_portioning = getattr(recipe, 'portioning_data', None)
-                if recipe_portioning:
-                    print(f"🔍 BATCH_SERVICE DEBUG: Found recipe.portioning_data: {recipe_portioning}")
-                    # Use recipe portioning data as fallback, scaled to this batch
-                    if isinstance(recipe_portioning, dict) and recipe_portioning.get('is_portioned'):
-                        try:
-                            scaled_portion_count = None
-                            if isinstance(recipe_portioning.get('portion_count'), (int, float)):
-                                scaled_portion_count = round(float(recipe_portioning.get('portion_count')) * float(scale))
-                            portion_snap = {
-                                'is_portioned': True,
-                                'portion_name': recipe_portioning.get('portion_name'),
-                                'portion_count': scaled_portion_count,
-                                # Per requirement: projected_yield becomes bulk yield of the batch
-                                'bulk_yield_quantity': float(projected_yield),
-                                'bulk_yield_unit_id': recipe_portioning.get('bulk_yield_unit_id')
-                            }
-                            print(f"🔍 BATCH_SERVICE DEBUG: Fallback portion_snap from recipe (scaled): {portion_snap}")
-                        except Exception as e:
-                            print(f"🔍 BATCH_SERVICE DEBUG: ERROR building fallback portion_snap: {e}")
-                else:
-                    print(f"🔍 BATCH_SERVICE DEBUG: No portioning data in recipe either")
+                print(f"🔍 BATCH_SERVICE DEBUG: No portioning_data provided in request; skipping recipe fallback by design.")
 
             # Create the batch
             print(f"🔍 BATCH_SERVICE DEBUG: Creating batch with portioning_data: {portion_snap}")

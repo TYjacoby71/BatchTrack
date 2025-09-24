@@ -288,6 +288,30 @@ def api_start_batch():
         
         # Prefer canonical portioning snapshot if a plan payload was sent
         portioning_data = data.get('portioning_data') or (data.get('batch_data', {}) or {}).get('portioning_data')
+
+        # Support flat payload fields (no nested portioning_data) to match other planned production data style
+        if portioning_data is None:
+            flat_is_portioned = data.get('is_portioned')
+            flat_portion_name = data.get('portion_name')
+            flat_portion_count = data.get('portion_count')
+            flat_bulk_yield_qty = data.get('bulk_yield_quantity')
+            flat_bulk_yield_unit_id = data.get('bulk_yield_unit_id')
+
+            # Only construct if is_portioned is truthy (accepts true/'true'/1)
+            truthy_vals = {True, 'true', 'True', 1, '1'}
+            if flat_is_portioned in truthy_vals:
+                try:
+                    portioning_data = {
+                        'is_portioned': True,
+                        'portion_name': flat_portion_name,
+                        'portion_count': (int(flat_portion_count) if flat_portion_count is not None and str(flat_portion_count) != '' else None),
+                        'bulk_yield_quantity': (float(flat_bulk_yield_qty) if flat_bulk_yield_qty is not None and str(flat_bulk_yield_qty) != '' else None),
+                        'bulk_yield_unit_id': flat_bulk_yield_unit_id
+                    }
+                except Exception as _e:
+                    # Leave as None; service will validate
+                    portioning_data = None
+            print(f"🔍 API_START_BATCH DEBUG: Composed portioning_data from flat fields: {portioning_data}")
         
         print(f"🔍 API_START_BATCH DEBUG: Final portioning_data being sent to service: {portioning_data}")
         print(f"🔍 API_START_BATCH DEBUG: Final portioning_data type: {type(portioning_data)}")
