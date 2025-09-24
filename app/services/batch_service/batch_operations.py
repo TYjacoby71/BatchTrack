@@ -35,6 +35,23 @@ class BatchOperationsService(BaseService):
 
             projected_yield = scale * recipe.predicted_yield
 
+            # Snapshot: accept the compiled portioning payload from Plan Production only (no computation here)
+            # Strict schema validation for portioning snapshot (mirror origin/main)
+            portion_snap = None
+            if portioning_data is not None:
+                if not isinstance(portioning_data, dict):
+                    raise ValueError("Invalid portioning_data format: expected object")
+                if portioning_data.get('is_portioned'):
+                    required_keys = ['portion_name', 'portion_count', 'bulk_yield_quantity', 'bulk_yield_unit']
+                    missing = [k for k in required_keys if portioning_data.get(k) in (None, '')]
+                    if missing:
+                        raise ValueError(f"Missing portioning fields: {', '.join(missing)}")
+                    if not isinstance(portioning_data.get('portion_count'), (int, float)) or portioning_data.get('portion_count') < 0:
+                        raise ValueError("portion_count must be a non-negative number")
+                    if not isinstance(portioning_data.get('bulk_yield_quantity'), (int, float)) or portioning_data.get('bulk_yield_quantity') < 0:
+                        raise ValueError("bulk_yield_quantity must be a non-negative number")
+                portion_snap = dict(portioning_data)
+
             # Create the batch
             batch = Batch(
                 recipe_id=recipe_id,
@@ -52,26 +69,30 @@ class BatchOperationsService(BaseService):
 
             db.session.add(batch)
 
-            # Snapshot portioning data from Plan Production if available (preserve main behavior)
+            # Attach portioning snapshot if the model supports it
             try:
-                if portioning_data and isinstance(portioning_data, dict) and hasattr(batch, 'portioning_data'):
-                    snap = dict(portioning_data)
-                    if 'is_portioned' in snap:
-                        snap['is_portioned'] = bool(snap.get('is_portioned'))
-                    batch.portioning_data = snap
+                if hasattr(batch, 'portioning_data'):
+                    batch.portioning_data = portion_snap
             except Exception:
                 pass
 
-            # Lock costing method for this batch (force average for consistent product costing)
+            # Lock costing method for this batch at start based on organization setting,
+            # but enforce average for product batches per new policy
             try:
                 if hasattr(batch, 'cost_method'):
-                    batch.cost_method = 'average'
+                    if str(batch_type).lower() == 'product':
+                        method = 'average'
+                    else:
+                        org = getattr(current_user, 'organization', None)
+                        method = (getattr(org, 'inventory_cost_method', None) or 'fifo') if org else 'fifo'
+                        method = method if method in ('fifo', 'average') else 'fifo'
+                    batch.cost_method = method
                     if hasattr(batch, 'cost_method_locked_at'):
                         batch.cost_method_locked_at = TimezoneUtils.utc_now()
             except Exception:
                 try:
                     if hasattr(batch, 'cost_method'):
-                        batch.cost_method = 'average'
+                        batch.cost_method = 'average' if str(batch_type).lower() == 'product' else 'fifo'
                 except Exception:
                     pass
 
