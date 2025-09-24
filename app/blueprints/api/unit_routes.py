@@ -1,4 +1,4 @@
-THIS SHOULD BE A LINTER ERROR
+
 from flask import Blueprint, jsonify, request
 from flask_login import login_required, current_user
 from app.services.unit_conversion import ConversionEngine
