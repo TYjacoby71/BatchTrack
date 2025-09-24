@@ -35,6 +35,18 @@ class BatchOperationsService(BaseService):
 
             projected_yield = scale * recipe.predicted_yield
 
+            # Compute portioning snapshot prior to batch creation so it's set at instantiation
+            portion_snap = None
+            try:
+                if portioning_data and isinstance(portioning_data, dict):
+                    portion_snap = dict(portioning_data)
+                elif getattr(recipe, 'portioning_data', None):
+                    portion_snap = dict(recipe.portioning_data)
+                if portion_snap is not None and 'is_portioned' in portion_snap:
+                    portion_snap['is_portioned'] = bool(portion_snap.get('is_portioned'))
+            except Exception:
+                portion_snap = None
+
             # Create the batch
             batch = Batch(
                 recipe_id=recipe_id,
@@ -45,28 +57,13 @@ class BatchOperationsService(BaseService):
                 scale=scale,
                 status='in_progress',
                 notes=notes,
+                portioning_data=portion_snap,
                 created_by=current_user.id,
                 organization_id=current_user.organization_id,
                 started_at=TimezoneUtils.utc_now()
             )
 
             db.session.add(batch)
-
-            # Snapshot portioning data: prefer payload from Plan Production; fallback to recipe.portioning_data
-            try:
-                snap = None
-                if portioning_data and isinstance(portioning_data, dict):
-                    snap = dict(portioning_data)
-                elif getattr(recipe, 'portioning_data', None):
-                    snap = dict(recipe.portioning_data)
-
-                if snap is not None:
-                    # Normalize boolean and expected fields
-                    if 'is_portioned' in snap:
-                        snap['is_portioned'] = bool(snap.get('is_portioned'))
-                    batch.portioning_data = snap
-            except Exception:
-                pass
 
             # Lock costing method for this batch at start based on organization setting (preserve original behavior)
             try:
