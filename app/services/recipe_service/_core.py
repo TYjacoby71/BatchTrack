@@ -22,7 +22,8 @@ def create_recipe(name: str, description: str = "", instructions: str = "",
                  yield_amount: float = 0.0, yield_unit: str = "",
                  ingredients: List[Dict] = None, parent_id: int = None,
                  allowed_containers: List[int] = None, label_prefix: str = "",
-                 consumables: List[Dict] = None) -> Tuple[bool, Any]:
+                 consumables: List[Dict] = None, category_id: int | None = None,
+                 portioning_data: Dict | None = None) -> Tuple[bool, Any]:
     """
     Create a new recipe with ingredients and UI fields.
 
@@ -80,12 +81,25 @@ def create_recipe(name: str, description: str = "", instructions: str = "",
             predicted_yield_unit=yield_unit,
             organization_id=current_user.organization_id,
             parent_id=parent_id,
-            label_prefix=final_label_prefix
+            label_prefix=final_label_prefix,
+            category_id=category_id
         )
 
         # Set allowed containers
         if allowed_containers:
             recipe.allowed_containers = allowed_containers
+
+        # Portioning data validation (minimal)
+        if portioning_data and isinstance(portioning_data, dict):
+            try:
+                if portioning_data.get('is_portioned'):
+                    pc = int(portioning_data.get('portion_count') or 0)
+                    byq = float(portioning_data.get('bulk_yield_quantity') or 0)
+                    if pc <= 0 or byq <= 0:
+                        return False, 'For portioned recipes, portion count and bulk yield must be provided.'
+                    recipe.portioning_data = portioning_data
+            except Exception:
+                pass
 
         db.session.add(recipe)
         db.session.flush()  # Get recipe ID
@@ -138,7 +152,8 @@ def update_recipe(recipe_id: int, name: str = None, description: str = None,
                  instructions: str = None, yield_amount: float = None,
                  yield_unit: str = None, ingredients: List[Dict] = None,
                  allowed_containers: List[int] = None, label_prefix: str = None,
-                 consumables: List[Dict] = None) -> Tuple[bool, Any]:
+                 consumables: List[Dict] = None, category_id: int | None = None,
+                 portioning_data: Dict | None = None) -> Tuple[bool, Any]:
     """
     Update an existing recipe.
 
@@ -184,6 +199,23 @@ def update_recipe(recipe_id: int, name: str = None, description: str = None,
             recipe.label_prefix = label_prefix
         if allowed_containers is not None:
             recipe.allowed_containers = allowed_containers
+        if category_id is not None:
+            recipe.category_id = category_id
+
+        # Apply portioning data updates
+        if portioning_data is not None:
+            # Clear if toggle OFF
+            if not portioning_data or not portioning_data.get('is_portioned'):
+                recipe.portioning_data = None
+            else:
+                try:
+                    pc = int(portioning_data.get('portion_count') or 0)
+                    byq = float(portioning_data.get('bulk_yield_quantity') or 0)
+                    if pc <= 0 or byq <= 0:
+                        return False, 'For portioned recipes, portion count and bulk yield must be provided.'
+                    recipe.portioning_data = portioning_data
+                except Exception:
+                    return False, 'Invalid portioning data.'
 
         # Update ingredients if provided
         if ingredients is not None:

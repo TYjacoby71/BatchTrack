@@ -280,6 +280,19 @@ def seed_categories_command():
         db.session.rollback()
         raise
 
+@click.command('seed-product-categories')
+@with_appcontext
+def seed_product_categories_command():
+    """Seed product categories, including 'Uncategorized'"""
+    try:
+        print("🔧 Seeding product categories...")
+        from .seeders.product_category_seeder import seed_product_categories
+        seed_product_categories()
+        print("✅ Product categories seeded successfully")
+    except Exception as e:
+        print(f'❌ Product category seeding failed: {e}')
+        raise
+
 @click.command('seed-permission-categories')
 @click.option('--category', help='Specific permission category to seed (app, organization, system, developer)')
 @with_appcontext
@@ -894,6 +907,7 @@ def register_commands(app):
     app.cli.add_command(seed_units_command)
     app.cli.add_command(seed_sub_tiers_command)
     app.cli.add_command(seed_categories_command)
+    app.cli.add_command(seed_product_categories_command) # Added new command
     app.cli.add_command(seed_test_data_command)
     app.cli.add_command(seed_permission_categories_command)
 

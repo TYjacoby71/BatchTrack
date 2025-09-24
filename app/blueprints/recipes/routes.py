@@ -13,6 +13,7 @@ from app.services.recipe_service import (
 from app.utils.unit_utils import get_global_unit_list
 from app.services.inventory_adjustment import create_inventory_item
 from app.models.unit import Unit
+from app.models.product_category import ProductCategory
 import logging
 from sqlalchemy import func
 
@@ -26,6 +27,21 @@ def new_recipe():
             # Extract form data and delegate to service
             ingredients = _extract_ingredients_from_form(request.form)
 
+            # Portioning inputs from form (optional)
+            portioning_payload = None
+            try:
+                is_portioned = request.form.get('is_portioned', '') == 'true'
+                if is_portioned:
+                    portioning_payload = {
+                        'is_portioned': True,
+                        'portion_count': int(request.form.get('portion_count') or 0),
+                        'portion_name': (request.form.get('portion_name') or '').strip() or None,
+                        'bulk_yield_quantity': float(request.form.get('bulk_yield_quantity') or 0.0),
+                        'bulk_yield_unit_id': int(request.form.get('bulk_yield_unit_id') or 0) or None
+                    }
+            except Exception:
+                portioning_payload = None
+
             success, result = create_recipe(
                 name=request.form.get('name'),
                 description=request.form.get('instructions'),
@@ -35,7 +51,9 @@ def new_recipe():
                 ingredients=ingredients,
                 consumables=_extract_consumables_from_form(request.form),
                 allowed_containers=[int(id) for id in request.form.getlist('allowed_containers[]') if id] or [],
-                label_prefix=request.form.get('label_prefix')
+                label_prefix=request.form.get('label_prefix'),
+                category_id=int(request.form.get('category_id')) if request.form.get('category_id') else None,
+                portioning_data=portioning_payload
             )
 
             if success:
@@ -158,6 +176,20 @@ def edit_recipe(recipe_id):
         try:
             ingredients = _extract_ingredients_from_form(request.form)
 
+            portioning_payload = None
+            try:
+                is_portioned = request.form.get('is_portioned', '') == 'true'
+                if is_portioned:
+                    portioning_payload = {
+                        'is_portioned': True,
+                        'portion_count': int(request.form.get('portion_count') or 0),
+                        'portion_name': (request.form.get('portion_name') or '').strip() or None,
+                        'bulk_yield_quantity': float(request.form.get('bulk_yield_quantity') or 0.0),
+                        'bulk_yield_unit_id': int(request.form.get('bulk_yield_unit_id') or 0) or None
+                    }
+            except Exception:
+                portioning_payload = None
+
             success, result = update_recipe(
                 recipe_id=recipe_id,
                 name=request.form.get('name'),
@@ -168,7 +200,9 @@ def edit_recipe(recipe_id):
                 ingredients=ingredients,
                 consumables=_extract_consumables_from_form(request.form),
                 allowed_containers=[int(id) for id in request.form.getlist('allowed_containers[]') if id] or [],
-                label_prefix=request.form.get('label_prefix')
+                label_prefix=request.form.get('label_prefix'),
+                category_id=int(request.form.get('category_id')) if request.form.get('category_id') else None,
+                portioning_data=portioning_payload
             )
 
             if success:
@@ -493,10 +527,14 @@ def _get_recipe_form_data():
     units = Unit.query.filter_by(is_active=True).order_by(Unit.unit_type, Unit.name).all()
     inventory_units = get_global_unit_list()
 
+    # Categories for dropdown
+    categories = ProductCategory.query.order_by(ProductCategory.name.asc()).all()
+
     return {
         'all_ingredients': all_ingredients,
         'units': units,
-        'inventory_units': inventory_units
+        'inventory_units': inventory_units,
+        'product_categories': categories
     }
 
 def _format_stock_results(ingredients):

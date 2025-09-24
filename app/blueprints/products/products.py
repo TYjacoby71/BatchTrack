@@ -200,10 +200,14 @@ def new_product():
     if request.method == 'POST':
         name = request.form.get('name')
         unit = request.form.get('product_base_unit')
+        category_id = request.form.get('category_id')
         low_stock_threshold = request.form.get('low_stock_threshold', 0)
 
         if not name or not unit:
             flash('Name and product base unit are required', 'error')
+            return redirect(url_for('products.new_product'))
+        if not category_id or not str(category_id).isdigit():
+            flash('Product category is required', 'error')
             return redirect(url_for('products.new_product'))
 
         # Check if product already exists (check both new Product model and legacy ProductSKU)
@@ -228,6 +232,7 @@ def new_product():
             product = Product(
                 name=name,
                 base_unit=unit,
+                category_id=int(category_id),
                 low_stock_threshold=float(low_stock_threshold) if low_stock_threshold else 0,
                 organization_id=current_user.organization_id,
                 created_by=current_user.id
@@ -296,7 +301,13 @@ def new_product():
             return redirect(url_for('products.new_product'))
 
     units = get_global_unit_list()
-    return render_template('pages/products/new_product.html', units=units)
+    # Load product categories for selection if template supports it later
+    try:
+        from ...models.product_category import ProductCategory
+        categories = ProductCategory.query.order_by(ProductCategory.name.asc()).all()
+    except Exception:
+        categories = []
+    return render_template('pages/products/new_product.html', units=units, product_categories=categories)
 
 @products_bp.route('/<int:product_id>')
 @login_required
@@ -365,12 +376,20 @@ def view_product(product_id):
     # Also add skus to product for template compatibility
     product.skus = skus
 
+    # Load product categories for edit modal
+    try:
+        from ...models.product_category import ProductCategory
+        product_categories = ProductCategory.query.order_by(ProductCategory.name.asc()).all()
+    except Exception:
+        product_categories = []
+
     return render_template('pages/products/view_product.html',
                          product=product,
                          variants=variants,
                          available_containers=available_containers,
                          get_global_unit_list=get_global_unit_list,
-                         inventory_groups={})
+                         inventory_groups={},
+                         product_categories=product_categories)
 
 # Keep the old route for backward compatibility
 @products_bp.route('/<product_name>')
@@ -409,10 +428,11 @@ def edit_product(product_id):
 
     name = request.form.get('name')
     unit = request.form.get('base_unit')  # Updated to match template form field name
+    category_id = request.form.get('category_id')
     low_stock_threshold = request.form.get('low_stock_threshold', 0)
 
-    if not name or not unit:
-        flash('Name and product base unit are required', 'error')
+    if not name or not unit or not category_id:
+        flash('Name, product base unit, and category are required', 'error')
         return redirect(url_for('products.view_product', product_id=product_id))
 
     # Check if another product has this name
@@ -429,6 +449,10 @@ def edit_product(product_id):
     product.name = name
     product.base_unit = unit
     product.low_stock_threshold = float(low_stock_threshold) if low_stock_threshold else 0
+    try:
+        product.category_id = int(category_id)
+    except Exception:
+        pass
 
     # Update all SKUs for this product
     skus = ProductSKU.query.filter_by(product_id=product.id).all()
