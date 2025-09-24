@@ -13,7 +13,7 @@ class ProductService:
         """Generate a unique SKU code"""
         return f"{product_name[:3].upper()}-{variant_name[:3].upper()}-{size_label[:3].upper()}-{str(uuid.uuid4())[:8].upper()}"
     @staticmethod
-    def get_or_create_sku(product_name: str, variant_name: str = 'Base', size_label: str = 'Bulk', unit: str = 'g'):
+    def get_or_create_sku(product_name: str, variant_name: str = 'Base', size_label: str = 'Bulk', unit: str = 'g', naming_context: dict | None = None):
         """Get or create a ProductSKU with proper Product/Variant relationships"""
 
         # Get or create Product
@@ -107,12 +107,16 @@ class ProductService:
                 except Exception:
                     category = None
                 template = (category.sku_name_template if category and category.sku_name_template else None) or '{variant} {product} ({size_label})'
-                sku_name = SKUNameBuilder.render(template, {
+                base_context = {
                     'product': product.name,
                     'variant': variant.name,
                     'container': None,
-                    'size_label': size_label
-                })
+                    'size_label': size_label,
+                }
+                # Merge any provided naming context (from recipe/batch/container)
+                if naming_context and isinstance(naming_context, dict):
+                    base_context.update({k: ('' if v is None else str(v)) for k, v in naming_context.items()})
+                sku_name = SKUNameBuilder.render(template, base_context)
             except Exception:
                 sku_name = f"{product.name} - {variant.name} - {size_label}"
             
@@ -147,6 +151,31 @@ class ProductService:
                 )
             except Exception:
                 pass
+
+            return product_sku
+
+        # If existing SKU found, optionally update its human name if a template exists and naming context provided
+        try:
+            if naming_context:
+                from ..services.sku_name_builder import SKUNameBuilder
+                from ..models.product_category import ProductCategory
+                category = None
+                try:
+                    category = ProductCategory.query.get(sku.product.category_id) if getattr(sku.product, 'category_id', None) else None
+                except Exception:
+                    category = None
+                template = (category.sku_name_template if category and category.sku_name_template else None)
+                if template:
+                    base_context = {
+                        'product': sku.product.name if sku.product else '',
+                        'variant': sku.variant.name if sku.variant else '',
+                        'container': None,
+                        'size_label': sku.size_label or '',
+                    }
+                    base_context.update({k: ('' if v is None else str(v)) for k, v in naming_context.items()})
+                    sku.sku_name = SKUNameBuilder.render(template, base_context)
+        except Exception:
+            pass
 
         return sku
 
