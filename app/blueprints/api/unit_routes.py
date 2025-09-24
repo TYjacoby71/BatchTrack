@@ -1,9 +1,10 @@
-
+THIS SHOULD BE A LINTER ERROR
 from flask import Blueprint, jsonify, request
 from flask_login import login_required, current_user
 from app.services.unit_conversion import ConversionEngine
 from app.utils.unit_utils import get_global_unit_list
 from app.models.models import Unit
+from sqlalchemy import func
 
 unit_api_bp = Blueprint('unit_api', __name__, url_prefix='/api')
 
@@ -27,6 +28,52 @@ def get_units():
             ]
         })
         
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@unit_api_bp.route('/unit-search')
+@login_required
+def unit_search():
+    """Search units by type and optional query, scoped to org for custom units.
+
+    Query params:
+      - type: unit_type to filter (e.g., 'count')
+      - q: substring match on name (optional)
+    """
+    try:
+        unit_type = (request.args.get('type') or '').strip()
+        q = (request.args.get('q') or '').strip()
+
+        query = Unit.query.filter(Unit.is_active == True)
+
+        if unit_type:
+            query = query.filter(Unit.unit_type == unit_type)
+
+        # Scope: include standard OR current org's custom
+        if current_user.organization_id:
+            query = query.filter(
+                (Unit.is_custom == False) | (Unit.organization_id == current_user.organization_id)
+            )
+        else:
+            query = query.filter(Unit.is_custom == False)
+
+        if q:
+            query = query.filter(func.lower(Unit.name).like(func.lower(f"%{q}%")))
+
+        results = query.order_by(Unit.unit_type, Unit.name).limit(25).all()
+        return jsonify({
+            'success': True,
+            'data': [
+                {
+                    'id': u.id,
+                    'name': u.name,
+                    'unit_type': u.unit_type,
+                    'symbol': u.symbol,
+                    'is_custom': u.is_custom
+                } for u in results
+            ]
+        })
     except Exception as e:
         return jsonify({'success': False, 'error': str(e)}), 500
 
