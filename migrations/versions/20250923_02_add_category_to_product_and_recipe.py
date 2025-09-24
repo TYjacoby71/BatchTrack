@@ -1,8 +1,8 @@
 """
 Add category_id to product and recipe, backfill to Uncategorized, set NOT NULL
 
-Revision ID: 20250923_02_add_category_to_product_and_recipe
-Revises: 20250923_01_create_product_category
+Revision ID: 20250923_02
+Revises: 20250923_01
 Create Date: 2025-09-23
 """
 
@@ -11,8 +11,8 @@ import sqlalchemy as sa
 
 
 # revision identifiers, used by Alembic.
-revision = '20250923_02_add_category_to_product_and_recipe'
-down_revision = '20250923_01_create_product_category'
+revision = '20250923_02'
+down_revision = '20250923_01'
 branch_labels = None
 depends_on = None
 

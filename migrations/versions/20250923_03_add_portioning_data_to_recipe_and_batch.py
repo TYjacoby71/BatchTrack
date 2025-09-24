@@ -1,8 +1,8 @@
 """
 Add portioning_data JSON to recipe and batch
 
-Revision ID: 20250923_03_add_portioning_json
-Revises: 20250923_02_add_category_to_product_and_recipe
+Revision ID: 20250923_03
+Revises: 20250923_02
 Create Date: 2025-09-23
 """
 
@@ -11,8 +11,8 @@ import sqlalchemy as sa
 
 
 # revision identifiers, used by Alembic.
-revision = '20250923_03_add_portioning_json'
-down_revision = '20250923_02_add_category_to_product_and_recipe'
+revision = '20250923_03'
+down_revision = '20250923_02'
 branch_labels = None
 depends_on = None
 

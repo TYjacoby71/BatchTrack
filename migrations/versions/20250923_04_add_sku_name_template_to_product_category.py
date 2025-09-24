@@ -1,8 +1,8 @@
 """
 Add sku_name_template to product_category
 
-Revision ID: 20250923_04_add_sku_name_template
-Revises: 20250923_03_add_portioning_json
+Revision ID: 20250923_04
+Revises: 20250923_03
 Create Date: 2025-09-23
 """
 
@@ -11,8 +11,8 @@ import sqlalchemy as sa
 
 
 # revision identifiers, used by Alembic.
-revision = '20250923_04_add_sku_name_template'
-down_revision = '20250923_03_add_portioning_json'
+revision = '20250923_04'
+down_revision = '20250923_03'
 branch_labels = None
 depends_on = None
 

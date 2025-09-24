@@ -1,8 +1,8 @@
 """
 Create product_category table
 
-Revision ID: 20250923_01_create_product_category
-Revises: 20250922_01_align_extras
+Revision ID: 20250923_01
+Revises: 20250922_02
 Create Date: 2025-09-23
 """
 
@@ -11,7 +11,7 @@ import sqlalchemy as sa
 
 
 # revision identifiers, used by Alembic.
-revision = '20250923_01_create_product_category'
+revision = '20250923_01'
 down_revision = '20250922_02'
 branch_labels = None
 depends_on = None
