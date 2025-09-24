@@ -50,6 +50,12 @@
                         <p><strong>Recipe:</strong> {{ batch.recipe.name }}</p>
                         <p><strong>Scale Planned:</strong> {{ batch.scale }}</p>
                         <p><strong>Batch Type:</strong> {{ batch.batch_type|title if batch.batch_type else 'Not Set' }}</p>
+                        {% if batch.portioning_data and batch.portioning_data.get('is_portioned') %}
+                        <p><strong>Portioning:</strong> 
+                            <span class="badge bg-info">Portioned Batch</span>
+                            <br><small class="text-muted">{{ batch.portioning_data.get('portion_count', 'Unknown') }} {{ batch.portioning_data.get('portion_name', 'portions') }} planned</small>
+                        </p>
+                        {% endif %}
                     </div>
                     <div class="col-md-6">
                         <p><strong>Started:</strong> {{ batch.started_at.strftime('%Y-%m-%d %H:%M') }}</p>
@@ -57,6 +63,9 @@
                             <span class="badge bg-warning">In Progress</span>
                         </p>
                         <p><strong>Projected Yield:</strong> {{ batch.projected_yield }} {{ batch.projected_yield_unit }}</p>
+                        {% if batch.portioning_data and batch.portioning_data.get('is_portioned') %}
+                        <p><strong>Projected Portions:</strong> {{ batch.portioning_data.get('portion_count', 'Unknown') }} {{ batch.portioning_data.get('portion_name', 'portions') }}</p>
+                        {% endif %}
                     </div>
                 </div>
             </div>
