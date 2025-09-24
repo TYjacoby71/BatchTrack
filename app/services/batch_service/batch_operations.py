@@ -35,24 +35,57 @@ class BatchOperationsService(BaseService):
 
             projected_yield = scale * recipe.predicted_yield
 
+            # 🔍 COMPREHENSIVE SERVICE PORTIONING DEBUG
+            print(f"🔍 BATCH_SERVICE DEBUG: Recipe ID: {recipe_id}, Recipe name: {recipe.name}")
+            print(f"🔍 BATCH_SERVICE DEBUG: Recipe portioning_data field: {getattr(recipe, 'portioning_data', None)}")
+            print(f"🔍 BATCH_SERVICE DEBUG: Received portioning_data parameter: {portioning_data}")
+            print(f"🔍 BATCH_SERVICE DEBUG: Received portioning_data type: {type(portioning_data)}")
+            print(f"🔍 BATCH_SERVICE DEBUG: Scale: {scale}, Projected yield: {projected_yield}")
+
             # Snapshot: accept the compiled portioning payload from Plan Production only (no computation here)
             # Strict schema validation for portioning snapshot
             portion_snap = None
             if portioning_data is not None:
+                print(f"🔍 BATCH_SERVICE DEBUG: Processing portioning_data...")
                 if not isinstance(portioning_data, dict):
+                    print(f"🔍 BATCH_SERVICE DEBUG: ERROR - Invalid portioning_data format, expected dict, got {type(portioning_data)}")
                     raise ValueError("Invalid portioning_data format: expected object")
+                
+                print(f"🔍 BATCH_SERVICE DEBUG: portioning_data keys: {list(portioning_data.keys())}")
+                print(f"🔍 BATCH_SERVICE DEBUG: is_portioned value: {portioning_data.get('is_portioned')}")
+                
                 if portioning_data.get('is_portioned'):
+                    print(f"🔍 BATCH_SERVICE DEBUG: Recipe IS portioned, validating required fields...")
                     required_keys = ['portion_name', 'portion_count', 'bulk_yield_quantity', 'bulk_yield_unit']
                     missing = [k for k in required_keys if portioning_data.get(k) in (None, '')]
                     if missing:
+                        print(f"🔍 BATCH_SERVICE DEBUG: ERROR - Missing portioning fields: {missing}")
                         raise ValueError(f"Missing portioning fields: {', '.join(missing)}")
                     if not isinstance(portioning_data.get('portion_count'), (int, float)) or portioning_data.get('portion_count') < 0:
+                        print(f"🔍 BATCH_SERVICE DEBUG: ERROR - Invalid portion_count: {portioning_data.get('portion_count')}")
                         raise ValueError("portion_count must be a non-negative number")
                     if not isinstance(portioning_data.get('bulk_yield_quantity'), (int, float)) or portioning_data.get('bulk_yield_quantity') < 0:
+                        print(f"🔍 BATCH_SERVICE DEBUG: ERROR - Invalid bulk_yield_quantity: {portioning_data.get('bulk_yield_quantity')}")
                         raise ValueError("bulk_yield_quantity must be a non-negative number")
+                    
+                    print(f"🔍 BATCH_SERVICE DEBUG: Portioning validation PASSED")
+                else:
+                    print(f"🔍 BATCH_SERVICE DEBUG: Recipe is NOT portioned (is_portioned = {portioning_data.get('is_portioned')})")
+                
                 portion_snap = dict(portioning_data)
+                print(f"🔍 BATCH_SERVICE DEBUG: Created portion_snap: {portion_snap}")
+            else:
+                print(f"🔍 BATCH_SERVICE DEBUG: No portioning_data provided, checking recipe for portioning info...")
+                # Check if recipe itself has portioning data
+                recipe_portioning = getattr(recipe, 'portioning_data', None)
+                if recipe_portioning:
+                    print(f"🔍 BATCH_SERVICE DEBUG: Found recipe.portioning_data: {recipe_portioning}")
+                    # Could potentially use recipe portioning data as fallback here
+                else:
+                    print(f"🔍 BATCH_SERVICE DEBUG: No portioning data in recipe either")
 
             # Create the batch
+            print(f"🔍 BATCH_SERVICE DEBUG: Creating batch with portioning_data: {portion_snap}")
             batch = Batch(
                 recipe_id=recipe_id,
                 label_code=label_code,
@@ -69,6 +102,8 @@ class BatchOperationsService(BaseService):
             )
 
             db.session.add(batch)
+            print(f"🔍 BATCH_SERVICE DEBUG: Batch object created with label: {label_code}")
+            print(f"🔍 BATCH_SERVICE DEBUG: Batch.portioning_data after creation: {batch.portioning_data}")
 
             # Lock costing method for this batch at start based on organization setting (preserve original behavior)
             try:
@@ -107,6 +142,19 @@ class BatchOperationsService(BaseService):
             else:
                 # All deductions validated; commit once atomically
                 db.session.commit()
+                
+                # 🔍 FINAL SUCCESS DEBUG
+                print(f"🔍 BATCH_SERVICE DEBUG: ✅ BATCH CREATED SUCCESSFULLY!")
+                print(f"🔍 BATCH_SERVICE DEBUG: Final batch ID: {batch.id}")
+                print(f"🔍 BATCH_SERVICE DEBUG: Final batch label: {batch.label_code}")
+                print(f"🔍 BATCH_SERVICE DEBUG: Final batch.portioning_data: {batch.portioning_data}")
+                
+                # Verify batch was persisted with portioning data
+                fresh_batch = Batch.query.get(batch.id)
+                if fresh_batch:
+                    print(f"🔍 BATCH_SERVICE DEBUG: Verified - Fresh batch.portioning_data from DB: {fresh_batch.portioning_data}")
+                else:
+                    print(f"🔍 BATCH_SERVICE DEBUG: ERROR - Could not fetch fresh batch from DB!")
 
                 # Emit domain event for batch start (best-effort)
                 try:
@@ -118,7 +166,8 @@ class BatchOperationsService(BaseService):
                             'batch_type': batch_type,
                             'projected_yield': projected_yield,
                             'projected_yield_unit': recipe.predicted_yield_unit,
-                            'label_code': label_code
+                            'label_code': label_code,
+                            'portioning_data': batch.portioning_data  # Include in event
                         },
                         organization_id=batch.organization_id,
                         user_id=batch.created_by,
