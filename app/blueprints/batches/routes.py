@@ -295,6 +295,8 @@ def api_start_batch():
                 }
             except Exception:
                 portioning_data = None
+        # Construct DTO-like structure for clarity if needed downstream
+        # (We still pass the dict to the service to avoid breaking signature)
         print(f"🔍 API_START_BATCH DEBUG: Composed portioning_data (flat-only): {portioning_data}")
 
         if not recipe_id:
