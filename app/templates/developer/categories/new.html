@@ -14,7 +14,17 @@
   <div class="mb-3">
     <label class="form-label">SKU Name Template</label>
     <input type="text" class="form-control" name="sku_name_template" placeholder="{variant} {product} ({size_label})">
-    <small class="text-muted">Tokens: {product}, {variant}, {container}, {size_label}</small>
+    <small class="text-muted">Tokens: {product}, {variant}, {container}, {size_label}, {yield_value}, {yield_unit}, {portion_name}, {portion_count}</small>
+    <div class="mt-2 d-flex flex-wrap gap-2">
+      <span class="badge bg-light text-dark token" data-token="{product}">{product}</span>
+      <span class="badge bg-light text-dark token" data-token="{variant}">{variant}</span>
+      <span class="badge bg-light text-dark token" data-token="{container}">{container}</span>
+      <span class="badge bg-light text-dark token" data-token="{size_label}">{size_label}</span>
+      <span class="badge bg-light text-dark token" data-token="{yield_value}">{yield_value}</span>
+      <span class="badge bg-light text-dark token" data-token="{yield_unit}">{yield_unit}</span>
+      <span class="badge bg-light text-dark token" data-token="{portion_name}">{portion_name}</span>
+      <span class="badge bg-light text-dark token" data-token="{portion_count}">{portion_count}</span>
+    </div>
   </div>
   <div class="d-flex gap-2">
     <a href="{{ url_for('developer.product_categories') }}" class="btn btn-secondary">Cancel</a>

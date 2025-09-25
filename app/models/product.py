@@ -295,6 +295,17 @@ class ProductSKU(db.Model, ScopedModelMixin):
         if self.variant and self.product_id != self.variant.product_id:
             raise ValueError(f"SKU product_id ({self.product_id}) does not match variant's product_id ({self.variant.product_id})")
 
+    @staticmethod
+    @event.listens_for(db.session, "before_flush")
+    def _enforce_inventory_item_type(session, flush_context, instances):
+        """Ensure linked InventoryItem is of type 'product' for all ProductSKUs"""
+        from ..models.inventory import InventoryItem
+        for obj in session.new.union(session.dirty):
+            if isinstance(obj, ProductSKU) and getattr(obj, 'inventory_item_id', None):
+                inv = session.get(InventoryItem, obj.inventory_item_id)
+                if inv and inv.type != 'product':
+                    raise ValueError(f"InventoryItem {inv.id} type '{inv.type}' is not 'product' for ProductSKU")
+
     # Table constraints
     __table_args__ = (
         db.UniqueConstraint('product_id', 'variant_id', 'size_label', 'fifo_id', name='unique_sku_combination'),
