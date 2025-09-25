@@ -35,8 +35,15 @@ def upgrade():
     op.drop_table('pricing_snapshot')
     op.drop_table('billing_snapshot')
     with op.batch_alter_table('batch', schema=None) as batch_op:
-        batch_op.drop_constraint('batch_sku_id_fkey', type_='foreignkey')
-        batch_op.create_foreign_key(None, 'product_sku', ['sku_id'], ['id'])
+        # Be defensive: in SQLite or fresh DBs this FK name may not exist
+        try:
+            batch_op.drop_constraint('batch_sku_id_fkey', type_='foreignkey')
+        except Exception:
+            pass
+        try:
+            batch_op.create_foreign_key('fk_batch_sku_id', 'product_sku', ['sku_id'], ['id'])
+        except Exception:
+            pass
         batch_op.drop_column('created_at')
         batch_op.drop_column('updated_at')
 
