@@ -31,6 +31,7 @@ class Recipe(ScopedModelMixin, db.Model):
     is_portioned = db.Column(db.Boolean, nullable=True)
     portion_name = db.Column(db.String(64), nullable=True)
     portion_count = db.Column(db.Integer, nullable=True)
+    portion_unit_id = db.Column(db.Integer, db.ForeignKey('unit.id'), nullable=True)
 
 class RecipeIngredient(ScopedModelMixin, db.Model):
     __tablename__ = 'recipe_ingredient'

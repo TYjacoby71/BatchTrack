@@ -95,6 +95,7 @@ class BatchOperationsService(BaseService):
                 is_portioned=(portion_snap.get('is_portioned') if isinstance(portion_snap, dict) else False) if portion_snap else False,
                 portion_name=(portion_snap.get('portion_name') if isinstance(portion_snap, dict) else None) if portion_snap else None,
                 projected_portions=(int(portion_snap.get('portion_count')) if isinstance(portion_snap, dict) and portion_snap.get('portion_count') is not None else None) if portion_snap else None,
+                portion_unit_id=None,
                 created_by=current_user.id,
                 organization_id=current_user.organization_id,
                 started_at=TimezoneUtils.utc_now()
