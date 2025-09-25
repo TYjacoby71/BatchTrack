@@ -298,7 +298,9 @@ def _create_product_output(batch, product_id, variant_id, final_quantity, output
         # For portioned batches, create portion-based SKU if final_portions provided
         if getattr(batch, 'is_portioned', False) and final_portions and final_portions > 0:
             try:
+                # Always coerce to a clean string
                 size_label = _derive_size_label_from_portions(batch, final_quantity, output_unit, final_portions)
+                size_label = ' '.join((size_label or 'Portion').split())
                 from ...services.product_service import ProductService
                 # Build naming context derived from batch snapshot
                 portion_name = getattr(batch, 'portion_name', None) or 'Unit'
@@ -468,6 +470,8 @@ def _create_container_sku(product, variant, container_item, quantity, batch, exp
             size_label = f"{cap_str} {base_name}".strip()
         else:
             size_label = f"1 unit {container_item.name}"
+        # Final sanitize
+        size_label = ' '.join((size_label or '').split())
 
         # Calculate total cost per container unit
         # Cost = (ingredient cost per unit × container capacity) + adjusted container cost

@@ -346,7 +346,15 @@ class ProductSKU(db.Model, ScopedModelMixin):
         # Set explicit attributes
         self.product_id = product_id
         self.variant_id = variant_id
-        self.size_label = size_label
+        # Normalize size_label to a clean string
+        try:
+            _sz = ('' if size_label is None else str(size_label)).strip()
+            if not _sz:
+                _sz = 'Bulk'
+            _sz = ' '.join(_sz.split())[:64]
+        except Exception:
+            _sz = 'Bulk'
+        self.size_label = _sz
         self.sku_code = sku_code
         self.sku = sku
         self.sku_name = sku_name
