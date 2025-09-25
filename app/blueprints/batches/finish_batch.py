@@ -298,7 +298,9 @@ def _create_product_output(batch, product_id, variant_id, final_quantity, output
         # For portioned batches, create portion-based SKU if final_portions provided
         if getattr(batch, 'is_portioned', False) and final_portions and final_portions > 0:
             try:
+                # Always coerce to a clean string
                 size_label = _derive_size_label_from_portions(batch, final_quantity, output_unit, final_portions)
+                size_label = ' '.join((size_label or 'Portion').split())
                 from ...services.product_service import ProductService
                 # Build naming context derived from batch snapshot
                 portion_name = getattr(batch, 'portion_name', None) or 'Unit'
@@ -341,7 +343,7 @@ def _create_product_output(batch, product_id, variant_id, final_quantity, output
                     created_by=current_user.id,
                     custom_expiration_date=expiration_date,
                     cost_override=ingredient_unit_cost,
-                    item_type='product'
+                    batch_id=batch.id
                 )
                 if not success:
                     raise ValueError('Failed to credit portion inventory')
@@ -460,9 +462,22 @@ def _create_container_sku(product, variant, container_item, quantity, batch, exp
         # Create size label format: "[capacity] [capacity_unit] [container_name]"
         # Example: "8 fl oz Bottle"
         if container_item.capacity and container_item.capacity_unit:
-            size_label = f"{container_item.capacity} {container_item.capacity_unit} {container_item.name}"
+            # Build from structured attributes
+            cap_str = f"{container_item.capacity} {container_item.capacity_unit}".strip()
+            try:
+                display_name = container_item.container_display_name
+            except Exception:
+                display_name = container_item.name
+            size_label = f"{cap_str} {display_name}".strip()
         else:
-            size_label = f"1 unit {container_item.name}"
+            # No capacity specified; fall back to derived display name
+            try:
+                display_name = container_item.container_display_name
+            except Exception:
+                display_name = container_item.name
+            size_label = display_name
+        # Final sanitize
+        size_label = ' '.join((size_label or '').split())
 
         # Calculate total cost per container unit
         # Cost = (ingredient cost per unit × container capacity) + adjusted container cost
@@ -520,7 +535,7 @@ def _create_container_sku(product, variant, container_item, quantity, batch, exp
             created_by=current_user.id,
             custom_expiration_date=expiration_date,
             cost_override=total_cost_per_container,  # Pass calculated cost per container
-            item_type='product'  # Ensure proper FIFO routing
+            batch_id=batch.id
         )
 
         if not success:
@@ -563,7 +578,7 @@ def _create_bulk_sku(product, variant, quantity, unit, expiration_date, batch, i
             created_by=current_user.id,
             custom_expiration_date=expiration_date,
             cost_override=ingredient_unit_cost,  # Pass ingredient unit cost for bulk
-            item_type='product'  # Ensure proper FIFO routing
+            batch_id=batch.id
         )
 
         if not success:

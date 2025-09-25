@@ -35,6 +35,8 @@ class InventoryItem(ScopedModelMixin, db.Model):
     # Container-specific fields (for items that can hold other items)
     capacity = db.Column(db.Float, nullable=True)  # How much this container can hold
     capacity_unit = db.Column(db.String(32), nullable=True)  # Unit for storage capacity
+    container_material = db.Column(db.String(64), nullable=True)
+    container_type = db.Column(db.String(64), nullable=True)
     created_by = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True)
     created_at = db.Column(db.DateTime, default=TimezoneUtils.utc_now)
 
@@ -59,6 +61,23 @@ class InventoryItem(ScopedModelMixin, db.Model):
     global_item = db.relationship('GlobalItem')
 
     # Legacy aliases removed: use capacity and capacity_unit exclusively
+    @property
+    def container_display_name(self):
+        """Derived clean display name for containers from structured attributes.
+
+        Example: "Glass Jar" or "Tin" if only type is present.
+        Falls back to name if attributes are missing or item is not a container.
+        """
+        try:
+            if self.type != 'container':
+                return self.name
+            material = (self.container_material or '').strip()
+            ctype = (self.container_type or '').strip()
+            if material and ctype:
+                return f"{material} {ctype}".strip()
+            return (ctype or material or self.name).strip()
+        except Exception:
+            return self.name
 
     def belongs_to_user(self):
         """Check if this record belongs to the current user's organization"""

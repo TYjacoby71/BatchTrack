@@ -14,7 +14,17 @@
   <div class="mb-3">
     <label class="form-label">SKU Name Template</label>
     <input type="text" class="form-control" name="sku_name_template" value="{{ category.sku_name_template or '' }}" placeholder="{variant} {product} ({size_label})">
-    <small class="text-muted">Tokens: {product}, {variant}, {container}, {size_label}</small>
+    <small class="text-muted">Tokens: {product}, {variant}, {container}, {size_label}, {yield_value}, {yield_unit}, {portion_name}, {portion_count}</small>
+    <div class="mt-2 d-flex flex-wrap gap-2">
+      <span class="badge bg-light text-dark token" data-token="{product}">{product}</span>
+      <span class="badge bg-light text-dark token" data-token="{variant}">{variant}</span>
+      <span class="badge bg-light text-dark token" data-token="{container}">{container}</span>
+      <span class="badge bg-light text-dark token" data-token="{size_label}">{size_label}</span>
+      <span class="badge bg-light text-dark token" data-token="{yield_value}">{yield_value}</span>
+      <span class="badge bg-light text-dark token" data-token="{yield_unit}">{yield_unit}</span>
+      <span class="badge bg-light text-dark token" data-token="{portion_name}">{portion_name}</span>
+      <span class="badge bg-light text-dark token" data-token="{portion_count}">{portion_count}</span>
+    </div>
     <div class="mt-2">
       <label class="form-label">Live Preview</label>
       <div class="form-text" id="skuPreview"></div>
@@ -35,10 +45,25 @@
     return tpl.replace('{product}', sample.product)
               .replace('{variant}', sample.variant)
               .replace('{container}', sample.container)
-              .replace('{size_label}', sample.size_label);
+              .replace('{size_label}', sample.size_label)
+              .replace('{yield_value}', '32')
+              .replace('{yield_unit}', 'oz')
+              .replace('{portion_name}', 'Bar')
+              .replace('{portion_count}', '8');
   }
   function update(){ preview.textContent = render(input.value || ''); }
   if (input && preview){ input.addEventListener('input', update); update(); }
+  document.querySelectorAll('.token').forEach(el => {
+    el.addEventListener('click', () => {
+      const token = el.getAttribute('data-token');
+      const start = input.selectionStart || input.value.length;
+      const end = input.selectionEnd || input.value.length;
+      input.value = input.value.slice(0, start) + token + input.value.slice(end);
+      input.focus();
+      input.setSelectionRange(start + token.length, start + token.length);
+      update();
+    });
+  });
 })();
 </script>
 {% endblock %}
