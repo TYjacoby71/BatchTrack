@@ -34,19 +34,14 @@ class BatchOperationsService(BaseService):
             label_code = generate_batch_label_code(recipe)
 
             # Prefer plan-provided projected snapshot; otherwise derive from recipe at start time
-            if projected_yield is None:
-                projected_yield = scale * recipe.predicted_yield
-            try:
-                projected_yield = float(projected_yield)
-            except Exception:
-                projected_yield = scale * recipe.predicted_yield
-
-            if not projected_yield_unit:
-                projected_yield_unit = recipe.predicted_yield_unit
-            try:
-                projected_yield_unit = str(projected_yield_unit)
-            except Exception:
-                projected_yield_unit = recipe.predicted_yield_unit
+            projected_yield = (
+                float(projected_yield)
+                if projected_yield is not None
+                else float(scale) * float(recipe.predicted_yield or 0.0)
+            )
+            projected_yield_unit = (
+                projected_yield_unit or recipe.predicted_yield_unit
+            )
 
             # 🔍 COMPREHENSIVE SERVICE PORTIONING DEBUG
             print(f"🔍 BATCH_SERVICE DEBUG: Recipe ID: {recipe_id}, Recipe name: {recipe.name}")
