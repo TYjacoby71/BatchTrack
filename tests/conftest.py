@@ -62,6 +62,13 @@ def db_session(app):
 
 
 @pytest.fixture
+def app_context(app):
+    """Provide an application context for tests that need it."""
+    with app.app_context():
+        yield
+
+
+@pytest.fixture
 def auth_headers():
     """Headers for authenticated requests."""
     return {'Content-Type': 'application/json'}
@@ -71,6 +78,7 @@ def _create_test_data():
     """Create basic test data with correct object relationships"""
     from app.models.subscription_tier import SubscriptionTier
     from app.models.models import Organization, User
+    from app.models.product_category import ProductCategory
     from app.extensions import db
 
     # Create a test subscription tier
@@ -83,6 +91,11 @@ def _create_test_data():
     )
     db.session.add(tier)
     db.session.commit()
+
+    # Ensure a default product category exists for tests
+    if not ProductCategory.query.filter_by(name='Uncategorized').first():
+        db.session.add(ProductCategory(name='Uncategorized'))
+        db.session.commit()
 
     # Create a test organization - Pass the tier object, not tier.id
     org = Organization(

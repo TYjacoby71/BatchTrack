@@ -4,6 +4,7 @@ from app.extensions import db
 from app.models.recipe import Recipe
 from app.models.models import User, Organization
 from app.services.batch_service.batch_operations import BatchOperationsService
+from app.services.production_planning.service import PlanProductionService
 from app.utils.timezone_utils import TimezoneUtils
 
 
@@ -29,7 +30,14 @@ def test_start_batch_uses_generator_and_persists_label(app):
             db.session.add(recipe)
             db.session.commit()
 
-            batch, errors = BatchOperationsService.start_batch(recipe.id, scale=1.0, batch_type='ingredient', notes='test')
+            snapshot = PlanProductionService.build_plan(
+                recipe=recipe,
+                scale=1.0,
+                batch_type='ingredient',
+                notes='test',
+                containers=[]
+            )
+            batch, errors = BatchOperationsService.start_batch(snapshot.to_dict())
 
         assert errors == []
         assert batch is not None

@@ -2,6 +2,7 @@ import logging
 from app.models import db, InventoryItem, UnifiedInventoryHistory
 from app.services.unit_conversion import ConversionEngine
 from ._validation import validate_inventory_fifo_sync
+from app.services.costing_engine import weighted_average_cost_for_item
 
 # Import operation modules directly
 from ._additive_ops import _universal_additive_handler, ADDITIVE_OPERATION_GROUPS
@@ -35,8 +36,13 @@ def process_inventory_adjustment(item_id, change_type, quantity, notes=None, cre
     # Check if this is the first entry for this item
     is_initial_stock = UnifiedInventoryHistory.query.filter_by(inventory_item_id=item.id).count() == 0
 
-    # Route to initial_stock handler ONLY if it's the first entry, otherwise use original change_type
-    effective_change_type = 'initial_stock' if is_initial_stock else change_type
+    # Route to initial_stock handler ONLY if it's the first entry and the quantity is positive (additive)
+    # Otherwise, preserve the original change_type to avoid creating negative lots
+    try:
+        qty_float = float(quantity)
+    except Exception:
+        qty_float = 0.0
+    effective_change_type = 'initial_stock' if (is_initial_stock and qty_float > 0) else change_type
 
     try:
         # Normalize quantity to the item's canonical unit if a different unit was provided
@@ -125,6 +131,25 @@ def process_inventory_adjustment(item_id, change_type, quantity, notes=None, cre
             logger.error(f"FIFO VALIDATION ERROR for item {item_id}: {str(e)}")
             db.session.rollback()
             return False, f"FIFO validation error: {str(e)}"
+
+        # Update master item's moving average cost (WAC) only for additive ops; skip for deductions/spoilage
+        try:
+            is_additive = False
+            for group_name, group_cfg in ADDITIVE_OPERATION_GROUPS.items():
+                if effective_change_type in group_cfg['operations']:
+                    is_additive = True
+                    break
+            if is_additive:
+                new_wac = weighted_average_cost_for_item(item.id)
+                try:
+                    current = float(item.cost_per_unit or 0.0)
+                except Exception:
+                    current = 0.0
+                if abs((new_wac or 0.0) - current) > 1e-9:
+                    item.cost_per_unit = float(new_wac or 0.0)
+        except Exception:
+            # Do not fail the adjustment because of WAC recompute issues
+            pass
 
         # Commit database changes unless caller defers commit for an outer transaction
         try:

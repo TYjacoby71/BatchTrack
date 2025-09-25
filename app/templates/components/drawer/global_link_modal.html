@@ -1,0 +1,107 @@
+<div class="modal fade" id="globalLinkModal" tabindex="-1" aria-labelledby="globalLinkModalLabel" aria-hidden="true" data-global-item-id="{{ global_item.id }}" role="dialog" aria-modal="true">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="globalLinkModalLabel">
+          <i class="fas fa-link text-primary"></i>
+          Link to Global Item: {{ global_item.name }}
+        </h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <div class="alert alert-info">
+          A global item "<strong>{{ global_item.name }}</strong>" matches items you already own. Linking will set industry-standard properties and improve accuracy. No units will be changed.
+        </div>
+
+        {% if items and items|length > 0 %}
+        <div class="table-responsive">
+          <table class="table table-sm align-middle">
+            <thead>
+              <tr>
+                <th style="width: 40px;"><input type="checkbox" id="glSelectAll" checked></th>
+                <th>Current Name</th>
+                <th>Will Become</th>
+                <th>Current Density</th>
+                <th>Global Density</th>
+                <th>Unit</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for it in items %}
+              <tr>
+                <td>
+                  <input type="checkbox" class="form-check-input gl-item" value="{{ it.id }}" checked>
+                </td>
+                <td>{{ it.name }}</td>
+                <td><span class="badge bg-secondary">{{ global_item.name }}</span></td>
+                <td>{{ '%.3f'|format(it.density) if it.density else '-' }}</td>
+                <td>{{ '%.3f'|format(global_item.density) if global_item.density else '-' }}</td>
+                <td>{{ it.unit }}</td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+        {% else %}
+        <div class="alert alert-secondary">No eligible items found.</div>
+        {% endif %}
+
+        <small class="text-muted">Deselect all if you do not want to link any items.</small>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-primary" id="glConfirmBtn" aria-label="Confirm linking selected items to {{ global_item.name }}">
+          Continue
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+(function(){
+  const init = function(){
+    const modal = document.getElementById('globalLinkModal');
+    if (!modal) return;
+    const selectAll = modal.querySelector('#glSelectAll');
+    const checkboxes = modal.querySelectorAll('.gl-item');
+    const confirmBtn = modal.querySelector('#glConfirmBtn');
+
+    // Select/Deselect all
+    if (selectAll) {
+      selectAll.addEventListener('change', function(){
+        checkboxes.forEach(cb => { cb.checked = selectAll.checked; });
+      });
+    }
+
+    // Confirm action
+    if (confirmBtn) {
+      confirmBtn.addEventListener('click', async function(){
+        const selected = Array.from(checkboxes).filter(cb => cb.checked).map(cb => cb.value);
+        try {
+          const globalItemId = Number(modal.getAttribute('data-global-item-id'));
+          const res = await fetch('/global-link/api/confirm', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'X-CSRFToken': (document.querySelector('meta[name="csrf-token"]') || {}).content },
+            body: JSON.stringify({ global_item_id: globalItemId, item_ids: selected })
+          });
+          const data = await res.json();
+          if (!data || !data.success) throw new Error(data && data.error || 'Linking failed');
+          // Close modal
+          const instance = bootstrap.Modal.getInstance(modal);
+          if (instance) instance.hide();
+          // Emit global success event
+          window.dispatchEvent(new CustomEvent('globalLinking.completed', { detail: { global_item_id: globalItemId, updated: data.updated, skipped: data.skipped } }));
+        } catch (e) {
+          alert(e.message || 'Failed to link items');
+        }
+      });
+    }
+  };
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', init, { once: true });
+  } else {
+    init();
+  }
+})();
+</script>
+

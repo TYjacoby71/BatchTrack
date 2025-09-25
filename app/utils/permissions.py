@@ -59,7 +59,7 @@ def require_permission(permission_name: str):
             # Basic auth check - check authentication first
             if not current_user.is_authenticated:
                 if wants_json():
-                    return jsonify({"error": "unauthorized"}), 401
+                    return jsonify({"error": "Authentication required"}), 401
                 flash("Please log in to access this page.", "error")
                 return redirect(url_for("auth.login"))
 
@@ -93,7 +93,7 @@ def any_permission_required(*permission_names):
         def decorated_function(*args, **named_args):
             if not current_user or not current_user.is_authenticated:
                 if wants_json():
-                    return jsonify({"error": "unauthorized"}), 401
+                    return jsonify({"error": "Authentication required"}), 401
                 return current_app.login_manager.unauthorized()
 
             # Check if user has any of the required permissions
@@ -125,7 +125,7 @@ def tier_required(min_tier: str):
             # Check authentication first, with JSON-aware response
             if not current_user.is_authenticated:
                 if wants_json_response:
-                    return jsonify(error="unauthorized"), 401
+                    return jsonify(error="Authentication required"), 401
                 # For web requests, let Flask-Login handle the redirect
                 return current_app.login_manager.unauthorized()
 

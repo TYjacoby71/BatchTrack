@@ -5,6 +5,7 @@ def test_extras_cannot_use_expired_lot(app, db_session, test_user, test_org):
     from app.models import InventoryItem, Recipe
     from app.models.inventory_lot import InventoryLot
     from app.services.batch_service.batch_operations import BatchOperationsService
+    from app.services.production_planning.service import PlanProductionService
     from app.utils.timezone_utils import TimezoneUtils
     from datetime import timedelta
 
@@ -42,16 +43,24 @@ def test_extras_cannot_use_expired_lot(app, db_session, test_user, test_org):
     db_session.add(recipe)
     db_session.flush()
 
-    batch, errors = BatchOperationsService.start_batch(recipe.id, scale=1.0, batch_type='ingredient', notes='test')
-    assert batch is not None, f"Failed to start batch: {errors}"
+    # Ensure a request and user context exists for batch start
+    from flask_login import login_user
+    with app.test_request_context():
+        login_user(test_user)
+        snapshot = PlanProductionService.build_plan(recipe=recipe, scale=1.0, batch_type='ingredient', notes='test', containers=[])
+        batch, errors = BatchOperationsService.start_batch(snapshot.to_dict())
+        assert batch is not None, f"Failed to start batch: {errors}"
 
     # Attempt to add expired item as an extra
-    success, message, err_list = BatchOperationsService.add_extra_items_to_batch(
-        batch_id=batch.id,
-        extra_ingredients=[{"item_id": item.id, "quantity": 10, "unit": "g"}],
-        extra_containers=[],
-        extra_consumables=[]
-    )
+    from flask_login import login_user
+    with app.test_request_context():
+        login_user(test_user)
+        success, message, err_list = BatchOperationsService.add_extra_items_to_batch(
+            batch_id=batch.id,
+            extra_ingredients=[{"item_id": item.id, "quantity": 10, "unit": "g"}],
+            extra_containers=[],
+            extra_consumables=[]
+        )
 
     assert success is False, "Extras addition should fail due to expired-only stock"
     assert err_list and any("Not enough" in (e.get("message") or "") or "stock" in (e.get("message") or "") for e in err_list)

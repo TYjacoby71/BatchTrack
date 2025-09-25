@@ -112,7 +112,7 @@
                         </a>
                     </li>
                     <li><a class="dropdown-item" href="{{ url_for('timers.list_timers') }}">Timers</a></li>
-                    <li><a class="dropdown-item" href="{{ url_for('reservations.list_reservations') }}">Reservations</a></li>
+                    <li><a class="dropdown-item" href="{{ url_for('reservation.list_reservations') }}">Reservations</a></li>
                     <li><a class="dropdown-item" href="{{ url_for('bulk_stock.bulk_stock_check') }}">Bulk Stock Check</a></li>
 
                     <li><hr class="dropdown-divider"></li>
@@ -260,7 +260,7 @@
                     <li><a class="dropdown-item" href="{{ url_for('timers.list_timers') }}">Timers</a></li>
                     {% endif %}
                     {% if has_role('developer') or has_role('organization_owner') or has_permission(current_user, 'organization.manage') %}
-                    <li><a class="dropdown-item" href="{{ url_for('reservations.list_reservations') }}">Reservations</a></li>
+                    <li><a class="dropdown-item" href="{{ url_for('reservation.list_reservations') }}">Reservations</a></li>
                     {% endif %}
                     {% if current_user.is_authenticated and has_permission(current_user, 'products.view') %}
                     <li><a class="dropdown-item" href="{{ url_for('bulk_stock.bulk_stock_check') }}">Bulk Stock Check</a></li>
@@ -339,6 +339,7 @@
     <script src="{{ url_for('static', filename='js/inventory/inventory_adjust.js') }}"></script>
     <script src="{{ url_for('static', filename='js/conversion/unit_converter.js') }}"></script>
     <script type="module" src="{{ url_for('static', filename='js/drawers/retention_drawer.js') }}"></script>
+    <script type="module" src="{{ url_for('static', filename='js/drawers/global_link_drawer.js') }}"></script>
 {% block scripts %}{% endblock %}
     <script src="{{ url_for('static', filename='js/expiration_alerts.js') }}"></script>
     </body>

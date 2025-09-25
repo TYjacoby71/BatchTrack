@@ -57,3 +57,27 @@ class RecipeConsumable(ScopedModelMixin, db.Model):
     order_position = db.Column(db.Integer, default=0)
 
     inventory_item = db.relationship('InventoryItem', backref='recipe_consumable_usages')
+
+# Defensive defaulting: ensure a category is assigned if omitted in code paths
+from sqlalchemy import event
+
+@event.listens_for(Recipe, "before_insert")
+def _assign_default_category_before_insert(mapper, connection, target):
+    """Assign a default ProductCategory if none was provided.
+
+    This preserves the NOT NULL invariant while keeping programmatic creations
+    (e.g., tests or scripts) from violating constraints when category is omitted.
+    """
+    try:
+        if getattr(target, 'category_id', None) is None:
+            from .product_category import ProductCategory
+            from ..extensions import db
+            default_cat = ProductCategory.query.filter_by(name='Uncategorized').first()
+            if not default_cat:
+                default_cat = ProductCategory(name='Uncategorized')
+                db.session.add(default_cat)
+                db.session.flush()
+            target.category_id = default_cat.id
+    except Exception:
+        # As a last resort, do nothing and let DB raise if truly impossible
+        pass

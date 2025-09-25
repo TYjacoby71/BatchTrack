@@ -40,21 +40,23 @@ def register_blueprints(app):
     safe_register_blueprint('app.blueprints.expiration.expiration_bp', 'expiration_bp', '/expiration', 'Expiration')
     safe_register_blueprint('app.blueprints.conversion.conversion_bp', 'conversion_bp', '/conversion', 'Conversion')
 
-    # Product blueprints - these might have issues
-    # Products Main
+    # Product blueprints - use the register function
     try:
-        from app.blueprints.products.products import products_bp
-        # Register with name 'products' to match template expectations
-        app.register_blueprint(products_bp, name='products')
+        from app.blueprints.products import register_product_blueprints
+        register_product_blueprints(app)
         successful_registrations.append("Products Main")
     except Exception as e:
         failed_registrations.append(f"Products Main: {e}")
+        # Fallback - try to register just the main products blueprint
+        try:
+            from app.blueprints.products.products import products_bp
+            app.register_blueprint(products_bp)
+            successful_registrations.append("Products Fallback")
+        except Exception as e2:
+            failed_registrations.append(f"Products Fallback: {e2}")
 
-    safe_register_blueprint('app.blueprints.products.product_inventory_routes.product_inventory_bp', 'product_inventory_bp', '/product-inventory', 'Product Inventory')
-    safe_register_blueprint('app.blueprints.products.reservation_routes.reservations_bp', 'reservations_bp', '/reservations', 'Reservations')
-    safe_register_blueprint('app.blueprints.products.sku.sku_bp', 'sku_bp', '/products/sku', 'SKU Management')
-    safe_register_blueprint('app.blueprints.products.product_variants.product_variants_bp', 'product_variants_bp', '/product-variants', 'Product Variants')
-    safe_register_blueprint('app.blueprints.products.product_alerts_bp.product_alerts_bp', 'product_alerts_bp', '/product-alerts', 'Product Alerts')
+    # Product blueprints are now registered via register_product_blueprints() above
+    # Remove individual registrations to avoid conflicts
 
     # API blueprints - these are often problematic
     safe_register_blueprint('app.blueprints.api.public.public_api_bp', 'public_api_bp', '/api/public', 'Public API')
@@ -62,6 +64,7 @@ def register_blueprints(app):
     safe_register_blueprint('app.blueprints.api.drawer_actions.drawer_actions_bp', 'drawer_actions_bp', None, 'Drawer Actions')
     safe_register_blueprint('app.blueprints.api.density_reference.density_reference_bp', 'density_reference_bp', '/api', 'Density Reference')
     safe_register_blueprint('app.blueprints.api.retention_drawer.retention_bp', 'retention_bp', None, 'Retention Drawer API')
+    safe_register_blueprint('app.blueprints.api.global_link_drawer.global_link_bp', 'global_link_bp', None, 'Global Link Drawer API')
 
     # Note: FIFO blueprint removed - functionality moved to inventory_adjustment service
 

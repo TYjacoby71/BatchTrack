@@ -8,6 +8,7 @@ from app.models.batch import Batch
 from app.services.product_service import ProductService
 from app.services.recipe_service._core import create_recipe
 from app.services.batch_service.batch_operations import BatchOperationsService
+from app.services.production_planning.service import PlanProductionService
 
 
 @pytest.mark.usefixtures('app_context')
@@ -24,7 +25,7 @@ def test_portioning_sku_labels_differ(client):
     db.session.commit()
 
     # Create product and variant
-    product = Product(name='Salt Soap', base_unit='oz', category_id=soaps.id)
+    product = Product(name='Salt Soap', category_id=soaps.id)
     db.session.add(product)
     db.session.flush()
     variant = ProductVariant(product_id=product.id, name='Lavender')
@@ -52,7 +53,8 @@ def test_portioning_sku_labels_differ(client):
     assert ok, f"Failed to create recipe: {recipe}"
 
     # Start batch
-    batch, errs = BatchOperationsService.start_batch(recipe_id=recipe.id, scale=1.0, batch_type='product', notes='Test batch')
+    snapshot = PlanProductionService.build_plan(recipe=recipe, scale=1.0, batch_type='product', notes='Test batch', containers=[])
+    batch, errs = BatchOperationsService.start_batch(snapshot.to_dict())
     assert batch is not None, f"Start batch failed: {errs}"
 
     # Finish batch with 5 lb final bulk and 10 portions
@@ -76,7 +78,8 @@ def test_portioning_sku_labels_differ(client):
     assert '(' in sku_a.sku_name and ')' in sku_a.sku_name
 
     # Start second batch
-    batch2, errs2 = BatchOperationsService.start_batch(recipe_id=recipe.id, scale=1.0, batch_type='product', notes='Test batch 2')
+    snapshot2 = PlanProductionService.build_plan(recipe=recipe, scale=1.0, batch_type='product', notes='Test batch 2', containers=[])
+    batch2, errs2 = BatchOperationsService.start_batch(snapshot2.to_dict())
     assert batch2 is not None, f"Start batch2 failed: {errs2}"
 
     # Finish second batch with 5 lb final bulk but 20 portions

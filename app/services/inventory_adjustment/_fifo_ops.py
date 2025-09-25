@@ -182,11 +182,17 @@ def deduct_fifo_inventory(item_id, quantity_to_deduct, change_type, notes=None, 
         # Determine valuation method for this deduction event
         valuation_method = None
         try:
-            if str(change_type).lower() == 'batch' and batch_id:
+            op = str(change_type).lower() if change_type else ''
+            # For commerce operations on products, always use average (WAC)
+            if op in {'sale', 'pos_sale', 'pos_return_neg'} and getattr(item, 'type', None) == 'product':
+                valuation_method = 'average'
+            # For batch deductions, honor the batch-locked method
+            elif op == 'batch' and batch_id:
                 from app.models import Batch
                 b = db.session.get(Batch, batch_id)
                 if b and getattr(b, 'cost_method', None):
                     valuation_method = b.cost_method
+            # Otherwise fall back to organization setting
             if not valuation_method:
                 org = getattr(item, 'organization', None)
                 org_method = getattr(org, 'inventory_cost_method', None) if org else None

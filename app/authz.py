@@ -17,7 +17,7 @@ def configure_login_manager(app):
             request.path.startswith('/api/') or 
             'application/json' in request.headers.get('Accept', '') or
             'application/json' in request.headers.get('Content-Type', '')):
-            return jsonify({"error": "unauthorized"}), 401
+            return jsonify({"error": "Authentication required"}), 401
         return redirect(url_for("auth.login"))
 
     @login_manager.user_loader
