@@ -1,4 +1,4 @@
-from dataclasses import dataclass
+from dataclasses import dataclass, asdict
 from typing import Optional
 
 
@@ -7,4 +7,7 @@ class BatchPortionSnapshot:
     is_portioned: bool
     portion_name: Optional[str]
     projected_portions: Optional[int]
+
+    def to_dict(self) -> dict:
+        return asdict(self)
 

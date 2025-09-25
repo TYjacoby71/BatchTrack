@@ -66,19 +66,23 @@ class BatchOperationsService(BaseService):
             # Create the batch
             print(f"🔍 BATCH_SERVICE DEBUG: Creating batch with portioning_data: {portion_snap}")
 
-            # Convert plan_snapshot to JSON-serializable format
-            # Check for dataclass objects and convert them to dicts
-            serializable_plan_snapshot = {}
-            for key, value in plan_snapshot.items():
-                if hasattr(value, '__dataclass_fields__'):  # It's a dataclass
-                    from dataclasses import asdict
-                    serializable_plan_snapshot[key] = asdict(value)
-                elif hasattr(value, '_asdict'):  # It's a namedtuple
-                    serializable_plan_snapshot[key] = value._asdict()
-                elif hasattr(value, '__dict__'):  # It's a class instance
-                    serializable_plan_snapshot[key] = value.__dict__
+            # Convert plan_snapshot to JSON-serializable format using the DTO's to_dict method
+            # The plan_snapshot should be a PlanSnapshot DTO object, not a dict
+            serializable_plan_snapshot = None
+            if plan_snapshot:
+                if hasattr(plan_snapshot, 'to_dict'):
+                    # It's a PlanSnapshot DTO object - use its to_dict method
+                    serializable_plan_snapshot = plan_snapshot.to_dict()
+                elif isinstance(plan_snapshot, dict):
+                    # It's already a dict - use as is (backwards compatibility)
+                    serializable_plan_snapshot = plan_snapshot
                 else:
-                    serializable_plan_snapshot[key] = value
+                    # Fallback - try to convert dataclass to dict
+                    from dataclasses import asdict
+                    try:
+                        serializable_plan_snapshot = asdict(plan_snapshot)
+                    except Exception:
+                        serializable_plan_snapshot = plan_snapshot
 
             batch = Batch(
                 recipe_id=snap_recipe_id,

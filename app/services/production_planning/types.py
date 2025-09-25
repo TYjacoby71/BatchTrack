@@ -1,4 +1,4 @@
-from dataclasses import dataclass
+from dataclasses import dataclass, asdict
 from typing import List, Optional, Dict, Any
 
 
@@ -9,12 +9,18 @@ class PortioningPlan:
     portion_unit_id: Optional[int] = None
     portion_count: Optional[int] = None
 
+    def to_dict(self) -> dict:
+        return asdict(self)
+
 
 @dataclass(frozen=True)
 class IngredientLine:
     inventory_item_id: int
     quantity: float
     unit: str
+
+    def to_dict(self) -> dict:
+        return asdict(self)
 
 
 @dataclass(frozen=True)
@@ -23,11 +29,17 @@ class ConsumableLine:
     quantity: float
     unit: str
 
+    def to_dict(self) -> dict:
+        return asdict(self)
+
 
 @dataclass(frozen=True)
 class ContainerSelection:
     id: int
     quantity: int
+
+    def to_dict(self) -> dict:
+        return asdict(self)
 
 
 @dataclass(frozen=True)
@@ -44,6 +56,22 @@ class PlanSnapshot:
     containers: List[ContainerSelection]
     requires_containers: bool = False
     category_extension: Optional[Dict[str, Any]] = None
+
+    def to_dict(self) -> dict:
+        return {
+            "recipe_id": self.recipe_id,
+            "scale": self.scale,
+            "batch_type": self.batch_type,
+            "notes": self.notes,
+            "projected_yield": self.projected_yield,
+            "projected_yield_unit": self.projected_yield_unit,
+            "portioning": self.portioning.to_dict(),
+            "ingredients_plan": [ing.to_dict() for ing in self.ingredients_plan],
+            "consumables_plan": [cons.to_dict() for cons in self.consumables_plan],
+            "containers": [cont.to_dict() for cont in self.containers],
+            "requires_containers": self.requires_containers,
+            "category_extension": self.category_extension
+        }
 
 """
 Production Planning Types
