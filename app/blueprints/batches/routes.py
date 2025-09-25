@@ -306,7 +306,7 @@ def api_start_batch():
         # If a full plan_snapshot is provided, pass it through, otherwise build a minimal one in service
         plan_snapshot = data.get('plan_snapshot')
         if plan_snapshot:
-            batch, errors = BatchOperationsService.start_batch(plan_snapshot=plan_snapshot)
+            batch, errors = BatchOperationsService.start_batch(plan_snapshot)
         else:
             # Build unified snapshot server-side to freeze config
             recipe = Recipe.query.get(recipe_id)
@@ -327,7 +327,7 @@ def api_start_batch():
                     'portion_unit_id': portioning_data.get('portion_unit_id'),
                     'portion_count': portioning_data.get('portion_count')
                 }
-            batch, errors = BatchOperationsService.start_batch(plan_snapshot=plan_dict)
+            batch, errors = BatchOperationsService.start_batch(plan_dict)
 
         if not batch:
             return jsonify({'success': False, 'message': '; '.join(errors) if isinstance(errors, list) else str(errors)}), 400

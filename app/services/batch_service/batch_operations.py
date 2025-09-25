@@ -20,81 +20,20 @@ class BatchOperationsService(BaseService):
     """Service for batch lifecycle operations: start, finish, cancel"""
 
     @classmethod
-    def start_batch(cls, recipe_id=None, scale=1.0, batch_type='ingredient', notes='', containers_data=None, requires_containers=False, portioning_data=None, projected_yield=None, projected_yield_unit=None, plan_snapshot: dict | None = None):
-        """Start a new batch with inventory deductions atomically. Rolls back on any failure."""
+    def start_batch(cls, plan_snapshot: dict):
+        """Start a new batch from an immutable plan snapshot. Rolls back on any failure."""
         try:
-            # If a full plan snapshot is provided, trust it entirely for freezing core fields
-            if plan_snapshot is not None:
-                try:
-                    snap_recipe_id = int(plan_snapshot.get('recipe_id'))
-                    snap_scale = float(plan_snapshot.get('scale', 1.0))
-                    snap_batch_type = plan_snapshot.get('batch_type', batch_type)
-                    snap_notes = plan_snapshot.get('notes', notes)
-                    snap_projected_yield = float(plan_snapshot.get('projected_yield') or 0.0)
-                    snap_projected_yield_unit = plan_snapshot.get('projected_yield_unit') or ''
-                    snap_portioning = plan_snapshot.get('portioning') or {}
-                    containers_data = plan_snapshot.get('containers') or []
+            # Trust the plan snapshot exclusively
+            snap_recipe_id = int(plan_snapshot.get('recipe_id'))
+            snap_scale = float(plan_snapshot.get('scale', 1.0))
+            snap_batch_type = plan_snapshot.get('batch_type', 'ingredient')
+            snap_notes = plan_snapshot.get('notes', '')
+            snap_projected_yield = float(plan_snapshot.get('projected_yield') or 0.0)
+            snap_projected_yield_unit = plan_snapshot.get('projected_yield_unit') or ''
+            snap_portioning = plan_snapshot.get('portioning') or {}
+            containers_data = plan_snapshot.get('containers') or []
 
-                    recipe = Recipe.query.get(snap_recipe_id)
-                    if not recipe:
-                        return None, "Recipe not found"
-
-                    # Generate batch label via centralized generator
-                    label_code = generate_batch_label_code(recipe)
-
-                    # Portion snapshot
-                    portion_snap = None
-                    if snap_portioning and isinstance(snap_portioning, dict) and snap_portioning.get('is_portioned'):
-                        portion_snap = {
-                            'is_portioned': True,
-                            'portion_name': snap_portioning.get('portion_name'),
-                            'portion_count': snap_portioning.get('portion_count')
-                        }
-
-                    batch = Batch(
-                        recipe_id=snap_recipe_id,
-                        label_code=label_code,
-                        batch_type=snap_batch_type,
-                        projected_yield=snap_projected_yield,
-                        projected_yield_unit=snap_projected_yield_unit,
-                        scale=snap_scale,
-                        status='in_progress',
-                        notes=snap_notes,
-                        portioning_data=portion_snap,
-                        is_portioned=bool(portion_snap.get('is_portioned')) if portion_snap else False,
-                        portion_name=portion_snap.get('portion_name') if portion_snap else None,
-                        projected_portions=int(portion_snap.get('portion_count')) if portion_snap and portion_snap.get('portion_count') is not None else None,
-                        plan_snapshot=plan_snapshot,
-                        created_by=current_user.id,
-                        organization_id=current_user.organization_id,
-                        started_at=TimezoneUtils.utc_now()
-                    )
-
-                    db.session.add(batch)
-
-                    # Containers from snapshot
-                    container_errors = []
-                    if containers_data:
-                        container_errors = cls._process_batch_containers(batch, containers_data, defer_commit=True)
-
-                    # Use existing ingredient/consumable processing based on recipe + scale
-                    ingredient_errors = cls._process_batch_ingredients(batch, recipe, snap_scale, defer_commit=True)
-                    consumable_errors = cls._process_batch_consumables(batch, recipe, snap_scale, defer_commit=True)
-
-                    all_errors = container_errors + ingredient_errors + consumable_errors
-                    if all_errors:
-                        db.session.rollback()
-                        return None, all_errors
-
-                    db.session.commit()
-                    return batch, []
-                except Exception as e:
-                    db.session.rollback()
-                    logger.error(f"Error starting batch with plan snapshot: {str(e)}")
-                    return None, [str(e)]
-
-            # Legacy path: no plan snapshot. Fall back to param-driven start (will be deprecated)
-            recipe = Recipe.query.get(recipe_id)
+            recipe = Recipe.query.get(snap_recipe_id)
             if not recipe:
                 return None, "Recipe not found"
 
@@ -114,67 +53,33 @@ class BatchOperationsService(BaseService):
                 projected_yield_unit or recipe.predicted_yield_unit
             )
 
-            # 🔍 COMPREHENSIVE SERVICE PORTIONING DEBUG
-            print(f"🔍 BATCH_SERVICE DEBUG: Recipe ID: {recipe_id}, Recipe name: {recipe.name}")
-            print(f"🔍 BATCH_SERVICE DEBUG: Recipe portioning_data field: {getattr(recipe, 'portioning_data', None)}")
-            print(f"🔍 BATCH_SERVICE DEBUG: Received portioning_data parameter: {portioning_data}")
-            print(f"🔍 BATCH_SERVICE DEBUG: Received portioning_data type: {type(portioning_data)}")
-            print(f"🔍 BATCH_SERVICE DEBUG: Scale: {scale}, Projected yield: {projected_yield}")
-
-            # Snapshot: accept portioning payload from API (flat fields only) if provided
-            # Strict schema validation for portioning snapshot
+            # Build portion snapshot from plan only
             portion_snap = None
-            if portioning_data is not None:
-                print(f"🔍 BATCH_SERVICE DEBUG: Processing portioning_data...")
-                if not isinstance(portioning_data, dict):
-                    print(f"🔍 BATCH_SERVICE DEBUG: ERROR - Invalid portioning_data format, expected dict, got {type(portioning_data)}")
-                    raise ValueError("Invalid portioning_data format: expected object")
-                
-                print(f"🔍 BATCH_SERVICE DEBUG: portioning_data keys: {list(portioning_data.keys())}")
-                print(f"🔍 BATCH_SERVICE DEBUG: is_portioned value: {portioning_data.get('is_portioned')}")
-                
-                if portioning_data.get('is_portioned'):
-                    print(f"🔍 BATCH_SERVICE DEBUG: Recipe IS portioned, validating required fields...")
-                    required_keys = ['portion_name', 'portion_count']
-                    missing = [k for k in required_keys if portioning_data.get(k) in (None, '')]
-                    if missing:
-                        print(f"🔍 BATCH_SERVICE DEBUG: ERROR - Missing portioning fields: {missing}")
-                        raise ValueError(f"Missing portioning fields: {', '.join(missing)}")
-                    if not isinstance(portioning_data.get('portion_count'), (int, float)) or portioning_data.get('portion_count') <= 0:
-                        print(f"🔍 BATCH_SERVICE DEBUG: ERROR - Invalid portion_count: {portioning_data.get('portion_count')}")
-                        raise ValueError("portion_count must be a positive number")
-                    
-                    print(f"🔍 BATCH_SERVICE DEBUG: Portioning validation PASSED")
-                else:
-                    print(f"🔍 BATCH_SERVICE DEBUG: Recipe is NOT portioned (is_portioned = {portioning_data.get('is_portioned')})")
-                
-                # Persist only absolute fields
+            if snap_portioning and isinstance(snap_portioning, dict) and snap_portioning.get('is_portioned'):
                 portion_snap = {
-                    'is_portioned': bool(portioning_data.get('is_portioned')),
-                    'portion_name': portioning_data.get('portion_name'),
-                    'portion_count': int(portioning_data.get('portion_count')) if portioning_data.get('portion_count') is not None else None
+                    'is_portioned': True,
+                    'portion_name': snap_portioning.get('portion_name'),
+                    'portion_count': snap_portioning.get('portion_count')
                 }
-                print(f"🔍 BATCH_SERVICE DEBUG: Created portion_snap: {portion_snap}")
-            else:
-                print(f"🔍 BATCH_SERVICE DEBUG: No portioning_data provided in request; skipping recipe fallback by design.")
+
+            print(f"🔍 BATCH_SERVICE DEBUG: Starting batch from snapshot for recipe {recipe.name}")
 
             # Create the batch
             print(f"🔍 BATCH_SERVICE DEBUG: Creating batch with portioning_data: {portion_snap}")
             batch = Batch(
-                recipe_id=recipe_id,
-                label_code=label_code,
-                batch_type=batch_type,
-                projected_yield=projected_yield,
-                projected_yield_unit=projected_yield_unit,
-                scale=scale,
+                recipe_id=snap_recipe_id,
+                label_code=generate_batch_label_code(recipe),
+                batch_type=snap_batch_type,
+                projected_yield=snap_projected_yield,
+                projected_yield_unit=snap_projected_yield_unit,
+                scale=snap_scale,
                 status='in_progress',
-                notes=notes,
+                notes=snap_notes,
                 portioning_data=portion_snap,
-                # Populate additive columns for clarity and reporting
-                is_portioned=(portion_snap.get('is_portioned') if isinstance(portion_snap, dict) else False) if portion_snap else False,
-                portion_name=(portion_snap.get('portion_name') if isinstance(portion_snap, dict) else None) if portion_snap else None,
-                projected_portions=(int(portion_snap.get('portion_count')) if isinstance(portion_snap, dict) and portion_snap.get('portion_count') is not None else None) if portion_snap else None,
-                portion_unit_id=None,
+                is_portioned=bool(portion_snap.get('is_portioned')) if portion_snap else False,
+                portion_name=portion_snap.get('portion_name') if portion_snap else None,
+                projected_portions=int(portion_snap.get('portion_count')) if portion_snap and portion_snap.get('portion_count') is not None else None,
+                plan_snapshot=plan_snapshot,
                 created_by=current_user.id,
                 organization_id=current_user.organization_id,
                 started_at=TimezoneUtils.utc_now()
@@ -202,14 +107,14 @@ class BatchOperationsService(BaseService):
 
             # Handle containers if required
             container_errors = []
-            if requires_containers:
+            if containers_data:
                 container_errors = cls._process_batch_containers(batch, containers_data, defer_commit=True)
 
             # Process ingredient deductions
-            ingredient_errors = cls._process_batch_ingredients(batch, recipe, scale, defer_commit=True)
+            ingredient_errors = cls._process_batch_ingredients(batch, recipe, snap_scale, defer_commit=True)
 
             # Process consumable deductions
-            consumable_errors = cls._process_batch_consumables(batch, recipe, scale, defer_commit=True)
+            consumable_errors = cls._process_batch_consumables(batch, recipe, snap_scale, defer_commit=True)
 
             # Combine all errors
             all_errors = container_errors + ingredient_errors + consumable_errors
