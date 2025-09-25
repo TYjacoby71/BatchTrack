@@ -38,7 +38,7 @@ class PlanSnapshot:
     notes: str
     projected_yield: float
     projected_yield_unit: str
-    portioning: Optional[PortioningPlan]
+    portioning: PortioningPlan
     ingredients_plan: List[IngredientLine]
     consumables_plan: List[ConsumableLine]
     containers: List[ContainerSelection]

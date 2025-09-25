@@ -13,7 +13,7 @@ class PlanProductionService:
         projected_yield_unit = recipe.predicted_yield_unit or ''
 
         # Portioning snapshot: override from request wins; else from recipe additive columns
-        portioning = None
+        portioning = PortioningPlan(is_portioned=False, portion_name=None, portion_unit_id=None, portion_count=None)
         if portioning_override and isinstance(portioning_override, dict) and portioning_override.get('is_portioned'):
             pc = portioning_override.get('portion_count')
             portioning = PortioningPlan(
@@ -32,7 +32,7 @@ class PlanProductionService:
                         portion_count=getattr(recipe, 'portion_count', None)
                     )
             except Exception:
-                portioning = None
+                portioning = PortioningPlan(is_portioned=False, portion_name=None, portion_unit_id=None, portion_count=None)
 
         # Ingredients plan (scale recipe_ingredients)
         ingredients_plan = []
