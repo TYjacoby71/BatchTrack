@@ -20,8 +20,10 @@ class BatchOperationsService(BaseService):
     """Service for batch lifecycle operations: start, finish, cancel"""
 
     @classmethod
+
     def start_batch(cls, plan_snapshot: dict):
         """Start a new batch from an immutable plan snapshot. Rolls back on any failure."""
+
         try:
             # Trust the plan snapshot exclusively
             snap_recipe_id = int(plan_snapshot.get('recipe_id'))
@@ -62,6 +64,23 @@ class BatchOperationsService(BaseService):
                 }
 
             print(f"🔍 BATCH_SERVICE DEBUG: Starting batch from snapshot for recipe {recipe.name}")
+
+            # Snapshot: accept the compiled portioning payload from Plan Production only (no computation here)
+            # Strict schema validation for portioning snapshot (mirror origin/main)
+            portion_snap = None
+            if portioning_data is not None:
+                if not isinstance(portioning_data, dict):
+                    raise ValueError("Invalid portioning_data format: expected object")
+                if portioning_data.get('is_portioned'):
+                    required_keys = ['portion_name', 'portion_count', 'bulk_yield_quantity', 'bulk_yield_unit']
+                    missing = [k for k in required_keys if portioning_data.get(k) in (None, '')]
+                    if missing:
+                        raise ValueError(f"Missing portioning fields: {', '.join(missing)}")
+                    if not isinstance(portioning_data.get('portion_count'), (int, float)) or portioning_data.get('portion_count') < 0:
+                        raise ValueError("portion_count must be a non-negative number")
+                    if not isinstance(portioning_data.get('bulk_yield_quantity'), (int, float)) or portioning_data.get('bulk_yield_quantity') < 0:
+                        raise ValueError("bulk_yield_quantity must be a non-negative number")
+                portion_snap = dict(portioning_data)
 
             # Create the batch
             print(f"🔍 BATCH_SERVICE DEBUG: Creating batch with portioning_data: {portion_snap}")
@@ -107,21 +126,33 @@ class BatchOperationsService(BaseService):
             print(f"🔍 BATCH_SERVICE DEBUG: Batch object created with label: {label_code}")
             print(f"🔍 BATCH_SERVICE DEBUG: Batch.portioning_data after creation: {batch.portioning_data}")
 
-            # Lock costing method for this batch at start based on organization setting (preserve original behavior)
+
+            # Attach portioning snapshot if the model supports it
+            try:
+                if hasattr(batch, 'portioning_data'):
+                    batch.portioning_data = portion_snap
+            except Exception:
+                pass
+
+            # Lock costing method for this batch at start based on organization setting,
+            # but enforce average for product batches per new policy
             try:
                 if hasattr(batch, 'cost_method'):
-                    org = getattr(current_user, 'organization', None)
-                    method = (getattr(org, 'inventory_cost_method', None) or 'fifo') if org else 'fifo'
-                    batch.cost_method = method if method in ('fifo', 'average') else 'fifo'
+                    if str(batch_type).lower() == 'product':
+                        method = 'average'
+                    else:
+                        org = getattr(current_user, 'organization', None)
+                        method = (getattr(org, 'inventory_cost_method', None) or 'fifo') if org else 'fifo'
+                        method = method if method in ('fifo', 'average') else 'fifo'
+                    batch.cost_method = method
                     if hasattr(batch, 'cost_method_locked_at'):
                         batch.cost_method_locked_at = TimezoneUtils.utc_now()
             except Exception:
                 try:
                     if hasattr(batch, 'cost_method'):
-                        batch.cost_method = 'fifo'
+                        batch.cost_method = 'average' if str(batch_type).lower() == 'product' else 'fifo'
                 except Exception:
                     pass
-
 
             # Handle containers if required
             container_errors = cls._process_batch_containers(batch, containers_data, defer_commit=True)
@@ -776,7 +807,7 @@ class BatchOperationsService(BaseService):
                         errors.append({
                             "item": inventory_item.name,
                             "message": sc_result.error_message or "Not enough in stock",
-                            "needed": sc_result.needed_quantity,
+                            "needed": getattr(sc_result, 'needed_quantity', None),
                             "needed_unit": sc_result.needed_unit
                         })
                         continue
@@ -794,10 +825,16 @@ class BatchOperationsService(BaseService):
                     )
 
                     if not success:
+                        normalized_message = message or "Not enough in stock"
+                        try:
+                            if isinstance(normalized_message, str) and normalized_message.lower().startswith("insufficient inventory"):
+                                normalized_message = f"Not enough in stock. {normalized_message}"
+                        except Exception:
+                            pass
                         errors.append({
                             "item": inventory_item.name,
-                            "message": message or "Not enough in stock",
-                            "needed": float(needed_amount),
+                            "message": normalized_message,
+                            "needed": float(needed_quantity),
                             "needed_unit": inventory_item.unit
                         })
                     else:
@@ -864,10 +901,16 @@ class BatchOperationsService(BaseService):
                     )
 
                     if not success:
+                        normalized_message = message or "Not enough in stock"
+                        try:
+                            if isinstance(normalized_message, str) and normalized_message.lower().startswith("insufficient inventory"):
+                                normalized_message = f"Not enough in stock. {normalized_message}"
+                        except Exception:
+                            pass
                         errors.append({
                             "item": consumable_item.name,
-                            "message": message or "Failed to deduct from inventory",
-                            "needed": needed_amount,
+                            "message": normalized_message,
+                            "needed": needed_quantity,
                             "needed_unit": consumable_item.unit
                         })
                         continue

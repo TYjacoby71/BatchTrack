@@ -52,3 +52,57 @@ def weighted_unit_cost_for_batch_item(inventory_item_id: int, batch_id: int) -> 
         except Exception:
             return 0.0
 
+
+# New: organization-agnostic weighted average cost for an inventory item based on active lots
+def weighted_average_cost_for_item(inventory_item_id: int) -> float:
+    """
+    Compute the quantity-weighted average unit cost across all active lots
+    (remaining_quantity > 0) for the given inventory item.
+
+    This returns 0.0 if the item is missing or there are no active lots.
+    """
+    try:
+        if not inventory_item_id:
+            return 0.0
+
+        item = db.session.get(InventoryItem, int(inventory_item_id))
+        if not item:
+            return 0.0
+
+        # Import locally to avoid circular imports
+        from app.models.inventory_lot import InventoryLot
+        from sqlalchemy import and_
+
+        lots = (
+            InventoryLot.query
+            .filter(
+                and_(
+                    InventoryLot.inventory_item_id == item.id,
+                    InventoryLot.organization_id == item.organization_id,
+                    InventoryLot.remaining_quantity > 0
+                )
+            )
+            .all()
+        )
+
+        if not lots:
+            return float(item.cost_per_unit or 0.0)
+
+        total_qty = 0.0
+        total_cost = 0.0
+        for lot in lots:
+            qty = float(lot.remaining_quantity or 0.0)
+            if qty <= 0:
+                continue
+            unit_cost = float(lot.unit_cost or 0.0)
+            total_qty += qty
+            total_cost += qty * unit_cost
+
+        return (total_cost / total_qty) if total_qty > 0 else float(item.cost_per_unit or 0.0)
+    except Exception as ex:
+        logger.error(f"Error computing weighted average cost for item {inventory_item_id}: {ex}")
+        try:
+            item = db.session.get(InventoryItem, int(inventory_item_id))
+            return float(item.cost_per_unit or 0.0) if item else 0.0
+        except Exception:
+            return 0.0
