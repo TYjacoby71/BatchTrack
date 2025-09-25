@@ -296,11 +296,7 @@ def api_start_batch():
         if not batch:
             return jsonify({'success': False, 'message': '; '.join(errors) if isinstance(errors, list) else str(errors)}), 400
 
-        message = 'Batch started successfully'
-        if errors:
-            message = f"Batch started with warnings: {'; '.join(errors)}"
-
-        return jsonify({'success': True, 'message': message, 'batch_id': batch.id})
+        return jsonify({'success': True, 'message': 'Batch started successfully', 'batch_id': batch.id})
 
     except Exception as e:
         logger.error(f"Error starting batch via API: {str(e)}")
