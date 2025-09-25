@@ -5,6 +5,7 @@ def test_extras_cannot_use_expired_lot(app, db_session, test_user, test_org):
     from app.models import InventoryItem, Recipe
     from app.models.inventory_lot import InventoryLot
     from app.services.batch_service.batch_operations import BatchOperationsService
+    from app.services.production_planning.service import PlanProductionService
     from app.utils.timezone_utils import TimezoneUtils
     from datetime import timedelta
 
@@ -44,10 +45,10 @@ def test_extras_cannot_use_expired_lot(app, db_session, test_user, test_org):
 
     # Ensure a request and user context exists for batch start
     from flask_login import login_user
-    from flask import current_app
     with app.test_request_context():
         login_user(test_user)
-        batch, errors = BatchOperationsService.start_batch(recipe.id, scale=1.0, batch_type='ingredient', notes='test')
+        snapshot = PlanProductionService.build_plan(recipe=recipe, scale=1.0, batch_type='ingredient', notes='test', containers=[])
+        batch, errors = BatchOperationsService.start_batch(snapshot.to_dict())
         assert batch is not None, f"Failed to start batch: {errors}"
 
     # Attempt to add expired item as an extra
