@@ -106,6 +106,26 @@ class InventoryItem(ScopedModelMixin, db.Model):
                 InventoryLot.expiration_date < today
             )).scalar() or 0
 
+
+@event.listens_for(InventoryItem, "before_insert")
+def _derive_ownership_before_insert(mapper, connection, target):
+    """Derive ownership from global linkage on insert."""
+    try:
+        target.ownership = 'global' if getattr(target, 'global_item_id', None) else 'org'
+    except Exception:
+        # Best-effort; do not block insert on ownership derivation
+        pass
+
+
+@event.listens_for(InventoryItem, "before_update")
+def _derive_ownership_before_update(mapper, connection, target):
+    """Derive ownership from global linkage on update."""
+    try:
+        target.ownership = 'global' if getattr(target, 'global_item_id', None) else 'org'
+    except Exception:
+        # Best-effort; do not block update on ownership derivation
+        pass
+
 class InventoryHistory(ScopedModelMixin, db.Model):
     __tablename__ = 'inventory_history'
     id = db.Column(db.Integer, primary_key=True)
