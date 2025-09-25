@@ -340,12 +340,26 @@ function loadVariants() {
     variantSelect.innerHTML = '<option value="">Select Variant</option>';
 
     if (data.variants && data.variants.length > 0) {
+      let baseVariantFound = false;
       data.variants.forEach(variant => {
         const option = document.createElement('option');
         option.value = variant.id;
         option.textContent = variant.name;
+        
+        // Preselect the Base variant
+        if (variant.name === 'Base') {
+          option.selected = true;
+          baseVariantFound = true;
+        }
+        
         variantSelect.appendChild(option);
       });
+      
+      // If no Base variant found, select the first variant
+      if (!baseVariantFound && data.variants.length > 0) {
+        variantSelect.selectedIndex = 1; // Index 1 because 0 is "Select Variant"
+      }
+      
       variantSelect.disabled = false;
     } else {
       variantSelect.innerHTML = '<option value="">No variants available</option>';
