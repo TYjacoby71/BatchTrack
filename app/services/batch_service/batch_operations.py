@@ -65,7 +65,7 @@ class BatchOperationsService(BaseService):
 
             # Create the batch
             print(f"🔍 BATCH_SERVICE DEBUG: Creating batch with portioning_data: {portion_snap}")
-            
+
             # Convert plan_snapshot to JSON-serializable format
             # Check for dataclass objects and convert them to dicts
             serializable_plan_snapshot = {}
@@ -120,9 +120,7 @@ class BatchOperationsService(BaseService):
 
 
             # Handle containers if required
-            container_errors = []
-            if containers_data:
-                container_errors = cls._process_batch_containers(batch, containers_data, defer_commit=True)
+            container_errors = cls._process_batch_containers(batch, containers_data, defer_commit=True)
 
             # Process ingredient deductions
             ingredient_errors = cls._process_batch_ingredients(batch, recipe, snap_scale, defer_commit=True)
@@ -140,13 +138,13 @@ class BatchOperationsService(BaseService):
             else:
                 # All deductions validated; commit once atomically
                 db.session.commit()
-                
+
                 # 🔍 FINAL SUCCESS DEBUG
                 print(f"🔍 BATCH_SERVICE DEBUG: ✅ BATCH CREATED SUCCESSFULLY!")
                 print(f"🔍 BATCH_SERVICE DEBUG: Final batch ID: {batch.id}")
                 print(f"🔍 BATCH_SERVICE DEBUG: Final batch label: {batch.label_code}")
                 print(f"🔍 BATCH_SERVICE DEBUG: Final batch.portioning_data: {batch.portioning_data}")
-                
+
                 # Verify batch was persisted with portioning data
                 fresh_batch = Batch.query.get(batch.id)
                 if fresh_batch:
@@ -182,7 +180,7 @@ class BatchOperationsService(BaseService):
             logger.error(f"Error starting batch: {str(e)}")
             return None, [str(e)]
 
-    
+
 
     @classmethod
     def _process_batch_containers(cls, batch, containers_data, defer_commit=False):
