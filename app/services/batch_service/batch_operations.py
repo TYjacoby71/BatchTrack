@@ -20,7 +20,7 @@ class BatchOperationsService(BaseService):
     """Service for batch lifecycle operations: start, finish, cancel"""
 
     @classmethod
-    def start_batch(cls, recipe_id, scale=1.0, batch_type='ingredient', notes='', containers_data=None, requires_containers=False, portioning_data=None):
+    def start_batch(cls, recipe_id, scale=1.0, batch_type='ingredient', notes='', containers_data=None, requires_containers=False, portioning_data=None, projected_yield=None, projected_yield_unit=None):
         """Start a new batch with inventory deductions atomically. Rolls back on any failure."""
         try:
             recipe = Recipe.query.get(recipe_id)
@@ -33,7 +33,20 @@ class BatchOperationsService(BaseService):
             # Generate batch label via centralized generator
             label_code = generate_batch_label_code(recipe)
 
-            projected_yield = scale * recipe.predicted_yield
+            # Prefer plan-provided projected snapshot; otherwise derive from recipe at start time
+            if projected_yield is None:
+                projected_yield = scale * recipe.predicted_yield
+            try:
+                projected_yield = float(projected_yield)
+            except Exception:
+                projected_yield = scale * recipe.predicted_yield
+
+            if not projected_yield_unit:
+                projected_yield_unit = recipe.predicted_yield_unit
+            try:
+                projected_yield_unit = str(projected_yield_unit)
+            except Exception:
+                projected_yield_unit = recipe.predicted_yield_unit
 
             # 🔍 COMPREHENSIVE SERVICE PORTIONING DEBUG
             print(f"🔍 BATCH_SERVICE DEBUG: Recipe ID: {recipe_id}, Recipe name: {recipe.name}")

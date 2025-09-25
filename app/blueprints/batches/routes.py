@@ -309,7 +309,9 @@ def api_start_batch():
             notes=notes,
             containers_data=containers_data,
             requires_containers=requires_containers,
-            portioning_data=portioning_data
+            portioning_data=portioning_data,
+            projected_yield=data.get('projected_yield'),
+            projected_yield_unit=data.get('projected_yield_unit')
         )
 
         if not batch:
