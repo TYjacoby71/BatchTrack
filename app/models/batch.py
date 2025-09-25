@@ -39,6 +39,7 @@ class Batch(ScopedModelMixin, db.Model):
     portion_name = db.Column(db.String(64), nullable=True)
     projected_portions = db.Column(db.Integer, nullable=True)
     final_portions = db.Column(db.Integer, nullable=True)
+    plan_snapshot = db.Column(db.JSON, nullable=True)
     portion_unit_id = db.Column(db.Integer, db.ForeignKey('unit.id'), nullable=True)
 
     # Costing policy snapshot

@@ -1,3 +1,50 @@
+from dataclasses import dataclass
+from typing import List, Optional, Dict, Any
+
+
+@dataclass(frozen=True)
+class PortioningPlan:
+    is_portioned: bool
+    portion_name: Optional[str] = None
+    portion_unit_id: Optional[int] = None
+    portion_count: Optional[int] = None
+
+
+@dataclass(frozen=True)
+class IngredientLine:
+    inventory_item_id: int
+    quantity: float
+    unit: str
+
+
+@dataclass(frozen=True)
+class ConsumableLine:
+    inventory_item_id: int
+    quantity: float
+    unit: str
+
+
+@dataclass(frozen=True)
+class ContainerSelection:
+    id: int
+    quantity: int
+
+
+@dataclass(frozen=True)
+class PlanSnapshot:
+    recipe_id: int
+    scale: float
+    batch_type: str
+    notes: str
+    projected_yield: float
+    projected_yield_unit: str
+    portioning: Optional[PortioningPlan]
+    ingredients_plan: List[IngredientLine]
+    consumables_plan: List[ConsumableLine]
+    containers: List[ContainerSelection]
+    requires_containers: bool = False
+    category_extension: Optional[Dict[str, Any]] = None
+
 """
 Production Planning Types
 

@@ -99,7 +99,7 @@ class BatchOperationsService(BaseService):
                 label_code=label_code,
                 batch_type=batch_type,
                 projected_yield=projected_yield,
-                projected_yield_unit=recipe.predicted_yield_unit,
+                projected_yield_unit=projected_yield_unit,
                 scale=scale,
                 status='in_progress',
                 notes=notes,
@@ -195,6 +195,36 @@ class BatchOperationsService(BaseService):
         except Exception as e:
             db.session.rollback()
             logger.error(f"Error starting batch: {str(e)}")
+            return None, [str(e)]
+
+    @classmethod
+    def start_batch_with_plan(cls, plan_snapshot: dict):
+        """Start a batch using a fully prepared plan snapshot (single source of truth)."""
+        try:
+            # Basic extraction
+            recipe_id = int(plan_snapshot.get('recipe_id'))
+            scale = float(plan_snapshot.get('scale', 1.0))
+            batch_type = plan_snapshot.get('batch_type', 'ingredient')
+            notes = plan_snapshot.get('notes', '')
+            projected_yield = float(plan_snapshot.get('projected_yield') or 0.0)
+            projected_yield_unit = plan_snapshot.get('projected_yield_unit') or ''
+            portioning = plan_snapshot.get('portioning') or {}
+            containers_data = plan_snapshot.get('containers') or []
+
+            # Create via existing start_batch but freeze values from snapshot
+            return cls.start_batch(
+                recipe_id=recipe_id,
+                scale=scale,
+                batch_type=batch_type,
+                notes=notes,
+                containers_data=containers_data,
+                requires_containers=bool(containers_data),
+                portioning_data=portioning,
+                projected_yield=projected_yield,
+                projected_yield_unit=projected_yield_unit
+            )
+        except Exception as e:
+            logger.error(f"Error starting batch with plan snapshot: {str(e)}")
             return None, [str(e)]
 
     @classmethod

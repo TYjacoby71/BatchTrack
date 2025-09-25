@@ -302,17 +302,22 @@ def api_start_batch():
         if not recipe_id:
             return jsonify({'success': False, 'message': 'Recipe ID is required.'}), 400
 
-        batch, errors = BatchOperationsService.start_batch(
-            recipe_id=recipe_id,
-            scale=scale,
-            batch_type=batch_type,
-            notes=notes,
-            containers_data=containers_data,
-            requires_containers=requires_containers,
-            portioning_data=portioning_data,
-            projected_yield=data.get('projected_yield'),
-            projected_yield_unit=data.get('projected_yield_unit')
-        )
+        # If a full plan_snapshot is provided, pass it through, otherwise build a minimal one in service
+        plan_snapshot = data.get('plan_snapshot')
+        if plan_snapshot:
+            batch, errors = BatchOperationsService.start_batch_with_plan(plan_snapshot)
+        else:
+            batch, errors = BatchOperationsService.start_batch(
+                recipe_id=recipe_id,
+                scale=scale,
+                batch_type=batch_type,
+                notes=notes,
+                containers_data=containers_data,
+                requires_containers=requires_containers,
+                portioning_data=portioning_data,
+                projected_yield=data.get('projected_yield'),
+                projected_yield_unit=data.get('projected_yield_unit')
+            )
 
         if not batch:
             return jsonify({'success': False, 'message': '; '.join(errors) if isinstance(errors, list) else str(errors)}), 400
