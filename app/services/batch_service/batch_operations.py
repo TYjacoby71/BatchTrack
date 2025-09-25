@@ -76,8 +76,12 @@ class BatchOperationsService(BaseService):
                 else:
                     print(f"🔍 BATCH_SERVICE DEBUG: Recipe is NOT portioned (is_portioned = {portioning_data.get('is_portioned')})")
                 
-                # Normalize keys to include bulk_yield_unit_id when possible
+                # Normalize keys to include bulk_yield_unit_id when possible; default to recipe.predicted_yield(_unit)
                 portion_snap = dict(portioning_data)
+                # Projected yield becomes bulk yield for portioned batches when not explicitly provided
+                if portion_snap.get('is_portioned') and (portion_snap.get('bulk_yield_quantity') in (None, '')):
+                    portion_snap['bulk_yield_quantity'] = float(projected_yield)
+                # Fill unit id if provided under alternate name
                 if 'bulk_yield_unit_id' not in portion_snap and 'bulk_yield_unit' in portion_snap:
                     portion_snap['bulk_yield_unit_id'] = portion_snap.get('bulk_yield_unit')
                 print(f"🔍 BATCH_SERVICE DEBUG: Created portion_snap: {portion_snap}")

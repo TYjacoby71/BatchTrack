@@ -293,7 +293,8 @@ def api_start_batch():
         if portioning_data is None:
             flat_is_portioned = data.get('is_portioned')
             flat_portion_name = data.get('portion_name')
-            flat_portion_count = data.get('portion_count')
+            # accept either portion_count or portion_quantity
+            flat_portion_count = data.get('portion_count') if data.get('portion_count') is not None else data.get('portion_quantity')
             flat_bulk_yield_qty = data.get('bulk_yield_quantity')
             flat_bulk_yield_unit_id = data.get('bulk_yield_unit_id')
 
