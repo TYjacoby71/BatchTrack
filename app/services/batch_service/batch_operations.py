@@ -42,7 +42,7 @@ class BatchOperationsService(BaseService):
             print(f"🔍 BATCH_SERVICE DEBUG: Received portioning_data type: {type(portioning_data)}")
             print(f"🔍 BATCH_SERVICE DEBUG: Scale: {scale}, Projected yield: {projected_yield}")
 
-            # Snapshot: accept the compiled portioning payload from Plan Production if provided
+            # Snapshot: accept portioning payload from API (flat fields only) if provided
             # Strict schema validation for portioning snapshot
             portion_snap = None
             if portioning_data is not None:
@@ -56,34 +56,25 @@ class BatchOperationsService(BaseService):
                 
                 if portioning_data.get('is_portioned'):
                     print(f"🔍 BATCH_SERVICE DEBUG: Recipe IS portioned, validating required fields...")
-                    required_keys = ['portion_name', 'portion_count', 'bulk_yield_quantity']
+                    required_keys = ['portion_name', 'portion_count']
                     missing = [k for k in required_keys if portioning_data.get(k) in (None, '')]
                     if missing:
                         print(f"🔍 BATCH_SERVICE DEBUG: ERROR - Missing portioning fields: {missing}")
                         raise ValueError(f"Missing portioning fields: {', '.join(missing)}")
-                    if not isinstance(portioning_data.get('portion_count'), (int, float)) or portioning_data.get('portion_count') < 0:
+                    if not isinstance(portioning_data.get('portion_count'), (int, float)) or portioning_data.get('portion_count') <= 0:
                         print(f"🔍 BATCH_SERVICE DEBUG: ERROR - Invalid portion_count: {portioning_data.get('portion_count')}")
-                        raise ValueError("portion_count must be a non-negative number")
-                    if not isinstance(portioning_data.get('bulk_yield_quantity'), (int, float)) or portioning_data.get('bulk_yield_quantity') < 0:
-                        print(f"🔍 BATCH_SERVICE DEBUG: ERROR - Invalid bulk_yield_quantity: {portioning_data.get('bulk_yield_quantity')}")
-                        raise ValueError("bulk_yield_quantity must be a non-negative number")
-                    # Unit can be provided as bulk_yield_unit_id or bulk_yield_unit (string); at least one is required
-                    if portioning_data.get('bulk_yield_unit_id') in (None, '') and portioning_data.get('bulk_yield_unit') in (None, ''):
-                        print("🔍 BATCH_SERVICE DEBUG: ERROR - Missing bulk_yield unit (id or name)")
-                        raise ValueError("Missing bulk_yield unit (id or name)")
+                        raise ValueError("portion_count must be a positive number")
                     
                     print(f"🔍 BATCH_SERVICE DEBUG: Portioning validation PASSED")
                 else:
                     print(f"🔍 BATCH_SERVICE DEBUG: Recipe is NOT portioned (is_portioned = {portioning_data.get('is_portioned')})")
                 
-                # Normalize keys to include bulk_yield_unit_id when possible; default to recipe.predicted_yield(_unit)
-                portion_snap = dict(portioning_data)
-                # Projected yield becomes bulk yield for portioned batches when not explicitly provided
-                if portion_snap.get('is_portioned') and (portion_snap.get('bulk_yield_quantity') in (None, '')):
-                    portion_snap['bulk_yield_quantity'] = float(projected_yield)
-                # Fill unit id if provided under alternate name
-                if 'bulk_yield_unit_id' not in portion_snap and 'bulk_yield_unit' in portion_snap:
-                    portion_snap['bulk_yield_unit_id'] = portion_snap.get('bulk_yield_unit')
+                # Persist only absolute fields
+                portion_snap = {
+                    'is_portioned': bool(portioning_data.get('is_portioned')),
+                    'portion_name': portioning_data.get('portion_name'),
+                    'portion_count': int(portioning_data.get('portion_count')) if portioning_data.get('portion_count') is not None else None
+                }
                 print(f"🔍 BATCH_SERVICE DEBUG: Created portion_snap: {portion_snap}")
             else:
                 print(f"🔍 BATCH_SERVICE DEBUG: No portioning_data provided in request; skipping recipe fallback by design.")
