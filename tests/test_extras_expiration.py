@@ -1,4 +1,4 @@
-THIS SHOULD BE A LINTER ERRORimport pytest
+import pytest
 
 
 def test_extras_cannot_use_expired_lot(app, db_session, test_user, test_org):

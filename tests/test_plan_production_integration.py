@@ -1,19 +1,20 @@
 import json
-from flask_login import login_user
 from app.models.models import User
+from app.extensions import db
 
 
 def _api(client, app, path, payload):
-    # Ensure an authenticated session by logging in a test user within a request context
-    with app.test_request_context('/'):
-        # Pick any existing user or create one if none present
-        from app.extensions import db
-        user = User.query.first()
-        if not user:
-            user = User(username='apitester', email='apitester@example.com', is_active=True, is_verified=True)
-            db.session.add(user)
-            db.session.commit()
-        login_user(user)
+    # Ensure an authenticated client session by setting flask-login keys
+    user = User.query.first()
+    if not user:
+        user = User(username='apitester', email='apitester@example.com', is_active=True, is_verified=True)
+        db.session.add(user)
+        db.session.commit()
+
+    with client.session_transaction() as sess:
+        sess['_user_id'] = str(user.id)
+        sess['_fresh'] = True
+
     return client.post(path, data=json.dumps(payload), content_type='application/json', headers={'Accept': 'application/json'})
 
 
