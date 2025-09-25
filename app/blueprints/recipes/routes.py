@@ -27,28 +27,44 @@ def new_recipe():
             # Extract form data and delegate to service
             ingredients = _extract_ingredients_from_form(request.form)
 
-            # Portioning inputs from form (optional)
+            # Portioning inputs from form (optional) - absolute minimal fields
             portioning_payload = None
             try:
                 is_portioned = request.form.get('is_portioned', '') == 'true'
                 if is_portioned:
-                    # Derive bulk yield from projected yield fields to keep DRY
-                    projected_qty = float(request.form.get('predicted_yield') or 0.0)
-                    projected_unit_name = (request.form.get('predicted_yield_unit') or '').strip()
-                    bulk_unit_id = None
-                    if projected_unit_name:
+                    portion_name = (request.form.get('portion_name') or '').strip() or None
+                    # Ensure portion_name is a valid Unit (count type). Use name as the key.
+                    unit_id = None
+                    if portion_name:
                         try:
-                            bulk_unit = Unit.query.filter(Unit.name == projected_unit_name).order_by((Unit.organization_id == current_user.organization_id).desc()).first()
-                            if bulk_unit:
-                                bulk_unit_id = int(bulk_unit.id)
+                            existing = Unit.query.filter(Unit.name == portion_name).order_by((Unit.organization_id == current_user.organization_id).desc()).first()
                         except Exception:
-                            bulk_unit_id = None
+                            existing = None
+                        if not existing:
+                            try:
+                                u = Unit(
+                                    name=portion_name,
+                                    unit_type='count',
+                                    base_unit='count',
+                                    conversion_factor=1.0,
+                                    is_active=True,
+                                    is_custom=True,
+                                    is_mapped=False,
+                                    organization_id=current_user.organization_id,
+                                    created_by=current_user.id
+                                )
+                                db.session.add(u)
+                                db.session.flush()
+                                unit_id = u.id
+                            except Exception:
+                                db.session.rollback()
+                        else:
+                            unit_id = existing.id
                     portioning_payload = {
                         'is_portioned': True,
                         'portion_count': int(request.form.get('portion_count') or 0),
-                        'portion_name': (request.form.get('portion_name') or '').strip() or None,
-                        'bulk_yield_quantity': projected_qty,
-                        'bulk_yield_unit_id': bulk_unit_id
+                        'portion_name': portion_name,
+                        'portion_unit_id': unit_id
                     }
             except Exception:
                 portioning_payload = None
@@ -64,7 +80,11 @@ def new_recipe():
                 allowed_containers=[int(id) for id in request.form.getlist('allowed_containers[]') if id] or [],
                 label_prefix=request.form.get('label_prefix'),
                 category_id=int(request.form.get('category_id')) if request.form.get('category_id') else None,
-                portioning_data=portioning_payload
+                portioning_data=portioning_payload,
+                # Absolute columns mirror JSON for clarity
+                is_portioned=(portioning_payload.get('is_portioned') if portioning_payload else False),
+                portion_name=(portioning_payload.get('portion_name') if portioning_payload else None),
+                portion_count=(portioning_payload.get('portion_count') if portioning_payload else None)
             )
 
             if success:
@@ -191,22 +211,38 @@ def edit_recipe(recipe_id):
             try:
                 is_portioned = request.form.get('is_portioned', '') == 'true'
                 if is_portioned:
-                    projected_qty = float(request.form.get('predicted_yield') or 0.0)
-                    projected_unit_name = (request.form.get('predicted_yield_unit') or '').strip()
-                    bulk_unit_id = None
-                    if projected_unit_name:
+                    portion_name = (request.form.get('portion_name') or '').strip() or None
+                    unit_id = None
+                    if portion_name:
                         try:
-                            bulk_unit = Unit.query.filter(Unit.name == projected_unit_name).order_by((Unit.organization_id == current_user.organization_id).desc()).first()
-                            if bulk_unit:
-                                bulk_unit_id = int(bulk_unit.id)
+                            existing = Unit.query.filter(Unit.name == portion_name).order_by((Unit.organization_id == current_user.organization_id).desc()).first()
                         except Exception:
-                            bulk_unit_id = None
+                            existing = None
+                        if not existing:
+                            try:
+                                u = Unit(
+                                    name=portion_name,
+                                    unit_type='count',
+                                    base_unit='count',
+                                    conversion_factor=1.0,
+                                    is_active=True,
+                                    is_custom=True,
+                                    is_mapped=False,
+                                    organization_id=current_user.organization_id,
+                                    created_by=current_user.id
+                                )
+                                db.session.add(u)
+                                db.session.flush()
+                                unit_id = u.id
+                            except Exception:
+                                db.session.rollback()
+                        else:
+                            unit_id = existing.id
                     portioning_payload = {
                         'is_portioned': True,
                         'portion_count': int(request.form.get('portion_count') or 0),
-                        'portion_name': (request.form.get('portion_name') or '').strip() or None,
-                        'bulk_yield_quantity': projected_qty,
-                        'bulk_yield_unit_id': bulk_unit_id
+                        'portion_name': portion_name,
+                        'portion_unit_id': unit_id
                     }
             except Exception:
                 portioning_payload = None
@@ -223,7 +259,10 @@ def edit_recipe(recipe_id):
                 allowed_containers=[int(id) for id in request.form.getlist('allowed_containers[]') if id] or [],
                 label_prefix=request.form.get('label_prefix'),
                 category_id=int(request.form.get('category_id')) if request.form.get('category_id') else None,
-                portioning_data=portioning_payload
+                portioning_data=portioning_payload,
+                is_portioned=(portioning_payload.get('is_portioned') if portioning_payload else False),
+                portion_name=(portioning_payload.get('portion_name') if portioning_payload else None),
+                portion_count=(portioning_payload.get('portion_count') if portioning_payload else None)
             )
 
             if success:

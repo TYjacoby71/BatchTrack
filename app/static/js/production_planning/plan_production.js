@@ -6,7 +6,15 @@ import { BatchManager } from './modules/batch-management.js';
 class PlanProductionApp {
     constructor() {
         const data = window.recipeData || {};
-        this.recipe = { id: data.id, name: data.name, yield_amount: data.yield_amount, yield_unit: data.yield_unit };
+        this.recipe = {
+            id: data.id,
+            name: data.name,
+            yield_amount: data.yield_amount,
+            yield_unit: data.yield_unit,
+            // Ensure portioning data is available to BatchManager
+            portioning_data: data.portioning || null,
+            is_portioned: (data.is_portioned === true || data.is_portioned === 'true')
+        };
         this.baseYield = Number(data.yield_amount || 0);
         this.unit = data.yield_unit || 'units';
         this.scale = this._readScale();
