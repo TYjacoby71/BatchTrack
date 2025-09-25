@@ -267,55 +267,47 @@ def get_available_ingredients_for_batch(recipe_id):
 @batches_bp.route('/api/start-batch', methods=['POST'])
 @login_required
 def api_start_batch():
-    """API endpoint to start a new batch from plan production page"""
+    """Start a new batch from a unified PlanSnapshot built server-side."""
     try:
-        data = request.get_json()
+        data = request.get_json() or {}
         recipe_id = data.get('recipe_id')
-        scale = float(data.get('scale', 1.0))
-        batch_type = data.get('batch_type', 'ingredient')
-        notes = data.get('notes', '')
-        requires_containers = bool(data.get('requires_containers', False))
-        containers_data = data.get('containers', [])
-        
-        # 🔍 API_START_BATCH DEBUG: Full request payload
-        print(f"🔍 API_START_BATCH DEBUG: Full request payload: {data}")
-
-        # Absolute contract: accept only flat portion fields
-        flat_is_portioned = data.get('is_portioned')
-        flat_portion_name = data.get('portion_name')
-        flat_portion_count = data.get('portion_count')
-
-        portioning_data = None
-        truthy_vals = {True, 'true', 'True', 1, '1'}
-        if flat_is_portioned in truthy_vals:
-            try:
-                portioning_data = {
-                    'is_portioned': True,
-                    'portion_name': flat_portion_name,
-                    'portion_count': (int(flat_portion_count) if flat_portion_count not in (None, '') else None)
-                }
-            except Exception:
-                portioning_data = None
-        # Construct DTO-like structure for clarity if needed downstream
-        # (We still pass the dict to the service to avoid breaking signature)
-        print(f"🔍 API_START_BATCH DEBUG: Composed portioning_data (flat-only): {portioning_data}")
-
         if not recipe_id:
             return jsonify({'success': False, 'message': 'Recipe ID is required.'}), 400
 
-        # If a full plan_snapshot is provided, pass it through, otherwise build a minimal one in service
-        plan_snapshot = data.get('plan_snapshot')
-        # ALWAYS build a unified snapshot server-side to freeze config (no OR)
+        scale = float(data.get('scale', 1.0))
+        batch_type = data.get('batch_type', 'ingredient')
+        notes = data.get('notes', '')
+        containers_data = data.get('containers', []) or []
+
+        # Portioning override captured consistently in the snapshot
+        portioning_override = None
+        if data.get('is_portioned') in {True, 'true', 'True', 1, '1'}:
+            try:
+                portioning_override = {
+                    'is_portioned': True,
+                    'portion_name': data.get('portion_name'),
+                    'portion_unit_id': data.get('portion_unit_id'),
+                    'portion_count': int(data.get('portion_count')) if data.get('portion_count') not in (None, '') else None
+                }
+            except Exception:
+                portioning_override = {
+                    'is_portioned': True,
+                    'portion_name': data.get('portion_name'),
+                    'portion_unit_id': data.get('portion_unit_id'),
+                    'portion_count': None
+                }
+
         recipe = Recipe.query.get(recipe_id)
         if not recipe:
             return jsonify({'success': False, 'message': 'Recipe not found.'}), 404
+
         snapshot_obj = PlanProductionService.build_plan(
             recipe=recipe,
             scale=scale,
             batch_type=batch_type,
             notes=notes,
             containers=containers_data,
-            portioning_override=portioning_data if isinstance(portioning_data, dict) else None
+            portioning_override=portioning_override
         )
         plan_dict = snapshot_obj.__dict__.copy()
         batch, errors = BatchOperationsService.start_batch(plan_dict)
