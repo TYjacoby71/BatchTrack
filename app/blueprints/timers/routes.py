@@ -232,16 +232,32 @@ def cancel_timer(timer_id):
 def complete_expired_timers():
     """Manually trigger completion of expired timers"""
     try:
-        completed_count = TimerService.complete_expired_timers()
+        result = TimerService.complete_expired_timers()
 
-        return jsonify({
-            'success': True,
-            'message': f'Completed {completed_count} expired timers',
-            'completed_count': completed_count
-        })
+        if result['success']:
+            return jsonify({
+                'success': True,
+                'message': result['message'],
+                'completed_count': result['completed_count']
+            })
+        else:
+            return jsonify({
+                'success': False,
+                'error': result.get('error', 'Unknown error'),
+                'message': result.get('message', 'Failed to complete expired timers'),
+                'completed_count': result.get('completed_count', 0)
+            }), 500
 
     except Exception as e:
-        return jsonify({'error': str(e)}), 500
+        import traceback
+        print(f"Timer completion endpoint error: {str(e)}")
+        print(traceback.format_exc())
+        return jsonify({
+            'success': False,
+            'error': str(e),
+            'message': 'Unexpected error completing expired timers',
+            'completed_count': 0
+        }), 500
 
 @timers_bp.route('/api/check-expired')
 @login_required

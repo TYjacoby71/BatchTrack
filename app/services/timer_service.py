@@ -230,30 +230,33 @@ class TimerService:
     def complete_expired_timers():
         """Complete all expired timers"""
         try:
-            from ..models import BatchTimer
-            from ..utils.timezone_utils import TimezoneUtils
             from datetime import timedelta
-            from sqlalchemy import text
-
+            
             current_time = TimezoneUtils.utc_now()
 
-            # Get expired timers with proper SQL syntax
-            expired_timers = BatchTimer.query.filter(
-                BatchTimer.status == 'active'
-            ).all()
+            # Get expired timers with proper organization scoping
+            query = BatchTimer.query.filter(BatchTimer.status == 'active')
+            
+            # Apply organization scoping
+            if current_user and current_user.is_authenticated and current_user.organization_id:
+                query = query.filter(BatchTimer.organization_id == current_user.organization_id)
+
+            expired_timers = query.all()
 
             # Filter expired timers in Python to avoid SQL syntax issues
             completed_count = 0
             for timer in expired_timers:
                 if timer.start_time and timer.duration_seconds:
-                    end_time = timer.start_time + timedelta(seconds=timer.duration_seconds)
-                    if current_time > end_time:
+                    expected_end_time = timer.start_time + timedelta(seconds=timer.duration_seconds)
+                    if current_time > expected_end_time:
                         timer.status = 'completed'
-                        timer.completed_at = current_time
+                        timer.end_time = current_time  # Use end_time field that exists in model
                         completed_count += 1
+                        logger.info(f"Auto-completed expired timer {timer.id} for batch {timer.batch_id}")
 
             if completed_count > 0:
                 db.session.commit()
+                logger.info(f"Successfully completed {completed_count} expired timers")
 
             return {
                 'success': True,
@@ -263,26 +266,34 @@ class TimerService:
 
         except Exception as e:
             db.session.rollback()
-            print(f"Timer service error: {e}")
+            logger.error(f"Timer completion error: {str(e)}", exc_info=True)
             return {
                 'success': False,
                 'error': str(e),
                 'completed_count': 0,
-                'message': 'Error completing expired timers'
+                'message': f'Error completing expired timers: {str(e)}'
             }
 
     @staticmethod
     def get_expired_timers():
         """Get all currently expired but active timers"""
         try:
+            from datetime import timedelta
+            
             current_time = TimezoneUtils.utc_now()
 
             expired_timers = []
-            active_timers = BatchTimer.query.filter(
+            query = BatchTimer.query.filter(
                 BatchTimer.status == 'active',
                 BatchTimer.start_time.isnot(None),
                 BatchTimer.duration_seconds.isnot(None)
-            ).all()
+            )
+
+            # Apply organization scoping
+            if current_user and current_user.is_authenticated and current_user.organization_id:
+                query = query.filter(BatchTimer.organization_id == current_user.organization_id)
+
+            active_timers = query.all()
 
             for timer in active_timers:
                 expected_end_time = timer.start_time + timedelta(seconds=timer.duration_seconds)
@@ -292,5 +303,5 @@ class TimerService:
             return expired_timers
 
         except Exception as e:
-            logger.error(f"Error getting expired timers: {str(e)}")
+            logger.error(f"Error getting expired timers: {str(e)}", exc_info=True)
             return []
