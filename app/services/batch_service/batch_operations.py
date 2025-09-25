@@ -65,6 +65,21 @@ class BatchOperationsService(BaseService):
 
             # Create the batch
             print(f"🔍 BATCH_SERVICE DEBUG: Creating batch with portioning_data: {portion_snap}")
+            
+            # Convert plan_snapshot to JSON-serializable format
+            # Check for dataclass objects and convert them to dicts
+            serializable_plan_snapshot = {}
+            for key, value in plan_snapshot.items():
+                if hasattr(value, '__dataclass_fields__'):  # It's a dataclass
+                    from dataclasses import asdict
+                    serializable_plan_snapshot[key] = asdict(value)
+                elif hasattr(value, '_asdict'):  # It's a namedtuple
+                    serializable_plan_snapshot[key] = value._asdict()
+                elif hasattr(value, '__dict__'):  # It's a class instance
+                    serializable_plan_snapshot[key] = value.__dict__
+                else:
+                    serializable_plan_snapshot[key] = value
+
             batch = Batch(
                 recipe_id=snap_recipe_id,
                 label_code=generate_batch_label_code(recipe),
@@ -78,7 +93,7 @@ class BatchOperationsService(BaseService):
                 is_portioned=bool(portion_snap.get('is_portioned')) if portion_snap else False,
                 portion_name=portion_snap.get('portion_name') if portion_snap else None,
                 projected_portions=int(portion_snap.get('portion_count')) if portion_snap and portion_snap.get('portion_count') is not None else None,
-                plan_snapshot=plan_snapshot,
+                plan_snapshot=serializable_plan_snapshot,
                 created_by=current_user.id,
                 organization_id=current_user.organization_id,
                 started_at=TimezoneUtils.utc_now()
