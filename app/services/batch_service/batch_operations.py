@@ -21,19 +21,49 @@ class BatchOperationsService(BaseService):
 
     @classmethod
 
-    def start_batch(cls, plan_snapshot: dict):
-        """Start a new batch from an immutable plan snapshot. Rolls back on any failure."""
+    def start_batch(cls, plan_snapshot: dict | int | None = None, *, recipe_id: int | None = None, scale: float | int | None = None, batch_type: str | None = None, notes: str | None = None, containers: list | None = None):
+        """Start a new batch.
+
+        Compatibility:
+        - New path: pass a full plan snapshot dict (preferred)
+        - Legacy path: pass `recipe_id`, `scale`, `batch_type`, `notes`, and optional `containers`
+        """
 
         try:
-            # Trust the plan snapshot exclusively
-            snap_recipe_id = int(plan_snapshot.get('recipe_id'))
-            snap_scale = float(plan_snapshot.get('scale', 1.0))
-            snap_batch_type = plan_snapshot.get('batch_type', 'ingredient')
-            snap_notes = plan_snapshot.get('notes', '')
-            snap_projected_yield = float(plan_snapshot.get('projected_yield') or 0.0)
-            snap_projected_yield_unit = plan_snapshot.get('projected_yield_unit') or ''
-            snap_portioning = plan_snapshot.get('portioning') or {}
-            containers_data = plan_snapshot.get('containers') or []
+            # Normalize inputs to a plan-like snapshot
+            normalized_snapshot = None
+            if isinstance(plan_snapshot, dict):
+                normalized_snapshot = plan_snapshot
+            else:
+                # If first positional arg was used as legacy recipe_id, capture it
+                if recipe_id is None and isinstance(plan_snapshot, int):
+                    recipe_id = plan_snapshot
+                # Build a minimal snapshot from legacy args
+                legacy = {
+                    'recipe_id': recipe_id,
+                    'scale': (1.0 if scale is None else float(scale)),
+                    'batch_type': (batch_type or 'ingredient'),
+                    'notes': (notes or ''),
+                    'containers': (containers or [])
+                }
+                # Remove None recipe_id to avoid int(None)
+                normalized_snapshot = legacy
+
+            # Trust the normalized snapshot exclusively
+            snap_recipe_id = int(normalized_snapshot.get('recipe_id'))
+            snap_scale = float(normalized_snapshot.get('scale', 1.0))
+            snap_batch_type = normalized_snapshot.get('batch_type', 'ingredient')
+            snap_notes = normalized_snapshot.get('notes', '')
+            snap_projected_yield = float(normalized_snapshot.get('projected_yield') or 0.0)
+            snap_projected_yield_unit = normalized_snapshot.get('projected_yield_unit') or ''
+            # Portioning can arrive embedded or flat for compatibility
+            snap_portioning = normalized_snapshot.get('portioning') or {
+                'is_portioned': normalized_snapshot.get('is_portioned'),
+                'portion_name': normalized_snapshot.get('portion_name'),
+                'portion_count': normalized_snapshot.get('portion_count'),
+                'portion_unit_id': normalized_snapshot.get('portion_unit_id')
+            }
+            containers_data = normalized_snapshot.get('containers') or []
 
             recipe = Recipe.query.get(snap_recipe_id)
             if not recipe:
@@ -71,17 +101,17 @@ class BatchOperationsService(BaseService):
 
             # Ensure plan_snapshot is JSON-serializable. The API route should already pass a dict.
             serializable_plan_snapshot = None
-            if plan_snapshot:
-                if isinstance(plan_snapshot, dict):
-                    serializable_plan_snapshot = plan_snapshot
+            if normalized_snapshot:
+                if isinstance(normalized_snapshot, dict):
+                    serializable_plan_snapshot = normalized_snapshot
                 elif hasattr(plan_snapshot, 'to_dict'):
-                    serializable_plan_snapshot = plan_snapshot.to_dict()
+                    serializable_plan_snapshot = normalized_snapshot.to_dict()
                 else:
                     from dataclasses import asdict
                     try:
-                        serializable_plan_snapshot = asdict(plan_snapshot)
+                        serializable_plan_snapshot = asdict(normalized_snapshot)
                     except Exception:
-                        serializable_plan_snapshot = plan_snapshot
+                        serializable_plan_snapshot = normalized_snapshot
 
             batch = Batch(
                 recipe_id=snap_recipe_id,

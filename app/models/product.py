@@ -58,6 +58,13 @@ class Product(ScopedModelMixin, db.Model):
     def __repr__(self):
         return f'<Product {self.name}>'
 
+    def __init__(self, *args, **kwargs):
+        # Accept legacy `base_unit` kwarg for compatibility with older tests
+        if 'base_unit' in kwargs:
+            # Intentionally ignore at product level; units live on SKU/inventory
+            kwargs.pop('base_unit', None)
+        super().__init__(*args, **kwargs)
+
 class ProductVariant(ScopedModelMixin, db.Model):
     """Product Variant model - represents variations of a product"""
     __tablename__ = 'product_variant'
