@@ -113,7 +113,7 @@ def _complete_batch_internal(batch_id, form_data):
         output_unit = form_data.get('output_unit')
         final_portions = None
         try:
-            if batch.portioning_data and batch.portioning_data.get('is_portioned'):
+            if getattr(batch, 'is_portioned', False):
                 final_portions = int(form_data.get('final_portions') or 0)
                 if final_portions <= 0:
                     return False, 'Final portions must be provided for portioned batches'
@@ -284,19 +284,19 @@ def _create_product_output(batch, product_id, variant_id, final_quantity, output
         bulk_quantity = max(0, final_quantity - total_container_volume)
 
         # Create bulk SKU if there's remaining quantity and not portioned
-        if bulk_quantity > 0 and not (batch.portioning_data and batch.portioning_data.get('is_portioned')):
+        if bulk_quantity > 0 and not getattr(batch, 'is_portioned', False):
             bulk_unit = output_unit
             # No product base unit; units are defined at SKU/Inventory level
 
             _create_bulk_sku(product, variant, bulk_quantity, bulk_unit, expiration_date, batch, ingredient_unit_cost)
 
         # For portioned batches, create portion-based SKU if final_portions provided
-        if batch.portioning_data and batch.portioning_data.get('is_portioned') and final_portions and final_portions > 0:
+        if getattr(batch, 'is_portioned', False) and final_portions and final_portions > 0:
             try:
                 size_label = _derive_size_label_from_portions(batch, final_quantity, output_unit, final_portions)
                 from ...services.product_service import ProductService
                 # Build naming context derived from batch snapshot
-                portion_name = (batch.portioning_data.get('portion_name') if batch.portioning_data else None) or 'Unit'
+                portion_name = getattr(batch, 'portion_name', None) or 'Unit'
                 naming_context = {
                     'yield_value': final_quantity,
                     'yield_unit': output_unit,
@@ -343,7 +343,7 @@ def _create_product_output(batch, product_id, variant_id, final_quantity, output
             except Exception as e:
                 logger.error(f"Error creating portion-based SKU: {e}")
 
-        logger.info(f"Created product output for batch {batch.label_code}: {len(container_skus)} container SKUs, {bulk_quantity if not (batch.portioning_data and batch.portioning_data.get('is_portioned')) else 0} {bulk_unit if (bulk_quantity > 0 and not (batch.portioning_data and batch.portioning_data.get('is_portioned'))) else ''} bulk")
+        logger.info(f"Created product output for batch {batch.label_code}: {len(container_skus)} container SKUs, {bulk_quantity if not getattr(batch, 'is_portioned', False) else 0} {bulk_unit if (bulk_quantity > 0 and not getattr(batch, 'is_portioned', False)) else ''} bulk")
         return {'total_container_volume': total_container_volume}
 
     except Exception as e:
@@ -360,7 +360,7 @@ def _derive_size_label_from_portions(batch, final_bulk_quantity, bulk_unit, fina
         if not final_portions or final_portions <= 0:
             return 'Portion'
         per_portion = round(float(final_bulk_quantity) / float(final_portions), 2)
-        portion_name = (batch.portioning_data.get('portion_name') if batch.portioning_data else None) or 'Unit'
+        portion_name = getattr(batch, 'portion_name', None) or 'Unit'
         unit = bulk_unit
         return f"{per_portion} {unit} {portion_name}"
     except Exception:

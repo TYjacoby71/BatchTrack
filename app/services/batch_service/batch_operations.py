@@ -60,26 +60,23 @@ class BatchOperationsService(BaseService):
                 portion_snap = {
                     'is_portioned': True,
                     'portion_name': snap_portioning.get('portion_name'),
-                    'portion_count': snap_portioning.get('portion_count')
+                    'portion_count': snap_portioning.get('portion_count'),
+                    'portion_unit_id': snap_portioning.get('portion_unit_id')
                 }
 
             print(f"🔍 BATCH_SERVICE DEBUG: Starting batch from snapshot for recipe {recipe.name}")
 
             # Create the batch
-            print(f"🔍 BATCH_SERVICE DEBUG: Creating batch with portioning_data: {portion_snap}")
+            print(f"🔍 BATCH_SERVICE DEBUG: Creating batch with portioning snapshot: {portion_snap}")
 
-            # Convert plan_snapshot to JSON-serializable format using the DTO's to_dict method
-            # The plan_snapshot should be a PlanSnapshot DTO object, not a dict
+            # Ensure plan_snapshot is JSON-serializable. The API route should already pass a dict.
             serializable_plan_snapshot = None
             if plan_snapshot:
-                if hasattr(plan_snapshot, 'to_dict'):
-                    # It's a PlanSnapshot DTO object - use its to_dict method
-                    serializable_plan_snapshot = plan_snapshot.to_dict()
-                elif isinstance(plan_snapshot, dict):
-                    # It's already a dict - use as is (backwards compatibility)
+                if isinstance(plan_snapshot, dict):
                     serializable_plan_snapshot = plan_snapshot
+                elif hasattr(plan_snapshot, 'to_dict'):
+                    serializable_plan_snapshot = plan_snapshot.to_dict()
                 else:
-                    # Fallback - try to convert dataclass to dict
                     from dataclasses import asdict
                     try:
                         serializable_plan_snapshot = asdict(plan_snapshot)
@@ -95,10 +92,10 @@ class BatchOperationsService(BaseService):
                 scale=snap_scale,
                 status='in_progress',
                 notes=snap_notes,
-                portioning_data=portion_snap,
                 is_portioned=bool(portion_snap.get('is_portioned')) if portion_snap else False,
                 portion_name=portion_snap.get('portion_name') if portion_snap else None,
                 projected_portions=int(portion_snap.get('portion_count')) if portion_snap and portion_snap.get('portion_count') is not None else None,
+                portion_unit_id=portion_snap.get('portion_unit_id') if portion_snap else None,
                 plan_snapshot=serializable_plan_snapshot,
                 created_by=current_user.id,
                 organization_id=current_user.organization_id,
@@ -107,33 +104,24 @@ class BatchOperationsService(BaseService):
 
             db.session.add(batch)
             print(f"🔍 BATCH_SERVICE DEBUG: Batch object created with label: {label_code}")
-            print(f"🔍 BATCH_SERVICE DEBUG: Batch.portioning_data after creation: {batch.portioning_data}")
-
-
-            # Attach portioning snapshot if the model supports it
             try:
-                if hasattr(batch, 'portioning_data'):
-                    batch.portioning_data = portion_snap
+                pass
             except Exception:
                 pass
 
-            # Lock costing method for this batch at start based on organization setting,
-            # but enforce average for product batches per new policy
+            # Lock costing method for this batch at start based on organization setting
             try:
                 if hasattr(batch, 'cost_method'):
-                    if str(batch_type).lower() == 'product':
-                        method = 'average'
-                    else:
-                        org = getattr(current_user, 'organization', None)
-                        method = (getattr(org, 'inventory_cost_method', None) or 'fifo') if org else 'fifo'
-                        method = method if method in ('fifo', 'average') else 'fifo'
+                    org = getattr(current_user, 'organization', None)
+                    method = (getattr(org, 'inventory_cost_method', None) or 'fifo') if org else 'fifo'
+                    method = method if method in ('fifo', 'average') else 'fifo'
                     batch.cost_method = method
                     if hasattr(batch, 'cost_method_locked_at'):
                         batch.cost_method_locked_at = TimezoneUtils.utc_now()
             except Exception:
                 try:
                     if hasattr(batch, 'cost_method'):
-                        batch.cost_method = 'average' if str(batch_type).lower() == 'product' else 'fifo'
+                        batch.cost_method = 'fifo'
                 except Exception:
                     pass
 
@@ -161,13 +149,9 @@ class BatchOperationsService(BaseService):
                 print(f"🔍 BATCH_SERVICE DEBUG: ✅ BATCH CREATED SUCCESSFULLY!")
                 print(f"🔍 BATCH_SERVICE DEBUG: Final batch ID: {batch.id}")
                 print(f"🔍 BATCH_SERVICE DEBUG: Final batch label: {batch.label_code}")
-                print(f"🔍 BATCH_SERVICE DEBUG: Final batch.portioning_data: {batch.portioning_data}")
-
-                # Verify batch was persisted with portioning data
+                # Verify batch was persisted
                 fresh_batch = Batch.query.get(batch.id)
-                if fresh_batch:
-                    print(f"🔍 BATCH_SERVICE DEBUG: Verified - Fresh batch.portioning_data from DB: {fresh_batch.portioning_data}")
-                else:
+                if not fresh_batch:
                     print(f"🔍 BATCH_SERVICE DEBUG: ERROR - Could not fetch fresh batch from DB!")
 
                 # Emit domain event for batch start (best-effort)
@@ -181,7 +165,7 @@ class BatchOperationsService(BaseService):
                             'projected_yield': projected_yield,
                             'projected_yield_unit': projected_yield_unit,
                             'label_code': batch.label_code,
-                            'portioning_data': batch.portioning_data  # Include in event
+                            'portioning': portion_snap
                         },
                         organization_id=batch.organization_id,
                         user_id=batch.created_by,
