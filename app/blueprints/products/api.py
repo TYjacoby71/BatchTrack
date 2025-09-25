@@ -60,7 +60,7 @@ def get_product_variants(product_id):
                 'name': variant.name
             })
 
-        return jsonify(variant_list)
+        return jsonify({'variants': variant_list})
 
     except Exception as e:
         return jsonify({'error': str(e)}), 500
