@@ -290,7 +290,7 @@ def api_start_batch():
             notes=notes,
             containers=containers_data
         )
-        plan_dict = snapshot_obj.__dict__.copy()
+        plan_dict = snapshot_obj.to_dict()
         batch, errors = BatchOperationsService.start_batch(plan_dict)
 
         if not batch:
