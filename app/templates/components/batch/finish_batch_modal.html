@@ -58,7 +58,7 @@
             {% if batch.is_portioned %}
             <div class="form-group mb-3">
               <label for="final_portions">Final number of portions created</label>
-              <input type="number" id="final_portions" name="final_portions" class="form-control" min="0" step="1" placeholder="e.g., {{ batch.projected_portions or '' }}" required>
+              <input type="number" id="final_portions" name="final_portions" class="form-control" min="0" step="1" value="{{ batch.projected_portions or '' }}" required>
               <div class="form-text">Portion name: {{ batch.portion_name or 'unit' }}</div>
             </div>
             {% endif %}
@@ -119,7 +119,7 @@
           </div>
 
           <!-- Container Management Section - Only show if batch has containers and is not portioned -->
-          {% if (batch.containers or batch.extra_containers) and not (batch.portioning_data and batch.portioning_data.get('is_portioned')) %}
+          {% if (batch.containers or batch.extra_containers) and not batch.is_portioned %}
           <div class="card mb-3">
             <div class="card-header">
               <h6 class="mb-0">Container Distribution</h6>
@@ -362,6 +362,7 @@ function validateYield() {
   const alertsContainer = document.getElementById('yield-validation-alerts');
   const batchMeta = document.getElementById('batchMeta');
   const hasContainers = (batchMeta && batchMeta.dataset && batchMeta.dataset.hasContainers === 'true');
+  const isPortioned = (batchMeta && batchMeta.dataset && batchMeta.dataset.isPortioned === 'true');
 
   if (!finalQuantityInput) {
     return;
@@ -383,6 +384,12 @@ function validateYield() {
     finalYieldDisplay.textContent = finalQuantity.toFixed(2);
   }
 
+  // For portioned batches, don't show bulk/container management
+  if (isPortioned) {
+    console.log('Portioned batch - yield will be used to derive portion SKUs');
+    return;
+  }
+
   if (!hasContainers) {
     console.log('No containers in batch - all yield goes to bulk');
     updateUncontainedYield(finalQuantity);
@@ -396,8 +403,15 @@ function validateYield() {
 function updateContainerSummary() {
   const finalQuantityInput = document.getElementById('final_quantity');
   const finalQuantity = parseFloat(finalQuantityInput?.value || 0);
+  const batchMeta = document.getElementById('batchMeta');
+  const isPortioned = (batchMeta && batchMeta.dataset && batchMeta.dataset.isPortioned === 'true');
 
   if (finalQuantity <= 0) {
+    return;
+  }
+
+  // For portioned batches, don't show container allocation
+  if (isPortioned) {
     return;
   }
 
@@ -437,7 +451,16 @@ function updateUncontainedYield(finalQuantity) {
 
 function validateContainerAllocation(finalQuantity, totalContainerCapacity) {
   const alertsContainer = document.getElementById('yield-validation-alerts');
+  const batchMeta = document.getElementById('batchMeta');
+  const isPortioned = (batchMeta && batchMeta.dataset && batchMeta.dataset.isPortioned === 'true');
+  
   if (!alertsContainer) return;
+
+  // Don't show container allocation alerts for portioned batches
+  if (isPortioned) {
+    alertsContainer.innerHTML = '';
+    return;
+  }
 
   let alertHtml = '';
 

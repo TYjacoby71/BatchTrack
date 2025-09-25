@@ -89,9 +89,6 @@
                         {{ batch.status|title }}
                     </span>
                 </p>
-                {% if batch.portioning_data and batch.portioning_data.get('is_portioned') %}
-                <p><strong>Portioning:</strong> {{ batch.portioning_data.get('portion_count') or '—' }} × {{ batch.portioning_data.get('portion_name') or 'Unit' }}</p>
-                {% endif %}
             </div>
         </div>
     </div>
