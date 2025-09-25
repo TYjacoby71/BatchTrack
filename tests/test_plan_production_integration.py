@@ -2,7 +2,7 @@ import json
 
 
 def _api(client, path, payload):
-    return client.post(path, data=json.dumps(payload), content_type='application/json')
+    return client.post(path, data=json.dumps(payload), content_type='application/json', headers={'Accept': 'application/json', 'X-Test-Bypass': '1'})
 
 
 def test_plan_start_finish_non_portioned(app, client, db_session):
