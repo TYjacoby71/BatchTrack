@@ -15,12 +15,6 @@ def register_middleware(app):
         The single, unified security checkpoint for every request.
         Checks are performed in order from least to most expensive.
         """
-        # Testing bypass: allow tests to call endpoints without auth/billing
-        try:
-            if getattr(app, 'testing', False):
-                return
-        except Exception:
-            pass
         # 1. Fast-path for completely public endpoints.
         public_endpoints = [
             'static', 'auth.login', 'auth.signup', 'auth.logout',
