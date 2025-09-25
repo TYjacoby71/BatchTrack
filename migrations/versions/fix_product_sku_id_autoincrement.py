@@ -32,8 +32,109 @@ def upgrade():
     print("   Fixing ProductSKU id column autoincrement...")
 
     try:
-        # For SQLite, we need to recreate the table to fix autoincrement
-        # First, create a temporary table with correct structure
+        dialect = connection.dialect.name
+
+        if dialect == 'sqlite':
+            # SQLite-compatible path: use INTEGER PRIMARY KEY AUTOINCREMENT and avoid PG casts/regex
+            connection.execute(text("""
+                CREATE TABLE product_sku_temp (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    inventory_item_id INTEGER,
+                    product_id INTEGER,
+                    variant_id INTEGER,
+                    size_label VARCHAR(32),
+                    sku_code VARCHAR(64),
+                    sku_name VARCHAR(128),
+                    unit VARCHAR(32),
+                    low_stock_threshold FLOAT,
+                    fifo_id VARCHAR(64),
+                    batch_id INTEGER,
+                    container_id INTEGER,
+                    retail_price FLOAT,
+                    wholesale_price FLOAT,
+                    profit_margin_target FLOAT,
+                    category VARCHAR(64),
+                    subcategory VARCHAR(64),
+                    tags TEXT,
+                    description TEXT,
+                    is_active BOOLEAN,
+                    is_product_active BOOLEAN,
+                    is_discontinued BOOLEAN,
+                    created_at TIMESTAMP,
+                    updated_at TIMESTAMP,
+                    created_by INTEGER,
+                    supplier_name VARCHAR(128),
+                    supplier_sku VARCHAR(64),
+                    supplier_cost FLOAT,
+                    weight FLOAT,
+                    weight_unit VARCHAR(16),
+                    dimensions VARCHAR(64),
+                    barcode VARCHAR(64),
+                    upc VARCHAR(64),
+                    quality_status VARCHAR(32),
+                    compliance_status VARCHAR(32),
+                    quality_checked_by INTEGER,
+                    quality_checked_at TIMESTAMP,
+                    location_id INTEGER,
+                    location_name VARCHAR(128),
+                    temperature_at_time FLOAT,
+                    shopify_product_id VARCHAR(64),
+                    shopify_variant_id VARCHAR(64),
+                    etsy_listing_id VARCHAR(64),
+                    amazon_asin VARCHAR(64),
+                    marketplace_sync_status VARCHAR(32),
+                    marketplace_last_sync TIMESTAMP,
+                    expiration_date TIMESTAMP,
+                    is_perishable BOOLEAN,
+                    shelf_life_days INTEGER,
+                    organization_id INTEGER
+                )
+            """))
+
+            # Copy data from old table to new table (excluding id to let autoincrement work)
+            # Note: avoid PG-specific casts; use a conservative conversion for location_id
+            connection.execute(text("""
+                INSERT INTO product_sku_temp (
+                    inventory_item_id, product_id, variant_id, size_label, sku_code, sku_name,
+                    unit, low_stock_threshold, fifo_id, batch_id, container_id,
+                    retail_price, wholesale_price, profit_margin_target, category, subcategory,
+                    tags, description, is_active, is_product_active, is_discontinued,
+                    created_at, updated_at, created_by, supplier_name, supplier_sku, supplier_cost,
+                    weight, weight_unit, dimensions, barcode, upc, quality_status, compliance_status,
+                    quality_checked_by, quality_checked_at, location_id, location_name,
+                    temperature_at_time, shopify_product_id, shopify_variant_id, etsy_listing_id,
+                    amazon_asin, marketplace_sync_status, marketplace_last_sync, expiration_date,
+                    is_perishable, shelf_life_days, organization_id
+                )
+                SELECT 
+                    inventory_item_id, product_id, variant_id, size_label, sku_code, sku_name,
+                    unit, low_stock_threshold, fifo_id, batch_id, container_id,
+                    retail_price, wholesale_price, profit_margin_target, category, subcategory,
+                    tags, description, is_active, is_product_active, is_discontinued,
+                    created_at, updated_at, created_by, supplier_name, supplier_sku, supplier_cost,
+                    weight, weight_unit, dimensions, barcode, upc, quality_status, compliance_status,
+                    quality_checked_by, quality_checked_at,
+                    CASE
+                        WHEN typeof(location_id) IN ('integer','real') THEN CAST(location_id AS INTEGER)
+                        WHEN typeof(location_id) = 'text' AND location_id GLOB '[0-9]*' THEN CAST(location_id AS INTEGER)
+                        ELSE NULL
+                    END as location_id,
+                    location_name,
+                    temperature_at_time, shopify_product_id, shopify_variant_id, etsy_listing_id,
+                    amazon_asin, marketplace_sync_status, marketplace_last_sync, expiration_date,
+                    is_perishable, shelf_life_days, organization_id
+                FROM product_sku
+            """))
+
+            # Replace table
+            connection.execute(text("DROP TABLE product_sku"))
+            connection.execute(text("ALTER TABLE product_sku_temp RENAME TO product_sku"))
+
+            print("   ✅ Successfully fixed ProductSKU id column autoincrement (SQLite)")
+            return
+
+        # PostgreSQL / others: original logic
+        # First, create a temporary table with correct structure (SERIAL for PG)
         connection.execute(text("""
             CREATE TABLE product_sku_temp (
                 id SERIAL PRIMARY KEY,
@@ -155,8 +256,6 @@ def upgrade():
         # Drop old table and rename new one
         connection.execute(text("DROP TABLE product_sku CASCADE"))
         connection.execute(text("ALTER TABLE product_sku_temp RENAME TO product_sku"))
-
-        # SERIAL already creates a primary key constraint, so no need to add one
 
         # Recreate foreign key constraints based on what we found
         for fk in foreign_keys:
