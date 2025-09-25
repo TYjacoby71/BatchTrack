@@ -65,23 +65,6 @@ class BatchOperationsService(BaseService):
 
             print(f"🔍 BATCH_SERVICE DEBUG: Starting batch from snapshot for recipe {recipe.name}")
 
-            # Snapshot: accept the compiled portioning payload from Plan Production only (no computation here)
-            # Strict schema validation for portioning snapshot (mirror origin/main)
-            portion_snap = None
-            if portioning_data is not None:
-                if not isinstance(portioning_data, dict):
-                    raise ValueError("Invalid portioning_data format: expected object")
-                if portioning_data.get('is_portioned'):
-                    required_keys = ['portion_name', 'portion_count', 'bulk_yield_quantity', 'bulk_yield_unit']
-                    missing = [k for k in required_keys if portioning_data.get(k) in (None, '')]
-                    if missing:
-                        raise ValueError(f"Missing portioning fields: {', '.join(missing)}")
-                    if not isinstance(portioning_data.get('portion_count'), (int, float)) or portioning_data.get('portion_count') < 0:
-                        raise ValueError("portion_count must be a non-negative number")
-                    if not isinstance(portioning_data.get('bulk_yield_quantity'), (int, float)) or portioning_data.get('bulk_yield_quantity') < 0:
-                        raise ValueError("bulk_yield_quantity must be a non-negative number")
-                portion_snap = dict(portioning_data)
-
             # Create the batch
             print(f"🔍 BATCH_SERVICE DEBUG: Creating batch with portioning_data: {portion_snap}")
 
