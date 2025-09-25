@@ -462,14 +462,20 @@ def _create_container_sku(product, variant, container_item, quantity, batch, exp
         # Create size label format: "[capacity] [capacity_unit] [container_name]"
         # Example: "8 fl oz Bottle"
         if container_item.capacity and container_item.capacity_unit:
-            # Normalize container name to avoid duplicated capacity text in size label
-            base_name = container_item.name
+            # Build from structured attributes
             cap_str = f"{container_item.capacity} {container_item.capacity_unit}".strip()
-            if base_name.lower().startswith(cap_str.lower()):
-                base_name = base_name[len(cap_str):].strip(" -")
-            size_label = f"{cap_str} {base_name}".strip()
+            try:
+                display_name = container_item.container_display_name
+            except Exception:
+                display_name = container_item.name
+            size_label = f"{cap_str} {display_name}".strip()
         else:
-            size_label = f"1 unit {container_item.name}"
+            # No capacity specified; fall back to derived display name
+            try:
+                display_name = container_item.container_display_name
+            except Exception:
+                display_name = container_item.name
+            size_label = display_name
         # Final sanitize
         size_label = ' '.join((size_label or '').split())
 
