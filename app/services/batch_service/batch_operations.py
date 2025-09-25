@@ -20,9 +20,80 @@ class BatchOperationsService(BaseService):
     """Service for batch lifecycle operations: start, finish, cancel"""
 
     @classmethod
-    def start_batch(cls, recipe_id, scale=1.0, batch_type='ingredient', notes='', containers_data=None, requires_containers=False, portioning_data=None, projected_yield=None, projected_yield_unit=None):
+    def start_batch(cls, recipe_id=None, scale=1.0, batch_type='ingredient', notes='', containers_data=None, requires_containers=False, portioning_data=None, projected_yield=None, projected_yield_unit=None, plan_snapshot: dict | None = None):
         """Start a new batch with inventory deductions atomically. Rolls back on any failure."""
         try:
+            # If a full plan snapshot is provided, trust it entirely for freezing core fields
+            if plan_snapshot is not None:
+                try:
+                    snap_recipe_id = int(plan_snapshot.get('recipe_id'))
+                    snap_scale = float(plan_snapshot.get('scale', 1.0))
+                    snap_batch_type = plan_snapshot.get('batch_type', batch_type)
+                    snap_notes = plan_snapshot.get('notes', notes)
+                    snap_projected_yield = float(plan_snapshot.get('projected_yield') or 0.0)
+                    snap_projected_yield_unit = plan_snapshot.get('projected_yield_unit') or ''
+                    snap_portioning = plan_snapshot.get('portioning') or {}
+                    containers_data = plan_snapshot.get('containers') or []
+
+                    recipe = Recipe.query.get(snap_recipe_id)
+                    if not recipe:
+                        return None, "Recipe not found"
+
+                    # Generate batch label via centralized generator
+                    label_code = generate_batch_label_code(recipe)
+
+                    # Portion snapshot
+                    portion_snap = None
+                    if snap_portioning and isinstance(snap_portioning, dict) and snap_portioning.get('is_portioned'):
+                        portion_snap = {
+                            'is_portioned': True,
+                            'portion_name': snap_portioning.get('portion_name'),
+                            'portion_count': snap_portioning.get('portion_count')
+                        }
+
+                    batch = Batch(
+                        recipe_id=snap_recipe_id,
+                        label_code=label_code,
+                        batch_type=snap_batch_type,
+                        projected_yield=snap_projected_yield,
+                        projected_yield_unit=snap_projected_yield_unit,
+                        scale=snap_scale,
+                        status='in_progress',
+                        notes=snap_notes,
+                        portioning_data=portion_snap,
+                        is_portioned=bool(portion_snap.get('is_portioned')) if portion_snap else False,
+                        portion_name=portion_snap.get('portion_name') if portion_snap else None,
+                        projected_portions=int(portion_snap.get('portion_count')) if portion_snap and portion_snap.get('portion_count') is not None else None,
+                        plan_snapshot=plan_snapshot,
+                        created_by=current_user.id,
+                        organization_id=current_user.organization_id,
+                        started_at=TimezoneUtils.utc_now()
+                    )
+
+                    db.session.add(batch)
+
+                    # Containers from snapshot
+                    container_errors = []
+                    if containers_data:
+                        container_errors = cls._process_batch_containers(batch, containers_data, defer_commit=True)
+
+                    # Use existing ingredient/consumable processing based on recipe + scale
+                    ingredient_errors = cls._process_batch_ingredients(batch, recipe, snap_scale, defer_commit=True)
+                    consumable_errors = cls._process_batch_consumables(batch, recipe, snap_scale, defer_commit=True)
+
+                    all_errors = container_errors + ingredient_errors + consumable_errors
+                    if all_errors:
+                        db.session.rollback()
+                        return None, all_errors
+
+                    db.session.commit()
+                    return batch, []
+                except Exception as e:
+                    db.session.rollback()
+                    logger.error(f"Error starting batch with plan snapshot: {str(e)}")
+                    return None, [str(e)]
+
+            # Legacy path: no plan snapshot. Fall back to param-driven start (will be deprecated)
             recipe = Recipe.query.get(recipe_id)
             if not recipe:
                 return None, "Recipe not found"
