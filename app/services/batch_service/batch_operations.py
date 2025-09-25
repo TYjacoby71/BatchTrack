@@ -37,7 +37,6 @@ class BatchOperationsService(BaseService):
             if not recipe:
                 return None, "Recipe not found"
 
-            scale = float(scale)
             containers_data = containers_data or []
 
             # Generate batch label via centralized generator
@@ -45,12 +44,12 @@ class BatchOperationsService(BaseService):
 
             # Prefer plan-provided projected snapshot; otherwise derive from recipe at start time
             projected_yield = (
-                float(projected_yield)
-                if projected_yield is not None
-                else float(scale) * float(recipe.predicted_yield or 0.0)
+                float(snap_projected_yield)
+                if snap_projected_yield is not None
+                else float(snap_scale) * float(recipe.predicted_yield or 0.0)
             )
             projected_yield_unit = (
-                projected_yield_unit or recipe.predicted_yield_unit
+                snap_projected_yield_unit or recipe.predicted_yield_unit
             )
 
             # Build portion snapshot from plan only
@@ -70,8 +69,8 @@ class BatchOperationsService(BaseService):
                 recipe_id=snap_recipe_id,
                 label_code=generate_batch_label_code(recipe),
                 batch_type=snap_batch_type,
-                projected_yield=snap_projected_yield,
-                projected_yield_unit=snap_projected_yield_unit,
+                projected_yield=projected_yield,
+                projected_yield_unit=projected_yield_unit,
                 scale=snap_scale,
                 status='in_progress',
                 notes=snap_notes,
@@ -145,12 +144,12 @@ class BatchOperationsService(BaseService):
                     EventEmitter.emit(
                         event_name='batch_started',
                         properties={
-                            'recipe_id': recipe_id,
-                            'scale': scale,
-                            'batch_type': batch_type,
+                            'recipe_id': snap_recipe_id,
+                            'scale': snap_scale,
+                            'batch_type': snap_batch_type,
                             'projected_yield': projected_yield,
-                            'projected_yield_unit': recipe.predicted_yield_unit,
-                            'label_code': label_code,
+                            'projected_yield_unit': projected_yield_unit,
+                            'label_code': batch.label_code,
                             'portioning_data': batch.portioning_data  # Include in event
                         },
                         organization_id=batch.organization_id,
