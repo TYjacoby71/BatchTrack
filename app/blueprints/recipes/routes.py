@@ -32,10 +32,34 @@ def new_recipe():
             try:
                 is_portioned = request.form.get('is_portioned', '') == 'true'
                 if is_portioned:
+                    portion_name = (request.form.get('portion_name') or '').strip() or None
+                    # Ensure portion_name is a valid Unit (count type). Use name as the key.
+                    if portion_name:
+                        try:
+                            existing = Unit.query.filter(Unit.name == portion_name).order_by((Unit.organization_id == current_user.organization_id).desc()).first()
+                        except Exception:
+                            existing = None
+                        if not existing:
+                            try:
+                                u = Unit(
+                                    name=portion_name,
+                                    unit_type='count',
+                                    base_unit='count',
+                                    conversion_factor=1.0,
+                                    is_active=True,
+                                    is_custom=True,
+                                    is_mapped=False,
+                                    organization_id=current_user.organization_id,
+                                    created_by=current_user.id
+                                )
+                                db.session.add(u)
+                                db.session.flush()
+                            except Exception:
+                                db.session.rollback()
                     portioning_payload = {
                         'is_portioned': True,
                         'portion_count': int(request.form.get('portion_count') or 0),
-                        'portion_name': (request.form.get('portion_name') or '').strip() or None
+                        'portion_name': portion_name
                     }
             except Exception:
                 portioning_payload = None
@@ -182,10 +206,33 @@ def edit_recipe(recipe_id):
             try:
                 is_portioned = request.form.get('is_portioned', '') == 'true'
                 if is_portioned:
+                    portion_name = (request.form.get('portion_name') or '').strip() or None
+                    if portion_name:
+                        try:
+                            existing = Unit.query.filter(Unit.name == portion_name).order_by((Unit.organization_id == current_user.organization_id).desc()).first()
+                        except Exception:
+                            existing = None
+                        if not existing:
+                            try:
+                                u = Unit(
+                                    name=portion_name,
+                                    unit_type='count',
+                                    base_unit='count',
+                                    conversion_factor=1.0,
+                                    is_active=True,
+                                    is_custom=True,
+                                    is_mapped=False,
+                                    organization_id=current_user.organization_id,
+                                    created_by=current_user.id
+                                )
+                                db.session.add(u)
+                                db.session.flush()
+                            except Exception:
+                                db.session.rollback()
                     portioning_payload = {
                         'is_portioned': True,
                         'portion_count': int(request.form.get('portion_count') or 0),
-                        'portion_name': (request.form.get('portion_name') or '').strip() or None
+                        'portion_name': portion_name
                     }
             except Exception:
                 portioning_payload = None
