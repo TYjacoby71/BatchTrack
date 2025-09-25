@@ -4,35 +4,26 @@ from .types import PlanSnapshot, PortioningPlan, IngredientLine, ConsumableLine,
 
 class PlanProductionService:
     @staticmethod
-    def build_plan(recipe, scale: float, batch_type: str, notes: str = '', containers: Optional[list] = None, portioning_override: Optional[dict] = None) -> PlanSnapshot:
-        """Build a fully frozen plan snapshot from a recipe and scale."""
+    def build_plan(recipe, scale: float, batch_type: str, notes: str = '', containers: Optional[list] = None) -> PlanSnapshot:
+        """Build a fully frozen plan snapshot from a recipe and scale. No client overrides."""
         containers = containers or []
 
         # Projected yield snapshot
         projected_yield = float((recipe.predicted_yield or 0.0) * float(scale or 1.0))
         projected_yield_unit = recipe.predicted_yield_unit or ''
 
-        # Portioning snapshot: override from request wins; else from recipe additive columns
+        # Portioning snapshot strictly from recipe additive columns (no overrides)
         portioning = PortioningPlan(is_portioned=False, portion_name=None, portion_unit_id=None, portion_count=None)
-        if portioning_override and isinstance(portioning_override, dict) and portioning_override.get('is_portioned'):
-            pc = portioning_override.get('portion_count')
-            portioning = PortioningPlan(
-                is_portioned=True,
-                portion_name=portioning_override.get('portion_name'),
-                portion_unit_id=portioning_override.get('portion_unit_id'),
-                portion_count=(int(pc) if pc is not None else None)
-            )
-        else:
-            try:
-                if getattr(recipe, 'is_portioned', False):
-                    portioning = PortioningPlan(
-                        is_portioned=True,
-                        portion_name=getattr(recipe, 'portion_name', None),
-                        portion_unit_id=None,
-                        portion_count=getattr(recipe, 'portion_count', None)
-                    )
-            except Exception:
-                portioning = PortioningPlan(is_portioned=False, portion_name=None, portion_unit_id=None, portion_count=None)
+        try:
+            if getattr(recipe, 'is_portioned', False):
+                portioning = PortioningPlan(
+                    is_portioned=True,
+                    portion_name=getattr(recipe, 'portion_name', None),
+                    portion_unit_id=None,
+                    portion_count=getattr(recipe, 'portion_count', None)
+                )
+        except Exception:
+            portioning = PortioningPlan(is_portioned=False, portion_name=None, portion_unit_id=None, portion_count=None)
 
         # Ingredients plan (scale recipe_ingredients)
         ingredients_plan = []

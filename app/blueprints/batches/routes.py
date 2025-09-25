@@ -279,24 +279,6 @@ def api_start_batch():
         notes = data.get('notes', '')
         containers_data = data.get('containers', []) or []
 
-        # Portioning override captured consistently in the snapshot
-        portioning_override = None
-        if data.get('is_portioned') in {True, 'true', 'True', 1, '1'}:
-            try:
-                portioning_override = {
-                    'is_portioned': True,
-                    'portion_name': data.get('portion_name'),
-                    'portion_unit_id': data.get('portion_unit_id'),
-                    'portion_count': int(data.get('portion_count')) if data.get('portion_count') not in (None, '') else None
-                }
-            except Exception:
-                portioning_override = {
-                    'is_portioned': True,
-                    'portion_name': data.get('portion_name'),
-                    'portion_unit_id': data.get('portion_unit_id'),
-                    'portion_count': None
-                }
-
         recipe = Recipe.query.get(recipe_id)
         if not recipe:
             return jsonify({'success': False, 'message': 'Recipe not found.'}), 404
@@ -306,8 +288,7 @@ def api_start_batch():
             scale=scale,
             batch_type=batch_type,
             notes=notes,
-            containers=containers_data,
-            portioning_override=portioning_override
+            containers=containers_data
         )
         plan_dict = snapshot_obj.__dict__.copy()
         batch, errors = BatchOperationsService.start_batch(plan_dict)
