@@ -211,19 +211,97 @@ class BatchOperationsService(BaseService):
             portioning = plan_snapshot.get('portioning') or {}
             containers_data = plan_snapshot.get('containers') or []
 
-            # Create via existing start_batch but freeze values from snapshot
-            return cls.start_batch(
+            # Create batch trusting snapshot
+            recipe = Recipe.query.get(recipe_id)
+            if not recipe:
+                return None, ["Recipe not found"]
+
+            label_code = generate_batch_label_code(recipe)
+
+            portion_snap = None
+            if portioning and isinstance(portioning, dict) and portioning.get('is_portioned'):
+                portion_snap = {
+                    'is_portioned': True,
+                    'portion_name': portioning.get('portion_name'),
+                    'portion_count': portioning.get('portion_count')
+                }
+
+            batch = Batch(
                 recipe_id=recipe_id,
-                scale=scale,
+                label_code=label_code,
                 batch_type=batch_type,
-                notes=notes,
-                containers_data=containers_data,
-                requires_containers=bool(containers_data),
-                portioning_data=portioning,
                 projected_yield=projected_yield,
-                projected_yield_unit=projected_yield_unit
+                projected_yield_unit=projected_yield_unit,
+                scale=scale,
+                status='in_progress',
+                notes=notes,
+                portioning_data=portion_snap,
+                is_portioned=bool(portion_snap.get('is_portioned')) if portion_snap else False,
+                portion_name=portion_snap.get('portion_name') if portion_snap else None,
+                projected_portions=int(portion_snap.get('portion_count')) if portion_snap and portion_snap.get('portion_count') is not None else None,
+                plan_snapshot=plan_snapshot,
+                created_by=current_user.id,
+                organization_id=current_user.organization_id,
+                started_at=TimezoneUtils.utc_now()
             )
+
+            db.session.add(batch)
+
+            # Containers
+            container_errors = []
+            if containers_data:
+                container_errors = cls._process_batch_containers(batch, containers_data, defer_commit=True)
+
+            # Ingredients from plan (no recompute)
+            ingredient_errors = []
+            for line in (plan_snapshot.get('ingredients_plan') or []):
+                try:
+                    inv_id = int(line.get('inventory_item_id'))
+                    qty = float(line.get('quantity') or 0)
+                    unit = str(line.get('unit') or '')
+                    if inv_id and qty > 0 and unit:
+                        bi = BatchIngredient(
+                            batch_id=batch.id,
+                            inventory_item_id=inv_id,
+                            quantity_used=qty,
+                            unit=unit,
+                            cost_per_unit=0.0,
+                            organization_id=current_user.organization_id
+                        )
+                        db.session.add(bi)
+                except Exception as e:
+                    ingredient_errors.append(str(e))
+
+            # Consumables from plan
+            consumable_errors = []
+            for line in (plan_snapshot.get('consumables_plan') or []):
+                try:
+                    inv_id = int(line.get('inventory_item_id'))
+                    qty = float(line.get('quantity') or 0)
+                    unit = str(line.get('unit') or '')
+                    if inv_id and qty > 0 and unit:
+                        from app.models.batch import BatchConsumable
+                        bc = BatchConsumable(
+                            batch_id=batch.id,
+                            inventory_item_id=inv_id,
+                            quantity_used=qty,
+                            unit=unit,
+                            cost_per_unit=0.0,
+                            organization_id=current_user.organization_id
+                        )
+                        db.session.add(bc)
+                except Exception as e:
+                    consumable_errors.append(str(e))
+
+            all_errors = container_errors + ingredient_errors + consumable_errors
+            if all_errors:
+                db.session.rollback()
+                return None, all_errors
+
+            db.session.commit()
+            return batch, []
         except Exception as e:
+            db.session.rollback()
             logger.error(f"Error starting batch with plan snapshot: {str(e)}")
             return None, [str(e)]
 

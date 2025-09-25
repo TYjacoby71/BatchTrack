@@ -8,6 +8,7 @@ from ...services.batch_service import BatchService, BatchOperationsService, Batc
 from ...services.inventory_adjustment import process_inventory_adjustment
 from ...utils.unit_utils import get_global_unit_list
 from ...models import Product
+from ...services.production_planning.service import PlanProductionService
 
 from . import batches_bp
 from .start_batch import start_batch_bp
@@ -307,17 +308,26 @@ def api_start_batch():
         if plan_snapshot:
             batch, errors = BatchOperationsService.start_batch_with_plan(plan_snapshot)
         else:
-            batch, errors = BatchOperationsService.start_batch(
-                recipe_id=recipe_id,
+            # Build unified snapshot server-side to freeze config
+            recipe = Recipe.query.get(recipe_id)
+            if not recipe:
+                return jsonify({'success': False, 'message': 'Recipe not found.'}), 404
+            snapshot_obj = PlanProductionService.build_plan(
+                recipe=recipe,
                 scale=scale,
                 batch_type=batch_type,
                 notes=notes,
-                containers_data=containers_data,
-                requires_containers=requires_containers,
-                portioning_data=portioning_data,
-                projected_yield=data.get('projected_yield'),
-                projected_yield_unit=data.get('projected_yield_unit')
+                containers=containers_data
             )
+            plan_dict = snapshot_obj.__dict__.copy()
+            if portioning_data and isinstance(portioning_data, dict):
+                plan_dict['portioning'] = {
+                    'is_portioned': bool(portioning_data.get('is_portioned')),
+                    'portion_name': portioning_data.get('portion_name'),
+                    'portion_unit_id': portioning_data.get('portion_unit_id'),
+                    'portion_count': portioning_data.get('portion_count')
+                }
+            batch, errors = BatchOperationsService.start_batch_with_plan(plan_dict)
 
         if not batch:
             return jsonify({'success': False, 'message': '; '.join(errors) if isinstance(errors, list) else str(errors)}), 400
