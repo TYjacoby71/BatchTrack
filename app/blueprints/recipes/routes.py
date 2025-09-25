@@ -51,7 +51,11 @@ def new_recipe():
                 allowed_containers=[int(id) for id in request.form.getlist('allowed_containers[]') if id] or [],
                 label_prefix=request.form.get('label_prefix'),
                 category_id=int(request.form.get('category_id')) if request.form.get('category_id') else None,
-                portioning_data=portioning_payload
+                portioning_data=portioning_payload,
+                # Absolute columns mirror JSON for clarity
+                is_portioned=(portioning_payload.get('is_portioned') if portioning_payload else False),
+                portion_name=(portioning_payload.get('portion_name') if portioning_payload else None),
+                portion_count=(portioning_payload.get('portion_count') if portioning_payload else None)
             )
 
             if success:
@@ -198,7 +202,10 @@ def edit_recipe(recipe_id):
                 allowed_containers=[int(id) for id in request.form.getlist('allowed_containers[]') if id] or [],
                 label_prefix=request.form.get('label_prefix'),
                 category_id=int(request.form.get('category_id')) if request.form.get('category_id') else None,
-                portioning_data=portioning_payload
+                portioning_data=portioning_payload,
+                is_portioned=(portioning_payload.get('is_portioned') if portioning_payload else False),
+                portion_name=(portioning_payload.get('portion_name') if portioning_payload else None),
+                portion_count=(portioning_payload.get('portion_count') if portioning_payload else None)
             )
 
             if success:

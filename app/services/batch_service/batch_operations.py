@@ -91,6 +91,10 @@ class BatchOperationsService(BaseService):
                 status='in_progress',
                 notes=notes,
                 portioning_data=portion_snap,
+                # Populate additive columns for clarity and reporting
+                is_portioned=(portion_snap.get('is_portioned') if isinstance(portion_snap, dict) else False) if portion_snap else False,
+                portion_name=(portion_snap.get('portion_name') if isinstance(portion_snap, dict) else None) if portion_snap else None,
+                projected_portions=(int(portion_snap.get('portion_count')) if isinstance(portion_snap, dict) and portion_snap.get('portion_count') is not None else None) if portion_snap else None,
                 created_by=current_user.id,
                 organization_id=current_user.organization_id,
                 started_at=TimezoneUtils.utc_now()
@@ -546,6 +550,15 @@ class BatchOperationsService(BaseService):
             if success:
                 try:
                     refreshed = Batch.query.get(batch_id)
+                    # Mirror final_portions into batch for reporting if provided
+                    try:
+                        if refreshed and form_data.get('final_portions'):
+                            val = int(form_data.get('final_portions'))
+                            if val > 0:
+                                refreshed.final_portions = val
+                                db.session.commit()
+                    except Exception:
+                        pass
                     # Compute containment efficiency if BatchStats exists
                     from app.models.statistics import BatchStats as _BatchStats
                     stats = _BatchStats.query.filter_by(batch_id=batch_id).first()
