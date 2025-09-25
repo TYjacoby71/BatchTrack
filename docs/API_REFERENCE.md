@@ -1,3 +1,37 @@
+## POST /batches/api/start-batch
+
+Start a new batch from a client-provided PlanSnapshot.
+
+Request JSON:
+```
+{
+  "plan_snapshot": {
+    "recipe_id": 12,
+    "scale": 1.0,
+    "batch_type": "product",
+    "projected_yield": 10.0,
+    "projected_yield_unit": "oz",
+    "portioning": {
+      "is_portioned": true,
+      "portion_name": "bars",
+      "portion_unit_id": 120,
+      "portion_count": 20
+    },
+    "containers": [{ "id": 11, "quantity": 4 }],
+    "ingredients_plan": [{ "inventory_item_id": 42, "quantity": 2.0, "unit": "count" }],
+    "consumables_plan": [{ "inventory_item_id": 77, "quantity": 1.0, "unit": "count" }]
+  }
+}
+```
+
+Response JSON:
+```
+{ "success": true, "message": "Batch started successfully", "batch_id": 34 }
+```
+
+Errors:
+- 400 if `plan_snapshot` is missing/invalid or deductions fail
+
 # API Reference
 
 ## Production Planning
