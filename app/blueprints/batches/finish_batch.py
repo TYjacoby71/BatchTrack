@@ -214,6 +214,7 @@ def _create_intermediate_ingredient(batch, final_quantity, output_unit, expirati
             inventory_item.shelf_life_days = batch.shelf_life_days
 
         # Process inventory adjustment through CANONICAL entry point
+        logger.info(f"🔧 INTERMEDIATE INGREDIENT: Adding {final_quantity} {output_unit} to inventory item {inventory_item.id}")
         success = process_inventory_adjustment(
             item_id=inventory_item.id,
             quantity=final_quantity,

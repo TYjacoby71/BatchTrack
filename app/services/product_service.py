@@ -361,21 +361,16 @@ class ProductService:
 
         db.session.commit()
 
-        # Find the base product ID (first SKU for this product)
-        base_sku = db.session.query(func.min(ProductSKU.id)).filter_by(
-            product_name=sku.product.name,
-            organization_id=current_user.organization_id
-        ).scalar()
-
+        # Use the product ID directly instead of finding base SKU
         return {
             'success': True,
             'product': {
-                'id': base_sku,
+                'id': sku.product.id,  # Use product ID, not SKU ID
                 'name': sku.product.name,
-                'product_base_unit': sku.unit
+                'product_base_unit': sku.unit  # Get unit from SKU since product no longer has base_unit
             },
             'variant': {
-                'id': sku.id,
+                'id': sku.variant.id,  # Use variant ID
                 'name': sku.variant.name
             }
         }
