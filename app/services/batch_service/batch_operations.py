@@ -109,23 +109,19 @@ class BatchOperationsService(BaseService):
             except Exception:
                 pass
 
-            # Lock costing method for this batch at start based on organization setting,
-            # but enforce average for product batches per new policy
+            # Lock costing method for this batch at start based on organization setting
             try:
                 if hasattr(batch, 'cost_method'):
-                    if str(snap_batch_type).lower() == 'product':
-                        method = 'average'
-                    else:
-                        org = getattr(current_user, 'organization', None)
-                        method = (getattr(org, 'inventory_cost_method', None) or 'fifo') if org else 'fifo'
-                        method = method if method in ('fifo', 'average') else 'fifo'
+                    org = getattr(current_user, 'organization', None)
+                    method = (getattr(org, 'inventory_cost_method', None) or 'fifo') if org else 'fifo'
+                    method = method if method in ('fifo', 'average') else 'fifo'
                     batch.cost_method = method
                     if hasattr(batch, 'cost_method_locked_at'):
                         batch.cost_method_locked_at = TimezoneUtils.utc_now()
             except Exception:
                 try:
                     if hasattr(batch, 'cost_method'):
-                        batch.cost_method = 'average' if str(snap_batch_type).lower() == 'product' else 'fifo'
+                        batch.cost_method = 'fifo'
                 except Exception:
                     pass
 
