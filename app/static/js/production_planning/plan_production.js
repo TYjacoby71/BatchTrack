@@ -39,6 +39,7 @@ class PlanProductionApp {
 
         // Initial UI sync
         this._updateProjectedYield();
+        this._updateProjectedPortions();
         this.updateValidation();
 
         // Hide containers if recipe is portioned
@@ -61,6 +62,7 @@ class PlanProductionApp {
             scaleInput.addEventListener('input', () => {
                 this.scale = this._readScale();
                 this._updateProjectedYield();
+                this._updateProjectedPortions();
                 if (this.requiresContainers) {
                     this.containerManager.onContainerRequirementChange();
                 }
@@ -120,6 +122,16 @@ class PlanProductionApp {
         if (el) {
             const projected = (this.baseYield || 0) * (this.scale || 1);
             el.textContent = `${projected} ${this.unit}`;
+        }
+    }
+
+    _updateProjectedPortions() {
+        const el = document.getElementById('projectedPortions');
+        if (el && this.recipe.portioning_data && this.recipe.portioning_data.portion_count) {
+            const basePortions = parseInt(this.recipe.portioning_data.portion_count) || 0;
+            const scaledPortions = Math.round(basePortions * (this.scale || 1));
+            const portionName = this.recipe.portioning_data.portion_name || 'units';
+            el.textContent = `${scaledPortions} ${portionName}`;
         }
     }
 
