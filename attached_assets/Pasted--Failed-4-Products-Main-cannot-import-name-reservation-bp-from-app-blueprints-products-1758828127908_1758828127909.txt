@@ -1,0 +1,103 @@
+
+❌ Failed: 4
+   - Products Main: cannot import name 'reservation_bp' from 'app.blueprints.products.reservation_routes' (/home/runner/workspace/app/blueprints/products/reservation_routes.py)
+   - SKU Management: cannot import name 'reservation_bp' from 'app.blueprints.products.reservation_routes' (/home/runner/workspace/app/blueprints/products/reservation_routes.py)
+   - Product Variants: cannot import name 'reservation_bp' from 'app.blueprints.products.reservation_routes' (/home/runner/workspace/app/blueprints/products/reservation_routes.py)
+   - Product Alerts: cannot import name 'reservation_bp' from 'app.blueprints.products.reservation_routes' (/home/runner/workspace/app/blueprints/products/reservation_routes.py)
+
+⚠️  App will continue running with available blueprints
+ * Serving Flask app 'app'
+ * Debug mode: on
+/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask_limiter/extension.py:333: UserWarning: Using the in-memory storage for tracking rate limits as no storage was explicitly specified. This is not recommended for production use. See: https://flask-limiter.readthedocs.io#configuring-a-storage-backend for documentation about configuring the storage backend.
+  warnings.warn(
+
+=== Blueprint Registration Summary ===
+✅ Successful: 27
+   - Authentication
+   - Admin
+   - Developer
+   - Inventory
+   - Recipes
+   - Batches
+   - Organization
+   - Billing
+   - Settings
+   - Timers
+   - Expiration
+   - Conversion
+   - Product Inventory
+   - Reservations
+   - Public API
+   - Main API
+   - Drawer Actions
+   - Density Reference
+   - Retention Drawer API
+   - App Routes
+   - Legal Routes
+   - Bulk Stock
+   - Fault Log
+   - Tag Manager
+   - Global Library Public
+   - Waitlist
+   - Production Planning
+
+❌ Failed: 4
+   - Products Main: cannot import name 'reservation_bp' from 'app.blueprints.products.reservation_routes' (/home/runner/workspace/app/blueprints/products/reservation_routes.py)
+   - SKU Management: cannot import name 'reservation_bp' from 'app.blueprints.products.reservation_routes' (/home/runner/workspace/app/blueprints/products/reservation_routes.py)
+   - Product Variants: cannot import name 'reservation_bp' from 'app.blueprints.products.reservation_routes' (/home/runner/workspace/app/blueprints/products/reservation_routes.py)
+   - Product Alerts: cannot import name 'reservation_bp' from 'app.blueprints.products.reservation_routes' (/home/runner/workspace/app/blueprints/products/reservation_routes.py)
+
+⚠️  App will continue running with available blueprints
+2025-09-25 19:21:46,356 WARNING:  * Debugger is active!
+2025-09-25 19:21:46,802 INFO: Expiration alerts debug: expired_fifo=3, expired_products=0, expiring_fifo=3, expiring_products=0
+2025-09-25 19:21:46,802 INFO: Current time: 2025-09-25 19:21:46.791996, cutoff: 2025-10-02 19:21:46.791996
+2025-09-25 19:21:46,880 [INFO] app.utils.unit_utils: Getting global unit list
+2025-09-25 19:21:46,880 INFO: Getting global unit list
+Traceback (most recent call last):
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py", line 1536, in __call__
+    return self.wsgi_app(environ, start_response)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py", line 1514, in wsgi_app
+    response = self.handle_exception(e)
+               ^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py", line 1511, in wsgi_app
+    response = self.full_dispatch_request()
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py", line 919, in full_dispatch_request
+    rv = self.handle_user_exception(e)
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py", line 917, in full_dispatch_request
+    rv = self.dispatch_request()
+         ^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py", line 902, in dispatch_request
+    return self.ensure_sync(self.view_functions[rule.endpoint])(**view_args)  # type: ignore[no-any-return]
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask_login/utils.py", line 290, in decorated_view
+    return current_app.ensure_sync(func)(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/app/routes/app_routes.py", line 125, in dashboard
+    return render_template("dashboard.html",
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/templating.py", line 150, in render_template
+    return _render(app, template, context)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/templating.py", line 131, in _render
+    rv = template.render(context)
+         ^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/jinja2/environment.py", line 1295, in render
+    self.environment.handle_exception()
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/jinja2/environment.py", line 942, in handle_exception
+    raise rewrite_traceback_stack(source=source)
+  File "/home/runner/workspace/app/templates/dashboard.html", line 1, in top-level template code
+    {% extends 'layout.html' %}
+  File "/home/runner/workspace/app/templates/layout.html", line 246, in top-level template code
+    <li><a class="dropdown-item" href="{{ url_for('products.list_products') }}">Products</a></li>
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py", line 1121, in url_for
+    return self.handle_url_build_error(error, endpoint, values)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py", line 1110, in url_for
+    rv = url_adapter.build(  # type: ignore[union-attr]
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/werkzeug/routing/map.py", line 924, in build
+    raise BuildError(endpoint, values, method, self)
+werkzeug.routing.exceptions.BuildError: Could not build url for endpoint 'products.list_products'. Did you mean 'recipes.list_recipes' instead?

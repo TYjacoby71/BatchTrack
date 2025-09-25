@@ -1,3 +1,21 @@
+## PlanSnapshot as Single Source of Truth
+
+- PlanSnapshot (DTO) is created during Production Planning and includes:
+  - recipe_id, scale, batch_type
+  - projected_yield, projected_yield_unit
+  - portioning: is_portioned, portion_name, portion_unit_id, portion_count
+  - ingredients_plan and consumables_plan (recipe × scale, frozen)
+  - containers (user selections, frozen)
+
+- Start Batch consumes only PlanSnapshot:
+  - `BatchOperationsService.start_batch(plan_snapshot)`
+  - Persists `batch.plan_snapshot` verbatim and frozen batch fields
+  - Performs deductions via ConversionEngine + Inventory Adjustment
+
+- UI Reads:
+  - Planned (read-only) from `batch.plan_snapshot`
+  - Actual from `batch.*` rows (ingredients, consumables, containers, extras)
+
 # BatchTrack Architecture Guide
 
 ## System Overview

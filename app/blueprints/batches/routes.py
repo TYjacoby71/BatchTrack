@@ -8,6 +8,7 @@ from ...services.batch_service import BatchService, BatchOperationsService, Batc
 from ...services.inventory_adjustment import process_inventory_adjustment
 from ...utils.unit_utils import get_global_unit_list
 from ...models import Product
+from ...services.production_planning.service import PlanProductionService
 
 from . import batches_bp
 from .start_batch import start_batch_bp
@@ -266,36 +267,36 @@ def get_available_ingredients_for_batch(recipe_id):
 @batches_bp.route('/api/start-batch', methods=['POST'])
 @login_required
 def api_start_batch():
-    """API endpoint to start a new batch from plan production page"""
+    """Start a new batch from a unified PlanSnapshot built server-side."""
     try:
-        data = request.get_json()
+        data = request.get_json() or {}
         recipe_id = data.get('recipe_id')
-        scale = float(data.get('scale', 1.0))
-        batch_type = data.get('batch_type', 'ingredient')
-        notes = data.get('notes', '')
-        requires_containers = bool(data.get('requires_containers', False))
-        containers_data = data.get('containers', [])
-
         if not recipe_id:
             return jsonify({'success': False, 'message': 'Recipe ID is required.'}), 400
 
-        batch, errors = BatchOperationsService.start_batch(
-            recipe_id=recipe_id,
+        scale = float(data.get('scale', 1.0))
+        batch_type = data.get('batch_type', 'ingredient')
+        notes = data.get('notes', '')
+        containers_data = data.get('containers', []) or []
+
+        recipe = Recipe.query.get(recipe_id)
+        if not recipe:
+            return jsonify({'success': False, 'message': 'Recipe not found.'}), 404
+
+        snapshot_obj = PlanProductionService.build_plan(
+            recipe=recipe,
             scale=scale,
             batch_type=batch_type,
             notes=notes,
-            containers_data=containers_data,
-            requires_containers=requires_containers
+            containers=containers_data
         )
+        plan_dict = snapshot_obj.to_dict()
+        batch, errors = BatchOperationsService.start_batch(plan_dict)
 
         if not batch:
             return jsonify({'success': False, 'message': '; '.join(errors) if isinstance(errors, list) else str(errors)}), 400
 
-        message = 'Batch started successfully'
-        if errors:
-            message = f"Batch started with warnings: {'; '.join(errors)}"
-
-        return jsonify({'success': True, 'message': message, 'batch_id': batch.id})
+        return jsonify({'success': True, 'message': 'Batch started successfully', 'batch_id': batch.id})
 
     except Exception as e:
         logger.error(f"Error starting batch via API: {str(e)}")

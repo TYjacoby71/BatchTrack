@@ -111,6 +111,14 @@ def _complete_batch_internal(batch_id, form_data):
         output_type = form_data.get('output_type')
         final_quantity = float(form_data.get('final_quantity', 0))
         output_unit = form_data.get('output_unit')
+        final_portions = None
+        try:
+            if batch.portioning_data and batch.portioning_data.get('is_portioned'):
+                final_portions = int(form_data.get('final_portions') or 0)
+                if final_portions <= 0:
+                    return False, 'Final portions must be provided for portioned batches'
+        except Exception:
+            return False, 'Invalid final portions value'
 
         # Perishable settings
         is_perishable = form_data.get('is_perishable') == 'on'
@@ -143,7 +151,7 @@ def _complete_batch_internal(batch_id, form_data):
             if not product_id or not variant_id:
                 return False, 'Product and variant selection required'
 
-            output_metrics = _create_product_output(batch, product_id, variant_id, final_quantity, output_unit, expiration_date, form_data)
+            output_metrics = _create_product_output(batch, product_id, variant_id, final_quantity, output_unit, expiration_date, form_data, final_portions=final_portions)
 
         # Persist fill efficiency to BatchStats if available (post output creation)
         try:
@@ -227,7 +235,7 @@ def _create_intermediate_ingredient(batch, final_quantity, output_unit, expirati
         raise
 
 
-def _create_product_output(batch, product_id, variant_id, final_quantity, output_unit, expiration_date, form_data):
+def _create_product_output(batch, product_id, variant_id, final_quantity, output_unit, expiration_date, form_data, final_portions: int | None = None):
     """Create product SKUs from batch completion using centralized inventory adjustment"""
     try:
         # Get product and variant with proper organization scoping
@@ -275,21 +283,88 @@ def _create_product_output(batch, product_id, variant_id, final_quantity, output
         # Calculate bulk quantity (remaining after containers)
         bulk_quantity = max(0, final_quantity - total_container_volume)
 
-        # Create bulk SKU if there's remaining quantity
-        if bulk_quantity > 0:
+        # Create bulk SKU if there's remaining quantity and not portioned
+        if bulk_quantity > 0 and not (batch.portioning_data and batch.portioning_data.get('is_portioned')):
             bulk_unit = output_unit
-            if bulk_unit != product.base_unit:
-                logger.warning(f"Bulk unit {bulk_unit} differs from product base unit {product.base_unit}")
+            # No product base unit; units are defined at SKU/Inventory level
 
             _create_bulk_sku(product, variant, bulk_quantity, bulk_unit, expiration_date, batch, ingredient_unit_cost)
 
-        logger.info(f"Created product output for batch {batch.label_code}: {len(container_skus)} container SKUs, {bulk_quantity} {bulk_unit if bulk_quantity > 0 else ''} bulk")
+        # For portioned batches, create portion-based SKU if final_portions provided
+        if batch.portioning_data and batch.portioning_data.get('is_portioned') and final_portions and final_portions > 0:
+            try:
+                size_label = _derive_size_label_from_portions(batch, final_quantity, output_unit, final_portions)
+                from ...services.product_service import ProductService
+                # Build naming context derived from batch snapshot
+                portion_name = (batch.portioning_data.get('portion_name') if batch.portioning_data else None) or 'Unit'
+                naming_context = {
+                    'yield_value': final_quantity,
+                    'yield_unit': output_unit,
+                    'portion_name': portion_name,
+                    'portion_count': final_portions,
+                }
+                product_sku = ProductService.get_or_create_sku(
+                    product_name=product.name,
+                    variant_name=variant.name,
+                    size_label=size_label,
+                    unit='count',
+                    naming_context=naming_context
+                )
+                # Ensure sku_name matches category template for portioned flows
+                try:
+                    from ...services.sku_name_builder import SKUNameBuilder
+                    from ...models.product_category import ProductCategory
+                    category = ProductCategory.query.get(product.category_id) if getattr(product, 'category_id', None) else None
+                    template = (category.sku_name_template if category and category.sku_name_template else None) or '{variant} {product} ({size_label})'
+                    base_context = {
+                        'product': product.name,
+                        'variant': variant.name,
+                        'container': None,
+                        'size_label': size_label,
+                    }
+                    base_context.update(naming_context)
+                    product_sku.sku_name = SKUNameBuilder.render(template, base_context)
+                except Exception:
+                    pass
+                # Credit inventory as number of portions
+                success = process_inventory_adjustment(
+                    item_id=product_sku.inventory_item_id,
+                    quantity=final_portions,
+                    change_type='finished_batch',
+                    unit='count',
+                    notes=f'Batch {batch.label_code} completed - {final_portions} portions',
+                    created_by=current_user.id,
+                    custom_expiration_date=expiration_date,
+                    cost_override=ingredient_unit_cost,
+                    item_type='product'
+                )
+                if not success:
+                    raise ValueError('Failed to credit portion inventory')
+            except Exception as e:
+                logger.error(f"Error creating portion-based SKU: {e}")
+
+        logger.info(f"Created product output for batch {batch.label_code}: {len(container_skus)} container SKUs, {bulk_quantity if not (batch.portioning_data and batch.portioning_data.get('is_portioned')) else 0} {bulk_unit if (bulk_quantity > 0 and not (batch.portioning_data and batch.portioning_data.get('is_portioned'))) else ''} bulk")
         return {'total_container_volume': total_container_volume}
 
     except Exception as e:
         logger.error(f"Error creating product output: {str(e)}")
         raise
 
+
+def _derive_size_label_from_portions(batch, final_bulk_quantity, bulk_unit, final_portions):
+    """Derive size label like '4 oz Bar' from bulk and portion count with simple division.
+
+    Uses the batch output unit directly; no implicit conversions here.
+    """
+    try:
+        if not final_portions or final_portions <= 0:
+            return 'Portion'
+        per_portion = round(float(final_bulk_quantity) / float(final_portions), 2)
+        portion_name = (batch.portioning_data.get('portion_name') if batch.portioning_data else None) or 'Unit'
+        unit = bulk_unit
+        return f"{per_portion} {unit} {portion_name}"
+    except Exception:
+        return 'Portion'
 
 def _process_container_allocations(batch, product, variant, form_data, expiration_date, ingredient_unit_cost):
     """Process container allocations and create SKUs"""
@@ -378,7 +453,7 @@ def _create_container_sku(product, variant, container_item, quantity, batch, exp
         logger.info(f"Creating container SKU with container: {container_item.name}, quantity: {quantity}")
 
         # Create size label format: "[capacity] [capacity_unit] [container_name]"
-        # Example: "4 floz Admin 4oz Glass Jars"
+        # Example: "8 fl oz Bottle"
         if container_item.capacity and container_item.capacity_unit:
             size_label = f"{container_item.capacity} {container_item.capacity_unit} {container_item.name}"
         else:
@@ -394,12 +469,36 @@ def _create_container_sku(product, variant, container_item, quantity, batch, exp
 
         # Use ProductService to get or create the SKU - this handles existing SKUs properly
         from ...services.product_service import ProductService
+        naming_context = {
+            'container': size_label,
+            'yield_value': batch.final_quantity,
+            'yield_unit': batch.output_unit,
+        }
+
         product_sku = ProductService.get_or_create_sku(
             product_name=product.name,
             variant_name=variant.name,
             size_label=size_label,
-            unit='count'  # Containers are always counted as individual units
+            unit='count',  # Containers are always counted as individual units
+            naming_context=naming_context
         )
+
+        # Ensure sku_name follows category template for container flows
+        try:
+            from ...services.sku_name_builder import SKUNameBuilder
+            from ...models.product_category import ProductCategory
+            category = ProductCategory.query.get(product.category_id) if getattr(product, 'category_id', None) else None
+            template = (category.sku_name_template if category and category.sku_name_template else None) or '{variant} {product} ({container})'
+            base_context = {
+                'product': product.name,
+                'variant': variant.name,
+                'container': size_label,
+                'size_label': None
+            }
+            base_context.update(naming_context)
+            product_sku.sku_name = SKUNameBuilder.render(template, base_context)
+        except Exception:
+            pass
 
         # Set perishable data at the inventory_item level from batch
         if product_sku.inventory_item and batch.is_perishable:

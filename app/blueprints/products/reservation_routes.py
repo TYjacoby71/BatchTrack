@@ -8,7 +8,8 @@ from ...services.pos_integration import POSIntegrationService
 from ...utils.permissions import has_permission
 # No separate audit needed - all history goes through UnifiedInventoryHistory via FIFO operations
 
-reservations_bp = Blueprint('reservations', __name__, url_prefix='/reservations')
+reservation_bp = Blueprint('reservation', __name__, url_prefix='/reservations')
+reservations_bp = reservation_bp  # Keep backward compatibility alias
 
 @reservations_bp.route('/')
 @login_required

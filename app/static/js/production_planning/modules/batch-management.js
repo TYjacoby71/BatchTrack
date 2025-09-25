@@ -16,13 +16,18 @@ export class BatchManager {
         if (!this.main.recipe) return;
 
         try {
+            const flatPortion = this.getFlatPortionFields();
             const payload = {
                 recipe_id: this.main.recipe.id,
                 scale: this.main.scale,
                 batch_type: this.main.batchType || 'ingredient',
                 notes: document.getElementById('batchNotes')?.value || '',
                 requires_containers: !!this.main.requiresContainers,
-                containers: this.getSelectedContainers()
+                containers: this.getSelectedContainers(),
+                // Absolute: send flat portion fields only
+                ...(flatPortion || {}),
+                projected_yield: (this.main.baseYield || 0) * (this.main.scale || 1),
+                projected_yield_unit: this.main.unit
             };
 
             const result = await this.main.apiCall('/batches/api/start-batch', payload);
@@ -65,6 +70,17 @@ export class BatchManager {
         const plan = this.main.containerManager?.containerPlan;
         if (!plan?.container_selection?.length) return [];
         return plan.container_selection.map(c => ({ id: c.container_id, quantity: c.containers_needed || c.quantity || 0 })).filter(c => c.quantity > 0);
+    }
+
+    getFlatPortionFields() {
+        const p = this.main?.recipe?.portioning_data;
+        if (!p || !p.is_portioned) return null;
+        // Absolute: do not scale; portions are derived at finish using final yield
+        return {
+            is_portioned: true,
+            portion_name: p.portion_name || '',
+            portion_count: (p.portion_count || null)
+        };
     }
 
     showSuccessMessage(message) {

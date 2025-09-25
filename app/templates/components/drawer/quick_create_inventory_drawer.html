@@ -124,32 +124,34 @@
         }
 
         // Category default density autofill and lock behavior
-        catSelect.addEventListener('change', function(){
-            const opt = catSelect.options[catSelect.selectedIndex];
-            const d = parseFloat(opt && opt.dataset && opt.dataset.density || '0');
-            if (catSelect.value !== '') {
-                if (d > 0) {
-                    densityInput.value = d.toFixed(3);
+        if (catSelect && densityInput) {
+            catSelect.addEventListener('change', function(){
+                const opt = catSelect.options[catSelect.selectedIndex];
+                const d = parseFloat(opt && opt.dataset && opt.dataset.density || '0');
+                if (catSelect.value !== '') {
+                    if (d > 0) {
+                        densityInput.value = d.toFixed(3);
+                    }
+                    densityInput.readOnly = true;
+                    densityInput.disabled = true;
+                } else {
+                    densityInput.readOnly = false;
+                    densityInput.disabled = false;
                 }
-                densityInput.readOnly = true;
-                densityInput.disabled = true;
-            } else {
-                densityInput.readOnly = false;
-                densityInput.disabled = false;
-            }
-        });
-        // Initialize lock state on open
-        (function(){
-            const opt = catSelect.options[catSelect.selectedIndex];
-            const d = parseFloat(opt && opt.dataset && opt.dataset.density || '0');
-            if (catSelect.value !== '') {
-                if (d > 0) {
-                    densityInput.value = d.toFixed(3);
+            });
+            // Initialize lock state on open
+            (function(){
+                const opt = catSelect.options[catSelect.selectedIndex];
+                const d = parseFloat(opt && opt.dataset && opt.dataset.density || '0');
+                if (catSelect.value !== '') {
+                    if (d > 0) {
+                        densityInput.value = d.toFixed(3);
+                    }
+                    densityInput.readOnly = true;
+                    densityInput.disabled = true;
                 }
-                densityInput.readOnly = true;
-                densityInput.disabled = true;
-            }
-        })();
+            })();
+        }
 
         // Global search: debounce typing and fetch suggestions
         let debounceTimer = null;
@@ -216,7 +218,7 @@
                         type: typeSelect ? typeSelect.value : 'ingredient',
                         unit: unitSelect ? unitSelect.value : 'count',
                         category_id: catSelect ? (catSelect.value || '') : '',
-                        density: densityInput ? (densityInput.value || '') : '',
+                        density: densityInput ? (densityInput.value || '') : ''
                     };
                     if (globalIdField && globalIdField.value) payload.global_item_id = globalIdField.value;
                     if (typeSelect && typeSelect.value === 'container') {

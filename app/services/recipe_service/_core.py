@@ -22,7 +22,10 @@ def create_recipe(name: str, description: str = "", instructions: str = "",
                  yield_amount: float = 0.0, yield_unit: str = "",
                  ingredients: List[Dict] = None, parent_id: int = None,
                  allowed_containers: List[int] = None, label_prefix: str = "",
-                 consumables: List[Dict] = None) -> Tuple[bool, Any]:
+                 consumables: List[Dict] = None, category_id: int | None = None,
+                 portioning_data: Dict | None = None,
+                 is_portioned: bool = None, portion_name: str = None,
+                 portion_count: int = None, portion_unit_id: int = None) -> Tuple[bool, Any]:
     """
     Create a new recipe with ingredients and UI fields.
 
@@ -80,12 +83,39 @@ def create_recipe(name: str, description: str = "", instructions: str = "",
             predicted_yield_unit=yield_unit,
             organization_id=current_user.organization_id,
             parent_id=parent_id,
-            label_prefix=final_label_prefix
+            label_prefix=final_label_prefix,
+            category_id=category_id
         )
 
         # Set allowed containers
         if allowed_containers:
             recipe.allowed_containers = allowed_containers
+
+        # Portioning data validation and assignment
+        if portioning_data and isinstance(portioning_data, dict):
+            try:
+                if portioning_data.get('is_portioned'):
+                    pc = int(portioning_data.get('portion_count') or 0)
+                    if pc <= 0:
+                        return False, 'For portioned recipes, portion count must be provided.'
+                    recipe.portioning_data = portioning_data
+                    # Also set discrete columns
+                    recipe.is_portioned = True
+                    recipe.portion_name = portioning_data.get('portion_name')
+                    recipe.portion_count = pc
+                    recipe.portion_unit_id = portioning_data.get('portion_unit_id')
+            except Exception:
+                pass
+
+        # Handle discrete portioning parameters (if passed separately)
+        if is_portioned is not None:
+            recipe.is_portioned = is_portioned
+        if portion_name is not None:
+            recipe.portion_name = portion_name
+        if portion_count is not None:
+            recipe.portion_count = portion_count
+        if portion_unit_id is not None:
+            recipe.portion_unit_id = portion_unit_id
 
         db.session.add(recipe)
         db.session.flush()  # Get recipe ID
@@ -138,7 +168,10 @@ def update_recipe(recipe_id: int, name: str = None, description: str = None,
                  instructions: str = None, yield_amount: float = None,
                  yield_unit: str = None, ingredients: List[Dict] = None,
                  allowed_containers: List[int] = None, label_prefix: str = None,
-                 consumables: List[Dict] = None) -> Tuple[bool, Any]:
+                 consumables: List[Dict] = None, category_id: int | None = None,
+                 portioning_data: Dict | None = None,
+                 is_portioned: bool = None, portion_name: str = None,
+                 portion_count: int = None, portion_unit_id: int = None) -> Tuple[bool, Any]:
     """
     Update an existing recipe.
 
@@ -184,6 +217,41 @@ def update_recipe(recipe_id: int, name: str = None, description: str = None,
             recipe.label_prefix = label_prefix
         if allowed_containers is not None:
             recipe.allowed_containers = allowed_containers
+        if category_id is not None:
+            recipe.category_id = category_id
+
+        # Apply portioning data updates (both JSON and discrete columns)
+        if portioning_data is not None:
+            # Clear if toggle OFF
+            if not portioning_data or not portioning_data.get('is_portioned'):
+                recipe.portioning_data = None
+                recipe.is_portioned = False
+                recipe.portion_name = None
+                recipe.portion_count = None
+                recipe.portion_unit_id = None
+            else:
+                try:
+                    pc = int(portioning_data.get('portion_count') or 0)
+                    if pc <= 0:
+                        return False, 'For portioned recipes, portion count must be provided.'
+                    recipe.portioning_data = portioning_data
+                    # Also update discrete columns
+                    recipe.is_portioned = True
+                    recipe.portion_name = portioning_data.get('portion_name')
+                    recipe.portion_count = pc
+                    recipe.portion_unit_id = portioning_data.get('portion_unit_id')
+                except Exception:
+                    return False, 'Invalid portioning data.'
+
+        # Handle discrete portioning parameters (if passed separately)
+        if is_portioned is not None:
+            recipe.is_portioned = is_portioned
+        if portion_name is not None:
+            recipe.portion_name = portion_name
+        if portion_count is not None:
+            recipe.portion_count = portion_count
+        if portion_unit_id is not None:
+            recipe.portion_unit_id = portion_unit_id
 
         # Update ingredients if provided
         if ingredients is not None:

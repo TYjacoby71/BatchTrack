@@ -233,32 +233,31 @@ reservation = create_reservation(
 
 ## Service Integration Patterns
 
-### 1. Batch Production Flow
+### 1. Batch Production Flow (PlanSnapshot → Start → Finish)
 ```python
-# 1. Check availability
-availability = check_recipe_availability(recipe_id, scale_factor)
+# 1) Plan (server-side)
+from app.services.production_planning.service import PlanProductionService
 
-# 2. Reserve ingredients (optional)
-reservations = create_ingredient_reservations(recipe_id, batch_id)
-
-# 3. Start batch and deduct ingredients
-for ingredient in recipe.ingredients:
-    deduct_inventory_fifo(
-        inventory_id=ingredient.inventory_id,
-        amount=ingredient.amount * scale_factor,
-        unit_id=ingredient.unit_id,
-        reason="batch",
-        batch_id=batch.id
-    )
-
-# 4. Finish batch and add products
-adjust_inventory(
-    inventory_id=product.inventory_id,
-    amount=batch.actual_yield,
-    unit_id=product.unit_id,
-    reason="finished_batch",
-    batch_id=batch.id
+plan = PlanProductionService.build_plan(
+    recipe=recipe,          # frozen from DB
+    scale=2.0,              # user-selected
+    batch_type='product',   # user-selected
+    notes='',               # optional, not persisted at start
+    containers=[{'id': 11, 'quantity': 4}]
 )
+
+# 2) Start (API)
+# Client submits the exact plan as a DTO
+resp = POST /batches/api/start-batch { 'plan_snapshot': plan }
+
+# 3) Start (service)
+# - Persists batch.projected_yield/unit, portioning, plan_snapshot
+# - Creates BatchIngredient/BatchConsumable via Conversion + Inventory Adjustment
+# - Creates BatchContainer via Inventory Adjustment
+
+# 4) Finish
+# - Record final_quantity/unit, final_portions (if portioned)
+# - Create product/ingredient outputs
 ```
 
 ### 2. Inventory Management Flow

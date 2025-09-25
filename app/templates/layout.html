@@ -112,7 +112,7 @@
                         </a>
                     </li>
                     <li><a class="dropdown-item" href="{{ url_for('timers.list_timers') }}">Timers</a></li>
-                    <li><a class="dropdown-item" href="{{ url_for('reservations.list_reservations') }}">Reservations</a></li>
+                    <li><a class="dropdown-item" href="{{ url_for('reservation.list_reservations') }}">Reservations</a></li>
                     <li><a class="dropdown-item" href="{{ url_for('bulk_stock.bulk_stock_check') }}">Bulk Stock Check</a></li>
 
                     <li><hr class="dropdown-divider"></li>
@@ -159,6 +159,9 @@
                     <li><a class="dropdown-item" href="{{ url_for('developer.global_items_admin') }}">
                         <i class="fas fa-boxes"></i> Global Items
                     </a></li>
+                    <li><a class="dropdown-item" href="{{ url_for('developer.product_categories') }}">
+                        <i class="fas fa-tags"></i> Product Categories
+                    </a></li>
                     <li><a class="dropdown-item" href="{{ url_for('developer.inventory_analytics_stub') }}">
                         <i class="fas fa-chart-line"></i> Inventory Analytics
                     </a></li>
@@ -167,6 +170,11 @@
                     </a></li>
                     <li><a class="dropdown-item" href="{{ url_for('developer.marketing_admin') }}">
                         <i class="fas fa-bullhorn"></i> Marketing Admin
+                    </a></li>
+                    <li><hr class="dropdown-divider"></li>
+                    <li><h6 class="dropdown-header">Data Reference</h6></li>
+                    <li><a class="dropdown-item" href="{{ url_for('developer.reference_categories') }}">
+                        <i class="fas fa-book"></i> Ingredient Reference Categories
                     </a></li>
 
                     <li><hr class="dropdown-divider"></li>
@@ -252,7 +260,7 @@
                     <li><a class="dropdown-item" href="{{ url_for('timers.list_timers') }}">Timers</a></li>
                     {% endif %}
                     {% if has_role('developer') or has_role('organization_owner') or has_permission(current_user, 'organization.manage') %}
-                    <li><a class="dropdown-item" href="{{ url_for('reservations.list_reservations') }}">Reservations</a></li>
+                    <li><a class="dropdown-item" href="{{ url_for('reservation.list_reservations') }}">Reservations</a></li>
                     {% endif %}
                     {% if current_user.is_authenticated and has_permission(current_user, 'products.view') %}
                     <li><a class="dropdown-item" href="{{ url_for('bulk_stock.bulk_stock_check') }}">Bulk Stock Check</a></li>
@@ -331,6 +339,7 @@
     <script src="{{ url_for('static', filename='js/inventory/inventory_adjust.js') }}"></script>
     <script src="{{ url_for('static', filename='js/conversion/unit_converter.js') }}"></script>
     <script type="module" src="{{ url_for('static', filename='js/drawers/retention_drawer.js') }}"></script>
+    <script type="module" src="{{ url_for('static', filename='js/drawers/global_link_drawer.js') }}"></script>
 {% block scripts %}{% endblock %}
     <script src="{{ url_for('static', filename='js/expiration_alerts.js') }}"></script>
     </body>

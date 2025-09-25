@@ -24,6 +24,14 @@
                     <div class="form-control bg-light border-0 d-flex align-items-center fw-normal" style="height: 38px;" id="projectedYield">{{ recipe.predicted_yield or 0 }} {{ recipe.predicted_yield_unit or 'units' }}</div>
                 </div>
             </div>
+            {% if recipe.portioning_data and recipe.portioning_data.get('is_portioned') %}
+            <div class="col-md-3">
+                <div class="form-group">
+                    <label class="form-label fw-semibold">Portions</label>
+                    <div class="form-control bg-light border-0 d-flex align-items-center fw-normal" style="height: 38px;" id="projectedPortions">{{ recipe.portioning_data.get('portion_count') or 0 }} {{ recipe.portioning_data.get('portion_name') or 'units' }}</div>
+                </div>
+            </div>
+            {% endif %}
             <div class="col-md-3">
                 <div class="form-group">
                     <label class="form-label fw-semibold">Batch Type <span class="text-danger">*</span></label>
@@ -52,8 +60,17 @@
                             </label>
                         </div>
                     </div>
+                    <div class="alert alert-info mt-2 d-none" id="portioningContainerNotice">
+                        <i class="fas fa-info-circle me-1"></i>
+                        This recipe is portioned. Containers can be added after the batch is started.
+                        If packaging is needed, it will be added after the batch is finished.
+                    </div>
                 </div>
             </div>
         </div>
     </div>
 </div>
+<style>
+@keyframes subtle-bounce { 0%, 100% { transform: translateY(0); } 30% { transform: translateY(-4px); } 60% { transform: translateY(2px); } }
+.bounce { animation: subtle-bounce 450ms ease-out; }
+</style>

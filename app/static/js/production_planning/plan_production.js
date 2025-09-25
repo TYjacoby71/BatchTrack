@@ -6,7 +6,15 @@ import { BatchManager } from './modules/batch-management.js';
 class PlanProductionApp {
     constructor() {
         const data = window.recipeData || {};
-        this.recipe = { id: data.id, name: data.name, yield_amount: data.yield_amount, yield_unit: data.yield_unit };
+        this.recipe = {
+            id: data.id,
+            name: data.name,
+            yield_amount: data.yield_amount,
+            yield_unit: data.yield_unit,
+            // Ensure portioning data is available to BatchManager
+            portioning_data: data.portioning || null,
+            is_portioned: (data.is_portioned === true || data.is_portioned === 'true')
+        };
         this.baseYield = Number(data.yield_amount || 0);
         this.unit = data.yield_unit || 'units';
         this.scale = this._readScale();
@@ -31,7 +39,21 @@ class PlanProductionApp {
 
         // Initial UI sync
         this._updateProjectedYield();
+        this._updateProjectedPortions();
         this.updateValidation();
+
+        // Hide containers if recipe is portioned
+        const initData = window.recipeData || {};
+        if (initData.is_portioned === true || initData.is_portioned === 'true') {
+            const requiresContainersCheckbox = document.getElementById('requiresContainers');
+            if (requiresContainersCheckbox) {
+                requiresContainersCheckbox.checked = false;
+            }
+            const card = document.getElementById('containerManagementCard');
+            if (card) {
+                card.style.display = 'none';
+            }
+        }
     }
 
     _bindCoreEvents() {
@@ -40,6 +62,7 @@ class PlanProductionApp {
             scaleInput.addEventListener('input', () => {
                 this.scale = this._readScale();
                 this._updateProjectedYield();
+                this._updateProjectedPortions();
                 if (this.requiresContainers) {
                     this.containerManager.onContainerRequirementChange();
                 }
@@ -59,6 +82,21 @@ class PlanProductionApp {
         const requiresContainersCheckbox = document.getElementById('requiresContainers');
         if (requiresContainersCheckbox) {
             requiresContainersCheckbox.addEventListener('change', () => {
+                const portioned = (window.recipeData?.is_portioned === true || window.recipeData?.is_portioned === 'true');
+                if (portioned && requiresContainersCheckbox.checked) {
+                    // Show info card with bounce instead of enabling containers
+                    const notice = document.getElementById('portioningContainerNotice');
+                    if (notice) {
+                        notice.classList.remove('d-none');
+                        // retrigger bounce
+                        notice.classList.remove('bounce');
+                        void notice.offsetWidth;
+                        notice.classList.add('bounce');
+                    }
+                    requiresContainersCheckbox.checked = false;
+                    return;
+                }
+
                 this.requiresContainers = !!requiresContainersCheckbox.checked;
                 const card = document.getElementById('containerManagementCard');
                 if (card) {
@@ -84,6 +122,16 @@ class PlanProductionApp {
         if (el) {
             const projected = (this.baseYield || 0) * (this.scale || 1);
             el.textContent = `${projected} ${this.unit}`;
+        }
+    }
+
+    _updateProjectedPortions() {
+        const el = document.getElementById('projectedPortions');
+        if (el && this.recipe.portioning_data && this.recipe.portioning_data.portion_count) {
+            const basePortions = parseInt(this.recipe.portioning_data.portion_count) || 0;
+            const scaledPortions = Math.round(basePortions * (this.scale || 1));
+            const portionName = this.recipe.portioning_data.portion_name || 'units';
+            el.textContent = `${scaledPortions} ${portionName}`;
         }
     }
 

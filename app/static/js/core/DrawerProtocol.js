@@ -90,7 +90,14 @@ class DrawerProtocol {
 
         // Open the modal
         console.log('🔧 DRAWER PROTOCOL: Attempting to open modal with URL:', modal_url, 'success_event:', success_event);
-        return this.openModal(modal_url, success_event);
+        const ok = await this.openModal(modal_url, success_event);
+        if (ok) {
+            try {
+                // Analytics hook: emit drawer open event for observability
+                window.dispatchEvent(new CustomEvent('drawer.analytics', { detail: { action: 'open', error_type, error_code, correlation_id } }));
+            } catch (_) {}
+        }
+        return ok;
     }
 
     /**

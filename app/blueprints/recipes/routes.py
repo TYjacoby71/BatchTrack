@@ -13,6 +13,7 @@ from app.services.recipe_service import (
 from app.utils.unit_utils import get_global_unit_list
 from app.services.inventory_adjustment import create_inventory_item
 from app.models.unit import Unit
+from app.models.product_category import ProductCategory
 import logging
 from sqlalchemy import func
 
@@ -26,6 +27,48 @@ def new_recipe():
             # Extract form data and delegate to service
             ingredients = _extract_ingredients_from_form(request.form)
 
+            # Portioning inputs from form (optional) - absolute minimal fields
+            portioning_payload = None
+            try:
+                is_portioned = request.form.get('is_portioned', '') == 'true'
+                if is_portioned:
+                    portion_name = (request.form.get('portion_name') or '').strip() or None
+                    # Ensure portion_name is a valid Unit (count type). Use name as the key.
+                    unit_id = None
+                    if portion_name:
+                        try:
+                            existing = Unit.query.filter(Unit.name == portion_name).order_by((Unit.organization_id == current_user.organization_id).desc()).first()
+                        except Exception:
+                            existing = None
+                        if not existing:
+                            try:
+                                u = Unit(
+                                    name=portion_name,
+                                    unit_type='count',
+                                    base_unit='count',
+                                    conversion_factor=1.0,
+                                    is_active=True,
+                                    is_custom=True,
+                                    is_mapped=False,
+                                    organization_id=current_user.organization_id,
+                                    created_by=current_user.id
+                                )
+                                db.session.add(u)
+                                db.session.flush()
+                                unit_id = u.id
+                            except Exception:
+                                db.session.rollback()
+                        else:
+                            unit_id = existing.id
+                    portioning_payload = {
+                        'is_portioned': True,
+                        'portion_count': int(request.form.get('portion_count') or 0),
+                        'portion_name': portion_name,
+                        'portion_unit_id': unit_id
+                    }
+            except Exception:
+                portioning_payload = None
+
             success, result = create_recipe(
                 name=request.form.get('name'),
                 description=request.form.get('instructions'),
@@ -35,7 +78,13 @@ def new_recipe():
                 ingredients=ingredients,
                 consumables=_extract_consumables_from_form(request.form),
                 allowed_containers=[int(id) for id in request.form.getlist('allowed_containers[]') if id] or [],
-                label_prefix=request.form.get('label_prefix')
+                label_prefix=request.form.get('label_prefix'),
+                category_id=int(request.form.get('category_id')) if request.form.get('category_id') else None,
+                portioning_data=portioning_payload,
+                # Absolute columns mirror JSON for clarity
+                is_portioned=(portioning_payload.get('is_portioned') if portioning_payload else False),
+                portion_name=(portioning_payload.get('portion_name') if portioning_payload else None),
+                portion_count=(portioning_payload.get('portion_count') if portioning_payload else None)
             )
 
             if success:
@@ -158,6 +207,46 @@ def edit_recipe(recipe_id):
         try:
             ingredients = _extract_ingredients_from_form(request.form)
 
+            portioning_payload = None
+            try:
+                is_portioned = request.form.get('is_portioned', '') == 'true'
+                if is_portioned:
+                    portion_name = (request.form.get('portion_name') or '').strip() or None
+                    unit_id = None
+                    if portion_name:
+                        try:
+                            existing = Unit.query.filter(Unit.name == portion_name).order_by((Unit.organization_id == current_user.organization_id).desc()).first()
+                        except Exception:
+                            existing = None
+                        if not existing:
+                            try:
+                                u = Unit(
+                                    name=portion_name,
+                                    unit_type='count',
+                                    base_unit='count',
+                                    conversion_factor=1.0,
+                                    is_active=True,
+                                    is_custom=True,
+                                    is_mapped=False,
+                                    organization_id=current_user.organization_id,
+                                    created_by=current_user.id
+                                )
+                                db.session.add(u)
+                                db.session.flush()
+                                unit_id = u.id
+                            except Exception:
+                                db.session.rollback()
+                        else:
+                            unit_id = existing.id
+                    portioning_payload = {
+                        'is_portioned': True,
+                        'portion_count': int(request.form.get('portion_count') or 0),
+                        'portion_name': portion_name,
+                        'portion_unit_id': unit_id
+                    }
+            except Exception:
+                portioning_payload = None
+
             success, result = update_recipe(
                 recipe_id=recipe_id,
                 name=request.form.get('name'),
@@ -168,7 +257,12 @@ def edit_recipe(recipe_id):
                 ingredients=ingredients,
                 consumables=_extract_consumables_from_form(request.form),
                 allowed_containers=[int(id) for id in request.form.getlist('allowed_containers[]') if id] or [],
-                label_prefix=request.form.get('label_prefix')
+                label_prefix=request.form.get('label_prefix'),
+                category_id=int(request.form.get('category_id')) if request.form.get('category_id') else None,
+                portioning_data=portioning_payload,
+                is_portioned=(portioning_payload.get('is_portioned') if portioning_payload else False),
+                portion_name=(portioning_payload.get('portion_name') if portioning_payload else None),
+                portion_count=(portioning_payload.get('portion_count') if portioning_payload else None)
             )
 
             if success:
@@ -280,17 +374,55 @@ def unlock_recipe(recipe_id):
     return redirect(url_for('recipes.view_recipe', recipe_id=recipe_id))
 
 @recipes_bp.route('/units/quick-add', methods=['POST'])
+@login_required
 def quick_add_unit():
-    # Simple database operation
-    data = request.get_json()
-    name = data.get('name')
-    type = data.get('type', 'volume')
-
+    """Create an org-scoped custom unit (e.g., portion count name)."""
     try:
-        unit = Unit(name=name, type=type)
+        data = request.get_json() or {}
+        name = (data.get('name') or '').strip()
+        unit_type = (data.get('type') or data.get('unit_type') or 'count').strip()
+
+        if not name:
+            return jsonify({'error': 'Unit name is required'}), 400
+
+        # Enforce count type for portion names
+        if unit_type != 'count':
+            unit_type = 'count'
+
+        # Check existing within org or standard
+        existing = Unit.query.filter(
+            func.lower(Unit.name) == func.lower(db.literal(name)),
+            ((Unit.is_custom == False) | (Unit.organization_id == current_user.organization_id))
+        ).first()
+        if existing:
+            return jsonify({
+                'id': existing.id,
+                'name': existing.name,
+                'unit_type': existing.unit_type,
+                'symbol': existing.symbol,
+                'is_custom': existing.is_custom
+            })
+
+        unit = Unit(
+            name=name,
+            unit_type=unit_type,
+            base_unit='count',
+            conversion_factor=1.0,
+            is_active=True,
+            is_custom=True,
+            is_mapped=False,
+            organization_id=current_user.organization_id,
+            created_by=current_user.id
+        )
         db.session.add(unit)
         db.session.commit()
-        return jsonify({'name': unit.name, 'type': unit.type})
+        return jsonify({
+            'id': unit.id,
+            'name': unit.name,
+            'unit_type': unit.unit_type,
+            'symbol': unit.symbol,
+            'is_custom': True
+        })
     except Exception as e:
         db.session.rollback()
         return jsonify({'error': str(e)}), 400
@@ -493,10 +625,14 @@ def _get_recipe_form_data():
     units = Unit.query.filter_by(is_active=True).order_by(Unit.unit_type, Unit.name).all()
     inventory_units = get_global_unit_list()
 
+    # Categories for dropdown
+    categories = ProductCategory.query.order_by(ProductCategory.name.asc()).all()
+
     return {
         'all_ingredients': all_ingredients,
         'units': units,
-        'inventory_units': inventory_units
+        'inventory_units': inventory_units,
+        'product_categories': categories
     }
 
 def _format_stock_results(ingredients):

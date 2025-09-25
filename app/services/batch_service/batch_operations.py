@@ -20,20 +20,50 @@ class BatchOperationsService(BaseService):
     """Service for batch lifecycle operations: start, finish, cancel"""
 
     @classmethod
-    def start_batch(cls, recipe_id, scale=1.0, batch_type='ingredient', notes='', containers_data=None, requires_containers=False, portioning_data=None):
-        """Start a new batch with inventory deductions atomically. Rolls back on any failure."""
+
+    def start_batch(cls, plan_snapshot: dict):
+        """Start a new batch from an immutable plan snapshot. Rolls back on any failure."""
+
         try:
-            recipe = Recipe.query.get(recipe_id)
+            # Trust the plan snapshot exclusively
+            snap_recipe_id = int(plan_snapshot.get('recipe_id'))
+            snap_scale = float(plan_snapshot.get('scale', 1.0))
+            snap_batch_type = plan_snapshot.get('batch_type', 'ingredient')
+            snap_notes = plan_snapshot.get('notes', '')
+            snap_projected_yield = float(plan_snapshot.get('projected_yield') or 0.0)
+            snap_projected_yield_unit = plan_snapshot.get('projected_yield_unit') or ''
+            snap_portioning = plan_snapshot.get('portioning') or {}
+            containers_data = plan_snapshot.get('containers') or []
+
+            recipe = Recipe.query.get(snap_recipe_id)
             if not recipe:
                 return None, "Recipe not found"
 
-            scale = float(scale)
             containers_data = containers_data or []
 
             # Generate batch label via centralized generator
             label_code = generate_batch_label_code(recipe)
 
-            projected_yield = scale * recipe.predicted_yield
+            # Prefer plan-provided projected snapshot; otherwise derive from recipe at start time
+            projected_yield = (
+                float(snap_projected_yield)
+                if snap_projected_yield is not None
+                else float(snap_scale) * float(recipe.predicted_yield or 0.0)
+            )
+            projected_yield_unit = (
+                snap_projected_yield_unit or recipe.predicted_yield_unit
+            )
+
+            # Build portion snapshot from plan only
+            portion_snap = None
+            if snap_portioning and isinstance(snap_portioning, dict) and snap_portioning.get('is_portioned'):
+                portion_snap = {
+                    'is_portioned': True,
+                    'portion_name': snap_portioning.get('portion_name'),
+                    'portion_count': snap_portioning.get('portion_count')
+                }
+
+            print(f"🔍 BATCH_SERVICE DEBUG: Starting batch from snapshot for recipe {recipe.name}")
 
             # Snapshot: accept the compiled portioning payload from Plan Production only (no computation here)
             # Strict schema validation for portioning snapshot (mirror origin/main)
@@ -53,21 +83,49 @@ class BatchOperationsService(BaseService):
                 portion_snap = dict(portioning_data)
 
             # Create the batch
+            print(f"🔍 BATCH_SERVICE DEBUG: Creating batch with portioning_data: {portion_snap}")
+
+            # Convert plan_snapshot to JSON-serializable format using the DTO's to_dict method
+            # The plan_snapshot should be a PlanSnapshot DTO object, not a dict
+            serializable_plan_snapshot = None
+            if plan_snapshot:
+                if hasattr(plan_snapshot, 'to_dict'):
+                    # It's a PlanSnapshot DTO object - use its to_dict method
+                    serializable_plan_snapshot = plan_snapshot.to_dict()
+                elif isinstance(plan_snapshot, dict):
+                    # It's already a dict - use as is (backwards compatibility)
+                    serializable_plan_snapshot = plan_snapshot
+                else:
+                    # Fallback - try to convert dataclass to dict
+                    from dataclasses import asdict
+                    try:
+                        serializable_plan_snapshot = asdict(plan_snapshot)
+                    except Exception:
+                        serializable_plan_snapshot = plan_snapshot
+
             batch = Batch(
-                recipe_id=recipe_id,
-                label_code=label_code,
-                batch_type=batch_type,
+                recipe_id=snap_recipe_id,
+                label_code=generate_batch_label_code(recipe),
+                batch_type=snap_batch_type,
                 projected_yield=projected_yield,
-                projected_yield_unit=recipe.predicted_yield_unit,
-                scale=scale,
+                projected_yield_unit=projected_yield_unit,
+                scale=snap_scale,
                 status='in_progress',
-                notes=notes,
+                notes=snap_notes,
+                portioning_data=portion_snap,
+                is_portioned=bool(portion_snap.get('is_portioned')) if portion_snap else False,
+                portion_name=portion_snap.get('portion_name') if portion_snap else None,
+                projected_portions=int(portion_snap.get('portion_count')) if portion_snap and portion_snap.get('portion_count') is not None else None,
+                plan_snapshot=serializable_plan_snapshot,
                 created_by=current_user.id,
                 organization_id=current_user.organization_id,
                 started_at=TimezoneUtils.utc_now()
             )
 
             db.session.add(batch)
+            print(f"🔍 BATCH_SERVICE DEBUG: Batch object created with label: {label_code}")
+            print(f"🔍 BATCH_SERVICE DEBUG: Batch.portioning_data after creation: {batch.portioning_data}")
+
 
             # Attach portioning snapshot if the model supports it
             try:
@@ -97,15 +155,13 @@ class BatchOperationsService(BaseService):
                     pass
 
             # Handle containers if required
-            container_errors = []
-            if requires_containers:
-                container_errors = cls._process_batch_containers(batch, containers_data, defer_commit=True)
+            container_errors = cls._process_batch_containers(batch, containers_data, defer_commit=True)
 
             # Process ingredient deductions
-            ingredient_errors = cls._process_batch_ingredients(batch, recipe, scale, defer_commit=True)
+            ingredient_errors = cls._process_batch_ingredients(batch, recipe, snap_scale, defer_commit=True)
 
             # Process consumable deductions
-            consumable_errors = cls._process_batch_consumables(batch, recipe, scale, defer_commit=True)
+            consumable_errors = cls._process_batch_consumables(batch, recipe, snap_scale, defer_commit=True)
 
             # Combine all errors
             all_errors = container_errors + ingredient_errors + consumable_errors
@@ -118,17 +174,31 @@ class BatchOperationsService(BaseService):
                 # All deductions validated; commit once atomically
                 db.session.commit()
 
+                # 🔍 FINAL SUCCESS DEBUG
+                print(f"🔍 BATCH_SERVICE DEBUG: ✅ BATCH CREATED SUCCESSFULLY!")
+                print(f"🔍 BATCH_SERVICE DEBUG: Final batch ID: {batch.id}")
+                print(f"🔍 BATCH_SERVICE DEBUG: Final batch label: {batch.label_code}")
+                print(f"🔍 BATCH_SERVICE DEBUG: Final batch.portioning_data: {batch.portioning_data}")
+
+                # Verify batch was persisted with portioning data
+                fresh_batch = Batch.query.get(batch.id)
+                if fresh_batch:
+                    print(f"🔍 BATCH_SERVICE DEBUG: Verified - Fresh batch.portioning_data from DB: {fresh_batch.portioning_data}")
+                else:
+                    print(f"🔍 BATCH_SERVICE DEBUG: ERROR - Could not fetch fresh batch from DB!")
+
                 # Emit domain event for batch start (best-effort)
                 try:
                     EventEmitter.emit(
                         event_name='batch_started',
                         properties={
-                            'recipe_id': recipe_id,
-                            'scale': scale,
-                            'batch_type': batch_type,
+                            'recipe_id': snap_recipe_id,
+                            'scale': snap_scale,
+                            'batch_type': snap_batch_type,
                             'projected_yield': projected_yield,
-                            'projected_yield_unit': recipe.predicted_yield_unit,
-                            'label_code': label_code
+                            'projected_yield_unit': projected_yield_unit,
+                            'label_code': batch.label_code,
+                            'portioning_data': batch.portioning_data  # Include in event
                         },
                         organization_id=batch.organization_id,
                         user_id=batch.created_by,
@@ -144,6 +214,8 @@ class BatchOperationsService(BaseService):
             db.session.rollback()
             logger.error(f"Error starting batch: {str(e)}")
             return None, [str(e)]
+
+
 
     @classmethod
     def _process_batch_containers(cls, batch, containers_data, defer_commit=False):
@@ -512,6 +584,15 @@ class BatchOperationsService(BaseService):
             if success:
                 try:
                     refreshed = Batch.query.get(batch_id)
+                    # Mirror final_portions into batch for reporting if provided
+                    try:
+                        if refreshed and form_data.get('final_portions'):
+                            val = int(form_data.get('final_portions'))
+                            if val > 0:
+                                refreshed.final_portions = val
+                                db.session.commit()
+                    except Exception:
+                        pass
                     # Compute containment efficiency if BatchStats exists
                     from app.models.statistics import BatchStats as _BatchStats
                     stats = _BatchStats.query.filter_by(batch_id=batch_id).first()
