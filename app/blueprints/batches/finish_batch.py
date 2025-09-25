@@ -140,11 +140,15 @@ def _complete_batch_internal(batch_id, form_data):
         batch.shelf_life_days = shelf_life_days
         batch.expiration_date = expiration_date
 
-        if output_type == 'ingredient':
+        # Route based on batch_type (primary) and output_type (secondary)
+        # batch_type determines the intended output, output_type is user selection
+        if batch.batch_type == 'ingredient' or output_type == 'ingredient':
             # Handle intermediate ingredient creation
+            logger.info(f"🔧 BATCH COMPLETION: Creating intermediate ingredient for batch_type='{batch.batch_type}', output_type='{output_type}'")
             _create_intermediate_ingredient(batch, final_quantity, output_unit, expiration_date)
         else:
-            # Handle product creation
+            # Handle product creation (batch_type='product' or default)
+            logger.info(f"🔧 BATCH COMPLETION: Creating product output for batch_type='{batch.batch_type}', output_type='{output_type}'")
             product_id = form_data.get('product_id')
             variant_id = form_data.get('variant_id')
 
