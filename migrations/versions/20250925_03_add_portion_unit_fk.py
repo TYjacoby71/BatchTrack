@@ -1,8 +1,8 @@
 """
 Add portion_unit_id FK to recipe and batch
 
-Revision ID: 20250925_02
-Revises: 20250925_01
+Revision ID: 20250925_03
+Revises: 20250925_02
 Create Date: 2025-09-25
 """
 
@@ -10,8 +10,8 @@ from alembic import op
 import sqlalchemy as sa
 
 
-revision = '20250925_02'
-down_revision = '20250925_01'
+revision = '20250925_03'
+down_revision = '20250925_02'
 branch_labels = None
 depends_on = None
 

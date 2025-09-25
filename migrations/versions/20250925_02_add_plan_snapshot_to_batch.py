@@ -2,7 +2,7 @@
 Add plan_snapshot JSON to batch
 
 Revision ID: 20250925_02
-Revises: 20250925_01_add_portion_columns_to_recipe_and_batch
+Revises: 20250925_01
 Create Date: 2025-09-25
 """
 
@@ -11,7 +11,7 @@ import sqlalchemy as sa
 
 
 revision = '20250925_02'
-down_revision = '20250925_01_add_portion_columns_to_recipe_and_batch'
+down_revision = '20250925_01'
 branch_labels = None
 depends_on = None
 

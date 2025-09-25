@@ -2,7 +2,7 @@
 Add portion columns to recipe and batch: is_portioned, portion_name, counts
 
 Revision ID: 20250925_01
-Revises: 20250923_03_add_portioning_data_to_recipe_and_batch
+Revises: 20250924_01
 Create Date: 2025-09-25
 """
 
@@ -12,7 +12,7 @@ import sqlalchemy as sa
 
 # revision identifiers, used by Alembic.
 revision = '20250925_01'
-down_revision = '20250923_03_add_portioning_data_to_recipe_and_batch'
+down_revision = '20250924_01'
 branch_labels = None
 depends_on = None
 
