@@ -168,10 +168,7 @@ class BatchOperationsService(BaseService):
             logger.error(f"Error starting batch: {str(e)}")
             return None, [str(e)]
 
-    @classmethod
-    def start_batch_with_plan(cls, plan_snapshot: dict):
-        """Deprecated wrapper for compatibility - use start_batch(plan_snapshot)."""
-        return cls.start_batch(plan_snapshot)
+    
 
     @classmethod
     def _process_batch_containers(cls, batch, containers_data, defer_commit=False):
