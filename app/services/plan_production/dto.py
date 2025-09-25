@@ -7,6 +7,8 @@ class PortioningPlan:
     is_portioned: bool
     portion_name: Optional[str] = None
     portion_count: Optional[int] = None
+    portion_unit_id: Optional[int] = None
+    portion_unit_name: Optional[str] = None
 
 
 @dataclass(frozen=True)
@@ -24,4 +26,6 @@ class StartBatchRequest:
     requires_containers: bool
     containers: List[ContainerSelection]
     portioning: Optional[PortioningPlan]
+    projected_yield: Optional[float] = None
+    projected_yield_unit: Optional[str] = None
 

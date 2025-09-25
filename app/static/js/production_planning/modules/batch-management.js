@@ -25,7 +25,9 @@ export class BatchManager {
                 requires_containers: !!this.main.requiresContainers,
                 containers: this.getSelectedContainers(),
                 // Absolute: send flat portion fields only
-                ...(flatPortion || {})
+                ...(flatPortion || {}),
+                projected_yield: (this.main.baseYield || 0) * (this.main.scale || 1),
+                projected_yield_unit: this.main.unit
             };
 
             const result = await this.main.apiCall('/batches/api/start-batch', payload);

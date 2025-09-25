@@ -34,6 +34,7 @@ def new_recipe():
                 if is_portioned:
                     portion_name = (request.form.get('portion_name') or '').strip() or None
                     # Ensure portion_name is a valid Unit (count type). Use name as the key.
+                    unit_id = None
                     if portion_name:
                         try:
                             existing = Unit.query.filter(Unit.name == portion_name).order_by((Unit.organization_id == current_user.organization_id).desc()).first()
@@ -54,12 +55,16 @@ def new_recipe():
                                 )
                                 db.session.add(u)
                                 db.session.flush()
+                                unit_id = u.id
                             except Exception:
                                 db.session.rollback()
+                        else:
+                            unit_id = existing.id
                     portioning_payload = {
                         'is_portioned': True,
                         'portion_count': int(request.form.get('portion_count') or 0),
-                        'portion_name': portion_name
+                        'portion_name': portion_name,
+                        'portion_unit_id': unit_id
                     }
             except Exception:
                 portioning_payload = None
@@ -207,6 +212,7 @@ def edit_recipe(recipe_id):
                 is_portioned = request.form.get('is_portioned', '') == 'true'
                 if is_portioned:
                     portion_name = (request.form.get('portion_name') or '').strip() or None
+                    unit_id = None
                     if portion_name:
                         try:
                             existing = Unit.query.filter(Unit.name == portion_name).order_by((Unit.organization_id == current_user.organization_id).desc()).first()
@@ -227,12 +233,16 @@ def edit_recipe(recipe_id):
                                 )
                                 db.session.add(u)
                                 db.session.flush()
+                                unit_id = u.id
                             except Exception:
                                 db.session.rollback()
+                        else:
+                            unit_id = existing.id
                     portioning_payload = {
                         'is_portioned': True,
                         'portion_count': int(request.form.get('portion_count') or 0),
-                        'portion_name': portion_name
+                        'portion_name': portion_name,
+                        'portion_unit_id': unit_id
                     }
             except Exception:
                 portioning_payload = None
