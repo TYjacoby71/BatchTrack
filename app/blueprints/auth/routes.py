@@ -214,6 +214,12 @@ def oauth_callback():
         flash('OAuth authentication failed. Please try again.', 'error')
         return redirect(url_for('auth.login'))
 
+@auth_bp.route('/callback')
+@limiter.limit("30/minute")
+def oauth_callback_compat():
+    """Compatibility alias for tests expecting /auth/callback."""
+    return oauth_callback()
+
 @auth_bp.route('/verify-email/<token>')
 def verify_email(token):
     """Verify email address"""

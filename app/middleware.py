@@ -122,6 +122,15 @@ def register_middleware(app):
                 # SIMPLE BILLING LOGIC:
                 # If billing bypass is NOT enabled, require active billing status
                 if not tier.is_billing_exempt:
+                    # Direct status enforcement as a guardrail
+                    billing_status = getattr(organization, 'billing_status', 'active') or 'active'
+                    if billing_status in ['payment_failed', 'past_due', 'suspended', 'canceled', 'cancelled']:
+                        if billing_status in ['payment_failed', 'past_due']:
+                            return redirect(url_for('billing.upgrade'))
+                        elif billing_status in ['suspended', 'canceled', 'cancelled']:
+                            flash('Your organization does not have an active subscription. Please update billing.', 'error')
+                            return redirect(url_for('billing.upgrade'))
+
                     # Check tier access using unified billing service
                     access_valid, access_reason = BillingService.validate_tier_access(organization)
                     if not access_valid:

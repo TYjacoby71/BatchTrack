@@ -62,6 +62,13 @@ def db_session(app):
 
 
 @pytest.fixture
+def app_context(app):
+    """Provide an application context for tests that need it."""
+    with app.app_context():
+        yield
+
+
+@pytest.fixture
 def auth_headers():
     """Headers for authenticated requests."""
     return {'Content-Type': 'application/json'}

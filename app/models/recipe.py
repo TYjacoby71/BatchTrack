@@ -16,7 +16,7 @@ class Recipe(ScopedModelMixin, db.Model):
     predicted_yield = db.Column(db.Float, default=0.0)
     predicted_yield_unit = db.Column(db.String(50), default="oz")
     allowed_containers = db.Column(db.PickleType, default=list)
-    category_id = db.Column(db.Integer, db.ForeignKey('product_category.id'), nullable=False)
+    category_id = db.Column(db.Integer, db.ForeignKey('product_category.id'), nullable=True)
     product_category = db.relationship('ProductCategory')
     created_by = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True)
     # Timestamps for retention calculations
