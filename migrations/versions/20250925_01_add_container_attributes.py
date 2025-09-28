@@ -22,18 +22,21 @@ def upgrade():
         batch_op.add_column(sa.Column('container_material', sa.String(length=64), nullable=True))
         batch_op.add_column(sa.Column('container_type', sa.String(length=64), nullable=True))
         batch_op.add_column(sa.Column('container_style', sa.String(length=64), nullable=True))
+        batch_op.add_column(sa.Column('container_color', sa.String(length=64), nullable=True))
 
     # global_item: add container_material and container_type
     with op.batch_alter_table('global_item') as batch_op:
         batch_op.add_column(sa.Column('container_material', sa.String(length=64), nullable=True))
         batch_op.add_column(sa.Column('container_type', sa.String(length=64), nullable=True))
         batch_op.add_column(sa.Column('container_style', sa.String(length=64), nullable=True))
+        batch_op.add_column(sa.Column('container_color', sa.String(length=64), nullable=True))
 
 
 def downgrade():
     # global_item: drop container_material and container_type
     try:
         with op.batch_alter_table('global_item') as batch_op:
+            batch_op.drop_column('container_color')
             batch_op.drop_column('container_style')
             batch_op.drop_column('container_type')
             batch_op.drop_column('container_material')
@@ -43,6 +46,7 @@ def downgrade():
     # inventory_item: drop container_material and container_type
     try:
         with op.batch_alter_table('inventory_item') as batch_op:
+            batch_op.drop_column('container_color')
             batch_op.drop_column('container_style')
             batch_op.drop_column('container_type')
             batch_op.drop_column('container_material')

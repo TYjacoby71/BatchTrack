@@ -58,6 +58,7 @@ def api_get_inventory_item(item_id):
             'container_material': getattr(item, 'container_material', None),
             'container_type': getattr(item, 'container_type', None),
             'container_style': getattr(item, 'container_style', None),
+            'container_color': getattr(item, 'container_color', None),
             'notes': ''
         })
     except Exception as e:

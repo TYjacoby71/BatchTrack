@@ -28,8 +28,9 @@
         {% if item.type == 'container' %}
         <div class="row mt-2">
             <div class="col-md-4"><strong>Capacity:</strong> {{ item.capacity or 'N/A' }} {{ item.capacity_unit or '' }}</div>
-            <div class="col-md-4"><strong>Material:</strong> {{ item.container_material or 'N/A' }}</div>
-            <div class="col-md-4"><strong>Type/Style:</strong> {{ (item.container_type or 'N/A') }}{% if item.container_style %} ({{ item.container_style }}){% endif %}</div>
+            <div class="col-md-3"><strong>Material:</strong> {{ item.container_material or 'N/A' }}</div>
+            <div class="col-md-3"><strong>Type/Style:</strong> {{ (item.container_type or 'N/A') }}{% if item.container_style %} ({{ item.container_style }}){% endif %}</div>
+            <div class="col-md-3"><strong>Color:</strong> {{ item.container_color or 'N/A' }}</div>
         </div>
         {% endif %}
         <div class="row">

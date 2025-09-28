@@ -38,6 +38,7 @@ class InventoryItem(ScopedModelMixin, db.Model):
     container_material = db.Column(db.String(64), nullable=True)
     container_type = db.Column(db.String(64), nullable=True)
     container_style = db.Column(db.String(64), nullable=True)
+    container_color = db.Column(db.String(64), nullable=True)
     created_by = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True)
     created_at = db.Column(db.DateTime, default=TimezoneUtils.utc_now)
 

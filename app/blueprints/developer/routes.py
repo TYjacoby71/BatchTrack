@@ -676,6 +676,7 @@ def global_item_edit(item_id):
         item.container_material = (request.form.get('container_material') or '').strip() or None
         item.container_type = (request.form.get('container_type') or '').strip() or None
         item.container_style = (request.form.get('container_style') or '').strip() or None
+        item.container_color = (request.form.get('container_color') or '').strip() or None
     except Exception:
         pass
     item.default_is_perishable = True if request.form.get('default_is_perishable') == 'on' else False
@@ -1001,6 +1002,7 @@ def create_global_item():
                 new_item.container_material = (request.form.get('container_material') or '').strip() or None
                 new_item.container_type = (request.form.get('container_type') or '').strip() or None
                 new_item.container_style = (request.form.get('container_style') or '').strip() or None
+                new_item.container_color = (request.form.get('container_color') or '').strip() or None
             except Exception:
                 pass
             new_item.default_is_perishable = request.form.get('default_is_perishable') == 'on'

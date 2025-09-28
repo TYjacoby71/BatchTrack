@@ -75,6 +75,10 @@
             <label for="container_style">Style (optional):</label>
             <input type="text" name="container_style" value="{{ item.container_style or '' }}" class="form-control" placeholder="Boston Round, Straight Sided, Drinking">
           </div>
+          <div class="mb-3">
+            <label for="container_color">Color (optional):</label>
+            <input type="text" name="container_color" value="{{ item.container_color or '' }}" class="form-control" placeholder="Amber, Clear, White">
+          </div>
           {% else %}
           <div class="mb-3">
             <label for="unit">Unit:</label>

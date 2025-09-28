@@ -111,6 +111,8 @@ def update_inventory_item(item_id: int, form_data: dict) -> tuple[bool, str]:
                 item.container_type = (form_data.get('container_type') or '').strip() or None
             if 'container_style' in form_data:
                 item.container_style = (form_data.get('container_style') or '').strip() or None
+            if 'container_color' in form_data:
+                item.container_color = (form_data.get('container_color') or '').strip() or None
 
         # Update basic item details (excluding quantity)
         if 'name' in form_data and not is_global_locked:

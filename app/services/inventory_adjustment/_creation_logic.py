@@ -140,9 +140,11 @@ def create_inventory_item(form_data, organization_id, created_by):
                 mat = (form_data.get('container_material') or '').strip()
                 ctype = (form_data.get('container_type') or '').strip()
                 style = (form_data.get('container_style') or '').strip()
+                color = (form_data.get('container_color') or '').strip()
                 new_item.container_material = mat or None
                 new_item.container_type = ctype or None
                 new_item.container_style = style or None
+                new_item.container_color = color or None
             except Exception:
                 pass
 
@@ -165,6 +167,8 @@ def create_inventory_item(form_data, organization_id, created_by):
                         new_item.container_type = global_item.container_type
                     if getattr(global_item, 'container_style', None):
                         new_item.container_style = global_item.container_style
+                    if getattr(global_item, 'container_color', None):
+                        new_item.container_color = global_item.container_color
             except Exception:
                 pass
 

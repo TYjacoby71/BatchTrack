@@ -62,6 +62,10 @@
                                     <label class="form-label">Style</label>
                                     <input type="text" class="form-control" id="qcInvStyle" placeholder="Boston Round / Straight Sided">
                                 </div>
+                                <div class="col-4">
+                                    <label class="form-label">Color</label>
+                                    <input type="text" class="form-control" id="qcInvColor" placeholder="Amber / Clear / White">
+                                </div>
                             </div>
                             <div class="form-text">Containers are counted in "count". Capacity helps planning.</div>
                         </div>
@@ -119,6 +123,7 @@
         const matInput = document.getElementById('qcInvMaterial');
         const typeNameInput = document.getElementById('qcInvTypeName');
         const styleInput = document.getElementById('qcInvStyle');
+        const colorInput = document.getElementById('qcInvColor');
         const submitBtn = document.getElementById('qcInvSubmit');
         const globalHint = document.getElementById('qcGlobalHint');
 
@@ -244,6 +249,7 @@
                         if (matInput && matInput.value) payload.container_material = matInput.value;
                         if (typeNameInput && typeNameInput.value) payload.container_type = typeNameInput.value;
                         if (styleInput && styleInput.value) payload.container_style = styleInput.value;
+                        if (colorInput && colorInput.value) payload.container_color = colorInput.value;
                     }
 
                 const res = await fetch('/inventory/api/quick-create', {
