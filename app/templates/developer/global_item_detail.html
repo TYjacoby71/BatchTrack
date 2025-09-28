@@ -39,6 +39,18 @@
         <input type="text" name="capacity_unit" class="form-control" value="{{ item.capacity_unit or '' }}">
       </div>
       <div class="col-md-3">
+        <label class="form-label">Container Material</label>
+        <input type="text" name="container_material" class="form-control" value="{{ item.container_material or '' }}">
+      </div>
+      <div class="col-md-3">
+        <label class="form-label">Container Type</label>
+        <input type="text" name="container_type" class="form-control" value="{{ item.container_type or '' }}">
+      </div>
+      <div class="col-md-3">
+        <label class="form-label">Container Style (optional)</label>
+        <input type="text" name="container_style" class="form-control" value="{{ item.container_style or '' }}">
+      </div>
+      <div class="col-md-3">
         <label class="form-label">Recommended Shelf Life (days)</label>
         <input type="number" name="recommended_shelf_life_days" class="form-control" value="{{ item.recommended_shelf_life_days or '' }}">
       </div>

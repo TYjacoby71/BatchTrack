@@ -53,6 +53,11 @@ def api_get_inventory_item(item_id):
             'density': item.density,
             'is_perishable': bool(item.is_perishable),
             'shelf_life_days': item.shelf_life_days,
+            'capacity': getattr(item, 'capacity', None),
+            'capacity_unit': getattr(item, 'capacity_unit', None),
+            'container_material': getattr(item, 'container_material', None),
+            'container_type': getattr(item, 'container_type', None),
+            'container_style': getattr(item, 'container_style', None),
             'notes': ''
         })
     except Exception as e:

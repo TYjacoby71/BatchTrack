@@ -654,6 +654,9 @@ def global_item_edit(item_id):
         'density': item.density,
         'capacity': item.capacity,
         'capacity_unit': item.capacity_unit,
+        'container_material': getattr(item, 'container_material', None),
+        'container_type': getattr(item, 'container_type', None),
+        'container_style': getattr(item, 'container_style', None),
         'default_is_perishable': item.default_is_perishable,
         'recommended_shelf_life_days': item.recommended_shelf_life_days,
         'aka_names': item.aka_names,
@@ -668,6 +671,13 @@ def global_item_edit(item_id):
     capacity = request.form.get('capacity')
     item.capacity = float(capacity) if capacity not in (None, '',) else None
     item.capacity_unit = request.form.get('capacity_unit', item.capacity_unit)
+    # Container attributes (optional)
+    try:
+        item.container_material = (request.form.get('container_material') or '').strip() or None
+        item.container_type = (request.form.get('container_type') or '').strip() or None
+        item.container_style = (request.form.get('container_style') or '').strip() or None
+    except Exception:
+        pass
     item.default_is_perishable = True if request.form.get('default_is_perishable') == 'on' else False
     rsl = request.form.get('recommended_shelf_life_days')
     item.recommended_shelf_life_days = int(rsl) if rsl not in (None, '',) else None
@@ -696,7 +706,7 @@ def global_item_edit(item_id):
         db.session.commit()
         # Basic audit log
         import logging
-        logging.info(f"GLOBAL_ITEM_EDIT: user={current_user.id} item_id={item.id} before={before} after={{'name': item.name, 'item_type': item.item_type}}")
+        logging.info(f"GLOBAL_ITEM_EDIT: user={current_user.id} item_id={item.id} before={before} after={{'name': item.name, 'item_type': item.item_type, 'container_material': item.container_material, 'container_type': item.container_type, 'container_style': item.container_style}}")
         flash('Global item updated successfully', 'success')
     except Exception as e:
         db.session.rollback()
@@ -986,6 +996,13 @@ def create_global_item():
                     return redirect(url_for('developer.create_global_item'))
 
             new_item.capacity_unit = request.form.get('capacity_unit', '').strip() or None
+            # Container attributes (optional)
+            try:
+                new_item.container_material = (request.form.get('container_material') or '').strip() or None
+                new_item.container_type = (request.form.get('container_type') or '').strip() or None
+                new_item.container_style = (request.form.get('container_style') or '').strip() or None
+            except Exception:
+                pass
             new_item.default_is_perishable = request.form.get('default_is_perishable') == 'on'
 
             shelf_life = request.form.get('recommended_shelf_life_days')

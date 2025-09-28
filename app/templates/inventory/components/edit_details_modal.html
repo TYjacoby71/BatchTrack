@@ -60,6 +60,21 @@
               {% endfor %}
             </select>
           </div>
+
+          <div class="mb-3">
+            <label for="container_material">Material:</label>
+            <input type="text" name="container_material" value="{{ item.container_material or '' }}" class="form-control" placeholder="Glass, PET Plastic, Aluminum">
+          </div>
+
+          <div class="mb-3">
+            <label for="container_type">Type:</label>
+            <input type="text" name="container_type" value="{{ item.container_type or '' }}" class="form-control" placeholder="Jar, Bottle, Tin, Tube, Glass">
+          </div>
+
+          <div class="mb-3">
+            <label for="container_style">Style (optional):</label>
+            <input type="text" name="container_style" value="{{ item.container_style or '' }}" class="form-control" placeholder="Boston Round, Straight Sided, Drinking">
+          </div>
           {% else %}
           <div class="mb-3">
             <label for="unit">Unit:</label>
