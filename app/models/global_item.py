@@ -22,6 +22,7 @@ class GlobalItem(db.Model):
 	capacity_unit = db.Column(db.String(32), nullable=True)
 	container_material = db.Column(db.String(64), nullable=True)
 	container_type = db.Column(db.String(64), nullable=True)
+	container_style = db.Column(db.String(64), nullable=True)
 
 	# SEO and metadata
 	metadata_json = db.Column(db.JSON, nullable=True)  # For SEO, descriptions, etc.
