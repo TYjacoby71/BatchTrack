@@ -66,7 +66,8 @@
 ### GlobalItem
 - **Purpose**: Curated global item library (read-only to orgs)
 - **Scoping**: System-wide (platform-owned)
-- **Key Fields**: `name`, `item_type`, `default_unit`, `density`, `capacity`, `synonyms`, perishables
+- **Key Fields**: `name`, `item_type`, `default_unit`, `density`, `capacity`, `capacity_unit`, `aka_names`
+- **Container Fields** (when `item_type='container'`): `container_material`, `container_type`, `container_style`, `container_color`
 - **Relationships**: Referenced by `InventoryItem.global_item_id`
 
 ### Ingredient
@@ -79,8 +80,10 @@
 - **Purpose**: Organization-owned stock with FIFO
 - **Scoping**: `organization_id`
 - **Key Fields**: `quantity`, `cost_per_unit`, `expiration_date`, `type`, `global_item_id` (nullable), `ownership`
+- **Container Fields** (when `type='container'`): `capacity`, `capacity_unit`, `container_material`, `container_type`, `container_style`, `container_color`
+- **Derived**: `container_display_name` builds `[style] [material?] [type]` and avoids duplication (e.g., "Drinking Glass")
 - **Relationships**: GlobalItem (nullable FK), Ingredient (legacy), InventoryHistory
-- See: `docs/GLOBAL_ITEM_LIBRARY.md` for global-locked rules
+- See: `docs/GLOBAL_ITEM_LIBRARY.md` and `docs/CONTAINERS_CURATION.md`
 
 ### InventoryHistory
 - **Purpose**: All inventory movements

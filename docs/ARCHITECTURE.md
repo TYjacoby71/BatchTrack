@@ -198,4 +198,4 @@ Subscription Tier → Available Features → User Limits → Team Members → Ac
 
 ---
 
-**Next:** See [SERVICES.md](SERVICES.md) for detailed service specifications. Also see [GLOBAL_ITEM_LIBRARY.md](GLOBAL_ITEM_LIBRARY.md) and [WALL_OF_DRAWERS_PROTOCOL.md](WALL_OF_DRAWERS_PROTOCOL.md).
+**Next:** See [SERVICES.md](SERVICES.md) for detailed service specifications. Also see [GLOBAL_ITEM_LIBRARY.md](GLOBAL_ITEM_LIBRARY.md), [CONTAINERS_CURATION.md](CONTAINERS_CURATION.md) and [WALL_OF_DRAWERS_PROTOCOL.md](WALL_OF_DRAWERS_PROTOCOL.md).
