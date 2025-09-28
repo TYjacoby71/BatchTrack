@@ -15,6 +15,17 @@ class ProductService:
     @staticmethod
     def get_or_create_sku(product_name: str, variant_name: str = 'Base', size_label: str = 'Bulk', unit: str = 'g', naming_context: dict | None = None):
         """Get or create a ProductSKU with proper Product/Variant relationships"""
+        # Normalize inputs early
+        try:
+            normalized_size_label = ('' if size_label is None else str(size_label)).strip()
+            if not normalized_size_label:
+                normalized_size_label = 'Bulk'
+            # collapse whitespace and cap length to DB field size
+            normalized_size_label = ' '.join(normalized_size_label.split())[:64]
+        except Exception:
+            normalized_size_label = 'Bulk'
+
+        size_label = normalized_size_label
 
         # Get or create Product
         product = Product.query.filter_by(
