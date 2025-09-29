@@ -99,6 +99,16 @@ class SubscriptionTier(db.Model):
         return False
 
     @property
+    def requires_stripe_billing(self):
+        """Compatibility property for legacy checks; maps to billing_provider."""
+        return self.billing_provider == 'stripe'
+
+    @property
+    def requires_whop_billing(self):
+        """Compatibility property for legacy checks; maps to billing_provider."""
+        return self.billing_provider == 'whop'
+
+    @property
     def can_be_deleted(self):
         """Check if this tier can be safely deleted"""
         return self.name.lower() not in ['exempt', 'free']  # Protect system tiers
