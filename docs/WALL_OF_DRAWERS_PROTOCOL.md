@@ -62,6 +62,18 @@ def build_drawer_payload(modal_url: str, *, error_type: str, error_code: str, su
 
 Example modal: `app/templates/components/drawer/density_fix_modal.html`
 
+### File Locations & Conventions
+
+- Frontend core
+  - Universal interceptor: `app/static/js/core/DrawerInterceptor.js`
+  - Universal protocol (listener): `app/static/js/core/DrawerProtocol.js`
+- Drawer-specific JS (optional helpers): `app/static/js/drawers/*.js` (e.g., `global_link_drawer.js`)
+- Drawer HTML templates: `app/templates/components/drawer/*.html`
+- Drawer actions API hub: `app/blueprints/api/drawer_actions.py` (prefix: `/api/drawer-actions`)
+- Service-side payload builder: `app/services/drawers/payloads.py`
+
+Ensure both core JS files are loaded globally (e.g., in `app/templates/layout.html` after Bootstrap) so all pages benefit from automatic drawer handling.
+
 ## Backend Pattern
 
 - Each service owns its `drawer_errors.py` mapping for user-fixable errors.
@@ -84,6 +96,18 @@ if not result['success']:
 return jsonify(result)
 ```
 
+Minimal drawer actions endpoint:
+
+```python
+@drawer_actions_bp.route('/conversion/density-modal/<int:ingredient_id>')
+@login_required
+@require_permission('inventory.view')
+def conversion_density_modal_get(ingredient_id):
+    # Lookup scoped record(s), then:
+    modal_html = render_template('components/drawer/density_fix_modal.html', ingredient=ingredient)
+    return jsonify({'success': True, 'modal_html': modal_html})
+```
+
 ## Developer Do / Don't
 
 - Do return `drawer_payload` at the top level when user action is needed.
@@ -96,11 +120,63 @@ return jsonify(result)
 
 ## Adding a New Drawer
 
-1. Add/extend `<service>/drawer_errors.py` mapping for the error.
-2. Implement a drawer actions endpoint returning `{ success, modal_html }`.
-3. Build the modal template that dispatches a clear `success_event`.
-4. From the API, attach `drawer_payload` using the standard builder when needed.
-5. Provide a retry callback or a `retry` block for `DrawerProtocol`.
+1. Add/extend `<service>/drawer_errors.py` mapping for the error (choose `error_type` and `error_code`).
+2. Implement a drawer actions endpoint under `app/blueprints/api/drawer_actions.py` returning `{ success, modal_html }`.
+3. Create a modal template in `app/templates/components/drawer/` that emits a specific `success_event` when the user completes the fix.
+4. From the calling API/service, attach `drawer_payload` using the standard builder, including `modal_url` and `success_event`. Include retry metadata (`retry` or legacy `retry_operation`/`retry_data`).
+5. Optionally add a drawer-specific helper in `app/static/js/drawers/` for client-side behaviors unique to this drawer.
+
+### Minimal End-to-End Example
+
+- Build payload (service/controller):
+
+```python
+from app.services.drawers.payloads import build_drawer_payload
+
+payload = build_drawer_payload(
+    modal_url=f"/api/drawer-actions/conversion/density-modal/{ingredient.id}",
+    error_type='conversion',
+    error_code='MISSING_DENSITY',
+    success_event='densityUpdated'
+)
+
+response = { 'success': False, 'error': 'Missing density', 'drawer_payload': payload }
+return jsonify(response)
+```
+
+- Drawer actions route returns modal HTML:
+
+```python
+@drawer_actions_bp.route('/conversion/density-modal/<int:ingredient_id>')
+def density_modal(ingredient_id):
+    modal_html = render_template('components/drawer/density_fix_modal.html', ingredient=ingredient)
+    return jsonify({'success': True, 'modal_html': modal_html})
+```
+
+- Modal template emits success event on completion:
+
+```html
+<div class="modal" id="densityFixModal" aria-labelledby="densityFixModalLabel" role="dialog">
+  <!-- form fields -->
+  <button id="saveDensity" class="btn btn-primary">Save</button>
+</div>
+<script>
+document.getElementById('saveDensity').addEventListener('click', async () => {
+  // submit density change via existing endpoint
+  // on success, emit the agreed event name so DrawerProtocol retries the original op
+  window.dispatchEvent(new CustomEvent('densityUpdated', { detail: { ingredientId: {{ ingredient.id }} } }));
+});
+</script>
+```
+
+### Required Listeners & Retries
+
+- Global listeners are already provided by `DrawerInterceptor.js` and `DrawerProtocol.js`.
+- Always provide a `success_event` in the payload and dispatch it from the modal when the fix is complete.
+- Provide retry metadata: either
+  - `retry`: `{ operation: 'stock_check', data: { recipe_id } }`, or
+  - legacy `retry_operation`/`retry_data` fields.
+- `DrawerProtocol` will automatically execute the provided retry after the success event.
 
 ## Cadence, Dedupe, and Telemetry
 
