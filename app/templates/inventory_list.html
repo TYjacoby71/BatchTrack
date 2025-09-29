@@ -414,11 +414,12 @@
     <form method="post" action="{{ url_for('inventory.add_inventory') }}" class="mb-4" id="addContainerForm" style="display: none;">
       <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
       <input type="hidden" name="type" value="container">
+      <input type="hidden" name="global_item_id" id="selectedGlobalContainerId">
       <div class="row g-3 align-items-end">
-        <div class="col">
+        <div class="col-md-3 position-relative">
           <label class="form-label">Name</label>
-          <select name="name" class="form-select" id="addContainerNameSelect" required></select>
-          <small class="text-muted">Type to search, or enter a custom name and press Enter</small>
+          <input type="text" name="name" class="form-control" placeholder="Enter container name" required id="containerNameInput" autocomplete="off">
+          <div id="containerSuggestions" class="position-absolute w-100" style="z-index: 1000; max-height: 200px; overflow-y: auto; display: none; background-color: white; border: 1px solid #dee2e6; border-radius: 0.375rem; box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15); top: 100%; margin-top: 2px;"></div>
         </div>
         <div class="col">
           <label class="form-label">Capacity</label>
@@ -1096,6 +1097,134 @@ document.addEventListener('DOMContentLoaded', function() {
     document.addEventListener('click', function(e) {
         if (!ingredientNameInput.contains(e.target) && !ingredientSuggestions.contains(e.target)) {
             ingredientSuggestions.style.display = 'none';
+        }
+    });
+});
+
+// Container name search functionality (mirrors ingredients)
+document.addEventListener('DOMContentLoaded', function() {
+    const nameInput = document.getElementById('containerNameInput');
+    const suggestionsEl = document.getElementById('containerSuggestions');
+    const globalIdInput = document.getElementById('selectedGlobalContainerId');
+
+    if (!nameInput || !suggestionsEl || !globalIdInput) {
+        return;
+    }
+
+    nameInput.addEventListener('input', function() {
+        const query = this.value.trim();
+        if (query.length < 2) {
+            suggestionsEl.style.display = 'none';
+            return;
+        }
+
+        Promise.all([
+            fetch(`/inventory/api/search?type=container&q=${encodeURIComponent(query)}`).then(r => r.json()).catch(() => ({results: []})),
+            fetch(`/api/ingredients/global-items/search?q=${encodeURIComponent(query)}&type=container`).then(r => r.json()).catch(() => ({results: []}))
+        ]).then(([invResults, globalResults]) => {
+            const suggestions = [];
+
+            if (invResults && invResults.results) {
+                invResults.results.forEach(item => {
+                    suggestions.push({
+                        source: 'inventory',
+                        id: item.id,
+                        name: item.text,
+                        capacity: item.capacity,
+                        capacity_unit: item.capacity_unit,
+                        container_material: item.container_material,
+                        container_type: item.container_type,
+                        container_style: item.container_style,
+                        container_color: item.container_color
+                    });
+                });
+            }
+
+            if (globalResults && globalResults.results) {
+                globalResults.results.forEach(item => {
+                    const exists = suggestions.some(s => s.name.toLowerCase() === item.text.toLowerCase());
+                    if (!exists) {
+                        suggestions.push({
+                            source: 'global',
+                            id: item.id,
+                            name: item.text,
+                            capacity: item.capacity,
+                            capacity_unit: item.capacity_unit,
+                            container_material: item.container_material,
+                            container_type: item.container_type,
+                            container_style: item.container_style,
+                            container_color: item.container_color
+                        });
+                    }
+                });
+            }
+
+            renderSuggestions(suggestions);
+        }).catch(() => {
+            suggestionsEl.style.display = 'none';
+        });
+    });
+
+    function renderSuggestions(list) {
+        if (!list.length) {
+            suggestionsEl.style.display = 'none';
+            return;
+        }
+
+        const html = list.map(item => `
+            <div class="suggestion-item p-2 border-bottom" style="cursor: pointer;"
+                 data-source="${item.source}"
+                 data-id="${item.id || ''}"
+                 data-name="${item.name || ''}"
+                 data-capacity="${item.capacity || ''}"
+                 data-capacity_unit="${item.capacity_unit || ''}"
+                 data-material="${item.container_material || ''}"
+                 data-ctype="${item.container_type || ''}"
+                 data-style="${item.container_style || ''}"
+                 data-color="${item.container_color || ''}">
+                <div class="fw-bold">${item.name}</div>
+                <small class="text-muted">
+                    ${item.source === 'inventory' ? 'In Inventory' : 'From Global Library'}
+                    ${item.capacity ? ` • ${item.capacity} ${item.capacity_unit || ''}` : ''}
+                </small>
+            </div>
+        `).join('');
+
+        suggestionsEl.innerHTML = html;
+        suggestionsEl.style.display = 'block';
+
+        suggestionsEl.querySelectorAll('.suggestion-item').forEach(el => {
+            el.addEventListener('click', function() {
+                const src = this.dataset.source;
+                nameInput.value = this.dataset.name || '';
+                if (src === 'global') {
+                    globalIdInput.value = this.dataset.id || '';
+                } else {
+                    globalIdInput.value = '';
+                }
+
+                const capEl = document.querySelector('#addContainerForm input[name="capacity"]');
+                const capUnitEl = document.querySelector('#addContainerForm select[name="capacity_unit"]');
+                const matEl = document.querySelector('#addContainerForm input[name="container_material"]');
+                const typeEl = document.querySelector('#addContainerForm input[name="container_type"]');
+                const styleEl = document.querySelector('#addContainerForm input[name="container_style"]');
+                const colorEl = document.querySelector('#addContainerForm input[name="container_color"]');
+
+                if (capEl) capEl.value = this.dataset.capacity || '';
+                if (capUnitEl && this.dataset.capacity_unit) capUnitEl.value = this.dataset.capacity_unit;
+                if (matEl) matEl.value = this.dataset.material || '';
+                if (typeEl) typeEl.value = this.dataset.ctype || '';
+                if (styleEl) styleEl.value = this.dataset.style || '';
+                if (colorEl) colorEl.value = this.dataset.color || '';
+
+                suggestionsEl.style.display = 'none';
+            });
+        });
+    }
+
+    document.addEventListener('click', function(e) {
+        if (!nameInput.contains(e.target) && !suggestionsEl.contains(e.target)) {
+            suggestionsEl.style.display = 'none';
         }
     });
 });

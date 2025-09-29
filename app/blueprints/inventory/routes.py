@@ -29,6 +29,56 @@ def can_edit_inventory_item(item):
         return True
     return item.organization_id == current_user.organization_id
 
+@inventory_bp.route('/api/search')
+@login_required
+def api_search_inventory():
+    """Search inventory items by name (org-scoped), optionally filtered by type.
+
+    Query params:
+      - q: search text (min 2 chars)
+      - type: optional inventory type (e.g., 'container', 'ingredient')
+
+    Returns JSON array of minimal objects for suggestions.
+    """
+    try:
+        q = (request.args.get('q') or '').strip()
+        inv_type = (request.args.get('type') or '').strip()
+        if len(q) < 2:
+            return jsonify({'results': []})
+
+        query = InventoryItem.query.filter(
+            InventoryItem.organization_id == current_user.organization_id,
+            InventoryItem.name.ilike(f"%{q}%")
+        )
+        if inv_type:
+            query = query.filter(InventoryItem.type == inv_type)
+
+        items = query.order_by(InventoryItem.name.asc()).limit(20).all()
+
+        results = []
+        for it in items:
+            base = {
+                'id': it.id,
+                'text': it.name,
+                'type': it.type,
+            }
+            # Attach container fields for containers
+            if it.type == 'container':
+                base.update({
+                    'capacity': getattr(it, 'capacity', None),
+                    'capacity_unit': getattr(it, 'capacity_unit', None),
+                    'container_material': getattr(it, 'container_material', None),
+                    'container_type': getattr(it, 'container_type', None),
+                    'container_style': getattr(it, 'container_style', None),
+                    'container_color': getattr(it, 'container_color', None),
+                })
+            results.append(base)
+
+        return jsonify({'results': results})
+    except Exception as e:
+        logger.exception('Inventory search failed')
+        return jsonify({'results': [], 'error': str(e)}), 500
+
 @inventory_bp.route('/api/get-item/<int:item_id>')
 @login_required
 def api_get_inventory_item(item_id):
