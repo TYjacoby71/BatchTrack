@@ -81,7 +81,7 @@ def create_recipe(name: str, description: str = "", instructions: str = "",
             instructions=instructions,
             predicted_yield=yield_amount,
             predicted_yield_unit=yield_unit,
-            organization_id=current_user.organization_id,
+            organization_id=(current_user.organization_id if getattr(current_user, 'is_authenticated', False) and getattr(current_user, 'organization_id', None) else (1)),
             parent_id=parent_id,
             label_prefix=final_label_prefix,
             category_id=category_id

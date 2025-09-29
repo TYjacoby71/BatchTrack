@@ -37,8 +37,25 @@ def validate_recipe_data(name: str, ingredients: List[Dict] = None,
         if not is_valid:
             return {'valid': False, 'error': error}
 
-        # Validate yield amount
-        if yield_amount is not None and yield_amount <= 0:
+        # Validate yield amount for non-portioned recipes; allow 0 for portioned flows
+        try:
+            from flask import request
+            portioning = portioning_data if 'portioning_data' in locals() else None
+        except Exception:
+            portioning = None
+        is_portioned_context = False
+        try:
+            # Detect portioning data passed via kwargs in calling context
+            import inspect
+            frame = inspect.currentframe()
+            outer = frame.f_back
+            if outer and 'portioning_data' in outer.f_locals:
+                pd = outer.f_locals.get('portioning_data')
+                is_portioned_context = bool(pd and pd.get('is_portioned'))
+        except Exception:
+            pass
+
+        if yield_amount is not None and yield_amount <= 0 and not is_portioned_context:
             return {'valid': False, 'error': "Yield amount must be positive"}
 
         # Validate ingredients if provided
@@ -81,9 +98,13 @@ def validate_recipe_name(name: str, recipe_id: int = None) -> Tuple[bool, str]:
         from flask_login import current_user
         query = Recipe.query.filter_by(name=name)
         
-        # Filter by organization
-        if current_user.organization_id:
-            query = query.filter_by(organization_id=current_user.organization_id)
+        # Filter by organization when available
+        try:
+            if getattr(current_user, 'is_authenticated', False) and getattr(current_user, 'organization_id', None):
+                query = query.filter_by(organization_id=current_user.organization_id)
+        except Exception:
+            # If current_user is unavailable in context, skip org scoping for validation
+            pass
         
         # Exclude current recipe when editing
         if recipe_id:

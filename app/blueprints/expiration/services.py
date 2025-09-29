@@ -542,6 +542,7 @@ class ExpirationService:
                     unit=entry.unit,
                     notes=f"Expired product lot disposal #{entry_id}: {notes}",
                     created_by=current_user.id if getattr(current_user, "is_authenticated", False) else None,
+                    item_type='product'
                 )
                 return result, "Successfully marked product FIFO entry as expired"
 
