@@ -48,7 +48,8 @@ def create_recipe(name: str, description: str = "", instructions: str = "",
         validation_result = validate_recipe_data(
             name=name,
             ingredients=ingredients or [],
-            yield_amount=yield_amount
+            yield_amount=yield_amount,
+            portioning_data=portioning_data
         )
 
         if not validation_result['valid']:
@@ -76,11 +77,29 @@ def create_recipe(name: str, description: str = "", instructions: str = "",
                     else:
                         final_label_prefix = f"{base_prefix}V1"
 
+        # Derive predicted yield from portioning bulk if provided and > 0
+        derived_yield = yield_amount
+        derived_unit = yield_unit
+        try:
+            if portioning_data and portioning_data.get('is_portioned'):
+                byq = float(portioning_data.get('bulk_yield_quantity') or 0)
+                if byq > 0:
+                    derived_yield = byq
+                    # Map bulk_yield_unit_id -> unit string if available
+                    buid = portioning_data.get('bulk_yield_unit_id')
+                    if buid:
+                        from ...models.unit import Unit
+                        u = Unit.query.get(buid)
+                        if u and getattr(u, 'name', None):
+                            derived_unit = u.name
+        except Exception:
+            pass
+
         recipe = Recipe(
             name=name,
             instructions=instructions,
-            predicted_yield=yield_amount,
-            predicted_yield_unit=yield_unit,
+            predicted_yield=derived_yield,
+            predicted_yield_unit=derived_unit,
             organization_id=(current_user.organization_id if getattr(current_user, 'is_authenticated', False) and getattr(current_user, 'organization_id', None) else (1)),
             parent_id=parent_id,
             label_prefix=final_label_prefix,

@@ -14,7 +14,8 @@ logger = logging.getLogger(__name__)
 
 
 def validate_recipe_data(name: str, ingredients: List[Dict] = None, 
-                        yield_amount: float = None, recipe_id: int = None, notes: str = None, category: str = None, tags: str = None, batch_size: float = None) -> Dict[str, Any]:
+                        yield_amount: float = None, recipe_id: int = None, notes: str = None, category: str = None, tags: str = None, batch_size: float = None,
+                        portioning_data: Dict | None = None) -> Dict[str, Any]:
     """
     Validate recipe data before creation or update.
     
@@ -37,26 +38,17 @@ def validate_recipe_data(name: str, ingredients: List[Dict] = None,
         if not is_valid:
             return {'valid': False, 'error': error}
 
-        # Validate yield amount for non-portioned recipes; allow 0 for portioned flows
-        try:
-            from flask import request
-            portioning = portioning_data if 'portioning_data' in locals() else None
-        except Exception:
-            portioning = None
-        is_portioned_context = False
-        try:
-            # Detect portioning data passed via kwargs in calling context
-            import inspect
-            frame = inspect.currentframe()
-            outer = frame.f_back
-            if outer and 'portioning_data' in outer.f_locals:
-                pd = outer.f_locals.get('portioning_data')
-                is_portioned_context = bool(pd and pd.get('is_portioned'))
-        except Exception:
-            pass
-
-        if yield_amount is not None and yield_amount <= 0 and not is_portioned_context:
-            return {'valid': False, 'error': "Yield amount must be positive"}
+        # Validate yield amount: must be > 0, unless portioning bulk yield is provided (>0)
+        if yield_amount is None or yield_amount <= 0:
+            bulk_ok = False
+            try:
+                if portioning_data and portioning_data.get('is_portioned'):
+                    byq = float(portioning_data.get('bulk_yield_quantity') or 0)
+                    bulk_ok = byq > 0
+            except Exception:
+                bulk_ok = False
+            if not bulk_ok:
+                return {'valid': False, 'error': "Yield amount must be positive"}
 
         # Validate ingredients if provided
         if ingredients:
