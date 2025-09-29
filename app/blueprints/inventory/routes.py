@@ -41,39 +41,15 @@ def api_search_inventory():
     Returns JSON array of minimal objects for suggestions.
     """
     try:
+        from app.services.inventory_search import InventorySearchService
         q = (request.args.get('q') or '').strip()
         inv_type = (request.args.get('type') or '').strip()
-        if len(q) < 2:
-            return jsonify({'results': []})
-
-        query = InventoryItem.query.filter(
-            InventoryItem.organization_id == current_user.organization_id,
-            InventoryItem.name.ilike(f"%{q}%")
+        results = InventorySearchService.search_inventory_items(
+            query_text=q,
+            inventory_type=inv_type if inv_type else None,
+            organization_id=current_user.organization_id,
+            limit=20
         )
-        if inv_type:
-            query = query.filter(InventoryItem.type == inv_type)
-
-        items = query.order_by(InventoryItem.name.asc()).limit(20).all()
-
-        results = []
-        for it in items:
-            base = {
-                'id': it.id,
-                'text': it.name,
-                'type': it.type,
-            }
-            # Attach container fields for containers
-            if it.type == 'container':
-                base.update({
-                    'capacity': getattr(it, 'capacity', None),
-                    'capacity_unit': getattr(it, 'capacity_unit', None),
-                    'container_material': getattr(it, 'container_material', None),
-                    'container_type': getattr(it, 'container_type', None),
-                    'container_style': getattr(it, 'container_style', None),
-                    'container_color': getattr(it, 'container_color', None),
-                })
-            results.append(base)
-
         return jsonify({'results': results})
     except Exception as e:
         logger.exception('Inventory search failed')

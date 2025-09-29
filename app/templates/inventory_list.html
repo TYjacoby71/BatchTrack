@@ -1783,6 +1783,152 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 });
 
+// Packaging name search functionality
+document.addEventListener('DOMContentLoaded', function() {
+    const nameInput = document.getElementById('packagingNameInput');
+    const suggestionsEl = document.getElementById('packagingSuggestions');
+    const globalIdInput = document.getElementById('selectedGlobalPackagingId');
+
+    if (!nameInput || !suggestionsEl || !globalIdInput) {
+        return;
+    }
+
+    nameInput.addEventListener('input', function() {
+        const query = this.value.trim();
+        if (query.length < 2) {
+            suggestionsEl.style.display = 'none';
+            return;
+        }
+
+        Promise.all([
+            fetch(`/inventory/api/search?type=packaging&q=${encodeURIComponent(query)}`).then(r => r.json()).catch(() => ({results: []})),
+            fetch(`/api/ingredients/global-items/search?q=${encodeURIComponent(query)}&type=packaging`).then(r => r.json()).catch(() => ({results: []}))
+        ]).then(([invResults, globalResults]) => {
+            const suggestions = [];
+
+            if (invResults && invResults.results) {
+                invResults.results.forEach(item => {
+                    suggestions.push({ source: 'inventory', id: item.id, name: item.text, unit: item.unit });
+                });
+            }
+            if (globalResults && globalResults.results) {
+                globalResults.results.forEach(item => {
+                    const exists = suggestions.some(s => s.name.toLowerCase() === item.text.toLowerCase());
+                    if (!exists) {
+                        suggestions.push({ source: 'global', id: item.id, name: item.text, unit: item.default_unit });
+                    }
+                });
+            }
+
+            renderSuggestions(suggestions);
+        }).catch(() => { suggestionsEl.style.display = 'none'; });
+    });
+
+    function renderSuggestions(list) {
+        if (!list.length) { suggestionsEl.style.display = 'none'; return; }
+        const html = list.map(item => `
+            <div class="suggestion-item p-2 border-bottom" style="cursor: pointer;"
+                 data-source="${item.source}" data-id="${item.id || ''}" data-name="${item.name || ''}" data-unit="${item.unit || ''}">
+                <div class="fw-bold">${item.name}</div>
+                <small class="text-muted">${item.source === 'inventory' ? 'In Inventory' : 'From Global Library'}</small>
+            </div>
+        `).join('');
+        suggestionsEl.innerHTML = html;
+        suggestionsEl.style.display = 'block';
+        suggestionsEl.querySelectorAll('.suggestion-item').forEach(el => {
+            el.addEventListener('click', function() {
+                nameInput.value = this.dataset.name || '';
+                if (this.dataset.source === 'global') { globalIdInput.value = this.dataset.id || ''; } else { globalIdInput.value = ''; }
+                const unitEl = document.querySelector('#addPackagingForm select[name="unit"]');
+                if (unitEl && this.dataset.unit) unitEl.value = this.dataset.unit;
+                suggestionsEl.style.display = 'none';
+            });
+        });
+    }
+
+    document.addEventListener('click', function(e) {
+        if (!nameInput.contains(e.target) && !suggestionsEl.contains(e.target)) {
+            suggestionsEl.style.display = 'none';
+        }
+    });
+});
+
+// Consumable name search functionality
+document.addEventListener('DOMContentLoaded', function() {
+    const nameInput = document.getElementById('consumableNameInput');
+    const suggestionsEl = document.getElementById('consumableSuggestions');
+    const globalIdInput = document.getElementById('selectedGlobalConsumableId');
+
+    if (!nameInput || !suggestionsEl || !globalIdInput) {
+        return;
+    }
+
+    nameInput.addEventListener('input', function() {
+        const query = this.value.trim();
+        if (query.length < 2) {
+            suggestionsEl.style.display = 'none';
+            return;
+        }
+
+        Promise.all([
+            fetch(`/inventory/api/search?type=consumable&q=${encodeURIComponent(query)}`).then(r => r.json()).catch(() => ({results: []})),
+            fetch(`/api/ingredients/global-items/search?q=${encodeURIComponent(query)}&type=consumable`).then(r => r.json()).catch(() => ({results: []}))
+        ]).then(([invResults, globalResults]) => {
+            const suggestions = [];
+            if (invResults && invResults.results) {
+                invResults.results.forEach(item => {
+                    suggestions.push({ source: 'inventory', id: item.id, name: item.text, unit: item.unit });
+                });
+            }
+            if (globalResults && globalResults.results) {
+                globalResults.results.forEach(item => {
+                    const exists = suggestions.some(s => s.name.toLowerCase() === item.text.toLowerCase());
+                    if (!exists) {
+                        suggestions.push({ source: 'global', id: item.id, name: item.text, unit: item.default_unit });
+                    }
+                });
+            }
+            renderSuggestions(suggestions);
+        }).catch(() => { suggestionsEl.style.display = 'none'; });
+    });
+
+    function renderSuggestions(list) {
+        if (!list.length) { suggestionsEl.style.display = 'none'; return; }
+        const html = list.map(item => `
+            <div class="suggestion-item p-2 border-bottom" style="cursor: pointer;"
+                 data-source="${item.source}" data-id="${item.id || ''}" data-name="${item.name || ''}" data-unit="${item.unit || ''}">
+                <div class="fw-bold">${item.name}</div>
+                <small class="text-muted">${item.source === 'inventory' ? 'In Inventory' : 'From Global Library'}</small>
+            </div>
+        `).join('');
+        suggestionsEl.innerHTML = html;
+        suggestionsEl.style.display = 'block';
+        suggestionsEl.querySelectorAll('.suggestion-item').forEach(el => {
+            el.addEventListener('click', function() {
+                nameInput.value = this.dataset.name || '';
+                if (this.dataset.source === 'global') { globalIdInput.value = this.dataset.id || ''; } else { globalIdInput.value = ''; }
+                const unitEl = document.querySelector('#addConsumableForm select[name="unit"]');
+                if (unitEl && this.dataset.unit) unitEl.value = this.dataset.unit;
+                suggestionsEl.style.display = 'none';
+            });
+        });
+    }
+
+    document.addEventListener('click', function(e) {
+        if (!nameInput.contains(e.target) && !suggestionsEl.contains(e.target)) {
+            suggestionsEl.style.display = 'none';
+        }
+    });
+});
+
+// Update help text when quantity changes (packaging/consumables)
+document.addEventListener('DOMContentLoaded', function() {
+    const pkgQty = document.querySelector('#addPackagingForm input[name="quantity"]');
+    if (pkgQty) pkgQty.addEventListener('input', updateAddPackagingCostHelp);
+    const consQty = document.querySelector('#addConsumableForm input[name="quantity"]');
+    if (consQty) consQty.addEventListener('input', updateAddConsumableCostHelp);
+});
+
 
 // Close the dropdown menu if the user clicks outside of it
 window.onclick = function(event) {
