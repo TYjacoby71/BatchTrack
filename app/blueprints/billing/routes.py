@@ -302,6 +302,16 @@ def complete_signup_from_stripe():
         db.session.commit()
         logger.info("Database changes committed successfully")
 
+        # Update Stripe customer metadata with organization_id and tier_key
+        try:
+            from ...services.stripe_service import StripeService
+            StripeService.update_customer_metadata(customer.id, {
+                'organization_id': str(org.id),
+                'tier_key': subscription_tier.key
+            })
+        except Exception as meta_error:
+            logger.warning(f"Failed to update Stripe customer metadata: {meta_error}")
+
         # Send welcome email
         try:
             from ...services.email_service import EmailService

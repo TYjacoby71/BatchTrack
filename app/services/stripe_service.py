@@ -165,15 +165,42 @@ class StripeService:
             lookup_key = price.get('id') if price else None
 
             from ..extensions import db
-            from ..models.models import Organization, User
+            from ..models.models import Organization
             from ..models.subscription_tier import SubscriptionTier
             from ..models.retention import StorageAddonSubscription
 
-            # Resolve org by Stripe customer_id via Organization.stripe_customer_id
+            # Resolve organization
             org = Organization.query.filter_by(stripe_customer_id=customer_id).first()
             if not org:
+                # Fallback to customer metadata lookup
+                if StripeService.initialize_stripe():
+                    try:
+                        cust = stripe.Customer.retrieve(customer_id)
+                        org_id_meta = (cust.metadata or {}).get('organization_id')
+                        if org_id_meta:
+                            org = Organization.query.get(int(org_id_meta))
+                    except Exception as _e:
+                        logger.warning(f"Could not resolve org from customer metadata: {_e}")
+            if not org:
+                logger.warning(f"Subscription.created for unknown customer {customer_id}")
                 return
 
+            # Update organization billing/subscription status
+            org.subscription_status = status or org.subscription_status
+            if status in ['active', 'trialing']:
+                org.billing_status = 'active'
+                org.is_active = True
+            elif status in ['past_due', 'unpaid']:
+                org.billing_status = 'past_due'
+                org.is_active = False
+            elif status in ['canceled', 'cancelled']:
+                org.billing_status = 'canceled'
+                org.is_active = False
+
+            if not org.stripe_customer_id:
+                org.stripe_customer_id = customer_id
+
+            # Optional: handle storage add-on subscription record
             tier: SubscriptionTier = org.subscription_tier
             if tier and getattr(tier, 'stripe_storage_lookup_key', None) in [lookup_key, price.get('lookup_key') if price else None]:
                 sub = StorageAddonSubscription(
@@ -184,7 +211,8 @@ class StripeService:
                     current_period_end=datetime.utcfromtimestamp(obj.get('current_period_end')) if obj.get('current_period_end') else None
                 )
                 db.session.add(sub)
-                db.session.commit()
+
+            db.session.commit()
         except Exception as e:
             logger.error(f"Error handling subscription.created: {e}")
 
@@ -194,13 +222,42 @@ class StripeService:
             obj = event.get('data', {}).get('object', {})
             sub_id = obj.get('id')
             status = obj.get('status')
+            customer_id = obj.get('customer')
             from ..extensions import db
+            from ..models.models import Organization
             from ..models.retention import StorageAddonSubscription
+
+            # Update add-on subscription record if present
             rec = StorageAddonSubscription.query.filter_by(stripe_subscription_id=sub_id).first()
             if rec:
                 rec.status = status
                 rec.current_period_end = datetime.utcfromtimestamp(obj.get('current_period_end')) if obj.get('current_period_end') else rec.current_period_end
-                db.session.commit()
+
+            # Update organization billing/subscription status
+            org = Organization.query.filter_by(stripe_customer_id=customer_id).first()
+            if not org:
+                if StripeService.initialize_stripe():
+                    try:
+                        cust = stripe.Customer.retrieve(customer_id)
+                        org_id_meta = (cust.metadata or {}).get('organization_id')
+                        if org_id_meta:
+                            org = Organization.query.get(int(org_id_meta))
+                    except Exception as _e:
+                        logger.warning(f"Could not resolve org from customer metadata: {_e}")
+
+            if org:
+                org.subscription_status = status or org.subscription_status
+                if status in ['active', 'trialing']:
+                    org.billing_status = 'active'
+                    org.is_active = True
+                elif status in ['past_due', 'unpaid']:
+                    org.billing_status = 'past_due'
+                    org.is_active = False
+                elif status in ['canceled', 'cancelled']:
+                    org.billing_status = 'canceled'
+                    org.is_active = False
+
+            db.session.commit()
         except Exception as e:
             logger.error(f"Error handling subscription.updated: {e}")
 
@@ -209,29 +266,36 @@ class StripeService:
         try:
             obj = event.get('data', {}).get('object', {})
             sub_id = obj.get('id')
+            customer_id = obj.get('customer')
             from ..extensions import db
+            from ..models.models import Organization
             from ..models.retention import StorageAddonSubscription
+
             rec = StorageAddonSubscription.query.filter_by(stripe_subscription_id=sub_id).first()
             if rec:
                 rec.status = 'canceled'
-                db.session.commit()
+
+            org = Organization.query.filter_by(stripe_customer_id=customer_id).first()
+            if not org:
+                if StripeService.initialize_stripe():
+                    try:
+                        cust = stripe.Customer.retrieve(customer_id)
+                        org_id_meta = (cust.metadata or {}).get('organization_id')
+                        if org_id_meta:
+                            org = Organization.query.get(int(org_id_meta))
+                    except Exception as _e:
+                        logger.warning(f"Could not resolve org from customer metadata: {_e}")
+
+            if org:
+                org.subscription_status = 'canceled'
+                org.billing_status = 'canceled'
+                org.is_active = False
+
+            db.session.commit()
         except Exception as e:
             logger.error(f"Error handling subscription.deleted: {e}")
 
-    @staticmethod
-    def _handle_subscription_created(event):
-        """Handle customer.subscription.created event"""
-        pass
-
-    @staticmethod
-    def _handle_subscription_updated(event):
-        """Handle customer.subscription.updated event"""
-        pass
-
-    @staticmethod
-    def _handle_subscription_deleted(event):
-        """Handle customer.subscription.deleted event"""
-        pass
+    # Removed duplicate stub handlers that previously overwrote real implementations
 
     @staticmethod
     def _handle_payment_succeeded(event):
@@ -487,6 +551,22 @@ class StripeService:
             }
 
         return pricing_data
+
+    @staticmethod
+    def update_customer_metadata(customer_id: str, metadata: dict) -> bool:
+        """Merge and update metadata on a Stripe customer."""
+        if not StripeService.initialize_stripe():
+            return False
+        try:
+            # Retrieve existing metadata to merge
+            cust = stripe.Customer.retrieve(customer_id)
+            existing = dict(getattr(cust, 'metadata', {}) or {})
+            existing.update(metadata or {})
+            stripe.Customer.modify(customer_id, metadata=existing)
+            return True
+        except Exception as e:
+            logger.error(f"Failed to update customer metadata for {customer_id}: {e}")
+            return False
 
     @staticmethod
     def create_one_time_checkout_by_lookup_key(lookup_key, customer_email, success_url, cancel_url, metadata=None):
