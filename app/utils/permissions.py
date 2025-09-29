@@ -345,15 +345,10 @@ class AuthorizationHierarchy:
         if not organization.tier.is_available:
             return False, "Subscription tier unavailable"
 
-        # For paid tiers, check billing status using org.billing_status primarily
+        # For paid tiers, check billing status using org.billing_status only
         if organization.tier.requires_stripe_billing or organization.tier.requires_whop_billing:
-            # Primary source: billing_status
             if getattr(organization, 'billing_status', None) in ['past_due', 'payment_failed', 'suspended', 'canceled', 'cancelled']:
                 return False, f"Billing status: {organization.billing_status}"
-            # Secondary compatibility: subscription_status
-            if getattr(organization, 'billing_status', None) is None:
-                if organization.subscription_status not in ['active', 'trialing']:
-                    return False, f"Subscription status: {organization.subscription_status}"
 
         return True, "Subscription in good standing"
 
@@ -513,15 +508,10 @@ class AuthorizationHierarchy:
         if not organization.tier.has_valid_integration:
             return False, "Subscription tier integration not configured"
 
-        # For billing-required tiers, check billing status
+        # For billing-required tiers, check billing_status only
         if organization.tier.requires_stripe_billing or organization.tier.requires_whop_billing:
-            # Primary source: billing_status
             if getattr(organization, 'billing_status', None) in ['past_due', 'payment_failed', 'suspended', 'canceled', 'cancelled']:
                 return False, "Subscription not active"
-            # Secondary compatibility: subscription_status
-            if getattr(organization, 'billing_status', None) is None:
-                if organization.subscription_status not in ['active', 'trialing']:
-                    return False, "Subscription not active"
 
             # Additional billing validations can be added here
             # e.g., check for past due payments, etc.
