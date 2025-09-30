@@ -1,0 +1,57 @@
+   - Production Planning
+
+🎉 All blueprints registered successfully!
+INFO  [alembic.env] Imported model module: app.models.batch
+INFO  [alembic.env] Imported model module: app.models.billing_snapshot
+INFO  [alembic.env] Imported model module: app.models.category
+INFO  [alembic.env] Imported model module: app.models.developer_permission
+INFO  [alembic.env] Imported model module: app.models.developer_role
+INFO  [alembic.env] Imported model module: app.models.domain_event
+INFO  [alembic.env] Imported model module: app.models.freshness_snapshot
+INFO  [alembic.env] Imported model module: app.models.global_item
+INFO  [alembic.env] Imported model module: app.models.inventory
+INFO  [alembic.env] Imported model module: app.models.inventory_lot
+INFO  [alembic.env] Imported model module: app.models.mixins
+INFO  [alembic.env] Imported model module: app.models.models
+INFO  [alembic.env] Imported model module: app.models.permission
+INFO  [alembic.env] Imported model module: app.models.pricing_snapshot
+INFO  [alembic.env] Imported model module: app.models.product
+INFO  [alembic.env] Imported model module: app.models.product_category
+INFO  [alembic.env] Imported model module: app.models.recipe
+INFO  [alembic.env] Imported model module: app.models.reservation
+INFO  [alembic.env] Imported model module: app.models.retention
+INFO  [alembic.env] Imported model module: app.models.role
+INFO  [alembic.env] Imported model module: app.models.statistics
+INFO  [alembic.env] Imported model module: app.models.stripe_event
+INFO  [alembic.env] Imported model module: app.models.subscription_tier
+INFO  [alembic.env] Imported model module: app.models.unified_inventory_history
+INFO  [alembic.env] Imported model module: app.models.unit
+INFO  [alembic.env] Imported model module: app.models.user_preferences
+INFO  [alembic.env] Imported model module: app.models.user_role_assignment
+INFO  [alembic.runtime.migration] Context impl PostgresqlImpl.
+INFO  [alembic.runtime.migration] Will assume transactional DDL.
+INFO  [alembic.runtime.migration] Running upgrade 20250930_4 -> 20250930_5, Set default visibility flags for global ingredient categories
+Setting visibility defaults for global ingredient categories from JSON files...
+   ⚠️  Category 'Oils (Carrier & Fixed)' not found in database
+   ⚠️  Category 'Butters & Solid Fats' not found in database
+   ⚠️  Category 'Waxes' not found in database
+   ⚠️  Category 'Essential Oils' not found in database
+   ⚠️  Category 'Fragrance Oils' not found in database
+   ⚠️  Category 'Liquids (Aqueous)' not found in database
+   ⚠️  Category 'Extracts & Alcohols (Solvents)' not found in database
+   ⚠️  Category 'Active Ingredients (Cosmetics)' not found in database
+   ⚠️  Category 'Preservatives & Additives' not found in database
+   ⚠️  Category 'Surfactants & Emulsifiers' not found in database
+   ⚠️  Category 'Clays' not found in database
+   ⚠️  Category 'Salts & Minerals (Crystalline)' not found in database
+   ⚠️  Category 'Botanicals (Dried & Whole/Parts)' not found in database
+   ⚠️  Category 'Herbs & Spices (Dried & Ground)' not found in database
+   ⚠️  Category 'Fruits, Nuts & Seeds (Whole/Chopped)' not found in database
+   ⚠️  Category 'Flours & Powders (Organic)' not found in database
+   ⚠️  Category 'Starches & Thickeners' not found in database
+   ⚠️  Category 'Sugars & Syrups' not found in database
+   ⚠️  Category 'Colorants (Pigments)' not found in database
+   ⚠️  Category 'Yeast & Cultures' not found in database
+   ⚠️  Category 'Miscellaneous' not found in database
+✅ Category visibility defaults set successfully!
+~/workspace$ 
