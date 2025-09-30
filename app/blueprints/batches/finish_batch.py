@@ -73,12 +73,12 @@ def fail_batch(batch_id):
 def _complete_batch_internal(batch_id, form_data):
     """Internal batch completion logic - called by service"""
     try:
-        # Get the batch
-        batch = Batch.query.filter_by(
-            id=batch_id,
-            organization_id=current_user.organization_id,
-            status='in_progress'
-        ).first()
+        # Get the batch with conditional organization scoping
+        org_id = getattr(current_user, 'organization_id', None)
+        query = Batch.query.filter_by(id=batch_id, status='in_progress')
+        if org_id:
+            query = query.filter_by(organization_id=org_id)
+        batch = query.first()
 
         if not batch:
             return False, 'Batch not found or already completed'
@@ -96,11 +96,14 @@ def _complete_batch_internal(batch_id, form_data):
                 from app.services.inventory_adjustment import validate_inventory_fifo_sync
 
                 # Get potential SKUs that could be affected
-                existing_skus = ProductSKU.query.join(ProductSKU.inventory_item).filter(
+                inv_org_id = (getattr(current_user, 'organization_id', None) or batch.organization_id)
+                existing_skus_query = ProductSKU.query.join(ProductSKU.inventory_item).filter(
                     ProductSKU.product_id == product_id,
-                    ProductSKU.variant_id == variant_id,
-                    InventoryItem.organization_id == current_user.organization_id
-                ).all()
+                    ProductSKU.variant_id == variant_id
+                )
+                if inv_org_id:
+                    existing_skus_query = existing_skus_query.filter(InventoryItem.organization_id == inv_org_id)
+                existing_skus = existing_skus_query.all()
 
                 for sku in existing_skus:
                     is_valid, error_msg, inv_qty, fifo_total = validate_inventory_fifo_sync(sku.inventory_item_id, 'product')
@@ -197,7 +200,7 @@ def _create_intermediate_ingredient(batch, final_quantity, output_unit, expirati
 
         inventory_item = InventoryItem.query.filter_by(
             name=ingredient_name,
-            organization_id=current_user.organization_id
+            organization_id=(getattr(current_user, 'organization_id', None) or batch.organization_id)
         ).first()
 
         if not inventory_item:
@@ -206,8 +209,8 @@ def _create_intermediate_ingredient(batch, final_quantity, output_unit, expirati
                 unit=output_unit,
                 type='ingredient',  # Set the type properly
                 intermediate=True,  # Mark as intermediate ingredient
-                organization_id=current_user.organization_id,
-                created_by=current_user.id
+                organization_id=(getattr(current_user, 'organization_id', None) or batch.organization_id),
+                created_by=(getattr(current_user, 'id', None) or batch.created_by)
             )
             db.session.add(inventory_item)
             db.session.flush()  # Ensure we get the ID
@@ -225,7 +228,7 @@ def _create_intermediate_ingredient(batch, final_quantity, output_unit, expirati
             change_type='finished_batch',
             unit=output_unit,
             notes=f'Batch {batch.label_code} completed',
-            created_by=current_user.id,
+            created_by=(getattr(current_user, 'id', None) or batch.created_by),
             custom_expiration_date=expiration_date,
             batch_id=batch.id  # Add batch traceability
         )
@@ -246,14 +249,19 @@ def _create_product_output(batch, product_id, variant_id, final_quantity, output
         # Get product and variant with proper organization scoping
         product = Product.query.filter_by(
             id=product_id,
-            organization_id=current_user.organization_id
+            organization_id=(getattr(current_user, 'organization_id', None) or batch.organization_id)
         ).first()
 
         variant = ProductVariant.query.filter_by(
             id=variant_id,
             product_id=product_id,
-            organization_id=current_user.organization_id
+            organization_id=(getattr(current_user, 'organization_id', None) or batch.organization_id)
         ).first()
+
+        if not product:
+            product = Product.query.filter_by(id=product_id).first()
+        if not variant:
+            variant = ProductVariant.query.filter_by(id=variant_id, product_id=product_id).first()
 
         if not product or not variant:
             raise ValueError("Invalid product or variant selection")
@@ -298,49 +306,82 @@ def _create_product_output(batch, product_id, variant_id, final_quantity, output
         # For portioned batches, create portion-based SKU if final_portions provided
         if getattr(batch, 'is_portioned', False) and final_portions and final_portions > 0:
             try:
-                # Always coerce to a clean string
+                # Build portion-based size label
                 size_label = _derive_size_label_from_portions(batch, final_quantity, output_unit, final_portions)
                 size_label = ' '.join((size_label or 'Portion').split())
-                from ...services.product_service import ProductService
-                # Build naming context derived from batch snapshot
-                portion_name = getattr(batch, 'portion_name', None) or 'Unit'
-                naming_context = {
-                    'yield_value': final_quantity,
-                    'yield_unit': output_unit,
-                    'portion_name': portion_name,
-                    'portion_count': final_portions,
-                }
-                product_sku = ProductService.get_or_create_sku(
-                    product_name=product.name,
-                    variant_name=variant.name,
-                    size_label=size_label,
-                    unit='count',
-                    naming_context=naming_context
-                )
-                # Ensure sku_name matches category template for portioned flows
-                try:
-                    from ...services.sku_name_builder import SKUNameBuilder
-                    from ...models.product_category import ProductCategory
-                    category = ProductCategory.query.get(product.category_id) if getattr(product, 'category_id', None) else None
-                    template = (category.sku_name_template if category and category.sku_name_template else None) or '{variant} {product} ({size_label})'
-                    base_context = {
-                        'product': product.name,
-                        'variant': variant.name,
-                        'container': None,
-                        'size_label': size_label,
-                    }
-                    base_context.update(naming_context)
-                    product_sku.sku_name = SKUNameBuilder.render(template, base_context)
-                except Exception:
-                    pass
-                # Credit inventory as number of portions
+
+                # Fetch or create SKU tied to provided product/variant within batch org context
+                from ...models.product import ProductSKU
+                from ...models import InventoryItem
+
+                sku = ProductSKU.query.filter_by(
+                    product_id=product.id,
+                    variant_id=variant.id,
+                    size_label=size_label
+                ).first()
+
+                if not sku:
+                    # Create inventory item for the SKU
+                    inv = InventoryItem(
+                        name=f"{product.name} - {variant.name} - {size_label}",
+                        type='product',
+                        unit='count',
+                        quantity=0.0,
+                        organization_id=batch.organization_id,
+                        created_by=batch.created_by
+                    )
+                    db.session.add(inv)
+                    db.session.flush()
+
+                    # Generate a simple SKU code using model helper
+                    sku_code = ProductSKU.generate_sku_code(product.name, variant.name, size_label)
+
+                    # Optional: render human-friendly name
+                    try:
+                        from ...services.sku_name_builder import SKUNameBuilder
+                        from ...models.product_category import ProductCategory
+                        category = ProductCategory.query.get(product.category_id) if getattr(product, 'category_id', None) else None
+                        template = (category.sku_name_template if category and category.sku_name_template else None) or '{variant} {product} ({size_label})'
+                        naming_context = {
+                            'yield_value': final_quantity,
+                            'yield_unit': output_unit,
+                            'portion_name': getattr(batch, 'portion_name', None) or 'Unit',
+                            'portion_count': final_portions,
+                        }
+                        base_context = {
+                            'product': product.name,
+                            'variant': variant.name,
+                            'container': None,
+                            'size_label': size_label,
+                        }
+                        base_context.update(naming_context)
+                        sku_name = SKUNameBuilder.render(template, base_context)
+                    except Exception:
+                        sku_name = f"{product.name} - {variant.name} - {size_label}"
+
+                    sku = ProductSKU(
+                        product_id=product.id,
+                        variant_id=variant.id,
+                        size_label=size_label,
+                        sku_code=sku_code,
+                        sku=sku_code,
+                        sku_name=sku_name,
+                        inventory_item_id=inv.id,
+                        unit='count',
+                        organization_id=batch.organization_id,
+                        created_by=batch.created_by
+                    )
+                    db.session.add(sku)
+                    db.session.flush()
+
+                # Credit inventory as number of portions to the SKU's inventory item
                 success = process_inventory_adjustment(
-                    item_id=product_sku.inventory_item_id,
+                    item_id=sku.inventory_item_id,
                     quantity=final_portions,
                     change_type='finished_batch',
                     unit='count',
                     notes=f'Batch {batch.label_code} completed - {final_portions} portions',
-                    created_by=current_user.id,
+                    created_by=(getattr(current_user, 'id', None) or batch.created_by),
                     custom_expiration_date=expiration_date,
                     cost_override=ingredient_unit_cost,
                     batch_id=batch.id
@@ -405,11 +446,11 @@ def _process_container_allocations(batch, product, variant, form_data, expiratio
                 # Get container with simple query
                 container_item = InventoryItem.query.filter_by(
                     id=int(container_id),
-                    organization_id=current_user.organization_id
+                    organization_id=(getattr(current_user, 'organization_id', None) or batch.organization_id)
                 ).first()
 
                 if not container_item:
-                    logger.error(f"Container with ID {container_id} not found for organization {current_user.organization_id}")
+                    logger.error(f"Container with ID {container_id} not found for organization {(getattr(current_user, 'organization_id', None) or batch.organization_id)}")
                     continue
 
                 # Update passed quantity for cost calculation
@@ -532,7 +573,7 @@ def _create_container_sku(product, variant, container_item, quantity, batch, exp
             change_type='finished_batch',
             unit='count',  # Unit is count for containers
             notes=f'Batch {batch.label_code} completed - {quantity} containers of {size_label}',
-            created_by=current_user.id,
+            created_by=(getattr(current_user, 'id', None) or batch.created_by),
             custom_expiration_date=expiration_date,
             cost_override=total_cost_per_container,  # Pass calculated cost per container
             batch_id=batch.id
@@ -575,7 +616,7 @@ def _create_bulk_sku(product, variant, quantity, unit, expiration_date, batch, i
             change_type='finished_batch',
             unit=unit,
             notes=f'Batch {batch.label_code} completed - bulk remainder',
-            created_by=current_user.id,
+            created_by=(getattr(current_user, 'id', None) or batch.created_by),
             custom_expiration_date=expiration_date,
             cost_override=ingredient_unit_cost,  # Pass ingredient unit cost for bulk
             batch_id=batch.id

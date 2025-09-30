@@ -144,7 +144,7 @@ def create_new_fifo_lot(item_id, quantity, change_type, unit=None, notes=None, c
             unit=unit,
             unit_cost=cost_per_unit,
             notes=notes,
-            created_by=getattr(current_user, 'id', None) if current_user.is_authenticated else None,
+            created_by=(getattr(current_user, 'id', None) if getattr(current_user, 'is_authenticated', False) else created_by),
             organization_id=item.organization_id,
             is_perishable=item.is_perishable,
             shelf_life_days=item.shelf_life_days,

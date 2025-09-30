@@ -134,6 +134,20 @@ def create_inventory_item(form_data, organization_id, created_by):
         if item_type == 'container':
             new_item.unit = 'count'
 
+        # Container structured attributes (material/type/style)
+        if item_type == 'container':
+            try:
+                mat = (form_data.get('container_material') or '').strip()
+                ctype = (form_data.get('container_type') or '').strip()
+                style = (form_data.get('container_style') or '').strip()
+                color = (form_data.get('container_color') or '').strip()
+                new_item.container_material = mat or None
+                new_item.container_type = ctype or None
+                new_item.container_style = style or None
+                new_item.container_color = color or None
+            except Exception:
+                pass
+
         # Apply global item defaults after instance is created
         if global_item:
             # Density for ingredients
@@ -144,6 +158,19 @@ def create_inventory_item(form_data, organization_id, created_by):
                 new_item.capacity = global_item.capacity
             if global_item.capacity_unit is not None:
                 new_item.capacity_unit = global_item.capacity_unit
+            # Container structured attributes defaults
+            try:
+                if item_type == 'container':
+                    if getattr(global_item, 'container_material', None):
+                        new_item.container_material = global_item.container_material
+                    if getattr(global_item, 'container_type', None):
+                        new_item.container_type = global_item.container_type
+                    if getattr(global_item, 'container_style', None):
+                        new_item.container_style = global_item.container_style
+                    if getattr(global_item, 'container_color', None):
+                        new_item.container_color = global_item.container_color
+            except Exception:
+                pass
 
         # Resolve category linkage and density precedence
         # 1) If a category ID was chosen, link and assign its default density

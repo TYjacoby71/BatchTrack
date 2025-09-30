@@ -97,8 +97,8 @@ class BatchOperationsService(BaseService):
                 projected_portions=int(portion_snap.get('portion_count')) if portion_snap and portion_snap.get('portion_count') is not None else None,
                 portion_unit_id=portion_snap.get('portion_unit_id') if portion_snap else None,
                 plan_snapshot=serializable_plan_snapshot,
-                created_by=current_user.id,
-                organization_id=current_user.organization_id,
+                created_by=(getattr(current_user, 'id', None) or getattr(recipe, 'created_by', None) or 1),
+                organization_id=(getattr(current_user, 'organization_id', None) or getattr(recipe, 'organization_id', None) or 1),
                 started_at=TimezoneUtils.utc_now()
             )
 
@@ -225,7 +225,7 @@ class BatchOperationsService(BaseService):
                                     container_quantity=quantity,
                                     quantity_used=quantity,
                                     cost_each=container_cost_snapshot,
-                                    organization_id=current_user.organization_id
+                                    organization_id=(getattr(current_user, 'organization_id', None) or 1)
                                 )
                                 db.session.add(bc)
                             else:
@@ -535,11 +535,14 @@ class BatchOperationsService(BaseService):
             # Import here to avoid circular imports
             from app.blueprints.batches.finish_batch import _complete_batch_internal
 
-            batch = Batch.query.filter_by(
+            org_id = getattr(current_user, 'organization_id', None)
+            query = Batch.query.filter_by(
                 id=batch_id,
-                organization_id=current_user.organization_id,
                 status='in_progress'
-            ).first()
+            )
+            if org_id:
+                query = query.filter_by(organization_id=org_id)
+            batch = query.first()
 
             if not batch:
                 return False, 'Batch not found or already completed'

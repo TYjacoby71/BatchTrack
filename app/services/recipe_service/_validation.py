@@ -14,7 +14,8 @@ logger = logging.getLogger(__name__)
 
 
 def validate_recipe_data(name: str, ingredients: List[Dict] = None, 
-                        yield_amount: float = None, recipe_id: int = None, notes: str = None, category: str = None, tags: str = None, batch_size: float = None) -> Dict[str, Any]:
+                        yield_amount: float = None, recipe_id: int = None, notes: str = None, category: str = None, tags: str = None, batch_size: float = None,
+                        portioning_data: Dict | None = None) -> Dict[str, Any]:
     """
     Validate recipe data before creation or update.
     
@@ -37,9 +38,17 @@ def validate_recipe_data(name: str, ingredients: List[Dict] = None,
         if not is_valid:
             return {'valid': False, 'error': error}
 
-        # Validate yield amount
-        if yield_amount is not None and yield_amount <= 0:
-            return {'valid': False, 'error': "Yield amount must be positive"}
+        # Validate yield amount: must be > 0, unless portioning bulk yield is provided (>0)
+        if yield_amount is None or yield_amount <= 0:
+            bulk_ok = False
+            try:
+                if portioning_data and portioning_data.get('is_portioned'):
+                    byq = float(portioning_data.get('bulk_yield_quantity') or 0)
+                    bulk_ok = byq > 0
+            except Exception:
+                bulk_ok = False
+            if not bulk_ok:
+                return {'valid': False, 'error': "Yield amount must be positive"}
 
         # Validate ingredients if provided
         if ingredients:
@@ -81,9 +90,13 @@ def validate_recipe_name(name: str, recipe_id: int = None) -> Tuple[bool, str]:
         from flask_login import current_user
         query = Recipe.query.filter_by(name=name)
         
-        # Filter by organization
-        if current_user.organization_id:
-            query = query.filter_by(organization_id=current_user.organization_id)
+        # Filter by organization when available
+        try:
+            if getattr(current_user, 'is_authenticated', False) and getattr(current_user, 'organization_id', None):
+                query = query.filter_by(organization_id=current_user.organization_id)
+        except Exception:
+            # If current_user is unavailable in context, skip org scoping for validation
+            pass
         
         # Exclude current recipe when editing
         if recipe_id:

@@ -30,14 +30,26 @@ class ProductService:
         # Get or create Product
         product = Product.query.filter_by(
             name=product_name,
-            organization_id=current_user.organization_id
+            organization_id=(getattr(current_user, 'organization_id', None) or 1)
         ).first()
 
         if not product:
+            # Ensure a default category exists
+            try:
+                from ..models.product_category import ProductCategory
+                default_cat = ProductCategory.query.filter_by(name='Uncategorized').first()
+                if not default_cat:
+                    default_cat = ProductCategory(name='Uncategorized')
+                    db.session.add(default_cat)
+                    db.session.flush()
+                category_id = default_cat.id
+            except Exception:
+                category_id = None
             product = Product(
                 name=product_name,
-                organization_id=current_user.organization_id,
-                created_by=current_user.id
+                organization_id=(getattr(current_user, 'organization_id', None) or 1),
+                created_by=(getattr(current_user, 'id', None) or 1),
+                category_id=category_id
             )
             db.session.add(product)
             db.session.flush()
@@ -64,8 +76,8 @@ class ProductService:
             variant = ProductVariant(
                 product_id=product.id,
                 name=variant_name,
-                organization_id=current_user.organization_id,
-                created_by=current_user.id
+                organization_id=(getattr(current_user, 'organization_id', None) or product.organization_id or 1),
+                created_by=(getattr(current_user, 'id', None) or product.created_by or 1)
             )
             db.session.add(variant)
             db.session.flush()
@@ -87,7 +99,7 @@ class ProductService:
             product_id=product.id,
             variant_id=variant.id,
             size_label=size_label,
-            organization_id=current_user.organization_id
+            organization_id=(getattr(current_user, 'organization_id', None) or product.organization_id or 1)
         ).first()
 
         if not sku:
@@ -98,8 +110,8 @@ class ProductService:
                 type='product',  # Critical: mark as product type
                 unit=unit,
                 quantity=0.0,
-                organization_id=current_user.organization_id,
-                created_by=current_user.id
+                organization_id=(getattr(current_user, 'organization_id', None) or product.organization_id or 1),
+                created_by=(getattr(current_user, 'id', None) or product.created_by or 1)
             )
             db.session.add(inventory_item)
             db.session.flush()
@@ -141,8 +153,8 @@ class ProductService:
                 sku_name=sku_name,
                 inventory_item_id=inventory_item.id,
                 unit=unit,
-                organization_id=current_user.organization_id,
-                created_by=current_user.id
+                organization_id=(getattr(current_user, 'organization_id', None) or product.organization_id or 1),
+                created_by=(getattr(current_user, 'id', None) or product.created_by or 1)
             )
 
             # Note: Perishable settings are managed at the inventory_item level
