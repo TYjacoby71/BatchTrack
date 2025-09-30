@@ -1,6 +1,7 @@
 from flask import Blueprint, render_template, request
 from app.models import db, GlobalItem
 from app.services.statistics.global_item_stats import GlobalItemStatsService
+from app.models.category import IngredientCategory
 
 global_library_bp = Blueprint('global_library_bp', __name__)
 
@@ -27,7 +28,6 @@ def global_library():
 
     # Filter by ingredient category name if provided and type is ingredient
     if category_filter and item_type == 'ingredient':
-        from app.models.category import IngredientCategory
         query = query.join(IngredientCategory, GlobalItem.ingredient_category_id == IngredientCategory.id).filter(
             IngredientCategory.name == category_filter
         )
@@ -47,12 +47,15 @@ def global_library():
 
     items = query.order_by(GlobalItem.item_type.asc(), GlobalItem.name.asc()).limit(500).all()
 
-    # Ingredient categories list for filter dropdown
-    from app.models.category import IngredientCategory
-    categories = db.session.query(IngredientCategory.name).join(
-        GlobalItem, GlobalItem.ingredient_category_id == IngredientCategory.id
-    ).filter(GlobalItem.item_type == 'ingredient').distinct().order_by(IngredientCategory.name).all()
-    categories = [c[0] for c in categories if c[0]]
+    # Get global ingredient categories for the filter dropdown (only for ingredients)
+    categories = []
+    if item_type == 'ingredient':
+        global_categories = IngredientCategory.query.filter_by(
+            organization_id=None,
+            is_active=True,
+            is_global_category=True
+        ).order_by(IngredientCategory.name).all()
+        categories = [cat.name for cat in global_categories]
 
     return render_template(
         'library/global_items_public.html',
@@ -77,4 +80,3 @@ def global_library_item_stats(item_id: int):
         }
     except Exception as e:
         return {'success': False, 'error': str(e)}, 500
-
