@@ -1,0 +1,27 @@
+
+{
+  "category_name": "Tin & Steel Containers",
+  "material": "Tin",
+  "default_capacity_unit": "oz",
+  "description": "Tin and steel containers for candles and solid products",
+  "items": [
+    {
+      "name": "Candle Tin",
+      "capacity": 6.0,
+      "capacity_unit": "oz",
+      "container_type": "Tin",
+      "container_style": "Candle",
+      "container_color": "Silver",
+      "aka_names": ["Tin Container", "Metal Candle Tin"]
+    },
+    {
+      "name": "Travel Tin",
+      "capacity": 2.0,
+      "capacity_unit": "oz",
+      "container_type": "Tin",
+      "container_style": "Travel",
+      "container_color": "Silver",
+      "aka_names": ["Small Tin", "Portable Tin"]
+    }
+  ]
+}

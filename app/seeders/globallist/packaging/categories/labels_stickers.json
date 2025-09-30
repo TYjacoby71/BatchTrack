@@ -1,0 +1,27 @@
+
+{
+  "category_name": "Labels & Stickers",
+  "material": "Paper",
+  "default_capacity_unit": "count",
+  "description": "Labels, stickers, and adhesive packaging materials",
+  "items": [
+    {
+      "name": "Round Label",
+      "capacity": 100.0,
+      "capacity_unit": "count",
+      "container_type": "Label",
+      "container_style": "Round",
+      "container_color": "White",
+      "aka_names": ["Circular Label", "Round Sticker"]
+    },
+    {
+      "name": "Rectangle Label",
+      "capacity": 100.0,
+      "capacity_unit": "count",
+      "container_type": "Label", 
+      "container_style": "Rectangle",
+      "container_color": "White",
+      "aka_names": ["Rectangular Label", "Square Label"]
+    }
+  ]
+}

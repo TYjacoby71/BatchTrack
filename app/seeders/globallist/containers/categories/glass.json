@@ -1,0 +1,27 @@
+
+{
+  "category_name": "Glass Containers",
+  "material": "Glass",
+  "default_capacity_unit": "oz",
+  "description": "Glass containers for cosmetics, food, and storage",
+  "items": [
+    {
+      "name": "Straight Sided Jar",
+      "capacity": 8.0,
+      "capacity_unit": "fl oz",
+      "container_type": "Jar",
+      "container_style": "Straight Sided",
+      "container_color": "Clear",
+      "aka_names": ["Straight-Sided Jar", "Clear Glass Jar"]
+    },
+    {
+      "name": "Boston Round Bottle",
+      "capacity": 4.0,
+      "capacity_unit": "fl oz", 
+      "container_type": "Bottle",
+      "container_style": "Boston Round",
+      "container_color": "Amber",
+      "aka_names": ["Boston Round", "Amber Glass Bottle"]
+    }
+  ]
+}

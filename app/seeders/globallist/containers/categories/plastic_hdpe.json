@@ -1,0 +1,27 @@
+
+{
+  "category_name": "HDPE Plastic Containers",
+  "material": "HDPE Plastic",
+  "default_capacity_unit": "oz",
+  "description": "HDPE plastic containers for heavy-duty storage and chemicals",
+  "items": [
+    {
+      "name": "HDPE Wide Mouth Jar",
+      "capacity": 16.0,
+      "capacity_unit": "oz",
+      "container_type": "Jar",
+      "container_style": "Wide Mouth",
+      "container_color": "White",
+      "aka_names": ["HDPE Jar", "Wide Mouth Container"]
+    },
+    {
+      "name": "HDPE Cylinder Bottle",
+      "capacity": 8.0,
+      "capacity_unit": "fl oz",
+      "container_type": "Bottle",
+      "container_style": "Cylinder",
+      "container_color": "Natural",
+      "aka_names": ["HDPE Bottle", "Cylinder Container"]
+    }
+  ]
+}

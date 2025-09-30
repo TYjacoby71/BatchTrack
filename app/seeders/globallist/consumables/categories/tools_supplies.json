@@ -1,0 +1,27 @@
+
+{
+  "category_name": "Tools & Supplies",
+  "material": "Mixed",
+  "default_capacity_unit": "count",
+  "description": "Manufacturing tools and supplies that get consumed",
+  "items": [
+    {
+      "name": "Disposable Pipettes",
+      "capacity": 100.0,
+      "capacity_unit": "count",
+      "container_type": "Tool",
+      "container_style": "Disposable",
+      "container_color": "Clear",
+      "aka_names": ["Plastic Pipettes", "Transfer Pipettes"]
+    },
+    {
+      "name": "Latex Gloves",
+      "capacity": 100.0,
+      "capacity_unit": "count",
+      "container_type": "Safety",
+      "container_style": "Disposable",
+      "container_color": "White",
+      "aka_names": ["Disposable Gloves", "Protective Gloves"]
+    }
+  ]
+}

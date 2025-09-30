@@ -1,0 +1,27 @@
+
+{
+  "category_name": "Cleaning Materials",
+  "material": "Mixed",
+  "default_capacity_unit": "count",
+  "description": "Cleaning supplies and sanitization materials",
+  "items": [
+    {
+      "name": "Isopropyl Alcohol Wipes",
+      "capacity": 50.0,
+      "capacity_unit": "count",
+      "container_type": "Wipe",
+      "container_style": "Sanitizing",
+      "container_color": "White",
+      "aka_names": ["Alcohol Wipes", "Sanitizing Wipes"]
+    },
+    {
+      "name": "Paper Towels",
+      "capacity": 100.0,
+      "capacity_unit": "count",
+      "container_type": "Towel",
+      "container_style": "Paper",
+      "container_color": "White",
+      "aka_names": ["Disposable Towels", "Cleaning Towels"]
+    }
+  ]
+}

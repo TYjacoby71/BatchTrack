@@ -19,26 +19,32 @@ def load_density_json():
 
 
 def load_category_files():
-	"""Load category files from app/seeders/globallist/ingredients/categories/"""
+	"""Load category files from app/seeders/globallist/*/categories/"""
 	import os
 	import json
 
-	base_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'app', 'seeders', 'globallist', 'ingredients', 'categories')
+	base_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'app', 'seeders', 'globallist')
 	categories = []
 
-	if not os.path.exists(base_path):
-		print(f"Category path not found: {base_path}")
-		return categories
+	# Load from ingredients, containers, packaging, and consumables
+	for item_type in ['ingredients', 'containers', 'packaging', 'consumables']:
+		category_path = os.path.join(base_dir, item_type, 'categories')
+		
+		if not os.path.exists(category_path):
+			print(f"Category path not found: {category_path}")
+			continue
 
-	for filename in os.listdir(base_path):
-		if filename.endswith('.json'):
-			filepath = os.path.join(base_path, filename)
-			try:
-				with open(filepath, 'r') as f:
-					category_data = json.load(f)
-					categories.append(category_data)
-			except Exception as e:
-				print(f"Error loading {filename}: {e}")
+		for filename in os.listdir(category_path):
+			if filename.endswith('.json'):
+				filepath = os.path.join(category_path, filename)
+				try:
+					with open(filepath, 'r') as f:
+						category_data = json.load(f)
+						# Add item_type to distinguish between categories
+						category_data['item_type'] = item_type.rstrip('s')  # Remove plural 's'
+						categories.append(category_data)
+				except Exception as e:
+					print(f"Error loading {filename}: {e}")
 
 	return categories
 
@@ -84,37 +90,59 @@ def seed():
 				curated_cat.is_global_category = True
 
 			# Process items in the category
+			item_type = cat_data.get('item_type', 'ingredient')
+			
 			for item_data in cat_data.get('items', []):
 				name = item_data.get('name', '').strip()
 				if not name:
 					continue
 
 				density = item_data.get('density_g_per_ml')
-				aka = item_data.get('aka', [])
+				aka = item_data.get('aka_names', item_data.get('aka', []))
 				default_unit = item_data.get('default_unit')
 				perishable = item_data.get('perishable', False)
 				shelf_life_days = item_data.get('shelf_life_days')
+				
+				# Container/packaging specific fields
+				capacity = item_data.get('capacity')
+				capacity_unit = item_data.get('capacity_unit')
+				container_material = cat_data.get('material')
+				container_type = item_data.get('container_type')
+				container_style = item_data.get('container_style')
+				container_color = item_data.get('container_color')
 
 				# Create or update global item
-				existing = GlobalItem.query.filter_by(name=name, item_type='ingredient').first()
+				existing = GlobalItem.query.filter_by(name=name, item_type=item_type).first()
 				if existing:
 					existing.density = density
 					existing.aka_names = aka
 					existing.default_unit = default_unit
-					existing.ingredient_category_id = curated_cat.id
+					existing.ingredient_category_id = curated_cat.id if item_type == 'ingredient' else None
 					existing.default_is_perishable = perishable
 					existing.recommended_shelf_life_days = shelf_life_days
+					existing.capacity = capacity
+					existing.capacity_unit = capacity_unit
+					existing.container_material = container_material
+					existing.container_type = container_type
+					existing.container_style = container_style
+					existing.container_color = container_color
 					updated_items += 1
 				else:
 					gi = GlobalItem(
 						name=name,
-						item_type='ingredient',
+						item_type=item_type,
 						default_unit=default_unit,
 						density=density,
-						ingredient_category_id=curated_cat.id,
+						ingredient_category_id=curated_cat.id if item_type == 'ingredient' else None,
 						aka_names=aka,
 						default_is_perishable=perishable,
 						recommended_shelf_life_days=shelf_life_days,
+						capacity=capacity,
+						capacity_unit=capacity_unit,
+						container_material=container_material,
+						container_type=container_type,
+						container_style=container_style,
+						container_color=container_color,
 					)
 					db.session.add(gi)
 					created_items += 1

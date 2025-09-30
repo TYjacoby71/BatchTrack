@@ -1,0 +1,27 @@
+
+{
+  "category_name": "Aluminum Containers",
+  "material": "Aluminum",
+  "default_capacity_unit": "oz",
+  "description": "Aluminum containers and tins for cosmetics and storage",
+  "items": [
+    {
+      "name": "Deep Profile Tin",
+      "capacity": 4.0,
+      "capacity_unit": "oz",
+      "container_type": "Tin",
+      "container_style": "Deep Profile",
+      "container_color": null,
+      "aka_names": ["Aluminum Tin", "Deep Tin"]
+    },
+    {
+      "name": "Shallow Tin",
+      "capacity": 2.0,
+      "capacity_unit": "oz",
+      "container_type": "Tin",
+      "container_style": "Shallow",
+      "container_color": null,
+      "aka_names": ["Flat Tin", "Aluminum Container"]
+    }
+  ]
+}

@@ -1,0 +1,27 @@
+
+{
+  "category_name": "Cardboard Packaging",
+  "material": "Cardboard",
+  "default_capacity_unit": "count",
+  "description": "Cardboard boxes and packaging materials",
+  "items": [
+    {
+      "name": "Small Product Box",
+      "capacity": 1.0,
+      "capacity_unit": "count",
+      "container_type": "Box",
+      "container_style": "Product",
+      "container_color": "Natural",
+      "aka_names": ["Cardboard Box", "Shipping Box"]
+    },
+    {
+      "name": "Gift Box",
+      "capacity": 1.0,
+      "capacity_unit": "count",
+      "container_type": "Box",
+      "container_style": "Gift",
+      "container_color": "White",
+      "aka_names": ["Present Box", "Retail Box"]
+    }
+  ]
+}
