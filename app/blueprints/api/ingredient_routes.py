@@ -9,16 +9,34 @@ ingredient_api_bp = Blueprint('ingredient_api', __name__)
 
 @ingredient_api_bp.route('/categories', methods=['GET'])
 def get_categories():
-    """Return base ingredient categories with their default densities."""
-    # Categories are org-scoped; expose current org's categories sorted by name
-    categories = IngredientCategory.query.order_by(IngredientCategory.name.asc()).all()
+    """Return ingredient categories: global categories plus user's custom ones."""
+    if not current_user.is_authenticated:
+        return jsonify([])
+    
+    # Get global categories (organization_id IS NULL)
+    global_categories = IngredientCategory.query.filter_by(
+        organization_id=None,
+        is_active=True,
+        is_global_category=True
+    ).order_by(IngredientCategory.name.asc()).all()
+    
+    # Get user's custom categories (organization_id = user's org, not global)
+    custom_categories = IngredientCategory.query.filter_by(
+        organization_id=current_user.organization_id,
+        is_active=True,
+        is_global_category=False
+    ).order_by(IngredientCategory.name.asc()).all()
+    
+    # Combine categories
+    all_categories = global_categories + custom_categories
+    
     return jsonify([
         {
             'id': cat.id,
             'name': cat.name,
             'default_density': cat.default_density
         }
-        for cat in categories
+        for cat in all_categories
     ])
 
 @ingredient_api_bp.route('/ingredient/<int:id>/density', methods=['GET'])
