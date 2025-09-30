@@ -882,6 +882,20 @@ def seed_test_data_command():
         db.session.rollback()
 
 
+@click.command('seed-global-inventory')
+@with_appcontext
+def seed_global_inventory_command():
+    """Seed complete global inventory library (ingredients, containers, packaging, consumables)"""
+    try:
+        print("🔄 Seeding global inventory library...")
+        from scripts.seed_global_inventory_library import seed_global_inventory_library
+        seed_global_inventory_library()
+        print('✅ Global inventory library seeded successfully!')
+    except Exception as e:
+        print(f'❌ Global inventory seeding failed: {str(e)}')
+        db.session.rollback()
+        raise
+
 def register_commands(app):
     """Register CLI commands"""
     # Database initialization
@@ -906,6 +920,7 @@ def register_commands(app):
     app.cli.add_command(seed_product_categories_command) # Added new command
     app.cli.add_command(seed_test_data_command)
     app.cli.add_command(seed_permission_categories_command)
+    app.cli.add_command(seed_global_inventory_command)
 
     # Production maintenance commands
     app.cli.add_command(update_permissions_command)
