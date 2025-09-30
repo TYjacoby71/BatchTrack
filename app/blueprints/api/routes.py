@@ -102,7 +102,7 @@ api_bp.register_blueprint(reservation_api_bp)
 def get_inventory_item(item_id):
     """Get inventory item details for editing"""
     from ...models import InventoryItem
-    
+
     item = InventoryItem.query.filter_by(
         id=item_id,
         organization_id=current_user.organization_id
@@ -167,4 +167,33 @@ def create_unit():
     except Exception as e:
         from ...extensions import db
         db.session.rollback()
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@api_bp.route('/category-visibility/<int:category_id>')
+@login_required
+def get_category_visibility_api(category_id):
+    """Get visibility settings for a category by ID"""
+    try:
+        from app.models.category import IngredientCategory
+
+        category = IngredientCategory.query.get_or_404(category_id)
+
+        # Check if user has access to this category
+        if category.organization_id and category.organization_id != current_user.organization_id:
+            return jsonify({'success': False, 'error': 'Access denied'}), 403
+
+        visibility = {
+            'show_saponification_value': getattr(category, 'show_saponification_value', False),
+            'show_iodine_value': getattr(category, 'show_iodine_value', False),
+            'show_melting_point': getattr(category, 'show_melting_point', False),
+            'show_flash_point': getattr(category, 'show_flash_point', False),
+            'show_ph_value': getattr(category, 'show_ph_value', False),
+            'show_moisture_content': getattr(category, 'show_moisture_content', False),
+            'show_shelf_life_months': getattr(category, 'show_shelf_life_months', False),
+            'show_comedogenic_rating': getattr(category, 'show_comedogenic_rating', False)
+        }
+
+        return jsonify({'success': True, 'visibility': visibility})
+
+    except Exception as e:
         return jsonify({'success': False, 'error': str(e)}), 500
