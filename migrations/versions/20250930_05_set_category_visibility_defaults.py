@@ -1,8 +1,8 @@
 
 """Set default visibility flags for global ingredient categories
 
-Revision ID: 20250930_05
-Revises: 20250930_04
+Revision ID: 20250930_5
+Revises: 20250930_4
 Create Date: 2025-09-30 00:05:00
 """
 
@@ -14,8 +14,8 @@ import os
 import glob
 
 # revision identifiers, used by Alembic.
-revision = '20250930_05'
-down_revision = '20250930_04'
+revision = '20250930_5'
+down_revision = '20250930_4'
 branch_labels = None
 depends_on = None
 
