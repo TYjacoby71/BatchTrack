@@ -62,6 +62,16 @@ def build_drawer_payload(modal_url: str, *, error_type: str, error_code: str, su
 
 Example modal: `app/templates/components/drawer/density_fix_modal.html`
 
+### Common success events
+
+- `conversion.density.updated` — density saved for an ingredient
+- `conversion.unit_mapping.created` — new custom unit mapping created
+- `globalLinking.completed` — inventory items linked to a GlobalItem
+- `inventory.quick_create.completed` — quick-create inventory finished
+- `container.plan.updated` — container planning fix completed
+
+Use a specific, namespaced event per drawer so `DrawerProtocol` can bind and retry reliably.
+
 ### File Locations & Conventions
 
 - Frontend core

@@ -13,7 +13,9 @@ class UnifiedInventoryHistory(ScopedModelMixin, db.Model):
 
     id = db.Column(db.Integer, primary_key=True)
     inventory_item_id = db.Column(db.Integer, db.ForeignKey('inventory_item.id'), nullable=False, index=True)
-    timestamp = db.Column(db.DateTime, default=datetime.utcnow, nullable=False, index=True)
+    # Use timezone-safe application helper for consistency
+    from ..utils.timezone_utils import TimezoneUtils as _TZ
+    timestamp = db.Column(db.DateTime, default=_TZ.utc_now, nullable=False, index=True)
     change_type = db.Column(db.String(50), nullable=False, index=True)
     quantity_change = db.Column(db.Float, nullable=False)
     unit = db.Column(db.String(50), nullable=False)

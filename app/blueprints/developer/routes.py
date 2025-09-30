@@ -1143,7 +1143,12 @@ def delete_global_item(item_id):
 @developer_bp.route('/inventory-analytics')
 @login_required
 def inventory_analytics_stub():
-    """Stub page for global inventory analytics in developer system"""
+    """Developer inventory analytics (feature-flagged)."""
+    from flask import current_app
+    enabled = current_app.config.get('FEATURE_INVENTORY_ANALYTICS', False)
+    if not enabled:
+        flash('Inventory analytics is not enabled for this environment.', 'info')
+        return redirect(url_for('developer.dashboard'))
     return render_template('developer/inventory_analytics.html')
 
 @developer_bp.route('/analytics-catalog')

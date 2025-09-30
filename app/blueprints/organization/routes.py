@@ -8,6 +8,7 @@ from app.models import User, Organization, Role, Permission
 from app.extensions import db
 from app.utils.permissions import require_permission, has_permission
 from app.utils.timezone_utils import TimezoneUtils
+from flask import current_app
 
 organization_bp = Blueprint('organization', __name__)
 
@@ -335,25 +336,54 @@ def invite_user():
         # Assign role using the new role assignment system
         new_user.assign_role(role, assigned_by=current_user)
 
-        # TODO: In a real implementation, send email with login details
-        # For now, we'll return the credentials directly
-
-        status_message = "User invited successfully!"
-        if will_be_inactive:
-            status_message += " User added as inactive due to subscription limits."
-
-        return jsonify({
-            'success': True, 
-            'message': f'{status_message} Login details - Username: {username}, Temporary password: {temp_password}',
-            'user_data': {
-                'username': username,
-                'email': email,
-                'full_name': new_user.full_name,
-                'role': role.name,
-                'temp_password': temp_password,  # Remove this in production
-                'is_active': new_user.is_active
-            }
-        })
+        # Send password setup email if email is configured; otherwise, include a minimal hint
+        try:
+            from app.services.email_service import EmailService
+            if EmailService.is_configured():
+                setup_token = EmailService.generate_reset_token(new_user.id)
+                EmailService.send_password_setup_email(email, setup_token, first_name=first_name or username)
+                status_message = "User invited successfully! Password setup email sent."
+                if will_be_inactive:
+                    status_message += " User added as inactive due to subscription limits."
+                return jsonify({
+                    'success': True,
+                    'message': status_message,
+                    'user_data': {
+                        'username': username,
+                        'email': email,
+                        'full_name': new_user.full_name,
+                        'role': role.name,
+                        'is_active': new_user.is_active
+                    }
+                })
+            else:
+                status_message = "User invited. Email not configured; please set a password manually."
+                if will_be_inactive:
+                    status_message += " User added as inactive due to subscription limits."
+                return jsonify({
+                    'success': True,
+                    'message': status_message,
+                    'user_data': {
+                        'username': username,
+                        'email': email,
+                        'full_name': new_user.full_name,
+                        'role': role.name,
+                        'is_active': new_user.is_active
+                    }
+                })
+        except Exception as _e:
+            # Fallback: do not expose temp password in API; instruct admin to set password
+            return jsonify({
+                'success': True,
+                'message': 'User invited. Configure email to send password setup links, or set a password manually.',
+                'user_data': {
+                    'username': username,
+                    'email': email,
+                    'full_name': new_user.full_name,
+                    'role': role.name,
+                    'is_active': new_user.is_active
+                }
+            })
 
     except Exception as e:
         db.session.rollback()
