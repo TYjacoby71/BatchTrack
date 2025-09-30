@@ -37,7 +37,18 @@ def clear_global_items():
                 db.session.query(GlobalItem).delete()
                 db.session.flush()  # Ensure FK references are cleared
 
-            # 2. Clear reference categories (parent table)
+            # 2. Clear inventory_item.category_id references to global categories
+            from app.models.inventory import InventoryItem
+            global_category_ids = [cat.id for cat in IngredientCategory.query.filter_by(organization_id=None).all()]
+            if global_category_ids:
+                print(f"🔗 Clearing inventory item category references to global categories...")
+                inventory_items_to_update = InventoryItem.query.filter(InventoryItem.category_id.in_(global_category_ids)).all()
+                for item in inventory_items_to_update:
+                    item.category_id = None
+                print(f"   ↻ Updated {len(inventory_items_to_update)} inventory items")
+                db.session.flush()
+
+            # 3. Clear reference categories (parent table)
             if categories_count > 0:
                 print(f"🗑️  Clearing {categories_count} reference categories...")
                 db.session.query(IngredientCategory).filter_by(organization_id=None).delete()
