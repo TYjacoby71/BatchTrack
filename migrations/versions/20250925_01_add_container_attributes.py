@@ -2,7 +2,7 @@
 Add container structured attributes to inventory_item and global_item
 
 Revision ID: 20250925_01_add_container_attributes
-Revises: 20250923_04
+Revises: 20250925_03
 Create Date: 2025-09-25 00:00:00
 """
 
@@ -11,7 +11,7 @@ import sqlalchemy as sa
 
 # revision identifiers, used by Alembic.
 revision = '20250925_01_add_container_attributes'
-down_revision = '20250923_04'
+down_revision = '20250925_03'
 branch_labels = None
 depends_on = None
 
