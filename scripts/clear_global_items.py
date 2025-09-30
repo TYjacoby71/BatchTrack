@@ -31,10 +31,11 @@ def clear_global_items():
             print(f"   - Global items: {global_items_count}")
             print(f"   - Reference categories: {categories_count}")
 
-            # 1. Clear global items first (child table)
+            # 1. Clear global items first (they reference categories via FK)
             if global_items_count > 0:
                 print(f"🗑️  Clearing {global_items_count} global items...")
                 db.session.query(GlobalItem).delete()
+                db.session.flush()  # Ensure FK references are cleared
 
             # 2. Clear reference categories (parent table)
             if categories_count > 0:

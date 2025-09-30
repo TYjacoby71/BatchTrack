@@ -69,8 +69,10 @@ def seed_global_inventory_library():
 			# Create or update ingredient category (only for ingredients)
 			curated_cat = None
 			if item_type == 'ingredient':
+				# Always check for existing category first
 				curated_cat = IngredientCategory.query.filter_by(name=cat_name, organization_id=None).first()
 				if not curated_cat:
+					# Create new category
 					curated_cat = IngredientCategory(
 						name=cat_name,
 						description=description,
@@ -89,27 +91,51 @@ def seed_global_inventory_library():
 						show_comedogenic_rating=cat_data.get('show_comedogenic_rating', False)
 					)
 					db.session.add(curated_cat)
-					db.session.flush()
-					created_categories += 1
-					print(f"    ✅ Created ingredient category: {cat_name}")
+					try:
+						db.session.flush()
+						created_categories += 1
+						print(f"    ✅ Created ingredient category: {cat_name}")
+					except Exception as e:
+						db.session.rollback()
+						# Try to fetch again in case of race condition
+						curated_cat = IngredientCategory.query.filter_by(name=cat_name, organization_id=None).first()
+						if not curated_cat:
+							print(f"    ❌ Failed to create category {cat_name}: {e}")
+							continue
+						print(f"    ↻ Category {cat_name} already existed, using existing")
 				else:
-					# Update existing category
-					if default_density is not None:
+					# Update existing category with new data
+					updated = False
+					if default_density is not None and curated_cat.default_density != default_density:
 						curated_cat.default_density = default_density
-					if description:
+						updated = True
+					if description and curated_cat.description != description:
 						curated_cat.description = description
+						updated = True
 					# Ensure global category flag is set
-					curated_cat.is_global_category = True
+					if not curated_cat.is_global_category:
+						curated_cat.is_global_category = True
+						updated = True
 					# Update visibility flags from JSON
-					curated_cat.show_saponification_value = cat_data.get('show_saponification_value', False)
-					curated_cat.show_iodine_value = cat_data.get('show_iodine_value', False)
-					curated_cat.show_melting_point = cat_data.get('show_melting_point', False)
-					curated_cat.show_flash_point = cat_data.get('show_flash_point', False)
-					curated_cat.show_ph_value = cat_data.get('show_ph_value', False)
-					curated_cat.show_moisture_content = cat_data.get('show_moisture_content', False)
-					curated_cat.show_shelf_life_months = cat_data.get('show_shelf_life_months', False)
-					curated_cat.show_comedogenic_rating = cat_data.get('show_comedogenic_rating', False)
-					print(f"    ↻ Updated ingredient category: {cat_name}")
+					visibility_updates = [
+						('show_saponification_value', cat_data.get('show_saponification_value', False)),
+						('show_iodine_value', cat_data.get('show_iodine_value', False)),
+						('show_melting_point', cat_data.get('show_melting_point', False)),
+						('show_flash_point', cat_data.get('show_flash_point', False)),
+						('show_ph_value', cat_data.get('show_ph_value', False)),
+						('show_moisture_content', cat_data.get('show_moisture_content', False)),
+						('show_shelf_life_months', cat_data.get('show_shelf_life_months', False)),
+						('show_comedogenic_rating', cat_data.get('show_comedogenic_rating', False))
+					]
+					for field, value in visibility_updates:
+						if getattr(curated_cat, field) != value:
+							setattr(curated_cat, field, value)
+							updated = True
+					
+					if updated:
+						print(f"    ↻ Updated ingredient category: {cat_name}")
+					else:
+						print(f"    ↻ Ingredient category unchanged: {cat_name}")
 
 			# Process items in the category
 			items_processed = 0
@@ -143,76 +169,109 @@ def seed_global_inventory_library():
 				shelf_life_months = item_data.get('shelf_life_months')
 				comedogenic = item_data.get('comedogenic_rating')
 
-				# Create or update global item
-				existing = GlobalItem.query.filter_by(name=name, item_type=item_type).first()
+				# Always check for existing item first (case-insensitive)
+				existing = GlobalItem.query.filter(
+					GlobalItem.name.ilike(name),
+					GlobalItem.item_type == item_type
+				).first()
+				
 				if existing:
-					# Update existing item
-					existing.density = density
-					existing.aka_names = aka
-					existing.default_unit = default_unit
-					existing.ingredient_category_id = curated_cat.id if (item_type == 'ingredient' and curated_cat) else None
-					existing.default_is_perishable = perishable
-					existing.recommended_shelf_life_days = shelf_life_days
-					existing.capacity = capacity
-					existing.capacity_unit = capacity_unit
-					existing.container_material = container_material
-					existing.container_type = container_type
-					existing.container_style = container_style
-					existing.container_color = container_color
+					# Update existing item with new data
+					updated = False
+					updates = [
+						('density', density),
+						('aka_names', aka),
+						('default_unit', default_unit),
+						('default_is_perishable', perishable),
+						('recommended_shelf_life_days', shelf_life_days),
+						('capacity', capacity),
+						('capacity_unit', capacity_unit),
+						('container_material', container_material),
+						('container_type', container_type),
+						('container_style', container_style),
+						('container_color', container_color)
+					]
+					
+					for field, value in updates:
+						if value is not None and getattr(existing, field) != value:
+							setattr(existing, field, value)
+							updated = True
+					
+					# Update category relationship for ingredients
+					if item_type == 'ingredient' and curated_cat:
+						if existing.ingredient_category_id != curated_cat.id:
+							existing.ingredient_category_id = curated_cat.id
+							updated = True
 					
 					# Update soap making fields for ingredients
 					if item_type == 'ingredient':
-						existing.saponification_value = sap_value
-						existing.iodine_value = iodine_val
-						existing.melting_point_c = melting_pt
-						existing.flash_point_c = flash_pt
-						existing.ph_value = ph_val
-						existing.moisture_content_percent = moisture
-						existing.shelf_life_months = shelf_life_months
-						existing.comedogenic_rating = comedogenic
+						soap_updates = [
+							('saponification_value', sap_value),
+							('iodine_value', iodine_val),
+							('melting_point_c', melting_pt),
+							('flash_point_c', flash_pt),
+							('ph_value', ph_val),
+							('moisture_content_percent', moisture),
+							('shelf_life_months', shelf_life_months),
+							('comedogenic_rating', comedogenic)
+						]
+						for field, value in soap_updates:
+							if value is not None and getattr(existing, field) != value:
+								setattr(existing, field, value)
+								updated = True
 					
-					updated_items += 1
+					if updated:
+						updated_items += 1
 				else:
 					# Create new item
-					gi = GlobalItem(
-						name=name,
-						item_type=item_type,
-						default_unit=default_unit,
-						density=density,
-						ingredient_category_id=curated_cat.id if (item_type == 'ingredient' and curated_cat) else None,
-						aka_names=aka,
-						default_is_perishable=perishable,
-						recommended_shelf_life_days=shelf_life_days,
-						capacity=capacity,
-						capacity_unit=capacity_unit,
-						container_material=container_material,
-						container_type=container_type,
-						container_style=container_style,
-						container_color=container_color,
-					)
-					
-					# Add soap making fields for ingredients
-					if item_type == 'ingredient':
-						gi.saponification_value = sap_value
-						gi.iodine_value = iodine_val
-						gi.melting_point_c = melting_pt
-						gi.flash_point_c = flash_pt
-						gi.ph_value = ph_val
-						gi.moisture_content_percent = moisture
-						gi.shelf_life_months = shelf_life_months
-						gi.comedogenic_rating = comedogenic
-					
-					db.session.add(gi)
-					created_items += 1
+					try:
+						gi = GlobalItem(
+							name=name,
+							item_type=item_type,
+							default_unit=default_unit,
+							density=density,
+							ingredient_category_id=curated_cat.id if (item_type == 'ingredient' and curated_cat) else None,
+							aka_names=aka,
+							default_is_perishable=perishable,
+							recommended_shelf_life_days=shelf_life_days,
+							capacity=capacity,
+							capacity_unit=capacity_unit,
+							container_material=container_material,
+							container_type=container_type,
+							container_style=container_style,
+							container_color=container_color,
+						)
+						
+						# Add soap making fields for ingredients
+						if item_type == 'ingredient':
+							gi.saponification_value = sap_value
+							gi.iodine_value = iodine_val
+							gi.melting_point_c = melting_pt
+							gi.flash_point_c = flash_pt
+							gi.ph_value = ph_val
+							gi.moisture_content_percent = moisture
+							gi.shelf_life_months = shelf_life_months
+							gi.comedogenic_rating = comedogenic
+						
+						db.session.add(gi)
+						created_items += 1
+					except Exception as e:
+						print(f"    ❌ Failed to create item {name}: {e}")
+						continue
 				
 				items_processed += 1
 
 			if items_processed > 0:
 				print(f"    📦 Processed {items_processed} items")
 
-		db.session.commit()
+		try:
+			db.session.commit()
+			print(f"\n🎉 Global Inventory Library Seeding Complete!")
+		except Exception as e:
+			db.session.rollback()
+			print(f"\n❌ Seeding failed during commit: {e}")
+			return
 		
-		print(f"\n🎉 Global Inventory Library Seeding Complete!")
 		print(f"📊 Summary:")
 		print(f"   Categories created: {created_categories}")
 		print(f"   Items created: {created_items}")
