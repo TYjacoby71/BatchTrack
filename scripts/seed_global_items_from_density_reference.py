@@ -190,7 +190,16 @@ def seed():
 					default_density=default_density,
 					is_global_category=True,
 					organization_id=None,
-					is_active=True
+					is_active=True,
+					# Set visibility flags from JSON
+					show_saponification_value=cat_data.get('show_saponification_value', False),
+					show_iodine_value=cat_data.get('show_iodine_value', False),
+					show_melting_point=cat_data.get('show_melting_point', False),
+					show_flash_point=cat_data.get('show_flash_point', False),
+					show_ph_value=cat_data.get('show_ph_value', False),
+					show_moisture_content=cat_data.get('show_moisture_content', False),
+					show_shelf_life_months=cat_data.get('show_shelf_life_months', False),
+					show_comedogenic_rating=cat_data.get('show_comedogenic_rating', False)
 				)
 				db.session.add(curated_cat)
 				db.session.flush()
@@ -203,6 +212,15 @@ def seed():
 					curated_cat.description = description
 				# Ensure global category flag is set
 				curated_cat.is_global_category = True
+				# Update visibility flags from JSON
+				curated_cat.show_saponification_value = cat_data.get('show_saponification_value', False)
+				curated_cat.show_iodine_value = cat_data.get('show_iodine_value', False)
+				curated_cat.show_melting_point = cat_data.get('show_melting_point', False)
+				curated_cat.show_flash_point = cat_data.get('show_flash_point', False)
+				curated_cat.show_ph_value = cat_data.get('show_ph_value', False)
+				curated_cat.show_moisture_content = cat_data.get('show_moisture_content', False)
+				curated_cat.show_shelf_life_months = cat_data.get('show_shelf_life_months', False)
+				curated_cat.show_comedogenic_rating = cat_data.get('show_comedogenic_rating', False)
 
 			# Process items in the category
 			item_type = cat_data.get('item_type', 'ingredient')

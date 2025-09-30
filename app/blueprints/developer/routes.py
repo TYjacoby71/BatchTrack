@@ -1786,3 +1786,83 @@ def get_user_api(user_id):
 
     except Exception as e:
         return jsonify({'success': False, 'error': str(e)})
+
+@developer_bp.route('/reference-categories/get-visibility', methods=['GET'])
+@login_required
+def get_category_visibility():
+    """Get visibility settings for a category"""
+    try:
+        category_name = request.args.get('category', '').strip()
+
+        if not category_name:
+            return jsonify({'success': False, 'error': 'Category name is required'})
+
+        # Find the category
+        from app.models.category import IngredientCategory
+        category = IngredientCategory.query.filter_by(
+            name=category_name,
+            organization_id=None,
+            is_global_category=True
+        ).first()
+
+        if not category:
+            return jsonify({'success': False, 'error': 'Category not found'})
+
+        visibility = {
+            'show_saponification_value': getattr(category, 'show_saponification_value', False),
+            'show_iodine_value': getattr(category, 'show_iodine_value', False),
+            'show_melting_point': getattr(category, 'show_melting_point', False),
+            'show_flash_point': getattr(category, 'show_flash_point', False),
+            'show_ph_value': getattr(category, 'show_ph_value', False),
+            'show_moisture_content': getattr(category, 'show_moisture_content', False),
+            'show_shelf_life_months': getattr(category, 'show_shelf_life_months', False),
+            'show_comedogenic_rating': getattr(category, 'show_comedogenic_rating', False)
+        }
+
+        return jsonify({'success': True, 'visibility': visibility})
+
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)})
+
+@developer_bp.route('/reference-categories/update-visibility', methods=['POST'])
+@login_required
+def update_category_visibility():
+    """Update visibility settings for a category"""
+    try:
+        data = request.get_json()
+        category_name = data.get('category', '').strip()
+
+        if not category_name:
+            return jsonify({'success': False, 'error': 'Category name is required'})
+
+        # Find the category
+        from app.models.category import IngredientCategory
+        category = IngredientCategory.query.filter_by(
+            name=category_name,
+            organization_id=None,
+            is_global_category=True
+        ).first()
+
+        if not category:
+            return jsonify({'success': False, 'error': 'Category not found'})
+
+        # Update visibility settings
+        category.show_saponification_value = data.get('show_saponification_value', False)
+        category.show_iodine_value = data.get('show_iodine_value', False)
+        category.show_melting_point = data.get('show_melting_point', False)
+        category.show_flash_point = data.get('show_flash_point', False)
+        category.show_ph_value = data.get('show_ph_value', False)
+        category.show_moisture_content = data.get('show_moisture_content', False)
+        category.show_shelf_life_months = data.get('show_shelf_life_months', False)
+        category.show_comedogenic_rating = data.get('show_comedogenic_rating', False)
+
+        db.session.commit()
+
+        return jsonify({
+            'success': True, 
+            'message': f'Visibility settings updated for category "{category_name}"'
+        })
+
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'success': False, 'error': str(e)})

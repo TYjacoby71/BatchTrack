@@ -2,5 +2,7 @@
   "category_name": "Fragrance Oils",
   "default_density": 0.87,
   "description": "For synthetic fragrance oils and blends.",
+  "show_flash_point": true,
+  "show_shelf_life_months": true,
   "items": []
 }

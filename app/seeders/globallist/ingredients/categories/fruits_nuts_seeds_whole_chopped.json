@@ -3,5 +3,6 @@
   "category_name": "Fruits, Nuts & Seeds (Whole/Chopped)",
   "default_density": 0.60,
   "description": "Whole dried fruits, nuts and large seeds.",
+  "show_shelf_life_months": true,
   "items": []
 }

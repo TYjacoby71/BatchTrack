@@ -3,5 +3,6 @@
   "category_name": "Miscellaneous",
   "default_density": 1.00,
   "description": "Miscellaneous items not covered by other categories.",
+  "show_shelf_life_months": true,
   "items": []
 }

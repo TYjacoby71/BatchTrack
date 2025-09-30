@@ -3,6 +3,8 @@
   "category_name": "Sugars & Syrups",
   "default_density": 1.35,
   "description": "For all viscous, sugar-based liquids and granulated sugars.",
+  "show_moisture_content": true,
+  "show_shelf_life_months": true,
   "items": [
     {
       "name": "Honey",

@@ -3,6 +3,8 @@
   "category_name": "Flours & Powders (Organic)",
   "default_density": 0.60,
   "description": "Organic flours and plant-based powders.",
+  "show_moisture_content": true,
+  "show_shelf_life_months": true,
   "items": [
     {
       "name": "All-Purpose Flour",

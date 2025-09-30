@@ -3,6 +3,9 @@
   "category_name": "Liquids (Aqueous)",
   "default_density": 1.0,
   "description": "For water-based liquids and hydrosols.",
+  "show_ph_value": true,
+  "show_moisture_content": true,
+  "show_shelf_life_months": true,
   "items": [
     {
       "name": "Water",

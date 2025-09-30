@@ -3,5 +3,6 @@
   "category_name": "Yeast & Cultures",
   "default_density": 0.80,
   "description": "Live cultures and fermentation starters.",
+  "show_shelf_life_months": true,
   "items": []
 }

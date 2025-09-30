@@ -3,6 +3,9 @@
   "category_name": "Essential Oils",
   "default_density": 0.89,
   "description": "For pure essential oils and aromatherapy oils.",
+  "show_comedogenic_rating": true,
+  "show_flash_point": true,
+  "show_shelf_life_months": true,
   "items": [
     {
       "name": "Lavender Essential Oil",
