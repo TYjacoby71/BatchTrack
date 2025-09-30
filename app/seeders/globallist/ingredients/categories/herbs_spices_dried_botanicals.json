@@ -3,5 +3,6 @@
   "category_name": "Herbs & Spices (Dried & Ground)",
   "default_density": 0.57,
   "description": "Dried ground herbs and spices.",
+  "show_shelf_life_months": true,
   "items": []
 }

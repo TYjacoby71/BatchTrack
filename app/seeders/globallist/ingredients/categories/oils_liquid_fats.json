@@ -3,6 +3,11 @@
   "category_name": "Oils (Carrier & Fixed)",
   "default_density": 0.92,
   "description": "For base/carrier oils from nuts, seeds, and vegetables.",
+  "show_saponification_value": true,
+  "show_iodine_value": true,
+  "show_melting_point": true,
+  "show_shelf_life_months": true,
+  "show_comedogenic_rating": true,
   "items": [
     {
       "name": "Olive Oil",

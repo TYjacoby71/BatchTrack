@@ -3,5 +3,7 @@
   "category_name": "Starches & Thickeners",
   "default_density": 0.63,
   "description": "For starches and common thickeners.",
+  "show_moisture_content": true,
+  "show_shelf_life_months": true,
   "items": []
 }

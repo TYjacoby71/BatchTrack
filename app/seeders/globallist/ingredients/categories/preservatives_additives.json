@@ -3,5 +3,7 @@
   "category_name": "Preservatives & Additives",
   "default_density": 1.10,
   "description": "Preservatives and functional additives.",
+  "show_ph_value": true,
+  "show_shelf_life_months": true,
   "items": []
 }

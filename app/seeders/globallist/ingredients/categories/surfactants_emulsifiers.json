@@ -3,5 +3,7 @@
   "category_name": "Surfactants & Emulsifiers",
   "default_density": 0.95,
   "description": "Surfactants and emulsifying agents.",
+  "show_ph_value": true,
+  "show_shelf_life_months": true,
   "items": []
 }

@@ -3,6 +3,9 @@
   "category_name": "Salts & Minerals (Crystalline)",
   "default_density": 2.16,
   "description": "Crystalline salts and minerals.",
+  "show_ph_value": true,
+  "show_moisture_content": true,
+  "show_shelf_life_months": true,
   "items": [
     {
       "name": "Table Salt",

@@ -3,5 +3,8 @@
   "category_name": "Clays",
   "default_density": 2.45,
   "description": "Mineral clays used for cosmetics.",
+  "show_ph_value": true,
+  "show_moisture_content": true,
+  "show_shelf_life_months": true,
   "items": []
 }

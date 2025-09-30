@@ -3,5 +3,8 @@
   "category_name": "Extracts & Alcohols (Solvents)",
   "default_density": 0.86,
   "description": "Extracts and solvent alcohols.",
+  "show_ph_value": true,
+  "show_flash_point": true,
+  "show_shelf_life_months": true,
   "items": []
 }
