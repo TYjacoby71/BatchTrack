@@ -103,6 +103,17 @@ def update_inventory_item(item_id: int, form_data: dict) -> tuple[bool, str]:
         if 'capacity_unit' in form_data and form_data.get('capacity_unit'):
             item.capacity_unit = form_data.get('capacity_unit')
 
+        # Container structured attributes (material/type/style)
+        if item.type == 'container':
+            if 'container_material' in form_data:
+                item.container_material = (form_data.get('container_material') or '').strip() or None
+            if 'container_type' in form_data:
+                item.container_type = (form_data.get('container_type') or '').strip() or None
+            if 'container_style' in form_data:
+                item.container_style = (form_data.get('container_style') or '').strip() or None
+            if 'container_color' in form_data:
+                item.container_color = (form_data.get('container_color') or '').strip() or None
+
         # Update basic item details (excluding quantity)
         if 'name' in form_data and not is_global_locked:
             item.name = form_data['name'].strip()

@@ -39,11 +39,19 @@ def upgrade():
                 if column_name == 'is_deleted':
                     batch_op.add_column(sa.Column(column_name, column_type, nullable=False, default=False))
                 elif column_name == 'deleted_by':
-                    batch_op.add_column(sa.Column(column_name, column_type, sa.ForeignKey('user.id'), nullable=True))
+                    # Add the column first, then create a named FK for batch mode compatibility
+                    batch_op.add_column(sa.Column(column_name, column_type, nullable=True))
                 else:
                     batch_op.add_column(sa.Column(column_name, column_type, nullable=nullable))
             else:
                 print(f"   ✅ {column_name} column already exists")
+
+        # Create explicit FK for deleted_by if the column was just added (or exists)
+        try:
+            batch_op.create_foreign_key('fk_user_deleted_by_user', 'user', ['deleted_by'], ['id'])
+        except Exception:
+            # Likely already exists or not supported on this backend; safe to continue
+            pass
     
     print("✅ Missing User columns migration completed")
 

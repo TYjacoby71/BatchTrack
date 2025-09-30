@@ -13,6 +13,9 @@
                 <p><strong>Name:</strong> {{ item.name }}</p>
                 <p><strong>Type:</strong> {{ item.type|title }}</p>
                 <p><strong>Unit:</strong> {{ item.unit }}</p>
+                {% if item.type == 'container' %}
+                <p><strong>Container:</strong> {{ item.container_display_name }}</p>
+                {% endif %}
             </div>
             <div class="col-md-6">
                 <p><strong>Current Quantity:</strong> {{ item.quantity }} {{ item.unit }}</p>
@@ -22,6 +25,14 @@
                 {% endif %}
             </div>
         </div>
+        {% if item.type == 'container' %}
+        <div class="row mt-2">
+            <div class="col-md-4"><strong>Capacity:</strong> {{ item.capacity or 'N/A' }} {{ item.capacity_unit or '' }}</div>
+            <div class="col-md-3"><strong>Material:</strong> {{ item.container_material or 'N/A' }}</div>
+            <div class="col-md-3"><strong>Type/Style:</strong> {{ (item.container_type or 'N/A') }}{% if item.container_style %} ({{ item.container_style }}){% endif %}</div>
+            <div class="col-md-3"><strong>Color:</strong> {{ item.container_color or 'N/A' }}</div>
+        </div>
+        {% endif %}
         <div class="row">
             <div class="col-3">
                 <div class="text-center">

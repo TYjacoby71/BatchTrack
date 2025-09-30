@@ -29,6 +29,32 @@ def can_edit_inventory_item(item):
         return True
     return item.organization_id == current_user.organization_id
 
+@inventory_bp.route('/api/search')
+@login_required
+def api_search_inventory():
+    """Search inventory items by name (org-scoped), optionally filtered by type.
+
+    Query params:
+      - q: search text (min 2 chars)
+      - type: optional inventory type (e.g., 'container', 'ingredient')
+
+    Returns JSON array of minimal objects for suggestions.
+    """
+    try:
+        from app.services.inventory_search import InventorySearchService
+        q = (request.args.get('q') or '').strip()
+        inv_type = (request.args.get('type') or '').strip()
+        results = InventorySearchService.search_inventory_items(
+            query_text=q,
+            inventory_type=inv_type if inv_type else None,
+            organization_id=current_user.organization_id,
+            limit=20
+        )
+        return jsonify({'results': results})
+    except Exception as e:
+        logger.exception('Inventory search failed')
+        return jsonify({'results': [], 'error': str(e)}), 500
+
 @inventory_bp.route('/api/get-item/<int:item_id>')
 @login_required
 def api_get_inventory_item(item_id):
@@ -53,6 +79,12 @@ def api_get_inventory_item(item_id):
             'density': item.density,
             'is_perishable': bool(item.is_perishable),
             'shelf_life_days': item.shelf_life_days,
+            'capacity': getattr(item, 'capacity', None),
+            'capacity_unit': getattr(item, 'capacity_unit', None),
+            'container_material': getattr(item, 'container_material', None),
+            'container_type': getattr(item, 'container_type', None),
+            'container_style': getattr(item, 'container_style', None),
+            'container_color': getattr(item, 'container_color', None),
             'notes': ''
         })
     except Exception as e:

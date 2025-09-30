@@ -35,6 +35,10 @@ class InventoryItem(ScopedModelMixin, db.Model):
     # Container-specific fields (for items that can hold other items)
     capacity = db.Column(db.Float, nullable=True)  # How much this container can hold
     capacity_unit = db.Column(db.String(32), nullable=True)  # Unit for storage capacity
+    container_material = db.Column(db.String(64), nullable=True)
+    container_type = db.Column(db.String(64), nullable=True)
+    container_style = db.Column(db.String(64), nullable=True)
+    container_color = db.Column(db.String(64), nullable=True)
     created_by = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True)
     created_at = db.Column(db.DateTime, default=TimezoneUtils.utc_now)
 
@@ -59,6 +63,45 @@ class InventoryItem(ScopedModelMixin, db.Model):
     global_item = db.relationship('GlobalItem')
 
     # Legacy aliases removed: use capacity and capacity_unit exclusively
+    @property
+    def container_display_name(self):
+        """Derived clean display name for containers from structured attributes.
+
+        Rules:
+        - Prefer style first if present (e.g., "Boston Round", "Straight Sided", "Drinking").
+        - Append material only if it is not already included in style or type (case-insensitive substring).
+        - Always include the base type if present (e.g., "Jar", "Bottle", "Glass").
+        - For non-container items, return canonical name.
+        - Fallback to item name on any error.
+        """
+        try:
+            if self.type != 'container':
+                return self.name
+            style = (self.container_style or '').strip()
+            material = (self.container_material or '').strip()
+            base_type = (self.container_type or '').strip()
+
+            parts = []
+
+            if style:
+                parts.append(style)
+
+            # Add material only if not duplicated in style or type
+            mat_lower = material.lower()
+            if material:
+                in_type = mat_lower in base_type.lower() if base_type else False
+                in_style = mat_lower in style.lower() if style else False
+                if not in_type and not in_style:
+                    parts.append(material)
+
+            if base_type:
+                parts.append(base_type)
+
+            # If nothing assembled, fall back to original name
+            assembled = " ".join([p for p in parts if p]).strip()
+            return assembled or self.name
+        except Exception:
+            return self.name
 
     def belongs_to_user(self):
         """Check if this record belongs to the current user's organization"""

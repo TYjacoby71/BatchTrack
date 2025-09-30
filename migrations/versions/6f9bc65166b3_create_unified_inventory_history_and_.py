@@ -108,6 +108,7 @@ def upgrade():
         print("   Migrating data from inventory_history...")
 
         # Get organization_id from inventory_item for each record
+        # Use CURRENT_TIMESTAMP for SQLite compatibility instead of now()
         migrate_inventory_sql = text("""
             INSERT INTO unified_inventory_history (
                 inventory_item_id, timestamp, change_type, quantity_change, unit,
@@ -117,7 +118,7 @@ def upgrade():
             )
             SELECT 
                 ih.inventory_item_id,
-                COALESCE(ih.timestamp, now()) as timestamp,
+                COALESCE(ih.timestamp, CURRENT_TIMESTAMP) as timestamp,
                 COALESCE(ih.change_type, 'unknown') as change_type,
                 COALESCE(ih.quantity_change, 0.0) as quantity_change,
                 COALESCE(ih.unit, 'g') as unit,
@@ -129,7 +130,7 @@ def upgrade():
                 ih.created_by,
                 '' as notes,
                 COALESCE(ih.quantity_used, 0.0) as quantity_used,
-                COALESCE(ih.is_perishable, false) as is_perishable,
+                CASE WHEN ih.is_perishable IS NULL THEN 0 ELSE ih.is_perishable END as is_perishable,
                 ih.shelf_life_days,
                 ih.expiration_date,
                 COALESCE(ii.organization_id, 1) as organization_id
@@ -159,7 +160,7 @@ def upgrade():
             )
             SELECT 
                 COALESCE(psh.inventory_item_id, ps.inventory_item_id) as inventory_item_id,
-                COALESCE(psh.timestamp, now()) as timestamp,
+                COALESCE(psh.timestamp, CURRENT_TIMESTAMP) as timestamp,
                 COALESCE(psh.change_type, 'unknown') as change_type,
                 COALESCE(psh.quantity_change, 0.0) as quantity_change,
                 COALESCE(psh.unit, 'count') as unit,
@@ -171,7 +172,7 @@ def upgrade():
                 COALESCE(psh.created_by, psh.user_id) as created_by,
                 COALESCE(psh.notes, '') as notes,
                 COALESCE(psh.quantity_used, 0.0) as quantity_used,
-                COALESCE(psh.is_perishable, false) as is_perishable,
+                CASE WHEN psh.is_perishable IS NULL THEN 0 ELSE psh.is_perishable END as is_perishable,
                 psh.shelf_life_days,
                 psh.expiration_date,
                 psh.customer,

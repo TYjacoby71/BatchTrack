@@ -15,18 +15,41 @@ class ProductService:
     @staticmethod
     def get_or_create_sku(product_name: str, variant_name: str = 'Base', size_label: str = 'Bulk', unit: str = 'g', naming_context: dict | None = None):
         """Get or create a ProductSKU with proper Product/Variant relationships"""
+        # Normalize inputs early
+        try:
+            normalized_size_label = ('' if size_label is None else str(size_label)).strip()
+            if not normalized_size_label:
+                normalized_size_label = 'Bulk'
+            # collapse whitespace and cap length to DB field size
+            normalized_size_label = ' '.join(normalized_size_label.split())[:64]
+        except Exception:
+            normalized_size_label = 'Bulk'
+
+        size_label = normalized_size_label
 
         # Get or create Product
         product = Product.query.filter_by(
             name=product_name,
-            organization_id=current_user.organization_id
+            organization_id=(getattr(current_user, 'organization_id', None) or 1)
         ).first()
 
         if not product:
+            # Ensure a default category exists
+            try:
+                from ..models.product_category import ProductCategory
+                default_cat = ProductCategory.query.filter_by(name='Uncategorized').first()
+                if not default_cat:
+                    default_cat = ProductCategory(name='Uncategorized')
+                    db.session.add(default_cat)
+                    db.session.flush()
+                category_id = default_cat.id
+            except Exception:
+                category_id = None
             product = Product(
                 name=product_name,
-                organization_id=current_user.organization_id,
-                created_by=current_user.id
+                organization_id=(getattr(current_user, 'organization_id', None) or 1),
+                created_by=(getattr(current_user, 'id', None) or 1),
+                category_id=category_id
             )
             db.session.add(product)
             db.session.flush()
@@ -53,8 +76,8 @@ class ProductService:
             variant = ProductVariant(
                 product_id=product.id,
                 name=variant_name,
-                organization_id=current_user.organization_id,
-                created_by=current_user.id
+                organization_id=(getattr(current_user, 'organization_id', None) or product.organization_id or 1),
+                created_by=(getattr(current_user, 'id', None) or product.created_by or 1)
             )
             db.session.add(variant)
             db.session.flush()
@@ -76,7 +99,7 @@ class ProductService:
             product_id=product.id,
             variant_id=variant.id,
             size_label=size_label,
-            organization_id=current_user.organization_id
+            organization_id=(getattr(current_user, 'organization_id', None) or product.organization_id or 1)
         ).first()
 
         if not sku:
@@ -87,8 +110,8 @@ class ProductService:
                 type='product',  # Critical: mark as product type
                 unit=unit,
                 quantity=0.0,
-                organization_id=current_user.organization_id,
-                created_by=current_user.id
+                organization_id=(getattr(current_user, 'organization_id', None) or product.organization_id or 1),
+                created_by=(getattr(current_user, 'id', None) or product.created_by or 1)
             )
             db.session.add(inventory_item)
             db.session.flush()
@@ -130,8 +153,8 @@ class ProductService:
                 sku_name=sku_name,
                 inventory_item_id=inventory_item.id,
                 unit=unit,
-                organization_id=current_user.organization_id,
-                created_by=current_user.id
+                organization_id=(getattr(current_user, 'organization_id', None) or product.organization_id or 1),
+                created_by=(getattr(current_user, 'id', None) or product.created_by or 1)
             )
 
             # Note: Perishable settings are managed at the inventory_item level
@@ -361,21 +384,16 @@ class ProductService:
 
         db.session.commit()
 
-        # Find the base product ID (first SKU for this product)
-        base_sku = db.session.query(func.min(ProductSKU.id)).filter_by(
-            product_name=sku.product.name,
-            organization_id=current_user.organization_id
-        ).scalar()
-
+        # Use the product ID directly instead of finding base SKU
         return {
             'success': True,
             'product': {
-                'id': base_sku,
+                'id': sku.product.id,  # Use product ID, not SKU ID
                 'name': sku.product.name,
-                'product_base_unit': sku.unit
+                'product_base_unit': sku.unit  # Get unit from SKU since product no longer has base_unit
             },
             'variant': {
-                'id': sku.id,
+                'id': sku.variant.id,  # Use variant ID
                 'name': sku.variant.name
             }
         }
