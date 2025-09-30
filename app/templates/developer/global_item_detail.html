@@ -64,6 +64,46 @@
           <label for="default_is_perishable" class="form-check-label">Perishable by default</label>
         </div>
       </div>
+      
+      <!-- Soap Making & Cosmetic Fields -->
+      <div class="col-12"><hr><h5 class="text-muted">Soap Making & Cosmetic Properties</h5></div>
+      <div class="col-md-3">
+        <label class="form-label">Saponification Value</label>
+        <input type="number" step="0.1" name="saponification_value" class="form-control" value="{{ item.saponification_value or '' }}">
+      </div>
+      <div class="col-md-3">
+        <label class="form-label">Iodine Value</label>
+        <input type="number" step="0.1" name="iodine_value" class="form-control" value="{{ item.iodine_value or '' }}">
+      </div>
+      <div class="col-md-3">
+        <label class="form-label">Melting Point (°C)</label>
+        <input type="number" step="0.1" name="melting_point_c" class="form-control" value="{{ item.melting_point_c or '' }}">
+      </div>
+      <div class="col-md-3">
+        <label class="form-label">Flash Point (°C)</label>
+        <input type="number" step="0.1" name="flash_point_c" class="form-control" value="{{ item.flash_point_c or '' }}">
+      </div>
+      <div class="col-md-3">
+        <label class="form-label">pH Value</label>
+        <input type="number" step="0.1" name="ph_value" class="form-control" value="{{ item.ph_value or '' }}">
+      </div>
+      <div class="col-md-3">
+        <label class="form-label">Moisture Content (%)</label>
+        <input type="number" step="0.1" name="moisture_content_percent" class="form-control" value="{{ item.moisture_content_percent or '' }}">
+      </div>
+      <div class="col-md-3">
+        <label class="form-label">Shelf Life (months)</label>
+        <input type="number" name="shelf_life_months" class="form-control" value="{{ item.shelf_life_months or '' }}">
+      </div>
+      <div class="col-md-3">
+        <label class="form-label">Comedogenic Rating</label>
+        <select name="comedogenic_rating" class="form-select">
+          <option value="">Select Rating</option>
+          {% for rating in range(6) %}
+          <option value="{{ rating }}" {% if item.comedogenic_rating == rating %}selected{% endif %}>{{ rating }} - {% if rating == 0 %}Non-comedogenic{% elif rating == 1 %}Very low{% elif rating == 2 %}Low{% elif rating == 3 %}Moderate{% elif rating == 4 %}High{% else %}Very high{% endif %}</option>
+          {% endfor %}
+        </select>
+      </div>
       <div class="col-12">
         <label class="form-label">Synonyms (comma-separated)</label>
         <input type="text" name="aka_names" class="form-control" value="{{ (item.aka_names or []) | join(', ') }}">

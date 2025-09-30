@@ -1,0 +1,27 @@
+
+{
+  "category_name": "PET Plastic Containers",
+  "material": "PET Plastic",
+  "default_capacity_unit": "oz",
+  "description": "PET plastic containers for lightweight storage and travel",
+  "items": [
+    {
+      "name": "PET Pump Bottle",
+      "capacity": 8.0,
+      "capacity_unit": "fl oz",
+      "container_type": "Bottle",
+      "container_style": "Pump",
+      "container_color": "Clear",
+      "aka_names": ["Plastic Pump Bottle", "PET Lotion Bottle"]
+    },
+    {
+      "name": "PET Squeeze Bottle",
+      "capacity": 16.0,
+      "capacity_unit": "fl oz",
+      "container_type": "Bottle", 
+      "container_style": "Squeeze",
+      "container_color": "Natural",
+      "aka_names": ["Squeeze Bottle", "Plastic Squeeze Bottle"]
+    }
+  ]
+}

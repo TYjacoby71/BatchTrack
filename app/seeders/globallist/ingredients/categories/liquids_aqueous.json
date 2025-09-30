@@ -1,6 +1,95 @@
+
 {
   "category_name": "Liquids (Aqueous)",
   "default_density": 1.0,
   "description": "For water-based liquids and hydrosols.",
-  "items": []
+  "items": [
+    {
+      "name": "Water",
+      "density_g_per_ml": 1.0,
+      "aka_names": ["distilled water", "pure water", "H2O"],
+      "default_unit": "milliliter",
+      "ph_value": 7.0,
+      "shelf_life_months": 60
+    },
+    {
+      "name": "Whole Milk",
+      "density_g_per_ml": 1.03,
+      "aka_names": ["milk", "cow milk", "dairy milk"],
+      "default_unit": "milliliter",
+      "ph_value": 6.7,
+      "shelf_life_months": 1,
+      "moisture_content_percent": 87
+    },
+    {
+      "name": "2% Milk",
+      "density_g_per_ml": 1.02,
+      "aka_names": ["reduced fat milk", "low fat milk"],
+      "default_unit": "milliliter",
+      "ph_value": 6.7,
+      "shelf_life_months": 1,
+      "moisture_content_percent": 89
+    },
+    {
+      "name": "Skim Milk",
+      "density_g_per_ml": 1.035,
+      "aka_names": ["fat free milk", "nonfat milk"],
+      "default_unit": "milliliter",
+      "ph_value": 6.7,
+      "shelf_life_months": 1,
+      "moisture_content_percent": 91
+    },
+    {
+      "name": "Heavy Cream",
+      "density_g_per_ml": 0.994,
+      "aka_names": ["heavy whipping cream", "double cream"],
+      "default_unit": "milliliter",
+      "ph_value": 6.5,
+      "shelf_life_months": 1,
+      "moisture_content_percent": 58
+    },
+    {
+      "name": "Light Cream",
+      "density_g_per_ml": 1.012,
+      "aka_names": ["coffee cream", "table cream"],
+      "default_unit": "milliliter",
+      "ph_value": 6.6,
+      "shelf_life_months": 1,
+      "moisture_content_percent": 73
+    },
+    {
+      "name": "Half and Half",
+      "density_g_per_ml": 1.025,
+      "aka_names": ["half & half", "cream"],
+      "default_unit": "milliliter",
+      "ph_value": 6.6,
+      "shelf_life_months": 1,
+      "moisture_content_percent": 80
+    },
+    {
+      "name": "Witch Hazel",
+      "density_g_per_ml": 0.98,
+      "aka_names": ["hamamelis water"],
+      "default_unit": "milliliter",
+      "ph_value": 4.2,
+      "shelf_life_months": 24
+    },
+    {
+      "name": "Rose Water",
+      "density_g_per_ml": 1.0,
+      "aka_names": ["rose hydrosol"],
+      "default_unit": "milliliter",
+      "ph_value": 5.5,
+      "shelf_life_months": 12
+    },
+    {
+      "name": "Aloe Vera Gel",
+      "density_g_per_ml": 1.02,
+      "aka_names": ["aloe gel"],
+      "default_unit": "milliliter",
+      "ph_value": 4.5,
+      "shelf_life_months": 6,
+      "moisture_content_percent": 99
+    }
+  ]
 }

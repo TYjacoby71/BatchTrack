@@ -1,0 +1,27 @@
+
+{
+  "category_name": "Bags & Pouches",
+  "material": "Plastic Film",
+  "default_capacity_unit": "count",
+  "description": "Plastic bags, pouches, and flexible packaging",
+  "items": [
+    {
+      "name": "Stand-Up Pouch",
+      "capacity": 8.0,
+      "capacity_unit": "oz",
+      "container_type": "Pouch",
+      "container_style": "Stand-Up",
+      "container_color": "Clear",
+      "aka_names": ["Standing Pouch", "Flexible Pouch"]
+    },
+    {
+      "name": "Zipper Bag",
+      "capacity": 4.0,
+      "capacity_unit": "oz",
+      "container_type": "Bag",
+      "container_style": "Zipper",
+      "container_color": "Clear",
+      "aka_names": ["Zip Bag", "Resealable Bag"]
+    }
+  ]
+}

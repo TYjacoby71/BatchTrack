@@ -135,6 +135,71 @@
             <small class="text-muted">Changing cost will reset tracked average cost. Historical records remain unchanged.</small>
           </div>
 
+          <!-- Soap Making & Cosmetic Formulation Fields -->
+                            <div class="card mt-3">
+                                <div class="card-header">
+                                    <h6 class="mb-0">Soap Making & Cosmetic Properties</h6>
+                                </div>
+                                <div class="card-body">
+                                    <div class="form-row">
+                                        <div class="form-group col-md-6">
+                                            <label for="editSaponificationValue">Saponification Value</label>
+                                            <input type="number" step="0.001" class="form-control" id="editSaponificationValue" name="saponification_value" min="0">
+                                            <small class="form-text text-muted">SAP value for oils/fats</small>
+                                        </div>
+                                        <div class="form-group col-md-6">
+                                            <label for="editIodineValue">Iodine Value</label>
+                                            <input type="number" step="0.1" class="form-control" id="editIodineValue" name="iodine_value" min="0">
+                                            <small class="form-text text-muted">Measure of unsaturation</small>
+                                        </div>
+                                    </div>
+                                    <div class="form-row">
+                                        <div class="form-group col-md-6">
+                                            <label for="editMeltingPoint">Melting Point (°C)</label>
+                                            <input type="number" step="0.1" class="form-control" id="editMeltingPoint" name="melting_point_c">
+                                            <small class="form-text text-muted">Melting point in Celsius</small>
+                                        </div>
+                                        <div class="form-group col-md-6">
+                                            <label for="editFlashPoint">Flash Point (°C)</label>
+                                            <input type="number" step="0.1" class="form-control" id="editFlashPoint" name="flash_point_c" min="0">
+                                            <small class="form-text text-muted">Flash point for essential oils</small>
+                                        </div>
+                                    </div>
+                                    <div class="form-row">
+                                        <div class="form-group col-md-4">
+                                            <label for="editPhValue">pH Value</label>
+                                            <input type="number" step="0.1" class="form-control" id="editPhValue" name="ph_value" min="0" max="14">
+                                            <small class="form-text text-muted">pH for liquids (0-14)</small>
+                                        </div>
+                                        <div class="form-group col-md-4">
+                                            <label for="editMoistureContent">Moisture Content (%)</label>
+                                            <input type="number" step="0.1" class="form-control" id="editMoistureContent" name="moisture_content_percent" min="0" max="100">
+                                            <small class="form-text text-muted">Moisture percentage</small>
+                                        </div>
+                                        <div class="form-group col-md-4">
+                                            <label for="editShelfLifeMonths">Shelf Life (months)</label>
+                                            <input type="number" class="form-control" id="editShelfLifeMonths" name="shelf_life_months" min="0">
+                                            <small class="form-text text-muted">Shelf life in months</small>
+                                        </div>
+                                    </div>
+                                    <div class="form-row">
+                                        <div class="form-group col-md-6">
+                                            <label for="editComedogenicRating">Comedogenic Rating</label>
+                                            <select class="form-control" id="editComedogenicRating" name="comedogenic_rating">
+                                                <option value="">Select rating...</option>
+                                                <option value="0">0 - Non-comedogenic</option>
+                                                <option value="1">1 - Very low</option>
+                                                <option value="2">2 - Low</option>
+                                                <option value="3">3 - Moderate</option>
+                                                <option value="4">4 - High</option>
+                                                <option value="5">5 - Very high</option>
+                                            </select>
+                                            <small class="form-text text-muted">Pore-clogging potential (0-5 scale)</small>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
           <div class="modal-footer">
             <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
             <input type="hidden" name="confirm_unit_change" id="confirmUnitChange" value="false">

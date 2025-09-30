@@ -3,5 +3,133 @@
   "category_name": "Oils (Carrier & Fixed)",
   "default_density": 0.92,
   "description": "For base/carrier oils from nuts, seeds, and vegetables.",
-  "items": []
+  "items": [
+    {
+      "name": "Olive Oil",
+      "density_g_per_ml": 0.91,
+      "aka_names": ["extra virgin olive oil", "EVOO"],
+      "default_unit": "milliliter",
+      "saponification_value": 190,
+      "iodine_value": 85,
+      "shelf_life_months": 24
+    },
+    {
+      "name": "Vegetable Oil",
+      "density_g_per_ml": 0.92,
+      "aka_names": ["canola oil", "soybean oil"],
+      "default_unit": "milliliter",
+      "saponification_value": 185,
+      "iodine_value": 110,
+      "shelf_life_months": 18
+    },
+    {
+      "name": "Coconut Oil",
+      "density_g_per_ml": 0.924,
+      "aka_names": ["virgin coconut oil", "refined coconut oil"],
+      "default_unit": "milliliter",
+      "saponification_value": 257,
+      "iodine_value": 8,
+      "shelf_life_months": 36,
+      "melting_point_c": 24
+    },
+    {
+      "name": "Avocado Oil",
+      "density_g_per_ml": 0.915,
+      "aka_names": ["cold pressed avocado oil"],
+      "default_unit": "milliliter",
+      "saponification_value": 187,
+      "iodine_value": 86,
+      "shelf_life_months": 12
+    },
+    {
+      "name": "Sunflower Oil",
+      "density_g_per_ml": 0.92,
+      "aka_names": ["sunflower seed oil"],
+      "default_unit": "milliliter",
+      "saponification_value": 188,
+      "iodine_value": 125,
+      "shelf_life_months": 12
+    },
+    {
+      "name": "Sesame Oil",
+      "density_g_per_ml": 0.92,
+      "aka_names": ["toasted sesame oil"],
+      "default_unit": "milliliter",
+      "saponification_value": 187,
+      "iodine_value": 110,
+      "shelf_life_months": 24
+    },
+    {
+      "name": "Peanut Oil",
+      "density_g_per_ml": 0.914,
+      "aka_names": ["groundnut oil"],
+      "default_unit": "milliliter",
+      "saponification_value": 192,
+      "iodine_value": 95,
+      "shelf_life_months": 18
+    },
+    {
+      "name": "Corn Oil",
+      "density_g_per_ml": 0.923,
+      "aka_names": ["maize oil"],
+      "default_unit": "milliliter",
+      "saponification_value": 192,
+      "iodine_value": 115,
+      "shelf_life_months": 12
+    },
+    {
+      "name": "Safflower Oil",
+      "density_g_per_ml": 0.924,
+      "aka_names": ["high oleic safflower oil"],
+      "default_unit": "milliliter",
+      "saponification_value": 192,
+      "iodine_value": 145,
+      "shelf_life_months": 12
+    },
+    {
+      "name": "Grapeseed Oil",
+      "density_g_per_ml": 0.923,
+      "aka_names": ["grape seed oil"],
+      "default_unit": "milliliter",
+      "saponification_value": 181,
+      "iodine_value": 130,
+      "shelf_life_months": 12
+    },
+    {
+      "name": "Walnut Oil",
+      "density_g_per_ml": 0.925,
+      "aka_names": ["cold pressed walnut oil"],
+      "default_unit": "milliliter",
+      "saponification_value": 189,
+      "iodine_value": 140,
+      "shelf_life_months": 6
+    },
+    {
+      "name": "Almond Oil",
+      "density_g_per_ml": 0.91,
+      "aka_names": ["sweet almond oil"],
+      "default_unit": "milliliter",
+      "saponification_value": 192,
+      "iodine_value": 95,
+      "shelf_life_months": 18
+    },
+    {
+      "name": "Jojoba Oil",
+      "density_g_per_ml": 0.864,
+      "aka_names": ["jojoba wax", "golden jojoba"],
+      "default_unit": "milliliter",
+      "saponification_value": 92,
+      "iodine_value": 85,
+      "shelf_life_months": 60
+    },
+    {
+      "name": "Castor Oil",
+      "density_g_per_ml": 0.96,
+      "aka_names": ["ricinus oil"],
+      "default_unit": "milliliter",
+      "saponification_value": 180,
+      "iodine_value": 85,
+      "shelf_life_months": 36
+    }
+  ]
 }

@@ -1,6 +1,37 @@
+
 {
   "category_name": "Waxes",
   "default_density": 0.93,
   "description": "For natural and synthetic waxes used in cosmetics and candle making.",
-  "items": []
+  "items": [
+    {
+      "name": "Beeswax",
+      "density_g_per_ml": 0.96,
+      "aka_names": ["white beeswax", "yellow beeswax"],
+      "default_unit": "gram",
+      "saponification_value": 95,
+      "melting_point_c": 63
+    },
+    {
+      "name": "Soy Wax",
+      "density_g_per_ml": 0.93,
+      "aka_names": ["soy candle wax"],
+      "default_unit": "gram",
+      "melting_point_c": 49
+    },
+    {
+      "name": "Paraffin Wax",
+      "density_g_per_ml": 0.9,
+      "aka_names": ["candle wax"],
+      "default_unit": "gram",
+      "melting_point_c": 60
+    },
+    {
+      "name": "Carnauba Wax",
+      "density_g_per_ml": 0.999,
+      "aka_names": ["brazil wax"],
+      "default_unit": "gram",
+      "melting_point_c": 85
+    }
+  ]
 }

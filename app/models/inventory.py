@@ -49,6 +49,16 @@ class InventoryItem(ScopedModelMixin, db.Model):
     # Intermediate ingredient flag
     intermediate = db.Column(db.Boolean, default=False)
 
+    # Soap making and cosmetic formulation fields
+    saponification_value = db.Column(db.Float, nullable=True)  # SAP value for oils/fats
+    iodine_value = db.Column(db.Float, nullable=True)  # Iodine value for oils
+    melting_point_c = db.Column(db.Float, nullable=True)  # Melting point in Celsius
+    flash_point_c = db.Column(db.Float, nullable=True)  # Flash point for essential oils
+    ph_value = db.Column(db.Float, nullable=True)  # pH for liquids
+    moisture_content_percent = db.Column(db.Float, nullable=True)  # Moisture content
+    shelf_life_months = db.Column(db.Integer, nullable=True)  # Shelf life in months
+    comedogenic_rating = db.Column(db.Integer, nullable=True)  # 0-5 scale for oils
+
     # Global library linkage (nullable)
     global_item_id = db.Column(db.Integer, db.ForeignKey('global_item.id', ondelete='SET NULL'), nullable=True, index=True)
     # Ownership semantics: 'global' when linked, 'org' when unlinked/customized

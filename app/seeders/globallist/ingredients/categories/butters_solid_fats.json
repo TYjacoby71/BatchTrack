@@ -1,6 +1,71 @@
+
 {
   "category_name": "Butters & Solid Fats",
   "default_density": 0.91,
   "description": "For solid fats at room temperature, including butters and solid oils.",
-  "items": []
+  "items": [
+    {
+      "name": "Butter",
+      "density_g_per_ml": 0.91,
+      "aka_names": ["unsalted butter", "salted butter"],
+      "default_unit": "gram",
+      "saponification_value": 227,
+      "melting_point_c": 32,
+      "shelf_life_months": 6
+    },
+    {
+      "name": "Margarine",
+      "density_g_per_ml": 0.91,
+      "aka_names": ["vegan butter", "plant butter"],
+      "default_unit": "gram",
+      "saponification_value": 190,
+      "melting_point_c": 34,
+      "shelf_life_months": 12
+    },
+    {
+      "name": "Ghee",
+      "density_g_per_ml": 0.9,
+      "aka_names": ["clarified butter"],
+      "default_unit": "gram",
+      "saponification_value": 230,
+      "melting_point_c": 35,
+      "shelf_life_months": 12
+    },
+    {
+      "name": "Coconut Butter",
+      "density_g_per_ml": 0.92,
+      "aka_names": ["coconut manna"],
+      "default_unit": "gram",
+      "saponification_value": 257,
+      "melting_point_c": 24,
+      "shelf_life_months": 24
+    },
+    {
+      "name": "Cocoa Butter",
+      "density_g_per_ml": 0.89,
+      "aka_names": ["theobroma oil"],
+      "default_unit": "gram",
+      "saponification_value": 192,
+      "melting_point_c": 34,
+      "shelf_life_months": 36
+    },
+    {
+      "name": "Shea Butter",
+      "density_g_per_ml": 0.92,
+      "aka_names": ["african shea butter"],
+      "default_unit": "gram",
+      "saponification_value": 178,
+      "melting_point_c": 38,
+      "shelf_life_months": 24
+    },
+    {
+      "name": "Mango Butter",
+      "density_g_per_ml": 0.91,
+      "aka_names": ["mango kernel butter"],
+      "default_unit": "gram",
+      "saponification_value": 188,
+      "melting_point_c": 43,
+      "shelf_life_months": 24
+    }
+  ]
 }
