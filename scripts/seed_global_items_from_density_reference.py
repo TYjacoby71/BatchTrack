@@ -48,6 +48,121 @@ def load_category_files():
 
 	return categories
 
+def process_category_files():
+	"""Process all category JSON files in the seeders directory"""
+	import glob
+	base_path = os.path.dirname(os.path.dirname(__file__))
+	
+	# Process ingredients
+	ingredient_files = glob.glob(os.path.join(base_path, 'app/seeders/globallist/ingredients/categories/*.json'))
+	container_files = glob.glob(os.path.join(base_path, 'app/seeders/globallist/containers/categories/*.json'))
+	packaging_files = glob.glob(os.path.join(base_path, 'app/seeders/globallist/packaging/categories/*.json'))
+	consumable_files = glob.glob(os.path.join(base_path, 'app/seeders/globallist/consumables/categories/*.json'))
+	
+	created_categories = 0
+	created_items = 0
+	updated_items = 0
+	
+	# Process ingredient categories
+	for file_path in ingredient_files:
+		with open(file_path, 'r') as f:
+			data = json.load(f)
+			
+		cat_name = data.get('category_name')
+		if not cat_name:
+			continue
+			
+		# Create or get category
+		category = IngredientCategory.query.filter_by(name=cat_name, organization_id=None).first()
+		if not category:
+			category = IngredientCategory(
+				name=cat_name,
+				description=data.get('description', ''),
+				default_density=data.get('default_density'),
+				organization_id=None,
+				is_global_category=True
+			)
+			db.session.add(category)
+			db.session.flush()
+			created_categories += 1
+		
+		# Process items
+		for item_data in data.get('items', []):
+			name = item_data.get('name')
+			if not name:
+				continue
+				
+			existing = GlobalItem.query.filter_by(name=name, item_type='ingredient').first()
+			if existing:
+				# Update existing
+				for field in ['density_g_per_ml', 'aka_names', 'default_unit', 'saponification_value', 
+							 'iodine_value', 'melting_point_c', 'flash_point_c', 'ph_value',
+							 'moisture_content_percent', 'shelf_life_months', 'comedogenic_rating']:
+					if field == 'density_g_per_ml' and item_data.get(field):
+						existing.density = item_data[field]
+					elif field == 'aka_names' and item_data.get(field):
+						existing.aka_names = item_data[field]
+					elif field in item_data and item_data[field] is not None:
+						setattr(existing, field, item_data[field])
+				existing.ingredient_category_id = category.id
+				updated_items += 1
+			else:
+				# Create new
+				gi = GlobalItem(
+					name=name,
+					item_type='ingredient',
+					density=item_data.get('density_g_per_ml'),
+					aka_names=item_data.get('aka_names', []),
+					default_unit=item_data.get('default_unit'),
+					ingredient_category_id=category.id,
+					saponification_value=item_data.get('saponification_value'),
+					iodine_value=item_data.get('iodine_value'),
+					melting_point_c=item_data.get('melting_point_c'),
+					flash_point_c=item_data.get('flash_point_c'),
+					ph_value=item_data.get('ph_value'),
+					moisture_content_percent=item_data.get('moisture_content_percent'),
+					shelf_life_months=item_data.get('shelf_life_months'),
+					comedogenic_rating=item_data.get('comedogenic_rating')
+				)
+				db.session.add(gi)
+				created_items += 1
+	
+	# Process container categories
+	for file_path in container_files:
+		with open(file_path, 'r') as f:
+			data = json.load(f)
+			
+		for item_data in data.get('items', []):
+			name = item_data.get('name')
+			if not name:
+				continue
+				
+			existing = GlobalItem.query.filter_by(name=name, item_type='container').first()
+			if existing:
+				# Update existing container
+				for field in ['capacity', 'capacity_unit', 'container_material', 'container_type', 
+							 'container_style', 'container_color', 'aka_names']:
+					if field in item_data and item_data[field] is not None:
+						setattr(existing, field, item_data[field])
+				updated_items += 1
+			else:
+				# Create new container
+				gi = GlobalItem(
+					name=name,
+					item_type='container',
+					capacity=item_data.get('capacity'),
+					capacity_unit=item_data.get('capacity_unit'),
+					container_material=data.get('material') or item_data.get('container_material'),
+					container_type=item_data.get('container_type'),
+					container_style=item_data.get('container_style'),
+					container_color=item_data.get('container_color'),
+					aka_names=item_data.get('aka_names', [])
+				)
+				db.session.add(gi)
+				created_items += 1
+	
+	return created_categories, created_items, updated_items
+
 def seed():
 	app = create_app()
 	with app.app_context():
@@ -225,22 +340,62 @@ def seed():
 				existing.aka_names = aka
 				existing.default_unit = default_unit
 				existing.ingredient_category_id = cur.id if cur else None
+				# Update new fields if present
+				if it.get('saponification_value') is not None:
+					existing.saponification_value = it.get('saponification_value')
+				if it.get('iodine_value') is not None:
+					existing.iodine_value = it.get('iodine_value')
+				if it.get('melting_point_c') is not None:
+					existing.melting_point_c = it.get('melting_point_c')
+				if it.get('flash_point_c') is not None:
+					existing.flash_point_c = it.get('flash_point_c')
+				if it.get('ph_value') is not None:
+					existing.ph_value = it.get('ph_value')
+				if it.get('moisture_content_percent') is not None:
+					existing.moisture_content_percent = it.get('moisture_content_percent')
+				if it.get('shelf_life_months') is not None:
+					existing.shelf_life_months = it.get('shelf_life_months')
+				if it.get('comedogenic_rating') is not None:
+					existing.comedogenic_rating = it.get('comedogenic_rating')
 				updated_items += 1
 			else:
+				# Extract additional fields if present
+				sap_value = it.get('saponification_value')
+				iodine_val = it.get('iodine_value')
+				melting_pt = it.get('melting_point_c')
+				flash_pt = it.get('flash_point_c')
+				ph_val = it.get('ph_value')
+				moisture = it.get('moisture_content_percent')
+				shelf_life = it.get('shelf_life_months')
+				comedogenic = it.get('comedogenic_rating')
+				
 				gi = GlobalItem(
 					name=name,
 					item_type='ingredient',
 					default_unit=default_unit,
 					density=density,
 					ingredient_category_id=(cur.id if cur else None),
-					suggested_inventory_category_id=None,
 					aka_names=aka,
+					saponification_value=sap_value,
+					iodine_value=iodine_val,
+					melting_point_c=melting_pt,
+					flash_point_c=flash_pt,
+					ph_value=ph_val,
+					moisture_content_percent=moisture,
+					shelf_life_months=shelf_life,
+					comedogenic_rating=comedogenic
 				)
 				db.session.add(gi)
 				created_items += 1
 
 		db.session.commit()
-		print(f'Curated categories created: {created_categories}; Items created: {created_items}; Items updated: {updated_items}')
+		print(f'Legacy data - Categories created: {created_categories}; Items created: {created_items}; Items updated: {updated_items}')
+
+		# Process category JSON files
+		print("Processing category JSON files...")
+		cat_created, items_created, items_updated = process_category_files()
+		db.session.commit()
+		print(f'Category files - Categories created: {cat_created}; Items created: {items_created}; Items updated: {items_updated}')
 
 
 if __name__ == '__main__':

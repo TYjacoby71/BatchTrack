@@ -3,5 +3,78 @@
   "category_name": "Flours & Powders (Organic)",
   "default_density": 0.60,
   "description": "Organic flours and plant-based powders.",
-  "items": []
+  "items": [
+    {
+      "name": "All-Purpose Flour",
+      "density_g_per_ml": 0.6,
+      "aka_names": ["AP flour", "white flour", "wheat flour"],
+      "default_unit": "gram",
+      "shelf_life_months": 8,
+      "moisture_content_percent": 14
+    },
+    {
+      "name": "Bread Flour",
+      "density_g_per_ml": 0.65,
+      "aka_names": ["high gluten flour", "strong flour"],
+      "default_unit": "gram",
+      "shelf_life_months": 8,
+      "moisture_content_percent": 14
+    },
+    {
+      "name": "Cake Flour",
+      "density_g_per_ml": 0.56,
+      "aka_names": ["pastry flour", "soft flour"],
+      "default_unit": "gram",
+      "shelf_life_months": 8,
+      "moisture_content_percent": 14
+    },
+    {
+      "name": "Self-Rising Flour",
+      "density_g_per_ml": 0.6,
+      "aka_names": ["self raising flour"],
+      "default_unit": "gram",
+      "shelf_life_months": 6,
+      "moisture_content_percent": 14
+    },
+    {
+      "name": "Whole Wheat Flour",
+      "density_g_per_ml": 0.65,
+      "aka_names": ["wholemeal flour", "graham flour"],
+      "default_unit": "gram",
+      "shelf_life_months": 3,
+      "moisture_content_percent": 14
+    },
+    {
+      "name": "Almond Flour",
+      "density_g_per_ml": 0.56,
+      "aka_names": ["almond meal", "ground almonds"],
+      "default_unit": "gram",
+      "shelf_life_months": 6,
+      "moisture_content_percent": 5
+    },
+    {
+      "name": "Coconut Flour",
+      "density_g_per_ml": 0.48,
+      "aka_names": ["ground coconut"],
+      "default_unit": "gram",
+      "shelf_life_months": 12,
+      "moisture_content_percent": 8
+    },
+    {
+      "name": "Rice Flour",
+      "density_g_per_ml": 0.58,
+      "aka_names": ["brown rice flour", "white rice flour"],
+      "default_unit": "gram",
+      "shelf_life_months": 6,
+      "moisture_content_percent": 12
+    },
+    {
+      "name": "Cocoa Powder",
+      "density_g_per_ml": 0.64,
+      "aka_names": ["unsweetened cocoa", "dutch processed cocoa"],
+      "default_unit": "gram",
+      "shelf_life_months": 36,
+      "moisture_content_percent": 3
+    }
+  ]
 }

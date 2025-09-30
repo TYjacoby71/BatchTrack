@@ -1,6 +1,80 @@
+
 {
   "category_name": "Essential Oils",
   "default_density": 0.89,
   "description": "For pure essential oils and aromatherapy oils.",
-  "items": []
+  "items": [
+    {
+      "name": "Lavender Essential Oil",
+      "density_g_per_ml": 0.885,
+      "aka_names": ["lavandula angustifolia"],
+      "default_unit": "milliliter",
+      "flash_point_c": 74,
+      "shelf_life_months": 36,
+      "comedogenic_rating": 2
+    },
+    {
+      "name": "Tea Tree Essential Oil",
+      "density_g_per_ml": 0.89,
+      "aka_names": ["melaleuca oil"],
+      "default_unit": "milliliter",
+      "flash_point_c": 60,
+      "shelf_life_months": 24,
+      "comedogenic_rating": 0
+    },
+    {
+      "name": "Peppermint Essential Oil",
+      "density_g_per_ml": 0.9,
+      "aka_names": ["mentha piperita"],
+      "default_unit": "milliliter",
+      "flash_point_c": 66,
+      "shelf_life_months": 36,
+      "comedogenic_rating": 0
+    },
+    {
+      "name": "Eucalyptus Essential Oil",
+      "density_g_per_ml": 0.92,
+      "aka_names": ["eucalyptus globulus"],
+      "default_unit": "milliliter",
+      "flash_point_c": 50,
+      "shelf_life_months": 24,
+      "comedogenic_rating": 0
+    },
+    {
+      "name": "Lemon Essential Oil",
+      "density_g_per_ml": 0.85,
+      "aka_names": ["citrus limon"],
+      "default_unit": "milliliter",
+      "flash_point_c": 48,
+      "shelf_life_months": 12,
+      "comedogenic_rating": 0
+    },
+    {
+      "name": "Orange Essential Oil",
+      "density_g_per_ml": 0.842,
+      "aka_names": ["sweet orange oil", "citrus sinensis"],
+      "default_unit": "milliliter",
+      "flash_point_c": 48,
+      "shelf_life_months": 12,
+      "comedogenic_rating": 0
+    },
+    {
+      "name": "Rosemary Essential Oil",
+      "density_g_per_ml": 0.908,
+      "aka_names": ["rosmarinus officinalis"],
+      "default_unit": "milliliter",
+      "flash_point_c": 50,
+      "shelf_life_months": 36,
+      "comedogenic_rating": 0
+    },
+    {
+      "name": "Frankincense Essential Oil",
+      "density_g_per_ml": 0.87,
+      "aka_names": ["boswellia oil"],
+      "default_unit": "milliliter",
+      "flash_point_c": 44,
+      "shelf_life_months": 48,
+      "comedogenic_rating": 1
+    }
+  ]
 }

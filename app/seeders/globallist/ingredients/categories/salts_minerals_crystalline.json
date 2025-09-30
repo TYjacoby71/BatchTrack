@@ -3,5 +3,70 @@
   "category_name": "Salts & Minerals (Crystalline)",
   "default_density": 2.16,
   "description": "Crystalline salts and minerals.",
-  "items": []
+  "items": [
+    {
+      "name": "Table Salt",
+      "density_g_per_ml": 2.16,
+      "aka_names": ["sodium chloride", "iodized salt", "fine salt"],
+      "default_unit": "gram",
+      "shelf_life_months": 60,
+      "moisture_content_percent": 0.5
+    },
+    {
+      "name": "Sea Salt",
+      "density_g_per_ml": 2.16,
+      "aka_names": ["coarse sea salt", "fine sea salt"],
+      "default_unit": "gram",
+      "shelf_life_months": 60,
+      "moisture_content_percent": 1
+    },
+    {
+      "name": "Kosher Salt",
+      "density_g_per_ml": 1.28,
+      "aka_names": ["coarse salt", "flaked salt"],
+      "default_unit": "gram",
+      "shelf_life_months": 60,
+      "moisture_content_percent": 0.5
+    },
+    {
+      "name": "Himalayan Pink Salt",
+      "density_g_per_ml": 2.16,
+      "aka_names": ["pink salt", "rock salt"],
+      "default_unit": "gram",
+      "shelf_life_months": 60,
+      "moisture_content_percent": 0.1
+    },
+    {
+      "name": "Epsom Salt",
+      "density_g_per_ml": 2.66,
+      "aka_names": ["magnesium sulfate"],
+      "default_unit": "gram",
+      "shelf_life_months": 60,
+      "moisture_content_percent": 0
+    },
+    {
+      "name": "Baking Soda",
+      "density_g_per_ml": 2.2,
+      "aka_names": ["sodium bicarbonate", "bicarbonate of soda"],
+      "default_unit": "gram",
+      "shelf_life_months": 24,
+      "moisture_content_percent": 0
+    },
+    {
+      "name": "Baking Powder",
+      "density_g_per_ml": 1.3,
+      "aka_names": ["double acting baking powder"],
+      "default_unit": "gram",
+      "shelf_life_months": 18,
+      "moisture_content_percent": 1
+    },
+    {
+      "name": "Cream of Tartar",
+      "density_g_per_ml": 1.78,
+      "aka_names": ["potassium bitartrate"],
+      "default_unit": "gram",
+      "shelf_life_months": 60,
+      "moisture_content_percent": 0
+    }
+  ]
 }

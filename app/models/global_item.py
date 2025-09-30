@@ -1,3 +1,4 @@
+
 from ..extensions import db
 from ..utils.timezone_utils import TimezoneUtils
 
@@ -24,6 +25,16 @@ class GlobalItem(db.Model):
 	container_type = db.Column(db.String(64), nullable=True)
 	container_style = db.Column(db.String(64), nullable=True)
 	container_color = db.Column(db.String(64), nullable=True)
+
+	# Soap making and cosmetic formulation fields
+	saponification_value = db.Column(db.Float, nullable=True)  # SAP value for oils/fats
+	iodine_value = db.Column(db.Float, nullable=True)  # Iodine value for oils
+	melting_point_c = db.Column(db.Float, nullable=True)  # Melting point in Celsius
+	flash_point_c = db.Column(db.Float, nullable=True)  # Flash point for essential oils
+	ph_value = db.Column(db.Float, nullable=True)  # pH for liquids
+	moisture_content_percent = db.Column(db.Float, nullable=True)  # Moisture content
+	shelf_life_months = db.Column(db.Integer, nullable=True)  # Shelf life in months
+	comedogenic_rating = db.Column(db.Integer, nullable=True)  # 0-5 scale for oils
 
 	# SEO and metadata
 	metadata_json = db.Column(db.JSON, nullable=True)  # For SEO, descriptions, etc.

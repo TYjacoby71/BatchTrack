@@ -3,5 +3,102 @@
   "category_name": "Sugars & Syrups",
   "default_density": 1.35,
   "description": "For all viscous, sugar-based liquids and granulated sugars.",
-  "items": []
+  "items": [
+    {
+      "name": "Honey",
+      "density_g_per_ml": 1.42,
+      "aka_names": ["raw honey", "clover honey", "wildflower honey"],
+      "default_unit": "gram",
+      "shelf_life_months": 60,
+      "moisture_content_percent": 18
+    },
+    {
+      "name": "Maple Syrup",
+      "density_g_per_ml": 1.37,
+      "aka_names": ["pure maple syrup", "grade A maple syrup"],
+      "default_unit": "milliliter",
+      "shelf_life_months": 12,
+      "moisture_content_percent": 33
+    },
+    {
+      "name": "Corn Syrup",
+      "density_g_per_ml": 1.48,
+      "aka_names": ["light corn syrup", "karo syrup"],
+      "default_unit": "milliliter",
+      "shelf_life_months": 36,
+      "moisture_content_percent": 23
+    },
+    {
+      "name": "Agave Nectar",
+      "density_g_per_ml": 1.4,
+      "aka_names": ["agave syrup", "blue agave"],
+      "default_unit": "milliliter",
+      "shelf_life_months": 24,
+      "moisture_content_percent": 25
+    },
+    {
+      "name": "Molasses",
+      "density_g_per_ml": 1.4,
+      "aka_names": ["blackstrap molasses", "unsulphured molasses"],
+      "default_unit": "milliliter",
+      "shelf_life_months": 24,
+      "moisture_content_percent": 22
+    },
+    {
+      "name": "Golden Syrup",
+      "density_g_per_ml": 1.45,
+      "aka_names": ["treacle", "light treacle"],
+      "default_unit": "milliliter",
+      "shelf_life_months": 24,
+      "moisture_content_percent": 20
+    },
+    {
+      "name": "Rice Syrup",
+      "density_g_per_ml": 1.52,
+      "aka_names": ["brown rice syrup", "rice malt syrup"],
+      "default_unit": "milliliter",
+      "shelf_life_months": 18,
+      "moisture_content_percent": 18
+    },
+    {
+      "name": "White Sugar",
+      "density_g_per_ml": 0.85,
+      "aka_names": ["granulated sugar", "caster sugar", "superfine sugar"],
+      "default_unit": "gram",
+      "shelf_life_months": 60,
+      "moisture_content_percent": 0.5
+    },
+    {
+      "name": "Brown Sugar",
+      "density_g_per_ml": 0.9,
+      "aka_names": ["light brown sugar", "dark brown sugar", "packed brown sugar"],
+      "default_unit": "gram",
+      "shelf_life_months": 24,
+      "moisture_content_percent": 4
+    },
+    {
+      "name": "Powdered Sugar",
+      "density_g_per_ml": 0.56,
+      "aka_names": ["confectioner's sugar", "icing sugar", "10x sugar"],
+      "default_unit": "gram",
+      "shelf_life_months": 36,
+      "moisture_content_percent": 1
+    },
+    {
+      "name": "Raw Sugar",
+      "density_g_per_ml": 0.88,
+      "aka_names": ["turbinado sugar", "demerara sugar"],
+      "default_unit": "gram",
+      "shelf_life_months": 48,
+      "moisture_content_percent": 2
+    },
+    {
+      "name": "Coconut Sugar",
+      "density_g_per_ml": 0.82,
+      "aka_names": ["palm sugar", "coconut palm sugar"],
+      "default_unit": "gram",
+      "shelf_life_months": 24,
+      "moisture_content_percent": 3
+    }
+  ]
 }

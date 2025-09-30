@@ -17,7 +17,7 @@
     {
       "name": "Boston Round Bottle",
       "capacity": 4.0,
-      "capacity_unit": "fl oz", 
+      "capacity_unit": "oz",
       "container_type": "Bottle",
       "container_style": "Boston Round",
       "container_color": "Amber",
