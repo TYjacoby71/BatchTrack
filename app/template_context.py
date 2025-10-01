@@ -48,24 +48,12 @@ def register_template_context(app):
 
         if categories is None:
             try:
-                # Fix: Get ingredient categories: global categories plus user's custom ones
-                # The original code fetched all categories regardless of organization,
-                # causing duplicates and showing categories not relevant to the user.
-                # This modification ensures only global categories (organization_id IS NULL, is_global_category=True)
-                # and the user's custom categories (organization_id = user's org, is_global_category=False) are fetched.
-                global_categories = IngredientCategory.query.filter_by(
+                # Get only global ingredient categories (no user-owned categories)
+                categories = IngredientCategory.query.filter_by(
                     organization_id=None,
                     is_active=True,
                     is_global_category=True
                 ).order_by(IngredientCategory.name).all()
-
-                custom_categories = IngredientCategory.query.filter_by(
-                    organization_id=current_user.organization_id,
-                    is_active=True,
-                    is_global_category=False
-                ).order_by(IngredientCategory.name).all()
-
-                categories = global_categories + custom_categories
                 app_cache.set("template:ingredient_categories", categories, ttl=3600)
             except Exception:
                 categories = []
