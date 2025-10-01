@@ -123,3 +123,37 @@ def get_global_item_stats(global_item_id):
         return jsonify({'success': True, 'stats': rollup})
     except Exception as e:
         return jsonify({'success': False, 'error': str(e)}), 500
+
+@ingredient_api_bp.route('/global-items/<int:global_item_id>/adoption', methods=['GET'])
+@login_required
+def get_global_item_adoption(global_item_id):
+    try:
+        from app.models import InventoryItem, db
+        from sqlalchemy import func
+        
+        # Count organizations using this global item
+        org_count = db.session.query(func.count(func.distinct(InventoryItem.organization_id))).filter(
+            InventoryItem.global_item_id == global_item_id,
+            InventoryItem.organization_id.isnot(None)
+        ).scalar() or 0
+        
+        # Count total inventory items linked to this global item
+        item_count = InventoryItem.query.filter_by(global_item_id=global_item_id).count()
+        
+        return jsonify({
+            'success': True, 
+            'organization_count': org_count,
+            'inventory_item_count': item_count
+        })
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@ingredient_api_bp.route('/global-items/<int:global_item_id>/cost-distribution', methods=['GET'])
+@login_required
+def get_global_item_cost_distribution(global_item_id):
+    try:
+        from app.services.statistics.global_item_stats import GlobalItemStatsService
+        cost_dist = GlobalItemStatsService.get_cost_distribution(global_item_id)
+        return jsonify({'success': True, 'cost_distribution': cost_dist})
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
