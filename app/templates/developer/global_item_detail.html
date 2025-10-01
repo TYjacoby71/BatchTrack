@@ -18,6 +18,7 @@
         </select>
       </div>
       <div class="col-md-3">
+        {% if item.item_type == 'ingredient' %}
         <label class="form-label">Default Unit</label>
         <select name="default_unit" class="form-select">
           <option value="">Select Unit</option>
@@ -25,11 +26,15 @@
             <option value="{{ unit.name }}" {% if unit.name == item.default_unit %}selected{% endif %}>{{ unit.name }}</option>
           {% endfor %}
         </select>
+        {% endif %}
       </div>
+      {% if item.item_type == 'ingredient' %}
       <div class="col-md-3">
         <label class="form-label">Density (g/ml)</label>
         <input type="number" step="0.001" name="density" class="form-control" value="{{ item.density or '' }}">
       </div>
+      {% endif %}
+      {% if item.item_type == 'container' %}
       <div class="col-md-3">
         <label class="form-label">Capacity</label>
         <input type="number" step="0.01" name="capacity" class="form-control" value="{{ item.capacity or '' }}">
@@ -54,17 +59,19 @@
         <label class="form-label">Container Color (optional)</label>
         <input type="text" name="container_color" class="form-control" value="{{ item.container_color or '' }}">
       </div>
+      {% endif %}
       <div class="col-md-3">
-        <label class="form-label">Recommended Shelf Life (days)</label>
-        <input type="number" name="recommended_shelf_life_days" class="form-control" value="{{ item.recommended_shelf_life_days or '' }}">
-      </div>
-      <div class="col-md-3 d-flex align-items-end">
-        <div class="form-check">
+        <div class="form-check mt-4">
           <input type="checkbox" class="form-check-input" id="default_is_perishable" name="default_is_perishable" {% if item.default_is_perishable %}checked{% endif %}>
           <label for="default_is_perishable" class="form-check-label">Perishable by default</label>
         </div>
       </div>
+      <div class="col-md-3" id="rslWrapper" style="display: {% if item.default_is_perishable %}block{% else %}none{% endif %};">
+        <label class="form-label">Recommended Shelf Life (days)</label>
+        <input type="number" name="recommended_shelf_life_days" class="form-control" value="{{ item.recommended_shelf_life_days or '' }}">
+      </div>
       
+      {% if item.item_type == 'ingredient' %}
       <!-- Soap Making & Cosmetic Fields -->
       <div class="col-12"><hr><h5 class="text-muted">Soap Making & Cosmetic Properties</h5></div>
       <div class="col-md-3">
@@ -104,10 +111,12 @@
           {% endfor %}
         </select>
       </div>
+      {% endif %}
       <div class="col-12">
         <label class="form-label">Synonyms (comma-separated)</label>
         <input type="text" name="aka_names" class="form-control" value="{{ (item.aka_names or []) | join(', ') }}">
       </div>
+      {% if item.item_type == 'ingredient' %}
       <div class="col-md-6">
         <label class="form-label">Ingredient Category</label>
         <div class="input-group">
@@ -122,6 +131,7 @@
           </a>
         </div>
       </div>
+      {% endif %}
     </div>
     <div class="mt-3 d-flex gap-2">
       <button type="submit" class="btn btn-primary">Save</button>
@@ -129,4 +139,17 @@
     </div>
   </form>
 </div></div>
+<script>
+document.addEventListener('DOMContentLoaded', function(){
+  try {
+    const perishable = document.getElementById('default_is_perishable');
+    const rsl = document.getElementById('rslWrapper');
+    if (perishable && rsl){
+      perishable.addEventListener('change', function(){
+        rsl.style.display = this.checked ? 'block' : 'none';
+      });
+    }
+  } catch(e) { console.warn('RSL toggle init failed', e); }
+});
+</script>
 {% endblock %}

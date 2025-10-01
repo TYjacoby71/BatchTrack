@@ -568,55 +568,12 @@ def system_settings():
 @developer_bp.route('/global-items')
 @login_required
 def global_items_admin():
-    """Developer admin page for managing Global Items"""
-    # Get filter parameters
-    item_type = request.args.get('type', '')
-    category_filter = request.args.get('category', '')
-    search_query = request.args.get('search', '').strip()
-
-    # Build base query
-    query = GlobalItem.query.filter(GlobalItem.is_archived != True)
-
-    # Filter by item type if specified
-    if item_type:
-        query = query.filter(GlobalItem.item_type == item_type)
-
-    # Filter by ingredient category if specified
-    if category_filter:
-        from app.models.category import IngredientCategory
-        # Use ingredient_category_id to join with IngredientCategory
-        query = query.join(IngredientCategory, GlobalItem.ingredient_category_id == IngredientCategory.id).filter(
-            IngredientCategory.name == category_filter
-        )
-
-    # Add search functionality
-    if search_query:
-        search_term = f"%{search_query}%"
-        query = query.filter(
-            db.or_(
-                GlobalItem.name.ilike(search_term),
-                GlobalItem.aka_names.op('::text').ilike(search_term)
-            )
-        )
-
-    # Get filtered results
-    items = query.order_by(GlobalItem.item_type, GlobalItem.name).limit(500).all()
-
-    # Get unique categories for filter dropdown (only from ingredients)
-    from app.models.category import IngredientCategory
-    categories = db.session.query(IngredientCategory.name).join(
-        GlobalItem, GlobalItem.ingredient_category_id == IngredientCategory.id
-    ).filter(
-        GlobalItem.item_type == 'ingredient'
-    ).distinct().order_by(IngredientCategory.name).all()
-    categories = [cat[0] for cat in categories if cat[0]]
-
-    return render_template('developer/global_items.html', 
-                         items=items, 
-                         categories=categories,
-                         selected_type=item_type,
-                         selected_category=category_filter,
-                         search_query=search_query)
+    """Developer admin page for managing Global Items.
+    Reuse public library template for unified UX; developer actions accessible from item detail pages.
+    """
+    # Delegate to public view handler logic to keep filtering identical
+    from app.routes.global_library_routes import global_library
+    return global_library()
 
 @developer_bp.route('/global-items/<int:item_id>')
 @login_required
