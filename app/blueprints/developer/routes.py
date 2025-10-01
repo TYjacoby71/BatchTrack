@@ -1233,6 +1233,79 @@ def integrations_test_email():
     except Exception as e:
         return jsonify({'success': False, 'error': str(e)}), 500
 
+
+@developer_bp.route('/integrations/test-stripe', methods=['POST'])
+@login_required
+def integrations_test_stripe():
+    """Test Stripe connectivity (no secrets shown)."""
+    try:
+        from app.services.stripe_service import StripeService
+        ok = StripeService.initialize_stripe()
+        if not ok:
+            return jsonify({'success': False, 'error': 'Stripe secret not configured'}), 400
+        # Try a harmless list call
+        import stripe
+        try:
+            prices = stripe.Price.list(limit=1)
+            return jsonify({'success': True, 'message': f"Stripe reachable. Prices found: {len(prices.data)}"})
+        except Exception as e:
+            return jsonify({'success': False, 'error': f"Stripe API error: {e}"}), 500
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@developer_bp.route('/integrations/stripe-events', methods=['GET'])
+@login_required
+def integrations_stripe_events():
+    """Summarize recent Stripe webhook events from the database."""
+    try:
+        from app.models.stripe_event import StripeEvent
+        total = StripeEvent.query.count()
+        last = StripeEvent.query.order_by(StripeEvent.id.desc()).first()
+        payload = {'total_events': total}
+        if last:
+            payload.update({
+                'last_event_id': last.event_id,
+                'last_event_type': last.event_type,
+                'last_status': last.status,
+                'last_processed_at': getattr(last, 'processed_at', None).isoformat() if getattr(last, 'processed_at', None) else None
+            })
+        return jsonify({'success': True, 'data': payload})
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@developer_bp.route('/integrations/feature-flags', methods=['POST'])
+@login_required
+def integrations_set_feature_flags():
+    """Set feature flags (developer only; stored in-app and persisted to settings.json)."""
+    try:
+        from flask import current_app
+        if current_user.user_type != 'developer':
+            return jsonify({'success': False, 'error': 'Developer access required'}), 403
+        data = request.get_json() or {}
+        # Only allow known flags
+        if 'FEATURE_INVENTORY_ANALYTICS' in data:
+            value = bool(data['FEATURE_INVENTORY_ANALYTICS'])
+            current_app.config['FEATURE_INVENTORY_ANALYTICS'] = value
+            # Persist to settings.json for next boot
+            try:
+                import json, os
+                settings = {}
+                if os.path.exists('settings.json'):
+                    with open('settings.json', 'r') as f:
+                        settings = json.load(f) or {}
+                ff = settings.get('feature_flags', {}) or {}
+                ff['FEATURE_INVENTORY_ANALYTICS'] = value
+                settings['feature_flags'] = ff
+                with open('settings.json', 'w') as f:
+                    json.dump(settings, f, indent=2)
+            except Exception:
+                pass
+        return jsonify({'success': True})
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
 @developer_bp.route('/analytics-catalog')
 @login_required
 def analytics_catalog():

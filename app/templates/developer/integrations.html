@@ -54,12 +54,26 @@
       <li>Ensure subscription tiers in the database include the Stripe lookup keys.</li>
     </ol>
   </div>
+  <form method="post" action="{{ url_for('developer.integrations_test_stripe') }}">
+    <button class="btn btn-sm btn-primary" type="submit" {% if not stripe_status.secret_key_present %}disabled{% endif %}>Test Stripe Connectivity</button>
+  </form>
+  <div class="mt-2">
+    <button class="btn btn-sm btn-outline-secondary" type="button" onclick="loadStripeEvents()">Show Recent Webhook Events</button>
+    <pre id="stripeEvents" class="mt-2" style="white-space: pre-wrap;"></pre>
+  </div>
 
   <hr>
   <h4>3) Feature Flags</h4>
   <ul>
     <li>Inventory Analytics: {% if feature_flags.FEATURE_INVENTORY_ANALYTICS %}<span class="text-success">Enabled</span>{% else %}<span class="text-warning">Disabled</span>{% endif %} — Set <code>FEATURE_INVENTORY_ANALYTICS=true</code> to enable.</li>
   </ul>
+  <div class="card p-2">
+    <div class="form-check form-switch">
+      <input class="form-check-input" type="checkbox" id="ff_analytics" {% if feature_flags.FEATURE_INVENTORY_ANALYTICS %}checked{% endif %} onchange="saveFlags()">
+      <label class="form-check-label" for="ff_analytics">Enable Inventory Analytics (developer only)</label>
+    </div>
+    <small class="text-muted">This updates the running app and persists to settings.json for next boot.</small>
+  </div>
 
   <hr>
   <h4>4) POS/Shopify</h4>
@@ -92,4 +106,24 @@
   </div>
 
 </div>
+
+<script>
+async function loadStripeEvents() {
+  try {
+    const resp = await fetch('{{ url_for('developer.integrations_stripe_events') }}');
+    const data = await resp.json();
+    document.getElementById('stripeEvents').textContent = JSON.stringify(data, null, 2);
+  } catch (e) {
+    document.getElementById('stripeEvents').textContent = 'Error loading events';
+  }
+}
+
+async function saveFlags() {
+  const analytics = document.getElementById('ff_analytics').checked;
+  const resp = await fetch('{{ url_for('developer.integrations_set_feature_flags') }}', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ FEATURE_INVENTORY_ANALYTICS: analytics })
+  });
+}
+</script>
 {% endblock %}
