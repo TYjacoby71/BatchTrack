@@ -1306,6 +1306,28 @@ def integrations_set_feature_flags():
     except Exception as e:
         return jsonify({'success': False, 'error': str(e)}), 500
 
+
+@developer_bp.route('/integrations/check-webhook', methods=['GET'])
+@login_required
+def integrations_check_webhook():
+    """Verify webhook endpoint HTTP reachability (does not validate Stripe signature)."""
+    try:
+        from flask import current_app
+        import requests
+        base = request.host_url.rstrip('/')
+        # Use our known webhook path
+        url = f"{base}/billing/webhooks/stripe"
+        # Send a harmless GET to see if the route 405s (expected) or 404s
+        try:
+            resp = requests.get(url, timeout=5)
+            status = resp.status_code
+            message = 'reachable (method not allowed expected)' if status == 405 else f'response {status}'
+            return jsonify({'success': True, 'url': url, 'status': status, 'message': message})
+        except Exception as e:
+            return jsonify({'success': False, 'url': url, 'error': f'Connection error: {e}'}), 500
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
 @developer_bp.route('/analytics-catalog')
 @login_required
 def analytics_catalog():

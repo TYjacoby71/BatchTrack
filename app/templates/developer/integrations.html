@@ -60,6 +60,8 @@
   <div class="mt-2">
     <button class="btn btn-sm btn-outline-secondary" type="button" onclick="loadStripeEvents()">Show Recent Webhook Events</button>
     <pre id="stripeEvents" class="mt-2" style="white-space: pre-wrap;"></pre>
+    <button class="btn btn-sm btn-outline-secondary" type="button" onclick="checkWebhook()">Check Webhook Endpoint Reachability</button>
+    <pre id="webhookCheck" class="mt-2" style="white-space: pre-wrap;"></pre>
   </div>
 
   <hr>
@@ -124,6 +126,16 @@ async function saveFlags() {
     method: 'POST', headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ FEATURE_INVENTORY_ANALYTICS: analytics })
   });
+}
+
+async function checkWebhook() {
+  try {
+    const resp = await fetch('{{ url_for('developer.integrations_check_webhook') }}');
+    const data = await resp.json();
+    document.getElementById('webhookCheck').textContent = JSON.stringify(data, null, 2);
+  } catch (e) {
+    document.getElementById('webhookCheck').textContent = 'Error checking webhook';
+  }
 }
 </script>
 {% endblock %}
