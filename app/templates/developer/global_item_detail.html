@@ -190,7 +190,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
 async function loadGlobalItemStats() {
     try {
-        const response = await fetch(`/api/global-items/{{ item.id }}/stats`);
+        const response = await fetch(`/api/ingredient_api/global-items/{{ item.id }}/stats`);
         if (!response.ok) {
             throw new Error(`HTTP error! status: ${response.status}`);
         }
@@ -275,7 +275,7 @@ function displayStats(stats) {
 
 async function loadAdoptionMetrics() {
     try {
-        const response = await fetch(`/api/global-items/{{ item.id }}/adoption`);
+        const response = await fetch(`/api/ingredient_api/global-items/{{ item.id }}/adoption`);
         if (!response.ok) {
             throw new Error(`HTTP error! status: ${response.status}`);
         }
