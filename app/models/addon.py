@@ -13,6 +13,12 @@ class Addon(db.Model):
     # Permission this addon grants when active
     permission_name = db.Column(db.String(128), nullable=True)
 
+    # Optional function key this addon enables (e.g., 'retention', 'analytics')
+    function_key = db.Column(db.String(64), nullable=True)
+
+    # If this addon extends data retention, specify how many days to extend
+    retention_extension_days = db.Column(db.Integer, nullable=True)
+
     # Billing integration
     billing_type = db.Column(db.String(32), nullable=False, default='subscription')  # 'subscription' | 'one_time'
     stripe_lookup_key = db.Column(db.String(128), nullable=True)

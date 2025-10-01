@@ -41,6 +41,8 @@ except ImportError:
 developer_bp = Blueprint('developer', __name__, url_prefix='/developer')
 developer_bp.register_blueprint(system_roles_bp)
 developer_bp.register_blueprint(subscription_tiers_bp)
+from .addons import addons_bp
+developer_bp.register_blueprint(addons_bp)
 
 # Developer access control is handled centrally in `app/middleware.py`.
 # This eliminates the dual security checkpoints that were causing routing conflicts
