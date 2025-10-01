@@ -12,6 +12,7 @@ from .seeders import (
     seed_categories,
     seed_subscriptions
 )
+from .seeders.addon_seeder import seed_addons
 from .seeders.consolidated_permission_seeder import seed_consolidated_permissions
 from .seeders.user_seeder import seed_users_and_organization
 
@@ -76,6 +77,14 @@ def init_production_command():
             print("✅ Subscription tiers seeded")
         except Exception as e:
             print(f"⚠️  Subscription seeding issue: {e}")
+            print("   Continuing with remaining steps...")
+
+        # Add-ons registry (independent)
+        try:
+            seed_addons()
+            print("✅ Add-ons seeded")
+        except Exception as e:
+            print(f"⚠️  Add-on seeding issue: {e}")
             print("   Continuing with remaining steps...")
 
         try:
