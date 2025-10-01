@@ -2,6 +2,7 @@ from flask import Blueprint, render_template, request, redirect, url_for, flash,
 from flask_login import login_required
 from app.models import db, Permission, SubscriptionTier, Organization
 from app.utils.permissions import require_permission # Assuming this is the correct import
+from app.models.addon import Addon
 import logging
 import json
 import os
@@ -174,15 +175,23 @@ def create_tier():
             tier.permissions = Permission.query.filter(Permission.id.in_(permission_ids)).all()
 
         db.session.add(tier)
+        db.session.flush()
+
+        # Allowed add-ons
+        addon_ids = request.form.getlist('allowed_addons', type=int)
+        if addon_ids:
+            tier.allowed_addons = Addon.query.filter(Addon.id.in_(addon_ids)).all()
+
         db.session.commit()
 
-        logger.info(f'Created subscription tier: {name} ({key})')
+        logger.info(f'Created subscription tier: {name} ({tier.key})')
         flash(f'Subscription tier "{name}" created successfully.', 'success')
         return redirect(url_for('.manage_tiers'))
 
     # For GET request
     all_permissions = Permission.query.order_by(Permission.name).all()
-    return render_template('developer/create_tier.html', all_permissions=all_permissions)
+    all_addons = Addon.query.filter_by(is_active=True).order_by(Addon.name).all()
+    return render_template('developer/create_tier.html', all_permissions=all_permissions, all_addons=all_addons)
 
 @subscription_tiers_bp.route('/edit/<int:tier_id>', methods=['GET', 'POST'])
 @login_required
@@ -258,6 +267,10 @@ def edit_tier(tier_id):
             permission_ids = request.form.getlist('permissions', type=int)
             tier.permissions = Permission.query.filter(Permission.id.in_(permission_ids)).all()
 
+            # Update allowed add-ons
+            addon_ids = request.form.getlist('allowed_addons', type=int)
+            tier.allowed_addons = Addon.query.filter(Addon.id.in_(addon_ids)).all()
+
             db.session.commit()
 
             logger.info(f'Updated subscription tier: {tier.name} ({tier.key})')
@@ -272,9 +285,11 @@ def edit_tier(tier_id):
 
     # For GET request
     all_permissions = Permission.query.order_by(Permission.name).all()
+    all_addons = Addon.query.filter_by(is_active=True).order_by(Addon.name).all()
     return render_template('developer/edit_tier.html',
                            tier=tier,
-                           all_permissions=all_permissions)
+                           all_permissions=all_permissions,
+                           all_addons=all_addons)
 
 @subscription_tiers_bp.route('/delete/<int:tier_id>', methods=['POST'])
 @login_required

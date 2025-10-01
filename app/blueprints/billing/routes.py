@@ -76,10 +76,17 @@ def storage_addon():
         return redirect(url_for('app_routes.dashboard'))
 
     tier = organization.subscription_tier
-    lookup_key = getattr(tier, 'stripe_storage_lookup_key', None)
-    if not lookup_key:
+    # Enforce tier-allowed add-ons: storage key must be allowed on this tier
+    try:
+        from ...models.addon import Addon
+        storage_addon = Addon.query.filter_by(key='storage', is_active=True).first()
+    except Exception:
+        storage_addon = None
+    if not storage_addon or storage_addon not in getattr(tier, 'allowed_addons', []):
         flash('Storage add-on is not available for your tier. Please upgrade instead.', 'warning')
         return redirect(url_for('billing.upgrade'))
+
+    lookup_key = storage_addon.stripe_lookup_key
 
     try:
         if not StripeService.initialize_stripe():

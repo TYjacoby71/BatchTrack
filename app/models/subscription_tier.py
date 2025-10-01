@@ -1,10 +1,17 @@
 from datetime import datetime
 from ..extensions import db
+from sqlalchemy.orm import backref
 
 # Association table for subscription tier permissions
 subscription_tier_permission = db.Table('subscription_tier_permission',
     db.Column('tier_id', db.Integer, db.ForeignKey('subscription_tier.id'), primary_key=True),
     db.Column('permission_id', db.Integer, db.ForeignKey('permission.id'), primary_key=True)
+)
+
+# Association table for which add-ons are allowed on a subscription tier
+tier_allowed_addon = db.Table('tier_allowed_addon',
+    db.Column('tier_id', db.Integer, db.ForeignKey('subscription_tier.id'), primary_key=True),
+    db.Column('addon_id', db.Integer, db.ForeignKey('addon.id'), primary_key=True)
 )
 
 class SubscriptionTier(db.Model):
@@ -54,6 +61,8 @@ class SubscriptionTier(db.Model):
     # Relationships
     permissions = db.relationship('Permission', secondary=subscription_tier_permission,
                                  backref=db.backref('tiers', lazy='dynamic'))
+    allowed_addons = db.relationship('Addon', secondary=tier_allowed_addon,
+                                     backref=backref('allowed_on_tiers', lazy='dynamic'))
 
     # Explicitly named constraints to avoid SQLite batch mode issues
     __table_args__ = (
