@@ -445,7 +445,10 @@ document.addEventListener('DOMContentLoaded', function() {
       ];
 
       soapMakingFields.forEach(fieldId => {
-        document.getElementById(fieldId).style.display = 'none';
+        const fieldDiv = document.getElementById(fieldId);
+        if (fieldDiv) {
+          fieldDiv.style.display = 'none';
+        }
       });
 
       // Only show fields for ingredients with a category
