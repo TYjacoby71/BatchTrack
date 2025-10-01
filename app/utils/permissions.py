@@ -345,10 +345,10 @@ class AuthorizationHierarchy:
         if not organization.tier.is_available:
             return False, "Subscription tier unavailable"
 
-        # For paid tiers, check billing status
+        # For paid tiers, check billing status using org.billing_status only
         if organization.tier.requires_stripe_billing or organization.tier.requires_whop_billing:
-            if organization.subscription_status not in ['active', 'trialing']:
-                return False, f"Subscription status: {organization.subscription_status}"
+            if getattr(organization, 'billing_status', None) in ['past_due', 'payment_failed', 'suspended', 'canceled', 'cancelled']:
+                return False, f"Billing status: {organization.billing_status}"
 
         return True, "Subscription in good standing"
 
@@ -473,9 +473,20 @@ class AuthorizationHierarchy:
         # Get tier-allowed permissions
         tier_permissions = AuthorizationHierarchy.get_tier_allowed_permissions(organization)
 
-        # Organization owners get all tier-allowed permissions
+        # Add-on entitlements: include permissions granted by active organization add-ons
+        addon_permissions = []
+        try:
+            from app.models.addon import OrganizationAddon
+            active_addons = OrganizationAddon.query.filter_by(organization_id=organization.id, active=True).all()
+            for ent in active_addons:
+                if ent.addon and ent.addon.permission_name:
+                    addon_permissions.append(ent.addon.permission_name)
+        except Exception as _e:
+            logger.warning(f"Addon entitlement lookup failed: {_e}")
+
+        # Organization owners get all tier-allowed + addon permissions
         if user.user_type == 'organization_owner':
-            return tier_permissions
+            return list(set(tier_permissions + addon_permissions))
 
         # Other users get intersection of tier permissions and role permissions
         user_permissions = set()
@@ -483,10 +494,15 @@ class AuthorizationHierarchy:
 
         for role in user_roles:
             role_permissions = [p.name for p in role.get_permissions()]
-            # Only add permissions that are both in role AND allowed by tier
+            # Only add permissions that are both in role AND allowed by tier or addons
             for perm in role_permissions:
-                if perm in tier_permissions:
+                if (perm in tier_permissions) or (perm in addon_permissions):
                     user_permissions.add(perm)
+
+        # Also, addon permissions may be independent of role if you prefer them to grant directly
+        # Here we keep it conservative: role still required. If you want addons to grant directly, uncomment:
+        # for perm in addon_permissions:
+        #     user_permissions.add(perm)
 
         return list(user_permissions)
 
@@ -508,10 +524,9 @@ class AuthorizationHierarchy:
         if not organization.tier.has_valid_integration:
             return False, "Subscription tier integration not configured"
 
-        # For billing-required tiers, check billing status
+        # For billing-required tiers, check billing_status only
         if organization.tier.requires_stripe_billing or organization.tier.requires_whop_billing:
-            # Check subscription status
-            if organization.subscription_status not in ['active', 'trialing']:
+            if getattr(organization, 'billing_status', None) in ['past_due', 'payment_failed', 'suspended', 'canceled', 'cancelled']:
                 return False, "Subscription not active"
 
             # Additional billing validations can be added here

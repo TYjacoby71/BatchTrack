@@ -76,10 +76,17 @@ def storage_addon():
         return redirect(url_for('app_routes.dashboard'))
 
     tier = organization.subscription_tier
-    lookup_key = getattr(tier, 'stripe_storage_lookup_key', None)
-    if not lookup_key:
+    # Enforce tier-allowed add-ons: storage key must be allowed on this tier
+    try:
+        from ...models.addon import Addon
+        storage_addon = Addon.query.filter_by(key='storage', is_active=True).first()
+    except Exception:
+        storage_addon = None
+    if not storage_addon or storage_addon not in getattr(tier, 'allowed_addons', []):
         flash('Storage add-on is not available for your tier. Please upgrade instead.', 'warning')
         return redirect(url_for('billing.upgrade'))
+
+    lookup_key = storage_addon.stripe_lookup_key
 
     try:
         if not StripeService.initialize_stripe():
@@ -301,6 +308,16 @@ def complete_signup_from_stripe():
         # Commit all changes
         db.session.commit()
         logger.info("Database changes committed successfully")
+
+        # Update Stripe customer metadata with organization_id and tier_key
+        try:
+            from ...services.stripe_service import StripeService
+            StripeService.update_customer_metadata(customer.id, {
+                'organization_id': str(org.id),
+                'tier_key': subscription_tier.key
+            })
+        except Exception as meta_error:
+            logger.warning(f"Failed to update Stripe customer metadata: {meta_error}")
 
         # Send welcome email
         try:
