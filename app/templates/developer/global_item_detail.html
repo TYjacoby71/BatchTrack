@@ -191,6 +191,9 @@ document.addEventListener('DOMContentLoaded', function() {
 async function loadGlobalItemStats() {
     try {
         const response = await fetch(`/api/global-items/{{ item.id }}/stats`);
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
         const data = await response.json();
 
         if (data.success) {
@@ -273,13 +276,19 @@ function displayStats(stats) {
 async function loadAdoptionMetrics() {
     try {
         const response = await fetch(`/api/global-items/{{ item.id }}/adoption`);
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
         const data = await response.json();
 
         if (data.success) {
             document.getElementById('organizationCount').textContent = data.organization_count || '0';
             document.getElementById('inventoryItemCount').textContent = data.inventory_item_count || '0';
+        } else {
+            throw new Error(data.error || 'Failed to load adoption metrics');
         }
     } catch (error) {
+        console.error('Error loading adoption metrics:', error);
         document.getElementById('organizationCount').textContent = 'Error';
         document.getElementById('inventoryItemCount').textContent = 'Error';
     }

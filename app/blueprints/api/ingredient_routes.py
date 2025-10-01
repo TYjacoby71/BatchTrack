@@ -119,6 +119,7 @@ def search_global_items():
 @login_required
 def get_global_item_stats(global_item_id):
     try:
+        from app.services.statistics.global_item_stats import GlobalItemStatsService
         rollup = GlobalItemStatsService.get_rollup(global_item_id)
         return jsonify({'success': True, 'stats': rollup})
     except Exception as e:
