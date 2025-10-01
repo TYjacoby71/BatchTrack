@@ -1,8 +1,8 @@
 """
 Add global_item_alias table and performance indexes
 
-Revision ID: 20250930_01
-Revises: 20250923_04
+Revision ID: 20251001_2
+Revises: 20251001_1
 Create Date: 2025-09-30
 """
 
@@ -11,8 +11,8 @@ import sqlalchemy as sa
 from sqlalchemy.dialects import postgresql
 
 
-revision = '20250930_01'
-down_revision = '20250923_04'
+revision = '20251001_2'
+down_revision = '20251001_1'
 branch_labels = None
 depends_on = None
 
