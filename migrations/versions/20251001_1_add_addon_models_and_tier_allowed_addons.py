@@ -27,7 +27,7 @@ def upgrade():
         sa.Column('permission_name', sa.String(length=128), nullable=True),
         sa.Column('billing_type', sa.String(length=32), nullable=False, server_default='subscription'),
         sa.Column('stripe_lookup_key', sa.String(length=128), nullable=True),
-        sa.Column('is_active', sa.Boolean(), nullable=False, server_default=sa.text('1')),
+        sa.Column('is_active', sa.Boolean(), nullable=False, server_default=sa.text('TRUE')),
         sa.Column('created_at', sa.DateTime(), nullable=False, server_default=sa.text('CURRENT_TIMESTAMP')),
         sa.Column('updated_at', sa.DateTime(), nullable=False, server_default=sa.text('CURRENT_TIMESTAMP')),
         sa.UniqueConstraint('key', name='uq_addon_key')
@@ -39,7 +39,7 @@ def upgrade():
         sa.Column('id', sa.Integer(), primary_key=True),
         sa.Column('organization_id', sa.Integer(), sa.ForeignKey('organization.id'), nullable=False),
         sa.Column('addon_id', sa.Integer(), sa.ForeignKey('addon.id'), nullable=False),
-        sa.Column('active', sa.Boolean(), nullable=False, server_default=sa.text('1')),
+        sa.Column('active', sa.Boolean(), nullable=False, server_default=sa.text('TRUE')),
         sa.Column('source', sa.String(length=32), nullable=False, server_default='subscription_item'),
         sa.Column('stripe_item_id', sa.String(length=128), nullable=True),
         sa.Column('current_period_end', sa.DateTime(), nullable=True),
