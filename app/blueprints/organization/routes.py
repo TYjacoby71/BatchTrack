@@ -314,76 +314,33 @@ def invite_user():
             username = f"{original_username}{counter}"
             counter += 1
 
-        # Create new user with temporary password
-        temp_password = secrets.token_urlsafe(12)
-
-        # Create new user (inactive if subscription limit reached)
-        new_user = User(
-            username=username,
+        # Delegate to service for invite orchestration
+        from app.services.user_invite_service import UserInviteService
+        result = UserInviteService.invite_user(
+            organization=current_user.organization,
             email=email,
+            role_id=role_id,
             first_name=first_name,
             last_name=last_name,
             phone=phone,
-            organization_id=current_user.organization_id,
-            is_active=not will_be_inactive,  # Inactive if subscription limit reached
-            user_type='team_member'
+            force_inactive=force_inactive
         )
-        new_user.set_password(temp_password)
 
-        db.session.add(new_user)
-        db.session.commit()
+        if not result.success:
+            return jsonify({'success': False, 'error': result.message})
 
-        # Assign role using the new role assignment system
-        new_user.assign_role(role, assigned_by=current_user)
-
-        # Send password setup email if email is configured; otherwise, include a minimal hint
-        try:
-            from app.services.email_service import EmailService
-            if EmailService.is_configured():
-                setup_token = EmailService.generate_reset_token(new_user.id)
-                EmailService.send_password_setup_email(email, setup_token, first_name=first_name or username)
-                status_message = "User invited successfully! Password setup email sent."
-                if will_be_inactive:
-                    status_message += " User added as inactive due to subscription limits."
-                return jsonify({
-                    'success': True,
-                    'message': status_message,
-                    'user_data': {
-                        'username': username,
-                        'email': email,
-                        'full_name': new_user.full_name,
-                        'role': role.name,
-                        'is_active': new_user.is_active
-                    }
-                })
-            else:
-                status_message = "User invited. Email not configured; please set a password manually."
-                if will_be_inactive:
-                    status_message += " User added as inactive due to subscription limits."
-                return jsonify({
-                    'success': True,
-                    'message': status_message,
-                    'user_data': {
-                        'username': username,
-                        'email': email,
-                        'full_name': new_user.full_name,
-                        'role': role.name,
-                        'is_active': new_user.is_active
-                    }
-                })
-        except Exception as _e:
-            # Fallback: do not expose temp password in API; instruct admin to set password
-            return jsonify({
-                'success': True,
-                'message': 'User invited. Configure email to send password setup links, or set a password manually.',
-                'user_data': {
-                    'username': username,
-                    'email': email,
-                    'full_name': new_user.full_name,
-                    'role': role.name,
-                    'is_active': new_user.is_active
-                }
-            })
+        invited = result.user
+        return jsonify({
+            'success': True,
+            'message': result.message,
+            'user_data': {
+                'username': invited.username,
+                'email': invited.email,
+                'full_name': invited.full_name,
+                'role': role.name,
+                'is_active': invited.is_active
+            }
+        })
 
     except Exception as e:
         db.session.rollback()
