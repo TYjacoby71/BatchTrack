@@ -34,6 +34,7 @@ _export([
 
     # Auth/Org/ACL - these are defined in this file below
     ("subscription_tier", "SubscriptionTier", None),
+    ("addon", "Addon", None),
     ("permission", "Permission", None),
     ("role", "Role", None),
 
