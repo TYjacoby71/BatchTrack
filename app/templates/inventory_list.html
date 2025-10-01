@@ -48,6 +48,47 @@ document.addEventListener('DOMContentLoaded', function() {
       spinner.classList.remove('d-none');
     });
   }
+
+  // Wire container field suggestions via datalist
+  try {
+    const hookSuggest = (selector, field) => {
+      const el = document.querySelector(selector);
+      if (!el) return;
+      el.addEventListener('input', async function(){
+        const q = (this.value || '').trim();
+        if (q.length < 1) return;
+        const res = await fetch(`/api/containers/suggestions?field=${encodeURIComponent(field)}&q=${encodeURIComponent(q)}`);
+        const data = await res.json().catch(() => ({}));
+        if (!data || !data.success) return;
+        const listId = `${this.id}List`;
+        let dl = document.getElementById(listId);
+        if (!dl) {
+          dl = document.createElement('datalist');
+          dl.id = listId;
+          document.body.appendChild(dl);
+          this.setAttribute('list', listId);
+        }
+        const vals = (data.suggestions || data.suggestions?.suggestions || []);
+        dl.innerHTML = '';
+        (Array.isArray(vals) ? vals : []).forEach(v => {
+          const opt = document.createElement('option');
+          opt.value = v;
+          dl.appendChild(opt);
+        });
+        if (field === 'material' && Array.isArray(data.curated_materials)) {
+          data.curated_materials.forEach(v => {
+            const opt = document.createElement('option');
+            opt.value = v;
+            dl.appendChild(opt);
+          });
+        }
+      });
+    };
+    hookSuggest('#addContainerMaterial', 'material');
+    hookSuggest('#addContainerType', 'type');
+    hookSuggest('#addContainerStyle', 'style');
+    hookSuggest('#addContainerColor', 'color');
+  } catch (e) { console.warn('Container suggestions init failed', e); }
 });
 
 function initTablePagination(tableType) {
@@ -152,6 +193,9 @@ function initTablePagination(tableType) {
       } else if (field === 'cost') {
         aVal = parseFloat(a.dataset.cost) || 0;
         bVal = parseFloat(b.dataset.cost) || 0;
+      } else if (field === 'material') {
+        aVal = (a.dataset.material || '');
+        bVal = (b.dataset.material || '');
       }
 
       if (direction === 'asc') {

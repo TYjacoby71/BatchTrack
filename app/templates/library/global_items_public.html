@@ -56,7 +56,7 @@
       {% for gi in items %}
       <tr>
         <td>
-          <a href="#" onclick="openItemDetails({{ gi.id }}); return false;">{{ gi.name }}</a>
+          <a href="#" class="gi-detail-link" data-gi-id="{{ gi.id }}">{{ gi.name }}</a>
         </td>
         <td><span class="badge bg-secondary">{{ gi.item_type }}</span></td>
         <td>{{ gi.ingredient_category.name if gi.ingredient_category else '-' }}</td>
@@ -89,6 +89,16 @@
       <div class="mb-2"><strong>Category:</strong> <span id="giCategory"></span></div>
       <div class="mb-2"><strong>Default Unit:</strong> <span id="giUnit"></span></div>
       <div class="mb-2"><strong>Density:</strong> <span id="giDensity"></span></div>
+      <div id="giContainerMeta" style="display:none;">
+        <div class="mb-2"><strong>Material:</strong> <span id="giMaterial"></span></div>
+        <div class="mb-2"><strong>Type/Style:</strong> <span id="giTypeStyle"></span></div>
+        <div class="mb-2"><strong>Color:</strong> <span id="giColor"></span></div>
+      </div>
+      <hr>
+      <div id="giIngredientStats" style="display:none;">
+        <h6>Ingredient Properties</h6>
+        <div class="row row-cols-2 g-2" id="giPropsGrid"></div>
+      </div>
       <hr>
       <h6>Community Cost Snapshot</h6>
       <div id="giCostStats">No cost data yet.</div>
@@ -151,6 +161,14 @@ document.addEventListener('DOMContentLoaded', function(){
   };
   typeFilter.addEventListener('change', updateCategoryVisibility);
   updateCategoryVisibility();
+  // Delegate clicks for detail links to avoid inline JS
+  document.querySelectorAll('.gi-detail-link').forEach(function(el){
+    el.addEventListener('click', function(e){
+      e.preventDefault();
+      const id = this.getAttribute('data-gi-id');
+      if (id) openItemDetails(id);
+    });
+  });
 });
 
 async function openItemDetails(id){
@@ -161,22 +179,59 @@ async function openItemDetails(id){
     document.getElementById('giDetailContent').style.display = 'none';
     oc.show();
 
-    // Fetch basic item and stats
-    const base = await fetch(`/api/ingredients/global-items/search?q=${encodeURIComponent('')}&type=`);
-    // We didn't add a single-item public endpoint for basics; use a minimal query via developer model rendering context
-    // Instead, embed minimal data client-side from the table row would be ideal; for now, pull stats only and leave basics blank if not present
+    // Fetch item + stats
     const statsRes = await fetch(`/global-items/${id}/stats`);
-    const stats = await statsRes.json();
+    const payload = await statsRes.json();
 
-    // Populate known fields from the table cache by requerying DOM would be complex; leave placeholders for now
-    document.getElementById('giName').textContent = `#${id}`;
-    document.getElementById('giType').textContent = '';
-    document.getElementById('giCategory').textContent = '';
-    document.getElementById('giUnit').textContent = '';
-    document.getElementById('giDensity').textContent = '';
+    if (payload && payload.success && payload.item) {
+      const it = payload.item;
+      document.getElementById('giName').textContent = it.name || `#${id}`;
+      document.getElementById('giType').textContent = it.item_type || '';
+      document.getElementById('giCategory').textContent = it.ingredient_category_name || '';
+      document.getElementById('giUnit').textContent = it.default_unit || '';
+      document.getElementById('giDensity').textContent = (it.density != null) ? Number(it.density).toFixed(3) : '';
 
-    if (stats && stats.success){
-      const c = stats.cost || {};
+      // Container meta
+      const isContainer = it.item_type === 'container' || it.item_type === 'packaging';
+      const metaDiv = document.getElementById('giContainerMeta');
+      if (isContainer) {
+        metaDiv.style.display = '';
+        document.getElementById('giMaterial').textContent = it.container_material || '';
+        const typeStyle = [it.container_type || '', it.container_style ? `(${it.container_style})` : ''].join(' ').trim();
+        document.getElementById('giTypeStyle').textContent = typeStyle;
+        document.getElementById('giColor').textContent = it.container_color || '';
+      } else {
+        metaDiv.style.display = 'none';
+      }
+
+      // Ingredient property visibility
+      const propsDiv = document.getElementById('giIngredientStats');
+      const grid = document.getElementById('giPropsGrid');
+      grid.innerHTML = '';
+      const vis = payload.category_visibility || {};
+      const addProp = (label, value, show) => {
+        if (!show) return;
+        const v = (value == null || value === '') ? '-' : value;
+        const col = document.createElement('div');
+        col.innerHTML = `<div><strong>${label}:</strong> ${v}</div>`;
+        grid.appendChild(col);
+      };
+      const isIngredient = it.item_type === 'ingredient';
+      propsDiv.style.display = isIngredient ? '' : 'none';
+      if (isIngredient) {
+        addProp('Saponification', it.saponification_value, vis.show_saponification_value);
+        addProp('Iodine', it.iodine_value, vis.show_iodine_value);
+        addProp('Melting Point (°C)', it.melting_point_c, vis.show_melting_point);
+        addProp('Flash Point (°C)', it.flash_point_c, vis.show_flash_point);
+        addProp('pH', it.ph_value, vis.show_ph_value);
+        addProp('Moisture %', it.moisture_content_percent, vis.show_moisture_content);
+        addProp('Shelf Life (months)', it.shelf_life_months, vis.show_shelf_life_months);
+        addProp('Comedogenic', it.comedogenic_rating, vis.show_comedogenic_rating);
+      }
+    }
+
+    if (payload && payload.success){
+      const c = payload.cost || {};
       if (c.count && c.count > 0){
         const mean = c.mean_ex_outliers != null ? c.mean_ex_outliers.toFixed(2) : '-';
         const low = c.low != null ? c.low.toFixed(2) : '-';
