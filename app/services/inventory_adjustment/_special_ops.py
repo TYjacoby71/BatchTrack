@@ -52,14 +52,44 @@ def handle_cost_override(item, quantity, change_type, notes=None, created_by=Non
 
 def handle_unit_conversion(item, quantity, change_type, notes=None, created_by=None, cost_override=None, custom_expiration_date=None, custom_shelf_life_days=None, customer=None, sale_price=None, order_id=None, target_quantity=None, unit=None, **kwargs):
     """
-    Handle unit conversion operations.
+    Handle unit conversion operations via the canonical ConversionEngine (UUCS).
 
-    This is a placeholder for unit conversion logic.
-    Currently not implemented as it requires complex conversion tables.
+    Converts the provided quantity from `unit` to the item's base `item.unit` and logs a no-op
+    inventory event to document the conversion intent (since conversion itself shouldn't change stock).
     """
     try:
-        logger.warning(f"UNIT CONVERSION: Operation attempted on item {item.id} but not implemented")
-        return False, "Unit conversion operations are not yet implemented"
+        from app.services.unit_conversion import ConversionEngine
+        from app.models import UnifiedInventoryHistory
+
+        if unit is None or unit == item.unit:
+            # Nothing to convert
+            return True, "No conversion needed"
+
+        # Probe conversion and compute converted value (does not change quantity here)
+        conv = ConversionEngine.convert_units(
+            amount=float(quantity or 0.0),
+            from_unit=unit,
+            to_unit=item.unit,
+            ingredient_id=item.id,
+            density=item.density
+        )
+
+        if not conv or conv.get('converted_value') is None:
+            return False, f"Cannot convert {unit} to {item.unit}"
+
+        # Log informational event; quantity_change = 0 to preserve stock, record mapping context
+        evt = UnifiedInventoryHistory(
+            inventory_item_id=item.id,
+            change_type='unit_conversion',
+            quantity_change=0.0,
+            unit=item.unit,
+            notes=(notes or f"Unit conversion verified: {quantity} {unit} -> {conv['converted_value']} {item.unit}"),
+            created_by=created_by,
+            organization_id=item.organization_id
+        )
+        db.session.add(evt)
+        logger.info(f"UNIT CONVERSION: Verified {quantity} {unit} -> {conv['converted_value']} {item.unit} for item {item.id}")
+        return True, "Unit conversion verified"
 
     except Exception as e:
         logger.error(f"UNIT CONVERSION ERROR: {str(e)}")

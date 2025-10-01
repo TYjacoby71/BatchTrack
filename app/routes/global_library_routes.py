@@ -32,14 +32,18 @@ def global_library():
             IngredientCategory.name == category_filter
         )
 
-    # Apply search across name and aka_names JSON
+    # Apply search across name and aliases (falls back to aka_names JSON)
     if search_query:
         term = f"%{search_query}%"
         try:
+            # Try alias table first for scalable search
+            from app.models import GlobalItem as _GI
+            from sqlalchemy import or_, exists, and_
+            alias_tbl = db.Table('global_item_alias', db.metadata, autoload_with=db.engine)
             query = query.filter(
-                db.or_(
-                    GlobalItem.name.ilike(term),
-                    GlobalItem.aka_names.op('::text').ilike(term)
+                or_(
+                    _GI.name.ilike(term),
+                    exists().where(and_(alias_tbl.c.global_item_id == _GI.id, alias_tbl.c.alias.ilike(term)))
                 )
             )
         except Exception:

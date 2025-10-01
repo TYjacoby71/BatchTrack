@@ -70,10 +70,8 @@ class InventoryLot(ScopedModelMixin, db.Model):
         delta = self.expiration_date - datetime.now().date()
         return delta.days
     
-    # Relationships
-    inventory_item = db.relationship('InventoryItem', backref='lots')
+    # Remove duplicate relationship declarations (kept canonical ones above)
     user = db.relationship('User')
-    organization = db.relationship('Organization')
     batch = db.relationship('Batch', backref='created_lots')
     
     # Constraints
@@ -101,12 +99,8 @@ class InventoryLot(ScopedModelMixin, db.Model):
         """Check if this lot is completely consumed"""
         return self.remaining_quantity <= 0
     
-    @property
-    def is_expired(self):
-        """Check if this lot has expired"""
-        if not self.expiration_date:
-            return False
-        return self.expiration_date < datetime.utcnow()
+    # is_expired defined above (lines 57-63) using date compare;
+    # retain a single implementation to avoid confusion.
     
     @property
     def consumption_percentage(self):

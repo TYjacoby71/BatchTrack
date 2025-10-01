@@ -115,8 +115,9 @@
 
 ### **Integration Ecosystem**
 - **ERP Integrations**: QuickBooks, Xero, NetSuite connections for accounting
-- **E-commerce Platforms**: Shopify, WooCommerce, BigCommerce inventory sync
+- **E-commerce Platforms**: Shopify, WooCommerce, BigCommerce inventory sync (Shopify: PARTIAL/STUBBED)
 - **Shipping Partners**: FedEx, UPS, DHL integration for automated fulfillment
+- **Billing Providers**: Stripe (Active), Whop (STUBBED)
 - **Compliance Tools**: FDA, organic certification, and regulatory management
 
 ## 🔬 **PHASE 6: AI & Machine Learning** (Month 10+)

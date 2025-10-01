@@ -1162,8 +1162,190 @@ def delete_global_item(item_id):
 @developer_bp.route('/inventory-analytics')
 @login_required
 def inventory_analytics_stub():
-    """Stub page for global inventory analytics in developer system"""
+    """Developer inventory analytics (feature-flagged)."""
+    from flask import current_app
+    enabled = current_app.config.get('FEATURE_INVENTORY_ANALYTICS', False)
+    if not enabled:
+        flash('Inventory analytics is not enabled for this environment.', 'info')
+        return redirect(url_for('developer.dashboard'))
     return render_template('developer/inventory_analytics.html')
+
+
+# ===================== Integrations & Launch Checklist =====================
+
+@developer_bp.route('/integrations')
+@login_required
+def integrations_checklist():
+    """Comprehensive integrations and launch checklist (developer only)."""
+    from flask import current_app
+    from app.services.email_service import EmailService
+    from app.services.stripe_service import StripeService
+    from app.models.subscription_tier import SubscriptionTier
+
+    # Email provider status
+    email_provider = (current_app.config.get('EMAIL_PROVIDER') or 'smtp').lower()
+    email_configured = EmailService.is_configured()
+    email_keys = {
+        'SMTP': bool(current_app.config.get('MAIL_SERVER')),
+        'SendGrid': bool(current_app.config.get('SENDGRID_API_KEY')),
+        'Postmark': bool(current_app.config.get('POSTMARK_SERVER_TOKEN')),
+        'Mailgun': bool(current_app.config.get('MAILGUN_API_KEY') and current_app.config.get('MAILGUN_DOMAIN')),
+    }
+
+    # Stripe status
+    stripe_secret = current_app.config.get('STRIPE_SECRET_KEY')
+    stripe_webhook_secret = current_app.config.get('STRIPE_WEBHOOK_SECRET')
+    tiers_count = SubscriptionTier.query.count()
+    stripe_status = {
+        'secret_key_present': bool(stripe_secret),
+        'webhook_secret_present': bool(stripe_webhook_secret),
+        'tiers_configured': tiers_count > 0,
+    }
+
+    # Feature flags
+    feature_flags = {
+        'FEATURE_INVENTORY_ANALYTICS': bool(current_app.config.get('FEATURE_INVENTORY_ANALYTICS', False)),
+    }
+
+    # Logging/PII
+    logging_status = {
+        'LOG_LEVEL': current_app.config.get('LOG_LEVEL', 'INFO'),
+        'LOG_REDACT_PII': current_app.config.get('LOG_REDACT_PII', True),
+    }
+
+    # POS/Shopify (stub)
+    shopify_status = {
+        'status': 'stubbed',
+        'notes': 'POS/Shopify integration is stubbed. Enable later via a dedicated adapter.'
+    }
+
+    return render_template(
+        'developer/integrations.html',
+        email_provider=email_provider,
+        email_configured=email_configured,
+        email_keys=email_keys,
+        stripe_status=stripe_status,
+        tiers_count=tiers_count,
+        feature_flags=feature_flags,
+        logging_status=logging_status,
+        shopify_status=shopify_status
+    )
+
+
+@developer_bp.route('/integrations/test-email', methods=['POST'])
+@login_required
+def integrations_test_email():
+    """Send a test email to current user's email if configured."""
+    try:
+        from app.services.email_service import EmailService
+        if not EmailService.is_configured():
+            return jsonify({'success': False, 'error': 'Email is not configured'}), 400
+        recipient = getattr(current_user, 'email', None)
+        if not recipient:
+            return jsonify({'success': False, 'error': 'Current user has no email address'}), 400
+        subject = 'BatchTrack Test Email'
+        html_body = '<p>This is a test email from BatchTrack Integrations Checklist.</p>'
+        ok = EmailService._send_email(recipient, subject, html_body, 'This is a test email from BatchTrack Integrations Checklist.')
+        if ok:
+            return jsonify({'success': True, 'message': f'Test email sent to {recipient}'})
+        return jsonify({'success': False, 'error': 'Failed to send email'}), 500
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@developer_bp.route('/integrations/test-stripe', methods=['POST'])
+@login_required
+def integrations_test_stripe():
+    """Test Stripe connectivity (no secrets shown)."""
+    try:
+        from app.services.stripe_service import StripeService
+        ok = StripeService.initialize_stripe()
+        if not ok:
+            return jsonify({'success': False, 'error': 'Stripe secret not configured'}), 400
+        # Try a harmless list call
+        import stripe
+        try:
+            prices = stripe.Price.list(limit=1)
+            return jsonify({'success': True, 'message': f"Stripe reachable. Prices found: {len(prices.data)}"})
+        except Exception as e:
+            return jsonify({'success': False, 'error': f"Stripe API error: {e}"}), 500
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@developer_bp.route('/integrations/stripe-events', methods=['GET'])
+@login_required
+def integrations_stripe_events():
+    """Summarize recent Stripe webhook events from the database."""
+    try:
+        from app.models.stripe_event import StripeEvent
+        total = StripeEvent.query.count()
+        last = StripeEvent.query.order_by(StripeEvent.id.desc()).first()
+        payload = {'total_events': total}
+        if last:
+            payload.update({
+                'last_event_id': last.event_id,
+                'last_event_type': last.event_type,
+                'last_status': last.status,
+                'last_processed_at': getattr(last, 'processed_at', None).isoformat() if getattr(last, 'processed_at', None) else None
+            })
+        return jsonify({'success': True, 'data': payload})
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@developer_bp.route('/integrations/feature-flags', methods=['POST'])
+@login_required
+def integrations_set_feature_flags():
+    """Set feature flags (developer only; stored in-app and persisted to settings.json)."""
+    try:
+        from flask import current_app
+        if current_user.user_type != 'developer':
+            return jsonify({'success': False, 'error': 'Developer access required'}), 403
+        data = request.get_json() or {}
+        # Only allow known flags
+        if 'FEATURE_INVENTORY_ANALYTICS' in data:
+            value = bool(data['FEATURE_INVENTORY_ANALYTICS'])
+            current_app.config['FEATURE_INVENTORY_ANALYTICS'] = value
+            # Persist to settings.json for next boot
+            try:
+                import json, os
+                settings = {}
+                if os.path.exists('settings.json'):
+                    with open('settings.json', 'r') as f:
+                        settings = json.load(f) or {}
+                ff = settings.get('feature_flags', {}) or {}
+                ff['FEATURE_INVENTORY_ANALYTICS'] = value
+                settings['feature_flags'] = ff
+                with open('settings.json', 'w') as f:
+                    json.dump(settings, f, indent=2)
+            except Exception:
+                pass
+        return jsonify({'success': True})
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@developer_bp.route('/integrations/check-webhook', methods=['GET'])
+@login_required
+def integrations_check_webhook():
+    """Verify webhook endpoint HTTP reachability (does not validate Stripe signature)."""
+    try:
+        from flask import current_app
+        import requests
+        base = request.host_url.rstrip('/')
+        # Use our known webhook path
+        url = f"{base}/billing/webhooks/stripe"
+        # Send a harmless GET to see if the route 405s (expected) or 404s
+        try:
+            resp = requests.get(url, timeout=5)
+            status = resp.status_code
+            message = 'reachable (method not allowed expected)' if status == 405 else f'response {status}'
+            return jsonify({'success': True, 'url': url, 'status': status, 'message': message})
+        except Exception as e:
+            return jsonify({'success': False, 'url': url, 'error': f'Connection error: {e}'}), 500
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
 
 @developer_bp.route('/analytics-catalog')
 @login_required

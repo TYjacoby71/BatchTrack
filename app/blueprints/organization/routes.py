@@ -8,6 +8,7 @@ from app.models import User, Organization, Role, Permission
 from app.extensions import db
 from app.utils.permissions import require_permission, has_permission
 from app.utils.timezone_utils import TimezoneUtils
+from flask import current_app
 
 organization_bp = Blueprint('organization', __name__)
 
@@ -313,45 +314,31 @@ def invite_user():
             username = f"{original_username}{counter}"
             counter += 1
 
-        # Create new user with temporary password
-        temp_password = secrets.token_urlsafe(12)
-
-        # Create new user (inactive if subscription limit reached)
-        new_user = User(
-            username=username,
+        # Delegate to service for invite orchestration
+        from app.services.user_invite_service import UserInviteService
+        result = UserInviteService.invite_user(
+            organization=current_user.organization,
             email=email,
+            role_id=role_id,
             first_name=first_name,
             last_name=last_name,
             phone=phone,
-            organization_id=current_user.organization_id,
-            is_active=not will_be_inactive,  # Inactive if subscription limit reached
-            user_type='team_member'
+            force_inactive=force_inactive
         )
-        new_user.set_password(temp_password)
 
-        db.session.add(new_user)
-        db.session.commit()
+        if not result.success:
+            return jsonify({'success': False, 'error': result.message})
 
-        # Assign role using the new role assignment system
-        new_user.assign_role(role, assigned_by=current_user)
-
-        # TODO: In a real implementation, send email with login details
-        # For now, we'll return the credentials directly
-
-        status_message = "User invited successfully!"
-        if will_be_inactive:
-            status_message += " User added as inactive due to subscription limits."
-
+        invited = result.user
         return jsonify({
-            'success': True, 
-            'message': f'{status_message} Login details - Username: {username}, Temporary password: {temp_password}',
+            'success': True,
+            'message': result.message,
             'user_data': {
-                'username': username,
-                'email': email,
-                'full_name': new_user.full_name,
+                'username': invited.username,
+                'email': invited.email,
+                'full_name': invited.full_name,
                 'role': role.name,
-                'temp_password': temp_password,  # Remove this in production
-                'is_active': new_user.is_active
+                'is_active': invited.is_active
             }
         })
 

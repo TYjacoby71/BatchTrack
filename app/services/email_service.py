@@ -5,6 +5,7 @@ from ..extensions import mail
 from ..utils.timezone_utils import TimezoneUtils
 import secrets
 import hashlib
+from typing import Optional
 
 logger = logging.getLogger(__name__)
 
@@ -133,22 +134,123 @@ class EmailService:
             return False
 
     @staticmethod
-    def _send_email(recipient, subject, html_body, text_body=None):
-        """Internal method to send email"""
+    def _send_email(recipient: str, subject: str, html_body: str, text_body: Optional[str] = None) -> bool:
+        """Internal method to send email via configured provider (SMTP default)."""
+        provider = (current_app.config.get('EMAIL_PROVIDER') or 'smtp').lower()
+
+        # Route to provider-specific adapter; fallback to SMTP on failure
         try:
+            if provider == 'sendgrid':
+                if EmailService._send_via_sendgrid(recipient, subject, html_body, text_body):
+                    return True
+                logger.warning("SendGrid send failed or not configured, falling back to SMTP")
+            elif provider == 'postmark':
+                if EmailService._send_via_postmark(recipient, subject, html_body, text_body):
+                    return True
+                logger.warning("Postmark send failed or not configured, falling back to SMTP")
+            elif provider == 'mailgun':
+                if EmailService._send_via_mailgun(recipient, subject, html_body, text_body):
+                    return True
+                logger.warning("Mailgun send failed or not configured, falling back to SMTP")
+            # 'ses' typically uses SMTP; if SES-specific SDK not configured, just use SMTP config
+        except Exception as e:
+            logger.warning(f"Provider adapter error ({provider}): {e}; falling back to SMTP")
+
+        # SMTP default path via Flask-Mail
+        try:
+            default_sender = current_app.config.get('MAIL_DEFAULT_SENDER')
             msg = Message(
                 subject=subject,
                 recipients=[recipient],
                 html=html_body,
-                body=text_body
+                body=text_body,
+                sender=default_sender
             )
-
             mail.send(msg)
-            logger.info(f"Email sent successfully to {recipient}")
+            logger.info(f"Email sent successfully to {recipient} via SMTP")
             return True
-
         except Exception as e:
-            logger.error(f"Failed to send email to {recipient}: {str(e)}")
+            logger.error(f"Failed to send email to {recipient} (SMTP): {str(e)}")
+            return False
+
+    @staticmethod
+    def _send_via_sendgrid(recipient: str, subject: str, html_body: str, text_body: Optional[str]) -> bool:
+        api_key = current_app.config.get('SENDGRID_API_KEY')
+        from_email = current_app.config.get('MAIL_DEFAULT_SENDER') or current_app.config.get('DEFAULT_FROM_EMAIL')
+        if not api_key or not from_email:
+            return False
+        try:
+            import requests
+            payload = {
+                'personalizations': [{ 'to': [{ 'email': recipient }] }],
+                'from': { 'email': from_email },
+                'subject': subject,
+                'content': [
+                    { 'type': 'text/plain', 'value': text_body or '' },
+                    { 'type': 'text/html', 'value': html_body or '' }
+                ]
+            }
+            headers = { 'Authorization': f'Bearer {api_key}', 'Content-Type': 'application/json' }
+            resp = requests.post('https://api.sendgrid.com/v3/mail/send', json=payload, headers=headers, timeout=10)
+            if 200 <= resp.status_code < 300:
+                logger.info(f"Email sent to {recipient} via SendGrid")
+                return True
+            logger.error(f"SendGrid error {resp.status_code}: {resp.text}")
+            return False
+        except Exception as e:
+            logger.error(f"SendGrid send error: {e}")
+            return False
+
+    @staticmethod
+    def _send_via_postmark(recipient: str, subject: str, html_body: str, text_body: Optional[str]) -> bool:
+        server_token = current_app.config.get('POSTMARK_SERVER_TOKEN')
+        from_email = current_app.config.get('MAIL_DEFAULT_SENDER') or current_app.config.get('DEFAULT_FROM_EMAIL')
+        if not server_token or not from_email:
+            return False
+        try:
+            import requests
+            payload = {
+                'From': from_email,
+                'To': recipient,
+                'Subject': subject,
+                'TextBody': text_body or '',
+                'HtmlBody': html_body or ''
+            }
+            headers = { 'X-Postmark-Server-Token': server_token }
+            resp = requests.post('https://api.postmarkapp.com/email', json=payload, headers=headers, timeout=10)
+            if 200 <= resp.status_code < 300:
+                logger.info(f"Email sent to {recipient} via Postmark")
+                return True
+            logger.error(f"Postmark error {resp.status_code}: {resp.text}")
+            return False
+        except Exception as e:
+            logger.error(f"Postmark send error: {e}")
+            return False
+
+    @staticmethod
+    def _send_via_mailgun(recipient: str, subject: str, html_body: str, text_body: Optional[str]) -> bool:
+        api_key = current_app.config.get('MAILGUN_API_KEY')
+        domain = current_app.config.get('MAILGUN_DOMAIN')
+        from_email = current_app.config.get('MAIL_DEFAULT_SENDER') or f"postmaster@{domain}" if domain else None
+        if not api_key or not domain or not from_email:
+            return False
+        try:
+            import requests
+            data = {
+                'from': from_email,
+                'to': [recipient],
+                'subject': subject,
+                'text': text_body or '',
+                'html': html_body or ''
+            }
+            resp = requests.post(f'https://api.mailgun.net/v3/{domain}/messages', auth=('api', api_key), data=data, timeout=10)
+            if 200 <= resp.status_code < 300:
+                logger.info(f"Email sent to {recipient} via Mailgun")
+                return True
+            logger.error(f"Mailgun error {resp.status_code}: {resp.text}")
+            return False
+        except Exception as e:
+            logger.error(f"Mailgun send error: {e}")
             return False
 
     @staticmethod
@@ -193,11 +295,18 @@ class EmailService:
 
     @staticmethod
     def is_configured():
-        """Check if email is properly configured"""
+        """Check if email is properly configured for the selected provider."""
         try:
-            return (current_app.config.get('MAIL_SERVER') and 
-                   current_app.config.get('MAIL_USERNAME'))
-        except:
+            provider = (current_app.config.get('EMAIL_PROVIDER') or 'smtp').lower()
+            if provider == 'sendgrid':
+                return bool(current_app.config.get('SENDGRID_API_KEY'))
+            if provider == 'postmark':
+                return bool(current_app.config.get('POSTMARK_SERVER_TOKEN'))
+            if provider == 'mailgun':
+                return bool(current_app.config.get('MAILGUN_API_KEY') and current_app.config.get('MAILGUN_DOMAIN'))
+            # SES SMTP or generic SMTP
+            return bool(current_app.config.get('MAIL_SERVER'))
+        except Exception:
             return False
 
     @staticmethod
