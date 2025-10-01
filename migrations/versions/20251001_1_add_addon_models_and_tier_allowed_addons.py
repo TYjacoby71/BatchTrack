@@ -1,7 +1,7 @@
 """add addon models and tier allowed addons
 
 Revision ID: 20251001_1
-Revises: 20250922_02_inventory_cost_method_toggle
+Revises: 20250930_5
 Create Date: 2025-10-01
 """
 
@@ -11,7 +11,7 @@ import sqlalchemy as sa
 
 # revision identifiers, used by Alembic.
 revision = '20251001_1'
-down_revision = '20250925_02_add_plan_snapshot_to_batch'
+down_revision = '20250930_5'
 branch_labels = None
 depends_on = None
 
