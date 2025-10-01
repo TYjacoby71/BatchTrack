@@ -1,0 +1,95 @@
+{% extends 'developer/layout.html' %}
+{% block content %}
+<div class="container my-4">
+  <h2>Integrations & Launch Checklist</h2>
+  <p class="text-muted">Use this page as a checklist to prepare for launch. Items marked in green are configured; items in red need attention.</p>
+
+  <hr>
+  <h4>1) Email (Transactional)</h4>
+  <p>Provider: <strong>{{ email_provider|upper }}</strong> — Status: {% if email_configured %}<span class="text-success">Configured</span>{% else %}<span class="text-danger">Not configured</span>{% endif %}</p>
+  <ul>
+    <li>SMTP: {{ 'OK' if email_keys.SMTP else 'Missing' }}</li>
+    <li>SendGrid API key: {{ 'OK' if email_keys.SendGrid else 'Missing' }}</li>
+    <li>Postmark Server Token: {{ 'OK' if email_keys.Postmark else 'Missing' }}</li>
+    <li>Mailgun API/Domain: {{ 'OK' if email_keys.Mailgun else 'Missing' }}</li>
+  </ul>
+  <div class="alert alert-info">
+    <strong>Setup instructions:</strong>
+    <ol class="mb-0">
+      <li>Pick a provider (SendGrid, SES, Postmark, Mailgun) and create an account.</li>
+      <li>Add domain DNS for SPF/DKIM (and DMARC optional) in your provider dashboard.</li>
+      <li>Set environment variables:
+        <ul>
+          <li>EMAIL_PROVIDER=smtp|sendgrid|postmark|mailgun</li>
+          <li>SMTP: MAIL_SERVER, MAIL_USERNAME, MAIL_PASSWORD, MAIL_DEFAULT_SENDER</li>
+          <li>SendGrid: SENDGRID_API_KEY, MAIL_DEFAULT_SENDER</li>
+          <li>Postmark: POSTMARK_SERVER_TOKEN, MAIL_DEFAULT_SENDER</li>
+          <li>Mailgun: MAILGUN_API_KEY, MAILGUN_DOMAIN, MAIL_DEFAULT_SENDER</li>
+        </ul>
+      </li>
+    </ol>
+  </div>
+  <form method="post" action="{{ url_for('developer.integrations_test_email') }}">
+    <button class="btn btn-sm btn-primary" type="submit" {% if not email_configured %}disabled{% endif %}>Send Test Email</button>
+  </form>
+
+  <hr>
+  <h4>2) Billing (Stripe)</h4>
+  <p>Status:
+    <span class="badge {% if stripe_status.secret_key_present %}bg-success{% else %}bg-danger{% endif %}">Secret Key</span>
+    <span class="badge {% if stripe_status.webhook_secret_present %}bg-success{% else %}bg-danger{% endif %}">Webhook Secret</span>
+    <span class="badge {% if stripe_status.tiers_configured %}bg-success{% else %}bg-danger{% endif %}">Tiers</span>
+  </p>
+  <div class="alert alert-info">
+    <strong>Setup instructions:</strong>
+    <ol class="mb-0">
+      <li>Create a Stripe account and products/prices with lookup keys per tier.</li>
+      <li>Configure environment:
+        <ul>
+          <li>STRIPE_SECRET_KEY=sk_live_xxx</li>
+          <li>STRIPE_WEBHOOK_SECRET=whsec_xxx</li>
+        </ul>
+      </li>
+      <li>Set your webhook endpoint to: <code>/billing/stripe/webhook</code> in Stripe and paste the webhook signing secret into STRIPE_WEBHOOK_SECRET.</li>
+      <li>Ensure subscription tiers in the database include the Stripe lookup keys.</li>
+    </ol>
+  </div>
+
+  <hr>
+  <h4>3) Feature Flags</h4>
+  <ul>
+    <li>Inventory Analytics: {% if feature_flags.FEATURE_INVENTORY_ANALYTICS %}<span class="text-success">Enabled</span>{% else %}<span class="text-warning">Disabled</span>{% endif %} — Set <code>FEATURE_INVENTORY_ANALYTICS=true</code> to enable.</li>
+  </ul>
+
+  <hr>
+  <h4>4) POS/Shopify</h4>
+  <p>Status: <span class="badge bg-secondary">{{ shopify_status.status|capitalize }}</span></p>
+  <div class="alert alert-secondary">
+    POS/Shopify is currently stubbed. When ready, we will add a provider adapter (webhooks and API client) and expose configuration here.
+  </div>
+
+  <hr>
+  <h4>5) Logging & Security</h4>
+  <ul>
+    <li>LOG_LEVEL: <code>{{ logging_status.LOG_LEVEL }}</code></li>
+    <li>PII Redaction: {% if logging_status.LOG_REDACT_PII %}<span class="text-success">On</span>{% else %}<span class="text-danger">Off</span>{% endif %}</li>
+  </ul>
+  <div class="alert alert-info">
+    <strong>Recommendation:</strong> Keep PII redaction enabled in production. Use DEBUG only in secure development environments.
+  </div>
+
+  <hr>
+  <h4>6) Pre-Launch Checklist (Quick View)</h4>
+  <ul>
+    <li>Email provider configured: {% if email_configured %}<span class="text-success">Yes</span>{% else %}<span class="text-danger">No</span>{% endif %}</li>
+    <li>Stripe keys present: {% if stripe_status.secret_key_present and stripe_status.webhook_secret_present %}<span class="text-success">Yes</span>{% else %}<span class="text-danger">No</span>{% endif %}</li>
+    <li>Tiers configured in DB: {% if tiers_count > 0 %}<span class="text-success">Yes</span>{% else %}<span class="text-danger">No</span>{% endif %}</li>
+    <li>Feature flags set appropriately: <span class="text-muted">Review above</span></li>
+  </ul>
+
+  <div class="alert alert-secondary">
+    For detailed requirements and status, see <a href="{{ url_for('developer.dashboard') }}">Developer Dashboard</a> and <a href="/docs/CRITICAL_PRELAUNCH.md" target="_blank">CRITICAL_PRELAUNCH.md</a>.
+  </div>
+
+</div>
+{% endblock %}

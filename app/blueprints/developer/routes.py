@@ -1151,6 +1151,88 @@ def inventory_analytics_stub():
         return redirect(url_for('developer.dashboard'))
     return render_template('developer/inventory_analytics.html')
 
+
+# ===================== Integrations & Launch Checklist =====================
+
+@developer_bp.route('/integrations')
+@login_required
+def integrations_checklist():
+    """Comprehensive integrations and launch checklist (developer only)."""
+    from flask import current_app
+    from app.services.email_service import EmailService
+    from app.services.stripe_service import StripeService
+    from app.models.subscription_tier import SubscriptionTier
+
+    # Email provider status
+    email_provider = (current_app.config.get('EMAIL_PROVIDER') or 'smtp').lower()
+    email_configured = EmailService.is_configured()
+    email_keys = {
+        'SMTP': bool(current_app.config.get('MAIL_SERVER')),
+        'SendGrid': bool(current_app.config.get('SENDGRID_API_KEY')),
+        'Postmark': bool(current_app.config.get('POSTMARK_SERVER_TOKEN')),
+        'Mailgun': bool(current_app.config.get('MAILGUN_API_KEY') and current_app.config.get('MAILGUN_DOMAIN')),
+    }
+
+    # Stripe status
+    stripe_secret = current_app.config.get('STRIPE_SECRET_KEY')
+    stripe_webhook_secret = current_app.config.get('STRIPE_WEBHOOK_SECRET')
+    tiers_count = SubscriptionTier.query.count()
+    stripe_status = {
+        'secret_key_present': bool(stripe_secret),
+        'webhook_secret_present': bool(stripe_webhook_secret),
+        'tiers_configured': tiers_count > 0,
+    }
+
+    # Feature flags
+    feature_flags = {
+        'FEATURE_INVENTORY_ANALYTICS': bool(current_app.config.get('FEATURE_INVENTORY_ANALYTICS', False)),
+    }
+
+    # Logging/PII
+    logging_status = {
+        'LOG_LEVEL': current_app.config.get('LOG_LEVEL', 'INFO'),
+        'LOG_REDACT_PII': current_app.config.get('LOG_REDACT_PII', True),
+    }
+
+    # POS/Shopify (stub)
+    shopify_status = {
+        'status': 'stubbed',
+        'notes': 'POS/Shopify integration is stubbed. Enable later via a dedicated adapter.'
+    }
+
+    return render_template(
+        'developer/integrations.html',
+        email_provider=email_provider,
+        email_configured=email_configured,
+        email_keys=email_keys,
+        stripe_status=stripe_status,
+        tiers_count=tiers_count,
+        feature_flags=feature_flags,
+        logging_status=logging_status,
+        shopify_status=shopify_status
+    )
+
+
+@developer_bp.route('/integrations/test-email', methods=['POST'])
+@login_required
+def integrations_test_email():
+    """Send a test email to current user's email if configured."""
+    try:
+        from app.services.email_service import EmailService
+        if not EmailService.is_configured():
+            return jsonify({'success': False, 'error': 'Email is not configured'}), 400
+        recipient = getattr(current_user, 'email', None)
+        if not recipient:
+            return jsonify({'success': False, 'error': 'Current user has no email address'}), 400
+        subject = 'BatchTrack Test Email'
+        html_body = '<p>This is a test email from BatchTrack Integrations Checklist.</p>'
+        ok = EmailService._send_email(recipient, subject, html_body, 'This is a test email from BatchTrack Integrations Checklist.')
+        if ok:
+            return jsonify({'success': True, 'message': f'Test email sent to {recipient}'})
+        return jsonify({'success': False, 'error': 'Failed to send email'}), 500
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
 @developer_bp.route('/analytics-catalog')
 @login_required
 def analytics_catalog():
