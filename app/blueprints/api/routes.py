@@ -92,9 +92,6 @@ from app.models.product_category import ProductCategory
 from app.models.unit import Unit
 
 # Register sub-blueprints
-api_bp.register_blueprint(ingredient_api_bp, url_prefix='/ingredient_api')
-api_bp.register_blueprint(container_api_bp, url_prefix='/container_api')
-api_bp.register_blueprint(reservation_api_bp, url_prefix='/reservation_api')
 
 api_bp.register_blueprint(ingredient_api_bp, url_prefix='/ingredients')
 api_bp.register_blueprint(container_api_bp)

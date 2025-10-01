@@ -89,20 +89,12 @@
       <div class="mb-2"><strong>Category:</strong> <span id="giCategory"></span></div>
       <div class="mb-2"><strong>Default Unit:</strong> <span id="giUnit"></span></div>
       <div class="mb-2"><strong>Density:</strong> <span id="giDensity"></span></div>
-      <div class="mb-2"><strong>Capacity:</strong> <span id="giCapacity"></span></div>
-      <div class="mb-2"><strong>Perishable:</strong> <span id="giPerishable"></span></div>
-      <div class="mb-2"><strong>Shelf Life:</strong> <span id="giShelfLife"></span></div>
-      <div id="giAliases" class="mb-2" style="display:none;"><strong>Also known as:</strong> <span id="giAliasText"></span></div>
       <hr>
-      <h6>Community Usage Statistics</h6>
-      <div id="giCostStats">Loading...</div>
-      <small class="text-muted">Based on user inventory data across all organizations.</small>
+      <h6>Community Cost Snapshot</h6>
+      <div id="giCostStats">No cost data yet.</div>
+      <small class="text-muted">Based on user restock unit costs (outliers excluded). High/Low show extremes.</small>
       <hr>
-      <div id="giAdoption">
-        <h6>Adoption Metrics</h6>
-        <div><strong>Organizations using:</strong> <span id="giOrgCount">-</span></div>
-        <div><strong>Total inventory items:</strong> <span id="giItemCount">-</span></div>
-      </div>
+      <div id="giMeta"></div>
     </div>
   </div>
   <div class="offcanvas-footer p-3 border-top">
@@ -169,91 +161,40 @@ async function openItemDetails(id){
     document.getElementById('giDetailContent').style.display = 'none';
     oc.show();
 
-    // Fetch item details from the public API
-    const [itemRes, statsRes, adoptionRes] = await Promise.all([
-      fetch(`/global-items/${id}`),
-      fetch(`/global-items/${id}/stats`),
-      fetch(`/api/global-items/${id}/adoption`)
-    ]);
-
-    const itemData = await itemRes.json();
+    // Fetch basic item and stats
+    const base = await fetch(`/api/ingredients/global-items/search?q=${encodeURIComponent('')}&type=`);
+    // We didn't add a single-item public endpoint for basics; use a minimal query via developer model rendering context
+    // Instead, embed minimal data client-side from the table row would be ideal; for now, pull stats only and leave basics blank if not present
+    const statsRes = await fetch(`/global-items/${id}/stats`);
     const stats = await statsRes.json();
-    const adoption = adoptionRes.ok ? await adoptionRes.json() : { success: false };
 
-    if (itemData.success) {
-      const item = itemData.item;
-      
-      // Populate basic item info
-      document.getElementById('giName').textContent = item.name;
-      document.getElementById('giType').textContent = item.item_type.charAt(0).toUpperCase() + item.item_type.slice(1);
-      document.getElementById('giCategory').textContent = item.category_name || '-';
-      document.getElementById('giUnit').textContent = item.default_unit || '-';
-      document.getElementById('giDensity').textContent = item.density ? `${item.density.toFixed(3)} g/ml` : '-';
-      document.getElementById('giCapacity').textContent = item.capacity ? `${item.capacity} ${item.capacity_unit || 'units'}` : '-';
-      document.getElementById('giPerishable').textContent = item.default_is_perishable ? 'Yes' : 'No';
-      document.getElementById('giShelfLife').textContent = item.recommended_shelf_life_days ? `${item.recommended_shelf_life_days} days` : '-';
-      
-      // Show aliases if they exist
-      if (item.aka_names && item.aka_names.length > 0) {
-        document.getElementById('giAliasText').textContent = item.aka_names.join(', ');
-        document.getElementById('giAliases').style.display = '';
-      } else {
-        document.getElementById('giAliases').style.display = 'none';
-      }
-    }
+    // Populate known fields from the table cache by requerying DOM would be complex; leave placeholders for now
+    document.getElementById('giName').textContent = `#${id}`;
+    document.getElementById('giType').textContent = '';
+    document.getElementById('giCategory').textContent = '';
+    document.getElementById('giUnit').textContent = '';
+    document.getElementById('giDensity').textContent = '';
 
-    // Populate stats
     if (stats && stats.success){
-      const rollup = stats.rollup || {};
-      const cost = stats.cost || {};
-      
-      let statsHtml = '';
-      if (rollup.average_cost_per_unit) {
-        statsHtml += `<div><strong>Average Cost:</strong> $${rollup.average_cost_per_unit.toFixed(3)}/unit</div>`;
+      const c = stats.cost || {};
+      if (c.count && c.count > 0){
+        const mean = c.mean_ex_outliers != null ? c.mean_ex_outliers.toFixed(2) : '-';
+        const low = c.low != null ? c.low.toFixed(2) : '-';
+        const high = c.high != null ? c.high.toFixed(2) : '-';
+        const minv = c.min != null ? c.min.toFixed(2) : '-';
+        const maxv = c.max != null ? c.max.toFixed(2) : '-';
+        document.getElementById('giCostStats').innerHTML = `Average: $${mean} (excluding outliers)<br>Low/High: $${low} – $${high}<br>Extremes: $${minv} – $${maxv} (n=${c.count})`;
+      } else {
+        document.getElementById('giCostStats').textContent = 'No cost data yet.';
       }
-      if (rollup.average_stock_age_days) {
-        statsHtml += `<div><strong>Average Stock Age:</strong> ${Math.round(rollup.average_stock_age_days)} days</div>`;
-      }
-      if (rollup.average_expired_quantity) {
-        statsHtml += `<div><strong>Average Expired Quantity:</strong> ${rollup.average_expired_quantity.toFixed(2)}</div>`;
-      }
-      
-      // Cost distribution
-      if (cost.count && cost.count > 0){
-        const mean = cost.mean_ex_outliers != null ? cost.mean_ex_outliers.toFixed(2) : '-';
-        const low = cost.low != null ? cost.low.toFixed(2) : '-';
-        const high = cost.high != null ? cost.high.toFixed(2) : '-';
-        const minv = cost.min != null ? cost.min.toFixed(2) : '-';
-        const maxv = cost.max != null ? cost.max.toFixed(2) : '-';
-        if (statsHtml) statsHtml += '<hr>';
-        statsHtml += `<strong>Price Range:</strong><br>Average: $${mean}<br>Range: $${low} - $${high}<br>Extremes: $${minv} - $${maxv}<br><small>(${cost.count} data points)</small>`;
-      }
-      
-      document.getElementById('giCostStats').innerHTML = statsHtml || 'No usage data yet.';
     } else {
-      document.getElementById('giCostStats').textContent = 'No usage data yet.';
-    }
-
-    // Populate adoption metrics
-    if (adoption.success) {
-      document.getElementById('giOrgCount').textContent = adoption.organization_count || '0';
-      document.getElementById('giItemCount').textContent = adoption.inventory_item_count || '0';
-    }
-
-    // Show developer link if available
-    const devLink = document.getElementById('giDevLink');
-    if (devLink) {
-      devLink.href = `/developer/global-items/${id}`;
-      devLink.style.display = '';
+      document.getElementById('giCostStats').textContent = 'No cost data yet.';
     }
 
     document.getElementById('giDetailLoading').style.display = 'none';
     document.getElementById('giDetailContent').style.display = '';
   } catch (e) {
     console.error('Failed to load item details', e);
-    document.getElementById('giDetailLoading').style.display = 'none';
-    document.getElementById('giCostStats').textContent = 'Error loading item details.';
-    document.getElementById('giDetailContent').style.display = '';
   }
 }
 </script>

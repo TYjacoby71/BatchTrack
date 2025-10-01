@@ -80,31 +80,3 @@ def global_library_item_stats(item_id: int):
         }
     except Exception as e:
         return {'success': False, 'error': str(e)}, 500
-
-@global_library_bp.route('/global-items/<int:item_id>')
-def global_library_item_detail(item_id: int):
-    """Public endpoint for a single global item's basic details."""
-    try:
-        from app.models import GlobalItem
-        item = GlobalItem.query.filter_by(id=item_id, is_archived=False).first()
-        if not item:
-            return {'success': False, 'error': 'Item not found'}, 404
-        
-        return {
-            'success': True,
-            'item': {
-                'id': item.id,
-                'name': item.name,
-                'item_type': item.item_type,
-                'default_unit': item.default_unit,
-                'density': item.density,
-                'capacity': item.capacity,
-                'capacity_unit': item.capacity_unit,
-                'default_is_perishable': item.default_is_perishable,
-                'recommended_shelf_life_days': item.recommended_shelf_life_days,
-                'category_name': item.ingredient_category.name if item.ingredient_category else None,
-                'aka_names': item.aka_names
-            }
-        }
-    except Exception as e:
-        return {'success': False, 'error': str(e)}, 500
