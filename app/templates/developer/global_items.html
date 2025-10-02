@@ -80,9 +80,10 @@
       <td>{{ gi.capacity or '-' }} {{ gi.capacity_unit or '' }}</td>
       <td>{{ 'Yes' if gi.default_is_perishable else 'No' }}</td>
       <td>
-      <a href="{{ url_for('developer.global_item_detail', item_id=gi.id) }}" class="btn btn-sm btn-outline-primary">View</a>
-      <button class="btn btn-sm btn-outline-danger ms-1" onclick="confirmDelete({{ gi.id }}, '{{ gi.name }}')">Delete</button>
-    </td>
+        <a href="{{ url_for('developer.global_item_detail', item_id=gi.id) }}" class="btn btn-sm btn-outline-primary">View</a>
+        <a href="{{ url_for('developer.global_item_detail', item_id=gi.id) }}" class="btn btn-sm btn-primary ms-1">Edit</a>
+        <button class="btn btn-sm btn-outline-danger ms-1" onclick="confirmDelete({{ gi.id }}, '{{ gi.name }}')">Delete</button>
+      </td>
     </tr>
   {% endfor %}
   </tbody>

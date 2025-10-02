@@ -2,6 +2,17 @@
 {% block content %}
 <div class="d-flex justify-content-between align-items-center mb-3">
   <h2>Global Inventory Library</h2>
+  {% if is_developer() %}
+  <div>
+    <a href="{{ url_for('developer.reference_categories') }}" class="btn btn-outline-primary me-2">
+      <i class="fas fa-tags"></i> Manage Categories
+    </a>
+    <a href="{{ url_for('developer.create_global_item') }}" class="btn btn-primary">
+      <i class="fas fa-plus"></i> Add Global Item
+    </a>
+  </div>
+  {% endif %}
+  
 </div>
 
 <div class="row mb-3">
@@ -50,6 +61,7 @@
         <th>Density (default if category)</th>
         <th>Capacity</th>
         <th>Perishable</th>
+        {% if is_developer() %}<th></th>{% endif %}
       </tr>
     </thead>
     <tbody>
@@ -69,6 +81,11 @@
         </td>
         <td>{{ gi.capacity or '-' }} {{ gi.capacity_unit or '' }}</td>
         <td>{{ 'Yes' if gi.default_is_perishable else 'No' }}</td>
+        {% if is_developer() %}
+        <td>
+          <a href="{{ url_for('developer.global_item_detail', item_id=gi.id) }}" class="btn btn-sm btn-primary">Edit</a>
+        </td>
+        {% endif %}
       </tr>
       {% endfor %}
     </tbody>
@@ -169,6 +186,7 @@ document.addEventListener('DOMContentLoaded', function(){
       if (id) openItemDetails(id);
     });
   });
+  // If developer, show the Developer Details link once we know the item id
 });
 
 async function openItemDetails(id){
@@ -248,6 +266,20 @@ async function openItemDetails(id){
 
     document.getElementById('giDetailLoading').style.display = 'none';
     document.getElementById('giDetailContent').style.display = '';
+
+    // Enable Developer Details link for developers
+    try {
+      const devLink = document.getElementById('giDevLink');
+      if (devLink) {
+        // Server will render this element regardless; show only if developer
+        {% if is_developer() %}
+        devLink.href = `/developer/global-items/${id}`;
+        devLink.style.display = '';
+        {% else %}
+        devLink.style.display = 'none';
+        {% endif %}
+      }
+    } catch (_e) {}
   } catch (e) {
     console.error('Failed to load item details', e);
   }

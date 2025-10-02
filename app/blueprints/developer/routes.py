@@ -568,12 +568,77 @@ def system_settings():
 @developer_bp.route('/global-items')
 @login_required
 def global_items_admin():
-    """Developer admin page for managing Global Items.
-    Reuse public library template for unified UX; developer actions accessible from item detail pages.
-    """
-    # Delegate to public view handler logic to keep filtering identical
-    from app.routes.global_library_routes import global_library
-    return global_library()
+    """Developer admin page for managing Global Items"""
+    # Get filter parameters
+    item_type = request.args.get('type', '').strip()
+    category_filter = request.args.get('category', '').strip()
+    search_query = request.args.get('search', '').strip()
+
+    # Build base query (exclude archived)
+    query = GlobalItem.query.filter(GlobalItem.is_archived != True)
+
+    # Filter by item type if specified
+    if item_type:
+        query = query.filter(GlobalItem.item_type == item_type)
+
+    # Filter by ingredient category name if specified (join via ingredient_category_id)
+    if category_filter and item_type == 'ingredient':
+        from app.models.category import IngredientCategory
+        query = query.join(
+            IngredientCategory, GlobalItem.ingredient_category_id == IngredientCategory.id
+        ).filter(IngredientCategory.name == category_filter)
+
+    # Add search functionality across name and aliases
+    if search_query:
+        term = f"%{search_query}%"
+        try:
+            # Prefer alias table when available
+            from sqlalchemy import or_, exists, and_
+            _alias_tbl = db.Table('global_item_alias', db.metadata, autoload_with=db.engine)
+            query = query.filter(
+                or_(
+                    GlobalItem.name.ilike(term),
+                    exists().where(and_(_alias_tbl.c.global_item_id == GlobalItem.id, _alias_tbl.c.alias.ilike(term)))
+                )
+            )
+        except Exception:
+            # Fallback to name-only search
+            query = query.filter(GlobalItem.name.ilike(term))
+
+    # Get filtered results
+    items = query.order_by(GlobalItem.item_type.asc(), GlobalItem.name.asc()).limit(500).all()
+
+    # Get unique ingredient categories for filter dropdown (ingredients only, global scope)
+    from app.models.category import IngredientCategory
+    categories = []
+    try:
+        categories = [
+            name for (name,) in db.session.query(IngredientCategory.name)
+            .join(GlobalItem, GlobalItem.ingredient_category_id == IngredientCategory.id)
+            .filter(
+                IngredientCategory.organization_id == None,  # global categories
+                IngredientCategory.is_global_category == True,
+                GlobalItem.item_type == 'ingredient'
+            )
+            .distinct()
+            .order_by(IngredientCategory.name)
+            .all()
+            if name
+        ]
+    except Exception:
+        # Safe fallback: list all global categories
+        categories = [c.name for c in IngredientCategory.query.filter_by(
+            organization_id=None, is_active=True, is_global_category=True
+        ).order_by(IngredientCategory.name).all()]
+
+    return render_template(
+        'developer/global_items.html',
+        items=items,
+        categories=categories,
+        selected_type=item_type,
+        selected_category=category_filter,
+        search_query=search_query,
+    )
 
 @developer_bp.route('/global-items/<int:item_id>')
 @login_required
