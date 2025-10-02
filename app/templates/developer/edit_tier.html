@@ -44,6 +44,48 @@
                                     </select>
                                     <div class="form-text">Used for organizing and sorting tiers</div>
                                 </div>
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <div class="mb-3">
+                                            <label for="max_users" class="form-label">Max Users</label>
+                                            <input type="number" class="form-control" id="max_users" name="max_users" value="{{ tier.max_users or '' }}" min="0">
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="mb-3">
+                                            <label for="max_recipes" class="form-label">Max Recipes</label>
+                                            <input type="number" class="form-control" id="max_recipes" name="max_recipes" value="{{ tier.max_recipes or '' }}" min="0">
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <div class="mb-3">
+                                            <label for="max_batches" class="form-label">Max Batches</label>
+                                            <input type="number" class="form-control" id="max_batches" name="max_batches" value="{{ tier.max_batches or '' }}" min="0">
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="mb-3">
+                                            <label for="max_products" class="form-label">Max Products</label>
+                                            <input type="number" class="form-control" id="max_products" name="max_products" value="{{ tier.max_products or '' }}" min="0">
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <div class="mb-3">
+                                            <label for="max_batchbot_requests" class="form-label">Max BatchBot Requests</label>
+                                            <input type="number" class="form-control" id="max_batchbot_requests" name="max_batchbot_requests" value="{{ tier.max_batchbot_requests or '' }}" min="0">
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="mb-3">
+                                            <label for="max_monthly_batches" class="form-label">Max Monthly Batches</label>
+                                            <input type="number" class="form-control" id="max_monthly_batches" name="max_monthly_batches" value="{{ tier.max_monthly_batches or '' }}" min="0">
+                                        </div>
+                                    </div>
+                                </div>
                             </div>
 
                             <div class="col-md-6">
@@ -84,6 +126,21 @@
                         </div>
 
                         <hr>
+
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="data_retention_days" class="form-label">Data Retention (days)</label>
+                                    <input type="number" class="form-control" id="data_retention_days" name="data_retention_days" value="{{ tier.data_retention_days or '' }}" min="0">
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="retention_notice_days" class="form-label">Notice Period (days)</label>
+                                    <input type="number" class="form-control" id="retention_notice_days" name="retention_notice_days" value="{{ tier.retention_notice_days or '' }}" min="0">
+                                </div>
+                            </div>
+                        </div>
 
                         <div class="mb-3">
                             <label class="form-label">Permissions</label>

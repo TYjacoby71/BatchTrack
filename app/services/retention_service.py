@@ -4,7 +4,8 @@ from flask_login import current_user
 
 from ..extensions import db
 from ..models import Recipe, Batch, Organization
-from ..models.retention import RetentionDeletionQueue, StorageAddonPurchase, StorageAddonSubscription
+from ..models.retention import RetentionDeletionQueue
+from ..models.addon import Addon
 
 
 class RetentionService:
@@ -15,19 +16,18 @@ class RetentionService:
         if not org or not org.tier:
             return None
         base = org.tier.data_retention_days or 0
-        # Subscription add-on active? If so, treat as unlimited add-on days (or use tier extension days)
-        sub_active = StorageAddonSubscription.query.filter_by(organization_id=org.id, status='active').first()
-        if sub_active:
-            extension_days = getattr(org.tier, 'storage_addon_retention_days', None) or 365
-            total = base + extension_days
-        else:
-            # Sum one-time purchases as fallback
-            addon_days = 0
-            try:
-                addon_days = sum(p.retention_extension_days for p in StorageAddonPurchase.query.filter_by(organization_id=org.id).all())
-            except Exception:
-                addon_days = 0
-            total = base + addon_days
+        # Retention extension via active organization add-ons matching function_key='retention'
+        retention_addons_days = 0
+        try:
+            from ..models.addon import OrganizationAddon
+            active_org_addons = OrganizationAddon.query.filter_by(organization_id=org.id, active=True).all()
+            addon_ids = [oa.addon_id for oa in active_org_addons]
+            if addon_ids:
+                retention_addons = Addon.query.filter(Addon.id.in_(addon_ids), Addon.function_key == 'retention').all()
+                retention_addons_days = sum((a.retention_extension_days or 0) for a in retention_addons)
+        except Exception:
+            retention_addons_days = 0
+        total = base + (retention_addons_days or 0)
         return total if total > 0 else None
 
     @staticmethod

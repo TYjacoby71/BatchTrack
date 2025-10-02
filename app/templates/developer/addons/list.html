@@ -1,0 +1,58 @@
+{% extends 'layout.html' %}
+{% block content %}
+<div class="container-fluid">
+  <div class="d-flex justify-content-between align-items-center mb-3">
+    <h2>Add-ons</h2>
+    <a href="{{ url_for('developer.addons.create_addon') }}" class="btn btn-primary">New Add-on</a>
+  </div>
+
+  <div class="card">
+    <div class="card-body">
+      <div class="table-responsive">
+        <table class="table table-striped align-middle">
+          <thead>
+            <tr>
+              <th>Name</th>
+              <th>Key</th>
+              <th>Function</th>
+              <th>Permission</th>
+              <th>Billing</th>
+              <th>Stripe Lookup Key</th>
+              <th>Retention +Days</th>
+              <th>Active</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for addon in addons %}
+            <tr>
+              <td>{{ addon.name }}</td>
+              <td><code>{{ addon.key }}</code></td>
+              <td>{{ addon.function_key or '' }}</td>
+              <td>{{ addon.permission_name or '' }}</td>
+              <td>{{ addon.billing_type }}</td>
+              <td><code>{{ addon.stripe_lookup_key or '' }}</code></td>
+              <td>{{ addon.retention_extension_days or '' }}</td>
+              <td>
+                {% if addon.is_active %}
+                  <span class="badge bg-success">Yes</span>
+                {% else %}
+                  <span class="badge bg-secondary">No</span>
+                {% endif %}
+              </td>
+              <td class="text-end">
+                <a class="btn btn-sm btn-outline-primary" href="{{ url_for('developer.addons.edit_addon', addon_id=addon.id) }}">Edit</a>
+                <form method="POST" action="{{ url_for('developer.addons.delete_addon', addon_id=addon.id) }}" class="d-inline" onsubmit="return confirm('Delete this add-on?');">
+                  <button class="btn btn-sm btn-outline-danger" type="submit">Delete</button>
+                </form>
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
