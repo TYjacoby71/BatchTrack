@@ -718,35 +718,10 @@ def reference_categories():
 @login_required
 def container_management():
     """Container management page for curating materials, types, colors, styles"""
-    # Get existing container field values from GlobalItem
-    materials = db.session.query(GlobalItem.container_material)\
-        .filter(GlobalItem.container_material.isnot(None))\
-        .distinct().order_by(GlobalItem.container_material).all()
-    materials = [m[0] for m in materials if m[0]]
-    
-    types = db.session.query(GlobalItem.container_type)\
-        .filter(GlobalItem.container_type.isnot(None))\
-        .distinct().order_by(GlobalItem.container_type).all()
-    types = [t[0] for t in types if t[0]]
-    
-    styles = db.session.query(GlobalItem.container_style)\
-        .filter(GlobalItem.container_style.isnot(None))\
-        .distinct().order_by(GlobalItem.container_style).all()
-    styles = [s[0] for s in styles if s[0]]
-    
-    colors = db.session.query(GlobalItem.container_color)\
-        .filter(GlobalItem.container_color.isnot(None))\
-        .distinct().order_by(GlobalItem.container_color).all()
-    colors = [c[0] for c in colors if c[0]]
-    
-    # Load curated lists from settings or use defaults
+    # Load master lists from settings - these are the single source of truth
     curated_lists = load_curated_container_lists()
     
     return render_template('developer/container_management.html',
-                         materials=materials,
-                         types=types,
-                         styles=styles,
-                         colors=colors,
                          curated_materials=curated_lists['materials'],
                          curated_types=curated_lists['types'],
                          curated_styles=curated_lists['styles'],
@@ -795,7 +770,7 @@ def save_curated_container_lists():
         return jsonify({'success': False, 'error': str(e)})
 
 def load_curated_container_lists():
-    """Load curated container lists from settings or return defaults"""
+    """Load curated container lists from settings or return defaults with existing database values merged in"""
     try:
         import json
         import os
@@ -812,8 +787,8 @@ def load_curated_container_lists():
     except:
         pass
     
-    # Return defaults if no saved lists or error loading
-    return {
+    # First time setup: merge database values with defaults
+    defaults = {
         'materials': [
             'Glass', 'PET Plastic', 'HDPE Plastic', 'PP Plastic', 'Aluminum', 
             'Tin', 'Steel', 'Paperboard', 'Cardboard', 'Silicone'
@@ -831,6 +806,53 @@ def load_curated_container_lists():
             'Frosted', 'Silver', 'Gold'
         ]
     }
+    
+    # Get existing values from database and merge with defaults
+    try:
+        from app.models.global_item import GlobalItem
+        from app.extensions import db
+        
+        # Get existing materials
+        materials = db.session.query(GlobalItem.container_material)\
+            .filter(GlobalItem.container_material.isnot(None))\
+            .distinct().all()
+        existing_materials = [m[0] for m in materials if m[0] and m[0] not in defaults['materials']]
+        
+        # Get existing types
+        types = db.session.query(GlobalItem.container_type)\
+            .filter(GlobalItem.container_type.isnot(None))\
+            .distinct().all()
+        existing_types = [t[0] for t in types if t[0] and t[0] not in defaults['types']]
+        
+        # Get existing styles
+        styles = db.session.query(GlobalItem.container_style)\
+            .filter(GlobalItem.container_style.isnot(None))\
+            .distinct().all()
+        existing_styles = [s[0] for s in styles if s[0] and s[0] not in defaults['styles']]
+        
+        # Get existing colors
+        colors = db.session.query(GlobalItem.container_color)\
+            .filter(GlobalItem.container_color.isnot(None))\
+            .distinct().all()
+        existing_colors = [c[0] for c in colors if c[0] and c[0] not in defaults['colors']]
+        
+        # Merge and sort
+        defaults['materials'].extend(existing_materials)
+        defaults['materials'] = sorted(list(set(defaults['materials'])))
+        
+        defaults['types'].extend(existing_types)
+        defaults['types'] = sorted(list(set(defaults['types'])))
+        
+        defaults['styles'].extend(existing_styles)
+        defaults['styles'] = sorted(list(set(defaults['styles'])))
+        
+        defaults['colors'].extend(existing_colors)
+        defaults['colors'] = sorted(list(set(defaults['colors'])))
+        
+    except Exception:
+        pass  # Use defaults if database query fails
+    
+    return defaults
 
 @developer_bp.route('/system-statistics')
 @login_required

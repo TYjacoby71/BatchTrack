@@ -1,4 +1,3 @@
-
 {% extends 'layout.html' %}
 
 {% block title %}Container Management - Developer{% endblock %}
@@ -20,7 +19,7 @@
                     <h3 class="mb-0">
                         <i class="fas fa-box-open text-primary"></i> Container Management
                     </h3>
-                    <p class="text-muted mb-0">Curate container materials, types, colors, and styles for the global library</p>
+                    <p class="text-muted mb-0">Manage the master lists that populate all container dropdowns across the system</p>
                 </div>
             </div>
         </div>
@@ -30,22 +29,27 @@
         <!-- Materials Section -->
         <div class="col-md-6 mb-4">
             <div class="card">
-                <div class="card-header">
+                <div class="card-header d-flex justify-content-between align-items-center">
                     <h5 class="mb-0">Materials</h5>
+                    <span class="badge bg-primary">{{ curated_materials|length }} items</span>
                 </div>
                 <div class="card-body">
-                    <h6>Currently Used ({{ materials|length }})</h6>
-                    <div class="mb-3">
-                        {% for material in materials %}
-                        <span class="badge bg-light text-dark me-1 mb-1">{{ material }}</span>
+                    <p class="text-muted small mb-3">Master list of container materials available in dropdowns</p>
+                    <div id="materialsList">
+                        {% for material in curated_materials %}
+                        <div class="d-flex align-items-center justify-content-between mb-2 p-2 border rounded">
+                            <span class="fw-medium">{{ material }}</span>
+                            <button type="button" class="btn btn-sm btn-outline-danger" onclick="removeItem('materials', '{{ material }}')">
+                                <i class="fas fa-times"></i>
+                            </button>
+                        </div>
                         {% endfor %}
                     </div>
-                    
-                    <h6>Curated Options</h6>
-                    <div class="mb-3">
-                        {% for material in curated_materials %}
-                        <span class="badge bg-primary me-1 mb-1">{{ material }}</span>
-                        {% endfor %}
+                    <div class="input-group mt-3">
+                        <input type="text" class="form-control" id="newMaterialInput" placeholder="Add new material...">
+                        <button class="btn btn-success" onclick="addItem('materials')">
+                            <i class="fas fa-plus"></i> Add
+                        </button>
                     </div>
                 </div>
             </div>
@@ -54,22 +58,27 @@
         <!-- Types Section -->
         <div class="col-md-6 mb-4">
             <div class="card">
-                <div class="card-header">
+                <div class="card-header d-flex justify-content-between align-items-center">
                     <h5 class="mb-0">Types</h5>
+                    <span class="badge bg-success">{{ curated_types|length }} items</span>
                 </div>
                 <div class="card-body">
-                    <h6>Currently Used ({{ types|length }})</h6>
-                    <div class="mb-3">
-                        {% for type in types %}
-                        <span class="badge bg-light text-dark me-1 mb-1">{{ type }}</span>
+                    <p class="text-muted small mb-3">Master list of container types available in dropdowns</p>
+                    <div id="typesList">
+                        {% for type in curated_types %}
+                        <div class="d-flex align-items-center justify-content-between mb-2 p-2 border rounded">
+                            <span class="fw-medium">{{ type }}</span>
+                            <button type="button" class="btn btn-sm btn-outline-danger" onclick="removeItem('types', '{{ type }}')">
+                                <i class="fas fa-times"></i>
+                            </button>
+                        </div>
                         {% endfor %}
                     </div>
-                    
-                    <h6>Curated Options</h6>
-                    <div class="mb-3">
-                        {% for type in curated_types %}
-                        <span class="badge bg-success me-1 mb-1">{{ type }}</span>
-                        {% endfor %}
+                    <div class="input-group mt-3">
+                        <input type="text" class="form-control" id="newTypeInput" placeholder="Add new type...">
+                        <button class="btn btn-success" onclick="addItem('types')">
+                            <i class="fas fa-plus"></i> Add
+                        </button>
                     </div>
                 </div>
             </div>
@@ -78,22 +87,27 @@
         <!-- Styles Section -->
         <div class="col-md-6 mb-4">
             <div class="card">
-                <div class="card-header">
+                <div class="card-header d-flex justify-content-between align-items-center">
                     <h5 class="mb-0">Styles</h5>
+                    <span class="badge bg-info">{{ curated_styles|length }} items</span>
                 </div>
                 <div class="card-body">
-                    <h6>Currently Used ({{ styles|length }})</h6>
-                    <div class="mb-3">
-                        {% for style in styles %}
-                        <span class="badge bg-light text-dark me-1 mb-1">{{ style }}</span>
+                    <p class="text-muted small mb-3">Master list of container styles available in dropdowns</p>
+                    <div id="stylesList">
+                        {% for style in curated_styles %}
+                        <div class="d-flex align-items-center justify-content-between mb-2 p-2 border rounded">
+                            <span class="fw-medium">{{ style }}</span>
+                            <button type="button" class="btn btn-sm btn-outline-danger" onclick="removeItem('styles', '{{ style }}')">
+                                <i class="fas fa-times"></i>
+                            </button>
+                        </div>
                         {% endfor %}
                     </div>
-                    
-                    <h6>Curated Options</h6>
-                    <div class="mb-3">
-                        {% for style in curated_styles %}
-                        <span class="badge bg-info me-1 mb-1">{{ style }}</span>
-                        {% endfor %}
+                    <div class="input-group mt-3">
+                        <input type="text" class="form-control" id="newStyleInput" placeholder="Add new style...">
+                        <button class="btn btn-success" onclick="addItem('styles')">
+                            <i class="fas fa-plus"></i> Add
+                        </button>
                     </div>
                 </div>
             </div>
@@ -102,142 +116,55 @@
         <!-- Colors Section -->
         <div class="col-md-6 mb-4">
             <div class="card">
-                <div class="card-header">
+                <div class="card-header d-flex justify-content-between align-items-center">
                     <h5 class="mb-0">Colors</h5>
+                    <span class="badge bg-warning">{{ curated_colors|length }} items</span>
                 </div>
                 <div class="card-body">
-                    <h6>Currently Used ({{ colors|length }})</h6>
-                    <div class="mb-3">
-                        {% for color in colors %}
-                        <span class="badge bg-light text-dark me-1 mb-1">{{ color }}</span>
+                    <p class="text-muted small mb-3">Master list of container colors available in dropdowns</p>
+                    <div id="colorsList">
+                        {% for color in curated_colors %}
+                        <div class="d-flex align-items-center justify-content-between mb-2 p-2 border rounded">
+                            <span class="fw-medium">{{ color }}</span>
+                            <button type="button" class="btn btn-sm btn-outline-danger" onclick="removeItem('colors', '{{ color }}')">
+                                <i class="fas fa-times"></i>
+                            </button>
+                        </div>
                         {% endfor %}
                     </div>
-                    
-                    <h6>Curated Options</h6>
-                    <div class="mb-3">
-                        {% for color in curated_colors %}
-                        <span class="badge bg-warning me-1 mb-1">{{ color }}</span>
-                        {% endfor %}
+                    <div class="input-group mt-3">
+                        <input type="text" class="form-control" id="newColorInput" placeholder="Add new color...">
+                        <button class="btn btn-success" onclick="addItem('colors')">
+                            <i class="fas fa-plus"></i> Add
+                        </button>
                     </div>
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- Edit Curated Lists Section -->
+    <!-- Save Changes Section -->
     <div class="row">
         <div class="col-12">
             <div class="card">
-                <div class="card-header">
-                    <h5 class="mb-0">Edit Curated Lists</h5>
-                    <p class="text-muted mb-0">Manage the curated options that appear as suggestions when creating containers</p>
-                </div>
-                <div class="card-body">
-                    <div class="row">
-                        <!-- Edit Materials -->
-                        <div class="col-md-6 mb-4">
-                            <div class="border rounded p-3">
-                                <h6>Edit Curated Materials</h6>
-                                <div id="curatedMaterialsList">
-                                    {% for material in curated_materials %}
-                                    <div class="d-flex align-items-center mb-2">
-                                        <span class="badge bg-primary me-2">{{ material }}</span>
-                                        <button type="button" class="btn btn-sm btn-outline-danger" onclick="removeCuratedItem('materials', '{{ material }}')">
-                                            <i class="fas fa-times"></i>
-                                        </button>
-                                    </div>
-                                    {% endfor %}
-                                </div>
-                                <div class="input-group mt-3">
-                                    <input type="text" class="form-control" id="newMaterialInput" placeholder="Add new material...">
-                                    <button class="btn btn-success" onclick="addCuratedItem('materials')">Add</button>
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- Edit Types -->
-                        <div class="col-md-6 mb-4">
-                            <div class="border rounded p-3">
-                                <h6>Edit Curated Types</h6>
-                                <div id="curatedTypesList">
-                                    {% for type in curated_types %}
-                                    <div class="d-flex align-items-center mb-2">
-                                        <span class="badge bg-success me-2">{{ type }}</span>
-                                        <button type="button" class="btn btn-sm btn-outline-danger" onclick="removeCuratedItem('types', '{{ type }}')">
-                                            <i class="fas fa-times"></i>
-                                        </button>
-                                    </div>
-                                    {% endfor %}
-                                </div>
-                                <div class="input-group mt-3">
-                                    <input type="text" class="form-control" id="newTypeInput" placeholder="Add new type...">
-                                    <button class="btn btn-success" onclick="addCuratedItem('types')">Add</button>
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- Edit Styles -->
-                        <div class="col-md-6 mb-4">
-                            <div class="border rounded p-3">
-                                <h6>Edit Curated Styles</h6>
-                                <div id="curatedStylesList">
-                                    {% for style in curated_styles %}
-                                    <div class="d-flex align-items-center mb-2">
-                                        <span class="badge bg-info me-2">{{ style }}</span>
-                                        <button type="button" class="btn btn-sm btn-outline-danger" onclick="removeCuratedItem('styles', '{{ style }}')">
-                                            <i class="fas fa-times"></i>
-                                        </button>
-                                    </div>
-                                    {% endfor %}
-                                </div>
-                                <div class="input-group mt-3">
-                                    <input type="text" class="form-control" id="newStyleInput" placeholder="Add new style...">
-                                    <button class="btn btn-success" onclick="addCuratedItem('styles')">Add</button>
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- Edit Colors -->
-                        <div class="col-md-6 mb-4">
-                            <div class="border rounded p-3">
-                                <h6>Edit Curated Colors</h6>
-                                <div id="curatedColorsList">
-                                    {% for color in curated_colors %}
-                                    <div class="d-flex align-items-center mb-2">
-                                        <span class="badge bg-warning me-2">{{ color }}</span>
-                                        <button type="button" class="btn btn-sm btn-outline-danger" onclick="removeCuratedItem('colors', '{{ color }}')">
-                                            <i class="fas fa-times"></i>
-                                        </button>
-                                    </div>
-                                    {% endfor %}
-                                </div>
-                                <div class="input-group mt-3">
-                                    <input type="text" class="form-control" id="newColorInput" placeholder="Add new color...">
-                                    <button class="btn btn-success" onclick="addCuratedItem('colors')">Add</button>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="text-center mt-4">
-                        <button class="btn btn-primary" onclick="saveCuratedLists()">
-                            <i class="fas fa-save"></i> Save All Changes
-                        </button>
-                        <button class="btn btn-secondary ms-2" onclick="location.reload()">
-                            <i class="fas fa-undo"></i> Reset Changes
-                        </button>
-                    </div>
+                <div class="card-body text-center">
+                    <button class="btn btn-primary btn-lg me-3" onclick="saveMasterLists()">
+                        <i class="fas fa-save"></i> Save All Changes
+                    </button>
+                    <button class="btn btn-secondary" onclick="location.reload()">
+                        <i class="fas fa-undo"></i> Reset Changes
+                    </button>
                 </div>
             </div>
         </div>
     </div>
 
     <!-- Actions Section -->
-    <div class="row">
+    <div class="row mt-4">
         <div class="col-12">
             <div class="card">
                 <div class="card-header">
-                    <h5 class="mb-0">Management Actions</h5>
+                    <h5 class="mb-0">Quick Actions</h5>
                 </div>
                 <div class="card-body">
                     <div class="row">
@@ -270,74 +197,74 @@
 </div>
 
 <script>
-// Store current curated lists
-let curatedLists = {
+// Store current master lists
+let masterLists = {
     materials: {{ curated_materials|tojson }},
     types: {{ curated_types|tojson }},
     styles: {{ curated_styles|tojson }},
     colors: {{ curated_colors|tojson }}
 };
 
-function addCuratedItem(listType) {
+function addItem(listType) {
     const inputId = `new${listType.charAt(0).toUpperCase() + listType.slice(0, -1)}Input`;
     const input = document.getElementById(inputId);
     const value = input.value.trim();
-    
+
     if (!value) {
         alert('Please enter a value');
         return;
     }
-    
-    if (curatedLists[listType].includes(value)) {
+
+    if (masterLists[listType].includes(value)) {
         alert('This item already exists in the list');
         return;
     }
-    
-    curatedLists[listType].push(value);
+
+    masterLists[listType].push(value);
+    masterLists[listType].sort(); // Keep lists alphabetically sorted
     input.value = '';
-    renderCuratedList(listType);
+    renderList(listType);
 }
 
-function removeCuratedItem(listType, item) {
-    const index = curatedLists[listType].indexOf(item);
+function removeItem(listType, item) {
+    const index = masterLists[listType].indexOf(item);
     if (index > -1) {
-        curatedLists[listType].splice(index, 1);
-        renderCuratedList(listType);
+        masterLists[listType].splice(index, 1);
+        renderList(listType);
     }
 }
 
-function renderCuratedList(listType) {
-    const listId = `curated${listType.charAt(0).toUpperCase() + listType.slice(0, -1)}sList`;
+function renderList(listType) {
+    const listId = `${listType}List`;
     const container = document.getElementById(listId);
-    
-    const badgeColors = {
-        materials: 'primary',
-        types: 'success', 
-        styles: 'info',
-        colors: 'warning'
-    };
-    
+
     container.innerHTML = '';
-    
-    curatedLists[listType].forEach(item => {
+
+    masterLists[listType].forEach(item => {
         const div = document.createElement('div');
-        div.className = 'd-flex align-items-center mb-2';
+        div.className = 'd-flex align-items-center justify-content-between mb-2 p-2 border rounded';
         div.innerHTML = `
-            <span class="badge bg-${badgeColors[listType]} me-2">${item}</span>
-            <button type="button" class="btn btn-sm btn-outline-danger" onclick="removeCuratedItem('${listType}', '${item}')">
+            <span class="fw-medium">${item}</span>
+            <button type="button" class="btn btn-sm btn-outline-danger" onclick="removeItem('${listType}', '${item}')">
                 <i class="fas fa-times"></i>
             </button>
         `;
         container.appendChild(div);
     });
+
+    // Update count badge
+    const badge = document.querySelector(`#${listType}List`).closest('.card').querySelector('.badge');
+    if (badge) {
+        badge.textContent = `${masterLists[listType].length} items`;
+    }
 }
 
-function saveCuratedLists() {
-    const saveBtn = document.querySelector('button[onclick="saveCuratedLists()"]');
+function saveMasterLists() {
+    const saveBtn = document.querySelector('button[onclick="saveMasterLists()"]');
     const originalText = saveBtn.innerHTML;
     saveBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Saving...';
     saveBtn.disabled = true;
-    
+
     fetch('/developer/container-management/save-curated', {
         method: 'POST',
         headers: {
@@ -345,21 +272,21 @@ function saveCuratedLists() {
             'X-CSRFToken': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
         },
         body: JSON.stringify({
-            curated_lists: curatedLists
+            curated_lists: masterLists
         })
     })
     .then(response => response.json())
     .then(data => {
         if (data.success) {
-            alert('Curated lists saved successfully!');
+            alert('Master lists saved successfully!');
             location.reload();
         } else {
-            alert('Error saving curated lists: ' + data.error);
+            alert('Error saving master lists: ' + data.error);
         }
     })
     .catch(error => {
         console.error('Error:', error);
-        alert('Error saving curated lists');
+        alert('Error saving master lists');
     })
     .finally(() => {
         saveBtn.innerHTML = originalText;
@@ -368,21 +295,17 @@ function saveCuratedLists() {
 }
 
 function exportContainerData() {
-    // Simple export functionality
     const data = {
-        materials: {{ materials|tojson }},
-        types: {{ types|tojson }},
-        styles: {{ styles|tojson }},
-        colors: {{ colors|tojson }},
-        curated: curatedLists
+        master_lists: masterLists,
+        export_date: new Date().toISOString()
     };
-    
+
     const dataStr = JSON.stringify(data, null, 2);
     const dataBlob = new Blob([dataStr], {type: 'application/json'});
     const url = URL.createObjectURL(dataBlob);
     const link = document.createElement('a');
     link.href = url;
-    link.download = 'container_data.json';
+    link.download = 'container_master_lists.json';
     link.click();
     URL.revokeObjectURL(url);
 }
@@ -391,12 +314,12 @@ function exportContainerData() {
 document.addEventListener('DOMContentLoaded', function() {
     const inputs = ['newMaterialInput', 'newTypeInput', 'newStyleInput', 'newColorInput'];
     const listTypes = ['materials', 'types', 'styles', 'colors'];
-    
+
     inputs.forEach((inputId, index) => {
         const input = document.getElementById(inputId);
         input.addEventListener('keypress', function(e) {
             if (e.key === 'Enter') {
-                addCuratedItem(listTypes[index]);
+                addItem(listTypes[index]);
             }
         });
     });
