@@ -714,6 +714,88 @@ def reference_categories():
                          global_items_by_category=global_items_by_category,
                          category_densities=category_densities)
 
+@developer_bp.route('/container-management')
+@login_required
+def container_management():
+    """Container management page for curating materials, types, colors, styles"""
+    # Get existing container field values from GlobalItem
+    materials = db.session.query(GlobalItem.container_material)\
+        .filter(GlobalItem.container_material.isnot(None))\
+        .distinct().order_by(GlobalItem.container_material).all()
+    materials = [m[0] for m in materials if m[0]]
+    
+    types = db.session.query(GlobalItem.container_type)\
+        .filter(GlobalItem.container_type.isnot(None))\
+        .distinct().order_by(GlobalItem.container_type).all()
+    types = [t[0] for t in types if t[0]]
+    
+    styles = db.session.query(GlobalItem.container_style)\
+        .filter(GlobalItem.container_style.isnot(None))\
+        .distinct().order_by(GlobalItem.container_style).all()
+    styles = [s[0] for s in styles if s[0]]
+    
+    colors = db.session.query(GlobalItem.container_color)\
+        .filter(GlobalItem.container_color.isnot(None))\
+        .distinct().order_by(GlobalItem.container_color).all()
+    colors = [c[0] for c in colors if c[0]]
+    
+    # Curated lists for suggestions
+    curated_materials = [
+        'Glass', 'PET Plastic', 'HDPE Plastic', 'PP Plastic', 'Aluminum', 
+        'Tin', 'Steel', 'Paperboard', 'Cardboard', 'Silicone'
+    ]
+    
+    curated_types = [
+        'Jar', 'Bottle', 'Tin', 'Tube', 'Pump Bottle', 'Spray Bottle',
+        'Dropper Bottle', 'Roll-on Bottle', 'Squeeze Bottle', 'Vial'
+    ]
+    
+    curated_styles = [
+        'Boston Round', 'Straight Sided', 'Wide Mouth', 'Narrow Mouth',
+        'Cobalt Blue', 'Amber', 'Clear', 'Frosted'
+    ]
+    
+    curated_colors = [
+        'Clear', 'Amber', 'Cobalt Blue', 'Green', 'White', 'Black',
+        'Frosted', 'Silver', 'Gold'
+    ]
+    
+    return render_template('developer/container_management.html',
+                         materials=materials,
+                         types=types,
+                         styles=styles,
+                         colors=colors,
+                         curated_materials=curated_materials,
+                         curated_types=curated_types,
+                         curated_styles=curated_styles,
+                         curated_colors=curated_colors)
+
+@developer_bp.route('/system-statistics')
+@login_required
+def system_statistics():
+    """System-wide statistics dashboard"""
+    # Gather system statistics
+    stats = {
+        'total_organizations': Organization.query.count(),
+        'active_organizations': Organization.query.filter_by(is_active=True).count(),
+        'total_users': User.query.filter(User.user_type != 'developer').count(),
+        'active_users': User.query.filter(
+            User.user_type != 'developer',
+            User.is_active == True
+        ).count(),
+        'total_global_items': GlobalItem.query.filter_by(is_archived=False).count(),
+        'total_permissions': Permission.query.count(),
+        'total_roles': Role.query.count()
+    }
+    
+    return render_template('developer/system_statistics.html', stats=stats)
+
+@developer_bp.route('/billing-integration')
+@login_required
+def billing_integration():
+    """Billing integration management"""
+    return render_template('developer/billing_integration.html')
+
 @developer_bp.route('/reference-categories/add', methods=['POST'])
 @login_required
 def add_reference_category():
