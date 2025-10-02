@@ -126,7 +126,7 @@ class StripeService:
             from ..extensions import db
             from ..models.models import Organization, User
             from ..models.subscription_tier import SubscriptionTier
-            from ..models.retention import StorageAddonPurchase
+            from ..models.addon import Addon, OrganizationAddon
 
             org = None
             try:
@@ -137,18 +137,17 @@ class StripeService:
             if not org:
                 return
 
-            # Check if purchase matches tier's storage add-on
-            tier: SubscriptionTier = org.subscription_tier
-            if tier and getattr(tier, 'stripe_storage_lookup_key', None) in [lookup_key, price.get('lookup_key') if price else None]:
-                # Determine extension days; default to 365 if configured, else 365
-                extension_days = getattr(tier, 'storage_addon_retention_days', None) or 365
-                purchase = StorageAddonPurchase(
+            # Activate matching add-on by lookup key
+            matching_addon = Addon.query.filter_by(stripe_lookup_key=lookup_key).first()
+            if matching_addon:
+                assoc = OrganizationAddon(
                     organization_id=org.id,
-                    stripe_session_id=session_id,
-                    stripe_price_lookup_key=lookup_key,
-                    retention_extension_days=extension_days
+                    addon_id=matching_addon.id,
+                    active=True,
+                    source='subscription_item',
+                    stripe_item_id=session_id
                 )
-                db.session.add(purchase)
+                db.session.add(assoc)
                 db.session.commit()
         except Exception as e:
             logger.error(f"Error handling checkout.session.completed: {e}")
@@ -167,7 +166,7 @@ class StripeService:
             from ..extensions import db
             from ..models.models import Organization
             from ..models.subscription_tier import SubscriptionTier
-            from ..models.retention import StorageAddonSubscription
+            from ..models.addon import Addon, OrganizationAddon
 
             # Resolve organization
             org = Organization.query.filter_by(stripe_customer_id=customer_id).first()
@@ -200,17 +199,28 @@ class StripeService:
             if not org.stripe_customer_id:
                 org.stripe_customer_id = customer_id
 
-            # Optional: handle storage add-on subscription record
-            tier: SubscriptionTier = org.subscription_tier
-            if tier and getattr(tier, 'stripe_storage_lookup_key', None) in [lookup_key, price.get('lookup_key') if price else None]:
-                sub = StorageAddonSubscription(
+            # Activate add-on on subscription creation if lookup matches
+            matching_addon = Addon.query.filter_by(stripe_lookup_key=lookup_key).first()
+            if matching_addon:
+                # Upsert OrganizationAddon
+                existing = OrganizationAddon.query.filter_by(
                     organization_id=org.id,
-                    stripe_subscription_id=obj.get('id'),
-                    price_lookup_key=lookup_key,
-                    status=status,
-                    current_period_end=datetime.utcfromtimestamp(obj.get('current_period_end')) if obj.get('current_period_end') else None
-                )
-                db.session.add(sub)
+                    addon_id=matching_addon.id
+                ).first()
+                if existing:
+                    existing.active = status in ['active', 'trialing']
+                    existing.stripe_item_id = obj.get('id')
+                    existing.current_period_end = datetime.utcfromtimestamp(obj.get('current_period_end')) if obj.get('current_period_end') else None
+                else:
+                    assoc = OrganizationAddon(
+                        organization_id=org.id,
+                        addon_id=matching_addon.id,
+                        active=status in ['active', 'trialing'],
+                        source='subscription_item',
+                        stripe_item_id=obj.get('id'),
+                        current_period_end=datetime.utcfromtimestamp(obj.get('current_period_end')) if obj.get('current_period_end') else None
+                    )
+                    db.session.add(assoc)
 
             db.session.commit()
         except Exception as e:
@@ -225,12 +235,12 @@ class StripeService:
             customer_id = obj.get('customer')
             from ..extensions import db
             from ..models.models import Organization
-            from ..models.retention import StorageAddonSubscription
+            from ..models.addon import Addon, OrganizationAddon
 
-            # Update add-on subscription record if present
-            rec = StorageAddonSubscription.query.filter_by(stripe_subscription_id=sub_id).first()
+            # Update OrganizationAddon for matching Stripe subscription id
+            rec = OrganizationAddon.query.filter_by(stripe_item_id=sub_id).first()
             if rec:
-                rec.status = status
+                rec.active = status in ['active', 'trialing']
                 rec.current_period_end = datetime.utcfromtimestamp(obj.get('current_period_end')) if obj.get('current_period_end') else rec.current_period_end
 
             # Update organization billing/subscription status
@@ -269,11 +279,11 @@ class StripeService:
             customer_id = obj.get('customer')
             from ..extensions import db
             from ..models.models import Organization
-            from ..models.retention import StorageAddonSubscription
+            from ..models.addon import OrganizationAddon
 
-            rec = StorageAddonSubscription.query.filter_by(stripe_subscription_id=sub_id).first()
+            rec = OrganizationAddon.query.filter_by(stripe_item_id=sub_id).first()
             if rec:
-                rec.status = 'canceled'
+                rec.active = False
 
             org = Organization.query.filter_by(stripe_customer_id=customer_id).first()
             if not org:

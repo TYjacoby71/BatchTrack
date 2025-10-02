@@ -271,6 +271,15 @@ document.addEventListener('DOMContentLoaded', function() {
             const sel = document.querySelector('#addContainerForm select[name="capacity_unit"]');
             if (sel) sel.value = data.capacity_unit;
           }
+          // Apply container meta suggestions when available
+          const mat = document.querySelector('#addContainerForm input[name="container_material"]');
+          if (mat && data.container_material) mat.value = data.container_material;
+          const typ = document.querySelector('#addContainerForm input[name="container_type"]');
+          if (typ && data.container_type) typ.value = data.container_type;
+          const sty = document.querySelector('#addContainerForm input[name="container_style"]');
+          if (sty && data.container_style) sty.value = data.container_style;
+          const col = document.querySelector('#addContainerForm input[name="container_color"]');
+          if (col && data.container_color) col.value = data.container_color;
         } catch (_) {}
       } else {
         hiddenGlobalIdContainer.value = '';

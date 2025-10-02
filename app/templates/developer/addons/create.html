@@ -1,0 +1,66 @@
+{% extends 'layout.html' %}
+{% block content %}
+<div class="container-fluid">
+  <div class="d-flex justify-content-between align-items-center mb-3">
+    <h2>Create Add-on</h2>
+    <a href="{{ url_for('developer.addons.list_addons') }}" class="btn btn-secondary">Back</a>
+  </div>
+
+  <div class="card">
+    <div class="card-body">
+      <form method="POST">
+        <div class="row">
+          <div class="col-md-6">
+            <div class="mb-3">
+              <label class="form-label" for="key">Key</label>
+              <input class="form-control" id="key" name="key" required>
+            </div>
+            <div class="mb-3">
+              <label class="form-label" for="name">Name</label>
+              <input class="form-control" id="name" name="name" required>
+            </div>
+            <div class="mb-3">
+              <label class="form-label" for="description">Description</label>
+              <textarea class="form-control" id="description" name="description" rows="3"></textarea>
+            </div>
+            <div class="mb-3">
+              <label class="form-label" for="permission_name">Permission Name</label>
+              <input class="form-control" id="permission_name" name="permission_name" placeholder="e.g., storage.extend">
+            </div>
+            <div class="mb-3">
+              <label class="form-label" for="function_key">Function Key</label>
+              <input class="form-control" id="function_key" name="function_key" placeholder="e.g., retention, analytics">
+            </div>
+          </div>
+          <div class="col-md-6">
+            <div class="mb-3">
+              <label class="form-label" for="billing_type">Billing Type</label>
+              <select class="form-select" id="billing_type" name="billing_type">
+                <option value="subscription">Subscription</option>
+                <option value="one_time">One-time</option>
+              </select>
+            </div>
+            <div class="mb-3">
+              <label class="form-label" for="stripe_lookup_key">Stripe Price Lookup Key</label>
+              <input class="form-control" id="stripe_lookup_key" name="stripe_lookup_key" placeholder="price_... or lookup key">
+            </div>
+            <div class="mb-3">
+              <label class="form-label" for="retention_extension_days">Retention Extension (days)</label>
+              <input class="form-control" id="retention_extension_days" name="retention_extension_days" type="number" min="0" placeholder="e.g., 365">
+            </div>
+            <div class="form-check mb-3">
+              <input class="form-check-input" type="checkbox" id="is_active" name="is_active" checked>
+              <label class="form-check-label" for="is_active">Active</label>
+            </div>
+          </div>
+        </div>
+        <div class="d-flex gap-2">
+          <button class="btn btn-primary" type="submit">Create</button>
+          <a class="btn btn-secondary" href="{{ url_for('developer.addons.list_addons') }}">Cancel</a>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+{% endblock %}
+

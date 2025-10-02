@@ -40,6 +40,8 @@
           <option value="quantity_desc">Quantity (High to Low)</option>
           <option value="cost_asc">Cost (Low to High)</option>
           <option value="cost_desc">Cost (High to Low)</option>
+          <option value="material_asc">Material (A-Z)</option>
+          <option value="material_desc">Material (Z-A)</option>
         </select>
       </div>
       <div class="col-md-2">
@@ -98,21 +100,22 @@
       <label class="form-label">Quantity in Stock</label>
       <input type="number" step="1" name="quantity" class="form-control" required>
     </div>
-    <div class="col">
+    <div class="col position-relative">
       <label class="form-label">Material</label>
-      <input type="text" name="container_material" class="form-control" placeholder="Glass / Plastic / Metal">
+      <input type="text" name="container_material" class="form-control" placeholder="Glass / Plastic / Metal" id="addContainerMaterial">
+      <div class="form-text">Curated + prior values will appear as you type</div>
     </div>
-    <div class="col">
+    <div class="col position-relative">
       <label class="form-label">Type</label>
-      <input type="text" name="container_type" class="form-control" placeholder="Jar / Bottle / Tin">
+      <input type="text" name="container_type" class="form-control" placeholder="Jar / Bottle / Tin" id="addContainerType">
     </div>
-    <div class="col">
+    <div class="col position-relative">
       <label class="form-label">Style</label>
-      <input type="text" name="container_style" class="form-control" placeholder="Boston Round / Straight Sided">
+      <input type="text" name="container_style" class="form-control" placeholder="Boston Round / Straight Sided" id="addContainerStyle">
     </div>
-    <div class="col">
+    <div class="col position-relative">
       <label class="form-label">Color</label>
-      <input type="text" name="container_color" class="form-control" placeholder="Clear / Amber / Cobalt">
+      <input type="text" name="container_color" class="form-control" placeholder="Clear / Amber / Cobalt" id="addContainerColor">
     </div>
     <div class="col">
       <label class="form-label">Cost Entry Type</label>
@@ -243,7 +246,7 @@
         </thead>
         <tbody id="containersTableBody">
           {% for item in items if item.type == 'container' %}
-          <tr data-name="{{ item.name.lower() }}" data-quantity="{{ item.quantity }}" data-cost="{{ item.cost_per_unit or 0 }}">
+          <tr data-name="{{ item.name.lower() }}" data-quantity="{{ item.quantity }}" data-cost="{{ item.cost_per_unit or 0 }}" data-material="{{ (item.container_material or '')|lower }}">
             <td class="col-name">
               <a href="{{ url_for('inventory.view_inventory', id=item.id) }}" class="text-decoration-none">
                 {{ item.name }}

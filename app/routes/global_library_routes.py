@@ -32,14 +32,18 @@ def global_library():
             IngredientCategory.name == category_filter
         )
 
-    # Apply search across name and aka_names JSON
+    # Apply search across name and aliases (falls back to aka_names JSON)
     if search_query:
         term = f"%{search_query}%"
         try:
+            # Try alias table first for scalable search
+            from app.models import GlobalItem as _GI
+            from sqlalchemy import or_, exists, and_
+            alias_tbl = db.Table('global_item_alias', db.metadata, autoload_with=db.engine)
             query = query.filter(
-                db.or_(
-                    GlobalItem.name.ilike(term),
-                    GlobalItem.aka_names.op('::text').ilike(term)
+                or_(
+                    _GI.name.ilike(term),
+                    exists().where(and_(alias_tbl.c.global_item_id == _GI.id, alias_tbl.c.alias.ilike(term)))
                 )
             )
         except Exception:
@@ -69,14 +73,67 @@ def global_library():
 
 @global_library_bp.route('/global-items/<int:item_id>/stats')
 def global_library_item_stats(item_id: int):
-    """Public stats endpoint for a GlobalItem, including cost distribution and rollup."""
+    """Public stats endpoint for a GlobalItem, including cost distribution, rollup,
+    basic item details, and category-based visibility flags when applicable.
+    """
     try:
+        from app.models.global_item import GlobalItem
+        from app.models.category import IngredientCategory
+
+        gi = GlobalItem.query.get_or_404(item_id)
+
         rollup = GlobalItemStatsService.get_rollup(item_id)
         cost = GlobalItemStatsService.get_cost_distribution(item_id)
+
+        # Basic item details for sidebar population
+        item_payload = {
+            'id': gi.id,
+            'name': gi.name,
+            'item_type': gi.item_type,
+            'default_unit': gi.default_unit,
+            'density': gi.density,
+            'capacity': gi.capacity,
+            'capacity_unit': gi.capacity_unit,
+            'ingredient_category_id': gi.ingredient_category_id,
+            'ingredient_category_name': gi.ingredient_category.name if gi.ingredient_category else None,
+            # Container fields
+            'container_material': getattr(gi, 'container_material', None),
+            'container_type': getattr(gi, 'container_type', None),
+            'container_style': getattr(gi, 'container_style', None),
+            'container_color': getattr(gi, 'container_color', None),
+            # Soap/cosmetic fields (raw values)
+            'saponification_value': getattr(gi, 'saponification_value', None),
+            'iodine_value': getattr(gi, 'iodine_value', None),
+            'melting_point_c': getattr(gi, 'melting_point_c', None),
+            'flash_point_c': getattr(gi, 'flash_point_c', None),
+            'ph_value': getattr(gi, 'ph_value', None),
+            'moisture_content_percent': getattr(gi, 'moisture_content_percent', None),
+            'shelf_life_months': getattr(gi, 'shelf_life_months', None),
+            'comedogenic_rating': getattr(gi, 'comedogenic_rating', None),
+        }
+
+        # Category visibility flags if ingredient category exists
+        category_visibility = None
+        if gi.ingredient_category_id:
+            cat = IngredientCategory.query.get(gi.ingredient_category_id)
+            if cat:
+                category_visibility = {
+                    'show_saponification_value': getattr(cat, 'show_saponification_value', False),
+                    'show_iodine_value': getattr(cat, 'show_iodine_value', False),
+                    'show_melting_point': getattr(cat, 'show_melting_point', False),
+                    'show_flash_point': getattr(cat, 'show_flash_point', False),
+                    'show_ph_value': getattr(cat, 'show_ph_value', False),
+                    'show_moisture_content': getattr(cat, 'show_moisture_content', False),
+                    'show_shelf_life_months': getattr(cat, 'show_shelf_life_months', False),
+                    'show_comedogenic_rating': getattr(cat, 'show_comedogenic_rating', False),
+                }
+
         return {
             'success': True,
+            'item': item_payload,
             'rollup': rollup,
             'cost': cost,
+            'category_visibility': category_visibility,
         }
     except Exception as e:
         return {'success': False, 'error': str(e)}, 500

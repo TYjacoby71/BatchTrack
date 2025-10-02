@@ -20,6 +20,11 @@
 - Check subscription tier limits before feature access
 - Implement template-level permission hiding
 
+### Developer Feature Flags
+
+- Use application config to guard dev-only or experimental features.
+- Example: set `FEATURE_INVENTORY_ANALYTICS=true` in environment to enable the developer analytics page.
+
 ## Adding New Features
 
 ### 1. Planning Phase
