@@ -124,6 +124,114 @@
         </div>
     </div>
 
+    <!-- Edit Curated Lists Section -->
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">Edit Curated Lists</h5>
+                    <p class="text-muted mb-0">Manage the curated options that appear as suggestions when creating containers</p>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <!-- Edit Materials -->
+                        <div class="col-md-6 mb-4">
+                            <div class="border rounded p-3">
+                                <h6>Edit Curated Materials</h6>
+                                <div id="curatedMaterialsList">
+                                    {% for material in curated_materials %}
+                                    <div class="d-flex align-items-center mb-2">
+                                        <span class="badge bg-primary me-2">{{ material }}</span>
+                                        <button type="button" class="btn btn-sm btn-outline-danger" onclick="removeCuratedItem('materials', '{{ material }}')">
+                                            <i class="fas fa-times"></i>
+                                        </button>
+                                    </div>
+                                    {% endfor %}
+                                </div>
+                                <div class="input-group mt-3">
+                                    <input type="text" class="form-control" id="newMaterialInput" placeholder="Add new material...">
+                                    <button class="btn btn-success" onclick="addCuratedItem('materials')">Add</button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Edit Types -->
+                        <div class="col-md-6 mb-4">
+                            <div class="border rounded p-3">
+                                <h6>Edit Curated Types</h6>
+                                <div id="curatedTypesList">
+                                    {% for type in curated_types %}
+                                    <div class="d-flex align-items-center mb-2">
+                                        <span class="badge bg-success me-2">{{ type }}</span>
+                                        <button type="button" class="btn btn-sm btn-outline-danger" onclick="removeCuratedItem('types', '{{ type }}')">
+                                            <i class="fas fa-times"></i>
+                                        </button>
+                                    </div>
+                                    {% endfor %}
+                                </div>
+                                <div class="input-group mt-3">
+                                    <input type="text" class="form-control" id="newTypeInput" placeholder="Add new type...">
+                                    <button class="btn btn-success" onclick="addCuratedItem('types')">Add</button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Edit Styles -->
+                        <div class="col-md-6 mb-4">
+                            <div class="border rounded p-3">
+                                <h6>Edit Curated Styles</h6>
+                                <div id="curatedStylesList">
+                                    {% for style in curated_styles %}
+                                    <div class="d-flex align-items-center mb-2">
+                                        <span class="badge bg-info me-2">{{ style }}</span>
+                                        <button type="button" class="btn btn-sm btn-outline-danger" onclick="removeCuratedItem('styles', '{{ style }}')">
+                                            <i class="fas fa-times"></i>
+                                        </button>
+                                    </div>
+                                    {% endfor %}
+                                </div>
+                                <div class="input-group mt-3">
+                                    <input type="text" class="form-control" id="newStyleInput" placeholder="Add new style...">
+                                    <button class="btn btn-success" onclick="addCuratedItem('styles')">Add</button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Edit Colors -->
+                        <div class="col-md-6 mb-4">
+                            <div class="border rounded p-3">
+                                <h6>Edit Curated Colors</h6>
+                                <div id="curatedColorsList">
+                                    {% for color in curated_colors %}
+                                    <div class="d-flex align-items-center mb-2">
+                                        <span class="badge bg-warning me-2">{{ color }}</span>
+                                        <button type="button" class="btn btn-sm btn-outline-danger" onclick="removeCuratedItem('colors', '{{ color }}')">
+                                            <i class="fas fa-times"></i>
+                                        </button>
+                                    </div>
+                                    {% endfor %}
+                                </div>
+                                <div class="input-group mt-3">
+                                    <input type="text" class="form-control" id="newColorInput" placeholder="Add new color...">
+                                    <button class="btn btn-success" onclick="addCuratedItem('colors')">Add</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="text-center mt-4">
+                        <button class="btn btn-primary" onclick="saveCuratedLists()">
+                            <i class="fas fa-save"></i> Save All Changes
+                        </button>
+                        <button class="btn btn-secondary ms-2" onclick="location.reload()">
+                            <i class="fas fa-undo"></i> Reset Changes
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- Actions Section -->
     <div class="row">
         <div class="col-12">
@@ -162,6 +270,103 @@
 </div>
 
 <script>
+// Store current curated lists
+let curatedLists = {
+    materials: {{ curated_materials|tojson }},
+    types: {{ curated_types|tojson }},
+    styles: {{ curated_styles|tojson }},
+    colors: {{ curated_colors|tojson }}
+};
+
+function addCuratedItem(listType) {
+    const inputId = `new${listType.charAt(0).toUpperCase() + listType.slice(0, -1)}Input`;
+    const input = document.getElementById(inputId);
+    const value = input.value.trim();
+    
+    if (!value) {
+        alert('Please enter a value');
+        return;
+    }
+    
+    if (curatedLists[listType].includes(value)) {
+        alert('This item already exists in the list');
+        return;
+    }
+    
+    curatedLists[listType].push(value);
+    input.value = '';
+    renderCuratedList(listType);
+}
+
+function removeCuratedItem(listType, item) {
+    const index = curatedLists[listType].indexOf(item);
+    if (index > -1) {
+        curatedLists[listType].splice(index, 1);
+        renderCuratedList(listType);
+    }
+}
+
+function renderCuratedList(listType) {
+    const listId = `curated${listType.charAt(0).toUpperCase() + listType.slice(0, -1)}sList`;
+    const container = document.getElementById(listId);
+    
+    const badgeColors = {
+        materials: 'primary',
+        types: 'success', 
+        styles: 'info',
+        colors: 'warning'
+    };
+    
+    container.innerHTML = '';
+    
+    curatedLists[listType].forEach(item => {
+        const div = document.createElement('div');
+        div.className = 'd-flex align-items-center mb-2';
+        div.innerHTML = `
+            <span class="badge bg-${badgeColors[listType]} me-2">${item}</span>
+            <button type="button" class="btn btn-sm btn-outline-danger" onclick="removeCuratedItem('${listType}', '${item}')">
+                <i class="fas fa-times"></i>
+            </button>
+        `;
+        container.appendChild(div);
+    });
+}
+
+function saveCuratedLists() {
+    const saveBtn = document.querySelector('button[onclick="saveCuratedLists()"]');
+    const originalText = saveBtn.innerHTML;
+    saveBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Saving...';
+    saveBtn.disabled = true;
+    
+    fetch('/developer/container-management/save-curated', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+        },
+        body: JSON.stringify({
+            curated_lists: curatedLists
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            alert('Curated lists saved successfully!');
+            location.reload();
+        } else {
+            alert('Error saving curated lists: ' + data.error);
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('Error saving curated lists');
+    })
+    .finally(() => {
+        saveBtn.innerHTML = originalText;
+        saveBtn.disabled = false;
+    });
+}
+
 function exportContainerData() {
     // Simple export functionality
     const data = {
@@ -169,12 +374,7 @@ function exportContainerData() {
         types: {{ types|tojson }},
         styles: {{ styles|tojson }},
         colors: {{ colors|tojson }},
-        curated: {
-            materials: {{ curated_materials|tojson }},
-            types: {{ curated_types|tojson }},
-            styles: {{ curated_styles|tojson }},
-            colors: {{ curated_colors|tojson }}
-        }
+        curated: curatedLists
     };
     
     const dataStr = JSON.stringify(data, null, 2);
@@ -186,5 +386,20 @@ function exportContainerData() {
     link.click();
     URL.revokeObjectURL(url);
 }
+
+// Allow Enter key to add items
+document.addEventListener('DOMContentLoaded', function() {
+    const inputs = ['newMaterialInput', 'newTypeInput', 'newStyleInput', 'newColorInput'];
+    const listTypes = ['materials', 'types', 'styles', 'colors'];
+    
+    inputs.forEach((inputId, index) => {
+        const input = document.getElementById(inputId);
+        input.addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                addCuratedItem(listTypes[index]);
+            }
+        });
+    });
+});
 </script>
 {% endblock %}

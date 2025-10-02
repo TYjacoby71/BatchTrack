@@ -739,36 +739,98 @@ def container_management():
         .distinct().order_by(GlobalItem.container_color).all()
     colors = [c[0] for c in colors if c[0]]
     
-    # Curated lists for suggestions
-    curated_materials = [
-        'Glass', 'PET Plastic', 'HDPE Plastic', 'PP Plastic', 'Aluminum', 
-        'Tin', 'Steel', 'Paperboard', 'Cardboard', 'Silicone'
-    ]
-    
-    curated_types = [
-        'Jar', 'Bottle', 'Tin', 'Tube', 'Pump Bottle', 'Spray Bottle',
-        'Dropper Bottle', 'Roll-on Bottle', 'Squeeze Bottle', 'Vial'
-    ]
-    
-    curated_styles = [
-        'Boston Round', 'Straight Sided', 'Wide Mouth', 'Narrow Mouth',
-        'Cobalt Blue', 'Amber', 'Clear', 'Frosted'
-    ]
-    
-    curated_colors = [
-        'Clear', 'Amber', 'Cobalt Blue', 'Green', 'White', 'Black',
-        'Frosted', 'Silver', 'Gold'
-    ]
+    # Load curated lists from settings or use defaults
+    curated_lists = load_curated_container_lists()
     
     return render_template('developer/container_management.html',
                          materials=materials,
                          types=types,
                          styles=styles,
                          colors=colors,
-                         curated_materials=curated_materials,
-                         curated_types=curated_types,
-                         curated_styles=curated_styles,
-                         curated_colors=curated_colors)
+                         curated_materials=curated_lists['materials'],
+                         curated_types=curated_lists['types'],
+                         curated_styles=curated_lists['styles'],
+                         curated_colors=curated_lists['colors'])
+
+@developer_bp.route('/container-management/save-curated', methods=['POST'])
+@login_required
+def save_curated_container_lists():
+    """Save curated container lists to settings.json"""
+    try:
+        data = request.get_json()
+        curated_lists = data.get('curated_lists', {})
+        
+        # Validate the structure
+        required_keys = ['materials', 'types', 'styles', 'colors']
+        for key in required_keys:
+            if key not in curated_lists or not isinstance(curated_lists[key], list):
+                return jsonify({'success': False, 'error': f'Invalid or missing {key} list'})
+        
+        # Load current settings
+        import json
+        import os
+        settings_file = 'settings.json'
+        settings = {}
+        
+        if os.path.exists(settings_file):
+            try:
+                with open(settings_file, 'r') as f:
+                    settings = json.load(f)
+            except (json.JSONDecodeError, IOError):
+                settings = {}
+        
+        # Update container curated lists
+        if 'container_management' not in settings:
+            settings['container_management'] = {}
+        
+        settings['container_management']['curated_lists'] = curated_lists
+        
+        # Save back to file
+        with open(settings_file, 'w') as f:
+            json.dump(settings, f, indent=2)
+        
+        return jsonify({'success': True, 'message': 'Curated lists saved successfully'})
+        
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)})
+
+def load_curated_container_lists():
+    """Load curated container lists from settings or return defaults"""
+    try:
+        import json
+        import os
+        settings_file = 'settings.json'
+        
+        if os.path.exists(settings_file):
+            with open(settings_file, 'r') as f:
+                settings = json.load(f)
+                curated_lists = settings.get('container_management', {}).get('curated_lists', {})
+                
+                # If we have saved curated lists, return them
+                if curated_lists and all(key in curated_lists for key in ['materials', 'types', 'styles', 'colors']):
+                    return curated_lists
+    except:
+        pass
+    
+    # Return defaults if no saved lists or error loading
+    return {
+        'materials': [
+            'Glass', 'PET Plastic', 'HDPE Plastic', 'PP Plastic', 'Aluminum', 
+            'Tin', 'Steel', 'Paperboard', 'Cardboard', 'Silicone'
+        ],
+        'types': [
+            'Jar', 'Bottle', 'Tin', 'Tube', 'Pump Bottle', 'Spray Bottle',
+            'Dropper Bottle', 'Roll-on Bottle', 'Squeeze Bottle', 'Vial'
+        ],
+        'styles': [
+            'Boston Round', 'Straight Sided', 'Wide Mouth', 'Narrow Mouth',
+            'Cobalt Blue', 'Amber', 'Clear', 'Frosted'
+        ],
+        'colors': [
+            'Clear', 'Amber', 'Cobalt Blue', 'Green', 'White', 'Black',
+            'Frosted', 'Silver', 'Gold'
+        ]
+    }
 
 @developer_bp.route('/system-statistics')
 @login_required

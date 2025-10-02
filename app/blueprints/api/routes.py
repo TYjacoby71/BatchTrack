@@ -231,10 +231,10 @@ def get_container_suggestions():
             values = [r[0] for r in qry.distinct().order_by(col.asc()).limit(limit).all()]
             return values
 
-        # Curated materials baseline
-        curated_materials = [
-            'Glass', 'PET Plastic', 'HDPE Plastic', 'PP Plastic', 'Aluminum', 'Tin', 'Steel', 'Paperboard', 'Cardboard'
-        ]
+        # Load curated materials from settings
+        from app.blueprints.developer.routes import load_curated_container_lists
+        curated_lists = load_curated_container_lists()
+        curated_materials = curated_lists['materials']
         if q:
             curated_materials = [m for m in curated_materials if q.lower() in m.lower()]
         curated_materials = curated_materials[:limit]
