@@ -2,6 +2,13 @@
 {% block content %}
 <div class="d-flex justify-content-between align-items-center mb-3">
   <h2>Global Inventory Library</h2>
+  {% if current_user.is_authenticated and current_user.user_type == 'developer' %}
+  <div class="col-md-6 text-end">
+    <a href="{{ url_for('developer.create_global_item') }}" class="btn btn-success btn-sm">
+      <i class="fas fa-plus"></i> Create Global Item
+    </a>
+  </div>
+  {% endif %}
 </div>
 
 <div class="row mb-3">
@@ -264,4 +271,3 @@ async function openItemDetails(id){
 }
 </script>
 {% endblock %}
-
