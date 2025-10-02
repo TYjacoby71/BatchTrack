@@ -50,6 +50,9 @@
         <th>Density (default if category)</th>
         <th>Capacity</th>
         <th>Perishable</th>
+        {% if current_user.is_authenticated and current_user.user_type == 'developer' %}
+        <th>Actions</th>
+        {% endif %}
       </tr>
     </thead>
     <tbody>
@@ -69,6 +72,13 @@
         </td>
         <td>{{ gi.capacity or '-' }} {{ gi.capacity_unit or '' }}</td>
         <td>{{ 'Yes' if gi.default_is_perishable else 'No' }}</td>
+        {% if current_user.is_authenticated and current_user.user_type == 'developer' %}
+        <td>
+          <a href="{{ url_for('developer.global_item_detail', item_id=gi.id) }}" class="btn btn-sm btn-outline-primary">
+            <i class="fas fa-edit"></i> Edit
+          </a>
+        </td>
+        {% endif %}
       </tr>
       {% endfor %}
     </tbody>
