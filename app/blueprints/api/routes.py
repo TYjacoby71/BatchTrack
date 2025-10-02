@@ -160,13 +160,10 @@ def create_unit():
         if existing:
             return jsonify({'success': True, 'data': {'id': existing.id, 'name': existing.name, 'unit_type': existing.unit_type}})
         u = Unit(name=name, unit_type=unit_type, conversion_factor=1.0, base_unit='Piece', is_active=True, is_custom=False, is_mapped=True, organization_id=None)
-        from ...extensions import db
-from ...models import GlobalItem
         db.session.add(u)
         db.session.commit()
         return jsonify({'success': True, 'data': {'id': u.id, 'name': u.name, 'unit_type': u.unit_type}})
     except Exception as e:
-        from ...extensions import db
         db.session.rollback()
         return jsonify({'success': False, 'error': str(e)}), 500
 
