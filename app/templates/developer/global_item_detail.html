@@ -1,182 +1,326 @@
+
 {% extends 'layout.html' %}
 {% block content %}
 <div class="d-flex justify-content-between align-items-center mb-3">
-  <h2>Global Item: {{ item.name }}</h2>
-  <a href="{{ url_for('developer.create_global_item') }}" class="btn btn-success">
-    <i class="fas fa-plus"></i> Add New Item
-  </a>
+  <div>
+    <nav aria-label="breadcrumb">
+      <ol class="breadcrumb mb-0">
+        <li class="breadcrumb-item"><a href="{{ url_for('developer.dashboard') }}">Developer</a></li>
+        <li class="breadcrumb-item"><a href="{{ url_for('developer.global_items_admin') }}">Global Items</a></li>
+        <li class="breadcrumb-item active" aria-current="page">{{ item.name }}</li>
+      </ol>
+    </nav>
+    <h2 class="mt-2">Global Item: {{ item.name }}</h2>
+  </div>
+  <div>
+    <a href="{{ url_for('developer.global_items_admin') }}" class="btn btn-outline-secondary me-2">
+      <i class="fas fa-arrow-left"></i> Back to Global Items
+    </a>
+    <a href="{{ url_for('developer.create_global_item') }}" class="btn btn-primary">
+      <i class="fas fa-plus"></i> Add New Item
+    </a>
+  </div>
 </div>
-<div class="card"><div class="card-body">
-  <form method="post" action="{{ url_for('developer.global_item_edit', item_id=item.id) }}">
-    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-    <div class="row g-3">
-      <div class="col-md-6">
-        <label class="form-label">Name</label>
-        <input type="text" name="name" class="form-control" value="{{ item.name }}" required>
-      </div>
-      <div class="col-md-3">
-        <label class="form-label">Type</label>
-        <select name="item_type" class="form-select">
-          {% for t in ['ingredient','container','packaging','consumable'] %}
-          <option value="{{ t }}" {% if item.item_type==t %}selected{% endif %}>{{ t|title }}</option>
-          {% endfor %}
-        </select>
-      </div>
-      <div class="col-md-3 ingredient-field">
-        <label class="form-label">Default Unit</label>
-        <select name="default_unit" class="form-select">
-          <option value="">Select Unit</option>
-          {% for unit in get_global_unit_list() %}
-            <option value="{{ unit.name }}" {% if unit.name == item.default_unit %}selected{% endif %}>{{ unit.name }}</option>
-          {% endfor %}
-        </select>
-      </div>
-      <div class="col-md-3 ingredient-field">
-        <label class="form-label">Density (g/ml)</label>
-        <input type="number" step="0.001" name="density" class="form-control" value="{{ item.density or '' }}">
-      </div>
-      <div class="col-md-3 container-field">
-        <label class="form-label">Capacity</label>
-        <input type="number" step="0.01" name="capacity" class="form-control" value="{{ item.capacity or '' }}">
-      </div>
-      <div class="col-md-3 container-field">
-        <label class="form-label">Capacity Unit</label>
-        <input type="text" name="capacity_unit" class="form-control" value="{{ item.capacity_unit or '' }}">
-      </div>
-      <div class="col-md-3 container-field">
-        <label class="form-label">Container Material</label>
-        <input type="text" name="container_material" class="form-control" value="{{ item.container_material or '' }}">
-      </div>
-      <div class="col-md-3 container-field">
-        <label class="form-label">Container Type</label>
-        <input type="text" name="container_type" class="form-control" value="{{ item.container_type or '' }}">
-      </div>
-      <div class="col-md-3 container-field">
-        <label class="form-label">Container Style (optional)</label>
-        <input type="text" name="container_style" class="form-control" value="{{ item.container_style or '' }}">
-      </div>
-      <div class="col-md-3 container-field">
-        <label class="form-label">Container Color (optional)</label>
-        <input type="text" name="container_color" class="form-control" value="{{ item.container_color or '' }}">
-      </div>
-      <div class="col-md-3">
-        <div class="form-check mt-4">
-          <input type="checkbox" class="form-check-input" id="default_is_perishable" name="default_is_perishable" {% if item.default_is_perishable %}checked{% endif %}>
-          <label for="default_is_perishable" class="form-check-label">Perishable by default</label>
-        </div>
-      </div>
-      <div class="col-md-3" id="rslWrapper" style="display: {% if item.default_is_perishable %}block{% else %}none{% endif %};">
-        <label class="form-label">Recommended Shelf Life (days)</label>
-        <input type="number" name="recommended_shelf_life_days" class="form-control" value="{{ item.recommended_shelf_life_days or '' }}">
-      </div>
+
+<div class="card">
+  <div class="card-body">
+    <form method="post" action="{{ url_for('developer.global_item_edit', item_id=item.id) }}" id="globalItemForm">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
       
-      <!-- Soap Making & Cosmetic Fields -->
-      <div class="col-12" id="soapMakingSection"><hr><h5 class="text-muted">Soap Making & Cosmetic Properties</h5></div>
-      <div class="col-md-3 ingredient-field">
-        <label class="form-label">Saponification Value</label>
-        <input type="number" step="0.1" name="saponification_value" class="form-control" value="{{ item.saponification_value or '' }}">
-      </div>
-      <div class="col-md-3 ingredient-field">
-        <label class="form-label">Iodine Value</label>
-        <input type="number" step="0.1" name="iodine_value" class="form-control" value="{{ item.iodine_value or '' }}">
-      </div>
-      <div class="col-md-3 ingredient-field">
-        <label class="form-label">Melting Point (°C)</label>
-        <input type="number" step="0.1" name="melting_point_c" class="form-control" value="{{ item.melting_point_c or '' }}">
-      </div>
-      <div class="col-md-3 ingredient-field">
-        <label class="form-label">Flash Point (°C)</label>
-        <input type="number" step="0.1" name="flash_point_c" class="form-control" value="{{ item.flash_point_c or '' }}">
-      </div>
-      <div class="col-md-3 ingredient-field">
-        <label class="form-label">pH Value</label>
-        <input type="number" step="0.1" name="ph_value" class="form-control" value="{{ item.ph_value or '' }}">
-      </div>
-      <div class="col-md-3 ingredient-field">
-        <label class="form-label">Moisture Content (%)</label>
-        <input type="number" step="0.1" name="moisture_content_percent" class="form-control" value="{{ item.moisture_content_percent or '' }}">
-      </div>
-      <div class="col-md-3 ingredient-field">
-        <label class="form-label">Shelf Life (months)</label>
-        <input type="number" name="shelf_life_months" class="form-control" value="{{ item.shelf_life_months or '' }}">
-      </div>
-      <div class="col-md-3 ingredient-field">
-        <label class="form-label">Comedogenic Rating</label>
-        <select name="comedogenic_rating" class="form-select">
-          <option value="">Select Rating</option>
-          {% for rating in range(6) %}
-          <option value="{{ rating }}" {% if item.comedogenic_rating == rating %}selected{% endif %}>{{ rating }} - {% if rating == 0 %}Non-comedogenic{% elif rating == 1 %}Very low{% elif rating == 2 %}Low{% elif rating == 3 %}Moderate{% elif rating == 4 %}High{% else %}Very high{% endif %}</option>
-          {% endfor %}
-        </select>
-      </div>
-      <div class="col-12">
-        <label class="form-label">Synonyms (comma-separated)</label>
-        <input type="text" name="aka_names" class="form-control" value="{{ (item.aka_names or []) | join(', ') }}">
-      </div>
-      <div class="col-md-6 ingredient-field">
-        <label class="form-label">Ingredient Category</label>
-        <div class="input-group">
-          <select name="ingredient_category_id" class="form-select">
-            <option value="">Select Category</option>
-            {% for category in global_ingredient_categories %}
-              <option value="{{ category.id }}" {% if item.ingredient_category and item.ingredient_category.id == category.id %}selected{% endif %}>{{ category.name }}</option>
+      <div class="row g-3">
+        <!-- Name and Type - Always visible -->
+        <div class="col-md-6">
+          <label class="form-label">Name *</label>
+          <input type="text" name="name" class="form-control" value="{{ item.name }}" required>
+        </div>
+        
+        <div class="col-md-3">
+          <label class="form-label">Type *</label>
+          <select name="item_type" id="itemType" class="form-select" required>
+            {% for t in ['ingredient','container','packaging','consumable'] %}
+            <option value="{{ t }}" {% if item.item_type==t %}selected{% endif %}>{{ t|title }}</option>
             {% endfor %}
           </select>
-          <a href="{{ url_for('developer.reference_categories') }}" class="btn btn-outline-secondary" title="Manage Global Categories">
-            <i class="fas fa-cog"></i>
-          </a>
+        </div>
+
+        <!-- Ingredient Category - Only for ingredients -->
+        <div class="col-md-6" id="ingredientCategorySection" style="display: none;">
+          <label class="form-label">Ingredient Category</label>
+          <div class="input-group">
+            <select name="ingredient_category_id" id="ingredientCategorySelect" class="form-select">
+              <option value="">Select Category</option>
+              {% for category in global_ingredient_categories %}
+                <option value="{{ category.id }}" {% if item.ingredient_category and item.ingredient_category.id == category.id %}selected{% endif %}>{{ category.name }}</option>
+              {% endfor %}
+            </select>
+            <a href="{{ url_for('developer.reference_categories') }}" class="btn btn-outline-secondary" title="Manage Global Categories">
+              <i class="fas fa-cog"></i>
+            </a>
+          </div>
+        </div>
+
+        <!-- Default Unit - For ingredients, packaging, consumables -->
+        <div class="col-md-3" id="defaultUnitSection" style="display: none;">
+          <label class="form-label">Default Unit</label>
+          <select name="default_unit" class="form-select">
+            <option value="">Select Unit</option>
+            {% for unit in get_global_unit_list() %}
+              <option value="{{ unit.name }}" {% if unit.name == item.default_unit %}selected{% endif %}>{{ unit.name }}</option>
+            {% endfor %}
+          </select>
+        </div>
+
+        <!-- Density - Only for ingredients -->
+        <div class="col-md-3" id="densitySection" style="display: none;">
+          <label class="form-label">Density (g/ml)</label>
+          <input type="number" step="0.001" name="density" class="form-control" value="{{ item.density or '' }}">
+        </div>
+
+        <!-- Container-specific fields -->
+        <div id="containerFields" style="display: none;">
+          <div class="col-12"><hr><h5 class="text-muted">Container Properties</h5></div>
+          
+          <div class="col-md-3">
+            <label class="form-label">Material</label>
+            <input type="text" name="container_material" class="form-control" value="{{ item.container_material or '' }}" placeholder="e.g. Glass, Plastic, Tin">
+          </div>
+          
+          <div class="col-md-3">
+            <label class="form-label">Capacity</label>
+            <input type="number" step="0.01" name="capacity" class="form-control" value="{{ item.capacity or '' }}">
+          </div>
+          
+          <div class="col-md-3">
+            <label class="form-label">Capacity Unit</label>
+            <input type="text" name="capacity_unit" class="form-control" value="{{ item.capacity_unit or '' }}" placeholder="e.g. ml, oz, count">
+          </div>
+          
+          <div class="col-md-3">
+            <label class="form-label">Container Type</label>
+            <input type="text" name="container_type" class="form-control" value="{{ item.container_type or '' }}" placeholder="e.g. Jar, Bottle, Tin">
+          </div>
+          
+          <div class="col-md-3">
+            <label class="form-label">Container Style</label>
+            <input type="text" name="container_style" class="form-control" value="{{ item.container_style or '' }}" placeholder="e.g. Boston Round, Straight Sided">
+          </div>
+          
+          <div class="col-md-3">
+            <label class="form-label">Container Color (optional)</label>
+            <input type="text" name="container_color" class="form-control" value="{{ item.container_color or '' }}">
+          </div>
+        </div>
+
+        <!-- Perishable - For ingredients and containers -->
+        <div class="col-md-3" id="perishableSection" style="display: none;">
+          <div class="form-check mt-4">
+            <input type="checkbox" class="form-check-input" id="default_is_perishable" name="default_is_perishable" {% if item.default_is_perishable %}checked{% endif %}>
+            <label for="default_is_perishable" class="form-check-label">Perishable by default</label>
+          </div>
+        </div>
+        
+        <div class="col-md-3" id="shelfLifeSection" style="display: {% if item.default_is_perishable %}block{% else %}none{% endif %};">
+          <label class="form-label">Recommended Shelf Life (days)</label>
+          <input type="number" name="recommended_shelf_life_days" class="form-control" value="{{ item.recommended_shelf_life_days or '' }}">
+        </div>
+
+        <!-- Ingredient-specific properties based on category -->
+        <div id="ingredientProperties" style="display: none;">
+          <div class="col-12"><hr><h5 class="text-muted">Ingredient Properties</h5></div>
+          
+          <div class="col-md-3" id="saponificationSection" style="display: none;">
+            <label class="form-label">Saponification Value</label>
+            <input type="number" step="0.1" name="saponification_value" class="form-control" value="{{ item.saponification_value or '' }}">
+          </div>
+          
+          <div class="col-md-3" id="iodineSection" style="display: none;">
+            <label class="form-label">Iodine Value</label>
+            <input type="number" step="0.1" name="iodine_value" class="form-control" value="{{ item.iodine_value or '' }}">
+          </div>
+          
+          <div class="col-md-3" id="meltingPointSection" style="display: none;">
+            <label class="form-label">Melting Point (°C)</label>
+            <input type="number" step="0.1" name="melting_point_c" class="form-control" value="{{ item.melting_point_c or '' }}">
+          </div>
+          
+          <div class="col-md-3" id="flashPointSection" style="display: none;">
+            <label class="form-label">Flash Point (°C)</label>
+            <input type="number" step="0.1" name="flash_point_c" class="form-control" value="{{ item.flash_point_c or '' }}">
+          </div>
+          
+          <div class="col-md-3" id="phSection" style="display: none;">
+            <label class="form-label">pH Value</label>
+            <input type="number" step="0.1" name="ph_value" class="form-control" value="{{ item.ph_value or '' }}">
+          </div>
+          
+          <div class="col-md-3" id="moistureSection" style="display: none;">
+            <label class="form-label">Moisture Content (%)</label>
+            <input type="number" step="0.1" name="moisture_content_percent" class="form-control" value="{{ item.moisture_content_percent or '' }}">
+          </div>
+          
+          <div class="col-md-3" id="shelfLifeMonthsSection" style="display: none;">
+            <label class="form-label">Shelf Life (months)</label>
+            <input type="number" name="shelf_life_months" class="form-control" value="{{ item.shelf_life_months or '' }}">
+          </div>
+          
+          <div class="col-md-3" id="comedogenicSection" style="display: none;">
+            <label class="form-label">Comedogenic Rating</label>
+            <select name="comedogenic_rating" class="form-select">
+              <option value="">Select Rating</option>
+              {% for rating in range(6) %}
+              <option value="{{ rating }}" {% if item.comedogenic_rating == rating %}selected{% endif %}>{{ rating }} - {% if rating == 0 %}Non-comedogenic{% elif rating == 1 %}Very low{% elif rating == 2 %}Low{% elif rating == 3 %}Moderate{% elif rating == 4 %}High{% else %}Very high{% endif %}</option>
+              {% endfor %}
+            </select>
+          </div>
+        </div>
+
+        <!-- Synonyms - Always visible -->
+        <div class="col-12">
+          <label class="form-label">Synonyms (comma-separated)</label>
+          <input type="text" name="aka_names" class="form-control" value="{{ (item.aka_names or []) | join(', ') }}" placeholder="Alternative names for this item">
         </div>
       </div>
-    </div>
-    <div class="mt-3 d-flex gap-2">
-      <button type="submit" class="btn btn-primary">Save</button>
-      <a class="btn btn-outline-secondary" href="{{ url_for('developer.global_item_stats_view', item_id=item.id) }}">View Stats</a>
-    </div>
-  </form>
-</div></div>
+
+      <!-- Form Actions -->
+      <div class="mt-4 d-flex justify-content-between">
+        <div>
+          <a href="{{ url_for('developer.global_items_admin') }}" class="btn btn-outline-secondary">
+            <i class="fas fa-times"></i> Cancel
+          </a>
+        </div>
+        <div>
+          <a class="btn btn-outline-info me-2" href="{{ url_for('developer.global_item_stats_view', item_id=item.id) }}">
+            <i class="fas fa-chart-bar"></i> View Stats
+          </a>
+          <button type="submit" class="btn btn-primary">
+            <i class="fas fa-save"></i> Save Changes
+          </button>
+        </div>
+      </div>
+    </form>
+  </div>
+</div>
+
 <script>
-document.addEventListener('DOMContentLoaded', function(){
-  try {
-    const perishable = document.getElementById('default_is_perishable');
-    const rsl = document.getElementById('rslWrapper');
-    const itemTypeSelect = document.querySelector('select[name="item_type"]');
+document.addEventListener('DOMContentLoaded', function() {
+  const itemTypeSelect = document.getElementById('itemType');
+  const ingredientCategorySelect = document.getElementById('ingredientCategorySelect');
+  const perishableCheckbox = document.getElementById('default_is_perishable');
+  const shelfLifeSection = document.getElementById('shelfLifeSection');
+  
+  // Category visibility cache
+  let categoryVisibilityCache = {};
+
+  function updateFormBasedOnType() {
+    const selectedType = itemTypeSelect.value;
     
-    // Toggle shelf life based on perishable checkbox
-    if (perishable && rsl){
-      perishable.addEventListener('change', function(){
-        rsl.style.display = this.checked ? 'block' : 'none';
-      });
+    // Hide all conditional sections first
+    document.getElementById('ingredientCategorySection').style.display = 'none';
+    document.getElementById('defaultUnitSection').style.display = 'none';
+    document.getElementById('densitySection').style.display = 'none';
+    document.getElementById('containerFields').style.display = 'none';
+    document.getElementById('perishableSection').style.display = 'none';
+    document.getElementById('ingredientProperties').style.display = 'none';
+    
+    // Show sections based on type
+    switch(selectedType) {
+      case 'ingredient':
+        document.getElementById('ingredientCategorySection').style.display = 'block';
+        document.getElementById('defaultUnitSection').style.display = 'block';
+        document.getElementById('densitySection').style.display = 'block';
+        document.getElementById('perishableSection').style.display = 'block';
+        document.getElementById('ingredientProperties').style.display = 'block';
+        updateIngredientPropertiesVisibility();
+        break;
+        
+      case 'container':
+        document.getElementById('containerFields').style.display = 'block';
+        document.getElementById('perishableSection').style.display = 'block';
+        break;
+        
+      case 'packaging':
+      case 'consumable':
+        document.getElementById('defaultUnitSection').style.display = 'block';
+        break;
     }
     
-    // Make form reactive to item type changes
-    if (itemTypeSelect) {
-      function updateFormVisibility() {
-        const selectedType = itemTypeSelect.value;
+    // Update shelf life visibility based on perishable checkbox
+    updateShelfLifeVisibility();
+  }
+
+  async function updateIngredientPropertiesVisibility() {
+    const categoryId = ingredientCategorySelect.value;
+    
+    // Hide all ingredient property sections first
+    ['saponificationSection', 'iodineSection', 'meltingPointSection', 'flashPointSection', 
+     'phSection', 'moistureSection', 'shelfLifeMonthsSection', 'comedogenicSection'].forEach(id => {
+      document.getElementById(id).style.display = 'none';
+    });
+    
+    if (!categoryId) return;
+    
+    try {
+      // Check cache first
+      if (!categoryVisibilityCache[categoryId]) {
+        const response = await fetch(`/api/category-visibility/${categoryId}`);
+        const data = await response.json();
         
-        // Show/hide ingredient-specific fields
-        const ingredientFields = document.querySelectorAll('.ingredient-field');
-        ingredientFields.forEach(field => {
-          field.style.display = selectedType === 'ingredient' ? 'block' : 'none';
-        });
-        
-        // Show/hide container-specific fields
-        const containerFields = document.querySelectorAll('.container-field');
-        containerFields.forEach(field => {
-          field.style.display = selectedType === 'container' ? 'block' : 'none';
-        });
-        
-        // Show/hide soap making section for ingredients
-        const soapMakingSection = document.getElementById('soapMakingSection');
-        if (soapMakingSection) {
-          soapMakingSection.style.display = selectedType === 'ingredient' ? 'block' : 'none';
+        if (data.success) {
+          categoryVisibilityCache[categoryId] = data.visibility;
+        } else {
+          console.warn('Failed to load category visibility:', data.error);
+          return;
         }
       }
       
-      // Initial call and event listener
-      updateFormVisibility();
-      itemTypeSelect.addEventListener('change', updateFormVisibility);
+      const visibility = categoryVisibilityCache[categoryId];
+      
+      // Show fields based on category visibility settings
+      if (visibility.show_saponification_value) {
+        document.getElementById('saponificationSection').style.display = 'block';
+      }
+      if (visibility.show_iodine_value) {
+        document.getElementById('iodineSection').style.display = 'block';
+      }
+      if (visibility.show_melting_point) {
+        document.getElementById('meltingPointSection').style.display = 'block';
+      }
+      if (visibility.show_flash_point) {
+        document.getElementById('flashPointSection').style.display = 'block';
+      }
+      if (visibility.show_ph_value) {
+        document.getElementById('phSection').style.display = 'block';
+      }
+      if (visibility.show_moisture_content) {
+        document.getElementById('moistureSection').style.display = 'block';
+      }
+      if (visibility.show_shelf_life_months) {
+        document.getElementById('shelfLifeMonthsSection').style.display = 'block';
+      }
+      if (visibility.show_comedogenic_rating) {
+        document.getElementById('comedogenicSection').style.display = 'block';
+      }
+    } catch (error) {
+      console.error('Error loading category visibility:', error);
     }
-  } catch(e) { console.warn('Form reactivity init failed', e); }
+  }
+
+  function updateShelfLifeVisibility() {
+    if (perishableCheckbox && shelfLifeSection) {
+      shelfLifeSection.style.display = perishableCheckbox.checked ? 'block' : 'none';
+    }
+  }
+
+  // Event listeners
+  itemTypeSelect.addEventListener('change', updateFormBasedOnType);
+  ingredientCategorySelect.addEventListener('change', updateIngredientPropertiesVisibility);
+  
+  if (perishableCheckbox) {
+    perishableCheckbox.addEventListener('change', updateShelfLifeVisibility);
+  }
+
+  // Initialize form state
+  updateFormBasedOnType();
 });
 </script>
 {% endblock %}
