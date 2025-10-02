@@ -1,3 +1,4 @@
+
 {% extends 'layout.html' %}
 
 {% block title %}Container Management - Developer{% endblock %}
@@ -25,9 +26,36 @@
         </div>
     </div>
 
-    <div class="row">
+    <!-- Container Type Tabs -->
+    <div class="mb-3">
+        <ul class="nav nav-tabs" id="containerManagementTabs">
+            <li class="nav-item">
+                <a class="nav-link active" href="#" data-type="materials">
+                    <i class="fas fa-cube"></i> Materials <span class="badge bg-primary ms-1">{{ curated_materials|length }}</span>
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link" href="#" data-type="types">
+                    <i class="fas fa-shapes"></i> Types <span class="badge bg-success ms-1">{{ curated_types|length }}</span>
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link" href="#" data-type="styles">
+                    <i class="fas fa-palette"></i> Styles <span class="badge bg-info ms-1">{{ curated_styles|length }}</span>
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link" href="#" data-type="colors">
+                    <i class="fas fa-paint-brush"></i> Colors <span class="badge bg-warning ms-1">{{ curated_colors|length }}</span>
+                </a>
+            </li>
+        </ul>
+    </div>
+
+    <!-- Tab Content -->
+    <div class="container-sections">
         <!-- Materials Section -->
-        <div class="col-md-6 mb-4">
+        <div class="section" id="section-materials">
             <div class="card">
                 <div class="card-header d-flex justify-content-between align-items-center">
                     <h5 class="mb-0">Materials</h5>
@@ -56,7 +84,7 @@
         </div>
 
         <!-- Types Section -->
-        <div class="col-md-6 mb-4">
+        <div class="section" id="section-types" style="display: none;">
             <div class="card">
                 <div class="card-header d-flex justify-content-between align-items-center">
                     <h5 class="mb-0">Types</h5>
@@ -85,7 +113,7 @@
         </div>
 
         <!-- Styles Section -->
-        <div class="col-md-6 mb-4">
+        <div class="section" id="section-styles" style="display: none;">
             <div class="card">
                 <div class="card-header d-flex justify-content-between align-items-center">
                     <h5 class="mb-0">Styles</h5>
@@ -114,7 +142,7 @@
         </div>
 
         <!-- Colors Section -->
-        <div class="col-md-6 mb-4">
+        <div class="section" id="section-colors" style="display: none;">
             <div class="card">
                 <div class="card-header d-flex justify-content-between align-items-center">
                     <h5 class="mb-0">Colors</h5>
@@ -144,7 +172,7 @@
     </div>
 
     <!-- Save Changes Section -->
-    <div class="row">
+    <div class="row mt-4">
         <div class="col-12">
             <div class="card">
                 <div class="card-body text-center">
@@ -205,6 +233,51 @@ let masterLists = {
     colors: {{ curated_colors|tojson }}
 };
 
+// Tab switching functionality
+document.addEventListener('DOMContentLoaded', function() {
+    const tabs = document.querySelectorAll('#containerManagementTabs .nav-link');
+    const sections = document.querySelectorAll('.container-sections .section');
+
+    tabs.forEach(tab => {
+        tab.addEventListener('click', function(e) {
+            e.preventDefault();
+            
+            // Remove active class from all tabs
+            tabs.forEach(t => t.classList.remove('active'));
+            
+            // Hide all sections
+            sections.forEach(section => {
+                section.style.display = 'none';
+            });
+            
+            // Add active class to clicked tab
+            this.classList.add('active');
+            
+            // Show corresponding section
+            const type = this.getAttribute('data-type');
+            const section = document.getElementById('section-' + type);
+            if (section) {
+                section.style.display = 'block';
+            }
+        });
+    });
+
+    // Set up Enter key handlers for inputs
+    const inputs = ['newMaterialInput', 'newTypeInput', 'newStyleInput', 'newColorInput'];
+    const listTypes = ['materials', 'types', 'styles', 'colors'];
+
+    inputs.forEach((inputId, index) => {
+        const input = document.getElementById(inputId);
+        if (input) {
+            input.addEventListener('keypress', function(e) {
+                if (e.key === 'Enter') {
+                    addItem(listTypes[index]);
+                }
+            });
+        }
+    });
+});
+
 function addItem(listType) {
     const inputId = `new${listType.charAt(0).toUpperCase() + listType.slice(0, -1)}Input`;
     const input = document.getElementById(inputId);
@@ -224,6 +297,7 @@ function addItem(listType) {
     masterLists[listType].sort(); // Keep lists alphabetically sorted
     input.value = '';
     renderList(listType);
+    updateTabBadge(listType);
 }
 
 function removeItem(listType, item) {
@@ -231,6 +305,7 @@ function removeItem(listType, item) {
     if (index > -1) {
         masterLists[listType].splice(index, 1);
         renderList(listType);
+        updateTabBadge(listType);
     }
 }
 
@@ -252,10 +327,17 @@ function renderList(listType) {
         container.appendChild(div);
     });
 
-    // Update count badge
-    const badge = document.querySelector(`#${listType}List`).closest('.card').querySelector('.badge');
+    // Update count badge in section header
+    const badge = document.querySelector(`#section-${listType} .badge`);
     if (badge) {
         badge.textContent = `${masterLists[listType].length} items`;
+    }
+}
+
+function updateTabBadge(listType) {
+    const tab = document.querySelector(`[data-type="${listType}"] .badge`);
+    if (tab) {
+        tab.textContent = masterLists[listType].length;
     }
 }
 
@@ -309,20 +391,5 @@ function exportContainerData() {
     link.click();
     URL.revokeObjectURL(url);
 }
-
-// Allow Enter key to add items
-document.addEventListener('DOMContentLoaded', function() {
-    const inputs = ['newMaterialInput', 'newTypeInput', 'newStyleInput', 'newColorInput'];
-    const listTypes = ['materials', 'types', 'styles', 'colors'];
-
-    inputs.forEach((inputId, index) => {
-        const input = document.getElementById(inputId);
-        input.addEventListener('keypress', function(e) {
-            if (e.key === 'Enter') {
-                addItem(listTypes[index]);
-            }
-        });
-    });
-});
 </script>
 {% endblock %}
