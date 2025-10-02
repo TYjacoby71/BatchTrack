@@ -1,5 +1,15 @@
 {% extends 'layout.html' %}
 {% block content %}
+<div class="container-fluid py-4">
+    <!-- Breadcrumbs -->
+    <nav aria-label="breadcrumb">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="{{ url_for('developer.dashboard') }}">Developer Dashboard</a></li>
+            <li class="breadcrumb-item"><a href="{{ url_for('developer.global_items_admin') }}">Global Items</a></li>
+            <li class="breadcrumb-item active" aria-current="page">Ingredient Categories</li>
+        </ol>
+    </nav>
+
 <div class="d-flex justify-content-between align-items-center mb-3">
   <h2>Global Ingredient Categories</h2>
   <a href="{{ url_for('developer.global_items_admin') }}" class="btn btn-secondary">
