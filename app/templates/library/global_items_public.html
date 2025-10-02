@@ -13,6 +13,7 @@
   </div>
   {% endif %}
   
+
 </div>
 
 <div class="row mb-3">
@@ -62,6 +63,7 @@
         <th>Capacity</th>
         <th>Perishable</th>
         {% if is_developer() %}<th></th>{% endif %}
+
       </tr>
     </thead>
     <tbody>
@@ -84,6 +86,7 @@
         {% if is_developer() %}
         <td>
           <a href="{{ url_for('developer.global_item_detail', item_id=gi.id) }}" class="btn btn-sm btn-primary">Edit</a>
+
         </td>
         {% endif %}
       </tr>
@@ -286,4 +289,3 @@ async function openItemDetails(id){
 }
 </script>
 {% endblock %}
-

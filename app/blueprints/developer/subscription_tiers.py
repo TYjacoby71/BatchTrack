@@ -110,11 +110,11 @@ def create_tier():
         max_monthly_batches = request.form.get('max_monthly_batches', None)
         data_retention_days_raw = request.form.get('data_retention_days', '').strip()
         retention_notice_days_raw = request.form.get('retention_notice_days', '').strip()
-        storage_addon_retention_days_raw = request.form.get('storage_addon_retention_days', '').strip()
+        
 
         billing_provider = request.form.get('billing_provider', 'exempt')
         stripe_key = request.form.get('stripe_lookup_key', '').strip()
-        stripe_storage_key = request.form.get('stripe_storage_lookup_key', '').strip()
+        
         whop_key = request.form.get('whop_product_key', '').strip()
 
         # Convert limit fields to integers or None if empty
@@ -126,7 +126,7 @@ def create_tier():
         max_monthly_batches = int(max_monthly_batches) if max_monthly_batches and max_monthly_batches.isdigit() else None
         data_retention_days = int(data_retention_days_raw) if data_retention_days_raw.isdigit() else None
         retention_notice_days = int(retention_notice_days_raw) if retention_notice_days_raw.isdigit() else None
-        storage_addon_retention_days = int(storage_addon_retention_days_raw) if storage_addon_retention_days_raw.isdigit() else None
+        
 
         # Validation
         if not name:
@@ -162,10 +162,8 @@ def create_tier():
             max_monthly_batches=max_monthly_batches,
             data_retention_days=data_retention_days,
             retention_notice_days=retention_notice_days,
-            storage_addon_retention_days=storage_addon_retention_days,
             billing_provider=billing_provider,
             stripe_lookup_key=stripe_key if stripe_key else None,
-            stripe_storage_lookup_key=stripe_storage_key or None,
             whop_product_key=whop_key if whop_key else None
         )
 
@@ -254,7 +252,7 @@ def edit_tier(tier_id):
             tier.billing_provider = billing_provider
             # tier.is_billing_exempt is removed from updates as it's derived from billing_provider
             tier.stripe_lookup_key = stripe_key or None
-            tier.stripe_storage_lookup_key = request.form.get('stripe_storage_lookup_key', '').strip() or None
+            
             tier.whop_product_key = whop_key or None
 
             # Retention fields

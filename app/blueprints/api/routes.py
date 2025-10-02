@@ -160,13 +160,10 @@ def create_unit():
         if existing:
             return jsonify({'success': True, 'data': {'id': existing.id, 'name': existing.name, 'unit_type': existing.unit_type}})
         u = Unit(name=name, unit_type=unit_type, conversion_factor=1.0, base_unit='Piece', is_active=True, is_custom=False, is_mapped=True, organization_id=None)
-        from ...extensions import db
-from ...models import GlobalItem
         db.session.add(u)
         db.session.commit()
         return jsonify({'success': True, 'data': {'id': u.id, 'name': u.name, 'unit_type': u.unit_type}})
     except Exception as e:
-        from ...extensions import db
         db.session.rollback()
         return jsonify({'success': False, 'error': str(e)}), 500
 
@@ -203,7 +200,7 @@ def get_category_visibility_api(category_id):
 @api_bp.route('/containers/suggestions', methods=['GET'])
 @login_required
 def get_container_suggestions():
-    """Return distinct container field suggestions (material/type/style/color) and curated list for materials.
+    """Return container field suggestions from curated master lists.
 
     Query params:
       - field: one of material|type|style|color (optional; default returns all)
@@ -215,44 +212,32 @@ def get_container_suggestions():
         q = (request.args.get('q') or '').strip().lower()
         limit = max(1, min(int(request.args.get('limit', 20)), 100))
 
-        # Map to model columns
-        field_map = {
-            'material': GlobalItem.container_material,
-            'type': GlobalItem.container_type,
-            'style': GlobalItem.container_style,
-            'color': GlobalItem.container_color,
-        }
+        # Load master lists from settings - single source of truth
+        from app.blueprints.developer.routes import load_curated_container_lists
+        curated_lists = load_curated_container_lists()
 
-        def fetch_distinct(col):
-            qry = db.session.query(col).filter(
-                GlobalItem.item_type.in_(['container', 'packaging']),
-                col.isnot(None),
-                col != ''
-            )
+        def filter_list(items):
             if q:
-                qry = qry.filter(col.ilike(f"%{q}%"))
-            values = [r[0] for r in qry.distinct().order_by(col.asc()).limit(limit).all()]
-            return values
+                filtered = [item for item in items if q.lower() in item.lower()]
+            else:
+                filtered = items[:]
+            return filtered[:limit]
 
-        # Curated materials baseline
-        curated_materials = [
-            'Glass', 'PET Plastic', 'HDPE Plastic', 'PP Plastic', 'Aluminum', 'Tin', 'Steel', 'Paperboard', 'Cardboard'
-        ]
-        if q:
-            curated_materials = [m for m in curated_materials if q.lower() in m.lower()]
-        curated_materials = curated_materials[:limit]
-
-        if field in field_map:
-            values = fetch_distinct(field_map[field])
-            return jsonify({'success': True, 'field': field, 'suggestions': values, 'curated_materials': curated_materials})
+        if field in ['material', 'type', 'style', 'color']:
+            field_key = field + 's' if field != 'material' else 'materials'
+            suggestions = filter_list(curated_lists.get(field_key, []))
+            return jsonify({
+                'success': True, 
+                'field': field, 
+                'suggestions': suggestions
+            })
 
         # Return all fields
         payload = {
-            'material': fetch_distinct(field_map['material']),
-            'type': fetch_distinct(field_map['type']),
-            'style': fetch_distinct(field_map['style']),
-            'color': fetch_distinct(field_map['color']),
-            'curated_materials': curated_materials,
+            'material': filter_list(curated_lists['materials']),
+            'type': filter_list(curated_lists['types']),
+            'style': filter_list(curated_lists['styles']),
+            'color': filter_list(curated_lists['colors'])
         }
         return jsonify({'success': True, 'suggestions': payload})
     except Exception as e:

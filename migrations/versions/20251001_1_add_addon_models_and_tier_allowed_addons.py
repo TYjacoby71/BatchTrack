@@ -25,6 +25,8 @@ def upgrade():
         sa.Column('name', sa.String(length=128), nullable=False),
         sa.Column('description', sa.Text(), nullable=True),
         sa.Column('permission_name', sa.String(length=128), nullable=True),
+        sa.Column('function_key', sa.String(length=64), nullable=True),
+        sa.Column('retention_extension_days', sa.Integer(), nullable=True),
         sa.Column('billing_type', sa.String(length=32), nullable=False, server_default='subscription'),
         sa.Column('stripe_lookup_key', sa.String(length=128), nullable=True),
         sa.Column('is_active', sa.Boolean(), nullable=False, server_default=sa.text('TRUE')),
