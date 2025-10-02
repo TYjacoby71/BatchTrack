@@ -718,57 +718,141 @@ def reference_categories():
 @login_required
 def container_management():
     """Container management page for curating materials, types, colors, styles"""
-    # Get existing container field values from GlobalItem
-    materials = db.session.query(GlobalItem.container_material)\
-        .filter(GlobalItem.container_material.isnot(None))\
-        .distinct().order_by(GlobalItem.container_material).all()
-    materials = [m[0] for m in materials if m[0]]
-    
-    types = db.session.query(GlobalItem.container_type)\
-        .filter(GlobalItem.container_type.isnot(None))\
-        .distinct().order_by(GlobalItem.container_type).all()
-    types = [t[0] for t in types if t[0]]
-    
-    styles = db.session.query(GlobalItem.container_style)\
-        .filter(GlobalItem.container_style.isnot(None))\
-        .distinct().order_by(GlobalItem.container_style).all()
-    styles = [s[0] for s in styles if s[0]]
-    
-    colors = db.session.query(GlobalItem.container_color)\
-        .filter(GlobalItem.container_color.isnot(None))\
-        .distinct().order_by(GlobalItem.container_color).all()
-    colors = [c[0] for c in colors if c[0]]
-    
-    # Curated lists for suggestions
-    curated_materials = [
-        'Glass', 'PET Plastic', 'HDPE Plastic', 'PP Plastic', 'Aluminum', 
-        'Tin', 'Steel', 'Paperboard', 'Cardboard', 'Silicone'
-    ]
-    
-    curated_types = [
-        'Jar', 'Bottle', 'Tin', 'Tube', 'Pump Bottle', 'Spray Bottle',
-        'Dropper Bottle', 'Roll-on Bottle', 'Squeeze Bottle', 'Vial'
-    ]
-    
-    curated_styles = [
-        'Boston Round', 'Straight Sided', 'Wide Mouth', 'Narrow Mouth',
-        'Cobalt Blue', 'Amber', 'Clear', 'Frosted'
-    ]
-    
-    curated_colors = [
-        'Clear', 'Amber', 'Cobalt Blue', 'Green', 'White', 'Black',
-        'Frosted', 'Silver', 'Gold'
-    ]
+    # Load master lists from settings - these are the single source of truth
+    curated_lists = load_curated_container_lists()
     
     return render_template('developer/container_management.html',
-                         materials=materials,
-                         types=types,
-                         styles=styles,
-                         colors=colors,
-                         curated_materials=curated_materials,
-                         curated_types=curated_types,
-                         curated_styles=curated_styles,
-                         curated_colors=curated_colors)
+                         curated_materials=curated_lists['materials'],
+                         curated_types=curated_lists['types'],
+                         curated_styles=curated_lists['styles'],
+                         curated_colors=curated_lists['colors'])
+
+@developer_bp.route('/container-management/save-curated', methods=['POST'])
+@login_required
+def save_curated_container_lists():
+    """Save curated container lists to settings.json"""
+    try:
+        data = request.get_json()
+        curated_lists = data.get('curated_lists', {})
+        
+        # Validate the structure
+        required_keys = ['materials', 'types', 'styles', 'colors']
+        for key in required_keys:
+            if key not in curated_lists or not isinstance(curated_lists[key], list):
+                return jsonify({'success': False, 'error': f'Invalid or missing {key} list'})
+        
+        # Load current settings
+        import json
+        import os
+        settings_file = 'settings.json'
+        settings = {}
+        
+        if os.path.exists(settings_file):
+            try:
+                with open(settings_file, 'r') as f:
+                    settings = json.load(f)
+            except (json.JSONDecodeError, IOError):
+                settings = {}
+        
+        # Update container curated lists
+        if 'container_management' not in settings:
+            settings['container_management'] = {}
+        
+        settings['container_management']['curated_lists'] = curated_lists
+        
+        # Save back to file
+        with open(settings_file, 'w') as f:
+            json.dump(settings, f, indent=2)
+        
+        return jsonify({'success': True, 'message': 'Curated lists saved successfully'})
+        
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)})
+
+def load_curated_container_lists():
+    """Load curated container lists from settings or return defaults with existing database values merged in"""
+    try:
+        import json
+        import os
+        settings_file = 'settings.json'
+        
+        if os.path.exists(settings_file):
+            with open(settings_file, 'r') as f:
+                settings = json.load(f)
+                curated_lists = settings.get('container_management', {}).get('curated_lists', {})
+                
+                # If we have saved curated lists, return them
+                if curated_lists and all(key in curated_lists for key in ['materials', 'types', 'styles', 'colors']):
+                    return curated_lists
+    except:
+        pass
+    
+    # First time setup: merge database values with defaults
+    defaults = {
+        'materials': [
+            'Glass', 'PET Plastic', 'HDPE Plastic', 'PP Plastic', 'Aluminum', 
+            'Tin', 'Steel', 'Paperboard', 'Cardboard', 'Silicone'
+        ],
+        'types': [
+            'Jar', 'Bottle', 'Tin', 'Tube', 'Pump Bottle', 'Spray Bottle',
+            'Dropper Bottle', 'Roll-on Bottle', 'Squeeze Bottle', 'Vial'
+        ],
+        'styles': [
+            'Boston Round', 'Straight Sided', 'Wide Mouth', 'Narrow Mouth',
+            'Cobalt Blue', 'Amber', 'Clear', 'Frosted'
+        ],
+        'colors': [
+            'Clear', 'Amber', 'Cobalt Blue', 'Green', 'White', 'Black',
+            'Frosted', 'Silver', 'Gold'
+        ]
+    }
+    
+    # Get existing values from database and merge with defaults
+    try:
+        from app.models.global_item import GlobalItem
+        from app.extensions import db
+        
+        # Get existing materials
+        materials = db.session.query(GlobalItem.container_material)\
+            .filter(GlobalItem.container_material.isnot(None))\
+            .distinct().all()
+        existing_materials = [m[0] for m in materials if m[0] and m[0] not in defaults['materials']]
+        
+        # Get existing types
+        types = db.session.query(GlobalItem.container_type)\
+            .filter(GlobalItem.container_type.isnot(None))\
+            .distinct().all()
+        existing_types = [t[0] for t in types if t[0] and t[0] not in defaults['types']]
+        
+        # Get existing styles
+        styles = db.session.query(GlobalItem.container_style)\
+            .filter(GlobalItem.container_style.isnot(None))\
+            .distinct().all()
+        existing_styles = [s[0] for s in styles if s[0] and s[0] not in defaults['styles']]
+        
+        # Get existing colors
+        colors = db.session.query(GlobalItem.container_color)\
+            .filter(GlobalItem.container_color.isnot(None))\
+            .distinct().all()
+        existing_colors = [c[0] for c in colors if c[0] and c[0] not in defaults['colors']]
+        
+        # Merge and sort
+        defaults['materials'].extend(existing_materials)
+        defaults['materials'] = sorted(list(set(defaults['materials'])))
+        
+        defaults['types'].extend(existing_types)
+        defaults['types'] = sorted(list(set(defaults['types'])))
+        
+        defaults['styles'].extend(existing_styles)
+        defaults['styles'] = sorted(list(set(defaults['styles'])))
+        
+        defaults['colors'].extend(existing_colors)
+        defaults['colors'] = sorted(list(set(defaults['colors'])))
+        
+    except Exception:
+        pass  # Use defaults if database query fails
+    
+    return defaults
 
 @developer_bp.route('/system-statistics')
 @login_required
