@@ -328,6 +328,24 @@ def update_recipe(recipe_id: int, name: str = None, description: str = None,
                     unit=item['unit']
                 ))
 
+        # Update category-specific structured fields if posted
+        try:
+            from flask import request
+            payload = request.form if request.form else None
+            if payload and isinstance(payload, dict):
+                cat_data = {}
+                for key in ['soap_superfat', 'soap_water_pct', 'soap_lye_type',
+                            'candle_fragrance_pct', 'candle_vessel_ml',
+                            'cosm_preservative_pct', 'cosm_emulsifier_pct',
+                            'baker_base_flour_g', 'herbal_ratio']:
+                    if key in payload and payload.get(key) not in (None, ''):
+                        cat_data[key] = payload.get(key)
+                # If any category data provided, set it; if none provided, preserve existing
+                if cat_data:
+                    recipe.category_data = cat_data
+        except Exception:
+            pass
+
         db.session.commit()
         logger.info(f"Updated recipe {recipe_id}: {recipe.name}")
 
