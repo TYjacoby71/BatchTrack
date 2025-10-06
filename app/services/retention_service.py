@@ -39,11 +39,7 @@ class RetentionService:
         except Exception:
             pass
 
-        # Otherwise apply legacy numeric policy if present; fallback to 365 if configured as one_year
-        days = getattr(org.tier, 'data_retention_days', None)
-        if isinstance(days, int) and days > 0:
-            return days
-        # Default baseline
+        # Default baseline: without a retention add-on (included or purchased), keep 1-year retention
         return 365
 
     @staticmethod
