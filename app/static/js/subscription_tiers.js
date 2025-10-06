@@ -54,8 +54,6 @@ $(document).ready(function() {
             success: function(response) {
                 if (response.success) {
                     showAlert('success', response.message || 'Sync completed successfully');
-                    // Reload page to show updated data
-                    setTimeout(() => location.reload(), 1000);
                 } else {
                     showAlert('error', response.error || response.message || 'Sync failed');
                 }
