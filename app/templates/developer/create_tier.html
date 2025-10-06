@@ -140,21 +140,39 @@
                         </div>
 
                         <div class="mb-3">
-                            <label class="form-label">Allowed Add-ons</label>
+                            <label class="form-label">Allowed Add-ons (Purchasable via Stripe)</label>
                             <div class="row">
                                 {% for addon in all_addons %}
                                 <div class="col-md-4 mb-2">
                                     <div class="form-check">
                                         <input type="checkbox" class="form-check-input"
-                                               id="addon_{{ addon.id }}" name="allowed_addons" value="{{ addon.id }}">
-                                        <label class="form-check-label" for="addon_{{ addon.id }}">
+                                               id="allowed_addon_{{ addon.id }}" name="allowed_addons" value="{{ addon.id }}">
+                                        <label class="form-check-label" for="allowed_addon_{{ addon.id }}">
                                             {{ addon.name }}{% if addon.permission_name %} (perm: {{ addon.permission_name }}){% endif %}
                                         </label>
                                     </div>
                                 </div>
                                 {% endfor %}
                             </div>
-                            <div class="form-text">Only add-ons checked here can be purchased on this tier.</div>
+                            <div class="form-text">Customers on this tier can purchase these add-ons.</div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label">Included Add-ons (Stripe-bypassed)</label>
+                            <div class="row">
+                                {% for addon in all_addons %}
+                                <div class="col-md-4 mb-2">
+                                    <div class="form-check">
+                                        <input type="checkbox" class="form-check-input"
+                                               id="included_addon_{{ addon.id }}" name="included_addons" value="{{ addon.id }}">
+                                        <label class="form-check-label" for="included_addon_{{ addon.id }}">
+                                            {{ addon.name }} (included)
+                                        </label>
+                                    </div>
+                                </div>
+                                {% endfor %}
+                            </div>
+                            <div class="form-text">These add-ons are granted on this tier without purchase.</div>
                         </div>
 
                         <div class="d-flex gap-2">

@@ -85,7 +85,9 @@ def manage_tiers():
             'data_retention_days': tier.data_retention_days,
             'retention_notice_days': tier.retention_notice_days,
             'retention_policy': getattr(tier, 'retention_policy', 'one_year'),
-            'retention_label': tier.retention_label
+            'retention_label': tier.retention_label,
+            'allowed_addon_ids': [a.id for a in getattr(tier, 'allowed_addons', [])],
+            'included_addon_ids': [a.id for a in getattr(tier, 'included_addons', [])]
         }
 
     return render_template('developer/subscription_tiers.html',
@@ -184,10 +186,16 @@ def create_tier():
         db.session.add(tier)
         db.session.flush()
 
-        # Allowed add-ons
+        # Allowed and Included add-ons
         addon_ids = request.form.getlist('allowed_addons', type=int)
-        if addon_ids:
-            tier.allowed_addons = Addon.query.filter(Addon.id.in_(addon_ids)).all()
+        included_ids = request.form.getlist('included_addons', type=int)
+        if addon_ids is not None:
+            tier.allowed_addons = Addon.query.filter(Addon.id.in_(addon_ids)).all() if addon_ids else []
+        if included_ids is not None:
+            try:
+                tier.included_addons = Addon.query.filter(Addon.id.in_(included_ids)).all() if included_ids else []
+            except Exception:
+                pass
 
         db.session.commit()
 
@@ -285,9 +293,14 @@ def edit_tier(tier_id):
             permission_ids = request.form.getlist('permissions', type=int)
             tier.permissions = Permission.query.filter(Permission.id.in_(permission_ids)).all()
 
-            # Update allowed add-ons
+            # Update allowed and included add-ons
             addon_ids = request.form.getlist('allowed_addons', type=int)
-            tier.allowed_addons = Addon.query.filter(Addon.id.in_(addon_ids)).all()
+            included_ids = request.form.getlist('included_addons', type=int)
+            tier.allowed_addons = Addon.query.filter(Addon.id.in_(addon_ids)).all() if addon_ids else []
+            try:
+                tier.included_addons = Addon.query.filter(Addon.id.in_(included_ids)).all() if included_ids else []
+            except Exception:
+                pass
 
             db.session.commit()
 

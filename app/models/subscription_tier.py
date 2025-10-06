@@ -14,6 +14,12 @@ tier_allowed_addon = db.Table('tier_allowed_addon',
     db.Column('addon_id', db.Integer, db.ForeignKey('addon.id'), primary_key=True)
 )
 
+# Association table for which add-ons are included (Stripe-bypassed) on a subscription tier
+tier_included_addon = db.Table('tier_included_addon',
+    db.Column('tier_id', db.Integer, db.ForeignKey('subscription_tier.id'), primary_key=True),
+    db.Column('addon_id', db.Integer, db.ForeignKey('addon.id'), primary_key=True)
+)
+
 class SubscriptionTier(db.Model):
     """Clean subscription tier model - NO pricing, just tier structure"""
     __tablename__ = 'subscription_tier'
@@ -66,6 +72,8 @@ class SubscriptionTier(db.Model):
                                  backref=db.backref('tiers', lazy='dynamic'))
     allowed_addons = db.relationship('Addon', secondary=tier_allowed_addon,
                                      backref=backref('allowed_on_tiers', lazy='dynamic'))
+    included_addons = db.relationship('Addon', secondary=tier_included_addon,
+                                      backref=backref('included_on_tiers', lazy='dynamic'))
 
     # Explicitly named constraints to avoid SQLite batch mode issues
     __table_args__ = (

@@ -15,12 +15,17 @@ class RetentionService:
     def get_org_retention_days(org: Organization) -> int | None:
         if not org or not org.tier:
             return None
-        policy = getattr(org.tier, 'retention_policy', 'one_year') or 'one_year'
-        if policy == 'subscribed':
-            return None  # Indefinite retention (included by tier)
-
-        # If organization has an active retention add-on, treat as subscribed (indefinite)
+        # Included retention via tier-included add-on OR purchased add-on
         try:
+            # Included on tier?
+            included = getattr(org.tier, 'included_addons', []) if org.tier else []
+            if any(getattr(a, 'function_key', None) == 'retention' for a in included or []):
+                return None
+        except Exception:
+            pass
+
+        try:
+            # Purchased via Stripe?
             from ..models.addon import OrganizationAddon
             active_org_addons = OrganizationAddon.query.filter_by(organization_id=org.id, active=True).all()
             addon_ids = [oa.addon_id for oa in active_org_addons]
@@ -32,10 +37,13 @@ class RetentionService:
                 if has_retention_addon:
                     return None
         except Exception:
-            # If add-on lookup fails, fall back to baseline
             pass
 
-        # Default baseline for one_year policy
+        # Otherwise apply legacy numeric policy if present; fallback to 365 if configured as one_year
+        days = getattr(org.tier, 'data_retention_days', None)
+        if isinstance(days, int) and days > 0:
+            return days
+        # Default baseline
         return 365
 
     @staticmethod
