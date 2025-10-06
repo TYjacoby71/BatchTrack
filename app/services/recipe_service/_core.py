@@ -136,6 +136,24 @@ def create_recipe(name: str, description: str = "", instructions: str = "",
         if portion_unit_id is not None:
             recipe.portion_unit_id = portion_unit_id
 
+        # Capture category-specific structured fields if present in portioning_data surrogate
+        try:
+            # Collect known category fields from request context if available
+            from flask import request
+            payload = request.form if request.form else None
+            if payload and isinstance(payload, dict):
+                cat_data = {}
+                for key in ['soap_superfat', 'soap_water_pct', 'soap_lye_type',
+                            'candle_fragrance_pct', 'candle_vessel_ml',
+                            'cosm_preservative_pct', 'cosm_emulsifier_pct',
+                            'baker_base_flour_g', 'herbal_ratio']:
+                    if key in payload and payload.get(key) not in (None, ''):
+                        cat_data[key] = payload.get(key)
+                if cat_data:
+                    recipe.category_data = cat_data
+        except Exception:
+            pass
+
         db.session.add(recipe)
         db.session.flush()  # Get recipe ID
 

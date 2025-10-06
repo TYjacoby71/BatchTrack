@@ -7,6 +7,7 @@
     var inputEl = options && options.inputEl;
     var giHiddenEl = options && options.giHiddenEl;
     var listEl = options && options.listEl;
+    var itemType = (options && options.itemType) || 'ingredient';
     if (!inputEl || !giHiddenEl) return;
 
     if (!listEl){
@@ -29,7 +30,8 @@
     var search = debounce(function(){
       var q = (inputEl.value||'').trim();
       if (!q){ listEl.classList.add('d-none'); listEl.innerHTML=''; return; }
-      fetch('/api/public/global-items/search?q=' + encodeURIComponent(q) + '&type=ingredient')
+      var url = '/api/public/global-items/search?q=' + encodeURIComponent(q) + (itemType ? ('&type=' + encodeURIComponent(itemType)) : '');
+      fetch(url)
         .then(function(r){ return r.ok ? r.json() : { results: [] }; })
         .then(function(data){ render((data && data.results) || []); })
         .catch(function(){ listEl.classList.add('d-none'); listEl.innerHTML=''; });
