@@ -53,8 +53,6 @@ $(document).ready(function() {
             dataType: 'json',
             success: function(response) {
                 if (response.success) {
-                    // Update pricing display immediately
-                    updateTierPricing(tierKey, response.tier);
                     showAlert('success', response.message || 'Sync completed successfully');
                     // Reload page to show updated data
                     setTimeout(() => location.reload(), 1000);
