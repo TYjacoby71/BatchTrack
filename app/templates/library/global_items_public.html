@@ -201,25 +201,24 @@ async function openItemDetails(id){
 
     // Fetch item + stats
     console.log('Fetching stats for global item:', id);
-    try {
-      const statsRes = await fetch(`/global-items/${id}/stats`);
-      console.log('Response status:', statsRes.status);
+    const statsRes = await fetch(`/global-items/${id}/stats`);
+    console.log('Response status:', statsRes.status);
 
-      if (!statsRes.ok) {
-        const errorText = await statsRes.text();
-        console.error('Stats fetch failed:', statsRes.status, statsRes.statusText, errorText);
-        throw new Error(`HTTP error! status: ${statsRes.status} - ${errorText}`);
-      }
+    if (!statsRes.ok) {
+      const errorText = await statsRes.text();
+      console.error('Stats fetch failed:', statsRes.status, statsRes.statusText, errorText);
+      throw new Error(`HTTP error! status: ${statsRes.status} - ${errorText}`);
+    }
 
-      const payload = await statsRes.json();
-      console.log('Stats payload received:', payload);
+    const payload = await statsRes.json();
+    console.log('Stats payload received:', payload);
 
-      if (!payload.success) {
-        console.error('API returned error:', payload.error);
-        throw new Error(`API error: ${payload.error}`);
-      }
+    if (!payload.success) {
+      console.error('API returned error:', payload.error);
+      throw new Error(`API error: ${payload.error}`);
+    }
 
-      if (payload && payload.success && payload.item) {
+    if (payload && payload.success && payload.item) {
         const it = payload.item;
         document.getElementById('giName').textContent = it.name || `#${id}`;
         document.getElementById('giType').textContent = it.item_type || '';
@@ -292,19 +291,19 @@ async function openItemDetails(id){
       }
 
       loadingEl.style.display = 'none';
-      contentEl.style.display = '';
-    } catch (e) {
-      console.error('Failed to load item details:', e);
-      const loadingEl = document.getElementById('giDetailLoading');
-      if (loadingEl) {
-        loadingEl.innerHTML = `<div class="alert alert-danger">Failed to load item details: ${e.message}<br><small>Check console for more details</small></div>`;
-      }
-      // Also hide the content div in case of error
-      const contentEl = document.getElementById('giDetailContent');
-      if (contentEl) {
-        contentEl.style.display = 'none';
-      }
+    contentEl.style.display = '';
+  } catch (e) {
+    console.error('Failed to load item details:', e);
+    const loadingEl = document.getElementById('giDetailLoading');
+    if (loadingEl) {
+      loadingEl.innerHTML = `<div class="alert alert-danger">Failed to load item details: ${e.message}<br><small>Check console for more details</small></div>`;
     }
+    // Also hide the content div in case of error
+    const contentEl = document.getElementById('giDetailContent');
+    if (contentEl) {
+      contentEl.style.display = 'none';
+    }
+  }
 }
 
 function getCSRFToken() {
