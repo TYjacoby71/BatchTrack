@@ -322,7 +322,8 @@ async function openItemDetails(id){
     contentEl.style.display = 'none';
     oc.show();
 
-    const statsRes = await fetch(`/developer/global-items/${id}/stats`);
+    // Use the same endpoint as customer side for consistency
+    const statsRes = await fetch(`/api/global-library/stats/${id}`);
     if (!statsRes.ok) {
       throw new Error(`HTTP error! status: ${statsRes.status}`);
     }
