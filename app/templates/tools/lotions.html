@@ -1,0 +1,54 @@
+{% extends 'layout.html' %}
+{% block content %}
+<div class="container py-4">
+  <h2 class="mb-3">Lotion & Cosmetic Tools</h2>
+  <p class="text-muted">Use grams as the standard. Enter summary % for key components.</p>
+
+  <div class="card mb-4">
+    <div class="card-header">Phase Summary</div>
+    <div class="card-body">
+      <form id="phaseForm" class="row g-3">
+        <div class="col-md-3"><label class="form-label">Batch Size (g)</label><input name="batch_g" type="number" class="form-control" min="0" step="1" required></div>
+        <div class="col-md-3"><label class="form-label">Emulsifier (%)</label><input name="emulsifier_pct" type="number" class="form-control" min="0" max="20" step="0.1"></div>
+        <div class="col-md-3"><label class="form-label">Preservative (%)</label><input name="preservative_pct" type="number" class="form-control" min="0" max="5" step="0.1"></div>
+        <div class="col-md-3 d-flex align-items-end"><button type="button" id="calcPhaseBtn" class="btn btn-primary w-100">Calculate</button></div>
+      </form>
+      <div class="mt-3" id="phaseResult" style="display:none;">
+        <div id="phaseNumbers" class="alert alert-info mb-2"></div>
+        <button class="btn btn-success" id="saveLotionTool">Save to BatchTrack</button>
+      </div>
+    </div>
+  </div>
+</div>
+<script>
+(function(){
+  function round(v){ return Math.round(v*1000)/1000 }
+  document.getElementById('calcPhaseBtn').addEventListener('click', function(){
+    const f = document.getElementById('phaseForm');
+    const batch = parseFloat(f.batch_g.value||'0');
+    const emul = parseFloat(f.emulsifier_pct.value||'0');
+    const pres = parseFloat(f.preservative_pct.value||'0');
+    if (!(batch>0)) { alert('Enter batch size in grams'); return; }
+    const emulG = batch * (emul/100);
+    const presG = batch * (pres/100);
+    const out = `Emulsifier: ${round(emulG)} g, Preservative: ${round(presG)} g`;
+    document.getElementById('phaseNumbers').textContent = out;
+    document.getElementById('phaseResult').style.display = 'block';
+  });
+  document.getElementById('saveLotionTool').addEventListener('click', function(){
+    const modalHtml = `
+      <div class="modal fade" id="savePrompt" tabindex="-1"><div class="modal-dialog"><div class="modal-content">
+        <div class="modal-header"><h5 class="modal-title">Save to BatchTrack</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
+        <div class="modal-body"><p>Create a free account to store this as a recipe.</p></div>
+        <div class="modal-footer">
+          <a class="btn btn-primary" href="{{ url_for('auth.signup') }}">Sign Up</a>
+          <a class="btn btn-outline-secondary" href="{{ url_for('auth.login') }}">Log In</a>
+        </div>
+      </div></div></div>`;
+    const div = document.createElement('div'); div.innerHTML = modalHtml; document.body.appendChild(div.firstChild);
+    const modal = new bootstrap.Modal(document.getElementById('savePrompt')); modal.show();
+  });
+})();
+</script>
+{% endblock %}

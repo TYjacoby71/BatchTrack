@@ -98,8 +98,23 @@ def new_recipe():
             flash('An unexpected error occurred', 'error')
 
     # GET request - show form
+    # Prefill from public tools draft (if present)
+    from flask import session
+    draft = session.pop('tool_draft', None)
+    prefill = None
+    if isinstance(draft, dict):
+        try:
+            prefill = Recipe(
+                name=draft.get('name') or '',
+                instructions=draft.get('instructions') or '',
+                predicted_yield=float(draft.get('predicted_yield') or 0) or 0.0,
+                predicted_yield_unit=(draft.get('predicted_yield_unit') or '')
+            )
+        except Exception:
+            prefill = None
+
     form_data = _get_recipe_form_data()
-    return render_template('pages/recipes/recipe_form.html', recipe=None, **form_data)
+    return render_template('pages/recipes/recipe_form.html', recipe=prefill, **form_data)
 
 @recipes_bp.route('/')
 @login_required

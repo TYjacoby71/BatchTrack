@@ -1,0 +1,54 @@
+{% extends 'layout.html' %}
+{% block content %}
+<div class="container py-4">
+  <h2 class="mb-3">Baker Tools</h2>
+  <p class="text-muted">Baker’s percentage with flour as 100%. Use grams.</p>
+
+  <div class="card">
+    <div class="card-header">Baker’s % Calculator</div>
+    <div class="card-body">
+      <form id="bakerForm" class="row g-3">
+        <div class="col-md-3"><label class="form-label">Base Flour (g)</label><input type="number" name="flour_g" class="form-control" min="0" step="1"></div>
+        <div class="col-md-3"><label class="form-label">Water (%)</label><input type="number" name="water_pct" class="form-control" min="0" max="120" step="0.1" value="70"></div>
+        <div class="col-md-3"><label class="form-label">Salt (%)</label><input type="number" name="salt_pct" class="form-control" min="0" max="5" step="0.1" value="2"></div>
+        <div class="col-md-3 d-flex align-items-end"><button type="button" id="calcBakerBtn" class="btn btn-primary w-100">Calculate</button></div>
+      </form>
+      <div class="mt-3" id="bakerResult" style="display:none;">
+        <div id="bakerNumbers" class="alert alert-info mb-2"></div>
+        <button class="btn btn-success" id="saveBakerTool">Save to BatchTrack</button>
+      </div>
+    </div>
+  </div>
+</div>
+<script>
+(function(){
+  function round(v){ return Math.round(v*1000)/1000 }
+  document.getElementById('calcBakerBtn').addEventListener('click', function(){
+    const f = document.getElementById('bakerForm');
+    const flour = parseFloat(f.flour_g.value||'0');
+    const water = parseFloat(f.water_pct.value||'0');
+    const salt = parseFloat(f.salt_pct.value||'0');
+    if (!(flour>0)) { alert('Enter flour grams'); return; }
+    const waterG = flour * (water/100);
+    const saltG = flour * (salt/100);
+    const out = `Water: ${round(waterG)} g, Salt: ${round(saltG)} g`;
+    document.getElementById('bakerNumbers').textContent = out;
+    document.getElementById('bakerResult').style.display = 'block';
+  });
+  document.getElementById('saveBakerTool').addEventListener('click', function(){
+    const modalHtml = `
+      <div class="modal fade" id="savePrompt" tabindex="-1"><div class="modal-dialog"><div class="modal-content">
+        <div class="modal-header"><h5 class="modal-title">Save to BatchTrack</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
+        <div class="modal-body"><p>Create a free account to store this as a recipe.</p></div>
+        <div class="modal-footer">
+          <a class="btn btn-primary" href="{{ url_for('auth.signup') }}">Sign Up</a>
+          <a class="btn btn-outline-secondary" href="{{ url_for('auth.login') }}">Log In</a>
+        </div>
+      </div></div></div>`;
+    const div = document.createElement('div'); div.innerHTML = modalHtml; document.body.appendChild(div.firstChild);
+    const modal = new bootstrap.Modal(document.getElementById('savePrompt')); modal.show();
+  });
+})();
+</script>
+{% endblock %}
