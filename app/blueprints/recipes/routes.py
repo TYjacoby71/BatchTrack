@@ -88,6 +88,18 @@ def new_recipe():
             )
 
             if success:
+                # Detect inline-created custom items (no global_item_id and zero quantity)
+                try:
+                    created_names = []
+                    for ing in ingredients:
+                        from app.models import InventoryItem as _Inv
+                        item = _Inv.query.get(ing['item_id'])
+                        if item and not getattr(item, 'global_item_id', None) and float(getattr(item, 'quantity', 0) or 0) == 0.0:
+                            created_names.append(item.name)
+                    if created_names:
+                        flash(f"Added {len(created_names)} new inventory item(s) from this recipe: " + ", ".join(created_names))
+                except Exception:
+                    pass
                 flash('Recipe created successfully with ingredients.')
                 return redirect(url_for('recipes.view_recipe', recipe_id=result.id))
             else:

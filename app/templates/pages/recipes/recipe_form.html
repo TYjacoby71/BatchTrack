@@ -930,16 +930,62 @@ document.getElementById('recipeForm').addEventListener('submit', function(e) {
         const list = container.querySelector('[data-role="suggestions"]');
         if (!input || !invHidden || !giHidden || !list) return;
 
-        // Use shared helper for consistent behavior and styling
-        if (window.attachMergedInventoryGlobalTypeahead) {
-            window.attachMergedInventoryGlobalTypeahead({
-                inputEl: input,
-                invHiddenEl: invHidden,
-                giHiddenEl: giHidden,
-                listEl: list,
-                mode: 'recipe'
+        // New behavior: as user types, search org inventory AND global, and allow create-or-link on Enter
+        let t;
+        function render(groups){
+            list.innerHTML='';
+            let any=false;
+            groups.forEach(group => {
+                if (!group.items || !group.items.length) return;
+                any = true;
+                const header = document.createElement('div');
+                header.className = 'list-group-item text-muted small';
+                header.textContent = group.title;
+                list.appendChild(header);
+                group.items.forEach(r => {
+                    const a = document.createElement('a');
+                    a.href = '#'; a.className='list-group-item list-group-item-action'; a.textContent=r.text;
+                    a.addEventListener('click', function(e){ e.preventDefault(); input.value=r.text; invHidden.value=r.id||''; giHidden.value=r.global_item_id||''; list.classList.add('d-none'); list.innerHTML=''; });
+                    list.appendChild(a);
+                });
             });
+            // Add create option
+            const q = (input.value||'').trim();
+            if (q){
+                const a = document.createElement('a');
+                a.href='#'; a.className='list-group-item list-group-item-action text-primary'; a.textContent = `Create "${q}"`;
+                a.addEventListener('click', function(e){ e.preventDefault(); createInline(q); });
+                list.appendChild(a); any=true;
+            }
+            list.classList.toggle('d-none', !any);
         }
+        function search(){
+            clearTimeout(t);
+            const q = (input.value||'').trim();
+            if (!q){ list.classList.add('d-none'); list.innerHTML=''; invHidden.value=''; giHidden.value=''; return; }
+            t=setTimeout(function(){
+                Promise.all([
+                    fetch('/api/ingredients/ingredients/search?q='+encodeURIComponent(q)).then(r=>r.json()).catch(()=>({results:[]})),
+                    fetch('/api/ingredients/global-items/search?q='+encodeURIComponent(q)+'&type=ingredient').then(r=>r.json()).catch(()=>({results:[]}))
+                ]).then(([inv, gi]) => {
+                    const groups = [];
+                    if (inv && inv.results && inv.results.length) groups.push({title:'Your Inventory', items: inv.results});
+                    if (gi && gi.results && gi.results.length) groups.push({title:'Global Library', items: gi.results});
+                    render(groups);
+                }).catch(()=>{ list.classList.add('d-none'); list.innerHTML=''; });
+            }, 250);
+        }
+        async function createInline(name){
+            try{
+                const res = await fetch('/api/ingredients/ingredients/create-or-link', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ name: name, type: 'ingredient' }) });
+                const data = await res.json();
+                if (data && data.success && data.item){
+                    input.value = data.item.name; invHidden.value = data.item.id; giHidden.value = data.item.global_item_id||''; list.classList.add('d-none'); list.innerHTML='';
+                }
+            }catch(_){ /* silent */ }
+        }
+        input.addEventListener('input', function(){ invHidden.value=''; giHidden.value=''; search(); });
+        input.addEventListener('keydown', function(e){ if (e.key==='Enter'){ e.preventDefault(); const q=(input.value||'').trim(); if (q) createInline(q); }});
     }
     // Attach to existing entries
     document.querySelectorAll('.ingredient-entry').forEach(entry => {
