@@ -76,6 +76,10 @@ def global_library_item_stats(item_id: int):
     """Public stats endpoint for a GlobalItem, including cost distribution, rollup,
     basic item details, and category-based visibility flags when applicable.
     """
+    import logging
+    logger = logging.getLogger(__name__)
+    logger.info(f"Stats request for global item {item_id}")
+    
     try:
         from app.models.global_item import GlobalItem
         from app.models.category import IngredientCategory
@@ -136,4 +140,7 @@ def global_library_item_stats(item_id: int):
             'category_visibility': category_visibility,
         }
     except Exception as e:
+        import logging
+        logger = logging.getLogger(__name__)
+        logger.error(f"Error getting stats for global item {item_id}: {str(e)}", exc_info=True)
         return {'success': False, 'error': str(e)}, 500
