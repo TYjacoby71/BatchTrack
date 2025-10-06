@@ -311,7 +311,7 @@ function clearFilters() {
     window.location.href = window.location.pathname;
 }
 
-function openItemDetails(id){
+async function openItemDetails(id){
   try {
     const offcanvasEl = document.getElementById('globalItemDetail');
     const oc = new bootstrap.Offcanvas(offcanvasEl);
