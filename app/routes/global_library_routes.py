@@ -132,15 +132,17 @@ def global_library_item_stats(item_id: int):
                     'show_comedogenic_rating': getattr(cat, 'show_comedogenic_rating', False),
                 }
 
-        return {
+        from flask import jsonify
+        return jsonify({
             'success': True,
             'item': item_payload,
             'rollup': rollup,
             'cost': cost,
             'category_visibility': category_visibility,
-        }
+        })
     except Exception as e:
         import logging
         logger = logging.getLogger(__name__)
         logger.error(f"Error getting stats for global item {item_id}: {str(e)}", exc_info=True)
-        return {'success': False, 'error': str(e)}, 500
+        from flask import jsonify
+        return jsonify({'success': False, 'error': str(e)}), 500
