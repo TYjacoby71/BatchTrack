@@ -22,86 +22,106 @@ def upgrade():
     This allows seeding to work without constraint violations
     TODO: Add constraints back in a separate migration after seeding
     """
+    
+    # Helper function to check if column exists
+    from sqlalchemy import inspect
+    bind = op.get_bind()
+    inspector = inspect(bind)
+    
+    def column_exists(table_name, column_name):
+        columns = [col['name'] for col in inspector.get_columns(table_name)]
+        return column_name in columns
 
     # Add all missing columns to product_sku table WITHOUT constraints
     with op.batch_alter_table('product_sku', schema=None) as batch_op:
-        # Add missing columns from ProductSKU model
-        batch_op.add_column(sa.Column('variant_id', sa.Integer(), nullable=True))
-        batch_op.add_column(sa.Column('size_label', sa.String(length=64), nullable=True))
-        batch_op.add_column(sa.Column('sku_name', sa.String(length=128), nullable=True))
-        batch_op.add_column(sa.Column('unit', sa.String(length=32), nullable=True))
-        batch_op.add_column(sa.Column('low_stock_threshold', sa.Float(), nullable=True))
-        batch_op.add_column(sa.Column('fifo_id', sa.String(length=32), nullable=True))
-        batch_op.add_column(sa.Column('batch_id', sa.Integer(), nullable=True))
-        batch_op.add_column(sa.Column('container_id', sa.Integer(), nullable=True))
-        batch_op.add_column(sa.Column('retail_price', sa.Float(), nullable=True))
-        batch_op.add_column(sa.Column('wholesale_price', sa.Float(), nullable=True))
-        batch_op.add_column(sa.Column('profit_margin_target', sa.Float(), nullable=True))
-        batch_op.add_column(sa.Column('category', sa.String(length=64), nullable=True))
-        batch_op.add_column(sa.Column('subcategory', sa.String(length=64), nullable=True))
-        batch_op.add_column(sa.Column('tags', sa.Text(), nullable=True))
-        batch_op.add_column(sa.Column('is_product_active', sa.Boolean(), nullable=True))
-        batch_op.add_column(sa.Column('is_discontinued', sa.Boolean(), nullable=True))
-        batch_op.add_column(sa.Column('created_by', sa.Integer(), nullable=True))
-        batch_op.add_column(sa.Column('supplier_name', sa.String(length=128), nullable=True))
-        batch_op.add_column(sa.Column('supplier_sku', sa.String(length=64), nullable=True))
-        batch_op.add_column(sa.Column('supplier_cost', sa.Float(), nullable=True))
-        batch_op.add_column(sa.Column('weight', sa.Float(), nullable=True))
-        batch_op.add_column(sa.Column('weight_unit', sa.String(length=16), nullable=True))
-        batch_op.add_column(sa.Column('dimensions', sa.String(length=64), nullable=True))
-        batch_op.add_column(sa.Column('barcode', sa.String(length=128), nullable=True))
-        batch_op.add_column(sa.Column('barcode_type', sa.String(length=20), nullable=True))
-        batch_op.add_column(sa.Column('upc', sa.String(length=32), nullable=True))
-        batch_op.add_column(sa.Column('quality_status', sa.String(length=32), nullable=True))
-        batch_op.add_column(sa.Column('compliance_status', sa.String(length=32), nullable=True))
-        batch_op.add_column(sa.Column('quality_checked_by', sa.Integer(), nullable=True))
-        batch_op.add_column(sa.Column('quality_checked_at', sa.DateTime(), nullable=True))
-        batch_op.add_column(sa.Column('location_id', sa.String(length=128), nullable=True))
-        batch_op.add_column(sa.Column('location_name', sa.String(length=128), nullable=True))
-        batch_op.add_column(sa.Column('temperature_at_time', sa.Float(), nullable=True))
-        batch_op.add_column(sa.Column('shopify_product_id', sa.String(length=64), nullable=True))
-        batch_op.add_column(sa.Column('shopify_variant_id', sa.String(length=64), nullable=True))
-        batch_op.add_column(sa.Column('etsy_listing_id', sa.String(length=64), nullable=True))
-        batch_op.add_column(sa.Column('amazon_asin', sa.String(length=64), nullable=True))
-        batch_op.add_column(sa.Column('marketplace_sync_status', sa.String(length=32), nullable=True))
-        batch_op.add_column(sa.Column('marketplace_last_sync', sa.DateTime(), nullable=True))
-        batch_op.add_column(sa.Column('expiration_date', sa.DateTime(), nullable=True))
-        batch_op.add_column(sa.Column('is_perishable', sa.Boolean(), nullable=True))
-        batch_op.add_column(sa.Column('shelf_life_days', sa.Integer(), nullable=True))
+        # Add missing columns from ProductSKU model (only if they don't exist)
+        columns_to_add = [
+            ('variant_id', sa.Integer()),
+            ('size_label', sa.String(length=64)),
+            ('sku_name', sa.String(length=128)),
+            ('unit', sa.String(length=32)),
+            ('low_stock_threshold', sa.Float()),
+            ('fifo_id', sa.String(length=32)),
+            ('batch_id', sa.Integer()),
+            ('container_id', sa.Integer()),
+            ('retail_price', sa.Float()),
+            ('wholesale_price', sa.Float()),
+            ('profit_margin_target', sa.Float()),
+            ('category', sa.String(length=64)),
+            ('subcategory', sa.String(length=64)),
+            ('tags', sa.Text()),
+            ('is_product_active', sa.Boolean()),
+            ('is_discontinued', sa.Boolean()),
+            ('created_by', sa.Integer()),
+            ('supplier_name', sa.String(length=128)),
+            ('supplier_sku', sa.String(length=64)),
+            ('supplier_cost', sa.Float()),
+            ('weight', sa.Float()),
+            ('weight_unit', sa.String(length=16)),
+            ('dimensions', sa.String(length=64)),
+            ('barcode', sa.String(length=128)),
+            ('barcode_type', sa.String(length=20)),
+            ('upc', sa.String(length=32)),
+            ('quality_status', sa.String(length=32)),
+            ('compliance_status', sa.String(length=32)),
+            ('quality_checked_by', sa.Integer()),
+            ('quality_checked_at', sa.DateTime()),
+            ('location_id', sa.String(length=128)),
+            ('location_name', sa.String(length=128)),
+            ('temperature_at_time', sa.Float()),
+            ('shopify_product_id', sa.String(length=64)),
+            ('shopify_variant_id', sa.String(length=64)),
+            ('etsy_listing_id', sa.String(length=64)),
+            ('amazon_asin', sa.String(length=64)),
+            ('marketplace_sync_status', sa.String(length=32)),
+            ('marketplace_last_sync', sa.DateTime()),
+            ('expiration_date', sa.DateTime()),
+            ('is_perishable', sa.Boolean()),
+            ('shelf_life_days', sa.Integer())
+        ]
+        
+        for col_name, col_type in columns_to_add:
+            if not column_exists('product_sku', col_name):
+                batch_op.add_column(sa.Column(col_name, col_type, nullable=True))
 
-    # Add missing ProductSKUHistory table columns  
+    # Add missing ProductSKUHistory table columns (only if they don't exist)
     with op.batch_alter_table('product_sku_history', schema=None) as batch_op:
-        # Update the foreign key reference
-        batch_op.add_column(sa.Column('inventory_item_id', sa.Integer(), nullable=True))
-        batch_op.add_column(sa.Column('remaining_quantity', sa.Float(), nullable=True))
-        batch_op.add_column(sa.Column('unit_cost', sa.Float(), nullable=True))
-        batch_op.add_column(sa.Column('sale_price', sa.Float(), nullable=True))
-        batch_op.add_column(sa.Column('customer', sa.String(length=128), nullable=True))
-        batch_op.add_column(sa.Column('fifo_code', sa.String(length=64), nullable=True))
-        batch_op.add_column(sa.Column('fifo_reference_id', sa.Integer(), nullable=True))
-        batch_op.add_column(sa.Column('fifo_source', sa.String(length=128), nullable=True))
-        batch_op.add_column(sa.Column('is_perishable', sa.Boolean(), nullable=True))
-        batch_op.add_column(sa.Column('shelf_life_days', sa.Integer(), nullable=True))
-        batch_op.add_column(sa.Column('expiration_date', sa.DateTime(), nullable=True))
-        batch_op.add_column(sa.Column('container_id', sa.Integer(), nullable=True))
-        batch_op.add_column(sa.Column('notes', sa.Text(), nullable=True))
-        batch_op.add_column(sa.Column('note', sa.Text(), nullable=True))
-        batch_op.add_column(sa.Column('created_by', sa.Integer(), nullable=True))
-        batch_op.add_column(sa.Column('order_id', sa.String(length=64), nullable=True))
-        batch_op.add_column(sa.Column('reservation_id', sa.String(length=64), nullable=True))
-        batch_op.add_column(sa.Column('is_reserved', sa.Boolean(), nullable=True))
-        batch_op.add_column(sa.Column('sale_location', sa.String(length=64), nullable=True))
-        batch_op.add_column(sa.Column('quantity_used', sa.Float(), nullable=True))
-        batch_op.add_column(sa.Column('batch_number', sa.String(length=128), nullable=True))
-        batch_op.add_column(sa.Column('lot_number', sa.String(length=128), nullable=True))
-        batch_op.add_column(sa.Column('temperature_at_time', sa.Float(), nullable=True))
-        batch_op.add_column(sa.Column('location_id', sa.String(length=128), nullable=True))
-        batch_op.add_column(sa.Column('location_name', sa.String(length=128), nullable=True))
-        batch_op.add_column(sa.Column('quality_status', sa.String(length=32), nullable=True))
-        batch_op.add_column(sa.Column('compliance_status', sa.String(length=32), nullable=True))
-        batch_op.add_column(sa.Column('quality_checked_by', sa.Integer(), nullable=True))
-        batch_op.add_column(sa.Column('marketplace_order_id', sa.String(length=128), nullable=True))
-        batch_op.add_column(sa.Column('marketplace_source', sa.String(length=32), nullable=True))
+        history_columns_to_add = [
+            ('inventory_item_id', sa.Integer()),
+            ('remaining_quantity', sa.Float()),
+            ('unit_cost', sa.Float()),
+            ('sale_price', sa.Float()),
+            ('customer', sa.String(length=128)),
+            ('fifo_code', sa.String(length=64)),
+            ('fifo_reference_id', sa.Integer()),
+            ('fifo_source', sa.String(length=128)),
+            ('is_perishable', sa.Boolean()),
+            ('shelf_life_days', sa.Integer()),
+            ('expiration_date', sa.DateTime()),
+            ('container_id', sa.Integer()),
+            ('notes', sa.Text()),
+            ('note', sa.Text()),
+            ('created_by', sa.Integer()),
+            ('order_id', sa.String(length=64)),
+            ('reservation_id', sa.String(length=64)),
+            ('is_reserved', sa.Boolean()),
+            ('sale_location', sa.String(length=64)),
+            ('quantity_used', sa.Float()),
+            ('batch_number', sa.String(length=128)),
+            ('lot_number', sa.String(length=128)),
+            ('temperature_at_time', sa.Float()),
+            ('location_id', sa.String(length=128)),
+            ('location_name', sa.String(length=128)),
+            ('quality_status', sa.String(length=32)),
+            ('compliance_status', sa.String(length=32)),
+            ('quality_checked_by', sa.Integer()),
+            ('marketplace_order_id', sa.String(length=128)),
+            ('marketplace_source', sa.String(length=32))
+        ]
+        
+        for col_name, col_type in history_columns_to_add:
+            if not column_exists('product_sku_history', col_name):
+                batch_op.add_column(sa.Column(col_name, col_type, nullable=True))
 
     print("✅ Migration completed: All columns added WITHOUT constraints")
     print("⚠️  TODO: Create a separate migration to add constraints after seeding")
