@@ -209,8 +209,28 @@
     } catch(e){ document.getElementById('convResult').textContent = 'Conversion error'; }
   });
 
-  document.getElementById('saveSoapTool').addEventListener('click', function(){
-    // Prompt unauthenticated users to login/signup; if logged in, we could post to a staging recipe endpoint later
+  document.getElementById('saveSoapTool').addEventListener('click', async function(){
+    // Save draft for prefill
+    try {
+      const f = document.getElementById('lyeForm');
+      const oilG = parseFloat(f.oil_weight_g.value||'0');
+      const superfat = parseFloat(f.superfat.value||'0');
+      const lyeType = f.lye_type.value;
+      const waterPct = parseFloat(f.water_pct.value||'33');
+      const lyeAfterSuperfat = (function(){
+        try { return parseFloat((document.getElementById('lyeNumbers').textContent.match(/Lye \(.*\): ([0-9.]+)/)||[])[1]||'0'); } catch(_) { return 0; }
+      })();
+      const waterG = oilG * (waterPct/100);
+      const payload = {
+        name: 'Soap (Draft)',
+        instructions: 'Draft from Soap Tools',
+        predicted_yield: Math.round((oilG + waterG + lyeAfterSuperfat)*100)/100,
+        predicted_yield_unit: 'gram',
+        category_name: 'Soaps'
+      };
+      await fetch('/tools/draft', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(payload)});
+    } catch(_) {}
+    // Prompt unauthenticated users to login/signup
     const modalHtml = `
       <div class="modal fade" id="savePrompt" tabindex="-1"><div class="modal-dialog"><div class="modal-content">
         <div class="modal-header"><h5 class="modal-title">Save to BatchTrack</h5>

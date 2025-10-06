@@ -35,7 +35,22 @@
     document.getElementById('bakerNumbers').textContent = out;
     document.getElementById('bakerResult').style.display = 'block';
   });
-  document.getElementById('saveBakerTool').addEventListener('click', function(){
+  document.getElementById('saveBakerTool').addEventListener('click', async function(){
+    try {
+      const f = document.getElementById('bakerForm');
+      const flour = parseFloat(f.flour_g.value||'0');
+      const water = parseFloat(f.water_pct.value||'0');
+      const salt = parseFloat(f.salt_pct.value||'0');
+      const batch = flour + (flour*(water/100)) + (flour*(salt/100));
+      const payload = {
+        name: 'Bread (Draft)',
+        instructions: 'Draft from Baker Tools',
+        predicted_yield: batch || 0,
+        predicted_yield_unit: 'gram',
+        category_name: 'Baked Goods'
+      };
+      await fetch('/tools/draft', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(payload)});
+    } catch(_) {}
     const modalHtml = `
       <div class="modal fade" id="savePrompt" tabindex="-1"><div class="modal-dialog"><div class="modal-content">
         <div class="modal-header"><h5 class="modal-title">Save to BatchTrack</h5>

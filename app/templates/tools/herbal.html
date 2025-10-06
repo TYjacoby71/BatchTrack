@@ -40,7 +40,20 @@
     }
     document.getElementById('herbResult').style.display = 'block';
   });
-  document.getElementById('saveHerbTool').addEventListener('click', function(){
+  document.getElementById('saveHerbTool').addEventListener('click', async function(){
+    try {
+      const f = document.getElementById('herbForm');
+      const herb = parseFloat(f.herb_g.value||'0');
+      const solv = parseFloat(f.solvent_ml.value||'0');
+      const payload = {
+        name: 'Tincture (Draft)',
+        instructions: 'Draft from Herbal Tools',
+        predicted_yield: (herb + solv) || 0,
+        predicted_yield_unit: 'gram',
+        category_name: 'Miscellaneous'
+      };
+      await fetch('/tools/draft', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(payload)});
+    } catch(_) {}
     const modalHtml = `
       <div class="modal fade" id="savePrompt" tabindex="-1"><div class="modal-dialog"><div class="modal-content">
         <div class="modal-header"><h5 class="modal-title">Save to BatchTrack</h5>

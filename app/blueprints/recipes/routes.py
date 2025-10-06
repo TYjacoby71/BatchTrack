@@ -110,6 +110,13 @@ def new_recipe():
                 predicted_yield=float(draft.get('predicted_yield') or 0) or 0.0,
                 predicted_yield_unit=(draft.get('predicted_yield_unit') or '')
             )
+            # Attempt to pre-select category by name if provided
+            cat_name = (draft.get('category_name') or '').strip()
+            if cat_name:
+                from app.models.product_category import ProductCategory
+                cat = ProductCategory.query.filter(func.lower(ProductCategory.name) == func.lower(db.literal(cat_name))).first()
+                if cat:
+                    prefill.category_id = cat.id
         except Exception:
             prefill = None
 

@@ -1,6 +1,6 @@
 from flask import Blueprint, jsonify, make_response, request
 from datetime import datetime, timezone
-from app.extensions import limiter
+from app.extensions import limiter, csrf
 from app.models.models import Unit
 from app.models.global_item import GlobalItem
 from app.services.unit_conversion.unit_conversion import ConversionEngine
@@ -76,6 +76,7 @@ def public_global_item_search():
                 'item_type': gi.item_type,
                 'default_unit': gi.default_unit,
                 'density': gi.density,
+                'saponification_value': getattr(gi, 'saponification_value', None),
             })
         return jsonify({'success': True, 'results': results})
     except Exception as e:
@@ -84,6 +85,7 @@ def public_global_item_search():
 
 @public_api_bp.route("/convert-units", methods=["POST"])
 @limiter.exempt
+@csrf.exempt
 def public_convert_units():
     """Public unit conversion endpoint using ConversionEngine. Does not require auth."""
     try:

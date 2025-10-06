@@ -108,5 +108,8 @@ def register_blueprints(app):
         csrf.exempt(app.view_functions["inventory.adjust_inventory"])
         if "waitlist.join_waitlist" in app.view_functions:
             csrf.exempt(app.view_functions["waitlist.join_waitlist"])
+        # Exempt public tools draft endpoint for anonymous users saving drafts
+        if "tools_bp.tools_draft" in app.view_functions:
+            csrf.exempt(app.view_functions["tools_bp.tools_draft"])
     except Exception:
         pass
