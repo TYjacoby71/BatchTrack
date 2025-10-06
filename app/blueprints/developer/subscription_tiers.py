@@ -110,11 +110,11 @@ def create_tier():
         max_monthly_batches = request.form.get('max_monthly_batches', None)
         data_retention_days_raw = request.form.get('data_retention_days', '').strip()
         retention_notice_days_raw = request.form.get('retention_notice_days', '').strip()
-        
+
 
         billing_provider = request.form.get('billing_provider', 'exempt')
         stripe_key = request.form.get('stripe_lookup_key', '').strip()
-        
+
         whop_key = request.form.get('whop_product_key', '').strip()
 
         # Convert limit fields to integers or None if empty
@@ -126,7 +126,7 @@ def create_tier():
         max_monthly_batches = int(max_monthly_batches) if max_monthly_batches and max_monthly_batches.isdigit() else None
         data_retention_days = int(data_retention_days_raw) if data_retention_days_raw.isdigit() else None
         retention_notice_days = int(retention_notice_days_raw) if retention_notice_days_raw.isdigit() else None
-        
+
 
         # Validation
         if not name:
@@ -252,7 +252,7 @@ def edit_tier(tier_id):
             tier.billing_provider = billing_provider
             # tier.is_billing_exempt is removed from updates as it's derived from billing_provider
             tier.stripe_lookup_key = stripe_key or None
-            
+
             tier.whop_product_key = whop_key or None
 
             # Retention fields
@@ -324,12 +324,12 @@ def delete_tier(tier_id):
 
     return redirect(url_for('.manage_tiers'))
 
-@subscription_tiers_bp.route('/sync/<tier_key>', methods=['POST'])
+@subscription_tiers_bp.route('/sync/<int:tier_id>', methods=['POST'])
 @login_required
 @require_permission('developer.system_management')
-def sync_tier_with_stripe(tier_key):
+def sync_tier_with_stripe(tier_id):
     """Sync a specific tier with Stripe pricing"""
-    tier = SubscriptionTier.query.filter_by(key=tier_key).first()
+    tier = db.session.get(SubscriptionTier, tier_id)
     if not tier:
         return jsonify({'success': False, 'error': 'Tier not found'}), 404
 
@@ -339,7 +339,7 @@ def sync_tier_with_stripe(tier_key):
     try:
         # Here you would implement actual Stripe sync logic
         # For now, return success
-        logger.info(f'Synced tier {tier_key} with Stripe')
+        logger.info(f'Synced tier {tier_id} with Stripe')
         return jsonify({
             'success': True,
             'message': f'Successfully synced {tier.name} with Stripe',
@@ -350,15 +350,15 @@ def sync_tier_with_stripe(tier_key):
             }
         })
     except Exception as e:
-        logger.error(f'Error syncing tier {tier_key}: {e}')
+        logger.error(f'Error syncing tier {tier_id}: {e}')
         return jsonify({'success': False, 'error': str(e)}), 500
 
-@subscription_tiers_bp.route('/sync-whop/<tier_key>', methods=['POST'])
+@subscription_tiers_bp.route('/sync-whop/<int:tier_id>', methods=['POST'])
 @login_required
 @require_permission('developer.system_management')
-def sync_tier_with_whop(tier_key):
+def sync_tier_with_whop(tier_id):
     """Sync a specific tier with Whop"""
-    tier = SubscriptionTier.query.filter_by(key=tier_key).first()
+    tier = db.session.get(SubscriptionTier, tier_id)
     if not tier:
         return jsonify({'success': False, 'error': 'Tier not found'}), 404
 
@@ -368,13 +368,13 @@ def sync_tier_with_whop(tier_key):
     try:
         # Here you would implement actual Whop sync logic
         # For now, return success
-        logger.info(f'Synced tier {tier_key} with Whop')
+        logger.info(f'Synced tier {tier_id} with Whop')
         return jsonify({
             'success': True,
             'message': f'Successfully synced {tier.name} with Whop'
         })
     except Exception as e:
-        logger.error(f'Error syncing tier {tier_key} with Whop: {e}')
+        logger.error(f'Error syncing tier {tier_id} with Whop: {e}')
         return jsonify({'success': False, 'error': str(e)}), 500
 
 @subscription_tiers_bp.route('/api/tiers')
