@@ -47,6 +47,9 @@ $(document).ready(function() {
         $.ajax({
             url: `/developer/subscription-tiers/sync/${tierKey}`,
             method: 'POST',
+            headers: {
+                'X-CSRFToken': $('meta[name=csrf-token]').attr('content')
+            },
             dataType: 'json',
             success: function(response) {
                 if (response.success) {
