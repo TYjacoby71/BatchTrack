@@ -45,10 +45,17 @@
                                 </div>
 
                                 <div class="mb-3">
+                                    <label for="retention_policy" class="form-label">Data Retention</label>
+                                    <select class="form-select" id="retention_policy" name="retention_policy" onchange="toggleRetentionFields()">
+                                        <option value="one_year" selected>1 year</option>
+                                        <option value="subscribed">Subscribed</option>
+                                    </select>
+                                    <div class="form-text">All-or-nothing: 1 year or unlimited while subscribed.</div>
+                                </div>
+                                <div class="mb-3" id="retention_days_field" style="display:none;">
                                     <label for="data_retention_days" class="form-label">Data Retention (days)</label>
                                     <input type="number" class="form-control" id="data_retention_days" name="data_retention_days" 
-                                           min="0" placeholder="e.g., 365 for 1 year (leave blank for indefinite)">
-                                    <div class="form-text">How long to retain long-term data before hard delete. Blank = indefinite.</div>
+                                           min="0" placeholder="365">
                                 </div>
 
                                 <div class="mb-3">
@@ -187,5 +194,23 @@ function toggleBillingFields() {
 
 // Initialize on page load
 document.addEventListener('DOMContentLoaded', toggleBillingFields);
+
+function toggleRetentionFields() {
+    const policy = document.getElementById('retention_policy')?.value;
+    const daysField = document.getElementById('retention_days_field');
+    if (!policy || !daysField) return;
+    if (policy === 'one_year') {
+        daysField.style.display = 'none';
+        const input = document.getElementById('data_retention_days');
+        if (input) input.value = 365;
+    } else if (policy === 'subscribed') {
+        daysField.style.display = 'none';
+        const input = document.getElementById('data_retention_days');
+        if (input) input.value = '';
+    } else {
+        daysField.style.display = 'block';
+    }
+}
+document.addEventListener('DOMContentLoaded', toggleRetentionFields);
 </script>
 {% endblock %}

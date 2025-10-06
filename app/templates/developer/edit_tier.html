@@ -130,6 +130,14 @@
                         <div class="row">
                             <div class="col-md-6">
                                 <div class="mb-3">
+                                    <label for="retention_policy" class="form-label">Data Retention</label>
+                                    <select class="form-select" id="retention_policy" name="retention_policy" onchange="toggleRetentionFields()">
+                                        <option value="one_year" {{ 'selected' if tier.retention_policy == 'one_year' else '' }}>1 year</option>
+                                        <option value="subscribed" {{ 'selected' if tier.retention_policy == 'subscribed' else '' }}>Subscribed</option>
+                                    </select>
+                                    <div class="form-text">All-or-nothing policy: 1 year or unlimited while subscribed.</div>
+                                </div>
+                                <div class="mb-3" id="retention_days_field" style="display:none;">
                                     <label for="data_retention_days" class="form-label">Data Retention (days)</label>
                                     <input type="number" class="form-control" id="data_retention_days" name="data_retention_days" value="{{ tier.data_retention_days or '' }}" min="0">
                                 </div>
@@ -211,5 +219,21 @@ function toggleBillingFields() {
 
 // Initialize on page load
 document.addEventListener('DOMContentLoaded', toggleBillingFields);
+
+function toggleRetentionFields() {
+    const policy = document.getElementById('retention_policy').value;
+    const daysField = document.getElementById('retention_days_field');
+    // Show legacy days field only when not strictly one_year/subscribed
+    if (policy === 'one_year') {
+        daysField.style.display = 'none';
+        document.getElementById('data_retention_days').value = 365;
+    } else if (policy === 'subscribed') {
+        daysField.style.display = 'none';
+        document.getElementById('data_retention_days').value = '';
+    } else {
+        daysField.style.display = 'block';
+    }
+}
+document.addEventListener('DOMContentLoaded', toggleRetentionFields);
 </script>
 {% endblock %}
