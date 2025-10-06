@@ -169,16 +169,18 @@ def create_unit():
 
 @api_bp.route('/category-visibility/<int:category_id>')
 @login_required
-def get_category_visibility_api(category_id):
-    """Get visibility settings for a category by ID"""
+def get_category_visibility(category_id):
+    """Get visibility settings for a category"""
     try:
         from app.models.category import IngredientCategory
+        category = IngredientCategory.query.filter_by(
+            id=category_id,
+            organization_id=None,
+            is_global_category=True
+        ).first()
 
-        category = IngredientCategory.query.get_or_404(category_id)
-
-        # Check if user has access to this category
-        if category.organization_id and category.organization_id != current_user.organization_id:
-            return jsonify({'success': False, 'error': 'Access denied'}), 403
+        if not category:
+            return jsonify({'success': False, 'error': 'Category not found'})
 
         visibility = {
             'show_saponification_value': getattr(category, 'show_saponification_value', False),
@@ -194,7 +196,7 @@ def get_category_visibility_api(category_id):
         return jsonify({'success': True, 'visibility': visibility})
 
     except Exception as e:
-        return jsonify({'success': False, 'error': str(e)}), 500
+        return jsonify({'success': False, 'error': str(e)})
 
 
 @api_bp.route('/containers/suggestions', methods=['GET'])

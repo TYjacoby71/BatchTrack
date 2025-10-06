@@ -97,7 +97,7 @@ def _handle_deductive_operation(item, quantity, change_type, notes, created_by, 
             return False, message, 0
 
         # Return the actual quantity delta (negative for deductions)
-        quantity_delta = float(quantity)
+        quantity_delta = -float(quantity)
 
         # Get description from mapping or use generic one
         description = DEDUCTION_DESCRIPTIONS.get(change_type, f'Used {quantity} from inventory')

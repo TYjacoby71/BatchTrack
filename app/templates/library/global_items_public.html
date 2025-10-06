@@ -60,9 +60,7 @@
         <th>Density (default if category)</th>
         <th>Capacity</th>
         <th>Perishable</th>
-        {% if current_user.is_authenticated and current_user.user_type == 'developer' %}
-        <th>Actions</th>
-        {% endif %}
+        {% if current_user.is_authenticated and current_user.user_type == 'developer' %}<th></th>{% endif %}
       </tr>
     </thead>
     <tbody>
@@ -84,9 +82,7 @@
         <td>{{ 'Yes' if gi.default_is_perishable else 'No' }}</td>
         {% if current_user.is_authenticated and current_user.user_type == 'developer' %}
         <td>
-          <a href="{{ url_for('developer.global_item_detail', item_id=gi.id) }}" class="btn btn-sm btn-outline-primary">
-            <i class="fas fa-edit"></i> Edit
-          </a>
+          <a href="{{ url_for('developer.global_item_detail', item_id=gi.id) }}" class="btn btn-sm btn-outline-primary">Edit</a>
         </td>
         {% endif %}
       </tr>
@@ -191,86 +187,136 @@ document.addEventListener('DOMContentLoaded', function(){
   });
 });
 
+// If developer, show the Developer Details link once we know the item ID
 async function openItemDetails(id){
   try {
     const offcanvasEl = document.getElementById('globalItemDetail');
     const oc = new bootstrap.Offcanvas(offcanvasEl);
-    document.getElementById('giDetailLoading').style.display = '';
-    document.getElementById('giDetailContent').style.display = 'none';
+    const loadingEl = document.getElementById('giDetailLoading');
+    const contentEl = document.getElementById('giDetailContent');
+
+    loadingEl.style.display = '';
+    contentEl.style.display = 'none';
     oc.show();
 
     // Fetch item + stats
+    console.log('Fetching stats for global item:', id);
     const statsRes = await fetch(`/global-items/${id}/stats`);
-    const payload = await statsRes.json();
+    console.log('Response status:', statsRes.status);
 
-    if (payload && payload.success && payload.item) {
-      const it = payload.item;
-      document.getElementById('giName').textContent = it.name || `#${id}`;
-      document.getElementById('giType').textContent = it.item_type || '';
-      document.getElementById('giCategory').textContent = it.ingredient_category_name || '';
-      document.getElementById('giUnit').textContent = it.default_unit || '';
-      document.getElementById('giDensity').textContent = (it.density != null) ? Number(it.density).toFixed(3) : '';
-
-      // Container meta
-      const isContainer = it.item_type === 'container' || it.item_type === 'packaging';
-      const metaDiv = document.getElementById('giContainerMeta');
-      if (isContainer) {
-        metaDiv.style.display = '';
-        document.getElementById('giMaterial').textContent = it.container_material || '';
-        const typeStyle = [it.container_type || '', it.container_style ? `(${it.container_style})` : ''].join(' ').trim();
-        document.getElementById('giTypeStyle').textContent = typeStyle;
-        document.getElementById('giColor').textContent = it.container_color || '';
-      } else {
-        metaDiv.style.display = 'none';
-      }
-
-      // Ingredient property visibility
-      const propsDiv = document.getElementById('giIngredientStats');
-      const grid = document.getElementById('giPropsGrid');
-      grid.innerHTML = '';
-      const vis = payload.category_visibility || {};
-      const addProp = (label, value, show) => {
-        if (!show) return;
-        const v = (value == null || value === '') ? '-' : value;
-        const col = document.createElement('div');
-        col.innerHTML = `<div><strong>${label}:</strong> ${v}</div>`;
-        grid.appendChild(col);
-      };
-      const isIngredient = it.item_type === 'ingredient';
-      propsDiv.style.display = isIngredient ? '' : 'none';
-      if (isIngredient) {
-        addProp('Saponification', it.saponification_value, vis.show_saponification_value);
-        addProp('Iodine', it.iodine_value, vis.show_iodine_value);
-        addProp('Melting Point (°C)', it.melting_point_c, vis.show_melting_point);
-        addProp('Flash Point (°C)', it.flash_point_c, vis.show_flash_point);
-        addProp('pH', it.ph_value, vis.show_ph_value);
-        addProp('Moisture %', it.moisture_content_percent, vis.show_moisture_content);
-        addProp('Shelf Life (months)', it.shelf_life_months, vis.show_shelf_life_months);
-        addProp('Comedogenic', it.comedogenic_rating, vis.show_comedogenic_rating);
-      }
+    if (!statsRes.ok) {
+      const errorText = await statsRes.text();
+      console.error('Stats fetch failed:', statsRes.status, statsRes.statusText, errorText);
+      throw new Error(`HTTP error! status: ${statsRes.status} - ${errorText}`);
     }
 
-    if (payload && payload.success){
-      const c = payload.cost || {};
-      if (c.count && c.count > 0){
-        const mean = c.mean_ex_outliers != null ? c.mean_ex_outliers.toFixed(2) : '-';
-        const low = c.low != null ? c.low.toFixed(2) : '-';
-        const high = c.high != null ? c.high.toFixed(2) : '-';
-        const minv = c.min != null ? c.min.toFixed(2) : '-';
-        const maxv = c.max != null ? c.max.toFixed(2) : '-';
-        document.getElementById('giCostStats').innerHTML = `Average: $${mean} (excluding outliers)<br>Low/High: $${low} – $${high}<br>Extremes: $${minv} – $${maxv} (n=${c.count})`;
+    const payload = await statsRes.json();
+    console.log('Stats payload received:', payload);
+
+    if (!payload.success) {
+      console.error('API returned error:', payload.error);
+      throw new Error(`API error: ${payload.error}`);
+    }
+
+    if (payload && payload.success && payload.item) {
+        const it = payload.item;
+        document.getElementById('giName').textContent = it.name || `#${id}`;
+        document.getElementById('giType').textContent = it.item_type || '';
+        document.getElementById('giCategory').textContent = it.ingredient_category_name || '';
+        document.getElementById('giUnit').textContent = it.default_unit || '';
+        document.getElementById('giDensity').textContent = (it.density != null) ? Number(it.density).toFixed(3) : '';
+
+        // Container meta
+        const isContainer = it.item_type === 'container' || it.item_type === 'packaging';
+        const metaDiv = document.getElementById('giContainerMeta');
+        if (isContainer) {
+          metaDiv.style.display = '';
+          document.getElementById('giMaterial').textContent = it.container_material || '';
+          const typeStyle = [it.container_type || '', it.container_style ? `(${it.container_style})` : ''].join(' ').trim();
+          document.getElementById('giTypeStyle').textContent = typeStyle;
+          document.getElementById('giColor').textContent = it.container_color || '';
+        } else {
+          metaDiv.style.display = 'none';
+        }
+
+        // Ingredient property visibility
+        const propsDiv = document.getElementById('giIngredientStats');
+        const grid = document.getElementById('giPropsGrid');
+        grid.innerHTML = '';
+        const vis = payload.category_visibility || {};
+        const addProp = (label, value, show) => {
+          if (!show) return;
+          const v = (value == null || value === '') ? '-' : value;
+          const col = document.createElement('div');
+          col.innerHTML = `<div><strong>${label}:</strong> ${v}</div>`;
+          grid.appendChild(col);
+        };
+        const isIngredient = it.item_type === 'ingredient';
+        propsDiv.style.display = isIngredient ? '' : 'none';
+        if (isIngredient) {
+          addProp('Saponification', it.saponification_value, vis.show_saponification_value);
+          addProp('Iodine', it.iodine_value, vis.show_iodine_value);
+          addProp('Melting Point (°C)', it.melting_point_c, vis.show_melting_point);
+          addProp('Flash Point (°C)', it.flash_point_c, vis.show_flash_point);
+          addProp('pH', it.ph_value, vis.show_ph_value);
+          addProp('Moisture %', it.moisture_content_percent, vis.show_moisture_content);
+          addProp('Shelf Life (months)', it.shelf_life_months, vis.show_shelf_life_months);
+          addProp('Comedogenic', it.comedogenic_rating, vis.show_comedogenic_rating);
+        }
+      }
+
+      if (payload && payload.success){
+        const c = payload.cost || {};
+        if (c.count && c.count > 0){
+          const mean = c.mean_ex_outliers != null ? c.mean_ex_outliers.toFixed(2) : '-';
+          const low = c.low != null ? c.low.toFixed(2) : '-';
+          const high = c.high != null ? c.high.toFixed(2) : '-';
+          const minv = c.min != null ? c.min.toFixed(2) : '-';
+          const maxv = c.max != null ? c.max.toFixed(2) : '-';
+          document.getElementById('giCostStats').innerHTML = `Average: $${mean} (excluding outliers)<br>Low/High: $${low} – $${high}<br>Extremes: $${minv} – $${maxv} (n=${c.count})`;
+        } else {
+          document.getElementById('giCostStats').textContent = 'No cost data yet.';
+        }
       } else {
         document.getElementById('giCostStats').textContent = 'No cost data yet.';
       }
-    } else {
-      document.getElementById('giCostStats').textContent = 'No cost data yet.';
-    }
 
-    document.getElementById('giDetailLoading').style.display = 'none';
-    document.getElementById('giDetailContent').style.display = '';
+      // Show developer link if user is a developer
+      const devLink = document.getElementById('giDevLink');
+      if (is_developer() && id) {
+        devLink.href = `/developer/global-items/${id}`;
+        devLink.style.display = '';
+      } else {
+        devLink.style.display = 'none';
+      }
+
+      loadingEl.style.display = 'none';
+    contentEl.style.display = '';
   } catch (e) {
-    console.error('Failed to load item details', e);
+    console.error('Failed to load item details:', e);
+    const loadingEl = document.getElementById('giDetailLoading');
+    if (loadingEl) {
+      loadingEl.innerHTML = `<div class="alert alert-danger">Failed to load item details: ${e.message}<br><small>Check console for more details</small></div>`;
+    }
+    // Also hide the content div in case of error
+    const contentEl = document.getElementById('giDetailContent');
+    if (contentEl) {
+      contentEl.style.display = 'none';
+    }
   }
+}
+
+function getCSRFToken() {
+  const meta = document.querySelector('meta[name=csrf-token]');
+  return meta ? meta.content : '';
+}
+
+function is_developer() {
+  {% if current_user.is_authenticated and current_user.user_type == 'developer' %}
+  return true;
+  {% else %}
+  return false;
+  {% endif %}
 }
 </script>
 {% endblock %}

@@ -180,10 +180,16 @@ def create_variation(recipe_id):
         form_data = _get_recipe_form_data()
         new_variation = _create_variation_template(parent)
 
+        # Extract parent ingredients for prefill
+        ingredients = [(ri.inventory_item_id, ri.quantity, ri.unit) for ri in parent.recipe_ingredients]
+        consumables = [(rc.inventory_item_id, rc.quantity, rc.unit) for rc in parent.recipe_consumables]
+
         return render_template('pages/recipes/recipe_form.html',
                              recipe=new_variation,
                              is_variation=True,
                              parent_recipe=parent,
+                             ingredient_prefill=ingredients,
+                             consumable_prefill=consumables,
                              **form_data)
 
     except Exception as e:
