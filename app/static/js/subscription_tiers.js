@@ -38,14 +38,14 @@ $(document).ready(function() {
 
     // Sync tier with Stripe
     $('.sync-tier').on('click', function() {
-        const tierKey = $(this).data('tier-key');
+        const tierId = $(this).data('tier-id');
         const lookupKey = $(this).data('lookup-key');
         const button = $(this);
         
         button.prop('disabled', true).html('<i class="fas fa-spinner fa-spin"></i> Syncing...');
         
         $.ajax({
-            url: `/developer/subscription-tiers/sync/${tierKey}`,
+            url: `/developer/subscription-tiers/sync/${tierId}`,
             method: 'POST',
             headers: {
                 'X-CSRFToken': $('meta[name=csrf-token]').attr('content')
@@ -76,14 +76,14 @@ $(document).ready(function() {
     
     // Sync tier with Whop
     $('.sync-whop-tier').on('click', function() {
-        const tierKey = $(this).data('tier-key');
+        const tierId = $(this).data('tier-id');
         const productKey = $(this).data('product-key');
         const button = $(this);
         
         button.prop('disabled', true).html('<i class="fas fa-spinner fa-spin"></i> Syncing...');
         
         $.ajax({
-            url: `/developer/subscription-tiers/sync-whop/${tierKey}`,
+            url: `/developer/subscription-tiers/sync-whop/${tierId}`,
             method: 'POST',
             dataType: 'json',
             success: function(response) {
