@@ -85,8 +85,14 @@ def register_middleware(app):
             selected_org_id = session.get("dev_selected_org_id")
             masquerade_org_id = session.get("masquerade_org_id")  # Support both session keys
 
-            # If no org selected, redirect to organization selection unless it's a developer-specific or auth permission page
-            if not selected_org_id and not masquerade_org_id and not (request.path.startswith("/developer/") or request.path.startswith("/auth/permissions")):
+            # If no org selected, redirect to organization selection unless it's a developer-specific,
+            # auth permission page, or a public Global Library endpoint (read-only).
+            allowed_without_org = (
+                request.path.startswith("/developer/")
+                or request.path.startswith("/auth/permissions")
+                or request.path.startswith("/global-items")
+            )
+            if not selected_org_id and not masquerade_org_id and not allowed_without_org:
                 flash("Please select an organization to view customer features.", "warning")
                 return redirect(url_for("developer.organizations"))
 

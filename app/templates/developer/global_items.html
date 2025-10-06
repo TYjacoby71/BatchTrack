@@ -71,7 +71,9 @@
   <tbody>
   {% for gi in items %}
     <tr>
-      <td>{{ gi.name }}</td>
+      <td>
+        <a href="#" class="gi-detail-link" data-gi-id="{{ gi.id }}">{{ gi.name }}</a>
+      </td>
       <td>
         <span class="badge bg-secondary">{{ gi.item_type }}</span>
       </td>
@@ -80,7 +82,7 @@
       <td>{{ gi.capacity or '-' }} {{ gi.capacity_unit or '' }}</td>
       <td>{{ 'Yes' if gi.default_is_perishable else 'No' }}</td>
       <td>
-      <button class="btn btn-sm btn-outline-primary" onclick="openItemDetails({{ gi.id }})">
+      <button class="btn btn-sm btn-outline-primary gi-view-btn" data-gi-id="{{ gi.id }}">
         <i class="fas fa-eye"></i> View
       </button>
       <a href="{{ url_for('developer.global_item_detail', item_id=gi.id) }}" class="btn btn-sm btn-outline-secondary ms-1">
@@ -294,12 +296,24 @@ function filterItems() {
 
 // Initialize page functionality
 document.addEventListener('DOMContentLoaded', function() {
-    try {
-        // Add any initialization code here if needed
-        console.log('Global items page loaded successfully');
-    } catch (error) {
-        console.error('Error initializing page:', error);
-    }
+  try {
+    document.querySelectorAll('.gi-detail-link').forEach(function(el){
+      el.addEventListener('click', function(e){
+        e.preventDefault();
+        const id = this.getAttribute('data-gi-id');
+        if (id) openItemDetails(id);
+      });
+    });
+    document.querySelectorAll('.gi-view-btn').forEach(function(btn){
+      btn.addEventListener('click', function(e){
+        e.preventDefault();
+        const id = this.getAttribute('data-gi-id');
+        if (id) openItemDetails(id);
+      });
+    });
+  } catch (error) {
+    console.error('Error initializing page:', error);
+  }
 });
 </script>
 <script>
