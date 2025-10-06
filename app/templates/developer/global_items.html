@@ -86,7 +86,7 @@
       <a href="{{ url_for('developer.global_item_detail', item_id=gi.id) }}" class="btn btn-sm btn-outline-secondary ms-1">
         <i class="fas fa-edit"></i> Edit
       </a>
-      <button class="btn btn-sm btn-outline-danger ms-1" onclick="confirmDelete({{ gi.id }}, '{{ gi.name }}')">Delete</button>
+      <button class="btn btn-sm btn-outline-danger ms-1" onclick="deleteGlobalItem({{ gi.id }}, '{{ gi.name }}')">Delete</button>
     </td>
 
     </tr>
@@ -189,6 +189,10 @@
 
 {% block scripts %}
 <script>
+function confirmDelete(itemId, itemName) {
+    deleteGlobalItem(itemId, itemName);
+}
+
 function deleteGlobalItem(itemId, itemName) {
     try {
         const modal = new bootstrap.Modal(document.getElementById('deleteGlobalItemModal'));
@@ -464,7 +468,7 @@ async function openItemDetails(id){
     console.error('Failed to load item details:', e);
     const loadingEl = document.getElementById('giDetailLoading');
     if (loadingEl) {
-      loadingEl.innerHTML = `<div class="alert alert-danger">Failed to load item details: ${e.message}<br><small>Check console for more details</small></div>`;
+      loadingEl.innerHTML = `<div class="alert alert-danger">Failed to load item details: ${e.message || 'Unknown error'}<br><small>Error details: ${JSON.stringify(e)}</small></div>`;
     }
     const contentEl = document.getElementById('giDetailContent');
     if (contentEl) {
