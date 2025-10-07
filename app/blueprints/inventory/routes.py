@@ -323,6 +323,7 @@ def view_inventory(id):
 
 @inventory_bp.route('/add', methods=['POST'])
 @login_required
+@permission_required('inventory.edit')
 def add_inventory():
     """Create new inventory items"""
     try:

@@ -7,6 +7,7 @@
   <div class="card mb-4">
     <div class="card-header">Phase Summary</div>
     <div class="card-body">
+      {% include 'components/recipes/_category_fields.html' %}
       <form id="phaseForm" class="row g-3">
         <div class="col-md-3"><label class="form-label">Batch Size (g)</label><input name="batch_g" type="number" class="form-control" min="0" step="1" required></div>
         <div class="col-md-3"><label class="form-label">Emulsifier (%)</label><input name="emulsifier_pct" type="number" class="form-control" min="0" max="20" step="0.1"></div>
