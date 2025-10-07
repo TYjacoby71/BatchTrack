@@ -100,11 +100,35 @@ def upgrade():
 
     # 2. Create indexes for performance
     print("   Creating indexes...")
-    op.create_index('idx_unified_item_remaining', 'unified_inventory_history', ['inventory_item_id', 'remaining_quantity'])
-    op.create_index('idx_unified_item_timestamp', 'unified_inventory_history', ['inventory_item_id', 'timestamp'])
-    op.create_index('idx_unified_fifo_code', 'unified_inventory_history', ['fifo_code'])
-    op.create_index('idx_unified_change_type', 'unified_inventory_history', ['change_type'])
-    op.create_index('idx_unified_expiration', 'unified_inventory_history', ['expiration_date'])
+    
+    # Check if indexes already exist before creating them
+    bind = op.get_bind()
+    inspector = sa.inspect(bind)
+    existing_indexes = []
+    
+    try:
+        existing_indexes = [idx['name'] for idx in inspector.get_indexes('unified_inventory_history')]
+    except:
+        # Table might not exist yet
+        existing_indexes = []
+    
+    indexes_to_create = [
+        ('idx_unified_item_remaining', ['inventory_item_id', 'remaining_quantity']),
+        ('idx_unified_item_timestamp', ['inventory_item_id', 'timestamp']),
+        ('idx_unified_fifo_code', ['fifo_code']),
+        ('idx_unified_change_type', ['change_type']),
+        ('idx_unified_expiration', ['expiration_date'])
+    ]
+    
+    for idx_name, columns in indexes_to_create:
+        if idx_name not in existing_indexes:
+            try:
+                op.create_index(idx_name, 'unified_inventory_history', columns)
+                print(f"   ✅ Created index: {idx_name}")
+            except Exception as e:
+                print(f"   ⚠️  Could not create index {idx_name}: {e}")
+        else:
+            print(f"   ⚠️  Index {idx_name} already exists - skipping")
 
     # 3. Migrate data from inventory_history if it exists
     print("   Migrating data from inventory_history...")
