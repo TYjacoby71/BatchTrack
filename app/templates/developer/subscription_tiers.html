@@ -177,14 +177,14 @@
                             <!-- Both sync buttons - split the row -->
                             <div class="col-6">
                                 <button type="button" class="btn btn-outline-primary btn-sm w-100 rounded-0 sync-tier" 
-                                        data-tier-key="{{ tier_key }}" 
+                                        data-tier-id="{{ tier_data.get('id') }}" 
                                         data-lookup-key="{{ tier_data.get('stripe_lookup_key') }}">
                                     <i class="fas fa-sync"></i> Sync Stripe
                                 </button>
                             </div>
                             <div class="col-6">
                                 <button type="button" class="btn btn-outline-success btn-sm w-100 rounded-0 sync-whop-tier" 
-                                        data-tier-key="{{ tier_key }}" 
+                                        data-tier-id="{{ tier_data.get('id') }}" 
                                         data-product-key="{{ tier_data.get('whop_product_key') }}">
                                     <i class="fas fa-sync"></i> Sync Whop
                                 </button>
@@ -193,7 +193,7 @@
                             <!-- Only Stripe - full width -->
                             <div class="col-12">
                                 <button type="button" class="btn btn-outline-primary btn-sm w-100 rounded-0 sync-tier" 
-                                        data-tier-key="{{ tier_key }}" 
+                                        data-tier-id="{{ tier_data.get('id') }}" 
                                         data-lookup-key="{{ tier_data.get('stripe_lookup_key') }}">
                                     <i class="fas fa-sync"></i> Sync with Stripe
                                 </button>
@@ -202,7 +202,7 @@
                             <!-- Only Whop - full width -->
                             <div class="col-12">
                                 <button type="button" class="btn btn-outline-success btn-sm w-100 rounded-0 sync-whop-tier" 
-                                        data-tier-key="{{ tier_key }}" 
+                                        data-tier-id="{{ tier_data.get('id') }}" 
                                         data-product-key="{{ tier_data.get('whop_product_key') }}">
                                     <i class="fas fa-sync"></i> Sync with Whop
                                 </button>
