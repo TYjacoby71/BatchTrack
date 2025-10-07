@@ -112,7 +112,7 @@ def new_recipe():
     # GET request - show form
     # Prefill from public tools draft (if present)
     from flask import session
-    draft = session.pop('tool_draft', None)
+    draft = session.get('tool_draft', None)
     prefill = None
     if isinstance(draft, dict):
         try:

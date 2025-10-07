@@ -44,7 +44,16 @@ def tools_draft():
     """
     from flask import session
     data = request.get_json() or {}
-    session['tool_draft'] = data
-    session.permanent = True
+    # Merge to preserve any prior progress and keep across redirects
+    try:
+        existing = session.get('tool_draft', {})
+        if not isinstance(existing, dict):
+            existing = {}
+        existing.update(data or {})
+        session['tool_draft'] = existing
+        session.permanent = True
+    except Exception:
+        session['tool_draft'] = data
+        session.permanent = True
     # Redirect to sign-in or directly to recipes new if already logged in
     return jsonify({'success': True, 'redirect': url_for('recipes.new_recipe')})

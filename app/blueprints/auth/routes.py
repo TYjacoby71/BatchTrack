@@ -83,7 +83,14 @@ def login():
             if user.user_type == 'developer':
                 return redirect(url_for('developer.dashboard'))
             else:
-                return redirect(url_for('app_routes.dashboard'))
+                # If a tool draft exists, preserve it across login to finish onboarding
+                next_url = url_for('app_routes.dashboard')
+                try:
+                    if session.get('tool_draft'):
+                        next_url = url_for('recipes.new_recipe')
+                except Exception:
+                    pass
+                return redirect(next_url)
         else:
             flash('Invalid username or password')
             return render_template('pages/auth/login.html', form=form)
@@ -193,7 +200,13 @@ def oauth_callback():
             if user.user_type == 'developer':
                 return redirect(url_for('developer.dashboard'))
             else:
-                return redirect(url_for('app_routes.dashboard'))
+                next_url = url_for('app_routes.dashboard')
+                try:
+                    if session.get('tool_draft'):
+                        next_url = url_for('recipes.new_recipe')
+                except Exception:
+                    pass
+                return redirect(next_url)
 
         else:
             # New user - store info for signup flow
@@ -206,8 +219,9 @@ def oauth_callback():
                 'email_verified': True
             }
 
+            # Send new users to signup, but if a tool draft exists, keep it and deep-link to recipe after signup
             flash('Please complete your account setup by selecting a subscription plan.', 'info')
-            return redirect(url_for('auth.signup'))
+            return redirect(url_for('auth.signup', tier='free'))
 
     except Exception as e:
         logger.error(f"OAuth callback error: {str(e)}")
