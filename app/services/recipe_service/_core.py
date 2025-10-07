@@ -144,11 +144,14 @@ def create_recipe(name: str, description: str = "", instructions: str = "",
             if payload and isinstance(payload, dict):
                 cat_data = {}
                 for key in ['soap_superfat', 'soap_water_pct', 'soap_lye_type',
-                            'candle_fragrance_pct', 'candle_vessel_ml',
+                            'candle_fragrance_pct', 'candle_vessel_ml', 'candle_fill_pct', 'vessel_fill_pct',
                             'cosm_preservative_pct', 'cosm_emulsifier_pct',
                             'baker_base_flour_g', 'herbal_ratio']:
                     if key in payload and payload.get(key) not in (None, ''):
                         cat_data[key] = payload.get(key)
+                # Normalize alias: candle_fill_pct -> vessel_fill_pct
+                if 'candle_fill_pct' in cat_data and 'vessel_fill_pct' not in cat_data:
+                    cat_data['vessel_fill_pct'] = cat_data['candle_fill_pct']
                 if cat_data:
                     recipe.category_data = cat_data
         except Exception:
