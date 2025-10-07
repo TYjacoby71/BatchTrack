@@ -28,72 +28,75 @@ def upgrade():
     """Create unified inventory history table and migrate existing data"""
     print("=== Creating UnifiedInventoryHistory and migrating data ===")
 
+    # Check if table already exists
     bind = op.get_bind()
+    inspector = sa.inspect(bind)
+    existing_tables = inspector.get_table_names()
 
-    # 1. Create the new unified table
-    print("   Creating unified_inventory_history table...")
-    op.create_table('unified_inventory_history',
-        sa.Column('id', sa.Integer(), nullable=False),
-        sa.Column('inventory_item_id', sa.Integer(), nullable=False),
-        sa.Column('timestamp', sa.DateTime(), nullable=False),
-        sa.Column('change_type', sa.String(50), nullable=False),
-        sa.Column('quantity_change', sa.Float(), nullable=False),
-        sa.Column('unit', sa.String(50), nullable=False),
-        sa.Column('unit_cost', sa.Float(), nullable=True),
-        sa.Column('remaining_quantity', sa.Float(), nullable=False, default=0.0),
+    if 'unified_inventory_history' not in existing_tables:
+        print("   Creating unified_inventory_history table...")
+        op.create_table('unified_inventory_history',
+            sa.Column('id', sa.Integer(), nullable=False),
+            sa.Column('inventory_item_id', sa.Integer(), nullable=False),
+            sa.Column('timestamp', sa.DateTime(), nullable=False),
+            sa.Column('change_type', sa.String(50), nullable=False),
+            sa.Column('quantity_change', sa.Float(), nullable=False),
+            sa.Column('unit', sa.String(50), nullable=False),
+            sa.Column('unit_cost', sa.Float(), nullable=True),
+            sa.Column('remaining_quantity', sa.Float(), nullable=False, default=0.0),
 
-        # FIFO Tracking
-        sa.Column('fifo_reference_id', sa.Integer(), nullable=True),
-        sa.Column('fifo_code', sa.String(64), nullable=True),
+            # FIFO Tracking
+            sa.Column('fifo_reference_id', sa.Integer(), nullable=True),
+            sa.Column('fifo_code', sa.String(64), nullable=True),
 
-        # Contextual Information
-        sa.Column('batch_id', sa.Integer(), nullable=True),
-        sa.Column('created_by', sa.Integer(), nullable=True),
-        sa.Column('notes', sa.Text(), nullable=True),
-        sa.Column('quantity_used', sa.Float(), nullable=False, default=0.0),
-        sa.Column('used_for_batch_id', sa.Integer(), nullable=True),
+            # Contextual Information
+            sa.Column('batch_id', sa.Integer(), nullable=True),
+            sa.Column('created_by', sa.Integer(), nullable=True),
+            sa.Column('notes', sa.Text(), nullable=True),
+            sa.Column('quantity_used', sa.Float(), nullable=False, default=0.0),
+            sa.Column('used_for_batch_id', sa.Integer(), nullable=True),
 
-        # Perishability
-        sa.Column('is_perishable', sa.Boolean(), nullable=False, default=False),
-        sa.Column('shelf_life_days', sa.Integer(), nullable=True),
-        sa.Column('expiration_date', sa.DateTime(), nullable=True),
+            # Perishability
+            sa.Column('is_perishable', sa.Boolean(), nullable=False, default=False),
+            sa.Column('shelf_life_days', sa.Integer(), nullable=True),
+            sa.Column('expiration_date', sa.DateTime(), nullable=True),
 
-        # Location and Quality
-        sa.Column('location_id', sa.String(128), nullable=True),
-        sa.Column('location_name', sa.String(128), nullable=True),
-        sa.Column('temperature_at_time', sa.Float(), nullable=True),
-        sa.Column('quality_status', sa.String(32), nullable=True),
-        sa.Column('compliance_status', sa.String(32), nullable=True),
-        sa.Column('quality_checked_by', sa.Integer(), nullable=True),
+            # Location and Quality
+            sa.Column('location_id', sa.String(128), nullable=True),
+            sa.Column('location_name', sa.String(128), nullable=True),
+            sa.Column('temperature_at_time', sa.Float(), nullable=True),
+            sa.Column('quality_status', sa.String(32), nullable=True),
+            sa.Column('compliance_status', sa.String(32), nullable=True),
+            sa.Column('quality_checked_by', sa.Integer(), nullable=True),
 
-        # Product-Specific Fields (Nullable for ingredient entries)
-        sa.Column('customer', sa.String(255), nullable=True),
-        sa.Column('sale_price', sa.Float(), nullable=True),
-        sa.Column('order_id', sa.String(255), nullable=True),
-        sa.Column('reservation_id', sa.String(64), nullable=True),
-        sa.Column('is_reserved', sa.Boolean(), nullable=False, default=False),
-        sa.Column('sale_location', sa.String(64), nullable=True),
-        sa.Column('marketplace_order_id', sa.String(128), nullable=True),
-        sa.Column('marketplace_source', sa.String(32), nullable=True),
+            # Product-Specific Fields (Nullable for ingredient entries)
+            sa.Column('customer', sa.String(255), nullable=True),
+            sa.Column('sale_price', sa.Float(), nullable=True),
+            sa.Column('order_id', sa.String(255), nullable=True),
+            sa.Column('reservation_id', sa.String(64), nullable=True),
+            sa.Column('is_reserved', sa.Boolean(), nullable=False, default=False),
+            sa.Column('sale_location', sa.String(64), nullable=True),
+            sa.Column('marketplace_order_id', sa.String(128), nullable=True),
+            sa.Column('marketplace_source', sa.String(32), nullable=True),
 
-        # Additional tracking
-        sa.Column('batch_number', sa.String(128), nullable=True),
-        sa.Column('lot_number', sa.String(128), nullable=True),
-        sa.Column('container_id', sa.Integer(), nullable=True),
-        sa.Column('fifo_source', sa.String(128), nullable=True),
-        sa.Column('organization_id', sa.Integer(), nullable=False),
+            # Additional tracking
+            sa.Column('batch_number', sa.String(128), nullable=True),
+            sa.Column('lot_number', sa.String(128), nullable=True),
+            sa.Column('container_id', sa.Integer(), nullable=True),
+            sa.Column('fifo_source', sa.String(128), nullable=True),
+            sa.Column('organization_id', sa.Integer(), nullable=False),
 
-        # Constraints
-        sa.PrimaryKeyConstraint('id'),
-        sa.ForeignKeyConstraint(['inventory_item_id'], ['inventory_item.id']),
-        sa.ForeignKeyConstraint(['batch_id'], ['batch.id']),
-        sa.ForeignKeyConstraint(['used_for_batch_id'], ['batch.id']),
-        sa.ForeignKeyConstraint(['created_by'], ['user.id']),
-        sa.ForeignKeyConstraint(['quality_checked_by'], ['user.id']),
-        sa.ForeignKeyConstraint(['container_id'], ['inventory_item.id']),
-        sa.ForeignKeyConstraint(['organization_id'], ['organization.id']),
-        sa.ForeignKeyConstraint(['fifo_reference_id'], ['unified_inventory_history.id'])
-    )
+            # Constraints
+            sa.PrimaryKeyConstraint('id'),
+            sa.ForeignKeyConstraint(['inventory_item_id'], ['inventory_item.id']),
+            sa.ForeignKeyConstraint(['batch_id'], ['batch.id']),
+            sa.ForeignKeyConstraint(['used_for_batch_id'], ['batch.id']),
+            sa.ForeignKeyConstraint(['created_by'], ['user.id']),
+            sa.ForeignKeyConstraint(['quality_checked_by'], ['user.id']),
+            sa.ForeignKeyConstraint(['container_id'], ['inventory_item.id']),
+            sa.ForeignKeyConstraint(['organization_id'], ['organization.id']),
+            sa.ForeignKeyConstraint(['fifo_reference_id'], ['unified_inventory_history.id'])
+        )
 
     # 2. Create indexes for performance
     print("   Creating indexes...")
@@ -104,9 +107,17 @@ def upgrade():
     op.create_index('idx_unified_expiration', 'unified_inventory_history', ['expiration_date'])
 
     # 3. Migrate data from inventory_history if it exists
-    if table_exists('inventory_history'):
-        print("   Migrating data from inventory_history...")
+    print("   Migrating data from inventory_history...")
 
+    # Get connection and migrate data
+    bind = op.get_bind()
+
+    # Check if source table exists  
+    inspector = sa.inspect(bind)
+    existing_tables = inspector.get_table_names()
+
+    # Only migrate data if both tables exist and are in correct state
+    if 'inventory_history' in existing_tables and 'unified_inventory_history' in existing_tables:
         # Get organization_id from inventory_item for each record
         # Use CURRENT_TIMESTAMP for SQLite compatibility instead of now()
         migrate_inventory_sql = text("""
