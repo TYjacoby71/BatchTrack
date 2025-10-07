@@ -2,107 +2,74 @@
 
 Revision ID: a1b2c3d4e5f6789012345678901234ab
 Revises: whop_integration
-Create Date: 2024-01-15 11:00:00.000000
+Create Date: 2024-10-07 20:00:00.000000
 
 """
 from alembic import op
 import sqlalchemy as sa
+from sqlalchemy import inspect
 
-# revision identifiers
+# revision identifiers, used by Alembic.
 revision = 'a1b2c3d4e5f6789012345678901234ab'
 down_revision = 'whop_integration'
 branch_labels = None
 depends_on = None
 
+
+def column_exists(table_name, column_name):
+    """Check if a column exists in a table"""
+    try:
+        connection = op.get_bind()
+        inspector = inspect(connection)
+        columns = [col['name'] for col in inspector.get_columns(table_name)]
+        return column_name in columns
+    except Exception:
+        return False
+
+
 def upgrade():
-    """Add Whop integration fields to SubscriptionTier"""
-    from sqlalchemy import inspect
-
-    # Get database connection and inspector
-    connection = op.get_bind()
-    inspector = inspect(connection)
-
-    def column_exists(table_name, column_name):
-        """Check if a column exists in a table"""
-        try:
-            # Use raw SQL query for more reliable column existence check
-            result = connection.execute(sa.text("""
-                SELECT column_name 
-                FROM information_schema.columns 
-                WHERE table_name = :table_name 
-                AND column_name = :column_name
-            """), {"table_name": table_name, "column_name": column_name})
-            return result.fetchone() is not None
-        except Exception as e:
-            print(f"   Error checking column existence: {e}")
-            # Fallback to inspector method
-            try:
-                columns = [col['name'] for col in inspector.get_columns(table_name)]
-                return column_name in columns
-            except Exception:
-                return False
-
+    """Add Whop integration fields to subscription_tier table"""
     print("=== Adding Whop integration fields to SubscriptionTier ===")
 
-    # Add Whop integration columns only if they don't exist
-    whop_columns = [
-        ('whop_product_key', sa.String(128)),
-        ('whop_product_name', sa.String(256)),
-        ('whop_last_synced', sa.DateTime()),
-        ('requires_whop_billing', sa.Boolean())
-    ]
+    # Add whop_product_key column if it doesn't exist
+    if not column_exists('subscription_tier', 'whop_product_key'):
+        op.add_column('subscription_tier', sa.Column('whop_product_key', sa.String(128), nullable=True))
+        print("   ✅ Added whop_product_key column")
+    else:
+        print("   ⚠️  whop_product_key column already exists, skipping...")
 
-    for col_name, col_type in whop_columns:
-        if not column_exists('subscription_tier', col_name):
-            print(f"   Adding {col_name} column...")
-            if col_name == 'requires_whop_billing':
-                op.add_column('subscription_tier', sa.Column(col_name, col_type, default=False, server_default='false'))
-            else:
-                op.add_column('subscription_tier', sa.Column(col_name, col_type, nullable=True))
-            print(f"   ✅ Added {col_name}")
-        else:
-            print(f"   ⚠️  {col_name} column already exists, skipping")
+    # Add whop_plan_name column if it doesn't exist
+    if not column_exists('subscription_tier', 'whop_plan_name'):
+        op.add_column('subscription_tier', sa.Column('whop_plan_name', sa.String(128), nullable=True))
+        print("   ✅ Added whop_plan_name column")
+    else:
+        print("   ⚠️  whop_plan_name column already exists, skipping...")
 
-    print("✅ Whop integration fields migration completed")
+    # Add whop_enabled column if it doesn't exist
+    if not column_exists('subscription_tier', 'whop_enabled'):
+        op.add_column('subscription_tier', sa.Column('whop_enabled', sa.Boolean(), nullable=True, default=False))
+        print("   ✅ Added whop_enabled column")
+    else:
+        print("   ⚠️  whop_enabled column already exists, skipping...")
+
+    print("   ✅ Migration completed successfully")
+
 
 def downgrade():
-    """Remove Whop integration fields from SubscriptionTier"""
-    from sqlalchemy import inspect
-
-    # Get database connection and inspector
-    connection = op.get_bind()
-    inspector = inspect(connection)
-
-    def column_exists(table_name, column_name):
-        """Check if a column exists in a table"""
-        try:
-            # Use raw SQL query for more reliable column existence check
-            result = connection.execute(sa.text("""
-                SELECT column_name 
-                FROM information_schema.columns 
-                WHERE table_name = :table_name 
-                AND column_name = :column_name
-            """), {"table_name": table_name, "column_name": column_name})
-            return result.fetchone() is not None
-        except Exception as e:
-            print(f"   Error checking column existence: {e}")
-            # Fallback to inspector method
-            try:
-                columns = [col['name'] for col in inspector.get_columns(table_name)]
-                return column_name in columns
-            except Exception:
-                return False
-
+    """Remove Whop integration fields from subscription_tier table"""
     print("=== Removing Whop integration fields from SubscriptionTier ===")
 
-    whop_columns = ['requires_whop_billing', 'whop_last_synced', 'whop_product_name', 'whop_product_key']
+    # Remove columns if they exist
+    if column_exists('subscription_tier', 'whop_enabled'):
+        op.drop_column('subscription_tier', 'whop_enabled')
+        print("   ✅ Removed whop_enabled column")
 
-    for col_name in whop_columns:
-        if column_exists('subscription_tier', col_name):
-            print(f"   Removing {col_name} column...")
-            op.drop_column('subscription_tier', col_name)
-            print(f"   ✅ Removed {col_name}")
-        else:
-            print(f"   ⚠️  {col_name} column does not exist, skipping")
+    if column_exists('subscription_tier', 'whop_plan_name'):
+        op.drop_column('subscription_tier', 'whop_plan_name')
+        print("   ✅ Removed whop_plan_name column")
 
-    print("✅ Whop integration fields downgrade completed")
+    if column_exists('subscription_tier', 'whop_product_key'):
+        op.drop_column('subscription_tier', 'whop_product_key')
+        print("   ✅ Removed whop_product_key column")
+
+    print("   ✅ Rollback completed successfully")
