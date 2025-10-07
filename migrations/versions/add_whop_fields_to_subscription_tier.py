@@ -1,4 +1,3 @@
-
 """Add Whop integration fields to SubscriptionTier
 
 Revision ID: a1b2c3d4e5f6789012345678901234ab
@@ -26,10 +25,22 @@ def upgrade():
     def column_exists(table_name, column_name):
         """Check if a column exists in a table"""
         try:
-            columns = [col['name'] for col in inspector.get_columns(table_name)]
-            return column_name in columns
-        except Exception:
-            return False
+            # Use raw SQL query for more reliable column existence check
+            result = connection.execute(sa.text("""
+                SELECT column_name 
+                FROM information_schema.columns 
+                WHERE table_name = :table_name 
+                AND column_name = :column_name
+            """), {"table_name": table_name, "column_name": column_name})
+            return result.fetchone() is not None
+        except Exception as e:
+            print(f"   Error checking column existence: {e}")
+            # Fallback to inspector method
+            try:
+                columns = [col['name'] for col in inspector.get_columns(table_name)]
+                return column_name in columns
+            except Exception:
+                return False
 
     print("=== Adding Whop integration fields to SubscriptionTier ===")
 
@@ -65,10 +76,22 @@ def downgrade():
     def column_exists(table_name, column_name):
         """Check if a column exists in a table"""
         try:
-            columns = [col['name'] for col in inspector.get_columns(table_name)]
-            return column_name in columns
-        except Exception:
-            return False
+            # Use raw SQL query for more reliable column existence check
+            result = connection.execute(sa.text("""
+                SELECT column_name 
+                FROM information_schema.columns 
+                WHERE table_name = :table_name 
+                AND column_name = :column_name
+            """), {"table_name": table_name, "column_name": column_name})
+            return result.fetchone() is not None
+        except Exception as e:
+            print(f"   Error checking column existence: {e}")
+            # Fallback to inspector method
+            try:
+                columns = [col['name'] for col in inspector.get_columns(table_name)]
+                return column_name in columns
+            except Exception:
+                return False
 
     print("=== Removing Whop integration fields from SubscriptionTier ===")
 
