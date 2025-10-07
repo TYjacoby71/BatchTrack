@@ -977,7 +977,7 @@ document.getElementById('recipeForm').addEventListener('submit', function(e) {
         }
         async function createInline(name){
             try{
-                const res = await fetch('/api/ingredients/ingredients/create-or-link', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ name: name, type: 'ingredient' }) });
+                const res = await fetch('/inventory/api/quick-create', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ name: name, type: 'ingredient' }) });
                 const data = await res.json();
                 if (data && data.success && data.item){
                     input.value = data.item.name; invHidden.value = data.item.id; giHidden.value = data.item.global_item_id||''; list.classList.add('d-none'); list.innerHTML='';
