@@ -73,11 +73,24 @@
     <div data-cat="Baked Goods" class="category-aid d-none">
       <div class="row g-3">
         <div class="col-md-3">
-          <label class="form-label small">Base Flour (g)</label>
+          <label class="form-label small">Flour (g)</label>
           <input type="number" class="form-control" id="baker_base_flour_g" name="baker_base_flour_g" placeholder="e.g., 1000" min="0" step="1">
         </div>
+        <div class="col-md-2">
+          <label class="form-label small">Water (%)</label>
+          <input type="number" class="form-control" id="baker_water_pct" name="baker_water_pct" placeholder="e.g., 70" min="0" max="120" step="0.1">
+        </div>
+        <div class="col-md-2">
+          <label class="form-label small">Salt (%)</label>
+          <input type="number" class="form-control" id="baker_salt_pct" name="baker_salt_pct" placeholder="e.g., 2" min="0" max="5" step="0.1">
+        </div>
+        <div class="col-md-2">
+          <label class="form-label small">Yeast (%)</label>
+          <input type="number" class="form-control" id="baker_yeast_pct" name="baker_yeast_pct" placeholder="e.g., 1" min="0" max="5" step="0.1">
+        </div>
       </div>
-      <small class="text-muted">Use grams and baker’s % relative to flour.</small>
+      <div class="mt-2 small text-muted" id="baker_result"></div>
+      <small class="text-muted">Baker’s %: Flour = 100%. Enter any fields to derive batch size.</small>
     </div>
 
     <!-- Herbalist: tincture ratio -->
@@ -157,6 +170,21 @@
     if (predictedYield){ const total = oil + water + lye; predictedYield.value = String(round(total)); applyUnitStepUp(total); }
     if (predictedYieldUnit && !predictedYieldUnit.value){ predictedYieldUnit.value = 'gram'; }
   }
+  function deriveBaking(){
+    const flour = parseFloat(document.getElementById('baker_base_flour_g')?.value||'');
+    const wp = parseFloat(document.getElementById('baker_water_pct')?.value||'');
+    const sp = parseFloat(document.getElementById('baker_salt_pct')?.value||'');
+    const yp = parseFloat(document.getElementById('baker_yeast_pct')?.value||'');
+    if (!(flour>0)) { document.getElementById('baker_result').textContent = ''; return; }
+    const waterG = isFinite(wp)? flour*(wp/100):0;
+    const saltG = isFinite(sp)? flour*(sp/100):0;
+    const yeastG = isFinite(yp)? flour*(yp/100):0;
+    const total = flour + waterG + saltG + yeastG;
+    const res = document.getElementById('baker_result');
+    if (res) res.textContent = `Water ${round(waterG)} g, Salt ${round(saltG)} g, Yeast ${round(yeastG)} g. Total ${round(total)} g`;
+    if (predictedYield){ predictedYield.value = String(round(total)); applyUnitStepUp(total); }
+    if (predictedYieldUnit && !predictedYieldUnit.value){ predictedYieldUnit.value = 'gram'; }
+  }
   function syncAids(){
     const selected = currentCategory();
     const aids = document.querySelectorAll('.category-aid');
@@ -179,6 +207,13 @@
     const el = document.getElementById(id);
     if (el){ el.addEventListener('input', deriveSoap); }
   });
+  // Wire baking inputs
+  ['baker_base_flour_g','baker_water_pct','baker_salt_pct','baker_yeast_pct'].forEach(id=>{
+    const el = document.getElementById(id);
+    if (el){ el.addEventListener('input', deriveBaking); }
+  });
+  // If user changes the yield unit, freeze unit auto step-up
+  if (predictedYieldUnit){ predictedYieldUnit.addEventListener('change', ()=>{ predictedYieldUnit.dataset.userChanged = 'true'; }); }
   syncAids();
 })();
 </script>
