@@ -40,7 +40,7 @@ def upgrade():
     else:
         print("   ✅ billing_provider column already exists")
 
-    # 2) Migrate data only if legacy boolean columns still exist AND table has data
+    # 2) Migrate data from legacy boolean columns if present
     legacy_cols = {"requires_stripe_billing", "requires_google_billing", "requires_whop_billing"}
     existing_legacy = legacy_cols & cols
 
@@ -51,60 +51,58 @@ def upgrade():
             row_count = result.scalar()
 
             if row_count > 0:
-                print(f"   Found {row_count} existing subscription_tier rows - migrating data from legacy boolean columns...")
+                print("   Found", row_count, "existing subscription_tier rows - migrating data from legacy boolean columns...")
 
-                # Build dynamic SQL based on which columns actually exist
-                tier_type_conditions = []
-                billing_provider_conditions = []
+                try:
+                    if existing_legacy:
+                        # Use proper boolean casting for PostgreSQL compatibility
+                        migration_sql = """
+                            UPDATE subscription_tier
+                            SET
+                              tier_type = CASE
+                                WHEN COALESCE(requires_whop_billing, false) = true OR COALESCE(requires_stripe_billing, false) = true
+                                THEN 'paid' ELSE 'free' END,
+                              billing_provider = CASE
+                                WHEN COALESCE(requires_whop_billing, false) = true THEN 'whop'
+                                WHEN COALESCE(requires_stripe_billing, false) = true THEN 'stripe'
+                                ELSE 'exempt' END
+                        """
 
-                if "requires_stripe_billing" in existing_legacy:
-                    tier_type_conditions.append("COALESCE(requires_stripe_billing, 0) = 1")
-                    billing_provider_conditions.append("WHEN COALESCE(requires_stripe_billing, 0) = 1 THEN 'stripe'")
-
-                if "requires_google_billing" in existing_legacy:
-                    tier_type_conditions.append("COALESCE(requires_google_billing, 0) = 1")
-                    billing_provider_conditions.append("WHEN COALESCE(requires_google_billing, 0) = 1 THEN 'google'")
-
-                if "requires_whop_billing" in existing_legacy:
-                    tier_type_conditions.append("COALESCE(requires_whop_billing, 0) = 1")
-                    billing_provider_conditions.append("WHEN COALESCE(requires_whop_billing, 0) = 1 THEN 'whop'")
-
-                # Only run migration if we have conditions to work with
-                if tier_type_conditions and billing_provider_conditions:
-                    tier_type_sql = " OR ".join(tier_type_conditions)
-                    billing_provider_sql = "\n                    ".join(billing_provider_conditions)
-
-                    migration_sql = f"""
-                        UPDATE subscription_tier
-                        SET
-                          tier_type = CASE
-                            WHEN {tier_type_sql}
-                            THEN 'paid' ELSE 'free' END,
-                          billing_provider = CASE
-                            {billing_provider_sql}
-                            ELSE NULL END
-                    """
-
-                    bind.execute(text(migration_sql))
-                    print("   ✅ Data migration completed")
+                        bind.execute(text(migration_sql))
+                        print("   ✅ Data migration completed")
+                    else:
+                        print("   ⚠️  No valid legacy columns found for migration")
                 else:
-                    print("   ⚠️  No valid legacy columns found for migration")
+                    print("   ℹ️  subscription_tier table is empty - skipping data migration")
+
+                except Exception as e:
+                    print(f"   ⚠️  Data migration failed: {e}")
+                    print("   ℹ️  Rolling back transaction and continuing without data migration...")
+                    # Rollback the failed transaction
+                    bind.rollback()
+
+                # 3) Drop legacy columns if present (in a new transaction)
+                print("   Dropping legacy boolean columns...")
+                try:
+                    # Start fresh transaction for column drops
+                    for col_name in existing_legacy:
+                        try:
+                            if op.get_bind().has_table('subscription_tier') and col_name in _get_columns('subscription_tier'):
+                                op.drop_column('subscription_tier', col_name)
+                                print(f"   ✅ Dropped {col_name}")
+                            else:
+                                print(f"   ℹ️  Column {col_name} does not exist or table missing")
+                        except Exception as e:
+                            print(f"   ⚠️  Could not drop {col_name}: {e}")
+                except Exception as e:
+                    print(f"   ⚠️  Error during column cleanup: {e}")
             else:
                 print("   ℹ️  subscription_tier table is empty - skipping data migration")
 
         except Exception as e:
-            print(f"   ⚠️  Data migration failed: {e}")
-            print("   ℹ️  This is normal for fresh database builds - continuing...")
+            print(f"   ⚠️  Error checking row count: {e}")
+            print("   ℹ️  Continuing without data migration...")
 
-        # 3) Drop legacy columns if present (SQLite-safe)
-        print("   Dropping legacy boolean columns...")
-        with op.batch_alter_table("subscription_tier") as batch_op:
-            for col_name in existing_legacy:
-                try:
-                    batch_op.drop_column(col_name)
-                    print(f"   ✅ Dropped {col_name}")
-                except Exception as e:
-                    print(f"   ⚠️  Could not drop {col_name}: {e}")
     else:
         print("   ℹ️  No legacy boolean columns found - skipping data migration")
 
