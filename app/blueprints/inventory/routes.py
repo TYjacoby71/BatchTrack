@@ -352,6 +352,7 @@ def add_inventory():
 
 @inventory_bp.route('/adjust/<int:item_id>', methods=['POST'])
 @login_required
+@permission_required('inventory.adjust')
 def adjust_inventory(item_id):
     """Handle inventory adjustments"""
     try:
@@ -439,6 +440,7 @@ def adjust_inventory(item_id):
 
 @inventory_bp.route('/edit/<int:id>', methods=['POST'])
 @login_required
+@permission_required('inventory.edit')
 def edit_inventory(id):
     """Handle inventory item editing and recounts"""
     try:

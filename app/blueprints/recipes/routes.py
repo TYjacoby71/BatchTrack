@@ -101,6 +101,12 @@ def new_recipe():
                 except Exception:
                     pass
                 flash('Recipe created successfully with ingredients.')
+                # Clear tool draft after successful save
+                try:
+                    from flask import session as _session
+                    _session.pop('tool_draft', None)
+                except Exception:
+                    pass
                 return redirect(url_for('recipes.view_recipe', recipe_id=result.id))
             else:
                 flash(f'Error creating recipe: {result}', 'error')
