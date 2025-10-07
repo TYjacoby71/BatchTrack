@@ -53,33 +53,33 @@ def upgrade():
             if row_count > 0:
                 print("   Found", row_count, "existing subscription_tier rows - migrating data from legacy boolean columns...")
 
-                try:
-                    if existing_legacy:
-                        # Use proper boolean casting for PostgreSQL compatibility
-                        migration_sql = """
-                            UPDATE subscription_tier
-                            SET
-                              tier_type = CASE
-                                WHEN COALESCE(requires_whop_billing, false) = true OR COALESCE(requires_stripe_billing, false) = true
-                                THEN 'paid' ELSE 'free' END,
-                              billing_provider = CASE
-                                WHEN COALESCE(requires_whop_billing, false) = true THEN 'whop'
-                                WHEN COALESCE(requires_stripe_billing, false) = true THEN 'stripe'
-                                ELSE 'exempt' END
-                        """
+                if existing_legacy:
+                    # Use proper boolean casting for PostgreSQL compatibility
+                    migration_sql = """
+                        UPDATE subscription_tier
+                        SET
+                          tier_type = CASE
+                            WHEN COALESCE(requires_whop_billing, false) = true OR COALESCE(requires_stripe_billing, false) = true
+                            THEN 'paid' ELSE 'free' END,
+                          billing_provider = CASE
+                            WHEN COALESCE(requires_whop_billing, false) = true THEN 'whop'
+                            WHEN COALESCE(requires_stripe_billing, false) = true THEN 'stripe'
+                            ELSE 'exempt' END
+                    """
 
+                    try:
                         bind.execute(text(migration_sql))
                         print("   ✅ Data migration completed")
-                    else:
-                        print("   ⚠️  No valid legacy columns found for migration")
+                    except Exception as e:
+                        print(f"   ⚠️  Data migration failed: {e}")
+                        print("   ℹ️  Rolling back transaction and continuing without data migration...")
+                        # Rollback the failed transaction
+                        try:
+                            bind.rollback()
+                        except:
+                            pass
                 else:
-                    print("   ℹ️  subscription_tier table is empty - skipping data migration")
-
-                except Exception as e:
-                    print(f"   ⚠️  Data migration failed: {e}")
-                    print("   ℹ️  Rolling back transaction and continuing without data migration...")
-                    # Rollback the failed transaction
-                    bind.rollback()
+                    print("   ⚠️  No valid legacy columns found for migration")
 
                 # 3) Drop legacy columns if present (in a new transaction)
                 print("   Dropping legacy boolean columns...")
