@@ -39,6 +39,10 @@
     <div data-cat="Candles" class="category-aid d-none">
       <div class="row g-3">
         <div class="col-md-3">
+          <label class="form-label small">Count</label>
+          <input type="number" class="form-control" id="candle_count" name="candle_count" placeholder="e.g., 8" min="1" step="1">
+        </div>
+        <div class="col-md-3">
           <label class="form-label small">Fragrance Load (%)</label>
           <input type="number" class="form-control" id="candle_fragrance_pct" name="candle_fragrance_pct" placeholder="e.g., 8" min="0" max="20" step="0.1">
         </div>
@@ -49,6 +53,10 @@
         <div class="col-md-3">
           <label class="form-label small">Vessel Fill (%)</label>
           <input type="number" class="form-control" id="candle_fill_pct" name="candle_fill_pct" placeholder="e.g., 90" min="1" max="100" step="0.1">
+        </div>
+        <div class="col-md-3">
+          <label class="form-label small">Total Wax (g) (optional)</label>
+          <input type="number" class="form-control" id="candle_wax_g" name="candle_wax_g" placeholder="e.g., 1000" min="0" step="0.1">
         </div>
       </div>
       <small class="text-muted">Advanced wick/vessel guidance coming soon.</small>
@@ -102,6 +110,44 @@
         </div>
       </div>
       <small class="text-muted">Basic ratio helper; full herbal profiles later.</small>
+    </div>
+
+    <!-- Preserves: simple volume target -->
+    <div data-cat="Preserves" class="category-aid d-none">
+      <div class="row g-3">
+        <div class="col-md-3">
+          <label class="form-label small">Batch Volume (ml)</label>
+          <input type="number" class="form-control" id="preserves_volume_ml" name="preserves_volume_ml" placeholder="e.g., 2000" min="0" step="1">
+        </div>
+      </div>
+      <small class="text-muted">Defaults to ml; large volumes step up to liters.</small>
+    </div>
+
+    <!-- Beverages: simple volume target -->
+    <div data-cat="Beverages" class="category-aid d-none">
+      <div class="row g-3">
+        <div class="col-md-3">
+          <label class="form-label small">Batch Volume (ml)</label>
+          <input type="number" class="form-control" id="beverage_volume_ml" name="beverage_volume_ml" placeholder="e.g., 5000" min="0" step="1">
+        </div>
+      </div>
+      <small class="text-muted">Defaults to ml; large volumes step up to liters.</small>
+    </div>
+
+    <!-- Confectionery: simple base + add-in % -->
+    <div data-cat="Confectionery" class="category-aid d-none">
+      <div class="row g-3">
+        <div class="col-md-3">
+          <label class="form-label small">Base (g)</label>
+          <input type="number" class="form-control" id="conf_base_g" name="conf_base_g" placeholder="e.g., 1000" min="0" step="1">
+        </div>
+        <div class="col-md-3">
+          <label class="form-label small">Add-in (%)</label>
+          <input type="number" class="form-control" id="conf_addin_pct" name="conf_addin_pct" placeholder="e.g., 10" min="0" max="100" step="0.1">
+        </div>
+      </div>
+      <div class="mt-2 small text-muted" id="conf_result"></div>
+      <small class="text-muted">Portioned by default. Enter base and % to derive batch size.</small>
     </div>
   </div>
 </div>
@@ -170,6 +216,62 @@
     if (predictedYield){ const total = oil + water + lye; predictedYield.value = String(round(total)); applyUnitStepUp(total); }
     if (predictedYieldUnit && !predictedYieldUnit.value){ predictedYieldUnit.value = 'gram'; }
   }
+  function deriveCandle(){
+    const count = parseFloat(document.getElementById('candle_count')?.value||'');
+    const fl = parseFloat(document.getElementById('candle_fragrance_pct')?.value||'');
+    const vml = parseFloat(document.getElementById('candle_vessel_ml')?.value||'');
+    const fill = parseFloat(document.getElementById('candle_fill_pct')?.value||'');
+    const waxG = parseFloat(document.getElementById('candle_wax_g')?.value||'');
+    let total = 0;
+    if (waxG>0 && isFinite(fl)){
+      // total = wax + fragrance = W + W*(fl/100)
+      total = waxG * (1 + fl/100);
+    } else if (isFinite(count) && isFinite(vml) && count>0 && vml>0){
+      const ratio = (isFinite(fill) && fill>0) ? (fill/100) : 1;
+      const totalMl = count * vml * ratio;
+      // assume 1 g/ml for preview; actual density adjustments happen in drawers if needed
+      // Convert total Ml to grams 1:1 preview
+      const t = totalMl;
+      if (isFinite(fl)){
+        // total = W + W*(fl/100) => W = total/(1+fl/100)
+        const W = t / (1 + fl/100);
+        total = W + (W * fl/100);
+      } else {
+        total = t;
+      }
+    }
+    if (total>0 && predictedYield){ predictedYield.value = String(round(total)); applyUnitStepUp(total); }
+    if (predictedYieldUnit && !predictedYieldUnit.value){ predictedYieldUnit.value = 'gram'; }
+  }
+
+  function deriveLotion(){
+    // Already have emulsifier/preservative %, derive from batch size if provided in base form
+    const batch = parseFloat(document.getElementById('predicted_yield')?.value||'');
+    const emul = parseFloat(document.getElementById('cosm_emulsifier_pct')?.value||'');
+    const pres = parseFloat(document.getElementById('cosm_preservative_pct')?.value||'');
+    if (batch>0 && (isFinite(emul)||isFinite(pres))){ applyUnitStepUp(batch); }
+  }
+
+  function derivePreserveVolume(){
+    const ml = parseFloat(document.getElementById('preserves_volume_ml')?.value||'');
+    if (ml>0 && predictedYield){ predictedYield.value = String(round(ml)); if (predictedYieldUnit && !predictedYieldUnit.value){ predictedYieldUnit.value = 'ml'; } applyUnitStepUp(ml); }
+  }
+
+  function deriveBeverageVolume(){
+    const ml = parseFloat(document.getElementById('beverage_volume_ml')?.value||'');
+    if (ml>0 && predictedYield){ predictedYield.value = String(round(ml)); if (predictedYieldUnit && !predictedYieldUnit.value){ predictedYieldUnit.value = 'ml'; } applyUnitStepUp(ml); }
+  }
+
+  function deriveConfectionery(){
+    const base = parseFloat(document.getElementById('conf_base_g')?.value||'');
+    const pct = parseFloat(document.getElementById('conf_addin_pct')?.value||'');
+    if (!(base>0)) { const r = document.getElementById('conf_result'); if (r) r.textContent=''; return; }
+    const addin = isFinite(pct)? base*(pct/100):0;
+    const total = base + addin;
+    const res = document.getElementById('conf_result'); if (res) res.textContent = `Add-ins ${round(addin)} g. Total ${round(total)} g`;
+    if (predictedYield){ predictedYield.value = String(round(total)); applyUnitStepUp(total); }
+    if (predictedYieldUnit && !predictedYieldUnit.value){ predictedYieldUnit.value = 'gram'; }
+  }
   function deriveBaking(){
     const flour = parseFloat(document.getElementById('baker_base_flour_g')?.value||'');
     const wp = parseFloat(document.getElementById('baker_water_pct')?.value||'');
@@ -198,6 +300,11 @@
     if (card) card.style.display = any ? 'block' : 'none';
     // Recalculate when soap is visible
     if (selected.toLowerCase().includes('soap')) deriveSoap();
+    if (selected.toLowerCase().includes('candle')) deriveCandle();
+    if (selected.toLowerCase().includes('baked')) deriveBaking();
+    if (selected.toLowerCase().includes('preserve')) derivePreserveVolume();
+    if (selected.toLowerCase().includes('beverage')) deriveBeverageVolume();
+    if (selected.toLowerCase().includes('confection')) deriveConfectionery();
   }
   if (categorySelect){
     categorySelect.addEventListener('change', syncAids);
@@ -211,6 +318,16 @@
   ['baker_base_flour_g','baker_water_pct','baker_salt_pct','baker_yeast_pct'].forEach(id=>{
     const el = document.getElementById(id);
     if (el){ el.addEventListener('input', deriveBaking); }
+  });
+  // Wire candle inputs
+  ['candle_count','candle_fragrance_pct','candle_vessel_ml','candle_fill_pct','candle_wax_g'].forEach(id=>{
+    const el = document.getElementById(id);
+    if (el){ el.addEventListener('input', deriveCandle); }
+  });
+  // Wire volume categories
+  ['preserves_volume_ml','beverage_volume_ml','conf_base_g','conf_addin_pct'].forEach(id=>{
+    const el = document.getElementById(id);
+    if (el){ el.addEventListener('input', ()=>{ if (id==='preserves_volume_ml') derivePreserveVolume(); else if (id==='beverage_volume_ml') deriveBeverageVolume(); else deriveConfectionery(); }); }
   });
   // If user changes the yield unit, freeze unit auto step-up
   if (predictedYieldUnit){ predictedYieldUnit.addEventListener('change', ()=>{ predictedYieldUnit.dataset.userChanged = 'true'; }); }
