@@ -99,6 +99,28 @@
   const card = document.getElementById('categorySpecificCard');
   const predictedYield = document.getElementById('predicted_yield');
   const predictedYieldUnit = document.getElementById('predicted_yield_unit');
+  function applyUnitStepUp(total){
+    if (!predictedYieldUnit || predictedYieldUnit.dataset.userChanged === 'true') return;
+    const unit = (predictedYieldUnit.value||'').toLowerCase();
+    if (!isFinite(total) || total<=0) return;
+    // Weight defaults
+    if (unit === '' || unit === 'gram' || unit === 'g'){
+      if (total >= 2000 && hasOption('kg')) predictedYieldUnit.value = 'kg';
+      return;
+    }
+    if (unit === 'oz'){
+      if (total >= 32 && hasOption('lb')) predictedYieldUnit.value = 'lb';
+      return;
+    }
+    // Volume defaults
+    if (unit === 'ml'){
+      if (total >= 1000 && hasOption('liter')) predictedYieldUnit.value = 'liter';
+      return;
+    }
+    function hasOption(name){
+      return Array.from(predictedYieldUnit.options||[]).some(o => (o.value||'').toLowerCase() === name);
+    }
+  }
   function currentCategory(){
     if (categorySelect) {
       return categorySelect.options[categorySelect.selectedIndex]?.text?.trim() || '';
@@ -132,7 +154,7 @@
       const rEl = document.getElementById('soap_ratio');
       if (rEl) rEl.value = String(round(ratio));
     }
-    if (predictedYield){ predictedYield.value = String(round(oil + water + lye)); }
+    if (predictedYield){ const total = oil + water + lye; predictedYield.value = String(round(total)); applyUnitStepUp(total); }
     if (predictedYieldUnit && !predictedYieldUnit.value){ predictedYieldUnit.value = 'gram'; }
   }
   function syncAids(){
