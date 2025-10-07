@@ -19,9 +19,13 @@ depends_on = None
 
 def table_exists(table_name):
     """Check if a table exists"""
-    bind = op.get_bind()
-    inspector = sa.inspect(bind)
-    return table_name in inspector.get_table_names()
+    try:
+        bind = op.get_bind()
+        inspector = sa.inspect(bind)
+        return table_name in inspector.get_table_names()
+    except Exception as e:
+        print(f"   ⚠️  Could not check table existence for {table_name}: {e}")
+        return False
 
 
 def upgrade():
@@ -178,10 +182,24 @@ def upgrade():
             print("   ✅ Successfully migrated inventory_history data")
         except Exception as e:
             print(f"   ⚠️  Error migrating inventory_history: {e}")
-            # Continue with migration even if this fails
+            # Rollback the failed transaction and start fresh
+            try:
+                bind.rollback()
+            except:
+                pass
+            print("   ℹ️  Transaction rolled back, continuing with migration...")
 
     # 4. Migrate data from product_sku_history if it exists
-    if table_exists('product_sku_history'):
+    # Check table existence in a new transaction context
+    try:
+        bind = op.get_bind()  # Get fresh connection
+        inspector = sa.inspect(bind)
+        has_product_sku_history = 'product_sku_history' in inspector.get_table_names()
+    except Exception as e:
+        print(f"   ⚠️  Could not check for product_sku_history table: {e}")
+        has_product_sku_history = False
+
+    if has_product_sku_history:
         print("   Migrating data from product_sku_history...")
 
         # Map product_sku_history to unified format
@@ -225,7 +243,12 @@ def upgrade():
             print("   ✅ Successfully migrated product_sku_history data")
         except Exception as e:
             print(f"   ⚠️  Error migrating product_sku_history: {e}")
-            # Continue with migration even if this fails
+            # Rollback the failed transaction
+            try:
+                bind.rollback()
+            except:
+                pass
+            print("   ℹ️  Transaction rolled back, continuing with migration...")
 
     print("   ✅ Unified inventory history migration completed")
 
