@@ -19,7 +19,8 @@ def analyze_container_options(
     preferred_container_id: Optional[int] = None,
     organization_id: Optional[int] = None,
     api_format: bool = True,
-    product_density: Optional[float] = None
+    product_density: Optional[float] = None,
+    fill_pct: Optional[float] = None
 ) -> Tuple[Optional[Dict[str, Any]], List[Dict[str, Any]]]:
     """
     Single entry point for container analysis.
@@ -38,6 +39,16 @@ def analyze_container_options(
             raise ValueError("Recipe is required for container analysis")
         total_yield = (getattr(recipe, 'predicted_yield', 0) or 0) * scale
         yield_unit = getattr(recipe, 'predicted_yield_unit', None) or 'ml'
+        # Apply recipe-level vessel fill % if present and valid
+        try:
+            recipe_fill_pct = None
+            cd = getattr(recipe, 'category_data', None)
+            if isinstance(cd, dict):
+                vfp = cd.get('vessel_fill_pct')
+                if vfp is not None:
+                    recipe_fill_pct = float(vfp)
+        except Exception:
+            recipe_fill_pct = None
 
         if total_yield <= 0:
             raise ValueError(f"Recipe '{recipe.name}' has no predicted yield configured")
@@ -49,7 +60,18 @@ def analyze_container_options(
             raise ValueError(f"No containers with valid capacity data found for recipe '{recipe.name}'. Check that containers have capacity and capacity_unit values, and are convertible to {yield_unit}.")
 
         # Create greedy fill strategy
-        strategy = _create_greedy_strategy(container_options, total_yield, yield_unit)
+        # Determine effective fill pct (prefer recipe, otherwise client-provided)
+        effective_fill_pct = None
+        for_candidate = fill_pct
+        if recipe_fill_pct and recipe_fill_pct > 0:
+            effective_fill_pct = recipe_fill_pct
+        elif for_candidate is not None:
+            try:
+                effective_fill_pct = float(for_candidate)
+            except Exception:
+                effective_fill_pct = None
+
+        strategy = _create_greedy_strategy(container_options, total_yield, yield_unit, effective_fill_pct)
 
         return strategy, container_options
 
@@ -123,7 +145,7 @@ def _load_suitable_containers(recipe: Recipe, org_id: int, total_yield: float, y
         container_options.append({
             'container_id': container.id,
             'container_name': container.name,
-            'capacity': converted_capacity,  # Always in recipe yield units
+            'capacity': converted_capacity,  # Always in recipe yield units before fill %
             'capacity_in_yield_unit': converted_capacity,  # Explicit for frontend
             'yield_unit': yield_unit,  # Add yield unit for frontend
             'conversion_successful': True,  # Mark conversion as successful
@@ -186,7 +208,7 @@ class MissingProductDensityError(Exception):
         self.to_unit = to_unit
 
 
-def _create_greedy_strategy(container_options: List[Dict[str, Any]], total_yield: float, yield_unit: str) -> Dict[str, Any]:
+def _create_greedy_strategy(container_options: List[Dict[str, Any]], total_yield: float, yield_unit: str, fill_pct: Optional[float] = None) -> Dict[str, Any]:
     """Create greedy fill strategy - largest containers first"""
 
     selected_containers = []
@@ -196,20 +218,30 @@ def _create_greedy_strategy(container_options: List[Dict[str, Any]], total_yield
         if remaining_yield <= 0:
             break
 
+        # Determine effective capacity with optional fill %
+        effective_capacity = container['capacity']
+        if fill_pct and fill_pct > 0:
+            effective_capacity = container['capacity'] * (fill_pct / 100.0)
+        if effective_capacity <= 0:
+            continue
+
         # Calculate how many of this container we need
         containers_needed = min(
             container['available_quantity'],
-            math.ceil(remaining_yield / container['capacity'])
+            math.ceil(remaining_yield / effective_capacity)
         )
 
         if containers_needed > 0:
             # Update the container option with selection
-            container['containers_needed'] = containers_needed
-            selected_containers.append(container.copy())
-            remaining_yield -= containers_needed * container['capacity']
+            # copy and record effective capacity for UI
+            ccopy = container.copy()
+            ccopy['containers_needed'] = containers_needed
+            ccopy['effective_capacity'] = effective_capacity
+            selected_containers.append(ccopy)
+            remaining_yield -= containers_needed * effective_capacity
 
     # Calculate totals
-    total_capacity = sum(c['capacity'] * c['containers_needed'] for c in selected_containers)
+    total_capacity = sum((c.get('effective_capacity', c['capacity'])) * c['containers_needed'] for c in selected_containers)
 
     # Local optimization around greedy solution to reduce overfill and improve containment
     def _optimize_selection(options: List[Dict[str, Any]], base_selection: List[Dict[str, Any]], target_yield: float) -> List[Dict[str, Any]]:
@@ -238,11 +270,13 @@ def _create_greedy_strategy(container_options: List[Dict[str, Any]], total_yield
                 capacity = 0.0
                 # top options
                 for opt, _ in ranges:
-                    capacity += current_counts.get(opt['container_id'], 0) * opt['capacity']
+                    eff_cap = opt.get('effective_capacity', opt['capacity'])
+                    capacity += current_counts.get(opt['container_id'], 0) * eff_cap
                 # other options from base selection unchanged
                 for c in base_selection:
                     if c['container_id'] not in current_counts:
-                        capacity += c['containers_needed'] * c['capacity']
+                        eff_cap2 = c.get('effective_capacity', c['capacity'])
+                        capacity += c['containers_needed'] * eff_cap2
 
                 # Feasibility preference: prefer >= target_min and minimize overfill; otherwise maximize capacity
                 if capacity >= target_min:
@@ -284,7 +318,7 @@ def _create_greedy_strategy(container_options: List[Dict[str, Any]], total_yield
     if selected_containers:
         optimized = _optimize_selection(container_options, selected_containers, total_yield)
         # Recompute totals
-        total_capacity = sum(c['capacity'] * c['containers_needed'] for c in optimized)
+        total_capacity = sum((c.get('effective_capacity', c['capacity'])) * c['containers_needed'] for c in optimized)
         selected_containers = optimized
 
     # Containment = Can the total capacity hold the yield? 
