@@ -165,7 +165,7 @@ def upgrade():
                 ih.created_by,
                 '' as notes,
                 COALESCE(ih.quantity_used, 0.0) as quantity_used,
-                CASE WHEN ih.is_perishable IS NULL THEN 0 ELSE ih.is_perishable END as is_perishable,
+                CASE WHEN ih.is_perishable IS NULL THEN false ELSE ih.is_perishable END as is_perishable,
                 ih.shelf_life_days,
                 ih.expiration_date,
                 COALESCE(ii.organization_id, 1) as organization_id
@@ -207,7 +207,7 @@ def upgrade():
                 COALESCE(psh.created_by, psh.user_id) as created_by,
                 COALESCE(psh.notes, '') as notes,
                 COALESCE(psh.quantity_used, 0.0) as quantity_used,
-                CASE WHEN psh.is_perishable IS NULL THEN 0 ELSE psh.is_perishable END as is_perishable,
+                CASE WHEN psh.is_perishable IS NULL THEN false ELSE psh.is_perishable END as is_perishable,
                 psh.shelf_life_days,
                 psh.expiration_date,
                 psh.customer,
