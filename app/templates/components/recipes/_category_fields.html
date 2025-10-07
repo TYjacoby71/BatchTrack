@@ -23,6 +23,14 @@
             <option value="KOH">KOH</option>
           </select>
         </div>
+        <div class="col-md-3">
+          <label class="form-label small">Lye (g)</label>
+          <input type="number" class="form-control" id="soap_lye_g" name="soap_lye_g" placeholder="auto" min="0" step="0.01">
+        </div>
+        <div class="col-md-3">
+          <label class="form-label small">Water:Lye Ratio</label>
+          <input type="number" class="form-control" id="soap_ratio" name="soap_ratio" placeholder="e.g., 2.3" min="0" step="0.01">
+        </div>
       </div>
       <small class="text-muted">Detailed per-oil SAP handled in Global Library; this is an aid.</small>
     </div>
@@ -85,6 +93,8 @@
 (function(){
   const categorySelect = document.getElementById('category_id');
   const card = document.getElementById('categorySpecificCard');
+  const predictedYield = document.getElementById('predicted_yield');
+  const predictedYieldUnit = document.getElementById('predicted_yield_unit');
   function currentCategory(){
     if (categorySelect) {
       return categorySelect.options[categorySelect.selectedIndex]?.text?.trim() || '';
@@ -93,6 +103,33 @@
       return String(window.RECIPE_CATEGORY_NAME);
     }
     return '';
+  }
+  function round(v){ return Math.round(v*1000)/1000 }
+  function deriveSoap(){
+    const oil = parseFloat(document.getElementById('soap_oil_g')?.value||'0');
+    const sf = parseFloat(document.getElementById('soap_superfat')?.value||'0');
+    const lyeType = document.getElementById('soap_lye_type')?.value||'NaOH';
+    const waterPctVal = parseFloat(document.getElementById('soap_water_pct')?.value||'0');
+    const lyeInput = parseFloat(document.getElementById('soap_lye_g')?.value||'');
+    const ratioInput = parseFloat(document.getElementById('soap_ratio')?.value||'');
+    if (!(oil>0)) return;
+    const SAP_NAOH = 0.138, SAP_KOH = 0.194; // average defaults
+    let lye = isFinite(lyeInput) ? lyeInput : ( (lyeType==='KOH'? SAP_KOH: SAP_NAOH) * oil * (1 - sf/100) );
+    let water;
+    if (isFinite(ratioInput) && ratioInput>0){ water = lye * ratioInput; }
+    else if (isFinite(waterPctVal) && waterPctVal>0){ water = oil * (waterPctVal/100); }
+    else { water = oil * 0.33; }
+    const ratio = lye>0 ? (water/lye) : '';
+    if (!isFinite(lyeInput)) {
+      const lyeEl = document.getElementById('soap_lye_g');
+      if (lyeEl) lyeEl.value = String(round(lye));
+    }
+    if (!isFinite(ratioInput)){
+      const rEl = document.getElementById('soap_ratio');
+      if (rEl) rEl.value = String(round(ratio));
+    }
+    if (predictedYield){ predictedYield.value = String(round(oil + water + lye)); }
+    if (predictedYieldUnit && !predictedYieldUnit.value){ predictedYieldUnit.value = 'gram'; }
   }
   function syncAids(){
     const selected = currentCategory();
@@ -105,10 +142,17 @@
       any = any || on;
     });
     if (card) card.style.display = any ? 'block' : 'none';
+    // Recalculate when soap is visible
+    if (selected.toLowerCase().includes('soap')) deriveSoap();
   }
   if (categorySelect){
     categorySelect.addEventListener('change', syncAids);
   }
+  // Wire soap inputs for live derivation
+  ['soap_oil_g','soap_superfat','soap_lye_type','soap_water_pct','soap_lye_g','soap_ratio'].forEach(id=>{
+    const el = document.getElementById(id);
+    if (el){ el.addEventListener('input', deriveSoap); }
+  });
   syncAids();
 })();
 </script>
