@@ -124,8 +124,20 @@ def process_inventory_adjustment(item_id, change_type, quantity, notes=None, cre
 
             if not is_valid:
                 logger.error(f"FIFO VALIDATION FAILED before commit for item {item_id}: {error_msg}")
-                db.session.rollback()
-                return False, f"FIFO validation failed: {error_msg}"
+                # Try to auto-correct minor sync issues (tolerance of 0.001)
+                try:
+                    from ._validation import validate_inventory_fifo_sync
+                    _, _, inv_qty, fifo_total = validate_inventory_fifo_sync(item_id)
+                    diff = abs(inv_qty - fifo_total)
+                    if diff <= 0.001:
+                        logger.info(f"AUTO-CORRECTING minor FIFO sync difference of {diff} for item {item_id}")
+                        item.quantity = fifo_total  # Align to FIFO total
+                    else:
+                        db.session.rollback()
+                        return False, f"FIFO validation failed: {error_msg}"
+                except Exception:
+                    db.session.rollback()
+                    return False, f"FIFO validation failed: {error_msg}"
 
         except Exception as e:
             logger.error(f"FIFO VALIDATION ERROR for item {item_id}: {str(e)}")

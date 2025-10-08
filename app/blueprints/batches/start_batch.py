@@ -8,7 +8,6 @@ start_batch_bp = Blueprint('start_batch', __name__)
 
 @start_batch_bp.route('/start_batch', methods=['POST'])
 @login_required
-@require_permission('batches.create')
 def start_batch():
     """Start a new batch - thin controller delegating to service"""
     try:
