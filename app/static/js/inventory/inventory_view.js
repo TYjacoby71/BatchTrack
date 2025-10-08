@@ -55,7 +55,8 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     const confirmRecountBtn = document.getElementById('confirmRecount');
-    if (confirmRecountBtn) {
+    if (confirmRecountBtn && recountModalEl) {
+        const recountModal = new bootstrap.Modal(recountModalEl);
         confirmRecountBtn.addEventListener('click', function() {
             const hiddenInput = document.createElement('input');
             hiddenInput.type = 'hidden';
