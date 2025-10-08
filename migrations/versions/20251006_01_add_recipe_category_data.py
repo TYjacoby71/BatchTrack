@@ -1,13 +1,19 @@
 """
 Add category_data JSON column to recipe table
+
+Revision ID:
+20251006_1
+Revises:
+20251001_2
+Create Date: 2025-10-06
 """
 
 from alembic import op
 import sqlalchemy as sa
 from sqlalchemy import inspect
 
-revision = '20251006_01_add_recipe_category_data'
-down_revision = '20250925_03_add_portion_unit_fk'
+revision = '20251006_1'
+down_revision = '20251001_2'
 branch_labels = None
 depends_on = None
 

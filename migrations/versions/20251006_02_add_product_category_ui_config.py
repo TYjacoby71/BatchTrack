@@ -6,8 +6,8 @@ from alembic import op
 import sqlalchemy as sa
 from sqlalchemy import inspect
 
-revision = '20251006_02_add_product_category_ui_config'
-down_revision = '20250923_04_add_sku_name_template_to_product_category'
+revision = '20251006_2'
+down_revision = '20251006_1'
 branch_labels = None
 depends_on = None
 
