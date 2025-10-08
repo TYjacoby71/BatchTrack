@@ -102,13 +102,22 @@
       const f = document.getElementById('flForm');
       const waxG = parseFloat(f.wax_g.value||'0');
       const flPct = parseFloat(f.fl_pct.value||'0');
+      const vesselMl = parseFloat(f.vessel_ml.value||'0');
+      const overlay = {
+        candle_wax_g: waxG,
+        candle_fragrance_pct: flPct,
+        candle_vessel_ml: vesselMl,
+        vessel_fill_pct: parseFloat(document.getElementById('candle_fill_pct')?.value||'') || null,
+        candle_count: parseFloat(document.getElementById('candle_count')?.value||'') || null
+      };
       const fragranceG = isFinite(waxG) && isFinite(flPct) ? (waxG * (flPct/100)) : 0;
       const payload = {
         name: 'Candle (Draft)',
         instructions: 'Draft from Candle Tools',
         predicted_yield: (waxG + fragranceG) || 0,
         predicted_yield_unit: 'gram',
-        category_name: 'Candles'
+        category_name: 'Candles',
+        category_data: overlay
       };
       await fetch('/tools/draft', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(payload)});
     } catch(_) {}

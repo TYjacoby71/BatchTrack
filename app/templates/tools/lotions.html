@@ -50,12 +50,17 @@
       const batch = parseFloat(f.batch_g.value||'0');
       const emul = parseFloat(f.emulsifier_pct.value||'0');
       const pres = parseFloat(f.preservative_pct.value||'0');
+      const overlay = {
+        cosm_emulsifier_pct: emul,
+        cosm_preservative_pct: pres
+      };
       const payload = {
         name: 'Lotion (Draft)',
         instructions: 'Draft from Lotion Tools',
         predicted_yield: batch || 0,
         predicted_yield_unit: 'gram',
-        category_name: 'Cosmetics'
+        category_name: 'Cosmetics',
+        category_data: overlay
       };
       await fetch('/tools/draft', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(payload)});
     } catch(_) {}

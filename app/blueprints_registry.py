@@ -90,40 +90,54 @@ def register_blueprints(app):
     # Exports blueprint (category-specific exports)
     try:
         from flask import Blueprint
+        from flask_login import login_required, current_user
         # Create a lightweight exports blueprint inline to avoid import churn
         from app.models import Recipe
         exports_bp = Blueprint('exports', __name__, url_prefix='/exports')
         
         @exports_bp.route('/recipe/<int:recipe_id>/soap-inci')
+        @login_required
         def _soap_inci_recipe(recipe_id: int):
             from flask import render_template, abort
             rec = Recipe.query.get(recipe_id)
             if not rec:
                 abort(404)
+            # Organization scoping
+            if getattr(current_user, 'organization_id', None) and rec.organization_id != current_user.organization_id:
+                abort(403)
             return render_template('exports/soap_inci.html', recipe=rec, source='recipe')
 
         @exports_bp.route('/recipe/<int:recipe_id>/candle-label')
+        @login_required
         def _candle_label_recipe(recipe_id: int):
             from flask import render_template, abort
             rec = Recipe.query.get(recipe_id)
             if not rec:
                 abort(404)
+            if getattr(current_user, 'organization_id', None) and rec.organization_id != current_user.organization_id:
+                abort(403)
             return render_template('exports/candle_label.html', recipe=rec, source='recipe')
 
         @exports_bp.route('/recipe/<int:recipe_id>/baker-sheet')
+        @login_required
         def _baker_sheet_recipe(recipe_id: int):
             from flask import render_template, abort
             rec = Recipe.query.get(recipe_id)
             if not rec:
                 abort(404)
+            if getattr(current_user, 'organization_id', None) and rec.organization_id != current_user.organization_id:
+                abort(403)
             return render_template('exports/baker_sheet.html', recipe=rec, source='recipe')
 
         @exports_bp.route('/recipe/<int:recipe_id>/lotion-inci')
+        @login_required
         def _lotion_inci_recipe(recipe_id: int):
             from flask import render_template, abort
             rec = Recipe.query.get(recipe_id)
             if not rec:
                 abort(404)
+            if getattr(current_user, 'organization_id', None) and rec.organization_id != current_user.organization_id:
+                abort(403)
             return render_template('exports/lotion_inci.html', recipe=rec, source='recipe')
 
         @exports_bp.route('/tool/soaps/inci')

@@ -49,6 +49,11 @@
       const f = document.getElementById('bakerForm');
       const flour = parseFloat(f.flour_g.value||'0');
       const water = parseFloat(f.water_pct.value||'0');
+      const overlay = {
+        baker_base_flour_g: flour,
+        baker_water_pct: water,
+        baker_salt_pct: parseFloat(f.salt_pct.value||'0')
+      };
       const salt = parseFloat(f.salt_pct.value||'0');
       const batch = flour + (flour*(water/100)) + (flour*(salt/100));
       const payload = {
@@ -56,7 +61,8 @@
         instructions: 'Draft from Baker Tools',
         predicted_yield: batch || 0,
         predicted_yield_unit: 'gram',
-        category_name: 'Baked Goods'
+        category_name: 'Baked Goods',
+        category_data: overlay
       };
       await fetch('/tools/draft', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(payload)});
     } catch(_) {}

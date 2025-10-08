@@ -47,12 +47,18 @@
       const f = document.getElementById('herbForm');
       const herb = parseFloat(f.herb_g.value||'0');
       const solv = parseFloat(f.solvent_ml.value||'0');
+      const overlay = {
+        herbal_ratio: (f.ratio.value||'').trim(),
+        herbal_herb_g: herb,
+        herbal_solvent_ml: solv
+      };
       const payload = {
         name: 'Tincture (Draft)',
         instructions: 'Draft from Herbal Tools',
         predicted_yield: (herb + solv) || 0,
         predicted_yield_unit: 'gram',
-        category_name: 'Miscellaneous'
+        category_name: 'Herbal',
+        category_data: overlay
       };
       await fetch('/tools/draft', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(payload)});
     } catch(_) {}
