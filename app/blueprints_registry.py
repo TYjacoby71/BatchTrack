@@ -87,6 +87,74 @@ def register_blueprints(app):
     # Register production planning blueprint
     safe_register_blueprint('app.blueprints.production_planning.production_planning_bp', 'production_planning_bp', '/production-planning', 'Production Planning')
 
+    # Exports blueprint (category-specific exports)
+    try:
+        from flask import Blueprint
+        # Create a lightweight exports blueprint inline to avoid import churn
+        from app.models import Recipe
+        exports_bp = Blueprint('exports', __name__, url_prefix='/exports')
+        
+        @exports_bp.route('/recipe/<int:recipe_id>/soap-inci')
+        def _soap_inci_recipe(recipe_id: int):
+            from flask import render_template, abort
+            rec = Recipe.query.get(recipe_id)
+            if not rec:
+                abort(404)
+            return render_template('exports/soap_inci.html', recipe=rec, source='recipe')
+
+        @exports_bp.route('/recipe/<int:recipe_id>/candle-label')
+        def _candle_label_recipe(recipe_id: int):
+            from flask import render_template, abort
+            rec = Recipe.query.get(recipe_id)
+            if not rec:
+                abort(404)
+            return render_template('exports/candle_label.html', recipe=rec, source='recipe')
+
+        @exports_bp.route('/recipe/<int:recipe_id>/baker-sheet')
+        def _baker_sheet_recipe(recipe_id: int):
+            from flask import render_template, abort
+            rec = Recipe.query.get(recipe_id)
+            if not rec:
+                abort(404)
+            return render_template('exports/baker_sheet.html', recipe=rec, source='recipe')
+
+        @exports_bp.route('/recipe/<int:recipe_id>/lotion-inci')
+        def _lotion_inci_recipe(recipe_id: int):
+            from flask import render_template, abort
+            rec = Recipe.query.get(recipe_id)
+            if not rec:
+                abort(404)
+            return render_template('exports/lotion_inci.html', recipe=rec, source='recipe')
+
+        @exports_bp.route('/tool/soaps/inci')
+        def _soap_inci_tool():
+            from flask import render_template, session
+            draft = session.get('tool_draft') or {}
+            return render_template('exports/soap_inci.html', tool_draft=draft, source='tool')
+
+        @exports_bp.route('/tool/candles/label')
+        def _candle_label_tool():
+            from flask import render_template, session
+            draft = session.get('tool_draft') or {}
+            return render_template('exports/candle_label.html', tool_draft=draft, source='tool')
+
+        @exports_bp.route('/tool/baker/sheet')
+        def _baker_sheet_tool():
+            from flask import render_template, session
+            draft = session.get('tool_draft') or {}
+            return render_template('exports/baker_sheet.html', tool_draft=draft, source='tool')
+
+        @exports_bp.route('/tool/lotions/inci')
+        def _lotion_inci_tool():
+            from flask import render_template, session
+            draft = session.get('tool_draft') or {}
+            return render_template('exports/lotion_inci.html', tool_draft=draft, source='tool')
+
+        app.register_blueprint(exports_bp)
+        successful_registrations.append('Exports')
+    except Exception as e:
+        failed_registrations.append(f"Exports: {e}")
+
 
     # Print summary
     print(f"\n=== Blueprint Registration Summary ===")
