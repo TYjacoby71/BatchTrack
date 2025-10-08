@@ -104,18 +104,18 @@ def upgrade():
 
     # 2. Create indexes for performance
     print("   Creating indexes...")
-    
+
     # Check if indexes already exist before creating them
     bind = op.get_bind()
     inspector = sa.inspect(bind)
     existing_indexes = []
-    
+
     try:
         existing_indexes = [idx['name'] for idx in inspector.get_indexes('unified_inventory_history')]
     except:
         # Table might not exist yet
         existing_indexes = []
-    
+
     indexes_to_create = [
         ('idx_unified_item_remaining', ['inventory_item_id', 'remaining_quantity']),
         ('idx_unified_item_timestamp', ['inventory_item_id', 'timestamp']),
@@ -123,7 +123,7 @@ def upgrade():
         ('idx_unified_change_type', ['change_type']),
         ('idx_unified_expiration', ['expiration_date'])
     ]
-    
+
     for idx_name, columns in indexes_to_create:
         if idx_name not in existing_indexes:
             try:
@@ -203,104 +203,94 @@ def upgrade():
         print("   Migrating data from product_sku_history...")
 
         # Check what columns actually exist in product_sku_history
-        try:
-            bind = op.get_bind()
-            inspector = sa.inspect(bind)
-            psh_columns = [col['name'] for col in inspector.get_columns('product_sku_history')]
-            print(f"   Available product_sku_history columns: {psh_columns}")
-            
-            # Check if product_sku table exists
-            has_product_sku_table = 'product_sku' in inspector.get_table_names()
-            
-            # Build migration SQL based on available columns
-            if 'inventory_item_id' in psh_columns:
-                # Direct migration - product_sku_history has inventory_item_id
-                migrate_product_sql = text("""
-                    INSERT INTO unified_inventory_history (
-                        inventory_item_id, timestamp, change_type, quantity_change, unit,
-                        unit_cost, remaining_quantity, fifo_reference_id, fifo_code,
-                        batch_id, created_by, notes, quantity_used,
-                        is_perishable, shelf_life_days, expiration_date,
-                        customer, sale_price, order_id, organization_id
-                    )
-                    SELECT 
-                        psh.inventory_item_id,
-                        COALESCE(psh.timestamp, CURRENT_TIMESTAMP) as timestamp,
-                        COALESCE(psh.change_type, 'unknown') as change_type,
-                        COALESCE(psh.quantity_change, 0.0) as quantity_change,
-                        COALESCE(psh.unit, 'count') as unit,
-                        psh.unit_cost,
-                        COALESCE(psh.remaining_quantity, 0.0) as remaining_quantity,
-                        psh.fifo_reference_id,
-                        psh.fifo_code,
-                        psh.batch_id,
-                        COALESCE(psh.created_by, psh.user_id) as created_by,
-                        COALESCE(psh.notes, '') as notes,
-                        COALESCE(psh.quantity_used, 0.0) as quantity_used,
-                        CASE WHEN psh.is_perishable IS NULL THEN false ELSE psh.is_perishable END as is_perishable,
-                        psh.shelf_life_days,
-                        psh.expiration_date,
-                        psh.customer,
-                        psh.sale_price,
-                        psh.order_id,
-                        COALESCE(ii.organization_id, 1) as organization_id
-                    FROM product_sku_history psh
-                    LEFT JOIN inventory_item ii ON psh.inventory_item_id = ii.id
-                    WHERE psh.inventory_item_id IS NOT NULL
-                """)
-            elif has_product_sku_table and ('sku_id' in psh_columns or 'product_sku_id' in psh_columns):
-                # Migration via product_sku table
-                sku_col = 'sku_id' if 'sku_id' in psh_columns else 'product_sku_id'
-                migrate_product_sql = text(f"""
-                    INSERT INTO unified_inventory_history (
-                        inventory_item_id, timestamp, change_type, quantity_change, unit,
-                        unit_cost, remaining_quantity, fifo_reference_id, fifo_code,
-                        batch_id, created_by, notes, quantity_used,
-                        is_perishable, shelf_life_days, expiration_date,
-                        customer, sale_price, order_id, organization_id
-                    )
-                    SELECT 
-                        ps.inventory_item_id,
-                        COALESCE(psh.timestamp, CURRENT_TIMESTAMP) as timestamp,
-                        COALESCE(psh.change_type, 'unknown') as change_type,
-                        COALESCE(psh.quantity_change, 0.0) as quantity_change,
-                        COALESCE(psh.unit, 'count') as unit,
-                        psh.unit_cost,
-                        COALESCE(psh.remaining_quantity, 0.0) as remaining_quantity,
-                        psh.fifo_reference_id,
-                        psh.fifo_code,
-                        psh.batch_id,
-                        COALESCE(psh.created_by, psh.user_id) as created_by,
-                        COALESCE(psh.notes, '') as notes,
-                        COALESCE(psh.quantity_used, 0.0) as quantity_used,
-                        CASE WHEN psh.is_perishable IS NULL THEN false ELSE psh.is_perishable END as is_perishable,
-                        psh.shelf_life_days,
-                        psh.expiration_date,
-                        psh.customer,
-                        psh.sale_price,
-                        psh.order_id,
-                        COALESCE(ii.organization_id, ps.organization_id, 1) as organization_id
-                    FROM product_sku_history psh
-                    LEFT JOIN product_sku ps ON psh.{sku_col} = ps.id
-                    LEFT JOIN inventory_item ii ON ps.inventory_item_id = ii.id
-                    WHERE ps.inventory_item_id IS NOT NULL
-                """)
-            else:
-                print("   ⚠️  Cannot migrate product_sku_history: no valid column mapping found")
-                migrate_product_sql = None
+        bind = op.get_bind()
+        inspector = sa.inspect(bind)
+        psh_columns = [col['name'] for col in inspector.get_columns('product_sku_history')]
+        print(f"   Available product_sku_history columns: {psh_columns}")
 
-            if migrate_product_sql:
-                bind.execute(migrate_product_sql)
-                print("   ✅ Successfully migrated product_sku_history data")
-            
-        except Exception as e:
-            print(f"   ⚠️  Error migrating product_sku_history: {e}")
-            # Rollback the failed transaction and get a new connection
-            try:
-                bind.rollback()
-            except:
-                pass
-            print("   ℹ️  Transaction rolled back, continuing with migration...")
+        # Check if product_sku table exists
+        has_product_sku_table = 'product_sku' in inspector.get_table_names()
+
+        # Build migration SQL based on available columns
+        if 'inventory_item_id' in psh_columns:
+            # Direct migration - product_sku_history has inventory_item_id
+            migrate_product_sql = text("""
+                INSERT INTO unified_inventory_history (
+                    inventory_item_id, timestamp, change_type, quantity_change, unit,
+                    unit_cost, remaining_quantity, fifo_reference_id, fifo_code,
+                    batch_id, created_by, notes, quantity_used,
+                    is_perishable, shelf_life_days, expiration_date,
+                    customer, sale_price, order_id, organization_id
+                )
+                SELECT 
+                    psh.inventory_item_id,
+                    COALESCE(psh.timestamp, CURRENT_TIMESTAMP) as timestamp,
+                    COALESCE(psh.change_type, 'unknown') as change_type,
+                    COALESCE(psh.quantity_change, 0.0) as quantity_change,
+                    COALESCE(psh.unit, 'count') as unit,
+                    psh.unit_cost,
+                    COALESCE(psh.remaining_quantity, 0.0) as remaining_quantity,
+                    psh.fifo_reference_id,
+                    psh.fifo_code,
+                    psh.batch_id,
+                    COALESCE(psh.created_by, psh.user_id) as created_by,
+                    COALESCE(psh.notes, '') as notes,
+                    COALESCE(psh.quantity_used, 0.0) as quantity_used,
+                    CASE WHEN psh.is_perishable IS NULL THEN false ELSE psh.is_perishable END as is_perishable,
+                    psh.shelf_life_days,
+                    psh.expiration_date,
+                    psh.customer,
+                    psh.sale_price,
+                    psh.order_id,
+                    COALESCE(ii.organization_id, 1) as organization_id
+                FROM product_sku_history psh
+                LEFT JOIN inventory_item ii ON psh.inventory_item_id = ii.id
+                WHERE psh.inventory_item_id IS NOT NULL
+            """)
+        elif has_product_sku_table and ('sku_id' in psh_columns or 'product_sku_id' in psh_columns):
+            # Migration via product_sku table
+            sku_col = 'sku_id' if 'sku_id' in psh_columns else 'product_sku_id'
+            migrate_product_sql = text(f"""
+                INSERT INTO unified_inventory_history (
+                    inventory_item_id, timestamp, change_type, quantity_change, unit,
+                    unit_cost, remaining_quantity, fifo_reference_id, fifo_code,
+                    batch_id, created_by, notes, quantity_used,
+                    is_perishable, shelf_life_days, expiration_date,
+                    customer, sale_price, order_id, organization_id
+                )
+                SELECT 
+                    ps.inventory_item_id,
+                    COALESCE(psh.timestamp, CURRENT_TIMESTAMP) as timestamp,
+                    COALESCE(psh.change_type, 'unknown') as change_type,
+                    COALESCE(psh.quantity_change, 0.0) as quantity_change,
+                    COALESCE(psh.unit, 'count') as unit,
+                    psh.unit_cost,
+                    COALESCE(psh.remaining_quantity, 0.0) as remaining_quantity,
+                    psh.fifo_reference_id,
+                    psh.fifo_code,
+                    psh.batch_id,
+                    COALESCE(psh.created_by, psh.user_id) as created_by,
+                    COALESCE(psh.notes, '') as notes,
+                    COALESCE(psh.quantity_used, 0.0) as quantity_used,
+                    CASE WHEN psh.is_perishable IS NULL THEN false ELSE psh.is_perishable END as is_perishable,
+                    psh.shelf_life_days,
+                    psh.expiration_date,
+                    psh.customer,
+                    psh.sale_price,
+                    psh.order_id,
+                    COALESCE(ii.organization_id, ps.organization_id, 1) as organization_id
+                FROM product_sku_history psh
+                LEFT JOIN product_sku ps ON psh.{sku_col} = ps.id
+                LEFT JOIN inventory_item ii ON ps.inventory_item_id = ii.id
+                WHERE ps.inventory_item_id IS NOT NULL
+            """)
+        else:
+            print("   ⚠️  Cannot migrate product_sku_history: no valid column mapping found")
+            migrate_product_sql = None
+
+        if migrate_product_sql:
+            bind.execute(migrate_product_sql)
+            print("   ✅ Successfully migrated product_sku_history data")
 
     print("   ✅ Unified inventory history migration completed")
 

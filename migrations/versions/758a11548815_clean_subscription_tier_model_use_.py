@@ -128,31 +128,41 @@ def upgrade():
 
         # Ensure proper column types and constraints
         print("   Ensuring proper column types...")
-        try:
-            # Handle NULL key values before setting NOT NULL constraint
-            if column_exists('subscription_tier', 'key'):
-                # First, update any NULL key values with a default
+        if column_exists('subscription_tier', 'key'):
+            # First, update any NULL key values with a default
+            try:
                 bind = op.get_bind()
+                # Test transaction state first
                 try:
-                    bind.execute(text("""
-                        UPDATE subscription_tier 
-                        SET "key" = COALESCE("key", 'tier_' || id::text) 
-                        WHERE "key" IS NULL
-                    """))
-                    print("   ✅ Fixed NULL key values")
-                except Exception as update_e:
-                    print(f"   ⚠️  Could not fix NULL keys: {update_e}")
+                    bind.execute(text("SELECT 1"))
+                except Exception as test_e:
+                    if "aborted" in str(test_e).lower():
+                        print("   ⚠️  Transaction aborted, rolling back...")
+                        bind.rollback()
+                        bind = op.get_bind()
+
+                # Fix NULL key values
+                bind.execute(text("""
+                    UPDATE subscription_tier 
+                    SET key = COALESCE(key, 'tier_' || id::text) 
+                    WHERE key IS NULL
+                """))
+                print("   ✅ Fixed NULL key values")
 
                 # Now make it NOT NULL
+                op.alter_column('subscription_tier', 'key',
+                              existing_type=sa.String(32),
+                              nullable=False)
+                print("   ✅ Set key column as NOT NULL")
+
+            except Exception as e:
+                print(f"   ⚠️  Could not fix key column: {e}")
+                # Rollback and continue
                 try:
-                    op.alter_column('subscription_tier', 'key',
-                                  existing_type=sa.String(32),
-                                  nullable=False)
-                    print("   ✅ Set key column as NOT NULL")
-                except Exception as alter_e:
-                    print(f"   ⚠️  Could not set key NOT NULL: {alter_e}")
-        except Exception as e:
-            print(f"   ⚠️  Could not fix column types: {e}")
+                    bind = op.get_bind()
+                    bind.rollback()
+                except:
+                    pass
 
         # Create indexes
         print("   Creating indexes...")
