@@ -1,4 +1,3 @@
-
 """Create inventory_lot table for proper FIFO tracking
 
 Revision ID: create_inventory_lot
@@ -17,7 +16,20 @@ depends_on = None
 
 
 def upgrade():
-    # Create inventory_lot table
+    """Create inventory_lot table for proper FIFO tracking"""
+    # Check if table already exists
+    from alembic import op
+    import sqlalchemy as sa
+    from sqlalchemy import inspect
+
+    bind = op.get_bind()
+    inspector = inspect(bind)
+    existing_tables = inspector.get_table_names()
+
+    if 'inventory_lot' in existing_tables:
+        print("   ✅ inventory_lot table already exists - skipping creation")
+        return
+
     op.create_table(
         'inventory_lot',
         sa.Column('id', sa.Integer(), nullable=False),
@@ -58,6 +70,6 @@ def downgrade():
     op.drop_index('idx_inventory_lot_expiration')
     op.drop_index('idx_inventory_lot_received_date')
     op.drop_index('idx_inventory_lot_item_remaining')
-    
+
     # Drop table
     op.drop_table('inventory_lot')
