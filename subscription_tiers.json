@@ -69,6 +69,29 @@
       "Email support"
     ]
   },
+  "free": {
+    "name": "Free Tools",
+    "description": "Recipe-only starter. Inventory read-only. No batches.",
+    "permissions": [
+      "recipes.view",
+      "recipes.create",
+      "recipes.edit",
+      "recipes.delete",
+      "inventory.view"
+    ],
+    "feature_groups": [
+      "recipe_management"
+    ],
+    "stripe_lookup_key": null,
+    "user_limit": 1,
+    "is_customer_facing": true,
+    "billing_provider": "exempt",
+    "features": [
+      "Public tools",
+      "Recipe management",
+      "Inventory visibility (read-only)"
+    ]
+  },
   "team": {
     "name": "Team Plan",
     "description": "Collaboration tools for small teams",

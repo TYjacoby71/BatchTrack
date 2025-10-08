@@ -2,11 +2,13 @@ from flask import Blueprint, request, flash, jsonify
 from flask_login import login_required, current_user
 from ...services.batch_service import BatchOperationsService
 from app.utils.permissions import role_required
+from app.utils.permissions import require_permission
 
 start_batch_bp = Blueprint('start_batch', __name__)
 
 @start_batch_bp.route('/start_batch', methods=['POST'])
 @login_required
+@require_permission('batches.create')
 def start_batch():
     """Start a new batch - thin controller delegating to service"""
     try:

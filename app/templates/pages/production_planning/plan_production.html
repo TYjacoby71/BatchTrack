@@ -80,7 +80,8 @@ window.recipeData = {
         is_portioned: {{ 'true' if recipe.portioning_data and recipe.portioning_data.get('is_portioned') else 'false' }},
         portion_count: {{ recipe.portioning_data.get('portion_count') if recipe.portioning_data and recipe.portioning_data.get('portion_count') else 'null' }},
         portion_name: "{{ recipe.portioning_data.get('portion_name') if recipe.portioning_data and recipe.portioning_data.get('portion_name') else '' }}"
-    }
+    },
+    category_data: {{ (recipe.category_data or {}) | tojson }}
 };
 </script>
 <script type="module" src="{{ url_for('static', filename='js/production_planning/plan_production.js') }}"></script>

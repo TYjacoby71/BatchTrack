@@ -1,0 +1,80 @@
+{% extends 'layout.html' %}
+{% block content %}
+<div class="container py-4">
+  <h2 class="mb-3">Herbalist Tools</h2>
+  <script>window.RECIPE_CATEGORY_NAME = 'Herbal';</script>
+  <p class="text-muted">Quick tincture ratio helper. Standardize to grams and milliliters.</p>
+  <div class="card">
+    <div class="card-header">Tincture Ratio</div>
+    <div class="card-body">
+      {% include 'components/recipes/_category_fields.html' %}
+      <form id="herbForm" class="row g-3">
+        <div class="col-md-3"><label class="form-label">Herb (g)</label><input type="number" name="herb_g" class="form-control" min="0" step="1"></div>
+        <div class="col-md-3"><label class="form-label">Solvent (ml)</label><input type="number" name="solvent_ml" class="form-control" min="0" step="1"></div>
+        <div class="col-md-3"><label class="form-label">Ratio</label><input type="text" name="ratio" class="form-control" placeholder="1:5"></div>
+        <div class="col-md-3 d-flex align-items-end"><button type="button" class="btn btn-primary w-100" id="calcHerbBtn">Calculate</button></div>
+      </form>
+      <div class="mt-3" id="herbResult" style="display:none;">
+        <div class="alert alert-info mb-2" id="herbNumbers"></div>
+        <button class="btn btn-success" id="saveHerbTool">Save to BatchTrack</button>
+      </div>
+    </div>
+  </div>
+</div>
+<script>
+(function(){
+  document.getElementById('calcHerbBtn').addEventListener('click', function(){
+    const f = document.getElementById('herbForm');
+    const ratio = (f.ratio.value||'').trim();
+    const parts = ratio.split(':');
+    if (parts.length===2){
+      const g = parseFloat(parts[0]||'1');
+      const ml = parseFloat(parts[1]||'5');
+      document.getElementById('herbNumbers').textContent = `For each 1 g herb use ${ml/g} ml solvent`;
+    } else {
+      const herb = parseFloat(f.herb_g.value||'0');
+      const solv = parseFloat(f.solvent_ml.value||'0');
+      if (herb>0 && solv>0){
+        document.getElementById('herbNumbers').textContent = `Ratio ~ ${herb}:${solv}`;
+      } else {
+        document.getElementById('herbNumbers').textContent = 'Enter herb and solvent or ratio';
+      }
+    }
+    document.getElementById('herbResult').style.display = 'block';
+  });
+  document.getElementById('saveHerbTool').addEventListener('click', async function(){
+    try {
+      const f = document.getElementById('herbForm');
+      const herb = parseFloat(f.herb_g.value||'0');
+      const solv = parseFloat(f.solvent_ml.value||'0');
+      const overlay = {
+        herbal_ratio: (f.ratio.value||'').trim(),
+        herbal_herb_g: herb,
+        herbal_solvent_ml: solv
+      };
+      const payload = {
+        name: 'Tincture (Draft)',
+        instructions: 'Draft from Herbal Tools',
+        predicted_yield: (herb + solv) || 0,
+        predicted_yield_unit: 'gram',
+        category_name: 'Herbal',
+        category_data: overlay
+      };
+      await fetch('/tools/draft', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(payload)});
+    } catch(_) {}
+    const modalHtml = `
+      <div class="modal fade" id="savePrompt" tabindex="-1"><div class="modal-dialog"><div class="modal-content">
+        <div class="modal-header"><h5 class="modal-title">Save to BatchTrack</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
+        <div class="modal-body"><p>Create a free account to store this as a recipe.</p></div>
+        <div class="modal-footer">
+          <a class="btn btn-primary" href="{{ url_for('auth.signup') }}">Sign Up</a>
+          <a class="btn btn-outline-secondary" href="{{ url_for('auth.login') }}">Log In</a>
+        </div>
+      </div></div></div>`;
+    const div = document.createElement('div'); div.innerHTML = modalHtml; document.body.appendChild(div.firstChild);
+    const modal = new bootstrap.Modal(document.getElementById('savePrompt')); modal.show();
+  });
+})();
+</script>
+{% endblock %}

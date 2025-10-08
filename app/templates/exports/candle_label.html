@@ -1,0 +1,18 @@
+{% extends 'layout.html' %}
+{% block content %}
+<div class="container py-4">
+  <h2 class="mb-3">Candle Label Summary</h2>
+  {% set cd = (recipe.category_data if recipe else (tool_draft.category_data if tool_draft else {})) or {} %}
+  <div class="card">
+    <div class="card-body">
+      <p class="mb-1"><strong>Source:</strong> {{ source|title }}</p>
+      {% if recipe %}
+      <p class="mb-1"><strong>Recipe:</strong> {{ recipe.name }}</p>
+      {% endif %}
+      <p class="mb-1"><strong>Fragrance Load (%):</strong> {{ cd.candle_fragrance_pct or '' }}</p>
+      <p class="mb-1"><strong>Vessel Volume (ml):</strong> {{ cd.candle_vessel_ml or '' }}</p>
+      <p class="mb-1"><strong>Vessel Fill (%):</strong> {{ cd.vessel_fill_pct or cd.candle_fill_pct or '' }}</p>
+    </div>
+  </div>
+</div>
+{% endblock %}

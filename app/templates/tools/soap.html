@@ -1,0 +1,338 @@
+{% extends 'layout.html' %}
+{% block content %}
+<div class="container py-4">
+  <h2 class="mb-3">Soap Maker Tools</h2>
+  <script>window.RECIPE_CATEGORY_NAME = 'Soaps';</script>
+  <p class="text-muted">Use grams by default. Convert as needed with the unit engine.</p>
+
+  <div class="card mb-4">
+    <div class="card-header">Lye Calculator</div>
+    <div class="card-body">
+      {% include 'components/recipes/_category_fields.html' %}
+      <div class="mb-3">
+        <h6>Oil Blend (per batch)</h6>
+        <div id="oilRows">
+          <div class="row g-2 align-items-end oil-row mb-2">
+            <div class="col-md-6">
+              <label class="form-label">Oil</label>
+              <div class="position-relative">
+                <input type="text" class="form-control oil-typeahead" placeholder="Search oils...">
+                <input type="hidden" class="oil-sap-koh">
+                <div class="list-group position-absolute w-100 d-none" data-role="suggestions" style="z-index:1050"></div>
+              </div>
+            </div>
+            <div class="col-md-3">
+              <label class="form-label">Weight (g)</label>
+              <input type="number" class="form-control oil-grams" min="0" step="0.1">
+            </div>
+            <div class="col-md-3 d-grid">
+              <button class="btn btn-outline-danger remove-oil" type="button">Remove</button>
+            </div>
+          </div>
+        </div>
+        <button class="btn btn-sm btn-outline-primary" id="addOil">Add Oil</button>
+      </div>
+
+      <div class="mb-3">
+        <h6>Add Ingredients (identical to system form)</h6>
+        <div class="ingredient-entry row mb-3 p-3 border rounded">
+          <div class="col-md-6">
+            <label class="form-label">Ingredient</label>
+            <div class="position-relative">
+              <input type="text" class="form-control recipe-ingredient-typeahead" placeholder="Search inventory and global..." autocomplete="off">
+              <div class="list-group position-absolute w-100 d-none" data-role="suggestions"></div>
+              <input type="hidden" name="ingredient_ids[]">
+              <input type="hidden" name="global_item_ids[]">
+            </div>
+          </div>
+          <div class="col-md-3">
+            <label class="form-label">Quantity</label>
+            <input type="number" step="0.01" min="0" class="form-control" name="ingredient_quantities[]">
+          </div>
+          <div class="col-md-3">
+            <label class="form-label">Unit</label>
+            <select class="form-select" name="ingredient_units[]">
+              <option value="gram">gram</option>
+              <option value="milliliter">milliliter</option>
+              <option value="oz">oz</option>
+            </select>
+          </div>
+        </div>
+      </div>
+      <form id="lyeForm" class="row g-3">
+        <div class="col-md-4">
+          <label class="form-label">Computed total oils (g)</label>
+          <input type="number" class="form-control" name="oil_weight_g" min="0" step="0.1" required readonly>
+        </div>
+        <div class="col-md-4">
+          <label class="form-label">Superfat (%)</label>
+          <input type="number" class="form-control" name="superfat" min="0" max="20" step="0.1" value="5" required>
+        </div>
+        <div class="col-md-4">
+          <label class="form-label">Lye type</label>
+          <select class="form-select" name="lye_type">
+            <option value="NaOH">NaOH (bar soap)</option>
+            <option value="KOH">KOH (liquid soap)</option>
+          </select>
+        </div>
+        <div class="col-md-4">
+          <label class="form-label">Water as % of oils</label>
+          <input type="number" class="form-control" name="water_pct" min="20" max="50" step="0.1" value="33">
+        </div>
+        <div class="col-12">
+          <button type="button" class="btn btn-primary" id="calcLyeBtn">Calculate</button>
+        </div>
+      </form>
+      <div class="mt-3" id="lyeResult" style="display:none;">
+        <div class="alert alert-info mb-2" id="lyeNumbers"></div>
+        <button class="btn btn-success" id="saveSoapTool">Save to BatchTrack</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-header">Quick Unit Conversion</div>
+    <div class="card-body">
+      <form id="convForm" class="row g-3">
+        <div class="col-md-3">
+          <label class="form-label">Amount</label>
+          <input type="number" class="form-control" name="amount" step="0.001" min="0">
+        </div>
+        <div class="col-md-3">
+          <label class="form-label">From</label>
+          <input type="text" class="form-control" name="from" placeholder="g, ml, oz">
+        </div>
+        <div class="col-md-3">
+          <label class="form-label">To</label>
+          <input type="text" class="form-control" name="to" placeholder="g, ml, oz">
+        </div>
+        <div class="col-md-3 d-flex align-items-end">
+          <button type="button" class="btn btn-outline-secondary w-100" id="convBtn">Convert</button>
+        </div>
+      </form>
+      <div class="mt-2 small text-muted" id="convResult"></div>
+    </div>
+  </div>
+
+  <div class="card mt-4">
+    <div class="card-header">Exports</div>
+    <div class="card-body">
+      <a class="btn btn-outline-secondary" href="{{ url_for('exports._soap_inci_tool') }}">View INCI Summary</a>
+    </div>
+  </div>
+</div>
+
+<script>
+(function(){
+  function round(v){ return Math.round(v*1000)/1000 }
+  function attachOilTypeahead(row){
+    const input = row.querySelector('.oil-typeahead');
+    const hiddenSap = row.querySelector('.oil-sap-koh');
+    const list = row.querySelector('[data-role="suggestions"]');
+    function render(items){
+      list.innerHTML='';
+      let any=false;
+      (items||[]).forEach(function(r){
+        const a=document.createElement('a');a.href='#';a.className='list-group-item list-group-item-action';
+        a.textContent=r.text + (r.saponification_value? ` (SAP ${r.saponification_value})` : '');
+        a.addEventListener('click', function(ev){ev.preventDefault(); input.value=r.text; hiddenSap.value = r.saponification_value || ''; list.classList.add('d-none'); list.innerHTML='';});
+        list.appendChild(a); any=true;
+      });
+      list.classList.toggle('d-none', !any);
+    }
+    let t;
+    input.addEventListener('input', function(){
+      hiddenSap.value='';
+      clearTimeout(t);
+      const q=(input.value||'').trim(); if(!q){ list.classList.add('d-none'); list.innerHTML=''; return; }
+      t=setTimeout(async function(){
+        try{
+          const r = await fetch('/api/public/global-items/search?q='+encodeURIComponent(q)+'&type=ingredient');
+          const data = await r.json();
+          const items = (data && (data.results||data.data||[])) || [];
+          render(items);
+        }catch(e){ list.classList.add('d-none'); }
+      }, 200);
+    });
+    document.addEventListener('click', function(e){ if(!list.contains(e.target) && e.target!==input){ list.classList.add('d-none'); }});
+  }
+
+  // Shared ingredient typeahead identical to internal form (inventory + global + quick-create)
+  function setupSharedTypeahead(container){
+    const input = container.querySelector('input.recipe-ingredient-typeahead');
+    const invHidden = container.querySelector('input[name="ingredient_ids[]"]');
+    const giHidden = container.querySelector('input[name="global_item_ids[]"]');
+    const list = container.querySelector('[data-role="suggestions"]');
+    if (!input || !invHidden || !giHidden || !list) return;
+    let t;
+    function render(groups){
+      list.innerHTML=''; let any=false;
+      groups.forEach(group => {
+        if (!group.items || !group.items.length) return; any=true;
+        const header = document.createElement('div'); header.className='list-group-item text-muted small'; header.textContent = group.title; list.appendChild(header);
+        group.items.forEach(r => {
+          const a=document.createElement('a'); a.href='#'; a.className='list-group-item list-group-item-action'; a.textContent=r.text;
+          a.addEventListener('click', function(e){ e.preventDefault(); input.value=r.text; invHidden.value=r.id||''; giHidden.value=r.global_item_id||''; list.classList.add('d-none'); list.innerHTML=''; });
+          list.appendChild(a);
+        });
+      });
+      const q=(input.value||'').trim();
+      if (q){ const a=document.createElement('a'); a.href='#'; a.className='list-group-item list-group-item-action text-primary'; a.textContent=`Create "${q}"`; a.addEventListener('click', function(e){ e.preventDefault(); createInline(q); }); list.appendChild(a); any=true; }
+      list.classList.toggle('d-none', !any);
+    }
+    function search(){
+      clearTimeout(t); const q=(input.value||'').trim(); if (!q){ list.classList.add('d-none'); list.innerHTML=''; invHidden.value=''; giHidden.value=''; return; }
+      t=setTimeout(function(){
+        Promise.all([
+          fetch('/api/ingredients/ingredients/search?q='+encodeURIComponent(q)).then(r=>r.json()).catch(()=>({results:[]})),
+          fetch('/api/ingredients/global-items/search?q='+encodeURIComponent(q)+'&type=ingredient').then(r=>r.json()).catch(()=>({results:[]}))
+        ]).then(([inv, gi])=>{
+          const groups=[]; if (inv && inv.results && inv.results.length) groups.push({title:'Your Inventory', items: inv.results}); if (gi && gi.results && gi.results.length) groups.push({title:'Global Library', items: gi.results}); render(groups);
+        }).catch(()=>{ list.classList.add('d-none'); list.innerHTML=''; });
+      }, 250);
+    }
+    async function createInline(name){
+      try{
+        const res = await fetch('/api/ingredients/ingredients/create-or-link', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ name: name, type: 'ingredient' }) });
+        const data = await res.json();
+        if (data && data.success && data.item){ input.value = data.item.name; invHidden.value = data.item.id; giHidden.value = data.item.global_item_id||''; list.classList.add('d-none'); list.innerHTML=''; }
+      } catch(_) {}
+    }
+    input.addEventListener('input', function(){ invHidden.value=''; giHidden.value=''; search(); });
+    input.addEventListener('keydown', function(e){ if (e.key==='Enter'){ e.preventDefault(); const q=(input.value||'').trim(); if (q) createInline(q); }});
+  }
+
+  function computeTotalOils(){
+    let sum=0; document.querySelectorAll('#oilRows .oil-grams').forEach(i=>{ const v=parseFloat(i.value||'0'); if(v>0) sum+=v; });
+    document.querySelector('#lyeForm [name="oil_weight_g"]').value = round(sum);
+    return sum;
+  }
+  function computeLyeBySAP(lyeType, superfat){
+    // Sum oil grams * SAP factor per oil; saponification_value is mg KOH / g oil
+    // g KOH per g oil = SAP_KOH/1000; g NaOH per g = SAP_KOH * 0.713 / 1000
+    let lyeTotal=0; let totalG=0;
+    document.querySelectorAll('#oilRows .oil-row').forEach(row=>{
+      const g = parseFloat(row.querySelector('.oil-grams').value||'0');
+      const sapKOH = parseFloat(row.querySelector('.oil-sap-koh').value||'0');
+      if (g>0){
+        totalG += g;
+        if (sapKOH>0){
+          const perG = (lyeType==='KOH') ? (sapKOH/1000.0) : (sapKOH*0.713/1000.0);
+          lyeTotal += g * perG;
+        }
+      }
+    });
+    if (lyeTotal>0) return lyeTotal * (1 - (superfat/100));
+    // Fallback to average SAP if no per-oil values provided
+    const sapAvgNaOH = 0.138, sapAvgKOH = 0.194;
+    const sap = (lyeType==='KOH')? sapAvgKOH : sapAvgNaOH;
+    return totalG * sap * (1 - (superfat/100));
+  }
+
+  document.getElementById('addOil').addEventListener('click', function(){
+    const container = document.getElementById('oilRows');
+    const row = document.createElement('div'); row.className='row g-2 align-items-end oil-row mb-2';
+    row.innerHTML = `
+      <div class="col-md-6">
+        <label class="form-label">Oil</label>
+        <div class="position-relative">
+          <input type="text" class="form-control oil-typeahead" placeholder="Search oils...">
+          <input type="hidden" class="oil-sap-koh">
+          <div class="list-group position-absolute w-100 d-none" data-role="suggestions" style="z-index:1050"></div>
+        </div>
+      </div>
+      <div class="col-md-3">
+        <label class="form-label">Weight (g)</label>
+        <input type="number" class="form-control oil-grams" min="0" step="0.1">
+      </div>
+      <div class="col-md-3 d-grid">
+        <button class="btn btn-outline-danger remove-oil" type="button">Remove</button>
+      </div>`;
+    container.appendChild(row);
+    attachOilTypeahead(row);
+  });
+  document.getElementById('oilRows').addEventListener('input', function(e){ if(e.target.classList.contains('oil-grams')) computeTotalOils(); });
+  document.getElementById('oilRows').addEventListener('click', function(e){ if(e.target.classList.contains('remove-oil')){ e.target.closest('.oil-row').remove(); computeTotalOils(); }});
+  // attach for initial row
+  attachOilTypeahead(document.querySelector('#oilRows .oil-row'));
+
+  // Wire shared typeahead for public tool ingredient entry
+  document.querySelectorAll('.ingredient-entry .position-relative').forEach(setupSharedTypeahead);
+
+  document.getElementById('calcLyeBtn').addEventListener('click', async function(){
+    const f = document.getElementById('lyeForm');
+    const oilG = computeTotalOils();
+    const superfat = parseFloat(f.superfat.value||'0');
+    const lyeType = f.lye_type.value;
+    const waterPct = parseFloat(f.water_pct.value||'33');
+    if (!(oilG>0)) { alert('Enter oil weight in grams'); return; }
+
+    const lyeAfterSuperfat = computeLyeBySAP(lyeType, superfat);
+    const waterG = oilG * (waterPct/100);
+
+    const out = `Lye (${lyeType}): ${round(lyeAfterSuperfat)} g, Water: ${round(waterG)} g`;
+    document.getElementById('lyeNumbers').textContent = out;
+    document.getElementById('lyeResult').style.display = 'block';
+  });
+
+  document.getElementById('convBtn').addEventListener('click', async function(){
+    const f = document.getElementById('convForm');
+    const amount = parseFloat(f.amount.value||'0');
+    const fromU = (f.from.value||'').trim();
+    const toU = (f.to.value||'').trim();
+    if (!(amount>0) || !fromU || !toU) { return; }
+    try {
+      const r = await fetch('/api/public/convert-units', {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ quantity: amount, from_unit: fromU, to_unit: toU })});
+      const data = await r.json();
+      if (data && data.success && data.data && data.data.success) {
+        document.getElementById('convResult').textContent = `${amount} ${fromU} = ${data.data.converted_value} ${toU}`;
+      } else {
+        const msg = (data && data.data && data.data.error_data && data.data.error_data.message) || (data && data.error) || 'Conversion failed';
+        document.getElementById('convResult').textContent = msg;
+      }
+    } catch(e){ document.getElementById('convResult').textContent = 'Conversion error'; }
+  });
+
+  document.getElementById('saveSoapTool').addEventListener('click', async function(){
+    // Save draft for prefill
+    try {
+      const f = document.getElementById('lyeForm');
+      const oilG = parseFloat(f.oil_weight_g.value||'0');
+      const superfat = parseFloat(f.superfat.value||'0');
+      const lyeType = f.lye_type.value;
+      const waterPct = parseFloat(f.water_pct.value||'33');
+      const lyeAfterSuperfat = (function(){
+        try { return parseFloat((document.getElementById('lyeNumbers').textContent.match(/Lye \(.*\): ([0-9.]+)/)||[])[1]||'0'); } catch(_) { return 0; }
+      })();
+      const waterG = oilG * (waterPct/100);
+      const payload = {
+        name: 'Soap (Draft)',
+        instructions: 'Draft from Soap Tools',
+        predicted_yield: Math.round((oilG + waterG + lyeAfterSuperfat)*100)/100,
+        predicted_yield_unit: 'gram',
+        category_name: 'Soaps'
+      };
+      await fetch('/tools/draft', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(payload)});
+    } catch(_) {}
+    // Prompt unauthenticated users to login/signup
+    const modalHtml = `
+      <div class="modal fade" id="savePrompt" tabindex="-1"><div class="modal-dialog"><div class="modal-content">
+        <div class="modal-header"><h5 class="modal-title">Save to BatchTrack</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
+        <div class="modal-body">
+          <p>Create a free account to store this calculation as a recipe and reuse it.</p>
+        </div>
+        <div class="modal-footer">
+          <a class="btn btn-primary" href="{{ url_for('auth.signup') }}">Sign Up</a>
+          <a class="btn btn-outline-secondary" href="{{ url_for('auth.login') }}">Log In</a>
+        </div>
+      </div></div></div>`;
+    const div = document.createElement('div');
+    div.innerHTML = modalHtml;
+    document.body.appendChild(div.firstChild);
+    const modal = new bootstrap.Modal(document.getElementById('savePrompt'));
+    modal.show();
+  });
+})();
+</script>
+{% endblock %}

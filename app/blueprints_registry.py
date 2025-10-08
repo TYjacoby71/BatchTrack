@@ -76,7 +76,9 @@ def register_blueprints(app):
         ('app.routes.fault_log_routes.faults_bp', 'faults_bp', '/faults', 'Fault Log'),
         ('app.routes.tag_manager_routes.tag_manager_bp', 'tag_manager_bp', '/tag-manager', 'Tag Manager'),
         ('app.routes.global_library_routes.global_library_bp', 'global_library_bp', None, 'Global Library Public'),
-        ('app.routes.waitlist_routes.waitlist_bp', 'waitlist_bp', '/waitlist', 'Waitlist')
+        ('app.routes.waitlist_routes.waitlist_bp', 'waitlist_bp', '/waitlist', 'Waitlist'),
+        # Public tools mounted at /tools
+        ('app.routes.tools_routes.tools_bp', 'tools_bp', '/tools', 'Public Tools')
     ]
 
     for import_path, bp_name, url_prefix, description in route_modules:
@@ -84,6 +86,88 @@ def register_blueprints(app):
 
     # Register production planning blueprint
     safe_register_blueprint('app.blueprints.production_planning.production_planning_bp', 'production_planning_bp', '/production-planning', 'Production Planning')
+
+    # Exports blueprint (category-specific exports)
+    try:
+        from flask import Blueprint
+        from flask_login import login_required, current_user
+        # Create a lightweight exports blueprint inline to avoid import churn
+        from app.models import Recipe
+        exports_bp = Blueprint('exports', __name__, url_prefix='/exports')
+        
+        @exports_bp.route('/recipe/<int:recipe_id>/soap-inci')
+        @login_required
+        def _soap_inci_recipe(recipe_id: int):
+            from flask import render_template, abort
+            rec = Recipe.query.get(recipe_id)
+            if not rec:
+                abort(404)
+            # Organization scoping
+            if getattr(current_user, 'organization_id', None) and rec.organization_id != current_user.organization_id:
+                abort(403)
+            return render_template('exports/soap_inci.html', recipe=rec, source='recipe')
+
+        @exports_bp.route('/recipe/<int:recipe_id>/candle-label')
+        @login_required
+        def _candle_label_recipe(recipe_id: int):
+            from flask import render_template, abort
+            rec = Recipe.query.get(recipe_id)
+            if not rec:
+                abort(404)
+            if getattr(current_user, 'organization_id', None) and rec.organization_id != current_user.organization_id:
+                abort(403)
+            return render_template('exports/candle_label.html', recipe=rec, source='recipe')
+
+        @exports_bp.route('/recipe/<int:recipe_id>/baker-sheet')
+        @login_required
+        def _baker_sheet_recipe(recipe_id: int):
+            from flask import render_template, abort
+            rec = Recipe.query.get(recipe_id)
+            if not rec:
+                abort(404)
+            if getattr(current_user, 'organization_id', None) and rec.organization_id != current_user.organization_id:
+                abort(403)
+            return render_template('exports/baker_sheet.html', recipe=rec, source='recipe')
+
+        @exports_bp.route('/recipe/<int:recipe_id>/lotion-inci')
+        @login_required
+        def _lotion_inci_recipe(recipe_id: int):
+            from flask import render_template, abort
+            rec = Recipe.query.get(recipe_id)
+            if not rec:
+                abort(404)
+            if getattr(current_user, 'organization_id', None) and rec.organization_id != current_user.organization_id:
+                abort(403)
+            return render_template('exports/lotion_inci.html', recipe=rec, source='recipe')
+
+        @exports_bp.route('/tool/soaps/inci')
+        def _soap_inci_tool():
+            from flask import render_template, session
+            draft = session.get('tool_draft') or {}
+            return render_template('exports/soap_inci.html', tool_draft=draft, source='tool')
+
+        @exports_bp.route('/tool/candles/label')
+        def _candle_label_tool():
+            from flask import render_template, session
+            draft = session.get('tool_draft') or {}
+            return render_template('exports/candle_label.html', tool_draft=draft, source='tool')
+
+        @exports_bp.route('/tool/baker/sheet')
+        def _baker_sheet_tool():
+            from flask import render_template, session
+            draft = session.get('tool_draft') or {}
+            return render_template('exports/baker_sheet.html', tool_draft=draft, source='tool')
+
+        @exports_bp.route('/tool/lotions/inci')
+        def _lotion_inci_tool():
+            from flask import render_template, session
+            draft = session.get('tool_draft') or {}
+            return render_template('exports/lotion_inci.html', tool_draft=draft, source='tool')
+
+        app.register_blueprint(exports_bp)
+        successful_registrations.append('Exports')
+    except Exception as e:
+        failed_registrations.append(f"Exports: {e}")
 
 
     # Print summary
@@ -106,5 +190,8 @@ def register_blueprints(app):
         csrf.exempt(app.view_functions["inventory.adjust_inventory"])
         if "waitlist.join_waitlist" in app.view_functions:
             csrf.exempt(app.view_functions["waitlist.join_waitlist"])
+        # Exempt public tools draft endpoint for anonymous users saving drafts
+        if "tools_bp.tools_draft" in app.view_functions:
+            csrf.exempt(app.view_functions["tools_bp.tools_draft"])
     except Exception:
         pass
