@@ -61,6 +61,12 @@ class PlanProductionService:
             except Exception:
                 continue
 
+        # Attach category-specific structured data (nullable) for full audit/export
+        try:
+            category_extension = dict(getattr(recipe, 'category_data', None) or {})
+        except Exception:
+            category_extension = None
+
         return PlanSnapshot(
             recipe_id=recipe.id,
             scale=float(scale or 1.0),
@@ -73,6 +79,6 @@ class PlanProductionService:
             consumables_plan=consumables_plan,
             containers=container_selection,
             requires_containers=bool(len(container_selection) > 0),
-            category_extension=None
+            category_extension=category_extension
         )
 

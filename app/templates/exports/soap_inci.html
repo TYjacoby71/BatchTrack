@@ -1,0 +1,18 @@
+{% extends 'layout.html' %}
+{% block content %}
+<div class="container py-4">
+  <h2 class="mb-3">Soap INCI Summary</h2>
+  {% set cd = (recipe.category_data if recipe else (tool_draft.category_data if tool_draft else {})) or {} %}
+  <div class="card">
+    <div class="card-body">
+      <p class="mb-1"><strong>Source:</strong> {{ source|title }}</p>
+      {% if recipe %}
+      <p class="mb-1"><strong>Recipe:</strong> {{ recipe.name }}</p>
+      {% endif %}
+      <p class="mb-1"><strong>Superfat (%):</strong> {{ cd.soap_superfat or cd.get('superfat') or '' }}</p>
+      <p class="mb-1"><strong>Water (% of oils):</strong> {{ cd.soap_water_pct or '' }}</p>
+      <p class="mb-1"><strong>Lye Type:</strong> {{ cd.soap_lye_type or '' }}</p>
+    </div>
+  </div>
+</div>
+{% endblock %}

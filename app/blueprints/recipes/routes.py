@@ -88,7 +88,25 @@ def new_recipe():
             )
 
             if success:
+                # Detect inline-created custom items (no global_item_id and zero quantity)
+                try:
+                    created_names = []
+                    for ing in ingredients:
+                        from app.models import InventoryItem as _Inv
+                        item = _Inv.query.get(ing['item_id'])
+                        if item and not getattr(item, 'global_item_id', None) and float(getattr(item, 'quantity', 0) or 0) == 0.0:
+                            created_names.append(item.name)
+                    if created_names:
+                        flash(f"Added {len(created_names)} new inventory item(s) from this recipe: " + ", ".join(created_names))
+                except Exception:
+                    pass
                 flash('Recipe created successfully with ingredients.')
+                # Clear tool draft after successful save
+                try:
+                    from flask import session as _session
+                    _session.pop('tool_draft', None)
+                except Exception:
+                    pass
                 return redirect(url_for('recipes.view_recipe', recipe_id=result.id))
             else:
                 flash(f'Error creating recipe: {result}', 'error')
@@ -98,8 +116,30 @@ def new_recipe():
             flash('An unexpected error occurred', 'error')
 
     # GET request - show form
+    # Prefill from public tools draft (if present)
+    from flask import session
+    draft = session.get('tool_draft', None)
+    prefill = None
+    if isinstance(draft, dict):
+        try:
+            prefill = Recipe(
+                name=draft.get('name') or '',
+                instructions=draft.get('instructions') or '',
+                predicted_yield=float(draft.get('predicted_yield') or 0) or 0.0,
+                predicted_yield_unit=(draft.get('predicted_yield_unit') or '')
+            )
+            # Attempt to pre-select category by name if provided
+            cat_name = (draft.get('category_name') or '').strip()
+            if cat_name:
+                from app.models.product_category import ProductCategory
+                cat = ProductCategory.query.filter(func.lower(ProductCategory.name) == func.lower(db.literal(cat_name))).first()
+                if cat:
+                    prefill.category_id = cat.id
+        except Exception:
+            prefill = None
+
     form_data = _get_recipe_form_data()
-    return render_template('pages/recipes/recipe_form.html', recipe=None, **form_data)
+    return render_template('pages/recipes/recipe_form.html', recipe=prefill, **form_data)
 
 @recipes_bp.route('/')
 @login_required

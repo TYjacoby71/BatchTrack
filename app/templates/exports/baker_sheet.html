@@ -1,0 +1,19 @@
+{% extends 'layout.html' %}
+{% block content %}
+<div class="container py-4">
+  <h2 class="mb-3">Baker Batch Sheet</h2>
+  {% set cd = (recipe.category_data if recipe else (tool_draft.category_data if tool_draft else {})) or {} %}
+  <div class="card">
+    <div class="card-body">
+      <p class="mb-1"><strong>Source:</strong> {{ source|title }}</p>
+      {% if recipe %}
+      <p class="mb-1"><strong>Recipe:</strong> {{ recipe.name }}</p>
+      {% endif %}
+      <p class="mb-1"><strong>Flour (g):</strong> {{ cd.baker_base_flour_g or '' }}</p>
+      <p class="mb-1"><strong>Water (%):</strong> {{ cd.baker_water_pct or '' }}</p>
+      <p class="mb-1"><strong>Salt (%):</strong> {{ cd.baker_salt_pct or '' }}</p>
+      <p class="mb-1"><strong>Yeast (%):</strong> {{ cd.baker_yeast_pct or '' }}</p>
+    </div>
+  </div>
+</div>
+{% endblock %}

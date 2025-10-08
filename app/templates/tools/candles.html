@@ -1,0 +1,144 @@
+{% extends 'layout.html' %}
+{% block content %}
+<div class="container py-4">
+  <h2 class="mb-3">Candle Maker Tools</h2>
+  <script>window.RECIPE_CATEGORY_NAME = 'Candles';</script>
+  <p class="text-muted">Use grams as the standard unit. Set fragrance load by % of total wax.</p>
+
+  <div class="card mb-4">
+    <div class="card-header">Fragrance Load Calculator</div>
+    <div class="card-body">
+      {% include 'components/recipes/_category_fields.html' %}
+      <form id="flForm" class="row g-3">
+        <div class="col-md-3">
+          <label class="form-label">Total Wax (g)</label>
+          <input type="number" class="form-control" name="wax_g" min="0" step="1" required>
+        </div>
+        <div class="col-md-3">
+          <label class="form-label">Fragrance Load (%)</label>
+          <input type="number" class="form-control" name="fl_pct" min="0" max="15" step="0.1" value="8">
+        </div>
+        <div class="col-md-3">
+          <label class="form-label">Vessel Volume (ml) (optional)</label>
+          <input type="number" class="form-control" name="vessel_ml" min="0" step="1">
+        </div>
+        <div class="col-md-3 d-flex align-items-end">
+          <button type="button" class="btn btn-primary w-100" id="calcFlBtn">Calculate</button>
+        </div>
+      </form>
+      <div class="mt-3" id="flResult" style="display:none;">
+        <div class="alert alert-info mb-2" id="flNumbers"></div>
+        <button class="btn btn-success" id="saveCandleTool">Save to BatchTrack</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-header">Quick Unit Conversion</div>
+    <div class="card-body">
+      <form id="convForm" class="row g-3">
+        <div class="col-md-3">
+          <label class="form-label">Amount</label>
+          <input type="number" class="form-control" name="amount" step="0.001" min="0">
+        </div>
+        <div class="col-md-3">
+          <label class="form-label">From</label>
+          <input type="text" class="form-control" name="from" placeholder="g, ml, oz">
+        </div>
+        <div class="col-md-3">
+          <label class="form-label">To</label>
+          <input type="text" class="form-control" name="to" placeholder="g, ml, oz">
+        </div>
+        <div class="col-md-3 d-flex align-items-end">
+          <button type="button" class="btn btn-outline-secondary w-100" id="convBtn">Convert</button>
+        </div>
+      </form>
+      <div class="mt-2 small text-muted" id="convResult"></div>
+    </div>
+  </div>
+
+  <div class="card mt-4">
+    <div class="card-header">Exports</div>
+    <div class="card-body">
+      <a class="btn btn-outline-secondary" href="{{ url_for('exports._candle_label_tool') }}">View Label Summary</a>
+    </div>
+  </div>
+</div>
+
+<script>
+(function(){
+  function round(v){ return Math.round(v*1000)/1000 }
+  document.getElementById('calcFlBtn').addEventListener('click', function(){
+    const f = document.getElementById('flForm');
+    const waxG = parseFloat(f.wax_g.value||'0');
+    const flPct = parseFloat(f.fl_pct.value||'0');
+    if (!(waxG>0) || !(flPct>=0)) { alert('Enter wax grams and fragrance %'); return; }
+    const fragranceG = waxG * (flPct/100);
+    const out = `Fragrance: ${round(fragranceG)} g for ${waxG} g wax at ${flPct}%`;
+    document.getElementById('flNumbers').textContent = out;
+    document.getElementById('flResult').style.display = 'block';
+  });
+
+  document.getElementById('convBtn').addEventListener('click', async function(){
+    const f = document.getElementById('convForm');
+    const amount = parseFloat(f.amount.value||'0');
+    const fromU = (f.from.value||'').trim();
+    const toU = (f.to.value||'').trim();
+    if (!(amount>0) || !fromU || !toU) { return; }
+    try {
+      const r = await fetch('/api/public/convert-units', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ quantity: amount, from_unit: fromU, to_unit: toU }) });
+      const data = await r.json();
+      if (data && data.success && data.data && data.data.success) {
+        document.getElementById('convResult').textContent = `${amount} ${fromU} = ${data.data.converted_value} ${toU}`;
+      } else {
+        const msg = (data && data.data && data.data.error_data && data.data.error_data.message) || (data && data.error) || 'Conversion failed';
+        document.getElementById('convResult').textContent = msg;
+      }
+    } catch(e){ document.getElementById('convResult').textContent = 'Conversion error'; }
+  });
+
+  document.getElementById('saveCandleTool').addEventListener('click', async function(){
+    try {
+      const f = document.getElementById('flForm');
+      const waxG = parseFloat(f.wax_g.value||'0');
+      const flPct = parseFloat(f.fl_pct.value||'0');
+      const vesselMl = parseFloat(f.vessel_ml.value||'0');
+      const overlay = {
+        candle_wax_g: waxG,
+        candle_fragrance_pct: flPct,
+        candle_vessel_ml: vesselMl,
+        vessel_fill_pct: parseFloat(document.getElementById('candle_fill_pct')?.value||'') || null,
+        candle_count: parseFloat(document.getElementById('candle_count')?.value||'') || null
+      };
+      const fragranceG = isFinite(waxG) && isFinite(flPct) ? (waxG * (flPct/100)) : 0;
+      const payload = {
+        name: 'Candle (Draft)',
+        instructions: 'Draft from Candle Tools',
+        predicted_yield: (waxG + fragranceG) || 0,
+        predicted_yield_unit: 'gram',
+        category_name: 'Candles',
+        category_data: overlay
+      };
+      await fetch('/tools/draft', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(payload)});
+    } catch(_) {}
+    const modalHtml = `
+      <div class="modal fade" id="savePrompt" tabindex="-1"><div class="modal-dialog"><div class="modal-content">
+        <div class="modal-header"><h5 class="modal-title">Save to BatchTrack</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
+        <div class="modal-body">
+          <p>Create a free account to store this calculation as a recipe and reuse it.</p>
+        </div>
+        <div class="modal-footer">
+          <a class="btn btn-primary" href="{{ url_for('auth.signup') }}">Sign Up</a>
+          <a class="btn btn-outline-secondary" href="{{ url_for('auth.login') }}">Log In</a>
+        </div>
+      </div></div></div>`;
+    const div = document.createElement('div');
+    div.innerHTML = modalHtml;
+    document.body.appendChild(div.firstChild);
+    const modal = new bootstrap.Modal(document.getElementById('savePrompt'));
+    modal.show();
+  });
+})();
+</script>
+{% endblock %}

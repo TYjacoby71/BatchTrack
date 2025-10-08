@@ -76,6 +76,79 @@ def search_ingredients():
 
     return jsonify({'results': payload})
 
+@ingredient_api_bp.route('/ingredients/create-or-link', methods=['POST'])
+@login_required
+def create_or_link_ingredient():
+    """Create an inventory item by name if not present, optionally linking to a Global Item when a match exists.
+    Input JSON: { name, type='ingredient'|'container'|'packaging'|'consumable', unit?, global_item_id? }
+    Returns: { success, item: {id,name,unit,type,global_item_id} }
+    """
+    try:
+        data = request.get_json() or {}
+        name = (data.get('name') or '').strip()
+        inv_type = (data.get('type') or 'ingredient').strip()
+        unit = (data.get('unit') or '').strip()
+        gi_id = data.get('global_item_id')
+
+        if not name:
+            return jsonify({'success': False, 'error': 'Name required'}), 400
+
+        # Try existing org item exact match
+        existing = InventoryItem.query.filter_by(
+            organization_id=current_user.organization_id,
+            name=name,
+            type=inv_type
+        ).order_by(InventoryItem.id.asc()).first()
+        if existing:
+            return jsonify({'success': True, 'item': {
+                'id': existing.id,
+                'name': existing.name,
+                'unit': existing.unit,
+                'type': existing.type,
+                'global_item_id': getattr(existing, 'global_item_id', None)
+            }})
+
+        # If no org item, attempt to link to provided global item or find one by name
+        global_item = None
+        if gi_id:
+            global_item = db.session.get(GlobalItem, int(gi_id))
+        else:
+            global_item = GlobalItem.query.filter(
+                func.lower(GlobalItem.name) == func.lower(db.literal(name)),
+                GlobalItem.item_type == inv_type,
+                GlobalItem.is_archived != True
+            ).order_by(GlobalItem.id.asc()).first()
+
+        # Create new zero-qty org item
+        new_item = InventoryItem(
+            name=name,
+            unit=(unit or (global_item.default_unit if global_item and global_item.default_unit else 'count' if inv_type=='container' else 'g')),
+            type=inv_type,
+            quantity=0.0,
+            organization_id=current_user.organization_id,
+            created_by=current_user.id
+        )
+        if global_item:
+            new_item.global_item_id = global_item.id
+            new_item.ownership = 'global'
+            # If container, prefer count unit; set capacity metadata when present
+            if inv_type == 'container' and getattr(global_item, 'capacity', None):
+                new_item.capacity = global_item.capacity
+                new_item.capacity_unit = global_item.capacity_unit
+
+        db.session.add(new_item)
+        db.session.commit()
+        return jsonify({'success': True, 'item': {
+            'id': new_item.id,
+            'name': new_item.name,
+            'unit': new_item.unit,
+            'type': new_item.type,
+            'global_item_id': getattr(new_item, 'global_item_id', None)
+        }})
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'success': False, 'error': str(e)}), 500
+
 @ingredient_api_bp.route('/global-items/search', methods=['GET'])
 @login_required
 def search_global_items():

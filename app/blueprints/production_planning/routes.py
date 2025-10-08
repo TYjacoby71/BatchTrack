@@ -81,7 +81,8 @@ def auto_fill_containers(recipe_id):
             scale=scale,
             organization_id=current_user.organization_id,
             api_format=True,
-            product_density=product_density
+            product_density=product_density,
+            fill_pct=data.get('fill_pct')
         )
 
         if strategy:
