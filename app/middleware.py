@@ -20,7 +20,12 @@ def register_middleware(app):
             'static', 'auth.login', 'auth.signup', 'auth.logout',
             'homepage', 'index', 'legal.privacy_policy', 'legal.terms_of_service',
             # Stripe webhook endpoint name
-            'billing.stripe_webhook'
+            'billing.stripe_webhook',
+            # Public tools and exports (HTML previews only)
+            'tools_bp.tools_index', 'tools_bp.tools_soap', 'tools_bp.tools_candles', 'tools_bp.tools_lotions', 'tools_bp.tools_herbal', 'tools_bp.tools_baker',
+            'exports._soap_inci_tool', 'exports._candle_label_tool', 'exports._baker_sheet_tool', 'exports._lotion_inci_tool',
+            # Public API endpoints
+            'public_api_bp.public_global_item_search'
         ]
 
         # Frequent endpoints that should have minimal logging
@@ -47,7 +52,11 @@ def register_middleware(app):
             '/static/',
             '/auth/login',
             '/auth/signup',
-            '/auth/logout'
+            '/auth/logout',
+            # Public tools + drafts + exports preview + public API namespace
+            '/tools',
+            '/exports/tool',
+            '/api/public'
         ]
 
         # Check endpoint names first
