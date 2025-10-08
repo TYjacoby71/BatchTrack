@@ -2,6 +2,7 @@
 {% block content %}
 <div class="container py-4">
   <h2 class="mb-3">Soap Maker Tools</h2>
+  <script>window.RECIPE_CATEGORY_NAME = 'Soaps';</script>
   <p class="text-muted">Use grams by default. Convert as needed with the unit engine.</p>
 
   <div class="card mb-4">
@@ -30,6 +31,33 @@
           </div>
         </div>
         <button class="btn btn-sm btn-outline-primary" id="addOil">Add Oil</button>
+      </div>
+
+      <div class="mb-3">
+        <h6>Add Ingredients (identical to system form)</h6>
+        <div class="ingredient-entry row mb-3 p-3 border rounded">
+          <div class="col-md-6">
+            <label class="form-label">Ingredient</label>
+            <div class="position-relative">
+              <input type="text" class="form-control recipe-ingredient-typeahead" placeholder="Search inventory and global..." autocomplete="off">
+              <div class="list-group position-absolute w-100 d-none" data-role="suggestions"></div>
+              <input type="hidden" name="ingredient_ids[]">
+              <input type="hidden" name="global_item_ids[]">
+            </div>
+          </div>
+          <div class="col-md-3">
+            <label class="form-label">Quantity</label>
+            <input type="number" step="0.01" min="0" class="form-control" name="ingredient_quantities[]">
+          </div>
+          <div class="col-md-3">
+            <label class="form-label">Unit</label>
+            <select class="form-select" name="ingredient_units[]">
+              <option value="gram">gram</option>
+              <option value="milliliter">milliliter</option>
+              <option value="oz">oz</option>
+            </select>
+          </div>
+        </div>
       </div>
       <form id="lyeForm" class="row g-3">
         <div class="col-md-4">
@@ -122,6 +150,51 @@
     document.addEventListener('click', function(e){ if(!list.contains(e.target) && e.target!==input){ list.classList.add('d-none'); }});
   }
 
+  // Shared ingredient typeahead identical to internal form (inventory + global + quick-create)
+  function setupSharedTypeahead(container){
+    const input = container.querySelector('input.recipe-ingredient-typeahead');
+    const invHidden = container.querySelector('input[name="ingredient_ids[]"]');
+    const giHidden = container.querySelector('input[name="global_item_ids[]"]');
+    const list = container.querySelector('[data-role="suggestions"]');
+    if (!input || !invHidden || !giHidden || !list) return;
+    let t;
+    function render(groups){
+      list.innerHTML=''; let any=false;
+      groups.forEach(group => {
+        if (!group.items || !group.items.length) return; any=true;
+        const header = document.createElement('div'); header.className='list-group-item text-muted small'; header.textContent = group.title; list.appendChild(header);
+        group.items.forEach(r => {
+          const a=document.createElement('a'); a.href='#'; a.className='list-group-item list-group-item-action'; a.textContent=r.text;
+          a.addEventListener('click', function(e){ e.preventDefault(); input.value=r.text; invHidden.value=r.id||''; giHidden.value=r.global_item_id||''; list.classList.add('d-none'); list.innerHTML=''; });
+          list.appendChild(a);
+        });
+      });
+      const q=(input.value||'').trim();
+      if (q){ const a=document.createElement('a'); a.href='#'; a.className='list-group-item list-group-item-action text-primary'; a.textContent=`Create "${q}"`; a.addEventListener('click', function(e){ e.preventDefault(); createInline(q); }); list.appendChild(a); any=true; }
+      list.classList.toggle('d-none', !any);
+    }
+    function search(){
+      clearTimeout(t); const q=(input.value||'').trim(); if (!q){ list.classList.add('d-none'); list.innerHTML=''; invHidden.value=''; giHidden.value=''; return; }
+      t=setTimeout(function(){
+        Promise.all([
+          fetch('/api/ingredients/ingredients/search?q='+encodeURIComponent(q)).then(r=>r.json()).catch(()=>({results:[]})),
+          fetch('/api/ingredients/global-items/search?q='+encodeURIComponent(q)+'&type=ingredient').then(r=>r.json()).catch(()=>({results:[]}))
+        ]).then(([inv, gi])=>{
+          const groups=[]; if (inv && inv.results && inv.results.length) groups.push({title:'Your Inventory', items: inv.results}); if (gi && gi.results && gi.results.length) groups.push({title:'Global Library', items: gi.results}); render(groups);
+        }).catch(()=>{ list.classList.add('d-none'); list.innerHTML=''; });
+      }, 250);
+    }
+    async function createInline(name){
+      try{
+        const res = await fetch('/api/ingredients/ingredients/create-or-link', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ name: name, type: 'ingredient' }) });
+        const data = await res.json();
+        if (data && data.success && data.item){ input.value = data.item.name; invHidden.value = data.item.id; giHidden.value = data.item.global_item_id||''; list.classList.add('d-none'); list.innerHTML=''; }
+      } catch(_) {}
+    }
+    input.addEventListener('input', function(){ invHidden.value=''; giHidden.value=''; search(); });
+    input.addEventListener('keydown', function(e){ if (e.key==='Enter'){ e.preventDefault(); const q=(input.value||'').trim(); if (q) createInline(q); }});
+  }
+
   function computeTotalOils(){
     let sum=0; document.querySelectorAll('#oilRows .oil-grams').forEach(i=>{ const v=parseFloat(i.value||'0'); if(v>0) sum+=v; });
     document.querySelector('#lyeForm [name="oil_weight_g"]').value = round(sum);
@@ -175,6 +248,9 @@
   document.getElementById('oilRows').addEventListener('click', function(e){ if(e.target.classList.contains('remove-oil')){ e.target.closest('.oil-row').remove(); computeTotalOils(); }});
   // attach for initial row
   attachOilTypeahead(document.querySelector('#oilRows .oil-row'));
+
+  // Wire shared typeahead for public tool ingredient entry
+  document.querySelectorAll('.ingredient-entry .position-relative').forEach(setupSharedTypeahead);
 
   document.getElementById('calcLyeBtn').addEventListener('click', async function(){
     const f = document.getElementById('lyeForm');
