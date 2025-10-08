@@ -100,6 +100,11 @@ def api_quick_create_inventory():
       { name, type, unit?, global_item_id?, category_id?/ref_*, density?, capacity?, capacity_unit? }
     """
     try:
+        # Validate CSRF token from header
+        csrf_token = request.headers.get('X-CSRFToken')
+        if not csrf_token:
+            return jsonify({'success': False, 'error': 'CSRF token missing'}), 400
+        
         data = request.get_json(force=True, silent=True) or {}
 
         # Normalize form-like dict for service
