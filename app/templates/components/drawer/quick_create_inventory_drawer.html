@@ -252,9 +252,13 @@
                         if (colorInput && colorInput.value) payload.container_color = colorInput.value;
                     }
 
+                const csrfToken = document.querySelector('input[name="csrf_token"]').value;
                 const res = await fetch('/inventory/api/quick-create', {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
+                    headers: { 
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': csrfToken
+                    },
                     body: JSON.stringify(payload)
                 });
                 const data = await res.json();
