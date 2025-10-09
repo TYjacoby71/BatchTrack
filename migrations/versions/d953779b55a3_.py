@@ -30,8 +30,11 @@ def column_exists(table_name, column_name):
         return False
     bind = op.get_bind()
     inspector = inspect(bind)
-    columns = [col['name'] for col in inspector.get_columns(table_name)]
-    return column_name in columns
+    try:
+        columns = [col['name'] for col in inspector.get_columns(table_name)]
+        return column_name in columns
+    except Exception:
+        return False
 
 
 def index_exists(table_name, index_name):
