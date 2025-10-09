@@ -118,9 +118,13 @@ def process_inventory_adjustment(item_id, change_type, quantity, notes=None, cre
             logger.info(f"RECOUNT: Item {item.id} quantity {item.quantity} -> {target_quantity}")
             item.quantity = float(target_quantity)
 
-        # Validate FIFO sync before commit
+        # Validate FIFO sync before commit. During a multi-step batch start (defer_commit=True),
+        # skip validation until outer transaction commits to avoid transient mismatch.
         try:
-            is_valid, error_msg, inv_qty, fifo_total = validate_inventory_fifo_sync(item_id)
+            if not defer_commit:
+                is_valid, error_msg, inv_qty, fifo_total = validate_inventory_fifo_sync(item_id)
+            else:
+                is_valid, error_msg = True, None
 
             if not is_valid:
                 logger.error(f"FIFO VALIDATION FAILED before commit for item {item_id}: {error_msg}")

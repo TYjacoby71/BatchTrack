@@ -4,5 +4,6 @@
   "description": "For synthetic fragrance oils and blends.",
   "show_flash_point": true,
   "show_shelf_life_months": true,
+  "ifra_category": "cat_4", 
   "items": []
 }

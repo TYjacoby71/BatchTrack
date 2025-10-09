@@ -26,9 +26,18 @@ class BatchStatisticsService:
     def create_from_production_plan(batch_id: int, production_plan: Dict[str, Any]) -> Optional[BatchStats]:
         """Create batch stats from production planning data"""
         try:
-            # Extract efficiency data from production plan
+            # Extract efficiency data from production plan, with category_extension fallback
             container_strategy = production_plan.get('container_strategy', {})
             planned_efficiency = container_strategy.get('containment_percentage', 0.0)
+            try:
+                if not planned_efficiency:
+                    cat_ext = (production_plan.get('category_extension') or {})
+                    # vessel_fill_pct directly maps to fill efficiency when available
+                    vfp = cat_ext.get('vessel_fill_pct')
+                    if vfp is not None:
+                        planned_efficiency = float(vfp)
+            except Exception:
+                pass
             
             # Extract yield data
             projected_yield = production_plan.get('projected_yield', {})

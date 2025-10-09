@@ -66,14 +66,14 @@ def seed_global_inventory_library():
 
 			print(f"\n📁 Processing {item_type} category: {cat_name}")
 
-			# Create or update ingredient category (only for ingredients)
+            # Create or update ingredient category (only for ingredients)
 			curated_cat = None
 			if item_type == 'ingredient':
 				# Always check for existing category first
 				curated_cat = IngredientCategory.query.filter_by(name=cat_name, organization_id=None).first()
 				if not curated_cat:
 					# Create new category
-					curated_cat = IngredientCategory(
+                    curated_cat = IngredientCategory(
 						name=cat_name,
 						description=description,
 						default_density=default_density,
@@ -90,6 +90,15 @@ def seed_global_inventory_library():
 						show_shelf_life_months=cat_data.get('show_shelf_life_months', False),
 						show_comedogenic_rating=cat_data.get('show_comedogenic_rating', False)
 					)
+                    # Optional IFRA category metadata on category
+                    try:
+                        ifra_cat = cat_data.get('ifra_category')
+                        if ifra_cat:
+                            # Store in generic metadata_json if exists
+                            if hasattr(curated_cat, 'metadata_json'):
+                                curated_cat.metadata_json = {'ifra_category': ifra_cat}
+                    except Exception:
+                        pass
 					db.session.add(curated_cat)
 					try:
 						db.session.flush()
@@ -116,7 +125,7 @@ def seed_global_inventory_library():
 					if not curated_cat.is_global_category:
 						curated_cat.is_global_category = True
 						updated = True
-					# Update visibility flags from JSON
+                    # Update visibility flags from JSON
 					visibility_updates = [
 						('show_saponification_value', cat_data.get('show_saponification_value', False)),
 						('show_iodine_value', cat_data.get('show_iodine_value', False)),
@@ -131,6 +140,17 @@ def seed_global_inventory_library():
 						if getattr(curated_cat, field) != value:
 							setattr(curated_cat, field, value)
 							updated = True
+                    # IFRA metadata update
+                    try:
+                        ifra_cat = cat_data.get('ifra_category')
+                        if ifra_cat and hasattr(curated_cat, 'metadata_json'):
+                            meta = curated_cat.metadata_json or {}
+                            if meta.get('ifra_category') != ifra_cat:
+                                meta['ifra_category'] = ifra_cat
+                                curated_cat.metadata_json = meta
+                                updated = True
+                    except Exception:
+                        pass
 					
 					if updated:
 						print(f"    ↻ Updated ingredient category: {cat_name}")
@@ -145,11 +165,13 @@ def seed_global_inventory_library():
 					continue
 
 				# Common fields for all item types
-				density = item_data.get('density_g_per_ml')
+                density = item_data.get('density_g_per_ml')
 				aka = item_data.get('aka_names', item_data.get('aka', []))
 				default_unit = item_data.get('default_unit')
 				perishable = item_data.get('perishable', False)
 				shelf_life_days = item_data.get('shelf_life_days')
+                # IFRA per-item category (optional)
+                ifra_cat_item = item_data.get('ifra_category')
 				
 				# Container/packaging specific fields
 				capacity = item_data.get('capacity')
@@ -178,7 +200,7 @@ def seed_global_inventory_library():
 				if existing:
 					# Update existing item with new data
 					updated = False
-					updates = [
+                    updates = [
 						('density', density),
 						('aka_names', aka),
 						('default_unit', default_unit),
@@ -189,7 +211,7 @@ def seed_global_inventory_library():
 						('container_material', container_material),
 						('container_type', container_type),
 						('container_style', container_style),
-						('container_color', container_color)
+                        ('container_color', container_color)
 					]
 					
 					for field, value in updates:
@@ -203,7 +225,7 @@ def seed_global_inventory_library():
 							existing.ingredient_category_id = curated_cat.id
 							updated = True
 					
-					# Update soap making fields for ingredients
+                    # Update soap/cosmetic fields for ingredients
 					if item_type == 'ingredient':
 						soap_updates = [
 							('saponification_value', sap_value),
@@ -219,6 +241,16 @@ def seed_global_inventory_library():
 							if value is not None and getattr(existing, field) != value:
 								setattr(existing, field, value)
 								updated = True
+                        # Store IFRA category in metadata_json if available
+                        try:
+                            if ifra_cat_item:
+                                meta = getattr(existing, 'metadata_json', None) or {}
+                                if meta.get('ifra_category') != ifra_cat_item:
+                                    meta['ifra_category'] = ifra_cat_item
+                                    setattr(existing, 'metadata_json', meta)
+                                    updated = True
+                        except Exception:
+                            pass
 					
 					if updated:
 						updated_items += 1
@@ -253,11 +285,19 @@ def seed_global_inventory_library():
 							gi.shelf_life_months = shelf_life_months
 							gi.comedogenic_rating = comedogenic
 						
-						db.session.add(gi)
+                        db.session.add(gi)
 						created_items += 1
 					except Exception as e:
 						print(f"    ❌ Failed to create item {name}: {e}")
 						continue
+                    # Per-item IFRA metadata for new ingredient
+                    try:
+                        if item_type == 'ingredient' and ifra_cat_item:
+                            meta = getattr(gi, 'metadata_json', None) or {}
+                            meta['ifra_category'] = ifra_cat_item
+                            setattr(gi, 'metadata_json', meta)
+                    except Exception:
+                        pass
 				
 				items_processed += 1
 
