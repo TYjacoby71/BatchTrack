@@ -15,20 +15,32 @@ class RetentionService:
     def get_org_retention_days(org: Organization) -> int | None:
         if not org or not org.tier:
             return None
-        base = org.tier.data_retention_days or 0
-        # Retention extension via active organization add-ons matching function_key='retention'
-        retention_addons_days = 0
+        # Included retention via tier-included add-on OR purchased add-on
         try:
+            # Included on tier?
+            included = getattr(org.tier, 'included_addons', []) if org.tier else []
+            if any(getattr(a, 'function_key', None) == 'retention' for a in included or []):
+                return None
+        except Exception:
+            pass
+
+        try:
+            # Purchased via Stripe?
             from ..models.addon import OrganizationAddon
             active_org_addons = OrganizationAddon.query.filter_by(organization_id=org.id, active=True).all()
             addon_ids = [oa.addon_id for oa in active_org_addons]
             if addon_ids:
-                retention_addons = Addon.query.filter(Addon.id.in_(addon_ids), Addon.function_key == 'retention').all()
-                retention_addons_days = sum((a.retention_extension_days or 0) for a in retention_addons)
+                has_retention_addon = Addon.query.filter(
+                    Addon.id.in_(addon_ids),
+                    Addon.function_key == 'retention'
+                ).count() > 0
+                if has_retention_addon:
+                    return None
         except Exception:
-            retention_addons_days = 0
-        total = base + (retention_addons_days or 0)
-        return total if total > 0 else None
+            pass
+
+        # Default baseline: without a retention add-on (included or purchased), keep 1-year retention
+        return 365
 
     @staticmethod
     def find_at_risk_recipes(org: Organization) -> List[Recipe]:

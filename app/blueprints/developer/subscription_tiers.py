@@ -83,7 +83,11 @@ def manage_tiers():
             'max_batchbot_requests': tier.max_batchbot_requests,
             'max_monthly_batches': tier.max_monthly_batches,
             'data_retention_days': tier.data_retention_days,
-            'retention_notice_days': tier.retention_notice_days
+            'retention_notice_days': tier.retention_notice_days,
+            'retention_policy': getattr(tier, 'retention_policy', 'one_year'),
+            'retention_label': tier.retention_label,
+            'allowed_addon_ids': [a.id for a in getattr(tier, 'allowed_addons', [])],
+            'included_addon_ids': [a.id for a in getattr(tier, 'included_addons', [])]
         }
 
     return render_template('developer/subscription_tiers.html',
@@ -108,6 +112,7 @@ def create_tier():
         max_products = request.form.get('max_products', None)
         max_batchbot_requests = request.form.get('max_batchbot_requests', None)
         max_monthly_batches = request.form.get('max_monthly_batches', None)
+        retention_policy = (request.form.get('retention_policy') or 'one_year').strip()
         data_retention_days_raw = request.form.get('data_retention_days', '').strip()
         retention_notice_days_raw = request.form.get('retention_notice_days', '').strip()
 
@@ -124,7 +129,12 @@ def create_tier():
         max_products = int(max_products) if max_products and max_products.isdigit() else None
         max_batchbot_requests = int(max_batchbot_requests) if max_batchbot_requests and max_batchbot_requests.isdigit() else None
         max_monthly_batches = int(max_monthly_batches) if max_monthly_batches and max_monthly_batches.isdigit() else None
+        # Normalize retention settings
         data_retention_days = int(data_retention_days_raw) if data_retention_days_raw.isdigit() else None
+        if retention_policy == 'one_year':
+            data_retention_days = 365
+        elif retention_policy == 'subscribed':
+            data_retention_days = None
         retention_notice_days = int(retention_notice_days_raw) if retention_notice_days_raw.isdigit() else None
 
 
@@ -160,6 +170,7 @@ def create_tier():
             max_products=max_products,
             max_batchbot_requests=max_batchbot_requests,
             max_monthly_batches=max_monthly_batches,
+            retention_policy=retention_policy,
             data_retention_days=data_retention_days,
             retention_notice_days=retention_notice_days,
             billing_provider=billing_provider,
@@ -175,10 +186,16 @@ def create_tier():
         db.session.add(tier)
         db.session.flush()
 
-        # Allowed add-ons
+        # Allowed and Included add-ons
         addon_ids = request.form.getlist('allowed_addons', type=int)
-        if addon_ids:
-            tier.allowed_addons = Addon.query.filter(Addon.id.in_(addon_ids)).all()
+        included_ids = request.form.getlist('included_addons', type=int)
+        if addon_ids is not None:
+            tier.allowed_addons = Addon.query.filter(Addon.id.in_(addon_ids)).all() if addon_ids else []
+        if included_ids is not None:
+            try:
+                tier.included_addons = Addon.query.filter(Addon.id.in_(included_ids)).all() if included_ids else []
+            except Exception:
+                pass
 
         db.session.commit()
 
@@ -256,18 +273,34 @@ def edit_tier(tier_id):
             tier.whop_product_key = whop_key or None
 
             # Retention fields
+            retention_policy = (request.form.get('retention_policy') or getattr(tier, 'retention_policy', 'one_year')).strip()
             data_retention_days_raw = request.form.get('data_retention_days', '').strip()
             retention_notice_days_raw = request.form.get('retention_notice_days', '').strip()
-            tier.data_retention_days = int(data_retention_days_raw) if data_retention_days_raw.isdigit() else None
+            # Apply policy normalization
+            if retention_policy == 'one_year':
+                tier.retention_policy = 'one_year'
+                tier.data_retention_days = 365
+            elif retention_policy == 'subscribed':
+                tier.retention_policy = 'subscribed'
+                tier.data_retention_days = None
+            else:
+                # Fallback: keep provided days if valid, otherwise default to 365
+                tier.retention_policy = 'one_year'
+                tier.data_retention_days = int(data_retention_days_raw) if data_retention_days_raw.isdigit() else 365
             tier.retention_notice_days = int(retention_notice_days_raw) if retention_notice_days_raw.isdigit() else None
 
             # Update permissions
             permission_ids = request.form.getlist('permissions', type=int)
             tier.permissions = Permission.query.filter(Permission.id.in_(permission_ids)).all()
 
-            # Update allowed add-ons
+            # Update allowed and included add-ons
             addon_ids = request.form.getlist('allowed_addons', type=int)
-            tier.allowed_addons = Addon.query.filter(Addon.id.in_(addon_ids)).all()
+            included_ids = request.form.getlist('included_addons', type=int)
+            tier.allowed_addons = Addon.query.filter(Addon.id.in_(addon_ids)).all() if addon_ids else []
+            try:
+                tier.included_addons = Addon.query.filter(Addon.id.in_(included_ids)).all() if included_ids else []
+            except Exception:
+                pass
 
             db.session.commit()
 

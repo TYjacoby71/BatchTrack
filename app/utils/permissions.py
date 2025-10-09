@@ -473,9 +473,20 @@ class AuthorizationHierarchy:
         # Get tier-allowed permissions
         tier_permissions = AuthorizationHierarchy.get_tier_allowed_permissions(organization)
 
-        # Add-on entitlements: include permissions granted by active organization add-ons
+        # Add-on entitlements from:
+        # 1) Included add-ons on the tier (Stripe-bypassed)
+        # 2) Active organization add-ons from Stripe purchases
         addon_permissions = []
         try:
+            # Included add-ons
+            try:
+                included = getattr(organization.tier, 'included_addons', []) if organization.tier else []
+                for a in included or []:
+                    if a and a.permission_name:
+                        addon_permissions.append(a.permission_name)
+            except Exception:
+                pass
+            # Purchased add-ons
             from app.models.addon import OrganizationAddon
             active_addons = OrganizationAddon.query.filter_by(organization_id=organization.id, active=True).all()
             for ent in active_addons:

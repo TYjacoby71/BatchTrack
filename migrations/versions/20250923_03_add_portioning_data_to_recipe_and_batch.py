@@ -18,18 +18,34 @@ depends_on = None
 
 
 def upgrade():
-    # Add JSON columns as nullable
-    with op.batch_alter_table('recipe') as batch_op:
-        try:
-            batch_op.add_column(sa.Column('portioning_data', sa.JSON(), nullable=True))
-        except Exception:
-            pass
+    from sqlalchemy import inspect
 
-    with op.batch_alter_table('batch') as batch_op:
+    bind = op.get_bind()
+    inspector = inspect(bind)
+
+    def column_exists(table_name, column_name):
+        """Check if a column exists in a table"""
         try:
-            batch_op.add_column(sa.Column('portioning_data', sa.JSON(), nullable=True))
+            columns = [col['name'] for col in inspector.get_columns(table_name)]
+            return column_name in columns
         except Exception:
-            pass
+            return False
+
+    # Add portioning_data JSON column to recipe table if it doesn't exist
+    if not column_exists('recipe', 'portioning_data'):
+        with op.batch_alter_table('recipe') as batch_op:
+            batch_op.add_column(sa.Column('portioning_data', sa.JSON(), nullable=True))
+        print("Added portioning_data column to recipe table")
+    else:
+        print("portioning_data column already exists in recipe table")
+
+    # Add portioning_data JSON column to batch table if it doesn't exist
+    if not column_exists('batch', 'portioning_data'):
+        with op.batch_alter_table('batch') as batch_op:
+            batch_op.add_column(sa.Column('portioning_data', sa.JSON(), nullable=True))
+        print("Added portioning_data column to batch table")
+    else:
+        print("portioning_data column already exists in batch table")
 
 
 def downgrade():
@@ -44,4 +60,3 @@ def downgrade():
             batch_op.drop_column('portioning_data')
     except Exception:
         pass
-
