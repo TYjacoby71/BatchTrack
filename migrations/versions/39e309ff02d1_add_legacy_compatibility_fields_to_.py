@@ -70,6 +70,15 @@ def upgrade():
     else:
         print("   ⚠️  stripe_price_id_yearly column already exists, skipping")
 
+    # Add whop_plan_id column if it doesn't exist
+    if not column_exists('subscription_tier', 'whop_plan_id'):
+        print("   Adding whop_plan_id column...")
+        with op.batch_alter_table('subscription_tier', schema=None) as batch_op:
+            batch_op.add_column(sa.Column('whop_plan_id', sa.String(128), nullable=True))
+        print("✅ whop_plan_id column added successfully")
+    else:
+        print("   ⚠️  whop_plan_id column already exists, skipping")
+
     print("=== Legacy compatibility fields migration completed ===")
 
 def downgrade():
