@@ -188,35 +188,19 @@ def downgrade():
     bind = op.get_bind()
     inspector = inspect(bind)
     columns = [col['name'] for col in inspector.get_columns('subscription_tier')]
-    
+
     if 'allowed_addon_keys' not in columns:
         with op.batch_alter_table('subscription_tier', schema=None) as batch_op:
             batch_op.add_column(sa.Column('allowed_addon_keys', postgresql.JSON(astext_type=sa.Text()), autoincrement=False, nullable=True))
 
     # Check and add recipe columns only if they don't exist
     recipe_columns = [col['name'] for col in inspector.get_columns('recipe')]
-    
-    recipe_columns_to_add = [
-        ('baker_salt_pct', sa.Column('baker_salt_pct', sa.NUMERIC(), sa.Computed("((category_data ->> 'baker_salt_pct'::text))::numeric", persisted=True), autoincrement=False, nullable=True)),
-        ('cosm_preservative_pct', sa.Column('cosm_preservative_pct', sa.NUMERIC(), sa.Computed("((category_data ->> 'cosm_preservative_pct'::text))::numeric", persisted=True), autoincrement=False, nullable=True)),
-        ('candle_fragrance_pct', sa.Column('candle_fragrance_pct', sa.NUMERIC(), sa.Computed("((category_data ->> 'candle_fragrance_pct'::text))::numeric", persisted=True), autoincrement=False, nullable=True)),
-        ('soap_lye_type', sa.Column('soap_lye_type', sa.TEXT(), sa.Computed("(category_data ->> 'soap_lye_type'::text)", persisted=True), autoincrement=False, nullable=True)),
-        ('baker_water_pct', sa.Column('baker_water_pct', sa.NUMERIC(), sa.Computed("((category_data ->> 'baker_water_pct'::text))::numeric", persisted=True), autoincrement=False, nullable=True)),
-        ('baker_base_flour_g', sa.Column('baker_base_flour_g', sa.NUMERIC(), sa.Computed("((category_data ->> 'baker_base_flour_g'::text))::numeric", persisted=True), autoincrement=False, nullable=True)),
-        ('vessel_fill_pct', sa.Column('vessel_fill_pct', sa.NUMERIC(), sa.Computed("((category_data ->> 'vessel_fill_pct'::text))::numeric", persisted=True), autoincrement=False, nullable=True)),
-        ('cosm_emulsifier_pct', sa.Column('cosm_emulsifier_pct', sa.NUMERIC(), sa.Computed("((category_data ->> 'cosm_emulsifier_pct'::text))::numeric", persisted=True), autoincrement=False, nullable=True)),
-        ('soap_superfat', sa.Column('soap_superfat', sa.NUMERIC(), sa.Computed("((category_data ->> 'soap_superfat'::text))::numeric", persisted=True), autoincrement=False, nullable=True)),
-        ('baker_yeast_pct', sa.Column('baker_yeast_pct', sa.NUMERIC(), sa.Computed("((category_data ->> 'baker_yeast_pct'::text))::numeric", persisted=True), autoincrement=False, nullable=True)),
-        ('counts', sa.Column('counts', sa.INTEGER(), autoincrement=False, nullable=True)),
-        ('soap_water_pct', sa.Column('soap_water_pct', sa.NUMERIC(), sa.Computed("((category_data ->> 'soap_water_pct'::text))::numeric", persisted=True), autoincrement=False, nullable=True)),
-        ('candle_vessel_ml', sa.Column('candle_vessel_ml', sa.NUMERIC(), sa.Computed("((category_data ->> 'candle_vessel_ml'::text))::numeric", persisted=True), autoincrement=False, nullable=True))
-    ]
-    
+
     with op.batch_alter_table('recipe', schema=None) as batch_op:
         for col_name, col_def in recipe_columns_to_add:
             if col_name not in recipe_columns:
                 batch_op.add_column(col_def)
-        
+
         # Create indexes only if they don't exist
         recipe_indexes_to_add = [
             'ix_recipe_vessel_fill_pct',
@@ -235,7 +219,7 @@ def downgrade():
             'ix_recipe_baker_salt_pct',
             'ix_recipe_baker_base_flour_g'
         ]
-        
+
         for index_name in recipe_indexes_to_add:
             if not index_exists(index_name):
                 if index_name == 'ix_recipe_vessel_fill_pct':
@@ -275,11 +259,12 @@ def downgrade():
 
     # Check and add product columns only if they don't exist
     product_columns = [col['name'] for col in inspector.get_columns('product')]
-    
+
     with op.batch_alter_table('product', schema=None) as batch_op:
         if 'category' not in product_columns:
             batch_op.add_column(sa.Column('category', sa.VARCHAR(length=64), autoincrement=False, nullable=True))
-        batch_op.create_index('ix_product_category_id', ['category_id'], unique=False)
+        if not index_exists('ix_product_category_id'):
+            batch_op.create_index('ix_product_category_id', ['category_id'], unique=False)
 
     with op.batch_alter_table('organization_addon', schema=None) as batch_op:
         batch_op.drop_index(batch_op.f('ix_organization_addon_organization_id'))
@@ -314,7 +299,8 @@ def downgrade():
         batch_op.add_column(sa.Column('container_volume_unit', sa.VARCHAR(length=16), autoincrement=False, nullable=True))
         batch_op.add_column(sa.Column('default_days_until_expiration', sa.INTEGER(), autoincrement=False, nullable=True))
         batch_op.add_column(sa.Column('container_shape', sa.VARCHAR(length=32), autoincrement=False, nullable=True))
-        batch_op.create_index('ix_global_item_aka_gin', [sa.literal_column('(aka_names::jsonb)')], unique=False, postgresql_using='gin')
+        if not index_exists('ix_global_item_aka_gin'):
+            batch_op.create_index('ix_global_item_aka_gin', [sa.literal_column('(aka_names::jsonb)')], unique=False, postgresql_using='gin')
 
     with op.batch_alter_table('extra_batch_consumable', schema=None) as batch_op:
         if not index_exists('ix_extra_batch_consumable_organization_id'):
@@ -334,7 +320,7 @@ def downgrade():
 
     # Check and add batch columns only if they don't exist
     batch_columns = [col['name'] for col in inspector.get_columns('batch')]
-    
+
     batch_columns_to_add = [
         ('baker_salt_pct', sa.Column('baker_salt_pct', sa.NUMERIC(), sa.Computed("(((plan_snapshot -> 'category_extension'::text) ->> 'baker_salt_pct'::text))::numeric", persisted=True), autoincrement=False, nullable=True)),
         ('cosm_preservative_pct', sa.Column('cosm_preservative_pct', sa.NUMERIC(), sa.Computed("(((plan_snapshot -> 'category_extension'::text) ->> 'cosm_preservative_pct'::text))::numeric", persisted=True), autoincrement=False, nullable=True)),
@@ -350,12 +336,12 @@ def downgrade():
         ('soap_water_pct', sa.Column('soap_water_pct', sa.NUMERIC(), sa.Computed("(((plan_snapshot -> 'category_extension'::text) ->> 'soap_water_pct'::text))::numeric", persisted=True), autoincrement=False, nullable=True)),
         ('candle_vessel_ml', sa.Column('candle_vessel_ml', sa.NUMERIC(), sa.Computed("(((plan_snapshot -> 'category_extension'::text) ->> 'candle_vessel_ml'::text))::numeric", persisted=True), autoincrement=False, nullable=True))
     ]
-    
+
     with op.batch_alter_table('batch', schema=None) as batch_op:
         for col_name, col_def in batch_columns_to_add:
             if col_name not in batch_columns:
                 batch_op.add_column(col_def)
-        
+
         # Create batch indexes only if they don't exist
         batch_indexes_to_add = [
             'ix_batch_vessel_fill_pct',
@@ -372,7 +358,7 @@ def downgrade():
             'ix_batch_baker_salt_pct',
             'ix_batch_baker_base_flour_g'
         ]
-        
+
         for index_name in batch_indexes_to_add:
             if not index_exists(index_name):
                 if index_name == 'ix_batch_vessel_fill_pct':
@@ -410,9 +396,12 @@ def downgrade():
     sa.PrimaryKeyConstraint('id', name='global_item_alias_pkey')
     )
     with op.batch_alter_table('global_item_alias', schema=None) as batch_op:
-        batch_op.create_index('ix_global_item_alias_tsv', [sa.literal_column("to_tsvector('simple'::regconfig, alias)")], unique=False, postgresql_using='gin')
-        batch_op.create_index('ix_global_item_alias_global_item_id', ['global_item_id'], unique=False)
-        batch_op.create_index('ix_global_item_alias_alias', ['alias'], unique=False)
+        if not index_exists('ix_global_item_alias_tsv'):
+            batch_op.create_index('ix_global_item_alias_tsv', [sa.literal_column("to_tsvector('simple'::regconfig, alias)")], unique=False, postgresql_using='gin')
+        if not index_exists('ix_global_item_alias_global_item_id'):
+            batch_op.create_index('ix_global_item_alias_global_item_id', ['global_item_id'], unique=False)
+        if not index_exists('ix_global_item_alias_alias'):
+            batch_op.create_index('ix_global_item_alias_alias', ['alias'], unique=False)
 
     op.drop_table('tier_included_addon')
     # ### end Alembic commands ###
