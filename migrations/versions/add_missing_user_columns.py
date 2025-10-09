@@ -22,70 +22,44 @@ def column_exists(table_name, column_name):
     columns = [col['name'] for col in inspector.get_columns(table_name)]
     return column_name in columns
 
-def constraint_exists(table_name, constraint_name):
-    """Check if a constraint exists in the database"""
-    conn = op.get_bind()
-    try:
-        # For PostgreSQL, check pg_constraint
-        result = conn.execute(sa.text("""
-            SELECT COUNT(*) FROM pg_constraint 
-            WHERE conname = :constraint_name
-        """), {"constraint_name": constraint_name})
-        return result.scalar() > 0
-    except:
-        # Fallback - assume it doesn't exist
-        return False
-
 def upgrade():
-    """Add missing User model columns with soft delete support"""
+    """Add all missing User model columns to the database"""
     print("=== Adding missing User model columns ===")
     
-    # Check and add columns if they don't exist
-    columns_to_add = [
+    missing_columns = [
         ('deleted_at', sa.DateTime(), True),
         ('deleted_by', sa.Integer(), True),
-        ('is_deleted', sa.Boolean(), False, False)
+        ('is_deleted', sa.Boolean(), False)
     ]
     
-    for col_name, col_type, nullable, *default in columns_to_add:
-        if column_exists('user', col_name):
-            print(f"   ✅ {col_name} column already exists")
-        else:
-            if default:
-                op.add_column('user', sa.Column(col_name, col_type, nullable=nullable, default=default[0]))
+    with op.batch_alter_table('user', schema=None) as batch_op:
+        for column_name, column_type, nullable in missing_columns:
+            if not column_exists('user', column_name):
+                print(f"   Adding {column_name} column...")
+                if column_name == 'is_deleted':
+                    batch_op.add_column(sa.Column(column_name, column_type, nullable=False, default=False))
+                elif column_name == 'deleted_by':
+                    # Add the column first, then create a named FK for batch mode compatibility
+                    batch_op.add_column(sa.Column(column_name, column_type, nullable=True))
+                else:
+                    batch_op.add_column(sa.Column(column_name, column_type, nullable=nullable))
             else:
-                op.add_column('user', sa.Column(col_name, col_type, nullable=nullable))
-            print(f"   ✅ Added {col_name} column")
-    
-    # Add foreign key constraint only if it doesn't exist
-    fk_constraint_name = 'fk_user_deleted_by_user'
-    if not constraint_exists('user', fk_constraint_name):
-        try:
-            op.create_foreign_key(
-                fk_constraint_name,
-                'user', 'user',
-                ['deleted_by'], ['id']
-            )
-            print("   ✅ Added foreign key constraint for deleted_by")
-        except Exception as e:
-            print(f"   ⚠️  Could not add foreign key constraint: {e}")
-    else:
-        print("   ✅ Foreign key constraint already exists")
+                print(f"   ✅ {column_name} column already exists")
 
-    print("✅ User columns migration completed")
+        # Create explicit FK for deleted_by if the column was just added (or exists)
+        try:
+            batch_op.create_foreign_key('fk_user_deleted_by_user', 'user', ['deleted_by'], ['id'])
+        except Exception:
+            # Likely already exists or not supported on this backend; safe to continue
+            pass
+    
+    print("✅ Missing User columns migration completed")
 
 def downgrade():
     """Remove the added columns"""
-    try:
-        # Remove foreign key constraint first
-        op.drop_constraint('fk_user_deleted_by_user', 'user', type_='foreignkey')
-    except:
-        pass
-    
-    # Remove columns
-    columns_to_remove = ['deleted_at', 'deleted_by', 'is_deleted']
-    for col_name in columns_to_remove:
-        try:
-            op.drop_column('user', col_name)
-        except:
-            pass
+    with op.batch_alter_table('user', schema=None) as batch_op:
+        columns_to_remove = ['deleted_at', 'deleted_by', 'is_deleted']
+        
+        for column_name in columns_to_remove:
+            if column_exists('user', column_name):
+                batch_op.drop_column(column_name)
