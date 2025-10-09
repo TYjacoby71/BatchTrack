@@ -73,11 +73,6 @@ def upgrade():
         else:
             print("   ⚠️  email_verification_token column already exists, skipping")
 
-        # The original code included these other columns, but the provided changes snippet
-        # only explicitly mentioned email_verified, email_verification_token, and google_id.
-        # For now, we will only address the explicitly changed ones and keep the rest of the
-        # original upgrade logic for other columns unless specified.
-
         if not column_exists('user', 'email_verification_sent_at'):
             print("   Adding email_verification_sent_at column...")
             batch_op.add_column(sa.Column('email_verification_sent_at', sa.DateTime(), nullable=True))

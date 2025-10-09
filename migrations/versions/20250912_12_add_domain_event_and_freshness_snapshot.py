@@ -18,53 +18,122 @@ depends_on = None
 
 
 def upgrade():
+    from sqlalchemy import inspect
+    
+    def table_exists(table_name):
+        """Check if a table exists"""
+        bind = op.get_bind()
+        inspector = inspect(bind)
+        return table_name in inspector.get_table_names()
+    
+    def index_exists(table_name, index_name):
+        """Check if an index exists"""
+        if not table_exists(table_name):
+            return False
+        bind = op.get_bind()
+        inspector = inspect(bind)
+        try:
+            indexes = [idx['name'] for idx in inspector.get_indexes(table_name)]
+            return index_name in indexes
+        except Exception:
+            return False
+    
+    print("=== Creating domain_event and freshness_snapshot tables ===")
+    
     # domain_event table
-    op.create_table(
-        'domain_event',
-        sa.Column('id', sa.Integer(), primary_key=True),
-        sa.Column('event_name', sa.String(length=128), nullable=False),
-        sa.Column('occurred_at', sa.DateTime(), nullable=True),
-        sa.Column('organization_id', sa.Integer(), sa.ForeignKey('organization.id'), nullable=True),
-        sa.Column('user_id', sa.Integer(), sa.ForeignKey('user.id'), nullable=True),
-        sa.Column('entity_type', sa.String(length=64), nullable=True),
-        sa.Column('entity_id', sa.Integer(), nullable=True),
-        sa.Column('correlation_id', sa.String(length=128), nullable=True),
-        sa.Column('source', sa.String(length=64), nullable=True, server_default=sa.text("'app'")),
-        sa.Column('schema_version', sa.Integer(), nullable=True, server_default=sa.text('1')),
-        sa.Column('properties', sa.JSON(), nullable=True),
-        sa.Column('is_processed', sa.Boolean(), nullable=True, server_default=sa.text('false')),
-        sa.Column('processed_at', sa.DateTime(), nullable=True),
-        sa.Column('delivery_attempts', sa.Integer(), nullable=True, server_default=sa.text('0')),
-        sa.Column('created_at', sa.DateTime(), nullable=True),
-    )
+    if not table_exists('domain_event'):
+        print("   Creating domain_event table...")
+        op.create_table(
+            'domain_event',
+            sa.Column('id', sa.Integer(), primary_key=True),
+            sa.Column('event_name', sa.String(length=128), nullable=False),
+            sa.Column('occurred_at', sa.DateTime(), nullable=True),
+            sa.Column('organization_id', sa.Integer(), sa.ForeignKey('organization.id'), nullable=True),
+            sa.Column('user_id', sa.Integer(), sa.ForeignKey('user.id'), nullable=True),
+            sa.Column('entity_type', sa.String(length=64), nullable=True),
+            sa.Column('entity_id', sa.Integer(), nullable=True),
+            sa.Column('correlation_id', sa.String(length=128), nullable=True),
+            sa.Column('source', sa.String(length=64), nullable=True, server_default=sa.text("'app'")),
+            sa.Column('schema_version', sa.Integer(), nullable=True, server_default=sa.text('1')),
+            sa.Column('properties', sa.JSON(), nullable=True),
+            sa.Column('is_processed', sa.Boolean(), nullable=True, server_default=sa.text('false')),
+            sa.Column('processed_at', sa.DateTime(), nullable=True),
+            sa.Column('delivery_attempts', sa.Integer(), nullable=True, server_default=sa.text('0')),
+            sa.Column('created_at', sa.DateTime(), nullable=True),
+        )
+        print("   ✅ domain_event table created")
+    else:
+        print("   ✅ domain_event table already exists - skipping")
 
     # Indexes for domain_event
-    op.create_index('ix_domain_event_event_name', 'domain_event', ['event_name'])
-    op.create_index('ix_domain_event_occurred_at', 'domain_event', ['occurred_at'])
-    op.create_index('ix_domain_event_org', 'domain_event', ['organization_id'])
-    op.create_index('ix_domain_event_user', 'domain_event', ['user_id'])
-    op.create_index('ix_domain_event_entity', 'domain_event', ['entity_type', 'entity_id'])
-    op.create_index('ix_domain_event_is_processed', 'domain_event', ['is_processed'])
-    op.create_index('ix_domain_event_correlation_id', 'domain_event', ['correlation_id'])
+    if table_exists('domain_event'):
+        domain_event_indexes = [
+            ('ix_domain_event_event_name', ['event_name']),
+            ('ix_domain_event_occurred_at', ['occurred_at']),
+            ('ix_domain_event_org', ['organization_id']),
+            ('ix_domain_event_user', ['user_id']),
+            ('ix_domain_event_entity', ['entity_type', 'entity_id']),
+            ('ix_domain_event_is_processed', ['is_processed']),
+            ('ix_domain_event_correlation_id', ['correlation_id']),
+        ]
+        
+        for idx_name, columns in domain_event_indexes:
+            if not index_exists('domain_event', idx_name):
+                try:
+                    print(f"   Creating index {idx_name}...")
+                    op.create_index(idx_name, 'domain_event', columns)
+                    print(f"   ✅ Created index {idx_name}")
+                except Exception as e:
+                    print(f"   ⚠️  Could not create index {idx_name}: {e}")
+            else:
+                print(f"   ✅ Index {idx_name} already exists - skipping")
 
     # freshness_snapshot table
-    op.create_table(
-        'freshness_snapshot',
-        sa.Column('id', sa.Integer(), primary_key=True),
-        sa.Column('snapshot_date', sa.Date(), nullable=False),
-        sa.Column('organization_id', sa.Integer(), sa.ForeignKey('organization.id'), nullable=False),
-        sa.Column('inventory_item_id', sa.Integer(), sa.ForeignKey('inventory_item.id'), nullable=False),
-        sa.Column('avg_days_to_usage', sa.Float(), nullable=True),
-        sa.Column('avg_days_to_spoilage', sa.Float(), nullable=True),
-        sa.Column('freshness_efficiency_score', sa.Float(), nullable=True),
-        sa.Column('computed_at', sa.DateTime(), nullable=True),
-    )
+    if not table_exists('freshness_snapshot'):
+        print("   Creating freshness_snapshot table...")
+        op.create_table(
+            'freshness_snapshot',
+            sa.Column('id', sa.Integer(), primary_key=True),
+            sa.Column('snapshot_date', sa.Date(), nullable=False),
+            sa.Column('organization_id', sa.Integer(), sa.ForeignKey('organization.id'), nullable=False),
+            sa.Column('inventory_item_id', sa.Integer(), sa.ForeignKey('inventory_item.id'), nullable=False),
+            sa.Column('avg_days_to_usage', sa.Float(), nullable=True),
+            sa.Column('avg_days_to_spoilage', sa.Float(), nullable=True),
+            sa.Column('freshness_efficiency_score', sa.Float(), nullable=True),
+            sa.Column('computed_at', sa.DateTime(), nullable=True),
+        )
+        print("   ✅ freshness_snapshot table created")
+    else:
+        print("   ✅ freshness_snapshot table already exists - skipping")
 
     # Indexes and unique constraint for freshness_snapshot
-    op.create_index('ix_freshness_snapshot_date', 'freshness_snapshot', ['snapshot_date'])
-    op.create_index('ix_freshness_snapshot_org', 'freshness_snapshot', ['organization_id'])
-    op.create_index('ix_freshness_snapshot_item', 'freshness_snapshot', ['inventory_item_id'])
-    op.create_unique_constraint('uq_freshness_snapshot_unique', 'freshness_snapshot', ['snapshot_date', 'organization_id', 'inventory_item_id'])
+    if table_exists('freshness_snapshot'):
+        freshness_indexes = [
+            ('ix_freshness_snapshot_date', ['snapshot_date']),
+            ('ix_freshness_snapshot_org', ['organization_id']),
+            ('ix_freshness_snapshot_item', ['inventory_item_id']),
+        ]
+        
+        for idx_name, columns in freshness_indexes:
+            if not index_exists('freshness_snapshot', idx_name):
+                try:
+                    print(f"   Creating index {idx_name}...")
+                    op.create_index(idx_name, 'freshness_snapshot', columns)
+                    print(f"   ✅ Created index {idx_name}")
+                except Exception as e:
+                    print(f"   ⚠️  Could not create index {idx_name}: {e}")
+            else:
+                print(f"   ✅ Index {idx_name} already exists - skipping")
+        
+        # Create unique constraint if it doesn't exist
+        try:
+            print("   Creating unique constraint uq_freshness_snapshot_unique...")
+            op.create_unique_constraint('uq_freshness_snapshot_unique', 'freshness_snapshot', ['snapshot_date', 'organization_id', 'inventory_item_id'])
+            print("   ✅ Created unique constraint uq_freshness_snapshot_unique")
+        except Exception as e:
+            print(f"   ⚠️  Could not create unique constraint (may already exist): {e}")
+    
+    print("✅ Domain event and freshness snapshot migration completed")
 
 
 def downgrade():

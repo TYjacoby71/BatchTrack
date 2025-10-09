@@ -46,13 +46,29 @@ def upgrade():
 
 def downgrade():
     """Remove is_verified field from user table"""
+    from sqlalchemy import inspect
+    
+    # Get database connection and inspector
+    connection = op.get_bind()
+    inspector = inspect(connection)
+
+    def column_exists(table_name, column_name):
+        """Check if a column exists in a table"""
+        try:
+            columns = [col['name'] for col in inspector.get_columns(table_name)]
+            return column_name in columns
+        except Exception:
+            return False
+    
     print("=== Removing is_verified field from user table ===")
 
-    with op.batch_alter_table('user', schema=None) as batch_op:
-        try:
+    # Only drop column if it exists
+    if column_exists('user', 'is_verified'):
+        print("   Dropping is_verified column...")
+        with op.batch_alter_table('user', schema=None) as batch_op:
             batch_op.drop_column('is_verified')
-            print("✅ is_verified column removed successfully")
-        except Exception as e:
-            print(f"   ⚠️  Could not remove is_verified column: {e}")
+        print("✅ is_verified column removed successfully")
+    else:
+        print("   ⚠️  is_verified column doesn't exist, skipping")
 
     print("✅ Downgrade completed")

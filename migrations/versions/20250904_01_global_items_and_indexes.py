@@ -75,14 +75,27 @@ def upgrade():
     # 3) Add the foreign key constraint
     print("Adding foreign key constraint...")
     try:
-        op.create_foreign_key(
-            'fk_inventory_item_global_item', 
-            'inventory_item', 
-            'global_item', 
-            ['global_item_id'], 
-            ['id']
-        )
-        print("   ✅ Foreign key constraint added successfully")
+        # Check if constraint already exists
+        from sqlalchemy import text
+        constraint_exists = connection.execute(text("""
+            SELECT COUNT(*) 
+            FROM information_schema.table_constraints 
+            WHERE table_name = 'inventory_item' 
+            AND constraint_name = 'fk_inventory_item_global_item'
+            AND constraint_type = 'FOREIGN KEY'
+        """)).scalar()
+        
+        if constraint_exists == 0:
+            op.create_foreign_key(
+                'fk_inventory_item_global_item', 
+                'inventory_item', 
+                'global_item', 
+                ['global_item_id'], 
+                ['id']
+            )
+            print("   ✅ Foreign key constraint added successfully")
+        else:
+            print("   ✅ Foreign key constraint already exists")
     except Exception as e:
         print(f"   ⚠️  Foreign key constraint may already exist: {e}")
 

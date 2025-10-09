@@ -92,7 +92,11 @@ def upgrade():
         if _has_table(inspector, table):
             for index_name, cols in index_list:
                 if not _has_index(inspector, table, index_name):
-                    op.create_index(index_name, table, cols)
+                    try:
+                        op.create_index(index_name, table, cols)
+                        print(f"   ✅ Created index {index_name} on {table}")
+                    except Exception as e:
+                        print(f"   ⚠️  Could not create index {index_name} on {table}: {e}")
 
 
 def downgrade():
