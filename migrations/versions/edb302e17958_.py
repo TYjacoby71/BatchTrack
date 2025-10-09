@@ -94,7 +94,13 @@ def upgrade():
         op.drop_table('pricing_snapshot')
     else:
         print("   ⚠️  pricing_snapshot table doesn't exist, skipping drop")
-    op.drop_table('billing_snapshot')
+    
+    # Check if billing_snapshot table exists before dropping
+    result = conn.execute(text("SELECT EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'billing_snapshot')"))
+    if result.fetchone()[0]:
+        op.drop_table('billing_snapshot')
+    else:
+        print("   ⚠️  billing_snapshot table doesn't exist, skipping drop")
     with op.batch_alter_table('batch', schema=None) as batch_op:
         # Drop only if the named constraint exists
         if has_named_batch_sku_fk:
