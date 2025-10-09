@@ -1,77 +1,84 @@
 
-"""Add visibility control fields for soap-making attributes to ingredient categories
-
-Revision ID: 20250930_04
-Revises: 20250930_03
-Create Date: 2025-09-30 04:00:00
-
 """
+Add visibility control fields for soap-making attributes to ingredient categories
+
+Revision ID: 20250930_4
+Revises: 20250930_3
+Create Date: 2025-09-30 00:00:00
+"""
+
 from alembic import op
 import sqlalchemy as sa
-from sqlalchemy import inspect
-
-
-def safe_add_column(table_name, column):
-    """Add column if it doesn't already exist"""
-    connection = op.get_bind()
-    inspector = inspect(connection)
-    existing_columns = [col['name'] for col in inspector.get_columns(table_name)]
-    
-    if column.name not in existing_columns:
-        op.add_column(table_name, column)
-        print(f"  ✅ Added column {column.name} to {table_name}")
-    else:
-        print(f"  ℹ️  Column {column.name} already exists in {table_name}")
-
-
-def safe_drop_column(table_name, column_name):
-    """Drop column if it exists"""
-    connection = op.get_bind()
-    inspector = inspect(connection)
-    existing_columns = [col['name'] for col in inspector.get_columns(table_name)]
-    
-    if column_name in existing_columns:
-        op.drop_column(table_name, column_name)
-        print(f"  ✅ Dropped column {column_name} from {table_name}")
-    else:
-        print(f"  ℹ️  Column {column_name} does not exist in {table_name}")
-
 
 # revision identifiers, used by Alembic.
-revision = '20250930_04'
-down_revision = '20250930_03'
+revision = '20250930_4'
+down_revision = '20250930_3'
 branch_labels = None
 depends_on = None
 
 
 def upgrade():
-    """Add visibility control fields to ingredient categories"""
     print("=== Adding visibility control fields to ingredient_category ===")
     
-    # Add visibility control fields for soap-making attributes
-    safe_add_column('ingredient_category', sa.Column('show_saponification_value', sa.Boolean(), nullable=True, default=False))
-    safe_add_column('ingredient_category', sa.Column('show_iodine_value', sa.Boolean(), nullable=True, default=False))
-    safe_add_column('ingredient_category', sa.Column('show_melting_point_c', sa.Boolean(), nullable=True, default=False))
-    safe_add_column('ingredient_category', sa.Column('show_flash_point_c', sa.Boolean(), nullable=True, default=False))
-    safe_add_column('ingredient_category', sa.Column('show_ph_value', sa.Boolean(), nullable=True, default=False))
-    safe_add_column('ingredient_category', sa.Column('show_moisture_content_percent', sa.Boolean(), nullable=True, default=False))
-    safe_add_column('ingredient_category', sa.Column('show_shelf_life_months', sa.Boolean(), nullable=True, default=False))
-    safe_add_column('ingredient_category', sa.Column('show_comedogenic_rating', sa.Boolean(), nullable=True, default=False))
+    # Add visibility control fields to ingredient_category
+    with op.batch_alter_table('ingredient_category') as batch_op:
+        batch_op.add_column(sa.Column('show_saponification_value', sa.Boolean(), default=False))
+        batch_op.add_column(sa.Column('show_iodine_value', sa.Boolean(), default=False))
+        batch_op.add_column(sa.Column('show_melting_point', sa.Boolean(), default=False))
+        batch_op.add_column(sa.Column('show_flash_point', sa.Boolean(), default=False))
+        batch_op.add_column(sa.Column('show_ph_value', sa.Boolean(), default=False))
+        batch_op.add_column(sa.Column('show_moisture_content', sa.Boolean(), default=False))
+        batch_op.add_column(sa.Column('show_shelf_life_months', sa.Boolean(), default=False))
+        batch_op.add_column(sa.Column('show_comedogenic_rating', sa.Boolean(), default=False))
     
-    print("✅ Visibility control fields migration completed")
+    print("✅ Visibility control fields added to ingredient_category")
+    
+    # Set default visibility for common soap-making categories
+    connection = op.get_bind()
+    
+    # Enable soap-making fields for oil categories
+    oil_categories = ['Oils', 'Oils - Liquid Fats', 'Butters - Solid Fats', 'Essential Oils']
+    for category_name in oil_categories:
+        connection.execute(sa.text("""
+            UPDATE ingredient_category 
+            SET show_saponification_value = true,
+                show_iodine_value = true,
+                show_comedogenic_rating = true
+            WHERE name = :category_name
+        """), {"category_name": category_name})
+    
+    # Enable pH for liquid categories
+    liquid_categories = ['Liquids - Aqueous', 'Extracts - Alcohols - Solvents']
+    for category_name in liquid_categories:
+        connection.execute(sa.text("""
+            UPDATE ingredient_category 
+            SET show_ph_value = true
+            WHERE name = :category_name
+        """), {"category_name": category_name})
+    
+    # Enable melting point for solid ingredients
+    solid_categories = ['Waxes', 'Butters - Solid Fats']
+    for category_name in solid_categories:
+        connection.execute(sa.text("""
+            UPDATE ingredient_category 
+            SET show_melting_point = true
+            WHERE name = :category_name
+        """), {"category_name": category_name})
+    
+    print("✅ Default visibility settings applied to common categories")
 
 
 def downgrade():
-    """Remove visibility control fields"""
-    print("=== Removing visibility control fields from ingredient_category ===")
-    
-    safe_drop_column('ingredient_category', 'show_comedogenic_rating')
-    safe_drop_column('ingredient_category', 'show_shelf_life_months')
-    safe_drop_column('ingredient_category', 'show_moisture_content_percent')
-    safe_drop_column('ingredient_category', 'show_ph_value')
-    safe_drop_column('ingredient_category', 'show_flash_point_c')
-    safe_drop_column('ingredient_category', 'show_melting_point_c')
-    safe_drop_column('ingredient_category', 'show_iodine_value')
-    safe_drop_column('ingredient_category', 'show_saponification_value')
-    
-    print("✅ Visibility control fields removal completed")
+    # Remove visibility control fields from ingredient_category
+    try:
+        with op.batch_alter_table('ingredient_category') as batch_op:
+            batch_op.drop_column('show_comedogenic_rating')
+            batch_op.drop_column('show_shelf_life_months')
+            batch_op.drop_column('show_moisture_content')
+            batch_op.drop_column('show_ph_value')
+            batch_op.drop_column('show_flash_point')
+            batch_op.drop_column('show_melting_point')
+            batch_op.drop_column('show_iodine_value')
+            batch_op.drop_column('show_saponification_value')
+    except Exception:
+        pass
