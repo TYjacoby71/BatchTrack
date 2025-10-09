@@ -1,8 +1,8 @@
 
 """Add missing retention policy columns to subscription_tier
 
-Revision ID: 20251009_01
-Revises: 20251008_03
+Revision ID: 20251009_1
+Revises: 20251008_3
 Create Date: 2025-10-09 18:50:00.000000
 
 """
@@ -10,8 +10,8 @@ from alembic import op
 import sqlalchemy as sa
 from sqlalchemy import inspect
 
-revision = '20251009_01'
-down_revision = '20251008_03'
+revision = '20251009_1'
+down_revision = '20251008_3'
 branch_labels = None
 depends_on = None
 
