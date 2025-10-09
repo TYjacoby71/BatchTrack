@@ -133,24 +133,36 @@ def upgrade():
         if column_exists('batch', 'updated_at'):
             batch_op.drop_column('updated_at')
 
+    print("=== Updating batch_container table ===")
+    # Add new columns safely
+    safe_add_column('batch_container', 'container_id', sa.Column('container_id', sa.Integer(), nullable=False))
+    safe_add_column('batch_container', 'container_quantity', sa.Column('container_quantity', sa.Integer(), nullable=False))
+    safe_add_column('batch_container', 'quantity_used', sa.Column('quantity_used', sa.Integer(), nullable=False))
+    safe_add_column('batch_container', 'fill_quantity', sa.Column('fill_quantity', sa.Float(), nullable=True))
+    safe_add_column('batch_container', 'fill_unit', sa.Column('fill_unit', sa.String(length=32), nullable=True))
+    safe_add_column('batch_container', 'cost_each', sa.Column('cost_each', sa.Float(), nullable=True))
+    safe_add_column('batch_container', 'organization_id', sa.Column('organization_id', sa.Integer(), nullable=True))
+    
+    # Add foreign keys and drop columns using batch operations
     with op.batch_alter_table('batch_container', schema=None) as batch_op:
-        batch_op.add_column(sa.Column('container_id', sa.Integer(), nullable=False))
-        batch_op.add_column(sa.Column('container_quantity', sa.Integer(), nullable=False))
-        batch_op.add_column(sa.Column('quantity_used', sa.Integer(), nullable=False))
-        batch_op.add_column(sa.Column('fill_quantity', sa.Float(), nullable=True))
-        batch_op.add_column(sa.Column('fill_unit', sa.String(length=32), nullable=True))
-        batch_op.add_column(sa.Column('cost_each', sa.Float(), nullable=True))
-        batch_op.add_column(sa.Column('organization_id', sa.Integer(), nullable=True))
-        batch_op.create_foreign_key(None, 'inventory_item', ['container_id'], ['id'])
-        batch_op.create_foreign_key(None, 'organization', ['organization_id'], ['id'])
-        batch_op.drop_column('created_at')
-        batch_op.drop_column('container_size')
-        batch_op.drop_column('qr_code')
-        batch_op.drop_column('label_printed')
-        batch_op.drop_column('container_unit')
-        batch_op.drop_column('quantity_filled')
-        batch_op.drop_column('container_name')
-        batch_op.drop_column('notes')
+        try:
+            batch_op.create_foreign_key(None, 'inventory_item', ['container_id'], ['id'])
+        except Exception as e:
+            print(f"   ℹ️  Could not create container_id foreign key: {e}")
+        try:
+            batch_op.create_foreign_key(None, 'organization', ['organization_id'], ['id'])
+        except Exception as e:
+            print(f"   ℹ️  Could not create organization_id foreign key: {e}")
+    
+    # Drop old columns safely
+    safe_drop_column('batch_container', 'created_at')
+    safe_drop_column('batch_container', 'container_size')
+    safe_drop_column('batch_container', 'qr_code')
+    safe_drop_column('batch_container', 'label_printed')
+    safe_drop_column('batch_container', 'container_unit')
+    safe_drop_column('batch_container', 'quantity_filled')
+    safe_drop_column('batch_container', 'container_name')
+    safe_drop_column('batch_container', 'notes')
 
     with op.batch_alter_table('batch_ingredient', schema=None) as batch_op:
         batch_op.add_column(sa.Column('organization_id', sa.Integer(), nullable=True))
@@ -276,23 +288,35 @@ def upgrade():
                type_=sa.Text(),
                existing_nullable=True)
 
+    print("=== Updating extra_batch_container table ===")
+    # Add new columns safely
+    safe_add_column('extra_batch_container', 'container_id', sa.Column('container_id', sa.Integer(), nullable=False))
+    safe_add_column('extra_batch_container', 'container_quantity', sa.Column('container_quantity', sa.Integer(), nullable=False))
+    safe_add_column('extra_batch_container', 'quantity_used', sa.Column('quantity_used', sa.Integer(), nullable=False))
+    safe_add_column('extra_batch_container', 'fill_quantity', sa.Column('fill_quantity', sa.Float(), nullable=True))
+    safe_add_column('extra_batch_container', 'fill_unit', sa.Column('fill_unit', sa.String(length=32), nullable=True))
+    safe_add_column('extra_batch_container', 'cost_each', sa.Column('cost_each', sa.Float(), nullable=True))
+    safe_add_column('extra_batch_container', 'reason', sa.Column('reason', sa.String(length=20), nullable=False))
+    safe_add_column('extra_batch_container', 'organization_id', sa.Column('organization_id', sa.Integer(), nullable=True))
+    
+    # Add foreign keys using batch operations
     with op.batch_alter_table('extra_batch_container', schema=None) as batch_op:
-        batch_op.add_column(sa.Column('container_id', sa.Integer(), nullable=False))
-        batch_op.add_column(sa.Column('container_quantity', sa.Integer(), nullable=False))
-        batch_op.add_column(sa.Column('quantity_used', sa.Integer(), nullable=False))
-        batch_op.add_column(sa.Column('fill_quantity', sa.Float(), nullable=True))
-        batch_op.add_column(sa.Column('fill_unit', sa.String(length=32), nullable=True))
-        batch_op.add_column(sa.Column('cost_each', sa.Float(), nullable=True))
-        batch_op.add_column(sa.Column('reason', sa.String(length=20), nullable=False))
-        batch_op.add_column(sa.Column('organization_id', sa.Integer(), nullable=True))
-        batch_op.create_foreign_key(None, 'organization', ['organization_id'], ['id'])
-        batch_op.create_foreign_key(None, 'inventory_item', ['container_id'], ['id'])
-        batch_op.drop_column('created_at')
-        batch_op.drop_column('container_size')
-        batch_op.drop_column('container_unit')
-        batch_op.drop_column('quantity_filled')
-        batch_op.drop_column('container_name')
-        batch_op.drop_column('notes')
+        try:
+            batch_op.create_foreign_key(None, 'organization', ['organization_id'], ['id'])
+        except Exception as e:
+            print(f"   ℹ️  Could not create organization_id foreign key: {e}")
+        try:
+            batch_op.create_foreign_key(None, 'inventory_item', ['container_id'], ['id'])
+        except Exception as e:
+            print(f"   ℹ️  Could not create container_id foreign key: {e}")
+    
+    # Drop old columns safely
+    safe_drop_column('extra_batch_container', 'created_at')
+    safe_drop_column('extra_batch_container', 'container_size')
+    safe_drop_column('extra_batch_container', 'container_unit')
+    safe_drop_column('extra_batch_container', 'quantity_filled')
+    safe_drop_column('extra_batch_container', 'container_name')
+    safe_drop_column('extra_batch_container', 'notes')
 
     with op.batch_alter_table('extra_batch_ingredient', schema=None) as batch_op:
         batch_op.add_column(sa.Column('organization_id', sa.Integer(), nullable=True))
