@@ -1,6 +1,7 @@
 from __future__ import annotations
 from typing import Optional, List, Dict, Any
-from flask import render_template
+from flask import render_template, request
+from io import BytesIO
 
 
 def _extract_lines_from_recipe(recipe) -> Dict[str, List[Dict[str, Any]]]:
@@ -142,19 +143,31 @@ class ExportService:
     @staticmethod
     def soap_inci_pdf(recipe=None, tool_draft: Optional[dict] = None) -> bytes:
         html = ExportService._render_html('exports/soap_inci.html', {'recipe': recipe, 'tool_draft': tool_draft, 'source': 'pdf'})
-        return html.encode('utf-8')
+        return ExportService._html_to_pdf(html)
 
     @staticmethod
     def candle_label_pdf(recipe=None, tool_draft: Optional[dict] = None) -> bytes:
         html = ExportService._render_html('exports/candle_label.html', {'recipe': recipe, 'tool_draft': tool_draft, 'source': 'pdf'})
-        return html.encode('utf-8')
+        return ExportService._html_to_pdf(html)
 
     @staticmethod
     def baker_sheet_pdf(recipe=None, tool_draft: Optional[dict] = None) -> bytes:
         html = ExportService._render_html('exports/baker_sheet.html', {'recipe': recipe, 'tool_draft': tool_draft, 'source': 'pdf'})
-        return html.encode('utf-8')
+        return ExportService._html_to_pdf(html)
 
     @staticmethod
     def lotion_inci_pdf(recipe=None, tool_draft: Optional[dict] = None) -> bytes:
         html = ExportService._render_html('exports/lotion_inci.html', {'recipe': recipe, 'tool_draft': tool_draft, 'source': 'pdf'})
+        return ExportService._html_to_pdf(html)
+
+    @staticmethod
+    def _html_to_pdf(html: str) -> bytes:
+        # Preferred: WeasyPrint (HTML/CSS → PDF)
+        try:
+            from weasyprint import HTML
+            base_url = request.host_url if request else None
+            return HTML(string=html, base_url=base_url).write_pdf()
+        except Exception:
+            pass
+        # Fallback: wrap HTML bytes (minimal) to keep route functional
         return html.encode('utf-8')
