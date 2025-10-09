@@ -193,20 +193,29 @@ def downgrade():
         with op.batch_alter_table('subscription_tier', schema=None) as batch_op:
             batch_op.add_column(sa.Column('allowed_addon_keys', postgresql.JSON(astext_type=sa.Text()), autoincrement=False, nullable=True))
 
+    # Check and add recipe columns only if they don't exist
+    recipe_columns = [col['name'] for col in inspector.get_columns('recipe')]
+    
+    recipe_columns_to_add = [
+        ('baker_salt_pct', sa.Column('baker_salt_pct', sa.NUMERIC(), sa.Computed("((category_data ->> 'baker_salt_pct'::text))::numeric", persisted=True), autoincrement=False, nullable=True)),
+        ('cosm_preservative_pct', sa.Column('cosm_preservative_pct', sa.NUMERIC(), sa.Computed("((category_data ->> 'cosm_preservative_pct'::text))::numeric", persisted=True), autoincrement=False, nullable=True)),
+        ('candle_fragrance_pct', sa.Column('candle_fragrance_pct', sa.NUMERIC(), sa.Computed("((category_data ->> 'candle_fragrance_pct'::text))::numeric", persisted=True), autoincrement=False, nullable=True)),
+        ('soap_lye_type', sa.Column('soap_lye_type', sa.TEXT(), sa.Computed("(category_data ->> 'soap_lye_type'::text)", persisted=True), autoincrement=False, nullable=True)),
+        ('baker_water_pct', sa.Column('baker_water_pct', sa.NUMERIC(), sa.Computed("((category_data ->> 'baker_water_pct'::text))::numeric", persisted=True), autoincrement=False, nullable=True)),
+        ('baker_base_flour_g', sa.Column('baker_base_flour_g', sa.NUMERIC(), sa.Computed("((category_data ->> 'baker_base_flour_g'::text))::numeric", persisted=True), autoincrement=False, nullable=True)),
+        ('vessel_fill_pct', sa.Column('vessel_fill_pct', sa.NUMERIC(), sa.Computed("((category_data ->> 'vessel_fill_pct'::text))::numeric", persisted=True), autoincrement=False, nullable=True)),
+        ('cosm_emulsifier_pct', sa.Column('cosm_emulsifier_pct', sa.NUMERIC(), sa.Computed("((category_data ->> 'cosm_emulsifier_pct'::text))::numeric", persisted=True), autoincrement=False, nullable=True)),
+        ('soap_superfat', sa.Column('soap_superfat', sa.NUMERIC(), sa.Computed("((category_data ->> 'soap_superfat'::text))::numeric", persisted=True), autoincrement=False, nullable=True)),
+        ('baker_yeast_pct', sa.Column('baker_yeast_pct', sa.NUMERIC(), sa.Computed("((category_data ->> 'baker_yeast_pct'::text))::numeric", persisted=True), autoincrement=False, nullable=True)),
+        ('counts', sa.Column('counts', sa.INTEGER(), autoincrement=False, nullable=True)),
+        ('soap_water_pct', sa.Column('soap_water_pct', sa.NUMERIC(), sa.Computed("((category_data ->> 'soap_water_pct'::text))::numeric", persisted=True), autoincrement=False, nullable=True)),
+        ('candle_vessel_ml', sa.Column('candle_vessel_ml', sa.NUMERIC(), sa.Computed("((category_data ->> 'candle_vessel_ml'::text))::numeric", persisted=True), autoincrement=False, nullable=True))
+    ]
+    
     with op.batch_alter_table('recipe', schema=None) as batch_op:
-        batch_op.add_column(sa.Column('baker_salt_pct', sa.NUMERIC(), sa.Computed("((category_data ->> 'baker_salt_pct'::text))::numeric", persisted=True), autoincrement=False, nullable=True))
-        batch_op.add_column(sa.Column('cosm_preservative_pct', sa.NUMERIC(), sa.Computed("((category_data ->> 'cosm_preservative_pct'::text))::numeric", persisted=True), autoincrement=False, nullable=True))
-        batch_op.add_column(sa.Column('candle_fragrance_pct', sa.NUMERIC(), sa.Computed("((category_data ->> 'candle_fragrance_pct'::text))::numeric", persisted=True), autoincrement=False, nullable=True))
-        batch_op.add_column(sa.Column('soap_lye_type', sa.TEXT(), sa.Computed("(category_data ->> 'soap_lye_type'::text)", persisted=True), autoincrement=False, nullable=True))
-        batch_op.add_column(sa.Column('baker_water_pct', sa.NUMERIC(), sa.Computed("((category_data ->> 'baker_water_pct'::text))::numeric", persisted=True), autoincrement=False, nullable=True))
-        batch_op.add_column(sa.Column('baker_base_flour_g', sa.NUMERIC(), sa.Computed("((category_data ->> 'baker_base_flour_g'::text))::numeric", persisted=True), autoincrement=False, nullable=True))
-        batch_op.add_column(sa.Column('vessel_fill_pct', sa.NUMERIC(), sa.Computed("((category_data ->> 'vessel_fill_pct'::text))::numeric", persisted=True), autoincrement=False, nullable=True))
-        batch_op.add_column(sa.Column('cosm_emulsifier_pct', sa.NUMERIC(), sa.Computed("((category_data ->> 'cosm_emulsifier_pct'::text))::numeric", persisted=True), autoincrement=False, nullable=True))
-        batch_op.add_column(sa.Column('soap_superfat', sa.NUMERIC(), sa.Computed("((category_data ->> 'soap_superfat'::text))::numeric", persisted=True), autoincrement=False, nullable=True))
-        batch_op.add_column(sa.Column('baker_yeast_pct', sa.NUMERIC(), sa.Computed("((category_data ->> 'baker_yeast_pct'::text))::numeric", persisted=True), autoincrement=False, nullable=True))
-        batch_op.add_column(sa.Column('counts', sa.INTEGER(), autoincrement=False, nullable=True))
-        batch_op.add_column(sa.Column('soap_water_pct', sa.NUMERIC(), sa.Computed("((category_data ->> 'soap_water_pct'::text))::numeric", persisted=True), autoincrement=False, nullable=True))
-        batch_op.add_column(sa.Column('candle_vessel_ml', sa.NUMERIC(), sa.Computed("((category_data ->> 'candle_vessel_ml'::text))::numeric", persisted=True), autoincrement=False, nullable=True))
+        for col_name, col_def in recipe_columns_to_add:
+            if col_name not in recipe_columns:
+                batch_op.add_column(col_def)
         batch_op.create_index('ix_recipe_vessel_fill_pct', ['vessel_fill_pct'], unique=False)
         batch_op.create_index('ix_recipe_soap_water_pct', ['soap_water_pct'], unique=False)
         batch_op.create_index('ix_recipe_soap_superfat', ['soap_superfat'], unique=False)
@@ -226,8 +235,12 @@ def downgrade():
     with op.batch_alter_table('product_category', schema=None) as batch_op:
         batch_op.create_index('ix_product_category_lower_name', [sa.literal_column('lower(name::text)')], unique=True)
 
+    # Check and add product columns only if they don't exist
+    product_columns = [col['name'] for col in inspector.get_columns('product')]
+    
     with op.batch_alter_table('product', schema=None) as batch_op:
-        batch_op.add_column(sa.Column('category', sa.VARCHAR(length=64), autoincrement=False, nullable=True))
+        if 'category' not in product_columns:
+            batch_op.add_column(sa.Column('category', sa.VARCHAR(length=64), autoincrement=False, nullable=True))
         batch_op.create_index('ix_product_category_id', ['category_id'], unique=False)
 
     with op.batch_alter_table('organization_addon', schema=None) as batch_op:
@@ -281,20 +294,29 @@ def downgrade():
         if not index_exists('ix_batch_consumable_batch_id'):
             batch_op.create_index('ix_batch_consumable_batch_id', ['batch_id'], unique=False)
 
+    # Check and add batch columns only if they don't exist
+    batch_columns = [col['name'] for col in inspector.get_columns('batch')]
+    
+    batch_columns_to_add = [
+        ('baker_salt_pct', sa.Column('baker_salt_pct', sa.NUMERIC(), sa.Computed("(((plan_snapshot -> 'category_extension'::text) ->> 'baker_salt_pct'::text))::numeric", persisted=True), autoincrement=False, nullable=True)),
+        ('cosm_preservative_pct', sa.Column('cosm_preservative_pct', sa.NUMERIC(), sa.Computed("(((plan_snapshot -> 'category_extension'::text) ->> 'cosm_preservative_pct'::text))::numeric", persisted=True), autoincrement=False, nullable=True)),
+        ('candle_fragrance_pct', sa.Column('candle_fragrance_pct', sa.NUMERIC(), sa.Computed("(((plan_snapshot -> 'category_extension'::text) ->> 'candle_fragrance_pct'::text))::numeric", persisted=True), autoincrement=False, nullable=True)),
+        ('soap_lye_type', sa.Column('soap_lye_type', sa.TEXT(), sa.Computed("((plan_snapshot -> 'category_extension'::text) ->> 'soap_lye_type'::text)", persisted=True), autoincrement=False, nullable=True)),
+        ('baker_water_pct', sa.Column('baker_water_pct', sa.NUMERIC(), sa.Computed("(((plan_snapshot -> 'category_extension'::text) ->> 'baker_water_pct'::text))::numeric", persisted=True), autoincrement=False, nullable=True)),
+        ('baker_base_flour_g', sa.Column('baker_base_flour_g', sa.NUMERIC(), sa.Computed("(((plan_snapshot -> 'category_extension'::text) ->> 'baker_base_flour_g'::text))::numeric", persisted=True), autoincrement=False, nullable=True)),
+        ('vessel_fill_pct', sa.Column('vessel_fill_pct', sa.NUMERIC(), sa.Computed("(((plan_snapshot -> 'category_extension'::text) ->> 'vessel_fill_pct'::text))::numeric", persisted=True), autoincrement=False, nullable=True)),
+        ('cosm_emulsifier_pct', sa.Column('cosm_emulsifier_pct', sa.NUMERIC(), sa.Computed("(((plan_snapshot -> 'category_extension'::text) ->> 'cosm_emulsifier_pct'::text))::numeric", persisted=True), autoincrement=False, nullable=True)),
+        ('soap_superfat', sa.Column('soap_superfat', sa.NUMERIC(), sa.Computed("(((plan_snapshot -> 'category_extension'::text) ->> 'soap_superfat'::text))::numeric", persisted=True), autoincrement=False, nullable=True)),
+        ('baker_yeast_pct', sa.Column('baker_yeast_pct', sa.NUMERIC(), sa.Computed("(((plan_snapshot -> 'category_extension'::text) ->> 'baker_yeast_pct'::text))::numeric", persisted=True), autoincrement=False, nullable=True)),
+        ('counts', sa.Column('counts', sa.INTEGER(), autoincrement=False, nullable=True)),
+        ('soap_water_pct', sa.Column('soap_water_pct', sa.NUMERIC(), sa.Computed("(((plan_snapshot -> 'category_extension'::text) ->> 'soap_water_pct'::text))::numeric", persisted=True), autoincrement=False, nullable=True)),
+        ('candle_vessel_ml', sa.Column('candle_vessel_ml', sa.NUMERIC(), sa.Computed("(((plan_snapshot -> 'category_extension'::text) ->> 'candle_vessel_ml'::text))::numeric", persisted=True), autoincrement=False, nullable=True))
+    ]
+    
     with op.batch_alter_table('batch', schema=None) as batch_op:
-        batch_op.add_column(sa.Column('baker_salt_pct', sa.NUMERIC(), sa.Computed("(((plan_snapshot -> 'category_extension'::text) ->> 'baker_salt_pct'::text))::numeric", persisted=True), autoincrement=False, nullable=True))
-        batch_op.add_column(sa.Column('cosm_preservative_pct', sa.NUMERIC(), sa.Computed("(((plan_snapshot -> 'category_extension'::text) ->> 'cosm_preservative_pct'::text))::numeric", persisted=True), autoincrement=False, nullable=True))
-        batch_op.add_column(sa.Column('candle_fragrance_pct', sa.NUMERIC(), sa.Computed("(((plan_snapshot -> 'category_extension'::text) ->> 'candle_fragrance_pct'::text))::numeric", persisted=True), autoincrement=False, nullable=True))
-        batch_op.add_column(sa.Column('soap_lye_type', sa.TEXT(), sa.Computed("((plan_snapshot -> 'category_extension'::text) ->> 'soap_lye_type'::text)", persisted=True), autoincrement=False, nullable=True))
-        batch_op.add_column(sa.Column('baker_water_pct', sa.NUMERIC(), sa.Computed("(((plan_snapshot -> 'category_extension'::text) ->> 'baker_water_pct'::text))::numeric", persisted=True), autoincrement=False, nullable=True))
-        batch_op.add_column(sa.Column('baker_base_flour_g', sa.NUMERIC(), sa.Computed("(((plan_snapshot -> 'category_extension'::text) ->> 'baker_base_flour_g'::text))::numeric", persisted=True), autoincrement=False, nullable=True))
-        batch_op.add_column(sa.Column('vessel_fill_pct', sa.NUMERIC(), sa.Computed("(((plan_snapshot -> 'category_extension'::text) ->> 'vessel_fill_pct'::text))::numeric", persisted=True), autoincrement=False, nullable=True))
-        batch_op.add_column(sa.Column('cosm_emulsifier_pct', sa.NUMERIC(), sa.Computed("(((plan_snapshot -> 'category_extension'::text) ->> 'cosm_emulsifier_pct'::text))::numeric", persisted=True), autoincrement=False, nullable=True))
-        batch_op.add_column(sa.Column('soap_superfat', sa.NUMERIC(), sa.Computed("(((plan_snapshot -> 'category_extension'::text) ->> 'soap_superfat'::text))::numeric", persisted=True), autoincrement=False, nullable=True))
-        batch_op.add_column(sa.Column('baker_yeast_pct', sa.NUMERIC(), sa.Computed("(((plan_snapshot -> 'category_extension'::text) ->> 'baker_yeast_pct'::text))::numeric", persisted=True), autoincrement=False, nullable=True))
-        batch_op.add_column(sa.Column('counts', sa.INTEGER(), autoincrement=False, nullable=True))
-        batch_op.add_column(sa.Column('soap_water_pct', sa.NUMERIC(), sa.Computed("(((plan_snapshot -> 'category_extension'::text) ->> 'soap_water_pct'::text))::numeric", persisted=True), autoincrement=False, nullable=True))
-        batch_op.add_column(sa.Column('candle_vessel_ml', sa.NUMERIC(), sa.Computed("(((plan_snapshot -> 'category_extension'::text) ->> 'candle_vessel_ml'::text))::numeric", persisted=True), autoincrement=False, nullable=True))
+        for col_name, col_def in batch_columns_to_add:
+            if col_name not in batch_columns:
+                batch_op.add_column(col_def)
         batch_op.create_index('ix_batch_vessel_fill_pct', ['vessel_fill_pct'], unique=False)
         batch_op.create_index('ix_batch_soap_water_pct', ['soap_water_pct'], unique=False)
         batch_op.create_index('ix_batch_soap_superfat', ['soap_superfat'], unique=False)
