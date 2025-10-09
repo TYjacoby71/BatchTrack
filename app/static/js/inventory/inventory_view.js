@@ -34,35 +34,37 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     const form = document.querySelector('#editDetailsModal form');
-    const recountModalEl = document.getElementById('recountConfirmModal');
-    
-    if (form && recountModalEl) {
+    if (form) {
         const quantityInput = form.querySelector('input[name="quantity"]');
         const originalQuantity = quantityInput ? parseFloat(quantityInput.value) : 0;
-        const recountModal = new bootstrap.Modal(recountModalEl);
+        const recountModalEl = document.getElementById('recountConfirmModal');
+        
+        if (recountModalEl) {
+            const recountModal = new bootstrap.Modal(recountModalEl);
 
-        form.addEventListener('submit', function(e) {
-            e.preventDefault();
-            const newQuantity = parseFloat(quantityInput.value);
-            if (newQuantity !== originalQuantity) {
+            form.addEventListener('submit', function(e) {
+        e.preventDefault();
+        const newQuantity = parseFloat(quantityInput.value);
+        if (newQuantity !== originalQuantity) {
                 recountModal.show();
             } else {
                 form.submit();
             }
         });
-
-        const confirmRecountBtn = document.getElementById('confirmRecount');
-        if (confirmRecountBtn) {
-            confirmRecountBtn.addEventListener('click', function() {
-                const hiddenInput = document.createElement('input');
-                hiddenInput.type = 'hidden';
-                hiddenInput.name = 'change_type';
-                hiddenInput.value = 'recount';
-                form.appendChild(hiddenInput);
-                recountModal.hide();
-                form.submit();
-            });
         }
+    }
+
+    const confirmRecountBtn = document.getElementById('confirmRecount');
+    if (confirmRecountBtn) {
+        confirmRecountBtn.addEventListener('click', function() {
+            const hiddenInput = document.createElement('input');
+            hiddenInput.type = 'hidden';
+            hiddenInput.name = 'change_type';
+            hiddenInput.value = 'recount';
+            form.appendChild(hiddenInput);
+            recountModal.hide();
+            form.submit();
+        });
     }
 
     const overrideCostCheckbox = document.getElementById('modal_override_cost');

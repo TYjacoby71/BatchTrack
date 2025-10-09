@@ -103,8 +103,11 @@ class BatchOperationsService(BaseService):
             )
 
             db.session.add(batch)
-            db.session.flush()  # Ensure batch gets an ID before any operations reference it
-            print(f"🔍 BATCH_SERVICE DEBUG: Batch object created with label: {label_code}, ID: {batch.id}")
+            print(f"🔍 BATCH_SERVICE DEBUG: Batch object created with label: {label_code}")
+            try:
+                pass
+            except Exception:
+                pass
 
             # Lock costing method for this batch at start based on organization setting
             try:
