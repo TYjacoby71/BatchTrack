@@ -34,13 +34,14 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     const form = document.querySelector('#editDetailsModal form');
+    let recountModal, recountModalEl;
     if (form) {
         const quantityInput = form.querySelector('input[name="quantity"]');
         const originalQuantity = quantityInput ? parseFloat(quantityInput.value) : 0;
-        const recountModalEl = document.getElementById('recountConfirmModal');
+        recountModalEl = document.getElementById('recountConfirmModal');
         
         if (recountModalEl) {
-            const recountModal = new bootstrap.Modal(recountModalEl);
+            recountModal = new bootstrap.Modal(recountModalEl);
 
             form.addEventListener('submit', function(e) {
         e.preventDefault();
@@ -62,7 +63,7 @@ document.addEventListener('DOMContentLoaded', function() {
             hiddenInput.name = 'change_type';
             hiddenInput.value = 'recount';
             form.appendChild(hiddenInput);
-            recountModal.hide();
+            if (recountModal) { recountModal.hide(); }
             form.submit();
         });
     }
