@@ -8,19 +8,33 @@ Create Date: 2025-09-25
 
 from alembic import op
 import sqlalchemy as sa
+from sqlalchemy import inspect
 
-# Import postgres_helpers if it exists and is needed for safe operations
-try:
-    from backend.utils.postgres_helpers import safe_add_column, safe_drop_column
-except ImportError:
-    # Define dummy functions if postgres_helpers is not available
-    def safe_add_column(table_name, column):
-        with op.batch_alter_table(table_name) as batch_op:
-            batch_op.add_column(column)
 
-    def safe_drop_column(table_name, column_name):
-        with op.batch_alter_table(table_name) as batch_op:
-            batch_op.drop_column(column_name)
+def safe_add_column(table_name, column):
+    """Add column if it doesn't already exist"""
+    connection = op.get_bind()
+    inspector = inspect(connection)
+    existing_columns = [col['name'] for col in inspector.get_columns(table_name)]
+    
+    if column.name not in existing_columns:
+        op.add_column(table_name, column)
+        print(f"Added column {column.name} to {table_name}")
+    else:
+        print(f"Column {column.name} already exists in {table_name}, skipping")
+
+
+def safe_drop_column(table_name, column_name):
+    """Drop column if it exists"""
+    connection = op.get_bind()
+    inspector = inspect(connection)
+    existing_columns = [col['name'] for col in inspector.get_columns(table_name)]
+    
+    if column_name in existing_columns:
+        op.drop_column(table_name, column_name)
+        print(f"Dropped column {column_name} from {table_name}")
+    else:
+        print(f"Column {column_name} does not exist in {table_name}, skipping")
 
 
 # revision identifiers, used by Alembic.
