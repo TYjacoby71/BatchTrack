@@ -103,6 +103,11 @@ class BatchOperationsService(BaseService):
             )
 
             db.session.add(batch)
+            # Ensure batch is INSERTed so FK references in inventory history succeed
+            try:
+                db.session.flush()
+            except Exception:
+                pass
             print(f"🔍 BATCH_SERVICE DEBUG: Batch object created with label: {label_code}")
             try:
                 pass
