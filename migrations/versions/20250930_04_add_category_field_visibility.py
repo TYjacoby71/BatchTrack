@@ -1,7 +1,7 @@
 """Add visibility control fields for soap-making attributes to ingredient categories
 
-Revision ID: 20250930_04
-Revises: 20250930_03
+Revision ID: 20250930_4
+Revises: 20250930_3
 Create Date: 2025-09-30 04:00:00
 
 """
@@ -11,8 +11,8 @@ from migrations.postgres_helpers import safe_add_column, safe_drop_column
 
 
 # revision identifiers, used by Alembic.
-revision = '20250930_04'
-down_revision = '20250930_03'
+revision = '20250930_4'
+down_revision = '20250930_3'
 branch_labels = None
 depends_on = None
 
