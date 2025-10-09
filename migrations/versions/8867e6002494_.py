@@ -270,7 +270,8 @@ def downgrade():
                     batch_op.create_index('ix_recipe_baker_base_flour_g', ['baker_base_flour_g'], unique=False)
 
     with op.batch_alter_table('product_category', schema=None) as batch_op:
-        batch_op.create_index('ix_product_category_lower_name', [sa.literal_column('lower(name::text)')], unique=True)
+        if not index_exists('ix_product_category_lower_name'):
+            batch_op.create_index('ix_product_category_lower_name', [sa.literal_column('lower(name::text)')], unique=True)
 
     # Check and add product columns only if they don't exist
     product_columns = [col['name'] for col in inspector.get_columns('product')]
