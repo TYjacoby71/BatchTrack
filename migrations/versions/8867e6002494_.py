@@ -8,6 +8,7 @@ Create Date: 2025-10-09 20:24:24.382516
 from alembic import op
 import sqlalchemy as sa
 from sqlalchemy.dialects import postgresql
+from sqlalchemy import inspect
 
 # revision identifiers, used by Alembic.
 revision = '8867e6002494'
@@ -183,8 +184,14 @@ def downgrade():
         if not index_exists('ix_unified_history_org'):
             batch_op.create_index('ix_unified_history_org', ['organization_id'], unique=False)
 
-    with op.batch_alter_table('subscription_tier', schema=None) as batch_op:
-        batch_op.add_column(sa.Column('allowed_addon_keys', postgresql.JSON(astext_type=sa.Text()), autoincrement=False, nullable=True))
+    # Check if column exists before trying to add it
+    bind = op.get_bind()
+    inspector = inspect(bind)
+    columns = [col['name'] for col in inspector.get_columns('subscription_tier')]
+    
+    if 'allowed_addon_keys' not in columns:
+        with op.batch_alter_table('subscription_tier', schema=None) as batch_op:
+            batch_op.add_column(sa.Column('allowed_addon_keys', postgresql.JSON(astext_type=sa.Text()), autoincrement=False, nullable=True))
 
     with op.batch_alter_table('recipe', schema=None) as batch_op:
         batch_op.add_column(sa.Column('baker_salt_pct', sa.NUMERIC(), sa.Computed("((category_data ->> 'baker_salt_pct'::text))::numeric", persisted=True), autoincrement=False, nullable=True))
