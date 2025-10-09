@@ -283,10 +283,17 @@ def downgrade():
             batch_op.create_index('ix_product_category_id', ['category_id'], unique=False)
 
     with op.batch_alter_table('organization_addon', schema=None) as batch_op:
-        batch_op.drop_index(batch_op.f('ix_organization_addon_organization_id'))
-        batch_op.drop_index(batch_op.f('ix_organization_addon_addon_id'))
-        batch_op.create_index('ix_organization_addon_org', ['organization_id'], unique=False)
-        batch_op.create_index('ix_organization_addon_addon', ['addon_id'], unique=False)
+        # Drop the new indexes that were created in upgrade (if they exist)
+        if index_exists('ix_organization_addon_organization_id'):
+            batch_op.drop_index(batch_op.f('ix_organization_addon_organization_id'))
+        if index_exists('ix_organization_addon_addon_id'):
+            batch_op.drop_index(batch_op.f('ix_organization_addon_addon_id'))
+        
+        # Recreate the old indexes
+        if not index_exists('ix_organization_addon_org'):
+            batch_op.create_index('ix_organization_addon_org', ['organization_id'], unique=False)
+        if not index_exists('ix_organization_addon_addon'):
+            batch_op.create_index('ix_organization_addon_addon', ['addon_id'], unique=False)
 
     with op.batch_alter_table('inventory_lot', schema=None) as batch_op:
         if not index_exists('ix_inventory_lot_org'):
