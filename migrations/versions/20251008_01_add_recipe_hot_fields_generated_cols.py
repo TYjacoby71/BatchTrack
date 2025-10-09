@@ -6,7 +6,7 @@ from alembic import op
 import sqlalchemy as sa
 from sqlalchemy import inspect
 
-revision = '20251008_01_add_recipe_hot_fields_generated_cols'
+revision = '20251008_1'
 down_revision = '20251006_2'
 branch_labels = None
 depends_on = None

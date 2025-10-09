@@ -5,8 +5,8 @@ Add optional GIN index on recipe.category_data for ad-hoc queries
 from alembic import op
 from sqlalchemy import inspect
 
-revision = '20251008_03_add_gin_index_on_recipe_category_data'
-down_revision = '20251008_02_add_batch_hot_fields_generated_cols'
+revision = '20251008_3'
+down_revision = '20251008_2'
 branch_labels = None
 depends_on = None
 
