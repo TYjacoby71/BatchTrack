@@ -140,7 +140,9 @@ def upgrade():
     with op.batch_alter_table('global_item', schema=None) as batch_op:
         batch_op.drop_index('ix_global_item_is_archived')
         batch_op.create_foreign_key(None, 'user', ['archived_by'], ['id'])
-        batch_op.drop_column('suggested_inventory_category_id')
+        # Only drop column if it exists
+        if column_exists('global_item', 'suggested_inventory_category_id'):
+            batch_op.drop_column('suggested_inventory_category_id')
 
     with op.batch_alter_table('inventory_change_log', schema=None) as batch_op:
         batch_op.drop_index('idx_change_log_item_date')
