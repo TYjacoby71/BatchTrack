@@ -1,0 +1,55 @@
+<div class="card">
+  <div class="card-header d-flex justify-content-between align-items-center">
+    <h6 class="mb-0"><i class="fas fa-puzzle-piece"></i> Add-ons</h6>
+    <small class="text-muted">Manage add-ons for your plan</small>
+  </div>
+  <div class="card-body">
+    {% set tier = org.subscription_tier %}
+    {% set allowed = tier.allowed_addons if tier else [] %}
+    {% set included = tier.included_addons if tier else [] %}
+
+    {% if not allowed and not included %}
+      <p class="text-muted mb-0">No add-ons available on your current plan.</p>
+    {% else %}
+      <div class="row">
+        {% for addon in included %}
+        <div class="col-md-6 mb-3">
+          <div class="border rounded p-3 h-100">
+            <div class="d-flex justify-content-between align-items-start">
+              <div>
+                <strong>{{ addon.name }}</strong>
+                <div class="text-muted small">{{ addon.description }}</div>
+              </div>
+              <span class="badge bg-success">Included</span>
+            </div>
+          </div>
+        </div>
+        {% endfor %}
+
+        {% for addon in allowed %}
+        <div class="col-md-6 mb-3">
+          <div class="border rounded p-3 h-100">
+            <div class="d-flex justify-content-between align-items-start">
+              <div>
+                <strong>{{ addon.name }}</strong>
+                <div class="text-muted small">{{ addon.description }}</div>
+              </div>
+              {% set is_included = addon in included %}
+              {% if is_included %}
+                <span class="badge bg-success">Included</span>
+              {% else %}
+                <form action="{{ url_for('billing.start_addon_checkout', addon_key=addon.key) }}" method="post">
+                  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+                  <button class="btn btn-outline-primary btn-sm" {% if not addon.stripe_lookup_key %}disabled{% endif %}>
+                    <i class="fas fa-shopping-cart"></i> Activate
+                  </button>
+                </form>
+              {% endif %}
+            </div>
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+    {% endif %}
+  </div>
+</div>
