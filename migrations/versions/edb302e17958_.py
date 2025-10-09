@@ -9,6 +9,7 @@ from alembic import op
 import sqlalchemy as sa
 from sqlalchemy.dialects import postgresql
 from sqlalchemy import inspect
+from sqlalchemy import text
 
 # revision identifiers, used by Alembic.
 revision = 'edb302e17958'
@@ -59,7 +60,7 @@ def upgrade():
     has_named_batch_sku_fk = any((fk.get('name') == 'batch_sku_id_fkey') for fk in batch_fks)
     has_sku_fk = any((fk.get('constrained_columns') == ['sku_id'] and fk.get('referred_table') == 'product_sku') for fk in batch_fks)
     print("=== Creating missing tables ===")
-    
+
     if not table_exists('developer_role_permission'):
         print("   Creating developer_role_permission table...")
         op.create_table('developer_role_permission',
@@ -72,7 +73,7 @@ def upgrade():
         print("   ✅ developer_role_permission table created")
     else:
         print("   ✅ developer_role_permission table already exists - skipping")
-    
+
     if not table_exists('subscription_tier_permission'):
         print("   Creating subscription_tier_permission table...")
         op.create_table('subscription_tier_permission',
@@ -85,7 +86,14 @@ def upgrade():
         print("   ✅ subscription_tier_permission table created")
     else:
         print("   ✅ subscription_tier_permission table already exists - skipping")
-    op.drop_table('pricing_snapshot')
+    # Clean up old/unused tables that may exist in some environments
+    # Check if table exists before dropping
+    conn = op.get_bind()
+    result = conn.execute(text("SELECT EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'pricing_snapshot')"))
+    if result.fetchone()[0]:
+        op.drop_table('pricing_snapshot')
+    else:
+        print("   ⚠️  pricing_snapshot table doesn't exist, skipping drop")
     op.drop_table('billing_snapshot')
     with op.batch_alter_table('batch', schema=None) as batch_op:
         # Drop only if the named constraint exists
