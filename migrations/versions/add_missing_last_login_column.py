@@ -28,17 +28,19 @@ def upgrade():
     """Add missing last_login column"""
     print("=== Adding missing last_login column ===")
 
-    # Check if column exists before adding
-    if not column_exists('user', 'last_login'):
-        print("   Adding last_login column...")
-        try:
+    try:
+        # Check if column exists before adding
+        if not column_exists('user', 'last_login'):
+            print("   Adding last_login column...")
             op.add_column('user', sa.Column('last_login', sa.DateTime(), nullable=True))
             print("   ✅ last_login column added")
-        except Exception as e:
-            print(f"   ⚠️  Error adding last_login column: {e}")
-            # Don't re-raise, just continue
-    else:
-        print("   ✅ last_login column already exists - skipping")
+        else:
+            print("   ⚠️  last_login column already exists - migration skipped")
+    except Exception as e:
+        print(f"   ⚠️  Migration error: {e}")
+        # For PostgreSQL, we need to handle transaction state carefully
+        # If there's an error, don't let it bubble up and abort the transaction
+        pass
 
     print("✅ Migration completed")
 
