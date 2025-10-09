@@ -1,6 +1,7 @@
 
 from flask_login import current_user
 from ..extensions import db
+import sqlalchemy as sa
 from .mixins import ScopedModelMixin
 from ..utils.timezone_utils import TimezoneUtils
 
@@ -34,6 +35,23 @@ class Recipe(ScopedModelMixin, db.Model):
     portion_unit_id = db.Column(db.Integer, db.ForeignKey('unit.id'), nullable=True)
     # Category-specific structured fields (per-category aids, e.g., lye settings, fragrance load, phases)
     category_data = db.Column(db.JSON, nullable=True)
+
+    # Computed projection columns (persisted) for hot fields
+    soap_superfat = db.Column(sa.Numeric(), sa.Computed("((category_data ->> 'soap_superfat'))::numeric", persisted=True), nullable=True)
+    soap_water_pct = db.Column(sa.Numeric(), sa.Computed("((category_data ->> 'soap_water_pct'))::numeric", persisted=True), nullable=True)
+    soap_lye_type = db.Column(sa.Text(), sa.Computed("(category_data ->> 'soap_lye_type')", persisted=True), nullable=True)
+
+    candle_fragrance_pct = db.Column(sa.Numeric(), sa.Computed("((category_data ->> 'candle_fragrance_pct'))::numeric", persisted=True), nullable=True)
+    candle_vessel_ml = db.Column(sa.Numeric(), sa.Computed("((category_data ->> 'candle_vessel_ml'))::numeric", persisted=True), nullable=True)
+    vessel_fill_pct = db.Column(sa.Numeric(), sa.Computed("((category_data ->> 'vessel_fill_pct'))::numeric", persisted=True), nullable=True)
+
+    baker_base_flour_g = db.Column(sa.Numeric(), sa.Computed("((category_data ->> 'baker_base_flour_g'))::numeric", persisted=True), nullable=True)
+    baker_water_pct = db.Column(sa.Numeric(), sa.Computed("((category_data ->> 'baker_water_pct'))::numeric", persisted=True), nullable=True)
+    baker_salt_pct = db.Column(sa.Numeric(), sa.Computed("((category_data ->> 'baker_salt_pct'))::numeric", persisted=True), nullable=True)
+    baker_yeast_pct = db.Column(sa.Numeric(), sa.Computed("((category_data ->> 'baker_yeast_pct'))::numeric", persisted=True), nullable=True)
+
+    cosm_emulsifier_pct = db.Column(sa.Numeric(), sa.Computed("((category_data ->> 'cosm_emulsifier_pct'))::numeric", persisted=True), nullable=True)
+    cosm_preservative_pct = db.Column(sa.Numeric(), sa.Computed("((category_data ->> 'cosm_preservative_pct'))::numeric", persisted=True), nullable=True)
 
     # Performance indexes and org scoping
     __table_args__ = (

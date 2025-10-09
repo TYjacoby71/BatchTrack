@@ -1,6 +1,7 @@
 
 from flask_login import current_user
 from ..extensions import db
+import sqlalchemy as sa
 from .mixins import ScopedModelMixin
 from ..utils.timezone_utils import TimezoneUtils
 
@@ -64,6 +65,20 @@ class Batch(ScopedModelMixin, db.Model):
         db.Index('ix_batch_cosm_emulsifier_pct', 'cosm_emulsifier_pct'),
         db.Index('ix_batch_cosm_preservative_pct', 'cosm_preservative_pct'),
     )
+
+    # Computed projection columns (persisted) for hot fields from plan_snapshot.category_extension
+    vessel_fill_pct = db.Column(sa.Numeric(), sa.Computed("(((plan_snapshot -> 'category_extension') ->> 'vessel_fill_pct'))::numeric", persisted=True), nullable=True)
+    candle_fragrance_pct = db.Column(sa.Numeric(), sa.Computed("(((plan_snapshot -> 'category_extension') ->> 'candle_fragrance_pct'))::numeric", persisted=True), nullable=True)
+    candle_vessel_ml = db.Column(sa.Numeric(), sa.Computed("(((plan_snapshot -> 'category_extension') ->> 'candle_vessel_ml'))::numeric", persisted=True), nullable=True)
+    soap_superfat = db.Column(sa.Numeric(), sa.Computed("(((plan_snapshot -> 'category_extension') ->> 'soap_superfat'))::numeric", persisted=True), nullable=True)
+    soap_water_pct = db.Column(sa.Numeric(), sa.Computed("(((plan_snapshot -> 'category_extension') ->> 'soap_water_pct'))::numeric", persisted=True), nullable=True)
+    soap_lye_type = db.Column(sa.Text(), sa.Computed("((plan_snapshot -> 'category_extension') ->> 'soap_lye_type')", persisted=True), nullable=True)
+    baker_base_flour_g = db.Column(sa.Numeric(), sa.Computed("(((plan_snapshot -> 'category_extension') ->> 'baker_base_flour_g'))::numeric", persisted=True), nullable=True)
+    baker_water_pct = db.Column(sa.Numeric(), sa.Computed("(((plan_snapshot -> 'category_extension') ->> 'baker_water_pct'))::numeric", persisted=True), nullable=True)
+    baker_salt_pct = db.Column(sa.Numeric(), sa.Computed("(((plan_snapshot -> 'category_extension') ->> 'baker_salt_pct'))::numeric", persisted=True), nullable=True)
+    baker_yeast_pct = db.Column(sa.Numeric(), sa.Computed("(((plan_snapshot -> 'category_extension') ->> 'baker_yeast_pct'))::numeric", persisted=True), nullable=True)
+    cosm_emulsifier_pct = db.Column(sa.Numeric(), sa.Computed("(((plan_snapshot -> 'category_extension') ->> 'cosm_emulsifier_pct'))::numeric", persisted=True), nullable=True)
+    cosm_preservative_pct = db.Column(sa.Numeric(), sa.Computed("(((plan_snapshot -> 'category_extension') ->> 'cosm_preservative_pct'))::numeric", persisted=True), nullable=True)
 
 class BatchIngredient(ScopedModelMixin, db.Model):
     __tablename__ = 'batch_ingredient'
