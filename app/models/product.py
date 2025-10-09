@@ -43,6 +43,7 @@ class Product(ScopedModelMixin, db.Model):
     # Unique constraint on name per organization
     __table_args__ = (
         db.UniqueConstraint('name', 'organization_id', name='unique_product_name_per_org'),
+        db.Index('ix_product_category_id', 'category_id'),
     )
 
     @property

@@ -74,11 +74,12 @@ class InventoryLot(ScopedModelMixin, db.Model):
     user = db.relationship('User')
     batch = db.relationship('Batch', backref='created_lots')
     
-    # Constraints
+    # Constraints and indexes
     __table_args__ = (
         db.CheckConstraint('remaining_quantity >= 0', name='check_remaining_quantity_non_negative'),
         db.CheckConstraint('original_quantity > 0', name='check_original_quantity_positive'),
         db.CheckConstraint('remaining_quantity <= original_quantity', name='check_remaining_not_exceeds_original'),
+        db.Index('ix_inventory_lot_org', 'organization_id'),
     )
     
     def __repr__(self):

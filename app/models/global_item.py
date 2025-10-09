@@ -54,4 +54,6 @@ class GlobalItem(db.Model):
 
 	__table_args__ = (
 		db.UniqueConstraint('name', 'item_type', name='_global_item_name_type_uc'),
+		# JSONB GIN index for aka_names (PostgreSQL only; inert elsewhere)
+		db.Index('ix_global_item_aka_gin', db.text('(aka_names::jsonb)'), postgresql_using='gin'),
 	)

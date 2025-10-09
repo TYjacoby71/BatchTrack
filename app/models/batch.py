@@ -49,6 +49,22 @@ class Batch(ScopedModelMixin, db.Model):
     recipe = db.relationship('Recipe', backref='batches')
     sku = db.relationship('ProductSKU', foreign_keys=[sku_id], backref='batches')
 
+    __table_args__ = (
+        db.Index('ix_batch_org', 'organization_id'),
+        db.Index('ix_batch_vessel_fill_pct', 'vessel_fill_pct'),
+        db.Index('ix_batch_candle_fragrance_pct', 'candle_fragrance_pct'),
+        db.Index('ix_batch_candle_vessel_ml', 'candle_vessel_ml'),
+        db.Index('ix_batch_soap_superfat', 'soap_superfat'),
+        db.Index('ix_batch_soap_water_pct', 'soap_water_pct'),
+        db.Index('ix_batch_soap_lye_type', 'soap_lye_type'),
+        db.Index('ix_batch_baker_base_flour_g', 'baker_base_flour_g'),
+        db.Index('ix_batch_baker_water_pct', 'baker_water_pct'),
+        db.Index('ix_batch_baker_salt_pct', 'baker_salt_pct'),
+        db.Index('ix_batch_baker_yeast_pct', 'baker_yeast_pct'),
+        db.Index('ix_batch_cosm_emulsifier_pct', 'cosm_emulsifier_pct'),
+        db.Index('ix_batch_cosm_preservative_pct', 'cosm_preservative_pct'),
+    )
+
 class BatchIngredient(ScopedModelMixin, db.Model):
     __tablename__ = 'batch_ingredient'
     id = db.Column(db.Integer, primary_key=True)
@@ -90,6 +106,12 @@ class BatchConsumable(ScopedModelMixin, db.Model):
 
     batch = db.relationship('Batch', backref='consumables')
     inventory_item = db.relationship('InventoryItem')
+
+    __table_args__ = (
+        db.Index('ix_batch_consumable_batch_id', 'batch_id'),
+        db.Index('ix_batch_consumable_inventory_item_id', 'inventory_item_id'),
+        db.Index('ix_batch_consumable_organization_id', 'organization_id'),
+    )
 
 class ExtraBatchContainer(ScopedModelMixin, db.Model):
     __tablename__ = 'extra_batch_container'
@@ -147,3 +169,9 @@ class ExtraBatchConsumable(ScopedModelMixin, db.Model):
 
     batch = db.relationship('Batch', backref='extra_consumables')
     inventory_item = db.relationship('InventoryItem')
+
+    __table_args__ = (
+        db.Index('ix_extra_batch_consumable_batch_id', 'batch_id'),
+        db.Index('ix_extra_batch_consumable_inventory_item_id', 'inventory_item_id'),
+        db.Index('ix_extra_batch_consumable_organization_id', 'organization_id'),
+    )

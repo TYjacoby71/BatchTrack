@@ -35,6 +35,25 @@ class Recipe(ScopedModelMixin, db.Model):
     # Category-specific structured fields (per-category aids, e.g., lye settings, fragrance load, phases)
     category_data = db.Column(db.JSON, nullable=True)
 
+    # Performance indexes and org scoping
+    __table_args__ = (
+        db.Index('ix_recipe_org', 'organization_id'),
+        db.Index('ix_recipe_category_id', 'category_id'),
+        db.Index('ix_recipe_category_data_gin', db.text('(category_data::jsonb)'), postgresql_using='gin'),
+        db.Index('ix_recipe_soap_superfat', 'soap_superfat'),
+        db.Index('ix_recipe_soap_water_pct', 'soap_water_pct'),
+        db.Index('ix_recipe_soap_lye_type', 'soap_lye_type'),
+        db.Index('ix_recipe_candle_fragrance_pct', 'candle_fragrance_pct'),
+        db.Index('ix_recipe_candle_vessel_ml', 'candle_vessel_ml'),
+        db.Index('ix_recipe_vessel_fill_pct', 'vessel_fill_pct'),
+        db.Index('ix_recipe_baker_base_flour_g', 'baker_base_flour_g'),
+        db.Index('ix_recipe_baker_water_pct', 'baker_water_pct'),
+        db.Index('ix_recipe_baker_salt_pct', 'baker_salt_pct'),
+        db.Index('ix_recipe_baker_yeast_pct', 'baker_yeast_pct'),
+        db.Index('ix_recipe_cosm_emulsifier_pct', 'cosm_emulsifier_pct'),
+        db.Index('ix_recipe_cosm_preservative_pct', 'cosm_preservative_pct'),
+    )
+
 class RecipeIngredient(ScopedModelMixin, db.Model):
     __tablename__ = 'recipe_ingredient'
     id = db.Column(db.Integer, primary_key=True)
