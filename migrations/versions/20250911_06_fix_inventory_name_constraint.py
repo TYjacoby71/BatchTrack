@@ -2,12 +2,51 @@
 
 Revision ID: 20250911_06
 Revises: 20250911_05
-Create Date: 2025-09-11 19:40:00.000000
+Create Date: 2025-09-11 19:30:00.000000
 
 """
 from alembic import op
 import sqlalchemy as sa
-from sqlalchemy import text
+from sqlalchemy import inspect, text
+
+# Helper functions to check for table and constraint existence
+def table_exists(table_name):
+    """Check if a table exists"""
+    from sqlalchemy.engine import reflection
+    inspector = reflection.Inspector(op.get_context().bind)
+    return table_name in inspector.get_table_names()
+
+def constraint_exists(table_name, constraint_name):
+    """Check if a constraint exists on a table"""
+    if not table_exists(table_name):
+        return False
+    try:
+        bind = op.get_bind()
+        result = bind.execute(text("""
+            SELECT COUNT(*) 
+            FROM information_schema.table_constraints 
+            WHERE table_name = :table_name 
+            AND constraint_name = :constraint_name
+        """), {"table_name": table_name, "constraint_name": constraint_name})
+        return result.scalar() > 0
+    except Exception:
+        return False
+
+def index_exists(table_name, index_name):
+    """Check if an index exists on a table"""
+    if not table_exists(table_name):
+        return False
+    try:
+        bind = op.get_bind()
+        result = bind.execute(text("""
+            SELECT COUNT(*) 
+            FROM pg_indexes 
+            WHERE tablename = :table_name 
+            AND indexname = :index_name
+        """), {"table_name": table_name, "index_name": index_name})
+        return result.scalar() > 0
+    except Exception:
+        return False
 
 # revision identifiers, used by Alembic.
 revision = '20250911_06'
@@ -16,87 +55,84 @@ branch_labels = None
 depends_on = None
 
 def upgrade():
-    """Remove old name-only constraint and ensure proper organization+name constraint"""
-    connection = op.get_bind()
-
+    """Fix inventory item name constraints to be organization-scoped"""
     print("=== FIXING INVENTORY ITEM NAME CONSTRAINTS ===")
 
-    # 1. Drop the problematic old constraint
-    print("1. Dropping old inventory_item_name_key constraint...")
-    try:
-        op.drop_constraint('inventory_item_name_key', 'inventory_item', type_='unique')
-        print("   ✅ Dropped inventory_item_name_key")
-    except Exception as e:
-        print(f"   ⚠️  Constraint may not exist: {e}")
+    if not table_exists('inventory_item'):
+        print("⚠️ inventory_item table does not exist - skipping")
+        return
 
-    # 2. Also try dropping any other name-only constraints that might exist
-    try:
-        connection.execute(text("ALTER TABLE inventory_item DROP CONSTRAINT IF EXISTS uq_inventory_item_name"))
-        print("   ✅ Dropped uq_inventory_item_name if existed")
-    except Exception:
-        pass
+    # 1. Try to drop the old global unique constraint if it exists
+    print("1. Checking for old inventory_item_name_key constraint...")
+    if constraint_exists('inventory_item', 'inventory_item_name_key'):
+        try:
+            print("   Dropping old inventory_item_name_key constraint...")
+            op.drop_constraint('inventory_item_name_key', 'inventory_item', type_='unique')
+            print("   ✅ Dropped global name constraint")
+        except Exception as e:
+            print(f"   ⚠️  Error dropping constraint: {e}")
+    else:
+        print("   ✅ Old constraint doesn't exist - skipping")
 
-    # 3. Ensure the proper organization+name constraint exists
-    print("2. Ensuring proper organization+name constraint...")
-    try:
-        # Check if constraint already exists before creating
-        constraint_exists = connection.execute(text("""
-            SELECT COUNT(*) 
-            FROM information_schema.table_constraints 
-            WHERE table_name = 'inventory_item' 
-            AND constraint_name = '_org_name_uc'
-        """)).scalar()
-        
-        if constraint_exists == 0:
+    # 2. Ensure proper organization+name unique constraint exists
+    print("2. Checking for organization+name constraint...")
+    if not constraint_exists('inventory_item', '_org_name_uc'):
+        try:
+            print("   Creating organization+name unique constraint...")
             op.create_unique_constraint('_org_name_uc', 'inventory_item', ['organization_id', 'name'])
-            print("   ✅ Created _org_name_uc constraint")
-        else:
-            print("   ✅ _org_name_uc constraint already exists")
-    except Exception as e:
-        print(f"   ⚠️  Error with constraint: {e}")
+            print("   ✅ Created organization+name constraint")
+        except Exception as e:
+            print(f"   ⚠️  Error creating constraint: {e}")
+    else:
+        print("   ✅ Organization+name constraint already exists")
 
-    # 4. Ensure proper indexes exist
+    # 3. Ensure proper indexes exist
     print("3. Ensuring proper indexes...")
-    try:
-        # Check if name index exists
-        name_index_exists = connection.execute(text("""
-            SELECT COUNT(*) 
-            FROM pg_indexes 
-            WHERE tablename = 'inventory_item' 
-            AND indexname = 'ix_inventory_item_name'
-        """)).scalar()
-        
-        if name_index_exists == 0:
+
+    # Name index
+    if not index_exists('inventory_item', 'ix_inventory_item_name'):
+        try:
+            print("   Creating name index...")
             op.create_index('ix_inventory_item_name', 'inventory_item', ['name'])
             print("   ✅ Created name index")
-        else:
-            print("   ✅ Name index already exists")
-    except Exception as e:
-        print(f"   ⚠️  Error with name index: {e}")
+        except Exception as e:
+            print(f"   ⚠️  Error creating name index: {e}")
+    else:
+        print("   ✅ Name index already exists")
 
-    try:
-        # Check if organization_id index exists
-        org_index_exists = connection.execute(text("""
-            SELECT COUNT(*) 
-            FROM pg_indexes 
-            WHERE tablename = 'inventory_item' 
-            AND indexname = 'ix_inventory_item_organization_id'
-        """)).scalar()
-        
-        if org_index_exists == 0:
+    # Organization ID index  
+    if not index_exists('inventory_item', 'ix_inventory_item_organization_id'):
+        try:
+            print("   Creating organization_id index...")
             op.create_index('ix_inventory_item_organization_id', 'inventory_item', ['organization_id'])
             print("   ✅ Created organization_id index")
-        else:
-            print("   ✅ Organization_id index already exists")
-    except Exception as e:
-        print(f"   ⚠️  Error with organization_id index: {e}")
+        except Exception as e:
+            print(f"   ⚠️  Error creating organization_id index: {e}")
+    else:
+        print("   ✅ Organization_id index already exists")
 
     print("=== INVENTORY CONSTRAINT FIX COMPLETE ===")
 
 def downgrade():
-    """Revert the constraint changes"""
-    # This is intentionally minimal since we don't want to break things
-    try:
-        op.drop_constraint('_org_name_uc', 'inventory_item', type_='unique')
-    except Exception:
-        pass
+    """Revert inventory item name constraint changes"""
+    print("=== REVERTING INVENTORY CONSTRAINT CHANGES ===")
+
+    if not table_exists('inventory_item'):
+        print("⚠️ inventory_item table does not exist - skipping downgrade")
+        return
+
+    if constraint_exists('inventory_item', '_org_name_uc'):
+        try:
+            op.drop_constraint('_org_name_uc', 'inventory_item', type_='unique')
+            print("Dropped organization+name constraint")
+        except Exception as e:
+            print(f"⚠️  Error dropping constraint: {e}")
+
+    if not constraint_exists('inventory_item', 'inventory_item_name_key'):
+        try:
+            op.create_unique_constraint('inventory_item_name_key', 'inventory_item', ['name'])
+            print("Recreated global name constraint")
+        except Exception as e:
+            print(f"⚠️  Error recreating global constraint: {e}")
+
+    print("=== INVENTORY CONSTRAINT REVERT COMPLETE ===")
