@@ -196,6 +196,22 @@ def downgrade():
     # Check and add recipe columns only if they don't exist
     recipe_columns = [col['name'] for col in inspector.get_columns('recipe')]
 
+    recipe_columns_to_add = [
+        ('baker_salt_pct', sa.Column('baker_salt_pct', sa.NUMERIC(), sa.Computed("(((category_data -> 'category_extension'::text) ->> 'baker_salt_pct'::text))::numeric", persisted=True), autoincrement=False, nullable=True)),
+        ('cosm_preservative_pct', sa.Column('cosm_preservative_pct', sa.NUMERIC(), sa.Computed("(((category_data -> 'category_extension'::text) ->> 'cosm_preservative_pct'::text))::numeric", persisted=True), autoincrement=False, nullable=True)),
+        ('candle_fragrance_pct', sa.Column('candle_fragrance_pct', sa.NUMERIC(), sa.Computed("(((category_data -> 'category_extension'::text) ->> 'candle_fragrance_pct'::text))::numeric", persisted=True), autoincrement=False, nullable=True)),
+        ('soap_lye_type', sa.Column('soap_lye_type', sa.TEXT(), sa.Computed("((category_data -> 'category_extension'::text) ->> 'soap_lye_type'::text)", persisted=True), autoincrement=False, nullable=True)),
+        ('baker_water_pct', sa.Column('baker_water_pct', sa.NUMERIC(), sa.Computed("(((category_data -> 'category_extension'::text) ->> 'baker_water_pct'::text))::numeric", persisted=True), autoincrement=False, nullable=True)),
+        ('baker_base_flour_g', sa.Column('baker_base_flour_g', sa.NUMERIC(), sa.Computed("(((category_data -> 'category_extension'::text) ->> 'baker_base_flour_g'::text))::numeric", persisted=True), autoincrement=False, nullable=True)),
+        ('vessel_fill_pct', sa.Column('vessel_fill_pct', sa.NUMERIC(), sa.Computed("(((category_data -> 'category_extension'::text) ->> 'vessel_fill_pct'::text))::numeric", persisted=True), autoincrement=False, nullable=True)),
+        ('cosm_emulsifier_pct', sa.Column('cosm_emulsifier_pct', sa.NUMERIC(), sa.Computed("(((category_data -> 'category_extension'::text) ->> 'cosm_emulsifier_pct'::text))::numeric", persisted=True), autoincrement=False, nullable=True)),
+        ('soap_superfat', sa.Column('soap_superfat', sa.NUMERIC(), sa.Computed("(((category_data -> 'category_extension'::text) ->> 'soap_superfat'::text))::numeric", persisted=True), autoincrement=False, nullable=True)),
+        ('baker_yeast_pct', sa.Column('baker_yeast_pct', sa.NUMERIC(), sa.Computed("(((category_data -> 'category_extension'::text) ->> 'baker_yeast_pct'::text))::numeric", persisted=True), autoincrement=False, nullable=True)),
+        ('counts', sa.Column('counts', sa.INTEGER(), autoincrement=False, nullable=True)),
+        ('soap_water_pct', sa.Column('soap_water_pct', sa.NUMERIC(), sa.Computed("(((category_data -> 'category_extension'::text) ->> 'soap_water_pct'::text))::numeric", persisted=True), autoincrement=False, nullable=True)),
+        ('candle_vessel_ml', sa.Column('candle_vessel_ml', sa.NUMERIC(), sa.Computed("(((category_data -> 'category_extension'::text) ->> 'candle_vessel_ml'::text))::numeric", persisted=True), autoincrement=False, nullable=True))
+    ]
+
     with op.batch_alter_table('recipe', schema=None) as batch_op:
         for col_name, col_def in recipe_columns_to_add:
             if col_name not in recipe_columns:
@@ -388,13 +404,21 @@ def downgrade():
                 elif index_name == 'ix_batch_baker_base_flour_g':
                     batch_op.create_index('ix_batch_baker_base_flour_g', ['baker_base_flour_g'], unique=False)
 
-    op.create_table('global_item_alias',
-    sa.Column('id', sa.INTEGER(), autoincrement=True, nullable=False),
-    sa.Column('global_item_id', sa.INTEGER(), autoincrement=False, nullable=False),
-    sa.Column('alias', sa.TEXT(), autoincrement=False, nullable=False),
-    sa.ForeignKeyConstraint(['global_item_id'], ['global_item.id'], name='global_item_alias_global_item_id_fkey', ondelete='CASCADE'),
-    sa.PrimaryKeyConstraint('id', name='global_item_alias_pkey')
-    )
+    # Check if table exists before creating
+    def table_exists(table_name):
+        bind = op.get_bind()
+        inspector = inspect(bind)
+        return table_name in inspector.get_table_names()
+
+    if not table_exists('global_item_alias'):
+        op.create_table('global_item_alias',
+        sa.Column('id', sa.INTEGER(), autoincrement=True, nullable=False),
+        sa.Column('global_item_id', sa.INTEGER(), autoincrement=False, nullable=False),
+        sa.Column('alias', sa.TEXT(), autoincrement=False, nullable=False),
+        sa.ForeignKeyConstraint(['global_item_id'], ['global_item.id'], name='global_item_alias_global_item_id_fkey', ondelete='CASCADE'),
+        sa.PrimaryKeyConstraint('id', name='global_item_alias_pkey')
+        )
+    
     with op.batch_alter_table('global_item_alias', schema=None) as batch_op:
         if not index_exists('ix_global_item_alias_tsv'):
             batch_op.create_index('ix_global_item_alias_tsv', [sa.literal_column("to_tsvector('simple'::regconfig, alias)")], unique=False, postgresql_using='gin')
@@ -403,5 +427,6 @@ def downgrade():
         if not index_exists('ix_global_item_alias_alias'):
             batch_op.create_index('ix_global_item_alias_alias', ['alias'], unique=False)
 
-    op.drop_table('tier_included_addon')
+    if table_exists('tier_included_addon'):
+        op.drop_table('tier_included_addon')
     # ### end Alembic commands ###
