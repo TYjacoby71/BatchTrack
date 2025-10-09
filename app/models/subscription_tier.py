@@ -14,6 +14,12 @@ tier_allowed_addon = db.Table('tier_allowed_addon',
     db.Column('addon_id', db.Integer, db.ForeignKey('addon.id'), primary_key=True)
 )
 
+# Association table for which add-ons are included (Stripe-bypassed) on a subscription tier
+tier_included_addon = db.Table('tier_included_addon',
+    db.Column('tier_id', db.Integer, db.ForeignKey('subscription_tier.id'), primary_key=True),
+    db.Column('addon_id', db.Integer, db.ForeignKey('addon.id'), primary_key=True)
+)
+
 class SubscriptionTier(db.Model):
     """Clean subscription tier model - NO pricing, just tier structure"""
     __tablename__ = 'subscription_tier'
@@ -35,11 +41,14 @@ class SubscriptionTier(db.Model):
     max_monthly_batches = db.Column(db.Integer, nullable=True)  # Monthly batch limit
 
     # Data retention policy (tier-driven)
-    # Number of days to retain long-term data (recipes, batches, etc.) before hard delete (None = indefinite)
+    # New all-or-nothing policy selection: 'one_year' or 'subscribed'
+    retention_policy = db.Column(db.String(16), nullable=False, default='one_year')
+    # Optional legacy: number of days to retain long-term data; kept for backwards compatibility
+    # When retention_policy == 'one_year', this will be normalized to 365 in controllers
     data_retention_days = db.Column(db.Integer, nullable=True)
     # Days before deletion to start user notification campaign (e.g., 30)
     retention_notice_days = db.Column(db.Integer, nullable=True)
-    # Optional: number of days a storage add-on purchase extends retention
+    # Optional: number of days a storage add-on purchase extends retention (deprecated under all-or-nothing)
     storage_addon_retention_days = db.Column(db.Integer, nullable=True)
 
     # Visibility control
@@ -63,6 +72,8 @@ class SubscriptionTier(db.Model):
                                  backref=db.backref('tiers', lazy='dynamic'))
     allowed_addons = db.relationship('Addon', secondary=tier_allowed_addon,
                                      backref=backref('allowed_on_tiers', lazy='dynamic'))
+    included_addons = db.relationship('Addon', secondary=tier_included_addon,
+                                      backref=backref('included_on_tiers', lazy='dynamic'))
 
     # Explicitly named constraints to avoid SQLite batch mode issues
     __table_args__ = (
@@ -121,6 +132,14 @@ class SubscriptionTier(db.Model):
     def can_be_deleted(self):
         """Check if this tier can be safely deleted"""
         return self.name.lower() not in ['exempt', 'free']  # Protect system tiers
+
+    @property
+    def retention_label(self) -> str:
+        """Human-friendly retention label for admin screens."""
+        if (self.retention_policy or 'one_year') == 'subscribed':
+            return 'Subscribed'
+        # Default to 1 year for one_year policy
+        return '1 year'
 
     def __repr__(self):
         return f'<SubscriptionTier {self.name}>'

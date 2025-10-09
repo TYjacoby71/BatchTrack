@@ -99,19 +99,31 @@
                             </span>
                         </div>
 
-                        {% if tier_data.data_retention_days or tier_data.retention_notice_days %}
+                        {% if tier_data.retention_policy or tier_data.data_retention_days or tier_data.retention_notice_days %}
                         <div class="d-flex align-items-center mb-2">
                             <i class="fas fa-database me-2 text-info"></i>
                             <strong>Retention:</strong>
                             <span class="ms-2">
-                                {% if tier_data.data_retention_days %}
-                                    {{ tier_data.data_retention_days }} days
+                                {% if tier_data.retention_label %}
+                                  {{ tier_data.retention_label }}
+                                {% elif tier_data.data_retention_days %}
+                                  {{ tier_data.data_retention_days }} days
                                 {% else %}
-                                    Indefinite
+                                  Indefinite
                                 {% endif %}
                                 {% if tier_data.retention_notice_days %}
                                     <small class="text-muted">(notice {{ tier_data.retention_notice_days }} days)</small>
                                 {% endif %}
+                            </span>
+                        </div>
+                        {% endif %}
+
+                        {% if tier_data.included_addon_ids and tier_data.included_addon_ids|length > 0 %}
+                        <div class="d-flex align-items-center mb-2">
+                            <i class="fas fa-puzzle-piece me-2 text-success"></i>
+                            <strong>Included Add-ons:</strong>
+                            <span class="ms-2">
+                                <span class="badge bg-success">{{ tier_data.included_addon_ids|length }} included</span>
                             </span>
                         </div>
                         {% endif %}

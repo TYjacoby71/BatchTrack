@@ -110,6 +110,36 @@ def storage_addon():
         flash('Checkout failed. Please try again later.', 'error')
         return redirect(url_for('billing.upgrade'))
 
+@billing_bp.route('/addons/start/<addon_key>', methods=['POST'])
+@login_required
+def start_addon_checkout(addon_key):
+    """Start Stripe checkout for a specific add-on by key (uses addon.stripe_lookup_key)."""
+    from ...models.addon import Addon
+    from ...services.stripe_service import StripeService
+    addon = Addon.query.filter_by(key=addon_key, is_active=True).first()
+    if not addon or not addon.stripe_lookup_key:
+        flash('Add-on not available.', 'warning')
+        return redirect(url_for('settings.index') + '#billing')
+
+    try:
+        if not StripeService.initialize_stripe():
+            flash('Billing temporarily unavailable', 'error')
+            return redirect(url_for('settings.index') + '#billing')
+        session = StripeService.create_subscription_checkout_by_lookup_key(
+            addon.stripe_lookup_key,
+            current_user.email,
+            success_url=url_for('settings.index', _external=True) + '#billing',
+            cancel_url=url_for('settings.index', _external=True) + '#billing',
+            metadata={'addon': addon.key}
+        )
+        if session and getattr(session, 'url', None):
+            return redirect(session.url)
+        flash('Unable to start checkout', 'error')
+    except Exception as e:
+        logger.error(f"Addon checkout error ({addon_key}): {e}")
+        flash('Checkout failed. Please try again later.', 'error')
+    return redirect(url_for('settings.index') + '#billing')
+
 @billing_bp.route('/checkout/<tier>')
 @billing_bp.route('/checkout/<tier>/<billing_cycle>')
 @login_required

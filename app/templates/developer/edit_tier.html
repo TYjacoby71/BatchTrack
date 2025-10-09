@@ -131,6 +131,14 @@
                         <div class="row">
                             <div class="col-md-6">
                                 <div class="mb-3">
+                                    <label for="retention_policy" class="form-label">Data Retention</label>
+                                    <select class="form-select" id="retention_policy" name="retention_policy" onchange="toggleRetentionFields()">
+                                        <option value="one_year" {{ 'selected' if tier.retention_policy == 'one_year' else '' }}>1 year</option>
+                                        <option value="subscribed" {{ 'selected' if tier.retention_policy == 'subscribed' else '' }}>Subscribed</option>
+                                    </select>
+                                    <div class="form-text">All-or-nothing policy: 1 year or unlimited while subscribed.</div>
+                                </div>
+                                <div class="mb-3" id="retention_days_field" style="display:none;">
                                     <label for="data_retention_days" class="form-label">Data Retention (days)</label>
                                     <input type="number" class="form-control" id="data_retention_days" name="data_retention_days" value="{{ tier.data_retention_days or '' }}" min="0">
                                 </div>
@@ -162,22 +170,41 @@
                         </div>
 
                         <div class="mb-3">
-                            <label class="form-label">Allowed Add-ons</label>
+                            <label class="form-label">Allowed Add-ons (Purchasable via Stripe)</label>
                             <div class="row">
                                 {% for addon in all_addons %}
                                 <div class="col-md-4 mb-2">
                                     <div class="form-check">
                                         <input type="checkbox" class="form-check-input"
-                                               id="addon_{{ addon.id }}" name="allowed_addons" value="{{ addon.id }}"
+                                               id="allowed_addon_{{ addon.id }}" name="allowed_addons" value="{{ addon.id }}"
                                                {{ 'checked' if addon in tier.allowed_addons else '' }}>
-                                        <label class="form-check-label" for="addon_{{ addon.id }}">
+                                        <label class="form-check-label" for="allowed_addon_{{ addon.id }}">
                                             {{ addon.name }}{% if addon.permission_name %} (perm: {{ addon.permission_name }}){% endif %}
                                         </label>
                                     </div>
                                 </div>
                                 {% endfor %}
                             </div>
-                            <div class="form-text">Only add-ons checked here can be purchased on this tier.</div>
+                            <div class="form-text">Customers on this tier can purchase these add-ons.</div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label">Included Add-ons (Stripe-bypassed)</label>
+                            <div class="row">
+                                {% for addon in all_addons %}
+                                <div class="col-md-4 mb-2">
+                                    <div class="form-check">
+                                        <input type="checkbox" class="form-check-input"
+                                               id="included_addon_{{ addon.id }}" name="included_addons" value="{{ addon.id }}"
+                                               {{ 'checked' if addon in tier.included_addons else '' }}>
+                                        <label class="form-check-label" for="included_addon_{{ addon.id }}">
+                                            {{ addon.name }} (included)
+                                        </label>
+                                    </div>
+                                </div>
+                                {% endfor %}
+                            </div>
+                            <div class="form-text">These add-ons are granted on this tier without purchase.</div>
                         </div>
 
                         <div class="d-flex gap-2">
@@ -212,5 +239,21 @@ function toggleBillingFields() {
 
 // Initialize on page load
 document.addEventListener('DOMContentLoaded', toggleBillingFields);
+
+function toggleRetentionFields() {
+    const policy = document.getElementById('retention_policy').value;
+    const daysField = document.getElementById('retention_days_field');
+    // Show legacy days field only when not strictly one_year/subscribed
+    if (policy === 'one_year') {
+        daysField.style.display = 'none';
+        document.getElementById('data_retention_days').value = 365;
+    } else if (policy === 'subscribed') {
+        daysField.style.display = 'none';
+        document.getElementById('data_retention_days').value = '';
+    } else {
+        daysField.style.display = 'block';
+    }
+}
+document.addEventListener('DOMContentLoaded', toggleRetentionFields);
 </script>
 {% endblock %}

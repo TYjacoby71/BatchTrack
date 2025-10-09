@@ -28,8 +28,7 @@ def create_addon():
         function_key = (request.form.get('function_key') or '').strip() or None
         billing_type = (request.form.get('billing_type') or 'subscription').strip()
         stripe_lookup_key = (request.form.get('stripe_lookup_key') or '').strip() or None
-        retention_extension_days_raw = (request.form.get('retention_extension_days') or '').strip()
-        retention_extension_days = int(retention_extension_days_raw) if retention_extension_days_raw.isdigit() else None
+        # retention_extension_days deprecated for retention feature
         is_active = True if request.form.get('is_active') == 'on' else False
 
         if not key:
@@ -51,7 +50,7 @@ def create_addon():
             function_key=function_key,
             billing_type=billing_type,
             stripe_lookup_key=stripe_lookup_key,
-            retention_extension_days=retention_extension_days,
+            
             is_active=is_active
         )
         db.session.add(addon)
@@ -78,8 +77,7 @@ def edit_addon(addon_id):
         addon.function_key = (request.form.get('function_key') or '').strip() or None
         addon.billing_type = (request.form.get('billing_type') or addon.billing_type).strip()
         addon.stripe_lookup_key = (request.form.get('stripe_lookup_key') or '').strip() or None
-        red = (request.form.get('retention_extension_days') or '').strip()
-        addon.retention_extension_days = int(red) if red.isdigit() else None
+        # retention_extension_days deprecated for retention feature
         addon.is_active = True if request.form.get('is_active') == 'on' else False
 
         db.session.commit()

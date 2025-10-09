@@ -6,14 +6,13 @@ def seed_addons():
     """Seed core add-ons used by the system (idempotent)."""
     core_addons = [
         {
-            'key': 'storage',
-            'name': 'Extra Data Storage',
-            'description': 'Extend data retention and storage capacity',
-            'permission_name': 'storage.extend',
+            'key': 'data_retention',
+            'name': 'Data Retention',
+            'description': 'Enable indefinite data retention while active',
+            'permission_name': None,
             'function_key': 'retention',
             'billing_type': 'subscription',
-            'stripe_lookup_key': None,  # Set in environment-specific config/UI later
-            'retention_extension_days': 365,
+            'stripe_lookup_key': 'data-retention',  # Set or override in prod as needed
             'is_active': True
         },
         {
@@ -40,8 +39,6 @@ def seed_addons():
             # Do not overwrite stripe_lookup_key if already set in prod
             if not existing.stripe_lookup_key:
                 existing.stripe_lookup_key = data['stripe_lookup_key']
-            if data.get('retention_extension_days') is not None and not getattr(existing, 'retention_extension_days', None):
-                existing.retention_extension_days = data['retention_extension_days']
             existing.is_active = data['is_active']
         else:
             db.session.add(Addon(**data))
