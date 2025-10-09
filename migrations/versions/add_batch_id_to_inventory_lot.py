@@ -1,3 +1,4 @@
+
 """Add batch_id to inventory_lot table
 
 Revision ID: add_batch_id_to_inventory_lot
@@ -50,7 +51,7 @@ def upgrade():
     """Add batch_id to inventory_lot table"""
     print("=== Adding batch_id to inventory_lot table ===")
 
-    # Check if the column already exists
+    # Add batch_id column if it doesn't exist
     if not column_exists('inventory_lot', 'batch_id'):
         print("   Adding batch_id column...")
         with op.batch_alter_table('inventory_lot', schema=None) as batch_op:
@@ -59,7 +60,7 @@ def upgrade():
     else:
         print("   ✅ batch_id column already exists - skipping")
 
-    # Check if the foreign key constraint exists
+    # Add foreign key constraint if it doesn't exist
     if not foreign_key_exists('inventory_lot', 'fk_inventory_lot_batch_id'):
         print("   Adding foreign key constraint...")
         with op.batch_alter_table('inventory_lot', schema=None) as batch_op:
@@ -74,9 +75,6 @@ def upgrade():
 def downgrade():
     # Use batch mode for SQLite compatibility
     with op.batch_alter_table('inventory_lot', schema=None) as batch_op:
-        # Remove index
-        batch_op.drop_index('idx_inventory_lot_batch')
-
         # Remove foreign key constraint
         batch_op.drop_constraint('fk_inventory_lot_batch_id', type_='foreignkey')
 
