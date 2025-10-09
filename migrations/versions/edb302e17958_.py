@@ -108,8 +108,11 @@ def upgrade():
         # Create only if the sku_id -> product_sku.id FK is missing
         if not has_sku_fk:
             batch_op.create_foreign_key('fk_batch_sku_id', 'product_sku', ['sku_id'], ['id'])
-        batch_op.drop_column('created_at')
-        batch_op.drop_column('updated_at')
+        # Only drop columns if they exist
+        if column_exists('batch', 'created_at'):
+            batch_op.drop_column('created_at')
+        if column_exists('batch', 'updated_at'):
+            batch_op.drop_column('updated_at')
 
     with op.batch_alter_table('batch_container', schema=None) as batch_op:
         batch_op.add_column(sa.Column('container_id', sa.Integer(), nullable=False))
