@@ -85,6 +85,7 @@ class UnifiedInventoryHistory(ScopedModelMixin, db.Model):
         db.Index('idx_unified_fifo_code', 'fifo_code'),
         db.Index('idx_unified_change_type', 'change_type'),
         db.Index('idx_unified_expiration', 'expiration_date'),
+        db.Index('ix_unified_history_org', 'organization_id'),
     )
 
     def __repr__(self):

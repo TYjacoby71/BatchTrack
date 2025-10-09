@@ -11,6 +11,11 @@ class ProductCategory(TimestampMixin, db.Model):
     sku_name_template = db.Column(db.String(256), nullable=True)
     ui_config = db.Column(db.JSON, nullable=True)
 
+    __table_args__ = (
+        # Functional unique index for case-insensitive name lookups
+        db.Index('ix_product_category_lower_name', db.text('lower(name::text)'), unique=True),
+    )
+
     def __repr__(self):
         return f"<ProductCategory {self.name} ({'Portioned' if self.is_typically_portioned else 'Bulk'})>"
 

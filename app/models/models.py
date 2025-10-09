@@ -261,6 +261,11 @@ class User(UserMixin, db.Model):
     deleted_by = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True)
     is_deleted = db.Column(db.Boolean, default=False)
 
+    # Indexes
+    __table_args__ = (
+        db.Index('ix_user_org', 'organization_id'),
+    )
+
     # Legacy compatibility: is_verified hybrid property
     @hybrid_property
     def is_verified(self):
