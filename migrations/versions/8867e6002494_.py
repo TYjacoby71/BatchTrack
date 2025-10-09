@@ -216,21 +216,58 @@ def downgrade():
         for col_name, col_def in recipe_columns_to_add:
             if col_name not in recipe_columns:
                 batch_op.add_column(col_def)
-        batch_op.create_index('ix_recipe_vessel_fill_pct', ['vessel_fill_pct'], unique=False)
-        batch_op.create_index('ix_recipe_soap_water_pct', ['soap_water_pct'], unique=False)
-        batch_op.create_index('ix_recipe_soap_superfat', ['soap_superfat'], unique=False)
-        batch_op.create_index('ix_recipe_soap_lye_type', ['soap_lye_type'], unique=False)
-        batch_op.create_index('ix_recipe_org', ['organization_id'], unique=False)
-        batch_op.create_index('ix_recipe_cosm_preservative_pct', ['cosm_preservative_pct'], unique=False)
-        batch_op.create_index('ix_recipe_cosm_emulsifier_pct', ['cosm_emulsifier_pct'], unique=False)
-        batch_op.create_index('ix_recipe_category_id', ['category_id'], unique=False)
-        batch_op.create_index('ix_recipe_category_data_gin', [sa.literal_column('(category_data::jsonb)')], unique=False, postgresql_using='gin')
-        batch_op.create_index('ix_recipe_candle_vessel_ml', ['candle_vessel_ml'], unique=False)
-        batch_op.create_index('ix_recipe_candle_fragrance_pct', ['candle_fragrance_pct'], unique=False)
-        batch_op.create_index('ix_recipe_baker_yeast_pct', ['baker_yeast_pct'], unique=False)
-        batch_op.create_index('ix_recipe_baker_water_pct', ['baker_water_pct'], unique=False)
-        batch_op.create_index('ix_recipe_baker_salt_pct', ['baker_salt_pct'], unique=False)
-        batch_op.create_index('ix_recipe_baker_base_flour_g', ['baker_base_flour_g'], unique=False)
+        
+        # Create indexes only if they don't exist
+        recipe_indexes_to_add = [
+            'ix_recipe_vessel_fill_pct',
+            'ix_recipe_soap_water_pct', 
+            'ix_recipe_soap_superfat',
+            'ix_recipe_soap_lye_type',
+            'ix_recipe_org',
+            'ix_recipe_cosm_preservative_pct',
+            'ix_recipe_cosm_emulsifier_pct',
+            'ix_recipe_category_id',
+            'ix_recipe_category_data_gin',
+            'ix_recipe_candle_vessel_ml',
+            'ix_recipe_candle_fragrance_pct',
+            'ix_recipe_baker_yeast_pct',
+            'ix_recipe_baker_water_pct',
+            'ix_recipe_baker_salt_pct',
+            'ix_recipe_baker_base_flour_g'
+        ]
+        
+        for index_name in recipe_indexes_to_add:
+            if not index_exists(index_name):
+                if index_name == 'ix_recipe_vessel_fill_pct':
+                    batch_op.create_index('ix_recipe_vessel_fill_pct', ['vessel_fill_pct'], unique=False)
+                elif index_name == 'ix_recipe_soap_water_pct':
+                    batch_op.create_index('ix_recipe_soap_water_pct', ['soap_water_pct'], unique=False)
+                elif index_name == 'ix_recipe_soap_superfat':
+                    batch_op.create_index('ix_recipe_soap_superfat', ['soap_superfat'], unique=False)
+                elif index_name == 'ix_recipe_soap_lye_type':
+                    batch_op.create_index('ix_recipe_soap_lye_type', ['soap_lye_type'], unique=False)
+                elif index_name == 'ix_recipe_org':
+                    batch_op.create_index('ix_recipe_org', ['organization_id'], unique=False)
+                elif index_name == 'ix_recipe_cosm_preservative_pct':
+                    batch_op.create_index('ix_recipe_cosm_preservative_pct', ['cosm_preservative_pct'], unique=False)
+                elif index_name == 'ix_recipe_cosm_emulsifier_pct':
+                    batch_op.create_index('ix_recipe_cosm_emulsifier_pct', ['cosm_emulsifier_pct'], unique=False)
+                elif index_name == 'ix_recipe_category_id':
+                    batch_op.create_index('ix_recipe_category_id', ['category_id'], unique=False)
+                elif index_name == 'ix_recipe_category_data_gin':
+                    batch_op.create_index('ix_recipe_category_data_gin', [sa.literal_column('(category_data::jsonb)')], unique=False, postgresql_using='gin')
+                elif index_name == 'ix_recipe_candle_vessel_ml':
+                    batch_op.create_index('ix_recipe_candle_vessel_ml', ['candle_vessel_ml'], unique=False)
+                elif index_name == 'ix_recipe_candle_fragrance_pct':
+                    batch_op.create_index('ix_recipe_candle_fragrance_pct', ['candle_fragrance_pct'], unique=False)
+                elif index_name == 'ix_recipe_baker_yeast_pct':
+                    batch_op.create_index('ix_recipe_baker_yeast_pct', ['baker_yeast_pct'], unique=False)
+                elif index_name == 'ix_recipe_baker_water_pct':
+                    batch_op.create_index('ix_recipe_baker_water_pct', ['baker_water_pct'], unique=False)
+                elif index_name == 'ix_recipe_baker_salt_pct':
+                    batch_op.create_index('ix_recipe_baker_salt_pct', ['baker_salt_pct'], unique=False)
+                elif index_name == 'ix_recipe_baker_base_flour_g':
+                    batch_op.create_index('ix_recipe_baker_base_flour_g', ['baker_base_flour_g'], unique=False)
 
     with op.batch_alter_table('product_category', schema=None) as batch_op:
         batch_op.create_index('ix_product_category_lower_name', [sa.literal_column('lower(name::text)')], unique=True)
@@ -317,19 +354,52 @@ def downgrade():
         for col_name, col_def in batch_columns_to_add:
             if col_name not in batch_columns:
                 batch_op.add_column(col_def)
-        batch_op.create_index('ix_batch_vessel_fill_pct', ['vessel_fill_pct'], unique=False)
-        batch_op.create_index('ix_batch_soap_water_pct', ['soap_water_pct'], unique=False)
-        batch_op.create_index('ix_batch_soap_superfat', ['soap_superfat'], unique=False)
-        batch_op.create_index('ix_batch_soap_lye_type', ['soap_lye_type'], unique=False)
-        batch_op.create_index('ix_batch_org', ['organization_id'], unique=False)
-        batch_op.create_index('ix_batch_cosm_preservative_pct', ['cosm_preservative_pct'], unique=False)
-        batch_op.create_index('ix_batch_cosm_emulsifier_pct', ['cosm_emulsifier_pct'], unique=False)
-        batch_op.create_index('ix_batch_candle_vessel_ml', ['candle_vessel_ml'], unique=False)
-        batch_op.create_index('ix_batch_candle_fragrance_pct', ['candle_fragrance_pct'], unique=False)
-        batch_op.create_index('ix_batch_baker_yeast_pct', ['baker_yeast_pct'], unique=False)
-        batch_op.create_index('ix_batch_baker_water_pct', ['baker_water_pct'], unique=False)
-        batch_op.create_index('ix_batch_baker_salt_pct', ['baker_salt_pct'], unique=False)
-        batch_op.create_index('ix_batch_baker_base_flour_g', ['baker_base_flour_g'], unique=False)
+        
+        # Create batch indexes only if they don't exist
+        batch_indexes_to_add = [
+            'ix_batch_vessel_fill_pct',
+            'ix_batch_soap_water_pct',
+            'ix_batch_soap_superfat', 
+            'ix_batch_soap_lye_type',
+            'ix_batch_org',
+            'ix_batch_cosm_preservative_pct',
+            'ix_batch_cosm_emulsifier_pct',
+            'ix_batch_candle_vessel_ml',
+            'ix_batch_candle_fragrance_pct',
+            'ix_batch_baker_yeast_pct',
+            'ix_batch_baker_water_pct',
+            'ix_batch_baker_salt_pct',
+            'ix_batch_baker_base_flour_g'
+        ]
+        
+        for index_name in batch_indexes_to_add:
+            if not index_exists(index_name):
+                if index_name == 'ix_batch_vessel_fill_pct':
+                    batch_op.create_index('ix_batch_vessel_fill_pct', ['vessel_fill_pct'], unique=False)
+                elif index_name == 'ix_batch_soap_water_pct':
+                    batch_op.create_index('ix_batch_soap_water_pct', ['soap_water_pct'], unique=False)
+                elif index_name == 'ix_batch_soap_superfat':
+                    batch_op.create_index('ix_batch_soap_superfat', ['soap_superfat'], unique=False)
+                elif index_name == 'ix_batch_soap_lye_type':
+                    batch_op.create_index('ix_batch_soap_lye_type', ['soap_lye_type'], unique=False)
+                elif index_name == 'ix_batch_org':
+                    batch_op.create_index('ix_batch_org', ['organization_id'], unique=False)
+                elif index_name == 'ix_batch_cosm_preservative_pct':
+                    batch_op.create_index('ix_batch_cosm_preservative_pct', ['cosm_preservative_pct'], unique=False)
+                elif index_name == 'ix_batch_cosm_emulsifier_pct':
+                    batch_op.create_index('ix_batch_cosm_emulsifier_pct', ['cosm_emulsifier_pct'], unique=False)
+                elif index_name == 'ix_batch_candle_vessel_ml':
+                    batch_op.create_index('ix_batch_candle_vessel_ml', ['candle_vessel_ml'], unique=False)
+                elif index_name == 'ix_batch_candle_fragrance_pct':
+                    batch_op.create_index('ix_batch_candle_fragrance_pct', ['candle_fragrance_pct'], unique=False)
+                elif index_name == 'ix_batch_baker_yeast_pct':
+                    batch_op.create_index('ix_batch_baker_yeast_pct', ['baker_yeast_pct'], unique=False)
+                elif index_name == 'ix_batch_baker_water_pct':
+                    batch_op.create_index('ix_batch_baker_water_pct', ['baker_water_pct'], unique=False)
+                elif index_name == 'ix_batch_baker_salt_pct':
+                    batch_op.create_index('ix_batch_baker_salt_pct', ['baker_salt_pct'], unique=False)
+                elif index_name == 'ix_batch_baker_base_flour_g':
+                    batch_op.create_index('ix_batch_baker_base_flour_g', ['baker_base_flour_g'], unique=False)
 
     op.create_table('global_item_alias',
     sa.Column('id', sa.INTEGER(), autoincrement=True, nullable=False),
