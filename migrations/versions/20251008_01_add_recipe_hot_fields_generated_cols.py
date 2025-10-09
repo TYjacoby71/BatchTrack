@@ -7,7 +7,7 @@ import sqlalchemy as sa
 from sqlalchemy import inspect
 
 revision = '20251008_01_add_recipe_hot_fields_generated_cols'
-down_revision = '20251006_02_add_product_category_ui_config'
+down_revision = '20251006_2'
 branch_labels = None
 depends_on = None
 
