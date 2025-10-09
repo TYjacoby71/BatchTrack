@@ -8,6 +8,14 @@ Create Date: 2025-09-23
 
 from alembic import op
 import sqlalchemy as sa
+import sys
+import os
+
+# Add the migrations directory to the path so we can import postgres_helpers
+migrations_dir = os.path.dirname(__file__)
+sys.path.insert(0, os.path.join(migrations_dir, '..'))
+
+from postgres_helpers import safe_add_column, safe_drop_column
 
 
 # revision identifiers, used by Alembic.
@@ -18,14 +26,13 @@ depends_on = None
 
 
 def upgrade():
-    with op.batch_alter_table('product_category') as batch_op:
-        batch_op.add_column(sa.Column('sku_name_template', sa.String(length=256), nullable=True))
+    # Use safe_add_column to only add if it doesn't exist
+    safe_add_column(
+        'product_category',
+        sa.Column('sku_name_template', sa.String(256), nullable=True)
+    )
 
 
 def downgrade():
-    try:
-        with op.batch_alter_table('product_category') as batch_op:
-            batch_op.drop_column('sku_name_template')
-    except Exception:
-        pass
-
+    # Use safe_drop_column to only drop if it exists
+    safe_drop_column('product_category', 'sku_name_template')
