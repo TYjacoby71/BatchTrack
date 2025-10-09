@@ -31,7 +31,7 @@ This document delineates the PlanSnapshot DTO end‑to‑end. The snapshot is th
     { "inventory_item_id": 77, "quantity": 1.0, "unit": "count" }
   ],
   "category_extension": {
-    "soap": { "lye_ratio": 0.28 }
+    // Mirrors `recipe.category_data` at plan build time (verbatim copy)
   }
 }
 ```

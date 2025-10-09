@@ -182,8 +182,15 @@ def register_blueprints(app):
         @exports_bp.route('/recipe/<int:recipe_id>/soap-inci.pdf')
         @login_required
         def _soap_inci_recipe_pdf(recipe_id: int):
-            from flask import jsonify
-            return jsonify({'error': 'PDF generation not yet implemented'}), 501
+            from flask import abort, Response
+            rec = Recipe.query.get(recipe_id)
+            if not rec:
+                abort(404)
+            if getattr(current_user, 'organization_id', None) and rec.organization_id != current_user.organization_id:
+                abort(403)
+            from app.services.exports import ExportService
+            pdf_bytes = ExportService.soap_inci_pdf(recipe=rec)
+            return Response(pdf_bytes, mimetype='application/pdf')
 
         @exports_bp.route('/recipe/<int:recipe_id>/candle-label.csv')
         @login_required
@@ -201,8 +208,15 @@ def register_blueprints(app):
         @exports_bp.route('/recipe/<int:recipe_id>/candle-label.pdf')
         @login_required
         def _candle_label_recipe_pdf(recipe_id: int):
-            from flask import jsonify
-            return jsonify({'error': 'PDF generation not yet implemented'}), 501
+            from flask import abort, Response
+            rec = Recipe.query.get(recipe_id)
+            if not rec:
+                abort(404)
+            if getattr(current_user, 'organization_id', None) and rec.organization_id != current_user.organization_id:
+                abort(403)
+            from app.services.exports import ExportService
+            pdf_bytes = ExportService.candle_label_pdf(recipe=rec)
+            return Response(pdf_bytes, mimetype='application/pdf')
 
         @exports_bp.route('/recipe/<int:recipe_id>/baker-sheet.csv')
         @login_required
@@ -220,8 +234,15 @@ def register_blueprints(app):
         @exports_bp.route('/recipe/<int:recipe_id>/baker-sheet.pdf')
         @login_required
         def _baker_sheet_recipe_pdf(recipe_id: int):
-            from flask import jsonify
-            return jsonify({'error': 'PDF generation not yet implemented'}), 501
+            from flask import abort, Response
+            rec = Recipe.query.get(recipe_id)
+            if not rec:
+                abort(404)
+            if getattr(current_user, 'organization_id', None) and rec.organization_id != current_user.organization_id:
+                abort(403)
+            from app.services.exports import ExportService
+            pdf_bytes = ExportService.baker_sheet_pdf(recipe=rec)
+            return Response(pdf_bytes, mimetype='application/pdf')
 
         @exports_bp.route('/recipe/<int:recipe_id>/lotion-inci.csv')
         @login_required
@@ -239,8 +260,15 @@ def register_blueprints(app):
         @exports_bp.route('/recipe/<int:recipe_id>/lotion-inci.pdf')
         @login_required
         def _lotion_inci_recipe_pdf(recipe_id: int):
-            from flask import jsonify
-            return jsonify({'error': 'PDF generation not yet implemented'}), 501
+            from flask import abort, Response
+            rec = Recipe.query.get(recipe_id)
+            if not rec:
+                abort(404)
+            if getattr(current_user, 'organization_id', None) and rec.organization_id != current_user.organization_id:
+                abort(403)
+            from app.services.exports import ExportService
+            pdf_bytes = ExportService.lotion_inci_pdf(recipe=rec)
+            return Response(pdf_bytes, mimetype='application/pdf')
 
         # Public tool preview CSV/PDF using session draft
         @exports_bp.route('/tool/soaps/inci.csv')
@@ -253,8 +281,11 @@ def register_blueprints(app):
 
         @exports_bp.route('/tool/soaps/inci.pdf')
         def _soap_inci_tool_pdf():
-            from flask import jsonify
-            return jsonify({'error': 'PDF generation not yet implemented'}), 501
+            from flask import session, Response
+            draft = session.get('tool_draft') or {}
+            from app.services.exports import ExportService
+            pdf_bytes = ExportService.soap_inci_pdf(tool_draft=draft)
+            return Response(pdf_bytes, mimetype='application/pdf')
 
         @exports_bp.route('/tool/candles/label.csv')
         def _candle_label_tool_csv():
@@ -266,8 +297,11 @@ def register_blueprints(app):
 
         @exports_bp.route('/tool/candles/label.pdf')
         def _candle_label_tool_pdf():
-            from flask import jsonify
-            return jsonify({'error': 'PDF generation not yet implemented'}), 501
+            from flask import session, Response
+            draft = session.get('tool_draft') or {}
+            from app.services.exports import ExportService
+            pdf_bytes = ExportService.candle_label_pdf(tool_draft=draft)
+            return Response(pdf_bytes, mimetype='application/pdf')
 
         @exports_bp.route('/tool/baker/sheet.csv')
         def _baker_sheet_tool_csv():
@@ -279,8 +313,11 @@ def register_blueprints(app):
 
         @exports_bp.route('/tool/baker/sheet.pdf')
         def _baker_sheet_tool_pdf():
-            from flask import jsonify
-            return jsonify({'error': 'PDF generation not yet implemented'}), 501
+            from flask import session, Response
+            draft = session.get('tool_draft') or {}
+            from app.services.exports import ExportService
+            pdf_bytes = ExportService.baker_sheet_pdf(tool_draft=draft)
+            return Response(pdf_bytes, mimetype='application/pdf')
 
         @exports_bp.route('/tool/lotions/inci.csv')
         def _lotion_inci_tool_csv():
@@ -292,8 +329,11 @@ def register_blueprints(app):
 
         @exports_bp.route('/tool/lotions/inci.pdf')
         def _lotion_inci_tool_pdf():
-            from flask import jsonify
-            return jsonify({'error': 'PDF generation not yet implemented'}), 501
+            from flask import session, Response
+            draft = session.get('tool_draft') or {}
+            from app.services.exports import ExportService
+            pdf_bytes = ExportService.lotion_inci_pdf(tool_draft=draft)
+            return Response(pdf_bytes, mimetype='application/pdf')
 
         app.register_blueprint(exports_bp)
         successful_registrations.append('Exports')

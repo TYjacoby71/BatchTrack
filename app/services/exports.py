@@ -1,5 +1,6 @@
 from __future__ import annotations
 from typing import Optional, List, Dict, Any
+from flask import render_template
 
 
 def _extract_lines_from_recipe(recipe) -> Dict[str, List[Dict[str, Any]]]:
@@ -133,3 +134,27 @@ class ExportService:
         for ln in data['ingredients']:
             rows.append([ln['name'], ln['quantity'], ln['unit']])
         return _csv(rows)
+
+    @staticmethod
+    def _render_html(template_name: str, context: Dict[str, Any]) -> str:
+        return render_template(template_name, **context)
+
+    @staticmethod
+    def soap_inci_pdf(recipe=None, tool_draft: Optional[dict] = None) -> bytes:
+        html = ExportService._render_html('exports/soap_inci.html', {'recipe': recipe, 'tool_draft': tool_draft, 'source': 'pdf'})
+        return html.encode('utf-8')
+
+    @staticmethod
+    def candle_label_pdf(recipe=None, tool_draft: Optional[dict] = None) -> bytes:
+        html = ExportService._render_html('exports/candle_label.html', {'recipe': recipe, 'tool_draft': tool_draft, 'source': 'pdf'})
+        return html.encode('utf-8')
+
+    @staticmethod
+    def baker_sheet_pdf(recipe=None, tool_draft: Optional[dict] = None) -> bytes:
+        html = ExportService._render_html('exports/baker_sheet.html', {'recipe': recipe, 'tool_draft': tool_draft, 'source': 'pdf'})
+        return html.encode('utf-8')
+
+    @staticmethod
+    def lotion_inci_pdf(recipe=None, tool_draft: Optional[dict] = None) -> bytes:
+        html = ExportService._render_html('exports/lotion_inci.html', {'recipe': recipe, 'tool_draft': tool_draft, 'source': 'pdf'})
+        return html.encode('utf-8')
