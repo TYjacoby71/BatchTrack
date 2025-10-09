@@ -8,6 +8,7 @@ Create Date: 2025-09-10
 
 from alembic import op
 import sqlalchemy as sa
+from sqlalchemy import text
 
 
 # revision identifiers, used by Alembic.
@@ -19,27 +20,47 @@ depends_on = None
 
 def upgrade():
     from sqlalchemy import inspect
-    
+
     def table_exists(table_name):
         """Check if a table exists"""
         bind = op.get_bind()
         inspector = inspect(bind)
         return table_name in inspector.get_table_names()
-    
+
     def index_exists(table_name, index_name):
-        """Check if an index exists"""
+        """Check if an index exists on a table"""
         if not table_exists(table_name):
             return False
-        bind = op.get_bind()
-        inspector = inspect(bind)
         try:
-            indexes = [idx['name'] for idx in inspector.get_indexes(table_name)]
-            return index_name in indexes
+            bind = op.get_bind()
+            result = bind.execute(text("""
+                SELECT COUNT(*)
+                FROM pg_indexes
+                WHERE tablename = :table_name
+                AND indexname = :index_name
+            """), {"table_name": table_name, "index_name": index_name})
+            return result.scalar() > 0
         except Exception:
             return False
-    
+
+    def constraint_exists(table_name, constraint_name):
+        """Check if a constraint exists on a table"""
+        if not table_exists(table_name):
+            return False
+        try:
+            bind = op.get_bind()
+            result = bind.execute(text("""
+                SELECT COUNT(*)
+                FROM information_schema.table_constraints
+                WHERE table_name = :table_name
+                AND constraint_name = :constraint_name
+            """), {"table_name": table_name, "constraint_name": constraint_name})
+            return result.scalar() > 0
+        except Exception:
+            return False
+
     print("=== Creating domain_event and freshness_snapshot tables ===")
-    
+
     # domain_event table
     if not table_exists('domain_event'):
         print("   Creating domain_event table...")
@@ -76,7 +97,7 @@ def upgrade():
             ('ix_domain_event_is_processed', ['is_processed']),
             ('ix_domain_event_correlation_id', ['correlation_id']),
         ]
-        
+
         for idx_name, columns in domain_event_indexes:
             if not index_exists('domain_event', idx_name):
                 try:
@@ -113,7 +134,7 @@ def upgrade():
             ('ix_freshness_snapshot_org', ['organization_id']),
             ('ix_freshness_snapshot_item', ['inventory_item_id']),
         ]
-        
+
         for idx_name, columns in freshness_indexes:
             if not index_exists('freshness_snapshot', idx_name):
                 try:
@@ -124,15 +145,19 @@ def upgrade():
                     print(f"   ⚠️  Could not create index {idx_name}: {e}")
             else:
                 print(f"   ✅ Index {idx_name} already exists - skipping")
-        
-        # Create unique constraint if it doesn't exist
-        try:
-            print("   Creating unique constraint uq_freshness_snapshot_unique...")
-            op.create_unique_constraint('uq_freshness_snapshot_unique', 'freshness_snapshot', ['snapshot_date', 'organization_id', 'inventory_item_id'])
-            print("   ✅ Created unique constraint uq_freshness_snapshot_unique")
-        except Exception as e:
-            print(f"   ⚠️  Could not create unique constraint (may already exist): {e}")
-    
+
+        # 9. Create unique constraint for freshness_snapshot
+        print("   Checking for unique constraint uq_freshness_snapshot_unique...")
+        if not constraint_exists('freshness_snapshot', 'uq_freshness_snapshot_unique'):
+            try:
+                print("   Creating unique constraint uq_freshness_snapshot_unique...")
+                op.create_unique_constraint('uq_freshness_snapshot_unique', 'freshness_snapshot', ['snapshot_date', 'organization_id', 'inventory_item_id'])
+                print("   ✅ Created unique constraint")
+            except Exception as e:
+                print(f"   ⚠️  Could not create unique constraint: {e}")
+        else:
+            print("   ✅ Unique constraint already exists")
+
     print("✅ Domain event and freshness snapshot migration completed")
 
 
@@ -162,4 +187,3 @@ def downgrade():
         op.drop_table('domain_event')
     except Exception:
         pass
-
