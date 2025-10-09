@@ -27,6 +27,7 @@ class InventoryItem(ScopedModelMixin, db.Model):
         db.UniqueConstraint('organization_id', 'name', name='_org_name_uc'),
         db.Index('ix_inventory_item_type', 'type'),
         db.Index('ix_inventory_item_is_archived', 'is_archived'),
+        db.Index('ix_inventory_item_org', 'organization_id'),
     )
     # Perishable tracking fields
     is_perishable = db.Column(db.Boolean, default=False)
