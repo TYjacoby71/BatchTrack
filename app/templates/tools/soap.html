@@ -34,30 +34,19 @@
       </div>
 
       <div class="mb-3">
-        <h6>Add Ingredients (identical to system form)</h6>
-        <div class="ingredient-entry row mb-3 p-3 border rounded">
-          <div class="col-md-6">
-            <label class="form-label">Ingredient</label>
-            <div class="position-relative">
-              <input type="text" class="form-control recipe-ingredient-typeahead" placeholder="Search inventory and global..." autocomplete="off">
-              <div class="list-group position-absolute w-100 d-none" data-role="suggestions"></div>
-              <input type="hidden" name="ingredient_ids[]">
-              <input type="hidden" name="global_item_ids[]">
-            </div>
-          </div>
-          <div class="col-md-3">
-            <label class="form-label">Quantity</label>
-            <input type="number" step="0.01" min="0" class="form-control" name="ingredient_quantities[]">
-          </div>
-          <div class="col-md-3">
-            <label class="form-label">Unit</label>
-            <select class="form-select" name="ingredient_units[]">
-              <option value="gram">gram</option>
-              <option value="milliliter">milliliter</option>
-              <option value="oz">oz</option>
-            </select>
-          </div>
-        </div>
+        <h6>Ingredients</h6>
+        <div id="tool-ingredients"></div>
+        <button class="btn btn-sm btn-outline-primary mt-2" id="addToolIngredient">Add Ingredient</button>
+      </div>
+      <div class="mb-3">
+        <h6>Consumables</h6>
+        <div id="tool-consumables"></div>
+        <button class="btn btn-sm btn-outline-primary mt-2" id="addToolConsumable">Add Consumable</button>
+      </div>
+      <div class="mb-3">
+        <h6>Containers</h6>
+        <div id="tool-containers"></div>
+        <button class="btn btn-sm btn-outline-primary mt-2" id="addToolContainer">Add Container</button>
       </div>
       <form id="lyeForm" class="row g-3">
         <div class="col-md-4">
@@ -256,8 +245,56 @@
   // attach for initial row
   attachOilTypeahead(document.querySelector('#oilRows .oil-row'));
 
-  // Wire shared typeahead for public tool ingredient entry
-  document.querySelectorAll('.ingredient-entry .position-relative').forEach(setupSharedTypeahead);
+  function buildLineRow(kind){
+    const row = document.createElement('div');
+    row.className = 'row g-2 align-items-end mb-2';
+    row.innerHTML = `
+      <div class="col-md-6">
+        <label class="form-label">${kind === 'container' ? 'Container' : (kind === 'consumable' ? 'Consumable' : 'Ingredient')}</label>
+        <div class="position-relative">
+          <input type="text" class="form-control tool-typeahead" placeholder="Search global..." autocomplete="off">
+          <input type="hidden" class="tool-gi-id">
+          <div class="list-group position-absolute w-100 d-none" data-role="suggestions"></div>
+        </div>
+      </div>
+      <div class="col-md-3 ${kind==='container'?'d-none':''}">
+        <label class="form-label">Quantity</label>
+        <input type="number" step="0.01" min="0" class="form-control tool-qty">
+      </div>
+      <div class="col-md-3 ${kind==='container'?'d-none':''}">
+        <label class="form-label">Unit</label>
+        <select class="form-select tool-unit">
+          <option value="gram">gram</option>
+          <option value="milliliter">milliliter</option>
+          <option value="oz">oz</option>
+          <option value="count">count</option>
+        </select>
+      </div>
+      <div class="col-md-3 ${kind!=='container'?'d-none':''}">
+        <label class="form-label">Count</label>
+        <input type="number" min="1" step="1" class="form-control tool-qty">
+      </div>
+      <div class="col-md-2 d-grid">
+        <button type="button" class="btn btn-outline-danger tool-remove">Remove</button>
+      </div>`;
+    const input = row.querySelector('.tool-typeahead');
+    const giHidden = row.querySelector('.tool-gi-id');
+    const list = row.querySelector('[data-role="suggestions"]');
+    const itemType = (kind==='container')? 'container' : (kind==='consumable' ? 'consumable' : 'ingredient');
+    attachPublicGlobalTypeahead({ inputEl: input, giHiddenEl: giHidden, listEl: list, itemType });
+    row.querySelector('.tool-remove').addEventListener('click', function(){ row.remove(); });
+    return row;
+  }
+
+  document.getElementById('addToolIngredient').addEventListener('click', function(){
+    document.getElementById('tool-ingredients').appendChild(buildLineRow('ingredient'));
+  });
+  document.getElementById('addToolConsumable').addEventListener('click', function(){
+    document.getElementById('tool-consumables').appendChild(buildLineRow('consumable'));
+  });
+  document.getElementById('addToolContainer').addEventListener('click', function(){
+    document.getElementById('tool-containers').appendChild(buildLineRow('container'));
+  });
 
   document.getElementById('calcLyeBtn').addEventListener('click', async function(){
     const f = document.getElementById('lyeForm');
@@ -305,12 +342,34 @@
         try { return parseFloat((document.getElementById('lyeNumbers').textContent.match(/Lye \(.*\): ([0-9.]+)/)||[])[1]||'0'); } catch(_) { return 0; }
       })();
       const waterG = oilG * (waterPct/100);
+      // Collect selected lines for draft persistence
+      function collectLines(wrapperId, kind){
+        const out = [];
+        document.querySelectorAll(`#${wrapperId} .row`).forEach(function(row){
+          const name = row.querySelector('.tool-typeahead')?.value?.trim();
+          const gi = row.querySelector('.tool-gi-id')?.value || '';
+          const qtyEl = row.querySelector('.tool-qty');
+          const unitEl = row.querySelector('.tool-unit');
+          const hasQty = qtyEl && qtyEl.value !== '';
+          if (!name && !gi) return;
+          if (kind === 'container'){
+            out.push({ name: name || undefined, global_item_id: gi ? parseInt(gi) : undefined, quantity: hasQty ? parseFloat(qtyEl.value) : 1 });
+          } else {
+            out.push({ name: name || undefined, global_item_id: gi ? parseInt(gi) : undefined, quantity: hasQty ? parseFloat(qtyEl.value) : 0, unit: (unitEl?.value || '').trim() || 'gram' });
+          }
+        });
+        return out;
+      }
+
       const payload = {
         name: 'Soap (Draft)',
         instructions: 'Draft from Soap Tools',
         predicted_yield: Math.round((oilG + waterG + lyeAfterSuperfat)*100)/100,
         predicted_yield_unit: 'gram',
-        category_name: 'Soaps'
+        category_name: 'Soaps',
+        ingredients: collectLines('tool-ingredients', 'ingredient'),
+        consumables: collectLines('tool-consumables', 'consumable'),
+        containers: collectLines('tool-containers', 'container')
       };
       await fetch('/tools/draft', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(payload)});
     } catch(_) {}

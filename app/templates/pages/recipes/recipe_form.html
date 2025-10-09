@@ -443,6 +443,11 @@
             </div>
             {% if not recipe %}
             <div class="form-text">Save the recipe to enable exports.</div>
+            {% if current_user.is_authenticated and not has_permission('batches.create') %}
+            <div class="alert alert-warning mt-3">
+              <i class="fas fa-lock me-1"></i> Starting batches is a premium feature. <a href="{{ url_for('billing.upgrade') }}" class="alert-link">Upgrade</a> to enable batch creation.
+            </div>
+            {% endif %}
             {% endif %}
         </div>
     </div>

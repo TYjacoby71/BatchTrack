@@ -82,10 +82,13 @@ def _handle_deductive_operation(item, quantity, change_type, notes, created_by, 
             if order_id:
                 enhanced_notes += f" (Order: {order_id})"
 
+        # Normalize sign: callers may pass negative numbers for deductions; use absolute for processing
+        qty_abs = abs(float(quantity))
+
         # Use FIFO deduction logic (valuation handled inside based on org/batch method)
         success, message = deduct_fifo_inventory(
             item_id=item.id,
-            quantity_to_deduct=quantity,
+            quantity_to_deduct=qty_abs,
             change_type=change_type,
             notes=enhanced_notes,
             created_by=created_by,
@@ -97,7 +100,7 @@ def _handle_deductive_operation(item, quantity, change_type, notes, created_by, 
             return False, message, 0
 
         # Return the actual quantity delta (negative for deductions)
-        quantity_delta = -float(quantity)
+        quantity_delta = -qty_abs
 
         # Get description from mapping or use generic one
         description = DEDUCTION_DESCRIPTIONS.get(change_type, f'Used {quantity} from inventory')

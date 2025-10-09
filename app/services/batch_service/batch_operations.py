@@ -103,6 +103,11 @@ class BatchOperationsService(BaseService):
             )
 
             db.session.add(batch)
+            # Ensure batch is INSERTed so FK references in inventory history succeed
+            try:
+                db.session.flush()
+            except Exception:
+                pass
             print(f"🔍 BATCH_SERVICE DEBUG: Batch object created with label: {label_code}")
             try:
                 pass
@@ -264,13 +269,13 @@ class BatchOperationsService(BaseService):
                     # Use centralized inventory adjustment
                     success, message = process_inventory_adjustment(
                         item_id=ingredient.id,
-                        quantity=-required_converted,
                         change_type='batch',
+                        quantity=required_converted,  # core handles sign for deductions
                         unit=ingredient.unit,
                         notes=f"Used in batch {batch.label_code}",
-                        batch_id=batch.id,
                         created_by=current_user.id,
-                        defer_commit=defer_commit
+                        batch_id=batch.id,
+                        defer_commit=True  # always defer commit during batch start
                     )
 
                     if not success:
@@ -331,13 +336,13 @@ class BatchOperationsService(BaseService):
 
                     success, message = process_inventory_adjustment(
                         item_id=item.id,
-                        quantity=-required_converted,
                         change_type='batch',
+                        quantity=required_converted,  # core handles sign for deductions
                         unit=item.unit,
                         notes=f"Consumable used in batch {batch.label_code}",
-                        batch_id=batch.id,
                         created_by=current_user.id,
-                        defer_commit=defer_commit
+                        batch_id=batch.id,
+                        defer_commit=True
                     )
 
                     if not success:

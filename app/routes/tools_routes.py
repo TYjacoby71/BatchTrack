@@ -44,6 +44,37 @@ def tools_draft():
     """
     from flask import session
     data = request.get_json() or {}
+    # Normalize line arrays if provided
+    def _norm_lines(lines, kind):
+        out = []
+        for ln in (lines or []):
+            try:
+                name = (ln.get('name') or '').strip() or None
+                gi = ln.get('global_item_id')
+                gi = int(gi) if gi not in (None, '', []) else None
+                qty = ln.get('quantity')
+                try:
+                    qty = float(qty) if qty not in (None, '', []) else None
+                except Exception:
+                    qty = None
+                unit = (ln.get('unit') or '').strip() or None
+                rec = {'name': name, 'global_item_id': gi}
+                if kind == 'container':
+                    rec['quantity'] = int(qty) if qty is not None else 1
+                else:
+                    rec['quantity'] = float(qty) if qty is not None else 0.0
+                    rec['unit'] = unit or 'gram'
+                out.append(rec)
+            except Exception:
+                continue
+        return out
+
+    if 'ingredients' in data:
+        data['ingredients'] = _norm_lines(data.get('ingredients'), 'ingredient')
+    if 'consumables' in data:
+        data['consumables'] = _norm_lines(data.get('consumables'), 'consumable')
+    if 'containers' in data:
+        data['containers'] = _norm_lines(data.get('containers'), 'container')
     # Merge to preserve any prior progress and keep across redirects
     try:
         existing = session.get('tool_draft', {})

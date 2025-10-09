@@ -3,8 +3,14 @@
 
 <div class="d-flex justify-content-between mb-3">
   <div class="d-flex gap-2">
-    <button type="button" class="btn btn-primary" onclick="toggleIngredientForm()">Add Ingredient</button>
-    <button type="button" class="btn btn-secondary" onclick="toggleUpdateForm()">Update Inventory</button>
+    {% if current_user.is_authenticated and has_permission('inventory.adjust') %}
+      <button type="button" class="btn btn-primary" onclick="toggleIngredientForm()">Add Ingredient</button>
+      <button type="button" class="btn btn-secondary" onclick="toggleUpdateForm()">Update Inventory</button>
+    {% else %}
+      <div class="alert alert-warning mb-0">
+        <i class="fas fa-lock me-1"></i> Inventory adjustments are locked on the Free tier. <a href="{{ url_for('billing.upgrade') }}" class="alert-link">Upgrade</a> to edit inventory.
+      </div>
+    {% endif %}
   </div>
   <div>
     <button type="button" class="btn btn-outline-secondary" onclick="toggleIngredientsFilter()">
@@ -117,6 +123,7 @@
     }
   }">
 
+  {% if current_user.is_authenticated and has_permission('inventory.adjust') %}
   <form @submit="submitForm">
 
   <template x-for="(row, index) in rows" :key="index">
@@ -170,6 +177,9 @@
     <button type="button" class="btn btn-secondary" @click="resetRows(); toggleUpdateForm()">Cancel</button>
   </div>
   </form>
+  {% else %}
+  <div class="alert alert-light border">Upgrade to edit inventory in bulk. <a href="{{ url_for('billing.upgrade') }}">View plans</a>.</div>
+  {% endif %}
 </div>
 
 <!-- Add New Ingredient Form -->
