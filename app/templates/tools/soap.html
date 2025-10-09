@@ -111,9 +111,12 @@
   </div>
 </div>
 
+<script src="{{ url_for('static', filename='js/components/suggestions.js') }}"></script>
+<script src="{{ url_for('static', filename='js/components/tool_lines.js') }}"></script>
 <script>
 (function(){
   function round(v){ return Math.round(v*1000)/1000 }
+  const TOOL_UNIT_OPTIONS_HTML = `{% for unit in global_units %}<option value="{{ unit.name }}">{{ unit.name }}</option>{% endfor %}`;
   function attachOilTypeahead(row){
     const input = row.querySelector('.oil-typeahead');
     const hiddenSap = row.querySelector('.oil-sap-koh');
@@ -277,11 +280,15 @@
       <div class="col-md-2 d-grid">
         <button type="button" class="btn btn-outline-danger tool-remove">Remove</button>
       </div>`;
+    const unitSelect = row.querySelector('.tool-unit');
+    if (unitSelect) unitSelect.innerHTML = TOOL_UNIT_OPTIONS_HTML;
     const input = row.querySelector('.tool-typeahead');
     const giHidden = row.querySelector('.tool-gi-id');
     const list = row.querySelector('[data-role="suggestions"]');
-    const itemType = (kind==='container')? 'container' : (kind==='consumable' ? 'consumable' : 'ingredient');
-    attachPublicGlobalTypeahead({ inputEl: input, giHiddenEl: giHidden, listEl: list, itemType });
+    // Use unified typeahead in public context (global-only)
+    if (typeof window.attachMergedInventoryGlobalTypeahead === 'function'){
+      window.attachMergedInventoryGlobalTypeahead({ inputEl: input, giHiddenEl: giHidden, listEl: list, mode: 'recipe', context: 'public' });
+    }
     row.querySelector('.tool-remove').addEventListener('click', function(){ row.remove(); });
     return row;
   }
