@@ -14,6 +14,16 @@ down_revision = 'add_batch_id_to_inventory_lot'
 branch_labels = None
 depends_on = None
 
+def column_exists(table_name, column_name):
+    """Check if a column exists"""
+    conn = op.get_bind()
+    inspector = sa.inspect(conn)
+    try:
+        columns = [col['name'] for col in inspector.get_columns(table_name)]
+        return column_name in columns
+    except:
+        return False
+
 def upgrade():
     """Add missing last_login column"""
     print("=== Adding missing last_login column ===")
