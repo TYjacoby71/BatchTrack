@@ -7,7 +7,7 @@ Create Date: 2025-09-16 21:08:49.172551
 """
 from alembic import op
 import sqlalchemy as sa
-from sqlalchemy import inspect
+from sqlalchemy import inspect, text
 
 
 # revision identifiers, used by Alembic.
@@ -32,6 +32,21 @@ def column_exists(table_name, column_name):
     inspector = inspect(bind)
     columns = [col['name'] for col in inspector.get_columns(table_name)]
     return column_name in columns
+
+
+def index_exists(table_name, index_name):
+    """Check if an index exists on a table"""
+    try:
+        bind = op.get_bind()
+        result = bind.execute(text("""
+            SELECT COUNT(*)
+            FROM pg_indexes
+            WHERE tablename = :table_name
+            AND indexname = :index_name
+        """), {"table_name": table_name, "index_name": index_name})
+        return result.scalar() > 0
+    except Exception:
+        return False
 
 
 def upgrade():
@@ -92,6 +107,7 @@ def upgrade():
         print("   ✅ retention_deletion_queue table created")
     else:
         print("   ✅ retention_deletion_queue table already exists - skipping")
+
     with op.batch_alter_table('batch_stats', schema=None) as batch_op:
         batch_op.drop_index('idx_batch_stats_org')
         batch_op.drop_index('idx_batch_stats_recipe')
@@ -100,18 +116,26 @@ def upgrade():
         batch_op.drop_index('ix_domain_event_entity')
         batch_op.drop_index('ix_domain_event_org')
         batch_op.drop_index('ix_domain_event_user')
-        batch_op.create_index(batch_op.f('ix_domain_event_entity_id'), ['entity_id'], unique=False)
-        batch_op.create_index(batch_op.f('ix_domain_event_entity_type'), ['entity_type'], unique=False)
-        batch_op.create_index(batch_op.f('ix_domain_event_organization_id'), ['organization_id'], unique=False)
-        batch_op.create_index(batch_op.f('ix_domain_event_user_id'), ['user_id'], unique=False)
+        # Check if index already exists before creating
+        if not index_exists('domain_event', 'ix_domain_event_entity_id'):
+            batch_op.create_index(batch_op.f('ix_domain_event_entity_id'), ['entity_id'], unique=False)
+        if not index_exists('domain_event', 'ix_domain_event_entity_type'):
+            batch_op.create_index(batch_op.f('ix_domain_event_entity_type'), ['entity_type'], unique=False)
+        if not index_exists('domain_event', 'ix_domain_event_organization_id'):
+            batch_op.create_index(batch_op.f('ix_domain_event_organization_id'), ['organization_id'], unique=False)
+        if not index_exists('domain_event', 'ix_domain_event_user_id'):
+            batch_op.create_index(batch_op.f('ix_domain_event_user_id'), ['user_id'], unique=False)
 
     with op.batch_alter_table('freshness_snapshot', schema=None) as batch_op:
         batch_op.drop_index('ix_freshness_snapshot_date')
         batch_op.drop_index('ix_freshness_snapshot_item')
         batch_op.drop_index('ix_freshness_snapshot_org')
-        batch_op.create_index(batch_op.f('ix_freshness_snapshot_inventory_item_id'), ['inventory_item_id'], unique=False)
-        batch_op.create_index(batch_op.f('ix_freshness_snapshot_organization_id'), ['organization_id'], unique=False)
-        batch_op.create_index(batch_op.f('ix_freshness_snapshot_snapshot_date'), ['snapshot_date'], unique=False)
+        if not index_exists('freshness_snapshot', 'ix_freshness_snapshot_inventory_item_id'):
+            batch_op.create_index(batch_op.f('ix_freshness_snapshot_inventory_item_id'), ['inventory_item_id'], unique=False)
+        if not index_exists('freshness_snapshot', 'ix_freshness_snapshot_organization_id'):
+            batch_op.create_index(batch_op.f('ix_freshness_snapshot_organization_id'), ['organization_id'], unique=False)
+        if not index_exists('freshness_snapshot', 'ix_freshness_snapshot_snapshot_date'):
+            batch_op.create_index(batch_op.f('ix_freshness_snapshot_snapshot_date'), ['snapshot_date'], unique=False)
 
     with op.batch_alter_table('global_item', schema=None) as batch_op:
         batch_op.drop_index('ix_global_item_is_archived')
