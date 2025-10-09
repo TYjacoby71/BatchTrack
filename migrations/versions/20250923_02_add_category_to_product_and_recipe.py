@@ -90,19 +90,44 @@ def upgrade():
     if product_nulls > 0 or recipe_nulls > 0:
         raise Exception(f"Still have NULL category_id values: {product_nulls} products, {recipe_nulls} recipes")
 
+    # Check existing constraints before adding new ones
+    def constraint_exists(table_name, constraint_name):
+        try:
+            constraints = inspector.get_foreign_keys(table_name)
+            return any(fk.get('name') == constraint_name for fk in constraints)
+        except Exception:
+            return False
+
+    def index_exists(table_name, index_name):
+        try:
+            indexes = inspector.get_indexes(table_name)
+            return any(idx.get('name') == index_name for idx in indexes)
+        except Exception:
+            return False
+
     # Add foreign keys, indexes, and set NOT NULL
     if 'product' in inspector.get_table_names():
         print("Adding constraints to product table...")
         with op.batch_alter_table('product') as batch_op:
-            try:
-                batch_op.create_foreign_key('fk_product_category', 'product_category', ['category_id'], ['id'])
-            except Exception as e:
-                print(f"Note: Could not create foreign key for product: {e}")
+            # Only create foreign key if it doesn't exist
+            if not constraint_exists('product', 'fk_product_category'):
+                try:
+                    batch_op.create_foreign_key('fk_product_category', 'product_category', ['category_id'], ['id'])
+                    print("Created foreign key fk_product_category")
+                except Exception as e:
+                    print(f"Note: Could not create foreign key for product: {e}")
+            else:
+                print("Foreign key fk_product_category already exists")
             
-            try:
-                batch_op.create_index('ix_product_category_id', ['category_id'])
-            except Exception as e:
-                print(f"Note: Could not create index for product: {e}")
+            # Only create index if it doesn't exist
+            if not index_exists('product', 'ix_product_category_id'):
+                try:
+                    batch_op.create_index('ix_product_category_id', ['category_id'])
+                    print("Created index ix_product_category_id")
+                except Exception as e:
+                    print(f"Note: Could not create index for product: {e}")
+            else:
+                print("Index ix_product_category_id already exists")
                 
             batch_op.alter_column('category_id', existing_type=sa.Integer(), nullable=False)
             print("Set product.category_id to NOT NULL")
@@ -110,15 +135,25 @@ def upgrade():
     if 'recipe' in inspector.get_table_names():
         print("Adding constraints to recipe table...")
         with op.batch_alter_table('recipe') as batch_op:
-            try:
-                batch_op.create_foreign_key('fk_recipe_category', 'product_category', ['category_id'], ['id'])
-            except Exception as e:
-                print(f"Note: Could not create foreign key for recipe: {e}")
+            # Only create foreign key if it doesn't exist
+            if not constraint_exists('recipe', 'fk_recipe_category'):
+                try:
+                    batch_op.create_foreign_key('fk_recipe_category', 'product_category', ['category_id'], ['id'])
+                    print("Created foreign key fk_recipe_category")
+                except Exception as e:
+                    print(f"Note: Could not create foreign key for recipe: {e}")
+            else:
+                print("Foreign key fk_recipe_category already exists")
                 
-            try:
-                batch_op.create_index('ix_recipe_category_id', ['category_id'])
-            except Exception as e:
-                print(f"Note: Could not create index for recipe: {e}")
+            # Only create index if it doesn't exist
+            if not index_exists('recipe', 'ix_recipe_category_id'):
+                try:
+                    batch_op.create_index('ix_recipe_category_id', ['category_id'])
+                    print("Created index ix_recipe_category_id")
+                except Exception as e:
+                    print(f"Note: Could not create index for recipe: {e}")
+            else:
+                print("Index ix_recipe_category_id already exists")
                 
             batch_op.alter_column('category_id', existing_type=sa.Integer(), nullable=False)
             print("Set recipe.category_id to NOT NULL")
