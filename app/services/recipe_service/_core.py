@@ -143,10 +143,19 @@ def create_recipe(name: str, description: str = "", instructions: str = "",
             payload = request.form if request.form else None
             if payload and isinstance(payload, dict):
                 cat_data = {}
-                for key in ['soap_superfat', 'soap_water_pct', 'soap_lye_type',
-                            'candle_fragrance_pct', 'candle_vessel_ml', 'candle_fill_pct', 'vessel_fill_pct',
-                            'cosm_preservative_pct', 'cosm_emulsifier_pct',
-                            'baker_base_flour_g', 'herbal_ratio']:
+                keys = [
+                    # Soaps
+                    'superfat_pct','lye_concentration_pct','lye_type','soap_superfat','soap_water_pct','soap_lye_type',
+                    # Candles
+                    'fragrance_load_pct','candle_fragrance_pct','candle_vessel_ml','vessel_fill_pct','candle_fill_pct',
+                    # Cosmetics/Lotions
+                    'cosm_preservative_pct','cosm_emulsifier_pct','oil_phase_pct','water_phase_pct','cool_down_phase_pct',
+                    # Baking
+                    'base_ingredient_id','moisture_loss_pct','derived_pre_dry_yield_g','derived_final_yield_g','baker_base_flour_g',
+                    # Herbal
+                    'herbal_ratio'
+                ]
+                for key in keys:
                     if key in payload and payload.get(key) not in (None, ''):
                         cat_data[key] = payload.get(key)
                 # Normalize alias: candle_fill_pct -> vessel_fill_pct

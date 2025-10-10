@@ -429,6 +429,9 @@
 
 <script src="{{ url_for('static', filename='js/components/suggestions.js') }}"></script>
 <script src="{{ url_for('static', filename='js/recipes/recipe_form.js') }}"></script>
+<script src="{{ url_for('static', filename='js/recipes/skins/category_skins.js') }}"></script>
+<script src="{{ url_for('static', filename='js/recipes/skins/baking_skin.js') }}"></script>
+<script src="{{ url_for('static', filename='js/recipes/skins/cosmetics_skin.js') }}"></script>
 <script>
 const formEl = document.getElementById('recipeForm');
 let PRESELECT_INGREDIENT_ID = (formEl.getAttribute('data-preselect-ingredient-id') || '').trim();
@@ -499,15 +502,19 @@ document.addEventListener('DOMContentLoaded', function() {
     }
     {% endif %}
 
-    // Category-driven portioning guidance
+    // Category-driven portioning guidance and containers visibility when portioned
     const categorySelect = document.getElementById('category_id');
     const isPortionedToggle = document.getElementById('is_portioned_toggle');
     const portioningSection = document.getElementById('portioningSection');
     const categoryHint = document.getElementById('categoryHint');
+    const allowedContainersCard = document.getElementById('allowedContainersCard');
 
     function syncPortioningUI() {
         const on = isPortionedToggle.checked;
         portioningSection.style.display = on ? 'block' : 'none';
+        if (allowedContainersCard) {
+            allowedContainersCard.style.display = on ? 'none' : 'block';
+        }
     }
 
     function onCategoryChange() {
@@ -534,6 +541,36 @@ document.addEventListener('DOMContentLoaded', function() {
             syncPortioningUI();
         });
         onCategoryChange();
+    }
+
+    // Skin host visibility and mounting
+    const skinCard = document.getElementById('categorySkinCard');
+    const skinHost = document.getElementById('categorySkinHost');
+    const infoCard = document.getElementById('categoryInfoCard');
+    const useSkinToggle = document.getElementById('useSkinToggle');
+
+    function currentCategoryName(){
+        return categorySelect?.options[categorySelect.selectedIndex]?.textContent?.trim() || '';
+    }
+
+    function syncSkinVisibility(){
+        const selected = currentCategoryName().toLowerCase();
+        const hasSkin = window.CategorySkins && window.CategorySkins.hasSkinFor(selected);
+        if (skinCard) skinCard.style.display = hasSkin ? 'block' : 'none';
+        if (infoCard) infoCard.style.display = hasSkin ? 'block' : 'none';
+        if (hasSkin && useSkinToggle?.checked){
+            window.CategorySkins.mount(selected, skinHost, document.getElementById('categoryInfoHost'));
+        } else if (window.CategorySkins) {
+            window.CategorySkins.unmount();
+        }
+    }
+
+    if (categorySelect){
+        syncSkinVisibility();
+        categorySelect.addEventListener('change', syncSkinVisibility);
+    }
+    if (useSkinToggle){
+        useSkinToggle.addEventListener('change', syncSkinVisibility);
     }
 });
 
