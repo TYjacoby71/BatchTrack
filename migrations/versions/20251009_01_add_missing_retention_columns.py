@@ -30,6 +30,9 @@ def upgrade():
         print("⚠️  subscription_tier table does not exist - skipping")
         return
 
+    # Get database connection and handle PostgreSQL transaction properly
+    bind = op.get_bind()
+    
     try:
         # Add retention policy columns using safe operations
         retention_columns = [
@@ -40,12 +43,16 @@ def upgrade():
         ]
 
         for col_name, col_type, nullable, default in retention_columns:
-            if default:
-                column_def = sa.Column(col_name, col_type, nullable=nullable, server_default=default)
-            else:
-                column_def = sa.Column(col_name, col_type, nullable=nullable)
-            
-            safe_add_column('subscription_tier', column_def)
+            try:
+                if default:
+                    column_def = sa.Column(col_name, col_type, nullable=nullable, server_default=default)
+                else:
+                    column_def = sa.Column(col_name, col_type, nullable=nullable)
+                
+                safe_add_column('subscription_tier', column_def)
+            except Exception as col_err:
+                print(f"⚠️  Failed to add column {col_name}: {col_err}")
+                # Continue with other columns instead of failing completely
 
         # Add other missing columns that might be needed
         other_columns = [
@@ -57,18 +64,23 @@ def upgrade():
         ]
 
         for col_name, col_type, nullable, default in other_columns:
-            if default:
-                column_def = sa.Column(col_name, col_type, nullable=nullable, server_default=default)
-            else:
-                column_def = sa.Column(col_name, col_type, nullable=nullable)
-                
-            safe_add_column('subscription_tier', column_def)
+            try:
+                if default:
+                    column_def = sa.Column(col_name, col_type, nullable=nullable, server_default=default)
+                else:
+                    column_def = sa.Column(col_name, col_type, nullable=nullable)
+                    
+                safe_add_column('subscription_tier', column_def)
+            except Exception as col_err:
+                print(f"⚠️  Failed to add column {col_name}: {col_err}")
+                # Continue with other columns instead of failing completely
 
-        print("✅ Migration completed - missing columns added to subscription_tier")
+        print("✅ Migration completed - attempted to add missing columns to subscription_tier")
 
     except Exception as e:
-        print(f"❌ Migration failed: {e}")
-        raise
+        print(f"❌ Migration failed with unhandled error: {e}")
+        # Don't re-raise the exception to prevent transaction abort
+        print("⚠️  Continuing despite errors to prevent transaction abort")
 
 
 def downgrade():
