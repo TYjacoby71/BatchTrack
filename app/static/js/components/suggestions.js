@@ -60,6 +60,7 @@
     var giHiddenEl = options && options.giHiddenEl;
     var listEl = ensureListContainer(options && options.listEl);
     var mode = (options && options.mode) || 'recipe'; // 'recipe' or 'inventory_create'
+    var context = (options && options.context) || 'customer'; // 'customer' or 'public'
 
     if (!inputEl || (!invHiddenEl && mode === 'recipe') || !giHiddenEl) return;
 
@@ -75,10 +76,24 @@
         listEl.innerHTML = '';
         return;
       }
-      Promise.all([
-        fetch('/api/ingredients/ingredients/search?q=' + encodeURIComponent(q)).then(function(r){return r.json();}).catch(function(){return {results: []};}),
-        fetch('/api/ingredients/global-items/search?q=' + encodeURIComponent(q) + '&type=ingredient').then(function(r){return r.json();}).catch(function(){return {results: []};})
-      ]).then(function(results){
+      var invPromise;
+      var giPromise;
+      if (context === 'public'){
+        // Public context: no inventory; global-only public endpoint
+        invPromise = Promise.resolve({ results: [] });
+        giPromise = fetch('/api/public/global-items/search?q=' + encodeURIComponent(q) + '&type=ingredient')
+          .then(function(r){ return r.json(); })
+          .catch(function(){ return { results: [] }; });
+      } else {
+        invPromise = fetch('/api/ingredients/ingredients/search?q=' + encodeURIComponent(q))
+          .then(function(r){ return r.json(); })
+          .catch(function(){ return { results: [] }; });
+        giPromise = fetch('/api/ingredients/global-items/search?q=' + encodeURIComponent(q) + '&type=ingredient')
+          .then(function(r){ return r.json(); })
+          .catch(function(){ return { results: [] }; });
+      }
+
+      Promise.all([invPromise, giPromise]).then(function(results){
         var inv = results[0] || {results: []};
         var gi = results[1] || {results: []};
         var invResults = inv.results || [];
@@ -129,6 +144,9 @@
       if (giHiddenEl) giHiddenEl.value = '';
       doSearch();
     });
+
+    // Public context: ensure units are from seeded global list in UIs that use it
+    // Note: Unit dropdowns elsewhere already use get_global_unit_list via template context
 
     document.addEventListener('click', function(e){
       if (!listEl.contains(e.target) && !inputEl.contains(e.target)){
