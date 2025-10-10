@@ -33,20 +33,24 @@ def upgrade():
         print("   ⚠️  user table does not exist - skipping")
         return
 
-    try:
-        # Add last_login column if it doesn't exist
-        column_def = sa.Column('last_login', sa.DateTime, nullable=True)
-        if safe_add_column('user', column_def):
+    # Add last_login column if it doesn't exist
+    column_def = sa.Column('last_login', sa.DateTime, nullable=True)
+    
+    if column_exists('user', 'last_login'):
+        print("   ⚠️  last_login column already exists - migration skipped")
+    else:
+        print("   Adding last_login column...")
+        try:
+            op.add_column('user', column_def)
             print("   ✅ last_login column added successfully")
-        else:
-            print("   ⚠️  last_login column already exists - migration skipped")
+        except Exception as e:
+            if 'already exists' in str(e).lower():
+                print("   ⚠️  Column already exists - skipping")
+            else:
+                print(f"   ❌ Failed to add column: {e}")
+                raise  # Re-raise for real errors
 
-        print("✅ Migration completed")
-
-    except Exception as e:
-        print(f"❌ Migration failed: {e}")
-        # Don't re-raise to prevent transaction abort
-        print("⚠️  Continuing despite errors to prevent transaction abort")
+    print("✅ Migration completed")
 
 
 def downgrade():

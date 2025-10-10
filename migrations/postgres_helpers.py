@@ -43,7 +43,8 @@ def column_exists(table_name, column_name):
         inspector = inspect(bind)
         columns = [col['name'] for col in inspector.get_columns(table_name)]
         return column_name in columns
-    except Exception:
+    except Exception as e:
+        print(f"   ⚠️  Error checking column {column_name} in {table_name}: {e}")
         return False
 
 
@@ -155,8 +156,9 @@ def safe_add_column(table_name, column_def, verbose=True):
     except Exception as e:
         if verbose:
             print(f"   ❌ Failed to add {column_name} column: {e}")
-        # Don't re-raise to prevent transaction abortion
-        return False
+        # CRITICAL: Re-raise the exception to prevent transaction corruption
+        # PostgreSQL needs to know about the failure to handle it properly
+        raise
 
 
 def safe_drop_column(table_name, column_name, verbose=True):
