@@ -94,12 +94,7 @@
                         <div class="form-text" id="categoryHint" style="display:none;"></div>
                     </div>
                 </div>
-                <div class="col-md-6 d-flex align-items-end">
-                    <div class="form-check form-switch">
-                        <input class="form-check-input" type="checkbox" id="is_portioned_toggle" name="is_portioned" value="true" {% if recipe and recipe.portioning_data and recipe.portioning_data.get('is_portioned') %}checked{% endif %}>
-                        <label class="form-check-label" for="is_portioned_toggle">This recipe is portioned into discrete units</label>
-                    </div>
-                </div>
+                
             </div>
         </div>
     </div>
@@ -137,6 +132,15 @@
                 </div>
             </div>
 
+            <div class="row">
+                <div class="col-md-12">
+                    <div class="form-check form-switch mt-1">
+                        <input class="form-check-input" type="checkbox" id="is_portioned_toggle" name="is_portioned" value="true" {% if recipe and recipe.portioning_data and recipe.portioning_data.get('is_portioned') %}checked{% endif %}>
+                        <label class="form-check-label" for="is_portioned_toggle">This recipe is portioned into discrete units</label>
+                    </div>
+                </div>
+            </div>
+
             <!-- Portioning Section -->
             <div id="portioningSection" class="mt-3" style="display:none;">
                 <div class="row">
@@ -158,29 +162,25 @@
         </div>
     </div>
 
-    <!-- Allowed Containers Card -->
-    <div class="card mb-4">
-        <div class="card-header">
-            <h5 class="card-title mb-0">
-                <i class="fas fa-box"></i> Allowed Containers
-            </h5>
-        </div>
-        <div class="card-body">
-            <div class="form-group">
-                <label for="allowed_containers" class="form-label">Select Allowed Containers</label>
-                <select id="allowed_containers" name="allowed_containers[]" class="form-select container-select" multiple>
-                    {% for container in all_ingredients if container.type == 'container' %}
-                    <option value="{{ container.id }}" {% if recipe and recipe.allowed_containers and container.id in recipe.allowed_containers %}selected{% endif %}>
-                        {{ container.name }} ({{ container.capacity }} {{ container.capacity_unit }})
-                    </option>
-                    {% endfor %}
-                </select>
-                <small class="form-text text-muted">
-                    Hold Ctrl (Cmd on Mac) to select multiple containers.<br>
-                    <strong>Note:</strong> Container requirement is now determined during batch planning.
-                </small>
+    
+    <!-- Category Skin Host -->
+    <div class="card mb-4" id="categorySkinCard" style="display:none;">
+        <div class="card-header d-flex align-items-center justify-content-between">
+            <h5 class="card-title mb-0"><i class="fas fa-layer-group"></i> Category Skin</h5>
+            <div class="form-check form-switch">
+                <input class="form-check-input" type="checkbox" id="useSkinToggle" checked>
+                <label class="form-check-label" for="useSkinToggle">Use category skin</label>
             </div>
         </div>
+        <div class="card-body" id="categorySkinHost"></div>
+    </div>
+
+    <!-- Category Info / Derivatives -->
+    <div class="card mb-4" id="categoryInfoCard" style="display:none;">
+        <div class="card-header">
+            <h5 class="card-title mb-0"><i class="fas fa-info"></i> Info</h5>
+        </div>
+        <div class="card-body" id="categoryInfoHost"></div>
     </div>
 
     <!-- Category-specific aids are provided by the shared partial below -->
@@ -295,31 +295,6 @@
 
     {% include 'components/recipes/_category_fields.html' %}
 
-    <!-- Exports Card -->
-    <div class="card mb-4">
-        <div class="card-header d-flex align-items-center justify-content-between">
-            <h5 class="card-title mb-0">
-                <i class="fas fa-file-export"></i> Exports
-            </h5>
-        </div>
-        <div class="card-body">
-            <div class="d-flex flex-wrap gap-2">
-                <a class="btn btn-outline-secondary" href="{% if recipe %}{{ url_for('exports._soap_inci_recipe', recipe_id=recipe.id) }}{% else %}#{% endif %}">Soap INCI</a>
-                <a class="btn btn-outline-secondary" href="{% if recipe %}{{ url_for('exports._candle_label_recipe', recipe_id=recipe.id) }}{% else %}#{% endif %}">Candle Label</a>
-                <a class="btn btn-outline-secondary" href="{% if recipe %}{{ url_for('exports._baker_sheet_recipe', recipe_id=recipe.id) }}{% else %}#{% endif %}">Baker Sheet</a>
-                <a class="btn btn-outline-secondary" href="{% if recipe %}{{ url_for('exports._lotion_inci_recipe', recipe_id=recipe.id) }}{% else %}#{% endif %}">Lotion INCI</a>
-            </div>
-            {% if not recipe %}
-            <div class="form-text">Save the recipe to enable exports.</div>
-            {% if current_user.is_authenticated and not has_permission('batches.create') %}
-            <div class="alert alert-warning mt-3">
-              <i class="fas fa-lock me-1"></i> Starting batches is a premium feature. <a href="{{ url_for('billing.upgrade') }}" class="alert-link">Upgrade</a> to enable batch creation.
-            </div>
-            {% endif %}
-            {% endif %}
-        </div>
-    </div>
-
     <!-- Consumables Card -->
     <div class="card mb-4">
         <div class="card-header d-flex justify-content-between align-items-center">
@@ -375,6 +350,55 @@
         </div>
     </div>
 
+    <!-- Allowed Containers Card (moved after consumables) -->
+    <div class="card mb-4" id="allowedContainersCard">
+        <div class="card-header">
+            <h5 class="card-title mb-0">
+                <i class="fas fa-box"></i> Allowed Containers
+            </h5>
+        </div>
+        <div class="card-body">
+            <div class="form-group">
+                <label for="allowed_containers" class="form-label">Select Allowed Containers</label>
+                <select id="allowed_containers" name="allowed_containers[]" class="form-select container-select" multiple>
+                    {% for container in all_ingredients if container.type == 'container' %}
+                    <option value="{{ container.id }}" {% if recipe and recipe.allowed_containers and container.id in recipe.allowed_containers %}selected{% endif %}>
+                        {{ container.name }} ({{ container.capacity }} {{ container.capacity_unit }})
+                    </option>
+                    {% endfor %}
+                </select>
+                <small class="form-text text-muted">
+                    Hold Ctrl (Cmd on Mac) to select multiple containers.<br>
+                    <strong>Note:</strong> Container requirement is now determined during batch planning.
+                </small>
+            </div>
+        </div>
+    </div>
+
+    <!-- Exports Card -->
+    <div class="card mb-4">
+        <div class="card-header d-flex align-items-center justify-content-between">
+            <h5 class="card-title mb-0">
+                <i class="fas fa-file-export"></i> Exports
+            </h5>
+        </div>
+        <div class="card-body">
+            <div class="d-flex flex-wrap gap-2">
+                <a class="btn btn-outline-secondary" href="{% if recipe %}{{ url_for('exports._soap_inci_recipe', recipe_id=recipe.id) }}{% else %}#{% endif %}">Soap INCI</a>
+                <a class="btn btn-outline-secondary" href="{% if recipe %}{{ url_for('exports._candle_label_recipe', recipe_id=recipe.id) }}{% else %}#{% endif %}">Candle Label</a>
+                <a class="btn btn-outline-secondary" href="{% if recipe %}{{ url_for('exports._baker_sheet_recipe', recipe_id=recipe.id) }}{% else %}#{% endif %}">Baker Sheet</a>
+                <a class="btn btn-outline-secondary" href="{% if recipe %}{{ url_for('exports._lotion_inci_recipe', recipe_id=recipe.id) }}{% else %}#{% endif %}">Lotion INCI</a>
+            </div>
+            {% if not recipe %}
+            <div class="form-text">Save the recipe to enable exports.</div>
+            {% if current_user.is_authenticated and not has_permission('batches.create') %}
+            <div class="alert alert-warning mt-3">
+              <i class="fas fa-lock me-1"></i> Starting batches is a premium feature. <a href="{{ url_for('billing.upgrade') }}" class="alert-link">Upgrade</a> to enable batch creation.
+            </div>
+            {% endif %}
+            {% endif %}
+        </div>
+    </div>
     <!-- Form Actions -->
     <div class="card">
         <div class="card-body">
