@@ -1,0 +1,209 @@
+
+e7e25f2
+Assistant checkpoint: Add missing container_style column migration Assistant generated file changes: - migrations/versions/20250925_04_add_container_attributes.py: Add missing container_style column to inventory_item table, Add container_style to downgrade function, Add container_style to global_item table as well, Add container_style to global_item downgrade --- User prompt: no, i believe somone chagned it to container shape improeprly Replit-Commit-Author: Assistant Replit-Commit-Session-Id: 9a85d93c-b9ee-4b18-9a92-ebdef63d8f22
+
+All logs
+Search
+Search
+
+Live tail
+PDT
+
+Menu
+
+10.229.28.5 - - [11/Oct/2025:02:40:02 +0000] "GET /static/js/drawers/retention_drawer.js HTTP/1.1" 200 0 "https://www.batchtrack.com/developer/reference-categories" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36"
+10.229.206.196 - - [11/Oct/2025:02:40:02 +0000] "GET /static/js/core/DrawerInterceptor.js HTTP/1.1" 200 0 "https://www.batchtrack.com/developer/reference-categories" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36"
+10.229.68.132 - - [11/Oct/2025:02:40:02 +0000] "GET /static/js/core/CacheManager.js HTTP/1.1" 200 0 "https://www.batchtrack.com/static/js/core/DrawerInterceptor.js" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36"
+10.229.68.132 - - [11/Oct/2025:02:40:02 +0000] "GET /retention/api/check HTTP/1.1" 302 235 "https://www.batchtrack.com/developer/reference-categories" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36"
+10.229.28.5 - - [11/Oct/2025:02:40:02 +0000] "GET /favicon.ico HTTP/1.1" 302 235 "https://www.batchtrack.com/developer/reference-categories" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36"
+10.229.77.1 - - [11/Oct/2025:02:40:02 +0000] "GET /developer/organizations HTTP/1.1" 200 20459 "https://www.batchtrack.com/developer/reference-categories" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36"
+10.229.28.5 - - [11/Oct/2025:02:40:05 +0000] "GET /developer/organizations HTTP/1.1" 200 20283 "https://www.batchtrack.com/developer/reference-categories" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36"
+10.229.206.196 - - [11/Oct/2025:02:40:05 +0000] "GET /static/js/core/DrawerInterceptor.js HTTP/1.1" 304 0 "https://www.batchtrack.com/developer/organizations" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36"
+10.229.68.132 - - [11/Oct/2025:02:40:05 +0000] "GET /static/js/main.js HTTP/1.1" 304 0 "https://www.batchtrack.com/developer/organizations" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36"
+10.229.68.132 - - [11/Oct/2025:02:40:05 +0000] "GET /static/style.css HTTP/1.1" 304 0 "https://www.batchtrack.com/developer/organizations" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36"
+10.229.28.5 - - [11/Oct/2025:02:40:05 +0000] "GET /static/js/core/DrawerProtocol.js HTTP/1.1" 304 0 "https://www.batchtrack.com/developer/organizations" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36"
+10.229.77.1 - - [11/Oct/2025:02:40:05 +0000] "GET /static/js/inventory/inventory_adjust.js HTTP/1.1" 200 0 "https://www.batchtrack.com/developer/organizations" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36"
+10.229.28.5 - - [11/Oct/2025:02:40:05 +0000] "GET /static/js/utils/utils.js HTTP/1.1" 200 0 "https://www.batchtrack.com/developer/organizations" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36"
+10.229.206.196 - - [11/Oct/2025:02:40:05 +0000] "GET /static/js/drawers/retention_drawer.js HTTP/1.1" 304 0 "https://www.batchtrack.com/developer/organizations" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36"
+10.229.206.196 - - [11/Oct/2025:02:40:05 +0000] "GET /static/js/drawers/global_link_drawer.js HTTP/1.1" 304 0 "https://www.batchtrack.com/developer/organizations" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36"
+10.229.77.1 - - [11/Oct/2025:02:40:05 +0000] "GET /static/js/conversion/unit_converter.js HTTP/1.1" 200 0 "https://www.batchtrack.com/developer/organizations" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36"
+10.229.28.5 - - [11/Oct/2025:02:40:05 +0000] "GET /static/js/expiration_alerts.js HTTP/1.1" 200 0 "https://www.batchtrack.com/developer/organizations" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36"
+10.229.206.196 - - [11/Oct/2025:02:40:05 +0000] "GET /static/js/core/CacheManager.js HTTP/1.1" 304 0 "https://www.batchtrack.com/static/js/core/DrawerInterceptor.js" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36"
+10.229.68.132 - - [11/Oct/2025:02:40:05 +0000] "GET /retention/api/check HTTP/1.1" 302 235 "https://www.batchtrack.com/developer/organizations" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36"
+10.229.68.132 - - [11/Oct/2025:02:40:05 +0000] "GET /favicon.ico HTTP/1.1" 302 235 "https://www.batchtrack.com/developer/organizations" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36"
+10.229.28.5 - - [11/Oct/2025:02:40:05 +0000] "GET /developer/organizations HTTP/1.1" 200 20459 "https://www.batchtrack.com/developer/organizations" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36"
+10.229.77.1 - - [11/Oct/2025:02:40:05 +0000] "GET /developer/organizations HTTP/1.1" 200 20459 "https://www.batchtrack.com/developer/organizations" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36"
+DEBUG: Organization BatchTrack Organization (ID: 1)
+DEBUG: Has tier record: True
+DEBUG: Tier key: exempt
+DEBUG: Tier name: Exempt Plan
+DEBUG: Effective tier: exempt
+DEBUG: Available tiers: ['free', 'solo', 'team', 'enterprise', 'exempt']
+10.229.28.5 - - [11/Oct/2025:02:40:07 +0000] "GET /developer/organizations/1 HTTP/1.1" 200 59434 "https://www.batchtrack.com/developer/organizations" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36"
+10.229.206.196 - - [11/Oct/2025:02:40:07 +0000] "GET /static/js/core/DrawerProtocol.js HTTP/1.1" 304 0 "https://www.batchtrack.com/developer/organizations/1" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36"
+10.229.206.196 - - [11/Oct/2025:02:40:07 +0000] "GET /static/style.css HTTP/1.1" 304 0 "https://www.batchtrack.com/developer/organizations/1" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36"
+10.229.77.1 - - [11/Oct/2025:02:40:07 +0000] "GET /static/js/main.js HTTP/1.1" 304 0 "https://www.batchtrack.com/developer/organizations/1" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36"
+10.229.206.196 - - [11/Oct/2025:02:40:07 +0000] "GET /static/js/utils/utils.js HTTP/1.1" 304 0 "https://www.batchtrack.com/developer/organizations/1" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36"
+10.229.28.5 - - [11/Oct/2025:02:40:07 +0000] "GET /static/js/conversion/unit_converter.js HTTP/1.1" 304 0 "https://www.batchtrack.com/developer/organizations/1" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36"
+10.229.68.132 - - [11/Oct/2025:02:40:07 +0000] "GET /static/js/inventory/inventory_adjust.js HTTP/1.1" 304 0 "https://www.batchtrack.com/developer/organizations/1" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36"
+10.229.68.132 - - [11/Oct/2025:02:40:07 +0000] "GET /static/js/drawers/retention_drawer.js HTTP/1.1" 304 0 "https://www.batchtrack.com/developer/organizations/1" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36"
+10.229.28.5 - - [11/Oct/2025:02:40:07 +0000] "GET /static/js/expiration_alerts.js HTTP/1.1" 304 0 "https://www.batchtrack.com/developer/organizations/1" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36"
+10.229.77.1 - - [11/Oct/2025:02:40:07 +0000] "GET /static/js/drawers/global_link_drawer.js HTTP/1.1" 304 0 "https://www.batchtrack.com/developer/organizations/1" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36"
+10.229.28.5 - - [11/Oct/2025:02:40:07 +0000] "GET /static/js/core/DrawerInterceptor.js HTTP/1.1" 304 0 "https://www.batchtrack.com/developer/organizations/1" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36"
+10.229.206.196 - - [11/Oct/2025:02:40:08 +0000] "GET /static/js/core/CacheManager.js HTTP/1.1" 304 0 "https://www.batchtrack.com/static/js/core/DrawerInterceptor.js" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36"
+10.229.206.196 - - [11/Oct/2025:02:40:08 +0000] "GET /retention/api/check HTTP/1.1" 302 235 "https://www.batchtrack.com/developer/organizations/1" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36"
+10.229.77.1 - - [11/Oct/2025:02:40:08 +0000] "GET /favicon.ico HTTP/1.1" 302 235 "https://www.batchtrack.com/developer/organizations/1" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36"
+10.229.206.196 - - [11/Oct/2025:02:40:08 +0000] "GET /developer/organizations HTTP/1.1" 200 20459 "https://www.batchtrack.com/developer/organizations/1" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36"
+10.229.28.5 - - [11/Oct/2025:02:40:08 +0000] "GET /developer/organizations HTTP/1.1" 200 20459 "https://www.batchtrack.com/developer/organizations/1" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36"
+10.229.68.132 - - [11/Oct/2025:02:40:12 +0000] "GET /developer/dashboard HTTP/1.1" 200 29809 "https://www.batchtrack.com/developer/organizations/1" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36"
+10.229.68.132 - - [11/Oct/2025:02:40:12 +0000] "GET /static/style.css HTTP/1.1" 304 0 "https://www.batchtrack.com/developer/dashboard" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36"
+10.229.28.5 - - [11/Oct/2025:02:40:12 +0000] "GET /static/js/core/DrawerProtocol.js HTTP/1.1" 304 0 "https://www.batchtrack.com/developer/dashboard" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36"
+10.229.77.1 - - [11/Oct/2025:02:40:12 +0000] "GET /static/js/conversion/unit_converter.js HTTP/1.1" 304 0 "https://www.batchtrack.com/developer/dashboard" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36"
+10.229.28.5 - - [11/Oct/2025:02:40:12 +0000] "GET /static/js/core/DrawerInterceptor.js HTTP/1.1" 304 0 "https://www.batchtrack.com/developer/dashboard" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36"
+10.229.206.196 - - [11/Oct/2025:02:40:12 +0000] "GET /static/js/utils/utils.js HTTP/1.1" 304 0 "https://www.batchtrack.com/developer/dashboard" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36"
+10.229.206.196 - - [11/Oct/2025:02:40:12 +0000] "GET /static/js/inventory/inventory_adjust.js HTTP/1.1" 304 0 "https://www.batchtrack.com/developer/dashboard" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36"
+10.229.206.196 - - [11/Oct/2025:02:40:12 +0000] "GET /static/js/drawers/retention_drawer.js HTTP/1.1" 304 0 "https://www.batchtrack.com/developer/dashboard" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36"
+10.229.68.132 - - [11/Oct/2025:02:40:12 +0000] "GET /static/js/main.js HTTP/1.1" 304 0 "https://www.batchtrack.com/developer/dashboard" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36"
+10.229.77.1 - - [11/Oct/2025:02:40:12 +0000] "GET /static/js/drawers/global_link_drawer.js HTTP/1.1" 304 0 "https://www.batchtrack.com/developer/dashboard" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36"
+10.229.28.5 - - [11/Oct/2025:02:40:12 +0000] "GET /static/js/expiration_alerts.js HTTP/1.1" 304 0 "https://www.batchtrack.com/developer/dashboard" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36"
+10.229.68.132 - - [11/Oct/2025:02:40:12 +0000] "GET /static/js/core/CacheManager.js HTTP/1.1" 304 0 "https://www.batchtrack.com/static/js/core/DrawerInterceptor.js" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36"
+10.229.28.5 - - [11/Oct/2025:02:40:12 +0000] "GET /retention/api/check HTTP/1.1" 302 235 "https://www.batchtrack.com/developer/dashboard" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36"
+10.229.77.1 - - [11/Oct/2025:02:40:13 +0000] "GET /favicon.ico HTTP/1.1" 302 235 "https://www.batchtrack.com/developer/dashboard" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36"
+10.229.28.5 - - [11/Oct/2025:02:40:13 +0000] "GET /developer/organizations HTTP/1.1" 200 20459 "https://www.batchtrack.com/developer/dashboard" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36"
+10.229.206.196 - - [11/Oct/2025:02:40:13 +0000] "GET /developer/organizations HTTP/1.1" 200 20459 "https://www.batchtrack.com/developer/dashboard" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36"
+2025-10-11 02:40:13,481 [ERROR] app:875: Exception on /developer/subscription-tiers/ [GET]
+Traceback (most recent call last):
+  File "/opt/render/project/src/.venv/lib/python3.13/site-packages/sqlalchemy/engine/base.py", line 1964, in _exec_single_context
+    self.dialect.do_execute(
+    ~~~~~~~~~~~~~~~~~~~~~~~^
+        cursor, str_statement, effective_parameters, context
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "/opt/render/project/src/.venv/lib/python3.13/site-packages/sqlalchemy/engine/default.py", line 945, in do_execute
+    cursor.execute(statement, parameters)
+    ~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^
+psycopg2.errors.UndefinedTable: relation "tier_allowed_addon" does not exist
+LINE 2: FROM addon, tier_allowed_addon 
+                    ^
+The above exception was the direct cause of the following exception:
+Traceback (most recent call last):
+  File "/opt/render/project/src/.venv/lib/python3.13/site-packages/flask/app.py", line 1511, in wsgi_app
+    response = self.full_dispatch_request()
+  File "/opt/render/project/src/.venv/lib/python3.13/site-packages/flask/app.py", line 919, in full_dispatch_request
+    rv = self.handle_user_exception(e)
+  File "/opt/render/project/src/.venv/lib/python3.13/site-packages/flask/app.py", line 917, in full_dispatch_request
+    rv = self.dispatch_request()
+  File "/opt/render/project/src/.venv/lib/python3.13/site-packages/flask/app.py", line 902, in dispatch_request
+    return self.ensure_sync(self.view_functions[rule.endpoint])(**view_args)  # type: ignore[no-any-return]
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^
+  File "/opt/render/project/src/.venv/lib/python3.13/site-packages/flask_login/utils.py", line 290, in decorated_view
+    return current_app.ensure_sync(func)(*args, **kwargs)
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^
+  File "/opt/render/project/src/app/utils/permissions.py", line 70, in decorated_function
+    return f(*args, **named_args)
+  File "/opt/render/project/src/app/blueprints/developer/subscription_tiers.py", line 89, in manage_tiers
+    'allowed_addon_ids': [a.id for a in getattr(tier, 'allowed_addons', [])],
+                                        ~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/render/project/src/.venv/lib/python3.13/site-packages/sqlalchemy/orm/attributes.py", line 566, in __get__
+    return self.impl.get(state, dict_)  # type: ignore[no-any-return]
+           ~~~~~~~~~~~~~^^^^^^^^^^^^^^
+  File "/opt/render/project/src/.venv/lib/python3.13/site-packages/sqlalchemy/orm/attributes.py", line 1086, in get
+    value = self._fire_loader_callables(state, key, passive)
+  File "/opt/render/project/src/.venv/lib/python3.13/site-packages/sqlalchemy/orm/attributes.py", line 1121, in _fire_loader_callables
+    return self.callable_(state, passive)
+           ~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^
+  File "/opt/render/project/src/.venv/lib/python3.13/site-packages/sqlalchemy/orm/strategies.py", line 978, in _load_for_state
+    return self._emit_lazyload(
+           ~~~~~~~~~~~~~~~~~~~^
+        session,
+        ^^^^^^^^
+    ...<7 lines>...
+        execution_options,
+        ^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "/opt/render/project/src/.venv/lib/python3.13/site-packages/sqlalchemy/orm/strategies.py", line 1141, in _emit_lazyload
+    result = session.execute(
+        stmt, params, execution_options=execution_options
+    )
+  File "/opt/render/project/src/.venv/lib/python3.13/site-packages/sqlalchemy/orm/session.py", line 2365, in execute
+    return self._execute_internal(
+           ~~~~~~~~~~~~~~~~~~~~~~^
+        statement,
+        ^^^^^^^^^^
+    ...<4 lines>...
+        _add_event=_add_event,
+        ^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "/opt/render/project/src/.venv/lib/python3.13/site-packages/sqlalchemy/orm/session.py", line 2251, in _execute_internal
+    result: Result[Any] = compile_state_cls.orm_execute_statement(
+                          ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^
+        self,
+        ^^^^^
+    ...<4 lines>...
+        conn,
+        ^^^^^
+    )
+    ^
+  File "/opt/render/project/src/.venv/lib/python3.13/site-packages/sqlalchemy/orm/context.py", line 306, in orm_execute_statement
+    result = conn.execute(
+        statement, params or {}, execution_options=execution_options
+    )
+  File "/opt/render/project/src/.venv/lib/python3.13/site-packages/sqlalchemy/engine/base.py", line 1416, in execute
+    return meth(
+        self,
+        distilled_parameters,
+        execution_options or NO_OPTIONS,
+    )
+  File "/opt/render/project/src/.venv/lib/python3.13/site-packages/sqlalchemy/sql/elements.py", line 523, in _execute_on_connection
+    return connection._execute_clauseelement(
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^
+        self, distilled_params, execution_options
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "/opt/render/project/src/.venv/lib/python3.13/site-packages/sqlalchemy/engine/base.py", line 1638, in _execute_clauseelement
+    ret = self._execute_context(
+        dialect,
+    ...<8 lines>...
+        cache_hit=cache_hit,
+    )
+  File "/opt/render/project/src/.venv/lib/python3.13/site-packages/sqlalchemy/engine/base.py", line 1843, in _execute_context
+    return self._exec_single_context(
+           ~~~~~~~~~~~~~~~~~~~~~~~~~^
+        dialect, context, statement, parameters
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "/opt/render/project/src/.venv/lib/python3.13/site-packages/sqlalchemy/engine/base.py", line 1983, in _exec_single_context
+    self._handle_dbapi_exception(
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~^
+        e, str_statement, effective_parameters, cursor, context
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "/opt/render/project/src/.venv/lib/python3.13/site-packages/sqlalchemy/engine/base.py", line 2352, in _handle_dbapi_exception
+    raise sqlalchemy_exception.with_traceback(exc_info[2]) from e
+  File "/opt/render/project/src/.venv/lib/python3.13/site-packages/sqlalchemy/engine/base.py", line 1964, in _exec_single_context
+    self.dialect.do_execute(
+    ~~~~~~~~~~~~~~~~~~~~~~~^
+        cursor, str_statement, effective_parameters, context
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "/opt/render/project/src/.venv/lib/python3.13/site-packages/sqlalchemy/engine/default.py", line 945, in do_execute
+    cursor.execute(statement, parameters)
+    ~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^
+sqlalchemy.exc.ProgrammingError: (psycopg2.errors.UndefinedTable) relation "tier_allowed_addon" does not exist
+LINE 2: FROM addon, tier_allowed_addon 
+                    ^
+[SQL: SELECT addon.id AS addon_id, addon.key AS addon_key, addon.name AS addon_name, addon.description AS addon_description, addon.permission_name AS addon_permission_name, addon.function_key AS addon_function_key, addon.retention_extension_days AS addon_retention_extension_days, addon.billing_type AS addon_billing_type, addon.stripe_lookup_key AS addon_stripe_lookup_key, addon.is_active AS addon_is_active, addon.created_at AS addon_created_at, addon.updated_at AS addon_updated_at 
+FROM addon, tier_allowed_addon 
+WHERE %(param_1)s = tier_allowed_addon.tier_id AND addon.id = tier_allowed_addon.addon_id]
+[parameters: {'param_1': 14}]
+(Background on this error at: https://sqlalche.me/e/20/f405)
+10.229.206.196 - - [11/Oct/2025:02:40:13 +0000] "GET /developer/subscription-tiers/ HTTP/1.1" 500 265 "https://www.batchtrack.com/developer/dashboard" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36"
+10.229.206.196 - - [11/Oct/2025:02:40:13 +0000] "GET /favicon.ico HTTP/1.1" 302 235 "https://www.batchtrack.com/developer/subscription-tiers/" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36"
+10.229.68.132 - - [11/Oct/2025:02:40:13 +0000] "GET /developer/organizations HTTP/1.1" 200 20459 "https://www.batchtrack.com/developer/subscription-tiers/" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36"
