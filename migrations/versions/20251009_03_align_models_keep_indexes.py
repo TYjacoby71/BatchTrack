@@ -187,8 +187,8 @@ def upgrade():
                 else:
                     print(f"   ✅ organization_id already exists in {table}")
 
-        # Now create indexes
-        for table, indexes in [
+        # Now create indexes - but handle the organization_id column addition failure gracefully
+        consumable_index_specs = [
             ('batch_consumable', [
                 ('ix_batch_consumable_batch_id', 'batch_id'),
                 ('ix_batch_consumable_inventory_item_id', 'inventory_item_id'),
@@ -199,8 +199,11 @@ def upgrade():
                 ('ix_extra_batch_consumable_inventory_item_id', 'inventory_item_id'),
                 ('ix_extra_batch_consumable_organization_id', 'organization_id'),
             ]),
-        ]:
+        ]
+        
+        for table, indexes in consumable_index_specs:
             if table_exists(table):
+                print(f"   Creating indexes for {table}...")
                 for ix, col in indexes:
                     # Only create index if the column actually exists
                     if column_exists(table, col):

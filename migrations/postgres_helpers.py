@@ -201,19 +201,34 @@ def safe_create_index(index_name, table_name, columns, unique=False, verbose=Tru
     Returns:
         bool: True if index was created, False if it already existed
     """
-    if not index_exists(table_name, index_name):
-        try:
-            op.create_index(index_name, table_name, columns, unique=unique)
-            if verbose:
-                print(f"✅ Created index {index_name} on {table_name}")
-            return True
-        except Exception as e:
-            if verbose:
-                print(f"⚠️  Error creating index {index_name}: {e}")
-            return False
-    else:
+    # First check if table exists
+    if not table_exists(table_name):
         if verbose:
-            print(f"Index {index_name} already exists")
+            print(f"   ⚠️  Table {table_name} doesn't exist - skipping index {index_name}")
+        return False
+        
+    # Check if all columns exist
+    for col in columns:
+        if not column_exists(table_name, col):
+            if verbose:
+                print(f"   ⚠️  Column {col} doesn't exist in {table_name} - skipping index {index_name}")
+            return False
+    
+    # Check if index already exists
+    if index_exists(table_name, index_name):
+        if verbose:
+            print(f"   ✅ Index {index_name} already exists")
+        return False
+        
+    # Try to create the index
+    try:
+        op.create_index(index_name, table_name, columns, unique=unique)
+        if verbose:
+            print(f"   ✅ Created index {index_name} on {table_name}")
+        return True
+    except Exception as e:
+        if verbose:
+            print(f"   ⚠️  Error creating index {index_name}: {e}")
         return False
 
 
