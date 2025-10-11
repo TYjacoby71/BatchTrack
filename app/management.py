@@ -125,6 +125,14 @@ def init_production_command():
         except Exception as e:
             print(f"⚠️  Product category seeding issue: {e}")
 
+        # Seed global inventory library (ingredients, containers, packaging, consumables)
+        try:
+            from scripts.seed_global_inventory_library import seed_global_inventory_library
+            seed_global_inventory_library()
+            print("✅ Global inventory library seeded")
+        except Exception as e:
+            print(f"⚠️  Global inventory library seeding issue: {e}")
+
         print('✅ Production seeding complete!')
         print('🔒 Login: admin/admin (CHANGE IMMEDIATELY)')
         print('📝 Note: This command can be run multiple times safely')
