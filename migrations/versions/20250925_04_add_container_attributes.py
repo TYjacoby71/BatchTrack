@@ -53,6 +53,7 @@ def upgrade():
     safe_add_column('inventory_item', sa.Column('container_color', sa.String(32), nullable=True))
     safe_add_column('inventory_item', sa.Column('container_closure_type', sa.String(32), nullable=True))
     safe_add_column('inventory_item', sa.Column('container_shape', sa.String(32), nullable=True))
+    safe_add_column('inventory_item', sa.Column('container_style', sa.String(64), nullable=True))
 
     # Add container attributes to global_item table using safe operations
     safe_add_column('global_item', sa.Column('container_material', sa.String(64), nullable=True))
@@ -62,10 +63,12 @@ def upgrade():
     safe_add_column('global_item', sa.Column('container_color', sa.String(32), nullable=True))
     safe_add_column('global_item', sa.Column('container_closure_type', sa.String(32), nullable=True))
     safe_add_column('global_item', sa.Column('container_shape', sa.String(32), nullable=True))
+    safe_add_column('global_item', sa.Column('container_style', sa.String(64), nullable=True))
 
 
 def downgrade():
     # Remove container attributes from both tables using safe operations
+    safe_drop_column('inventory_item', 'container_style')
     safe_drop_column('inventory_item', 'container_shape')
     safe_drop_column('inventory_item', 'container_closure_type')
     safe_drop_column('inventory_item', 'container_color')
@@ -74,6 +77,7 @@ def downgrade():
     safe_drop_column('inventory_item', 'container_volume')
     safe_drop_column('inventory_item', 'container_material')
 
+    safe_drop_column('global_item', 'container_style')
     safe_drop_column('global_item', 'container_shape')
     safe_drop_column('global_item', 'container_closure_type')
     safe_drop_column('global_item', 'container_color')
