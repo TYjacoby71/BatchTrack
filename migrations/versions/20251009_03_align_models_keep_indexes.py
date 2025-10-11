@@ -19,9 +19,9 @@ import sys
 import os
 sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
 from postgres_helpers import (
-    table_exists, 
-    column_exists, 
-    index_exists, 
+    table_exists,
+    column_exists,
+    index_exists,
     safe_create_index,
     safe_add_column
 )
@@ -34,7 +34,7 @@ depends_on = None
 
 def upgrade():
     print("=== Starting model alignment with PostgreSQL safety ===")
-    
+
     try:
         # 1) Org-scoping indexes
         print("   Creating org-scoping indexes...")
@@ -79,7 +79,7 @@ def upgrade():
                 'cosm_emulsifier_pct': ("((category_data ->> 'cosm_emulsifier_pct'))::numeric", sa.Numeric()),
                 'cosm_preservative_pct': ("((category_data ->> 'cosm_preservative_pct'))::numeric", sa.Numeric()),
             }
-            
+
             for name, (expr, col_def) in computed_cols.items():
                 if not column_exists('recipe', name):
                     try:
@@ -138,7 +138,7 @@ def upgrade():
                 'cosm_emulsifier_pct': ("(((plan_snapshot -> 'category_extension') ->> 'cosm_emulsifier_pct'))::numeric", sa.Numeric()),
                 'cosm_preservative_pct': ("(((plan_snapshot -> 'category_extension') ->> 'cosm_preservative_pct'))::numeric", sa.Numeric()),
             }
-            
+
             for name, (expr, col_def) in batch_computed_cols.items():
                 if not column_exists('batch', name):
                     try:
@@ -171,8 +171,23 @@ def upgrade():
             for ix, col in batch_indexes:
                 safe_create_index(ix, 'batch', [col], verbose=True)
 
-        # 6) BatchConsumable & ExtraBatchConsumable indexes
-        print("   Creating consumable indexes...")
+        # 6) BatchConsumable & ExtraBatchConsumable - add missing organization_id columns and indexes
+        print("   Processing consumable tables...")
+        consumable_tables = ['batch_consumable', 'extra_batch_consumable']
+
+        for table in consumable_tables:
+            if table_exists(table):
+                # Add organization_id column if missing
+                if not column_exists(table, 'organization_id'):
+                    try:
+                        safe_add_column(table, sa.Column('organization_id', sa.Integer(), nullable=True), verbose=True)
+                        print(f"   ✅ Added organization_id to {table}")
+                    except Exception as e:
+                        print(f"   ⚠️  Failed to add organization_id to {table}: {e}")
+                else:
+                    print(f"   ✅ organization_id already exists in {table}")
+
+        # Now create indexes
         for table, indexes in [
             ('batch_consumable', [
                 ('ix_batch_consumable_batch_id', 'batch_id'),
@@ -185,8 +200,15 @@ def upgrade():
                 ('ix_extra_batch_consumable_organization_id', 'organization_id'),
             ]),
         ]:
-            for ix, col in indexes:
-                safe_create_index(ix, table, [col], verbose=True)
+            if table_exists(table):
+                for ix, col in indexes:
+                    # Only create index if the column actually exists
+                    if column_exists(table, col):
+                        safe_create_index(ix, table, [col], verbose=True)
+                    else:
+                        print(f"   ⚠️  Column {col} doesn't exist in {table} - skipping index {ix}")
+            else:
+                print(f"   ⚠️  Table {table} doesn't exist - skipping indexes")
 
         # 7) Global Item alias table and indexes
         print("   Processing global item alias table...")
@@ -201,7 +223,7 @@ def upgrade():
                 print("   ✅ Created global_item_alias table")
             except Exception as e:
                 print(f"   ⚠️  Failed to create global_item_alias table: {e}")
-                
+
         if table_exists('global_item_alias'):
             safe_create_index('ix_global_item_alias_alias', 'global_item_alias', ['alias'], verbose=True)
             safe_create_index('ix_global_item_alias_global_item_id', 'global_item_alias', ['global_item_id'], verbose=True)
@@ -222,7 +244,7 @@ def upgrade():
                 print(f"   ⚠️  Global item aka_names GIN index creation failed: {e}")
 
         print("✅ Model alignment completed successfully")
-    
+
     except Exception as e:
         print(f"❌ Migration failed with error: {e}")
         # Re-raise the exception to ensure Alembic knows the migration failed
