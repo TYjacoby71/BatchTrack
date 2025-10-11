@@ -3,100 +3,47 @@ Align naming for extras and ensure consumable tables and indexes exist
 
 Revision ID: 20250922_01_align_extras
 Revises: d953779b55a3
-Create Date: 2025-09-22
+Create Date: 2025-09-22 10:00:00.000000
 
-This migration is intentionally conservative and idempotent:
-- Verifies presence of batch_consumable and extra_batch_consumable tables, creating them if missing
-- Adds helpful indexes on (batch_id), (inventory_item_id), and (organization_id) if missing
-
-Note: No destructive renames are performed here. Update as needed.
 """
-
 from alembic import op
 import sqlalchemy as sa
 
+# Import the PostgreSQL helpers
+import sys
+import os
+sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
+from postgres_helpers import table_exists, index_exists, column_exists, safe_create_index
 
-# revision identifiers, used by Alembic.
+
 revision = '20250922_01_align_extras'
 down_revision = 'd953779b55a3'
 branch_labels = None
 depends_on = None
 
 
-def _has_table(inspector, table_name: str) -> bool:
-    try:
-        return table_name in inspector.get_table_names()  # type: ignore
-    except Exception:
-        return False
-
-
-def _has_index(inspector, table_name: str, index_name: str) -> bool:
-    try:
-        indexes = inspector.get_indexes(table_name)  # type: ignore
-        return any(idx.get('name') == index_name for idx in indexes)
-    except Exception:
-        return False
-
-
 def upgrade():
-    bind = op.get_bind()
-    inspector = sa.inspect(bind)
+    """Align naming for consumable tables and add missing indexes"""
 
-    # Ensure batch_consumable table exists (if prior migration didn't run)
-    if not _has_table(inspector, 'batch_consumable'):
-        op.create_table(
-            'batch_consumable',
-            sa.Column('id', sa.Integer(), primary_key=True, nullable=False),
-            sa.Column('batch_id', sa.Integer(), sa.ForeignKey('batch.id'), nullable=False),
-            sa.Column('inventory_item_id', sa.Integer(), sa.ForeignKey('inventory_item.id'), nullable=False),
-            sa.Column('quantity_used', sa.Float(), nullable=False),
-            sa.Column('unit', sa.String(length=32), nullable=False),
-            sa.Column('cost_per_unit', sa.Float(), nullable=True),
-            sa.Column('total_cost', sa.Float(), nullable=True),
-            sa.Column('organization_id', sa.Integer(), sa.ForeignKey('organization.id'), nullable=True),
-        )
+    # Define indexes that should exist (only if the column exists)
+    indexes_to_create = [
+        ('batch_consumable', 'ix_batch_consumable_batch_id', 'batch_id'),
+        ('batch_consumable', 'ix_batch_consumable_inventory_item_id', 'inventory_item_id'),
+        ('batch_consumable', 'ix_batch_consumable_organization_id', 'organization_id'),
+        ('extra_batch_consumable', 'ix_extra_batch_consumable_batch_id', 'batch_id'),
+        ('extra_batch_consumable', 'ix_extra_batch_consumable_inventory_item_id', 'inventory_item_id'),
+        ('extra_batch_consumable', 'ix_extra_batch_consumable_organization_id', 'organization_id'),
+    ]
 
-    # Ensure extra_batch_consumable table exists
-    if not _has_table(inspector, 'extra_batch_consumable'):
-        op.create_table(
-            'extra_batch_consumable',
-            sa.Column('id', sa.Integer(), primary_key=True, nullable=False),
-            sa.Column('batch_id', sa.Integer(), sa.ForeignKey('batch.id'), nullable=False),
-            sa.Column('inventory_item_id', sa.Integer(), sa.ForeignKey('inventory_item.id'), nullable=False),
-            sa.Column('quantity_used', sa.Float(), nullable=False),
-            sa.Column('unit', sa.String(length=32), nullable=False),
-            sa.Column('cost_per_unit', sa.Float(), nullable=True),
-            sa.Column('total_cost', sa.Float(), nullable=True),
-            sa.Column('reason', sa.String(length=20), nullable=False, server_default='extra_use'),
-            sa.Column('organization_id', sa.Integer(), sa.ForeignKey('organization.id'), nullable=True),
-        )
-
-    # Refresh inspector after potential table creation
-    inspector = sa.inspect(bind)
-
-    # Add helpful indexes if missing
-    idx_defs = {
-        'batch_consumable': [
-            ('ix_batch_consumable_batch_id', ['batch_id']),
-            ('ix_batch_consumable_inventory_item_id', ['inventory_item_id']),
-            ('ix_batch_consumable_organization_id', ['organization_id']),
-        ],
-        'extra_batch_consumable': [
-            ('ix_extra_batch_consumable_batch_id', ['batch_id']),
-            ('ix_extra_batch_consumable_inventory_item_id', ['inventory_item_id']),
-            ('ix_extra_batch_consumable_organization_id', ['organization_id']),
-        ],
-    }
-
-    for table, index_list in idx_defs.items():
-        if _has_table(inspector, table):
-            for index_name, cols in index_list:
-                if not _has_index(inspector, table, index_name):
-                    try:
-                        op.create_index(index_name, table, cols)
-                        print(f"   ✅ Created index {index_name} on {table}")
-                    except Exception as e:
-                        print(f"   ⚠️  Could not create index {index_name} on {table}: {e}")
+    # Create missing indexes only if both table and column exist
+    for table_name, index_name, column_name in indexes_to_create:
+        if table_exists(table_name):
+            if column_exists(table_name, column_name):
+                safe_create_index(index_name, table_name, [column_name], verbose=True)
+            else:
+                print(f"   ⚠️  Column {column_name} does not exist in {table_name} - skipping index {index_name}")
+        else:
+            print(f"   ⚠️  Table {table_name} does not exist - skipping index {index_name}")
 
 
 def downgrade():
@@ -125,4 +72,3 @@ def downgrade():
     #     op.drop_table('extra_batch_consumable')
     # if _has_table(sa.inspect(bind), 'batch_consumable'):
     #     op.drop_table('batch_consumable')
-
