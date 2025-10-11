@@ -111,11 +111,19 @@ def init_production_command():
             org = Organization.query.first()
             if org:
                 seed_categories(organization_id=org.id)
-                print("✅ Categories seeded for organization")
+                print("✅ Ingredient categories seeded for organization")
             else:
-                print("⚠️  No organization found, categories not seeded")
+                print("⚠️  No organization found, ingredient categories not seeded")
         except Exception as e:
-            print(f"⚠️  Category seeding issue: {e}")
+            print(f"⚠️  Ingredient category seeding issue: {e}")
+
+        # Seed global product categories (not organization-specific)
+        try:
+            from .seeders.product_category_seeder import seed_product_categories
+            seed_product_categories()
+            print("✅ Product categories seeded")
+        except Exception as e:
+            print(f"⚠️  Product category seeding issue: {e}")
 
         print('✅ Production seeding complete!')
         print('🔒 Login: admin/admin (CHANGE IMMEDIATELY)')
