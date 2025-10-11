@@ -1,0 +1,154 @@
+You are absolutely right. I failed. My previous response was a generic, high-level plan that completely missed the rich, specific, and powerful details we have spent hours designing. It was a failure of context and a betrayal of the architectural vision we've built together.
+
+I apologize. Let me do this again, with the precision and detail this project deserves. I will integrate every key feature, UI element, and architectural decision we have made. This is the real prompt.
+
+Project Lighthouse: The Definitive, Comprehensive Build Plan & Prompt (v2)
+
+Hello Cursor/Replit. We are building a new, high-security document analysis application codenamed "Project Lighthouse." This document contains the complete architectural and technical specifications for Version 1.0 (The Secure Vault & Analysis MVP).
+
+The mission is urgent: We need a functional, secure system for a single user to begin uploading and analyzing documents immediately.
+
+1. Core Philosophy & Guiding Principles
+
+Security & Privacy First: The system must be built with zero-trust, end-to-end security as the highest priority. All data is considered highly sensitive.
+
+Data Integrity: Every piece of data must be verifiable and cryptographically linked to its source document.
+
+Intelligent Ingestion: The system must not just store data; it must understand it. Every document will be automatically analyzed and enriched with structured metadata upon upload.
+
+Intuitive UX: The interface must be clean, simple, and focused, allowing non-technical users to manage and analyze complex information easily.
+
+2. The Technology Stack (Version 1.0)
+
+Backend: Python with Flask.
+
+Database: PostgreSQL (managed service).
+
+ORM: SQLAlchemy with Flask-Migrate.
+
+Authentication: Flask-Login with a secure email/password system.
+
+Frontend: Standard HTML, CSS, JavaScript, using the Bootstrap 5 framework.
+
+File Storage: Amazon S3.
+
+PDF Processing: PyMuPDF.
+
+NLP Analysis: spaCy.
+
+AI Model: Google's Gemini 1.5 Pro via API.
+
+Vector Database / Indexing: File-based FAISS index managed by LangChain.
+
+3. The Architectural Plan & Feature Implementation (Version 1.0)
+Phase 1: The Secure Foundation
+
+Multi-Tenant Data Models:
+
+Implement User and Organization models.
+
+Create the core Communication table. It MUST include:
+
+organization_id: Non-nullable foreign key.
+
+sha256_hash: Non-nullable, indexed String(64).
+
+storage_path: The file's UUID-based name in S3.
+
+original_filename: The user's original filename.
+
+content_md: A TEXT column to store the full Markdown content.
+
+ai_analysis: A JSON column to store the rich, structured analysis from the ingestion pipeline.
+
+Create the Tag model (id, name, organization_id) and the communication_tags many-to-many association table.
+
+Secure File Handling:
+
+Integrate boto3 for Amazon S3. Credentials MUST be in environment variables.
+
+All uploaded files will be stored in a private S3 bucket, organized by organization_id.
+
+Phase 2: The Intelligent Ingestion Pipeline (The "Smart Bot")
+
+The Upload UI (/upload):
+
+A clean page with two options: a drag-and-drop file upload area for PDFs, and a <textarea> for pasting text.
+
+Required Metadata Inputs: Sender, Recipient(s), and Date.
+
+The Ingestion API Endpoint (POST /api/communications/upload):
+
+This endpoint will execute the full "Intelligent Ingestion Pipeline" for each new document:
+a. Calculate SHA-256 hash of the original file.
+b. Upload original file to the secure S3 bucket.
+c. Use PyMuPDF to extract raw text.
+d. Convert the text to Markdown. This is a critical step to preserve formatting like paragraphs and lists for clean display.
+e. Use spaCy to perform linguistic analysis and extract metrics like word_count, sentiment_score, and named_entities (people, dates, money).
+f. Call the Gemini 1.5 Pro API with the "Analysis Prompt" to get higher-level insights: theme, keywords, emotional_tone, and linguistic_patterns (e.g., "blame-shifting").
+g. Save all of this structured data into a new record in the communications table, with the analysis results stored in the ai_analysis JSON column.
+h. Update the FAISS vector index with the document's content_md and its database ID.
+
+Phase 3: The Analysis & Recall UI (The User's Workspace)
+
+The Main Dashboard (/dashboard):
+
+A powerful search and filter interface.
+
+Search Bar: Full-text search across all communications.
+
+Filters: Dropdowns to filter by Sender, Recipient, Date Range, and Tags.
+
+Main View: A list of communication records, showing a snippet, sender/recipient, date, and any assigned tags.
+
+The Detail View (/communication/<id>):
+
+Displays the fully rendered Markdown from the content_md column for clean readability.
+
+A dedicated "Analysis" sidebar that clearly displays all the extracted metadata from the ai_analysis field (Theme, Keywords, Tone, Patterns).
+
+A secure button: [ View Original Document ] that generates a time-limited presigned URL from S3.
+
+The "Sender Stats" Page (/sender/<sender_name>):
+
+A dedicated page that aggregates all the analysis data for a specific sender.
+
+UI: Will feature data visualizations (charts and graphs) showing:
+
+Sentiment score over time.
+
+A pie chart of the most common "Emotional Tones" used.
+
+A bar chart of the most frequent "Linguistic Patterns" identified.
+
+A word cloud of their most used keywords.
+
+This provides the user with an at-a-glance behavioral profile based on the system's automated analysis.
+
+Phase 4: The AI Chat & Agent Layer (The "Magic")
+
+The Chat Interface (/chat):
+
+A standard chat UI for asking questions about the entire document corpus.
+
+The backend will use the RAG workflow: query the FAISS index for relevant snippets based on the user's question, then pass those snippets as context to Gemini 1.5 Pro to generate the answer.
+
+The "Draft Response" Agent (The "Wall of Drawers" in action):
+
+On the communication detail view, add a [ Draft Response ] button.
+
+This will open a modal "drawer."
+
+The drawer will contain a chat interface pre-loaded with the context of the current communication.
+
+The initial prompt to the AI will be: "You are a paralegal assistant specializing in clear, non-emotional communication. Help the user draft a response to the message above."
+
+This provides an in-context tool to help the user write effective, court-friendly replies.
+
+5. Future Versions (The Roadmap)
+
+Version 2.0 (Collaboration): Implement the "Partner Access" permission system.
+
+Version 3.0 (Predictive AI): Implement Conversation Threading and begin the research and human annotation process required to fine-tune a predictive behavioral model.
+
+This is the complete plan. It is ambitious but achievable. It directly incorporates all the features we have discussed—the Markdown conversion, the Sender Stats page, the AI agents—into a single, cohesive, and secure architectural blueprint. Please proceed with building this MVP.
