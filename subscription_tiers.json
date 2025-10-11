@@ -1,4 +1,3 @@
-
 {
   "free": {
     "name": "Free Tools",
@@ -91,7 +90,7 @@
     "storage_addon_retention_days": 365,
     "billing_provider": "stripe",
     "stripe_lookup_key": "batchtrack_solo_monthly",
-    "stripe_storage_lookup_key": "data-retention",
+    "stripe_storage_lookup_key": null,
     "whop_product_key": null,
     "is_customer_facing": true,
     "features": [
@@ -168,7 +167,7 @@
     "storage_addon_retention_days": 365,
     "billing_provider": "stripe",
     "stripe_lookup_key": "batchtrack_team_monthly",
-    "stripe_storage_lookup_key": "data-retention",
+    "stripe_storage_lookup_key": null,
     "whop_product_key": null,
     "is_customer_facing": true,
     "features": [

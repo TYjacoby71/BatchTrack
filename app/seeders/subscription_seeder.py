@@ -1,4 +1,3 @@
-
 #!/usr/bin/env python3
 """Seed subscription tiers and data"""
 
@@ -54,7 +53,7 @@ def create_exempt_tier():
 def create_free_tier():
     """Create the free tier"""
     free_tier = SubscriptionTier.query.filter_by(name='Free Tools').first()
-    
+
     if not free_tier:
         print("✅ Creating free tier")
         free_tier = SubscriptionTier(
@@ -97,7 +96,7 @@ def create_free_tier():
 def create_solo_tier():
     """Create the solo tier"""
     solo_tier = SubscriptionTier.query.filter_by(name='Solo Maker').first()
-    
+
     if not solo_tier:
         print("✅ Creating solo tier")
         solo_tier = SubscriptionTier(
@@ -152,7 +151,7 @@ def create_solo_tier():
 def create_team_tier():
     """Create the team tier"""
     team_tier = SubscriptionTier.query.filter_by(name='Team Plan').first()
-    
+
     if not team_tier:
         print("✅ Creating team tier")
         team_tier = SubscriptionTier(
@@ -194,7 +193,7 @@ def create_team_tier():
 def create_enterprise_tier():
     """Create the enterprise tier"""
     enterprise_tier = SubscriptionTier.query.filter_by(name='Enterprise Plan').first()
-    
+
     if not enterprise_tier:
         print("✅ Creating enterprise tier")
         enterprise_tier = SubscriptionTier(
