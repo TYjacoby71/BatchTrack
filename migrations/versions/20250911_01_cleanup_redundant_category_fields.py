@@ -1,4 +1,3 @@
-
 """cleanup redundant category fields
 
 Revision ID: 20250911_01
@@ -41,13 +40,13 @@ def upgrade():
     Remove reference_category_name from global_item since it's redundant with the category relationship.
     """
     print("🧹 Cleaning up redundant category fields...")
-    
+
     # 1) Update global_item.reference_category to use category.name where needed
     if table_exists('global_item') and table_exists('category'):
         print("   Updating global_item.reference_category from category relationships...")
         try:
             bind = op.get_bind()
-            
+
             # Update reference_category to match the category name for items that have ingredient_category_id
             bind.execute(text("""
                 UPDATE global_item 
@@ -58,10 +57,10 @@ def upgrade():
                      OR global_item.reference_category != ingredient_category.name)
             """))
             print("   ✅ Updated reference_category from category relationships")
-            
+
         except Exception as e:
             print(f"   ⚠️  Could not update reference_category: {e}")
-    
+
     # 2) Drop reference_category_name from ingredient_category table if it exists
     if table_exists('ingredient_category') and column_exists('ingredient_category', 'reference_category_name'):
         print("   Removing redundant reference_category_name from ingredient_category table...")
@@ -71,13 +70,13 @@ def upgrade():
             print("   ✅ Removed reference_category_name from ingredient_category table")
         except Exception as e:
             print(f"   ⚠️  Could not drop reference_category_name from ingredient_category: {e}")
-    
+
     # 3) Ensure all global items have proper reference_category values
     if table_exists('global_item'):
         print("   Ensuring all global items have reference_category values...")
         try:
             bind = op.get_bind()
-            
+
             # For items without reference_category, set it to a default based on their category
             bind.execute(text("""
                 UPDATE global_item 
@@ -88,10 +87,10 @@ def upgrade():
                 WHERE reference_category IS NULL
             """))
             print("   ✅ Set default reference_category values")
-            
+
         except Exception as e:
             print(f"   ⚠️  Could not set default reference_category values: {e}")
-    
+
     print("✅ Category field cleanup completed")
 
 
@@ -100,14 +99,14 @@ def downgrade():
     Restore the reference_category_name field to category table
     """
     print("🔄 Restoring reference_category_name field...")
-    
+
     # Add back reference_category_name to ingredient_category table
     if table_exists('ingredient_category') and not column_exists('ingredient_category', 'reference_category_name'):
         print("   Adding reference_category_name back to ingredient_category table...")
         try:
             with op.batch_alter_table('ingredient_category', schema=None) as batch_op:
                 batch_op.add_column(sa.Column('reference_category_name', sa.String(length=255), nullable=True))
-            
+
             # Populate it with the category name
             bind = op.get_bind()
             bind.execute(text("""
@@ -116,8 +115,8 @@ def downgrade():
                 WHERE reference_category_name IS NULL
             """))
             print("   ✅ Restored reference_category_name to ingredient_category table")
-            
+
         except Exception as e:
             print(f"   ⚠️  Could not restore reference_category_name: {e}")
-    
+
     print("✅ Downgrade completed")
