@@ -247,20 +247,39 @@ def upgrade():
             create_index_if_missing(bind, 'global_item_alias', 'ix_global_item_alias_global_item_id', ['global_item_id'])
             try:
                 bind.execute(text("CREATE INDEX IF NOT EXISTS ix_global_item_alias_tsv ON global_item_alias USING GIN (to_tsvector('simple', alias))"))
+                print("   ✅ Created global_item_alias GIN index")
             except Exception as e:
                 print(f"   ⚠️  Global item alias GIN index creation failed: {e}")
+                # Rollback the transaction and start fresh
+                try:
+                    bind.rollback()
+                    print("   🔄 Transaction rolled back, continuing...")
+                except Exception:
+                    pass
 
-        # 8) GlobalItem aka_names JSON/GIN
+        # 8) GlobalItem aka_names JSON/GIN - with transaction recovery
         if table_exists(inspector, 'global_item'):
             try:
                 bind.execute(text("CREATE INDEX IF NOT EXISTS ix_global_item_aka_gin ON global_item USING GIN ((aka_names::jsonb))"))
+                print("   ✅ Created global_item aka_names GIN index")
             except Exception as e:
                 print(f"   ⚠️  Global item aka_names GIN index creation failed: {e}")
+                # Rollback the transaction and start fresh
+                try:
+                    bind.rollback()
+                    print("   🔄 Transaction rolled back, continuing...")
+                except Exception:
+                    pass
 
         print("✅ Model alignment completed successfully")
     
     except Exception as e:
         print(f"❌ Migration failed with error: {e}")
+        # Try to rollback the transaction before re-raising
+        try:
+            bind.rollback()
+        except Exception:
+            pass
         # Re-raise the exception to ensure Alembic knows the migration failed
         raise
 
