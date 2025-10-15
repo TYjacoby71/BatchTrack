@@ -1,9 +1,8 @@
-
 <h3>Packaging</h3>
 
 <div class="d-flex justify-content-between mb-3">
   <div class="d-flex gap-2">
-    {% if current_user.is_authenticated and has_permission('inventory.adjust') %}
+    {% if current_user.is_authenticated and has_permission(current_user, 'inventory.adjust') %}
       <button type="button" class="btn btn-primary" onclick="togglePackagingForm()">Add Packaging</button>
       <button type="button" class="btn btn-secondary" onclick="togglePackagingUpdateForm()">Update Packaging</button>
     {% else %}
@@ -25,8 +24,8 @@
     <div class="row g-3">
       <div class="col-md-3">
         <div class="form-check">
-          <input type="checkbox" id="packagingShowArchived" class="form-check-input" 
-                 {{ 'checked' if show_archived else '' }} 
+          <input type="checkbox" id="packagingShowArchived" class="form-check-input"
+                 {{ 'checked' if show_archived else '' }}
                  onchange="toggleArchivedFilter('packaging')">
           <label class="form-check-label" for="packagingShowArchived">
             Show Archived Inventory
@@ -119,8 +118,8 @@
 </form>
 
 <!-- Multi-Adjust Packaging Form -->
-<div id="updatePackagingForm" style="display: none;" 
-  x-data="{ 
+<div id="updatePackagingForm" style="display: none;"
+  x-data="{
     rows: [{id: '', quantity: '', unit: '{{ get_global_unit_list()[0].name if get_global_unit_list() else "count" }}', change_type: 'restock', cost_entry_type: 'no_change', cost: 0, costHelp: 'Cost will remain unchanged'}],
     submitForm(e) {
       e.preventDefault();
@@ -243,14 +242,14 @@
               <div class="action-dropdown">
                 <button class="action-toggle {{ 'text-muted' if item.is_archived else '' }}" onclick="toggleActionMenu(this)">⋯</button>
                 <div class="action-menu">
-                  <a href="{{ url_for('inventory.view_inventory', id=item.id) }}" 
+                  <a href="{{ url_for('inventory.view_inventory', id=item.id) }}"
                      class="dropdown-item {{ 'text-muted' if item.is_archived else '' }}">View Details</a>
                   {% if not item.is_archived %}
-                    <a href="{{ url_for('inventory.archive_inventory', id=item.id) }}" 
-                       class="dropdown-item text-warning" 
+                    <a href="{{ url_for('inventory.archive_inventory', id=item.id) }}"
+                       class="dropdown-item text-warning"
                        onclick="return confirm('Are you sure you want to archive this item?')">Archive</a>
                   {% else %}
-                    <a href="{{ url_for('inventory.restore_inventory', id=item.id) }}" 
+                    <a href="{{ url_for('inventory.restore_inventory', id=item.id) }}"
                        class="dropdown-item text-success">Restore</a>
                   {% endif %}
                 </div>
