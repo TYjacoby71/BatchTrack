@@ -94,12 +94,7 @@
                         <div class="form-text" id="categoryHint" style="display:none;"></div>
                     </div>
                 </div>
-                <div class="col-md-6 d-flex align-items-end">
-                    <div class="form-check form-switch">
-                        <input class="form-check-input" type="checkbox" id="is_portioned_toggle" name="is_portioned" value="true" {% if recipe and recipe.portioning_data and recipe.portioning_data.get('is_portioned') %}checked{% endif %}>
-                        <label class="form-check-label" for="is_portioned_toggle">This recipe is portioned into discrete units</label>
-                    </div>
-                </div>
+                
             </div>
         </div>
     </div>
@@ -137,6 +132,15 @@
                 </div>
             </div>
 
+            <div class="row">
+                <div class="col-md-12">
+                    <div class="form-check form-switch mt-1">
+                        <input class="form-check-input" type="checkbox" id="is_portioned_toggle" name="is_portioned" value="true" {% if recipe and recipe.portioning_data and recipe.portioning_data.get('is_portioned') %}checked{% endif %}>
+                        <label class="form-check-label" for="is_portioned_toggle">This recipe is portioned into discrete units</label>
+                    </div>
+                </div>
+            </div>
+
             <!-- Portioning Section -->
             <div id="portioningSection" class="mt-3" style="display:none;">
                 <div class="row">
@@ -158,164 +162,28 @@
         </div>
     </div>
 
-    <!-- Allowed Containers Card -->
-    <div class="card mb-4">
-        <div class="card-header">
-            <h5 class="card-title mb-0">
-                <i class="fas fa-box"></i> Allowed Containers
-            </h5>
-        </div>
-        <div class="card-body">
-            <div class="form-group">
-                <label for="allowed_containers" class="form-label">Select Allowed Containers</label>
-                <select id="allowed_containers" name="allowed_containers[]" class="form-select container-select" multiple>
-                    {% for container in all_ingredients if container.type == 'container' %}
-                    <option value="{{ container.id }}" {% if recipe and recipe.allowed_containers and container.id in recipe.allowed_containers %}selected{% endif %}>
-                        {{ container.name }} ({{ container.capacity }} {{ container.capacity_unit }})
-                    </option>
-                    {% endfor %}
-                </select>
-                <small class="form-text text-muted">
-                    Hold Ctrl (Cmd on Mac) to select multiple containers.<br>
-                    <strong>Note:</strong> Container requirement is now determined during batch planning.
-                </small>
-            </div>
-        </div>
-    </div>
-
-    <!-- Category Assistant (Specialized Forms) -->
-    <div class="card mb-4" id="categoryAssistantCard" style="display:none;">
+    
+    <!-- Category Skin Host -->
+    <div class="card mb-4" id="categorySkinCard" style="display:none;">
         <div class="card-header d-flex align-items-center justify-content-between">
-            <h5 class="card-title mb-0"><i class="fas fa-magic"></i> Category Assistant</h5>
-            <small class="text-muted">Helps you compute common fields by category. Units default to grams.</small>
-        </div>
-        <div class="card-body">
-            <!-- Soaps -->
-            <div id="assistant-soaps" class="assistant" style="display:none;">
-                <div class="row g-3">
-                    <div class="col-md-3">
-                        <label class="form-label">Total oils (g)</label>
-                        <input type="number" class="form-control" id="soap_oil_g" step="0.1" min="0">
-                    </div>
-                    <div class="col-md-3">
-                        <label class="form-label">Superfat (%)</label>
-                        <input type="number" class="form-control" id="soap_superfat" step="0.1" min="0" max="20" value="5">
-                    </div>
-                    <div class="col-md-3">
-                        <label class="form-label">Lye Type</label>
-                        <select id="soap_lye_type" class="form-select">
-                            <option value="NaOH">NaOH (bar)</option>
-                            <option value="KOH">KOH (liquid)</option>
-                        </select>
-                    </div>
-                    <div class="col-md-3">
-                        <label class="form-label">Water (% of oils)</label>
-                        <input type="number" class="form-control" id="soap_water_pct" step="0.1" min="20" max="50" value="33">
-                    </div>
-                </div>
-                <div class="mt-3 d-flex gap-2">
-                    <button type="button" class="btn btn-outline-primary" id="soap_calc_btn">Calculate</button>
-                    <div id="soap_result" class="align-self-center text-muted small"></div>
-                </div>
-            </div>
-
-            <!-- Candles -->
-            <div id="assistant-candles" class="assistant" style="display:none;">
-                <div class="row g-3">
-                    <div class="col-md-4">
-                        <label class="form-label">Fill per candle (g)</label>
-                        <input type="number" class="form-control" id="candle_fill_g" step="0.1" min="0">
-                    </div>
-                    <div class="col-md-4">
-                        <label class="form-label">Fragrance Load (%)</label>
-                        <input type="number" class="form-control" id="candle_fl_pct" step="0.1" min="0" max="15" value="8">
-                    </div>
-                    <div class="col-md-4">
-                        <label class="form-label">Count</label>
-                        <input type="number" class="form-control" id="candle_count" step="1" min="1" value="1">
-                    </div>
-                </div>
-                <div class="mt-3 d-flex gap-2">
-                    <button type="button" class="btn btn-outline-primary" id="candle_calc_btn">Calculate</button>
-                    <div id="candle_result" class="align-self-center text-muted small"></div>
-                </div>
-            </div>
-
-            <!-- Lotions/Cosmetics -->
-            <div id="assistant-lotions" class="assistant" style="display:none;">
-                <div class="row g-3">
-                    <div class="col-md-4">
-                        <label class="form-label">Batch size (g)</label>
-                        <input type="number" class="form-control" id="lotion_batch_g" step="0.1" min="0">
-                    </div>
-                    <div class="col-md-4">
-                        <label class="form-label">Water phase (%)</label>
-                        <input type="number" class="form-control" id="lotion_water_pct" step="0.1" min="0" max="100" value="65">
-                    </div>
-                    <div class="col-md-4">
-                        <label class="form-label">Oil phase (%)</label>
-                        <input type="number" class="form-control" id="lotion_oil_pct" step="0.1" min="0" max="100" value="30">
-                    </div>
-                    <div class="col-md-4">
-                        <label class="form-label">Cool-down (%)</label>
-                        <input type="number" class="form-control" id="lotion_cool_pct" step="0.1" min="0" max="100" value="5">
-                    </div>
-                </div>
-                <div class="mt-3 d-flex gap-2">
-                    <button type="button" class="btn btn-outline-primary" id="lotion_calc_btn">Calculate</button>
-                    <div id="lotion_result" class="align-self-center text-muted small"></div>
-                </div>
-            </div>
-
-            <!-- Baked Goods -->
-            <div id="assistant-baked-goods" class="assistant" style="display:none;">
-                <div class="row g-3">
-                    <div class="col-md-3">
-                        <label class="form-label">Flour (g)</label>
-                        <input type="number" class="form-control" id="baker_flour_g" step="0.1" min="0">
-                    </div>
-                    <div class="col-md-3">
-                        <label class="form-label">Hydration (%)</label>
-                        <input type="number" class="form-control" id="baker_hydration" step="0.1" min="40" max="110" value="65">
-                    </div>
-                    <div class="col-md-3">
-                        <label class="form-label">Salt (%)</label>
-                        <input type="number" class="form-control" id="baker_salt" step="0.1" min="0" max="5" value="2">
-                    </div>
-                    <div class="col-md-3">
-                        <label class="form-label">Yeast (%)</label>
-                        <input type="number" class="form-control" id="baker_yeast" step="0.1" min="0" max="5" value="1">
-                    </div>
-                </div>
-                <div class="mt-3 d-flex gap-2">
-                    <button type="button" class="btn btn-outline-primary" id="baker_calc_btn">Calculate</button>
-                    <div id="baker_result" class="align-self-center text-muted small"></div>
-                </div>
-            </div>
-
-            <!-- Herbal -->
-            <div id="assistant-herbal" class="assistant" style="display:none;">
-                <div class="row g-3">
-                    <div class="col-md-4">
-                        <label class="form-label">Ratio (menstruum:herb)</label>
-                        <input type="text" class="form-control" id="herbal_ratio" value="5:1">
-                    </div>
-                    <div class="col-md-4">
-                        <label class="form-label">Herb (g)</label>
-                        <input type="number" class="form-control" id="herbal_herb_g" step="0.1" min="0">
-                    </div>
-                    <div class="col-md-4">
-                        <label class="form-label">Alcohol (%)</label>
-                        <input type="number" class="form-control" id="herbal_abv" step="1" min="0" max="100" value="40">
-                    </div>
-                </div>
-                <div class="mt-3 d-flex gap-2">
-                    <button type="button" class="btn btn-outline-primary" id="herbal_calc_btn">Calculate</button>
-                    <div id="herbal_result" class="align-self-center text-muted small"></div>
-                </div>
+            <h5 class="card-title mb-0"><i class="fas fa-layer-group"></i> Category Skin</h5>
+            <div class="form-check form-switch">
+                <input class="form-check-input" type="checkbox" id="useSkinToggle" checked>
+                <label class="form-check-label" for="useSkinToggle">Use category skin</label>
             </div>
         </div>
+        <div class="card-body" id="categorySkinHost"></div>
     </div>
+
+    <!-- Category Info / Derivatives -->
+    <div class="card mb-4" id="categoryInfoCard" style="display:none;">
+        <div class="card-header">
+            <h5 class="card-title mb-0"><i class="fas fa-info"></i> Info</h5>
+        </div>
+        <div class="card-body" id="categoryInfoHost"></div>
+    </div>
+
+    <!-- Category-specific aids are provided by the shared partial below -->
 
     <!-- Ingredients Card -->
     <div class="card mb-4">
@@ -507,6 +375,55 @@
         </div>
     </div>
 
+    <!-- Allowed Containers Card (moved after consumables) -->
+    <div class="card mb-4" id="allowedContainersCard">
+        <div class="card-header">
+            <h5 class="card-title mb-0">
+                <i class="fas fa-box"></i> Allowed Containers
+            </h5>
+        </div>
+        <div class="card-body">
+            <div class="form-group">
+                <label for="allowed_containers" class="form-label">Select Allowed Containers</label>
+                <select id="allowed_containers" name="allowed_containers[]" class="form-select container-select" multiple>
+                    {% for container in all_ingredients if container.type == 'container' %}
+                    <option value="{{ container.id }}" {% if recipe and recipe.allowed_containers and container.id in recipe.allowed_containers %}selected{% endif %}>
+                        {{ container.name }} ({{ container.capacity }} {{ container.capacity_unit }})
+                    </option>
+                    {% endfor %}
+                </select>
+                <small class="form-text text-muted">
+                    Hold Ctrl (Cmd on Mac) to select multiple containers.<br>
+                    <strong>Note:</strong> Container requirement is now determined during batch planning.
+                </small>
+            </div>
+        </div>
+    </div>
+
+    <!-- Exports Card -->
+    <div class="card mb-4">
+        <div class="card-header d-flex align-items-center justify-content-between">
+            <h5 class="card-title mb-0">
+                <i class="fas fa-file-export"></i> Exports
+            </h5>
+        </div>
+        <div class="card-body">
+            <div class="d-flex flex-wrap gap-2">
+                <a class="btn btn-outline-secondary" href="{% if recipe %}{{ url_for('exports._soap_inci_recipe', recipe_id=recipe.id) }}{% else %}#{% endif %}">Soap INCI</a>
+                <a class="btn btn-outline-secondary" href="{% if recipe %}{{ url_for('exports._candle_label_recipe', recipe_id=recipe.id) }}{% else %}#{% endif %}">Candle Label</a>
+                <a class="btn btn-outline-secondary" href="{% if recipe %}{{ url_for('exports._baker_sheet_recipe', recipe_id=recipe.id) }}{% else %}#{% endif %}">Baker Sheet</a>
+                <a class="btn btn-outline-secondary" href="{% if recipe %}{{ url_for('exports._lotion_inci_recipe', recipe_id=recipe.id) }}{% else %}#{% endif %}">Lotion INCI</a>
+            </div>
+            {% if not recipe %}
+            <div class="form-text">Save the recipe to enable exports.</div>
+            {% if current_user.is_authenticated and not has_permission('batches.create') %}
+            <div class="alert alert-warning mt-3">
+              <i class="fas fa-lock me-1"></i> Starting batches is a premium feature. <a href="{{ url_for('billing.upgrade') }}" class="alert-link">Upgrade</a> to enable batch creation.
+            </div>
+            {% endif %}
+            {% endif %}
+        </div>
+    </div>
     <!-- Form Actions -->
     <div class="card">
         <div class="card-body">
@@ -537,6 +454,9 @@
 
 <script src="{{ url_for('static', filename='js/components/suggestions.js') }}"></script>
 <script src="{{ url_for('static', filename='js/recipes/recipe_form.js') }}"></script>
+<script src="{{ url_for('static', filename='js/recipes/skins/category_skins.js') }}"></script>
+<script src="{{ url_for('static', filename='js/recipes/skins/baking_skin.js') }}"></script>
+<script src="{{ url_for('static', filename='js/recipes/skins/cosmetics_skin.js') }}"></script>
 <script>
 const formEl = document.getElementById('recipeForm');
 let PRESELECT_INGREDIENT_ID = (formEl.getAttribute('data-preselect-ingredient-id') || '').trim();
@@ -607,15 +527,19 @@ document.addEventListener('DOMContentLoaded', function() {
     }
     {% endif %}
 
-    // Category-driven portioning guidance
+    // Category-driven portioning guidance and containers visibility when portioned
     const categorySelect = document.getElementById('category_id');
     const isPortionedToggle = document.getElementById('is_portioned_toggle');
     const portioningSection = document.getElementById('portioningSection');
     const categoryHint = document.getElementById('categoryHint');
+    const allowedContainersCard = document.getElementById('allowedContainersCard');
 
     function syncPortioningUI() {
         const on = isPortionedToggle.checked;
         portioningSection.style.display = on ? 'block' : 'none';
+        if (allowedContainersCard) {
+            allowedContainersCard.style.display = on ? 'none' : 'block';
+        }
     }
 
     function onCategoryChange() {
@@ -644,88 +568,35 @@ document.addEventListener('DOMContentLoaded', function() {
         onCategoryChange();
     }
 
-    // Category Assistant logic
-    const assistantCard = document.getElementById('categoryAssistantCard');
-    const sections = {
-        'soaps': document.getElementById('assistant-soaps'),
-        'candles': document.getElementById('assistant-candles'),
-        'lotions': document.getElementById('assistant-lotions'),
-        'baked goods': document.getElementById('assistant-baked-goods'),
-        'herbal': document.getElementById('assistant-herbal')
-    };
-    function showAssistantFor(catName){
-        const key = (catName||'').toLowerCase();
-        let any=false;
-        Object.keys(sections).forEach(k=>{ const el=sections[k]; if (!el) return; const on = key.indexOf(k) !== -1; el.style.display = on? 'block':'none'; any = any || on; });
-        assistantCard.style.display = any? 'block':'none';
+    // Skin host visibility and mounting
+    const skinCard = document.getElementById('categorySkinCard');
+    const skinHost = document.getElementById('categorySkinHost');
+    const infoCard = document.getElementById('categoryInfoCard');
+    const useSkinToggle = document.getElementById('useSkinToggle');
+
+    function currentCategoryName(){
+        return categorySelect?.options[categorySelect.selectedIndex]?.textContent?.trim() || '';
     }
+
+    function syncSkinVisibility(){
+        const selected = currentCategoryName().toLowerCase();
+        const hasSkin = window.CategorySkins && window.CategorySkins.hasSkinFor(selected);
+        if (skinCard) skinCard.style.display = hasSkin ? 'block' : 'none';
+        if (infoCard) infoCard.style.display = hasSkin ? 'block' : 'none';
+        if (hasSkin && useSkinToggle?.checked){
+            window.CategorySkins.mount(selected, skinHost, document.getElementById('categoryInfoHost'));
+        } else if (window.CategorySkins) {
+            window.CategorySkins.unmount();
+        }
+    }
+
     if (categorySelect){
-        showAssistantFor(categorySelect.options[categorySelect.selectedIndex]?.textContent);
-        categorySelect.addEventListener('change', () => showAssistantFor(categorySelect.options[categorySelect.selectedIndex]?.textContent));
+        syncSkinVisibility();
+        categorySelect.addEventListener('change', syncSkinVisibility);
     }
-
-    // Calculators (lightweight; results are guidance; copy amounts into ingredients)
-    function round(v){ return Math.round(v*1000)/1000 }
-    const soapBtn = document.getElementById('soap_calc_btn');
-    if (soapBtn){ soapBtn.addEventListener('click', function(){
-        const oil = parseFloat(document.getElementById('soap_oil_g').value||'0');
-        const sf = parseFloat(document.getElementById('soap_superfat').value||'0');
-        const lyeType = document.getElementById('soap_lye_type').value;
-        const waterPct = parseFloat(document.getElementById('soap_water_pct').value||'33');
-        if (!(oil>0)) { alert('Enter total oils in grams'); return; }
-        const SAP_NAOH = 0.138, SAP_KOH = 0.194; // average defaults
-        const sap = (lyeType==='KOH')? SAP_KOH: SAP_NAOH;
-        const lye = oil * sap * (1 - sf/100);
-        const water = oil * (waterPct/100);
-        document.getElementById('soap_result').textContent = `Lye (${lyeType}) ${round(lye)} g, Water ${round(water)} g`;
-    }); }
-
-    const candleBtn = document.getElementById('candle_calc_btn');
-    if (candleBtn){ candleBtn.addEventListener('click', function(){
-        const fill = parseFloat(document.getElementById('candle_fill_g').value||'0');
-        const fl = parseFloat(document.getElementById('candle_fl_pct').value||'0');
-        const count = parseInt(document.getElementById('candle_count').value||'1', 10);
-        if (!(fill>0) || !(count>0)) { alert('Enter fill grams and count'); return; }
-        const fragPer = fill*(fl/100), waxPer = fill - fragPer;
-        const out = `Per: Fragrance ${round(fragPer)} g, Wax ${round(waxPer)} g. Total: Fragrance ${round(fragPer*count)} g, Wax ${round(waxPer*count)} g`;
-        document.getElementById('candle_result').textContent = out;
-    }); }
-
-    const lotionBtn = document.getElementById('lotion_calc_btn');
-    if (lotionBtn){ lotionBtn.addEventListener('click', function(){
-        const batch = parseFloat(document.getElementById('lotion_batch_g').value||'0');
-        const wp = parseFloat(document.getElementById('lotion_water_pct').value||'0');
-        const op = parseFloat(document.getElementById('lotion_oil_pct').value||'0');
-        const cp = parseFloat(document.getElementById('lotion_cool_pct').value||'0');
-        if (!(batch>0)) { alert('Enter batch grams'); return; }
-        const sum = wp+op+cp; if (Math.abs(sum-100)>0.01){ alert('Phases must sum to 100%'); return; }
-        const wg = batch*(wp/100), og = batch*(op/100), cg = batch*(cp/100);
-        document.getElementById('lotion_result').textContent = `Water ${round(wg)} g, Oil ${round(og)} g, Cool ${round(cg)} g`;
-    }); }
-
-    const bakerBtn = document.getElementById('baker_calc_btn');
-    if (bakerBtn){ bakerBtn.addEventListener('click', function(){
-        const flour = parseFloat(document.getElementById('baker_flour_g').value||'0');
-        const hyd = parseFloat(document.getElementById('baker_hydration').value||'0');
-        const salt = parseFloat(document.getElementById('baker_salt').value||'0');
-        const yeast = parseFloat(document.getElementById('baker_yeast').value||'0');
-        if (!(flour>0)) { alert('Enter flour grams'); return; }
-        const waterG = flour*(hyd/100), saltG = flour*(salt/100), yeastG = flour*(yeast/100);
-        const total = flour+waterG+saltG+yeastG;
-        document.getElementById('baker_result').textContent = `Water ${round(waterG)} g, Salt ${round(saltG)} g, Yeast ${round(yeastG)} g. Total ${round(total)} g`;
-    }); }
-
-    const herbalBtn = document.getElementById('herbal_calc_btn');
-    if (herbalBtn){ herbalBtn.addEventListener('click', function(){
-        const ratio = (document.getElementById('herbal_ratio').value||'').trim();
-        const herb = parseFloat(document.getElementById('herbal_herb_g').value||'0');
-        if (!/^\d+\s*:\s*\d+$/.test(ratio)) { alert('Enter ratio like 5:1'); return; }
-        if (!(herb>0)) { alert('Enter herb grams'); return; }
-        const parts = ratio.split(':');
-        const per = parseFloat(parts[0])/parseFloat(parts[1]);
-        const menstruum = herb*per;
-        document.getElementById('herbal_result').textContent = `Menstruum ${round(menstruum)} g for ${round(herb)} g herb`;
-    }); }
+    if (useSkinToggle){
+        useSkinToggle.addEventListener('change', syncSkinVisibility);
+    }
 });
 
 function addIngredient(preselectId = null, presetUnit = null) {
@@ -949,83 +820,24 @@ document.getElementById('recipeForm').addEventListener('submit', function(e) {
     }
 });
 
-// Simple typeahead wiring for inventory + global search
+// Unified ingredient typeahead using shared component
 (function(){
-    function setupTypeahead(container) {
+    function setupMerged(container){
         const input = container.querySelector('input.recipe-ingredient-typeahead');
         const invHidden = container.querySelector('input[name="ingredient_ids[]"]');
         const giHidden = container.querySelector('input[name="global_item_ids[]"]');
         const list = container.querySelector('[data-role="suggestions"]');
-        if (!input || !invHidden || !giHidden || !list) return;
-
-        // New behavior: as user types, search org inventory AND global, and allow create-or-link on Enter
-        let t;
-        function render(groups){
-            list.innerHTML='';
-            let any=false;
-            groups.forEach(group => {
-                if (!group.items || !group.items.length) return;
-                any = true;
-                const header = document.createElement('div');
-                header.className = 'list-group-item text-muted small';
-                header.textContent = group.title;
-                list.appendChild(header);
-                group.items.forEach(r => {
-                    const a = document.createElement('a');
-                    a.href = '#'; a.className='list-group-item list-group-item-action'; a.textContent=r.text;
-                    a.addEventListener('click', function(e){ e.preventDefault(); input.value=r.text; invHidden.value=r.id||''; giHidden.value=r.global_item_id||''; list.classList.add('d-none'); list.innerHTML=''; });
-                    list.appendChild(a);
-                });
-            });
-            // Add create option
-            const q = (input.value||'').trim();
-            if (q){
-                const a = document.createElement('a');
-                a.href='#'; a.className='list-group-item list-group-item-action text-primary'; a.textContent = `Create "${q}"`;
-                a.addEventListener('click', function(e){ e.preventDefault(); createInline(q); });
-                list.appendChild(a); any=true;
-            }
-            list.classList.toggle('d-none', !any);
+        if (!input || !giHidden || !list) return;
+        if (typeof window.attachMergedInventoryGlobalTypeahead === 'function'){
+            window.attachMergedInventoryGlobalTypeahead({ inputEl: input, invHiddenEl: invHidden, giHiddenEl: giHidden, listEl: list, mode: 'recipe' });
         }
-        function search(){
-            clearTimeout(t);
-            const q = (input.value||'').trim();
-            if (!q){ list.classList.add('d-none'); list.innerHTML=''; invHidden.value=''; giHidden.value=''; return; }
-            t=setTimeout(function(){
-                Promise.all([
-                    fetch('/api/ingredients/ingredients/search?q='+encodeURIComponent(q)).then(r=>r.json()).catch(()=>({results:[]})),
-                    fetch('/api/ingredients/global-items/search?q='+encodeURIComponent(q)+'&type=ingredient').then(r=>r.json()).catch(()=>({results:[]}))
-                ]).then(([inv, gi]) => {
-                    const groups = [];
-                    if (inv && inv.results && inv.results.length) groups.push({title:'Your Inventory', items: inv.results});
-                    if (gi && gi.results && gi.results.length) groups.push({title:'Global Library', items: gi.results});
-                    render(groups);
-                }).catch(()=>{ list.classList.add('d-none'); list.innerHTML=''; });
-            }, 250);
-        }
-        async function createInline(name){
-            try{
-                const res = await fetch('/inventory/api/quick-create', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ name: name, type: 'ingredient' }) });
-                const data = await res.json();
-                if (data && data.success && data.item){
-                    input.value = data.item.name; invHidden.value = data.item.id; giHidden.value = data.item.global_item_id||''; list.classList.add('d-none'); list.innerHTML='';
-                }
-            }catch(_){ /* silent */ }
-        }
-        input.addEventListener('input', function(){ invHidden.value=''; giHidden.value=''; search(); });
-        input.addEventListener('keydown', function(e){ if (e.key==='Enter'){ e.preventDefault(); const q=(input.value||'').trim(); if (q) createInline(q); }});
     }
-    // Attach to existing entries
-    document.querySelectorAll('.ingredient-entry').forEach(entry => {
-        const container = entry.querySelector('.position-relative');
-        if (container) setupTypeahead(container);
-    });
-    // Hook into dynamic addIngredient
+    document.querySelectorAll('.ingredient-entry .position-relative').forEach(setupMerged);
     const originalAdd = addIngredient;
     window.addIngredient = function(preselectId, presetUnit){
         const entry = originalAdd(preselectId, presetUnit);
         const container = entry.querySelector('.position-relative');
-        if (container) setupTypeahead(container);
+        if (container) setupMerged(container);
         return entry;
     };
 })();
