@@ -1,4 +1,5 @@
 
+import os
 from ..extensions import db
 from ..utils.timezone_utils import TimezoneUtils
 
@@ -52,8 +53,19 @@ class GlobalItem(db.Model):
 	ingredient_category = db.relationship('IngredientCategory', backref='global_items')
 	archived_by_user = db.relationship('User', foreign_keys=[archived_by])
 
-	__table_args__ = (
+	def _is_postgres_url(url: str) -> bool:
+		if not url:
+			return False
+		url = url.lower()
+		return (
+			url.startswith("postgres://")
+			or url.startswith("postgresql://")
+			or url.startswith("postgresql+psycopg2://")
+		)
+
+	_IS_PG = _is_postgres_url(os.environ.get("DATABASE_URL", ""))
+
+	__table_args__ = tuple([
 		db.UniqueConstraint('name', 'item_type', name='_global_item_name_type_uc'),
-		# JSONB GIN index for aka_names (PostgreSQL only; inert elsewhere)
-		db.Index('ix_global_item_aka_gin', db.text('(aka_names::jsonb)'), postgresql_using='gin'),
-	)
+		*([db.Index('ix_global_item_aka_gin', db.text('(aka_names::jsonb)'), postgresql_using='gin')] if _IS_PG else []),
+	])

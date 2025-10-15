@@ -1,9 +1,26 @@
 
+import os
 from flask_login import current_user
 from ..extensions import db
 import sqlalchemy as sa
 from .mixins import ScopedModelMixin
 from ..utils.timezone_utils import TimezoneUtils
+
+# Dialect-aware helpers to allow SQLite tests while keeping PG features in prod
+def _is_postgres_url(url: str) -> bool:
+    if not url:
+        return False
+    url = url.lower()
+    return (
+        url.startswith("postgres://")
+        or url.startswith("postgresql://")
+        or url.startswith("postgresql+psycopg2://")
+    )
+
+_IS_PG = _is_postgres_url(os.environ.get("DATABASE_URL", ""))
+
+def _pg_computed(expr: str):
+    return sa.Computed(expr, persisted=True) if _IS_PG else None
 
 class Batch(ScopedModelMixin, db.Model):
     __tablename__ = 'batch'
@@ -66,19 +83,19 @@ class Batch(ScopedModelMixin, db.Model):
         db.Index('ix_batch_cosm_preservative_pct', 'cosm_preservative_pct'),
     )
 
-    # Computed projection columns (persisted) for hot fields from plan_snapshot.category_extension
-    vessel_fill_pct = db.Column(sa.Numeric(), sa.Computed("(((plan_snapshot -> 'category_extension') ->> 'vessel_fill_pct'))::numeric", persisted=True), nullable=True)
-    candle_fragrance_pct = db.Column(sa.Numeric(), sa.Computed("(((plan_snapshot -> 'category_extension') ->> 'candle_fragrance_pct'))::numeric", persisted=True), nullable=True)
-    candle_vessel_ml = db.Column(sa.Numeric(), sa.Computed("(((plan_snapshot -> 'category_extension') ->> 'candle_vessel_ml'))::numeric", persisted=True), nullable=True)
-    soap_superfat = db.Column(sa.Numeric(), sa.Computed("(((plan_snapshot -> 'category_extension') ->> 'soap_superfat'))::numeric", persisted=True), nullable=True)
-    soap_water_pct = db.Column(sa.Numeric(), sa.Computed("(((plan_snapshot -> 'category_extension') ->> 'soap_water_pct'))::numeric", persisted=True), nullable=True)
-    soap_lye_type = db.Column(sa.Text(), sa.Computed("((plan_snapshot -> 'category_extension') ->> 'soap_lye_type')", persisted=True), nullable=True)
-    baker_base_flour_g = db.Column(sa.Numeric(), sa.Computed("(((plan_snapshot -> 'category_extension') ->> 'baker_base_flour_g'))::numeric", persisted=True), nullable=True)
-    baker_water_pct = db.Column(sa.Numeric(), sa.Computed("(((plan_snapshot -> 'category_extension') ->> 'baker_water_pct'))::numeric", persisted=True), nullable=True)
-    baker_salt_pct = db.Column(sa.Numeric(), sa.Computed("(((plan_snapshot -> 'category_extension') ->> 'baker_salt_pct'))::numeric", persisted=True), nullable=True)
-    baker_yeast_pct = db.Column(sa.Numeric(), sa.Computed("(((plan_snapshot -> 'category_extension') ->> 'baker_yeast_pct'))::numeric", persisted=True), nullable=True)
-    cosm_emulsifier_pct = db.Column(sa.Numeric(), sa.Computed("(((plan_snapshot -> 'category_extension') ->> 'cosm_emulsifier_pct'))::numeric", persisted=True), nullable=True)
-    cosm_preservative_pct = db.Column(sa.Numeric(), sa.Computed("(((plan_snapshot -> 'category_extension') ->> 'cosm_preservative_pct'))::numeric", persisted=True), nullable=True)
+    # Computed projection columns (persisted) for hot fields from plan_snapshot.category_extension (Postgres only)
+    vessel_fill_pct = db.Column(sa.Numeric(), _pg_computed("(((plan_snapshot -> 'category_extension') ->> 'vessel_fill_pct'))::numeric"), nullable=True)
+    candle_fragrance_pct = db.Column(sa.Numeric(), _pg_computed("(((plan_snapshot -> 'category_extension') ->> 'candle_fragrance_pct'))::numeric"), nullable=True)
+    candle_vessel_ml = db.Column(sa.Numeric(), _pg_computed("(((plan_snapshot -> 'category_extension') ->> 'candle_vessel_ml'))::numeric"), nullable=True)
+    soap_superfat = db.Column(sa.Numeric(), _pg_computed("(((plan_snapshot -> 'category_extension') ->> 'soap_superfat'))::numeric"), nullable=True)
+    soap_water_pct = db.Column(sa.Numeric(), _pg_computed("(((plan_snapshot -> 'category_extension') ->> 'soap_water_pct'))::numeric"), nullable=True)
+    soap_lye_type = db.Column(sa.Text(), _pg_computed("((plan_snapshot -> 'category_extension') ->> 'soap_lye_type')"), nullable=True)
+    baker_base_flour_g = db.Column(sa.Numeric(), _pg_computed("(((plan_snapshot -> 'category_extension') ->> 'baker_base_flour_g'))::numeric"), nullable=True)
+    baker_water_pct = db.Column(sa.Numeric(), _pg_computed("(((plan_snapshot -> 'category_extension') ->> 'baker_water_pct'))::numeric"), nullable=True)
+    baker_salt_pct = db.Column(sa.Numeric(), _pg_computed("(((plan_snapshot -> 'category_extension') ->> 'baker_salt_pct'))::numeric"), nullable=True)
+    baker_yeast_pct = db.Column(sa.Numeric(), _pg_computed("(((plan_snapshot -> 'category_extension') ->> 'baker_yeast_pct'))::numeric"), nullable=True)
+    cosm_emulsifier_pct = db.Column(sa.Numeric(), _pg_computed("(((plan_snapshot -> 'category_extension') ->> 'cosm_emulsifier_pct'))::numeric"), nullable=True)
+    cosm_preservative_pct = db.Column(sa.Numeric(), _pg_computed("(((plan_snapshot -> 'category_extension') ->> 'cosm_preservative_pct'))::numeric"), nullable=True)
 
 class BatchIngredient(ScopedModelMixin, db.Model):
     __tablename__ = 'batch_ingredient'
