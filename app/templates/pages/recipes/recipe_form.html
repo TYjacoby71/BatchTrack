@@ -94,7 +94,7 @@
                         <div class="form-text" id="categoryHint" style="display:none;"></div>
                     </div>
                 </div>
-                
+
             </div>
         </div>
     </div>
@@ -162,7 +162,7 @@
         </div>
     </div>
 
-    
+
     <!-- Category Skin Host -->
     <div class="card mb-4" id="categorySkinCard" style="display:none;">
         <div class="card-header d-flex align-items-center justify-content-between">
@@ -309,13 +309,13 @@
                 <a class="btn btn-outline-secondary" href="{% if recipe and recipe.id %}{{ url_for('exports.baker_sheet_recipe', recipe_id=recipe.id) }}{% else %}#{% endif %}">Baker Sheet</a>
                 <a class="btn btn-outline-secondary" href="{% if recipe and recipe.id %}{{ url_for('exports.lotion_inci_recipe', recipe_id=recipe.id) }}{% else %}#{% endif %}">Lotion INCI</a>
             </div>
-            {% if not recipe %}
+            {% if not recipe or not recipe.id %}
             <div class="form-text">Save the recipe to enable exports.</div>
-            {% if current_user.is_authenticated and not has_permission('batches.create') %}
+            {% endif %}
+            {% if current_user.is_authenticated and not has_permission(current_user, 'batches.create') %}
             <div class="alert alert-warning mt-3">
               <i class="fas fa-lock me-1"></i> Starting batches is a premium feature. <a href="{{ url_for('billing.upgrade') }}" class="alert-link">Upgrade</a> to enable batch creation.
             </div>
-            {% endif %}
             {% endif %}
         </div>
     </div>
@@ -414,13 +414,13 @@
                 <a class="btn btn-outline-secondary" href="{% if recipe and recipe.id %}{{ url_for('exports.baker_sheet_recipe', recipe_id=recipe.id) }}{% else %}#{% endif %}">Baker Sheet</a>
                 <a class="btn btn-outline-secondary" href="{% if recipe and recipe.id %}{{ url_for('exports.lotion_inci_recipe', recipe_id=recipe.id) }}{% else %}#{% endif %}">Lotion INCI</a>
             </div>
-            {% if not recipe %}
+            {% if not recipe or not recipe.id %}
             <div class="form-text">Save the recipe to enable exports.</div>
-            {% if current_user.is_authenticated and not has_permission('batches.create') %}
+            {% endif %}
+            {% if current_user.is_authenticated and not has_permission(current_user, 'batches.create') %}
             <div class="alert alert-warning mt-3">
               <i class="fas fa-lock me-1"></i> Starting batches is a premium feature. <a href="{{ url_for('billing.upgrade') }}" class="alert-link">Upgrade</a> to enable batch creation.
             </div>
-            {% endif %}
             {% endif %}
         </div>
     </div>
