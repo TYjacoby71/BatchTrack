@@ -3,7 +3,7 @@
 
 <div class="d-flex justify-content-between mb-3">
   <div class="d-flex gap-2">
-    {% if current_user.is_authenticated and has_permission('inventory.adjust') %}
+    {% if current_user.is_authenticated and has_permission(current_user, 'inventory.adjust') %}
       <button type="button" class="btn btn-primary" onclick="toggleIngredientForm()">Add Ingredient</button>
       <button type="button" class="btn btn-secondary" onclick="toggleUpdateForm()">Update Inventory</button>
     {% else %}
@@ -123,7 +123,7 @@
     }
   }">
 
-  {% if current_user.is_authenticated and has_permission('inventory.adjust') %}
+  {% if current_user.is_authenticated and has_permission(current_user, 'inventory.adjust') %}
   <form @submit="submitForm">
 
   <template x-for="(row, index) in rows" :key="index">
