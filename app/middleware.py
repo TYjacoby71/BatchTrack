@@ -102,60 +102,83 @@ def register_middleware(app):
                 or request.path.startswith("/global-items")
             )
             if not selected_org_id and not masquerade_org_id and not allowed_without_org:
-                flash("Please select an organization to view customer features.", "warning")
+                try:
+                    flash("Please select an organization to view customer features.", "warning")
+                except Exception:
+                    pass
                 return redirect(url_for("developer.organizations"))
 
             # If an org is selected, set it as the effective org for the request
             effective_org_id = selected_org_id or masquerade_org_id
             if effective_org_id:
-                from .models import Organization
-                from .extensions import db
-                g.effective_org = db.session.get(Organization, effective_org_id)
-                g.is_developer_masquerade = True
+                try:
+                    from .models import Organization
+                    from .extensions import db
+                    g.effective_org = db.session.get(Organization, effective_org_id)
+                    g.is_developer_masquerade = True
+                except Exception:
+                    # If DB is unavailable, continue without masquerade context
+                    g.effective_org = None
+                    g.is_developer_masquerade = False
 
             # IMPORTANT: Developers bypass the billing check below.
             return
 
         # 4. Enforce billing for all regular, authenticated users.
         if fresh_current_user.is_authenticated and getattr(fresh_current_user, 'user_type', None) != 'developer':
-            # CRITICAL FIX: Force completely fresh database query to avoid session isolation issues
-            from .models import User, Organization
-            from .extensions import db
-            from .services.billing_service import BillingService # Import BillingService
+            # CRITICAL FIX: Guard DB calls; degrade gracefully if DB is down
+            try:
+                # Force fresh database query to avoid session isolation issues
+                from .models import User, Organization
+                from .extensions import db
+                from .services.billing_service import BillingService # Import BillingService
 
-            # Get fresh user and organization data from current session
-            fresh_user = db.session.get(User, fresh_current_user.id)
-            if fresh_user and fresh_user.organization_id:
-                # Force fresh load of organization to get latest billing_status
-                organization = db.session.get(Organization, fresh_user.organization_id)
-            else:
-                organization = None
+                # Get fresh user and organization data from current session
+                fresh_user = db.session.get(User, fresh_current_user.id)
+                if fresh_user and fresh_user.organization_id:
+                    # Force fresh load of organization to get latest billing_status
+                    organization = db.session.get(Organization, fresh_user.organization_id)
+                else:
+                    organization = None
 
-            if organization and organization.subscription_tier:
-                tier = organization.subscription_tier
+                if organization and organization.subscription_tier:
+                    tier = organization.subscription_tier
 
-                # SIMPLE BILLING LOGIC:
-                # If billing bypass is NOT enabled, require active billing status
-                if not tier.is_billing_exempt:
-                    # Direct status enforcement as a guardrail
-                    billing_status = getattr(organization, 'billing_status', 'active') or 'active'
-                    if billing_status in ['payment_failed', 'past_due', 'suspended', 'canceled', 'cancelled']:
-                        if billing_status in ['payment_failed', 'past_due']:
-                            return redirect(url_for('billing.upgrade'))
-                        elif billing_status in ['suspended', 'canceled', 'cancelled']:
-                            flash('Your organization does not have an active subscription. Please update billing.', 'error')
-                            return redirect(url_for('billing.upgrade'))
+                    # SIMPLE BILLING LOGIC:
+                    # If billing bypass is NOT enabled, require active billing status
+                    if not tier.is_billing_exempt:
+                        # Direct status enforcement as a guardrail
+                        billing_status = getattr(organization, 'billing_status', 'active') or 'active'
+                        if billing_status in ['payment_failed', 'past_due', 'suspended', 'canceled', 'cancelled']:
+                            if billing_status in ['payment_failed', 'past_due']:
+                                return redirect(url_for('billing.upgrade'))
+                            elif billing_status in ['suspended', 'canceled', 'cancelled']:
+                                try:
+                                    flash('Your organization does not have an active subscription. Please update billing.', 'error')
+                                except Exception:
+                                    pass
+                                return redirect(url_for('billing.upgrade'))
 
-                    # Check tier access using unified billing service
-                    access_valid, access_reason = BillingService.validate_tier_access(organization)
-                    if not access_valid:
-                        logger.warning(f"Billing access denied for org {organization.id}: {access_reason}")
+                        # Check tier access using unified billing service
+                        access_valid, access_reason = BillingService.validate_tier_access(organization)
+                        if not access_valid:
+                            logger.warning(f"Billing access denied for org {organization.id}: {access_reason}")
 
-                        if access_reason in ['payment_required', 'subscription_canceled']:
-                            return redirect(url_for('billing.upgrade'))
-                        elif access_reason == 'organization_suspended':
-                            flash('Your organization has been suspended. Please contact support.', 'error')
-                            return redirect(url_for('billing.upgrade'))
+                            if access_reason in ['payment_required', 'subscription_canceled']:
+                                return redirect(url_for('billing.upgrade'))
+                            elif access_reason == 'organization_suspended':
+                                try:
+                                    flash('Your organization has been suspended. Please contact support.', 'error')
+                                except Exception:
+                                    pass
+                                return redirect(url_for('billing.upgrade'))
+            except Exception:
+                # On DB error, rollback and degrade: allow request to proceed without billing gate
+                try:
+                    from .extensions import db
+                    db.session.rollback()
+                except Exception:
+                    pass
 
         # 5. If all checks pass, do nothing and allow the request to proceed.
         return None
