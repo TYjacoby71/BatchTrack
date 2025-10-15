@@ -23,7 +23,7 @@ def register_middleware(app):
             'billing.stripe_webhook',
             # Public tools and exports (HTML previews only)
             'tools_bp.tools_index', 'tools_bp.tools_soap', 'tools_bp.tools_candles', 'tools_bp.tools_lotions', 'tools_bp.tools_herbal', 'tools_bp.tools_baker',
-            'exports._soap_inci_tool', 'exports._candle_label_tool', 'exports._baker_sheet_tool', 'exports._lotion_inci_tool',
+            'exports.soap_inci_tool', 'exports.candle_label_tool', 'exports.baker_sheet_tool', 'exports.lotion_inci_tool',
             # Public API endpoints
             'public_api_bp.public_global_item_search'
         ]
