@@ -23,6 +23,8 @@ def configure_login_manager(app):
     @login_manager.user_loader
     def load_user(user_id):
         from .models import User
+        from sqlalchemy.exc import SQLAlchemyError
+        from .extensions import db
         try:
             user = app.extensions['sqlalchemy'].session.get(User, int(user_id))
             if user and user.is_active:
@@ -32,4 +34,11 @@ def configure_login_manager(app):
                     return user
             return None
         except (ValueError, TypeError):
+            return None
+        except SQLAlchemyError:
+            # On DB errors, fail open to anonymous instead of crashing the request
+            try:
+                db.session.rollback()
+            except Exception:
+                pass
             return None
