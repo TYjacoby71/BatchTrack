@@ -90,6 +90,7 @@ from .container_routes import container_api_bp
 from .reservation_routes import reservation_api_bp
 from app.models.product_category import ProductCategory
 from app.models.unit import Unit
+from ...utils.unit_utils import get_global_unit_list
 
 # Register sub-blueprints
 
@@ -136,15 +137,35 @@ def get_category(cat_id):
 @api_bp.route('/unit-search', methods=['GET'])
 @login_required
 def list_units():
-    unit_type = request.args.get('type')
+    """Unified unit search using get_global_unit_list (standard + org custom)."""
+    unit_type = (request.args.get('type') or request.args.get('unit_type') or '').strip()
     q = (request.args.get('q') or '').strip()
-    qry = Unit.scoped()
+    try:
+        units = get_global_unit_list() or []
+    except Exception:
+        units = []
+
     if unit_type:
-        qry = qry.filter_by(unit_type=unit_type)
+        units = [u for u in units if getattr(u, 'unit_type', None) == unit_type]
     if q:
-        qry = qry.filter(Unit.name.ilike(f"%{q}%"))
-    units = qry.order_by(Unit.unit_type, Unit.name).limit(50).all()
-    return jsonify({'success': True, 'data': [{'id': u.id, 'name': u.name, 'unit_type': u.unit_type} for u in units]})
+        q_lower = q.lower()
+        units = [u for u in units if (getattr(u, 'name', '') or '').lower().find(q_lower) != -1]
+
+    try:
+        units.sort(key=lambda u: (str(getattr(u, 'unit_type', '') or ''), str(getattr(u, 'name', '') or '')))
+    except Exception:
+        pass
+
+    results = units[:50]
+    return jsonify({'success': True, 'data': [
+        {
+            'id': getattr(u, 'id', None),
+            'name': getattr(u, 'name', ''),
+            'unit_type': getattr(u, 'unit_type', None),
+            'symbol': getattr(u, 'symbol', None),
+            'is_custom': getattr(u, 'is_custom', False)
+        } for u in results
+    ]})
 
 @api_bp.route('/units', methods=['POST'])
 @login_required
