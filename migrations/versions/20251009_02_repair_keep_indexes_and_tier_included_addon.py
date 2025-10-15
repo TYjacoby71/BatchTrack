@@ -100,27 +100,6 @@ def create_tier_included_addon_if_missing() -> None:
     )
 
 
-def create_tier_allowed_addon_if_missing() -> None:
-    """Ensure the association table expected by models exists.
-
-    Models reference `tier_allowed_addon` for the allowed add-ons relationship.
-    This migration predates that table, so create it defensively here to avoid
-    runtime errors in environments where subsequent migrations have not yet run.
-    """
-    if table_exists('tier_allowed_addon'):
-        return
-    if not table_exists('subscription_tier') or not table_exists('addon'):
-        return
-    op.create_table(
-        'tier_allowed_addon',
-        sa.Column('tier_id', sa.Integer(), nullable=False),
-        sa.Column('addon_id', sa.Integer(), nullable=False),
-        sa.ForeignKeyConstraint(['tier_id'], ['subscription_tier.id']),
-        sa.ForeignKeyConstraint(['addon_id'], ['addon.id']),
-        sa.PrimaryKeyConstraint('tier_id', 'addon_id'),
-    )
-
-
 def ensure_org_scoping_indexes() -> None:
     targets = [
         ('user', 'organization_id', 'ix_user_org'),
@@ -303,7 +282,6 @@ def ensure_product_category_indexes() -> None:
 
 def upgrade():
     create_tier_included_addon_if_missing()
-    create_tier_allowed_addon_if_missing()
     ensure_org_scoping_indexes()
     ensure_global_item_alias_and_indexes()
     ensure_json_gin_indexes()
@@ -323,11 +301,6 @@ def downgrade():
     if table_exists('tier_included_addon'):
         try:
             op.drop_table('tier_included_addon')
-        except Exception:
-            pass
-    if table_exists('tier_allowed_addon'):
-        try:
-            op.drop_table('tier_allowed_addon')
         except Exception:
             pass
 

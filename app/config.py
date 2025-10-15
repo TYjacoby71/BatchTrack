@@ -6,16 +6,7 @@ class Config:
     SECRET_KEY = os.environ.get('FLASK_SECRET_KEY', 'devkey-please-change-in-production')
 
     # Database Configuration
-    def _normalize_db_url(url: str | None) -> str | None:
-        if not url:
-            return None
-        return 'postgresql://' + url[len('postgres://'):] if url.startswith('postgres://') else url
-
-    # Prefer internal URL on Render, then standard DATABASE_URL
-    database_url = (
-        _normalize_db_url(os.environ.get('DATABASE_INTERNAL_URL'))
-        or _normalize_db_url(os.environ.get('DATABASE_URL'))
-    )
+    database_url = os.environ.get('DATABASE_URL')
     if database_url:
         # Use PostgreSQL from environment
         SQLALCHEMY_DATABASE_URI = database_url
