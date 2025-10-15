@@ -119,7 +119,8 @@ def _install_global_resilience_handlers(app):
             except Exception:
                 pass
 
-    @app.errorhandler((OperationalError, DBAPIError))
+    @app.errorhandler(OperationalError)
+    @app.errorhandler(DBAPIError)
     def _db_error_handler(e):
         try:
             db.session.rollback()
