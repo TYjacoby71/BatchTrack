@@ -80,6 +80,9 @@ def create_app(config=None):
     # Configure centralized logging
     configure_logging(app)
 
+    # Install global resilience (DB rollback + maintenance page)
+    _install_global_resilience_handlers(app)
+
     # Register CLI commands
     from .management import register_commands
     register_commands(app)
@@ -101,6 +104,33 @@ def _configure_sqlite_engine_options(app):
             opts["poolclass"] = StaticPool
             opts["connect_args"] = {"check_same_thread": False}
         app.config["SQLALCHEMY_ENGINE_OPTIONS"] = opts
+
+def _install_global_resilience_handlers(app):
+    """Install global DB rollback and friendly maintenance handler."""
+    from sqlalchemy.exc import OperationalError, DBAPIError, SQLAlchemyError
+    from .extensions import db
+    from flask import render_template
+
+    @app.teardown_request
+    def _rollback_on_error(exc):
+        if exc is not None:
+            try:
+                db.session.rollback()
+            except Exception:
+                pass
+
+    @app.errorhandler(OperationalError)
+    @app.errorhandler(DBAPIError)
+    def _db_error_handler(e):
+        try:
+            db.session.rollback()
+        except Exception:
+            pass
+        # Return lightweight 503 page; avoid cascading errors if template missing
+        try:
+            return render_template("errors/maintenance.html"), 503
+        except Exception:
+            return ("Service temporarily unavailable. Please try again shortly.", 503)
 
 def _add_core_routes(app):
     """Add core application routes"""

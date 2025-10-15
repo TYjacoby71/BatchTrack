@@ -94,7 +94,7 @@ def register_blueprints(app):
         # Create a lightweight exports blueprint inline to avoid import churn
         from app.models import Recipe
         exports_bp = Blueprint('exports', __name__, url_prefix='/exports')
-        
+
         @exports_bp.route('/recipe/<int:recipe_id>/soap-inci')
         @login_required
         def soap_inci_recipe(recipe_id: int):
@@ -339,6 +339,8 @@ def register_blueprints(app):
         successful_registrations.append('Exports')
     except Exception as e:
         failed_registrations.append(f"Exports: {e}")
+        # Don't let exports failure break the app
+        pass
 
 
     # Print summary
