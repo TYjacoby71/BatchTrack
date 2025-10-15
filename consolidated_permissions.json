@@ -29,6 +29,11 @@
           "description": "Manually adjust inventory quantities, add stock, or record waste/loss"
         },
         {
+          "name": "inventory.adjust",
+          "display_name": "Adjust Stock Levels",
+          "description": "Manually adjust inventory quantities, add stock, or record waste/loss"
+        },
+        {
           "name": "inventory.reserve",
           "display_name": "Reserve Inventory",
           "description": "Create inventory reservations for planned production or sales"
