@@ -20,7 +20,27 @@ fileConfig(config.config_file_name)
 logger = logging.getLogger('alembic.env')
 
 
+def _normalize_db_url(url: str | None) -> str | None:
+    if not url:
+        return None
+    # SQLAlchemy 2.x prefers postgresql:// over postgres://
+    if url.startswith('postgres://'):
+        return 'postgresql://' + url[len('postgres://'):]
+    return url
+
+
 def get_engine():
+    # Prefer explicit env URLs in production (Render) to avoid resolution issues
+    import os
+    preferred_env_url = (
+        _normalize_db_url(os.environ.get('ALEMBIC_DATABASE_URL'))
+        or _normalize_db_url(os.environ.get('DATABASE_INTERNAL_URL'))
+        or _normalize_db_url(os.environ.get('DATABASE_URL'))
+    )
+    if preferred_env_url:
+        from sqlalchemy import create_engine
+        return create_engine(preferred_env_url)
+
     try:
         # this works with Flask-SQLAlchemy<3 and Alchemical
         return current_app.extensions['migrate'].db.get_engine()
