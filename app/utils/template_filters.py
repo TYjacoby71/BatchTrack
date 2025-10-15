@@ -213,7 +213,9 @@ def register_template_filters(app):
 
     def template_has_permission(permission_name):
         try:
-            return has_permission(permission_name)
+            from flask_login import current_user
+            from app.utils.permissions import has_permission as has_perm_util
+            return has_perm_util(current_user, permission_name)
         except Exception:
             return False
 
