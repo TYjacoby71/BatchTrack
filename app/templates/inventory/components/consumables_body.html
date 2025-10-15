@@ -1,9 +1,8 @@
-
 <h3>Consumables</h3>
 
 <div class="d-flex justify-content-between mb-3">
   <div class="d-flex gap-2">
-    {% if current_user.is_authenticated and has_permission('inventory.adjust') %}
+    {% if current_user.is_authenticated and has_permission(current_user, 'inventory.adjust') %}
       <button type="button" class="btn btn-primary" onclick="toggleConsumableForm()">Add Consumable</button>
       <button type="button" class="btn btn-secondary" onclick="toggleConsumableUpdateForm()">Update Consumables</button>
     {% else %}
