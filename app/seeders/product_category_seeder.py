@@ -59,4 +59,3 @@ def seed_product_categories():
             if changed:
                 db.session.add(existing)
     db.session.commit()
-

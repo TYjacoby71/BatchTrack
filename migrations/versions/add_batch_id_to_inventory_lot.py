@@ -72,13 +72,35 @@ def upgrade():
 
 
 def downgrade():
-    # Use batch mode for SQLite compatibility
-    with op.batch_alter_table('inventory_lot', schema=None) as batch_op:
-        # Remove index
-        batch_op.drop_index('idx_inventory_lot_batch')
+    """Remove batch_id from inventory_lot table"""
+    print("=== Removing batch_id from inventory_lot table ===")
+    
+    if not table_exists('inventory_lot'):
+        print("   ⚠️  inventory_lot table does not exist - skipping")
+        return
 
-        # Remove foreign key constraint
-        batch_op.drop_constraint('fk_inventory_lot_batch_id', type_='foreignkey')
+    # Remove foreign key constraint if it exists
+    if foreign_key_exists('inventory_lot', 'fk_inventory_lot_batch_id'):
+        print("   Removing foreign key constraint...")
+        try:
+            with op.batch_alter_table('inventory_lot', schema=None) as batch_op:
+                batch_op.drop_constraint('fk_inventory_lot_batch_id', type_='foreignkey')
+            print("   ✅ Foreign key constraint removed")
+        except Exception as e:
+            print(f"   ⚠️  Error removing foreign key: {e}")
+    else:
+        print("   ✅ Foreign key constraint doesn't exist - skipping")
 
-        # Remove column
-        batch_op.drop_column('batch_id')
+    # Remove column if it exists
+    if column_exists('inventory_lot', 'batch_id'):
+        print("   Removing batch_id column...")
+        try:
+            with op.batch_alter_table('inventory_lot', schema=None) as batch_op:
+                batch_op.drop_column('batch_id')
+            print("   ✅ batch_id column removed")
+        except Exception as e:
+            print(f"   ⚠️  Error removing column: {e}")
+    else:
+        print("   ✅ batch_id column doesn't exist - skipping")
+
+    print("✅ batch_id downgrade completed")

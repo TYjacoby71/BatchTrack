@@ -18,19 +18,22 @@ depends_on = None
 
 
 def _get_uncategorized_id(conn):
-    """Ensure 'Uncategorized' exists and return its id"""
-    # First try to find existing uncategorized category
-    result = conn.execute(sa.text("SELECT id FROM product_category WHERE lower(name) = lower(:n)"), {"n": "Uncategorized"}).fetchone()
-    if result:
-        print(f"Found existing Uncategorized category with ID: {result[0]}")
-        return result[0]
-    
-    # Create it if it doesn't exist
-    print("Creating Uncategorized product category...")
-    conn.execute(sa.text("INSERT INTO product_category (name, is_typically_portioned) VALUES (:n, false)"), {"n": "Uncategorized"})
-    result = conn.execute(sa.text("SELECT id FROM product_category WHERE lower(name) = lower(:n)"), {"n": "Uncategorized"}).fetchone()
-    print(f"Created Uncategorized category with ID: {result[0]}")
-    return result[0]
+    """Get or create the Uncategorized product category"""
+    result = conn.execute(sa.text("SELECT id FROM product_category WHERE name = 'Uncategorized' LIMIT 1"))
+    row = result.fetchone()
+    if row:
+        return row[0]
+
+    # Create it - check what columns exist and insert accordingly
+    try:
+        # Try with is_typically_portioned first
+        conn.execute(sa.text("INSERT INTO product_category (name, is_typically_portioned, organization_id) VALUES (:n, false, 1)"), {"n": "Uncategorized"})
+    except Exception:
+        # Fallback to just name and organization_id
+        conn.execute(sa.text("INSERT INTO product_category (name, organization_id) VALUES (:n, 1)"), {"n": "Uncategorized"})
+
+    result = conn.execute(sa.text("SELECT id FROM product_category WHERE name = 'Uncategorized' LIMIT 1"))
+    return result.fetchone()[0]
 
 
 def upgrade():
@@ -48,7 +51,7 @@ def upgrade():
                 batch_op.add_column(sa.Column('category_id', sa.Integer(), nullable=True))
         else:
             print("category_id column already exists in product table")
-            
+
     if 'recipe' in inspector.get_table_names():
         columns = [col['name'] for col in inspector.get_columns('recipe')]
         if 'category_id' not in columns:
@@ -60,14 +63,14 @@ def upgrade():
 
     # Ensure Uncategorized category exists and get its ID
     uncategorized_id = _get_uncategorized_id(bind)
-    
+
     # Backfill products
     if 'product' in inspector.get_table_names():
         print("Backfilling product category_id values...")
         result = bind.execute(sa.text("SELECT COUNT(*) FROM product WHERE category_id IS NULL"))
         null_count = result.fetchone()[0]
         print(f"Found {null_count} products with NULL category_id")
-        
+
         if null_count > 0:
             bind.execute(sa.text("UPDATE product SET category_id = :cid WHERE category_id IS NULL"), {"cid": uncategorized_id})
             print(f"Updated {null_count} products to use Uncategorized category")
@@ -78,7 +81,7 @@ def upgrade():
         result = bind.execute(sa.text("SELECT COUNT(*) FROM recipe WHERE category_id IS NULL"))
         null_count = result.fetchone()[0]
         print(f"Found {null_count} recipes with NULL category_id")
-        
+
         if null_count > 0:
             bind.execute(sa.text("UPDATE recipe SET category_id = :cid WHERE category_id IS NULL"), {"cid": uncategorized_id})
             print(f"Updated {null_count} recipes to use Uncategorized category")
@@ -86,7 +89,7 @@ def upgrade():
     # Verify no NULL values remain before setting NOT NULL
     product_nulls = bind.execute(sa.text("SELECT COUNT(*) FROM product WHERE category_id IS NULL")).fetchone()[0] if 'product' in inspector.get_table_names() else 0
     recipe_nulls = bind.execute(sa.text("SELECT COUNT(*) FROM recipe WHERE category_id IS NULL")).fetchone()[0] if 'recipe' in inspector.get_table_names() else 0
-    
+
     if product_nulls > 0 or recipe_nulls > 0:
         raise Exception(f"Still have NULL category_id values: {product_nulls} products, {recipe_nulls} recipes")
 
@@ -118,7 +121,7 @@ def upgrade():
                     print(f"Note: Could not create foreign key for product: {e}")
             else:
                 print("Foreign key fk_product_category already exists")
-            
+
             # Only create index if it doesn't exist
             if not index_exists('product', 'ix_product_category_id'):
                 try:
@@ -128,7 +131,7 @@ def upgrade():
                     print(f"Note: Could not create index for product: {e}")
             else:
                 print("Index ix_product_category_id already exists")
-                
+
             batch_op.alter_column('category_id', existing_type=sa.Integer(), nullable=False)
             print("Set product.category_id to NOT NULL")
 
@@ -144,7 +147,7 @@ def upgrade():
                     print(f"Note: Could not create foreign key for recipe: {e}")
             else:
                 print("Foreign key fk_recipe_category already exists")
-                
+
             # Only create index if it doesn't exist
             if not index_exists('recipe', 'ix_recipe_category_id'):
                 try:
@@ -154,7 +157,7 @@ def upgrade():
                     print(f"Note: Could not create index for recipe: {e}")
             else:
                 print("Index ix_recipe_category_id already exists")
-                
+
             batch_op.alter_column('category_id', existing_type=sa.Integer(), nullable=False)
             print("Set recipe.category_id to NOT NULL")
 
@@ -192,4 +195,3 @@ def downgrade():
             batch_op.drop_column('category_id')
     except Exception:
         pass
-

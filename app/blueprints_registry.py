@@ -97,7 +97,7 @@ def register_blueprints(app):
         
         @exports_bp.route('/recipe/<int:recipe_id>/soap-inci')
         @login_required
-        def _soap_inci_recipe(recipe_id: int):
+        def soap_inci_recipe(recipe_id: int):
             from flask import render_template, abort
             rec = Recipe.query.get(recipe_id)
             if not rec:
@@ -109,7 +109,7 @@ def register_blueprints(app):
 
         @exports_bp.route('/recipe/<int:recipe_id>/candle-label')
         @login_required
-        def _candle_label_recipe(recipe_id: int):
+        def candle_label_recipe(recipe_id: int):
             from flask import render_template, abort
             rec = Recipe.query.get(recipe_id)
             if not rec:
@@ -120,7 +120,7 @@ def register_blueprints(app):
 
         @exports_bp.route('/recipe/<int:recipe_id>/baker-sheet')
         @login_required
-        def _baker_sheet_recipe(recipe_id: int):
+        def baker_sheet_recipe(recipe_id: int):
             from flask import render_template, abort
             rec = Recipe.query.get(recipe_id)
             if not rec:
@@ -131,7 +131,7 @@ def register_blueprints(app):
 
         @exports_bp.route('/recipe/<int:recipe_id>/lotion-inci')
         @login_required
-        def _lotion_inci_recipe(recipe_id: int):
+        def lotion_inci_recipe(recipe_id: int):
             from flask import render_template, abort
             rec = Recipe.query.get(recipe_id)
             if not rec:
@@ -141,25 +141,25 @@ def register_blueprints(app):
             return render_template('exports/lotion_inci.html', recipe=rec, source='recipe')
 
         @exports_bp.route('/tool/soaps/inci')
-        def _soap_inci_tool():
+        def soap_inci_tool():
             from flask import render_template, session
             draft = session.get('tool_draft') or {}
             return render_template('exports/soap_inci.html', tool_draft=draft, source='tool')
 
         @exports_bp.route('/tool/candles/label')
-        def _candle_label_tool():
+        def candle_label_tool():
             from flask import render_template, session
             draft = session.get('tool_draft') or {}
             return render_template('exports/candle_label.html', tool_draft=draft, source='tool')
 
         @exports_bp.route('/tool/baker/sheet')
-        def _baker_sheet_tool():
+        def baker_sheet_tool():
             from flask import render_template, session
             draft = session.get('tool_draft') or {}
             return render_template('exports/baker_sheet.html', tool_draft=draft, source='tool')
 
         @exports_bp.route('/tool/lotions/inci')
-        def _lotion_inci_tool():
+        def lotion_inci_tool():
             from flask import render_template, session
             draft = session.get('tool_draft') or {}
             return render_template('exports/lotion_inci.html', tool_draft=draft, source='tool')
@@ -167,7 +167,7 @@ def register_blueprints(app):
         # CSV/PDF export routes (recipe-scoped; require login)
         @exports_bp.route('/recipe/<int:recipe_id>/soap-inci.csv')
         @login_required
-        def _soap_inci_recipe_csv(recipe_id: int):
+        def soap_inci_recipe_csv(recipe_id: int):
             from flask import abort, Response
             rec = Recipe.query.get(recipe_id)
             if not rec:
@@ -181,7 +181,7 @@ def register_blueprints(app):
 
         @exports_bp.route('/recipe/<int:recipe_id>/soap-inci.pdf')
         @login_required
-        def _soap_inci_recipe_pdf(recipe_id: int):
+        def soap_inci_recipe_pdf(recipe_id: int):
             from flask import abort, Response
             rec = Recipe.query.get(recipe_id)
             if not rec:
@@ -194,7 +194,7 @@ def register_blueprints(app):
 
         @exports_bp.route('/recipe/<int:recipe_id>/candle-label.csv')
         @login_required
-        def _candle_label_recipe_csv(recipe_id: int):
+        def candle_label_recipe_csv(recipe_id: int):
             from flask import abort, Response
             rec = Recipe.query.get(recipe_id)
             if not rec:
@@ -207,7 +207,7 @@ def register_blueprints(app):
 
         @exports_bp.route('/recipe/<int:recipe_id>/candle-label.pdf')
         @login_required
-        def _candle_label_recipe_pdf(recipe_id: int):
+        def candle_label_recipe_pdf(recipe_id: int):
             from flask import abort, Response
             rec = Recipe.query.get(recipe_id)
             if not rec:
@@ -220,7 +220,7 @@ def register_blueprints(app):
 
         @exports_bp.route('/recipe/<int:recipe_id>/baker-sheet.csv')
         @login_required
-        def _baker_sheet_recipe_csv(recipe_id: int):
+        def baker_sheet_recipe_csv(recipe_id: int):
             from flask import abort, Response
             rec = Recipe.query.get(recipe_id)
             if not rec:
@@ -233,7 +233,7 @@ def register_blueprints(app):
 
         @exports_bp.route('/recipe/<int:recipe_id>/baker-sheet.pdf')
         @login_required
-        def _baker_sheet_recipe_pdf(recipe_id: int):
+        def baker_sheet_recipe_pdf(recipe_id: int):
             from flask import abort, Response
             rec = Recipe.query.get(recipe_id)
             if not rec:
@@ -246,7 +246,7 @@ def register_blueprints(app):
 
         @exports_bp.route('/recipe/<int:recipe_id>/lotion-inci.csv')
         @login_required
-        def _lotion_inci_recipe_csv(recipe_id: int):
+        def lotion_inci_recipe_csv(recipe_id: int):
             from flask import abort, Response
             rec = Recipe.query.get(recipe_id)
             if not rec:
@@ -259,7 +259,7 @@ def register_blueprints(app):
 
         @exports_bp.route('/recipe/<int:recipe_id>/lotion-inci.pdf')
         @login_required
-        def _lotion_inci_recipe_pdf(recipe_id: int):
+        def lotion_inci_recipe_pdf(recipe_id: int):
             from flask import abort, Response
             rec = Recipe.query.get(recipe_id)
             if not rec:
@@ -272,7 +272,7 @@ def register_blueprints(app):
 
         # Public tool preview CSV/PDF using session draft
         @exports_bp.route('/tool/soaps/inci.csv')
-        def _soap_inci_tool_csv():
+        def soap_inci_tool_csv():
             from flask import session, Response
             draft = session.get('tool_draft') or {}
             from app.services.exports import ExportService
@@ -280,7 +280,7 @@ def register_blueprints(app):
             return Response(csv_text, mimetype='text/csv')
 
         @exports_bp.route('/tool/soaps/inci.pdf')
-        def _soap_inci_tool_pdf():
+        def soap_inci_tool_pdf():
             from flask import session, Response
             draft = session.get('tool_draft') or {}
             from app.services.exports import ExportService
@@ -288,7 +288,7 @@ def register_blueprints(app):
             return Response(pdf_bytes, mimetype='application/pdf')
 
         @exports_bp.route('/tool/candles/label.csv')
-        def _candle_label_tool_csv():
+        def candle_label_tool_csv():
             from flask import session, Response
             draft = session.get('tool_draft') or {}
             from app.services.exports import ExportService
@@ -296,7 +296,7 @@ def register_blueprints(app):
             return Response(csv_text, mimetype='text/csv')
 
         @exports_bp.route('/tool/candles/label.pdf')
-        def _candle_label_tool_pdf():
+        def candle_label_tool_pdf():
             from flask import session, Response
             draft = session.get('tool_draft') or {}
             from app.services.exports import ExportService
@@ -304,7 +304,7 @@ def register_blueprints(app):
             return Response(pdf_bytes, mimetype='application/pdf')
 
         @exports_bp.route('/tool/baker/sheet.csv')
-        def _baker_sheet_tool_csv():
+        def baker_sheet_tool_csv():
             from flask import session, Response
             draft = session.get('tool_draft') or {}
             from app.services.exports import ExportService
@@ -312,7 +312,7 @@ def register_blueprints(app):
             return Response(csv_text, mimetype='text/csv')
 
         @exports_bp.route('/tool/baker/sheet.pdf')
-        def _baker_sheet_tool_pdf():
+        def baker_sheet_tool_pdf():
             from flask import session, Response
             draft = session.get('tool_draft') or {}
             from app.services.exports import ExportService
@@ -320,7 +320,7 @@ def register_blueprints(app):
             return Response(pdf_bytes, mimetype='application/pdf')
 
         @exports_bp.route('/tool/lotions/inci.csv')
-        def _lotion_inci_tool_csv():
+        def lotion_inci_tool_csv():
             from flask import session, Response
             draft = session.get('tool_draft') or {}
             from app.services.exports import ExportService
@@ -328,7 +328,7 @@ def register_blueprints(app):
             return Response(csv_text, mimetype='text/csv')
 
         @exports_bp.route('/tool/lotions/inci.pdf')
-        def _lotion_inci_tool_pdf():
+        def lotion_inci_tool_pdf():
             from flask import session, Response
             draft = session.get('tool_draft') or {}
             from app.services.exports import ExportService

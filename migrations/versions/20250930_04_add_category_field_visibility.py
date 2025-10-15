@@ -24,10 +24,10 @@ def upgrade():
     # Add visibility control fields for soap-making attributes
     safe_add_column('ingredient_category', sa.Column('show_saponification_value', sa.Boolean(), nullable=True, default=False))
     safe_add_column('ingredient_category', sa.Column('show_iodine_value', sa.Boolean(), nullable=True, default=False))
-    safe_add_column('ingredient_category', sa.Column('show_melting_point_c', sa.Boolean(), nullable=True, default=False))
-    safe_add_column('ingredient_category', sa.Column('show_flash_point_c', sa.Boolean(), nullable=True, default=False))
+    safe_add_column('ingredient_category', sa.Column('show_melting_point', sa.Boolean(), nullable=True, default=False))
+    safe_add_column('ingredient_category', sa.Column('show_flash_point', sa.Boolean(), nullable=True, default=False))
     safe_add_column('ingredient_category', sa.Column('show_ph_value', sa.Boolean(), nullable=True, default=False))
-    safe_add_column('ingredient_category', sa.Column('show_moisture_content_percent', sa.Boolean(), nullable=True, default=False))
+    safe_add_column('ingredient_category', sa.Column('show_moisture_content', sa.Boolean(), nullable=True, default=False))
     safe_add_column('ingredient_category', sa.Column('show_shelf_life_months', sa.Boolean(), nullable=True, default=False))
     safe_add_column('ingredient_category', sa.Column('show_comedogenic_rating', sa.Boolean(), nullable=True, default=False))
 
@@ -40,10 +40,10 @@ def downgrade():
 
     safe_drop_column('ingredient_category', 'show_comedogenic_rating')
     safe_drop_column('ingredient_category', 'show_shelf_life_months')
-    safe_drop_column('ingredient_category', 'show_moisture_content_percent')
+    safe_drop_column('ingredient_category', 'show_moisture_content')
     safe_drop_column('ingredient_category', 'show_ph_value')
-    safe_drop_column('ingredient_category', 'show_flash_point_c')
-    safe_drop_column('ingredient_category', 'show_melting_point_c')
+    safe_drop_column('ingredient_category', 'show_flash_point')
+    safe_drop_column('ingredient_category', 'show_melting_point')
     safe_drop_column('ingredient_category', 'show_iodine_value')
     safe_drop_column('ingredient_category', 'show_saponification_value')
 
