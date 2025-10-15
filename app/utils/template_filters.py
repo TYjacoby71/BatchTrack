@@ -211,11 +211,20 @@ def register_template_filters(app):
         is_organization_owner, is_developer
     )
 
-    def template_has_permission(permission_name):
+    def template_has_permission(user_or_permission, permission_name=None):
         try:
             from flask_login import current_user
             from app.utils.permissions import has_permission as has_perm_util
-            return has_perm_util(current_user, permission_name)
+            
+            # Handle both calling patterns:
+            # has_permission('inventory.adjust') - permission only
+            # has_permission(current_user, 'inventory.adjust') - user + permission
+            if permission_name is None:
+                # Single argument - it's the permission name
+                return has_perm_util(current_user, user_or_permission)
+            else:
+                # Two arguments - user and permission
+                return has_perm_util(user_or_permission, permission_name)
         except Exception:
             return False
 
