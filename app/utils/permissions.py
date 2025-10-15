@@ -360,14 +360,8 @@ class AuthorizationHierarchy:
         if not organization or not organization.tier:
             return []
 
-        # Load tier configuration to get permissions
-        from app.blueprints.developer.subscription_tiers import load_tiers_config
-        tiers_config = load_tiers_config()
-
-        tier_key = organization.effective_subscription_tier
-        tier_data = tiers_config.get(tier_key, {})
-
-        return tier_data.get('permissions', [])
+        # Get permissions directly from the database tier relationship
+        return [p.name for p in organization.tier.permissions]
 
     @staticmethod
     def check_user_authorization(user, permission_name):

@@ -259,9 +259,8 @@
     ]
   },
   "exempt": {
-    "name": "Exempt Plan",
+    "name": "Exempt Plan", 
     "description": "System tier for testing and special accounts",
-    "permissions": [],
     "tier_type": "monthly",
     "user_limit": -1,
     "max_users": null,
