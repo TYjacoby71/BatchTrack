@@ -207,13 +207,36 @@ def register_template_filters(app):
 
     # Register template globals
     from .permissions import (
-        has_permission, has_role, has_subscription_feature, 
-        is_organization_owner, is_developer
+        has_permission as core_has_permission,
+        has_role,
+        has_subscription_feature,
+        is_organization_owner,
+        is_developer,
     )
 
-    def template_has_permission(permission_name):
+    def template_has_permission(*args):
+        """Template-friendly permission check.
+        Supports both has_permission('perm') and has_permission(user, 'perm').
+        """
         try:
-            return has_permission(permission_name)
+            # Lazy import to avoid circulars in some CLI contexts
+            from . import permissions as permission_utils
+        except Exception:
+            permission_utils = None
+
+        try:
+            if len(args) == 1:
+                permission_name = args[0]
+                user = current_user
+            elif len(args) >= 2:
+                user, permission_name = args[0], args[1]
+            else:
+                return False
+
+            if permission_utils and hasattr(permission_utils, 'has_permission'):
+                return permission_utils.has_permission(user, permission_name)
+            # Fallback to directly imported core function
+            return core_has_permission(user, permission_name)
         except Exception:
             return False
 

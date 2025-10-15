@@ -113,13 +113,30 @@ def storage_addon():
 @billing_bp.route('/addons/start/<addon_key>', methods=['POST'])
 @login_required
 def start_addon_checkout(addon_key):
-    """Start Stripe checkout for a specific add-on by key (uses addon.stripe_lookup_key)."""
+    """Start Stripe checkout for a specific add-on by key (uses addon.stripe_lookup_key).
+    Enforces that the add-on is allowed for the organization's current tier.
+    """
     from ...models.addon import Addon
     from ...services.stripe_service import StripeService
     addon = Addon.query.filter_by(key=addon_key, is_active=True).first()
     if not addon or not addon.stripe_lookup_key:
         flash('Add-on not available.', 'warning')
         return redirect(url_for('settings.index') + '#billing')
+
+    organization = current_user.organization
+    tier = getattr(organization, 'subscription_tier_obj', None)
+    # Enforce allowed vs included semantics
+    if not tier:
+        flash('No subscription tier found for your organization.', 'warning')
+        return redirect(url_for('settings.index') + '#billing')
+    included = set(getattr(tier, 'included_addons', []) or [])
+    allowed = set(getattr(tier, 'allowed_addons', []) or [])
+    if addon in included:
+        flash('This add-on is already included in your tier.', 'info')
+        return redirect(url_for('settings.index') + '#billing')
+    if addon not in allowed:
+        flash('This add-on is not available for your current tier.', 'warning')
+        return redirect(url_for('billing.upgrade'))
 
     try:
         if not StripeService.initialize_stripe():
