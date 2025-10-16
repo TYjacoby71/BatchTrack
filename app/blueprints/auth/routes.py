@@ -7,6 +7,7 @@ from werkzeug.security import generate_password_hash
 from . import auth_bp
 from ...extensions import db
 from ...models import User, Organization, Role, Permission
+from ...models.subscription_tier import SubscriptionTier # Import SubscriptionTier here
 from ...utils.timezone_utils import TimezoneUtils
 from ...utils.permissions import require_permission
 from flask_login import login_required
@@ -196,10 +197,10 @@ def oauth_callback():
 
             # Log them in
             login_user(user)
-            
+
             # Clear dismissed alerts from session on OAuth login
             session.pop('dismissed_alerts', None)
-            
+
             user.last_login = TimezoneUtils.utc_now()
             db.session.commit()
 
@@ -309,7 +310,7 @@ def logout():
 
     # Clear developer customer view session if present
     session.pop('dev_selected_org_id', None)
-    
+
     # Clear dismissed alerts from session on logout
     session.pop('dismissed_alerts', None)
 
@@ -407,43 +408,20 @@ def signup():
     if current_user.is_authenticated:
         return redirect(url_for('app_routes.dashboard'))
 
-    # Get tiers filtered by database columns only
-    from ...models.subscription_tier import SubscriptionTier
-
-    available_tiers_db = SubscriptionTier.query.filter_by(
-            is_customer_facing=True).filter(
-            SubscriptionTier.billing_provider != 'exempt').order_by(SubscriptionTier.user_limit).all()
-
-    tiers_config = load_tiers_config()
+    # Get available tiers from database only
+    db_tiers = SubscriptionTier.query.filter_by(
+        is_available=True,
+        is_customer_facing=True
+    ).all()
 
     available_tiers = {}
-    for tier_obj in available_tiers_db:
-        tier_config = tiers_config.get(tier_obj.key, {})
-
-        # Get features from tier config
-        features = tier_config.get('fallback_features', []) if tier_config else []
-
-        # Get live pricing from Stripe if available, otherwise use fallback
-        from ...services.stripe_service import StripeService
-        live_pricing = None
-        if tier_obj.stripe_lookup_key:
-            try:
-                live_pricing = StripeService.get_live_pricing_for_tier(tier_obj)
-            except:
-                live_pricing = None
-
-        # Use live pricing if available, otherwise fallback
-        if live_pricing:
-            price_display = live_pricing['formatted_price']
-        else:
-            price_display = tier_obj.fallback_price
-
-        available_tiers[tier_obj.key] = {
-            'name': tier_obj.name,
-            'price_display': price_display,
-            'features': features,
-            'user_limit': tier_obj.user_limit,
-            'whop_product_id': tier_config.get('whop_product_id', '') if tier_config else ''
+    for tier in db_tiers:
+        available_tiers[tier.key] = {
+            'name': tier.name,
+            'price_monthly': tier.stripe_price_monthly,
+            'price_yearly': tier.stripe_price_yearly,
+            'max_users': tier.max_users,
+            'features': [p.name for p in tier.permissions] + [a.key for a in tier.allowed_addons if a.is_active]
         }
 
     # Get signup tracking parameters

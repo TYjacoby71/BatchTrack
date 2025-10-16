@@ -114,7 +114,7 @@ def tier_required(min_tier: str):
     """
     Decorator requiring minimum subscription tier
     """
-    TIER_ORDER = ["free", "starter", "pro", "business", "enterprise"]
+    TIER_ORDER = ["free", "solo", "team", "enterprise", "exempt"]
 
     def decorator(f):
         @wraps(f)
@@ -557,14 +557,9 @@ class FeatureGate:
         if not subscription_ok:
             return False
 
-        # Load tier configuration
-        from app.blueprints.developer.subscription_tiers import load_tiers_config
-        tiers_config = load_tiers_config()
-
+        # Get available features from organization's tier
         tier_key = organization.effective_subscription_tier
-        tier_data = tiers_config.get(tier_key, {})
-
-        available_features = tier_data.get('features', [])
+        available_features = organization.get_subscription_features()
         return feature_name in available_features
 
     @staticmethod

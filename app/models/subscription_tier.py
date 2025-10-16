@@ -97,11 +97,6 @@ class SubscriptionTier(db.Model):
         return any(p.name == permission_name for p in self.permissions)
 
     @property
-    def key(self):
-        """Generate key from name for backwards compatibility"""
-        return self.name.lower().replace(' ', '_').replace('plan', '').strip('_')
-
-    @property
     def is_billing_exempt(self):
         """Check if this tier is exempt from billing - single source of truth"""
         return self.billing_provider == 'exempt'
