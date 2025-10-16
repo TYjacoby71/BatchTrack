@@ -418,32 +418,36 @@ def signup():
         SubscriptionTier.billing_provider != 'exempt'
     ).all()
 
+    # Build available tiers using same logic as signup_data() to avoid redundancy
+    tiers_config = load_tiers_config()
     available_tiers = {}
-    for tier in db_tiers:
-        # Get live pricing from Stripe if available
+
+    for tier_obj in db_tiers:
+        # Use tier name for config lookup since key is removed
+        tier_config_key = tier_obj.name.lower().replace(' plan', '').replace(' ', '_')
+        tier_config = tiers_config.get(tier_config_key, {})
+
+        # Get features from tier config
+        features = tier_config.get('fallback_features', []) if tier_config else []
+
+        # Get live pricing from Stripe if available, otherwise use fallback
         from ...services.stripe_service import StripeService
         live_pricing = None
-        if tier.stripe_lookup_key:
+        if tier_obj.stripe_lookup_key:
             try:
-                live_pricing = StripeService.get_live_pricing_for_tier(tier)
+                live_pricing = StripeService.get_live_pricing_for_tier(tier_obj)
             except:
                 live_pricing = None
 
-        # Determine billing cycle from tier_type or live pricing
-        billing_cycle = 'monthly'
-        if live_pricing:
-            billing_cycle = live_pricing.get('billing_cycle', 'monthly')
-        elif tier.tier_type:
-            billing_cycle = tier.tier_type
-
+        # Use live pricing if available, otherwise show as contact sales
         price_display = live_pricing['formatted_price'] if live_pricing else 'Contact Sales'
 
-        available_tiers[str(tier.id)] = {
-            'name': tier.name,
+        available_tiers[str(tier_obj.id)] = {
+            'name': tier_obj.name,
             'price_display': price_display,
-            'billing_cycle': billing_cycle,
-            'user_limit': tier.user_limit,
-            'features': [p.name for p in tier.permissions] + [a.name for a in tier.allowed_addons if getattr(a, 'is_active', True)]
+            'features': features,
+            'user_limit': tier_obj.user_limit,
+            'whop_product_id': tier_config.get('whop_product_id', '') if tier_config else ''
         }
 
     # Get signup tracking parameters
