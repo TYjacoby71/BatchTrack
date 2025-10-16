@@ -1,0 +1,36 @@
+{% extends 'layout.html' %}
+{% block content %}
+<h2>Public Tools - Feature Flags</h2>
+<form method="post">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+  <div class="card mb-3">
+    <div class="card-header">Toggle Tool Availability</div>
+    <div class="card-body">
+      <div class="form-check mb-2">
+        <input class="form-check-input" type="checkbox" id="tools_soap" name="tools.soap" {% if flags['tools.soap'] %}checked{% endif %}>
+        <label class="form-check-label" for="tools_soap">Soap Tools</label>
+      </div>
+      <div class="form-check mb-2">
+        <input class="form-check-input" type="checkbox" id="tools_candles" name="tools.candles" {% if flags['tools.candles'] %}checked{% endif %}>
+        <label class="form-check-label" for="tools_candles">Candle Tools</label>
+      </div>
+      <div class="form-check mb-2">
+        <input class="form-check-input" type="checkbox" id="tools_lotions" name="tools.lotions" {% if flags['tools.lotions'] %}checked{% endif %}>
+        <label class="form-check-label" for="tools_lotions">Lotion & Cosmetic Tools</label>
+      </div>
+      <div class="form-check mb-2">
+        <input class="form-check-input" type="checkbox" id="tools_herbal" name="tools.herbal" {% if flags['tools.herbal'] %}checked{% endif %}>
+        <label class="form-check-label" for="tools_herbal">Herbalist Tools</label>
+      </div>
+      <div class="form-check mb-2">
+        <input class="form-check-input" type="checkbox" id="tools_baker" name="tools.baker" {% if flags['tools.baker'] %}checked{% endif %}>
+        <label class="form-check-label" for="tools_baker">Baker Tools</label>
+      </div>
+    </div>
+  </div>
+  <div class="d-flex gap-2">
+    <a href="{{ url_for('developer.product_categories') }}" class="btn btn-secondary">Back</a>
+    <button type="submit" class="btn btn-success">Save</button>
+  </div>
+</form>
+{% endblock %}

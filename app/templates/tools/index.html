@@ -5,6 +5,7 @@
   <p class="text-muted">Free calculators and converters. Create your first export, then save to BatchTrack.</p>
 
   <div class="row g-3">
+    {% if tool_flags.soap %}
     <div class="col-md-6 col-lg-4">
       <a class="card h-100 text-decoration-none" href="/tools/soap">
         <div class="card-body">
@@ -13,6 +14,8 @@
         </div>
       </a>
     </div>
+    {% endif %}
+    {% if tool_flags.candles %}
     <div class="col-md-6 col-lg-4">
       <a class="card h-100 text-decoration-none" href="/tools/candles">
         <div class="card-body">
@@ -21,6 +24,8 @@
         </div>
       </a>
     </div>
+    {% endif %}
+    {% if tool_flags.lotions %}
     <div class="col-md-6 col-lg-4">
       <a class="card h-100 text-decoration-none" href="/tools/lotions">
         <div class="card-body">
@@ -29,6 +34,8 @@
         </div>
       </a>
     </div>
+    {% endif %}
+    {% if tool_flags.herbal %}
     <div class="col-md-6 col-lg-4">
       <a class="card h-100 text-decoration-none" href="/tools/herbal">
         <div class="card-body">
@@ -37,6 +44,8 @@
         </div>
       </a>
     </div>
+    {% endif %}
+    {% if tool_flags.baker %}
     <div class="col-md-6 col-lg-4">
       <a class="card h-100 text-decoration-none" href="/tools/baker">
         <div class="card-body">
@@ -45,6 +54,7 @@
         </div>
       </a>
     </div>
+    {% endif %}
   </div>
 </div>
 {% endblock %}

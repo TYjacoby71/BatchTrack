@@ -1,11 +1,22 @@
-from flask import Blueprint, render_template, request, jsonify, redirect, url_for
+from flask import Blueprint, render_template, request, jsonify, redirect, url_for, flash
 from app.services.unit_conversion.unit_conversion import ConversionEngine
 from app.models import GlobalItem
+from app.models import FeatureFlag
 
 # Public Tools blueprint
 # Mounted at /tools via blueprints_registry
 
 tools_bp = Blueprint('tools_bp', __name__)
+
+def _is_enabled(key: str, default: bool = True) -> bool:
+    try:
+        flag = FeatureFlag.query.filter_by(key=key).first()
+        if flag is None:
+            return default
+        return bool(flag.enabled)
+    except Exception:
+        return default
+
 
 @tools_bp.route('/')
 def tools_index():
@@ -13,26 +24,48 @@ def tools_index():
     Includes: Unit Converter, Fragrance Load Calculator, Lye Calculator (view-only),
     and quick draft Recipe Tool (category-aware) with Save CTA that invites sign-in.
     """
-    return render_template('tools/index.html')
+    flags = {
+        'soap': _is_enabled('tools.soap', True),
+        'candles': _is_enabled('tools.candles', True),
+        'lotions': _is_enabled('tools.lotions', True),
+        'herbal': _is_enabled('tools.herbal', True),
+        'baker': _is_enabled('tools.baker', True),
+    }
+    return render_template('tools/index.html', tool_flags=flags)
 
 @tools_bp.route('/soap')
 def tools_soap():
+    if not _is_enabled('tools.soap', True):
+        flash('Soap tools are currently unavailable.', 'warning')
+        return redirect(url_for('tools_bp.tools_index'))
     return render_template('tools/soap.html')
 
 @tools_bp.route('/candles')
 def tools_candles():
+    if not _is_enabled('tools.candles', True):
+        flash('Candle tools are currently unavailable.', 'warning')
+        return redirect(url_for('tools_bp.tools_index'))
     return render_template('tools/candles.html')
 
 @tools_bp.route('/lotions')
 def tools_lotions():
+    if not _is_enabled('tools.lotions', True):
+        flash('Lotion tools are currently unavailable.', 'warning')
+        return redirect(url_for('tools_bp.tools_index'))
     return render_template('tools/lotions.html')
 
 @tools_bp.route('/herbal')
 def tools_herbal():
+    if not _is_enabled('tools.herbal', True):
+        flash('Herbal tools are currently unavailable.', 'warning')
+        return redirect(url_for('tools_bp.tools_index'))
     return render_template('tools/herbal.html')
 
 @tools_bp.route('/baker')
 def tools_baker():
+    if not _is_enabled('tools.baker', True):
+        flash('Baker tools are currently unavailable.', 'warning')
+        return redirect(url_for('tools_bp.tools_index'))
     return render_template('tools/baker.html')
 
 

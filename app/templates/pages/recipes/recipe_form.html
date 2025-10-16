@@ -88,7 +88,7 @@
                             <option value="">Select category</option>
                             {% set selected_cat = recipe.category_id if recipe else None %}
                             {% for c in product_categories %}
-                            <option value="{{ c.id }}" data-is-portioned="{{ 'true' if c.is_typically_portioned else 'false' }}" {% if selected_cat and selected_cat == c.id %}selected{% endif %}>{{ c.name }}</option>
+                            <option value="{{ c.id }}" data-is-portioned="{{ 'true' if c.is_typically_portioned else 'false' }}" data-skin-enabled="{{ 'true' if c.skin_enabled else 'false' }}" {% if selected_cat and selected_cat == c.id %}selected{% endif %}>{{ c.name }}</option>
                             {% endfor %}
                         </select>
                         <div class="form-text" id="categoryHint" style="display:none;"></div>
@@ -293,7 +293,7 @@
         </div>
     </div>
 
-    {% include 'components/recipes/_category_fields.html' %}
+    {# Category aids removed #}
 
     <!-- Exports Card -->
     <div class="card mb-4">
@@ -580,10 +580,13 @@ document.addEventListener('DOMContentLoaded', function() {
 
     function syncSkinVisibility(){
         const selected = currentCategoryName().toLowerCase();
-        const hasSkin = window.CategorySkins && window.CategorySkins.hasSkinFor(selected);
-        if (skinCard) skinCard.style.display = hasSkin ? 'block' : 'none';
-        if (infoCard) infoCard.style.display = hasSkin ? 'block' : 'none';
-        if (hasSkin && useSkinToggle?.checked){
+        const sel = categorySelect?.options[categorySelect.selectedIndex];
+        const skinEnabled = sel ? (sel.getAttribute('data-skin-enabled') === 'true') : false;
+        const hasSkinType = window.CategorySkins && window.CategorySkins.hasSkinFor(selected);
+        const showSkin = !!(skinEnabled && hasSkinType);
+        if (skinCard) skinCard.style.display = showSkin ? 'block' : 'none';
+        if (infoCard) infoCard.style.display = showSkin ? 'block' : 'none';
+        if (showSkin && useSkinToggle?.checked){
             window.CategorySkins.mount(selected, skinHost, document.getElementById('categoryInfoHost'));
         } else if (window.CategorySkins) {
             window.CategorySkins.unmount();

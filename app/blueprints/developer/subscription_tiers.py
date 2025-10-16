@@ -105,7 +105,14 @@ def create_tier():
         name = request.form.get('name', '').strip()
         description = request.form.get('description', '')
         tier_type = request.form.get('tier_type', 'monthly')
-        user_limit = int(request.form.get('user_limit', 1))
+        def _parse_int_allow_neg1(text, default):
+            try:
+                v = int(str(text).strip())
+                return v
+            except Exception:
+                return default
+
+        user_limit = _parse_int_allow_neg1(request.form.get('user_limit', 1), 1)
         max_users = request.form.get('max_users', None)
         max_recipes = request.form.get('max_recipes', None)
         max_batches = request.form.get('max_batches', None)
@@ -245,7 +252,7 @@ def edit_tier(tier_id):
         try:
             tier.name = request.form.get('name', tier.name)
             tier.description = request.form.get('description', tier.description)
-            tier.user_limit = int(request.form.get('user_limit', tier.user_limit)) # Keep original if not provided
+            tier.user_limit = _parse_int_allow_neg1(request.form.get('user_limit', tier.user_limit), tier.user_limit)
 
             # Update limit fields, converting to int or None
             max_users = request.form.get('max_users', str(tier.max_users) if tier.max_users is not None else '')

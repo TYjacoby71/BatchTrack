@@ -32,7 +32,7 @@ def seed_product_categories():
                 ui_config = {"overlay": "lotion", "unit_mode": "weight"}
             else:
                 ui_config = None
-            db.session.add(ProductCategory(name=row["name"], is_typically_portioned=row["is_portioned"], sku_name_template=row["template"], ui_config=ui_config))
+            db.session.add(ProductCategory(name=row["name"], is_typically_portioned=row["is_portioned"], sku_name_template=row["template"], ui_config=ui_config, skin_enabled=False))
         else:
             # update template/flag if changed
             changed = False
