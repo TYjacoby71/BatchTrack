@@ -16,7 +16,7 @@ language = "python3"
 requiredFiles = [".replit", "replit.nix"]
 
 [deployment]
-run = ["sh", "-c", "python wsgi.py"]
+run = ["sh", "-c", "FLASK_ENV=production FLASK_DEBUG=false python wsgi.py"]
 deploymentTarget = "cloudrun"
 build = ["sh", "-c", "pip install -r requirements.txt"]
 

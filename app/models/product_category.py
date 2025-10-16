@@ -24,6 +24,8 @@ class ProductCategory(TimestampMixin, db.Model):
     is_typically_portioned = db.Column(db.Boolean, default=False, nullable=False)
     sku_name_template = db.Column(db.String(256), nullable=True)
     ui_config = db.Column(db.JSON, nullable=True)
+    # Controls whether the recipe form shows category skin UI for this category
+    skin_enabled = db.Column(db.Boolean, default=False, nullable=True)
 
     __table_args__ = tuple([
         # Functional unique index for case-insensitive name lookups (Postgres only due to ::text)

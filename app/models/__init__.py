@@ -22,6 +22,7 @@ from .batch import (
 from .unit import Unit, CustomUnitMapping, ConversionLog
 from .category import IngredientCategory, Tag
 from .product_category import ProductCategory
+from .feature_flag import FeatureFlag
 from .stripe_event import StripeEvent
 from .pricing_snapshot import PricingSnapshot
 from .billing_snapshot import BillingSnapshot

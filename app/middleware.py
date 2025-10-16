@@ -86,6 +86,24 @@ def register_middleware(app):
 
             return redirect(url_for('auth.login', next=request.url))
 
+        # Block non-developers from accessing any /developer/* routes
+        try:
+            if request.path.startswith('/developer/'):
+                user_type = getattr(current_user, 'user_type', None)
+                if user_type != 'developer':
+                    accept = request.accept_mimetypes
+                    wants_json = request.path.startswith('/api/') or ("application/json" in accept and not accept.accept_html)
+                    if wants_json:
+                        return jsonify({"error": "forbidden", "reason": "developer_only"}), 403
+                    try:
+                        flash('Developer access required.', 'error')
+                    except Exception:
+                        pass
+                    return redirect(url_for('app_routes.dashboard'))
+        except Exception:
+            # If anything goes wrong, fail closed
+            return jsonify({"error": "forbidden"}), 403
+
         # Force reload current_user to ensure fresh session data
         from flask_login import current_user as fresh_current_user
 
