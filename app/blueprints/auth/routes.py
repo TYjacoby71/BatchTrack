@@ -351,7 +351,9 @@ def signup_data():
 
     available_tiers = {}
     for tier_obj in available_tiers_db:
-        tier_config = tiers_config.get(tier_obj.key, {})
+        # Use tier name for config lookup since key is removed
+        tier_config_key = tier_obj.name.lower().replace(' plan', '').replace(' ', '_')
+        tier_config = tiers_config.get(tier_config_key, {})
 
         # Get features from tier config
         features = tier_config.get('fallback_features', []) if tier_config else []
@@ -371,7 +373,7 @@ def signup_data():
         else:
             price_display = tier_obj.fallback_price
 
-        available_tiers[tier_obj.key] = {
+        available_tiers[str(tier_obj.id)] = {
             'name': tier_obj.name,
             'price_display': price_display,
             'features': features,
@@ -417,7 +419,7 @@ def signup():
 
     available_tiers = {}
     for tier in db_tiers:
-        available_tiers[tier.key] = {
+        available_tiers[str(tier.id)] = {
             'name': tier.name,
             'price_monthly': tier.stripe_price_monthly,
             'price_yearly': tier.stripe_price_yearly,
@@ -460,7 +462,11 @@ def signup():
         from ...services.stripe_service import StripeService
         from ...models import SubscriptionTier
 
-        tier_obj = SubscriptionTier.query.filter_by(key=selected_tier).first()
+        try:
+            tier_id = int(selected_tier)
+            tier_obj = SubscriptionTier.query.get(tier_id)
+        except (ValueError, TypeError):
+            tier_obj = None
         if not tier_obj:
             flash('Invalid subscription plan', 'error')
             return render_template('pages/auth/signup.html',
@@ -472,8 +478,8 @@ def signup():
 
         # Complete metadata for Stripe checkout - include all signup data
         metadata = {
-            'tier': selected_tier,
-            'tier_key': selected_tier,  # Both for compatibility
+            'tier_id': str(tier_obj.id),
+            'tier_name': tier_obj.name,
             'signup_source': signup_source,
             'oauth_signup': str(oauth_signup)
         }
