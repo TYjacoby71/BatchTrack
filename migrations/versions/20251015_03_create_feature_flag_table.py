@@ -1,4 +1,3 @@
-
 """
 Create feature_flag table
 """
@@ -26,40 +25,30 @@ def index_exists(table_name, index_name):
         return False
 
 def upgrade():
-    print("=== Creating feature_flag table ===")
-    
-    if not table_exists('feature_flag'):
-        print("   Creating feature_flag table...")
-        try:
-            op.create_table(
-                'feature_flag',
-                sa.Column('id', sa.Integer(), primary_key=True),
-                sa.Column('key', sa.String(length=128), nullable=False, unique=True, index=True),
-                sa.Column('description', sa.String(length=255), nullable=True),
-                sa.Column('enabled', sa.Boolean(), nullable=False, server_default=sa.text('false')),
-                sa.Column('created_at', sa.DateTime(), nullable=True),
-                sa.Column('updated_at', sa.DateTime(), nullable=True),
-            )
-            print("   ✅ feature_flag table created")
-        except Exception as e:
-            print(f"   ⚠️  Could not create feature_flag table: {e}")
+    # Check if table already exists
+    bind = op.get_bind()
+    inspector = sa.inspect(bind)
+
+    if 'feature_flag' not in inspector.get_table_names():
+        print("Creating feature_flag table...")
+        op.create_table('feature_flag',
+        sa.Column('id', sa.Integer(), nullable=False),
+        sa.Column('name', sa.String(length=100), nullable=False),
+        sa.Column('description', sa.Text(), nullable=True),
+        sa.Column('is_enabled', sa.Boolean(), nullable=False),
+        sa.Column('created_at', sa.DateTime(), nullable=True),
+        sa.Column('updated_at', sa.DateTime(), nullable=True),
+        sa.PrimaryKeyConstraint('id'),
+        sa.UniqueConstraint('name')
+        )
+        print("✅ feature_flag table created successfully")
     else:
-        print("   ✅ feature_flag table already exists")
-    
-    # Create unique index if it doesn't exist
-    if table_exists('feature_flag') and not index_exists('feature_flag', 'ix_feature_flag_key'):
-        try:
-            op.create_index('ix_feature_flag_key', 'feature_flag', ['key'], unique=True)
-            print("   ✅ Created unique index on key column")
-        except Exception as e:
-            print(f"   ⚠️  Could not create unique index: {e}")
-    
-    print("✅ Feature flag table migration completed")
+        print("⚠️  feature_flag table already exists, skipping creation")
 
 
 def downgrade():
     print("=== Removing feature_flag table ===")
-    
+
     # Drop index first
     if table_exists('feature_flag') and index_exists('feature_flag', 'ix_feature_flag_key'):
         try:
@@ -67,7 +56,7 @@ def downgrade():
             print("   ✅ Dropped unique index")
         except Exception as e:
             print(f"   ⚠️  Could not drop index: {e}")
-    
+
     # Drop table
     if table_exists('feature_flag'):
         try:
@@ -75,5 +64,5 @@ def downgrade():
             print("   ✅ Dropped feature_flag table")
         except Exception as e:
             print(f"   ⚠️  Could not drop table: {e}")
-    
+
     print("✅ Feature flag table downgrade completed")
