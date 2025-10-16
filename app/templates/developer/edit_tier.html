@@ -32,7 +32,7 @@
                                 <div class="mb-3">
                                     <label for="user_limit" class="form-label">User Limit</label>
                                     <input type="number" class="form-control" id="user_limit" name="user_limit" 
-                                           value="{{ tier.user_limit }}" min="-1" required>
+                                           value="{{ tier.user_limit }}" min="-1" step="1" required>
                                     <div class="form-text">Set to -1 for unlimited users</div>
                                 </div>
 
@@ -46,12 +46,6 @@
                                     <div class="form-text">Used for organizing and sorting tiers</div>
                                 </div>
                                 <div class="row">
-                                    <div class="col-md-6">
-                                        <div class="mb-3">
-                                            <label for="max_users" class="form-label">Max Users</label>
-                                            <input type="number" class="form-control" id="max_users" name="max_users" value="{{ tier.max_users or '' }}" min="0">
-                                        </div>
-                                    </div>
                                     <div class="col-md-6">
                                         <div class="mb-3">
                                             <label for="max_recipes" class="form-label">Max Recipes</label>

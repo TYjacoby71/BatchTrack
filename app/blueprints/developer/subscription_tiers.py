@@ -130,7 +130,7 @@ def create_tier():
         whop_key = request.form.get('whop_product_key', '').strip()
 
         # Convert limit fields to integers or None if empty
-        max_users = int(max_users) if max_users and max_users.isdigit() else None
+        # Do not set tier.max_users from form; maintained only for legacy compatibility elsewhere
         max_recipes = int(max_recipes) if max_recipes and max_recipes.isdigit() else None
         max_batches = int(max_batches) if max_batches and max_batches.isdigit() else None
         max_products = int(max_products) if max_products and max_products.isdigit() else None
@@ -252,11 +252,15 @@ def edit_tier(tier_id):
         try:
             tier.name = request.form.get('name', tier.name)
             tier.description = request.form.get('description', tier.description)
-            tier.user_limit = _parse_int_allow_neg1(request.form.get('user_limit', tier.user_limit), tier.user_limit)
+            # Allow -1 for unlimited
+            try:
+                tier.user_limit = int(request.form.get('user_limit', tier.user_limit))
+            except (ValueError, TypeError):
+                tier.user_limit = tier.user_limit
 
             # Update limit fields, converting to int or None
-            max_users = request.form.get('max_users', str(tier.max_users) if tier.max_users is not None else '')
-            tier.max_users = int(max_users) if max_users and max_users.isdigit() else None
+            # Stop processing legacy max_users from form; keep existing DB value intact
+            # (We keep the column for backward compatibility but do not expose/edit it)
 
             max_recipes = request.form.get('max_recipes', str(tier.max_recipes) if tier.max_recipes is not None else '')
             tier.max_recipes = int(max_recipes) if max_recipes and max_recipes.isdigit() else None
