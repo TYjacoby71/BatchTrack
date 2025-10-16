@@ -110,14 +110,34 @@ def tools_draft():
         data['containers'] = _norm_lines(data.get('containers'), 'container')
     # Merge to preserve any prior progress and keep across redirects
     try:
+        from datetime import datetime
         existing = session.get('tool_draft', {})
         if not isinstance(existing, dict):
             existing = {}
         existing.update(data or {})
         session['tool_draft'] = existing
-        session.permanent = True
+
+        # Track draft metadata for TTL and debugging
+        meta = session.get('tool_draft_meta') or {}
+        if not isinstance(meta, dict):
+            meta = {}
+        if not meta.get('created_at'):
+            meta['created_at'] = datetime.utcnow().isoformat()
+        meta['last_updated_at'] = datetime.utcnow().isoformat()
+        meta['source'] = 'public_tools'
+        session['tool_draft_meta'] = meta
+
+        # Do NOT make the entire session permanent just for a draft
+        # Let session behave normally so drafts end with the browser session
+        try:
+            session.permanent = False
+        except Exception:
+            pass
     except Exception:
         session['tool_draft'] = data
-        session.permanent = True
+        try:
+            session.pop('tool_draft_meta', None)
+        except Exception:
+            pass
     # Redirect to sign-in or directly to recipes new if already logged in
     return jsonify({'success': True, 'redirect': url_for('recipes.new_recipe')})

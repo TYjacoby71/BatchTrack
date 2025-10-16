@@ -8,7 +8,7 @@ from . import auth_bp
 from ...extensions import db
 from ...models import User, Organization, Role, Permission
 from ...utils.timezone_utils import TimezoneUtils
-from ...utils.permissions import require_permission, has_permission
+from ...utils.permissions import require_permission
 from flask_login import login_required
 import logging
 from .whop_auth import WhopAuth # Import WhopAuth
@@ -53,6 +53,14 @@ def login():
         return redirect(url_for('app_routes.dashboard'))
 
     form = LoginForm()
+    # Persist "next" param for OAuth/alternate login flows
+    try:
+        if request.method == 'GET':
+            next_param = request.args.get('next')
+            if next_param and isinstance(next_param, str) and next_param.startswith('/') and not next_param.startswith('//'):
+                session['login_next'] = next_param
+    except Exception:
+        pass
     if request.method == 'POST' and form.validate_on_submit():
         username = request.form.get('username')
         password = request.form.get('password')
@@ -79,22 +87,18 @@ def login():
             user.last_login = TimezoneUtils.utc_now()
             db.session.commit()
 
-            # Redirect based on user type - developers go to their own dashboard
+            # Redirect based on user type and optional next parameter
             if user.user_type == 'developer':
                 return redirect(url_for('developer.dashboard'))
             else:
-                # Admin users should not be funneled into recipe creation from public tool drafts
-                # Clear any lingering public tool draft for admins and go to dashboard
-                next_url = url_for('app_routes.dashboard')
+                # Prefer an explicit next target if present and safe; otherwise go to dashboard
                 try:
-                    if has_permission(user, 'system.admin'):
-                        session.pop('tool_draft', None)
-                    elif session.get('tool_draft'):
-                        # Regular users with a tool draft proceed to recipe creation
-                        next_url = url_for('recipes.new_recipe')
+                    next_url = session.pop('login_next', None) or request.args.get('next')
                 except Exception:
-                    pass
-                return redirect(next_url)
+                    next_url = None
+                if isinstance(next_url, str) and next_url.startswith('/') and not next_url.startswith('//'):
+                    return redirect(next_url)
+                return redirect(url_for('app_routes.dashboard'))
         else:
             flash('Invalid username or password')
             return render_template('pages/auth/login.html', form=form)
@@ -204,15 +208,14 @@ def oauth_callback():
             if user.user_type == 'developer':
                 return redirect(url_for('developer.dashboard'))
             else:
-                next_url = url_for('app_routes.dashboard')
+                # Prefer explicit next if present; else dashboard
                 try:
-                    if has_permission(user, 'system.admin'):
-                        session.pop('tool_draft', None)
-                    elif session.get('tool_draft'):
-                        next_url = url_for('recipes.new_recipe')
+                    next_url = session.pop('login_next', None)
                 except Exception:
-                    pass
-                return redirect(next_url)
+                    next_url = None
+                if isinstance(next_url, str) and next_url.startswith('/') and not next_url.startswith('//'):
+                    return redirect(next_url)
+                return redirect(url_for('app_routes.dashboard'))
 
         else:
             # New user - store info for signup flow
@@ -310,6 +313,12 @@ def logout():
     # Clear dismissed alerts from session on logout
     session.pop('dismissed_alerts', None)
 
+    # Clear public tool drafts on logout so sensitive data doesn't persist between users
+    try:
+        session.pop('tool_draft', None)
+        session.pop('tool_draft_meta', None)
+    except Exception:
+        pass
     logout_user()
     return redirect(url_for('homepage'))
 
@@ -585,15 +594,6 @@ def whop_login():
         login_user(user)
         user.last_login = TimezoneUtils.utc_now()
         db.session.commit()
-        
-        # Clear any lingering public tools draft for system admins
-        try:
-            if has_permission(user, 'system.admin'):
-                from flask import session as _session
-                _session.pop('tool_draft', None)
-        except Exception:
-            pass
-
         flash('Successfully logged in with Whop license.', 'success')
         return redirect(url_for('app_routes.dashboard'))
     else:
