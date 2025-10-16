@@ -43,6 +43,7 @@ def manage_tiers():
     for tier in all_tiers_db:
         # Get live pricing from Stripe if available
         price_display = 'N/A'
+        live_pricing = None
 
         if tier.stripe_lookup_key:
             try:
