@@ -337,12 +337,9 @@ class AuthorizationHierarchy:
         if organization.effective_subscription_tier == 'exempt':
             return True, "Exempt status"
 
-        # IMPORTANT: Degrade gracefully when no tier is assigned.
-        # During migrations or transient billing outages, treat missing tier
-        # as allowed to avoid locking users out unexpectedly. Downstream tier
-        # gating will also skip when tier is missing.
+        # Strict gating: no tier means no access
         if not organization.tier:
-            return True, "No subscription tier assigned (grace allow)"
+            return False, "No subscription tier assigned"
 
         # Check if tier is available
         if not organization.tier.is_available:
@@ -408,20 +405,15 @@ class AuthorizationHierarchy:
                 return False
 
             # Step 2: Check if subscription tier allows this permission
-            # If tier is missing, SKIP the tier gate and rely on roles.
             tier_permissions = AuthorizationHierarchy.get_tier_allowed_permissions(organization)
-            if organization.tier:
-                if permission_name not in tier_permissions:
-                    logger.debug(f"Permission {permission_name} not allowed by tier {organization.effective_subscription_tier}")
-                    return False
+            if permission_name not in tier_permissions:
+                logger.debug(f"Permission {permission_name} not allowed by tier {organization.effective_subscription_tier}")
+                return False
 
             # Step 3: Check user role permissions
-            # Organization owners get all tier-allowed permissions.
-            # If tier is missing, owners get access based on their role (grace allow).
+            # Organization owners get all tier-allowed permissions (tier gate already enforced above).
             if getattr(user, 'is_organization_owner', False):
-                if not organization.tier:
-                    return True
-                return True  # tier gate already passed above when tier exists
+                return True
 
             # Other users need role-based permissions
             try:
@@ -499,28 +491,14 @@ class AuthorizationHierarchy:
             logger.warning(f"Addon entitlement lookup failed: {_e}")
 
         # Organization owners get all tier-allowed + addon permissions.
-        # If tier is missing, owners get their role permissions (grace allow).
         if getattr(user, 'is_organization_owner', False):
-            if not organization.tier:
-                # No tier: return role permissions directly
-                roles = user.get_active_roles()
-                role_perms = set()
-                for role in roles:
-                    role_perms.update(p.name for p in role.get_permissions())
-                return list(role_perms)
             return list(set(tier_permissions + addon_permissions))
 
         # Other users
         user_permissions = set()
         user_roles = user.get_active_roles()
 
-        # If no tier, do not gate by tier: return role-based permissions directly
-        if not organization.tier:
-            for role in user_roles:
-                user_permissions.update(p.name for p in role.get_permissions())
-            return list(user_permissions)
-
-        # Tier exists: intersect role permissions with tier-allowed or addon-granted
+        # Intersect role permissions with tier-allowed or addon-granted
         for role in user_roles:
             role_permissions = [p.name for p in role.get_permissions()]
             for perm in role_permissions:
