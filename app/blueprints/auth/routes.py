@@ -410,8 +410,9 @@ def signup():
 
     # Get available tiers from database only
     db_tiers = SubscriptionTier.query.filter_by(
-        is_available=True,
         is_customer_facing=True
+    ).filter(
+        SubscriptionTier.billing_provider != 'exempt'
     ).all()
 
     available_tiers = {}
