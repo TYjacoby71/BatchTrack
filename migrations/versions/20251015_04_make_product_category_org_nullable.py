@@ -1,8 +1,8 @@
 """
 Make product_category.organization_id nullable to support global categories
 
-Revision ID: 20251015_01
-Revises: 20251009_3
+Revision ID: 20251015_04
+Revises: 20251015_03
 Create Date: 2025-10-15
 """
 
@@ -12,8 +12,8 @@ from sqlalchemy import inspect
 
 
 # revision identifiers, used by Alembic.
-revision = '20251015_01'
-down_revision = '20251009_3'
+revision = '20251015_04'
+down_revision = '20251015_03'
 branch_labels = None
 depends_on = None
 
