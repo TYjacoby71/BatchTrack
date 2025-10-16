@@ -8,7 +8,7 @@ from . import auth_bp
 from ...extensions import db
 from ...models import User, Organization, Role, Permission
 from ...utils.timezone_utils import TimezoneUtils
-from ...utils.permissions import require_permission
+from ...utils.permissions import require_permission, has_permission
 from flask_login import login_required
 import logging
 from .whop_auth import WhopAuth # Import WhopAuth
@@ -83,10 +83,14 @@ def login():
             if user.user_type == 'developer':
                 return redirect(url_for('developer.dashboard'))
             else:
-                # If a tool draft exists, preserve it across login to finish onboarding
+                # Admin users should not be funneled into recipe creation from public tool drafts
+                # Clear any lingering public tool draft for admins and go to dashboard
                 next_url = url_for('app_routes.dashboard')
                 try:
-                    if session.get('tool_draft'):
+                    if has_permission(user, 'system.admin'):
+                        session.pop('tool_draft', None)
+                    elif session.get('tool_draft'):
+                        # Regular users with a tool draft proceed to recipe creation
                         next_url = url_for('recipes.new_recipe')
                 except Exception:
                     pass
@@ -202,7 +206,9 @@ def oauth_callback():
             else:
                 next_url = url_for('app_routes.dashboard')
                 try:
-                    if session.get('tool_draft'):
+                    if has_permission(user, 'system.admin'):
+                        session.pop('tool_draft', None)
+                    elif session.get('tool_draft'):
                         next_url = url_for('recipes.new_recipe')
                 except Exception:
                     pass
@@ -579,6 +585,15 @@ def whop_login():
         login_user(user)
         user.last_login = TimezoneUtils.utc_now()
         db.session.commit()
+        
+        # Clear any lingering public tools draft for system admins
+        try:
+            if has_permission(user, 'system.admin'):
+                from flask import session as _session
+                _session.pop('tool_draft', None)
+        except Exception:
+            pass
+
         flash('Successfully logged in with Whop license.', 'success')
         return redirect(url_for('app_routes.dashboard'))
     else:
