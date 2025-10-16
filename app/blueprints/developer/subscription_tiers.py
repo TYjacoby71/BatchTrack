@@ -150,6 +150,7 @@ def create_tier():
             flash('Tier Name is required.', 'error')
             return redirect(url_for('.create_tier'))
 
+        # Check for duplicate name
         if SubscriptionTier.query.filter_by(name=name).first():
             flash(f"A tier with the name '{name}' already exists.", 'error')
             return redirect(url_for('.create_tier'))
@@ -206,7 +207,7 @@ def create_tier():
 
         db.session.commit()
 
-        logger.info(f'Created subscription tier: {name} ({tier.key})')
+        logger.info(f'Created subscription tier: {name} (key: {tier.key})')
         flash(f'Subscription tier "{name}" created successfully.', 'success')
         return redirect(url_for('.manage_tiers'))
 
