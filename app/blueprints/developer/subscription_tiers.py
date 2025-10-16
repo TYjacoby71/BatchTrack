@@ -69,7 +69,7 @@ def manage_tiers():
             'stripe_storage_lookup_key': getattr(tier, 'stripe_storage_lookup_key', None),
             'whop_product_key': tier.whop_product_key,
             'stripe_price': price_display,  # Now shows actual pricing
-            'last_synced': None,  # TODO: Add sync tracking
+            'last_synced': live_pricing.get('last_synced') if live_pricing else None,
             'whop_last_synced': None,  # TODO: Add whop sync tracking
             'permissions': [p.name for p in tier.permissions],
             'pricing_category': 'standard',  # Default value

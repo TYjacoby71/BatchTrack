@@ -69,8 +69,8 @@
                     <div class="row mb-3">
                         <div class="col-6">
                             <small class="text-muted">Stripe Sync:</small>
-                            {% if tier_data.stripe_lookup_key and tier_data.last_synced %}
-                                <span class="badge bg-success ms-1">{{ tier_data.last_synced[:10] if tier_data.last_synced else 'Never' }}</span>
+                            {% if tier_data.stripe_lookup_key and tier_data.stripe_price and tier_data.stripe_price != 'N/A' %}
+                                <span class="badge bg-success ms-1">Synced</span>
                             {% elif tier_data.stripe_lookup_key %}
                                 <span class="badge bg-warning ms-1">Not Synced</span>
                             {% else %}
