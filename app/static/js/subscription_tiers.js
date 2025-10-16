@@ -54,6 +54,8 @@ $(document).ready(function() {
             success: function(response) {
                 if (response.success) {
                     showAlert('success', response.message || 'Sync completed successfully');
+                    // Optionally reload the page to show updated pricing
+                    setTimeout(() => location.reload(), 1500);
                 } else {
                     showAlert('error', response.error || response.message || 'Sync failed');
                 }
@@ -70,6 +72,16 @@ $(document).ready(function() {
         });
     });
     
+    // Helper function to show alerts
+    function showAlert(type, message) {
+        if (typeof window.showAlert === 'function') {
+            window.showAlert(type, message);
+        } else {
+            // Fallback to simple alert
+            alert(message);
+        }
+    }
+        
     // Sync tier with Whop
     $('.sync-whop-tier').on('click', function() {
         const tierId = $(this).data('tier-id');

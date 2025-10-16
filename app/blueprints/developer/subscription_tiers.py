@@ -43,6 +43,7 @@ def manage_tiers():
     for tier in all_tiers_db:
         # Get live pricing from Stripe if available
         price_display = 'N/A'
+        live_pricing = None
 
         if tier.stripe_lookup_key:
             try:
@@ -69,7 +70,7 @@ def manage_tiers():
             'stripe_storage_lookup_key': getattr(tier, 'stripe_storage_lookup_key', None),
             'whop_product_key': tier.whop_product_key,
             'stripe_price': price_display,  # Now shows actual pricing
-            'last_synced': None,  # TODO: Add sync tracking
+            'last_synced': live_pricing.get('last_synced') if live_pricing else None,
             'whop_last_synced': None,  # TODO: Add whop sync tracking
             'permissions': [p.name for p in tier.permissions],
             'pricing_category': 'standard',  # Default value
@@ -150,6 +151,7 @@ def create_tier():
             flash('Tier Name is required.', 'error')
             return redirect(url_for('.create_tier'))
 
+        # Check for duplicate name
         if SubscriptionTier.query.filter_by(name=name).first():
             flash(f"A tier with the name '{name}' already exists.", 'error')
             return redirect(url_for('.create_tier'))
@@ -206,7 +208,7 @@ def create_tier():
 
         db.session.commit()
 
-        logger.info(f'Created subscription tier: {name} ({tier.key})')
+        logger.info(f'Created subscription tier: {name} (key: {tier.key})')
         flash(f'Subscription tier "{name}" created successfully.', 'success')
         return redirect(url_for('.manage_tiers'))
 
@@ -381,18 +383,28 @@ def sync_tier_with_stripe(tier_id):
         return jsonify({'success': False, 'error': 'No Stripe lookup key configured'}), 400
 
     try:
-        # Here you would implement actual Stripe sync logic
-        # For now, return success
-        logger.info(f'Synced tier {tier_id} with Stripe')
-        return jsonify({
-            'success': True,
-            'message': f'Successfully synced {tier.name} with Stripe',
-            'tier': {
-                'key': tier.key,
-                'name': tier.name,
-                'stripe_price': 'N/A'  # No longer stored locally
-            }
-        })
+        from ...services.stripe_service import StripeService
+        
+        # Get live pricing from Stripe
+        live_pricing = StripeService.get_live_pricing_for_tier(tier)
+        if live_pricing:
+            logger.info(f'Successfully synced tier {tier.name} with Stripe - Price: {live_pricing["formatted_price"]}')
+            return jsonify({
+                'success': True,
+                'message': f'Successfully synced {tier.name} with Stripe - Price: {live_pricing["formatted_price"]}',
+                'tier': {
+                    'key': tier.key,
+                    'name': tier.name,
+                    'stripe_price': live_pricing['formatted_price']
+                }
+            })
+        else:
+            logger.warning(f'No pricing found for tier {tier.name} with lookup key {tier.stripe_lookup_key}')
+            return jsonify({
+                'success': False, 
+                'error': f'No pricing found in Stripe for lookup key: {tier.stripe_lookup_key}'
+            }), 400
+            
     except Exception as e:
         logger.error(f'Error syncing tier {tier_id}: {e}')
         return jsonify({'success': False, 'error': str(e)}), 500

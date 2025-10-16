@@ -365,7 +365,8 @@ class StripeService:
                 'formatted_price': f'${amount:.0f}',
                 'currency': currency,
                 'billing_cycle': billing_cycle,
-                'lookup_key': tier_obj.stripe_lookup_key
+                'lookup_key': tier_obj.stripe_lookup_key,
+                'last_synced': datetime.utcnow().isoformat()
             }
 
         except stripe.error.StripeError as e:

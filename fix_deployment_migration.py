@@ -31,24 +31,36 @@ def fix_migration():
             print("🔄 Attempting to fix failed migration...")
             
             with engine.connect() as conn:
-                # Rollback any existing transaction
+                # First, try to end any existing transaction
                 try:
+                    # Try to rollback first
                     conn.execute(text("ROLLBACK;"))
                     print("✅ Rolled back failed transaction")
                 except Exception as e:
                     print(f"ℹ️  No active transaction to rollback: {e}")
                 
-                # Check current migration state
+                # Create a fresh transaction to check migration state
+                trans = conn.begin()
                 try:
                     result = conn.execute(text("SELECT version_num FROM alembic_version;"))
                     current_version = result.scalar()
                     print(f"📍 Current migration version: {current_version}")
+                    
+                    # Also check if feature_flag table exists
+                    result = conn.execute(text("""
+                        SELECT EXISTS (
+                            SELECT FROM information_schema.tables 
+                            WHERE table_name = 'feature_flag'
+                        );
+                    """))
+                    table_exists = result.scalar()
+                    print(f"📍 feature_flag table exists: {table_exists}")
+                    
+                    trans.commit()
                 except Exception as e:
-                    print(f"❌ Error checking migration version: {e}")
+                    trans.rollback()
+                    print(f"❌ Error checking migration state: {e}")
                     return False
-                
-                # Commit the rollback
-                conn.commit()
                 
             print("✅ Database transaction reset successfully")
             print("🚀 Now run 'flask db upgrade' to retry the migration")

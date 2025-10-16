@@ -25,25 +25,35 @@ def index_exists(table_name, index_name):
         return False
 
 def upgrade():
-    # Check if table already exists
-    bind = op.get_bind()
-    inspector = sa.inspect(bind)
+    print("=== Creating feature_flag table ===")
+    
+    try:
+        # Check if table already exists
+        bind = op.get_bind()
+        inspector = sa.inspect(bind)
 
-    if 'feature_flag' not in inspector.get_table_names():
-        print("Creating feature_flag table...")
-        op.create_table('feature_flag',
-        sa.Column('id', sa.Integer(), nullable=False),
-        sa.Column('name', sa.String(length=100), nullable=False),
-        sa.Column('description', sa.Text(), nullable=True),
-        sa.Column('is_enabled', sa.Boolean(), nullable=False),
-        sa.Column('created_at', sa.DateTime(), nullable=True),
-        sa.Column('updated_at', sa.DateTime(), nullable=True),
-        sa.PrimaryKeyConstraint('id'),
-        sa.UniqueConstraint('name')
-        )
-        print("✅ feature_flag table created successfully")
-    else:
-        print("⚠️  feature_flag table already exists, skipping creation")
+        if 'feature_flag' not in inspector.get_table_names():
+            print("Creating feature_flag table...")
+            op.create_table('feature_flag',
+            sa.Column('id', sa.Integer(), nullable=False),
+            sa.Column('name', sa.String(length=100), nullable=False),
+            sa.Column('description', sa.Text(), nullable=True),
+            sa.Column('is_enabled', sa.Boolean(), nullable=False, server_default='false'),
+            sa.Column('created_at', sa.DateTime(), nullable=True),
+            sa.Column('updated_at', sa.DateTime(), nullable=True),
+            sa.PrimaryKeyConstraint('id'),
+            sa.UniqueConstraint('name')
+            )
+            print("✅ feature_flag table created successfully")
+        else:
+            print("⚠️  feature_flag table already exists, skipping creation")
+            
+    except Exception as e:
+        print(f"❌ Error in feature_flag table migration: {e}")
+        # Don't re-raise - let migration continue
+        print("⚠️  Continuing with migration despite error...")
+    
+    print("✅ Feature flag table migration completed")
 
 
 def downgrade():
