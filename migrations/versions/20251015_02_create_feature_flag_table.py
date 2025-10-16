@@ -5,8 +5,8 @@ from alembic import op
 import sqlalchemy as sa
 from sqlalchemy import inspect
 
-revision = '20251015_01'
-down_revision = '20251009_3'
+revision = '20251015_02'
+down_revision = '20251015_01'
 branch_labels = None
 depends_on = None
 
