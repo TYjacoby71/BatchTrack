@@ -411,6 +411,7 @@ def signup():
         return redirect(url_for('app_routes.dashboard'))
 
     # Get available tiers from database only
+    from ...models.subscription_tier import SubscriptionTier
     db_tiers = SubscriptionTier.query.filter_by(
         is_customer_facing=True
     ).filter(
