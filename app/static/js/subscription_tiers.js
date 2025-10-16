@@ -159,21 +159,4 @@ $(document).ready(function() {
             tierCard.find('.last-synced').text(`Last synced: ${syncDate}`);
         }
     }
-    
-    function showAlert(type, message) {
-        const alertClass = type === 'success' ? 'alert-success' : 'alert-danger';
-        const alert = $(`
-            <div class="alert ${alertClass} alert-dismissible fade show" role="alert">
-                ${message}
-                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-            </div>
-        `);
-        
-        $('.container-fluid').prepend(alert);
-        
-        // Auto-dismiss after 5 seconds
-        setTimeout(function() {
-            alert.alert('close');
-        }, 5000);
-    }
 });
