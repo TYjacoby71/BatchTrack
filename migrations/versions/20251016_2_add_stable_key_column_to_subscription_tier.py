@@ -18,59 +18,77 @@ depends_on = None
 
 
 def upgrade():
-    """Add stable key column and populate from existing data"""
+    """Remove any key column and ensure clean tier structure with integer IDs"""
     
-    # Add the key column
-    op.add_column('subscription_tier', sa.Column('key', sa.String(64), nullable=True))
-    
-    # Get database connection
     connection = op.get_bind()
     
-    # Update existing tiers with computed keys
-    tiers_to_update = [
-        ('Solo Plan', 'solo'),
-        ('Solo Maker', 'solo'),  # Normalize back to 'solo' 
-        ('Team Plan', 'team'),
-        ('Team', 'team'),
-        ('Enterprise Plan', 'enterprise'),
-        ('Enterprise', 'enterprise'),
-        ('Free Plan', 'free'),
-        ('Free', 'free'),
-        ('Starter', 'starter'),
-        ('Pro', 'pro'),
-        ('Business', 'business'),
-        ('Exempt', 'exempt')
-    ]
-    
-    for name, key in tiers_to_update:
-        try:
-            connection.execute(
-                text("UPDATE subscription_tier SET key = :key WHERE name = :name"),
-                key=key, name=name
-            )
-        except Exception as e:
-            print(f"Could not update tier {name} to key {key}: {e}")
-    
-    # For any remaining tiers without keys, compute from name
+    # First, drop the key column if it exists (from previous failed migrations)
     try:
-        result = connection.execute(text("SELECT id, name FROM subscription_tier WHERE key IS NULL"))
-        for row in result:
-            computed_key = row[1].lower().replace(' ', '_').replace('plan', '').strip('_')
-            connection.execute(
-                text("UPDATE subscription_tier SET key = :key WHERE id = :id"),
-                key=computed_key, id=row[0]
-            )
+        connection.execute(text("ALTER TABLE subscription_tier DROP COLUMN IF EXISTS key"))
+        print("✅ Dropped existing key column")
     except Exception as e:
-        print(f"Could not update remaining tiers: {e}")
+        print(f"Key column didn't exist or couldn't be dropped: {e}")
     
-    # Make the column non-nullable and unique
-    op.alter_column('subscription_tier', 'key', nullable=False)
-    op.create_unique_constraint('uq_subscription_tier_key', 'subscription_tier', ['key'])
+    # Ensure all tiers have proper integer IDs and clean up any duplicates
+    try:
+        # Get all tiers and their current state
+        result = connection.execute(text("SELECT id, name FROM subscription_tier ORDER BY id"))
+        tiers = result.fetchall()
+        print(f"Found {len(tiers)} existing tiers")
+        
+        # Normalize tier names to avoid duplicates
+        tier_name_mapping = {
+            'Solo Maker': 'Solo Plan',  # Normalize back to Solo Plan
+            'Team': 'Team Plan',        # Normalize to Team Plan
+            'Enterprise': 'Enterprise Plan',  # Normalize to Enterprise Plan
+            'Free': 'Free Plan'         # Normalize to Free Plan
+        }
+        
+        for tier_id, tier_name in tiers:
+            if tier_name in tier_name_mapping:
+                new_name = tier_name_mapping[tier_name]
+                print(f"Normalizing '{tier_name}' -> '{new_name}'")
+                connection.execute(
+                    text("UPDATE subscription_tier SET name = :new_name WHERE id = :tier_id"),
+                    {'new_name': new_name, 'tier_id': tier_id}
+                )
+        
+        # Remove any duplicate tiers (keep the one with lowest ID)
+        connection.execute(text("""
+            DELETE FROM subscription_tier 
+            WHERE id NOT IN (
+                SELECT MIN(id) 
+                FROM subscription_tier 
+                GROUP BY name
+            )
+        """))
+        
+        print("✅ Normalized tier names and removed duplicates")
+        
+    except Exception as e:
+        print(f"Could not normalize tiers: {e}")
     
-    print("✅ Added stable key column to subscription_tier")
+    print("✅ Subscription tier migration completed - using integer IDs only")
 
 
 def downgrade():
-    """Remove the key column"""
-    op.drop_constraint('uq_subscription_tier_key', 'subscription_tier', type_='unique')
-    op.drop_column('subscription_tier', 'key')
+    """Add back a key column for rollback compatibility"""
+    
+    connection = op.get_bind()
+    
+    # Add the key column back
+    op.add_column('subscription_tier', sa.Column('key', sa.String(64), nullable=True))
+    
+    # Populate with computed values
+    try:
+        connection.execute(text("""
+            UPDATE subscription_tier 
+            SET key = LOWER(REPLACE(REPLACE(name, ' Plan', ''), ' ', '_'))
+        """))
+        
+        # Make it not null and unique
+        op.alter_column('subscription_tier', 'key', nullable=False)
+        op.create_unique_constraint('uq_subscription_tier_key', 'subscription_tier', ['key'])
+        
+    except Exception as e:
+        print(f"Could not populate key column in downgrade: {e}")

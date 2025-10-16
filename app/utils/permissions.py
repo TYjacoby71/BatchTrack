@@ -114,7 +114,7 @@ def tier_required(min_tier: str):
     """
     Decorator requiring minimum subscription tier
     """
-    TIER_ORDER = ["free", "solo", "team", "enterprise", "exempt"]
+    TIER_ORDER = ['Exempt', 'Free Plan', 'Solo Plan', 'Team Plan', 'Enterprise Plan']
 
     def decorator(f):
         @wraps(f)
