@@ -367,11 +367,11 @@ def signup_data():
             except:
                 live_pricing = None
 
-        # Use live pricing if available, otherwise fallback
+        # Use live pricing if available, otherwise show as contact sales
         if live_pricing:
             price_display = live_pricing['formatted_price']
         else:
-            price_display = tier_obj.fallback_price
+            price_display = 'Contact Sales'
 
         available_tiers[str(tier_obj.id)] = {
             'name': tier_obj.name,
