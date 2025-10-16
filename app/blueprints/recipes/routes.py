@@ -105,6 +105,7 @@ def new_recipe():
                 try:
                     from flask import session as _session
                     _session.pop('tool_draft', None)
+                    _session.pop('tool_draft_meta', None)
                 except Exception:
                     pass
                 return redirect(url_for('recipes.view_recipe', recipe_id=result.id))
@@ -119,6 +120,19 @@ def new_recipe():
     # Prefill from public tools draft (if present)
     from flask import session
     draft = session.get('tool_draft', None)
+    # Expire stale drafts (>72 hours) so they don't linger indefinitely
+    try:
+        from datetime import datetime, timedelta
+        meta = session.get('tool_draft_meta') or {}
+        created_at = meta.get('created_at')
+        if created_at:
+            created_dt = datetime.fromisoformat(created_at)
+            if datetime.utcnow() - created_dt > timedelta(hours=72):
+                session.pop('tool_draft', None)
+                session.pop('tool_draft_meta', None)
+                draft = None
+    except Exception:
+        pass
     prefill = None
     if isinstance(draft, dict):
         try:
