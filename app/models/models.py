@@ -160,18 +160,25 @@ class Organization(db.Model):
         return self.tier
 
     def get_subscription_features(self):
-        """Get list of features for current subscription tier"""
+        """Get list of features for this organization's subscription tier"""
         if not self.tier:
             return []
 
-        # Load tier configuration
-        from ..blueprints.developer.subscription_tiers import load_tiers_config
-        tiers_config = load_tiers_config()
+        # Get features from tier's permissions and addons
+        features = []
 
-        if self.tier.key in tiers_config:
-            return tiers_config[self.tier.key].get('features', [])
+        # Add permission-based features
+        if self.tier.permissions:
+            for permission in self.tier.permissions:
+                features.append(permission.name)
 
-        return []
+        # Add addon-based features
+        if self.tier.allowed_addons:
+            for addon in self.tier.allowed_addons:
+                if addon.is_active:
+                    features.append(addon.key)
+
+        return features
 
     def get_tier_display_name(self):
         """Get the display name for the current subscription tier"""
@@ -375,14 +382,14 @@ class User(UserMixin, db.Model):
             print(f"Error type: {type(e).__name__}")
             print(f"Error details: {str(e)}")
             print("------------------------------------------------------------------")
-            
+
             # Try to rollback and clean up
             try:
                 from ..extensions import db
                 db.session.rollback()
             except:
                 pass
-            
+
             return []
 
     def has_permission(self, permission_name):
@@ -390,14 +397,14 @@ class User(UserMixin, db.Model):
         # Handle enum permission names by converting to string
         if hasattr(permission_name, 'value'):
             permission_name = permission_name.value
-            
+
         # Developers check their developer roles
         if self.user_type == 'developer':
             return self.has_developer_permission(permission_name)
 
         # Get roles from both active assignments and direct role relationships (for tests)
         roles = self.get_active_roles()
-        
+
         # Also check direct role relationships (backwards compatibility for tests)
         if hasattr(self, 'roles'):
             for role in self.roles:
