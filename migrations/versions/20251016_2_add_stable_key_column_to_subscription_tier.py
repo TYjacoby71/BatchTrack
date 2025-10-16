@@ -1,8 +1,8 @@
 
 """Add stable key column to subscription_tier
 
-Revision ID: 20251016_01
-Revises: 20251015_04
+Revision ID: 20251016_2
+Revises: 20251016_1
 Create Date: 2025-10-16 22:35:00.000000
 
 """
@@ -11,8 +11,8 @@ import sqlalchemy as sa
 from sqlalchemy.sql import text
 
 # revision identifiers, used by Alembic.
-revision = '20251016_01'
-down_revision = '20251015_04'
+revision = '20251016_2'
+down_revision = '20251016_1'
 branch_labels = None
 depends_on = None
 
