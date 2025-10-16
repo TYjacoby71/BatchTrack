@@ -337,7 +337,7 @@ class AuthorizationHierarchy:
         if organization.effective_subscription_tier == 'exempt':
             return True, "Exempt status"
 
-        # Check if organization has valid subscription tier
+        # Strict gating: no tier means no access
         if not organization.tier:
             return False, "No subscription tier assigned"
 
@@ -411,8 +411,8 @@ class AuthorizationHierarchy:
                 return False
 
             # Step 3: Check user role permissions
-            # Organization owners get all tier-allowed permissions
-            if user.user_type == 'organization_owner' or user.user_type == 'developer':
+            # Organization owners get all tier-allowed permissions (tier gate already enforced above).
+            if getattr(user, 'is_organization_owner', False):
                 return True
 
             # Other users need role-based permissions
@@ -420,6 +420,7 @@ class AuthorizationHierarchy:
                 user_roles = user.get_active_roles()
                 for role in user_roles:
                     if role.has_permission(permission_name):
+                        # If tier exists, the gate already allowed; if no tier, allow by role
                         return True
             except Exception as role_error:
                 logger.warning(f"User roles error in authorization: {role_error}")
@@ -464,7 +465,7 @@ class AuthorizationHierarchy:
         if not subscription_ok:
             return []
 
-        # Get tier-allowed permissions
+        # Get tier-allowed permissions (may be empty if tier missing)
         tier_permissions = AuthorizationHierarchy.get_tier_allowed_permissions(organization)
 
         # Add-on entitlements from:
@@ -489,17 +490,17 @@ class AuthorizationHierarchy:
         except Exception as _e:
             logger.warning(f"Addon entitlement lookup failed: {_e}")
 
-        # Organization owners get all tier-allowed + addon permissions
-        if user.user_type == 'organization_owner':
+        # Organization owners get all tier-allowed + addon permissions.
+        if getattr(user, 'is_organization_owner', False):
             return list(set(tier_permissions + addon_permissions))
 
-        # Other users get intersection of tier permissions and role permissions
+        # Other users
         user_permissions = set()
         user_roles = user.get_active_roles()
 
+        # Intersect role permissions with tier-allowed or addon-granted
         for role in user_roles:
             role_permissions = [p.name for p in role.get_permissions()]
-            # Only add permissions that are both in role AND allowed by tier or addons
             for perm in role_permissions:
                 if (perm in tier_permissions) or (perm in addon_permissions):
                     user_permissions.add(perm)

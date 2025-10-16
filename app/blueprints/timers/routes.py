@@ -27,6 +27,7 @@ def list_timers():
 
 @timers_bp.route('/api/create-timer', methods=['POST'])
 @timers_bp.route('/create', methods=['POST'])
+@login_required
 def api_create_timer():
     """Create a new timer for a batch"""
     try:
