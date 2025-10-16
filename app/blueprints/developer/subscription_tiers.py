@@ -382,18 +382,28 @@ def sync_tier_with_stripe(tier_id):
         return jsonify({'success': False, 'error': 'No Stripe lookup key configured'}), 400
 
     try:
-        # Here you would implement actual Stripe sync logic
-        # For now, return success
-        logger.info(f'Synced tier {tier_id} with Stripe')
-        return jsonify({
-            'success': True,
-            'message': f'Successfully synced {tier.name} with Stripe',
-            'tier': {
-                'key': tier.key,
-                'name': tier.name,
-                'stripe_price': 'N/A'  # No longer stored locally
-            }
-        })
+        from ...services.stripe_service import StripeService
+        
+        # Get live pricing from Stripe
+        live_pricing = StripeService.get_live_pricing_for_tier(tier)
+        if live_pricing:
+            logger.info(f'Successfully synced tier {tier.name} with Stripe - Price: {live_pricing["formatted_price"]}')
+            return jsonify({
+                'success': True,
+                'message': f'Successfully synced {tier.name} with Stripe - Price: {live_pricing["formatted_price"]}',
+                'tier': {
+                    'key': tier.key,
+                    'name': tier.name,
+                    'stripe_price': live_pricing['formatted_price']
+                }
+            })
+        else:
+            logger.warning(f'No pricing found for tier {tier.name} with lookup key {tier.stripe_lookup_key}')
+            return jsonify({
+                'success': False, 
+                'error': f'No pricing found in Stripe for lookup key: {tier.stripe_lookup_key}'
+            }), 400
+            
     except Exception as e:
         logger.error(f'Error syncing tier {tier_id}: {e}')
         return jsonify({'success': False, 'error': str(e)}), 500

@@ -2,6 +2,10 @@
 
 {% block title %}Subscription Tiers Management - Developer{% endblock %}
 
+{% block head %}
+<meta name="csrf-token" content="{{ csrf_token() }}">
+{% endblock %}
+
 {% block content %}
 <div class="container-fluid py-4">
     <!-- Breadcrumbs -->
