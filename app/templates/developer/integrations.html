@@ -1,4 +1,9 @@
 {% extends 'layout.html' %}
+
+{% block head %}
+<meta name="csrf-token" content="{{ csrf_token() }}">
+{% endblock %}
+
 {% block content %}
 <div class="container my-4">
   <h2>Integrations & Launch Checklist</h2>
@@ -30,6 +35,7 @@
     </ol>
   </div>
   <form method="post" action="{{ url_for('developer.integrations_test_email') }}">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
     <button class="btn btn-sm btn-primary" type="submit" {% if not email_configured %}disabled{% endif %}>Send Test Email</button>
   </form>
 
@@ -55,6 +61,7 @@
     </ol>
   </div>
   <form method="post" action="{{ url_for('developer.integrations_test_stripe') }}">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
     <button class="btn btn-sm btn-primary" type="submit" {% if not stripe_status.secret_key_present %}disabled{% endif %}>Test Stripe Connectivity</button>
   </form>
   <div class="mt-2">
@@ -122,8 +129,13 @@ async function loadStripeEvents() {
 
 async function saveFlags() {
   const analytics = document.getElementById('ff_analytics').checked;
+  const csrfToken = document.querySelector('meta[name=csrf-token]').getAttribute('content');
   const resp = await fetch('{{ url_for('developer.integrations_set_feature_flags') }}', {
-    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    method: 'POST', 
+    headers: { 
+      'Content-Type': 'application/json',
+      'X-CSRFToken': csrfToken
+    },
     body: JSON.stringify({ FEATURE_INVENTORY_ANALYTICS: analytics })
   });
 }
