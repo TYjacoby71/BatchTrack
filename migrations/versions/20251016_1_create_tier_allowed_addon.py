@@ -1,8 +1,8 @@
 """
 Create tier_allowed_addon association table if missing
 
-Revision ID: 20251015_01_create_tier_allowed_addon
-Revises: 20251009_2
+Revision ID: 20251016_1    
+Revises: 20251015_04
 Create Date: 2025-10-15
 """
 
@@ -11,8 +11,8 @@ import sqlalchemy as sa
 from sqlalchemy import inspect
 
 # revision identifiers, used by Alembic.
-revision = '20251015_01_create_tier_allowed_addon'
-down_revision = '20251009_2'
+revision = '20251016_1'
+down_revision = '20251015_04'
 branch_labels = None
 depends_on = None
 
