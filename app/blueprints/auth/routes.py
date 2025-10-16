@@ -420,12 +420,30 @@ def signup():
 
     available_tiers = {}
     for tier in db_tiers:
+        # Get live pricing from Stripe if available
+        from ...services.stripe_service import StripeService
+        live_pricing = None
+        if tier.stripe_lookup_key:
+            try:
+                live_pricing = StripeService.get_live_pricing_for_tier(tier)
+            except:
+                live_pricing = None
+
+        # Determine billing cycle from tier_type or live pricing
+        billing_cycle = 'monthly'
+        if live_pricing:
+            billing_cycle = live_pricing.get('billing_cycle', 'monthly')
+        elif tier.tier_type:
+            billing_cycle = tier.tier_type
+
+        price_display = live_pricing['formatted_price'] if live_pricing else 'Contact Sales'
+
         available_tiers[str(tier.id)] = {
             'name': tier.name,
-            'price_monthly': tier.stripe_price_monthly,
-            'price_yearly': tier.stripe_price_yearly,
-            'max_users': tier.max_users,
-            'features': [p.name for p in tier.permissions] + [a.key for a in tier.allowed_addons if a.is_active]
+            'price_display': price_display,
+            'billing_cycle': billing_cycle,
+            'user_limit': tier.user_limit,
+            'features': [p.name for p in tier.permissions] + [a.name for a in tier.allowed_addons if getattr(a, 'is_active', True)]
         }
 
     # Get signup tracking parameters
