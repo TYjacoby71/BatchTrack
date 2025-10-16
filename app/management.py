@@ -138,6 +138,11 @@ def init_production_command():
         print('📝 Note: This command can be run multiple times safely')
         print('📊 Database status:')
         try:
+            # Ensure session is clean in case prior steps raised and were handled
+            try:
+                db.session.rollback()
+            except Exception:
+                pass
             from .models import Organization, User, Permission, SubscriptionTier, Unit
             print(f'   - Organizations: {Organization.query.count()}')
             print(f'   - Users: {User.query.count()}')

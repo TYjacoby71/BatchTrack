@@ -105,13 +105,15 @@ def create_tier():
         name = request.form.get('name', '').strip()
         description = request.form.get('description', '')
         tier_type = request.form.get('tier_type', 'monthly')
-        # Allow -1 for unlimited
-        try:
-            user_limit = int(request.form.get('user_limit', 1))
-        except (ValueError, TypeError):
-            user_limit = 1
-        # Deprecated legacy field; ignore any incoming max_users from form
-        max_users = None
+        def _parse_int_allow_neg1(text, default):
+            try:
+                v = int(str(text).strip())
+                return v
+            except Exception:
+                return default
+
+        user_limit = _parse_int_allow_neg1(request.form.get('user_limit', 1), 1)
+        max_users = request.form.get('max_users', None)
         max_recipes = request.form.get('max_recipes', None)
         max_batches = request.form.get('max_batches', None)
         max_products = request.form.get('max_products', None)

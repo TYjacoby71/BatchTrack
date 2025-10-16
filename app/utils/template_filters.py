@@ -206,43 +206,35 @@ def register_template_filters(app):
         return local_dt.strftime('%Y-%m-%d %H:%M:%S %Z')
 
     # Register template globals
+    # Avoid name shadowing by aliasing imported helpers
     from .permissions import (
-        has_permission as core_has_permission,
-        has_role,
+        has_permission as perm_has_permission,
+        has_role as perm_has_role,
         has_subscription_feature,
         is_organization_owner,
-        is_developer,
+        is_developer
     )
 
     def template_has_permission(*args):
-        """Template-friendly permission check.
-        Supports both has_permission('perm') and has_permission(user, 'perm').
+        """Jinja-safe permission checker supporting both signatures:
+        - has_permission('perm.name')
+        - has_permission(user, 'perm.name')
         """
-        try:
-            # Lazy import to avoid circulars in some CLI contexts
-            from . import permissions as permission_utils
-        except Exception:
-            permission_utils = None
-
         try:
             if len(args) == 1:
                 permission_name = args[0]
-                user = current_user
-            elif len(args) >= 2:
-                user, permission_name = args[0], args[1]
+                return perm_has_permission(current_user, permission_name)
+            elif len(args) == 2:
+                user, permission_name = args
+                return perm_has_permission(user, permission_name)
             else:
                 return False
-
-            if permission_utils and hasattr(permission_utils, 'has_permission'):
-                return permission_utils.has_permission(user, permission_name)
-            # Fallback to directly imported core function
-            return core_has_permission(user, permission_name)
         except Exception:
             return False
 
     def template_has_role(role_name):
         try:
-            return has_role(role_name)
+            return perm_has_role(role_name)
         except Exception:
             return False
 

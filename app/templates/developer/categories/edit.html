@@ -11,6 +11,10 @@
     <input class="form-check-input" type="checkbox" id="is_typically_portioned" name="is_typically_portioned" {% if category.is_typically_portioned %}checked{% endif %}>
     <label class="form-check-label" for="is_typically_portioned">Typically Portioned</label>
   </div>
+  <div class="form-check mb-3">
+    <input class="form-check-input" type="checkbox" id="skin_enabled" name="skin_enabled" {% if category.skin_enabled %}checked{% endif %}>
+    <label class="form-check-label" for="skin_enabled">Enable Skin in Recipe Form</label>
+  </div>
   <div class="mb-3">
     <label class="form-label">SKU Name Template</label>
     <input type="text" class="form-control" name="sku_name_template" value="{{ category.sku_name_template or '' }}" placeholder="{variant} {product} ({size_label})">
