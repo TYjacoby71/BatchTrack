@@ -51,12 +51,17 @@ def upgrade():
         'cancel_at_period_end': False
     }
 
-    # Load tier configuration for display
+    # Build a minimal tiers map from DB for debug display (no JSON reads)
+    from ...models.subscription_tier import SubscriptionTier
     try:
-        from ..developer.subscription_tiers import load_tiers_config
-        tiers_config = load_tiers_config()
+        db_tiers = SubscriptionTier.query.filter_by(is_customer_facing=True).all()
+        tiers_config = {str(t.id): {
+            'name': t.name,
+            'is_available': t.has_valid_integration or t.is_billing_exempt,
+            'billing_provider': t.billing_provider,
+        } for t in db_tiers}
     except Exception as e:
-        logger.error(f"Error loading tiers config: {e}")
+        logger.error(f"Error loading tiers from DB: {e}")
         tiers_config = {}
 
     return render_template('billing/upgrade.html',
@@ -361,7 +366,7 @@ def complete_signup_from_stripe():
             from ...services.stripe_service import StripeService
             StripeService.update_customer_metadata(customer.id, {
                 'organization_id': str(org.id),
-                'tier_key': subscription_tier.key
+                'tier_id': str(subscription_tier.id)
             })
         except Exception as meta_error:
             logger.warning(f"Failed to update Stripe customer metadata: {meta_error}")
@@ -583,12 +588,11 @@ def debug_billing():
 
     debug_info = {
         'organization_id': organization.id,
-        'subscription_tier': organization.subscription_tier_obj.key if organization.subscription_tier_obj else None,
+        'subscription_tier': str(organization.subscription_tier_obj.id) if organization.subscription_tier_obj else None,
         'stripe_customer_id': organization.stripe_customer_id,
         'whop_license_key': organization.whop_license_key,
         'billing_status': getattr(organization, 'billing_status', 'unknown'),
-        'last_online_sync': organization.last_online_sync.isoformat() if organization.last_online_sync else None,
-        'offline_license_valid': BillingService.validate_offline_license(organization)[0] if organization.offline_tier_cache else False
+        'last_online_sync': organization.last_online_sync.isoformat() if organization.last_online_sync else None
     }
 
     return render_template('billing/debug.html', debug_info=debug_info)

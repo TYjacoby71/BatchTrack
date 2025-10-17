@@ -4,8 +4,7 @@
   </div>
   <div class="card-body">
     <h5 class="text-primary">
-      {% set tier_name = org.get_tier_display_name() %}
-      {{ tier_name if tier_name else org.effective_subscription_tier.title() }}
+      {{ org.get_tier_display_name() }}
     </h5>
     <p class="text-muted">{{ org.active_users_count }}/{{ org.get_max_users() }} users</p>
 

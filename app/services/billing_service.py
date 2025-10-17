@@ -20,15 +20,19 @@ class BillingService:
             return 'exempt'
 
         tier = SubscriptionTier.query.get(organization.subscription_tier_id)
-        return tier.key if tier else 'exempt'
+        return str(tier.id) if tier else 'exempt'
 
     @staticmethod
     def assign_tier_to_organization(organization, tier_key):
-        """Assign a subscription tier to an organization"""
-        tier = SubscriptionTier.query.filter_by(key=tier_key).first()
+        """Assign a subscription tier to an organization. tier_key is a tier ID string."""
+        try:
+            tier_id = int(tier_key)
+        except (TypeError, ValueError):
+            tier_id = None
+        tier = SubscriptionTier.query.get(tier_id) if tier_id is not None else None
         if not tier:
-            # Fallback to exempt tier
-            tier = SubscriptionTier.query.filter_by(key='exempt').first()
+            # Fallback to any exempt tier
+            tier = SubscriptionTier.query.filter_by(billing_provider='exempt').first()
 
         if tier:
             organization.subscription_tier_id = tier.id
@@ -94,41 +98,42 @@ class BillingService:
             pricing_data = {'tiers': {}, 'available': True}
             
             for tier in tiers:
+                key = str(tier.id)
                 if tier.is_billing_exempt:
                     # Exempt tiers
-                    pricing_data['tiers'][tier.key] = {
+                    pricing_data['tiers'][key] = {
                         'name': tier.name,
                         'description': getattr(tier, 'description', ''),
                         'price': 'Free',
                         'billing_cycle': 'exempt',
                         'available': True,
                         'provider': 'exempt',
-                        'features': getattr(tier, 'features', [])
+                        'features': [p.name for p in getattr(tier, 'permissions', [])]
                     }
                 elif tier.billing_provider == 'stripe':
                     # Get live Stripe pricing
                     from .stripe_service import StripeService
                     stripe_pricing = StripeService.get_live_pricing_for_tier(tier)
                     
-                    pricing_data['tiers'][tier.key] = {
+                    pricing_data['tiers'][key] = {
                         'name': tier.name,
                         'description': getattr(tier, 'description', ''),
                         'price': stripe_pricing['formatted_price'] if stripe_pricing else 'N/A',
                         'billing_cycle': stripe_pricing['billing_cycle'] if stripe_pricing else 'monthly',
                         'available': stripe_pricing is not None,
                         'provider': 'stripe',
-                        'features': getattr(tier, 'features', [])
+                        'features': [p.name for p in getattr(tier, 'permissions', [])]
                     }
                 elif tier.billing_provider == 'whop':
                     # Whop is stubbed for now
-                    pricing_data['tiers'][tier.key] = {
+                    pricing_data['tiers'][key] = {
                         'name': tier.name,
                         'description': getattr(tier, 'description', ''),
                         'price': 'Contact Sales',
                         'billing_cycle': 'monthly',
                         'available': False,  # Disabled for now
                         'provider': 'whop',
-                        'features': getattr(tier, 'features', [])
+                        'features': [p.name for p in getattr(tier, 'permissions', [])]
                     }
             
             return pricing_data
@@ -139,8 +144,12 @@ class BillingService:
 
     @staticmethod
     def create_checkout_session(tier_key, user_email, user_name, success_url, cancel_url, metadata=None):
-        """Create checkout session with appropriate provider"""
-        tier = SubscriptionTier.query.filter_by(key=tier_key).first()
+        """Create checkout session with appropriate provider. tier_key is a tier ID string."""
+        try:
+            tier_id = int(tier_key)
+        except (TypeError, ValueError):
+            tier_id = None
+        tier = SubscriptionTier.query.get(tier_id) if tier_id is not None else None
         if not tier:
             logger.error(f"Tier {tier_key} not found")
             return None

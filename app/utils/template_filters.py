@@ -147,14 +147,21 @@ def register_filters(app):
 
     @app.template_global()
     def get_tier_features(tier_key=None):
-        """Template function to get features for a subscription tier"""
-        if not tier_key:
-            tier_key = get_current_tier()
-
-        from app.blueprints.developer.subscription_tiers import load_tiers_config
-        tiers_config = load_tiers_config()
-        tier_data = tiers_config.get(tier_key, {})
-        return tier_data.get('features', [])
+        """Get features for a subscription tier from DB permissions only"""
+        try:
+            if not tier_key:
+                tier_key = get_current_tier()
+            from app.models.subscription_tier import SubscriptionTier
+            try:
+                tier_id = int(tier_key)
+            except (TypeError, ValueError):
+                tier_id = None
+            tier = SubscriptionTier.query.get(tier_id) if tier_id is not None else None
+            if not tier:
+                return []
+            return [p.name for p in getattr(tier, 'permissions', [])]
+        except Exception:
+            return []
 
     @app.template_filter('user_timezone')
     def user_timezone_filter(datetime_obj, format_string='%Y-%m-%d %H:%M:%S'):

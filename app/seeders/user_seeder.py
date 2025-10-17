@@ -45,7 +45,7 @@ def seed_users_and_organization():
 
     print(f"ℹ️  Using organization: {org.name} (ID: {org.id})")
     if org.tier:
-        print(f"   - Subscription tier: {org.tier.key} ({org.tier.name})")
+        print(f"   - Subscription tier: {org.tier.id} ({org.tier.name})")
 
     # Get required roles
     org_owner_role = Role.query.filter_by(name='organization_owner', is_system_role=True).first()

@@ -442,8 +442,8 @@
                 <button type="submit" class="btn btn-success">
                     <i class="fas fa-save"></i> {% if recipe and recipe.parent_id or is_variation %}Save Variation{% else %}Save Recipe{% endif %}
                 </button>
-                {% if current_user.is_authenticated and current_user.organization and current_user.organization.effective_subscription_tier == 'free' %}
-                <span class="ms-3 text-muted small">Inventory is read-only on Free Tools tier. <a href="{{ url_for('billing.upgrade') }}">Upgrade</a> to adjust inventory or start batches.</span>
+                {% if current_user.is_authenticated and current_user.organization and (not current_user.organization.tier or current_user.organization.tier.is_billing_exempt) %}
+                <span class="ms-3 text-muted small">Inventory is read-only on the Exempt tier. <a href="{{ url_for('billing.upgrade') }}">Upgrade</a> to adjust inventory or start batches.</span>
                 {% endif %}
             </div>
         </div>

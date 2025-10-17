@@ -16,6 +16,10 @@ logger = logging.getLogger(__name__)
 class StripeService:
     """Service for handling Stripe integration and billing operations"""
 
+    # Simple in-process cache for pricing lookups to reduce Stripe calls
+    _pricing_cache = {}
+    _pricing_cache_ttl_seconds = 600  # 10 minutes
+
     @staticmethod
     def initialize():
         """Initialize Stripe with API key"""
@@ -331,6 +335,16 @@ class StripeService:
     @staticmethod
     def get_live_pricing_for_tier(tier_obj):
         """Get live pricing from Stripe for a subscription tier"""
+        # Serve from cache if fresh
+        try:
+            cache_key = f"price::{tier_obj.stripe_lookup_key}"
+            now = datetime.utcnow()
+            cached = StripeService._pricing_cache.get(cache_key)
+            if cached and (now - cached['ts']).total_seconds() < StripeService._pricing_cache_ttl_seconds:
+                return cached['data']
+        except Exception:
+            pass
+
         if not StripeService.initialize_stripe():
             return None
 
@@ -372,6 +386,22 @@ class StripeService:
         except stripe.error.StripeError as e:
             logger.error(f"Stripe error fetching price for {tier_obj.stripe_lookup_key}: {e}")
             return None
+        finally:
+            # Cache successful lookups
+            try:
+                if 'price' in locals():
+                    data = {
+                        'price_id': price.id,
+                        'amount': price.unit_amount / 100,
+                        'formatted_price': f"${price.unit_amount / 100:.0f}",
+                        'currency': price.currency.upper(),
+                        'billing_cycle': 'yearly' if getattr(price, 'recurring', None) and price.recurring.interval == 'year' else ('monthly' if getattr(price, 'recurring', None) and price.recurring.interval == 'month' else 'one-time'),
+                        'lookup_key': tier_obj.stripe_lookup_key,
+                        'last_synced': datetime.utcnow().isoformat()
+                    }
+                    StripeService._pricing_cache[cache_key] = {'ts': datetime.utcnow(), 'data': data}
+            except Exception:
+                pass
 
     @staticmethod
     def create_checkout_session_for_tier(tier_obj, customer_email, customer_name, success_url, cancel_url, metadata=None):

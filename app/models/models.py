@@ -103,9 +103,7 @@ class Organization(db.Model):
     whop_license_key = db.Column(db.String(255), nullable=True)
     billing_status = db.Column(db.String(50), default='active', nullable=False)  # active, suspended, cancelled
 
-    # Offline support
-    last_online_sync = db.Column(db.DateTime, nullable=True)
-    offline_tier_cache = db.Column(db.JSON, nullable=True)  # Cached tier permissions for offline use
+    # Offline support (removed)
 
     # Inventory costing policy
     inventory_cost_method = db.Column(db.String(16), nullable=True)  # 'fifo' | 'average' (default handled in logic)
@@ -151,8 +149,10 @@ class Organization(db.Model):
 
     @property
     def effective_subscription_tier(self):
-        """Get the effective subscription tier key"""
-        return self.tier.key if self.tier else 'free'
+        """Get the effective subscription tier identifier (string id or 'exempt')."""
+        if not self.tier:
+            return 'exempt'
+        return str(self.tier.id)
 
     @property
     def subscription_tier_obj(self):
@@ -568,8 +568,8 @@ class User(UserMixin, db.Model):
         if self.user_type == 'developer':
             return 'System Developer'
         elif self.is_organization_owner and self.organization:
-            tier = self.organization.subscription_tier.title()
-            return f'{tier} Owner'
+            tier_name = self.organization.tier.name if self.organization.tier else 'Exempt'
+            return f'{tier_name} Owner'
         else:
             roles = self.get_active_roles()
             if roles:

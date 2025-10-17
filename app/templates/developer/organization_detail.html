@@ -17,8 +17,8 @@
                         <div>
                             <h2 class="mb-2">{{ organization.name }}</h2>
                             <p class="text-muted mb-0">
-                                <span class="badge bg-{{ 'success' if organization.tier and organization.tier.key == 'enterprise' else 'warning' if organization.tier and organization.tier.key == 'team' else 'secondary' }}">
-                                    {{ organization.tier.name if organization.tier else 'Free' }}
+                                <span class="badge bg-secondary">
+                                    {{ organization.tier.name if organization.tier else 'Exempt' }}
                                 </span>
                                 <span class="badge bg-{{ 'success' if organization.is_active else 'danger' }}">
                                     {{ 'Active' if organization.is_active else 'Inactive' }}
@@ -80,12 +80,7 @@
                                         {% endif %}
                                     {% endfor %}
                                 {% else %}
-                                <!-- Fallback if tiers_config not available -->
-                                <option value="free" {% if current_tier == 'free' %}selected{% endif %}>Free</option>
-                                <option value="solo" {% if current_tier == 'solo' %}selected{% endif %}>Solo</option>
-                                <option value="team" {% if current_tier == 'team' %}selected{% endif %}>Team</option>
-                                <option value="enterprise" {% if current_tier == 'enterprise' %}selected{% endif %}>Enterprise</option>
-                                <option value="exempt" {% if current_tier == 'exempt' %}selected{% endif %}>Exempt</option>
+                                <!-- Fallback removed: tiers are always loaded from DB -->
                                 {% endif %}
                             </select>
                         </div>

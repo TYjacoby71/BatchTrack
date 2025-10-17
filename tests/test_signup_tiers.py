@@ -19,14 +19,16 @@ class TestSignupTierCharacterization:
             assert response.status_code in [200, 302, 401, 403]
 
     def test_tier_bypass_behavior(self, app):
-        """Test current billing bypass flag behavior."""
+        """Test billing model fields exist for bypass and provider mapping."""
         with app.app_context():
             # Characterize how billing bypass currently works
             tier = SubscriptionTier.query.first()
             if tier:
-                # Check if billing bypass fields exist
-                assert hasattr(tier, 'key')
-                # TODO: Check for billing bypass fields once we identify them
+                # Check required fields
+                assert hasattr(tier, 'id')
+                assert hasattr(tier, 'name')
+                assert hasattr(tier, 'billing_provider')
+                assert hasattr(tier, 'is_billing_exempt')
 
     def test_organization_tier_assignment(self, app):
         """Test how organizations are assigned to tiers."""

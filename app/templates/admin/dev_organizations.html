@@ -52,8 +52,8 @@
                                         {% endif %}
                                     </td>
                                     <td>
-                                        <span class="badge bg-{{ 'success' if org.subscription_tier == 'enterprise' else 'warning' if org.subscription_tier == 'team' else 'secondary' }}">
-                                            {{ org.subscription_tier.title() }}
+                                        <span class="badge bg-secondary">
+                                            {{ org.tier.name if org.tier else 'Exempt' }}
                                         </span>
                                     </td>
                                     <td>{{ org.users|length }}</td>
@@ -91,7 +91,7 @@
                     <div class="card bg-success text-white">
                         <div class="card-body">
                             <h5>Enterprise Orgs</h5>
-                            <h3>{{ organizations|selectattr('subscription_tier', 'equalto', 'enterprise')|list|length }}</h3>
+                            <h3>N/A</h3>
                         </div>
                     </div>
                 </div>
@@ -99,7 +99,7 @@
                     <div class="card bg-warning text-white">
                         <div class="card-body">
                             <h5>Team Orgs</h5>
-                            <h3>{{ organizations|selectattr('subscription_tier', 'equalto', 'team')|list|length }}</h3>
+                            <h3>N/A</h3>
                         </div>
                     </div>
                 </div>
@@ -107,7 +107,7 @@
                     <div class="card bg-secondary text-white">
                         <div class="card-body">
                             <h5>Solo Orgs</h5>
-                            <h3>{{ organizations|selectattr('subscription_tier', 'equalto', 'solo')|list|length }}</h3>
+                            <h3>N/A</h3>
                         </div>
                     </div>
                 </div>

@@ -192,15 +192,9 @@ def organizations():
 @login_required
 def create_organization():
     """Create new organization with owner user"""
-    # Load available tiers for the form
-    from .subscription_tiers import load_tiers_config
-    tiers_config = load_tiers_config()
-
-    # Include all tiers for developer creation (including internal ones)
-    available_tiers = {
-        key: tier for key, tier in tiers_config.items() 
-        if isinstance(tier, dict) and tier.get('is_available', True)
-    }
+    # Load available tiers for the form (DB only)
+    from ..models.subscription_tier import SubscriptionTier as _ST
+    available_tiers = {str(t.id): {'name': t.name} for t in _ST.query.order_by(_ST.name).all()}
 
     if request.method == 'POST':
         # Organization details
@@ -321,15 +315,13 @@ def organization_detail(org_id):
         }
         users.append(user_dict)
 
-    # Load subscription tiers config for the dropdown
-    from .subscription_tiers import load_tiers_config
-    all_tiers_config = load_tiers_config()
-
-    # Filter to only include dictionary objects (valid tier configurations)
-    tiers_config = {}
-    for tier_key, tier_data in all_tiers_config.items():
-        if isinstance(tier_data, dict) and tier_data.get('is_available', True):
-            tiers_config[tier_key] = tier_data
+    # Build subscription tiers from DB for the dropdown
+    from ..models.subscription_tier import SubscriptionTier as _ST
+    try:
+        all_db_tiers = _ST.query.order_by(_ST.name).all()
+        tiers_config = {str(t.id): {'name': t.name, 'is_available': t.has_valid_integration or t.is_billing_exempt} for t in all_db_tiers}
+    except Exception:
+        tiers_config = {}
 
     # Debug subscription info
     current_tier = org.effective_subscription_tier
@@ -338,9 +330,9 @@ def organization_detail(org_id):
     print(f"DEBUG: Organization {org.name} (ID: {org.id})")
     print(f"DEBUG: Has tier record: {tier_record is not None}")
     if tier_record:
-        print(f"DEBUG: Tier key: {tier_record.key}")
+        print(f"DEBUG: Tier id: {tier_record.id}")
         print(f"DEBUG: Tier name: {tier_record.name}")
-    print(f"DEBUG: Effective tier: {current_tier}")
+    print(f"DEBUG: Effective tier id: {current_tier}")
     print(f"DEBUG: Available tiers: {list(tiers_config.keys())}")
 
     return render_template('developer/organization_detail.html',
