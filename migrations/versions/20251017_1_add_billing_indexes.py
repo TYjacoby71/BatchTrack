@@ -1,6 +1,6 @@
 """add billing performance indexes
 
-Revision ID: 20251017_01_add_billing_indexes
+Revision ID: 20251017_1
 Revises: 20251016_2
 Create Date: 2025-10-17 00:00:00.000000
 
@@ -10,7 +10,7 @@ import sqlalchemy as sa
 from sqlalchemy import inspect
 
 # revision identifiers, used by Alembic.
-revision = '20251017_01_add_billing_indexes'
+revision = '20251017_1'
 down_revision = '20251016_2'
 branch_labels = None
 depends_on = None

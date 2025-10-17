@@ -1,7 +1,7 @@
 """drop offline billing snapshot columns
 
-Revision ID: 20251017_02_drop_offline_billing_columns
-Revises: 20251017_01_add_billing_indexes
+Revision ID: 20251017_2
+Revises: 20251017_1
 Create Date: 2025-10-17 00:30:00.000000
 
 """
@@ -10,8 +10,8 @@ import sqlalchemy as sa
 from sqlalchemy import inspect
 
 # revision identifiers, used by Alembic.
-revision = '20251017_02_drop_offline_billing_columns'
-down_revision = '20251017_01_add_billing_indexes'
+revision = '20251017_2'
+down_revision = '20251017_1'
 branch_labels = None
 depends_on = None
 
