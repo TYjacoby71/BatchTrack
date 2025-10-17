@@ -152,7 +152,7 @@ def start_addon_checkout(addon_key):
             current_user.email,
             success_url=url_for('settings.index', _external=True) + '#billing',
             cancel_url=url_for('settings.index', _external=True) + '#billing',
-            metadata={'addon': addon.key}
+            metadata={'addon': addon.function_key if hasattr(addon, 'function_key') else addon.name}
         )
         if session and getattr(session, 'url', None):
             return redirect(session.url)

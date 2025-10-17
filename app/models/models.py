@@ -176,7 +176,7 @@ class Organization(db.Model):
         if self.tier.allowed_addons:
             for addon in self.tier.allowed_addons:
                 if addon.is_active:
-                    features.append(addon.key)
+                    features.append(addon.function_key if hasattr(addon, 'function_key') else addon.name)
 
         return features
 
