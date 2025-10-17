@@ -1,21 +1,9 @@
 {% extends 'layout.html' %}
 {% block content %}
-<div class="container mt-4">
+<div>
   <div class="row">
     <div class="col-12">
-      <nav aria-label="breadcrumb">
-        <ol class="breadcrumb">
-          <li class="breadcrumb-item"><a href="{{ url_for('products.list_products') }}">Products</a></li>
-          <li class="breadcrumb-item">
-            {% if product_breadcrumb_id %}
-              <a href="{{ url_for('products.view_product', product_id=product_breadcrumb_id) }}">{{ product.name }}</a>
-            {% else %}
-              {{ product.name }}
-            {% endif %}
-          </li>
-          <li class="breadcrumb-item active">{{ variation.name }}</li>
-        </ol>
-      </nav>
+      
 
       <!-- Variation Summary Card -->
       <div class="card mb-4">

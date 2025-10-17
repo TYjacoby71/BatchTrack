@@ -40,7 +40,13 @@ def view_sku(inventory_item_id):
                          fifo_filter=request.args.get('fifo', 'false').lower() == 'true',
                          now=TimezoneUtils.now().replace(tzinfo=None),  # Use naive datetime for template comparisons
                          timedelta=timedelta,
-                         TimezoneUtils=TimezoneUtils)
+                         TimezoneUtils=TimezoneUtils,
+                         breadcrumb_items=[
+                            {'label': 'Products', 'url': url_for('products.list_products')},
+                            {'label': sku.product_name, 'url': url_for('products.view_product', product_id=sku.product_id)},
+                            {'label': sku.variant_name, 'url': url_for('product_variants.view_variant', product_id=sku.product_id, variant_name=sku.variant_name)},
+                            {'label': sku.size_label}
+                         ])
 
 @sku_bp.route('/<int:inventory_item_id>/edit', methods=['POST'])
 @login_required

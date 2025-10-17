@@ -192,7 +192,8 @@ def list_products():
     else:  # default to name
         products.sort(key=lambda p: p.name.lower())
 
-    return render_template('pages/products/list_products.html', products=products, current_sort=sort_type)
+    return render_template('pages/products/list_products.html', products=products, current_sort=sort_type,
+                           breadcrumb_items=[{'label': 'Products'}])
 
 @products_bp.route('/new', methods=['GET', 'POST'])
 @login_required
@@ -389,7 +390,8 @@ def view_product(product_id):
                          available_containers=available_containers,
                          get_global_unit_list=get_global_unit_list,
                          inventory_groups={},
-                         product_categories=product_categories)
+                         product_categories=product_categories,
+                         breadcrumb_items=[{'label': 'Products', 'url': url_for('products.list_products')}, {'label': product.name}])
 
 # Keep the old route for backward compatibility
 @products_bp.route('/<product_name>')

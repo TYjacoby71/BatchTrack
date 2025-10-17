@@ -55,7 +55,12 @@ def plan_production_route(recipe_id):
             return jsonify({'success': False, 'error': 'Production planning failed'}), 500
 
     # GET request - show planning form
-    return render_template('pages/production_planning/plan_production.html', recipe=recipe)
+    return render_template('pages/production_planning/plan_production.html', recipe=recipe, breadcrumb_items=[
+        {'label': 'Dashboard', 'url': url_for('app_routes.dashboard')},
+        {'label': 'Recipes', 'url': url_for('recipes.list_recipes')},
+        {'label': recipe.name, 'url': url_for('recipes.view_recipe', recipe_id=recipe.id)},
+        {'label': 'Plan Production'}
+    ])
 
 @production_planning_bp.route('/recipe/<int:recipe_id>/auto-fill-containers', methods=['POST'])
 @login_required
