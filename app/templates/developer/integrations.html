@@ -72,15 +72,40 @@
   </div>
 
   <hr>
-  <h4>3) Feature Flags</h4>
+  <h4>3) Feature Flags & Tools</h4>
   <ul>
     <li>Inventory Analytics: {% if feature_flags.FEATURE_INVENTORY_ANALYTICS %}<span class="text-success">Enabled</span>{% else %}<span class="text-warning">Disabled</span>{% endif %} — Set <code>FEATURE_INVENTORY_ANALYTICS=true</code> to enable.</li>
+    <li>Public Tools: Toggle individual tool availability for users</li>
   </ul>
-  <div class="card p-2">
-    <div class="form-check form-switch">
+  <div class="card p-3">
+    <h6>Developer Features</h6>
+    <div class="form-check form-switch mb-2">
       <input class="form-check-input" type="checkbox" id="ff_analytics" {% if feature_flags.FEATURE_INVENTORY_ANALYTICS %}checked{% endif %} onchange="saveFlags()">
       <label class="form-check-label" for="ff_analytics">Enable Inventory Analytics (developer only)</label>
     </div>
+    
+    <h6 class="mt-3">Public Tools Availability</h6>
+    <div class="form-check form-switch mb-2">
+      <input class="form-check-input" type="checkbox" id="tools_soap" {% if feature_flags.get('TOOLS_SOAP', True) %}checked{% endif %} onchange="saveFlags()">
+      <label class="form-check-label" for="tools_soap">Soap Making Tools</label>
+    </div>
+    <div class="form-check form-switch mb-2">
+      <input class="form-check-input" type="checkbox" id="tools_candles" {% if feature_flags.get('TOOLS_CANDLES', True) %}checked{% endif %} onchange="saveFlags()">
+      <label class="form-check-label" for="tools_candles">Candle Making Tools</label>
+    </div>
+    <div class="form-check form-switch mb-2">
+      <input class="form-check-input" type="checkbox" id="tools_lotions" {% if feature_flags.get('TOOLS_LOTIONS', True) %}checked{% endif %} onchange="saveFlags()">
+      <label class="form-check-label" for="tools_lotions">Lotion & Cosmetic Tools</label>
+    </div>
+    <div class="form-check form-switch mb-2">
+      <input class="form-check-input" type="checkbox" id="tools_herbal" {% if feature_flags.get('TOOLS_HERBAL', True) %}checked{% endif %} onchange="saveFlags()">
+      <label class="form-check-label" for="tools_herbal">Herbalist Tools</label>
+    </div>
+    <div class="form-check form-switch mb-2">
+      <input class="form-check-input" type="checkbox" id="tools_baking" {% if feature_flags.get('TOOLS_BAKING', True) %}checked{% endif %} onchange="saveFlags()">
+      <label class="form-check-label" for="tools_baking">Baking Tools</label>
+    </div>
+    
     <small class="text-muted">This updates the running app and persists to settings.json for next boot.</small>
   </div>
 
@@ -129,6 +154,12 @@ async function loadStripeEvents() {
 
 async function saveFlags() {
   const analytics = document.getElementById('ff_analytics').checked;
+  const toolsSoap = document.getElementById('tools_soap').checked;
+  const toolsCandles = document.getElementById('tools_candles').checked;
+  const toolsLotions = document.getElementById('tools_lotions').checked;
+  const toolsHerbal = document.getElementById('tools_herbal').checked;
+  const toolsBaking = document.getElementById('tools_baking').checked;
+  
   const csrfToken = document.querySelector('meta[name=csrf-token]').getAttribute('content');
   const resp = await fetch('{{ url_for('developer.integrations_set_feature_flags') }}', {
     method: 'POST', 
@@ -136,8 +167,21 @@ async function saveFlags() {
       'Content-Type': 'application/json',
       'X-CSRFToken': csrfToken
     },
-    body: JSON.stringify({ FEATURE_INVENTORY_ANALYTICS: analytics })
+    body: JSON.stringify({ 
+      FEATURE_INVENTORY_ANALYTICS: analytics,
+      TOOLS_SOAP: toolsSoap,
+      TOOLS_CANDLES: toolsCandles,
+      TOOLS_LOTIONS: toolsLotions,
+      TOOLS_HERBAL: toolsHerbal,
+      TOOLS_BAKING: toolsBaking
+    })
   });
+  
+  if (resp.ok) {
+    // Show success feedback
+    const result = await resp.json();
+    console.log('Feature flags updated successfully');
+  }
 }
 
 async function checkWebhook() {
