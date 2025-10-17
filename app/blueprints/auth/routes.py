@@ -21,17 +21,7 @@ from datetime import datetime, timedelta
 logger = logging.getLogger(__name__)
 
 def load_tiers_config():
-    """Temporary shim: return DB tiers in the legacy structure; do not read JSON."""
-    try:
-        db_tiers = SubscriptionTier.query.filter_by(is_customer_facing=True).all()
-        return {str(t.id): {
-            'name': t.name,
-            'fallback_features': [p.name for p in getattr(t, 'permissions', [])],
-            'whop_product_id': getattr(t, 'whop_product_key', ''),
-            'is_available': t.has_valid_integration or t.is_billing_exempt
-        } for t in db_tiers}
-    except Exception:
-        return {}
+    raise RuntimeError('load_tiers_config has been removed. Use DB via SubscriptionTier queries.')
 
 class LoginForm(FlaskForm):
     username = StringField('Username', validators=[DataRequired()])

@@ -10,22 +10,7 @@ import os
 logger = logging.getLogger(__name__)
 
 def load_tiers_config():
-    """Deprecated JSON loader shim: return DB tiers for legacy callers; do not read JSON."""
-    try:
-        all_tiers_db = SubscriptionTier.query.order_by(SubscriptionTier.name).all()
-        tiers = {}
-        for t in all_tiers_db:
-            tiers[str(t.id)] = {
-                'name': t.name,
-                'description': t.description,
-                'is_customer_facing': t.is_customer_facing,
-                'is_available': t.has_valid_integration or t.is_billing_exempt,
-                'billing_provider': t.billing_provider,
-                'permissions': [p.name for p in getattr(t, 'permissions', [])]
-            }
-        return tiers
-    except Exception:
-        return {}
+    raise RuntimeError('Deprecated: load_tiers_config removed. Query SubscriptionTier directly.')
 
 subscription_tiers_bp = Blueprint('subscription_tiers', __name__, url_prefix='/subscription-tiers')
 

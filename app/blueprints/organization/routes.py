@@ -224,10 +224,13 @@ def update_subscription_tier():
         if not organization:
             return jsonify({'success': False, 'error': 'No organization selected'})
 
-        # Load and validate tier
-        from ...blueprints.developer.subscription_tiers import load_tiers_config
-        tiers_config = load_tiers_config()
-        if tier_key not in tiers_config:
+        # Validate tier via DB only
+        from ...models.subscription_tier import SubscriptionTier
+        try:
+            _tier_id = int(tier_key)
+        except (TypeError, ValueError):
+            _tier_id = None
+        if not _tier_id or not SubscriptionTier.query.get(_tier_id):
             return jsonify({'success': False, 'error': 'Invalid subscription tier'})
 
         # Update or create subscription
