@@ -991,6 +991,28 @@ input:checked + .toggle-label:before {
   --color-subtle-bg: #0f172a;
   --color-subtle-bg-2: #111827;
 }
+
+/* Warm, neutral, soft theme for makers */
+:root[data-theme='warm'] {
+  /* Neutrals with warm undertones */
+  --color-border: #e6dfd9;           /* warm gray-beige border */
+  --color-bg: #faf7f4;               /* soft warm off-white background */
+  --color-surface: #ffffff;          /* clean surface for cards */
+  --color-text: #3e3a37;             /* deep warm gray for text */
+  --color-muted: #7a716b;            /* muted warm gray for secondary text */
+
+  /* Primary accent: soft rose clay */
+  --color-primary: #d88c8a;          /* warm rose/terracotta */
+  --color-primary-hover: #c77876;    /* slightly deeper on hover */
+  --color-on-primary: #ffffff;       /* readable on primary */
+
+  /* Surfaces and subtle fills */
+  --color-navbar: #fff8f5;           /* very soft warm surface */
+  --color-breadcrumb-bg: #f4ece7;    /* gentle warm breadcrumb bg */
+  --color-table-header-bg: #f5efea;  /* subtle table header */
+  --color-subtle-bg: #f5efea;        /* subtle fills */
+  --color-subtle-bg-2: #efe7e1;      /* slightly stronger fill */
+}
 /* Themed overrides */
 body { background-color: var(--color-bg); color: var(--color-text); }
 .app-container { background-color: var(--color-surface); }
