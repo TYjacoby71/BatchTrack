@@ -342,8 +342,8 @@ class AuthorizationHierarchy:
         if not organization.tier:
             return False, "No subscription tier assigned"
 
-        # Check if tier is available
-        if not organization.tier.is_available:
+        # Check if tier has valid integration
+        if not organization.tier.has_valid_integration:
             return False, "Subscription tier unavailable"
 
         # For paid tiers, check billing status using org.billing_status only
