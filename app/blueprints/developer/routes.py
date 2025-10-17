@@ -192,15 +192,9 @@ def organizations():
 @login_required
 def create_organization():
     """Create new organization with owner user"""
-    # Load available tiers for the form
-    from .subscription_tiers import load_tiers_config
-    tiers_config = load_tiers_config()
-
-    # Include all tiers for developer creation (including internal ones)
-    available_tiers = {
-        key: tier for key, tier in tiers_config.items() 
-        if isinstance(tier, dict) and tier.get('is_available', True)
-    }
+    # Load available tiers for the form (DB only)
+    from ..models.subscription_tier import SubscriptionTier as _ST
+    available_tiers = {str(t.id): {'name': t.name} for t in _ST.query.order_by(_ST.name).all()}
 
     if request.method == 'POST':
         # Organization details
@@ -336,9 +330,9 @@ def organization_detail(org_id):
     print(f"DEBUG: Organization {org.name} (ID: {org.id})")
     print(f"DEBUG: Has tier record: {tier_record is not None}")
     if tier_record:
-        print(f"DEBUG: Tier key: {tier_record.key}")
+        print(f"DEBUG: Tier id: {tier_record.id}")
         print(f"DEBUG: Tier name: {tier_record.name}")
-    print(f"DEBUG: Effective tier: {current_tier}")
+    print(f"DEBUG: Effective tier id: {current_tier}")
     print(f"DEBUG: Available tiers: {list(tiers_config.keys())}")
 
     return render_template('developer/organization_detail.html',
