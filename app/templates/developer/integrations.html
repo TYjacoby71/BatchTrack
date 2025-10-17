@@ -74,128 +74,236 @@
   <hr>
   <h4>3) Feature Flags & System Toggles</h4>
   <p>Features are broad functional areas. Permissions control specific actions within those features.</p>
-  
+
   <div class="card p-3">
-    <h6>Core Business Features</h6>
+    <h6 class="mt-3">Core Business Features</h6>
     <div class="form-check form-switch mb-2">
       <input class="form-check-input" type="checkbox" id="ff_fifo_tracking" {% if feature_flags.get('FEATURE_FIFO_TRACKING', True) %}checked{% endif %} onchange="saveFlags()">
-      <label class="form-check-label" for="ff_fifo_tracking">FIFO Inventory Tracking</label>
+      <label class="form-check-label" for="ff_fifo_tracking">
+        FIFO Inventory Tracking 
+        <span class="badge bg-success ms-1">WIRED</span>
+      </label>
+      <div><small class="text-muted">First-in-first-out inventory tracking via inventory_adjustment service</small></div>
     </div>
     <div class="form-check form-switch mb-2">
       <input class="form-check-input" type="checkbox" id="ff_barcode_scanning" {% if feature_flags.get('FEATURE_BARCODE_SCANNING', False) %}checked{% endif %} onchange="saveFlags()">
-      <label class="form-check-label" for="ff_barcode_scanning">Barcode Scanning</label>
+      <label class="form-check-label" for="ff_barcode_scanning">
+        Barcode Scanning 
+        <span class="badge bg-danger ms-1">STUB</span>
+      </label>
+      <div><small class="text-muted">Barcode scanning for inventory management - not implemented</small></div>
     </div>
     <div class="form-check form-switch mb-2">
       <input class="form-check-input" type="checkbox" id="ff_product_variants" {% if feature_flags.get('FEATURE_PRODUCT_VARIANTS', True) %}checked{% endif %} onchange="saveFlags()">
-      <label class="form-check-label" for="ff_product_variants">Product Variants System</label>
+      <label class="form-check-label" for="ff_product_variants">
+        Product Variants System 
+        <span class="badge bg-success ms-1">WIRED</span>
+      </label>
+      <div><small class="text-muted">Working products system with variants via ProductService</small></div>
     </div>
     <div class="form-check form-switch mb-2">
       <input class="form-check-input" type="checkbox" id="ff_auto_sku_generation" {% if feature_flags.get('FEATURE_AUTO_SKU_GENERATION', True) %}checked{% endif %} onchange="saveFlags()">
-      <label class="form-check-label" for="ff_auto_sku_generation">Auto-generate SKUs</label>
+      <label class="form-check-label" for="ff_auto_sku_generation">
+        Auto-generate SKUs 
+        <span class="badge bg-success ms-1">WIRED</span>
+      </label>
+      <div><small class="text-muted">Implemented in ProductService for automatic SKU code generation</small></div>
     </div>
     <div class="form-check form-switch mb-2">
       <input class="form-check-input" type="checkbox" id="ff_recipe_variations" {% if feature_flags.get('FEATURE_RECIPE_VARIATIONS', True) %}checked{% endif %} onchange="saveFlags()">
-      <label class="form-check-label" for="ff_recipe_variations">Recipe Variations</label>
+      <label class="form-check-label" for="ff_recipe_variations">
+        Recipe Variations 
+        <span class="badge bg-success ms-1">WIRED</span>
+      </label>
+      <div><small class="text-muted">Working recipe system with parent/child variation relationships</small></div>
     </div>
     <div class="form-check form-switch mb-2">
       <input class="form-check-input" type="checkbox" id="ff_cost_tracking" {% if feature_flags.get('FEATURE_COST_TRACKING', True) %}checked{% endif %} onchange="saveFlags()">
-      <label class="form-check-label" for="ff_cost_tracking">Cost Tracking & Profit Margins</label>
+      <label class="form-check-label" for="ff_cost_tracking">
+        Cost Tracking & Profit Margins 
+        <span class="badge bg-success ms-1">WIRED</span>
+      </label>
+      <div><small class="text-muted">Implemented in costing_engine and inventory with FIFO/average costing</small></div>
     </div>
     <div class="form-check form-switch mb-2">
       <input class="form-check-input" type="checkbox" id="ff_expiration_tracking" {% if feature_flags.get('FEATURE_EXPIRATION_TRACKING', True) %}checked{% endif %} onchange="saveFlags()">
-      <label class="form-check-label" for="ff_expiration_tracking">Expiration Date Tracking</label>
+      <label class="form-check-label" for="ff_expiration_tracking">
+        Expiration Date Tracking 
+        <span class="badge bg-success ms-1">WIRED</span>
+      </label>
+      <div><small class="text-muted">Working expiration system with services and lot-based tracking</small></div>
     </div>
     <div class="form-check form-switch mb-2">
       <input class="form-check-input" type="checkbox" id="ff_bulk_operations" {% if feature_flags.get('FEATURE_BULK_OPERATIONS', True) %}checked{% endif %} onchange="saveFlags()">
-      <label class="form-check-label" for="ff_bulk_operations">Bulk Inventory Operations</label>
+      <label class="form-check-label" for="ff_bulk_operations">
+        Bulk Inventory Operations 
+        <span class="badge bg-success ms-1">WIRED</span>
+      </label>
+      <div><small class="text-muted">Implemented in bulk_stock routes for bulk inventory operations</small></div>
     </div>
 
     <h6 class="mt-3">Developer & Advanced Features</h6>
     <div class="form-check form-switch mb-2">
       <input class="form-check-input" type="checkbox" id="ff_analytics" {% if feature_flags.FEATURE_INVENTORY_ANALYTICS %}checked{% endif %} onchange="saveFlags()">
-      <label class="form-check-label" for="ff_analytics">Inventory Analytics (developer only)</label>
+      <label class="form-check-label" for="ff_analytics">
+        Inventory Analytics (developer only) 
+        <span class="badge bg-success ms-1">WIRED</span>
+      </label>
+      <div><small class="text-muted">Developer feature for advanced inventory analytics and reporting</small></div>
     </div>
     <div class="form-check form-switch mb-2">
       <input class="form-check-input" type="checkbox" id="ff_debug_mode" {% if feature_flags.get('FEATURE_DEBUG_MODE', False) %}checked{% endif %} onchange="saveFlags()">
-      <label class="form-check-label" for="ff_debug_mode">Debug Mode</label>
+      <label class="form-check-label" for="ff_debug_mode">
+        Debug Mode 
+        <span class="badge bg-danger ms-1">STUB</span>
+      </label>
+      <div><small class="text-muted">Enables detailed logging and debugging information for development purposes</small></div>
     </div>
     <div class="form-check form-switch mb-2">
       <input class="form-check-input" type="checkbox" id="ff_auto_backup" {% if feature_flags.get('FEATURE_AUTO_BACKUP', False) %}checked{% endif %} onchange="saveFlags()">
-      <label class="form-check-label" for="ff_auto_backup">Auto-backup System</label>
+      <label class="form-check-label" for="ff_auto_backup">
+        Auto-backup System 
+        <span class="badge bg-danger ms-1">STUB</span>
+      </label>
+      <div><small class="text-muted">Automated backup of system data and configurations - not yet implemented</small></div>
     </div>
     <div class="form-check form-switch mb-2">
       <input class="form-check-input" type="checkbox" id="ff_csv_export" {% if feature_flags.get('FEATURE_CSV_EXPORT', True) %}checked{% endif %} onchange="saveFlags()">
-      <label class="form-check-label" for="ff_csv_export">CSV Export</label>
+      <label class="form-check-label" for="ff_csv_export">
+        CSV Export 
+        <span class="badge bg-success ms-1">WIRED</span>
+      </label>
+      <div><small class="text-muted">Functionality to export data and reports to CSV format</small></div>
     </div>
     <div class="form-check form-switch mb-2">
       <input class="form-check-input" type="checkbox" id="ff_advanced_reports" {% if feature_flags.get('FEATURE_ADVANCED_REPORTS', False) %}checked{% endif %} onchange="saveFlags()">
-      <label class="form-check-label" for="ff_advanced_reports">Advanced Reports</label>
+      <label class="form-check-label" for="ff_advanced_reports">
+        Advanced Reports 
+        <span class="badge bg-danger ms-1">STUB</span>
+      </label>
+      <div><small class="text-muted">Complex reporting features beyond standard reports - not implemented</small></div>
     </div>
     <div class="form-check form-switch mb-2">
       <input class="form-check-input" type="checkbox" id="ff_global_item_library" {% if feature_flags.get('FEATURE_GLOBAL_ITEM_LIBRARY', True) %}checked{% endif %} onchange="saveFlags()">
-      <label class="form-check-label" for="ff_global_item_library">Global Item Library Access</label>
+      <label class="form-check-label" for="ff_global_item_library">
+        Global Item Library Access 
+        <span class="badge bg-success ms-1">WIRED</span>
+      </label>
+      <div><small class="text-muted">Access to a shared library of items across multiple locations or systems</small></div>
     </div>
 
     <h6 class="mt-3">Notification Systems</h6>
     <div class="form-check form-switch mb-2">
       <input class="form-check-input" type="checkbox" id="ff_email_notifications" {% if feature_flags.get('FEATURE_EMAIL_NOTIFICATIONS', True) %}checked{% endif %} onchange="saveFlags()">
-      <label class="form-check-label" for="ff_email_notifications">Email Notifications</label>
+      <label class="form-check-label" for="ff_email_notifications">
+        Email Notifications 
+        <span class="badge bg-success ms-1">WIRED</span>
+      </label>
+      <div><small class="text-muted">System for sending email notifications to users and administrators</small></div>
     </div>
     <div class="form-check form-switch mb-2">
       <input class="form-check-input" type="checkbox" id="ff_browser_notifications" {% if feature_flags.get('FEATURE_BROWSER_NOTIFICATIONS', False) %}checked{% endif %} onchange="saveFlags()">
-      <label class="form-check-label" for="ff_browser_notifications">Browser Push Notifications</label>
+      <label class="form-check-label" for="ff_browser_notifications">
+        Browser Push Notifications 
+        <span class="badge bg-danger ms-1">STUB</span>
+      </label>
+      <div><small class="text-muted">Real-time push notifications to the browser - not implemented</small></div>
     </div>
 
     <h6 class="mt-3">Integration Features</h6>
     <div class="form-check form-switch mb-2">
       <input class="form-check-input" type="checkbox" id="ff_shopify_integration" {% if feature_flags.get('FEATURE_SHOPIFY_INTEGRATION', False) %}checked{% endif %} onchange="saveFlags()">
-      <label class="form-check-label" for="ff_shopify_integration">Shopify Integration (stubbed)</label>
+      <label class="form-check-label" for="ff_shopify_integration">
+        Shopify Integration (stubbed) 
+        <span class="badge bg-danger ms-1">STUB</span>
+      </label>
+      <div><small class="text-muted">Integration with Shopify for e-commerce synchronization - currently a placeholder</small></div>
     </div>
     <div class="form-check form-switch mb-2">
       <input class="form-check-input" type="checkbox" id="ff_api_access" {% if feature_flags.get('FEATURE_API_ACCESS', False) %}checked{% endif %} onchange="saveFlags()">
-      <label class="form-check-label" for="ff_api_access">REST API Access</label>
+      <label class="form-check-label" for="ff_api_access">
+        REST API Access 
+        <span class="badge bg-danger ms-1">STUB</span>
+      </label>
+      <div><small class="text-muted">Enables access to the system via a RESTful API - not implemented</small></div>
     </div>
     <div class="form-check form-switch mb-2">
       <input class="form-check-input" type="checkbox" id="ff_oauth_providers" {% if feature_flags.get('FEATURE_OAUTH_PROVIDERS', True) %}checked{% endif %} onchange="saveFlags()">
-      <label class="form-check-label" for="ff_oauth_providers">OAuth Login Providers</label>
+      <label class="form-check-label" for="ff_oauth_providers">
+        OAuth Login Providers 
+        <span class="badge bg-success ms-1">WIRED</span>
+      </label>
+      <div><small class="text-muted">Support for authentication via OAuth 2.0 providers (e.g., Google, Facebook)</small></div>
     </div>
 
     <h6 class="mt-3">AI Features (Premium)</h6>
     <div class="form-check form-switch mb-2">
       <input class="form-check-input" type="checkbox" id="ff_ai_recipe_optimization" {% if feature_flags.get('FEATURE_AI_RECIPE_OPTIMIZATION', False) %}checked{% endif %} onchange="saveFlags()">
-      <label class="form-check-label" for="ff_ai_recipe_optimization">AI Recipe Optimization</label>
+      <label class="form-check-label" for="ff_ai_recipe_optimization">
+        AI Recipe Optimization 
+        <span class="badge bg-danger ms-1">STUB</span>
+      </label>
+      <div><small class="text-muted">Utilizes AI for optimizing recipes and ingredient usage - not implemented</small></div>
     </div>
     <div class="form-check form-switch mb-2">
       <input class="form-check-input" type="checkbox" id="ff_ai_demand_forecasting" {% if feature_flags.get('FEATURE_AI_DEMAND_FORECASTING', False) %}checked{% endif %} onchange="saveFlags()">
-      <label class="form-check-label" for="ff_ai_demand_forecasting">AI Demand Forecasting</label>
+      <label class="form-check-label" for="ff_ai_demand_forecasting">
+        AI Demand Forecasting 
+        <span class="badge bg-danger ms-1">STUB</span>
+      </label>
+      <div><small class="text-muted">AI-powered demand forecasting for inventory management - not implemented</small></div>
     </div>
     <div class="form-check form-switch mb-2">
       <input class="form-check-input" type="checkbox" id="ff_ai_quality_insights" {% if feature_flags.get('FEATURE_AI_QUALITY_INSIGHTS', False) %}checked{% endif %} onchange="saveFlags()">
-      <label class="form-check-label" for="ff_ai_quality_insights">AI Quality Insights</label>
+      <label class="form-check-label" for="ff_ai_quality_insights">
+        AI Quality Insights 
+        <span class="badge bg-danger ms-1">STUB</span>
+      </label>
+      <div><small class="text-muted">AI analysis for quality control and insights - not implemented</small></div>
     </div>
 
     <h6 class="mt-3">Public Tools Availability</h6>
     <div class="form-check form-switch mb-2">
       <input class="form-check-input" type="checkbox" id="tools_soap" {% if feature_flags.get('TOOLS_SOAP', True) %}checked{% endif %} onchange="saveFlags()">
-      <label class="form-check-label" for="tools_soap">Soap Making Tools</label>
+      <label class="form-check-label" for="tools_soap">
+        Soap Making Tools 
+        <span class="badge bg-success ms-1">WIRED</span>
+      </label>
+      <div><small class="text-muted">Tools and calculators for soap making recipes and processes</small></div>
     </div>
     <div class="form-check form-switch mb-2">
       <input class="form-check-input" type="checkbox" id="tools_candles" {% if feature_flags.get('TOOLS_CANDLES', True) %}checked{% endif %} onchange="saveFlags()">
-      <label class="form-check-label" for="tools_candles">Candle Making Tools</label>
+      <label class="form-check-label" for="tools_candles">
+        Candle Making Tools 
+        <span class="badge bg-success ms-1">WIRED</span>
+      </label>
+      <div><small class="text-muted">Tools and calculators for candle making recipes and processes</small></div>
     </div>
     <div class="form-check form-switch mb-2">
       <input class="form-check-input" type="checkbox" id="tools_lotions" {% if feature_flags.get('TOOLS_LOTIONS', True) %}checked{% endif %} onchange="saveFlags()">
-      <label class="form-check-label" for="tools_lotions">Lotion & Cosmetic Tools</label>
+      <label class="form-check-label" for="tools_lotions">
+        Lotion & Cosmetic Tools 
+        <span class="badge bg-success ms-1">WIRED</span>
+      </label>
+      <div><small class="text-muted">Tools for creating lotions, creams, and other cosmetic products</small></div>
     </div>
     <div class="form-check form-switch mb-2">
       <input class="form-check-input" type="checkbox" id="tools_herbal" {% if feature_flags.get('TOOLS_HERBAL', True) %}checked{% endif %} onchange="saveFlags()">
-      <label class="form-check-label" for="tools_herbal">Herbalist Tools</label>
+      <label class="form-check-label" for="tools_herbal">
+        Herbalist Tools 
+        <span class="badge bg-success ms-1">WIRED</span>
+      </label>
+      <div><small class="text-muted">Tools for herbalists, including tincture calculators and formulation aids</small></div>
     </div>
     <div class="form-check form-switch mb-2">
       <input class="form-check-input" type="checkbox" id="tools_baking" {% if feature_flags.get('TOOLS_BAKING', True) %}checked{% endif %} onchange="saveFlags()">
-      <label class="form-check-label" for="tools_baking">Baking Tools</label>
+      <label class="form-check-label" for="tools_baking">
+        Baking Tools 
+        <span class="badge bg-success ms-1">WIRED</span>
+      </label>
+      <div><small class="text-muted">Tools for bakers, including recipe scaling and ingredient conversions</small></div>
     </div>
-    
+
     <small class="text-muted">Features control broad functionality. Permissions (managed via subscription tiers) control specific actions within features. Changes update the running app and persist to settings.json.</small>
   </div>
 
@@ -245,7 +353,7 @@ async function loadStripeEvents() {
 async function saveFlags() {
   // Get all feature flag checkboxes
   const flags = {};
-  
+
   // Core business features
   flags.FEATURE_FIFO_TRACKING = document.getElementById('ff_fifo_tracking').checked;
   flags.FEATURE_BARCODE_SCANNING = document.getElementById('ff_barcode_scanning').checked;
@@ -255,7 +363,7 @@ async function saveFlags() {
   flags.FEATURE_COST_TRACKING = document.getElementById('ff_cost_tracking').checked;
   flags.FEATURE_EXPIRATION_TRACKING = document.getElementById('ff_expiration_tracking').checked;
   flags.FEATURE_BULK_OPERATIONS = document.getElementById('ff_bulk_operations').checked;
-  
+
   // Developer & advanced features
   flags.FEATURE_INVENTORY_ANALYTICS = document.getElementById('ff_analytics').checked;
   flags.FEATURE_DEBUG_MODE = document.getElementById('ff_debug_mode').checked;
@@ -263,28 +371,28 @@ async function saveFlags() {
   flags.FEATURE_CSV_EXPORT = document.getElementById('ff_csv_export').checked;
   flags.FEATURE_ADVANCED_REPORTS = document.getElementById('ff_advanced_reports').checked;
   flags.FEATURE_GLOBAL_ITEM_LIBRARY = document.getElementById('ff_global_item_library').checked;
-  
+
   // Notification systems
   flags.FEATURE_EMAIL_NOTIFICATIONS = document.getElementById('ff_email_notifications').checked;
   flags.FEATURE_BROWSER_NOTIFICATIONS = document.getElementById('ff_browser_notifications').checked;
-  
+
   // Integration features
   flags.FEATURE_SHOPIFY_INTEGRATION = document.getElementById('ff_shopify_integration').checked;
   flags.FEATURE_API_ACCESS = document.getElementById('ff_api_access').checked;
   flags.FEATURE_OAUTH_PROVIDERS = document.getElementById('ff_oauth_providers').checked;
-  
+
   // AI features
   flags.FEATURE_AI_RECIPE_OPTIMIZATION = document.getElementById('ff_ai_recipe_optimization').checked;
   flags.FEATURE_AI_DEMAND_FORECASTING = document.getElementById('ff_ai_demand_forecasting').checked;
   flags.FEATURE_AI_QUALITY_INSIGHTS = document.getElementById('ff_ai_quality_insights').checked;
-  
+
   // Public tools
   flags.TOOLS_SOAP = document.getElementById('tools_soap').checked;
   flags.TOOLS_CANDLES = document.getElementById('tools_candles').checked;
   flags.TOOLS_LOTIONS = document.getElementById('tools_lotions').checked;
   flags.TOOLS_HERBAL = document.getElementById('tools_herbal').checked;
   flags.TOOLS_BAKING = document.getElementById('tools_baking').checked;
-  
+
   const csrfToken = document.querySelector('meta[name=csrf-token]').getAttribute('content');
   const resp = await fetch('{{ url_for('developer.integrations_set_feature_flags') }}', {
     method: 'POST', 
@@ -294,7 +402,7 @@ async function saveFlags() {
     },
     body: JSON.stringify(flags)
   });
-  
+
   if (resp.ok) {
     // Show success feedback
     const result = await resp.json();

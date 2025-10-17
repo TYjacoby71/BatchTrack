@@ -10,10 +10,23 @@ tools_bp = Blueprint('tools_bp', __name__)
 
 def _is_enabled(key: str, default: bool = True) -> bool:
     try:
+        # Check both database FeatureFlag and settings.json
         flag = FeatureFlag.query.filter_by(key=key).first()
-        if flag is None:
+        if flag is not None:
+            return bool(flag.enabled)
+        
+        # Fallback to settings.json
+        from flask import current_app
+        import json
+        import os
+        
+        try:
+            with open('settings.json', 'r') as f:
+                settings = json.load(f)
+                feature_flags = settings.get('feature_flags', {})
+                return feature_flags.get(key, default)
+        except Exception:
             return default
-        return bool(flag.enabled)
     except Exception:
         return default
 
@@ -25,45 +38,45 @@ def tools_index():
     and quick draft Recipe Tool (category-aware) with Save CTA that invites sign-in.
     """
     flags = {
-        'soap': _is_enabled('tools.soap', True),
-        'candles': _is_enabled('tools.candles', True),
-        'lotions': _is_enabled('tools.lotions', True),
-        'herbal': _is_enabled('tools.herbal', True),
-        'baker': _is_enabled('tools.baker', True),
+        'soap': _is_enabled('TOOLS_SOAP', True),
+        'candles': _is_enabled('TOOLS_CANDLES', True),
+        'lotions': _is_enabled('TOOLS_LOTIONS', True),
+        'herbal': _is_enabled('TOOLS_HERBAL', True),
+        'baker': _is_enabled('TOOLS_BAKING', True),
     }
     return render_template('tools/index.html', tool_flags=flags)
 
 @tools_bp.route('/soap')
 def tools_soap():
-    if not _is_enabled('tools.soap', True):
+    if not _is_enabled('TOOLS_SOAP', True):
         flash('Soap tools are currently unavailable.', 'warning')
         return redirect(url_for('tools_bp.tools_index'))
     return render_template('tools/soap.html')
 
 @tools_bp.route('/candles')
 def tools_candles():
-    if not _is_enabled('tools.candles', True):
+    if not _is_enabled('TOOLS_CANDLES', True):
         flash('Candle tools are currently unavailable.', 'warning')
         return redirect(url_for('tools_bp.tools_index'))
     return render_template('tools/candles.html')
 
 @tools_bp.route('/lotions')
 def tools_lotions():
-    if not _is_enabled('tools.lotions', True):
+    if not _is_enabled('TOOLS_LOTIONS', True):
         flash('Lotion tools are currently unavailable.', 'warning')
         return redirect(url_for('tools_bp.tools_index'))
     return render_template('tools/lotions.html')
 
 @tools_bp.route('/herbal')
 def tools_herbal():
-    if not _is_enabled('tools.herbal', True):
+    if not _is_enabled('TOOLS_HERBAL', True):
         flash('Herbal tools are currently unavailable.', 'warning')
         return redirect(url_for('tools_bp.tools_index'))
     return render_template('tools/herbal.html')
 
 @tools_bp.route('/baker')
 def tools_baker():
-    if not _is_enabled('tools.baker', True):
+    if not _is_enabled('TOOLS_BAKING', True):
         flash('Baker tools are currently unavailable.', 'warning')
         return redirect(url_for('tools_bp.tools_index'))
     return render_template('tools/baker.html')
