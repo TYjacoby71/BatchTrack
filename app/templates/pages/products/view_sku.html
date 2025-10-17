@@ -133,17 +133,10 @@ async function markAsExpired(type, id) {
 {% block content %}
 {% include 'components/sku/styles.html' %}
 
-<div class="container-fluid">
+<div>
     <div class="row">
         <div class="col-md-12">
-            <nav aria-label="breadcrumb">
-                <ol class="breadcrumb">
-                    <li class="breadcrumb-item"><a href="{{ url_for('products.list_products') }}">Products</a></li>
-                    <li class="breadcrumb-item"><a href="{{ url_for('products.view_product', product_id=sku.product_id) }}">{{ sku.product_name }}</a></li>
-                    <li class="breadcrumb-item"><a href="{{ url_for('product_variants.view_variant', product_id=sku.product_id, variant_name=sku.variant_name) }}">{{ sku.variant_name }}</a></li>
-                    <li class="breadcrumb-item active">{{ sku.size_label }}</li>
-                </ol>
-            </nav>
+            
 
             <div class="d-flex justify-content-between align-items-center mb-4">
                 <h2>{{ sku.product_name }} - {{ sku.variant_name }} - {{ sku.size_label }} Item</h2>

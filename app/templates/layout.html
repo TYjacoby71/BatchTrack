@@ -368,6 +368,19 @@
 
     <main class="container-xl mt-4">
         <div class="section-spacing">
+            {% if breadcrumb_items is defined and breadcrumb_items %}
+            <nav aria-label="breadcrumb" class="mb-3">
+                <ol class="breadcrumb">
+                    {% for crumb in breadcrumb_items %}
+                        {% if crumb.url %}
+                        <li class="breadcrumb-item"><a href="{{ crumb.url }}">{{ crumb.label }}</a></li>
+                        {% else %}
+                        <li class="breadcrumb-item active">{{ crumb.label }}</li>
+                        {% endif %}
+                    {% endfor %}
+                </ol>
+            </nav>
+            {% endif %}
             {% with messages = get_flashed_messages() %}
                 {% if messages %}
                     {% for message in messages %}
