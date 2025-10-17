@@ -103,9 +103,7 @@ class Organization(db.Model):
     whop_license_key = db.Column(db.String(255), nullable=True)
     billing_status = db.Column(db.String(50), default='active', nullable=False)  # active, suspended, cancelled
 
-    # Offline support
-    last_online_sync = db.Column(db.DateTime, nullable=True)
-    offline_tier_cache = db.Column(db.JSON, nullable=True)  # Cached tier permissions for offline use
+    # Offline support (removed)
 
     # Inventory costing policy
     inventory_cost_method = db.Column(db.String(16), nullable=True)  # 'fifo' | 'average' (default handled in logic)
