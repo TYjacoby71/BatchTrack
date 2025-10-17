@@ -67,11 +67,8 @@ class WhopService:
         """Sync organization tier and status from Whop license data"""
         tier_key = license_data["tier"]
         
-        # Find or create the subscription tier
-        tier = SubscriptionTier.query.filter_by(key=tier_key).first()
-        if not tier:
-            # Fallback to solo tier if tier doesn't exist
-            tier = SubscriptionTier.query.filter_by(key='solo').first()
+        # Map external product tiers to an internal DB tier by name
+        tier = SubscriptionTier.query.filter(SubscriptionTier.name.ilike(f"%{tier_key}%")).first()
 
         if tier:
             organization.subscription_tier_id = tier.id
@@ -98,7 +95,7 @@ class WhopService:
         )
 
         # Assign subscription tier
-        tier = SubscriptionTier.query.filter_by(key=license_data['tier']).first()
+        tier = SubscriptionTier.query.filter(SubscriptionTier.name.ilike(f"%{license_data['tier']}%")) .first()
         if tier:
             organization.subscription_tier_id = tier.id
 

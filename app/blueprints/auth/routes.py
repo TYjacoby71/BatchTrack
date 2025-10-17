@@ -21,26 +21,17 @@ from datetime import datetime, timedelta
 logger = logging.getLogger(__name__)
 
 def load_tiers_config():
-    """Load subscription tiers from JSON file - this is the single source of truth"""
-    import json
-    import os
-
-    TIERS_CONFIG_FILE = 'subscription_tiers.json'
-
-    if os.path.exists(TIERS_CONFIG_FILE):
-        with open(TIERS_CONFIG_FILE, 'r') as f:
-            loaded_tiers = json.load(f)
-            # Filter out metadata keys and invalid entries
-            valid_tiers = {}
-            for tier_key, tier_data in loaded_tiers.items():
-                # Skip metadata keys (start with underscore) and non-dict values
-                if not tier_key.startswith('_') and isinstance(tier_data, dict):
-                    valid_tiers[tier_key] = tier_data
-            return valid_tiers
-
-    # If no JSON file exists, return empty dict - force creation of subscription_tiers.json
-    print("WARNING: No subscription_tiers.json found - tiers must be configured in JSON file")
-    return {}
+    """Temporary shim: return DB tiers in the legacy structure; do not read JSON."""
+    try:
+        db_tiers = SubscriptionTier.query.filter_by(is_customer_facing=True).all()
+        return {str(t.id): {
+            'name': t.name,
+            'fallback_features': [p.name for p in getattr(t, 'permissions', [])],
+            'whop_product_id': getattr(t, 'whop_product_key', ''),
+            'is_available': t.has_valid_integration or t.is_billing_exempt
+        } for t in db_tiers}
+    except Exception:
+        return {}
 
 class LoginForm(FlaskForm):
     username = StringField('Username', validators=[DataRequired()])
@@ -345,18 +336,11 @@ def signup_data():
             is_customer_facing=True).filter(
             SubscriptionTier.billing_provider != 'exempt').order_by(SubscriptionTier.user_limit).all()
 
-    # Further filter by subscription_type = 'monthly' (this should be a database column)
-    # For now, show all customer-facing tiers since subscription_type might not be implemented yet
-    tiers_config = load_tiers_config()
-
+    # Build purely from DB for display
     available_tiers = {}
     for tier_obj in available_tiers_db:
-        # Use tier name for config lookup since key is removed
-        tier_config_key = tier_obj.name.lower().replace(' plan', '').replace(' ', '_')
-        tier_config = tiers_config.get(tier_config_key, {})
-
-        # Get features from tier config
-        features = tier_config.get('fallback_features', []) if tier_config else []
+        # Features from permissions
+        features = [p.name for p in getattr(tier_obj, 'permissions', [])]
 
         # Get live pricing from Stripe if available, otherwise use fallback
         from ...services.stripe_service import StripeService
@@ -378,7 +362,7 @@ def signup_data():
             'price_display': price_display,
             'features': features,
             'user_limit': tier_obj.user_limit,
-            'whop_product_id': tier_config.get('whop_product_id', '') if tier_config else ''
+            'whop_product_id': tier_obj.whop_product_key or ''
         }
 
     return jsonify({
@@ -418,17 +402,10 @@ def signup():
         SubscriptionTier.billing_provider != 'exempt'
     ).all()
 
-    # Build available tiers using same logic as signup_data() to avoid redundancy
-    tiers_config = load_tiers_config()
+    # Build available tiers using DB only
     available_tiers = {}
-
     for tier_obj in db_tiers:
-        # Use tier name for config lookup since key is removed
-        tier_config_key = tier_obj.name.lower().replace(' plan', '').replace(' ', '_')
-        tier_config = tiers_config.get(tier_config_key, {})
-
-        # Get features from tier config
-        features = tier_config.get('fallback_features', []) if tier_config else []
+        features = [p.name for p in getattr(tier_obj, 'permissions', [])]
 
         # Get live pricing from Stripe if available, otherwise use fallback
         from ...services.stripe_service import StripeService
@@ -447,7 +424,7 @@ def signup():
             'price_display': price_display,
             'features': features,
             'user_limit': tier_obj.user_limit,
-            'whop_product_id': tier_config.get('whop_product_id', '') if tier_config else ''
+            'whop_product_id': tier_obj.whop_product_key or ''
         }
 
     # Get signup tracking parameters

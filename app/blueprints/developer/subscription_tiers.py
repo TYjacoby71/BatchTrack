@@ -10,23 +10,22 @@ import os
 logger = logging.getLogger(__name__)
 
 def load_tiers_config():
-    """Load subscription tiers from JSON file - this is the single source of truth"""
-    TIERS_CONFIG_FILE = 'subscription_tiers.json'
-
-    if os.path.exists(TIERS_CONFIG_FILE):
-        with open(TIERS_CONFIG_FILE, 'r') as f:
-            loaded_tiers = json.load(f)
-            # Filter out metadata keys and invalid entries
-            valid_tiers = {}
-            for tier_key, tier_data in loaded_tiers.items():
-                # Skip metadata keys (start with underscore) and non-dict values
-                if not tier_key.startswith('_') and isinstance(tier_data, dict):
-                    valid_tiers[tier_key] = tier_data
-            return valid_tiers
-
-    # If no JSON file exists, return empty dict - force creation of subscription_tiers.json
-    print("WARNING: No subscription_tiers.json found - tiers must be configured in JSON file")
-    return {}
+    """Deprecated JSON loader shim: return DB tiers for legacy callers; do not read JSON."""
+    try:
+        all_tiers_db = SubscriptionTier.query.order_by(SubscriptionTier.name).all()
+        tiers = {}
+        for t in all_tiers_db:
+            tiers[str(t.id)] = {
+                'name': t.name,
+                'description': t.description,
+                'is_customer_facing': t.is_customer_facing,
+                'is_available': t.has_valid_integration or t.is_billing_exempt,
+                'billing_provider': t.billing_provider,
+                'permissions': [p.name for p in getattr(t, 'permissions', [])]
+            }
+        return tiers
+    except Exception:
+        return {}
 
 subscription_tiers_bp = Blueprint('subscription_tiers', __name__, url_prefix='/subscription-tiers')
 

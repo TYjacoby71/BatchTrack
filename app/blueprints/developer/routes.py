@@ -321,15 +321,13 @@ def organization_detail(org_id):
         }
         users.append(user_dict)
 
-    # Load subscription tiers config for the dropdown
-    from .subscription_tiers import load_tiers_config
-    all_tiers_config = load_tiers_config()
-
-    # Filter to only include dictionary objects (valid tier configurations)
-    tiers_config = {}
-    for tier_key, tier_data in all_tiers_config.items():
-        if isinstance(tier_data, dict) and tier_data.get('is_available', True):
-            tiers_config[tier_key] = tier_data
+    # Build subscription tiers from DB for the dropdown
+    from ..models.subscription_tier import SubscriptionTier as _ST
+    try:
+        all_db_tiers = _ST.query.order_by(_ST.name).all()
+        tiers_config = {str(t.id): {'name': t.name, 'is_available': t.has_valid_integration or t.is_billing_exempt} for t in all_db_tiers}
+    except Exception:
+        tiers_config = {}
 
     # Debug subscription info
     current_tier = org.effective_subscription_tier

@@ -17,8 +17,8 @@
                         <div>
                             <h2 class="mb-2">{{ organization.name }}</h2>
                             <p class="text-muted mb-0">
-                                <span class="badge bg-{{ 'success' if organization.tier and organization.tier.key == 'enterprise' else 'warning' if organization.tier and organization.tier.key == 'team' else 'secondary' }}">
-                                    {{ organization.tier.name if organization.tier else 'Free' }}
+                                <span class="badge bg-secondary">
+                                    {{ organization.tier.name if organization.tier else 'Exempt' }}
                                 </span>
                                 <span class="badge bg-{{ 'success' if organization.is_active else 'danger' }}">
                                     {{ 'Active' if organization.is_active else 'Inactive' }}

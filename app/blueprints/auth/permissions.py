@@ -3,21 +3,22 @@ from flask_login import login_required, current_user
 from app.models import Permission, Role, User, DeveloperPermission
 from app.extensions import db
 from app.utils.permissions import require_permission
-from app.blueprints.developer.subscription_tiers import load_tiers_config
+from app.models.subscription_tier import SubscriptionTier
 from . import auth_bp
 
 def get_tier_permissions(tier_key):
-    """Get all permissions available to a subscription tier"""
-    tiers_config = load_tiers_config()
-    tier_data = tiers_config.get(tier_key, {})
-    permission_names = tier_data.get('permissions', [])
-
-    # Get actual permission objects
-    permissions = Permission.query.filter(
-        Permission.name.in_(permission_names),
+    """Get all permissions available to a subscription tier (DB only)."""
+    try:
+        tier_id = int(tier_key)
+    except (TypeError, ValueError):
+        tier_id = None
+    tier = SubscriptionTier.query.get(tier_id) if tier_id is not None else None
+    if not tier:
+        return []
+    return Permission.query.filter(
+        Permission.name.in_([p.name for p in getattr(tier, 'permissions', [])]),
         Permission.is_active == True
     ).all()
-    return permissions
 
 @auth_bp.route('/permissions')
 @login_required

@@ -31,9 +31,13 @@ def dashboard():
     from ...services.billing_service import BillingService
     pricing_data = BillingService.get_comprehensive_pricing_data()
 
-    # Load subscription tiers config for tier display (needed for both developer and customer views)
-    from ...blueprints.developer.subscription_tiers import load_tiers_config
-    tiers_config = load_tiers_config()
+    # Load subscription tiers from DB for tier display (no JSON)
+    from ...models.subscription_tier import SubscriptionTier
+    try:
+        db_tiers = SubscriptionTier.query.filter_by(is_customer_facing=True).all()
+        tiers_config = {str(t.id): {'name': t.name, 'is_available': t.has_valid_integration or t.is_billing_exempt} for t in db_tiers}
+    except Exception:
+        tiers_config = {}
 
     # Get organization data - handle developer customer view
     from app.utils.permissions import get_effective_organization

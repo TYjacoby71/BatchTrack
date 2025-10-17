@@ -3,7 +3,7 @@ from flask import Blueprint, render_template, jsonify
 from flask_login import login_required, current_user
 from app.models import Permission
 from app.utils.permissions import has_permission, _org_tier_includes_permission
-from app.blueprints.developer.subscription_tiers import load_tiers_config
+from app.models.subscription_tier import SubscriptionTier
 
 debug_bp = Blueprint('debug', __name__, url_prefix='/debug')
 
@@ -20,10 +20,13 @@ def debug_permissions():
     # Get current tier
     current_tier = current_user.organization.effective_subscription_tier if current_user.organization else 'free'
     
-    # Get tier config
-    tiers_config = load_tiers_config()
-    tier_data = tiers_config.get(current_tier, {})
-    tier_permissions = tier_data.get('permissions', [])
+    # Build tier permissions from DB only
+    try:
+        tier_id = int(current_tier) if isinstance(current_tier, str) else current_tier
+    except Exception:
+        tier_id = None
+    tier_obj = SubscriptionTier.query.get(tier_id) if tier_id else None
+    tier_permissions = [p.name for p in getattr(tier_obj, 'permissions', [])] if tier_obj else []
     
     # Check each permission
     permission_status = {}
@@ -49,5 +52,14 @@ def debug_tiers():
     if current_user.user_type != 'developer':
         return jsonify({'error': 'Developer access only'}), 403
         
-    tiers_config = load_tiers_config()
+    tiers_config = {}
+    tiers = SubscriptionTier.query.all()
+    for t in tiers:
+        tiers_config[str(t.id)] = {
+            'name': t.name,
+            'permissions': [p.name for p in getattr(t, 'permissions', [])],
+            'billing_provider': t.billing_provider,
+            'is_billing_exempt': t.is_billing_exempt,
+            'is_customer_facing': t.is_customer_facing,
+        }
     return jsonify(tiers_config)

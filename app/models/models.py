@@ -151,8 +151,10 @@ class Organization(db.Model):
 
     @property
     def effective_subscription_tier(self):
-        """Get the effective subscription tier key"""
-        return self.tier.key if self.tier else 'free'
+        """Get the effective subscription tier identifier (string id or 'exempt')."""
+        if not self.tier:
+            return 'exempt'
+        return str(self.tier.id)
 
     @property
     def subscription_tier_obj(self):
@@ -568,8 +570,8 @@ class User(UserMixin, db.Model):
         if self.user_type == 'developer':
             return 'System Developer'
         elif self.is_organization_owner and self.organization:
-            tier = self.organization.subscription_tier.title()
-            return f'{tier} Owner'
+            tier_name = self.organization.tier.name if self.organization.tier else 'Exempt'
+            return f'{tier_name} Owner'
         else:
             roles = self.get_active_roles()
             if roles:
