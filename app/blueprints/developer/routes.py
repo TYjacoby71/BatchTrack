@@ -1501,7 +1501,39 @@ def integrations_set_feature_flags():
         
         # Define allowed flags
         allowed_flags = [
+            # Core business features
+            'FEATURE_FIFO_TRACKING',
+            'FEATURE_BARCODE_SCANNING',
+            'FEATURE_PRODUCT_VARIANTS',
+            'FEATURE_AUTO_SKU_GENERATION',
+            'FEATURE_RECIPE_VARIATIONS',
+            'FEATURE_COST_TRACKING',
+            'FEATURE_EXPIRATION_TRACKING',
+            'FEATURE_BULK_OPERATIONS',
+            
+            # Developer & advanced features
             'FEATURE_INVENTORY_ANALYTICS',
+            'FEATURE_DEBUG_MODE',
+            'FEATURE_AUTO_BACKUP',
+            'FEATURE_CSV_EXPORT',
+            'FEATURE_ADVANCED_REPORTS',
+            'FEATURE_GLOBAL_ITEM_LIBRARY',
+            
+            # Notification systems
+            'FEATURE_EMAIL_NOTIFICATIONS',
+            'FEATURE_BROWSER_NOTIFICATIONS',
+            
+            # Integration features
+            'FEATURE_SHOPIFY_INTEGRATION',
+            'FEATURE_API_ACCESS',
+            'FEATURE_OAUTH_PROVIDERS',
+            
+            # AI features
+            'FEATURE_AI_RECIPE_OPTIMIZATION',
+            'FEATURE_AI_DEMAND_FORECASTING',
+            'FEATURE_AI_QUALITY_INSIGHTS',
+            
+            # Public tools
             'TOOLS_SOAP',
             'TOOLS_CANDLES', 
             'TOOLS_LOTIONS',
