@@ -67,7 +67,7 @@
     <div class="current-plan mb-4">
         <div class="card">
             <div class="card-body">
-                <h3>Current Plan: {{ current_tier.title() }}</h3>
+                <h3>Current Plan: {{ organization.get_tier_display_name() }}</h3>
                 {% if subscription_details.status != 'inactive' %}
                 <div class="subscription-info">
                     <p><strong>Status:</strong> {{ subscription_details.status.title() }}</p>
@@ -137,7 +137,7 @@
                 </div>
 
                 <div class="card-footer text-center">
-                    {% if current_tier != tier_name %}
+                    {% if organization.get_tier_display_name() != tier_data.get('name', tier_name.title()) %}
                     {% if has_permission(current_user, 'organization.manage_billing') %}
                       <!-- Standard billing flow for all paid tiers -->
                       <form method="POST" action="{{ url_for('billing.checkout', tier=tier_name) }}" class="d-inline">

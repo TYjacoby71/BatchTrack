@@ -76,6 +76,9 @@
   <p>Features are broad functional areas. Permissions control specific actions within those features.</p>
 
   <div class="card p-3">
+    <div id="flagSaveStatus" class="alert alert-success d-none" role="alert">
+      ✅ Feature flags updated successfully
+    </div>
     <h6 class="mt-3">Core Business Features</h6>
     <div class="form-check form-switch mb-2">
       <input class="form-check-input" type="checkbox" id="ff_fifo_tracking" {% if feature_flags.get('FEATURE_FIFO_TRACKING', True) %}checked{% endif %} onchange="saveFlags()">
@@ -407,9 +410,29 @@ async function saveFlags() {
     // Show success feedback
     const result = await resp.json();
     console.log('Feature flags updated successfully');
-    // You could add a toast notification here
+    
+    // Show visual confirmation
+    const statusDiv = document.getElementById('flagSaveStatus');
+    statusDiv.className = 'alert alert-success';
+    statusDiv.style.display = 'block';
+    
+    // Auto-hide after 3 seconds
+    setTimeout(() => {
+      statusDiv.style.display = 'none';
+    }, 3000);
   } else {
     console.error('Failed to update feature flags');
+    
+    // Show error feedback
+    const statusDiv = document.getElementById('flagSaveStatus');
+    statusDiv.className = 'alert alert-danger';
+    statusDiv.innerHTML = '❌ Failed to update feature flags';
+    statusDiv.style.display = 'block';
+    
+    // Auto-hide after 5 seconds
+    setTimeout(() => {
+      statusDiv.style.display = 'none';
+    }, 5000);
   }
 }
 

@@ -40,19 +40,17 @@ class SignupService:
             logger.warning(f"Tier mismatch! Signup had {signup_tier}, processing {tier}")
             logger.info(f"Using tier from checkout: {tier}")
 
-        # Double-check tier configuration before proceeding - but don't fail if pricing is unavailable
-        try:
-            from ..blueprints.developer.subscription_tiers import load_tiers_config
-            tiers_config = load_tiers_config()
-            tier_data = tiers_config.get(tier, {})
-            logger.info(f"Final tier check - tier '{tier}' being processed")
-        except Exception as config_error:
-            logger.warning(f"Could not load tier configuration, proceeding anyway: {str(config_error)}")
-            # Don't fail signup just because we can't load tier config
+        # No JSON-based tier config; rely on DB only
+        logger.info(f"Final tier check using DB - tier '{tier}' being processed")
 
         try:
             # Get the subscription tier
-            subscription_tier = SubscriptionTier.query.filter_by(key=tier).first()
+            # tier is expected to be a DB id as string
+            try:
+                tier_id = int(tier)
+            except (TypeError, ValueError):
+                tier_id = None
+            subscription_tier = SubscriptionTier.query.get(tier_id) if tier_id is not None else None
             if not subscription_tier:
                 raise Exception(f"Subscription tier '{tier}' not found")
 
@@ -117,7 +115,7 @@ class SignupService:
                 owner_user.email,
                 owner_user.first_name,
                 org.name,
-                tier.title()
+                subscription_tier.name
             )
 
             # Send verification email if needed

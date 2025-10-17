@@ -34,7 +34,6 @@ docs/                # Comprehensive documentation
 - `app/blueprints/billing/routes.py` - Webhook handlers
 - `app/services/stripe_service.py` - Stripe API wrapper
 - `app/services/billing_service.py` - Business billing logic
-- `app/services/offline_billing_service.py` - Offline billing fallback
 
 **Risk Assessment:**
 - Webhook signature verification present but needs verification
