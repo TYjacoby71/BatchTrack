@@ -27,20 +27,12 @@
                     <div class="row" id="tierSelection">
                         {% for tier_key, tier_data in available_tiers.items() %}
                         <div class="col-lg-4 col-md-6 mb-4">
-                            <div class="card tier-card h-100 {% if tier_key == 'team' %}border-success border-3{% else %}border-2{% endif %}" 
+                            <div class="card tier-card h-100 border-2" 
                                  data-tier="{{ tier_key }}"
                                  style="cursor: pointer; transition: all 0.3s; position: relative;"
                                  onclick="selectTier('{{ tier_key }}')"
                                  onmouseover="this.style.transform='translateY(-8px)'; this.style.boxShadow='0 8px 25px rgba(0,0,0,0.15)'"
                                  onmouseout="if(!this.classList.contains('selected')) { this.style.transform='translateY(0px)'; this.style.boxShadow='0 2px 10px rgba(0,0,0,0.1)'; }">
-                                
-                                {% if tier_key == 'team' %}
-                                <div class="position-absolute top-0 end-0 p-2">
-                                    <span class="badge bg-primary">
-                                        <i class="fas fa-star me-1"></i>Most Popular
-                                    </span>
-                                </div>
-                                {% endif %}
 
                                 <div class="card-body text-center p-4">
                                     <h3 class="card-title fw-bold">{{ tier_data.name }}</h3>
@@ -72,10 +64,10 @@
                                 
                                 <div class="card-footer bg-transparent text-center">
                                     <div class="tier-selection-indicator">
-                                        <i class="fas fa-check-circle text-success fs-4" style="display: {% if tier_key == 'team' %}inline{% else %}none{% endif %};"></i>
+                                        <i class="fas fa-check-circle text-success fs-4" style="display: none;"></i>
                                         <div class="tier-status-text mt-2">
-                                            <span class="badge {% if tier_key == 'team' %}bg-success{% else %}bg-outline-primary{% endif %} px-3 py-2">
-                                                {% if tier_key == 'team' %}Selected{% else %}Click to Select{% endif %}
+                                            <span class="badge bg-outline-primary px-3 py-2">
+                                                Click to Select
                                             </span>
                                         </div>
                                     </div>
@@ -92,7 +84,7 @@
                                 <div class="card bg-light border-0">
                                     <div class="card-body py-4">
                                         <h5 class="mb-3">
-                                            <i class="fas fa-shopping-cart me-2"></i>
+                        <i class="fas fa-shopping-cart me-2"></i>
                                             Ready to get started?
                                         </h5>
                                         <p class="text-muted mb-4" id="selectedTierText">
@@ -100,7 +92,7 @@
                                         </p>
                                         
                                         <div class="d-flex gap-3 justify-content-center">
-                                            <a href="{{ url_for('auth.login') }}" class="btn btn-outline-secondary">
+                        <a href="{{ url_for('auth.login') }}" class="btn btn-outline-secondary">
                                                 <i class="fas fa-arrow-left me-2"></i>Back to Login
                                             </a>
                                             <button type="button" class="btn btn-success btn-lg px-4" id="continueBtn" onclick="proceedToPayment()">
@@ -119,7 +111,7 @@
 </div>
 
 <script>
-let selectedTier = 'team'; // Default selection
+let selectedTier = '{{ default_tier_id }}'; // Default selection from server
 let availableTiers = {{ available_tiers|tojson }};
 
 function selectTier(tierKey) {
@@ -206,9 +198,14 @@ function proceedToPayment() {
     form.submit();
 }
 
-// Initialize with team tier selected
+// Initialize with default tier selected
 document.addEventListener('DOMContentLoaded', function() {
-    selectTier('team');
+    if (selectedTier && availableTiers[selectedTier]) {
+        selectTier(selectedTier);
+    } else {
+        const firstKey = Object.keys(availableTiers)[0];
+        if (firstKey) selectTier(firstKey);
+    }
 });
 </script>
 

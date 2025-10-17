@@ -80,12 +80,7 @@
                                         {% endif %}
                                     {% endfor %}
                                 {% else %}
-                                <!-- Fallback if tiers_config not available -->
-                                <option value="free" {% if current_tier == 'free' %}selected{% endif %}>Free</option>
-                                <option value="solo" {% if current_tier == 'solo' %}selected{% endif %}>Solo</option>
-                                <option value="team" {% if current_tier == 'team' %}selected{% endif %}>Team</option>
-                                <option value="enterprise" {% if current_tier == 'enterprise' %}selected{% endif %}>Enterprise</option>
-                                <option value="exempt" {% if current_tier == 'exempt' %}selected{% endif %}>Exempt</option>
+                                <!-- Fallback removed: tiers are always loaded from DB -->
                                 {% endif %}
                             </select>
                         </div>

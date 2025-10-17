@@ -516,6 +516,9 @@ def signup():
         else:
             flash('Payment system temporarily unavailable. Please try again later.', 'error')
 
+    # Choose a default tier id for UI selection (first available)
+    default_tier_id = str(db_tiers[0].id) if db_tiers else ''
+
     return render_template('pages/auth/signup.html',
                          signup_source=signup_source,
                          referral_code=referral_code,
@@ -523,7 +526,8 @@ def signup():
                          available_tiers=available_tiers,
                          oauth_user_info=oauth_user_info,
                          oauth_available=OAuthService.is_oauth_configured(),
-                         preselected_tier=preselected_tier)
+                         preselected_tier=preselected_tier,
+                         default_tier_id=default_tier_id)
 
 # Whop License Login Route
 @auth_bp.route('/whop-login', methods=['POST'])
