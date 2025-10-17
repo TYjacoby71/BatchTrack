@@ -52,12 +52,12 @@ def manage_tiers():
                 if live_pricing:
                     price_display = live_pricing['formatted_price']
             except Exception as e:
-                logger.warning(f"Could not fetch live pricing for tier {tier.key}: {e}")
+                logger.warning(f"Could not fetch live pricing for tier {tier.id}: {e}")
 
         if tier.billing_provider == 'exempt':
             price_display = 'Free'
 
-        tiers_dict[tier.key] = {
+        tiers_dict[tier.id] = {
             'id': tier.id,  # Include the tier ID
             'name': tier.name,
             'description': tier.description,
@@ -208,7 +208,7 @@ def create_tier():
 
         db.session.commit()
 
-        logger.info(f'Created subscription tier: {name} (key: {tier.key})')
+        logger.info(f'Created subscription tier: {name} (id: {tier.id})')
         flash(f'Subscription tier "{name}" created successfully.', 'success')
         return redirect(url_for('.manage_tiers'))
 
@@ -317,7 +317,7 @@ def edit_tier(tier_id):
 
             db.session.commit()
 
-            logger.info(f'Updated subscription tier: {tier.name} ({tier.key})')
+            logger.info(f'Updated subscription tier: {tier.name} (id: {tier.id})')
             flash(f'Subscription tier "{tier.name}" updated successfully.', 'success')
             return redirect(url_for('.manage_tiers'))
 
@@ -346,8 +346,8 @@ def delete_tier(tier_id):
         return redirect(url_for('.manage_tiers'))
 
     # Safety check for system-critical tiers
-    if tier.key in ['exempt', 'free']:
-        flash(f'Cannot delete the system-critical "{tier.key}" tier.', 'error')
+    if tier.id in [1, 2]: # Assuming default IDs for exempt and free tiers
+        flash(f'Cannot delete the system-critical "{tier.name}" tier.', 'error')
         return redirect(url_for('.manage_tiers'))
 
     # Check for organizations using this tier
@@ -360,7 +360,7 @@ def delete_tier(tier_id):
         db.session.delete(tier)
         db.session.commit()
 
-        logger.info(f'Deleted subscription tier: {tier.name} ({tier.key})')
+        logger.info(f'Deleted subscription tier: {tier.name} (id: {tier.id})')
         flash(f'Subscription tier "{tier.name}" has been deleted.', 'success')
 
     except Exception as e:
@@ -384,7 +384,7 @@ def sync_tier_with_stripe(tier_id):
 
     try:
         from ...services.stripe_service import StripeService
-        
+
         # Get live pricing from Stripe
         live_pricing = StripeService.get_live_pricing_for_tier(tier)
         if live_pricing:
@@ -393,7 +393,8 @@ def sync_tier_with_stripe(tier_id):
                 'success': True,
                 'message': f'Successfully synced {tier.name} with Stripe - Price: {live_pricing["formatted_price"]}',
                 'tier': {
-                    'key': tier.key,
+                    'id': tier.id,
+                    'key': str(tier.id),
                     'name': tier.name,
                     'stripe_price': live_pricing['formatted_price']
                 }
@@ -404,7 +405,7 @@ def sync_tier_with_stripe(tier_id):
                 'success': False, 
                 'error': f'No pricing found in Stripe for lookup key: {tier.stripe_lookup_key}'
             }), 400
-            
+
     except Exception as e:
         logger.error(f'Error syncing tier {tier_id}: {e}')
         return jsonify({'success': False, 'error': str(e)}), 500
@@ -441,7 +442,7 @@ def api_get_tiers():
     tiers = SubscriptionTier.query.filter_by(is_customer_facing=True).all()
     return jsonify([{
         'id': tier.id,
-        'key': tier.key,
+        'key': str(tier.id), # Use ID as key for API
         'name': tier.name,
         'description': tier.description,
         'user_limit': tier.user_limit,

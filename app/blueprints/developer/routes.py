@@ -1395,6 +1395,11 @@ def integrations_checklist():
     # Feature flags
     feature_flags = {
         'FEATURE_INVENTORY_ANALYTICS': bool(current_app.config.get('FEATURE_INVENTORY_ANALYTICS', False)),
+        'TOOLS_SOAP': bool(current_app.config.get('TOOLS_SOAP', True)),
+        'TOOLS_CANDLES': bool(current_app.config.get('TOOLS_CANDLES', True)),
+        'TOOLS_LOTIONS': bool(current_app.config.get('TOOLS_LOTIONS', True)),
+        'TOOLS_HERBAL': bool(current_app.config.get('TOOLS_HERBAL', True)),
+        'TOOLS_BAKING': bool(current_app.config.get('TOOLS_BAKING', True)),
     }
 
     # Logging/PII
@@ -1493,24 +1498,74 @@ def integrations_set_feature_flags():
         if current_user.user_type != 'developer':
             return jsonify({'success': False, 'error': 'Developer access required'}), 403
         data = request.get_json() or {}
-        # Only allow known flags
-        if 'FEATURE_INVENTORY_ANALYTICS' in data:
-            value = bool(data['FEATURE_INVENTORY_ANALYTICS'])
-            current_app.config['FEATURE_INVENTORY_ANALYTICS'] = value
-            # Persist to settings.json for next boot
-            try:
-                import json, os
-                settings = {}
-                if os.path.exists('settings.json'):
-                    with open('settings.json', 'r') as f:
-                        settings = json.load(f) or {}
-                ff = settings.get('feature_flags', {}) or {}
-                ff['FEATURE_INVENTORY_ANALYTICS'] = value
-                settings['feature_flags'] = ff
-                with open('settings.json', 'w') as f:
-                    json.dump(settings, f, indent=2)
-            except Exception:
-                pass
+        
+        # Define allowed flags
+        allowed_flags = [
+            # Core business features
+            'FEATURE_FIFO_TRACKING',
+            'FEATURE_BARCODE_SCANNING',
+            'FEATURE_PRODUCT_VARIANTS',
+            'FEATURE_AUTO_SKU_GENERATION',
+            'FEATURE_RECIPE_VARIATIONS',
+            'FEATURE_COST_TRACKING',
+            'FEATURE_EXPIRATION_TRACKING',
+            'FEATURE_BULK_OPERATIONS',
+            
+            # Developer & advanced features
+            'FEATURE_INVENTORY_ANALYTICS',
+            'FEATURE_DEBUG_MODE',
+            'FEATURE_AUTO_BACKUP',
+            'FEATURE_CSV_EXPORT',
+            'FEATURE_ADVANCED_REPORTS',
+            'FEATURE_GLOBAL_ITEM_LIBRARY',
+            
+            # Notification systems
+            'FEATURE_EMAIL_NOTIFICATIONS',
+            'FEATURE_BROWSER_NOTIFICATIONS',
+            
+            # Integration features
+            'FEATURE_SHOPIFY_INTEGRATION',
+            'FEATURE_API_ACCESS',
+            'FEATURE_OAUTH_PROVIDERS',
+            
+            # AI features
+            'FEATURE_AI_RECIPE_OPTIMIZATION',
+            'FEATURE_AI_DEMAND_FORECASTING',
+            'FEATURE_AI_QUALITY_INSIGHTS',
+            
+            # Public tools
+            'TOOLS_SOAP',
+            'TOOLS_CANDLES', 
+            'TOOLS_LOTIONS',
+            'TOOLS_HERBAL',
+            'TOOLS_BAKING'
+        ]
+        
+        # Update app config for allowed flags
+        for flag in allowed_flags:
+            if flag in data:
+                value = bool(data[flag])
+                current_app.config[flag] = value
+        
+        # Persist to settings.json for next boot
+        try:
+            import json, os
+            settings = {}
+            if os.path.exists('settings.json'):
+                with open('settings.json', 'r') as f:
+                    settings = json.load(f) or {}
+            
+            ff = settings.get('feature_flags', {}) or {}
+            for flag in allowed_flags:
+                if flag in data:
+                    ff[flag] = bool(data[flag])
+                    
+            settings['feature_flags'] = ff
+            with open('settings.json', 'w') as f:
+                json.dump(settings, f, indent=2)
+        except Exception:
+            pass
+            
         return jsonify({'success': True})
     except Exception as e:
         return jsonify({'success': False, 'error': str(e)}), 500

@@ -113,9 +113,9 @@ def any_permission_required(*permission_names):
 def tier_required(min_tier: str):
     """
     Decorator requiring minimum subscription tier
+    Note: This is now deprecated in favor of permission-based access control.
+    Use require_permission() instead for specific feature gating.
     """
-    TIER_ORDER = ["free", "solo", "team", "enterprise", "exempt"]
-
     def decorator(f):
         @wraps(f)
         def decorated_function(*args, **named_args):
@@ -135,21 +135,22 @@ def tier_required(min_tier: str):
                     return jsonify(error="no_organization"), 403
                 raise Forbidden("No organization found.")
 
-            current_tier = getattr(org, 'subscription_tier', 'free')
-            try:
-                current_index = TIER_ORDER.index(current_tier)
-                required_index = TIER_ORDER.index(min_tier)
-
-                if current_index < required_index:
-                    if wants_json_response:
-                        return jsonify(error="tier_forbidden", required=min_tier, current=current_tier), 403
-                    raise Forbidden(f"Requires {min_tier} tier or higher.")
-
-            except ValueError:
-                # Unknown tier, deny access
+            # Simple tier check - just verify they have a valid tier
+            # For more sophisticated access control, use permission-based decorators
+            if not org.tier:
                 if wants_json_response:
-                    return jsonify(error="unknown_tier"), 403
-                raise Forbidden("Unknown subscription tier.")
+                    return jsonify(error="no_tier"), 403
+                raise Forbidden("No subscription tier assigned.")
+
+            # Exempt organizations have access to everything
+            if org.tier.name == 'Exempt Plan':
+                return f(*args, **named_args)
+
+            # For specific tier requirements, check the tier name directly
+            if min_tier and org.tier.name != min_tier:
+                if wants_json_response:
+                    return jsonify(error="tier_forbidden", required=min_tier, current=org.tier.name), 403
+                raise Forbidden(f"Requires {min_tier} tier.")
 
             return f(*args, **named_args)
         return decorated_function

@@ -382,7 +382,7 @@ class StripeService:
         # Get live pricing first
         pricing = StripeService.get_live_pricing_for_tier(tier_obj)
         if not pricing:
-            logger.error(f"No pricing found for tier {tier_obj.key}")
+            logger.error(f"No pricing found for tier {tier_obj.name} (ID: {tier_obj.id})")
             return None
 
         try:
@@ -405,17 +405,18 @@ class StripeService:
                 success_url=success_url,
                 cancel_url=cancel_url,
                 metadata={
-                    'tier_key': tier_obj.key,
+                    'tier_id': str(tier_obj.id),
+                    'tier_name': tier_obj.name,
                     'lookup_key': tier_obj.stripe_lookup_key,
                     **(metadata or {})
                 }
             )
 
-            logger.info(f"Created checkout session for tier {tier_obj.key} with price {pricing['price_id']}")
+            logger.info(f"Created checkout session for tier {tier_obj.name} (ID: {tier_obj.id}) with price {pricing['price_id']}")
             return session
 
         except stripe.error.StripeError as e:
-            logger.error(f"Failed to create checkout session for tier {tier_obj.key}: {e}")
+            logger.error(f"Failed to create checkout session for tier {tier_obj.name} (ID: {tier_obj.id}): {e}")
             return None
 
     @staticmethod
@@ -455,7 +456,7 @@ class StripeService:
                     }
 
                 db.session.commit()
-                logger.info(f"Synced tier {tier_obj.key} with Stripe product {product.name}")
+                logger.info(f"Synced tier {tier_obj.name} (ID: {tier_obj.id}) with Stripe product {product.name}")
                 return True
 
         except stripe.error.StripeError as e:
@@ -484,11 +485,19 @@ class StripeService:
                 return False
 
             # Get tier from subscription metadata
-            tier_key = subscription.get('metadata', {}).get('tier_key')
-            if tier_key:
-                tier = SubscriptionTier.query.filter_by(key=tier_key).first()
-                if tier:
-                    organization.subscription_tier_id = tier.id
+            tier_id = subscription.get('metadata', {}).get('tier_id')
+            if tier_id:
+                try:
+                    tier = SubscriptionTier.query.get(int(tier_id))
+                    if tier:
+                        organization.subscription_tier_id = tier.id
+                except (ValueError, TypeError):
+                    # Fallback: try by name if tier_id fails
+                    tier_name = subscription.get('metadata', {}).get('tier_name')
+                    if tier_name:
+                        tier = SubscriptionTier.query.filter_by(name=tier_name).first()
+                        if tier:
+                            organization.subscription_tier_id = tier.id
 
             # Handle subscription status
             status = subscription['status']
@@ -549,7 +558,7 @@ class StripeService:
         for tier in stripe_tiers:
             pricing = StripeService.get_live_pricing_for_tier(tier)
 
-            pricing_data['tiers'][tier.key] = {
+            pricing_data['tiers'][str(tier.id)] = {
                 'name': tier.name,
                 'description': getattr(tier, 'description', ''),
                 'user_limit': tier.user_limit,
