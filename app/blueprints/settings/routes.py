@@ -20,7 +20,7 @@ def index():
     user_prefs_obj = UserPreferences.get_for_user(current_user.id)
 
     # Convert to dictionary for JSON serialization - handle None for developers
-        if user_prefs_obj:
+    if user_prefs_obj:
         user_prefs = {
             'max_dashboard_alerts': user_prefs_obj.max_dashboard_alerts,
             'show_expiration_alerts': user_prefs_obj.show_expiration_alerts,
