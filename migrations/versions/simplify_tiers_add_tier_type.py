@@ -22,8 +22,39 @@ def upgrade():
     
     connection = op.get_bind()
     
-    # Add tier_type column
-    op.add_column('subscription_tier', sa.Column('tier_type', sa.String(32), nullable=False, server_default='monthly'))
+    # Helper: check if a column exists (robust to SQLite)
+    def column_exists(table_name: str, column_name: str) -> bool:
+        try:
+            inspector = sa.inspect(connection)
+            return any(col["name"] == column_name for col in inspector.get_columns(table_name))
+        except Exception as e:
+            print(f"Could not inspect columns for {table_name}.{column_name}: {e}")
+            return False
+
+    # Add tier_type column (idempotent)
+    if not column_exists('subscription_tier', 'tier_type'):
+        # Add as nullable first for maximum backend compatibility, then backfill and tighten
+        op.add_column('subscription_tier', sa.Column('tier_type', sa.String(32), nullable=True))
+    else:
+        print("   ℹ️  'tier_type' column already exists - skipping add")
+
+    # Backfill missing values and attempt to enforce NOT NULL + default (best-effort on SQLite)
+    try:
+        connection.execute(text("UPDATE subscription_tier SET tier_type = COALESCE(tier_type, 'monthly') WHERE tier_type IS NULL"))
+    except Exception as e:
+        print(f"Could not backfill tier_type values: {e}")
+
+    try:
+        op.alter_column(
+            'subscription_tier',
+            'tier_type',
+            existing_type=sa.String(32),
+            nullable=False,
+            server_default='monthly'
+        )
+    except Exception as e:
+        # SQLite often can't alter constraints in-place; continue
+        print(f"Could not alter tier_type nullability/default (continuing): {e}")
     
     # Make name unique (remove existing constraint on key first)
     try:
