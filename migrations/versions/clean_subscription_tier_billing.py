@@ -18,10 +18,18 @@ def upgrade():
     """Ensure billing_provider defaults and constraints are correct"""
     connection = op.get_bind()
 
-    # Update any NULL billing_provider values to 'exempt'
-    connection.execute(
-        sa.text("UPDATE subscription_tier SET billing_provider = 'exempt' WHERE billing_provider IS NULL")
-    )
+    # Update any NULL billing_provider values to 'exempt' only if column exists
+    try:
+        inspector = sa.inspect(connection)
+        cols = [c['name'] for c in inspector.get_columns('subscription_tier')]
+        if 'billing_provider' in cols:
+            connection.execute(
+                sa.text("UPDATE subscription_tier SET billing_provider = 'exempt' WHERE billing_provider IS NULL OR billing_provider = ''")
+            )
+        else:
+            print("   ℹ️  billing_provider column missing - skipping default backfill")
+    except Exception as e:
+        print(f"   ⚠️  Could not update billing_provider defaults: {e}")
 
     print("✅ Billing provider cleanup completed")
 
