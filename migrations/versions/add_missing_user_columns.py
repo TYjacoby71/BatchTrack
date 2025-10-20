@@ -47,15 +47,22 @@ def upgrade():
 
     if not column_exists('user', 'is_deleted'):
         # Add column as nullable first with default False
-        op.add_column('user', sa.Column('is_deleted', sa.Boolean(), nullable=True, default=False))
+        op.add_column('user', sa.Column('is_deleted', sa.Boolean(), nullable=True, server_default=sa.text('0')))
         print("   ✅ Added is_deleted column")
 
         # Update all existing records to False
-        op.execute("UPDATE \"user\" SET is_deleted = FALSE WHERE is_deleted IS NULL")
+        try:
+            op.execute("UPDATE \"user\" SET is_deleted = 0 WHERE is_deleted IS NULL")
+        except Exception:
+            # Fallback for backends that accept TRUE/FALSE
+            op.execute("UPDATE \"user\" SET is_deleted = FALSE WHERE is_deleted IS NULL")
 
-        # Now make it NOT NULL with default
-        op.alter_column('user', 'is_deleted', nullable=False, server_default='false')
-        print("   ✅ Set is_deleted defaults for existing users")
+        # Avoid ALTER COLUMN on SQLite; server_default keeps future inserts false
+        try:
+            op.alter_column('user', 'is_deleted', nullable=False, server_default=sa.text('0'))
+            print("   ✅ Set is_deleted NOT NULL with default")
+        except Exception as e:
+            print(f"   ⚠️  Skipping NOT NULL alter for is_deleted on this dialect: {e}")
     else:
         print("   ✅ is_deleted column already exists")
 

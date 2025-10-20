@@ -215,7 +215,13 @@ def upgrade():
         if not fk_exists:
             print("      Creating foreign key constraint for archived_by column...")
             with op.batch_alter_table('global_item', schema=None) as batch_op:
-                batch_op.create_foreign_key(None, 'user', ['archived_by'], ['id'])
+                # Batch mode requires explicit constraint name
+                batch_op.create_foreign_key(
+                    'fk_global_item_archived_by_user',
+                    'user',
+                    ['archived_by'],
+                    ['id']
+                )
             print("      ✅ Foreign key constraint created for archived_by column.")
         else:
             print("      ✅ Foreign key constraint for archived_by already exists - skipping.")
