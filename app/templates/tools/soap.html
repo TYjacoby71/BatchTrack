@@ -1,6 +1,6 @@
 {% extends 'layout.html' %}
 {% block content %}
-<div class="container py-4">
+<div class="py-1">
   <h2 class="mb-3">Soap Maker Tools</h2>
   <script>window.RECIPE_CATEGORY_NAME = 'Soaps';</script>
   <p class="text-muted">Use grams by default. Convert as needed with the unit engine.</p>
@@ -108,6 +108,7 @@
       <a class="btn btn-outline-secondary" href="{{ url_for('exports.soap_inci_tool') }}">View INCI Summary</a>
     </div>
   </div>
+
 </div>
 
 <script src="{{ url_for('static', filename='js/components/suggestions.js') }}"></script>

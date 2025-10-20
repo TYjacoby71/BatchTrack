@@ -1,15 +1,10 @@
 {% extends "layout.html" %}
 
 {% block content %}
-<div class="container mt-4">
+<div>
   <div class="row">
     <div class="col-12">
-      <nav aria-label="breadcrumb">
-        <ol class="breadcrumb">
-          <li class="breadcrumb-item"><a href="{{ url_for('inventory.list_inventory') }}">Inventory</a></li>
-          <li class="breadcrumb-item active">{{ item.name }}</li>
-        </ol>
-      </nav>
+      
 
       <!-- Pending Unit Change Alert -->
       {% if session.get('pending_unit_change') and session['pending_unit_change'].item_id == item.id %}

@@ -324,7 +324,11 @@ def view_inventory(id):
                          now=datetime.utcnow(),
                          int_to_base36=int_to_base36,
                          fifo_filter=fifo_filter,
-                         TimezoneUtils=TimezoneUtils)
+                         TimezoneUtils=TimezoneUtils,
+                         breadcrumb_items=[
+                             {'label': 'Inventory', 'url': url_for('inventory.list_inventory')},
+                             {'label': item.name}
+                         ])
 
 @inventory_bp.route('/add', methods=['POST'])
 @login_required

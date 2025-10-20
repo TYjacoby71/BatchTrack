@@ -1,7 +1,40 @@
 {% extends 'layout.html' %}
 {% from 'macros/forms.html' import csrf_form %}
 {% block content %}
-<h2>{{ recipe.name }}</h2>
+<div class="card mb-4">
+  <div class="card-body">
+    <h2 class="mb-1">{{ recipe.name }}</h2>
+    <div>
+      {% if recipe.is_locked %}
+        <span class="badge bg-secondary">Locked</span>
+      {% endif %}
+      {% if recipe.parent_id %}
+        <p class="text-muted mb-0">Variation of:
+          <a href="{{ url_for('recipes.view_recipe', recipe_id=recipe.parent_id) }}">{{ recipe.parent.name }}</a>
+        </p>
+      {% endif %}
+    </div>
+
+    <div class="action-buttons mt-3">
+      <a href="{{ url_for('recipes.clone_recipe', recipe_id=recipe.id) }}" class="btn btn-sm btn-secondary">{% if recipe.parent_id %}Make New Parent{% else %}Duplicate{% endif %}</a>
+      {% if not recipe.parent_id %}
+      <a href="{{ url_for('recipes.create_variation', recipe_id=recipe.id) }}" class="btn btn-sm btn-info">New Variation</a>
+      {% endif %}
+      {% if recipe.is_locked %}
+        <button type="button" class="btn btn-sm btn-warning" data-bs-toggle="modal" data-bs-target="#unlockModal">
+          {% if recipe.parent_id %}Unlock Variation{% else %}Unlock Recipe{% endif %}
+        </button>
+      {% else %}
+        <form method="post" action="{{ url_for('recipes.lock_recipe', recipe_id=recipe.id) }}" style="display:inline;">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <button type="submit" class="btn btn-sm btn-warning">
+            {% if recipe.parent_id %}Lock Variation{% else %}Lock Recipe{% endif %}
+          </button>
+        </form>
+      {% endif %}
+    </div>
+  </div>
+</div>
 
 {% if recipe.is_locked %}
   <span class="badge bg-secondary">Locked</span>
@@ -58,43 +91,58 @@
   </div>
 </div>
 
-<div class="recipe-details">
-    <p><strong>Label Prefix:</strong> {{ recipe.label_prefix }}</p>
-
-    <h3>Ingredients</h3>
-    <ul>
-        {% for assoc in recipe.recipe_ingredients %}
-        <li>{{ assoc.inventory_item.name }}: {{ assoc.quantity }} {{ assoc.unit }}</li>
-        {% endfor %}
-    </ul>
-
-    <h3>Consumables</h3>
-    <ul>
-        {% if recipe.recipe_consumables %}
+<div class="row g-3">
+  <div class="col-lg-6">
+    <div class="card">
+      <div class="card-body">
+        <h5 class="card-title">Details</h5>
+        <p class="mb-0"><strong>Label Prefix:</strong> {{ recipe.label_prefix }}</p>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-body">
+        <h5 class="card-title">Ingredients</h5>
+        <ul class="mb-0">
+          {% for assoc in recipe.recipe_ingredients %}
+          <li>{{ assoc.inventory_item.name }}: {{ assoc.quantity }} {{ assoc.unit }}</li>
+          {% endfor %}
+        </ul>
+      </div>
+    </div>
+  </div>
+  <div class="col-lg-6">
+    <div class="card">
+      <div class="card-body">
+        <h5 class="card-title">Consumables</h5>
+        <ul class="mb-0">
+          {% if recipe.recipe_consumables %}
             {% for assoc in recipe.recipe_consumables %}
             <li>{{ assoc.inventory_item.name if assoc.inventory_item else assoc.inventory_item_id }}: {{ assoc.quantity }} {{ assoc.unit }}</li>
             {% endfor %}
-        {% else %}
+          {% else %}
             <li class="text-muted">No consumables configured</li>
-        {% endif %}
-    </ul>
-
+          {% endif %}
+        </ul>
+      </div>
+    </div>
     {% if recipe.instructions %}
-    <h3>Instructions</h3>
-    <p>{{ recipe.instructions }}</p>
+    <div class="card">
+      <div class="card-body">
+        <h5 class="card-title">Instructions</h5>
+        <p class="mb-0">{{ recipe.instructions }}</p>
+      </div>
+    </div>
     {% endif %}
+  </div>
 </div>
 
-<div class="actions">
-    <a href="{{ url_for('production_planning.plan_production_route', recipe_id=recipe.id) }}" class="btn btn-success">
-                            <i class="fas fa-play"></i> Plan Production
-                        </a>
-    <form method="get" action="{{ url_for('recipes.edit_recipe', recipe_id=recipe.id) }}" style="display: inline;">
-        <button type="submit" 
-                class="btn btn-primary" 
-                >Edit Recipe</button>
-
-    </form>
-    <a href="{{ url_for('recipes.list_recipes') }}" class="btn btn-outline-secondary">Back to List</a>
+<div class="d-flex gap-2 mt-3">
+  <a href="{{ url_for('production_planning.plan_production_route', recipe_id=recipe.id) }}" class="btn btn-success">
+    <i class="fas fa-play"></i> Plan Production
+  </a>
+  <form method="get" action="{{ url_for('recipes.edit_recipe', recipe_id=recipe.id) }}">
+    <button type="submit" class="btn btn-primary">Edit Recipe</button>
+  </form>
+  <a href="{{ url_for('recipes.list_recipes') }}" class="btn btn-outline-secondary">Back to List</a>
 </div>
 {% endblock %}
