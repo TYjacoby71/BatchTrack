@@ -104,27 +104,32 @@ def upgrade():
             print("   Adding billing_provider column...")
             op.add_column('subscription_tier', sa.Column('billing_provider', sa.String(32), nullable=False, server_default="'exempt'"))
 
-        # Remove pricing columns using direct SQL (safer for SQLite)
-        pricing_columns_to_remove = [
-            'fallback_price', 'stripe_price', 'stripe_price_id', 'stripe_price_id_monthly', 
+        # Remove deprecated pricing columns; keep structural columns to avoid churn
+        # DO NOT drop: 'tier_type', 'billing_provider', 'tier_key', limits columns, etc.
+        columns_to_remove = [
+            'fallback_price', 'stripe_price', 'stripe_price_id', 'stripe_price_id_monthly',
             'stripe_price_id_yearly', 'stripe_product_id', 'last_stripe_sync', 'whop_last_synced',
-            'pricing_category', 'billing_cycle', 'tier_type', 'supports_stripe', 'supports_whop',
-            'whop_only', 'fallback_price_monthly', 'fallback_price_yearly', 'stripe_price_monthly',
-            'stripe_price_yearly', 'grace_period_days', 'max_users', 'max_monthly_batches',
-            'last_billing_sync', 'tier_key', 'is_available'
+            'pricing_category', 'billing_cycle', 'supports_stripe', 'supports_whop', 'whop_only',
+            'fallback_price_monthly', 'fallback_price_yearly', 'stripe_price_monthly', 'stripe_price_yearly',
+            'is_available'
         ]
 
         # Get current columns to check what actually exists
         current_columns = [col['name'] for col in inspector_initial.get_columns('subscription_tier')]
 
-        for col in pricing_columns_to_remove:
-            if col in current_columns:
-                print(f"   Removing pricing column: {col}")
-                try:
-                    # Use direct SQL for column removal (more reliable for SQLite)
-                    connection.execute(text(f'ALTER TABLE subscription_tier DROP COLUMN "{col}"'))
-                except Exception as e:
-                    print(f"   ⚠️  Could not remove {col}: {e}")
+        # Drop columns safely using batch mode (SQLite-safe); only if they exist
+        cols_to_drop_now = [c for c in columns_to_remove if c in current_columns]
+        if cols_to_drop_now:
+            try:
+                with op.batch_alter_table('subscription_tier', schema=None) as batch_op:
+                    for col in cols_to_drop_now:
+                        print(f"   Removing deprecated column: {col}")
+                        try:
+                            batch_op.drop_column(col)
+                        except Exception as e:
+                            print(f"   ⚠️  Could not remove {col}: {e}")
+            except Exception as outer_e:
+                print(f"   ⚠️  Batch drop failed: {outer_e}")
 
         # Ensure proper column types and constraints
         print("   Ensuring proper column types...")
@@ -141,12 +146,21 @@ def upgrade():
                         bind.rollback()
                         bind = op.get_bind()
 
-                # Fix NULL key values
-                bind.execute(text("""
-                    UPDATE subscription_tier 
-                    SET key = COALESCE(key, 'tier_' || id::text) 
-                    WHERE key IS NULL
-                """))
+                # Fix NULL key values (dialect-aware CAST)
+                dialect = bind.dialect.name
+                if dialect == 'postgresql':
+                    update_sql = """
+                        UPDATE subscription_tier 
+                        SET key = COALESCE(key, 'tier_' || id::text) 
+                        WHERE key IS NULL
+                    """
+                else:
+                    update_sql = """
+                        UPDATE subscription_tier 
+                        SET key = COALESCE(key, 'tier_' || CAST(id AS TEXT)) 
+                        WHERE key IS NULL
+                    """
+                bind.execute(text(update_sql))
                 print("   ✅ Fixed NULL key values")
 
                 # Now make it NOT NULL
