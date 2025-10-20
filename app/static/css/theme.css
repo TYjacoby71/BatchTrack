@@ -176,6 +176,22 @@
   --bs-btn-active-bg: var(--color-primary-hover);
   --bs-btn-active-border-color: var(--color-primary-hover);
 }
+.btn-info {
+  --bs-btn-color: #000;
+  --bs-btn-bg: #38bdf8; /* tokenize later if needed */
+  --bs-btn-border-color: #38bdf8;
+  --bs-btn-hover-color: #000;
+  --bs-btn-hover-bg: #22d3ee;
+  --bs-btn-hover-border-color: #22d3ee;
+}
+.btn-dark {
+  --bs-btn-color: #fff;
+  --bs-btn-bg: #1f2937;
+  --bs-btn-border-color: #1f2937;
+  --bs-btn-hover-color: #fff;
+  --bs-btn-hover-bg: #111827;
+  --bs-btn-hover-border-color: #111827;
+}
 .btn-light {
   --bs-btn-color: var(--color-text);
   --bs-btn-bg: var(--color-subtle-bg);
@@ -190,6 +206,44 @@
   --bs-btn-hover-color: var(--color-text);
   --bs-btn-hover-bg: var(--color-subtle-bg-2);
   --bs-btn-hover-border-color: var(--color-border);
+}
+.btn-outline-primary {
+  --bs-btn-color: var(--color-primary);
+  --bs-btn-border-color: var(--color-primary);
+  --bs-btn-hover-color: var(--color-on-primary);
+  --bs-btn-hover-bg: var(--color-primary);
+  --bs-btn-hover-border-color: var(--color-primary);
+}
+.btn-outline-success {
+  --bs-btn-color: var(--color-success);
+  --bs-btn-border-color: var(--color-success);
+  --bs-btn-hover-color: #fff;
+  --bs-btn-hover-bg: var(--color-success);
+  --bs-btn-hover-border-color: var(--color-success);
+}
+.btn-outline-danger {
+  --bs-btn-color: var(--color-danger);
+  --bs-btn-border-color: var(--color-danger);
+  --bs-btn-hover-color: #fff;
+  --bs-btn-hover-bg: var(--color-danger);
+  --bs-btn-hover-border-color: var(--color-danger);
+}
+.btn-outline-warning {
+  --bs-btn-color: var(--color-warning);
+  --bs-btn-border-color: var(--color-warning);
+  --bs-btn-hover-color: #000;
+  --bs-btn-hover-bg: var(--color-warning);
+  --bs-btn-hover-border-color: var(--color-warning);
+}
+.btn-outline-info {
+  --bs-btn-color: #0ea5b7;
+  --bs-btn-border-color: #0ea5b7;
+  --bs-btn-hover-color: #000;
+  --bs-btn-hover-bg: #22d3ee;
+  --bs-btn-hover-border-color: #22d3ee;
+}
+.btn-link {
+  color: var(--color-primary);
 }
 .btn-secondary {
   --bs-btn-color: var(--color-text);
