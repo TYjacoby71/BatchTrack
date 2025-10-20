@@ -288,7 +288,8 @@ def upgrade():
             print("   ⚠️  Cannot migrate product_sku_history: no valid column mapping found")
             migrate_product_sql = None
 
-        if migrate_product_sql:
+        # Avoid truthiness checks on SQLAlchemy ClauseElements (v2.0 raises TypeError)
+        if migrate_product_sql is not None:
             bind.execute(migrate_product_sql)
             print("   ✅ Successfully migrated product_sku_history data")
 
