@@ -17,34 +17,60 @@ def table_exists(table_name):
     return table_name in inspector.get_table_names()
 
 def constraint_exists(table_name, constraint_name):
-    """Check if a constraint exists on a table"""
+    """Check if a constraint exists on a table (portable)."""
     if not table_exists(table_name):
         return False
     try:
         bind = op.get_bind()
-        result = bind.execute(text("""
-            SELECT COUNT(*) 
-            FROM information_schema.table_constraints 
-            WHERE table_name = :table_name 
-            AND constraint_name = :constraint_name
-        """), {"table_name": table_name, "constraint_name": constraint_name})
-        return result.scalar() > 0
+        inspector = inspect(bind)
+        # Check foreign keys
+        fks = inspector.get_foreign_keys(table_name)
+        if any(fk.get('name') == constraint_name for fk in fks):
+            return True
+        # Check unique constraints if available
+        try:
+            uqs = inspector.get_unique_constraints(table_name)
+            if any(uq.get('name') == constraint_name for uq in uqs):
+                return True
+        except Exception:
+            pass
+        # Fallback to information_schema on Postgres
+        if bind.dialect.name in ("postgresql", "postgres"):
+            result = bind.execute(text(
+                """
+                SELECT 1 
+                FROM information_schema.table_constraints 
+                WHERE table_name = :table_name 
+                  AND constraint_name = :constraint_name
+                """
+            ), {"table_name": table_name, "constraint_name": constraint_name})
+            return result.first() is not None
     except Exception:
         return False
 
 def index_exists(table_name, index_name):
-    """Check if an index exists on a table"""
+    """Check if an index exists on a table (portable)."""
     if not table_exists(table_name):
         return False
     try:
         bind = op.get_bind()
-        result = bind.execute(text("""
-            SELECT COUNT(*) 
-            FROM pg_indexes 
-            WHERE tablename = :table_name 
-            AND indexname = :index_name
-        """), {"table_name": table_name, "index_name": index_name})
-        return result.scalar() > 0
+        inspector = inspect(bind)
+        indexes = inspector.get_indexes(table_name)
+        for idx in indexes:
+            name = idx.get('name') or idx.get('indexname')
+            if name == index_name:
+                return True
+        # Fallback per dialect
+        if bind.dialect.name in ("postgresql", "postgres"):
+            result = bind.execute(text(
+                "SELECT 1 FROM pg_indexes WHERE tablename = :t AND indexname = :n"
+            ), {"t": table_name, "n": index_name})
+            return result.first() is not None
+        if bind.dialect.name == 'sqlite':
+            result = bind.execute(text(
+                "SELECT 1 FROM sqlite_master WHERE type='index' AND name = :n"
+            ), {"n": index_name})
+            return result.first() is not None
     except Exception:
         return False
 
