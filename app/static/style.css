@@ -193,13 +193,20 @@ body {
 /* Form improvements */
 .form-control, .form-select {
   border-radius: var(--radius-2);
-  border: 1px solid var(--color-border);
+  border: 2px solid var(--color-border);
   padding: var(--space-3);
+  background-color: var(--color-surface);
 }
 
 .form-control:focus, .form-select:focus {
   border-color: var(--color-primary);
   box-shadow: 0 0 0 3px var(--focus-ring-color);
+}
+
+/* Ensure textarea fields also have proper borders */
+textarea.form-control {
+  border: 2px solid var(--color-border);
+  background-color: var(--color-surface);
 }
 
 /* Modal improvements */
@@ -1029,7 +1036,7 @@ input:checked + .toggle-label:before {
 /* Warm, neutral, soft theme for makers */
 :root[data-theme='warm'] {
   /* Neutrals with warm undertones */
-  --color-border: #e6dfd9;           /* warm gray-beige border */
+  --color-border: #d4c5b9;           /* more visible warm gray-beige border */
   --color-bg: #faf7f4;               /* soft warm off-white background */
   --color-surface: #ffffff;          /* clean surface for cards */
   --color-text: #3e3a37;             /* deep warm gray for text */
