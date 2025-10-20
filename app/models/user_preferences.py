@@ -10,6 +10,10 @@ class UserPreferences(ScopedModelMixin, db.Model):
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False, unique=True)
     organization_id = db.Column(db.Integer, db.ForeignKey('organization.id'), nullable=False)
 
+    # Appearance
+    # Theme preference: 'system' (follow OS), 'light', 'dark', 'warm', etc.
+    theme = db.Column(db.String(20), nullable=True)
+
     # Alert preferences
     max_dashboard_alerts = db.Column(db.Integer, default=3)
     show_expiration_alerts = db.Column(db.Boolean, default=True)

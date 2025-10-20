@@ -179,7 +179,7 @@
         </thead>
         <tbody>
             {% if batch.batch_ingredients %}
-            <tr><th colspan="5" style="background: #e0e0e0; text-align: left;">INGREDIENTS</th></tr>
+            <tr><th colspan="5" style="background: var(--color-table-header-bg); text-align: left;">INGREDIENTS</th></tr>
             {% for ing in batch.batch_ingredients %}
                 {% set amount = ing.quantity_used|float or 0 %}
                 {% set cost = ing.cost_per_unit|float or 0 %}
@@ -196,7 +196,7 @@
             {% endif %}
 
             {% if batch.containers %}
-            <tr><th colspan="5" style="background: #e0e0e0; text-align: left;">CONTAINERS</th></tr>
+            <tr><th colspan="5" style="background: var(--color-table-header-bg); text-align: left;">CONTAINERS</th></tr>
             {% for container in batch.containers %}
                 {% set line_cost = (container.quantity_used|float or 0) * (container.cost_each|float or 0) %}
                 <tr>
@@ -211,7 +211,7 @@
             {% endif %}
 
             {% if batch.consumables %}
-            <tr><th colspan="5" style="background: #e0e0e0; text-align: left;">CONSUMABLES</th></tr>
+            <tr><th colspan="5" style="background: var(--color-table-header-bg); text-align: left;">CONSUMABLES</th></tr>
             {% for cons in batch.consumables %}
                 {% set line_cost = (cons.quantity_used|float or 0) * (cons.cost_per_unit|float or 0) %}
                 <tr>
@@ -226,7 +226,7 @@
             {% endif %}
 
             {% if batch.extra_ingredients %}
-            <tr><th colspan="5" style="background: #e0e0e0; text-align: left;">EXTRA INGREDIENTS</th></tr>
+            <tr><th colspan="5" style="background: var(--color-table-header-bg); text-align: left;">EXTRA INGREDIENTS</th></tr>
             {% for extra in batch.extra_ingredients %}
                 {% set line_cost = (extra.quantity_used|float or 0) * (extra.cost_per_unit|float or 0) %}
                 <tr>
@@ -241,7 +241,7 @@
             {% endif %}
 
             {% if batch.extra_containers %}
-            <tr><th colspan="5" style="background: #e0e0e0; text-align: left;">EXTRA CONTAINERS</th></tr>
+            <tr><th colspan="5" style="background: var(--color-table-header-bg); text-align: left;">EXTRA CONTAINERS</th></tr>
             {% for container in batch.extra_containers %}
                 {% set line_cost = (container.quantity_used|float or 0) * (container.cost_each|float or 0) %}
                 <tr>
@@ -256,7 +256,7 @@
             {% endif %}
 
             {% if batch.extra_consumables %}
-            <tr><th colspan="5" style="background: #e0e0e0; text-align: left;">EXTRA CONSUMABLES</th></tr>
+            <tr><th colspan="5" style="background: var(--color-table-header-bg); text-align: left;">EXTRA CONSUMABLES</th></tr>
             {% for extra in batch.extra_consumables %}
                 {% set line_cost = (extra.quantity_used|float or 0) * (extra.cost_per_unit|float or 0) %}
                 <tr>
@@ -468,9 +468,9 @@
 </div>
 <style>
 .btn-outline-primary:hover {
-    background-color: #0d6efd;
-    border-color: #0d6efd;
-    color: white;
+    background-color: var(--color-primary);
+    border-color: var(--color-primary);
+    color: var(--color-on-primary);
     cursor: pointer;
 }
 
