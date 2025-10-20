@@ -1007,7 +1007,7 @@ input:checked + .toggle-label:before {
   }
 }
 :root[data-theme='dark'] {
-  --color-border: #374151;
+  --color-border: #6b7280;
   --color-bg: #0b1220;
   --color-surface: #121a2b;
   --color-text: #e5e7eb;
