@@ -1,4 +1,4 @@
-/* Theme tokens and Bootstrap mapping */
+/* Theme tokens and Bootstrap mapping (industry-standard palettes) */
 
 /* Base (light) theme */
 :root {
@@ -36,19 +36,25 @@
   --color-surface: #ffffff;
   --color-text: #111827;
   --color-muted: #6b7280;
-  --color-primary: #3b82f6;
-  --color-primary-hover: #2563eb;
+  --color-primary: #0d6efd;           /* Bootstrap primary */
+  --color-primary-hover: #0b5ed7;
   --color-success: #198754;
-  --color-warning: #b7791f;
+  --color-warning: #ffc107;
   --color-danger: #dc3545;
+  --color-info: #0dcaf0;
+  --color-info-hover: #31d2f2;
+  --color-dark: #212529;
+  --color-dark-hover: #16181b;
+
   --color-success-bg: #e8f5e9;
-  --color-warning-bg: #fff3e0;
-  --color-danger-bg: #ffebee;
+  --color-warning-bg: #fff3cd;
+  --color-danger-bg: #f8d7da;
   --color-highlight-bg: #fff8db;
   --color-highlight-border: #f1c40f;
   --overlay-2: rgba(0, 0, 0, 0.075);
-  --overlay-primary-weak: rgba(0, 123, 255, 0.05);
-  --focus-ring-color: rgba(59, 130, 246, 0.1);
+  --overlay-primary-weak: rgba(13, 110, 253, 0.08);
+  --focus-ring-color: rgba(13, 110, 253, 0.2);
+
   --color-navbar: #ffffff;
   --color-breadcrumb-bg: #f8f9fa;
   --color-table-header-bg: #f8f9fa;
@@ -67,29 +73,37 @@
   --bs-success: var(--color-success);
   --bs-warning: var(--color-warning);
   --bs-danger: var(--color-danger);
+  --bs-info: var(--color-info);
+  --bs-dark: var(--color-dark);
 }
 
 /* Dark theme via system when no explicit theme is set */
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme]) {
-    --color-border: #233450;
-    --color-bg: #0b1220;
-    --color-surface: #121a2b;
-    --color-text: #e5e7eb;
-    --color-muted: #9ca3af;
-    --color-primary: #60a5fa;
+    --color-border: #334155;          /* slate-600 */
+    --color-bg: #0b1220;              /* deep navy */
+    --color-surface: #111827;         /* slate-800 */
+    --color-text: #e5e7eb;            /* gray-200 */
+    --color-muted: #9ca3af;           /* gray-400 */
+    --color-primary: #66b2ff;         /* lighter primary for dark */
     --color-primary-hover: #93c5fd;
     --color-success: #22c55e;
     --color-warning: #f59e0b;
     --color-danger: #ef4444;
+    --color-info: #38bdf8;
+    --color-info-hover: #22d3ee;
+    --color-dark: #0f172a;
+    --color-dark-hover: #0b1220;
+
     --color-success-bg: rgba(34, 197, 94, 0.15);
     --color-warning-bg: rgba(245, 158, 11, 0.15);
     --color-danger-bg: rgba(239, 68, 68, 0.15);
     --color-highlight-bg: rgba(245, 158, 11, 0.12);
     --color-highlight-border: #f59e0b;
     --overlay-2: rgba(255, 255, 255, 0.05);
-    --overlay-primary-weak: rgba(96, 165, 250, 0.12);
-    --focus-ring-color: rgba(96, 165, 250, 0.25);
+    --overlay-primary-weak: rgba(102, 178, 255, 0.15);
+    --focus-ring-color: rgba(102, 178, 255, 0.35);
+
     --color-navbar: #0d1526;
     --color-breadcrumb-bg: #0f172a;
     --color-table-header-bg: #0f172a;
@@ -101,30 +115,43 @@
 
 /* Explicit dark theme override */
 :root[data-theme='dark'] {
-  --color-border: #233450;
+  --color-border: #334155;
   --color-bg: #0b1220;
-  --color-surface: #121a2b;
+  --color-surface: #111827;
   --color-text: #e5e7eb;
   --color-muted: #9ca3af;
-  --color-primary: #60a5fa;
+  --color-primary: #66b2ff;
   --color-primary-hover: #93c5fd;
   --color-success: #22c55e;
   --color-warning: #f59e0b;
   --color-danger: #ef4444;
+  --color-info: #38bdf8;
+  --color-info-hover: #22d3ee;
+  --color-dark: #0f172a;
+  --color-dark-hover: #0b1220;
+
   --color-success-bg: rgba(34, 197, 94, 0.15);
   --color-warning-bg: rgba(245, 158, 11, 0.15);
   --color-danger-bg: rgba(239, 68, 68, 0.15);
   --color-highlight-bg: rgba(245, 158, 11, 0.12);
   --color-highlight-border: #f59e0b;
   --overlay-2: rgba(255, 255, 255, 0.05);
-  --overlay-primary-weak: rgba(96, 165, 250, 0.12);
-  --focus-ring-color: rgba(96, 165, 250, 0.25);
+  --overlay-primary-weak: rgba(102, 178, 255, 0.15);
+  --focus-ring-color: rgba(102, 178, 255, 0.35);
+
   --color-navbar: #0d1526;
   --color-breadcrumb-bg: #0f172a;
   --color-table-header-bg: #0f172a;
   --color-on-primary: #0b1220;
   --color-subtle-bg: #0f172a;
   --color-subtle-bg-2: #111827;
+
+  --bs-primary: var(--color-primary);
+  --bs-success: var(--color-success);
+  --bs-warning: var(--color-warning);
+  --bs-danger: var(--color-danger);
+  --bs-info: var(--color-info);
+  --bs-dark: var(--color-dark);
 }
 
 /* Warm, neutral, soft theme for makers */
@@ -145,6 +172,11 @@
   --color-success: #2f855a;
   --color-warning: #b7791f;
   --color-danger: #c53030;
+  --color-info: #0ea5b7;
+  --color-info-hover: #0891a2;
+  --color-dark: #3a2f2a;
+  --color-dark-hover: #2e241f;
+
   --color-success-bg: #e6f4ea;
   --color-warning-bg: #fff5e6;
   --color-danger-bg: #ffe6e6;
@@ -153,6 +185,13 @@
   --overlay-2: rgba(62, 58, 55, 0.06);
   --overlay-primary-weak: rgba(216, 140, 138, 0.12);
   --focus-ring-color: rgba(216, 140, 138, 0.25);
+
+  --bs-primary: var(--color-primary);
+  --bs-success: var(--color-success);
+  --bs-warning: var(--color-warning);
+  --bs-danger: var(--color-danger);
+  --bs-info: var(--color-info);
+  --bs-dark: var(--color-dark);
 }
 
 /* Map token colors to Bootstrap component variables */
@@ -177,21 +216,53 @@
   --bs-btn-active-bg: var(--color-primary-hover);
   --bs-btn-active-border-color: var(--color-primary-hover);
 }
+.btn-success {
+  --bs-btn-color: #fff;
+  --bs-btn-bg: var(--color-success);
+  --bs-btn-border-color: var(--color-success);
+  --bs-btn-hover-color: #fff;
+  --bs-btn-hover-bg: var(--color-success);
+  --bs-btn-hover-border-color: var(--color-success);
+}
+.btn-danger {
+  --bs-btn-color: #fff;
+  --bs-btn-bg: var(--color-danger);
+  --bs-btn-border-color: var(--color-danger);
+  --bs-btn-hover-color: #fff;
+  --bs-btn-hover-bg: var(--color-danger);
+  --bs-btn-hover-border-color: var(--color-danger);
+}
+.btn-warning {
+  --bs-btn-color: #000;
+  --bs-btn-bg: var(--color-warning);
+  --bs-btn-border-color: var(--color-warning);
+  --bs-btn-hover-color: #000;
+  --bs-btn-hover-bg: var(--color-warning);
+  --bs-btn-hover-border-color: var(--color-warning);
+}
 .btn-info {
   --bs-btn-color: #000;
-  --bs-btn-bg: #38bdf8; /* tokenize later if needed */
-  --bs-btn-border-color: #38bdf8;
+  --bs-btn-bg: var(--color-info);
+  --bs-btn-border-color: var(--color-info);
   --bs-btn-hover-color: #000;
-  --bs-btn-hover-bg: #22d3ee;
-  --bs-btn-hover-border-color: #22d3ee;
+  --bs-btn-hover-bg: var(--color-info-hover);
+  --bs-btn-hover-border-color: var(--color-info-hover);
 }
 .btn-dark {
   --bs-btn-color: #fff;
-  --bs-btn-bg: #1f2937;
-  --bs-btn-border-color: #1f2937;
+  --bs-btn-bg: var(--color-dark);
+  --bs-btn-border-color: var(--color-dark);
   --bs-btn-hover-color: #fff;
-  --bs-btn-hover-bg: #111827;
-  --bs-btn-hover-border-color: #111827;
+  --bs-btn-hover-bg: var(--color-dark-hover);
+  --bs-btn-hover-border-color: var(--color-dark-hover);
+}
+.btn-secondary {
+  --bs-btn-color: var(--color-text);
+  --bs-btn-bg: var(--color-subtle-bg-2);
+  --bs-btn-border-color: var(--color-border);
+  --bs-btn-hover-color: var(--color-text);
+  --bs-btn-hover-bg: var(--color-subtle-bg);
+  --bs-btn-hover-border-color: var(--color-border);
 }
 .btn-light {
   --bs-btn-color: var(--color-text);
@@ -201,13 +272,8 @@
   --bs-btn-hover-bg: var(--color-subtle-bg-2);
   --bs-btn-hover-border-color: var(--color-border);
 }
-.btn-outline-secondary {
-  --bs-btn-color: var(--color-muted);
-  --bs-btn-border-color: var(--color-border);
-  --bs-btn-hover-color: var(--color-text);
-  --bs-btn-hover-bg: var(--color-subtle-bg-2);
-  --bs-btn-hover-border-color: var(--color-border);
-}
+
+/* Outline variants */
 .btn-outline-primary {
   --bs-btn-color: var(--color-primary);
   --bs-btn-border-color: var(--color-primary);
@@ -237,47 +303,21 @@
   --bs-btn-hover-border-color: var(--color-warning);
 }
 .btn-outline-info {
-  --bs-btn-color: #0ea5b7;
-  --bs-btn-border-color: #0ea5b7;
+  --bs-btn-color: var(--color-info);
+  --bs-btn-border-color: var(--color-info);
   --bs-btn-hover-color: #000;
-  --bs-btn-hover-bg: #22d3ee;
-  --bs-btn-hover-border-color: #22d3ee;
+  --bs-btn-hover-bg: var(--color-info);
+  --bs-btn-hover-border-color: var(--color-info);
 }
-.btn-link {
-  color: var(--color-primary);
-}
-.btn-secondary {
-  --bs-btn-color: var(--color-text);
-  --bs-btn-bg: var(--color-subtle-bg-2);
-  --bs-btn-border-color: var(--color-border);
-  --bs-btn-hover-color: var(--color-text);
-  --bs-btn-hover-bg: var(--color-subtle-bg);
-  --bs-btn-hover-border-color: var(--color-border);
-}
-.btn-success {
-  --bs-btn-color: #fff;
-  --bs-btn-bg: var(--color-success);
-  --bs-btn-border-color: var(--color-success);
+.btn-outline-dark {
+  --bs-btn-color: var(--color-dark);
+  --bs-btn-border-color: var(--color-dark);
   --bs-btn-hover-color: #fff;
-  --bs-btn-hover-bg: var(--color-success);
-  --bs-btn-hover-border-color: var(--color-success);
+  --bs-btn-hover-bg: var(--color-dark);
+  --bs-btn-hover-border-color: var(--color-dark);
 }
-.btn-danger {
-  --bs-btn-color: #fff;
-  --bs-btn-bg: var(--color-danger);
-  --bs-btn-border-color: var(--color-danger);
-  --bs-btn-hover-color: #fff;
-  --bs-btn-hover-bg: var(--color-danger);
-  --bs-btn-hover-border-color: var(--color-danger);
-}
-.btn-warning {
-  --bs-btn-color: #000;
-  --bs-btn-bg: var(--color-warning);
-  --bs-btn-border-color: var(--color-warning);
-  --bs-btn-hover-color: #000;
-  --bs-btn-hover-bg: var(--color-warning);
-  --bs-btn-hover-border-color: var(--color-warning);
-}
+
+.btn-link { color: var(--color-primary); }
 
 /* Form controls: visible borders and subtle shadows in all themes */
 .form-control,
@@ -288,7 +328,7 @@
   border: 1px solid var(--color-border) !important;
   background-color: var(--color-surface);
   color: var(--color-text);
-  box-shadow: 0 1px 2px 0 rgba(0,0,0,0.04);
+  box-shadow: 0 1px 2px rgba(0,0,0,0.04);
 }
 .form-control::placeholder,
 .form-select::placeholder { color: var(--color-muted); }
