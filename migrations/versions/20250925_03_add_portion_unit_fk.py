@@ -45,14 +45,72 @@ depends_on = None
 
 
 def upgrade():
-    # Add portion_unit_id FK to recipe table using safe operation
-    safe_add_column('recipe', sa.Column('portion_unit_id', sa.Integer(), sa.ForeignKey('unit.id'), nullable=True))
-    
-    # Add portion_unit_id FK to batch table using safe operation
-    safe_add_column('batch', sa.Column('portion_unit_id', sa.Integer(), sa.ForeignKey('unit.id'), nullable=True))
+    bind = op.get_bind()
+    dialect = bind.dialect.name
+    inspector = inspect(bind)
+
+    is_sqlite = dialect == 'sqlite'
+
+    # SQLite: add simple integer columns (no FK constraints via ALTER)
+    if is_sqlite:
+        safe_add_column('recipe', sa.Column('portion_unit_id', sa.Integer(), nullable=True))
+        safe_add_column('batch', sa.Column('portion_unit_id', sa.Integer(), nullable=True))
+        return
+
+    # Non-SQLite (e.g., Postgres): add column then create FK in batch mode
+    if 'recipe' in inspector.get_table_names():
+        existing = [c['name'] for c in inspector.get_columns('recipe')]
+        if 'portion_unit_id' not in existing:
+            with op.batch_alter_table('recipe') as batch_op:
+                batch_op.add_column(sa.Column('portion_unit_id', sa.Integer(), nullable=True))
+                try:
+                    batch_op.create_foreign_key('fk_recipe_portion_unit', 'unit', ['portion_unit_id'], ['id'])
+                except Exception as e:
+                    print(f"Note: Could not create FK on recipe.portion_unit_id: {e}")
+        else:
+            print("Column portion_unit_id already exists in recipe, skipping")
+
+    if 'batch' in inspector.get_table_names():
+        existing = [c['name'] for c in inspector.get_columns('batch')]
+        if 'portion_unit_id' not in existing:
+            with op.batch_alter_table('batch') as batch_op:
+                batch_op.add_column(sa.Column('portion_unit_id', sa.Integer(), nullable=True))
+                try:
+                    batch_op.create_foreign_key('fk_batch_portion_unit', 'unit', ['portion_unit_id'], ['id'])
+                except Exception as e:
+                    print(f"Note: Could not create FK on batch.portion_unit_id: {e}")
+        else:
+            print("Column portion_unit_id already exists in batch, skipping")
 
 
 def downgrade():
-    # Remove portion_unit_id FK from both tables using safe operations
+    bind = op.get_bind()
+    dialect = bind.dialect.name
+    inspector = inspect(bind)
+
+    is_sqlite = dialect == 'sqlite'
+
+    # On non-SQLite, attempt to drop FK constraints before dropping columns
+    if not is_sqlite:
+        if 'recipe' in inspector.get_table_names():
+            try:
+                with op.batch_alter_table('recipe') as batch_op:
+                    try:
+                        batch_op.drop_constraint('fk_recipe_portion_unit', type_='foreignkey')
+                    except Exception:
+                        pass
+            except Exception:
+                pass
+        if 'batch' in inspector.get_table_names():
+            try:
+                with op.batch_alter_table('batch') as batch_op:
+                    try:
+                        batch_op.drop_constraint('fk_batch_portion_unit', type_='foreignkey')
+                    except Exception:
+                        pass
+            except Exception:
+                pass
+
+    # Remove columns using safe operations
     safe_drop_column('recipe', 'portion_unit_id')
     safe_drop_column('batch', 'portion_unit_id')
