@@ -60,6 +60,7 @@
   --bs-body-bg: var(--color-bg);
   --bs-body-color: var(--color-text);
   --bs-border-color: var(--color-border);
+  --bs-border-color-translucent: color-mix(in srgb, var(--color-border) 70%, transparent);
   --bs-link-color: var(--color-primary);
   --bs-link-hover-color: var(--color-primary-hover);
   --bs-primary: var(--color-primary);
@@ -276,4 +277,32 @@
   --bs-btn-hover-color: #000;
   --bs-btn-hover-bg: var(--color-warning);
   --bs-btn-hover-border-color: var(--color-warning);
+}
+
+/* Form controls: visible borders and subtle shadows in all themes */
+.form-control,
+.form-select,
+.form-check-input,
+.input-group .form-control,
+.input-group .form-select {
+  border: 1px solid var(--color-border) !important;
+  background-color: var(--color-surface);
+  color: var(--color-text);
+  box-shadow: 0 1px 2px 0 rgba(0,0,0,0.04);
+}
+.form-control::placeholder,
+.form-select::placeholder { color: var(--color-muted); }
+.form-control:focus,
+.form-select:focus,
+.form-check-input:focus {
+  border-color: var(--color-primary) !important;
+  outline: 0;
+  box-shadow: 0 0 0 3px var(--focus-ring-color) !important;
+}
+
+/* Cards: ensure visible separation in dark/light */
+.card {
+  background-color: var(--color-surface);
+  border: 1px solid var(--color-border);
+  box-shadow: var(--shadow-1);
 }
