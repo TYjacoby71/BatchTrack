@@ -16,8 +16,10 @@
       (function() {
         try {
           var t = localStorage.getItem('bt_theme');
-          if (t) {
+          if (t && t !== 'system') {
             document.documentElement.setAttribute('data-theme', t);
+          } else {
+            document.documentElement.removeAttribute('data-theme');
           }
         } catch (e) {}
       })();

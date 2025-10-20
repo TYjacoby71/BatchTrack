@@ -20,7 +20,7 @@ def index():
     user_prefs_obj = UserPreferences.get_for_user(current_user.id)
 
     # Convert to dictionary for JSON serialization - handle None for developers
-    if user_prefs_obj:
+        if user_prefs_obj:
         user_prefs = {
             'max_dashboard_alerts': user_prefs_obj.max_dashboard_alerts,
             'show_expiration_alerts': user_prefs_obj.show_expiration_alerts,
@@ -31,7 +31,8 @@ def index():
             'show_alert_badges': user_prefs_obj.show_alert_badges,
             'dashboard_layout': user_prefs_obj.dashboard_layout,
             'compact_view': user_prefs_obj.compact_view,
-            'show_quick_actions': user_prefs_obj.show_quick_actions
+                'show_quick_actions': user_prefs_obj.show_quick_actions,
+                'theme': (user_prefs_obj.theme or 'system')
         }
     else:
         # Default preferences for developers or users without preferences
@@ -45,7 +46,8 @@ def index():
             'show_alert_badges': True,
             'dashboard_layout': 'standard',
             'compact_view': False,
-            'show_quick_actions': True
+            'show_quick_actions': True,
+            'theme': 'system'
         }
 
     # Get organization info for org owners
@@ -146,7 +148,8 @@ def get_user_preferences():
                 'show_alert_badges': user_prefs.show_alert_badges,
                 'dashboard_layout': user_prefs.dashboard_layout,
                 'compact_view': user_prefs.compact_view,
-                'show_quick_actions': user_prefs.show_quick_actions
+                'show_quick_actions': user_prefs.show_quick_actions,
+                'theme': (user_prefs.theme or 'system')
             })
         else:
             # Return defaults for developers or users without preferences
@@ -160,7 +163,8 @@ def get_user_preferences():
                 'show_alert_badges': True,
                 'dashboard_layout': 'standard',
                 'compact_view': False,
-                'show_quick_actions': True
+                'show_quick_actions': True,
+                'theme': 'system'
             })
     except Exception as e:
         return jsonify({'error': str(e)}), 500

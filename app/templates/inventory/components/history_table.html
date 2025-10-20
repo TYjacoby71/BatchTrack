@@ -64,7 +64,7 @@
                   {% set is_expired = lot_expired %}
                   {% set is_expiring_soon = lot_expiring_soon %}
                   <tr class="{% if is_expired %}table-danger{% elif is_expiring_soon %}table-warning{% endif %}"
-                      {% if is_expired %}style="background-color: #f8d7da !important; border-color: #f5c6cb !important;"{% elif is_expiring_soon %}style="background-color: #fff3cd !important; border-color: #ffeaa7 !important;"{% endif %}>
+                      {% if is_expired %}style="background-color: var(--color-danger-bg) !important; border-color: var(--color-danger) !important;"{% elif is_expiring_soon %}style="background-color: var(--color-warning-bg) !important; border-color: var(--color-warning) !important;"{% endif %}>
                     <td>{{ TimezoneUtils.format_for_user(entry.timestamp, '%Y-%m-%d %H:%M') if entry.timestamp else 'N/A' }}</td>
                     <td>
                       {% if entry.change_type == 'finished_batch' %}
