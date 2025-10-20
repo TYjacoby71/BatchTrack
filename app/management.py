@@ -7,6 +7,7 @@ from flask import current_app
 from flask.cli import with_appcontext
 from .extensions import db
 from .models import User, Organization, Permission
+from flask_migrate import upgrade as alembic_upgrade
 from .seeders import (
     seed_units,
     seed_categories,
@@ -58,8 +59,31 @@ def init_production_command():
 
         if missing_tables:
             print(f"❌ Missing required tables: {missing_tables}")
-            print("   Run 'flask db upgrade' first to create database schema")
-            return
+            print("   Attempting to run database migrations automatically (alembic upgrade head)...")
+            try:
+                # Run Alembic migrations programmatically
+                alembic_upgrade()
+
+                # Re-inspect after migration
+                inspector = inspect(db.engine)
+                tables = inspector.get_table_names()
+                missing_tables = [t for t in required_tables if t not in tables]
+
+                if missing_tables:
+                    print(f"❌ Tables still missing after migration: {missing_tables}")
+                    print("   If a previous migration failed and left a transaction open, try:")
+                    print("     1) python fix_deployment_migration.py")
+                    print("     2) flask db upgrade")
+                    return
+                else:
+                    print("✅ Database migrated successfully. Continuing seeding...")
+            except Exception as mig_err:
+                print(f"❌ Automatic migration failed: {mig_err}")
+                print("   Run 'flask db upgrade' manually to create the schema.")
+                print("   If it fails with a transaction error, try:")
+                print("     1) python fix_deployment_migration.py")
+                print("     2) flask db upgrade")
+                return
 
         # Essential system setup (STRICT DEPENDENCY ORDER)
         print("=== Step 1: System foundations (Organization Independent) ===")
