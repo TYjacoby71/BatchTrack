@@ -169,14 +169,8 @@ def upgrade():
         dialect_name = getattr(bind.dialect, 'name', '')
         try:
             if dialect_name == 'sqlite':
-                # Use batch mode for SQLite to recreate table with FK
-                with op.batch_alter_table('inventory_item') as batch_op:
-                    batch_op.create_foreign_key(
-                        'fk_inventory_item_global_item',
-                        'global_item',
-                        ['global_item_id'],
-                        ['id']
-                    )
+                # SQLite ALTER for FKs requires table rebuild; skip here safely.
+                print("   ℹ️  Skipping FK add on SQLite (not supported without full table rebuild)")
             else:
                 op.create_foreign_key(
                     'fk_inventory_item_global_item',
@@ -185,7 +179,7 @@ def upgrade():
                     ['global_item_id'],
                     ['id']
                 )
-            print("   ✅ Added foreign key constraint")
+                print("   ✅ Added foreign key constraint")
         except Exception as e:
             # Best-effort for non-supporting dialects
             print(f"   ℹ️  Could not add foreign key constraint on this dialect: {e}")
@@ -247,14 +241,10 @@ def downgrade():
         bind = op.get_bind()
         dialect_name = getattr(bind.dialect, 'name', '')
         if dialect_name == 'sqlite':
-            with op.batch_alter_table('inventory_item') as batch_op:
-                try:
-                    batch_op.drop_constraint('fk_inventory_item_global_item', type_='foreignkey')
-                except Exception:
-                    pass
+            print("   ℹ️  Skipping FK drop on SQLite")
         else:
             op.drop_constraint('fk_inventory_item_global_item', 'inventory_item', type_='foreignkey')
-        print("   ✅ Dropped foreign key constraint")
+            print("   ✅ Dropped foreign key constraint")
     except Exception:
         print("   ℹ️  Foreign key constraint doesn't exist")
 
