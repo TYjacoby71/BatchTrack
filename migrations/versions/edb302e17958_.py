@@ -113,8 +113,19 @@ def upgrade():
         # Add foreign keys and drop old columns
         with op.batch_alter_table('batch_container', schema=None) as batch_op:
             try:
-                batch_op.create_foreign_key(None, 'inventory_item', ['container_id'], ['id'])
-                batch_op.create_foreign_key(None, 'organization', ['organization_id'], ['id'])
+                # Batch mode requires explicit constraint names
+                batch_op.create_foreign_key(
+                    'fk_batch_container_container_id_inventory_item',
+                    'inventory_item',
+                    ['container_id'],
+                    ['id']
+                )
+                batch_op.create_foreign_key(
+                    'fk_batch_container_organization_id_organization',
+                    'organization',
+                    ['organization_id'],
+                    ['id']
+                )
             except Exception as e:
                 print(f"   ⚠️  Could not create foreign keys: {e}")
 
