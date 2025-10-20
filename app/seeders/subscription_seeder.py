@@ -39,7 +39,8 @@ def create_exempt_tier():
                 max_batches=None,
                 max_products=None,
                 max_batchbot_requests=None,
-                max_monthly_batches=None,
+                # NOTE: Column may be NOT NULL in some deployments; use -1 to denote "unlimited"
+                max_monthly_batches=-1,
                 retention_policy='subscribed',  # Keep data while subscribed
                 data_retention_days=None,
                 retention_notice_days=None,
@@ -238,7 +239,8 @@ def create_enterprise_tier():
                 max_batches=None,  # Unlimited batches
                 max_products=None,  # Unlimited products
                 max_batchbot_requests=None,  # Unlimited AI requests
-                max_monthly_batches=None,  # Unlimited monthly batches
+                # NOTE: Column may be NOT NULL in some deployments; use -1 to denote "unlimited"
+                max_monthly_batches=-1,  # Unlimited monthly batches
                 retention_policy='subscribed',  # Keep data while subscribed
                 data_retention_days=None,
                 retention_notice_days=30,
