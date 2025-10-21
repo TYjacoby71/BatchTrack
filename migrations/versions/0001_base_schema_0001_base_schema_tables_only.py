@@ -749,7 +749,54 @@ def upgrade():
 
     # product_sku will be created after inventory_item section
 
-    # product_sku_history will be created after inventory_item is created
+    # Create product_sku_history now that dependencies exist
+    op.create_table('product_sku_history',
+    sa.Column('id', sa.Integer(), nullable=False),
+    sa.Column('inventory_item_id', sa.Integer(), nullable=False),
+    sa.Column('timestamp', sa.DateTime(), nullable=True),
+    sa.Column('change_type', sa.String(length=32), nullable=False),
+    sa.Column('quantity_change', sa.Float(), nullable=False),
+    sa.Column('remaining_quantity', sa.Float(), nullable=True),
+    sa.Column('unit', sa.String(length=32), nullable=False),
+    sa.Column('unit_cost', sa.Float(), nullable=True),
+    sa.Column('sale_price', sa.Float(), nullable=True),
+    sa.Column('customer', sa.String(length=128), nullable=True),
+    sa.Column('fifo_code', sa.String(length=64), nullable=True),
+    sa.Column('fifo_reference_id', sa.Integer(), nullable=True),
+    sa.Column('fifo_source', sa.String(length=128), nullable=True),
+    sa.Column('is_perishable', sa.Boolean(), nullable=True),
+    sa.Column('shelf_life_days', sa.Integer(), nullable=True),
+    sa.Column('expiration_date', sa.DateTime(), nullable=True),
+    sa.Column('batch_id', sa.Integer(), nullable=True),
+    sa.Column('container_id', sa.Integer(), nullable=True),
+    sa.Column('notes', sa.Text(), nullable=True),
+    sa.Column('note', sa.Text(), nullable=True),
+    sa.Column('created_by', sa.Integer(), nullable=True),
+    sa.Column('order_id', sa.String(length=64), nullable=True),
+    sa.Column('reservation_id', sa.String(length=64), nullable=True),
+    sa.Column('is_reserved', sa.Boolean(), nullable=True),
+    sa.Column('sale_location', sa.String(length=64), nullable=True),
+    sa.Column('quantity_used', sa.Float(), nullable=True),
+    sa.Column('batch_number', sa.String(length=128), nullable=True),
+    sa.Column('lot_number', sa.String(length=128), nullable=True),
+    sa.Column('temperature_at_time', sa.Float(), nullable=True),
+    sa.Column('location_id', sa.String(length=128), nullable=True),
+    sa.Column('location_name', sa.String(length=128), nullable=True),
+    sa.Column('quality_status', sa.String(length=32), nullable=True),
+    sa.Column('compliance_status', sa.String(length=32), nullable=True),
+    sa.Column('quality_checked_by', sa.Integer(), nullable=True),
+    sa.Column('marketplace_order_id', sa.String(length=128), nullable=True),
+    sa.Column('marketplace_source', sa.String(length=32), nullable=True),
+    sa.Column('organization_id', sa.Integer(), nullable=True),
+    sa.ForeignKeyConstraint(['batch_id'], ['batch.id'], ),
+    sa.ForeignKeyConstraint(['container_id'], ['inventory_item.id'], ),
+    sa.ForeignKeyConstraint(['created_by'], ['user.id'], ),
+    sa.ForeignKeyConstraint(['fifo_reference_id'], ['product_sku_history.id'], ),
+    sa.ForeignKeyConstraint(['inventory_item_id'], ['inventory_item.id'], ),
+    sa.ForeignKeyConstraint(['organization_id'], ['organization.id'], ),
+    sa.ForeignKeyConstraint(['quality_checked_by'], ['user.id'], ),
+    sa.PrimaryKeyConstraint('id')
+    )
 
     # Create inventory_history after batch and inventory tables exist
     op.create_table('inventory_history',
@@ -966,60 +1013,6 @@ def upgrade():
         batch_op.create_index(batch_op.f('ix_inventory_item_ownership'), ['ownership'], unique=False)
         batch_op.create_index('ix_inventory_item_type', ['type'], unique=False)
 
-    # Now create product_sku_history after inventory_item exists
-    op.create_table('product_sku_history',
-    sa.Column('id', sa.Integer(), nullable=False),
-    sa.Column('inventory_item_id', sa.Integer(), nullable=False),
-    sa.Column('timestamp', sa.DateTime(), nullable=True),
-    sa.Column('change_type', sa.String(length=32), nullable=False),
-    sa.Column('quantity_change', sa.Float(), nullable=False),
-    sa.Column('remaining_quantity', sa.Float(), nullable=True),
-    sa.Column('unit', sa.String(length=32), nullable=False),
-    sa.Column('unit_cost', sa.Float(), nullable=True),
-    sa.Column('sale_price', sa.Float(), nullable=True),
-    sa.Column('customer', sa.String(length=128), nullable=True),
-    sa.Column('fifo_code', sa.String(length=64), nullable=True),
-    sa.Column('fifo_reference_id', sa.Integer(), nullable=True),
-    sa.Column('fifo_source', sa.String(length=128), nullable=True),
-    sa.Column('is_perishable', sa.Boolean(), nullable=True),
-    sa.Column('shelf_life_days', sa.Integer(), nullable=True),
-    sa.Column('expiration_date', sa.DateTime(), nullable=True),
-    sa.Column('batch_id', sa.Integer(), nullable=True),
-    sa.Column('container_id', sa.Integer(), nullable=True),
-    sa.Column('notes', sa.Text(), nullable=True),
-    sa.Column('note', sa.Text(), nullable=True),
-    sa.Column('created_by', sa.Integer(), nullable=True),
-    sa.Column('order_id', sa.String(length=64), nullable=True),
-    sa.Column('reservation_id', sa.String(length=64), nullable=True),
-    sa.Column('is_reserved', sa.Boolean(), nullable=True),
-    sa.Column('sale_location', sa.String(length=64), nullable=True),
-    sa.Column('quantity_used', sa.Float(), nullable=True),
-    sa.Column('batch_number', sa.String(length=128), nullable=True),
-    sa.Column('lot_number', sa.String(length=128), nullable=True),
-    sa.Column('temperature_at_time', sa.Float(), nullable=True),
-    sa.Column('location_id', sa.String(length=128), nullable=True),
-    sa.Column('location_name', sa.String(length=128), nullable=True),
-    sa.Column('quality_status', sa.String(length=32), nullable=True),
-    sa.Column('compliance_status', sa.String(length=32), nullable=True),
-    sa.Column('quality_checked_by', sa.Integer(), nullable=True),
-    sa.Column('marketplace_order_id', sa.String(length=128), nullable=True),
-    sa.Column('marketplace_source', sa.String(length=32), nullable=True),
-    sa.Column('organization_id', sa.Integer(), nullable=True),
-    sa.ForeignKeyConstraint(['batch_id'], ['batch.id'], ),
-    sa.ForeignKeyConstraint(['container_id'], ['inventory_item.id'], ),
-    sa.ForeignKeyConstraint(['created_by'], ['user.id'], ),
-    sa.ForeignKeyConstraint(['fifo_reference_id'], ['product_sku_history.id'], ),
-    sa.ForeignKeyConstraint(['inventory_item_id'], ['inventory_item.id'], ),
-    sa.ForeignKeyConstraint(['organization_id'], ['organization.id'], ),
-    sa.ForeignKeyConstraint(['quality_checked_by'], ['user.id'], ),
-    sa.PrimaryKeyConstraint('id')
-    )
-    with op.batch_alter_table('product_sku_history', schema=None) as batch_op:
-        batch_op.create_index('idx_change_type', ['change_type'], unique=False)
-        batch_op.create_index('idx_fifo_code', ['fifo_code'], unique=False)
-        batch_op.create_index('idx_inventory_item_remaining', ['inventory_item_id', 'remaining_quantity'], unique=False)
-        batch_op.create_index('idx_inventory_item_timestamp', ['inventory_item_id', 'timestamp'], unique=False)
-
     op.create_table('retention_deletion_queue',
     sa.Column('id', sa.Integer(), nullable=False),
     sa.Column('organization_id', sa.Integer(), nullable=False),
@@ -1219,7 +1212,7 @@ def upgrade():
     sa.ForeignKeyConstraint(['organization_id'], ['organization.id'], ),
     sa.ForeignKeyConstraint(['used_for_batch_id'], ['batch.id'], ),
     sa.PrimaryKeyConstraint('id')
-    
+    )
     op.create_table('inventory_lot',
     sa.Column('id', sa.Integer(), nullable=False),
     sa.Column('inventory_item_id', sa.Integer(), nullable=False),
@@ -1283,7 +1276,58 @@ def upgrade():
     sa.PrimaryKeyConstraint('id'),
     sa.UniqueConstraint('organization_id')
     )
-    # product_sku_history already created above after inventory_item
+    # Defer product_sku_history until after product_sku exists
+    sa.Column('id', sa.Integer(), nullable=False),
+    sa.Column('inventory_item_id', sa.Integer(), nullable=False),
+    sa.Column('timestamp', sa.DateTime(), nullable=True),
+    sa.Column('change_type', sa.String(length=32), nullable=False),
+    sa.Column('quantity_change', sa.Float(), nullable=False),
+    sa.Column('remaining_quantity', sa.Float(), nullable=True),
+    sa.Column('unit', sa.String(length=32), nullable=False),
+    sa.Column('unit_cost', sa.Float(), nullable=True),
+    sa.Column('sale_price', sa.Float(), nullable=True),
+    sa.Column('customer', sa.String(length=128), nullable=True),
+    sa.Column('fifo_code', sa.String(length=64), nullable=True),
+    sa.Column('fifo_reference_id', sa.Integer(), nullable=True),
+    sa.Column('fifo_source', sa.String(length=128), nullable=True),
+    sa.Column('is_perishable', sa.Boolean(), nullable=True),
+    sa.Column('shelf_life_days', sa.Integer(), nullable=True),
+    sa.Column('expiration_date', sa.DateTime(), nullable=True),
+    sa.Column('batch_id', sa.Integer(), nullable=True),
+    sa.Column('container_id', sa.Integer(), nullable=True),
+    sa.Column('notes', sa.Text(), nullable=True),
+    sa.Column('note', sa.Text(), nullable=True),
+    sa.Column('created_by', sa.Integer(), nullable=True),
+    sa.Column('order_id', sa.String(length=64), nullable=True),
+    sa.Column('reservation_id', sa.String(length=64), nullable=True),
+    sa.Column('is_reserved', sa.Boolean(), nullable=True),
+    sa.Column('sale_location', sa.String(length=64), nullable=True),
+    sa.Column('quantity_used', sa.Float(), nullable=True),
+    sa.Column('batch_number', sa.String(length=128), nullable=True),
+    sa.Column('lot_number', sa.String(length=128), nullable=True),
+    sa.Column('temperature_at_time', sa.Float(), nullable=True),
+    sa.Column('location_id', sa.String(length=128), nullable=True),
+    sa.Column('location_name', sa.String(length=128), nullable=True),
+    sa.Column('quality_status', sa.String(length=32), nullable=True),
+    sa.Column('compliance_status', sa.String(length=32), nullable=True),
+    sa.Column('quality_checked_by', sa.Integer(), nullable=True),
+    sa.Column('marketplace_order_id', sa.String(length=128), nullable=True),
+    sa.Column('marketplace_source', sa.String(length=32), nullable=True),
+    sa.Column('organization_id', sa.Integer(), nullable=True),
+    sa.ForeignKeyConstraint(['batch_id'], ['batch.id'], ),
+    sa.ForeignKeyConstraint(['container_id'], ['inventory_item.id'], ),
+    sa.ForeignKeyConstraint(['created_by'], ['user.id'], ),
+    sa.ForeignKeyConstraint(['fifo_reference_id'], ['product_sku_history.id'], ),
+    sa.ForeignKeyConstraint(['inventory_item_id'], ['inventory_item.id'], ),
+    sa.ForeignKeyConstraint(['organization_id'], ['organization.id'], ),
+    sa.ForeignKeyConstraint(['quality_checked_by'], ['user.id'], ),
+    sa.PrimaryKeyConstraint('id')
+    )
+    with op.batch_alter_table('product_sku_history', schema=None) as batch_op:
+        batch_op.create_index('idx_change_type', ['change_type'], unique=False)
+        batch_op.create_index('idx_fifo_code', ['fifo_code'], unique=False)
+        batch_op.create_index('idx_inventory_item_remaining', ['inventory_item_id', 'remaining_quantity'], unique=False)
+        batch_op.create_index('idx_inventory_item_timestamp', ['inventory_item_id', 'timestamp'], unique=False)
 
     op.create_table('recipe_consumable',
     sa.Column('id', sa.Integer(), nullable=False),
@@ -1366,7 +1410,7 @@ def upgrade():
     sa.ForeignKeyConstraint(['reserved_item_id'], ['inventory_item.id'], ),
     sa.ForeignKeyConstraint(['source_batch_id'], ['batch.id'], ),
     sa.PrimaryKeyConstraint('id')
-    
+    )
     with op.batch_alter_table('reservation', schema=None) as batch_op:
         batch_op.create_index('idx_expires_at', ['expires_at'], unique=False)
         batch_op.create_index('idx_order_status', ['order_id', 'status'], unique=False)
