@@ -34,8 +34,8 @@ def upgrade():
             sa.Column('retention_extension_days', sa.Integer(), nullable=True),
             sa.Column('billing_type', sa.String(length=32), server_default='subscription', nullable=False),
             sa.Column('stripe_lookup_key', sa.String(length=128), nullable=True),
-            # Use explicit boolean literal defaults for PostgreSQL; SQLite tolerates 1/0 but we prefer consistency
-            sa.Column('is_active', sa.Boolean(), server_default=sa.text('false'), nullable=False),
+            # Use explicit boolean literal defaults for PostgreSQL
+            sa.Column('is_active', sa.Boolean(), server_default=sa.text('true'), nullable=False),
             sa.Column('created_at', sa.DateTime(), server_default=sa.text('CURRENT_TIMESTAMP'), nullable=False),
             sa.Column('updated_at', sa.DateTime(), server_default=sa.text('CURRENT_TIMESTAMP'), nullable=False),
             sa.PrimaryKeyConstraint('id'),
