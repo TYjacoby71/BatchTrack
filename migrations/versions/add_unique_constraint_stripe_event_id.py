@@ -8,6 +8,9 @@ Create Date: 2025-08-11 20:06:30.000000
 """
 from alembic import op
 import sqlalchemy as sa
+import sys, os
+sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
+from postgres_helpers import ensure_unique_constraint_or_index, table_exists
 
 
 # revision identifiers, used by Alembic.
@@ -39,9 +42,8 @@ def upgrade():
         op.create_index(op.f('ix_stripe_event_event_id'), 'stripe_event', ['event_id'], unique=False)
         print("✅ Created stripe_event table")
     
-    # Add unique constraint on stripe_event.event_id using batch mode for SQLite compatibility
-    with op.batch_alter_table('stripe_event', schema=None) as batch_op:
-        batch_op.create_unique_constraint('uq_stripe_event_event_id', ['event_id'])
+    # Ensure uniqueness (constraint on PG, unique index on SQLite)
+    ensure_unique_constraint_or_index('stripe_event', 'uq_stripe_event_event_id', ['event_id'])
     # ### end Alembic commands ###
 
 
