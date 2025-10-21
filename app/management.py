@@ -70,6 +70,10 @@ def init_production_command():
             print("✅ Permissions, organization roles, and developer roles seeded")
         except Exception as e:
             print(f"⚠️  Permission seeding issue: {e}")
+            try:
+                db.session.rollback()
+            except Exception:
+                pass
             print("   Continuing with remaining steps...")
 
         try:
@@ -77,6 +81,10 @@ def init_production_command():
             print("✅ Subscription tiers seeded")
         except Exception as e:
             print(f"⚠️  Subscription seeding issue: {e}")
+            try:
+                db.session.rollback()
+            except Exception:
+                pass
             print("   Continuing with remaining steps...")
 
         # Add-ons registry (independent)
@@ -85,6 +93,10 @@ def init_production_command():
             print("✅ Add-ons seeded")
         except Exception as e:
             print(f"⚠️  Add-on seeding issue: {e}")
+            try:
+                db.session.rollback()
+            except Exception:
+                pass
             print("   Continuing with remaining steps...")
 
         try:
@@ -92,6 +104,10 @@ def init_production_command():
             print("✅ Units seeded")
         except Exception as e:
             print(f"⚠️  Unit seeding issue: {e}")
+            try:
+                db.session.rollback()
+            except Exception:
+                pass
             print("   Continuing with remaining steps...")
 
         # Create organization and users (DEPENDS on system foundations)
@@ -102,6 +118,10 @@ def init_production_command():
             print("✅ Organization and users seeded")
         except Exception as e:
             print(f"⚠️  User/organization seeding issue: {e}")
+            try:
+                db.session.rollback()
+            except Exception:
+                pass
             print("   Continuing with remaining steps...")
 
         # Setup default categories for the organization
@@ -116,6 +136,10 @@ def init_production_command():
                 print("⚠️  No organization found, ingredient categories not seeded")
         except Exception as e:
             print(f"⚠️  Ingredient category seeding issue: {e}")
+            try:
+                db.session.rollback()
+            except Exception:
+                pass
 
         # Seed global product categories (not organization-specific)
         try:
@@ -124,6 +148,10 @@ def init_production_command():
             print("✅ Product categories seeded")
         except Exception as e:
             print(f"⚠️  Product category seeding issue: {e}")
+            try:
+                db.session.rollback()
+            except Exception:
+                pass
 
         # Seed global inventory library (ingredients, containers, packaging, consumables)
         try:
@@ -132,6 +160,10 @@ def init_production_command():
             print("✅ Global inventory library seeded")
         except Exception as e:
             print(f"⚠️  Global inventory library seeding issue: {e}")
+            try:
+                db.session.rollback()
+            except Exception:
+                pass
 
         print('✅ Production seeding complete!')
         print('🔒 Login: admin/admin (CHANGE IMMEDIATELY)')
