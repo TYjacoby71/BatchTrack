@@ -1212,7 +1212,7 @@ def upgrade():
     sa.ForeignKeyConstraint(['organization_id'], ['organization.id'], ),
     sa.ForeignKeyConstraint(['used_for_batch_id'], ['batch.id'], ),
     sa.PrimaryKeyConstraint('id')
-    )
+    
     op.create_table('inventory_lot',
     sa.Column('id', sa.Integer(), nullable=False),
     sa.Column('inventory_item_id', sa.Integer(), nullable=False),
@@ -1322,7 +1322,7 @@ def upgrade():
     sa.ForeignKeyConstraint(['organization_id'], ['organization.id'], ),
     sa.ForeignKeyConstraint(['quality_checked_by'], ['user.id'], ),
     sa.PrimaryKeyConstraint('id')
-    )
+    
     with op.batch_alter_table('product_sku_history', schema=None) as batch_op:
         batch_op.create_index('idx_change_type', ['change_type'], unique=False)
         batch_op.create_index('idx_fifo_code', ['fifo_code'], unique=False)
@@ -1410,7 +1410,7 @@ def upgrade():
     sa.ForeignKeyConstraint(['reserved_item_id'], ['inventory_item.id'], ),
     sa.ForeignKeyConstraint(['source_batch_id'], ['batch.id'], ),
     sa.PrimaryKeyConstraint('id')
-    )
+    
     with op.batch_alter_table('reservation', schema=None) as batch_op:
         batch_op.create_index('idx_expires_at', ['expires_at'], unique=False)
         batch_op.create_index('idx_order_status', ['order_id', 'status'], unique=False)
