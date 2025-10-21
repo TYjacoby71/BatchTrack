@@ -4,6 +4,9 @@ Add optional GIN index on recipe.category_data for ad-hoc queries
 
 from alembic import op
 from sqlalchemy import inspect
+import sys, os
+sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
+from postgres_helpers import is_postgresql
 
 revision = '20251008_3'
 down_revision = '20251008_2'
@@ -20,16 +23,16 @@ def table_exists(table_name):
 def upgrade():
     if not table_exists('recipe'):
         return
-    try:
-        # PostgreSQL-specific: create GIN index on JSONB cast
-        op.execute("CREATE INDEX IF NOT EXISTS ix_recipe_category_data_gin ON recipe USING GIN ((category_data::jsonb))")
-    except Exception:
-        # Non-Postgres or permissions issues; ignore
-        pass
+    if is_postgresql():
+        try:
+            op.execute("CREATE INDEX IF NOT EXISTS ix_recipe_category_data_gin ON recipe USING GIN ((category_data::jsonb))")
+        except Exception:
+            pass
 
 
 def downgrade():
-    try:
-        op.execute("DROP INDEX IF EXISTS ix_recipe_category_data_gin")
-    except Exception:
-        pass
+    if is_postgresql():
+        try:
+            op.execute("DROP INDEX IF EXISTS ix_recipe_category_data_gin")
+        except Exception:
+            pass

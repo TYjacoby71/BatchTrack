@@ -9,6 +9,9 @@ Create Date: 2025-09-08
 from alembic import op
 import sqlalchemy as sa
 from sqlalchemy.sql import text
+import sys, os
+sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
+from postgres_helpers import is_sqlite
 
 # Helper functions to check for table and column existence
 def table_exists(table_name):
@@ -41,16 +44,20 @@ def upgrade():
             print("   Adding organization_id column to recipe_consumable...")
             op.add_column('recipe_consumable', sa.Column('organization_id', sa.Integer(), nullable=True))
 
-            # Add foreign key constraint
-            op.create_foreign_key(
-                'fk_recipe_consumable_organization',
-                'recipe_consumable',
-                'organization',
-                ['organization_id'],
-                ['id']
-            )
+            if not is_sqlite():
+                # Add foreign key constraint on PostgreSQL only
+                op.create_foreign_key(
+                    'fk_recipe_consumable_organization',
+                    'recipe_consumable',
+                    'organization',
+                    ['organization_id'],
+                    ['id']
+                )
+                print("✅ Added organization_id foreign key to recipe_consumable")
+            else:
+                print("ℹ️  SQLite detected - skipping FK create (requires table rebuild)")
 
-            print("✅ Added organization_id column and foreign key to recipe_consumable")
+            print("✅ Added organization_id column to recipe_consumable")
 
         except Exception as e:
             print(f"Warning: Could not add organization_id to recipe_consumable: {e}")
