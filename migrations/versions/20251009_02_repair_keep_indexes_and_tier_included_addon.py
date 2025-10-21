@@ -295,9 +295,8 @@ def ensure_product_category_indexes() -> None:
     # product_category lower(name) unique functional index (PostgreSQL only)
     if table_exists('product_category'):
         try:
-            op.execute("CREATE UNIQUE INDEX IF NOT EXISTS ix_product_category_lower_name ON product_category (lower(name::text))")
+            op.execute("CREATE UNIQUE INDEX IF NOT EXISTS ix_product_category_lower_name ON product_category (lower(name))")
         except Exception:
-            # Non-Postgres or incompatible
             pass
 
 

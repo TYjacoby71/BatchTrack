@@ -9,6 +9,9 @@ Create Date: 2025-10-16 22:35:00.000000
 from alembic import op
 import sqlalchemy as sa
 from sqlalchemy.sql import text
+import sys, os
+sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
+from postgres_helpers import is_postgresql
 
 # revision identifiers, used by Alembic.
 revision = '20251016_2'
@@ -24,8 +27,11 @@ def upgrade():
     
     # First, drop the key column if it exists (from previous failed migrations)
     try:
-        connection.execute(text("ALTER TABLE subscription_tier DROP COLUMN IF EXISTS key"))
-        print("✅ Dropped existing key column")
+        if is_postgresql():
+            connection.execute(text("ALTER TABLE subscription_tier DROP COLUMN IF EXISTS key"))
+            print("✅ Dropped existing key column")
+        else:
+            print("ℹ️  Skipping DROP COLUMN IF EXISTS on SQLite")
     except Exception as e:
         print(f"Key column didn't exist or couldn't be dropped: {e}")
     

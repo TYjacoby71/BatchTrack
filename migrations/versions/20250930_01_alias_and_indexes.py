@@ -9,6 +9,9 @@ Create Date: 2025-09-30
 from alembic import op
 import sqlalchemy as sa
 from sqlalchemy.dialects import postgresql
+import sys, os
+sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
+from postgres_helpers import table_exists, index_exists, safe_create_index, is_postgresql
 
 
 revision = '20250930_1'
@@ -19,24 +22,6 @@ depends_on = None
 
 def upgrade():
     from sqlalchemy import inspect
-    
-    def table_exists(table_name):
-        """Check if a table exists"""
-        bind = op.get_bind()
-        inspector = inspect(bind)
-        return table_name in inspector.get_table_names()
-    
-    def index_exists(table_name, index_name):
-        """Check if an index exists"""
-        if not table_exists(table_name):
-            return False
-        bind = op.get_bind()
-        inspector = inspect(bind)
-        try:
-            indexes = [idx['name'] for idx in inspector.get_indexes(table_name)]
-            return index_name in indexes
-        except Exception:
-            return False
     
     print("=== Adding alias table and performance indexes ===")
     
@@ -55,10 +40,10 @@ def upgrade():
 
     # 2) GIN/tsvector index for fast alias search (PostgreSQL only)
     try:
-        op.execute("CREATE INDEX IF NOT EXISTS ix_global_item_alias_tsv ON global_item_alias USING GIN (to_tsvector('simple', alias))")
-        print("   ✅ Created GIN index for alias search")
+        if is_postgresql():
+            op.execute("CREATE INDEX IF NOT EXISTS ix_global_item_alias_tsv ON global_item_alias USING GIN (to_tsvector('simple', alias))")
+            print("   ✅ Created GIN index for alias search")
     except Exception:
-        # Non-Postgres backends or already exists
         print("   ⚠️  Could not create GIN index - non-Postgres or already exists")
 
     # 3) Backfill aliases from global_item.aka_names JSON if present
@@ -94,19 +79,14 @@ def upgrade():
         if not table_exists(table):
             print(f"   ⚠️  Table {table} does not exist - skipping index {ix_name}")
             continue
-            
-        if not index_exists(table, ix_name):
-            try:
-                print(f"   Creating index {ix_name} on {table}.{column}...")
-                op.create_index(ix_name, table, [column])
-                print(f"   ✅ Created index {ix_name}")
-            except Exception as e:
-                print(f"   ⚠️  Could not create index {ix_name}: {e}")
+        created = safe_create_index(ix_name, table, [column])
+        if created:
+            print(f"   ✅ Created index {ix_name}")
         else:
-            print(f"   ✅ Index {ix_name} already exists - skipping")
+            print(f"   ✅ Index {ix_name} already exists or was skipped")
 
     # 5) Optional JSONB GIN index on global_item.aka_names for fallback search (PostgreSQL only)
-    if table_exists('global_item'):
+    if table_exists('global_item') and is_postgresql():
         try:
             op.execute("CREATE INDEX IF NOT EXISTS ix_global_item_aka_gin ON global_item USING GIN ((aka_names::jsonb))")
             print("   ✅ Created JSONB GIN index on aka_names")
