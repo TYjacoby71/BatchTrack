@@ -7,6 +7,9 @@ Create Date: 2025-08-21 04:57:00.000000
 """
 from alembic import op
 import sqlalchemy as sa
+import sys, os
+sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
+from postgres_helpers import table_exists, index_exists, safe_create_index, ensure_unique_constraint_or_index, is_sqlite
 
 # revision identifiers
 revision = 'create_inventory_lot'
@@ -46,14 +49,11 @@ def upgrade():
         ]
 
         for idx_name, columns in indexes_to_create:
-            if idx_name not in existing_indexes:
-                try:
-                    op.create_index(idx_name, 'inventory_lot', columns)
-                    print(f"   ✅ Created index: {idx_name}")
-                except Exception as e:
-                    print(f"   ⚠️  Could not create index {idx_name}: {e}")
+            created = safe_create_index(idx_name, 'inventory_lot', columns)
+            if created:
+                print(f"   ✅ Created index: {idx_name}")
             else:
-                print(f"   ⚠️  Index {idx_name} already exists - skipping")
+                print(f"   ✅ Index {idx_name} already exists or was skipped")
         
         print("✅ inventory_lot migration completed (table existed)")
         return
@@ -80,7 +80,9 @@ def upgrade():
         sa.ForeignKeyConstraint(['inventory_item_id'], ['inventory_item.id']),
         sa.ForeignKeyConstraint(['created_by'], ['user.id']),
         sa.ForeignKeyConstraint(['organization_id'], ['organization.id']),
+        # Unique/index constraints
         sa.UniqueConstraint('fifo_code'),
+        # Check constraints are PG-friendly; SQLite may ignore or fail to alter; creation here is fine for new table
         sa.CheckConstraint('remaining_quantity >= 0', name='check_remaining_quantity_non_negative'),
         sa.CheckConstraint('original_quantity > 0', name='check_original_quantity_positive'),
         sa.CheckConstraint('remaining_quantity <= original_quantity', name='check_remaining_not_exceeds_original'),
@@ -88,10 +90,10 @@ def upgrade():
 
     # Create indexes for performance
     print("   Creating indexes...")
-    op.create_index('idx_inventory_lot_item_remaining', 'inventory_lot', ['inventory_item_id', 'remaining_quantity'])
-    op.create_index('idx_inventory_lot_received_date', 'inventory_lot', ['received_date'])
-    op.create_index('idx_inventory_lot_expiration', 'inventory_lot', ['expiration_date'])
-    op.create_index('idx_inventory_lot_organization', 'inventory_lot', ['organization_id'])
+    safe_create_index('idx_inventory_lot_item_remaining', 'inventory_lot', ['inventory_item_id', 'remaining_quantity'])
+    safe_create_index('idx_inventory_lot_received_date', 'inventory_lot', ['received_date'])
+    safe_create_index('idx_inventory_lot_expiration', 'inventory_lot', ['expiration_date'])
+    safe_create_index('idx_inventory_lot_organization', 'inventory_lot', ['organization_id'])
     
     print("✅ inventory_lot table and indexes created successfully")
 
