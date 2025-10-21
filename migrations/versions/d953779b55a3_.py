@@ -62,14 +62,31 @@ def safe_add_column(table_name, column_name, column_def):
         print(f"      ✅ Column '{column_name}' already exists in table '{table_name}' - skipping.")
 
 def safe_drop_column(table_name, column_name):
-    """Safely drop a column from a table if it exists."""
-    if column_exists(table_name, column_name):
-        print(f"      Dropping column '{column_name}' from table '{table_name}'...")
+    """Drop column if it exists with automatic temporary table cleanup"""
+    from migrations.postgres_helpers import clean_sqlite_temp_tables, is_sqlite
+
+    # Clean any leftover temp tables first
+    clean_sqlite_temp_tables()
+
+    inspector = sa.inspect(op.get_bind())
+    columns = [col['name'] for col in inspector.get_columns(table_name)]
+
+    if column_name not in columns:
+        print(f"      ℹ️ Column '{column_name}' does not exist in table '{table_name}', skipping drop.")
+        return
+
+    print(f"      Dropping column '{column_name}' from table '{table_name}'...")
+
+    try:
         with op.batch_alter_table(table_name, schema=None) as batch_op:
             batch_op.drop_column(column_name)
-        print(f"      ✅ Column '{column_name}' dropped from table '{table_name}'.")
-    else:
-        print(f"      ⚠️ Column '{column_name}' does not exist in table '{table_name}', skipping drop.")
+        print(f"      ✅ Column '{column_name}' dropped successfully from table '{table_name}'")
+    except Exception as e:
+        print(f"      ⚠️ Failed to drop column '{column_name}' from table '{table_name}': {e}")
+        # Clean up temp tables if SQLite operation failed
+        if is_sqlite():
+            clean_sqlite_temp_tables()
+        raise
 
 def safe_create_index(table_name, index_name, columns, unique=False):
     """Safely create an index only if it doesn't exist"""

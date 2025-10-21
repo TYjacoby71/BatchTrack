@@ -151,6 +151,28 @@ def run_migrations_online():
     connectable = get_engine()
 
     with connectable.connect() as connection:
+        # Clean up any leftover temporary tables from failed SQLite migrations
+        if 'sqlite' in str(connection.engine.url):
+            try:
+                # Get list of all temporary tables
+                result = connection.execute(text("""
+                    SELECT name FROM sqlite_master 
+                    WHERE type='table' AND name LIKE '_alembic_tmp_%'
+                """))
+                temp_tables = [row[0] for row in result.fetchall()]
+                
+                if temp_tables:
+                    logger.info(f"Cleaning up {len(temp_tables)} temporary tables from failed migrations")
+                    for table_name in temp_tables:
+                        try:
+                            connection.execute(text(f"DROP TABLE IF EXISTS {table_name}"))
+                            logger.info(f"   ✅ Cleaned up temporary table: {table_name}")
+                        except Exception as e:
+                            logger.warning(f"   ⚠️  Could not clean temporary table {table_name}: {e}")
+                    connection.commit()
+            except Exception as e:
+                logger.warning(f"Could not clean temporary tables: {e}")
+        
         context.configure(
             connection=connection,
             target_metadata=get_metadata(),

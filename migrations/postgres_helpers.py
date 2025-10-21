@@ -1,3 +1,120 @@
+
+"""
+PostgreSQL and SQLite migration helper utilities
+"""
+from sqlalchemy import text, inspect
+from alembic import op
+import logging
+
+logger = logging.getLogger('alembic.helpers')
+
+def is_sqlite():
+    """Check if we're running on SQLite"""
+    connection = op.get_bind()
+    return 'sqlite' in str(connection.engine.url)
+
+def is_postgresql():
+    """Check if we're running on PostgreSQL"""
+    connection = op.get_bind()
+    return 'postgresql' in str(connection.engine.url)
+
+def clean_sqlite_temp_tables():
+    """Clean up any leftover temporary tables from failed SQLite migrations"""
+    if not is_sqlite():
+        return
+        
+    connection = op.get_bind()
+    try:
+        # Get list of all temporary tables
+        result = connection.execute(text("""
+            SELECT name FROM sqlite_master 
+            WHERE type='table' AND name LIKE '_alembic_tmp_%'
+        """))
+        temp_tables = [row[0] for row in result.fetchall()]
+        
+        if temp_tables:
+            logger.info(f"🧹 Cleaning up {len(temp_tables)} temporary tables")
+            for table_name in temp_tables:
+                try:
+                    connection.execute(text(f"DROP TABLE IF EXISTS {table_name}"))
+                    logger.info(f"   ✅ Cleaned: {table_name}")
+                except Exception as e:
+                    logger.warning(f"   ⚠️  Failed to clean {table_name}: {e}")
+            connection.commit()
+    except Exception as e:
+        logger.warning(f"⚠️  Could not clean temporary tables: {e}")
+
+def safe_batch_alter_table(table_name, **kwargs):
+    """Safely alter a table with automatic temp table cleanup for SQLite"""
+    clean_sqlite_temp_tables()  # Clean before operation
+    
+    try:
+        with op.batch_alter_table(table_name, **kwargs) as batch_op:
+            yield batch_op
+    except Exception as e:
+        # If batch operation fails, clean up and re-raise
+        if is_sqlite():
+            logger.warning(f"Batch operation failed, cleaning temporary tables: {e}")
+            clean_sqlite_temp_tables()
+        raise
+
+def safe_drop_column(table_name, column_name):
+    """Safely drop a column with automatic cleanup"""
+    inspector = inspect(op.get_bind())
+    
+    # Check if column exists
+    columns = [col['name'] for col in inspector.get_columns(table_name)]
+    if column_name not in columns:
+        logger.info(f"   ℹ️  Column {column_name} doesn't exist in {table_name}, skipping")
+        return
+    
+    clean_sqlite_temp_tables()  # Clean before operation
+    
+    try:
+        with op.batch_alter_table(table_name, schema=None) as batch_op:
+            batch_op.drop_column(column_name)
+        logger.info(f"   ✅ Dropped {column_name} from {table_name}")
+    except Exception as e:
+        logger.warning(f"   ⚠️  Failed to drop {column_name} from {table_name}: {e}")
+        if is_sqlite():
+            clean_sqlite_temp_tables()
+        raise
+
+def safe_add_column(table_name, column_name, column_type, **kwargs):
+    """Safely add a column with automatic cleanup"""
+    inspector = inspect(op.get_bind())
+    
+    # Check if column already exists
+    columns = [col['name'] for col in inspector.get_columns(table_name)]
+    if column_name in columns:
+        logger.info(f"   ℹ️  Column {column_name} already exists in {table_name}, skipping")
+        return
+    
+    clean_sqlite_temp_tables()  # Clean before operation
+    
+    try:
+        with op.batch_alter_table(table_name, schema=None) as batch_op:
+            batch_op.add_column(op.Column(column_name, column_type, **kwargs))
+        logger.info(f"   ✅ Added {column_name} to {table_name}")
+    except Exception as e:
+        logger.warning(f"   ⚠️  Failed to add {column_name} to {table_name}: {e}")
+        if is_sqlite():
+            clean_sqlite_temp_tables()
+        raise
+
+def table_exists(table_name):
+    """Check if table exists"""
+    inspector = inspect(op.get_bind())
+    return table_name in inspector.get_table_names()
+
+def column_exists(table_name, column_name):
+    """Check if column exists in table"""
+    if not table_exists(table_name):
+        return False
+    inspector = inspect(op.get_bind())
+    columns = [col['name'] for col in inspector.get_columns(table_name)]
+    return column_name in columns
+
 """
 PostgreSQL migration helpers for safe database operations.
 
