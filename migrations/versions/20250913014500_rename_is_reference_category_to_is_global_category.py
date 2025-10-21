@@ -1,4 +1,3 @@
-
 """rename is_reference_category to is_global_category
 
 Revision ID: 20250913014500
@@ -41,7 +40,7 @@ def column_exists(table_name: str, column_name: str) -> bool:
 def upgrade():
     """Rename is_reference_category to is_global_category for clarity"""
     print("🔄 Renaming is_reference_category to is_global_category...")
-    
+
     if table_exists('ingredient_category'):
         # Add the new column
         if not column_exists('ingredient_category', 'is_global_category'):
@@ -81,22 +80,22 @@ def upgrade():
                 # Fallback: mark organization-scoped NULL as global
                 bind.execute(text("""
                     UPDATE ingredient_category 
-                    SET is_global_category = 1
+                    SET is_global_category = TRUE
                     WHERE organization_id IS NULL
                 """))
-    
+
     print("✅ Successfully renamed field to is_global_category")
 
 
 def downgrade():
     """Revert is_global_category back to is_reference_category"""
     print("🔄 Reverting is_global_category to is_reference_category...")
-    
+
     if table_exists('ingredient_category'):
         # Add the old column back
         if not column_exists('ingredient_category', 'is_reference_category'):
             op.add_column('ingredient_category', sa.Column('is_reference_category', sa.Boolean, default=False))
-            
+
         # Copy data back
         if column_exists('ingredient_category', 'is_global_category'):
             bind = op.get_bind()
@@ -105,8 +104,8 @@ def downgrade():
                 SET is_reference_category = is_global_category 
                 WHERE is_global_category IS NOT NULL
             """))
-            
+
             # Drop the new column
             op.drop_column('ingredient_category', 'is_global_category')
-    
+
     print("✅ Successfully reverted to is_reference_category")
