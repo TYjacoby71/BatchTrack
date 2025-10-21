@@ -1,17 +1,17 @@
 - name: Tests
-        run: pytest
+  run: pytest
 
-      - name: Check migration safety
-        run: |
-          # Verify no migration drift
-          export DATABASE_URL="sqlite:///test_ci.db"
-          flask db upgrade
-          flask db migrate -m "ci_check" --rev-id ci_test >/dev/null 2>&1 || true
+- name: Check migration safety
+  run: |
+    # Verify no migration drift
+    export DATABASE_URL="sqlite:///test_ci.db"
+    flask db upgrade
+    flask db migrate -m "ci_check" --rev-id ci_test >/dev/null 2>&1 || true
 
-          if [ -f "migrations/versions/*ci_test*.py" ]; then
-            echo "❌ Migration drift in CI - models changed without migration"
-            exit 1
-          fi
+    if compgen -G 'migrations/versions/*ci_test*.py' > /dev/null; then
+      echo "❌ Migration drift in CI - models changed without migration"
+      exit 1
+    fi
 
-          echo "✅ Migration safety confirmed"
-          rm -f test_ci.db
+    echo "✅ Migration safety confirmed"
+    rm -f test_ci.db
