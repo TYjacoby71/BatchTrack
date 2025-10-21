@@ -18,7 +18,7 @@ from .seeders.consolidated_permission_seeder import seed_consolidated_permission
 from .seeders.user_seeder import seed_users_and_organization
 
 # Import text from sqlalchemy for raw SQL execution
-from sqlalchemy import text
+from sqlalchemy import text, inspect
 
 @click.command('activate-users')
 @with_appcontext
@@ -84,6 +84,13 @@ def init_production_command():
                 print("     1) python fix_deployment_migration.py")
                 print("     2) flask db upgrade")
                 return
+
+        # Ensure schema is aligned with current models (adds any missing columns)
+        try:
+            print("🔧 Ensuring schema matches current models (adding any missing tables/columns)...")
+            sync_schema_command()
+        except Exception as e:
+            print(f"⚠️  Schema sync encountered an issue (continuing): {e}")
 
         # Essential system setup (STRICT DEPENDENCY ORDER)
         print("=== Step 1: System foundations (Organization Independent) ===")
