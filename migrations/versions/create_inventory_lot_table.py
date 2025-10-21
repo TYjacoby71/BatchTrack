@@ -9,7 +9,14 @@ from alembic import op
 import sqlalchemy as sa
 import sys, os
 sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
-from postgres_helpers import table_exists, index_exists, safe_create_index, ensure_unique_constraint_or_index, is_sqlite
+from postgres_helpers import (
+    table_exists,
+    index_exists,
+    safe_create_index,
+    ensure_unique_constraint_or_index,
+    is_sqlite,
+    safe_drop_index,
+)
 
 # revision identifiers
 revision = 'create_inventory_lot'
@@ -99,11 +106,15 @@ def upgrade():
 
 
 def downgrade():
-    # Drop indexes first
-    op.drop_index('idx_inventory_lot_organization')
-    op.drop_index('idx_inventory_lot_expiration')
-    op.drop_index('idx_inventory_lot_received_date')
-    op.drop_index('idx_inventory_lot_item_remaining')
+    # Drop indexes first (safe / IF EXISTS)
+    safe_drop_index('idx_inventory_lot_organization')
+    safe_drop_index('idx_inventory_lot_expiration')
+    safe_drop_index('idx_inventory_lot_received_date')
+    safe_drop_index('idx_inventory_lot_item_remaining')
 
     # Drop table
-    op.drop_table('inventory_lot')
+    try:
+        op.drop_table('inventory_lot')
+    except Exception:
+        # Best effort: ignore if missing
+        pass
