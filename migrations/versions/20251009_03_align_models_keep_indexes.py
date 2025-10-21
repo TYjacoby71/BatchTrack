@@ -23,7 +23,8 @@ from postgres_helpers import (
     column_exists,
     index_exists,
     safe_create_index,
-    safe_add_column
+    safe_add_column,
+    is_postgresql,
 )
 
 revision = '20251009_3'
@@ -53,7 +54,8 @@ def upgrade():
         if table_exists('product_category'):
             try:
                 bind = op.get_bind()
-                bind.execute(text("CREATE UNIQUE INDEX IF NOT EXISTS ix_product_category_lower_name ON product_category (lower(name::text))"))
+                # Use dialect-safe expression (avoid ::text cast)
+                bind.execute(text("CREATE UNIQUE INDEX IF NOT EXISTS ix_product_category_lower_name ON product_category (lower(name))"))
                 print("   ✅ Created product category functional index")
             except Exception as e:
                 print(f"   ⚠️  Product category index creation failed: {e}")
@@ -114,12 +116,14 @@ def upgrade():
                 safe_create_index(ix, 'recipe', [col], verbose=True)
 
             # JSON/GIN index
-            try:
-                bind = op.get_bind()
-                bind.execute(text("CREATE INDEX IF NOT EXISTS ix_recipe_category_data_gin ON recipe USING GIN ((category_data::jsonb))"))
-                print("   ✅ Created recipe GIN index")
-            except Exception as e:
-                print(f"   ⚠️  Recipe GIN index creation failed: {e}")
+            # Create JSONB GIN index only on PostgreSQL
+            if is_postgresql():
+                try:
+                    bind = op.get_bind()
+                    bind.execute(text("CREATE INDEX IF NOT EXISTS ix_recipe_category_data_gin ON recipe USING GIN ((category_data::jsonb))"))
+                    print("   ✅ Created recipe GIN index")
+                except Exception as e:
+                    print(f"   ⚠️  Recipe GIN index creation failed: {e}")
 
         # 5) Batch computed columns and indexes
         print("   Processing batch computed columns...")
@@ -230,15 +234,16 @@ def upgrade():
         if table_exists('global_item_alias'):
             safe_create_index('ix_global_item_alias_alias', 'global_item_alias', ['alias'], verbose=True)
             safe_create_index('ix_global_item_alias_global_item_id', 'global_item_alias', ['global_item_id'], verbose=True)
-            try:
-                bind = op.get_bind()
-                bind.execute(text("CREATE INDEX IF NOT EXISTS ix_global_item_alias_tsv ON global_item_alias USING GIN (to_tsvector('simple', alias))"))
-                print("   ✅ Created global_item_alias GIN index")
-            except Exception as e:
-                print(f"   ⚠️  Global item alias GIN index creation failed: {e}")
+            if is_postgresql():
+                try:
+                    bind = op.get_bind()
+                    bind.execute(text("CREATE INDEX IF NOT EXISTS ix_global_item_alias_tsv ON global_item_alias USING GIN (to_tsvector('simple', alias))"))
+                    print("   ✅ Created global_item_alias GIN index")
+                except Exception as e:
+                    print(f"   ⚠️  Global item alias GIN index creation failed: {e}")
 
         # 8) GlobalItem aka_names JSON/GIN
-        if table_exists('global_item'):
+        if table_exists('global_item') and is_postgresql():
             try:
                 bind = op.get_bind()
                 bind.execute(text("CREATE INDEX IF NOT EXISTS ix_global_item_aka_gin ON global_item USING GIN ((aka_names::jsonb))"))
