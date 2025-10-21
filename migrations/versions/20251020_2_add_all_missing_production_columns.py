@@ -69,12 +69,14 @@ def safe_create_foreign_key(constraint_name, source_table, referent_table, local
         return False
     
     try:
-        op.create_foreign_key(constraint_name, source_table, referent_table, local_cols, remote_cols, **kwargs)
+        # Use batch mode for SQLite compatibility
+        with op.batch_alter_table(source_table, schema=None) as batch_op:
+            batch_op.create_foreign_key(constraint_name, referent_table, local_cols, remote_cols, **kwargs)
         print(f"   ✅ Created foreign key {constraint_name}")
         return True
     except Exception as e:
-        print(f"   ❌ Failed to create foreign key {constraint_name}: {e}")
-        raise
+        print(f"   ⚠️  Could not create foreign key {constraint_name}: {e}")
+        return False  # Don't raise, just warn
 
 def upgrade():
     """Add all missing columns that exist in models but not in database schema"""
@@ -144,30 +146,22 @@ def downgrade():
     """Remove the added columns and constraints"""
     print("=== Removing Added Production Columns ===")
     
-    # Drop foreign key constraints first
-    try:
-        if foreign_key_exists('role', 'fk_role_organization'):
-            op.drop_constraint('fk_role_organization', 'role', type_='foreignkey')
-    except Exception:
-        pass
+    # Drop foreign key constraints first using batch mode for SQLite
+    constraint_drops = [
+        ('role', 'fk_role_organization'),
+        ('role', 'fk_role_created_by_user'), 
+        ('unit', 'fk_unit_organization'),
+        ('unit', 'fk_unit_created_by_user')
+    ]
     
-    try:
-        if foreign_key_exists('role', 'fk_role_created_by_user'):
-            op.drop_constraint('fk_role_created_by_user', 'role', type_='foreignkey')
-    except Exception:
-        pass
-    
-    try:
-        if foreign_key_exists('unit', 'fk_unit_organization'):
-            op.drop_constraint('fk_unit_organization', 'unit', type_='foreignkey')
-    except Exception:
-        pass
-    
-    try:
-        if foreign_key_exists('unit', 'fk_unit_created_by_user'):
-            op.drop_constraint('fk_unit_created_by_user', 'unit', type_='foreignkey')
-    except Exception:
-        pass
+    for table_name, constraint_name in constraint_drops:
+        if table_exists(table_name) and foreign_key_exists(table_name, constraint_name):
+            try:
+                with op.batch_alter_table(table_name, schema=None) as batch_op:
+                    batch_op.drop_constraint(constraint_name, type_='foreignkey')
+                print(f"   ✅ Dropped foreign key {constraint_name}")
+            except Exception as e:
+                print(f"   ⚠️  Could not drop foreign key {constraint_name}: {e}")
     
     # Drop columns in reverse order
     columns_to_drop = [

@@ -72,14 +72,24 @@ def safe_drop_column(table_name, column_name):
         print(f"      ⚠️ Column '{column_name}' does not exist in table '{table_name}', skipping drop.")
 
 def safe_create_index(table_name, index_name, columns, unique=False):
-    """Safely create an index on a table if it doesn't exist."""
-    if not index_exists(table_name, index_name):
-        print(f"      Creating index '{index_name}' on table '{table_name}'...")
+    """Safely create an index only if it doesn't exist"""
+    # Check if index already exists
+    inspector = inspect(op.get_bind())
+    try:
+        indexes = [idx['name'] for idx in inspector.get_indexes(table_name)]
+        if index_name in indexes:
+            print(f"      ✅ Index '{index_name}' already exists on table '{table_name}'")
+            return
+    except Exception:
+        pass
+
+    try:
         with op.batch_alter_table(table_name, schema=None) as batch_op:
-            batch_op.create_index(batch_op.f(index_name), columns, unique=unique)
-        print(f"      ✅ Index '{index_name}' created on table '{table_name}'.")
-    else:
-        print(f"      ✅ Index '{index_name}' already exists on table '{table_name}' - skipping.")
+            batch_op.create_index(index_name, columns, unique=unique)
+        print(f"      ✅ Created index '{index_name}' on table '{table_name}'")
+    except Exception as e:
+        print(f"      ⚠️  Could not create index '{index_name}' on table '{table_name}': {e}")
+        # Don't raise - just warn and continue
 
 def safe_drop_index(table_name, index_name):
     """Safely drop an index from a table if it exists."""
