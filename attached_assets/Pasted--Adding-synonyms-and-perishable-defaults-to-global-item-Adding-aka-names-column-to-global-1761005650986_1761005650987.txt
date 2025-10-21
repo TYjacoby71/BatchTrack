@@ -1,0 +1,1004 @@
+=== Adding synonyms and perishable defaults to global_item ===
+   Adding aka_names column to global_item...
+   ✅ Added aka_names column to global_item
+   Adding default_is_perishable column to global_item...
+   ✅ Added default_is_perishable column to global_item
+   Adding default_days_until_expiration column to global_item...
+   ✅ Added default_days_until_expiration column to global_item
+✅ GlobalItem synonyms and perishables migration completed
+INFO  [alembic.runtime.migration] Running upgrade 20250904_02 -> 20250904_03, Set ON DELETE SET NULL for inventory_item.global_item_id
+INFO  [alembic.runtime.migration] Running upgrade 20250904_03 -> 20250904_04, Add missing inventory_category_id column to inventory_item table
+Creating inventory_category table and adding inventory_category_id column...
+   Creating inventory_category table...
+   ✅ Created inventory_category table
+   Adding inventory_category_id column...
+   ✅ Added inventory_category_id column
+   Adding foreign key constraint...
+   ⚠️  Could not add foreign key constraint: No support for ALTER of constraints in SQLite dialect. Please refer to the batch mode feature which allows for SQLite migrations using a copy-and-move strategy.
+   Adding index for inventory_category_id...
+   ✅ Added index for inventory_category_id
+✅ Migration completed
+INFO  [alembic.runtime.migration] Running upgrade 20250904_04 -> 20250904_04a, Add reference_category to global_item
+INFO  [alembic.runtime.migration] Running upgrade 20250904_04a -> 20250905_01, Add soft-delete fields to global_item and ownership to inventory_item
+Starting global_item soft-delete and inventory_item ownership migration...
+Adding soft-delete columns to global_item...
+  Adding is_archived column...
+  Adding archived_at column...
+  Adding archived_by column...
+  Creating index on is_archived...
+Adding ownership column to inventory_item...
+  Adding ownership column...
+  Creating index on ownership...
+  Backfilling ownership values...
+    All inventory items already have ownership values
+✅ Migration completed successfully!
+INFO  [alembic.runtime.migration] Running upgrade 20250905_01 -> 20250906_01, Add foreign key from global_item to ingredient_category
+=== Adding ingredient_category_id to global_item ===
+   Adding ingredient_category_id column...
+   ✅ Added ingredient_category_id column
+   Adding index...
+   ✅ Added index
+   Adding foreign key constraint...
+   ✅ Added foreign key constraint
+✅ Migration completed successfully
+INFO  [alembic.runtime.migration] Running upgrade 20250906_01 -> 2025090502, Add consumables tables for recipes and batches
+=== Adding consumables tables ===
+   Creating recipe_consumable table...
+   ✅ Created recipe_consumable table
+   Creating batch_consumable table...
+   ✅ Created batch_consumable table
+   Creating extra_batch_consumable table...
+   ✅ Created extra_batch_consumable table
+✅ Consumables migration completed successfully
+INFO  [alembic.runtime.migration] Running upgrade 2025090502 -> 20250908_01, Add organization_id column to recipe_consumable table
+   Adding organization_id column to recipe_consumable...
+Warning: Could not add organization_id to recipe_consumable: No support for ALTER of constraints in SQLite dialect. Please refer to the batch mode feature which allows for SQLite migrations using a copy-and-move strategy.
+INFO  [alembic.runtime.migration] Running upgrade 20250908_01 -> 20250911_01, cleanup redundant category fields
+🧹 Cleaning up redundant category fields...
+   Updating global_item.reference_category from category relationships...
+   ✅ Updated reference_category from category relationships
+   ℹ️  reference_category_name column doesn't exist - skipping
+   Ensuring all global items have reference_category values...
+   ✅ Set default reference_category values
+✅ Category field cleanup completed
+INFO  [alembic.runtime.migration] Running upgrade 20250911_01 -> 20250911_02, Add reference_category field to global_item table
+⚠️ reference_category column already exists, skipping
+✅ Created index on reference_category
+INFO  [alembic.runtime.migration] Running upgrade 20250911_02 -> 20250911_03, Remove reference_category field from global_item table
+✅ Removed reference_category field from global_item table
+INFO  [alembic.runtime.migration] Running upgrade 20250911_03 -> 20250911_04, Add missing timestamp columns to ingredient_category
+   Adding created_at column to ingredient_category...
+✅ Added created_at column to ingredient_category
+   Adding updated_at column to ingredient_category...
+✅ Added updated_at column to ingredient_category
+INFO  [alembic.runtime.migration] Running upgrade 20250911_04 -> 20250911_05, Add missing timestamp columns to global_item
+   Adding created_at column to global_item...
+✅ Added created_at column to global_item
+   Adding updated_at column to global_item...
+✅ Added updated_at column to global_item
+INFO  [alembic.runtime.migration] Running upgrade 20250911_05 -> 20250911_06, Fix inventory item name constraint to be organization-scoped
+=== FIXING INVENTORY ITEM NAME CONSTRAINTS ===
+1. Checking for old inventory_item_name_key constraint...
+   ✅ Old constraint doesn't exist - skipping
+2. Checking for organization+name constraint...
+   Creating organization+name unique constraint...
+   ⚠️  Error creating constraint: No support for ALTER of constraints in SQLite dialect. Please refer to the batch mode feature which allows for SQLite migrations using a copy-and-move strategy.
+3. Ensuring proper indexes...
+   Creating name index...
+   ✅ Created name index
+   ✅ Organization_id index already exists
+=== INVENTORY CONSTRAINT FIX COMPLETE ===
+INFO  [alembic.runtime.migration] Running upgrade 20250911_06 -> 20250913014500, rename is_reference_category to is_global_category
+🔄 Renaming is_reference_category to is_global_category...
+   Adding is_global_category column...
+   Setting default values for global categories...
+✅ Successfully renamed field to is_global_category
+INFO  [alembic.runtime.migration] Running upgrade 20250913014500 -> 20250912_01, Add domain_event and freshness_snapshot tables
+=== Creating domain_event and freshness_snapshot tables ===
+   Creating domain_event table...
+   ✅ domain_event table created
+   Creating index ix_domain_event_event_name...
+   ✅ Created index ix_domain_event_event_name
+   Creating index ix_domain_event_occurred_at...
+   ✅ Created index ix_domain_event_occurred_at
+   Creating index ix_domain_event_org...
+   ✅ Created index ix_domain_event_org
+   Creating index ix_domain_event_user...
+   ✅ Created index ix_domain_event_user
+   Creating index ix_domain_event_entity...
+   ✅ Created index ix_domain_event_entity
+   Creating index ix_domain_event_is_processed...
+   ✅ Created index ix_domain_event_is_processed
+   Creating index ix_domain_event_correlation_id...
+   ✅ Created index ix_domain_event_correlation_id
+   Creating freshness_snapshot table...
+   ✅ freshness_snapshot table created
+   Creating index ix_freshness_snapshot_date...
+   ✅ Created index ix_freshness_snapshot_date
+   Creating index ix_freshness_snapshot_org...
+   ✅ Created index ix_freshness_snapshot_org
+   Creating index ix_freshness_snapshot_item...
+   ✅ Created index ix_freshness_snapshot_item
+   Checking for unique constraint uq_freshness_snapshot_unique...
+   Creating unique constraint uq_freshness_snapshot_unique...
+   ⚠️  Could not create unique constraint: No support for ALTER of constraints in SQLite dialect. Please refer to the batch mode feature which allows for SQLite migrations using a copy-and-move strategy.
+✅ Domain event and freshness snapshot migration completed
+INFO  [alembic.runtime.migration] Running upgrade 20250912_01 -> d953779b55a3, empty message
+=== Creating storage and retention tables ===
+   Creating storage_addon_purchase table...
+   ✅ storage_addon_purchase table created
+   Creating storage_addon_subscription table...
+   ✅ storage_addon_subscription table created
+   Creating retention_deletion_queue table...
+   ✅ retention_deletion_queue table created
+      ⚠️ Index 'idx_batch_stats_org' does not exist on table 'batch_stats', skipping drop.
+      ⚠️ Index 'idx_batch_stats_recipe' does not exist on table 'batch_stats', skipping drop.
+      ⚠️ Index 'ix_domain_event_entity' does not exist on table 'domain_event', skipping drop.
+      ⚠️ Index 'ix_domain_event_org' does not exist on table 'domain_event', skipping drop.
+      ⚠️ Index 'ix_domain_event_user' does not exist on table 'domain_event', skipping drop.
+      Creating index 'ix_domain_event_entity_id' on table 'domain_event'...
+      ✅ Index 'ix_domain_event_entity_id' created on table 'domain_event'.
+      Creating index 'ix_domain_event_entity_type' on table 'domain_event'...
+      ✅ Index 'ix_domain_event_entity_type' created on table 'domain_event'.
+      Creating index 'ix_domain_event_organization_id' on table 'domain_event'...
+      ✅ Index 'ix_domain_event_organization_id' created on table 'domain_event'.
+      Creating index 'ix_domain_event_user_id' on table 'domain_event'...
+      ✅ Index 'ix_domain_event_user_id' created on table 'domain_event'.
+      ⚠️ Index 'ix_freshness_snapshot_date' does not exist on table 'freshness_snapshot', skipping drop.
+      ⚠️ Index 'ix_freshness_snapshot_item' does not exist on table 'freshness_snapshot', skipping drop.
+      ⚠️ Index 'ix_freshness_snapshot_org' does not exist on table 'freshness_snapshot', skipping drop.
+      Creating index 'ix_freshness_snapshot_inventory_item_id' on table 'freshness_snapshot'...
+      ✅ Index 'ix_freshness_snapshot_inventory_item_id' created on table 'freshness_snapshot'.
+      Creating index 'ix_freshness_snapshot_organization_id' on table 'freshness_snapshot'...
+      ✅ Index 'ix_freshness_snapshot_organization_id' created on table 'freshness_snapshot'.
+      Creating index 'ix_freshness_snapshot_snapshot_date' on table 'freshness_snapshot'...
+      ✅ Index 'ix_freshness_snapshot_snapshot_date' created on table 'freshness_snapshot'.
+      ⚠️ Index 'ix_global_item_is_archived' does not exist on table 'global_item', skipping drop.
+      Dropping foreign key for column 'archived_by' from table 'global_item'...
+      ⚠️ Foreign key for column 'archived_by' does not exist on table 'global_item', skipping drop.
+      ✅ Column 'archived_by' already exists in table 'global_item' - skipping.
+      Creating foreign key constraint for archived_by column...
+      ✅ Foreign key constraint created for archived_by column.
+      Dropping column 'suggested_inventory_category_id' from table 'global_item'...
+      ✅ Column 'suggested_inventory_category_id' dropped from table 'global_item'.
+      ⚠️ Index 'idx_change_log_item_date' does not exist on table 'inventory_change_log', skipping drop.
+      ⚠️ Index 'idx_change_log_type_date' does not exist on table 'inventory_change_log', skipping drop.
+      ⚠️ Index 'idx_inventory_efficiency_org' does not exist on table 'inventory_efficiency_stats', skipping drop.
+      ⚠️ Index 'ix_inventory_item_inventory_category_id' does not exist on table 'inventory_item', skipping drop.
+      ✅ Column 'created_at' already exists in table 'recipe' - skipping.
+      ✅ Column 'updated_at' already exists in table 'recipe' - skipping.
+      ⚠️ Index 'ix_recipe_consumable_organization_id' does not exist on table 'recipe_consumable', skipping drop.
+      ⚠️ Index 'idx_recipe_stats_org' does not exist on table 'recipe_stats', skipping drop.
+      Adding column 'data_retention_days' to table 'subscription_tier'...
+      ✅ Column 'data_retention_days' added to table 'subscription_tier'.
+      Adding column 'retention_notice_days' to table 'subscription_tier'...
+      ✅ Column 'retention_notice_days' added to table 'subscription_tier'.
+      Adding column 'storage_addon_retention_days' to table 'subscription_tier'...
+      ✅ Column 'storage_addon_retention_days' added to table 'subscription_tier'.
+      Adding column 'stripe_storage_lookup_key' to table 'subscription_tier'...
+      ✅ Column 'stripe_storage_lookup_key' added to table 'subscription_tier'.
+      Creating index 'uq_subscription_tier_stripe_storage_lookup_key' on table 'subscription_tier'...
+      ✅ Index 'uq_subscription_tier_stripe_storage_lookup_key' created on table 'subscription_tier'.
+      ⚠️ Index 'ix_user_organization_id' does not exist on table 'user', skipping drop.
+   ✅ stripe_event table already exists - skipping creation
+INFO  [alembic.runtime.migration] Running upgrade d953779b55a3 -> 20250922_01_align_extras, Align naming for extras and ensure consumable tables and indexes exist
+   ✅ Created index ix_batch_consumable_batch_id on batch_consumable
+   ✅ Created index ix_batch_consumable_inventory_item_id on batch_consumable
+   ⚠️  Column organization_id does not exist in batch_consumable - skipping index ix_batch_consumable_organization_id
+   ✅ Created index ix_extra_batch_consumable_batch_id on extra_batch_consumable
+   ✅ Created index ix_extra_batch_consumable_inventory_item_id on extra_batch_consumable
+   ✅ Created index ix_extra_batch_consumable_organization_id on extra_batch_consumable
+INFO  [alembic.runtime.migration] Running upgrade 20250922_01_align_extras -> 20250922_02, Add inventory cost method toggle and valuation method fields
+=== Adding inventory cost method toggle and valuation method fields ===
+Adding inventory_cost_method to organization...
+✅ Added inventory_cost_method column
+Adding inventory_cost_method_changed_at to organization...
+✅ Added inventory_cost_method_changed_at column
+Adding valuation_method to unified_inventory_history...
+✅ Added valuation_method column
+Adding cost_method to batch...
+✅ Added cost_method column
+Adding cost_method_locked_at to batch...
+✅ Added cost_method_locked_at column
+✅ Inventory cost method migration completed
+INFO  [alembic.runtime.migration] Running upgrade 20250922_02 -> 20250923_01, Create product_category table
+=== Creating product_category table ===
+Creating product_category table...
+✅ Created product_category table
+   ✅ Created index ix_product_category_organization_id on product_category
+   ✅ Created index ix_product_category_name on product_category
+✅ Product category migration completed
+INFO  [alembic.runtime.migration] Running upgrade 20250923_01 -> 20250923_02, Add category_id to product and recipe, backfill to Uncategorized, set NOT NULL
+Starting product and recipe category migration...
+Adding category_id column to product table...
+Adding category_id column to recipe table...
+Backfilling product category_id values...
+Found 0 products with NULL category_id
+Backfilling recipe category_id values...
+Found 0 recipes with NULL category_id
+Adding constraints to product table...
+Created foreign key fk_product_category
+Created index ix_product_category_id
+Set product.category_id to NOT NULL
+Adding constraints to recipe table...
+Created foreign key fk_recipe_category
+Created index ix_recipe_category_id
+Set recipe.category_id to NOT NULL
+✅ Product and recipe category migration completed successfully!
+INFO  [alembic.runtime.migration] Running upgrade 20250923_02 -> 20250923_03, Add portioning_data JSON to recipe and batch
+Added portioning_data column to recipe table
+Added portioning_data column to batch table
+INFO  [alembic.runtime.migration] Running upgrade 20250923_03 -> 20250923_04, Add sku_name_template to product_category
+   ✅ sku_name_template column added successfully
+INFO  [alembic.runtime.migration] Running upgrade 20250923_04 -> 20250924_01, Drop Product.base_unit column
+INFO  [alembic.runtime.migration] Running upgrade 20250924_01 -> 20250925_01, Add portion columns to recipe and batch: is_portioned, portion_name, counts
+Added column is_portioned to recipe
+Added column portion_name to recipe
+Added column counts to recipe
+Added column is_portioned to batch
+Added column portion_name to batch
+Added column counts to batch
+INFO  [alembic.runtime.migration] Running upgrade 20250925_01 -> 20250925_02, Add plan_snapshot JSON to batch
+Added column plan_snapshot to batch
+INFO  [alembic.runtime.migration] Running upgrade 20250925_02 -> 20250925_03, Add portion_unit_id FK to recipe and batch
+Added column portion_unit_id to recipe
+Added column portion_unit_id to batch
+INFO  [alembic.runtime.migration] Running upgrade 20250925_03 -> 20250925_04, Add container structured attributes to inventory_item and global_item
+Added column container_material to inventory_item
+Added column container_volume to inventory_item
+Added column container_volume_unit to inventory_item
+Added column container_dimensions to inventory_item
+Added column container_color to inventory_item
+Added column container_closure_type to inventory_item
+Added column container_shape to inventory_item
+Added column container_style to inventory_item
+Added column container_material to global_item
+Added column container_volume to global_item
+Added column container_volume_unit to global_item
+Added column container_dimensions to global_item
+Added column container_color to global_item
+Added column container_closure_type to global_item
+Added column container_shape to global_item
+Added column container_style to global_item
+INFO  [alembic.runtime.migration] Running upgrade 20250925_04 -> 20250930_1, Add global_item_alias table and performance indexes
+=== Adding alias table and performance indexes ===
+   Creating global_item_alias table...
+   ✅ global_item_alias table created
+   ⚠️  Could not create GIN index - non-Postgres or already exists
+   ⚠️  Could not backfill aliases - JSON functions unsupported
+   Creating index ix_inventory_item_org on inventory_item.organization_id...
+   ✅ Created index ix_inventory_item_org
+   Creating index ix_inventory_lot_org on inventory_lot.organization_id...
+   ✅ Created index ix_inventory_lot_org
+   Creating index ix_unified_history_org on unified_inventory_history.organization_id...
+   ✅ Created index ix_unified_history_org
+   Creating index ix_recipe_org on recipe.organization_id...
+   ✅ Created index ix_recipe_org
+   Creating index ix_batch_org on batch.organization_id...
+   ✅ Created index ix_batch_org
+   Creating index ix_user_org on user.organization_id...
+   ✅ Created index ix_user_org
+   ⚠️  Could not create JSONB GIN index - non-Postgres or already exists
+✅ Alias and indexes migration completed
+INFO  [alembic.runtime.migration] Running upgrade 20250930_1 -> 20250930_2, Add soap making and cosmetic formulation attributes to inventory items
+=== Adding soap making and cosmetic formulation fields to inventory items ===
+Processing inventory_item table...
+  ✅ Added saponification_value to inventory_item
+  ✅ Added iodine_value to inventory_item
+  ✅ Added melting_point_c to inventory_item
+  ✅ Added flash_point_c to inventory_item
+  ✅ Added ph_value to inventory_item
+  ✅ Added moisture_content_percent to inventory_item
+  ✅ Added shelf_life_months to inventory_item
+  ✅ Added comedogenic_rating to inventory_item
+✅ Soap making and cosmetic formulation fields migration completed successfully
+INFO  [alembic.runtime.migration] Running upgrade 20250930_2 -> 20250930_3, Add soap making and cosmetic formulation attributes to global_item table
+=== Adding soap making and cosmetic formulation fields to global_item ===
+Processing global_item table...
+  ✅ Added saponification_value to global_item
+  ✅ Added iodine_value to global_item
+  ✅ Added melting_point_c to global_item
+  ✅ Added flash_point_c to global_item
+  ✅ Added ph_value to global_item
+  ✅ Added moisture_content_percent to global_item
+  ✅ Added shelf_life_months to global_item
+  ✅ Added comedogenic_rating to global_item
+✅ Soap making and cosmetic formulation fields migration for global_item completed successfully
+INFO  [alembic.runtime.migration] Running upgrade 20250930_3 -> 20250930_4, Add visibility control fields for soap-making attributes to ingredient categories
+=== Adding visibility control fields to ingredient_category ===
+   ✅ show_saponification_value column added successfully
+   ✅ show_iodine_value column added successfully
+   ✅ show_melting_point column added successfully
+   ✅ show_flash_point column added successfully
+   ✅ show_ph_value column added successfully
+   ✅ show_moisture_content column added successfully
+   ✅ show_shelf_life_months column added successfully
+   ✅ show_comedogenic_rating column added successfully
+✅ Visibility control fields migration completed
+INFO  [alembic.runtime.migration] Running upgrade 20250930_4 -> 20250930_5, Set default visibility flags for global ingredient categories
+Setting visibility defaults for global ingredient categories from JSON files...
+   ⚠️  Category 'Miscellaneous' not found in database
+   ⚠️  Category 'Salts & Minerals (Crystalline)' not found in database
+   ⚠️  Category 'Essential Oils' not found in database
+   ⚠️  Category 'Extracts & Alcohols (Solvents)' not found in database
+   ⚠️  Category 'Liquids (Aqueous)' not found in database
+   ⚠️  Category 'Waxes' not found in database
+   ⚠️  Category 'Fruits, Nuts & Seeds (Whole/Chopped)' not found in database
+   ⚠️  Category 'Herbs & Spices (Dried & Ground)' not found in database
+   ⚠️  Category 'Active Ingredients (Cosmetics)' not found in database
+   ⚠️  Category 'Flours & Powders (Organic)' not found in database
+   ⚠️  Category 'Starches & Thickeners' not found in database
+   ⚠️  Category 'Botanicals (Dried & Whole/Parts)' not found in database
+   ⚠️  Category 'Butters & Solid Fats' not found in database
+   ⚠️  Category 'Sugars & Syrups' not found in database
+   ⚠️  Category 'Preservatives & Additives' not found in database
+   ⚠️  Category 'Yeast & Cultures' not found in database
+   ⚠️  Category 'Fragrance Oils' not found in database
+   ⚠️  Category 'Colorants (Pigments)' not found in database
+   ⚠️  Category 'Oils (Carrier & Fixed)' not found in database
+   ⚠️  Category 'Surfactants & Emulsifiers' not found in database
+   ⚠️  Category 'Clays' not found in database
+✅ Category visibility defaults set successfully!
+INFO  [alembic.runtime.migration] Running upgrade 20250930_5 -> 20251001_1, add addon models and tier allowed addons
+=== Adding addon table and tier allowed addons ===
+Creating addon table...
+✅ Created addon table
+   ✅ allowed_addon_keys column added successfully
+✅ Addon models and tier allowed addons migration completed
+INFO  [alembic.runtime.migration] Running upgrade 20251001_1 -> 20251001_2, add function_key and retention_extension_days to addon
+=== Adding function_key and retention_extension_days to addon ===
+   ✅ function_key column already exists - skipping
+   ✅ retention_extension_days column already exists - skipping
+✅ Addon fields migration completed
+INFO  [alembic.runtime.migration] Running upgrade 20251001_2 -> 20251006_1, Add category_data JSON column to recipe table
+INFO  [alembic.runtime.migration] Running upgrade 20251006_1 -> 20251006_2, Add ui_config JSON column to product_category
+INFO  [alembic.runtime.migration] Running upgrade 20251006_2 -> 20251008_1, Add generated columns for hot recipe fields and basic indexes
+INFO  [alembic.runtime.migration] Running upgrade 20251008_1 -> 20251008_2, Add generated columns for hot batch fields (from plan_snapshot.category_extension) and indexes
+INFO  [alembic.runtime.migration] Running upgrade 20251008_2 -> 20251008_3, Add optional GIN index on recipe.category_data for ad-hoc queries
+INFO  [alembic.runtime.migration] Running upgrade 20251008_3 -> 20251009_1, Add missing retention policy columns to subscription_tier
+=== Adding missing retention policy columns to subscription_tier ===
+   ✅ retention_policy column added successfully
+   ℹ️  data_retention_days column already exists - skipping
+   ℹ️  retention_notice_days column already exists - skipping
+   ℹ️  storage_addon_retention_days column already exists - skipping
+   ℹ️  tier_type column already exists - skipping
+   ℹ️  billing_provider column already exists - skipping
+   ℹ️  stripe_lookup_key column already exists - skipping
+   ℹ️  stripe_storage_lookup_key column already exists - skipping
+   ℹ️  whop_product_key column already exists - skipping
+✅ Migration completed - 9/9 columns processed
+INFO  [alembic.runtime.migration] Running upgrade 20251009_1 -> 20251009_2, Repair keep-list indexes/tables and add tier_included_addon
+INFO  [alembic.runtime.migration] Running upgrade 20251009_2 -> 20251009_3, Align models to own keep-list indexes, projections, and association table
+=== Starting model alignment with PostgreSQL safety ===
+   Creating org-scoping indexes...
+   ⚠️  Error creating index ix_user_org: (sqlite3.OperationalError) index ix_user_org already exists
+[SQL: CREATE INDEX ix_user_org ON user (organization_id)]
+(Background on this error at: https://sqlalche.me/e/20/e3q8)
+   ⚠️  Error creating index ix_inventory_item_org: (sqlite3.OperationalError) index ix_inventory_item_org already exists
+[SQL: CREATE INDEX ix_inventory_item_org ON inventory_item (organization_id)]
+(Background on this error at: https://sqlalche.me/e/20/e3q8)
+   ⚠️  Error creating index ix_inventory_lot_org: (sqlite3.OperationalError) index ix_inventory_lot_org already exists
+[SQL: CREATE INDEX ix_inventory_lot_org ON inventory_lot (organization_id)]
+(Background on this error at: https://sqlalche.me/e/20/e3q8)
+   ⚠️  Error creating index ix_unified_history_org: (sqlite3.OperationalError) index ix_unified_history_org already exists
+[SQL: CREATE INDEX ix_unified_history_org ON unified_inventory_history (organization_id)]
+(Background on this error at: https://sqlalche.me/e/20/e3q8)
+   ⚠️  Error creating index ix_recipe_org: (sqlite3.OperationalError) index ix_recipe_org already exists
+[SQL: CREATE INDEX ix_recipe_org ON recipe (organization_id)]
+(Background on this error at: https://sqlalche.me/e/20/e3q8)
+   ⚠️  Error creating index ix_batch_org: (sqlite3.OperationalError) index ix_batch_org already exists
+[SQL: CREATE INDEX ix_batch_org ON batch (organization_id)]
+(Background on this error at: https://sqlalche.me/e/20/e3q8)
+   Creating product category indexes...
+   ⚠️  Product category index creation failed: (sqlite3.OperationalError) unrecognized token: ":"
+[SQL: CREATE UNIQUE INDEX IF NOT EXISTS ix_product_category_lower_name ON product_category (lower(name::text))]
+(Background on this error at: https://sqlalche.me/e/20/e3q8)
+   ⚠️  Error creating index ix_product_category_id: (sqlite3.OperationalError) index ix_product_category_id already exists
+[SQL: CREATE INDEX ix_product_category_id ON product (category_id)]
+(Background on this error at: https://sqlalche.me/e/20/e3q8)
+   Processing recipe computed columns...
+   ✅ Column recipe.soap_superfat already exists
+   ✅ Column recipe.soap_water_pct already exists
+   ✅ Column recipe.soap_lye_type already exists
+   ✅ Column recipe.candle_fragrance_pct already exists
+   ✅ Column recipe.candle_vessel_ml already exists
+   ✅ Column recipe.vessel_fill_pct already exists
+   ✅ Column recipe.baker_base_flour_g already exists
+   ✅ Column recipe.baker_water_pct already exists
+   ✅ Column recipe.baker_salt_pct already exists
+   ✅ Column recipe.baker_yeast_pct already exists
+   ✅ Column recipe.cosm_emulsifier_pct already exists
+   ✅ Column recipe.cosm_preservative_pct already exists
+   ⚠️  Error creating index ix_recipe_category_id: (sqlite3.OperationalError) index ix_recipe_category_id already exists
+[SQL: CREATE INDEX ix_recipe_category_id ON recipe (category_id)]
+(Background on this error at: https://sqlalche.me/e/20/e3q8)
+   ⚠️  Error creating index ix_recipe_soap_superfat: (sqlite3.OperationalError) index ix_recipe_soap_superfat already exists
+[SQL: CREATE INDEX ix_recipe_soap_superfat ON recipe (soap_superfat)]
+(Background on this error at: https://sqlalche.me/e/20/e3q8)
+   ⚠️  Error creating index ix_recipe_soap_water_pct: (sqlite3.OperationalError) index ix_recipe_soap_water_pct already exists
+[SQL: CREATE INDEX ix_recipe_soap_water_pct ON recipe (soap_water_pct)]
+(Background on this error at: https://sqlalche.me/e/20/e3q8)
+   ⚠️  Error creating index ix_recipe_soap_lye_type: (sqlite3.OperationalError) index ix_recipe_soap_lye_type already exists
+[SQL: CREATE INDEX ix_recipe_soap_lye_type ON recipe (soap_lye_type)]
+(Background on this error at: https://sqlalche.me/e/20/e3q8)
+   ⚠️  Error creating index ix_recipe_candle_fragrance_pct: (sqlite3.OperationalError) index ix_recipe_candle_fragrance_pct already exists
+[SQL: CREATE INDEX ix_recipe_candle_fragrance_pct ON recipe (candle_fragrance_pct)]
+(Background on this error at: https://sqlalche.me/e/20/e3q8)
+   ⚠️  Error creating index ix_recipe_candle_vessel_ml: (sqlite3.OperationalError) index ix_recipe_candle_vessel_ml already exists
+[SQL: CREATE INDEX ix_recipe_candle_vessel_ml ON recipe (candle_vessel_ml)]
+(Background on this error at: https://sqlalche.me/e/20/e3q8)
+   ⚠️  Error creating index ix_recipe_vessel_fill_pct: (sqlite3.OperationalError) index ix_recipe_vessel_fill_pct already exists
+[SQL: CREATE INDEX ix_recipe_vessel_fill_pct ON recipe (vessel_fill_pct)]
+(Background on this error at: https://sqlalche.me/e/20/e3q8)
+   ⚠️  Error creating index ix_recipe_baker_base_flour_g: (sqlite3.OperationalError) index ix_recipe_baker_base_flour_g already exists
+[SQL: CREATE INDEX ix_recipe_baker_base_flour_g ON recipe (baker_base_flour_g)]
+(Background on this error at: https://sqlalche.me/e/20/e3q8)
+   ⚠️  Error creating index ix_recipe_baker_water_pct: (sqlite3.OperationalError) index ix_recipe_baker_water_pct already exists
+[SQL: CREATE INDEX ix_recipe_baker_water_pct ON recipe (baker_water_pct)]
+(Background on this error at: https://sqlalche.me/e/20/e3q8)
+   ⚠️  Error creating index ix_recipe_baker_salt_pct: (sqlite3.OperationalError) index ix_recipe_baker_salt_pct already exists
+[SQL: CREATE INDEX ix_recipe_baker_salt_pct ON recipe (baker_salt_pct)]
+(Background on this error at: https://sqlalche.me/e/20/e3q8)
+   ⚠️  Error creating index ix_recipe_baker_yeast_pct: (sqlite3.OperationalError) index ix_recipe_baker_yeast_pct already exists
+[SQL: CREATE INDEX ix_recipe_baker_yeast_pct ON recipe (baker_yeast_pct)]
+(Background on this error at: https://sqlalche.me/e/20/e3q8)
+   ⚠️  Error creating index ix_recipe_cosm_emulsifier_pct: (sqlite3.OperationalError) index ix_recipe_cosm_emulsifier_pct already exists
+[SQL: CREATE INDEX ix_recipe_cosm_emulsifier_pct ON recipe (cosm_emulsifier_pct)]
+(Background on this error at: https://sqlalche.me/e/20/e3q8)
+   ⚠️  Error creating index ix_recipe_cosm_preservative_pct: (sqlite3.OperationalError) index ix_recipe_cosm_preservative_pct already exists
+[SQL: CREATE INDEX ix_recipe_cosm_preservative_pct ON recipe (cosm_preservative_pct)]
+(Background on this error at: https://sqlalche.me/e/20/e3q8)
+   ⚠️  Recipe GIN index creation failed: (sqlite3.OperationalError) near "USING": syntax error
+[SQL: CREATE INDEX IF NOT EXISTS ix_recipe_category_data_gin ON recipe USING GIN ((category_data::jsonb))]
+(Background on this error at: https://sqlalche.me/e/20/e3q8)
+   Processing batch computed columns...
+   ✅ Column batch.vessel_fill_pct already exists
+   ✅ Column batch.candle_fragrance_pct already exists
+   ✅ Column batch.candle_vessel_ml already exists
+   ✅ Column batch.soap_superfat already exists
+   ✅ Column batch.soap_water_pct already exists
+   ✅ Column batch.soap_lye_type already exists
+   ✅ Column batch.baker_base_flour_g already exists
+   ✅ Column batch.baker_water_pct already exists
+   ✅ Column batch.baker_salt_pct already exists
+   ✅ Column batch.baker_yeast_pct already exists
+   ✅ Column batch.cosm_emulsifier_pct already exists
+   ✅ Column batch.cosm_preservative_pct already exists
+   ⚠️  Error creating index ix_batch_vessel_fill_pct: (sqlite3.OperationalError) index ix_batch_vessel_fill_pct already exists
+[SQL: CREATE INDEX ix_batch_vessel_fill_pct ON batch (vessel_fill_pct)]
+(Background on this error at: https://sqlalche.me/e/20/e3q8)
+   ⚠️  Error creating index ix_batch_candle_fragrance_pct: (sqlite3.OperationalError) index ix_batch_candle_fragrance_pct already exists
+[SQL: CREATE INDEX ix_batch_candle_fragrance_pct ON batch (candle_fragrance_pct)]
+(Background on this error at: https://sqlalche.me/e/20/e3q8)
+   ⚠️  Error creating index ix_batch_candle_vessel_ml: (sqlite3.OperationalError) index ix_batch_candle_vessel_ml already exists
+[SQL: CREATE INDEX ix_batch_candle_vessel_ml ON batch (candle_vessel_ml)]
+(Background on this error at: https://sqlalche.me/e/20/e3q8)
+   ⚠️  Error creating index ix_batch_soap_superfat: (sqlite3.OperationalError) index ix_batch_soap_superfat already exists
+[SQL: CREATE INDEX ix_batch_soap_superfat ON batch (soap_superfat)]
+(Background on this error at: https://sqlalche.me/e/20/e3q8)
+   ⚠️  Error creating index ix_batch_soap_water_pct: (sqlite3.OperationalError) index ix_batch_soap_water_pct already exists
+[SQL: CREATE INDEX ix_batch_soap_water_pct ON batch (soap_water_pct)]
+(Background on this error at: https://sqlalche.me/e/20/e3q8)
+   ⚠️  Error creating index ix_batch_soap_lye_type: (sqlite3.OperationalError) index ix_batch_soap_lye_type already exists
+[SQL: CREATE INDEX ix_batch_soap_lye_type ON batch (soap_lye_type)]
+(Background on this error at: https://sqlalche.me/e/20/e3q8)
+   ⚠️  Error creating index ix_batch_baker_base_flour_g: (sqlite3.OperationalError) index ix_batch_baker_base_flour_g already exists
+[SQL: CREATE INDEX ix_batch_baker_base_flour_g ON batch (baker_base_flour_g)]
+(Background on this error at: https://sqlalche.me/e/20/e3q8)
+   ⚠️  Error creating index ix_batch_baker_water_pct: (sqlite3.OperationalError) index ix_batch_baker_water_pct already exists
+[SQL: CREATE INDEX ix_batch_baker_water_pct ON batch (baker_water_pct)]
+(Background on this error at: https://sqlalche.me/e/20/e3q8)
+   ⚠️  Error creating index ix_batch_baker_salt_pct: (sqlite3.OperationalError) index ix_batch_baker_salt_pct already exists
+[SQL: CREATE INDEX ix_batch_baker_salt_pct ON batch (baker_salt_pct)]
+(Background on this error at: https://sqlalche.me/e/20/e3q8)
+   ⚠️  Error creating index ix_batch_baker_yeast_pct: (sqlite3.OperationalError) index ix_batch_baker_yeast_pct already exists
+[SQL: CREATE INDEX ix_batch_baker_yeast_pct ON batch (baker_yeast_pct)]
+(Background on this error at: https://sqlalche.me/e/20/e3q8)
+   ⚠️  Error creating index ix_batch_cosm_emulsifier_pct: (sqlite3.OperationalError) index ix_batch_cosm_emulsifier_pct already exists
+[SQL: CREATE INDEX ix_batch_cosm_emulsifier_pct ON batch (cosm_emulsifier_pct)]
+(Background on this error at: https://sqlalche.me/e/20/e3q8)
+   ⚠️  Error creating index ix_batch_cosm_preservative_pct: (sqlite3.OperationalError) index ix_batch_cosm_preservative_pct already exists
+[SQL: CREATE INDEX ix_batch_cosm_preservative_pct ON batch (cosm_preservative_pct)]
+(Background on this error at: https://sqlalche.me/e/20/e3q8)
+   Processing consumable tables...
+   ✅ organization_id column added successfully
+   ✅ Added organization_id to batch_consumable
+   ✅ organization_id already exists in extra_batch_consumable
+   Creating indexes for batch_consumable...
+   ⚠️  Error creating index ix_batch_consumable_batch_id: (sqlite3.OperationalError) index ix_batch_consumable_batch_id already exists
+[SQL: CREATE INDEX ix_batch_consumable_batch_id ON batch_consumable (batch_id)]
+(Background on this error at: https://sqlalche.me/e/20/e3q8)
+   ⚠️  Error creating index ix_batch_consumable_inventory_item_id: (sqlite3.OperationalError) index ix_batch_consumable_inventory_item_id already exists
+[SQL: CREATE INDEX ix_batch_consumable_inventory_item_id ON batch_consumable (inventory_item_id)]
+(Background on this error at: https://sqlalche.me/e/20/e3q8)
+   ✅ Created index ix_batch_consumable_organization_id on batch_consumable
+   Creating indexes for extra_batch_consumable...
+   ⚠️  Error creating index ix_extra_batch_consumable_batch_id: (sqlite3.OperationalError) index ix_extra_batch_consumable_batch_id already exists
+[SQL: CREATE INDEX ix_extra_batch_consumable_batch_id ON extra_batch_consumable (batch_id)]
+(Background on this error at: https://sqlalche.me/e/20/e3q8)
+   ⚠️  Error creating index ix_extra_batch_consumable_inventory_item_id: (sqlite3.OperationalError) index ix_extra_batch_consumable_inventory_item_id already exists
+[SQL: CREATE INDEX ix_extra_batch_consumable_inventory_item_id ON extra_batch_consumable (inventory_item_id)]
+(Background on this error at: https://sqlalche.me/e/20/e3q8)
+   ⚠️  Error creating index ix_extra_batch_consumable_organization_id: (sqlite3.OperationalError) index ix_extra_batch_consumable_organization_id already exists
+[SQL: CREATE INDEX ix_extra_batch_consumable_organization_id ON extra_batch_consumable (organization_id)]
+(Background on this error at: https://sqlalche.me/e/20/e3q8)
+   Processing global item alias table...
+   ⚠️  Error creating index ix_global_item_alias_alias: (sqlite3.OperationalError) index ix_global_item_alias_alias already exists
+[SQL: CREATE INDEX ix_global_item_alias_alias ON global_item_alias (alias)]
+(Background on this error at: https://sqlalche.me/e/20/e3q8)
+   ⚠️  Error creating index ix_global_item_alias_global_item_id: (sqlite3.OperationalError) index ix_global_item_alias_global_item_id already exists
+[SQL: CREATE INDEX ix_global_item_alias_global_item_id ON global_item_alias (global_item_id)]
+(Background on this error at: https://sqlalche.me/e/20/e3q8)
+   ⚠️  Global item alias GIN index creation failed: (sqlite3.OperationalError) near "USING": syntax error
+[SQL: CREATE INDEX IF NOT EXISTS ix_global_item_alias_tsv ON global_item_alias USING GIN (to_tsvector('simple', alias))]
+(Background on this error at: https://sqlalche.me/e/20/e3q8)
+   ⚠️  Global item aka_names GIN index creation failed: (sqlite3.OperationalError) near "USING": syntax error
+[SQL: CREATE INDEX IF NOT EXISTS ix_global_item_aka_gin ON global_item USING GIN ((aka_names::jsonb))]
+(Background on this error at: https://sqlalche.me/e/20/e3q8)
+✅ Model alignment completed successfully
+INFO  [alembic.runtime.migration] Running upgrade 20251009_3 -> 20251011_01, Fix tier addon association table naming inconsistency
+INFO  [alembic.runtime.migration] Running upgrade 20251011_01 -> 20251015_01, Fix portion columns to match models: rename counts -> portion_count/projected_portions, add final_portions
+INFO  [alembic.runtime.migration] Running upgrade 20251015_01 -> 20251015_02, Add skin_enabled boolean to product_category
+INFO  [alembic.runtime.migration] Running upgrade 20251015_02 -> 20251015_03, Create feature_flag table
+=== Creating feature_flag table ===
+Creating feature_flag table...
+✅ feature_flag table created successfully
+✅ Feature flag table migration completed
+INFO  [alembic.runtime.migration] Running upgrade 20251015_03 -> 20251015_04, Make product_category.organization_id nullable to support global categories
+INFO  [alembic.runtime.migration] Running upgrade 20251015_04 -> 20251016_1, Create tier_allowed_addon association table if missing
+INFO  [alembic.runtime.migration] Running upgrade 20251016_1 -> 20251016_2, Add stable key column to subscription_tier
+Key column didn't exist or couldn't be dropped: (sqlite3.OperationalError) near "EXISTS": syntax error
+[SQL: ALTER TABLE subscription_tier DROP COLUMN IF EXISTS key]
+(Background on this error at: https://sqlalche.me/e/20/e3q8)
+Found 0 existing tiers
+✅ Normalized tier names and removed duplicates
+✅ Subscription tier migration completed - using integer IDs only
+INFO  [alembic.runtime.migration] Running upgrade 20251016_2 -> 20251017_1, add billing performance indexes
+INFO  [alembic.runtime.migration] Running upgrade 20251017_1 -> 20251017_2, drop offline billing snapshot columns
+INFO  [alembic.runtime.migration] Running upgrade 20251017_2 -> 20251020_1, add theme column to user_preferences
+=== Adding theme column to user_preferences ===
+   ✅ theme column already exists
+✅ Migration completed: theme column available
+render@srv-d3r8t01r0fns73fusa00-65dd8f7fd8-m2wtt:~/project/src$ flask init-production
+/opt/render/project/src/.venv/lib/python3.13/site-packages/flask_limiter/extension.py:333: UserWarning: Using the in-memory storage for tracking rate limits as no storage was explicitly specified. This is not recommended for production use. See: https://flask-limiter.readthedocs.io#configuring-a-storage-backend for documentation about configuring the storage backend.
+  warnings.warn(
+
+=== Blueprint Registration Summary ===
+✅ Successful: 29
+   - Authentication
+   - Admin
+   - Developer
+   - Inventory
+   - Recipes
+   - Batches
+   - Organization
+   - Billing
+   - Settings
+   - Timers
+   - Expiration
+   - Conversion
+   - Products Main
+   - Public API
+   - Main API
+   - Drawer Actions
+   - Density Reference
+   - Retention Drawer API
+   - Global Link Drawer API
+   - App Routes
+   - Legal Routes
+   - Bulk Stock
+   - Fault Log
+   - Tag Manager
+   - Global Library Public
+   - Waitlist
+   - Public Tools
+   - Production Planning
+   - Exports
+
+🎉 All blueprints registered successfully!
+🚀 BatchTrack Production Seeding Starting...
+⚠️  Assumes database schema is already migrated (flask db upgrade)
+=== Step 1: System foundations (Organization Independent) ===
+=== Seeding Consolidated Permissions System ===
+Seeding organization permissions...
+Processing category: Main dashboard and overview features
+  Created: dashboard.view
+Processing category: All inventory tracking, adjustments, and stock management
+  Created: inventory.view
+  Created: inventory.edit
+  Created: inventory.adjust
+  Created: inventory.reserve
+  Created: inventory.delete
+  Created: inventory.view_costs
+Processing category: Recipe creation, editing, and production planning
+  Created: recipes.view
+  Created: recipes.create
+  Created: recipes.edit
+  Created: recipes.delete
+  Created: recipes.scale
+  Created: recipes.plan_production
+Processing category: Production batch tracking from start to finish
+  Created: batches.view
+  Created: batches.create
+  Created: batches.edit
+  Created: batches.finish
+  Created: batches.cancel
+  Created: batches.view_costs
+Processing category: Product catalog, SKUs, and sales tracking
+  Created: products.view
+  Created: products.create
+  Created: products.edit
+  Created: products.delete
+  Created: products.manage_variants
+  Created: products.sales_tracking
+Processing category: Organization settings, users, and roles management
+  Created: organization.view
+  Created: organization.edit
+  Created: organization.manage_users
+  Created: organization.manage_roles
+  Created: organization.manage_billing
+  Created: organization.view_audit_logs
+Processing category: Alert management and notification preferences
+  Created: alerts.view
+  Created: alerts.manage
+  Created: alerts.dismiss
+Processing category: Reporting, analytics, and business insights
+  Created: reports.view
+  Created: reports.export
+  Created: reports.advanced
+  Created: reports.custom
+Processing category: Third-party integrations and marketplace connections
+  Created: integrations.shopify
+  Created: integrations.marketplace
+  Created: integrations.api_access
+Processing category: AI-powered features and automation
+  Created: ai.recipe_optimization
+  Created: ai.demand_forecasting
+  Created: ai.quality_insights
+✅ Organization permissions seeded successfully!
+Seeding developer permissions...
+Processing category: Core system administration and management
+⚠️  Permission seeding issue: (sqlite3.OperationalError) no such column: developer_permission.category
+[SQL: SELECT developer_permission.id AS developer_permission_id, developer_permission.name AS developer_permission_name, developer_permission.description AS developer_permission_description, developer_permission.category AS developer_permission_category, developer_permission.is_active AS developer_permission_is_active, developer_permission.created_at AS developer_permission_created_at 
+FROM developer_permission 
+WHERE developer_permission.name = ?
+ LIMIT ? OFFSET ?]
+[parameters: ('dev.system_admin', 1, 0)]
+(Background on this error at: https://sqlalche.me/e/20/e3q8)
+   Continuing with remaining steps...
+=== Seeding Complete Subscription System ===
+=== Seeding Complete Subscription System ===
+✅ Creating exempt tier
+   - Exempt tier created with 44 permissions
+✅ Creating free tier
+   - Free tier created with 5 permissions
+✅ Creating solo tier
+   - Solo tier created with 39 permissions
+✅ Creating team tier
+   - Team tier created with 44 permissions
+✅ Creating enterprise tier
+   - Enterprise tier created with 44 permissions
+✅ Subscription tier seeding completed!
+✅ Successfully created/verified: Exempt tier, Free tier, Solo tier, Team tier, Enterprise tier
+=== Migrating Organizations to Tier IDs ===
+✅ Organization migration completed! (0 organizations migrated)
+✅ Complete subscription system seeding completed!
+   - Tiers processed with error recovery
+   - Organizations migrated with error recovery
+   - System ready for production use
+✅ Subscription tiers seeded
+✅ Addons seeded
+✅ Add-ons seeded
+=== Seeding 49 standard units ===
+⚠️  Unit seeding issue: (sqlite3.OperationalError) no such column: unit.is_active
+[SQL: SELECT unit.id AS unit_id, unit.name AS unit_name, unit.symbol AS unit_symbol, unit.unit_type AS unit_unit_type, unit.conversion_factor AS unit_conversion_factor, unit.base_unit AS unit_base_unit, unit.is_active AS unit_is_active, unit.is_custom AS unit_is_custom, unit.is_mapped AS unit_is_mapped, unit.created_by AS unit_created_by, unit.organization_id AS unit_organization_id, unit.created_at AS unit_created_at, unit.updated_at AS unit_updated_at 
+FROM unit 
+WHERE unit.name = ?
+ LIMIT ? OFFSET ?]
+[parameters: ('gram', 1, 0)]
+(Background on this error at: https://sqlalche.me/e/20/e3q8)
+   Continuing with remaining steps...
+=== Step 2: Organization-dependent setup ===
+ℹ️  Developer roles should now exist for user assignment...
+=== Creating Default Organization with Essential Users ===
+ℹ️  No organizations found - creating default organization
+✅ Created default organization: BatchTrack Organization (ID: 1)
+ℹ️  Using organization: BatchTrack Organization (ID: 1)
+   - Subscription tier: 1 (Exempt Plan)
+⚠️  User/organization seeding issue: (sqlite3.OperationalError) no such column: role.is_active
+[SQL: SELECT role.id AS role_id, role.name AS role_name, role.description AS role_description, role.is_active AS role_is_active, role.is_system_role AS role_is_system_role, role.created_at AS role_created_at, role.created_by AS role_created_by, role.organization_id AS role_organization_id 
+FROM role 
+WHERE role.name = ? AND role.is_system_role = 1
+ LIMIT ? OFFSET ?]
+[parameters: ('organization_owner', 1, 0)]
+(Background on this error at: https://sqlalche.me/e/20/e3q8)
+   Continuing with remaining steps...
+=== Step 3: Organization-specific data ===
+⚠️  Ingredient category seeding issue: (sqlite3.OperationalError) no such column: ingredient_category.description
+[SQL: SELECT ingredient_category.id AS ingredient_category_id, ingredient_category.name AS ingredient_category_name, ingredient_category.description AS ingredient_category_description, ingredient_category.color AS ingredient_category_color, ingredient_category.default_density AS ingredient_category_default_density, ingredient_category.is_active AS ingredient_category_is_active, ingredient_category.created_by AS ingredient_category_created_by, ingredient_category.created_at AS ingredient_category_created_at, ingredient_category.updated_at AS ingredient_category_updated_at, ingredient_category.is_global_category AS ingredient_category_is_global_category, ingredient_category.show_saponification_value AS ingredient_category_show_saponification_value, ingredient_category.show_iodine_value AS ingredient_category_show_iodine_value, ingredient_category.show_melting_point AS ingredient_category_show_melting_point, ingredient_category.show_flash_point AS ingredient_category_show_flash_point, ingredient_category.show_ph_value AS ingredient_category_show_ph_value, ingredient_category.show_moisture_content AS ingredient_category_show_moisture_content, ingredient_category.show_shelf_life_months AS ingredient_category_show_shelf_life_months, ingredient_category.show_comedogenic_rating AS ingredient_category_show_comedogenic_rating, ingredient_category.organization_id AS ingredient_category_organization_id 
+FROM ingredient_category 
+WHERE ingredient_category.name = ? AND ingredient_category.organization_id = ?
+ LIMIT ? OFFSET ?]
+[parameters: ('Liquids', 1, 1, 0)]
+(Background on this error at: https://sqlalche.me/e/20/e3q8)
+✅ Product categories seeded
+/opt/render/project/src/.venv/lib/python3.13/site-packages/flask_limiter/extension.py:333: UserWarning: Using the in-memory storage for tracking rate limits as no storage was explicitly specified. This is not recommended for production use. See: https://flask-limiter.readthedocs.io#configuring-a-storage-backend for documentation about configuring the storage backend.
+  warnings.warn(
+
+=== Blueprint Registration Summary ===
+✅ Successful: 29
+   - Authentication
+   - Admin
+   - Developer
+   - Inventory
+   - Recipes
+   - Batches
+   - Organization
+   - Billing
+   - Settings
+   - Timers
+   - Expiration
+   - Conversion
+   - Products Main
+   - Public API
+   - Main API
+   - Drawer Actions
+   - Density Reference
+   - Retention Drawer API
+   - Global Link Drawer API
+   - App Routes
+   - Legal Routes
+   - Bulk Stock
+   - Fault Log
+   - Tag Manager
+   - Global Library Public
+   - Waitlist
+   - Public Tools
+   - Production Planning
+   - Exports
+
+🎉 All blueprints registered successfully!
+=== Seeding Global Inventory Library ===
+Processing all inventory types: ingredients, containers, packaging, consumables
+Found 31 category files to process
+
+📁 Processing ingredient category: Miscellaneous
+⚠️  Global inventory library seeding issue: (sqlite3.OperationalError) no such column: ingredient_category.description
+[SQL: SELECT ingredient_category.id AS ingredient_category_id, ingredient_category.name AS ingredient_category_name, ingredient_category.description AS ingredient_category_description, ingredient_category.color AS ingredient_category_color, ingredient_category.default_density AS ingredient_category_default_density, ingredient_category.is_active AS ingredient_category_is_active, ingredient_category.created_by AS ingredient_category_created_by, ingredient_category.created_at AS ingredient_category_created_at, ingredient_category.updated_at AS ingredient_category_updated_at, ingredient_category.is_global_category AS ingredient_category_is_global_category, ingredient_category.show_saponification_value AS ingredient_category_show_saponification_value, ingredient_category.show_iodine_value AS ingredient_category_show_iodine_value, ingredient_category.show_melting_point AS ingredient_category_show_melting_point, ingredient_category.show_flash_point AS ingredient_category_show_flash_point, ingredient_category.show_ph_value AS ingredient_category_show_ph_value, ingredient_category.show_moisture_content AS ingredient_category_show_moisture_content, ingredient_category.show_shelf_life_months AS ingredient_category_show_shelf_life_months, ingredient_category.show_comedogenic_rating AS ingredient_category_show_comedogenic_rating, ingredient_category.organization_id AS ingredient_category_organization_id 
+FROM ingredient_category 
+WHERE ingredient_category.name = ? AND ingredient_category.organization_id IS NULL
+ LIMIT ? OFFSET ?]
+[parameters: ('Miscellaneous', 1, 0)]
+(Background on this error at: https://sqlalche.me/e/20/e3q8)
+✅ Production seeding complete!
+🔒 Login: admin/admin (CHANGE IMMEDIATELY)
+📝 Note: This command can be run multiple times safely
+📊 Database status:
+   - Organizations: 1
+   - Users: 0
+   - Permissions: 44
+   - Subscription Tiers: 5
+   - Status check failed: (sqlite3.OperationalError) no such column: unit.is_active
+[SQL: SELECT count(*) AS count_1 
+FROM (SELECT unit.id AS unit_id, unit.name AS unit_name, unit.symbol AS unit_symbol, unit.unit_type AS unit_unit_type, unit.conversion_factor AS unit_conversion_factor, unit.base_unit AS unit_base_unit, unit.is_active AS unit_is_active, unit.is_custom AS unit_is_custom, unit.is_mapped AS unit_is_mapped, unit.created_by AS unit_created_by, unit.organization_id AS unit_organization_id, unit.created_at AS unit_created_at, unit.updated_at AS unit_updated_at 
+FROM unit) AS anon_1]
+(Background on this error at: https://sqlalche.me/e/20/e3q8)
+render@srv-d3r8t01r0fns73fusa00-65dd8f7fd8-m2wtt:~/project/src$ flask init-production
+/opt/render/project/src/.venv/lib/python3.13/site-packages/flask_limiter/extension.py:333: UserWarning: Using the in-memory storage for tracking rate limits as no storage was explicitly specified. This is not recommended for production use. See: https://flask-limiter.readthedocs.io#configuring-a-storage-backend for documentation about configuring the storage backend.
+  warnings.warn(
+
+=== Blueprint Registration Summary ===
+✅ Successful: 29
+   - Authentication
+   - Admin
+   - Developer
+   - Inventory
+   - Recipes
+   - Batches
+   - Organization
+   - Billing
+   - Settings
+   - Timers
+   - Expiration
+   - Conversion
+   - Products Main
+   - Public API
+   - Main API
+   - Drawer Actions
+   - Density Reference
+   - Retention Drawer API
+   - Global Link Drawer API
+   - App Routes
+   - Legal Routes
+   - Bulk Stock
+   - Fault Log
+   - Tag Manager
+   - Global Library Public
+   - Waitlist
+   - Public Tools
+   - Production Planning
+   - Exports
+
+🎉 All blueprints registered successfully!
+🚀 BatchTrack Production Seeding Starting...
+⚠️  Assumes database schema is already migrated (flask db upgrade)
+=== Step 1: System foundations (Organization Independent) ===
+=== Seeding Consolidated Permissions System ===
+Seeding organization permissions...
+Processing category: Main dashboard and overview features
+  Updated: dashboard.view
+Processing category: All inventory tracking, adjustments, and stock management
+  Updated: inventory.view
+  Updated: inventory.edit
+  Updated: inventory.adjust
+  Updated: inventory.reserve
+  Updated: inventory.delete
+  Updated: inventory.view_costs
+Processing category: Recipe creation, editing, and production planning
+  Updated: recipes.view
+  Updated: recipes.create
+  Updated: recipes.edit
+  Updated: recipes.delete
+  Updated: recipes.scale
+  Updated: recipes.plan_production
+Processing category: Production batch tracking from start to finish
+  Updated: batches.view
+  Updated: batches.create
+  Updated: batches.edit
+  Updated: batches.finish
+  Updated: batches.cancel
+  Updated: batches.view_costs
+Processing category: Product catalog, SKUs, and sales tracking
+  Updated: products.view
+  Updated: products.create
+  Updated: products.edit
+  Updated: products.delete
+  Updated: products.manage_variants
+  Updated: products.sales_tracking
+Processing category: Organization settings, users, and roles management
+  Updated: organization.view
+  Updated: organization.edit
+  Updated: organization.manage_users
+  Updated: organization.manage_roles
+  Updated: organization.manage_billing
+  Updated: organization.view_audit_logs
+Processing category: Alert management and notification preferences
+  Updated: alerts.view
+  Updated: alerts.manage
+  Updated: alerts.dismiss
+Processing category: Reporting, analytics, and business insights
+  Updated: reports.view
+  Updated: reports.export
+  Updated: reports.advanced
+  Updated: reports.custom
+Processing category: Third-party integrations and marketplace connections
+  Updated: integrations.shopify
+  Updated: integrations.marketplace
+  Updated: integrations.api_access
+Processing category: AI-powered features and automation
+  Updated: ai.recipe_optimization
+  Updated: ai.demand_forecasting
+  Updated: ai.quality_insights
+✅ Organization permissions seeded successfully!
+Seeding developer permissions...
+Processing category: Core system administration and management
+⚠️  Permission seeding issue: (sqlite3.OperationalError) no such column: developer_permission.category
+[SQL: SELECT developer_permission.id AS developer_permission_id, developer_permission.name AS developer_permission_name, developer_permission.description AS developer_permission_description, developer_permission.category AS developer_permission_category, developer_permission.is_active AS developer_permission_is_active, developer_permission.created_at AS developer_permission_created_at 
+FROM developer_permission 
+WHERE developer_permission.name = ?
+ LIMIT ? OFFSET ?]
+[parameters: ('dev.system_admin', 1, 0)]
+(Background on this error at: https://sqlalche.me/e/20/e3q8)
+   Continuing with remaining steps...
+=== Seeding Complete Subscription System ===
+=== Seeding Complete Subscription System ===
+ℹ️  Exempt tier already exists
+ℹ️  Free tier already exists
+ℹ️  Solo tier already exists
+ℹ️  Team tier already exists
+ℹ️  Enterprise tier already exists
+✅ Subscription tier seeding completed!
+✅ Successfully created/verified: Exempt tier, Free tier, Solo tier, Team tier, Enterprise tier
+=== Migrating Organizations to Tier IDs ===
+✅ Organization migration completed! (0 organizations migrated)
+✅ Complete subscription system seeding completed!
+   - Tiers processed with error recovery
+   - Organizations migrated with error recovery
+   - System ready for production use
+✅ Subscription tiers seeded
+✅ Addons seeded
+✅ Add-ons seeded
+=== Seeding 49 standard units ===
+⚠️  Unit seeding issue: (sqlite3.OperationalError) no such column: unit.is_active
+[SQL: SELECT unit.id AS unit_id, unit.name AS unit_name, unit.symbol AS unit_symbol, unit.unit_type AS unit_unit_type, unit.conversion_factor AS unit_conversion_factor, unit.base_unit AS unit_base_unit, unit.is_active AS unit_is_active, unit.is_custom AS unit_is_custom, unit.is_mapped AS unit_is_mapped, unit.created_by AS unit_created_by, unit.organization_id AS unit_organization_id, unit.created_at AS unit_created_at, unit.updated_at AS unit_updated_at 
+FROM unit 
+WHERE unit.name = ?
+ LIMIT ? OFFSET ?]
+[parameters: ('gram', 1, 0)]
+(Background on this error at: https://sqlalche.me/e/20/e3q8)
+   Continuing with remaining steps...
+=== Step 2: Organization-dependent setup ===
+ℹ️  Developer roles should now exist for user assignment...
+=== Creating Default Organization with Essential Users ===
+ℹ️  Found 1 existing organizations - using first organization
+ℹ️  Using organization: BatchTrack Organization (ID: 1)
+   - Subscription tier: 1 (Exempt Plan)
+⚠️  User/organization seeding issue: (sqlite3.OperationalError) no such column: role.is_active
+[SQL: SELECT role.id AS role_id, role.name AS role_name, role.description AS role_description, role.is_active AS role_is_active, role.is_system_role AS role_is_system_role, role.created_at AS role_created_at, role.created_by AS role_created_by, role.organization_id AS role_organization_id 
+FROM role 
+WHERE role.name = ? AND role.is_system_role = 1
+ LIMIT ? OFFSET ?]
+[parameters: ('organization_owner', 1, 0)]
+(Background on this error at: https://sqlalche.me/e/20/e3q8)
+   Continuing with remaining steps...
+=== Step 3: Organization-specific data ===
+⚠️  Ingredient category seeding issue: (sqlite3.OperationalError) no such column: ingredient_category.description
+[SQL: SELECT ingredient_category.id AS ingredient_category_id, ingredient_category.name AS ingredient_category_name, ingredient_category.description AS ingredient_category_description, ingredient_category.color AS ingredient_category_color, ingredient_category.default_density AS ingredient_category_default_density, ingredient_category.is_active AS ingredient_category_is_active, ingredient_category.created_by AS ingredient_category_created_by, ingredient_category.created_at AS ingredient_category_created_at, ingredient_category.updated_at AS ingredient_category_updated_at, ingredient_category.is_global_category AS ingredient_category_is_global_category, ingredient_category.show_saponification_value AS ingredient_category_show_saponification_value, ingredient_category.show_iodine_value AS ingredient_category_show_iodine_value, ingredient_category.show_melting_point AS ingredient_category_show_melting_point, ingredient_category.show_flash_point AS ingredient_category_show_flash_point, ingredient_category.show_ph_value AS ingredient_category_show_ph_value, ingredient_category.show_moisture_content AS ingredient_category_show_moisture_content, ingredient_category.show_shelf_life_months AS ingredient_category_show_shelf_life_months, ingredient_category.show_comedogenic_rating AS ingredient_category_show_comedogenic_rating, ingredient_category.organization_id AS ingredient_category_organization_id 
+FROM ingredient_category 
+WHERE ingredient_category.name = ? AND ingredient_category.organization_id = ?
+ LIMIT ? OFFSET ?]
+[parameters: ('Liquids', 1, 1, 0)]
+(Background on this error at: https://sqlalche.me/e/20/e3q8)
+✅ Product categories seeded
+/opt/render/project/src/.venv/lib/python3.13/site-packages/flask_limiter/extension.py:333: UserWarning: Using the in-memory storage for tracking rate limits as no storage was explicitly specified. This is not recommended for production use. See: https://flask-limiter.readthedocs.io#configuring-a-storage-backend for documentation about configuring the storage backend.
+  warnings.warn(
+
+=== Blueprint Registration Summary ===
+✅ Successful: 29
+   - Authentication
+   - Admin
+   - Developer
+   - Inventory
+   - Recipes
+   - Batches
+   - Organization
+   - Billing
+   - Settings
+   - Timers
+   - Expiration
+   - Conversion
+   - Products Main
+   - Public API
+   - Main API
+   - Drawer Actions
+   - Density Reference
+   - Retention Drawer API
+   - Global Link Drawer API
+   - App Routes
+   - Legal Routes
+   - Bulk Stock
+   - Fault Log
+   - Tag Manager
+   - Global Library Public
+   - Waitlist
+   - Public Tools
+   - Production Planning
+   - Exports
+
+🎉 All blueprints registered successfully!
+=== Seeding Global Inventory Library ===
+Processing all inventory types: ingredients, containers, packaging, consumables
+Found 31 category files to process
+
+📁 Processing ingredient category: Miscellaneous
+⚠️  Global inventory library seeding issue: (sqlite3.OperationalError) no such column: ingredient_category.description
+[SQL: SELECT ingredient_category.id AS ingredient_category_id, ingredient_category.name AS ingredient_category_name, ingredient_category.description AS ingredient_category_description, ingredient_category.color AS ingredient_category_color, ingredient_category.default_density AS ingredient_category_default_density, ingredient_category.is_active AS ingredient_category_is_active, ingredient_category.created_by AS ingredient_category_created_by, ingredient_category.created_at AS ingredient_category_created_at, ingredient_category.updated_at AS ingredient_category_updated_at, ingredient_category.is_global_category AS ingredient_category_is_global_category, ingredient_category.show_saponification_value AS ingredient_category_show_saponification_value, ingredient_category.show_iodine_value AS ingredient_category_show_iodine_value, ingredient_category.show_melting_point AS ingredient_category_show_melting_point, ingredient_category.show_flash_point AS ingredient_category_show_flash_point, ingredient_category.show_ph_value AS ingredient_category_show_ph_value, ingredient_category.show_moisture_content AS ingredient_category_show_moisture_content, ingredient_category.show_shelf_life_months AS ingredient_category_show_shelf_life_months, ingredient_category.show_comedogenic_rating AS ingredient_category_show_comedogenic_rating, ingredient_category.organization_id AS ingredient_category_organization_id 
+FROM ingredient_category 
+WHERE ingredient_category.name = ? AND ingredient_category.organization_id IS NULL
+ LIMIT ? OFFSET ?]
+[parameters: ('Miscellaneous', 1, 0)]
+(Background on this error at: https://sqlalche.me/e/20/e3q8)
+✅ Production seeding complete!
+🔒 Login: admin/admin (CHANGE IMMEDIATELY)
+📝 Note: This command can be run multiple times safely
+📊 Database status:
+   - Organizations: 1
+   - Users: 0
+   - Permissions: 44
+   - Subscription Tiers: 5
+   - Status check failed: (sqlite3.OperationalError) no such column: unit.is_active
+[SQL: SELECT count(*) AS count_1 
+FROM (SELECT unit.id AS unit_id, unit.name AS unit_name, unit.symbol AS unit_symbol, unit.unit_type AS unit_unit_type, unit.conversion_factor AS unit_conversion_factor, unit.base_unit AS unit_base_unit, unit.is_active AS unit_is_active, unit.is_custom AS unit_is_custom, unit.is_mapped AS unit_is_mapped, unit.created_by AS unit_created_by, unit.organization_id AS unit_organization_id, unit.created_at AS unit_created_at, unit.updated_at AS unit_updated_at 
+FROM unit) AS anon_1]
+(Background on this error at: https://sqlalche.me/e/20/e3q8)
+render@srv-d3r8t01r0fns73fusa00-65dd8f7fd8-m2wtt:~/project/src$ 
