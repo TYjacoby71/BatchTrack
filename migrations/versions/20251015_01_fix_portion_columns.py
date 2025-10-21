@@ -85,36 +85,25 @@ def upgrade():
 
 
 def downgrade():
-    # Best-effort reversal: keep it simple and safe
-    bind = op.get_bind()
-    inspector = inspect(bind)
+    """
+    Simple, safe downgrade: just drop the new columns and let the legacy columns be recreated
+    if needed by subsequent migrations. Data loss is acceptable in downgrades.
+    """
+    print("=== Downgrading portion columns (dropping new columns) ===")
 
-    # Recreate legacy counts columns if needed (not strictly necessary)
-    if not _has_column(inspector, 'recipe', 'counts') and _has_column(inspector, 'recipe', 'portion_count'):
+    # Simply drop all the new columns - much safer than trying to rename/preserve data
+    columns_to_drop = [
+        ('batch', 'final_portions'),
+        ('batch', 'projected_portions'),
+        ('recipe', 'portion_count')
+    ]
+
+    for table_name, column_name in columns_to_drop:
         try:
-            op.alter_column('recipe', 'portion_count', new_column_name='counts')
-        except Exception:
-            # Fallback: add counts (data not migrated)
-            op.add_column('recipe', sa.Column('counts', sa.Integer(), nullable=True))
+            with op.batch_alter_table(table_name, schema=None) as batch_op:
+                batch_op.drop_column(column_name)
+            print(f"✅ Dropped {column_name} from {table_name}")
+        except Exception as e:
+            print(f"ℹ️  Could not drop {column_name} from {table_name}: {e}")
 
-    if not _has_column(inspector, 'batch', 'counts') and _has_column(inspector, 'batch', 'projected_portions'):
-        try:
-            op.alter_column('batch', 'projected_portions', new_column_name='counts')
-        except Exception:
-            op.add_column('batch', sa.Column('counts', sa.Integer(), nullable=True))
-
-    # Drop the newer columns if present
-    try:
-        op.drop_column('recipe', 'portion_count')
-    except Exception:
-        pass
-
-    try:
-        op.drop_column('batch', 'projected_portions')
-    except Exception:
-        pass
-
-    try:
-        op.drop_column('batch', 'final_portions')
-    except Exception:
-        pass
+    print("✅ Portion columns downgrade completed")
