@@ -19,6 +19,7 @@ class Config:
     if database_url:
         # Use PostgreSQL from environment
         SQLALCHEMY_DATABASE_URI = database_url
+        print(f"🔧 CONFIG: Using PostgreSQL database: {database_url[:50]}...")
     else:
         # Fallback to SQLite for local development
         import os
@@ -26,6 +27,7 @@ class Config:
         os.makedirs(instance_path, exist_ok=True)
         os.chmod(instance_path, 0o777)
         SQLALCHEMY_DATABASE_URI = 'sqlite:///' + os.path.join(instance_path, 'batchtrack.db')
+        print(f"🔧 CONFIG: Using SQLite database: {SQLALCHEMY_DATABASE_URI}")
 
     SQLALCHEMY_TRACK_MODIFICATIONS = False
     SQLALCHEMY_ENGINE_OPTIONS = {
