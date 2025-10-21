@@ -24,7 +24,7 @@ def upgrade():
     # Create addon table only if it doesn't exist
     if not table_exists('addon'):
         print("Creating addon table...")
-            op.create_table('addon',
+        op.create_table('addon',
             sa.Column('id', sa.Integer(), nullable=False),
             sa.Column('key', sa.String(length=64), nullable=False),
             sa.Column('name', sa.String(length=128), nullable=False),
