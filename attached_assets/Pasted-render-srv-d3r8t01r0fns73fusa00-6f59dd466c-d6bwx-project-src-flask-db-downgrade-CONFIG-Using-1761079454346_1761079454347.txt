@@ -1,0 +1,865 @@
+render@srv-d3r8t01r0fns73fusa00-6f59dd466c-d6bwx:~/project/src$ flask db downgrade
+🔧 CONFIG: Using PostgreSQL database: postgresql://batchtrack_postgress_development_user...
+/opt/render/project/src/.venv/lib/python3.13/site-packages/flask_limiter/extension.py:333: UserWarning: Using the in-memory storage for tracking rate limits as no storage was explicitly specified. This is not recommended for production use. See: https://flask-limiter.readthedocs.io#configuring-a-storage-backend for documentation about configuring the storage backend.
+  warnings.warn(
+
+=== Blueprint Registration Summary ===
+✅ Successful: 29
+   - Authentication
+   - Admin
+   - Developer
+   - Inventory
+   - Recipes
+   - Batches
+   - Organization
+   - Billing
+   - Settings
+   - Timers
+   - Expiration
+   - Conversion
+   - Products Main
+   - Public API
+   - Main API
+   - Drawer Actions
+   - Density Reference
+   - Retention Drawer API
+   - Global Link Drawer API
+   - App Routes
+   - Legal Routes
+   - Bulk Stock
+   - Fault Log
+   - Tag Manager
+   - Global Library Public
+   - Waitlist
+   - Public Tools
+   - Production Planning
+   - Exports
+
+🎉 All blueprints registered successfully!
+INFO  [alembic.env] Imported model module: app.models.addon
+INFO  [alembic.env] Imported model module: app.models.batch
+INFO  [alembic.env] Imported model module: app.models.billing_snapshot
+INFO  [alembic.env] Imported model module: app.models.category
+INFO  [alembic.env] Imported model module: app.models.developer_permission
+INFO  [alembic.env] Imported model module: app.models.developer_role
+INFO  [alembic.env] Imported model module: app.models.domain_event
+INFO  [alembic.env] Imported model module: app.models.feature_flag
+INFO  [alembic.env] Imported model module: app.models.freshness_snapshot
+INFO  [alembic.env] Imported model module: app.models.global_item
+INFO  [alembic.env] Imported model module: app.models.global_item_alias
+INFO  [alembic.env] Imported model module: app.models.inventory
+INFO  [alembic.env] Imported model module: app.models.inventory_lot
+INFO  [alembic.env] Imported model module: app.models.mixins
+INFO  [alembic.env] Imported model module: app.models.models
+INFO  [alembic.env] Imported model module: app.models.permission
+INFO  [alembic.env] Imported model module: app.models.pricing_snapshot
+INFO  [alembic.env] Imported model module: app.models.product
+INFO  [alembic.env] Imported model module: app.models.product_category
+INFO  [alembic.env] Imported model module: app.models.recipe
+INFO  [alembic.env] Imported model module: app.models.reservation
+INFO  [alembic.env] Imported model module: app.models.retention
+INFO  [alembic.env] Imported model module: app.models.role
+INFO  [alembic.env] Imported model module: app.models.statistics
+INFO  [alembic.env] Imported model module: app.models.stripe_event
+INFO  [alembic.env] Imported model module: app.models.subscription_tier
+INFO  [alembic.env] Imported model module: app.models.unified_inventory_history
+INFO  [alembic.env] Imported model module: app.models.unit
+INFO  [alembic.env] Imported model module: app.models.user_preferences
+INFO  [alembic.env] Imported model module: app.models.user_role_assignment
+INFO  [alembic.runtime.migration] Context impl PostgresqlImpl.
+INFO  [alembic.runtime.migration] Will assume transactional DDL.
+INFO  [alembic.runtime.migration] Running downgrade 20250922_01_align_extras -> d953779b55a3, Align naming for extras and ensure consumable tables and indexes exist
+Traceback (most recent call last):
+  File "/opt/render/project/src/.venv/lib/python3.13/site-packages/sqlalchemy/engine/base.py", line 1964, in _exec_single_context
+    self.dialect.do_execute(
+    ~~~~~~~~~~~~~~~~~~~~~~~^
+        cursor, str_statement, effective_parameters, context
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "/opt/render/project/src/.venv/lib/python3.13/site-packages/sqlalchemy/engine/default.py", line 945, in do_execute
+    cursor.execute(statement, parameters)
+    ~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^
+psycopg2.errors.InFailedSqlTransaction: current transaction is aborted, commands ignored until end of transaction block
+
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/opt/render/project/src/.venv/bin/flask", line 8, in <module>
+    sys.exit(main())
+             ~~~~^^
+  File "/opt/render/project/src/.venv/lib/python3.13/site-packages/flask/cli.py", line 1129, in main
+    cli.main()
+    ~~~~~~~~^^
+  File "/opt/render/project/src/.venv/lib/python3.13/site-packages/click/core.py", line 1082, in main
+    rv = self.invoke(ctx)
+  File "/opt/render/project/src/.venv/lib/python3.13/site-packages/click/core.py", line 1697, in invoke
+    return _process_result(sub_ctx.command.invoke(sub_ctx))
+                           ~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^
+  File "/opt/render/project/src/.venv/lib/python3.13/site-packages/click/core.py", line 1697, in invoke
+    return _process_result(sub_ctx.command.invoke(sub_ctx))
+                           ~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^
+  File "/opt/render/project/src/.venv/lib/python3.13/site-packages/click/core.py", line 1443, in invoke
+    return ctx.invoke(self.callback, **ctx.params)
+           ~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/render/project/src/.venv/lib/python3.13/site-packages/click/core.py", line 788, in invoke
+    return __callback(*args, **kwargs)
+  File "/opt/render/project/src/.venv/lib/python3.13/site-packages/click/decorators.py", line 33, in new_func
+    return f(get_current_context(), *args, **kwargs)
+  File "/opt/render/project/src/.venv/lib/python3.13/site-packages/flask/cli.py", line 400, in decorator
+    return ctx.invoke(f, *args, **kwargs)
+           ~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^
+  File "/opt/render/project/src/.venv/lib/python3.13/site-packages/click/core.py", line 788, in invoke
+    return __callback(*args, **kwargs)
+  File "/opt/render/project/src/.venv/lib/python3.13/site-packages/flask_migrate/cli.py", line 168, in downgrade
+    _downgrade(directory, revision, sql, tag, x_arg)
+    ~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/render/project/src/.venv/lib/python3.13/site-packages/flask_migrate/__init__.py", line 111, in wrapped
+    f(*args, **kwargs)
+    ~^^^^^^^^^^^^^^^^^
+  File "/opt/render/project/src/.venv/lib/python3.13/site-packages/flask_migrate/__init__.py", line 210, in downgrade
+    command.downgrade(config, revision, sql=sql, tag=tag)
+    ~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/render/project/src/.venv/lib/python3.13/site-packages/alembic/command.py", line 455, in downgrade
+    script.run_env()
+    ~~~~~~~~~~~~~~^^
+  File "/opt/render/project/src/.venv/lib/python3.13/site-packages/alembic/script/base.py", line 586, in run_env
+    util.load_python_file(self.dir, "env.py")
+    ~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^
+  File "/opt/render/project/src/.venv/lib/python3.13/site-packages/alembic/util/pyfiles.py", line 95, in load_python_file
+    module = load_module_py(module_id, path)
+  File "/opt/render/project/src/.venv/lib/python3.13/site-packages/alembic/util/pyfiles.py", line 113, in load_module_py
+    spec.loader.exec_module(module)  # type: ignore
+    ~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^
+  File "<frozen importlib._bootstrap_external>", line 1026, in exec_module
+  File "<frozen importlib._bootstrap>", line 488, in _call_with_frames_removed
+  File "/opt/render/project/src/migrations/env.py", line 189, in <module>
+    run_migrations_online()
+    ~~~~~~~~~~~~~~~~~~~~~^^
+  File "/opt/render/project/src/migrations/env.py", line 183, in run_migrations_online
+    context.run_migrations()
+    ~~~~~~~~~~~~~~~~~~~~~~^^
+  File "<string>", line 8, in run_migrations
+  File "/opt/render/project/src/.venv/lib/python3.13/site-packages/alembic/runtime/environment.py", line 946, in run_migrations
+    self.get_context().run_migrations(**kw)
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^
+  File "/opt/render/project/src/.venv/lib/python3.13/site-packages/alembic/runtime/migration.py", line 630, in run_migrations
+    head_maintainer.update_to_step(step)
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^
+  File "/opt/render/project/src/.venv/lib/python3.13/site-packages/alembic/runtime/migration.py", line 862, in update_to_step
+    self._update_version(from_, to_)
+    ~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^
+  File "/opt/render/project/src/.venv/lib/python3.13/site-packages/alembic/runtime/migration.py", line 797, in _update_version
+    ret = self.context.impl._exec(
+        self.context._version.update()
+    ...<4 lines>...
+        )
+    )
+  File "/opt/render/project/src/.venv/lib/python3.13/site-packages/alembic/ddl/impl.py", line 246, in _exec
+    return conn.execute(construct, params)
+           ~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^
+  File "/opt/render/project/src/.venv/lib/python3.13/site-packages/sqlalchemy/engine/base.py", line 1416, in execute
+    return meth(
+        self,
+        distilled_parameters,
+        execution_options or NO_OPTIONS,
+    )
+  File "/opt/render/project/src/.venv/lib/python3.13/site-packages/sqlalchemy/sql/elements.py", line 523, in _execute_on_connection
+    return connection._execute_clauseelement(
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^
+        self, distilled_params, execution_options
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "/opt/render/project/src/.venv/lib/python3.13/site-packages/sqlalchemy/engine/base.py", line 1638, in _execute_clauseelement
+    ret = self._execute_context(
+        dialect,
+    ...<8 lines>...
+        cache_hit=cache_hit,
+    )
+  File "/opt/render/project/src/.venv/lib/python3.13/site-packages/sqlalchemy/engine/base.py", line 1843, in _execute_context
+    return self._exec_single_context(
+           ~~~~~~~~~~~~~~~~~~~~~~~~~^
+        dialect, context, statement, parameters
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "/opt/render/project/src/.venv/lib/python3.13/site-packages/sqlalchemy/engine/base.py", line 1983, in _exec_single_context
+    self._handle_dbapi_exception(
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~^
+        e, str_statement, effective_parameters, cursor, context
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "/opt/render/project/src/.venv/lib/python3.13/site-packages/sqlalchemy/engine/base.py", line 2352, in _handle_dbapi_exception
+    raise sqlalchemy_exception.with_traceback(exc_info[2]) from e
+  File "/opt/render/project/src/.venv/lib/python3.13/site-packages/sqlalchemy/engine/base.py", line 1964, in _exec_single_context
+    self.dialect.do_execute(
+    ~~~~~~~~~~~~~~~~~~~~~~~^
+        cursor, str_statement, effective_parameters, context
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "/opt/render/project/src/.venv/lib/python3.13/site-packages/sqlalchemy/engine/default.py", line 945, in do_execute
+    cursor.execute(statement, parameters)
+    ~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^
+sqlalchemy.exc.InternalError: (psycopg2.errors.InFailedSqlTransaction) current transaction is aborted, commands ignored until end of transaction block
+
+[SQL: UPDATE alembic_version SET version_num='d953779b55a3' WHERE alembic_version.version_num = '20250922_01_align_extras']
+(Background on this error at: https://sqlalche.me/e/20/2j85)
+render@srv-d3r8t01r0fns73fusa00-6f59dd466c-d6bwx:~/project/src$ flask db upgrade
+🔧 CONFIG: Using PostgreSQL database: postgresql://batchtrack_postgress_development_user...
+/opt/render/project/src/.venv/lib/python3.13/site-packages/flask_limiter/extension.py:333: UserWarning: Using the in-memory storage for tracking rate limits as no storage was explicitly specified. This is not recommended for production use. See: https://flask-limiter.readthedocs.io#configuring-a-storage-backend for documentation about configuring the storage backend.
+  warnings.warn(
+
+=== Blueprint Registration Summary ===
+✅ Successful: 29
+   - Authentication
+   - Admin
+   - Developer
+   - Inventory
+   - Recipes
+   - Batches
+   - Organization
+   - Billing
+   - Settings
+   - Timers
+   - Expiration
+   - Conversion
+   - Products Main
+   - Public API
+   - Main API
+   - Drawer Actions
+   - Density Reference
+   - Retention Drawer API
+   - Global Link Drawer API
+   - App Routes
+   - Legal Routes
+   - Bulk Stock
+   - Fault Log
+   - Tag Manager
+   - Global Library Public
+   - Waitlist
+   - Public Tools
+   - Production Planning
+   - Exports
+
+🎉 All blueprints registered successfully!
+INFO  [alembic.env] Imported model module: app.models.addon
+INFO  [alembic.env] Imported model module: app.models.batch
+INFO  [alembic.env] Imported model module: app.models.billing_snapshot
+INFO  [alembic.env] Imported model module: app.models.category
+INFO  [alembic.env] Imported model module: app.models.developer_permission
+INFO  [alembic.env] Imported model module: app.models.developer_role
+INFO  [alembic.env] Imported model module: app.models.domain_event
+INFO  [alembic.env] Imported model module: app.models.feature_flag
+INFO  [alembic.env] Imported model module: app.models.freshness_snapshot
+INFO  [alembic.env] Imported model module: app.models.global_item
+INFO  [alembic.env] Imported model module: app.models.global_item_alias
+INFO  [alembic.env] Imported model module: app.models.inventory
+INFO  [alembic.env] Imported model module: app.models.inventory_lot
+INFO  [alembic.env] Imported model module: app.models.mixins
+INFO  [alembic.env] Imported model module: app.models.models
+INFO  [alembic.env] Imported model module: app.models.permission
+INFO  [alembic.env] Imported model module: app.models.pricing_snapshot
+INFO  [alembic.env] Imported model module: app.models.product
+INFO  [alembic.env] Imported model module: app.models.product_category
+INFO  [alembic.env] Imported model module: app.models.recipe
+INFO  [alembic.env] Imported model module: app.models.reservation
+INFO  [alembic.env] Imported model module: app.models.retention
+INFO  [alembic.env] Imported model module: app.models.role
+INFO  [alembic.env] Imported model module: app.models.statistics
+INFO  [alembic.env] Imported model module: app.models.stripe_event
+INFO  [alembic.env] Imported model module: app.models.subscription_tier
+INFO  [alembic.env] Imported model module: app.models.unified_inventory_history
+INFO  [alembic.env] Imported model module: app.models.unit
+INFO  [alembic.env] Imported model module: app.models.user_preferences
+INFO  [alembic.env] Imported model module: app.models.user_role_assignment
+INFO  [alembic.runtime.migration] Context impl PostgresqlImpl.
+INFO  [alembic.runtime.migration] Will assume transactional DDL.
+INFO  [alembic.runtime.migration] Running upgrade 20250922_01_align_extras -> 20250922_02, Add inventory cost method toggle and valuation method fields
+=== Adding inventory cost method toggle and valuation method fields ===
+Adding inventory_cost_method to organization...
+✅ Added inventory_cost_method column
+Adding inventory_cost_method_changed_at to organization...
+✅ Added inventory_cost_method_changed_at column
+Adding valuation_method to unified_inventory_history...
+✅ Added valuation_method column
+Adding cost_method to batch...
+✅ Added cost_method column
+Adding cost_method_locked_at to batch...
+✅ Added cost_method_locked_at column
+✅ Inventory cost method migration completed
+INFO  [alembic.runtime.migration] Running upgrade 20250922_02 -> 20250923_01, Create product_category table
+=== Creating product_category table ===
+Creating product_category table...
+✅ Created product_category table
+   ✅ Created index ix_product_category_name on product_category
+✅ Product category migration completed
+INFO  [alembic.runtime.migration] Running upgrade 20250923_01 -> 20250923_02, Add category_id to product and recipe, backfill to Uncategorized, set NOT NULL
+Starting product and recipe category migration...
+Adding category_id column to product table...
+Adding category_id column to recipe table...
+Backfilling product category_id values...
+Found 0 products with NULL category_id
+Backfilling recipe category_id values...
+Found 0 recipes with NULL category_id
+Adding constraints to product table...
+Created foreign key fk_product_category
+Created index ix_product_category_id
+Set product.category_id to NOT NULL
+Adding constraints to recipe table...
+Created foreign key fk_recipe_category
+Created index ix_recipe_category_id
+Set recipe.category_id to NOT NULL
+✅ Product and recipe category migration completed successfully!
+INFO  [alembic.runtime.migration] Running upgrade 20250923_02 -> 20250923_03, Add portioning_data JSON to recipe and batch
+Added portioning_data column to recipe table
+Added portioning_data column to batch table
+INFO  [alembic.runtime.migration] Running upgrade 20250923_03 -> 20250923_04, Add sku_name_template to product_category
+   ✅ sku_name_template column added successfully
+INFO  [alembic.runtime.migration] Running upgrade 20250923_04 -> 20250924_01, Drop Product.base_unit column
+INFO  [alembic.runtime.migration] Running upgrade 20250924_01 -> 20250925_01, Add portion columns to recipe and batch: is_portioned, portion_name, counts
+Added column is_portioned to recipe
+Added column portion_name to recipe
+Added column counts to recipe
+Added column is_portioned to batch
+Added column portion_name to batch
+Added column counts to batch
+INFO  [alembic.runtime.migration] Running upgrade 20250925_01 -> 20250925_02, Add plan_snapshot JSON to batch
+Added column plan_snapshot to batch
+INFO  [alembic.runtime.migration] Running upgrade 20250925_02 -> 20250925_03, Add portion_unit_id FK to recipe and batch
+INFO  [alembic.runtime.migration] Running upgrade 20250925_03 -> 20250925_04, Add container structured attributes to inventory_item and global_item
+Added column container_material to inventory_item
+Added column container_volume to inventory_item
+Added column container_volume_unit to inventory_item
+Added column container_dimensions to inventory_item
+Added column container_color to inventory_item
+Added column container_closure_type to inventory_item
+Added column container_shape to inventory_item
+Added column container_style to inventory_item
+Added column container_material to global_item
+Added column container_volume to global_item
+Added column container_volume_unit to global_item
+Added column container_dimensions to global_item
+Added column container_color to global_item
+Added column container_closure_type to global_item
+Added column container_shape to global_item
+Added column container_style to global_item
+INFO  [alembic.runtime.migration] Running upgrade 20250925_04 -> 20250930_1, Add global_item_alias table and performance indexes
+=== Adding alias table and performance indexes ===
+   Creating global_item_alias table...
+   ✅ global_item_alias table created
+   ✅ Created GIN index for alias search
+   ✅ Backfilled aliases from aka_names
+   ✅ Created index ix_inventory_item_org on inventory_item
+   ✅ Created index ix_inventory_item_org
+   ✅ Created index ix_inventory_lot_org on inventory_lot
+   ✅ Created index ix_inventory_lot_org
+   ✅ Created index ix_unified_history_org on unified_inventory_history
+   ✅ Created index ix_unified_history_org
+   ✅ Created index ix_recipe_org on recipe
+   ✅ Created index ix_recipe_org
+   ✅ Created index ix_batch_org on batch
+   ✅ Created index ix_batch_org
+   ✅ Created index ix_user_org on user
+   ✅ Created index ix_user_org
+   ✅ Created JSONB GIN index on aka_names
+✅ Alias and indexes migration completed
+INFO  [alembic.runtime.migration] Running upgrade 20250930_1 -> 20250930_2, Add soap making and cosmetic formulation attributes to inventory items
+=== Adding soap making and cosmetic formulation fields to inventory items ===
+Processing inventory_item table...
+  ✅ Added saponification_value to inventory_item
+  ✅ Added iodine_value to inventory_item
+  ✅ Added melting_point_c to inventory_item
+  ✅ Added flash_point_c to inventory_item
+  ✅ Added ph_value to inventory_item
+  ✅ Added moisture_content_percent to inventory_item
+  ✅ Added shelf_life_months to inventory_item
+  ✅ Added comedogenic_rating to inventory_item
+✅ Soap making and cosmetic formulation fields migration completed successfully
+INFO  [alembic.runtime.migration] Running upgrade 20250930_2 -> 20250930_3, Add soap making and cosmetic formulation attributes to global_item table
+=== Adding soap making and cosmetic formulation fields to global_item ===
+Processing global_item table...
+  ✅ Added saponification_value to global_item
+  ✅ Added iodine_value to global_item
+  ✅ Added melting_point_c to global_item
+  ✅ Added flash_point_c to global_item
+  ✅ Added ph_value to global_item
+  ✅ Added moisture_content_percent to global_item
+  ✅ Added shelf_life_months to global_item
+  ✅ Added comedogenic_rating to global_item
+✅ Soap making and cosmetic formulation fields migration for global_item completed successfully
+INFO  [alembic.runtime.migration] Running upgrade 20250930_3 -> 20250930_4, Add visibility control fields for soap-making attributes to ingredient categories
+=== Adding visibility control fields to ingredient_category ===
+   ✅ show_saponification_value column added successfully
+   ✅ show_iodine_value column added successfully
+   ✅ show_melting_point column added successfully
+   ✅ show_flash_point column added successfully
+   ✅ show_ph_value column added successfully
+   ✅ show_moisture_content column added successfully
+   ✅ show_shelf_life_months column added successfully
+   ✅ show_comedogenic_rating column added successfully
+✅ Visibility control fields migration completed
+INFO  [alembic.runtime.migration] Running upgrade 20250930_4 -> 20250930_5, Set default visibility flags for global ingredient categories
+Setting visibility defaults for global ingredient categories from JSON files...
+   ⚠️  Category 'Salts & Minerals (Crystalline)' not found in database
+   ⚠️  Category 'Waxes' not found in database
+   ⚠️  Category 'Fruits, Nuts & Seeds (Whole/Chopped)' not found in database
+   ⚠️  Category 'Oils (Carrier & Fixed)' not found in database
+   ⚠️  Category 'Liquids (Aqueous)' not found in database
+   ⚠️  Category 'Butters & Solid Fats' not found in database
+   ⚠️  Category 'Starches & Thickeners' not found in database
+   ⚠️  Category 'Essential Oils' not found in database
+   ⚠️  Category 'Surfactants & Emulsifiers' not found in database
+   ⚠️  Category 'Fragrance Oils' not found in database
+   ⚠️  Category 'Yeast & Cultures' not found in database
+   ⚠️  Category 'Preservatives & Additives' not found in database
+   ⚠️  Category 'Miscellaneous' not found in database
+   ⚠️  Category 'Extracts & Alcohols (Solvents)' not found in database
+   ⚠️  Category 'Herbs & Spices (Dried & Ground)' not found in database
+   ⚠️  Category 'Active Ingredients (Cosmetics)' not found in database
+   ⚠️  Category 'Colorants (Pigments)' not found in database
+   ⚠️  Category 'Botanicals (Dried & Whole/Parts)' not found in database
+   ⚠️  Category 'Flours & Powders (Organic)' not found in database
+   ⚠️  Category 'Sugars & Syrups' not found in database
+   ⚠️  Category 'Clays' not found in database
+✅ Category visibility defaults set successfully!
+INFO  [alembic.runtime.migration] Running upgrade 20250930_5 -> 20251001_1, add addon models and tier allowed addons
+=== Adding addon table and tier allowed addons ===
+Creating addon table...
+✅ Created addon table
+   ✅ allowed_addon_keys column added successfully
+✅ Addon models and tier allowed addons migration completed
+INFO  [alembic.runtime.migration] Running upgrade 20251001_1 -> 20251001_2, add function_key and retention_extension_days to addon
+=== Adding function_key and retention_extension_days to addon ===
+✅ Addon fields migration completed
+INFO  [alembic.runtime.migration] Running upgrade 20251001_2 -> 20251006_1, Add category_data JSON column to recipe table
+INFO  [alembic.runtime.migration] Running upgrade 20251006_1 -> 20251006_2, Add ui_config JSON column to product_category
+INFO  [alembic.runtime.migration] Running upgrade 20251006_2 -> 20251008_1, Add generated columns for hot recipe fields and basic indexes
+   ✅ Created index ix_recipe_soap_superfat on recipe
+   ✅ Created index ix_recipe_soap_water_pct on recipe
+   ✅ Created index ix_recipe_soap_lye_type on recipe
+   ✅ Created index ix_recipe_candle_fragrance_pct on recipe
+   ✅ Created index ix_recipe_candle_vessel_ml on recipe
+   ✅ Created index ix_recipe_vessel_fill_pct on recipe
+   ✅ Created index ix_recipe_baker_base_flour_g on recipe
+   ✅ Created index ix_recipe_baker_water_pct on recipe
+   ✅ Created index ix_recipe_baker_salt_pct on recipe
+   ✅ Created index ix_recipe_baker_yeast_pct on recipe
+   ✅ Created index ix_recipe_cosm_emulsifier_pct on recipe
+   ✅ Created index ix_recipe_cosm_preservative_pct on recipe
+INFO  [alembic.runtime.migration] Running upgrade 20251008_1 -> 20251008_2, Add generated columns for hot batch fields (from plan_snapshot.category_extension) and indexes
+   ✅ Created index ix_batch_vessel_fill_pct on batch
+   ✅ Created index ix_batch_candle_fragrance_pct on batch
+   ✅ Created index ix_batch_candle_vessel_ml on batch
+   ✅ Created index ix_batch_soap_superfat on batch
+   ✅ Created index ix_batch_soap_water_pct on batch
+   ✅ Created index ix_batch_soap_lye_type on batch
+   ✅ Created index ix_batch_baker_base_flour_g on batch
+   ✅ Created index ix_batch_baker_water_pct on batch
+   ✅ Created index ix_batch_baker_salt_pct on batch
+   ✅ Created index ix_batch_baker_yeast_pct on batch
+   ✅ Created index ix_batch_cosm_emulsifier_pct on batch
+   ✅ Created index ix_batch_cosm_preservative_pct on batch
+INFO  [alembic.runtime.migration] Running upgrade 20251008_2 -> 20251008_3, Add optional GIN index on recipe.category_data for ad-hoc queries
+INFO  [alembic.runtime.migration] Running upgrade 20251008_3 -> 20251009_1, Add missing retention policy columns to subscription_tier
+=== Adding missing retention policy columns to subscription_tier ===
+   ✅ retention_policy column added successfully
+✅ Migration completed - retention_policy ensured
+INFO  [alembic.runtime.migration] Running upgrade 20251009_1 -> 20251009_2, Repair keep-list indexes/tables and add tier_included_addon
+INFO  [alembic.runtime.migration] Running upgrade 20251009_2 -> 20251009_3, Align models to own keep-list indexes, projections, and association table
+=== Starting model alignment with PostgreSQL safety ===
+   Creating org-scoping indexes...
+   Creating product category indexes...
+   ✅ Created product category functional index
+   Processing recipe computed columns...
+   ✅ Column recipe.soap_superfat already exists
+   ✅ Column recipe.soap_water_pct already exists
+   ✅ Column recipe.soap_lye_type already exists
+   ✅ Column recipe.candle_fragrance_pct already exists
+   ✅ Column recipe.candle_vessel_ml already exists
+   ✅ Column recipe.vessel_fill_pct already exists
+   ✅ Column recipe.baker_base_flour_g already exists
+   ✅ Column recipe.baker_water_pct already exists
+   ✅ Column recipe.baker_salt_pct already exists
+   ✅ Column recipe.baker_yeast_pct already exists
+   ✅ Column recipe.cosm_emulsifier_pct already exists
+   ✅ Column recipe.cosm_preservative_pct already exists
+   ✅ Created recipe GIN index
+   Processing batch computed columns...
+   ✅ Column batch.vessel_fill_pct already exists
+   ✅ Column batch.candle_fragrance_pct already exists
+   ✅ Column batch.candle_vessel_ml already exists
+   ✅ Column batch.soap_superfat already exists
+   ✅ Column batch.soap_water_pct already exists
+   ✅ Column batch.soap_lye_type already exists
+   ✅ Column batch.baker_base_flour_g already exists
+   ✅ Column batch.baker_water_pct already exists
+   ✅ Column batch.baker_salt_pct already exists
+   ✅ Column batch.baker_yeast_pct already exists
+   ✅ Column batch.cosm_emulsifier_pct already exists
+   ✅ Column batch.cosm_preservative_pct already exists
+   Processing consumable tables...
+   ✅ organization_id column added successfully
+   ✅ Added organization_id to batch_consumable
+   ✅ organization_id already exists in extra_batch_consumable
+   Creating indexes for batch_consumable...
+   ✅ Created index ix_batch_consumable_organization_id on batch_consumable
+   Creating indexes for extra_batch_consumable...
+   Processing global item alias table...
+   ✅ Created global_item_alias GIN index
+   ✅ Created global_item aka_names GIN index
+✅ Model alignment completed successfully
+INFO  [alembic.runtime.migration] Running upgrade 20251009_3 -> 20251011_01, Fix tier addon association table naming inconsistency
+INFO  [alembic.runtime.migration] Running upgrade 20251011_01 -> 20251015_01, Fix portion columns to match models: rename counts -> portion_count/projected_portions, add final_portions
+INFO  [alembic.runtime.migration] Running upgrade 20251015_01 -> 20251015_02, Add skin_enabled boolean to product_category
+INFO  [alembic.runtime.migration] Running upgrade 20251015_02 -> 20251015_03, Create feature_flag table
+=== Creating feature_flag table ===
+Creating feature_flag table...
+✅ feature_flag table created successfully
+✅ Feature flag table migration completed
+INFO  [alembic.runtime.migration] Running upgrade 20251015_03 -> 20251015_04, Make product_category.organization_id nullable to support global categories
+INFO  [alembic.runtime.migration] Running upgrade 20251015_04 -> 20251016_1, Create tier_allowed_addon association table if missing
+INFO  [alembic.runtime.migration] Running upgrade 20251016_1 -> 20251016_2, Add stable key column to subscription_tier
+✅ Dropped existing key column
+Found 0 existing tiers
+✅ Normalized tier names and removed duplicates
+✅ Subscription tier migration completed - using integer IDs only
+INFO  [alembic.runtime.migration] Running upgrade 20251016_2 -> 20251017_1, add billing performance indexes
+INFO  [alembic.runtime.migration] Running upgrade 20251017_1 -> 20251017_2, drop offline billing snapshot columns
+INFO  [alembic.runtime.migration] Running upgrade 20251017_2 -> 20251020_1, add theme column to user_preferences
+=== Adding theme column to user_preferences ===
+   ✅ theme column already exists
+✅ Migration completed: theme column available
+INFO  [alembic.runtime.migration] Running upgrade 20251020_1 -> 20251020_2, Add all missing production columns that exist in models but not in database
+=== Adding All Missing Production Columns ===
+   ✅ Added category to developer_permission
+   ✅ Added is_active to unit
+   ✅ Added is_active to role
+   ✅ Added description to ingredient_category
+   ✅ Added is_active to developer_permission
+   ✅ created_at already exists in unit
+   ✅ updated_at already exists in unit
+   ✅ created_at already exists in role
+   ✅ Added created_by to role
+   ✅ organization_id already exists in role
+   ✅ is_system_role already exists in role
+   ✅ Created foreign key fk_role_created_by_user
+   ✅ Created foreign key fk_role_organization
+   ✅ Created foreign key fk_unit_organization
+✅ All missing production columns migration completed
+INFO  [alembic.runtime.migration] Running upgrade 20251020_2 -> 20251021_01, Add missing columns for init-production compatibility (developer_role, unit, ingredient_category)
+=== Fixing missing columns for init-production ===
+   ✅ Added developer_role.category
+   ✅ Added developer_role.is_active
+   ✅ developer_role.created_at already exists
+   ✅ Added unit.is_custom
+   ✅ Added unit.is_mapped
+   ✅ ingredient_category.description already exists
+   ✅ Added ingredient_category.color
+   ✅ Added ingredient_category.default_density
+   ✅ Added ingredient_category.is_active
+   ✅ Added ingredient_category.created_by
+   ✅ ingredient_category.created_at already exists
+   ✅ ingredient_category.updated_at already exists
+   ✅ ingredient_category.show_saponification_value already exists
+   ✅ ingredient_category.show_iodine_value already exists
+   ✅ ingredient_category.show_melting_point already exists
+   ✅ ingredient_category.show_flash_point already exists
+   ✅ ingredient_category.show_ph_value already exists
+   ✅ ingredient_category.show_moisture_content already exists
+   ✅ ingredient_category.show_shelf_life_months already exists
+   ✅ ingredient_category.show_comedogenic_rating already exists
+   ✅ ingredient_category.is_global_category already exists
+✅ Missing columns fix complete
+render@srv-d3r8t01r0fns73fusa00-6f59dd466c-d6bwx:~/project/src$ flask downgrade base
+🔧 CONFIG: Using PostgreSQL database: postgresql://batchtrack_postgress_development_user...
+/opt/render/project/src/.venv/lib/python3.13/site-packages/flask_limiter/extension.py:333: UserWarning: Using the in-memory storage for tracking rate limits as no storage was explicitly specified. This is not recommended for production use. See: https://flask-limiter.readthedocs.io#configuring-a-storage-backend for documentation about configuring the storage backend.
+  warnings.warn(
+
+=== Blueprint Registration Summary ===
+✅ Successful: 29
+   - Authentication
+   - Admin
+   - Developer
+   - Inventory
+   - Recipes
+   - Batches
+   - Organization
+   - Billing
+   - Settings
+   - Timers
+   - Expiration
+   - Conversion
+   - Products Main
+   - Public API
+   - Main API
+   - Drawer Actions
+   - Density Reference
+   - Retention Drawer API
+   - Global Link Drawer API
+   - App Routes
+   - Legal Routes
+   - Bulk Stock
+   - Fault Log
+   - Tag Manager
+   - Global Library Public
+   - Waitlist
+   - Public Tools
+   - Production Planning
+   - Exports
+
+🎉 All blueprints registered successfully!
+Usage: flask [OPTIONS] COMMAND [ARGS]...
+Try 'flask --help' for help.
+
+Error: No such command 'downgrade'.
+render@srv-d3r8t01r0fns73fusa00-6f59dd466c-d6bwx:~/project/src$ flask db downgrade base
+🔧 CONFIG: Using PostgreSQL database: postgresql://batchtrack_postgress_development_user...
+/opt/render/project/src/.venv/lib/python3.13/site-packages/flask_limiter/extension.py:333: UserWarning: Using the in-memory storage for tracking rate limits as no storage was explicitly specified. This is not recommended for production use. See: https://flask-limiter.readthedocs.io#configuring-a-storage-backend for documentation about configuring the storage backend.
+  warnings.warn(
+
+=== Blueprint Registration Summary ===
+✅ Successful: 29
+   - Authentication
+   - Admin
+   - Developer
+   - Inventory
+   - Recipes
+   - Batches
+   - Organization
+   - Billing
+   - Settings
+   - Timers
+   - Expiration
+   - Conversion
+   - Products Main
+   - Public API
+   - Main API
+   - Drawer Actions
+   - Density Reference
+   - Retention Drawer API
+   - Global Link Drawer API
+   - App Routes
+   - Legal Routes
+   - Bulk Stock
+   - Fault Log
+   - Tag Manager
+   - Global Library Public
+   - Waitlist
+   - Public Tools
+   - Production Planning
+   - Exports
+
+🎉 All blueprints registered successfully!
+INFO  [alembic.env] Imported model module: app.models.addon
+INFO  [alembic.env] Imported model module: app.models.batch
+INFO  [alembic.env] Imported model module: app.models.billing_snapshot
+INFO  [alembic.env] Imported model module: app.models.category
+INFO  [alembic.env] Imported model module: app.models.developer_permission
+INFO  [alembic.env] Imported model module: app.models.developer_role
+INFO  [alembic.env] Imported model module: app.models.domain_event
+INFO  [alembic.env] Imported model module: app.models.feature_flag
+INFO  [alembic.env] Imported model module: app.models.freshness_snapshot
+INFO  [alembic.env] Imported model module: app.models.global_item
+INFO  [alembic.env] Imported model module: app.models.global_item_alias
+INFO  [alembic.env] Imported model module: app.models.inventory
+INFO  [alembic.env] Imported model module: app.models.inventory_lot
+INFO  [alembic.env] Imported model module: app.models.mixins
+INFO  [alembic.env] Imported model module: app.models.models
+INFO  [alembic.env] Imported model module: app.models.permission
+INFO  [alembic.env] Imported model module: app.models.pricing_snapshot
+INFO  [alembic.env] Imported model module: app.models.product
+INFO  [alembic.env] Imported model module: app.models.product_category
+INFO  [alembic.env] Imported model module: app.models.recipe
+INFO  [alembic.env] Imported model module: app.models.reservation
+INFO  [alembic.env] Imported model module: app.models.retention
+INFO  [alembic.env] Imported model module: app.models.role
+INFO  [alembic.env] Imported model module: app.models.statistics
+INFO  [alembic.env] Imported model module: app.models.stripe_event
+INFO  [alembic.env] Imported model module: app.models.subscription_tier
+INFO  [alembic.env] Imported model module: app.models.unified_inventory_history
+INFO  [alembic.env] Imported model module: app.models.unit
+INFO  [alembic.env] Imported model module: app.models.user_preferences
+INFO  [alembic.env] Imported model module: app.models.user_role_assignment
+INFO  [alembic.runtime.migration] Context impl PostgresqlImpl.
+INFO  [alembic.runtime.migration] Will assume transactional DDL.
+INFO  [alembic.runtime.migration] Running downgrade 20251021_01 -> 20251020_2, Add missing columns for init-production compatibility (developer_role, unit, ingredient_category)
+=== Downgrading missing column fixes ===
+ℹ️  No-op downgrade (columns preserved)
+INFO  [alembic.runtime.migration] Running downgrade 20251020_2 -> 20251020_1, Add all missing production columns that exist in models but not in database
+=== Removing Added Production Columns ===
+   ✅ Dropped foreign key fk_role_organization
+   ✅ Dropped foreign key fk_role_created_by_user
+   ✅ Dropped foreign key fk_unit_organization
+   ✅ Dropped updated_at from unit
+   ✅ Dropped created_at from unit
+   ✅ Dropped is_active from unit
+   ✅ Dropped is_system_role from role
+   ✅ Dropped organization_id from role
+   ✅ Dropped created_by from role
+   ✅ Dropped created_at from role
+   ✅ Dropped is_active from role
+   ✅ Dropped description from ingredient_category
+   ✅ Dropped is_active from developer_permission
+   ✅ Dropped category from developer_permission
+✅ Production columns downgrade completed
+INFO  [alembic.runtime.migration] Running downgrade 20251020_1 -> 20251017_2, add theme column to user_preferences
+=== Removing theme column from user_preferences ===
+   Removing theme column...
+   ✅ theme column removed successfully
+✅ Downgrade completed
+INFO  [alembic.runtime.migration] Running downgrade 20251017_2 -> 20251017_1, drop offline billing snapshot columns
+INFO  [alembic.runtime.migration] Running downgrade 20251017_1 -> 20251016_2, add billing performance indexes
+INFO  [alembic.runtime.migration] Running downgrade 20251016_2 -> 20251016_1, Add stable key column to subscription_tier
+   ✅ Created unique constraint uq_subscription_tier_key
+INFO  [alembic.runtime.migration] Running downgrade 20251016_1 -> 20251015_04, Create tier_allowed_addon association table if missing
+INFO  [alembic.runtime.migration] Running downgrade 20251015_04 -> 20251015_03, Make product_category.organization_id nullable to support global categories
+INFO  [alembic.runtime.migration] Running downgrade 20251015_03 -> 20251015_02, Create feature_flag table
+=== Removing feature_flag table ===
+   ✅ Dropped feature_flag table
+✅ Feature flag table downgrade completed
+INFO  [alembic.runtime.migration] Running downgrade 20251015_02 -> 20251015_01, Add skin_enabled boolean to product_category
+INFO  [alembic.runtime.migration] Running downgrade 20251015_01 -> 20251011_01, Fix portion columns to match models: rename counts -> portion_count/projected_portions, add final_portions
+Traceback (most recent call last):
+  File "/opt/render/project/src/.venv/lib/python3.13/site-packages/sqlalchemy/engine/base.py", line 1964, in _exec_single_context
+    self.dialect.do_execute(
+    ~~~~~~~~~~~~~~~~~~~~~~~^
+        cursor, str_statement, effective_parameters, context
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "/opt/render/project/src/.venv/lib/python3.13/site-packages/sqlalchemy/engine/default.py", line 945, in do_execute
+    cursor.execute(statement, parameters)
+    ~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^
+psycopg2.errors.InFailedSqlTransaction: current transaction is aborted, commands ignored until end of transaction block
+
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/opt/render/project/src/.venv/bin/flask", line 8, in <module>
+    sys.exit(main())
+             ~~~~^^
+  File "/opt/render/project/src/.venv/lib/python3.13/site-packages/flask/cli.py", line 1129, in main
+    cli.main()
+    ~~~~~~~~^^
+  File "/opt/render/project/src/.venv/lib/python3.13/site-packages/click/core.py", line 1082, in main
+    rv = self.invoke(ctx)
+  File "/opt/render/project/src/.venv/lib/python3.13/site-packages/click/core.py", line 1697, in invoke
+    return _process_result(sub_ctx.command.invoke(sub_ctx))
+                           ~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^
+  File "/opt/render/project/src/.venv/lib/python3.13/site-packages/click/core.py", line 1697, in invoke
+    return _process_result(sub_ctx.command.invoke(sub_ctx))
+                           ~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^
+  File "/opt/render/project/src/.venv/lib/python3.13/site-packages/click/core.py", line 1443, in invoke
+    return ctx.invoke(self.callback, **ctx.params)
+           ~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/render/project/src/.venv/lib/python3.13/site-packages/click/core.py", line 788, in invoke
+    return __callback(*args, **kwargs)
+  File "/opt/render/project/src/.venv/lib/python3.13/site-packages/click/decorators.py", line 33, in new_func
+    return f(get_current_context(), *args, **kwargs)
+  File "/opt/render/project/src/.venv/lib/python3.13/site-packages/flask/cli.py", line 400, in decorator
+    return ctx.invoke(f, *args, **kwargs)
+           ~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^
+  File "/opt/render/project/src/.venv/lib/python3.13/site-packages/click/core.py", line 788, in invoke
+    return __callback(*args, **kwargs)
+  File "/opt/render/project/src/.venv/lib/python3.13/site-packages/flask_migrate/cli.py", line 168, in downgrade
+    _downgrade(directory, revision, sql, tag, x_arg)
+    ~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/render/project/src/.venv/lib/python3.13/site-packages/flask_migrate/__init__.py", line 111, in wrapped
+    f(*args, **kwargs)
+    ~^^^^^^^^^^^^^^^^^
+  File "/opt/render/project/src/.venv/lib/python3.13/site-packages/flask_migrate/__init__.py", line 210, in downgrade
+    command.downgrade(config, revision, sql=sql, tag=tag)
+    ~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/render/project/src/.venv/lib/python3.13/site-packages/alembic/command.py", line 455, in downgrade
+    script.run_env()
+    ~~~~~~~~~~~~~~^^
+  File "/opt/render/project/src/.venv/lib/python3.13/site-packages/alembic/script/base.py", line 586, in run_env
+    util.load_python_file(self.dir, "env.py")
+    ~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^
+  File "/opt/render/project/src/.venv/lib/python3.13/site-packages/alembic/util/pyfiles.py", line 95, in load_python_file
+    module = load_module_py(module_id, path)
+  File "/opt/render/project/src/.venv/lib/python3.13/site-packages/alembic/util/pyfiles.py", line 113, in load_module_py
+    spec.loader.exec_module(module)  # type: ignore
+    ~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^
+  File "<frozen importlib._bootstrap_external>", line 1026, in exec_module
+  File "<frozen importlib._bootstrap>", line 488, in _call_with_frames_removed
+  File "/opt/render/project/src/migrations/env.py", line 189, in <module>
+    run_migrations_online()
+    ~~~~~~~~~~~~~~~~~~~~~^^
+  File "/opt/render/project/src/migrations/env.py", line 183, in run_migrations_online
+    context.run_migrations()
+    ~~~~~~~~~~~~~~~~~~~~~~^^
+  File "<string>", line 8, in run_migrations
+  File "/opt/render/project/src/.venv/lib/python3.13/site-packages/alembic/runtime/environment.py", line 946, in run_migrations
+    self.get_context().run_migrations(**kw)
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^
+  File "/opt/render/project/src/.venv/lib/python3.13/site-packages/alembic/runtime/migration.py", line 630, in run_migrations
+    head_maintainer.update_to_step(step)
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^
+  File "/opt/render/project/src/.venv/lib/python3.13/site-packages/alembic/runtime/migration.py", line 862, in update_to_step
+    self._update_version(from_, to_)
+    ~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^
+  File "/opt/render/project/src/.venv/lib/python3.13/site-packages/alembic/runtime/migration.py", line 797, in _update_version
+    ret = self.context.impl._exec(
+        self.context._version.update()
+    ...<4 lines>...
+        )
+    )
+  File "/opt/render/project/src/.venv/lib/python3.13/site-packages/alembic/ddl/impl.py", line 246, in _exec
+    return conn.execute(construct, params)
+           ~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^
+  File "/opt/render/project/src/.venv/lib/python3.13/site-packages/sqlalchemy/engine/base.py", line 1416, in execute
+    return meth(
+        self,
+        distilled_parameters,
+        execution_options or NO_OPTIONS,
+    )
+  File "/opt/render/project/src/.venv/lib/python3.13/site-packages/sqlalchemy/sql/elements.py", line 523, in _execute_on_connection
+    return connection._execute_clauseelement(
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^
+        self, distilled_params, execution_options
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "/opt/render/project/src/.venv/lib/python3.13/site-packages/sqlalchemy/engine/base.py", line 1638, in _execute_clauseelement
+    ret = self._execute_context(
+        dialect,
+    ...<8 lines>...
+        cache_hit=cache_hit,
+    )
+  File "/opt/render/project/src/.venv/lib/python3.13/site-packages/sqlalchemy/engine/base.py", line 1843, in _execute_context
+    return self._exec_single_context(
+           ~~~~~~~~~~~~~~~~~~~~~~~~~^
+        dialect, context, statement, parameters
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "/opt/render/project/src/.venv/lib/python3.13/site-packages/sqlalchemy/engine/base.py", line 1983, in _exec_single_context
+    self._handle_dbapi_exception(
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~^
+        e, str_statement, effective_parameters, cursor, context
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "/opt/render/project/src/.venv/lib/python3.13/site-packages/sqlalchemy/engine/base.py", line 2352, in _handle_dbapi_exception
+    raise sqlalchemy_exception.with_traceback(exc_info[2]) from e
+  File "/opt/render/project/src/.venv/lib/python3.13/site-packages/sqlalchemy/engine/base.py", line 1964, in _exec_single_context
+    self.dialect.do_execute(
+    ~~~~~~~~~~~~~~~~~~~~~~~^
+        cursor, str_statement, effective_parameters, context
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "/opt/render/project/src/.venv/lib/python3.13/site-packages/sqlalchemy/engine/default.py", line 945, in do_execute
+    cursor.execute(statement, parameters)
+    ~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^
+sqlalchemy.exc.InternalError: (psycopg2.errors.InFailedSqlTransaction) current transaction is aborted, commands ignored until end of transaction block
+
+[SQL: UPDATE alembic_version SET version_num='20251011_01' WHERE alembic_version.version_num = '20251015_01']
+(Background on this error at: https://sqlalche.me/e/20/2j85)
+render@srv-d3r8t01r0fns73fusa00-6f59dd466c-d6bwx:~/project/src$ 
