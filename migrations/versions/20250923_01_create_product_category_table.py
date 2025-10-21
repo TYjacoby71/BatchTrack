@@ -28,7 +28,7 @@ def upgrade():
                 sa.Column('id', sa.Integer(), nullable=False),
                 sa.Column('name', sa.String(length=100), nullable=False),
                 sa.Column('description', sa.Text(), nullable=True),
-                sa.Column('is_typically_portioned', sa.Boolean(), nullable=False, default=False, server_default='false'),
+                sa.Column('is_typically_portioned', sa.Boolean(), nullable=False, default=False, server_default=sa.text('false')),
                 sa.Column('organization_id', sa.Integer(), nullable=False),
                 sa.Column('created_at', sa.DateTime(), nullable=True),
                 sa.Column('updated_at', sa.DateTime(), nullable=True),

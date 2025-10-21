@@ -228,8 +228,15 @@ def downgrade():
     
     for constraint_name in constraints_to_remove:
         try:
-            op.drop_constraint(constraint_name, 'inventory_history', type_='check')
-            print(f"   ✅ Removed constraint: {constraint_name}")
+            # Best-effort: for PG try IF EXISTS via raw SQL to avoid aborting the transaction
+            bind = op.get_bind()
+            try:
+                bind.execute(text(f"ALTER TABLE inventory_history DROP CONSTRAINT IF EXISTS {constraint_name}"))
+                print(f"   ✅ Removed constraint (if existed): {constraint_name}")
+            except Exception:
+                # Fallback to Alembic helper
+                op.drop_constraint(constraint_name, 'inventory_history', type_='check')
+                print(f"   ✅ Removed constraint: {constraint_name}")
         except Exception as e:
             print(f"   ⚠️  Could not remove constraint {constraint_name}: {e}")
     
@@ -242,8 +249,15 @@ def downgrade():
     
     for index_name in indexes_to_remove:
         try:
-            op.drop_index(index_name, 'inventory_history')
-            print(f"   ✅ Removed index: {index_name}")
+            # Try PG-safe IF EXISTS drop via raw SQL first
+            bind = op.get_bind()
+            try:
+                bind.execute(text(f"DROP INDEX IF EXISTS {index_name}"))
+                print(f"   ✅ Removed index (if existed): {index_name}")
+            except Exception:
+                # Fallback to Alembic helper
+                op.drop_index(index_name, 'inventory_history')
+                print(f"   ✅ Removed index: {index_name}")
         except Exception as e:
             print(f"   ⚠️  Could not remove index: {e}")
     

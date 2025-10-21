@@ -66,15 +66,18 @@ def upgrade():
         # First, ensure required columns exist with proper defaults
         if not column_exists('subscription_tier', 'user_limit'):
             print("   Adding user_limit column...")
-            op.add_column('subscription_tier', sa.Column('user_limit', sa.Integer, nullable=False, server_default='1'))
+            op.add_column('subscription_tier', sa.Column('user_limit', sa.Integer, nullable=False, server_default=sa.text('1')))
 
         if not column_exists('subscription_tier', 'is_customer_facing'):
             print("   Adding is_customer_facing column...")
-            op.add_column('subscription_tier', sa.Column('is_customer_facing', sa.Boolean, nullable=False, server_default='1'))
+            # Boolean default needs dialect-appropriate literal
+            default_true = sa.text('true') if connection.dialect.name == 'postgresql' else sa.text('1')
+            op.add_column('subscription_tier', sa.Column('is_customer_facing', sa.Boolean, nullable=False, server_default=default_true))
 
         if not column_exists('subscription_tier', 'is_billing_exempt'):
             print("   Adding is_billing_exempt column...")
-            op.add_column('subscription_tier', sa.Column('is_billing_exempt', sa.Boolean, nullable=False, server_default='0'))
+            default_false = sa.text('false') if connection.dialect.name == 'postgresql' else sa.text('0')
+            op.add_column('subscription_tier', sa.Column('is_billing_exempt', sa.Boolean, nullable=False, server_default=default_false))
 
         if not column_exists('subscription_tier', 'stripe_lookup_key'):
             print("   Adding stripe_lookup_key column...")
