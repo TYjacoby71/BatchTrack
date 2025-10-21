@@ -1,0 +1,1035 @@
+        stripe_price_id VARCHAR(128), 
+        whop_plan_id VARCHAR(128), 
+        user_limit INTEGER DEFAULT '1' NOT NULL, 
+        is_customer_facing BOOLEAN DEFAULT '1' NOT NULL, 
+        stripe_lookup_key VARCHAR(128), 
+        max_recipes INTEGER, 
+        max_batches INTEGER, 
+        max_products INTEGER, 
+        max_batchbot_requests INTEGER, 
+        data_retention_days INTEGER, 
+        retention_notice_days INTEGER, 
+        storage_addon_retention_days INTEGER, 
+        stripe_storage_lookup_key VARCHAR(128), 
+        allowed_addon_keys JSON, 
+        retention_policy VARCHAR(16) DEFAULT 'one_year' NOT NULL, 
+        "key" VARCHAR(64), 
+        PRIMARY KEY (id), 
+        UNIQUE (name)
+)
+
+]
+(Background on this error at: https://sqlalche.me/e/20/e3q8)
+   ⚠️  Failed to remove column tier_type: (sqlite3.OperationalError) table _alembic_tmp_subscription_tier already exists
+[SQL: 
+CREATE TABLE _alembic_tmp_subscription_tier (
+        id INTEGER NOT NULL, 
+        name VARCHAR(50) NOT NULL, 
+        display_name VARCHAR(100), 
+        description TEXT, 
+        max_users INTEGER, 
+        max_organizations INTEGER, 
+        stripe_price_id_monthly VARCHAR(255), 
+        stripe_price_id_yearly VARCHAR(255), 
+        price_monthly FLOAT, 
+        price_yearly FLOAT, 
+        features TEXT, 
+        is_active BOOLEAN, 
+        created_at DATETIME, 
+        updated_at DATETIME, 
+        whop_product_key VARCHAR(128), 
+        whop_plan_name VARCHAR(128), 
+        whop_enabled BOOLEAN, 
+        last_billing_sync DATETIME, 
+        grace_period_days INTEGER, 
+        fallback_price VARCHAR(32), 
+        billing_provider VARCHAR(32), 
+        tier_key VARCHAR(64), 
+        max_monthly_batches INTEGER NOT NULL, 
+        stripe_product_id VARCHAR(128), 
+        stripe_price_id VARCHAR(128), 
+        whop_plan_id VARCHAR(128), 
+        user_limit INTEGER DEFAULT '1' NOT NULL, 
+        is_customer_facing BOOLEAN DEFAULT '1' NOT NULL, 
+        stripe_lookup_key VARCHAR(128), 
+        max_recipes INTEGER, 
+        max_batches INTEGER, 
+        max_products INTEGER, 
+        max_batchbot_requests INTEGER, 
+        data_retention_days INTEGER, 
+        retention_notice_days INTEGER, 
+        storage_addon_retention_days INTEGER, 
+        stripe_storage_lookup_key VARCHAR(128), 
+        allowed_addon_keys JSON, 
+        retention_policy VARCHAR(16) DEFAULT 'one_year' NOT NULL, 
+        "key" VARCHAR(64), 
+        PRIMARY KEY (id), 
+        UNIQUE (name)
+)
+
+]
+(Background on this error at: https://sqlalche.me/e/20/e3q8)
+   ⚠️  Failed to remove column storage_addon_retention_days: (sqlite3.OperationalError) table _alembic_tmp_subscription_tier already exists
+[SQL: 
+CREATE TABLE _alembic_tmp_subscription_tier (
+        id INTEGER NOT NULL, 
+        name VARCHAR(50) NOT NULL, 
+        display_name VARCHAR(100), 
+        description TEXT, 
+        max_users INTEGER, 
+        max_organizations INTEGER, 
+        stripe_price_id_monthly VARCHAR(255), 
+        stripe_price_id_yearly VARCHAR(255), 
+        price_monthly FLOAT, 
+        price_yearly FLOAT, 
+        features TEXT, 
+        is_active BOOLEAN, 
+        created_at DATETIME, 
+        updated_at DATETIME, 
+        whop_product_key VARCHAR(128), 
+        whop_plan_name VARCHAR(128), 
+        whop_enabled BOOLEAN, 
+        last_billing_sync DATETIME, 
+        grace_period_days INTEGER, 
+        fallback_price VARCHAR(32), 
+        tier_type VARCHAR(32), 
+        billing_provider VARCHAR(32), 
+        tier_key VARCHAR(64), 
+        max_monthly_batches INTEGER NOT NULL, 
+        stripe_product_id VARCHAR(128), 
+        stripe_price_id VARCHAR(128), 
+        whop_plan_id VARCHAR(128), 
+        user_limit INTEGER DEFAULT '1' NOT NULL, 
+        is_customer_facing BOOLEAN DEFAULT '1' NOT NULL, 
+        stripe_lookup_key VARCHAR(128), 
+        max_recipes INTEGER, 
+        max_batches INTEGER, 
+        max_products INTEGER, 
+        max_batchbot_requests INTEGER, 
+        data_retention_days INTEGER, 
+        retention_notice_days INTEGER, 
+        stripe_storage_lookup_key VARCHAR(128), 
+        allowed_addon_keys JSON, 
+        retention_policy VARCHAR(16) DEFAULT 'one_year' NOT NULL, 
+        "key" VARCHAR(64), 
+        PRIMARY KEY (id), 
+        UNIQUE (name)
+)
+
+]
+(Background on this error at: https://sqlalche.me/e/20/e3q8)
+   ⚠️  Failed to remove column retention_notice_days: (sqlite3.OperationalError) table _alembic_tmp_subscription_tier already exists
+[SQL: 
+CREATE TABLE _alembic_tmp_subscription_tier (
+        id INTEGER NOT NULL, 
+        name VARCHAR(50) NOT NULL, 
+        display_name VARCHAR(100), 
+        description TEXT, 
+        max_users INTEGER, 
+        max_organizations INTEGER, 
+        stripe_price_id_monthly VARCHAR(255), 
+        stripe_price_id_yearly VARCHAR(255), 
+        price_monthly FLOAT, 
+        price_yearly FLOAT, 
+        features TEXT, 
+        is_active BOOLEAN, 
+        created_at DATETIME, 
+        updated_at DATETIME, 
+        whop_product_key VARCHAR(128), 
+        whop_plan_name VARCHAR(128), 
+        whop_enabled BOOLEAN, 
+        last_billing_sync DATETIME, 
+        grace_period_days INTEGER, 
+        fallback_price VARCHAR(32), 
+        tier_type VARCHAR(32), 
+        billing_provider VARCHAR(32), 
+        tier_key VARCHAR(64), 
+        max_monthly_batches INTEGER NOT NULL, 
+        stripe_product_id VARCHAR(128), 
+        stripe_price_id VARCHAR(128), 
+        whop_plan_id VARCHAR(128), 
+        user_limit INTEGER DEFAULT '1' NOT NULL, 
+        is_customer_facing BOOLEAN DEFAULT '1' NOT NULL, 
+        stripe_lookup_key VARCHAR(128), 
+        max_recipes INTEGER, 
+        max_batches INTEGER, 
+        max_products INTEGER, 
+        max_batchbot_requests INTEGER, 
+        data_retention_days INTEGER, 
+        storage_addon_retention_days INTEGER, 
+        stripe_storage_lookup_key VARCHAR(128), 
+        allowed_addon_keys JSON, 
+        retention_policy VARCHAR(16) DEFAULT 'one_year' NOT NULL, 
+        "key" VARCHAR(64), 
+        PRIMARY KEY (id), 
+        UNIQUE (name)
+)
+
+]
+(Background on this error at: https://sqlalche.me/e/20/e3q8)
+   ⚠️  Failed to remove column data_retention_days: (sqlite3.OperationalError) table _alembic_tmp_subscription_tier already exists
+[SQL: 
+CREATE TABLE _alembic_tmp_subscription_tier (
+        id INTEGER NOT NULL, 
+        name VARCHAR(50) NOT NULL, 
+        display_name VARCHAR(100), 
+        description TEXT, 
+        max_users INTEGER, 
+        max_organizations INTEGER, 
+        stripe_price_id_monthly VARCHAR(255), 
+        stripe_price_id_yearly VARCHAR(255), 
+        price_monthly FLOAT, 
+        price_yearly FLOAT, 
+        features TEXT, 
+        is_active BOOLEAN, 
+        created_at DATETIME, 
+        updated_at DATETIME, 
+        whop_product_key VARCHAR(128), 
+        whop_plan_name VARCHAR(128), 
+        whop_enabled BOOLEAN, 
+        last_billing_sync DATETIME, 
+        grace_period_days INTEGER, 
+        fallback_price VARCHAR(32), 
+        tier_type VARCHAR(32), 
+        billing_provider VARCHAR(32), 
+        tier_key VARCHAR(64), 
+        max_monthly_batches INTEGER NOT NULL, 
+        stripe_product_id VARCHAR(128), 
+        stripe_price_id VARCHAR(128), 
+        whop_plan_id VARCHAR(128), 
+        user_limit INTEGER DEFAULT '1' NOT NULL, 
+        is_customer_facing BOOLEAN DEFAULT '1' NOT NULL, 
+        stripe_lookup_key VARCHAR(128), 
+        max_recipes INTEGER, 
+        max_batches INTEGER, 
+        max_products INTEGER, 
+        max_batchbot_requests INTEGER, 
+        retention_notice_days INTEGER, 
+        storage_addon_retention_days INTEGER, 
+        stripe_storage_lookup_key VARCHAR(128), 
+        allowed_addon_keys JSON, 
+        retention_policy VARCHAR(16) DEFAULT 'one_year' NOT NULL, 
+        "key" VARCHAR(64), 
+        PRIMARY KEY (id), 
+        UNIQUE (name)
+)
+
+]
+(Background on this error at: https://sqlalche.me/e/20/e3q8)
+   ⚠️  Failed to remove column retention_policy: (sqlite3.OperationalError) table _alembic_tmp_subscription_tier already exists
+[SQL: 
+CREATE TABLE _alembic_tmp_subscription_tier (
+        id INTEGER NOT NULL, 
+        name VARCHAR(50) NOT NULL, 
+        display_name VARCHAR(100), 
+        description TEXT, 
+        max_users INTEGER, 
+        max_organizations INTEGER, 
+        stripe_price_id_monthly VARCHAR(255), 
+        stripe_price_id_yearly VARCHAR(255), 
+        price_monthly FLOAT, 
+        price_yearly FLOAT, 
+        features TEXT, 
+        is_active BOOLEAN, 
+        created_at DATETIME, 
+        updated_at DATETIME, 
+        whop_product_key VARCHAR(128), 
+        whop_plan_name VARCHAR(128), 
+        whop_enabled BOOLEAN, 
+        last_billing_sync DATETIME, 
+        grace_period_days INTEGER, 
+        fallback_price VARCHAR(32), 
+        tier_type VARCHAR(32), 
+        billing_provider VARCHAR(32), 
+        tier_key VARCHAR(64), 
+        max_monthly_batches INTEGER NOT NULL, 
+        stripe_product_id VARCHAR(128), 
+        stripe_price_id VARCHAR(128), 
+        whop_plan_id VARCHAR(128), 
+        user_limit INTEGER DEFAULT '1' NOT NULL, 
+        is_customer_facing BOOLEAN DEFAULT '1' NOT NULL, 
+        stripe_lookup_key VARCHAR(128), 
+        max_recipes INTEGER, 
+        max_batches INTEGER, 
+        max_products INTEGER, 
+        max_batchbot_requests INTEGER, 
+        data_retention_days INTEGER, 
+        retention_notice_days INTEGER, 
+        storage_addon_retention_days INTEGER, 
+        stripe_storage_lookup_key VARCHAR(128), 
+        allowed_addon_keys JSON, 
+        "key" VARCHAR(64), 
+        PRIMARY KEY (id), 
+        UNIQUE (name)
+)
+
+]
+(Background on this error at: https://sqlalche.me/e/20/e3q8)
+✅ Downgrade completed
+INFO  [alembic.runtime.migration] Running downgrade 20251008_3 -> 20251008_2, Add optional GIN index on recipe.category_data for ad-hoc queries
+INFO  [alembic.runtime.migration] Running downgrade 20251008_2 -> 20251008_1, Add generated columns for hot batch fields (from plan_snapshot.category_extension) and indexes
+INFO  [alembic.runtime.migration] Running downgrade 20251008_1 -> 20251006_2, Add generated columns for hot recipe fields and basic indexes
+INFO  [alembic.runtime.migration] Running downgrade 20251006_2 -> 20251006_1, Add ui_config JSON column to product_category
+INFO  [alembic.runtime.migration] Running downgrade 20251006_1 -> 20251001_2, Add category_data JSON column to recipe table
+INFO  [alembic.runtime.migration] Running downgrade 20251001_2 -> 20251001_1, add function_key and retention_extension_days to addon
+=== Removing function_key and retention_extension_days from addon ===
+✅ Dropped retention_extension_days from addon
+✅ Dropped function_key from addon
+✅ Addon fields downgrade completed
+INFO  [alembic.runtime.migration] Running downgrade 20251001_1 -> 20250930_5, add addon models and tier allowed addons
+=== Removing addon table and tier allowed addons ===
+⚠️  Could not remove allowed_addon_keys: (sqlite3.OperationalError) table _alembic_tmp_subscription_tier already exists
+[SQL: 
+CREATE TABLE _alembic_tmp_subscription_tier (
+        id INTEGER NOT NULL, 
+        name VARCHAR(50) NOT NULL, 
+        display_name VARCHAR(100), 
+        description TEXT, 
+        max_users INTEGER, 
+        max_organizations INTEGER, 
+        stripe_price_id_monthly VARCHAR(255), 
+        stripe_price_id_yearly VARCHAR(255), 
+        price_monthly FLOAT, 
+        price_yearly FLOAT, 
+        features TEXT, 
+        is_active BOOLEAN, 
+        created_at DATETIME, 
+        updated_at DATETIME, 
+        whop_product_key VARCHAR(128), 
+        whop_plan_name VARCHAR(128), 
+        whop_enabled BOOLEAN, 
+        last_billing_sync DATETIME, 
+        grace_period_days INTEGER, 
+        fallback_price VARCHAR(32), 
+        tier_type VARCHAR(32), 
+        billing_provider VARCHAR(32), 
+        tier_key VARCHAR(64), 
+        max_monthly_batches INTEGER NOT NULL, 
+        stripe_product_id VARCHAR(128), 
+        stripe_price_id VARCHAR(128), 
+        whop_plan_id VARCHAR(128), 
+        user_limit INTEGER DEFAULT '1' NOT NULL, 
+        is_customer_facing BOOLEAN DEFAULT '1' NOT NULL, 
+        stripe_lookup_key VARCHAR(128), 
+        max_recipes INTEGER, 
+        max_batches INTEGER, 
+        max_products INTEGER, 
+        max_batchbot_requests INTEGER, 
+        data_retention_days INTEGER, 
+        retention_notice_days INTEGER, 
+        storage_addon_retention_days INTEGER, 
+        stripe_storage_lookup_key VARCHAR(128), 
+        retention_policy VARCHAR(16) DEFAULT 'one_year' NOT NULL, 
+        "key" VARCHAR(64), 
+        PRIMARY KEY (id), 
+        UNIQUE (name)
+)
+
+]
+(Background on this error at: https://sqlalche.me/e/20/e3q8)
+✅ Dropped addon table
+✅ Addon models and tier allowed addons downgrade completed
+INFO  [alembic.runtime.migration] Running downgrade 20250930_5 -> 20250930_4, Set default visibility flags for global ingredient categories
+Resetting all category visibility flags to False...
+✅ Category visibility flags reset!
+INFO  [alembic.runtime.migration] Running downgrade 20250930_4 -> 20250930_3, Add visibility control fields for soap-making attributes to ingredient categories
+=== Removing visibility control fields from ingredient_category ===
+✅ Dropped show_comedogenic_rating from ingredient_category
+✅ Dropped show_shelf_life_months from ingredient_category
+✅ Dropped show_moisture_content from ingredient_category
+✅ Dropped show_ph_value from ingredient_category
+✅ Dropped show_flash_point from ingredient_category
+✅ Dropped show_melting_point from ingredient_category
+✅ Dropped show_iodine_value from ingredient_category
+✅ Dropped show_saponification_value from ingredient_category
+✅ Visibility control fields removal completed
+INFO  [alembic.runtime.migration] Running downgrade 20250930_3 -> 20250930_2, Add soap making and cosmetic formulation attributes to global_item table
+=== Removing soap making and cosmetic formulation fields from global_item ===
+Removing soap making fields from global_item...
+  ✅ Removed comedogenic_rating from global_item
+  ✅ Removed shelf_life_months from global_item
+  ✅ Removed moisture_content_percent from global_item
+  ✅ Removed ph_value from global_item
+  ✅ Removed flash_point_c from global_item
+  ✅ Removed melting_point_c from global_item
+  ✅ Removed iodine_value from global_item
+  ✅ Removed saponification_value from global_item
+✅ Soap making and cosmetic formulation fields downgrade for global_item completed
+INFO  [alembic.runtime.migration] Running downgrade 20250930_2 -> 20250930_1, Add soap making and cosmetic formulation attributes to inventory items
+=== Removing soap making and cosmetic formulation fields from inventory items ===
+Removing soap making fields from inventory_item...
+  ✅ Removed comedogenic_rating from inventory_item
+  ✅ Removed shelf_life_months from inventory_item
+  ✅ Removed moisture_content_percent from inventory_item
+  ✅ Removed ph_value from inventory_item
+  ✅ Removed flash_point_c from inventory_item
+  ✅ Removed melting_point_c from inventory_item
+  ✅ Removed iodine_value from inventory_item
+  ✅ Removed saponification_value from inventory_item
+✅ Soap making and cosmetic formulation fields downgrade completed
+INFO  [alembic.runtime.migration] Running downgrade 20250930_1 -> 20250925_04, Add global_item_alias table and performance indexes
+INFO  [alembic.runtime.migration] Running downgrade 20250925_04 -> 20250925_03, Add container structured attributes to inventory_item and global_item
+Dropped column container_style from inventory_item
+Dropped column container_shape from inventory_item
+Dropped column container_closure_type from inventory_item
+Dropped column container_color from inventory_item
+Dropped column container_dimensions from inventory_item
+Dropped column container_volume_unit from inventory_item
+Dropped column container_volume from inventory_item
+Dropped column container_material from inventory_item
+Dropped column container_style from global_item
+Dropped column container_shape from global_item
+Dropped column container_closure_type from global_item
+Dropped column container_color from global_item
+Dropped column container_dimensions from global_item
+Dropped column container_volume_unit from global_item
+Dropped column container_volume from global_item
+Dropped column container_material from global_item
+INFO  [alembic.runtime.migration] Running downgrade 20250925_03 -> 20250925_02, Add portion_unit_id FK to recipe and batch
+Dropped column portion_unit_id from recipe
+Dropped column portion_unit_id from batch
+INFO  [alembic.runtime.migration] Running downgrade 20250925_02 -> 20250925_01, Add plan_snapshot JSON to batch
+Dropped column plan_snapshot from batch
+INFO  [alembic.runtime.migration] Running downgrade 20250925_01 -> 20250924_01, Add portion columns to recipe and batch: is_portioned, portion_name, counts
+Dropped column counts from batch
+Dropped column portion_name from batch
+Dropped column is_portioned from batch
+Dropped column counts from recipe
+Dropped column portion_name from recipe
+Dropped column is_portioned from recipe
+INFO  [alembic.runtime.migration] Running downgrade 20250924_01 -> 20250923_04, Drop Product.base_unit column
+INFO  [alembic.runtime.migration] Running downgrade 20250923_04 -> 20250923_03, Add sku_name_template to product_category
+✅ Dropped sku_name_template from product_category
+INFO  [alembic.runtime.migration] Running downgrade 20250923_03 -> 20250923_02, Add portioning_data JSON to recipe and batch
+INFO  [alembic.runtime.migration] Running downgrade 20250923_02 -> 20250923_01, Add category_id to product and recipe, backfill to Uncategorized, set NOT NULL
+INFO  [alembic.runtime.migration] Running downgrade 20250923_01 -> 20250922_02, Create product_category table
+=== Dropping product_category table ===
+Dropped ix_product_category_name
+Dropped ix_product_category_organization_id
+✅ Dropped product_category table
+✅ Downgrade completed
+INFO  [alembic.runtime.migration] Running downgrade 20250922_02 -> 20250922_01_align_extras, Add inventory cost method toggle and valuation method fields
+=== Reverting inventory cost method toggle and valuation method fields ===
+Dropped cost_method_locked_at from batch
+Dropped cost_method from batch
+Dropped valuation_method from unified_inventory_history
+Dropped inventory_cost_method_changed_at from organization
+Dropped inventory_cost_method from organization
+✅ Downgrade completed successfully
+INFO  [alembic.runtime.migration] Running downgrade 20250922_01_align_extras -> d953779b55a3, Align naming for extras and ensure consumable tables and indexes exist
+INFO  [alembic.runtime.migration] Running downgrade d953779b55a3 -> 20250912_01, empty message
+=== Removing stripe_event table ===
+   Dropping stripe_event table...
+   ✅ stripe_event table dropped successfully
+      Creating index 'ix_user_organization_id' on table 'user'...
+Traceback (most recent call last):
+  File "/opt/render/project/src/.venv/lib/python3.13/site-packages/sqlalchemy/engine/base.py", line 1964, in _exec_single_context
+    self.dialect.do_execute(
+    ~~~~~~~~~~~~~~~~~~~~~~~^
+        cursor, str_statement, effective_parameters, context
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "/opt/render/project/src/.venv/lib/python3.13/site-packages/sqlalchemy/engine/default.py", line 945, in do_execute
+    cursor.execute(statement, parameters)
+    ~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^
+sqlite3.OperationalError: index ix_user_organization_id already exists
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/opt/render/project/src/.venv/bin/flask", line 8, in <module>
+    sys.exit(main())
+             ~~~~^^
+  File "/opt/render/project/src/.venv/lib/python3.13/site-packages/flask/cli.py", line 1129, in main
+    cli.main()
+    ~~~~~~~~^^
+  File "/opt/render/project/src/.venv/lib/python3.13/site-packages/click/core.py", line 1082, in main
+    rv = self.invoke(ctx)
+  File "/opt/render/project/src/.venv/lib/python3.13/site-packages/click/core.py", line 1697, in invoke
+    return _process_result(sub_ctx.command.invoke(sub_ctx))
+                           ~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^
+  File "/opt/render/project/src/.venv/lib/python3.13/site-packages/click/core.py", line 1697, in invoke
+    return _process_result(sub_ctx.command.invoke(sub_ctx))
+                           ~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^
+  File "/opt/render/project/src/.venv/lib/python3.13/site-packages/click/core.py", line 1443, in invoke
+    return ctx.invoke(self.callback, **ctx.params)
+           ~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/render/project/src/.venv/lib/python3.13/site-packages/click/core.py", line 788, in invoke
+    return __callback(*args, **kwargs)
+  File "/opt/render/project/src/.venv/lib/python3.13/site-packages/click/decorators.py", line 33, in new_func
+    return f(get_current_context(), *args, **kwargs)
+  File "/opt/render/project/src/.venv/lib/python3.13/site-packages/flask/cli.py", line 400, in decorator
+    return ctx.invoke(f, *args, **kwargs)
+           ~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^
+  File "/opt/render/project/src/.venv/lib/python3.13/site-packages/click/core.py", line 788, in invoke
+    return __callback(*args, **kwargs)
+  File "/opt/render/project/src/.venv/lib/python3.13/site-packages/flask_migrate/cli.py", line 168, in downgrade
+    _downgrade(directory, revision, sql, tag, x_arg)
+    ~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/render/project/src/.venv/lib/python3.13/site-packages/flask_migrate/__init__.py", line 111, in wrapped
+    f(*args, **kwargs)
+    ~^^^^^^^^^^^^^^^^^
+  File "/opt/render/project/src/.venv/lib/python3.13/site-packages/flask_migrate/__init__.py", line 210, in downgrade
+    command.downgrade(config, revision, sql=sql, tag=tag)
+    ~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/render/project/src/.venv/lib/python3.13/site-packages/alembic/command.py", line 455, in downgrade
+    script.run_env()
+    ~~~~~~~~~~~~~~^^
+  File "/opt/render/project/src/.venv/lib/python3.13/site-packages/alembic/script/base.py", line 586, in run_env
+    util.load_python_file(self.dir, "env.py")
+    ~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^
+  File "/opt/render/project/src/.venv/lib/python3.13/site-packages/alembic/util/pyfiles.py", line 95, in load_python_file
+    module = load_module_py(module_id, path)
+  File "/opt/render/project/src/.venv/lib/python3.13/site-packages/alembic/util/pyfiles.py", line 113, in load_module_py
+    spec.loader.exec_module(module)  # type: ignore
+    ~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^
+  File "<frozen importlib._bootstrap_external>", line 1026, in exec_module
+  File "<frozen importlib._bootstrap>", line 488, in _call_with_frames_removed
+  File "/opt/render/project/src/migrations/env.py", line 167, in <module>
+    run_migrations_online()
+    ~~~~~~~~~~~~~~~~~~~~~^^
+  File "/opt/render/project/src/migrations/env.py", line 161, in run_migrations_online
+    context.run_migrations()
+    ~~~~~~~~~~~~~~~~~~~~~~^^
+  File "<string>", line 8, in run_migrations
+  File "/opt/render/project/src/.venv/lib/python3.13/site-packages/alembic/runtime/environment.py", line 946, in run_migrations
+    self.get_context().run_migrations(**kw)
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^
+  File "/opt/render/project/src/.venv/lib/python3.13/site-packages/alembic/runtime/migration.py", line 623, in run_migrations
+    step.migration_fn(**kw)
+    ~~~~~~~~~~~~~~~~~^^^^^^
+  File "/opt/render/project/src/migrations/versions/d953779b55a3_.py", line 323, in downgrade
+    safe_create_index('user', 'ix_user_organization_id', ['organization_id'], unique=False)
+    ~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/render/project/src/migrations/versions/d953779b55a3_.py", line 78, in safe_create_index
+    with op.batch_alter_table(table_name, schema=None) as batch_op:
+         ~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/render/project/python/Python-3.13.4/lib/python3.13/contextlib.py", line 148, in __exit__
+    next(self.gen)
+    ~~~~^^^^^^^^^^
+  File "/opt/render/project/src/.venv/lib/python3.13/site-packages/alembic/operations/base.py", line 397, in batch_alter_table
+    impl.flush()
+    ~~~~~~~~~~^^
+  File "/opt/render/project/src/.venv/lib/python3.13/site-packages/alembic/operations/batch.py", line 115, in flush
+    fn(*arg, **kw)
+    ~~^^^^^^^^^^^^
+  File "/opt/render/project/src/.venv/lib/python3.13/site-packages/alembic/ddl/impl.py", line 434, in create_index
+    self._exec(schema.CreateIndex(index, **kw))
+    ~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/render/project/src/.venv/lib/python3.13/site-packages/alembic/ddl/impl.py", line 246, in _exec
+    return conn.execute(construct, params)
+           ~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^
+  File "/opt/render/project/src/.venv/lib/python3.13/site-packages/sqlalchemy/engine/base.py", line 1416, in execute
+    return meth(
+        self,
+        distilled_parameters,
+        execution_options or NO_OPTIONS,
+    )
+  File "/opt/render/project/src/.venv/lib/python3.13/site-packages/sqlalchemy/sql/ddl.py", line 187, in _execute_on_connection
+    return connection._execute_ddl(
+           ~~~~~~~~~~~~~~~~~~~~~~~^
+        self, distilled_params, execution_options
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "/opt/render/project/src/.venv/lib/python3.13/site-packages/sqlalchemy/engine/base.py", line 1527, in _execute_ddl
+    ret = self._execute_context(
+        dialect,
+    ...<4 lines>...
+        compiled,
+    )
+  File "/opt/render/project/src/.venv/lib/python3.13/site-packages/sqlalchemy/engine/base.py", line 1843, in _execute_context
+    return self._exec_single_context(
+           ~~~~~~~~~~~~~~~~~~~~~~~~~^
+        dialect, context, statement, parameters
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "/opt/render/project/src/.venv/lib/python3.13/site-packages/sqlalchemy/engine/base.py", line 1983, in _exec_single_context
+    self._handle_dbapi_exception(
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~^
+        e, str_statement, effective_parameters, cursor, context
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "/opt/render/project/src/.venv/lib/python3.13/site-packages/sqlalchemy/engine/base.py", line 2352, in _handle_dbapi_exception
+    raise sqlalchemy_exception.with_traceback(exc_info[2]) from e
+  File "/opt/render/project/src/.venv/lib/python3.13/site-packages/sqlalchemy/engine/base.py", line 1964, in _exec_single_context
+    self.dialect.do_execute(
+    ~~~~~~~~~~~~~~~~~~~~~~~^
+        cursor, str_statement, effective_parameters, context
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "/opt/render/project/src/.venv/lib/python3.13/site-packages/sqlalchemy/engine/default.py", line 945, in do_execute
+    cursor.execute(statement, parameters)
+    ~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^
+sqlalchemy.exc.OperationalError: (sqlite3.OperationalError) index ix_user_organization_id already exists
+[SQL: CREATE INDEX ix_user_organization_id ON user (organization_id)]
+(Background on this error at: https://sqlalche.me/e/20/e3q8)
+render@srv-d3r8t01r0fns73fusa00-8678499cb8-5fhtd:~/project/src$ flask db upgrade
+/opt/render/project/src/.venv/lib/python3.13/site-packages/flask_limiter/extension.py:333: UserWarning: Using the in-memory storage for tracking rate limits as no storage was explicitly specified. This is not recommended for production use. See: https://flask-limiter.readthedocs.io#configuring-a-storage-backend for documentation about configuring the storage backend.
+  warnings.warn(
+
+=== Blueprint Registration Summary ===
+✅ Successful: 29
+   - Authentication
+   - Admin
+   - Developer
+   - Inventory
+   - Recipes
+   - Batches
+   - Organization
+   - Billing
+   - Settings
+   - Timers
+   - Expiration
+   - Conversion
+   - Products Main
+   - Public API
+   - Main API
+   - Drawer Actions
+   - Density Reference
+   - Retention Drawer API
+   - Global Link Drawer API
+   - App Routes
+   - Legal Routes
+   - Bulk Stock
+   - Fault Log
+   - Tag Manager
+   - Global Library Public
+   - Waitlist
+   - Public Tools
+   - Production Planning
+   - Exports
+
+🎉 All blueprints registered successfully!
+INFO  [alembic.env] Imported model module: app.models.addon
+INFO  [alembic.env] Imported model module: app.models.batch
+INFO  [alembic.env] Imported model module: app.models.billing_snapshot
+INFO  [alembic.env] Imported model module: app.models.category
+INFO  [alembic.env] Imported model module: app.models.developer_permission
+INFO  [alembic.env] Imported model module: app.models.developer_role
+INFO  [alembic.env] Imported model module: app.models.domain_event
+INFO  [alembic.env] Imported model module: app.models.feature_flag
+INFO  [alembic.env] Imported model module: app.models.freshness_snapshot
+INFO  [alembic.env] Imported model module: app.models.global_item
+INFO  [alembic.env] Imported model module: app.models.global_item_alias
+INFO  [alembic.env] Imported model module: app.models.inventory
+INFO  [alembic.env] Imported model module: app.models.inventory_lot
+INFO  [alembic.env] Imported model module: app.models.mixins
+INFO  [alembic.env] Imported model module: app.models.models
+INFO  [alembic.env] Imported model module: app.models.permission
+INFO  [alembic.env] Imported model module: app.models.pricing_snapshot
+INFO  [alembic.env] Imported model module: app.models.product
+INFO  [alembic.env] Imported model module: app.models.product_category
+INFO  [alembic.env] Imported model module: app.models.recipe
+INFO  [alembic.env] Imported model module: app.models.reservation
+INFO  [alembic.env] Imported model module: app.models.retention
+INFO  [alembic.env] Imported model module: app.models.role
+INFO  [alembic.env] Imported model module: app.models.statistics
+INFO  [alembic.env] Imported model module: app.models.stripe_event
+INFO  [alembic.env] Imported model module: app.models.subscription_tier
+INFO  [alembic.env] Imported model module: app.models.unified_inventory_history
+INFO  [alembic.env] Imported model module: app.models.unit
+INFO  [alembic.env] Imported model module: app.models.user_preferences
+INFO  [alembic.env] Imported model module: app.models.user_role_assignment
+INFO  [alembic.runtime.migration] Context impl SQLiteImpl.
+INFO  [alembic.runtime.migration] Will assume non-transactional DDL.
+INFO  [alembic.runtime.migration] Running upgrade d953779b55a3 -> 20250922_01_align_extras, Align naming for extras and ensure consumable tables and indexes exist
+   ✅ Created index ix_batch_consumable_batch_id on batch_consumable
+   ✅ Created index ix_batch_consumable_inventory_item_id on batch_consumable
+   ✅ Created index ix_batch_consumable_organization_id on batch_consumable
+   ✅ Created index ix_extra_batch_consumable_batch_id on extra_batch_consumable
+   ✅ Created index ix_extra_batch_consumable_inventory_item_id on extra_batch_consumable
+   ✅ Created index ix_extra_batch_consumable_organization_id on extra_batch_consumable
+INFO  [alembic.runtime.migration] Running upgrade 20250922_01_align_extras -> 20250922_02, Add inventory cost method toggle and valuation method fields
+=== Adding inventory cost method toggle and valuation method fields ===
+Adding inventory_cost_method to organization...
+✅ Added inventory_cost_method column
+Adding inventory_cost_method_changed_at to organization...
+✅ Added inventory_cost_method_changed_at column
+Adding valuation_method to unified_inventory_history...
+✅ Added valuation_method column
+Adding cost_method to batch...
+✅ Added cost_method column
+Adding cost_method_locked_at to batch...
+✅ Added cost_method_locked_at column
+✅ Inventory cost method migration completed
+INFO  [alembic.runtime.migration] Running upgrade 20250922_02 -> 20250923_01, Create product_category table
+=== Creating product_category table ===
+Creating product_category table...
+✅ Created product_category table
+   ✅ Created index ix_product_category_organization_id on product_category
+   ✅ Created index ix_product_category_name on product_category
+✅ Product category migration completed
+INFO  [alembic.runtime.migration] Running upgrade 20250923_01 -> 20250923_02, Add category_id to product and recipe, backfill to Uncategorized, set NOT NULL
+Starting product and recipe category migration...
+Adding category_id column to product table...
+Adding category_id column to recipe table...
+Backfilling product category_id values...
+Found 0 products with NULL category_id
+Backfilling recipe category_id values...
+Found 0 recipes with NULL category_id
+Adding constraints to product table...
+Created foreign key fk_product_category
+Created index ix_product_category_id
+Set product.category_id to NOT NULL
+Adding constraints to recipe table...
+Created foreign key fk_recipe_category
+Created index ix_recipe_category_id
+Set recipe.category_id to NOT NULL
+✅ Product and recipe category migration completed successfully!
+INFO  [alembic.runtime.migration] Running upgrade 20250923_02 -> 20250923_03, Add portioning_data JSON to recipe and batch
+Added portioning_data column to recipe table
+Added portioning_data column to batch table
+INFO  [alembic.runtime.migration] Running upgrade 20250923_03 -> 20250923_04, Add sku_name_template to product_category
+   ✅ sku_name_template column added successfully
+INFO  [alembic.runtime.migration] Running upgrade 20250923_04 -> 20250924_01, Drop Product.base_unit column
+INFO  [alembic.runtime.migration] Running upgrade 20250924_01 -> 20250925_01, Add portion columns to recipe and batch: is_portioned, portion_name, counts
+Added column is_portioned to recipe
+Added column portion_name to recipe
+Added column counts to recipe
+Added column is_portioned to batch
+Added column portion_name to batch
+Added column counts to batch
+INFO  [alembic.runtime.migration] Running upgrade 20250925_01 -> 20250925_02, Add plan_snapshot JSON to batch
+Added column plan_snapshot to batch
+INFO  [alembic.runtime.migration] Running upgrade 20250925_02 -> 20250925_03, Add portion_unit_id FK to recipe and batch
+Added column portion_unit_id to recipe
+Added column portion_unit_id to batch
+INFO  [alembic.runtime.migration] Running upgrade 20250925_03 -> 20250925_04, Add container structured attributes to inventory_item and global_item
+Added column container_material to inventory_item
+Added column container_volume to inventory_item
+Added column container_volume_unit to inventory_item
+Added column container_dimensions to inventory_item
+Added column container_color to inventory_item
+Added column container_closure_type to inventory_item
+Added column container_shape to inventory_item
+Added column container_style to inventory_item
+Added column container_material to global_item
+Added column container_volume to global_item
+Added column container_volume_unit to global_item
+Added column container_dimensions to global_item
+Added column container_color to global_item
+Added column container_closure_type to global_item
+Added column container_shape to global_item
+Added column container_style to global_item
+INFO  [alembic.runtime.migration] Running upgrade 20250925_04 -> 20250930_1, Add global_item_alias table and performance indexes
+=== Adding alias table and performance indexes ===
+   Creating global_item_alias table...
+   ✅ global_item_alias table created
+   ⚠️  Could not create GIN index - non-Postgres or already exists
+   ⚠️  Could not backfill aliases - JSON functions unsupported
+   Creating index ix_inventory_item_org on inventory_item.organization_id...
+   ✅ Created index ix_inventory_item_org
+   Creating index ix_inventory_lot_org on inventory_lot.organization_id...
+   ✅ Created index ix_inventory_lot_org
+   Creating index ix_unified_history_org on unified_inventory_history.organization_id...
+   ✅ Created index ix_unified_history_org
+   Creating index ix_recipe_org on recipe.organization_id...
+   ✅ Created index ix_recipe_org
+   Creating index ix_batch_org on batch.organization_id...
+   ✅ Created index ix_batch_org
+   Creating index ix_user_org on user.organization_id...
+   ✅ Created index ix_user_org
+   ⚠️  Could not create JSONB GIN index - non-Postgres or already exists
+✅ Alias and indexes migration completed
+INFO  [alembic.runtime.migration] Running upgrade 20250930_1 -> 20250930_2, Add soap making and cosmetic formulation attributes to inventory items
+=== Adding soap making and cosmetic formulation fields to inventory items ===
+Processing inventory_item table...
+  ✅ Added saponification_value to inventory_item
+  ✅ Added iodine_value to inventory_item
+  ✅ Added melting_point_c to inventory_item
+  ✅ Added flash_point_c to inventory_item
+  ✅ Added ph_value to inventory_item
+  ✅ Added moisture_content_percent to inventory_item
+  ✅ Added shelf_life_months to inventory_item
+  ✅ Added comedogenic_rating to inventory_item
+✅ Soap making and cosmetic formulation fields migration completed successfully
+INFO  [alembic.runtime.migration] Running upgrade 20250930_2 -> 20250930_3, Add soap making and cosmetic formulation attributes to global_item table
+=== Adding soap making and cosmetic formulation fields to global_item ===
+Processing global_item table...
+  ✅ Added saponification_value to global_item
+  ✅ Added iodine_value to global_item
+  ✅ Added melting_point_c to global_item
+  ✅ Added flash_point_c to global_item
+  ✅ Added ph_value to global_item
+  ✅ Added moisture_content_percent to global_item
+  ✅ Added shelf_life_months to global_item
+  ✅ Added comedogenic_rating to global_item
+✅ Soap making and cosmetic formulation fields migration for global_item completed successfully
+INFO  [alembic.runtime.migration] Running upgrade 20250930_3 -> 20250930_4, Add visibility control fields for soap-making attributes to ingredient categories
+=== Adding visibility control fields to ingredient_category ===
+   ✅ show_saponification_value column added successfully
+   ✅ show_iodine_value column added successfully
+   ✅ show_melting_point column added successfully
+   ✅ show_flash_point column added successfully
+   ✅ show_ph_value column added successfully
+   ✅ show_moisture_content column added successfully
+   ✅ show_shelf_life_months column added successfully
+   ✅ show_comedogenic_rating column added successfully
+✅ Visibility control fields migration completed
+INFO  [alembic.runtime.migration] Running upgrade 20250930_4 -> 20250930_5, Set default visibility flags for global ingredient categories
+Setting visibility defaults for global ingredient categories from JSON files...
+   ⚠️  Category 'Miscellaneous' not found in database
+   ⚠️  Category 'Salts & Minerals (Crystalline)' not found in database
+   ⚠️  Category 'Essential Oils' not found in database
+   ⚠️  Category 'Extracts & Alcohols (Solvents)' not found in database
+   ⚠️  Category 'Liquids (Aqueous)' not found in database
+   ⚠️  Category 'Waxes' not found in database
+   ⚠️  Category 'Fruits, Nuts & Seeds (Whole/Chopped)' not found in database
+   ⚠️  Category 'Herbs & Spices (Dried & Ground)' not found in database
+   ⚠️  Category 'Active Ingredients (Cosmetics)' not found in database
+   ⚠️  Category 'Flours & Powders (Organic)' not found in database
+   ⚠️  Category 'Starches & Thickeners' not found in database
+   ⚠️  Category 'Botanicals (Dried & Whole/Parts)' not found in database
+   ⚠️  Category 'Butters & Solid Fats' not found in database
+   ⚠️  Category 'Sugars & Syrups' not found in database
+   ⚠️  Category 'Preservatives & Additives' not found in database
+   ⚠️  Category 'Yeast & Cultures' not found in database
+   ⚠️  Category 'Fragrance Oils' not found in database
+   ⚠️  Category 'Colorants (Pigments)' not found in database
+   ⚠️  Category 'Oils (Carrier & Fixed)' not found in database
+   ⚠️  Category 'Surfactants & Emulsifiers' not found in database
+   ⚠️  Category 'Clays' not found in database
+✅ Category visibility defaults set successfully!
+INFO  [alembic.runtime.migration] Running upgrade 20250930_5 -> 20251001_1, add addon models and tier allowed addons
+=== Adding addon table and tier allowed addons ===
+Creating addon table...
+✅ Created addon table
+   ✅ allowed_addon_keys column already exists - skipping
+✅ Addon models and tier allowed addons migration completed
+INFO  [alembic.runtime.migration] Running upgrade 20251001_1 -> 20251001_2, add function_key and retention_extension_days to addon
+=== Adding function_key and retention_extension_days to addon ===
+   ✅ function_key column already exists - skipping
+   ✅ retention_extension_days column already exists - skipping
+✅ Addon fields migration completed
+INFO  [alembic.runtime.migration] Running upgrade 20251001_2 -> 20251006_1, Add category_data JSON column to recipe table
+INFO  [alembic.runtime.migration] Running upgrade 20251006_1 -> 20251006_2, Add ui_config JSON column to product_category
+INFO  [alembic.runtime.migration] Running upgrade 20251006_2 -> 20251008_1, Add generated columns for hot recipe fields and basic indexes
+INFO  [alembic.runtime.migration] Running upgrade 20251008_1 -> 20251008_2, Add generated columns for hot batch fields (from plan_snapshot.category_extension) and indexes
+INFO  [alembic.runtime.migration] Running upgrade 20251008_2 -> 20251008_3, Add optional GIN index on recipe.category_data for ad-hoc queries
+INFO  [alembic.runtime.migration] Running upgrade 20251008_3 -> 20251009_1, Add missing retention policy columns to subscription_tier
+=== Adding missing retention policy columns to subscription_tier ===
+   ℹ️  retention_policy column already exists - skipping
+   ℹ️  data_retention_days column already exists - skipping
+   ℹ️  retention_notice_days column already exists - skipping
+   ℹ️  storage_addon_retention_days column already exists - skipping
+   ℹ️  tier_type column already exists - skipping
+   ℹ️  billing_provider column already exists - skipping
+   ℹ️  stripe_lookup_key column already exists - skipping
+   ℹ️  stripe_storage_lookup_key column already exists - skipping
+   ℹ️  whop_product_key column already exists - skipping
+✅ Migration completed - 9/9 columns processed
+INFO  [alembic.runtime.migration] Running upgrade 20251009_1 -> 20251009_2, Repair keep-list indexes/tables and add tier_included_addon
+INFO  [alembic.runtime.migration] Running upgrade 20251009_2 -> 20251009_3, Align models to own keep-list indexes, projections, and association table
+=== Starting model alignment with PostgreSQL safety ===
+   Creating org-scoping indexes...
+   ⚠️  Error creating index ix_user_org: (sqlite3.OperationalError) index ix_user_org already exists
+[SQL: CREATE INDEX ix_user_org ON user (organization_id)]
+(Background on this error at: https://sqlalche.me/e/20/e3q8)
+   ⚠️  Error creating index ix_inventory_item_org: (sqlite3.OperationalError) index ix_inventory_item_org already exists
+[SQL: CREATE INDEX ix_inventory_item_org ON inventory_item (organization_id)]
+(Background on this error at: https://sqlalche.me/e/20/e3q8)
+   ⚠️  Error creating index ix_inventory_lot_org: (sqlite3.OperationalError) index ix_inventory_lot_org already exists
+[SQL: CREATE INDEX ix_inventory_lot_org ON inventory_lot (organization_id)]
+(Background on this error at: https://sqlalche.me/e/20/e3q8)
+   ⚠️  Error creating index ix_unified_history_org: (sqlite3.OperationalError) index ix_unified_history_org already exists
+[SQL: CREATE INDEX ix_unified_history_org ON unified_inventory_history (organization_id)]
+(Background on this error at: https://sqlalche.me/e/20/e3q8)
+   ⚠️  Error creating index ix_recipe_org: (sqlite3.OperationalError) index ix_recipe_org already exists
+[SQL: CREATE INDEX ix_recipe_org ON recipe (organization_id)]
+(Background on this error at: https://sqlalche.me/e/20/e3q8)
+   ⚠️  Error creating index ix_batch_org: (sqlite3.OperationalError) index ix_batch_org already exists
+[SQL: CREATE INDEX ix_batch_org ON batch (organization_id)]
+(Background on this error at: https://sqlalche.me/e/20/e3q8)
+   Creating product category indexes...
+   ⚠️  Product category index creation failed: (sqlite3.OperationalError) unrecognized token: ":"
+[SQL: CREATE UNIQUE INDEX IF NOT EXISTS ix_product_category_lower_name ON product_category (lower(name::text))]
+(Background on this error at: https://sqlalche.me/e/20/e3q8)
+   ⚠️  Error creating index ix_product_category_id: (sqlite3.OperationalError) index ix_product_category_id already exists
+[SQL: CREATE INDEX ix_product_category_id ON product (category_id)]
+(Background on this error at: https://sqlalche.me/e/20/e3q8)
+   Processing recipe computed columns...
+   ✅ Column recipe.soap_superfat already exists
+   ✅ Column recipe.soap_water_pct already exists
+   ✅ Column recipe.soap_lye_type already exists
+   ✅ Column recipe.candle_fragrance_pct already exists
+   ✅ Column recipe.candle_vessel_ml already exists
+   ✅ Column recipe.vessel_fill_pct already exists
+   ✅ Column recipe.baker_base_flour_g already exists
+   ✅ Column recipe.baker_water_pct already exists
+   ✅ Column recipe.baker_salt_pct already exists
+   ✅ Column recipe.baker_yeast_pct already exists
+   ✅ Column recipe.cosm_emulsifier_pct already exists
+   ✅ Column recipe.cosm_preservative_pct already exists
+   ⚠️  Error creating index ix_recipe_category_id: (sqlite3.OperationalError) index ix_recipe_category_id already exists
+[SQL: CREATE INDEX ix_recipe_category_id ON recipe (category_id)]
+(Background on this error at: https://sqlalche.me/e/20/e3q8)
+   ⚠️  Error creating index ix_recipe_soap_superfat: (sqlite3.OperationalError) index ix_recipe_soap_superfat already exists
+[SQL: CREATE INDEX ix_recipe_soap_superfat ON recipe (soap_superfat)]
+(Background on this error at: https://sqlalche.me/e/20/e3q8)
+   ⚠️  Error creating index ix_recipe_soap_water_pct: (sqlite3.OperationalError) index ix_recipe_soap_water_pct already exists
+[SQL: CREATE INDEX ix_recipe_soap_water_pct ON recipe (soap_water_pct)]
+(Background on this error at: https://sqlalche.me/e/20/e3q8)
+   ⚠️  Error creating index ix_recipe_soap_lye_type: (sqlite3.OperationalError) index ix_recipe_soap_lye_type already exists
+[SQL: CREATE INDEX ix_recipe_soap_lye_type ON recipe (soap_lye_type)]
+(Background on this error at: https://sqlalche.me/e/20/e3q8)
+   ⚠️  Error creating index ix_recipe_candle_fragrance_pct: (sqlite3.OperationalError) index ix_recipe_candle_fragrance_pct already exists
+[SQL: CREATE INDEX ix_recipe_candle_fragrance_pct ON recipe (candle_fragrance_pct)]
+(Background on this error at: https://sqlalche.me/e/20/e3q8)
+   ⚠️  Error creating index ix_recipe_candle_vessel_ml: (sqlite3.OperationalError) index ix_recipe_candle_vessel_ml already exists
+[SQL: CREATE INDEX ix_recipe_candle_vessel_ml ON recipe (candle_vessel_ml)]
+(Background on this error at: https://sqlalche.me/e/20/e3q8)
+   ⚠️  Error creating index ix_recipe_vessel_fill_pct: (sqlite3.OperationalError) index ix_recipe_vessel_fill_pct already exists
+[SQL: CREATE INDEX ix_recipe_vessel_fill_pct ON recipe (vessel_fill_pct)]
+(Background on this error at: https://sqlalche.me/e/20/e3q8)
+   ⚠️  Error creating index ix_recipe_baker_base_flour_g: (sqlite3.OperationalError) index ix_recipe_baker_base_flour_g already exists
+[SQL: CREATE INDEX ix_recipe_baker_base_flour_g ON recipe (baker_base_flour_g)]
+(Background on this error at: https://sqlalche.me/e/20/e3q8)
+   ⚠️  Error creating index ix_recipe_baker_water_pct: (sqlite3.OperationalError) index ix_recipe_baker_water_pct already exists
+[SQL: CREATE INDEX ix_recipe_baker_water_pct ON recipe (baker_water_pct)]
+(Background on this error at: https://sqlalche.me/e/20/e3q8)
+   ⚠️  Error creating index ix_recipe_baker_salt_pct: (sqlite3.OperationalError) index ix_recipe_baker_salt_pct already exists
+[SQL: CREATE INDEX ix_recipe_baker_salt_pct ON recipe (baker_salt_pct)]
+(Background on this error at: https://sqlalche.me/e/20/e3q8)
+   ⚠️  Error creating index ix_recipe_baker_yeast_pct: (sqlite3.OperationalError) index ix_recipe_baker_yeast_pct already exists
+[SQL: CREATE INDEX ix_recipe_baker_yeast_pct ON recipe (baker_yeast_pct)]
+(Background on this error at: https://sqlalche.me/e/20/e3q8)
+   ⚠️  Error creating index ix_recipe_cosm_emulsifier_pct: (sqlite3.OperationalError) index ix_recipe_cosm_emulsifier_pct already exists
+[SQL: CREATE INDEX ix_recipe_cosm_emulsifier_pct ON recipe (cosm_emulsifier_pct)]
+(Background on this error at: https://sqlalche.me/e/20/e3q8)
+   ⚠️  Error creating index ix_recipe_cosm_preservative_pct: (sqlite3.OperationalError) index ix_recipe_cosm_preservative_pct already exists
+[SQL: CREATE INDEX ix_recipe_cosm_preservative_pct ON recipe (cosm_preservative_pct)]
+(Background on this error at: https://sqlalche.me/e/20/e3q8)
+   ⚠️  Recipe GIN index creation failed: (sqlite3.OperationalError) near "USING": syntax error
+[SQL: CREATE INDEX IF NOT EXISTS ix_recipe_category_data_gin ON recipe USING GIN ((category_data::jsonb))]
+(Background on this error at: https://sqlalche.me/e/20/e3q8)
+   Processing batch computed columns...
+   ✅ Column batch.vessel_fill_pct already exists
+   ✅ Column batch.candle_fragrance_pct already exists
+   ✅ Column batch.candle_vessel_ml already exists
+   ✅ Column batch.soap_superfat already exists
+   ✅ Column batch.soap_water_pct already exists
+   ✅ Column batch.soap_lye_type already exists
+   ✅ Column batch.baker_base_flour_g already exists
+   ✅ Column batch.baker_water_pct already exists
+   ✅ Column batch.baker_salt_pct already exists
+   ✅ Column batch.baker_yeast_pct already exists
+   ✅ Column batch.cosm_emulsifier_pct already exists
+   ✅ Column batch.cosm_preservative_pct already exists
+   ⚠️  Error creating index ix_batch_vessel_fill_pct: (sqlite3.OperationalError) index ix_batch_vessel_fill_pct already exists
+[SQL: CREATE INDEX ix_batch_vessel_fill_pct ON batch (vessel_fill_pct)]
+(Background on this error at: https://sqlalche.me/e/20/e3q8)
+   ⚠️  Error creating index ix_batch_candle_fragrance_pct: (sqlite3.OperationalError) index ix_batch_candle_fragrance_pct already exists
+[SQL: CREATE INDEX ix_batch_candle_fragrance_pct ON batch (candle_fragrance_pct)]
+(Background on this error at: https://sqlalche.me/e/20/e3q8)
+   ⚠️  Error creating index ix_batch_candle_vessel_ml: (sqlite3.OperationalError) index ix_batch_candle_vessel_ml already exists
+[SQL: CREATE INDEX ix_batch_candle_vessel_ml ON batch (candle_vessel_ml)]
+(Background on this error at: https://sqlalche.me/e/20/e3q8)
+   ⚠️  Error creating index ix_batch_soap_superfat: (sqlite3.OperationalError) index ix_batch_soap_superfat already exists
+[SQL: CREATE INDEX ix_batch_soap_superfat ON batch (soap_superfat)]
+(Background on this error at: https://sqlalche.me/e/20/e3q8)
+   ⚠️  Error creating index ix_batch_soap_water_pct: (sqlite3.OperationalError) index ix_batch_soap_water_pct already exists
+[SQL: CREATE INDEX ix_batch_soap_water_pct ON batch (soap_water_pct)]
+(Background on this error at: https://sqlalche.me/e/20/e3q8)
+   ⚠️  Error creating index ix_batch_soap_lye_type: (sqlite3.OperationalError) index ix_batch_soap_lye_type already exists
+[SQL: CREATE INDEX ix_batch_soap_lye_type ON batch (soap_lye_type)]
+(Background on this error at: https://sqlalche.me/e/20/e3q8)
+   ⚠️  Error creating index ix_batch_baker_base_flour_g: (sqlite3.OperationalError) index ix_batch_baker_base_flour_g already exists
+[SQL: CREATE INDEX ix_batch_baker_base_flour_g ON batch (baker_base_flour_g)]
+(Background on this error at: https://sqlalche.me/e/20/e3q8)
+   ⚠️  Error creating index ix_batch_baker_water_pct: (sqlite3.OperationalError) index ix_batch_baker_water_pct already exists
+[SQL: CREATE INDEX ix_batch_baker_water_pct ON batch (baker_water_pct)]
+(Background on this error at: https://sqlalche.me/e/20/e3q8)
+   ⚠️  Error creating index ix_batch_baker_salt_pct: (sqlite3.OperationalError) index ix_batch_baker_salt_pct already exists
+[SQL: CREATE INDEX ix_batch_baker_salt_pct ON batch (baker_salt_pct)]
+(Background on this error at: https://sqlalche.me/e/20/e3q8)
+   ⚠️  Error creating index ix_batch_baker_yeast_pct: (sqlite3.OperationalError) index ix_batch_baker_yeast_pct already exists
+[SQL: CREATE INDEX ix_batch_baker_yeast_pct ON batch (baker_yeast_pct)]
+(Background on this error at: https://sqlalche.me/e/20/e3q8)
+   ⚠️  Error creating index ix_batch_cosm_emulsifier_pct: (sqlite3.OperationalError) index ix_batch_cosm_emulsifier_pct already exists
+[SQL: CREATE INDEX ix_batch_cosm_emulsifier_pct ON batch (cosm_emulsifier_pct)]
+(Background on this error at: https://sqlalche.me/e/20/e3q8)
+   ⚠️  Error creating index ix_batch_cosm_preservative_pct: (sqlite3.OperationalError) index ix_batch_cosm_preservative_pct already exists
+[SQL: CREATE INDEX ix_batch_cosm_preservative_pct ON batch (cosm_preservative_pct)]
+(Background on this error at: https://sqlalche.me/e/20/e3q8)
+   Processing consumable tables...
+   ✅ organization_id already exists in batch_consumable
+   ✅ organization_id already exists in extra_batch_consumable
+   Creating indexes for batch_consumable...
+   ⚠️  Error creating index ix_batch_consumable_batch_id: (sqlite3.OperationalError) index ix_batch_consumable_batch_id already exists
+[SQL: CREATE INDEX ix_batch_consumable_batch_id ON batch_consumable (batch_id)]
+(Background on this error at: https://sqlalche.me/e/20/e3q8)
+   ⚠️  Error creating index ix_batch_consumable_inventory_item_id: (sqlite3.OperationalError) index ix_batch_consumable_inventory_item_id already exists
+[SQL: CREATE INDEX ix_batch_consumable_inventory_item_id ON batch_consumable (inventory_item_id)]
+(Background on this error at: https://sqlalche.me/e/20/e3q8)
+   ⚠️  Error creating index ix_batch_consumable_organization_id: (sqlite3.OperationalError) index ix_batch_consumable_organization_id already exists
+[SQL: CREATE INDEX ix_batch_consumable_organization_id ON batch_consumable (organization_id)]
+(Background on this error at: https://sqlalche.me/e/20/e3q8)
+   Creating indexes for extra_batch_consumable...
+   ⚠️  Error creating index ix_extra_batch_consumable_batch_id: (sqlite3.OperationalError) index ix_extra_batch_consumable_batch_id already exists
+[SQL: CREATE INDEX ix_extra_batch_consumable_batch_id ON extra_batch_consumable (batch_id)]
+(Background on this error at: https://sqlalche.me/e/20/e3q8)
+   ⚠️  Error creating index ix_extra_batch_consumable_inventory_item_id: (sqlite3.OperationalError) index ix_extra_batch_consumable_inventory_item_id already exists
+[SQL: CREATE INDEX ix_extra_batch_consumable_inventory_item_id ON extra_batch_consumable (inventory_item_id)]
+(Background on this error at: https://sqlalche.me/e/20/e3q8)
+   ⚠️  Error creating index ix_extra_batch_consumable_organization_id: (sqlite3.OperationalError) index ix_extra_batch_consumable_organization_id already exists
+[SQL: CREATE INDEX ix_extra_batch_consumable_organization_id ON extra_batch_consumable (organization_id)]
+(Background on this error at: https://sqlalche.me/e/20/e3q8)
+   Processing global item alias table...
+   ⚠️  Error creating index ix_global_item_alias_alias: (sqlite3.OperationalError) index ix_global_item_alias_alias already exists
+[SQL: CREATE INDEX ix_global_item_alias_alias ON global_item_alias (alias)]
+(Background on this error at: https://sqlalche.me/e/20/e3q8)
+   ⚠️  Error creating index ix_global_item_alias_global_item_id: (sqlite3.OperationalError) index ix_global_item_alias_global_item_id already exists
+[SQL: CREATE INDEX ix_global_item_alias_global_item_id ON global_item_alias (global_item_id)]
+(Background on this error at: https://sqlalche.me/e/20/e3q8)
+   ⚠️  Global item alias GIN index creation failed: (sqlite3.OperationalError) near "USING": syntax error
+[SQL: CREATE INDEX IF NOT EXISTS ix_global_item_alias_tsv ON global_item_alias USING GIN (to_tsvector('simple', alias))]
+(Background on this error at: https://sqlalche.me/e/20/e3q8)
+   ⚠️  Global item aka_names GIN index creation failed: (sqlite3.OperationalError) near "USING": syntax error
+[SQL: CREATE INDEX IF NOT EXISTS ix_global_item_aka_gin ON global_item USING GIN ((aka_names::jsonb))]
+(Background on this error at: https://sqlalche.me/e/20/e3q8)
+✅ Model alignment completed successfully
+INFO  [alembic.runtime.migration] Running upgrade 20251009_3 -> 20251011_01, Fix tier addon association table naming inconsistency
+INFO  [alembic.runtime.migration] Running upgrade 20251011_01 -> 20251015_01, Fix portion columns to match models: rename counts -> portion_count/projected_portions, add final_portions
+INFO  [alembic.runtime.migration] Running upgrade 20251015_01 -> 20251015_02, Add skin_enabled boolean to product_category
+INFO  [alembic.runtime.migration] Running upgrade 20251015_02 -> 20251015_03, Create feature_flag table
+=== Creating feature_flag table ===
+Creating feature_flag table...
+✅ feature_flag table created successfully
+✅ Feature flag table migration completed
+INFO  [alembic.runtime.migration] Running upgrade 20251015_03 -> 20251015_04, Make product_category.organization_id nullable to support global categories
+INFO  [alembic.runtime.migration] Running upgrade 20251015_04 -> 20251016_1, Create tier_allowed_addon association table if missing
+INFO  [alembic.runtime.migration] Running upgrade 20251016_1 -> 20251016_2, Add stable key column to subscription_tier
+Key column didn't exist or couldn't be dropped: (sqlite3.OperationalError) near "EXISTS": syntax error
+[SQL: ALTER TABLE subscription_tier DROP COLUMN IF EXISTS key]
+(Background on this error at: https://sqlalche.me/e/20/e3q8)
+Found 0 existing tiers
+✅ Normalized tier names and removed duplicates
+✅ Subscription tier migration completed - using integer IDs only
+INFO  [alembic.runtime.migration] Running upgrade 20251016_2 -> 20251017_1, add billing performance indexes
+INFO  [alembic.runtime.migration] Running upgrade 20251017_1 -> 20251017_2, drop offline billing snapshot columns
+INFO  [alembic.runtime.migration] Running upgrade 20251017_2 -> 20251020_1, add theme column to user_preferences
+=== Adding theme column to user_preferences ===
+   Adding theme column...
+   ✅ theme column added successfully
+✅ Migration completed: theme column available
+INFO  [alembic.runtime.migration] Running upgrade 20251020_1 -> 20251020_2, Add all missing production columns that exist in models but not in database
+=== Adding All Missing Production Columns ===
+   ✅ category already exists in developer_permission
+   ✅ is_active already exists in unit
+   ✅ is_active already exists in role
+   ✅ description already exists in ingredient_category
+   ✅ is_active already exists in developer_permission
+   ✅ created_at already exists in unit
+   ✅ updated_at already exists in unit
+   ✅ created_at already exists in role
+   ✅ created_by already exists in role
+   ✅ organization_id already exists in role
+   ✅ is_system_role already exists in role
+   ❌ Failed to create foreign key fk_role_created_by_user: No support for ALTER of constraints in SQLite dialect. Please refer to the batch mode feature which allows for SQLite migrations using a copy-and-move strategy.
+ERROR [flask_migrate] Error: No support for ALTER of constraints in SQLite dialect. Please refer to the batch mode feature which allows for SQLite migrations using a copy-and-move strategy.
+render@srv-d3r8t01r0fns73fusa00-8678499cb8-5fhtd:~/project/src$ 
