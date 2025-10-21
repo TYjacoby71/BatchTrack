@@ -135,18 +135,9 @@ def ensure_org_scoping_indexes() -> None:
 
 
 def ensure_global_item_alias_and_indexes() -> None:
-    # Table
+    # Table is created in 20250930_01; do not recreate here.
     if not table_exists('global_item_alias'):
-        if not table_exists('global_item'):
-            # Can't create association without parent; skip
-            pass
-        else:
-            op.create_table(
-                'global_item_alias',
-                sa.Column('id', sa.Integer(), primary_key=True, nullable=False),
-                sa.Column('global_item_id', sa.Integer(), sa.ForeignKey('global_item.id', ondelete='CASCADE'), nullable=False),
-                sa.Column('alias', sa.Text(), nullable=False),
-            )
+        return
     # Indexes (btree)
     safe_create_index('ix_global_item_alias_alias', 'global_item_alias', ['alias'])
     safe_create_index('ix_global_item_alias_global_item_id', 'global_item_alias', ['global_item_id'])
