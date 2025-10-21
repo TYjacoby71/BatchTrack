@@ -1,3 +1,4 @@
+
 """rename is_reference_category to is_global_category
 
 Revision ID: 20250913014500
@@ -94,10 +95,12 @@ def downgrade():
     if table_exists('ingredient_category'):
         # Add the old column back
         if not column_exists('ingredient_category', 'is_reference_category'):
+            print("   Adding is_reference_category column...")
             op.add_column('ingredient_category', sa.Column('is_reference_category', sa.Boolean, default=False))
 
         # Copy data back
         if column_exists('ingredient_category', 'is_global_category'):
+            print("   Copying data from is_global_category to is_reference_category...")
             bind = op.get_bind()
             bind.execute(text("""
                 UPDATE ingredient_category 
@@ -106,6 +109,10 @@ def downgrade():
             """))
 
             # Drop the new column
-            op.drop_column('ingredient_category', 'is_global_category')
+            print("   Dropping is_global_category column...")
+            try:
+                op.drop_column('ingredient_category', 'is_global_category')
+            except Exception as e:
+                print(f"   ⚠️  Could not drop is_global_category column: {e}")
 
     print("✅ Successfully reverted to is_reference_category")
