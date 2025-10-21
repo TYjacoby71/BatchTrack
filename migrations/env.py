@@ -18,6 +18,17 @@ config = context.config
 # This line sets up loggers basically.
 fileConfig(config.config_file_name)
 logger = logging.getLogger('alembic.env')
+def _pre_migration_cleanup_if_needed():
+    """Perform lightweight, idempotent cleanup prior to running migrations.
+
+    - On SQLite, drop leftover temp/aux tables that can linger after a failed
+      batch migration. On PostgreSQL, this is a no-op.
+    """
+    try:
+        from migrations.migration_helpers import sqlite_cleanup_temp_tables
+        sqlite_cleanup_temp_tables(verbose=True)
+    except Exception as exc:
+        logger.info(f"Pre-migration cleanup skipped: {exc}")
 
 
 def _normalize_db_url(url: str | None) -> str | None:
@@ -120,6 +131,7 @@ def run_migrations_offline():
         url=url, target_metadata=get_metadata(), literal_binds=True
     )
 
+    _pre_migration_cleanup_if_needed()
     with context.begin_transaction():
         context.run_migrations()
 
@@ -157,6 +169,7 @@ def run_migrations_online():
             **conf_args
         )
 
+        _pre_migration_cleanup_if_needed()
         with context.begin_transaction():
             context.run_migrations()
 

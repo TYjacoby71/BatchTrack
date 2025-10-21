@@ -44,10 +44,22 @@ def activate_users():
 @click.command('init-production')
 @with_appcontext
 def init_production_command():
-    """Seed production database with essential data (run after migrations)"""
+    """Seed production database with essential data (run after migrations)
+
+    Hardened for cross-DB reliability: performs SQLite temp-table cleanup
+    before seeding to avoid issues from prior failed batch migrations.
+    """
     try:
         print("🚀 BatchTrack Production Seeding Starting...")
         print("⚠️  Assumes database schema is already migrated (flask db upgrade)")
+
+        # Pre-cleanup: on SQLite, drop leftover temp tables from failed migrations
+        try:
+            from migrations.migration_helpers import sqlite_cleanup_temp_tables
+            sqlite_cleanup_temp_tables(verbose=True)
+        except Exception as e:
+            # Non-fatal; continue seeding
+            print(f"ℹ️  Pre-cleanup skipped or failed: {e}")
 
         # Check if database has basic tables
         from sqlalchemy import inspect
