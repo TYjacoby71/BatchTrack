@@ -27,18 +27,12 @@ def table_exists(table_name: str) -> bool:
 
 
 def upgrade():
-    # Create association table for allowed add-ons on a tier
+    # Redundant creation: table is created in 20251001_1. Keep a no-op to preserve ordering.
+    # Intentionally do not recreate if missing to avoid duplicate definitions.
     if not table_exists('tier_allowed_addon'):
-        # Only create if parent tables exist
-        if table_exists('subscription_tier') and table_exists('addon'):
-            op.create_table(
-                'tier_allowed_addon',
-                sa.Column('tier_id', sa.Integer(), nullable=False),
-                sa.Column('addon_id', sa.Integer(), nullable=False),
-                sa.ForeignKeyConstraint(['tier_id'], ['subscription_tier.id']),
-                sa.ForeignKeyConstraint(['addon_id'], ['addon.id']),
-                sa.PrimaryKeyConstraint('tier_id', 'addon_id'),
-            )
+        # If parents missing, earlier migration would have created it.
+        # No action needed here.
+        pass
 
 
 def downgrade():

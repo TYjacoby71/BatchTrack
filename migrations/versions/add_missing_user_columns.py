@@ -7,6 +7,9 @@ Create Date: 2025-08-25 17:35:00.000000
 """
 from alembic import op
 import sqlalchemy as sa
+import sys, os
+sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
+from postgres_helpers import is_sqlite
 
 # revision identifiers, used by Alembic.
 revision = 'add_missing_user_columns'
@@ -71,12 +74,15 @@ def upgrade():
         fk_constraint_name = 'fk_user_deleted_by_user'
         if not constraint_exists('user', fk_constraint_name):
             try:
-                op.create_foreign_key(
-                    fk_constraint_name,
-                    'user', 'user',
-                    ['deleted_by'], ['id']
-                )
-                print("   ✅ Added foreign key constraint for deleted_by")
+                if is_sqlite():
+                    print("   ℹ️  Skipping FK add on SQLite (requires table rebuild)")
+                else:
+                    op.create_foreign_key(
+                        fk_constraint_name,
+                        'user', 'user',
+                        ['deleted_by'], ['id']
+                    )
+                    print("   ✅ Added foreign key constraint for deleted_by")
             except Exception as e:
                 print(f"   ⚠️  Could not add foreign key constraint: {e}")
         else:

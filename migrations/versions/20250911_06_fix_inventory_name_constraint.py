@@ -8,13 +8,14 @@ Create Date: 2025-09-11 19:30:00.000000
 from alembic import op
 import sqlalchemy as sa
 from sqlalchemy import inspect, text
+import sys, os
+sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
+from postgres_helpers import ensure_unique_constraint_or_index, table_exists
 
 # Helper functions to check for table and constraint existence
-def table_exists(table_name):
-    """Check if a table exists"""
-    from sqlalchemy.engine import reflection
-    inspector = reflection.Inspector(op.get_context().bind)
-    return table_name in inspector.get_table_names()
+def _local_table_exists(table_name):
+    # Kept for backward compatibility in this file; prefer helpers.table_exists
+    return table_exists(table_name)
 
 def constraint_exists(table_name, constraint_name):
     """Check if a constraint exists on a table (portable)."""
@@ -102,15 +103,9 @@ def upgrade():
 
     # 2. Ensure proper organization+name unique constraint exists
     print("2. Checking for organization+name constraint...")
-    if not constraint_exists('inventory_item', '_org_name_uc'):
-        try:
-            print("   Creating organization+name unique constraint...")
-            op.create_unique_constraint('_org_name_uc', 'inventory_item', ['organization_id', 'name'])
-            print("   ✅ Created organization+name constraint")
-        except Exception as e:
-            print(f"   ⚠️  Error creating constraint: {e}")
-    else:
-        print("   ✅ Organization+name constraint already exists")
+    created = ensure_unique_constraint_or_index('inventory_item', '_org_name_uc', ['organization_id', 'name'])
+    if not created:
+        print("   ✅ Organization+name unique already present")
 
     # 3. Ensure proper indexes exist
     print("3. Ensuring proper indexes...")

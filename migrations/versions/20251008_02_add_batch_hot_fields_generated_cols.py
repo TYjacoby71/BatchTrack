@@ -5,6 +5,9 @@ Add generated columns for hot batch fields (from plan_snapshot.category_extensio
 from alembic import op
 import sqlalchemy as sa
 from sqlalchemy import inspect
+import sys, os
+sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
+from postgres_helpers import safe_create_index
 
 revision = '20251008_2'
 down_revision = '20251008_1'
@@ -102,10 +105,7 @@ def upgrade():
         'cosm_emulsifier_pct', 'cosm_preservative_pct',
     ]
     for col in index_targets:
-        try:
-            op.create_index(f'ix_batch_{col}', 'batch', [col])
-        except Exception:
-            pass
+        safe_create_index(f'ix_batch_{col}', 'batch', [col])
 
 
 def downgrade():

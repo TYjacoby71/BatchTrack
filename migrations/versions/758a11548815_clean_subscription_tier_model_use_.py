@@ -8,6 +8,9 @@ Create Date: 2025-08-18 18:10:04.813518
 from alembic import op
 import sqlalchemy as sa
 from sqlalchemy import text, inspect
+import sys, os
+sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
+from postgres_helpers import safe_create_index
 
 # revision identifiers, used by Alembic.
 revision = '758a11548815'
@@ -191,10 +194,11 @@ def upgrade():
                     bind.rollback()
                     bind = op.get_bind()
 
-            op.create_index('uq_subscription_tier_key', 'subscription_tier', ['key'], unique=True, if_not_exists=True)
-            print("   ✅ Created unique key index")
-            op.create_index('idx_subscription_tier_billing_provider', 'subscription_tier', ['billing_provider'], if_not_exists=True)
-            print("   ✅ Created billing provider index")
+            # Use helper for idempotency and cross-dialect compatibility
+            safe_create_index('uq_subscription_tier_key', 'subscription_tier', ['key'], unique=True)
+            print("   ✅ Created unique key index (or already existed)")
+            safe_create_index('idx_subscription_tier_billing_provider', 'subscription_tier', ['billing_provider'])
+            print("   ✅ Created billing provider index (or already existed)")
         except Exception as e:
             print(f"   ⚠️  Could not create some indexes: {e}")
             # Try to rollback and continue
