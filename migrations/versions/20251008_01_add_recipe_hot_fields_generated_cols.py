@@ -5,6 +5,9 @@ Add generated columns for hot recipe fields and basic indexes
 from alembic import op
 import sqlalchemy as sa
 from sqlalchemy import inspect
+import sys, os
+sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
+from postgres_helpers import safe_create_index
 
 revision = '20251008_1'
 down_revision = '20251006_2'
@@ -95,10 +98,7 @@ def upgrade():
         'cosm_emulsifier_pct', 'cosm_preservative_pct',
     ]
     for col in index_targets:
-        try:
-            op.create_index(f'ix_recipe_{col}', 'recipe', [col])
-        except Exception:
-            pass
+        safe_create_index(f'ix_recipe_{col}', 'recipe', [col])
 
 
 def downgrade():
