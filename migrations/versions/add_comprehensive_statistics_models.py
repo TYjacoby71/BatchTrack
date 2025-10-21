@@ -7,6 +7,9 @@ Create Date: 2025-08-27 19:30:00.000000
 """
 from alembic import op
 import sqlalchemy as sa
+import sys, os
+sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
+from postgres_helpers import table_exists, index_exists, safe_create_index
 
 # revision identifiers
 revision = 'add_comprehensive_stats'
@@ -205,13 +208,13 @@ def upgrade():
     else:
         print("   ✅ inventory_change_log table already exists")
 
-    # Create indexes for performance
-    op.create_index('idx_batch_stats_recipe', 'batch_stats', ['recipe_id'])
-    op.create_index('idx_batch_stats_org', 'batch_stats', ['organization_id'])
-    op.create_index('idx_recipe_stats_org', 'recipe_stats', ['organization_id'])
-    op.create_index('idx_inventory_efficiency_org', 'inventory_efficiency_stats', ['organization_id'])
-    op.create_index('idx_change_log_item_date', 'inventory_change_log', ['inventory_item_id', 'change_date'])
-    op.create_index('idx_change_log_type_date', 'inventory_change_log', ['change_type', 'change_date'])
+    # Create indexes for performance (idempotent)
+    safe_create_index('idx_batch_stats_recipe', 'batch_stats', ['recipe_id'])
+    safe_create_index('idx_batch_stats_org', 'batch_stats', ['organization_id'])
+    safe_create_index('idx_recipe_stats_org', 'recipe_stats', ['organization_id'])
+    safe_create_index('idx_inventory_efficiency_org', 'inventory_efficiency_stats', ['organization_id'])
+    safe_create_index('idx_change_log_item_date', 'inventory_change_log', ['inventory_item_id', 'change_date'])
+    safe_create_index('idx_change_log_type_date', 'inventory_change_log', ['change_type', 'change_date'])
 
     print("✅ Statistics models migration completed successfully")
 

@@ -9,6 +9,9 @@ Create Date: 2025-09-04 12:00:00.000000
 from alembic import op
 import sqlalchemy as sa
 from sqlalchemy import inspect
+import sys, os
+sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
+from postgres_helpers import is_sqlite
 
 # revision identifiers, used by Alembic.
 revision = '20250904_04'
@@ -90,14 +93,17 @@ def upgrade():
     if not constraint_exists('inventory_item', 'fk_inventory_item_inventory_category'):
         print("   Adding foreign key constraint...")
         try:
-            op.create_foreign_key(
-                'fk_inventory_item_inventory_category',
-                'inventory_item',
-                'inventory_category',
-                ['inventory_category_id'],
-                ['id']
-            )
-            print("   ✅ Added foreign key constraint")
+            if is_sqlite():
+                print("   ℹ️  Skipping FK add on SQLite (requires table rebuild)")
+            else:
+                op.create_foreign_key(
+                    'fk_inventory_item_inventory_category',
+                    'inventory_item',
+                    'inventory_category',
+                    ['inventory_category_id'],
+                    ['id']
+                )
+                print("   ✅ Added foreign key constraint")
         except Exception as e:
             print(f"   ⚠️  Could not add foreign key constraint: {e}")
     else:

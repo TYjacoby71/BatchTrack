@@ -9,6 +9,9 @@ Create Date: 2025-08-05 00:53:00.000000
 from alembic import op
 import sqlalchemy as sa
 from sqlalchemy import inspect, text
+import sys, os
+sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
+from postgres_helpers import is_sqlite
 
 
 # revision identifiers, used by Alembic.
@@ -94,15 +97,18 @@ def upgrade():
         
         print("   Adding foreign key constraint for subscription_tier_id...")
         try:
-            op.create_foreign_key(
-                'fk_organization_subscription_tier_id',
-                'organization',
-                'subscription_tier',
-                ['subscription_tier_id'],
-                ['id'],
-                ondelete='SET NULL'  # Allow nulls when tier is deleted
-            )
-            print("   ✅ Added foreign key constraint")
+            if is_sqlite():
+                print("   ℹ️  Skipping FK add on SQLite (requires table rebuild)")
+            else:
+                op.create_foreign_key(
+                    'fk_organization_subscription_tier_id',
+                    'organization',
+                    'subscription_tier',
+                    ['subscription_tier_id'],
+                    ['id'],
+                    ondelete='SET NULL'
+                )
+                print("   ✅ Added foreign key constraint")
         except Exception as e:
             print(f"   ⚠️  Could not add foreign key constraint: {e}")
     

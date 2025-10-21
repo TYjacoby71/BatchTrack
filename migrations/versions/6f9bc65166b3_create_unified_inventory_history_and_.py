@@ -8,6 +8,9 @@ Create Date: 2025-08-13 19:25:08.055765
 from alembic import op
 import sqlalchemy as sa
 from sqlalchemy import text
+import sys, os
+sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
+from postgres_helpers import safe_create_index
 
 
 # revision identifiers, used by Alembic.
@@ -125,14 +128,11 @@ def upgrade():
     ]
 
     for idx_name, columns in indexes_to_create:
-        if idx_name not in existing_indexes:
-            try:
-                op.create_index(idx_name, 'unified_inventory_history', columns)
-                print(f"   ✅ Created index: {idx_name}")
-            except Exception as e:
-                print(f"   ⚠️  Could not create index {idx_name}: {e}")
+        created = safe_create_index(idx_name, 'unified_inventory_history', columns)
+        if created:
+            print(f"   ✅ Created index: {idx_name}")
         else:
-            print(f"   ⚠️  Index {idx_name} already exists - skipping")
+            print(f"   ✅ Index {idx_name} already exists or was skipped")
 
     # 3. Migrate data from inventory_history if it exists
     print("   Migrating data from inventory_history...")
