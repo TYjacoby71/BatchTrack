@@ -1,0 +1,498 @@
+render@srv-d3r8t01r0fns73fusa00-5b6b779c8f-qflb9:~/project/src$ flask db upgrade
+🔧 CONFIG: Using PostgreSQL database: postgresql://batchtrack_postgress_development_user...
+/opt/render/project/src/.venv/lib/python3.13/site-packages/flask_limiter/extension.py:333: UserWarning: Using the in-memory storage for tracking rate limits as no storage was explicitly specified. This is not recommended for production use. See: https://flask-limiter.readthedocs.io#configuring-a-storage-backend for documentation about configuring the storage backend.
+  warnings.warn(
+
+=== Blueprint Registration Summary ===
+✅ Successful: 29
+   - Authentication
+   - Admin
+   - Developer
+   - Inventory
+   - Recipes
+   - Batches
+   - Organization
+   - Billing
+   - Settings
+   - Timers
+   - Expiration
+   - Conversion
+   - Products Main
+   - Public API
+   - Main API
+   - Drawer Actions
+   - Density Reference
+   - Retention Drawer API
+   - Global Link Drawer API
+   - App Routes
+   - Legal Routes
+   - Bulk Stock
+   - Fault Log
+   - Tag Manager
+   - Global Library Public
+   - Waitlist
+   - Public Tools
+   - Production Planning
+   - Exports
+
+🎉 All blueprints registered successfully!
+INFO  [alembic.env] Imported model module: app.models.addon
+INFO  [alembic.env] Imported model module: app.models.batch
+INFO  [alembic.env] Imported model module: app.models.billing_snapshot
+INFO  [alembic.env] Imported model module: app.models.category
+INFO  [alembic.env] Imported model module: app.models.developer_permission
+INFO  [alembic.env] Imported model module: app.models.developer_role
+INFO  [alembic.env] Imported model module: app.models.domain_event
+INFO  [alembic.env] Imported model module: app.models.feature_flag
+INFO  [alembic.env] Imported model module: app.models.freshness_snapshot
+INFO  [alembic.env] Imported model module: app.models.global_item
+INFO  [alembic.env] Imported model module: app.models.global_item_alias
+INFO  [alembic.env] Imported model module: app.models.inventory
+INFO  [alembic.env] Imported model module: app.models.inventory_lot
+INFO  [alembic.env] Imported model module: app.models.mixins
+INFO  [alembic.env] Imported model module: app.models.models
+INFO  [alembic.env] Imported model module: app.models.permission
+INFO  [alembic.env] Imported model module: app.models.pricing_snapshot
+INFO  [alembic.env] Imported model module: app.models.product
+INFO  [alembic.env] Imported model module: app.models.product_category
+INFO  [alembic.env] Imported model module: app.models.recipe
+INFO  [alembic.env] Imported model module: app.models.reservation
+INFO  [alembic.env] Imported model module: app.models.retention
+INFO  [alembic.env] Imported model module: app.models.role
+INFO  [alembic.env] Imported model module: app.models.statistics
+INFO  [alembic.env] Imported model module: app.models.stripe_event
+INFO  [alembic.env] Imported model module: app.models.subscription_tier
+INFO  [alembic.env] Imported model module: app.models.unified_inventory_history
+INFO  [alembic.env] Imported model module: app.models.unit
+INFO  [alembic.env] Imported model module: app.models.user_preferences
+INFO  [alembic.env] Imported model module: app.models.user_role_assignment
+INFO  [alembic.runtime.migration] Context impl PostgresqlImpl.
+INFO  [alembic.runtime.migration] Will assume transactional DDL.
+INFO  [alembic.runtime.migration] Running upgrade add_batch_id_to_inventory_lot -> add_missing_last_login_column, add missing last_login column
+=== Adding missing last_login column ===
+   Adding last_login column...
+   ✅ last_login column added successfully
+✅ Migration completed
+INFO  [alembic.runtime.migration] Running upgrade add_missing_last_login_column -> add_missing_user_columns, add missing user columns
+=== Adding missing User model columns ===
+   ✅ Added deleted_at column
+   ✅ Added deleted_by column
+   ✅ Added is_deleted column
+   ✅ Set is_deleted NOT NULL with default
+   ✅ Added foreign key constraint for deleted_by
+✅ User columns migration completed
+INFO  [alembic.runtime.migration] Running upgrade add_missing_user_columns -> add_perm_category_col, add missing permission category column
+=== Adding missing permission.category column ===
+   Adding category column...
+   ✅ category column added successfully
+✅ Permission category column migration completed
+INFO  [alembic.runtime.migration] Running upgrade add_perm_category_col -> edb302e17958, empty message
+=== Starting comprehensive schema migration ===
+=== Creating missing tables ===
+   Creating developer_role_permission table...
+   ✅ Created developer_role_permission table
+   Creating subscription_tier_permission table...
+   ✅ Created subscription_tier_permission table
+=== Cleaning up deprecated tables ===
+   ✅ Dropped table: pricing_snapshot
+   ✅ Dropped table: billing_snapshot
+=== Updating table schemas ===
+   Updating batch table...
+   ✅ Updated batch table
+   Updating batch_container table...
+   ✅ Added column container_id
+   ✅ Added column container_quantity
+   ✅ Added column quantity_used
+   ✅ Added column fill_quantity
+   ✅ Added column fill_unit
+   ✅ Added column cost_each
+   ✅ Added column organization_id
+   ✅ Dropped column created_at
+   ✅ Dropped column container_size
+   ✅ Dropped column qr_code
+   ✅ Dropped column label_printed
+   ✅ Dropped column container_unit
+   ✅ Dropped column quantity_filled
+   ✅ Dropped column container_name
+   ✅ Dropped column notes
+   ✅ Updated batch_container table
+   Processing batch_ingredient table...
+   ✅ Processed batch_ingredient table
+   Processing batch_inventory_log table...
+   ✅ Processed batch_inventory_log table
+   Processing batch_timer table...
+   ✅ Processed batch_timer table
+   Processing billing_snapshots table...
+   ✅ Processed billing_snapshots table
+   Processing conversion_log table...
+   ✅ Processed conversion_log table
+   Processing custom_unit_mapping table...
+   ✅ Processed custom_unit_mapping table
+   Processing developer_permission table...
+   ✅ Processed developer_permission table
+   Processing developer_role table...
+   ✅ Processed developer_role table
+   Processing extra_batch_container table...
+   ✅ Processed extra_batch_container table
+   Processing extra_batch_ingredient table...
+   ✅ Processed extra_batch_ingredient table
+   Processing ingredient_category table...
+   ✅ Processed ingredient_category table
+   Processing inventory_history table...
+   ✅ Processed inventory_history table
+   Processing inventory_item table...
+   ✅ Processed inventory_item table
+   Processing inventory_lot table...
+   ✅ Processed inventory_lot table
+   Processing organization table...
+   ✅ Processed organization table
+   Processing organization_stats table...
+   ✅ Processed organization_stats table
+   Processing permission table...
+   ✅ Processed permission table
+   Processing pricing_snapshots table...
+   ✅ Processed pricing_snapshots table
+   Processing product table...
+   ✅ Processed product table
+   Processing product_sku table...
+   ✅ Processed product_sku table
+   Processing product_sku_history table...
+   ✅ Processed product_sku_history table
+   Processing product_variant table...
+   ✅ Processed product_variant table
+   Processing recipe table...
+   ✅ Processed recipe table
+   Processing recipe_ingredient table...
+   ✅ Processed recipe_ingredient table
+   Processing reservation table...
+   ✅ Processed reservation table
+   Processing role table...
+   ✅ Processed role table
+   Processing stripe_event table...
+   ✅ Processed stripe_event table
+   Processing subscription_tier table...
+   ✅ Processed subscription_tier table
+   Processing tag table...
+   ✅ Processed tag table
+   Processing unified_inventory_history table...
+   ✅ Processed unified_inventory_history table
+   Processing unit table...
+   ✅ Processed unit table
+   Processing user table...
+   ✅ Processed user table
+   Processing user_preferences table...
+   ✅ Processed user_preferences table
+   Processing user_role_assignment table...
+   ✅ Processed user_role_assignment table
+   Processing user_stats table...
+   ✅ Processed user_stats table
+✅ Migration completed successfully
+INFO  [alembic.runtime.migration] Running upgrade edb302e17958 -> fix_perm_unit_schema, fix permission and unit schema mismatch
+=== Fixing Permission and Unit Schema Mismatches ===
+   Adding is_active column to permission table...
+   ✅ is_active column added to permission table
+   ✅ created_at column already exists in permission table
+   Converting unit.is_base_unit to unit.base_unit...
+   ✅ Converted is_base_unit to base_unit column
+✅ Schema mismatch fixes completed
+INFO  [alembic.runtime.migration] Running upgrade fix_perm_unit_schema -> add_comprehensive_stats, Add comprehensive statistics models
+   Creating batch_stats table...
+   ✅ Created batch_stats table
+   Creating recipe_stats table...
+   ✅ Created recipe_stats table
+   Creating inventory_efficiency_stats table...
+   ✅ Created inventory_efficiency_stats table
+   Creating organization_leaderboard_stats table...
+   ✅ Created organization_leaderboard_stats table
+   Creating inventory_change_log table...
+   ✅ Created inventory_change_log table
+   ✅ Created index idx_batch_stats_recipe on batch_stats
+   ✅ Created index idx_batch_stats_org on batch_stats
+   ✅ Created index idx_recipe_stats_org on recipe_stats
+   ✅ Created index idx_inventory_efficiency_org on inventory_efficiency_stats
+   ✅ Created index idx_change_log_item_date on inventory_change_log
+   ✅ Created index idx_change_log_type_date on inventory_change_log
+✅ Statistics models migration completed successfully
+INFO  [alembic.runtime.migration] Running upgrade add_comprehensive_stats -> add_capacity_fields, Add container capacity columns
+=== Adding container capacity columns ===
+   Adding capacity column to inventory_item...
+   ✅ Added capacity column to inventory_item
+   Adding capacity_unit column to inventory_item...
+   ✅ Added capacity_unit column to inventory_item
+✅ Container capacity columns migration completed
+INFO  [alembic.runtime.migration] Running upgrade add_capacity_fields -> add_reference_guide_integration, Add reference guide integration fields
+=== Adding reference guide integration fields ===
+   Adding reference_item_name column to inventory_item...
+   ✅ Added reference_item_name column to inventory_item
+   Adding reference_item_type column to inventory_item...
+   ✅ Added reference_item_type column to inventory_item
+   Adding reference_guide_url column to inventory_item...
+   ✅ Added reference_guide_url column to inventory_item
+✅ Reference guide integration migration completed
+INFO  [alembic.runtime.migration] Running upgrade add_reference_guide_integration -> 20250904_01, Global items table, link to inventory_item, and performance indexes
+=== Creating global_item table and indexes ===
+Creating global_item table...
+   ✅ Created global_item table
+   Creating index ix_global_item_name...
+   ✅ Created index ix_global_item_name
+   Creating index ix_global_item_item_type...
+   ✅ Created index ix_global_item_item_type
+   Adding global_item_id column to inventory_item...
+   ✅ Added global_item_id column to inventory_item
+   Creating index ix_inventory_item_global_item_id...
+   ✅ Created index ix_inventory_item_global_item_id
+   Adding foreign key constraint...
+   ✅ Added foreign key constraint
+   Creating index ix_inventory_item_organization_id...
+   ✅ Created index ix_inventory_item_organization_id
+   Creating index ix_inventory_item_type...
+   ✅ Created index ix_inventory_item_type
+   ℹ️  Skipping ix_inventory_item_is_archived (column missing)
+   Creating index ix_user_organization_id...
+   ✅ Created index ix_user_organization_id
+✅ Global items migration completed successfully
+INFO  [alembic.runtime.migration] Running upgrade 20250904_01 -> 20250904_01a, Repair: ensure global_item exists with indexes and FK
+INFO  [alembic.runtime.migration] Running upgrade 20250904_01a -> 20250904_02, Extend GlobalItem with synonyms and perishable defaults
+=== Adding synonyms and perishable defaults to global_item ===
+   Adding aka_names column to global_item...
+   ✅ Added aka_names column to global_item
+   Adding default_is_perishable column to global_item...
+   ✅ Added default_is_perishable column to global_item
+   Adding default_days_until_expiration column to global_item...
+   ✅ Added default_days_until_expiration column to global_item
+✅ GlobalItem synonyms and perishables migration completed
+INFO  [alembic.runtime.migration] Running upgrade 20250904_02 -> 20250904_03, Set ON DELETE SET NULL for inventory_item.global_item_id
+INFO  [alembic.runtime.migration] Running upgrade 20250904_03 -> 20250904_04, Add missing inventory_category_id column to inventory_item table
+Creating inventory_category table and adding inventory_category_id column...
+   Creating inventory_category table...
+   ✅ Created inventory_category table
+   Adding inventory_category_id column...
+   ✅ Added inventory_category_id column
+   Adding foreign key constraint...
+   ✅ Added foreign key constraint
+   Adding index for inventory_category_id...
+   ✅ Added index for inventory_category_id
+✅ Migration completed
+INFO  [alembic.runtime.migration] Running upgrade 20250904_04 -> 20250904_04a, Add reference_category to global_item
+INFO  [alembic.runtime.migration] Running upgrade 20250904_04a -> 20250905_01, Add soft-delete fields to global_item and ownership to inventory_item
+Starting global_item soft-delete and inventory_item ownership migration...
+Adding soft-delete columns to global_item...
+  Adding is_archived column...
+  Adding archived_at column...
+  Adding archived_by column...
+  Creating index on is_archived...
+Adding ownership column to inventory_item...
+  Adding ownership column...
+  Creating index on ownership...
+  Backfilling ownership values...
+    All inventory items already have ownership values
+✅ Migration completed successfully!
+INFO  [alembic.runtime.migration] Running upgrade 20250905_01 -> 20250906_01, Add foreign key from global_item to ingredient_category
+=== Adding ingredient_category_id to global_item ===
+   Adding ingredient_category_id column...
+   ✅ Added ingredient_category_id column
+   Adding index...
+   ✅ Added index
+   Adding foreign key constraint...
+   ✅ Added foreign key constraint
+✅ Migration completed successfully
+INFO  [alembic.runtime.migration] Running upgrade 20250906_01 -> 2025090502, Add consumables tables for recipes and batches
+=== Adding consumables tables ===
+   Creating recipe_consumable table...
+   ✅ Created recipe_consumable table
+   Creating batch_consumable table...
+   ✅ Created batch_consumable table
+   Creating extra_batch_consumable table...
+   ✅ Created extra_batch_consumable table
+✅ Consumables migration completed successfully
+INFO  [alembic.runtime.migration] Running upgrade 2025090502 -> 20250908_01, Add organization_id column to recipe_consumable table
+   Adding organization_id column to recipe_consumable...
+✅ Added organization_id foreign key to recipe_consumable
+✅ Added organization_id column to recipe_consumable
+INFO  [alembic.runtime.migration] Running upgrade 20250908_01 -> 20250911_01, cleanup redundant category fields
+🧹 Cleaning up redundant category fields...
+   Updating global_item.reference_category from category relationships...
+   ✅ Updated reference_category from category relationships
+   ℹ️  reference_category_name column doesn't exist - skipping
+   Ensuring all global items have reference_category values...
+   ✅ Set default reference_category values
+✅ Category field cleanup completed
+INFO  [alembic.runtime.migration] Running upgrade 20250911_01 -> 20250911_02, Add reference_category field to global_item table
+⚠️ reference_category column already exists, skipping
+✅ Created index on reference_category
+INFO  [alembic.runtime.migration] Running upgrade 20250911_02 -> 20250911_03, Remove reference_category field from global_item table
+✅ Removed reference_category field from global_item table
+INFO  [alembic.runtime.migration] Running upgrade 20250911_03 -> 20250911_04, Add missing timestamp columns to ingredient_category
+   Adding created_at column to ingredient_category...
+✅ Added created_at column to ingredient_category
+   Adding updated_at column to ingredient_category...
+✅ Added updated_at column to ingredient_category
+INFO  [alembic.runtime.migration] Running upgrade 20250911_04 -> 20250911_05, Add missing timestamp columns to global_item
+   Adding created_at column to global_item...
+✅ Added created_at column to global_item
+   Adding updated_at column to global_item...
+✅ Added updated_at column to global_item
+INFO  [alembic.runtime.migration] Running upgrade 20250911_05 -> 20250911_06, Fix inventory item name constraint to be organization-scoped
+=== FIXING INVENTORY ITEM NAME CONSTRAINTS ===
+1. Checking for old inventory_item_name_key constraint...
+   ✅ Old constraint doesn't exist - skipping
+2. Checking for organization+name constraint...
+   ✅ Created unique constraint _org_name_uc
+3. Ensuring proper indexes...
+   Creating name index...
+   ✅ Created name index
+   ✅ Organization_id index already exists
+=== INVENTORY CONSTRAINT FIX COMPLETE ===
+INFO  [alembic.runtime.migration] Running upgrade 20250911_06 -> 20250913014500, rename is_reference_category to is_global_category
+🔄 Renaming is_reference_category to is_global_category...
+   Adding is_global_category column...
+   Setting default values for global categories...
+Traceback (most recent call last):
+  File "/opt/render/project/src/.venv/lib/python3.13/site-packages/sqlalchemy/engine/base.py", line 1964, in _exec_single_context
+    self.dialect.do_execute(
+    ~~~~~~~~~~~~~~~~~~~~~~~^
+        cursor, str_statement, effective_parameters, context
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "/opt/render/project/src/.venv/lib/python3.13/site-packages/sqlalchemy/engine/default.py", line 945, in do_execute
+    cursor.execute(statement, parameters)
+    ~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^
+psycopg2.errors.DatatypeMismatch: column "is_global_category" is of type boolean but expression is of type integer
+LINE 3:                     SET is_global_category = 1
+                                                     ^
+HINT:  You will need to rewrite or cast the expression.
+
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/opt/render/project/src/.venv/bin/flask", line 8, in <module>
+    sys.exit(main())
+             ~~~~^^
+  File "/opt/render/project/src/.venv/lib/python3.13/site-packages/flask/cli.py", line 1129, in main
+    cli.main()
+    ~~~~~~~~^^
+  File "/opt/render/project/src/.venv/lib/python3.13/site-packages/click/core.py", line 1082, in main
+    rv = self.invoke(ctx)
+  File "/opt/render/project/src/.venv/lib/python3.13/site-packages/click/core.py", line 1697, in invoke
+    return _process_result(sub_ctx.command.invoke(sub_ctx))
+                           ~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^
+  File "/opt/render/project/src/.venv/lib/python3.13/site-packages/click/core.py", line 1697, in invoke
+    return _process_result(sub_ctx.command.invoke(sub_ctx))
+                           ~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^
+  File "/opt/render/project/src/.venv/lib/python3.13/site-packages/click/core.py", line 1443, in invoke
+    return ctx.invoke(self.callback, **ctx.params)
+           ~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/render/project/src/.venv/lib/python3.13/site-packages/click/core.py", line 788, in invoke
+    return __callback(*args, **kwargs)
+  File "/opt/render/project/src/.venv/lib/python3.13/site-packages/click/decorators.py", line 33, in new_func
+    return f(get_current_context(), *args, **kwargs)
+  File "/opt/render/project/src/.venv/lib/python3.13/site-packages/flask/cli.py", line 400, in decorator
+    return ctx.invoke(f, *args, **kwargs)
+           ~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^
+  File "/opt/render/project/src/.venv/lib/python3.13/site-packages/click/core.py", line 788, in invoke
+    return __callback(*args, **kwargs)
+  File "/opt/render/project/src/.venv/lib/python3.13/site-packages/flask_migrate/cli.py", line 150, in upgrade
+    _upgrade(directory, revision, sql, tag, x_arg)
+    ~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/render/project/src/.venv/lib/python3.13/site-packages/flask_migrate/__init__.py", line 111, in wrapped
+    f(*args, **kwargs)
+    ~^^^^^^^^^^^^^^^^^
+  File "/opt/render/project/src/.venv/lib/python3.13/site-packages/flask_migrate/__init__.py", line 200, in upgrade
+    command.upgrade(config, revision, sql=sql, tag=tag)
+    ~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/render/project/src/.venv/lib/python3.13/site-packages/alembic/command.py", line 408, in upgrade
+    script.run_env()
+    ~~~~~~~~~~~~~~^^
+  File "/opt/render/project/src/.venv/lib/python3.13/site-packages/alembic/script/base.py", line 586, in run_env
+    util.load_python_file(self.dir, "env.py")
+    ~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^
+  File "/opt/render/project/src/.venv/lib/python3.13/site-packages/alembic/util/pyfiles.py", line 95, in load_python_file
+    module = load_module_py(module_id, path)
+  File "/opt/render/project/src/.venv/lib/python3.13/site-packages/alembic/util/pyfiles.py", line 113, in load_module_py
+    spec.loader.exec_module(module)  # type: ignore
+    ~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^
+  File "<frozen importlib._bootstrap_external>", line 1026, in exec_module
+  File "<frozen importlib._bootstrap>", line 488, in _call_with_frames_removed
+  File "/opt/render/project/src/migrations/env.py", line 189, in <module>
+    run_migrations_online()
+    ~~~~~~~~~~~~~~~~~~~~~^^
+  File "/opt/render/project/src/migrations/env.py", line 183, in run_migrations_online
+    context.run_migrations()
+    ~~~~~~~~~~~~~~~~~~~~~~^^
+  File "<string>", line 8, in run_migrations
+  File "/opt/render/project/src/.venv/lib/python3.13/site-packages/alembic/runtime/environment.py", line 946, in run_migrations
+    self.get_context().run_migrations(**kw)
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^
+  File "/opt/render/project/src/.venv/lib/python3.13/site-packages/alembic/runtime/migration.py", line 623, in run_migrations
+    step.migration_fn(**kw)
+    ~~~~~~~~~~~~~~~~~^^^^^^
+  File "/opt/render/project/src/migrations/versions/20250913014500_rename_is_reference_category_to_is_global_category.py", line 82, in upgrade
+    bind.execute(text("""
+    ~~~~~~~~~~~~^^^^^^^^^
+        UPDATE ingredient_category
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^
+        SET is_global_category = 1
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^
+        WHERE organization_id IS NULL
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    """))
+    ^^^^^
+  File "/opt/render/project/src/.venv/lib/python3.13/site-packages/sqlalchemy/engine/base.py", line 1416, in execute
+    return meth(
+        self,
+        distilled_parameters,
+        execution_options or NO_OPTIONS,
+    )
+  File "/opt/render/project/src/.venv/lib/python3.13/site-packages/sqlalchemy/sql/elements.py", line 523, in _execute_on_connection
+    return connection._execute_clauseelement(
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^
+        self, distilled_params, execution_options
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "/opt/render/project/src/.venv/lib/python3.13/site-packages/sqlalchemy/engine/base.py", line 1638, in _execute_clauseelement
+    ret = self._execute_context(
+        dialect,
+    ...<8 lines>...
+        cache_hit=cache_hit,
+    )
+  File "/opt/render/project/src/.venv/lib/python3.13/site-packages/sqlalchemy/engine/base.py", line 1843, in _execute_context
+    return self._exec_single_context(
+           ~~~~~~~~~~~~~~~~~~~~~~~~~^
+        dialect, context, statement, parameters
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "/opt/render/project/src/.venv/lib/python3.13/site-packages/sqlalchemy/engine/base.py", line 1983, in _exec_single_context
+    self._handle_dbapi_exception(
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~^
+        e, str_statement, effective_parameters, cursor, context
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "/opt/render/project/src/.venv/lib/python3.13/site-packages/sqlalchemy/engine/base.py", line 2352, in _handle_dbapi_exception
+    raise sqlalchemy_exception.with_traceback(exc_info[2]) from e
+  File "/opt/render/project/src/.venv/lib/python3.13/site-packages/sqlalchemy/engine/base.py", line 1964, in _exec_single_context
+    self.dialect.do_execute(
+    ~~~~~~~~~~~~~~~~~~~~~~~^
+        cursor, str_statement, effective_parameters, context
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "/opt/render/project/src/.venv/lib/python3.13/site-packages/sqlalchemy/engine/default.py", line 945, in do_execute
+    cursor.execute(statement, parameters)
+    ~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^
+sqlalchemy.exc.ProgrammingError: (psycopg2.errors.DatatypeMismatch) column "is_global_category" is of type boolean but expression is of type integer
+LINE 3:                     SET is_global_category = 1
+                                                     ^
+HINT:  You will need to rewrite or cast the expression.
+
+[SQL: 
+                    UPDATE ingredient_category 
+                    SET is_global_category = 1
+                    WHERE organization_id IS NULL
+                ]
+(Background on this error at: https://sqlalche.me/e/20/f405)
+render@srv-d3r8t01r0fns73fusa00-5b6b779c8f-qflb9:~/project/src$ 
