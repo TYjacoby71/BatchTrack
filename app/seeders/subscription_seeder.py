@@ -34,7 +34,7 @@ def create_exempt_tier():
                 description='System tier for exempt accounts - unlimited access',
                 tier_type='monthly',
                 user_limit=-1,  # Unlimited users
-                max_users=None,
+                max_users=-1,  # Use -1 to represent unlimited for NOT NULL schemas
                 max_recipes=None,
                 max_batches=None,
                 max_products=None,
@@ -234,7 +234,7 @@ def create_enterprise_tier():
                 description='Full-scale production management',
                 tier_type='monthly',
                 user_limit=-1,  # Unlimited users
-                max_users=None,
+                max_users=-1,  # Use -1 to represent unlimited for NOT NULL schemas
                 max_recipes=None,  # Unlimited recipes
                 max_batches=None,  # Unlimited batches
                 max_products=None,  # Unlimited products
