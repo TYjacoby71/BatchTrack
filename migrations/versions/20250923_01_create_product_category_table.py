@@ -29,10 +29,8 @@ def upgrade():
                 sa.Column('name', sa.String(length=100), nullable=False),
                 sa.Column('description', sa.Text(), nullable=True),
                 sa.Column('is_typically_portioned', sa.Boolean(), nullable=False, default=False, server_default=sa.text('false')),
-                sa.Column('organization_id', sa.Integer(), nullable=False),
                 sa.Column('created_at', sa.DateTime(), nullable=True),
                 sa.Column('updated_at', sa.DateTime(), nullable=True),
-                sa.ForeignKeyConstraint(['organization_id'], ['organization.id'], ),
                 sa.PrimaryKeyConstraint('id')
             )
             print("✅ Created product_category table")
@@ -42,7 +40,6 @@ def upgrade():
         print("✅ product_category table already exists")
 
     # Create indexes
-    safe_create_index('ix_product_category_organization_id', 'product_category', ['organization_id'])
     safe_create_index('ix_product_category_name', 'product_category', ['name'])
 
     print("✅ Product category migration completed")

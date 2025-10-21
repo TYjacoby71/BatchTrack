@@ -18,19 +18,19 @@ depends_on = None
 
 
 def _get_uncategorized_id(conn):
-    """Get or create the Uncategorized product category"""
+    """Get or create the global Uncategorized product category"""
     result = conn.execute(sa.text("SELECT id FROM product_category WHERE name = 'Uncategorized' LIMIT 1"))
     row = result.fetchone()
     if row:
         return row[0]
 
-    # Create it - check what columns exist and insert accordingly
+    # Create global category (no organization_id)
     try:
         # Try with is_typically_portioned first
-        conn.execute(sa.text("INSERT INTO product_category (name, is_typically_portioned, organization_id) VALUES (:n, false, 1)"), {"n": "Uncategorized"})
+        conn.execute(sa.text("INSERT INTO product_category (name, is_typically_portioned) VALUES (:n, false)"), {"n": "Uncategorized"})
     except Exception:
-        # Fallback to just name and organization_id
-        conn.execute(sa.text("INSERT INTO product_category (name, organization_id) VALUES (:n, 1)"), {"n": "Uncategorized"})
+        # Fallback to just name
+        conn.execute(sa.text("INSERT INTO product_category (name) VALUES (:n)"), {"n": "Uncategorized"})
 
     result = conn.execute(sa.text("SELECT id FROM product_category WHERE name = 'Uncategorized' LIMIT 1"))
     return result.fetchone()[0]
