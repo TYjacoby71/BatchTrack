@@ -83,7 +83,7 @@ def safe_create_index(table: str, index_name: str, columns: list[str], unique: b
 
 
 def upgrade() -> None:
-    print("=== Fix inventory_item.type and core flags for init-production ===")
+    print("=== Fix inventory_item.type and core fields for init-production ===")
 
     if not table_exists("inventory_item"):
         print("   ⚠️  inventory_item table is missing; nothing to fix")
@@ -142,10 +142,14 @@ def upgrade() -> None:
     except Exception as e:
         print(f"   ⚠️  Error ensuring inventory_item.type: {e}")
 
-    # 2) Ensure core flags exist that init-production and models rely on
+    # 2) Ensure core flags and fields exist that init-production and models rely on
     safe_add_column("inventory_item", sa.Column("is_active", sa.Boolean(), nullable=True))
     safe_add_column("inventory_item", sa.Column("is_archived", sa.Boolean(), nullable=True))
     safe_add_column("inventory_item", sa.Column("intermediate", sa.Boolean(), nullable=True))
+    safe_add_column("inventory_item", sa.Column("is_perishable", sa.Boolean(), nullable=True))
+    safe_add_column("inventory_item", sa.Column("shelf_life_days", sa.Integer(), nullable=True))
+    safe_add_column("inventory_item", sa.Column("created_by", sa.Integer(), nullable=True))
+    safe_add_column("inventory_item", sa.Column("density_source", sa.String(length=32), nullable=True))
 
     # 3) Create index on type if missing
     try:
@@ -153,7 +157,7 @@ def upgrade() -> None:
     except Exception as e:
         print(f"   ⚠️  Could not create ix_inventory_item_type: {e}")
 
-    print("✅ inventory_item.type and core flags ensured")
+    print("✅ inventory_item.type and core fields ensured")
 
 
 def downgrade() -> None:
