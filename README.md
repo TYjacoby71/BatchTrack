@@ -68,6 +68,7 @@ For detailed development information, see:
  - **[Global Item Library](docs/GLOBAL_ITEM_LIBRARY.md)** - Library & Shelf model and global-locked rules
  - **[Wall of Drawers Protocol](docs/WALL_OF_DRAWERS_PROTOCOL.md)** - In-context error resolution pattern
  - **[Deployment & Migrations](deploy_migration_guide.md)** - Runbook for production changes
+- **[Upgrade Log](docs/UPGRADE_LOG.md)** - Canonical base→head Alembic upgrade order and observed transitions
  - **[Global Item Library](docs/GLOBAL_ITEM_LIBRARY.md)** - Library & Shelf model and global-locked rules
  - **[Wall of Drawers Protocol](docs/WALL_OF_DRAWERS_PROTOCOL.md)** - In-context error resolution pattern
 
