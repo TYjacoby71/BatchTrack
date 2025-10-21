@@ -179,8 +179,23 @@ def run_migrations_online():
             **conf_args
         )
 
-        with context.begin_transaction():
-            context.run_migrations()
+        try:
+            with context.begin_transaction():
+                context.run_migrations()
+        except Exception as e:
+            if 'InFailedSqlTransaction' in str(e) or 'transaction is aborted' in str(e):
+                logger.error(f"Transaction aborted during migration: {e}")
+                logger.info("Attempting to recover by rolling back and retrying...")
+                try:
+                    connection.rollback()
+                    # Try once more with a fresh transaction
+                    with context.begin_transaction():
+                        context.run_migrations()
+                except Exception as retry_e:
+                    logger.error(f"Recovery attempt failed: {retry_e}")
+                    raise e
+            else:
+                raise e
 
 
 if context.is_offline_mode():

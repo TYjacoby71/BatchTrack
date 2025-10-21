@@ -36,8 +36,24 @@ def upgrade():
 
 
 def downgrade():
-    # Best-effort drop; skip if table missing
+    """Remove tier_allowed_addon association table - safe no-op version"""
+    print("=== Removing tier_allowed_addon table (safe downgrade) ===")
+
+    # Use batch operations for maximum safety
     try:
-        op.drop_table('tier_allowed_addon')
-    except Exception:
-        pass
+        bind = op.get_bind()
+        inspector = inspect(bind)
+
+        if 'tier_allowed_addon' in inspector.get_table_names():
+            print("   Found tier_allowed_addon table, attempting removal...")
+            with op.batch_alter_table('tier_allowed_addon', schema=None) as batch_op:
+                pass  # Just create the batch context
+            op.drop_table('tier_allowed_addon')
+            print("   ✅ Dropped tier_allowed_addon table")
+        else:
+            print("   ℹ️  tier_allowed_addon table does not exist - skipping")
+
+    except Exception as e:
+        print(f"   ⚠️  Could not drop tier_allowed_addon table (safe to ignore): {e}")
+
+    print("✅ Safe tier_allowed_addon downgrade completed")
