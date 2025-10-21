@@ -33,8 +33,19 @@ def upgrade():
     op.create_index("ix_stripe_event_event_type", "stripe_event", ["event_type"], unique=False)
     op.create_index("ix_inventory_item_name_org", "inventory_item", ["organization_id", "name"], unique=True)
 
+    # Add the deferred FK to resolve cycle between batch <-> product_sku
+    op.create_foreign_key(
+        "fk_batch_sku_id",
+        "batch",
+        "product_sku",
+        ["sku_id"],
+        ["id"],
+    )
+
 
 def downgrade():
+    # Drop the deferred FK added in this revision
+    op.drop_constraint("fk_batch_sku_id", "batch", type_="foreignkey")
     op.drop_index("ix_inventory_item_name_org", table_name="inventory_item")
     op.drop_index("ix_stripe_event_event_type", table_name="stripe_event")
     op.drop_index("ix_product_sku_sku", table_name="product_sku")
