@@ -49,20 +49,22 @@ def upgrade():
         print("   ✅ deleted_by column already exists")
 
     if not column_exists('user', 'is_deleted'):
-        # Add column as nullable first with default False
-        op.add_column('user', sa.Column('is_deleted', sa.Boolean(), nullable=True, server_default=sa.text('0')))
+        # Add column as nullable first with a dialect-appropriate default
+        default_false = sa.text('0') if is_sqlite() else sa.text('false')
+        op.add_column('user', sa.Column('is_deleted', sa.Boolean(), nullable=True, server_default=default_false))
         print("   ✅ Added is_deleted column")
 
-        # Update all existing records to False
+        # Update all existing records to False using dialect-appropriate literal
         try:
-            op.execute("UPDATE \"user\" SET is_deleted = 0 WHERE is_deleted IS NULL")
-        except Exception:
-            # Fallback for backends that accept TRUE/FALSE
+            # Prefer boolean literal for PostgreSQL
             op.execute("UPDATE \"user\" SET is_deleted = FALSE WHERE is_deleted IS NULL")
+        except Exception:
+            # Fallback for SQLite numeric boolean
+            op.execute("UPDATE \"user\" SET is_deleted = 0 WHERE is_deleted IS NULL")
 
         # Avoid ALTER COLUMN on SQLite; server_default keeps future inserts false
         try:
-            op.alter_column('user', 'is_deleted', nullable=False, server_default=sa.text('0'))
+            op.alter_column('user', 'is_deleted', nullable=False, server_default=default_false)
             print("   ✅ Set is_deleted NOT NULL with default")
         except Exception as e:
             print(f"   ⚠️  Skipping NOT NULL alter for is_deleted on this dialect: {e}")

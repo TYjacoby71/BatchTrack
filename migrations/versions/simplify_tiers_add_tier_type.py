@@ -81,7 +81,10 @@ def upgrade():
 def downgrade():
     """Restore key column and is_billing_exempt"""
     op.add_column('subscription_tier', sa.Column('key', sa.String(32), nullable=True))
-    op.add_column('subscription_tier', sa.Column('is_billing_exempt', sa.Boolean, nullable=False, server_default='0'))
+    default_false = sa.text('false')
+    if op.get_bind().dialect.name == 'sqlite':
+        default_false = sa.text('0')
+    op.add_column('subscription_tier', sa.Column('is_billing_exempt', sa.Boolean, nullable=False, server_default=default_false))
     
     # Generate keys from names for existing records
     connection = op.get_bind()

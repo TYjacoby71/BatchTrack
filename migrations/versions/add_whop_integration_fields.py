@@ -43,7 +43,9 @@ def upgrade():
         if not column_exists('organization', col_name):
             print(f"   Adding {col_name} column...")
             if col_name == 'whop_verified':
-                op.add_column('organization', sa.Column(col_name, col_type, default=False, server_default='false'))
+                # Use dialect-appropriate boolean default
+                default_false = sa.text('false') if connection.dialect.name == 'postgresql' else sa.text('0')
+                op.add_column('organization', sa.Column(col_name, col_type, nullable=False, server_default=default_false))
             else:
                 op.add_column('organization', sa.Column(col_name, col_type, nullable=True))
             print(f"   ✅ Added {col_name}")

@@ -36,8 +36,12 @@ def upgrade():
     # Add is_verified column if it doesn't exist
     if not column_exists('user', 'is_verified'):
         print("   Adding is_verified column...")
+        # Use boolean literal defaults across dialects
+        default_false = sa.text('false')
+        if inspect(connection).bind.dialect.name == 'sqlite':
+            default_false = sa.text('0')
         with op.batch_alter_table('user', schema=None) as batch_op:
-            batch_op.add_column(sa.Column('is_verified', sa.Boolean(), nullable=False, server_default='0'))
+            batch_op.add_column(sa.Column('is_verified', sa.Boolean(), nullable=False, server_default=default_false))
         print("✅ is_verified column added successfully")
     else:
         print("   ⚠️  is_verified column already exists, skipping")

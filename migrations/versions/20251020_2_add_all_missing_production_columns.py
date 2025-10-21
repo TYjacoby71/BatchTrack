@@ -90,12 +90,12 @@ def upgrade():
     # Fix unit.is_active - missing column
     if table_exists('unit'):
         safe_add_column('unit', 'is_active', 
-                       sa.Column('is_active', sa.Boolean(), nullable=False, server_default='true'))
+                       sa.Column('is_active', sa.Boolean(), nullable=False, server_default=sa.text('true')))
     
     # Fix role.is_active - missing column  
     if table_exists('role'):
         safe_add_column('role', 'is_active', 
-                       sa.Column('is_active', sa.Boolean(), nullable=False, server_default='true'))
+                       sa.Column('is_active', sa.Boolean(), nullable=False, server_default=sa.text('true')))
     
     # Fix ingredient_category.description - missing column
     if table_exists('ingredient_category'):
@@ -107,7 +107,7 @@ def upgrade():
     # Fix developer_permission missing columns if they exist in model
     if table_exists('developer_permission'):
         safe_add_column('developer_permission', 'is_active', 
-                       sa.Column('is_active', sa.Boolean(), nullable=False, server_default='true'))
+                       sa.Column('is_active', sa.Boolean(), nullable=False, server_default=sa.text('true')))
     
     # Fix any missing timestamp columns
     if table_exists('unit'):
@@ -124,7 +124,7 @@ def upgrade():
         safe_add_column('role', 'organization_id', 
                        sa.Column('organization_id', sa.Integer(), nullable=True))
         safe_add_column('role', 'is_system_role', 
-                       sa.Column('is_system_role', sa.Boolean(), nullable=False, server_default='false'))
+                       sa.Column('is_system_role', sa.Boolean(), nullable=False, server_default=sa.text('false')))
     
     # Add foreign key constraints safely
     if table_exists('role') and table_exists('user') and column_exists('role', 'created_by'):

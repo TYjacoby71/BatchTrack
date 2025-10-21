@@ -32,7 +32,7 @@ def upgrade():
     # Fix permission table - add back is_active column
     if not column_exists('permission', 'is_active'):
         print("   Adding is_active column to permission table...")
-        op.add_column('permission', sa.Column('is_active', sa.Boolean(), nullable=False, server_default='true'))
+        op.add_column('permission', sa.Column('is_active', sa.Boolean(), nullable=False, server_default=sa.text('true')))
         print("   ✅ is_active column added to permission table")
     else:
         print("   ✅ is_active column already exists in permission table")
