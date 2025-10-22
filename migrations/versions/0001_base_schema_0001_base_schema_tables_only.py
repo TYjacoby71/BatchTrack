@@ -1526,7 +1526,7 @@ def downgrade():
                 DROP TABLE IF EXISTS domain_event CASCADE;
                 DROP TABLE IF EXISTS custom_unit_mapping CASCADE;
                 DROP TABLE IF EXISTS conversion_log CASCADE;
-                DROP TABLE IF EXISTS user CASCADE;
+                DROP TABLE IF EXISTS "user" CASCADE;
                 DROP TABLE IF EXISTS storage_addon_subscription CASCADE;
                 DROP TABLE IF EXISTS storage_addon_purchase CASCADE;
                 DROP TABLE IF EXISTS organization_stats CASCADE;
