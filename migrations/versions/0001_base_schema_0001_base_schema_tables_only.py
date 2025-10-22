@@ -1516,48 +1516,81 @@ def downgrade():
     safe_drop_index('idx_order_status', 'reservation')
     safe_drop_index('idx_expires_at', 'reservation')
 
-    op.drop_table('reservation')
-    op.drop_table('recipe_stats')
-    op.drop_table('recipe_ingredient')
-    op.drop_table('recipe_consumable')
+    # Helper function for safely dropping tables
+    def safe_drop_table(table_name):
+        from migrations.postgres_helpers import is_postgresql
+        from sqlalchemy import text
+        
+        if is_postgresql():
+            # For PostgreSQL, check if table exists first
+            try:
+                bind = op.get_bind()
+                result = bind.execute(text("""
+                    SELECT EXISTS (
+                        SELECT FROM information_schema.tables 
+                        WHERE table_name = :t
+                    )
+                """), {"t": table_name})
+                
+                if result.scalar():
+                    op.drop_table(table_name)
+                    print(f"   ✅ Dropped table {table_name}")
+                else:
+                    print(f"   ℹ️  Table {table_name} does not exist, skipping")
+            except Exception as e:
+                print(f"   ⚠️  Could not drop table '{table_name}': {e}")
+        else:
+            # For SQLite, just try to drop it
+            try:
+                op.drop_table(table_name)
+                print(f"   ✅ Dropped table {table_name}")
+            except Exception as e:
+                print(f"   ℹ️  Table {table_name} does not exist or could not be dropped: {e}")
+
+    safe_drop_table('reservation')
+    safe_drop_table('recipe_stats')
+    safe_drop_table('recipe_ingredient')
+    safe_drop_table('recipe_consumable')
+    
     # Safely drop indexes for product_sku_history
     safe_drop_index('idx_change_type', 'product_sku_history')
     safe_drop_index('idx_fifo_code', 'product_sku_history')
     safe_drop_index('idx_inventory_item_remaining', 'product_sku_history')
     safe_drop_index('idx_inventory_item_timestamp', 'product_sku_history')
 
-    op.drop_table('product_sku_history')
-    op.drop_table('organization_leaderboard_stats')
+    safe_drop_table('product_sku_history')
+    safe_drop_table('organization_leaderboard_stats')
+    
     # Safely drop index for inventory_lot
     safe_drop_index('ix_inventory_lot_org', 'inventory_lot')
 
-    op.drop_table('inventory_lot')
-    op.drop_table('inventory_history')
-    op.drop_table('inventory_efficiency_stats')
+    safe_drop_table('inventory_lot')
+    safe_drop_table('inventory_history')
+    safe_drop_table('inventory_efficiency_stats')
     # Safely drop indexes for freshness_snapshot
     safe_drop_index(op.f('ix_freshness_snapshot_snapshot_date'), 'freshness_snapshot')
     safe_drop_index(op.f('ix_freshness_snapshot_organization_id'), 'freshness_snapshot')
     safe_drop_index(op.f('ix_freshness_snapshot_inventory_item_id'), 'freshness_snapshot')
 
-    op.drop_table('freshness_snapshot')
-    op.drop_table('extra_batch_ingredient')
-    op.drop_table('extra_batch_container')
+    safe_drop_table('freshness_snapshot')
+    safe_drop_table('extra_batch_ingredient')
+    safe_drop_table('extra_batch_container')
     # Safely drop indexes for extra_batch_consumable
     safe_drop_index('ix_extra_batch_consumable_organization_id', 'extra_batch_consumable')
     safe_drop_index('ix_extra_batch_consumable_inventory_item_id', 'extra_batch_consumable')
     safe_drop_index('ix_extra_batch_consumable_batch_id', 'extra_batch_consumable')
 
-    op.drop_table('extra_batch_consumable')
-    op.drop_table('batch_inventory_log')
-    op.drop_table('batch_ingredient')
-    op.drop_table('batch_container')
+    safe_drop_table('extra_batch_consumable')
+    safe_drop_table('batch_inventory_log')
+    safe_drop_table('batch_ingredient')
+    safe_drop_table('batch_container')
     # Safely drop indexes for batch_consumable
     safe_drop_index('ix_batch_consumable_organization_id', 'batch_consumable')
     safe_drop_index('ix_batch_consumable_inventory_item_id', 'batch_consumable')
     safe_drop_index('ix_batch_consumable_batch_id', 'batch_consumable')
 
-    op.drop_table('batch_consumable')
-    op.drop_table('retention_deletion_queue')
+    safe_drop_table('batch_consumable')
+    safe_drop_table('retention_deletion_queue')
     # Safely drop indexes for inventory_item
     safe_drop_index('ix_inventory_item_type', 'inventory_item')
     safe_drop_index(op.f('ix_inventory_item_ownership'), 'inventory_item')
