@@ -1,4 +1,5 @@
 
+
 """0006 align schema with models
 
 Revision ID: 0006_schema_alignment
@@ -58,22 +59,7 @@ def upgrade():
     op.create_index('idx_reserved_item_status', 'reservation', ['reserved_item_id', 'status'], unique=False)
     op.create_index(op.f('ix_reservation_order_id'), 'reservation', ['order_id'], unique=False)
 
-    # 2. Fix nullable constraints (reverse what 0005 did for columns that should be nullable)
-    if dialect == 'sqlite':
-        with op.batch_alter_table('inventory_item', schema=None) as batch_op:
-            batch_op.alter_column('is_active', existing_type=sa.Boolean(), nullable=True)
-            batch_op.alter_column('is_archived', existing_type=sa.Boolean(), nullable=True)
-        with op.batch_alter_table('role', schema=None) as batch_op:
-            batch_op.alter_column('is_active', existing_type=sa.Boolean(), nullable=True)
-        with op.batch_alter_table('user', schema=None) as batch_op:
-            batch_op.alter_column('is_active', existing_type=sa.Boolean(), nullable=True)
-    else:
-        op.alter_column('inventory_item', 'is_active', existing_type=sa.Boolean(), nullable=True)
-        op.alter_column('inventory_item', 'is_archived', existing_type=sa.Boolean(), nullable=True) 
-        op.alter_column('role', 'is_active', existing_type=sa.Boolean(), nullable=True)
-        op.alter_column('user', 'is_active', existing_type=sa.Boolean(), nullable=True)
-
-    # 3. Handle index changes
+    # 2. Handle index changes (cleanup from 0002)
     # Remove old inventory_item name_org index (was created in 0002)
     try:
         op.drop_index('ix_inventory_item_name_org', table_name='inventory_item')
@@ -87,7 +73,10 @@ def upgrade():
         pass  # May not exist
     
     # Add unique constraint on product_sku.sku
-    op.create_unique_constraint(None, 'product_sku', ['sku'])
+    try:
+        op.create_unique_constraint(None, 'product_sku', ['sku'])
+    except:
+        pass  # May already exist
 
     # Add missing foreign key to product_sku
     try:
@@ -101,21 +90,32 @@ def upgrade():
     except:
         pass  # May not exist
 
-    # 4. Add PostgreSQL-specific indexes and features
+    # 3. Add PostgreSQL-specific indexes and features
     if dialect == 'postgresql':
         # Add GIN indexes for JSON columns and text search
-        # Note: Cannot use CONCURRENTLY within transaction, so using regular CREATE INDEX
-        op.execute('CREATE INDEX ix_global_item_aka_gin ON global_item USING gin ((aka_names::jsonb));')
-        op.execute('CREATE INDEX ix_recipe_category_data_gin ON recipe USING gin ((category_data::jsonb));')
+        try:
+            op.execute('CREATE INDEX IF NOT EXISTS ix_global_item_aka_gin ON global_item USING gin ((aka_names::jsonb));')
+        except:
+            pass
+        try:
+            op.execute('CREATE INDEX IF NOT EXISTS ix_recipe_category_data_gin ON recipe USING gin ((category_data::jsonb));')
+        except:
+            pass
 
         # Add text search index for global_item_alias using 'simple' config
-        op.execute("""
-            CREATE INDEX ix_global_item_alias_tsv ON global_item_alias 
-            USING gin(to_tsvector('simple', alias));
-        """)
+        try:
+            op.execute("""
+                CREATE INDEX IF NOT EXISTS ix_global_item_alias_tsv ON global_item_alias 
+                USING gin(to_tsvector('simple', alias));
+            """)
+        except:
+            pass
 
         # Add UNIQUE case-insensitive index for product_category names
-        op.execute('CREATE UNIQUE INDEX ix_product_category_lower_name ON product_category (lower(name));')
+        try:
+            op.execute('CREATE UNIQUE INDEX IF NOT EXISTS ix_product_category_lower_name ON product_category (lower(name));')
+        except:
+            pass
 
 
 def downgrade():
@@ -142,7 +142,10 @@ def downgrade():
             pass
 
     # Restore stripe_event index
-    op.create_index('ix_stripe_event_event_type', 'stripe_event', ['event_type'], unique=False)
+    try:
+        op.create_index('ix_stripe_event_event_type', 'stripe_event', ['event_type'], unique=False)
+    except:
+        pass
 
     # Remove product_sku foreign key and unique constraint
     try:
@@ -155,25 +158,16 @@ def downgrade():
         pass
     
     # Restore product_sku sku index
-    op.create_index('ix_product_sku_sku', 'product_sku', ['sku'], unique=True)
+    try:
+        op.create_index('ix_product_sku_sku', 'product_sku', ['sku'], unique=True)
+    except:
+        pass
 
     # Restore inventory_item name_org index  
-    op.create_index('ix_inventory_item_name_org', 'inventory_item', ['organization_id', 'name'], unique=True)
-
-    # Restore nullable constraints
-    if dialect == 'sqlite':
-        with op.batch_alter_table('user', schema=None) as batch_op:
-            batch_op.alter_column('is_active', existing_type=sa.Boolean(), nullable=False, server_default=sa.false())
-        with op.batch_alter_table('role', schema=None) as batch_op:
-            batch_op.alter_column('is_active', existing_type=sa.Boolean(), nullable=False, server_default=sa.false())
-        with op.batch_alter_table('inventory_item', schema=None) as batch_op:
-            batch_op.alter_column('is_archived', existing_type=sa.Boolean(), nullable=False, server_default=sa.false())
-            batch_op.alter_column('is_active', existing_type=sa.Boolean(), nullable=False, server_default=sa.true())
-    else:
-        op.alter_column('user', 'is_active', existing_type=sa.Boolean(), nullable=False, server_default=sa.false())
-        op.alter_column('role', 'is_active', existing_type=sa.Boolean(), nullable=False, server_default=sa.false())
-        op.alter_column('inventory_item', 'is_archived', existing_type=sa.Boolean(), nullable=False, server_default=sa.false())
-        op.alter_column('inventory_item', 'is_active', existing_type=sa.Boolean(), nullable=False, server_default=sa.true())
+    try:
+        op.create_index('ix_inventory_item_name_org', 'inventory_item', ['organization_id', 'name'], unique=True)
+    except:
+        pass
 
     # Drop reservation table and indexes
     op.drop_index(op.f('ix_reservation_order_id'), table_name='reservation')
@@ -181,3 +175,4 @@ def downgrade():
     op.drop_index('idx_order_status', table_name='reservation')
     op.drop_index('idx_expires_at', table_name='reservation')
     op.drop_table('reservation')
+

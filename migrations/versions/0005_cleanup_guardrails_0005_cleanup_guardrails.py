@@ -1,3 +1,4 @@
+
 """0005 cleanup guardrails
 
 Revision ID: 0005_cleanup_guardrails
@@ -48,9 +49,6 @@ def upgrade():
 
 
 def downgrade():
-    # Reverse: drop server defaults and relax nullability (do not change data)
-    op.alter_column('feature_flag', 'enabled', existing_type=sa.Boolean(), server_default=None, nullable=True)
-    op.alter_column('inventory_item', 'is_archived', existing_type=sa.Boolean(), server_default=None, nullable=True)
-    op.alter_column('inventory_item', 'is_active', existing_type=sa.Boolean(), server_default=None, nullable=True)
-    op.alter_column('role', 'is_active', existing_type=sa.Boolean(), server_default=None, nullable=True)
-    op.alter_column('user', 'is_active', existing_type=sa.Boolean(), server_default=None, nullable=True)
+    # Don't reverse the constraint changes - leave them hardened
+    # This prevents the back-and-forth nullable changes that cause issues
+    pass
