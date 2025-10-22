@@ -941,9 +941,11 @@ def upgrade():
     sa.ForeignKeyConstraint(['product_id'], ['product.id'], ),
     sa.ForeignKeyConstraint(['variant_id'], ['product_variant.id'], ),
     sa.ForeignKeyConstraint(['created_by'], ['user.id'], ),
+    sa.ForeignKeyConstraint(['quality_checked_by'], ['user.id'], ),
     # batch_id FK removed to avoid circular dependency - added in 0002 as deferred
     sa.ForeignKeyConstraint(['container_id'], ['inventory_item.id'], ),
     sa.PrimaryKeyConstraint('id'),
+    sa.UniqueConstraint('sku', name='uq_product_sku_sku'),
     sa.UniqueConstraint('product_id', 'variant_id', 'size_label', 'fifo_id', name='unique_sku_combination'),
     sa.UniqueConstraint('barcode', name='unique_barcode'),
     sa.UniqueConstraint('upc', name='unique_upc')
@@ -953,6 +955,42 @@ def upgrade():
         batch_op.create_index('idx_product_variant', ['product_id', 'variant_id'], unique=False)
         batch_op.create_index('idx_active_skus', ['is_active', 'is_product_active'], unique=False)
         batch_op.create_index('idx_inventory_item', ['inventory_item_id'], unique=False)
+
+    # Create reservation table that 0006 expects to exist
+    op.create_table('reservation',
+        sa.Column('id', sa.Integer(), nullable=False),
+        sa.Column('order_id', sa.String(length=128), nullable=False),
+        sa.Column('reserved_item_id', sa.Integer(), nullable=False),
+        sa.Column('quantity', sa.Float(), nullable=False),
+        sa.Column('unit', sa.String(length=32), nullable=False),
+        sa.Column('status', sa.String(length=32), nullable=True),
+        sa.Column('expires_at', sa.DateTime(), nullable=True),
+        sa.Column('notes', sa.Text(), nullable=True),
+        sa.Column('created_by', sa.Integer(), nullable=True),
+        sa.Column('organization_id', sa.Integer(), nullable=True),
+        sa.Column('reservation_id', sa.String(length=128), nullable=True),
+        sa.Column('product_item_id', sa.Integer(), nullable=True),
+        sa.Column('unit_cost', sa.Float(), nullable=True),
+        sa.Column('sale_price', sa.Float(), nullable=True),
+        sa.Column('customer', sa.String(length=255), nullable=True),
+        sa.Column('source_fifo_id', sa.String(length=128), nullable=True),
+        sa.Column('source_batch_id', sa.Integer(), nullable=True),
+        sa.Column('source', sa.String(length=128), nullable=True),
+        sa.Column('created_at', sa.DateTime(), nullable=True),
+        sa.Column('released_at', sa.DateTime(), nullable=True),
+        sa.Column('converted_at', sa.DateTime(), nullable=True),
+        sa.ForeignKeyConstraint(['created_by'], ['user.id'], ),
+        sa.ForeignKeyConstraint(['organization_id'], ['organization.id'], ),
+        sa.ForeignKeyConstraint(['reserved_item_id'], ['inventory_item.id'], ),
+        sa.ForeignKeyConstraint(['product_item_id'], ['inventory_item.id'], ),
+        sa.ForeignKeyConstraint(['source_batch_id'], ['batch.id'], ),
+        sa.PrimaryKeyConstraint('id')
+    )
+    with op.batch_alter_table('reservation', schema=None) as batch_op:
+        batch_op.create_index('idx_expires_at', ['expires_at'], unique=False)
+        batch_op.create_index('idx_order_status', ['order_id', 'status'], unique=False)
+        batch_op.create_index('idx_reserved_item_status', ['reserved_item_id', 'status'], unique=False)
+        batch_op.create_index(batch_op.f('ix_reservation_order_id'), ['order_id'], unique=False)
 
     # Create product_sku_history after inventory_item exists
     op.create_table('product_sku_history',
@@ -1441,6 +1479,8 @@ def downgrade():
 
     op.drop_table('unified_inventory_history')
     op.drop_table('inventory_change_log')
+    
+    # Drop reservation table
     with op.batch_alter_table('reservation', schema=None) as batch_op:
         batch_op.drop_index(batch_op.f('ix_reservation_order_id'))
         batch_op.drop_index('idx_reserved_item_status')

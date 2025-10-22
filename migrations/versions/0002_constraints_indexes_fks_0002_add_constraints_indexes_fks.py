@@ -18,22 +18,6 @@ depends_on = None
 
 
 def upgrade():
-    # Add foreign keys that may be complex or require explicit naming/order
-    # Use explicit constraint names for clarity and idempotence
-    # Example pattern:
-    # op.create_foreign_key(
-    #     "fk_child_parent",
-    #     "child", "parent",
-    #     local_cols=["parent_id"], remote_cols=["id"],
-    #     ondelete="CASCADE"
-    # )
-
-    # Role-Permission many-to-many already created via association table in 0001
-    # Create additional indexes and uniques missed by autogenerate
-    op.create_index("ix_product_sku_sku", "product_sku", ["sku"], unique=True)
-    op.create_index("ix_stripe_event_event_type", "stripe_event", ["event_type"], unique=False)
-    op.create_index("ix_inventory_item_name_org", "inventory_item", ["organization_id", "name"], unique=True)
-
     # Add the deferred FKs to resolve cycle between batch <-> product_sku
     # Use safe helper to no-op on SQLite
     safe_create_foreign_key(
@@ -59,6 +43,3 @@ def downgrade():
     if not is_sqlite():
         op.drop_constraint("fk_product_sku_batch_id", "product_sku", type_="foreignkey")
         op.drop_constraint("fk_batch_sku_id", "batch", type_="foreignkey")
-    op.drop_index("ix_inventory_item_name_org", table_name="inventory_item")
-    op.drop_index("ix_stripe_event_event_type", table_name="stripe_event")
-    op.drop_index("ix_product_sku_sku", table_name="product_sku")
