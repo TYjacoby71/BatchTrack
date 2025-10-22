@@ -30,8 +30,12 @@ def is_sqlite() -> bool:
 
 
 def is_postgresql() -> bool:
-    conn = _bind()
-    return "postgresql" in str(conn.engine.url)
+    try:
+        conn = _bind()
+        dialect_name = str(conn.engine.url.drivername).lower()
+        return any(pg in dialect_name for pg in ['postgresql', 'postgres', 'psycopg'])
+    except Exception:
+        return False
 
 
 def _inspector():
