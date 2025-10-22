@@ -42,32 +42,29 @@ def upgrade():
     if dialect == 'postgresql':
         # GIN indexes for JSON columns
         try:
-            op.execute('CREATE INDEX CONCURRENTLY IF NOT EXISTS ix_global_item_aka_gin ON global_item USING gin ((aka_names::jsonb));')
+            op.execute('CREATE INDEX IF NOT EXISTS ix_global_item_aka_gin ON global_item USING gin ((aka_names::jsonb));')
         except:
-            op.execute('CREATE INDEX ix_global_item_aka_gin ON global_item USING gin ((aka_names::jsonb));')
+            pass  # Index may already exist
         
         try:
-            op.execute('CREATE INDEX CONCURRENTLY IF NOT EXISTS ix_recipe_category_data_gin ON recipe USING gin ((category_data::jsonb));')
+            op.execute('CREATE INDEX IF NOT EXISTS ix_recipe_category_data_gin ON recipe USING gin ((category_data::jsonb));')
         except:
-            op.execute('CREATE INDEX ix_recipe_category_data_gin ON recipe USING gin ((category_data::jsonb));')
+            pass  # Index may already exist
 
         # Text search index for global_item_alias using 'simple' config
         try:
             op.execute("""
-                CREATE INDEX CONCURRENTLY IF NOT EXISTS ix_global_item_alias_tsv 
+                CREATE INDEX IF NOT EXISTS ix_global_item_alias_tsv 
                 ON global_item_alias USING gin(to_tsvector('simple', alias));
             """)
         except:
-            op.execute("""
-                CREATE INDEX ix_global_item_alias_tsv 
-                ON global_item_alias USING gin(to_tsvector('simple', alias));
-            """)
+            pass  # Index may already exist
 
         # Case-insensitive unique index for product_category names
         try:
-            op.execute('CREATE UNIQUE INDEX CONCURRENTLY ix_product_category_lower_name ON product_category (lower(name));')
+            op.execute('CREATE UNIQUE INDEX IF NOT EXISTS ix_product_category_lower_name ON product_category (lower(name));')
         except:
-            op.execute('CREATE UNIQUE INDEX ix_product_category_lower_name ON product_category (lower(name));')
+            pass  # Index may already exist
 
     # 3. Handle index changes
     
