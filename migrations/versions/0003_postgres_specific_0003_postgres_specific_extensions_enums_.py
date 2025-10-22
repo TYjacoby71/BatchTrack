@@ -28,19 +28,19 @@ def upgrade():
         # Example: ensure updated_at auto-update via trigger for specific tables
         op.execute(
             """
-            DO $$
+            DO $BODY$
             BEGIN
                 IF NOT EXISTS (
                     SELECT 1 FROM pg_proc WHERE proname = 'set_updated_at'
                 ) THEN
-                    CREATE OR REPLACE FUNCTION set_updated_at() RETURNS trigger AS $$
+                    CREATE OR REPLACE FUNCTION set_updated_at() RETURNS trigger AS $FUNC$
                     BEGIN
                         NEW.updated_at = NOW();
                         RETURN NEW;
                     END;
-                    $$ LANGUAGE plpgsql;
+                    $FUNC$ LANGUAGE plpgsql;
                 END IF;
-            END $$;
+            END $BODY$;
             """
         )
 
