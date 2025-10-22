@@ -941,7 +941,7 @@ def upgrade():
     sa.ForeignKeyConstraint(['product_id'], ['product.id'], ),
     sa.ForeignKeyConstraint(['variant_id'], ['product_variant.id'], ),
     sa.ForeignKeyConstraint(['created_by'], ['user.id'], ),
-    sa.ForeignKeyConstraint(['batch_id'], ['batch.id'], ),
+    # batch_id FK removed to avoid circular dependency - added in 0002 as deferred
     sa.ForeignKeyConstraint(['container_id'], ['inventory_item.id'], ),
     sa.PrimaryKeyConstraint('id'),
     sa.UniqueConstraint('product_id', 'variant_id', 'size_label', 'fifo_id', name='unique_sku_combination'),

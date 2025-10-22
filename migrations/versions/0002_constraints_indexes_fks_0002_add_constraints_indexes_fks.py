@@ -34,7 +34,7 @@ def upgrade():
     op.create_index("ix_stripe_event_event_type", "stripe_event", ["event_type"], unique=False)
     op.create_index("ix_inventory_item_name_org", "inventory_item", ["organization_id", "name"], unique=True)
 
-    # Add the deferred FK to resolve cycle between batch <-> product_sku
+    # Add the deferred FKs to resolve cycle between batch <-> product_sku
     # Use safe helper to no-op on SQLite
     safe_create_foreign_key(
         "fk_batch_sku_id",
@@ -43,11 +43,21 @@ def upgrade():
         ["sku_id"],
         ["id"],
     )
+    
+    # Add the reverse FK for product traceability to batch
+    safe_create_foreign_key(
+        "fk_product_sku_batch_id",
+        "product_sku",
+        "batch",
+        ["batch_id"],
+        ["id"],
+    )
 
 
 def downgrade():
-    # Drop the deferred FK added in this revision (skip on SQLite)
+    # Drop the deferred FKs added in this revision (skip on SQLite)
     if not is_sqlite():
+        op.drop_constraint("fk_product_sku_batch_id", "product_sku", type_="foreignkey")
         op.drop_constraint("fk_batch_sku_id", "batch", type_="foreignkey")
     op.drop_index("ix_inventory_item_name_org", table_name="inventory_item")
     op.drop_index("ix_stripe_event_event_type", table_name="stripe_event")

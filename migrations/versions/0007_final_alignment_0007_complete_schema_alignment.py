@@ -1,4 +1,3 @@
-
 """0007 complete schema alignment
 
 Revision ID: 0007_final_alignment
@@ -37,7 +36,7 @@ def upgrade():
         op.alter_column('user', 'is_active', existing_type=sa.Boolean(), nullable=True)
 
     # 2. Add missing indexes that were detected
-    
+
     # PostgreSQL-specific indexes
     if dialect == 'postgresql':
         # GIN indexes for JSON columns
@@ -45,7 +44,7 @@ def upgrade():
             op.execute('CREATE INDEX IF NOT EXISTS ix_global_item_aka_gin ON global_item USING gin ((aka_names::jsonb));')
         except:
             pass  # Index may already exist
-        
+
         try:
             op.execute('CREATE INDEX IF NOT EXISTS ix_recipe_category_data_gin ON recipe USING gin ((category_data::jsonb));')
         except:
@@ -67,7 +66,7 @@ def upgrade():
             pass  # Index may already exist
 
     # 3. Handle index changes
-    
+
     # Remove old inventory_item name_org index (was created in 0002)
     try:
         op.drop_index('ix_inventory_item_name_org', table_name='inventory_item')
@@ -79,7 +78,7 @@ def upgrade():
         op.drop_index('ix_product_sku_sku', table_name='product_sku')
     except:
         pass  # May not exist
-    
+
     # Add unique constraint on product_sku.sku
     try:
         op.create_unique_constraint(None, 'product_sku', ['sku'])
@@ -118,7 +117,7 @@ def downgrade():
         op.drop_constraint(None, 'product_sku', type_='unique')  # sku unique constraint
     except:
         pass
-    
+
     # Restore product_sku sku index
     try:
         op.create_index('ix_product_sku_sku', 'product_sku', ['sku'], unique=True)
@@ -139,7 +138,7 @@ def downgrade():
             'ix_recipe_category_data_gin',
             'ix_global_item_aka_gin'
         ]
-        
+
         for idx_name in indexes_to_drop:
             try:
                 op.drop_index(idx_name)
