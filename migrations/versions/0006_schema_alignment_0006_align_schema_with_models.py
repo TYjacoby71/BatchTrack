@@ -94,34 +94,18 @@ def upgrade():
     # 4. Add PostgreSQL-specific indexes and features
     if dialect == 'postgresql':
         # Add GIN indexes for JSON columns and text search
-        try:
-            op.execute('CREATE INDEX CONCURRENTLY ix_global_item_aka_gin ON global_item USING gin ((aka_names::jsonb));')
-        except:
-            # Fallback without CONCURRENTLY
-            op.execute('CREATE INDEX ix_global_item_aka_gin ON global_item USING gin ((aka_names::jsonb));')
-
-        try:
-            op.execute('CREATE INDEX CONCURRENTLY ix_recipe_category_data_gin ON recipe USING gin ((category_data::jsonb));')
-        except:
-            op.execute('CREATE INDEX ix_recipe_category_data_gin ON recipe USING gin ((category_data::jsonb));')
+        # Note: Cannot use CONCURRENTLY within transaction, so using regular CREATE INDEX
+        op.execute('CREATE INDEX ix_global_item_aka_gin ON global_item USING gin ((aka_names::jsonb));')
+        op.execute('CREATE INDEX ix_recipe_category_data_gin ON recipe USING gin ((category_data::jsonb));')
 
         # Add text search index for global_item_alias
-        try:
-            op.execute("""
-                CREATE INDEX CONCURRENTLY ix_global_item_alias_tsv ON global_item_alias 
-                USING gin(to_tsvector('english', alias));
-            """)
-        except:
-            op.execute("""
-                CREATE INDEX ix_global_item_alias_tsv ON global_item_alias 
-                USING gin(to_tsvector('english', alias));
-            """)
+        op.execute("""
+            CREATE INDEX ix_global_item_alias_tsv ON global_item_alias 
+            USING gin(to_tsvector('english', alias));
+        """)
 
         # Add case-insensitive index for product_category names
-        try:
-            op.execute('CREATE INDEX CONCURRENTLY ix_product_category_lower_name ON product_category (lower(name));')
-        except:
-            op.execute('CREATE INDEX ix_product_category_lower_name ON product_category (lower(name));')
+        op.execute('CREATE INDEX ix_product_category_lower_name ON product_category (lower(name));')
 
 
 def downgrade():
