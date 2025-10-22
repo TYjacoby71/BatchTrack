@@ -21,24 +21,34 @@ def upgrade():
     bind = op.get_bind()
     dialect = bind.dialect.name
 
-    # 1. Create missing reservation table
+    # 1. Create reservation table matching current models
     op.create_table('reservation',
         sa.Column('id', sa.Integer(), nullable=False),
-        sa.Column('order_id', sa.String(length=255), nullable=False),
+        sa.Column('order_id', sa.String(length=128), nullable=False),
         sa.Column('reserved_item_id', sa.Integer(), nullable=False),
-        sa.Column('reserved_item_type', sa.String(length=50), nullable=False),
-        sa.Column('quantity_reserved', sa.Float(), nullable=False),
-        sa.Column('unit', sa.String(length=50), nullable=False),
-        sa.Column('status', sa.String(length=32), nullable=False),
-        sa.Column('reserved_at', sa.DateTime(), nullable=False),
+        sa.Column('quantity', sa.Float(), nullable=False),
+        sa.Column('unit', sa.String(length=32), nullable=False),
+        sa.Column('status', sa.String(length=32), nullable=True),
         sa.Column('expires_at', sa.DateTime(), nullable=True),
-        sa.Column('fulfilled_at', sa.DateTime(), nullable=True),
-        sa.Column('cancelled_at', sa.DateTime(), nullable=True),
         sa.Column('notes', sa.Text(), nullable=True),
         sa.Column('created_by', sa.Integer(), nullable=True),
-        sa.Column('organization_id', sa.Integer(), nullable=False),
+        sa.Column('organization_id', sa.Integer(), nullable=True),
+        sa.Column('reservation_id', sa.String(length=128), nullable=True),
+        sa.Column('product_item_id', sa.Integer(), nullable=True),
+        sa.Column('unit_cost', sa.Float(), nullable=True),
+        sa.Column('sale_price', sa.Float(), nullable=True),
+        sa.Column('customer', sa.String(length=255), nullable=True),
+        sa.Column('source_fifo_id', sa.String(length=128), nullable=True),
+        sa.Column('source_batch_id', sa.Integer(), nullable=True),
+        sa.Column('source', sa.String(length=128), nullable=True),
+        sa.Column('created_at', sa.DateTime(), nullable=True),
+        sa.Column('released_at', sa.DateTime(), nullable=True),
+        sa.Column('converted_at', sa.DateTime(), nullable=True),
         sa.ForeignKeyConstraint(['created_by'], ['user.id'], ),
         sa.ForeignKeyConstraint(['organization_id'], ['organization.id'], ),
+        sa.ForeignKeyConstraint(['reserved_item_id'], ['inventory_item.id'], ),
+        sa.ForeignKeyConstraint(['product_item_id'], ['inventory_item.id'], ),
+        sa.ForeignKeyConstraint(['source_batch_id'], ['batch.id'], ),
         sa.PrimaryKeyConstraint('id')
     )
     
@@ -98,14 +108,14 @@ def upgrade():
         op.execute('CREATE INDEX ix_global_item_aka_gin ON global_item USING gin ((aka_names::jsonb));')
         op.execute('CREATE INDEX ix_recipe_category_data_gin ON recipe USING gin ((category_data::jsonb));')
 
-        # Add text search index for global_item_alias
+        # Add text search index for global_item_alias using 'simple' config
         op.execute("""
             CREATE INDEX ix_global_item_alias_tsv ON global_item_alias 
-            USING gin(to_tsvector('english', alias));
+            USING gin(to_tsvector('simple', alias));
         """)
 
-        # Add case-insensitive index for product_category names
-        op.execute('CREATE INDEX ix_product_category_lower_name ON product_category (lower(name));')
+        # Add UNIQUE case-insensitive index for product_category names
+        op.execute('CREATE UNIQUE INDEX ix_product_category_lower_name ON product_category (lower(name));')
 
 
 def downgrade():
