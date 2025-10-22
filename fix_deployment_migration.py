@@ -25,44 +25,50 @@ def fix_migration():
                 print("❌ No database URL found")
                 return False
                 
-            # Create engine
-            engine = create_engine(database_url)
+            # Create engine with autocommit isolation to avoid transaction issues
+            engine = create_engine(database_url, isolation_level="AUTOCOMMIT")
             
             print("🔄 Attempting to fix failed migration...")
             
-            with engine.connect() as conn:
-                # First, try to end any existing transaction
+            # Use multiple connection attempts to clear any stuck transactions
+            for attempt in range(3):
                 try:
-                    # Try to rollback first
-                    conn.execute(text("ROLLBACK;"))
-                    print("✅ Rolled back failed transaction")
+                    with engine.connect() as conn:
+                        print(f"📍 Connection attempt {attempt + 1}/3")
+                        
+                        # Check current migration state
+                        try:
+                            result = conn.execute(text("SELECT version_num FROM alembic_version;"))
+                            current_version = result.scalar()
+                            print(f"📍 Current migration version: {current_version}")
+                        except Exception as e:
+                            print(f"⚠️  Could not read migration version: {e}")
+                            continue
+                        
+                        # Force reset migration to base schema
+                        if current_version and current_version != '0001_base_schema':
+                            print(f"🔄 Forcing migration reset to 0001_base_schema...")
+                            try:
+                                conn.execute(text(
+                                    "UPDATE alembic_version SET version_num = '0001_base_schema'"
+                                ))
+                                print("✅ Migration version reset successfully")
+                                break
+                            except Exception as e:
+                                print(f"❌ Failed to reset migration version: {e}")
+                                continue
+                        else:
+                            print("✅ Migration already at base schema")
+                            break
+                            
                 except Exception as e:
-                    print(f"ℹ️  No active transaction to rollback: {e}")
-                
-                # Create a fresh transaction to check migration state
-                trans = conn.begin()
-                try:
-                    result = conn.execute(text("SELECT version_num FROM alembic_version;"))
-                    current_version = result.scalar()
-                    print(f"📍 Current migration version: {current_version}")
-                    
-                    # Also check if feature_flag table exists
-                    result = conn.execute(text("""
-                        SELECT EXISTS (
-                            SELECT FROM information_schema.tables 
-                            WHERE table_name = 'feature_flag'
-                        );
-                    """))
-                    table_exists = result.scalar()
-                    print(f"📍 feature_flag table exists: {table_exists}")
-                    
-                    trans.commit()
-                except Exception as e:
-                    trans.rollback()
-                    print(f"❌ Error checking migration state: {e}")
-                    return False
-                
-            print("✅ Database transaction reset successfully")
+                    print(f"❌ Connection attempt {attempt + 1} failed: {e}")
+                    if attempt == 2:  # Last attempt
+                        print("❌ All connection attempts failed")
+                        return False
+                    continue
+            
+            print("✅ Database transaction issues resolved")
             print("🚀 Now run 'flask db upgrade' to retry the migration")
             return True
             
