@@ -19,23 +19,45 @@ depends_on = None
 
 def upgrade():
     # Add the deferred FKs to resolve cycle between batch <-> product_sku
-    # Use safe helper to no-op on SQLite
-    safe_create_foreign_key(
-        "fk_batch_sku_id",
-        "batch",
-        "product_sku",
-        ["sku_id"],
-        ["id"],
-    )
-
-    # Add the reverse FK for product traceability to batch
-    safe_create_foreign_key(
-        "fk_product_sku_batch_id",
-        "product_sku",
-        "batch",
-        ["batch_id"],
-        ["id"],
-    )
+    # Use safe helper to no-op on SQLite and handle existing constraints
+    from migrations.postgres_helpers import is_postgresql
+    from sqlalchemy import text
+    
+    if is_postgresql():
+        bind = op.get_bind()
+        
+        # Check if fk_batch_sku_id already exists
+        result = bind.execute(text("""
+            SELECT COUNT(*) FROM information_schema.table_constraints 
+            WHERE constraint_name = 'fk_batch_sku_id' 
+            AND table_name = 'batch'
+        """))
+        if result.scalar() == 0:
+            safe_create_foreign_key(
+                "fk_batch_sku_id",
+                "batch", 
+                "product_sku",
+                ["sku_id"],
+                ["id"],
+            )
+        
+        # Check if fk_product_sku_batch_id already exists  
+        result = bind.execute(text("""
+            SELECT COUNT(*) FROM information_schema.table_constraints 
+            WHERE constraint_name = 'fk_product_sku_batch_id' 
+            AND table_name = 'product_sku'
+        """))
+        if result.scalar() == 0:
+            safe_create_foreign_key(
+                "fk_product_sku_batch_id",
+                "product_sku",
+                "batch", 
+                ["batch_id"],
+                ["id"],
+            )
+    else:
+        # SQLite - no-op as intended
+        pass
 
 
 def downgrade():
