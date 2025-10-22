@@ -7,6 +7,7 @@ Create Date: 2025-10-21 20:27:26.513838
 """
 from alembic import op
 import sqlalchemy as sa
+from migrations.postgres_helpers import safe_create_foreign_key, is_sqlite
 
 
 # revision identifiers, used by Alembic.
@@ -34,7 +35,8 @@ def upgrade():
     op.create_index("ix_inventory_item_name_org", "inventory_item", ["organization_id", "name"], unique=True)
 
     # Add the deferred FK to resolve cycle between batch <-> product_sku
-    op.create_foreign_key(
+    # Use safe helper to no-op on SQLite
+    safe_create_foreign_key(
         "fk_batch_sku_id",
         "batch",
         "product_sku",
@@ -44,8 +46,9 @@ def upgrade():
 
 
 def downgrade():
-    # Drop the deferred FK added in this revision
-    op.drop_constraint("fk_batch_sku_id", "batch", type_="foreignkey")
+    # Drop the deferred FK added in this revision (skip on SQLite)
+    if not is_sqlite():
+        op.drop_constraint("fk_batch_sku_id", "batch", type_="foreignkey")
     op.drop_index("ix_inventory_item_name_org", table_name="inventory_item")
     op.drop_index("ix_stripe_event_event_type", table_name="stripe_event")
     op.drop_index("ix_product_sku_sku", table_name="product_sku")
