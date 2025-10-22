@@ -291,6 +291,24 @@ def safe_create_foreign_key(
         return False
 
 
+def safe_drop_foreign_key(fk_name: str, table_name: str, verbose: bool = True) -> bool:
+    """Safely drop a foreign key constraint if it exists"""
+    if not table_exists(table_name):
+        return False
+    if is_sqlite():
+        # SQLite doesn't support dropping individual foreign keys
+        return False
+    try:
+        op.drop_constraint(fk_name, table_name, type_="foreignkey")
+        if verbose:
+            print(f"✅ Dropped foreign key {fk_name}")
+        return True
+    except Exception as e:
+        if verbose:
+            print(f"⚠️ Foreign key {fk_name} doesn't exist or error: {e}")
+        return False
+
+
 def safe_alter_set_not_null(table_name: str, column_name: str, existing_type=None, verbose: bool = True) -> bool:
     """Best-effort NOT NULL enforcement.
 

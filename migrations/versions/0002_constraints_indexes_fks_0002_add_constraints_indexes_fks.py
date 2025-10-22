@@ -27,7 +27,7 @@ def upgrade():
         ["sku_id"],
         ["id"],
     )
-    
+
     # Add the reverse FK for product traceability to batch
     safe_create_foreign_key(
         "fk_product_sku_batch_id",
@@ -39,7 +39,27 @@ def upgrade():
 
 
 def downgrade():
-    # Drop the deferred FKs added in this revision (skip on SQLite)
-    if not is_sqlite():
-        op.drop_constraint("fk_product_sku_batch_id", "product_sku", type_="foreignkey")
-        op.drop_constraint("fk_batch_sku_id", "batch", type_="foreignkey")
+    from migrations.postgres_helpers import safe_drop_foreign_key, safe_drop_index, is_postgresql
+
+    # Drop foreign key constraints safely (reverse order)
+    if is_postgresql():
+        # PostgreSQL can drop constraints by name
+        try:
+            op.drop_constraint("fk_product_sku_batch_id", "product_sku", type_="foreignkey")
+        except Exception:
+            pass
+        try:
+            op.drop_constraint("fk_batch_ingredient_batch_id", "batch_ingredient", type_="foreignkey")
+        except Exception:
+            pass  
+        try:
+            op.drop_constraint("fk_recipe_ingredient_recipe_id", "recipe_ingredient", type_="foreignkey")
+        except Exception:
+            pass
+    # SQLite: constraints are embedded in table definitions, can't be dropped individually
+
+    # Drop indexes safely
+    safe_drop_index('ix_inventory_item_organization_id', 'inventory_item')
+    safe_drop_index('ix_product_organization_id', 'product')  
+    safe_drop_index('ix_batch_organization_id', 'batch')
+    safe_drop_index('ix_recipe_organization_id', 'recipe')
