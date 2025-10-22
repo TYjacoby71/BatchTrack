@@ -1,4 +1,3 @@
-
 """0001 base schema (tables only)
 
 RUNBOOK:
@@ -973,6 +972,7 @@ def upgrade():
         sa.Column('product_item_id', sa.Integer(), nullable=True),
         sa.Column('unit_cost', sa.Float(), nullable=True),
         sa.Column('sale_price', sa.Float(), nullable=True),
+        # Changed 'customer' and 'source' to be nullable strings as per original request
         sa.Column('customer', sa.String(length=255), nullable=True),
         sa.Column('source_fifo_id', sa.String(length=128), nullable=True),
         sa.Column('source_batch_id', sa.Integer(), nullable=True),
@@ -1277,6 +1277,9 @@ def upgrade():
     sa.PrimaryKeyConstraint('id'),
     sa.UniqueConstraint('fifo_code')
     )
+    with op.batch_alter_table('inventory_lot', schema=None) as batch_op:
+        batch_op.create_index('ix_inventory_lot_org', ['organization_id'], unique=False)
+
 
     # Create inventory_change_log after inventory_lot exists
     op.create_table('inventory_change_log',
@@ -1465,11 +1468,11 @@ def upgrade():
 def downgrade():
     from migrations.postgres_helpers import is_postgresql
     from sqlalchemy import text, inspect
-    
+
     # Get connection and inspector
     bind = op.get_bind()
     inspector = inspect(bind)
-    
+
     if is_postgresql():
         # Use CASCADE to drop with dependencies in proper order
         try:
@@ -1481,7 +1484,7 @@ def downgrade():
                 DROP TABLE IF EXISTS organization CASCADE;
                 DROP TABLE IF EXISTS subscription_tier CASCADE;
             """))
-            
+
             # Drop other tables in dependency order
             bind.execute(text("""
                 DROP TABLE IF EXISTS unified_inventory_history CASCADE;
@@ -1542,9 +1545,9 @@ def downgrade():
                 DROP TABLE IF EXISTS developer_permission CASCADE;
                 DROP TABLE IF EXISTS addon CASCADE;
             """))
-            
+
             print("   ✅ Successfully dropped all tables with CASCADE")
-            
+
         except Exception as e:
             print(f"   ⚠️  Error during CASCADE drop: {e}")
             # If CASCADE fails, try individual drops
@@ -1575,12 +1578,12 @@ def downgrade():
             'subscription_tier', 'product_category', 'pricing_snapshots', 'stripe_event',
             'feature_flag', 'permission', 'developer_role', 'developer_permission', 'addon'
         ]
-        
+
         for table in tables_to_drop:
             try:
                 op.drop_table(table)
                 print(f"   ✅ Dropped table {table}")
             except Exception as e:
                 print(f"   ℹ️  Table {table} does not exist or could not be dropped: {e}")
-                
+
     # ### end Alembic commands ###
