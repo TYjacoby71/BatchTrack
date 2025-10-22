@@ -1469,7 +1469,7 @@ def downgrade():
     def safe_drop_index(index_name, table_name):
         from migrations.postgres_helpers import is_postgresql
         from sqlalchemy import text
-        
+
         if is_postgresql():
             # For PostgreSQL, check if index exists first
             try:
@@ -1478,7 +1478,7 @@ def downgrade():
                     SELECT COUNT(*) FROM pg_indexes 
                     WHERE tablename = :t AND indexname = :i
                 """), {"t": table_name, "i": index_name})
-                
+
                 if result.scalar() > 0:
                     bind.execute(text(f'DROP INDEX IF EXISTS {index_name}'))
                     print(f"   ✅ Dropped index {index_name}")
@@ -1520,7 +1520,7 @@ def downgrade():
     def safe_drop_table(table_name):
         from migrations.postgres_helpers import is_postgresql
         from sqlalchemy import text
-        
+
         if is_postgresql():
             # For PostgreSQL, check if table exists first
             try:
@@ -1531,7 +1531,7 @@ def downgrade():
                         WHERE table_name = :t
                     )
                 """), {"t": table_name})
-                
+
                 if result.scalar():
                     op.drop_table(table_name)
                     print(f"   ✅ Dropped table {table_name}")
@@ -1551,7 +1551,7 @@ def downgrade():
     safe_drop_table('recipe_stats')
     safe_drop_table('recipe_ingredient')
     safe_drop_table('recipe_consumable')
-    
+
     # Safely drop indexes for product_sku_history
     safe_drop_index('idx_change_type', 'product_sku_history')
     safe_drop_index('idx_fifo_code', 'product_sku_history')
@@ -1560,7 +1560,7 @@ def downgrade():
 
     safe_drop_table('product_sku_history')
     safe_drop_table('organization_leaderboard_stats')
-    
+
     # Safely drop index for inventory_lot
     safe_drop_index('ix_inventory_lot_org', 'inventory_lot')
 
@@ -1600,129 +1600,18 @@ def downgrade():
     safe_drop_index('ix_inventory_item_is_archived', 'inventory_item')
     safe_drop_index(op.f('ix_inventory_item_global_item_id'), 'inventory_item')
 
-    op.drop_table('inventory_item')
-    # Safely drop indexes for global_item_alias
-    safe_drop_index('ix_global_item_alias_global_item_id', 'global_item_alias')
-    safe_drop_index('ix_global_item_alias_alias', 'global_item_alias')
+    # Drop remaining tables using the safe wrapper (in dependency order)
+    remaining_tables = [
+        'user_role_assignment', 'user_preferences', 'unified_inventory_history',
+        'subscription_tier', 'stripe_event', 'statistics', 'role', 'retention',
+        'recipe', 'product_category', 'product', 'pricing_snapshot', 'permission',
+        'models', 'mixins', 'global_item_alias', 'global_item', 
+        'feature_flag', 'domain_event', 'developer_role', 'developer_permission',
+        'category', 'billing_snapshot', 'batch', 'addon', 'inventory',
+        'inventory_item'  # inventory_item last due to foreign key dependencies
+    ]
 
-    op.drop_table('global_item_alias')
-    op.drop_table('batch_stats')
-    op.drop_table('user_role_assignment')
-    op.drop_table('role_permission')
-    # Safely drop indexes for recipe
-    safe_drop_index('ix_recipe_vessel_fill_pct', 'recipe')
-    safe_drop_index('ix_recipe_soap_water_pct', 'recipe')
-    safe_drop_index('ix_recipe_soap_superfat', 'recipe')
-    safe_drop_index('ix_recipe_soap_lye_type', 'recipe')
-    safe_drop_index('ix_recipe_org', 'recipe')
-    safe_drop_index('ix_recipe_cosm_preservative_pct', 'recipe')
-    safe_drop_index('ix_recipe_cosm_emulsifier_pct', 'recipe')
-    safe_drop_index('ix_recipe_category_id', 'recipe')
-    safe_drop_index('ix_recipe_candle_vessel_ml', 'recipe')
-    safe_drop_index('ix_recipe_candle_fragrance_pct', 'recipe')
-    safe_drop_index('ix_recipe_baker_yeast_pct', 'recipe')
-    safe_drop_index('ix_recipe_baker_water_pct', 'recipe')
-    safe_drop_index('ix_recipe_baker_salt_pct', 'recipe')
-    safe_drop_index('ix_recipe_baker_base_flour_g', 'recipe')
+    for table_name in remaining_tables:
+        safe_drop_table(table_name)
 
-    op.drop_table('recipe')
-    op.drop_table('product_variant')
-    # Safely drop indexes for global_item
-    safe_drop_index(op.f('ix_global_item_name'), 'global_item')
-    safe_drop_index(op.f('ix_global_item_item_type'), 'global_item')
-    safe_drop_index(op.f('ix_global_item_ingredient_category_id'), 'global_item')
-
-    op.drop_table('global_item')
-    op.drop_table('user_stats')
-    op.drop_table('user_preferences')
-    op.drop_table('unit')
-    op.drop_table('tag')
-    op.drop_table('role')
-    # Safely drop indexes for product
-    safe_drop_index('ix_product_category_id', 'product')
-    safe_drop_index('ix_product_container_id', 'product')
-    safe_drop_index('ix_product_name', 'product')
-    safe_drop_index('ix_product_organization_id', 'product')
-    safe_drop_index('ix_product_recipe_id', 'product')
-
-    op.drop_table('product')
-    op.drop_table('inventory_category')
-    op.drop_table('ingredient_category')
-    # Safely drop indexes for domain_event
-    safe_drop_index(op.f('ix_domain_event_user_id'), 'domain_event')
-    safe_drop_index(op.f('ix_domain_event_organization_id'), 'domain_event')
-    safe_drop_index(op.f('ix_domain_event_occurred_at'), 'domain_event')
-    safe_drop_index(op.f('ix_domain_event_is_processed'), 'domain_event')
-    safe_drop_index(op.f('ix_domain_event_event_name'), 'domain_event')
-    safe_drop_index(op.f('ix_domain_event_entity_type'), 'domain_event')
-    safe_drop_index(op.f('ix_domain_event_entity_id'), 'domain_event')
-    safe_drop_index(op.f('ix_domain_event_correlation_id'), 'domain_event')
-
-    op.drop_table('domain_event')
-    op.drop_table('custom_unit_mapping')
-    op.drop_table('conversion_log')
-    op.drop_table('batch_timer')
-    # Safely drop index for user
-    safe_drop_index('ix_user_org', 'user')
-
-    op.drop_table('user')
-    op.drop_table('storage_addon_subscription')
-    op.drop_table('storage_addon_purchase')
-    op.drop_table('organization_stats')
-    # Safely drop indexes for organization_addon
-    safe_drop_index(op.f('ix_organization_addon_organization_id'), 'organization_addon')
-    safe_drop_index(op.f('ix_organization_addon_addon_id'), 'organization_addon')
-
-    op.drop_table('organization_addon')
-    op.drop_table('billing_snapshots')
-    op.drop_table('tier_included_addon')
-    op.drop_table('tier_allowed_addon')
-    op.drop_table('subscription_tier_permission')
-    op.drop_table('organization')
-    op.drop_table('developer_role_permission')
-    op.drop_table('subscription_tier')
-    # Safely drop indexes for stripe_event
-    safe_drop_index(op.f('ix_stripe_event_event_id'), 'stripe_event')
-    safe_drop_index('ix_stripe_event_stripe_id', 'stripe_event')
-    safe_drop_index('ix_stripe_event_processed', 'stripe_event')
-    safe_drop_index('ix_stripe_event_created', 'stripe_event')
-
-    op.drop_table('stripe_event')
-    # Safely drop indexes for product_sku
-    safe_drop_index('ix_product_sku_inventory_item_id', 'product_sku')
-    safe_drop_index('idx_product_variant', 'product_sku')
-    safe_drop_index('idx_inventory_item', 'product_sku')
-    safe_drop_index('idx_active_skus', 'product_sku')
-
-    op.drop_table('product_sku')
-    # Safely drop index for product_category
-    safe_drop_index(op.f('ix_product_category_name'), 'product_category')
-    safe_drop_index('ix_product_category_parent_id', 'product_category')
-
-    op.drop_table('product_category')
-    op.drop_table('pricing_snapshots')
-    op.drop_table('permission')
-    # Safely drop index for feature_flag
-    safe_drop_index(op.f('ix_feature_flag_key'), 'feature_flag')
-
-    op.drop_table('feature_flag')
-    op.drop_table('developer_role')
-    op.drop_table('developer_permission')
-    # Safely drop indexes for batch
-    safe_drop_index('ix_batch_vessel_fill_pct', 'batch')
-    safe_drop_index('ix_batch_soap_water_pct', 'batch')
-    safe_drop_index('ix_batch_soap_superfat', 'batch')
-    safe_drop_index('ix_batch_soap_lye_type', 'batch')
-    safe_drop_index('ix_batch_org', 'batch')
-    safe_drop_index('ix_batch_cosm_preservative_pct', 'batch')
-    safe_drop_index('ix_batch_cosm_emulsifier_pct', 'batch')
-    safe_drop_index('ix_batch_candle_vessel_ml', 'batch')
-    safe_drop_index('ix_batch_candle_fragrance_pct', 'batch')
-    safe_drop_index('ix_batch_baker_yeast_pct', 'batch')
-    safe_drop_index('ix_batch_baker_water_pct', 'batch')
-    safe_drop_index('ix_batch_baker_salt_pct', 'batch')
-    safe_drop_index('ix_batch_baker_base_flour_g', 'batch')
-
-    op.drop_table('batch')
-    op.drop_table('addon')
     # ### end Alembic commands ###
