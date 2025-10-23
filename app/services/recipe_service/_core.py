@@ -304,12 +304,44 @@ def update_recipe(recipe_id: int, name: str = None, description: str = None,
 
         # Update ingredients if provided
         if ingredients is not None:
-            # Validate new ingredients
+            # Validate new ingredients and ensure yield/portioning context is considered
+            # Pull latest posted yield and portioning data if available so validation doesn't falsely fail
+            posted_yield = recipe.predicted_yield
+            posted_portioning = None
+            try:
+                from flask import request
+                if request and request.form:
+                    # Use the submitted yield if present
+                    if 'predicted_yield' in request.form:
+                        try:
+                            posted_yield = float(request.form.get('predicted_yield') or 0)
+                        except (ValueError, TypeError):
+                            posted_yield = recipe.predicted_yield
+                    # Build minimal portioning context from form to satisfy validation rules
+                    is_portioned_flag = (request.form.get('is_portioned') == 'true')
+                    if is_portioned_flag:
+                        # Consider portion count and optional bulk yield fields if the form/skin provides them
+                        portion_count_val = request.form.get('portion_count')
+                        try:
+                            portion_count_val = int(portion_count_val) if portion_count_val not in (None, '') else 0
+                        except (ValueError, TypeError):
+                            portion_count_val = 0
+                        posted_portioning = {
+                            'is_portioned': True,
+                            'portion_count': portion_count_val,
+                            # Accept optional bulk yield fields if front-end sends them
+                            'bulk_yield_quantity': request.form.get('bulk_yield_quantity') or None,
+                            'bulk_yield_unit_id': request.form.get('bulk_yield_unit_id') or None,
+                        }
+            except Exception:
+                posted_portioning = None
+
             validation_result = validate_recipe_data(
                 name=recipe.name,
                 ingredients=ingredients,
-                yield_amount=recipe.predicted_yield,
-                recipe_id=recipe_id
+                yield_amount=posted_yield,
+                recipe_id=recipe_id,
+                portioning_data=posted_portioning
             )
 
             if not validation_result['valid']:

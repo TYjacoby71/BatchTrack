@@ -4,6 +4,8 @@ This handler should work with the centralized quantity update system.
 """
 
 import logging
+from sqlalchemy import func
+from sqlalchemy.exc import IntegrityError
 from app.models import db, InventoryItem, IngredientCategory, Unit, UnifiedInventoryHistory, GlobalItem
 from app.services.density_assignment_service import DensityAssignmentService
 from ._fifo_ops import create_new_fifo_lot
@@ -101,6 +103,23 @@ def create_inventory_item(form_data, organization_id, created_by):
                 is_perishable = bool(global_item.default_is_perishable)
             if not shelf_life_days and global_item.recommended_shelf_life_days:
                 shelf_life_days = int(global_item.recommended_shelf_life_days)
+
+        # Prevent duplicate items by name within the same organization (case-insensitive)
+        try:
+            existing_item = (
+                db.session.query(InventoryItem)
+                .filter(
+                    InventoryItem.organization_id == organization_id,
+                    func.lower(InventoryItem.name) == func.lower(name)
+                )
+                .first()
+            )
+        except Exception:
+            existing_item = None
+
+        if existing_item is not None:
+            item_noun = 'ingredient' if (form_data.get('type') or '').strip() == 'ingredient' else 'item'
+            return False, f"{item_noun.capitalize()} '{name}' already exists in your inventory. Please restock or adjust it instead of adding a duplicate.", None
 
         # Create the new inventory item with quantity = 0
         # The initial stock will be added via process_inventory_adjustment
@@ -242,9 +261,15 @@ def create_inventory_item(form_data, organization_id, created_by):
             except Exception:
                 pass
 
-        # Save the new item
+        # Save the new item (handle rare race-condition on unique constraint)
         db.session.add(new_item)
-        db.session.flush()  # Get the ID without committing
+        try:
+            db.session.flush()  # Get the ID without committing
+        except IntegrityError as ie:
+            db.session.rollback()
+            # Convert DB unique-constraint error into a friendly message
+            item_noun = 'ingredient' if item_type == 'ingredient' else 'item'
+            return False, f"{item_noun.capitalize()} '{name}' already exists in your inventory. Please restock or adjust it instead of adding a duplicate.", None
 
         logger.info(f"CREATED: New inventory item {new_item.id} - {new_item.name}")
 

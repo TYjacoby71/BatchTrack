@@ -307,12 +307,19 @@ def edit_recipe(recipe_id):
             except Exception:
                 portioning_payload = None
 
+            # Parse yield amount safely: if blank, do not override existing yield
+            _yield_param = request.form.get('predicted_yield')
+            try:
+                parsed_yield_amount = float(_yield_param) if _yield_param not in (None, '') else None
+            except (ValueError, TypeError):
+                parsed_yield_amount = None
+
             success, result = update_recipe(
                 recipe_id=recipe_id,
                 name=request.form.get('name'),
                 description=request.form.get('instructions'),
                 instructions=request.form.get('instructions'),
-                yield_amount=float(request.form.get('predicted_yield') or 0.0),
+                yield_amount=parsed_yield_amount,
                 yield_unit=request.form.get('predicted_yield_unit') or "",
                 ingredients=ingredients,
                 consumables=_extract_consumables_from_form(request.form),
