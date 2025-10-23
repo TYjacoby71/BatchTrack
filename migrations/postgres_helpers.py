@@ -1,228 +1,219 @@
-"""
-PostgreSQL migration helpers for safe database operations.
 
-This module provides utility functions to safely check for the existence
-of database objects before attempting to create or drop them, preventing
-transaction failures in PostgreSQL migrations.
 """
+Cross-dialect (PostgreSQL + SQLite) migration helpers.
+
+These utilities provide safe, idempotent operations that work across
+both PostgreSQL and SQLite, minimizing ALTER-in-place usage and
+handling differences like constraints and functional/GIN indexes.
+"""
+
+from __future__ import annotations
+
+import logging
+from contextlib import contextmanager
+from typing import Iterable
+
 from alembic import op
 from sqlalchemy import inspect, text
 
+logger = logging.getLogger("alembic.helpers")
 
-def table_exists(table_name):
-    """Check if a table exists in the database.
 
-    Args:
-        table_name (str): Name of the table to check
+# --------------- Dialect detection ---------------
+def _bind():
+    return op.get_bind()
 
-    Returns:
-        bool: True if table exists, False otherwise
-    """
+
+def is_sqlite() -> bool:
+    conn = _bind()
+    return "sqlite" in str(conn.engine.url)
+
+
+def is_postgresql() -> bool:
     try:
-        bind = op.get_bind()
-        inspector = inspect(bind)
-        return table_name in inspector.get_table_names()
+        conn = _bind()
+        dialect_name = str(conn.engine.url.drivername).lower()
+        return any(pg in dialect_name for pg in ['postgresql', 'postgres', 'psycopg'])
     except Exception:
         return False
 
 
-def column_exists(table_name, column_name):
-    """Check if a column exists in a table.
+def _inspector():
+    return inspect(_bind())
 
-    Args:
-        table_name (str): Name of the table
-        column_name (str): Name of the column to check
 
-    Returns:
-        bool: True if column exists, False otherwise
-    """
-    if not table_exists(table_name):
-        return False
+# --------------- SQLite temp table cleanup ---------------
+def clean_sqlite_temp_tables() -> None:
+    if not is_sqlite():
+        return
+    conn = _bind()
     try:
-        bind = op.get_bind()
-        inspector = inspect(bind)
-        columns = [col['name'] for col in inspector.get_columns(table_name)]
-        return column_name in columns
+        result = conn.execute(
+            text(
+                """
+                SELECT name FROM sqlite_master
+                WHERE type='table' AND name LIKE '_alembic_tmp_%'
+                """
+            )
+        )
+        temp_tables = [row[0] for row in result.fetchall()]
+        for table_name in temp_tables:
+            try:
+                conn.execute(text(f"DROP TABLE IF EXISTS {table_name}"))
+                logger.info(f"   ✅ Cleaned: {table_name}")
+            except Exception as e:  # pragma: no cover - best effort
+                logger.warning(f"   ⚠️  Failed to clean {table_name}: {e}")
+        if temp_tables:
+            conn.commit()
+    except Exception as e:  # pragma: no cover - best effort
+        logger.warning(f"⚠️  Could not clean temporary tables: {e}")
+
+
+@contextmanager
+def safe_batch_alter_table(table_name: str, **kwargs):
+    clean_sqlite_temp_tables()
+    try:
+        with op.batch_alter_table(table_name, **kwargs) as batch_op:
+            yield batch_op
     except Exception as e:
-        print(f"   ⚠️  Error checking column {column_name} in {table_name}: {e}")
-        return False
+        if is_sqlite():
+            logger.warning(f"Batch operation failed, cleaning temporary tables: {e}")
+            clean_sqlite_temp_tables()
+        raise
 
 
-def index_exists(table_name, index_name):
-    """Check if an index exists on a table.
-
-    Args:
-        table_name (str): Name of the table
-        index_name (str): Name of the index to check
-
-    Returns:
-        bool: True if index exists, False otherwise
-    """
-    if not table_exists(table_name):
-        return False
+# --------------- Existence checks ---------------
+def table_exists(table_name: str) -> bool:
     try:
-        bind = op.get_bind()
-        result = bind.execute(text("""
-            SELECT COUNT(*)
-            FROM pg_indexes
-            WHERE tablename = :table_name
-            AND indexname = :index_name
-        """), {"table_name": table_name, "index_name": index_name})
-        return result.scalar() > 0
+        return table_name in _inspector().get_table_names()
     except Exception:
         return False
 
 
-def constraint_exists(table_name, constraint_name):
-    """Check if a constraint exists on a table.
-
-    Args:
-        table_name (str): Name of the table
-        constraint_name (str): Name of the constraint to check
-
-    Returns:
-        bool: True if constraint exists, False otherwise
-    """
+def column_exists(table_name: str, column_name: str) -> bool:
     if not table_exists(table_name):
         return False
     try:
-        bind = op.get_bind()
-        result = bind.execute(text("""
-            SELECT COUNT(*)
-            FROM information_schema.table_constraints
-            WHERE table_name = :table_name
-            AND constraint_name = :constraint_name
-        """), {"table_name": table_name, "constraint_name": constraint_name})
-        return result.scalar() > 0
+        cols = [c["name"] for c in _inspector().get_columns(table_name)]
+        return column_name in cols
     except Exception:
         return False
 
 
-def foreign_key_exists(table_name, fk_name):
-    """Check if a foreign key constraint exists.
-
-    Args:
-        table_name (str): Name of the table
-        fk_name (str): Name of the foreign key constraint
-
-    Returns:
-        bool: True if foreign key exists, False otherwise
-    """
+def index_exists(table_name: str, index_name: str) -> bool:
     if not table_exists(table_name):
         return False
     try:
-        bind = op.get_bind()
-        result = bind.execute(text("""
-            SELECT COUNT(*)
-            FROM information_schema.table_constraints tc
-            WHERE tc.table_name = :table_name
-            AND tc.constraint_name = :fk_name
-            AND tc.constraint_type = 'FOREIGN KEY'
-        """), {"table_name": table_name, "fk_name": fk_name})
-        return result.scalar() > 0
+        # Try portable inspector first
+        for idx in _inspector().get_indexes(table_name):
+            name = idx.get("name") or idx.get("indexname")
+            if name == index_name:
+                return True
+        # Fallback to PG catalogs
+        if is_postgresql():
+            res = _bind().execute(
+                text(
+                    """
+                    SELECT 1 FROM pg_indexes
+                    WHERE tablename = :t AND indexname = :i
+                    """
+                ),
+                {"t": table_name, "i": index_name},
+            )
+            return res.first() is not None
+        # Fallback to SQLite sqlite_master
+        if is_sqlite():
+            res = _bind().execute(
+                text(
+                    "SELECT 1 FROM sqlite_master WHERE type='index' AND name = :i"
+                ),
+                {"i": index_name},
+            )
+            return res.first() is not None
     except Exception:
         return False
+    return False
 
 
-def safe_add_column(table_name, column_def, verbose=True):
-    """Safely add a column only if it doesn't exist.
+def unique_constraint_exists(table_name: str, constraint_name: str) -> bool:
+    if not table_exists(table_name):
+        return False
+    try:
+        # Inspector path
+        try:
+            for uq in _inspector().get_unique_constraints(table_name):
+                if uq.get("name") == constraint_name:
+                    return True
+        except Exception:
+            pass
+        # Fallback to PG information_schema
+        if is_postgresql():
+            res = _bind().execute(
+                text(
+                    """
+                    SELECT 1 FROM information_schema.table_constraints
+                    WHERE table_name = :t AND constraint_name = :c
+                    """
+                ),
+                {"t": table_name, "c": constraint_name},
+            )
+            return res.first() is not None
+    except Exception:
+        return False
+    return False
 
-    Args:
-        table_name (str): Name of the table
-        column_def: SQLAlchemy Column definition
-        verbose (bool): Whether to print status messages
 
-    Returns:
-        bool: True if column was added, False if it already existed
-    """
+# --------------- Safe DDL operations ---------------
+def safe_add_column(table_name: str, column_def, verbose: bool = True) -> bool:
     if not table_exists(table_name):
         if verbose:
             print(f"   ⚠️  {table_name} table does not exist - skipping column add")
         return False
-
-    column_name = column_def.name
-    if column_exists(table_name, column_name):
+    col_name = column_def.name
+    if column_exists(table_name, col_name):
         if verbose:
-            print(f"   ✅ {column_name} column already exists - skipping")
+            # keep quiet to reduce noisy logs
+            pass
         return False
-
     try:
-        # Use batch operations for better transaction safety
         with op.batch_alter_table(table_name, schema=None) as batch_op:
             batch_op.add_column(column_def)
         if verbose:
-            print(f"   ✅ {column_name} column added successfully")
+            print(f"   ✅ {col_name} column added successfully")
         return True
     except Exception as e:
         if verbose:
-            print(f"   ❌ Failed to add {column_name} column: {e}")
-        # CRITICAL: Re-raise the exception to prevent transaction corruption
-        # PostgreSQL needs to know about the failure to handle it properly
+            print(f"   ❌ Failed to add {col_name} column: {e}")
         raise
 
 
-def safe_drop_column(table_name, column_name, verbose=True):
-    """Safely drop a column only if it exists.
-
-    Args:
-        table_name (str): Name of the table
-        column_name (str): Name of the column to drop
-        verbose (bool): Whether to print status messages
-
-    Returns:
-        bool: True if column was dropped, False if it didn't exist
-    """
-    if column_exists(table_name, column_name):
-        try:
-            op.drop_column(table_name, column_name)
-            if verbose:
-                print(f"✅ Dropped {column_name} from {table_name}")
-            return True
-        except Exception as e:
-            if verbose:
-                print(f"⚠️  Error dropping {column_name} from {table_name}: {e}")
-            return False
-    else:
+def safe_drop_column(table_name: str, column_name: str, verbose: bool = True) -> bool:
+    if not column_exists(table_name, column_name):
+        return False
+    try:
+        with op.batch_alter_table(table_name, schema=None) as batch_op:
+            batch_op.drop_column(column_name)
         if verbose:
-            print(f"Column {column_name} doesn't exist in {table_name}")
+            print(f"✅ Dropped {column_name} from {table_name}")
+        return True
+    except Exception as e:
+        if verbose:
+            print(f"⚠️  Error dropping {column_name} from {table_name}: {e}")
         return False
 
 
-def safe_create_index(index_name, table_name, columns, unique=False, verbose=True):
-    """Safely create an index only if it doesn't exist.
-
-    Args:
-        index_name (str): Name of the index
-        table_name (str): Name of the table
-        columns (list): List of column names
-        unique (bool): Whether the index should be unique
-        verbose (bool): Whether to print status messages
-
-    Returns:
-        bool: True if index was created, False if it already existed
-    """
-    # First check if table exists
+def safe_create_index(
+    index_name: str, table_name: str, columns: Iterable[str], unique: bool = False, verbose: bool = True
+) -> bool:
     if not table_exists(table_name):
-        if verbose:
-            print(f"   ⚠️  Table {table_name} doesn't exist - skipping index {index_name}")
         return False
-        
-    # Check if all columns exist
     for col in columns:
         if not column_exists(table_name, col):
-            if verbose:
-                print(f"   ⚠️  Column {col} doesn't exist in {table_name} - skipping index {index_name}")
             return False
-    
-    # Check if index already exists
     if index_exists(table_name, index_name):
-        if verbose:
-            print(f"   ✅ Index {index_name} already exists")
         return False
-        
-    # Try to create the index
     try:
-        op.create_index(index_name, table_name, columns, unique=unique)
+        op.create_index(index_name, table_name, list(columns), unique=unique)
         if verbose:
             print(f"   ✅ Created index {index_name} on {table_name}")
         return True
@@ -232,34 +223,106 @@ def safe_create_index(index_name, table_name, columns, unique=False, verbose=Tru
         return False
 
 
-def safe_drop_index(index_name, table_name=None, verbose=True):
-    """Safely drop an index only if it exists.
+def safe_drop_index(index_name: str, table_name: str | None = None, verbose: bool = True) -> bool:
+    try:
+        if table_name and not index_exists(table_name, index_name):
+            return False
+        op.drop_index(index_name, table_name=table_name) if table_name else op.drop_index(index_name)
+        if verbose:
+            print(f"✅ Dropped index {index_name}")
+        return True
+    except Exception as e:
+        if verbose:
+            print(f"Index {index_name} doesn't exist or error: {e}")
+        return False
 
-    Args:
-        index_name (str): Name of the index
-        table_name (str, optional): Name of the table (for checking)
-        verbose (bool): Whether to print status messages
 
-    Returns:
-        bool: True if index was dropped, False if it didn't exist
+def ensure_unique_constraint_or_index(
+    table_name: str, constraint_name: str, columns: Iterable[str], verbose: bool = True
+) -> bool:
+    """Create a unique constraint if possible; otherwise create a unique index.
+
+    Returns True only if something was created.
     """
-    if table_name and index_exists(table_name, index_name):
-        try:
-            op.drop_index(index_name, table_name=table_name)
-            if verbose:
-                print(f"✅ Dropped index {index_name}")
-            return True
-        except Exception as e:
-            if verbose:
-                print(f"⚠️  Error dropping index {index_name}: {e}")
-            return False
-    else:
-        try:
-            op.drop_index(index_name)
-            if verbose:
-                print(f"✅ Dropped index {index_name}")
-            return True
-        except Exception as e:
-            if verbose:
-                print(f"Index {index_name} doesn't exist or error: {e}")
-            return False
+    if not table_exists(table_name):
+        return False
+    if unique_constraint_exists(table_name, constraint_name):
+        return False
+    if index_exists(table_name, constraint_name):
+        # If a unique index with the same name already exists, treat as done
+        return False
+    try:
+        if is_postgresql():
+            op.create_unique_constraint(constraint_name, table_name, list(columns))
+        else:
+            # SQLite: emulate via unique index on expression-free columns
+            op.create_index(constraint_name, table_name, list(columns), unique=True)
+        if verbose:
+            print(f"   ✅ Created unique {'constraint' if is_postgresql() else 'index'} {constraint_name}")
+        return True
+    except Exception as e:
+        if verbose:
+            print(f"   ⚠️  Could not create unique constraint/index {constraint_name}: {e}")
+        return False
+
+
+def safe_create_foreign_key(
+    fk_name: str,
+    source_table: str,
+    referent_table: str,
+    local_cols: Iterable[str],
+    remote_cols: Iterable[str],
+    ondelete: str | None = None,
+    verbose: bool = True,
+) -> bool:
+    if not table_exists(source_table) or not table_exists(referent_table):
+        return False
+    if is_sqlite():
+        # SQLite cannot ALTER TABLE to add FKs without table rebuild; skip safely
+        return False
+    try:
+        op.create_foreign_key(fk_name, source_table, referent_table, list(local_cols), list(remote_cols), ondelete=ondelete)
+        if verbose:
+            print(f"   ✅ Created foreign key {fk_name}")
+        return True
+    except Exception as e:
+        if verbose:
+            print(f"   ⚠️  Could not create foreign key {fk_name}: {e}")
+        return False
+
+
+def safe_drop_foreign_key(fk_name: str, table_name: str, verbose: bool = True) -> bool:
+    """Safely drop a foreign key constraint if it exists"""
+    if not table_exists(table_name):
+        return False
+    if is_sqlite():
+        # SQLite doesn't support dropping individual foreign keys
+        return False
+    try:
+        op.drop_constraint(fk_name, table_name, type_="foreignkey")
+        if verbose:
+            print(f"✅ Dropped foreign key {fk_name}")
+        return True
+    except Exception as e:
+        if verbose:
+            print(f"⚠️ Foreign key {fk_name} doesn't exist or error: {e}")
+        return False
+
+
+def safe_alter_set_not_null(table_name: str, column_name: str, existing_type=None, verbose: bool = True) -> bool:
+    """Best-effort NOT NULL enforcement.
+
+    On SQLite this may require a table copy; batch_alter_table usually handles it,
+    but if it fails we skip.
+    """
+    if not column_exists(table_name, column_name):
+        return False
+    try:
+        op.alter_column(table_name, column_name, existing_type=existing_type, nullable=False)
+        if verbose:
+            print(f"   ✅ Set {table_name}.{column_name} NOT NULL")
+        return True
+    except Exception as e:
+        if verbose:
+            print(f"   ⚠️  Could not set NOT NULL on {table_name}.{column_name}: {e}")
+        return False

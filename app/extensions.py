@@ -14,7 +14,8 @@ except ImportError:
     mail = None
 
 db = SQLAlchemy()
-migrate = Migrate()
+# Enable robust autogeneration and SQLite-friendly alters
+migrate = Migrate(compare_type=True, render_as_batch=True)
 login_manager = LoginManager()
 csrf = CSRFProtect()
 limiter = Limiter(key_func=get_remote_address)

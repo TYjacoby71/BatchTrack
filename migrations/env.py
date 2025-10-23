@@ -6,6 +6,7 @@ from logging.config import fileConfig
 from flask import current_app
 
 from alembic import context
+from sqlalchemy import text
 
 # Production safety check removed - migrations now allowed in all environments
 
@@ -30,29 +31,22 @@ def _normalize_db_url(url: str | None) -> str | None:
 
 
 def get_engine():
-    # Prefer explicit env URLs in production (Render) to avoid resolution issues
-    import os
-    preferred_env_url = (
-        _normalize_db_url(os.environ.get('ALEMBIC_DATABASE_URL'))
-        or _normalize_db_url(os.environ.get('DATABASE_INTERNAL_URL'))
-        or _normalize_db_url(os.environ.get('DATABASE_URL'))
-    )
-    if preferred_env_url:
-        from sqlalchemy import create_engine
-        return create_engine(preferred_env_url)
+    """Always derive the engine from Flask's SQLAlchemy configuration.
 
+    This ensures we use the same connection parameters as the app
+    across environments (SQLite locally, Postgres on Render).
+    """
     try:
-        # this works with Flask-SQLAlchemy<3 and Alchemical
+        # Flask-SQLAlchemy < 3
         return current_app.extensions['migrate'].db.get_engine()
     except (TypeError, AttributeError):
-        # this works with Flask-SQLAlchemy>=3
+        # Flask-SQLAlchemy >= 3
         return current_app.extensions['migrate'].db.engine
 
 
 def get_engine_url():
     try:
-        return get_engine().url.render_as_string(hide_password=False).replace(
-            '%', '%%')
+        return get_engine().url.render_as_string(hide_password=False).replace('%', '%%')
     except AttributeError:
         return str(get_engine().url).replace('%', '%%')
 
@@ -85,10 +79,11 @@ def import_all_models():
     except Exception as e:
         logger.error(f'Error importing models: {e}')
 
-# Import all models dynamically
+# Import all models dynamically so Alembic can autogenerate accurately
 import_all_models()
 
-config.set_main_option('sqlalchemy.url', get_engine_url())
+# Always use the Flask SQLAlchemy URI
+config.set_main_option("sqlalchemy.url", current_app.config["SQLALCHEMY_DATABASE_URI"])
 target_db = current_app.extensions['migrate'].db
 
 # other values from the config, defined by the needs of env.py,
@@ -116,8 +111,14 @@ def run_migrations_offline():
 
     """
     url = config.get_main_option("sqlalchemy.url")
+    # Mirror online config defaults coming from Flask-Migrate init
+    conf_args = getattr(current_app.extensions.get('migrate'), 'configure_args', {})
     context.configure(
-        url=url, target_metadata=get_metadata(), literal_binds=True
+        url=url,
+        target_metadata=get_metadata(),
+        literal_binds=True,
+        compare_type=conf_args.get("compare_type", False),
+        compare_server_default=conf_args.get("compare_server_default", False),
     )
 
     with context.begin_transaction():
@@ -143,18 +144,44 @@ def run_migrations_online():
                 logger.info('No changes in schema detected.')
 
     conf_args = current_app.extensions['migrate'].configure_args
-    # Ensure each revision runs in its own transaction
+    # Ensure each revision runs in its own transaction (Postgres-friendly)
     conf_args["transaction_per_migration"] = True
+    # Avoid spurious diffs from server defaults while models use Python defaults
+    conf_args["compare_server_default"] = False
+    # Be conservative on type diffs to keep cross-db compatibility
+    conf_args.setdefault("compare_type", False)
     if conf_args.get("process_revision_directives") is None:
         conf_args["process_revision_directives"] = process_revision_directives
 
     connectable = get_engine()
 
     with connectable.connect() as connection:
+        # Clean up any leftover temporary tables from failed SQLite migrations
+        if 'sqlite' in str(connection.engine.url):
+            try:
+                # Get list of all temporary tables
+                result = connection.execute(text("""
+                    SELECT name FROM sqlite_master 
+                    WHERE type='table' AND name LIKE '_alembic_tmp_%'
+                """))
+                temp_tables = [row[0] for row in result.fetchall()]
+                
+                if temp_tables:
+                    logger.info(f"Cleaning up {len(temp_tables)} temporary tables from failed migrations")
+                    for table_name in temp_tables:
+                        try:
+                            connection.execute(text(f"DROP TABLE IF EXISTS {table_name}"))
+                            logger.info(f"   ✅ Cleaned up temporary table: {table_name}")
+                        except Exception as e:
+                            logger.warning(f"   ⚠️  Could not clean temporary table {table_name}: {e}")
+                    connection.commit()
+            except Exception as e:
+                logger.warning(f"Could not clean temporary tables: {e}")
+        
         context.configure(
             connection=connection,
             target_metadata=get_metadata(),
-            **conf_args
+            **conf_args,
         )
 
         with context.begin_transaction():

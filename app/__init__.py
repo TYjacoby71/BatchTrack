@@ -60,8 +60,7 @@ def create_app(config=None):
     limiter.init_app(app)
     configure_login_manager(app)
 
-    # Initialize session configuration
-    app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(days=31)
+    # Session lifetime should come from config classes; avoid overriding here
 
     # Clear all dismissed alerts on app restart - Flask 2.2+ compatible
     with app.app_context():
@@ -71,6 +70,28 @@ def create_app(config=None):
     # Register application components
     register_middleware(app)
     register_blueprints(app)
+    # Import models for Alembic
+    from . import models
+
+    # Only create tables when explicitly enabled for local/dev throwaway setups.
+    # Honor legacy disable flag if present.
+    create_all_disabled = os.environ.get('SQLALCHEMY_DISABLE_CREATE_ALL')
+    create_all_enabled = os.environ.get('SQLALCHEMY_ENABLE_CREATE_ALL') in {"1", "true", "True", "yes", "YES"}
+
+    if create_all_disabled:
+        logger.info("🔒 db.create_all() disabled via SQLALCHEMY_DISABLE_CREATE_ALL")
+    elif create_all_enabled:
+        logger.info("🔧 Local dev: creating tables via db.create_all()")
+        with app.app_context():
+            try:
+                db.create_all()
+                logger.info("✅ Database tables created/verified")
+            except Exception as e:
+                logger.warning(f"⚠️  Database table creation skipped: {e}")
+    else:
+        logger.info("🔒 db.create_all() not enabled; Alembic migrations are the source of truth")
+
+    # Register context processors
     register_template_context(app)
     register_template_filters(app)
 
@@ -86,9 +107,6 @@ def create_app(config=None):
     # Register CLI commands
     from .management import register_commands
     register_commands(app)
-
-    # Import models to ensure they're registered
-    from . import models
 
     return app
 

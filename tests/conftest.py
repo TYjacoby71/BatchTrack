@@ -28,7 +28,18 @@ def app():
     })
 
     with app.app_context():
-        db.create_all()
+        # Prefer Alembic migrations to build schema if available; fallback to create_all for unit tests
+        try:
+            os.environ.setdefault('SQLALCHEMY_DISABLE_CREATE_ALL', '1')
+            # Build schema solely via migrations for closer prod parity
+            from flask.cli import ScriptInfo
+            # Invoke upgrade programmatically
+            from flask_migrate import upgrade
+            upgrade()
+        except Exception:
+            # If migrations are not runnable in test context, fall back to create_all
+            os.environ.pop('SQLALCHEMY_DISABLE_CREATE_ALL', None)
+            db.create_all()
 
         # Create basic test data
         _create_test_data()
