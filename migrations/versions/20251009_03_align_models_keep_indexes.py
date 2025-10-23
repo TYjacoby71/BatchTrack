@@ -54,11 +54,29 @@ def upgrade():
         if table_exists('product_category'):
             try:
                 bind = op.get_bind()
-                # Use dialect-safe expression (avoid ::text cast)
-                bind.execute(text("CREATE UNIQUE INDEX IF NOT EXISTS ix_product_category_lower_name ON product_category (lower(name))"))
-                print("   ✅ Created product category functional index")
+                # Pre-check duplicates to avoid aborting the transaction
+                dup_check = text(
+                    """
+                    SELECT 1
+                    FROM product_category
+                    GROUP BY lower(name)
+                    HAVING COUNT(*) > 1
+                    LIMIT 1
+                    """
+                )
+                has_dups = bind.execute(dup_check).first() is not None
+                if has_dups:
+                    print("   ⚠️  Skipping functional unique index on product_category.lower(name): duplicates exist")
+                else:
+                    bind.execute(
+                        text(
+                            "CREATE UNIQUE INDEX IF NOT EXISTS ix_product_category_lower_name ON product_category (lower(name))"
+                        )
+                    )
+                    print("   ✅ Created product category functional index")
             except Exception as e:
-                print(f"   ⚠️  Product category index creation failed: {e}")
+                # If anything still goes wrong, do not let the transaction abort
+                print(f"   ⚠️  Product category index creation skipped due to error: {e}")
 
         # 3) Product foreign key index
         safe_create_index('ix_product_category_id', 'product', ['category_id'], unique=False, verbose=True)
@@ -67,27 +85,28 @@ def upgrade():
         print("   Processing recipe computed columns...")
         if table_exists('recipe'):
             # Check which computed columns already exist to avoid conflicts
+            # Map of computed columns: expression, fallback SQLAlchemy type, and SQL column type string
             computed_cols = {
-                'soap_superfat': ("((category_data ->> 'soap_superfat'))::numeric", sa.Numeric()),
-                'soap_water_pct': ("((category_data ->> 'soap_water_pct'))::numeric", sa.Numeric()),
-                'soap_lye_type': ("(category_data ->> 'soap_lye_type')", sa.Text()),
-                'candle_fragrance_pct': ("((category_data ->> 'candle_fragrance_pct'))::numeric", sa.Numeric()),
-                'candle_vessel_ml': ("((category_data ->> 'candle_vessel_ml'))::numeric", sa.Numeric()),
-                'vessel_fill_pct': ("((category_data ->> 'vessel_fill_pct'))::numeric", sa.Numeric()),
-                'baker_base_flour_g': ("((category_data ->> 'baker_base_flour_g'))::numeric", sa.Numeric()),
-                'baker_water_pct': ("((category_data ->> 'baker_water_pct'))::numeric", sa.Numeric()),
-                'baker_salt_pct': ("((category_data ->> 'baker_salt_pct'))::numeric", sa.Numeric()),
-                'baker_yeast_pct': ("((category_data ->> 'baker_yeast_pct'))::numeric", sa.Numeric()),
-                'cosm_emulsifier_pct': ("((category_data ->> 'cosm_emulsifier_pct'))::numeric", sa.Numeric()),
-                'cosm_preservative_pct': ("((category_data ->> 'cosm_preservative_pct'))::numeric", sa.Numeric()),
+                'soap_superfat': ("((category_data ->> 'soap_superfat'))::numeric", sa.Numeric(), 'numeric'),
+                'soap_water_pct': ("((category_data ->> 'soap_water_pct'))::numeric", sa.Numeric(), 'numeric'),
+                'soap_lye_type': ("(category_data ->> 'soap_lye_type')", sa.Text(), 'text'),
+                'candle_fragrance_pct': ("((category_data ->> 'candle_fragrance_pct'))::numeric", sa.Numeric(), 'numeric'),
+                'candle_vessel_ml': ("((category_data ->> 'candle_vessel_ml'))::numeric", sa.Numeric(), 'numeric'),
+                'vessel_fill_pct': ("((category_data ->> 'vessel_fill_pct'))::numeric", sa.Numeric(), 'numeric'),
+                'baker_base_flour_g': ("((category_data ->> 'baker_base_flour_g'))::numeric", sa.Numeric(), 'numeric'),
+                'baker_water_pct': ("((category_data ->> 'baker_water_pct'))::numeric", sa.Numeric(), 'numeric'),
+                'baker_salt_pct': ("((category_data ->> 'baker_salt_pct'))::numeric", sa.Numeric(), 'numeric'),
+                'baker_yeast_pct': ("((category_data ->> 'baker_yeast_pct'))::numeric", sa.Numeric(), 'numeric'),
+                'cosm_emulsifier_pct': ("((category_data ->> 'cosm_emulsifier_pct'))::numeric", sa.Numeric(), 'numeric'),
+                'cosm_preservative_pct': ("((category_data ->> 'cosm_preservative_pct'))::numeric", sa.Numeric(), 'numeric'),
             }
 
-            for name, (expr, col_def) in computed_cols.items():
+            for name, (expr, col_def, sql_type) in computed_cols.items():
                 if not column_exists('recipe', name):
                     try:
                         bind = op.get_bind()
-                        col_type = "numeric" if isinstance(col_def, type) and issubclass(col_def, sa.Numeric) else "text"
-                        bind.execute(text(f"ALTER TABLE recipe ADD COLUMN {name} {col_type} GENERATED ALWAYS AS ({expr}) STORED"))
+                        # Ensure the declared type matches the expression type to avoid transaction aborts
+                        bind.execute(text(f"ALTER TABLE recipe ADD COLUMN {name} {sql_type} GENERATED ALWAYS AS ({expr}) STORED"))
                         print(f"   ✅ Added computed column recipe.{name}")
                     except Exception as e:
                         print(f"   ⚠️  Failed to add computed column recipe.{name}: {e}")
@@ -129,26 +148,25 @@ def upgrade():
         print("   Processing batch computed columns...")
         if table_exists('batch'):
             batch_computed_cols = {
-                'vessel_fill_pct': ("(((plan_snapshot -> 'category_extension') ->> 'vessel_fill_pct'))::numeric", sa.Numeric()),
-                'candle_fragrance_pct': ("(((plan_snapshot -> 'category_extension') ->> 'candle_fragrance_pct'))::numeric", sa.Numeric()),
-                'candle_vessel_ml': ("(((plan_snapshot -> 'category_extension') ->> 'candle_vessel_ml'))::numeric", sa.Numeric()),
-                'soap_superfat': ("(((plan_snapshot -> 'category_extension') ->> 'soap_superfat'))::numeric", sa.Numeric()),
-                'soap_water_pct': ("(((plan_snapshot -> 'category_extension') ->> 'soap_water_pct'))::numeric", sa.Numeric()),
-                'soap_lye_type': ("((plan_snapshot -> 'category_extension') ->> 'soap_lye_type')", sa.Text()),
-                'baker_base_flour_g': ("(((plan_snapshot -> 'category_extension') ->> 'baker_base_flour_g'))::numeric", sa.Numeric()),
-                'baker_water_pct': ("(((plan_snapshot -> 'category_extension') ->> 'baker_water_pct'))::numeric", sa.Numeric()),
-                'baker_salt_pct': ("(((plan_snapshot -> 'category_extension') ->> 'baker_salt_pct'))::numeric", sa.Numeric()),
-                'baker_yeast_pct': ("(((plan_snapshot -> 'category_extension') ->> 'baker_yeast_pct'))::numeric", sa.Numeric()),
-                'cosm_emulsifier_pct': ("(((plan_snapshot -> 'category_extension') ->> 'cosm_emulsifier_pct'))::numeric", sa.Numeric()),
-                'cosm_preservative_pct': ("(((plan_snapshot -> 'category_extension') ->> 'cosm_preservative_pct'))::numeric", sa.Numeric()),
+                'vessel_fill_pct': ("(((plan_snapshot -> 'category_extension') ->> 'vessel_fill_pct'))::numeric", sa.Numeric(), 'numeric'),
+                'candle_fragrance_pct': ("(((plan_snapshot -> 'category_extension') ->> 'candle_fragrance_pct'))::numeric", sa.Numeric(), 'numeric'),
+                'candle_vessel_ml': ("(((plan_snapshot -> 'category_extension') ->> 'candle_vessel_ml'))::numeric", sa.Numeric(), 'numeric'),
+                'soap_superfat': ("(((plan_snapshot -> 'category_extension') ->> 'soap_superfat'))::numeric", sa.Numeric(), 'numeric'),
+                'soap_water_pct': ("(((plan_snapshot -> 'category_extension') ->> 'soap_water_pct'))::numeric", sa.Numeric(), 'numeric'),
+                'soap_lye_type': ("((plan_snapshot -> 'category_extension') ->> 'soap_lye_type')", sa.Text(), 'text'),
+                'baker_base_flour_g': ("(((plan_snapshot -> 'category_extension') ->> 'baker_base_flour_g'))::numeric", sa.Numeric(), 'numeric'),
+                'baker_water_pct': ("(((plan_snapshot -> 'category_extension') ->> 'baker_water_pct'))::numeric", sa.Numeric(), 'numeric'),
+                'baker_salt_pct': ("(((plan_snapshot -> 'category_extension') ->> 'baker_salt_pct'))::numeric", sa.Numeric(), 'numeric'),
+                'baker_yeast_pct': ("(((plan_snapshot -> 'category_extension') ->> 'baker_yeast_pct'))::numeric", sa.Numeric(), 'numeric'),
+                'cosm_emulsifier_pct': ("(((plan_snapshot -> 'category_extension') ->> 'cosm_emulsifier_pct'))::numeric", sa.Numeric(), 'numeric'),
+                'cosm_preservative_pct': ("(((plan_snapshot -> 'category_extension') ->> 'cosm_preservative_pct'))::numeric", sa.Numeric(), 'numeric'),
             }
 
-            for name, (expr, col_def) in batch_computed_cols.items():
+            for name, (expr, col_def, sql_type) in batch_computed_cols.items():
                 if not column_exists('batch', name):
                     try:
                         bind = op.get_bind()
-                        col_type = "numeric" if isinstance(col_def, type) and issubclass(col_def, sa.Numeric) else "text"
-                        bind.execute(text(f"ALTER TABLE batch ADD COLUMN {name} {col_type} GENERATED ALWAYS AS ({expr}) STORED"))
+                        bind.execute(text(f"ALTER TABLE batch ADD COLUMN {name} {sql_type} GENERATED ALWAYS AS ({expr}) STORED"))
                         print(f"   ✅ Added computed column batch.{name}")
                     except Exception as e:
                         print(f"   ⚠️  Failed to add computed column batch.{name}: {e}")
