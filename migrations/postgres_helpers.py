@@ -78,6 +78,30 @@ def safe_batch_alter_table(table_name: str, **kwargs):
         raise
 
 
+# --------------- Savepoint / nested transaction helpers ---------------
+@contextmanager
+def in_savepoint():
+    """Run operations inside a SAVEPOINT so failures don't abort outer tx.
+
+    Works on PostgreSQL and SQLite. Any exception is swallowed and the
+    savepoint is rolled back; callers can decide how to react.
+    """
+    conn = _bind()
+    nested = conn.begin_nested()
+    try:
+        yield
+        nested.commit()
+    except Exception:
+        # Roll back to the savepoint and swallow the error to keep tx usable
+        try:
+            nested.rollback()
+        except Exception:
+            # If rollback fails, re-raise to avoid hiding fatal issues
+            raise
+        # Swallow
+        return
+
+
 # --------------- Existence checks ---------------
 def table_exists(table_name: str) -> bool:
     try:
@@ -171,31 +195,37 @@ def safe_add_column(table_name: str, column_def, verbose: bool = True) -> bool:
             # keep quiet to reduce noisy logs
             pass
         return False
-    try:
-        with op.batch_alter_table(table_name, schema=None) as batch_op:
-            batch_op.add_column(column_def)
-        if verbose:
-            print(f"   ✅ {col_name} column added successfully")
-        return True
-    except Exception as e:
-        if verbose:
-            print(f"   ❌ Failed to add {col_name} column: {e}")
-        raise
+    with in_savepoint():
+        try:
+            with op.batch_alter_table(table_name, schema=None) as batch_op:
+                batch_op.add_column(column_def)
+            if verbose:
+                print(f"   ✅ {col_name} column added successfully")
+            return True
+        except Exception as e:
+            if verbose:
+                print(f"   ❌ Failed to add {col_name} column: {e}")
+            # handled by savepoint
+            return False
+    return False
 
 
 def safe_drop_column(table_name: str, column_name: str, verbose: bool = True) -> bool:
     if not column_exists(table_name, column_name):
         return False
-    try:
-        with op.batch_alter_table(table_name, schema=None) as batch_op:
-            batch_op.drop_column(column_name)
-        if verbose:
-            print(f"✅ Dropped {column_name} from {table_name}")
-        return True
-    except Exception as e:
-        if verbose:
-            print(f"⚠️  Error dropping {column_name} from {table_name}: {e}")
-        return False
+    with in_savepoint():
+        try:
+            with op.batch_alter_table(table_name, schema=None) as batch_op:
+                batch_op.drop_column(column_name)
+            if verbose:
+                print(f"✅ Dropped {column_name} from {table_name}")
+            return True
+        except Exception as e:
+            if verbose:
+                print(f"⚠️  Error dropping {column_name} from {table_name}: {e}")
+            # handled by savepoint
+            return False
+    return False
 
 
 def safe_create_index(
@@ -208,29 +238,35 @@ def safe_create_index(
             return False
     if index_exists(table_name, index_name):
         return False
-    try:
-        op.create_index(index_name, table_name, list(columns), unique=unique)
-        if verbose:
-            print(f"   ✅ Created index {index_name} on {table_name}")
-        return True
-    except Exception as e:
-        if verbose:
-            print(f"   ⚠️  Error creating index {index_name}: {e}")
-        return False
+    with in_savepoint():
+        try:
+            op.create_index(index_name, table_name, list(columns), unique=unique)
+            if verbose:
+                print(f"   ✅ Created index {index_name} on {table_name}")
+            return True
+        except Exception as e:
+            if verbose:
+                print(f"   ⚠️  Error creating index {index_name}: {e}")
+            # handled by savepoint
+            return False
+    return False
 
 
 def safe_drop_index(index_name: str, table_name: str | None = None, verbose: bool = True) -> bool:
-    try:
-        if table_name and not index_exists(table_name, index_name):
+    with in_savepoint():
+        try:
+            if table_name and not index_exists(table_name, index_name):
+                return False
+            op.drop_index(index_name, table_name=table_name) if table_name else op.drop_index(index_name)
+            if verbose:
+                print(f"✅ Dropped index {index_name}")
+            return True
+        except Exception as e:
+            if verbose:
+                print(f"Index {index_name} doesn't exist or error: {e}")
+            # handled by savepoint
             return False
-        op.drop_index(index_name, table_name=table_name) if table_name else op.drop_index(index_name)
-        if verbose:
-            print(f"✅ Dropped index {index_name}")
-        return True
-    except Exception as e:
-        if verbose:
-            print(f"Index {index_name} doesn't exist or error: {e}")
-        return False
+    return False
 
 
 def ensure_unique_constraint_or_index(
@@ -247,19 +283,22 @@ def ensure_unique_constraint_or_index(
     if index_exists(table_name, constraint_name):
         # If a unique index with the same name already exists, treat as done
         return False
-    try:
-        if is_postgresql():
-            op.create_unique_constraint(constraint_name, table_name, list(columns))
-        else:
-            # SQLite: emulate via unique index on expression-free columns
-            op.create_index(constraint_name, table_name, list(columns), unique=True)
-        if verbose:
-            print(f"   ✅ Created unique {'constraint' if is_postgresql() else 'index'} {constraint_name}")
-        return True
-    except Exception as e:
-        if verbose:
-            print(f"   ⚠️  Could not create unique constraint/index {constraint_name}: {e}")
-        return False
+    with in_savepoint():
+        try:
+            if is_postgresql():
+                op.create_unique_constraint(constraint_name, table_name, list(columns))
+            else:
+                # SQLite: emulate via unique index on expression-free columns
+                op.create_index(constraint_name, table_name, list(columns), unique=True)
+            if verbose:
+                print(f"   ✅ Created unique {'constraint' if is_postgresql() else 'index'} {constraint_name}")
+            return True
+        except Exception as e:
+            if verbose:
+                print(f"   ⚠️  Could not create unique constraint/index {constraint_name}: {e}")
+            # handled by savepoint
+            return False
+    return False
 
 
 def safe_create_foreign_key(
@@ -276,15 +315,25 @@ def safe_create_foreign_key(
     if is_sqlite():
         # SQLite cannot ALTER TABLE to add FKs without table rebuild; skip safely
         return False
-    try:
-        op.create_foreign_key(fk_name, source_table, referent_table, list(local_cols), list(remote_cols), ondelete=ondelete)
-        if verbose:
-            print(f"   ✅ Created foreign key {fk_name}")
-        return True
-    except Exception as e:
-        if verbose:
-            print(f"   ⚠️  Could not create foreign key {fk_name}: {e}")
-        return False
+    with in_savepoint():
+        try:
+            op.create_foreign_key(
+                fk_name,
+                source_table,
+                referent_table,
+                list(local_cols),
+                list(remote_cols),
+                ondelete=ondelete,
+            )
+            if verbose:
+                print(f"   ✅ Created foreign key {fk_name}")
+            return True
+        except Exception as e:
+            if verbose:
+                print(f"   ⚠️  Could not create foreign key {fk_name}: {e}")
+            # handled by savepoint
+            return False
+    return False
 
 
 def safe_alter_set_not_null(table_name: str, column_name: str, existing_type=None, verbose: bool = True) -> bool:
@@ -295,12 +344,43 @@ def safe_alter_set_not_null(table_name: str, column_name: str, existing_type=Non
     """
     if not column_exists(table_name, column_name):
         return False
-    try:
-        op.alter_column(table_name, column_name, existing_type=existing_type, nullable=False)
-        if verbose:
-            print(f"   ✅ Set {table_name}.{column_name} NOT NULL")
-        return True
-    except Exception as e:
-        if verbose:
-            print(f"   ⚠️  Could not set NOT NULL on {table_name}.{column_name}: {e}")
+    with in_savepoint():
+        try:
+            op.alter_column(table_name, column_name, existing_type=existing_type, nullable=False)
+            if verbose:
+                print(f"   ✅ Set {table_name}.{column_name} NOT NULL")
+            return True
+        except Exception as e:
+            if verbose:
+                print(f"   ⚠️  Could not set NOT NULL on {table_name}.{column_name}: {e}")
+            # handled by savepoint
+            return False
+    return False
+
+
+# --------------- Table drop helpers ---------------
+def safe_drop_table(table_name: str, cascade: bool = False, verbose: bool = True) -> bool:
+    """Drop a table if it exists. Uses CASCADE on Postgres when requested.
+
+    Wrapped in a SAVEPOINT so failures do not abort the outer transaction.
+    """
+    if not table_exists(table_name):
         return False
+    conn = _bind()
+    with in_savepoint():
+        try:
+            if is_postgresql():
+                suffix = " CASCADE" if cascade else ""
+                conn.execute(text(f"DROP TABLE IF EXISTS {table_name}{suffix}"))
+            else:
+                # SQLite doesn't support CASCADE in DROP TABLE; it drops anyway
+                conn.execute(text(f"DROP TABLE IF EXISTS {table_name}"))
+            if verbose:
+                print(f"✅ Dropped table {table_name}{' (cascade)' if cascade else ''}")
+            return True
+        except Exception as e:
+            if verbose:
+                print(f"⚠️  Could not drop table {table_name}: {e}")
+            # handled by savepoint
+            return False
+    return False
