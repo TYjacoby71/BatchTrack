@@ -74,16 +74,29 @@ def upgrade():
 def downgrade():
     bind = op.get_bind()
     if bind.dialect.name == "postgresql":
-        # Drop triggers if they exist
-        for table in (
-            "addon",
-            "organization_addon",
-            "product_sku",
-            "product",
-            "unit",
-            "user_preferences",
-            "subscription_tier",
-        ):
-            op.execute(sa.text('DROP TRIGGER IF EXISTS "trg_' + table + '_updated_at" ON "' + table + '";'))
-        # Function can remain shared; safe to drop if desired
-        op.execute("DROP FUNCTION IF EXISTS set_updated_at() CASCADE;")
+        try:
+            # Drop triggers if they exist (safe operations)
+            for table in (
+                "addon",
+                "organization_addon", 
+                "product_sku",
+                "product",
+                "unit", 
+                "user_preferences",
+                "subscription_tier",
+            ):
+                try:
+                    bind.execute(sa.text(f'DROP TRIGGER IF EXISTS "trg_{table}_updated_at" ON "{table}";'))
+                except Exception as e:
+                    print(f"⚠️ Could not drop trigger for {table}: {e}")
+                    continue
+            
+            # Drop function if it exists (safe operation)
+            try:
+                bind.execute(sa.text("DROP FUNCTION IF EXISTS set_updated_at() CASCADE;"))
+            except Exception as e:
+                print(f"⚠️ Could not drop function set_updated_at: {e}")
+                
+        except Exception as e:
+            print(f"⚠️ Error during PostgreSQL downgrade: {e}")
+            # Continue - don't fail the entire migration

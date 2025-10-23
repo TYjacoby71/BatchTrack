@@ -67,29 +67,33 @@ def upgrade():
 
 
 def downgrade():
-    # Remove the deferred constraints added in upgrade()
-
-    # Remove the batch.sku_id FK
-    with op.batch_alter_table('batch', schema=None) as batch_op:
-        batch_op.drop_constraint('fk_batch_sku_id', type_='foreignkey')
-
-    from migrations.postgres_helpers import safe_drop_foreign_key, safe_drop_index, is_postgresql
-
-    # Safe downgrade - only drop what we actually created in upgrade()
-    # The upgrade() only creates two foreign keys, so only drop those
+    # Safe downgrade that handles transaction issues
+    from migrations.postgres_helpers import safe_drop_foreign_key, is_postgresql
 
     if is_postgresql():
-        # Drop the foreign keys we created in upgrade() (in reverse order)
-        try:
-            op.drop_constraint("fk_product_sku_batch_id", "product_sku", type_="foreignkey")
-        except Exception:
-            # Constraint might not exist, continue
-            pass
-
-        try:
-            op.drop_constraint("fk_batch_sku_id", "batch", type_="foreignkey")  
-        except Exception:
-            # Constraint might not exist, continue
-            pass
-
+        # Safely drop foreign keys we created, with proper transaction handling
+        bind = op.get_bind()
+        
+        # Drop in reverse order of creation
+        constraints_to_drop = [
+            ("fk_product_sku_batch_id", "product_sku"),
+            ("fk_batch_sku_id", "batch")
+        ]
+        
+        for constraint_name, table_name in constraints_to_drop:
+            try:
+                # Check if constraint exists before trying to drop it
+                result = bind.execute(sa.text("""
+                    SELECT COUNT(*) FROM information_schema.table_constraints 
+                    WHERE constraint_name = :c AND table_name = :t
+                """), {"c": constraint_name, "t": table_name})
+                
+                if result.scalar() > 0:
+                    op.drop_constraint(constraint_name, table_name, type_="foreignkey")
+                    print(f"✅ Dropped constraint {constraint_name}")
+            except Exception as e:
+                print(f"⚠️ Could not drop constraint {constraint_name}: {e}")
+                # Continue with other operations
+                pass
+    
     # SQLite: No foreign keys to drop since upgrade() is no-op on SQLite
