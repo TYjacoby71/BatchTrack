@@ -1,17 +1,28 @@
-- name: Tests
-        run: pytest
+- name: Build test DB (SQLite) and check drift
+  run: |
+    set -euo pipefail
+    export FLASK_APP="app:create_app"   # if your project needs this
+    export DATABASE_URL="sqlite:///test_ci.db"
 
-      - name: Check migration safety
-        run: |
-          # Verify no migration drift
-          export DATABASE_URL="sqlite:///test_ci.db"
-          flask db upgrade
-          flask db migrate -m "ci_check" --rev-id ci_test >/dev/null 2>&1 || true
+    # Fresh schema
+    rm -f test_ci.db
+    flask db upgrade
 
-          if [ -f "migrations/versions/*ci_test*.py" ]; then
-            echo "❌ Migration drift in CI - models changed without migration"
-            exit 1
-          fi
+    # Try to autogenerate a diff into a deterministic ID
+    # Alembic exits non-zero when no changes; we don't care about that,
+    # we only care if a file appears.
+    rm -f migrations/versions/*ci_test*.py || true
+    flask db migrate -m "ci_check" --rev-id ci_test >/dev/null 2>&1 || true
 
-          echo "✅ Migration safety confirmed"
-          rm -f test_ci.db
+    if compgen -G 'migrations/versions/*ci_test*.py' > /dev/null; then
+      echo "❌ Migration drift in CI - models changed without migration"
+      cat migrations/versions/*ci_test*.py || true
+      exit 1
+    fi
+
+    echo "✅ Migration safety confirmed"
+
+- name: Run tests
+  env:
+    DATABASE_URL: "sqlite:///test_ci.db"
+  run: pytest
