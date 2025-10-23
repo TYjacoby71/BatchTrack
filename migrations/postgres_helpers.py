@@ -183,6 +183,43 @@ def unique_constraint_exists(table_name: str, constraint_name: str) -> bool:
     return False
 
 
+# Foreign key existence check to avoid duplicate constraint errors
+def foreign_key_exists(table_name: str, constraint_name: str) -> bool:
+    """Return True if a foreign key constraint with the given name exists.
+
+    Uses SQLAlchemy inspector first for portability, then falls back to
+    information_schema on PostgreSQL. On SQLite, constraint names may not be
+    preserved; we best-effort via inspector and otherwise return False.
+    """
+    if not table_exists(table_name):
+        return False
+    try:
+        # Inspector path (works on PostgreSQL)
+        try:
+            for fk in _inspector().get_foreign_keys(table_name):
+                if (fk.get("name") or "") == constraint_name:
+                    return True
+        except Exception:
+            pass
+        # PostgreSQL fallback via information_schema
+        if is_postgresql():
+            res = _bind().execute(
+                text(
+                    """
+                    SELECT 1
+                    FROM information_schema.table_constraints
+                    WHERE table_name = :t
+                      AND constraint_name = :c
+                      AND constraint_type = 'FOREIGN KEY'
+                    """
+                ),
+                {"t": table_name, "c": constraint_name},
+            )
+            return res.first() is not None
+    except Exception:
+        return False
+    return False
+
 # --------------- Safe DDL operations ---------------
 def safe_add_column(table_name: str, column_def, verbose: bool = True) -> bool:
     if not table_exists(table_name):
@@ -314,6 +351,20 @@ def safe_create_foreign_key(
         return False
     if is_sqlite():
         # SQLite cannot ALTER TABLE to add FKs without table rebuild; skip safely
+        return False
+    # Ensure requested columns exist before attempting to create the FK
+    try:
+        for col in local_cols:
+            if not column_exists(source_table, col):
+                return False
+        for col in remote_cols:
+            if not column_exists(referent_table, col):
+                return False
+    except Exception:
+        # If any inspection fails, be conservative and skip
+        return False
+    # Skip if FK already exists to avoid DuplicateObject errors
+    if foreign_key_exists(source_table, fk_name):
         return False
     with in_savepoint():
         try:
