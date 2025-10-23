@@ -60,8 +60,7 @@ def create_app(config=None):
     limiter.init_app(app)
     configure_login_manager(app)
 
-    # Initialize session configuration
-    app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(days=31)
+    # Session lifetime should come from config classes; avoid overriding here
 
     # Clear all dismissed alerts on app restart - Flask 2.2+ compatible
     with app.app_context():
