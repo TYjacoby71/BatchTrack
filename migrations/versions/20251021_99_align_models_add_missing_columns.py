@@ -14,8 +14,14 @@ from sqlalchemy import inspect, text
 from contextlib import contextmanager
 from migrations.postgres_helpers import (
     table_exists,
+    column_exists,
+    index_exists,
+    unique_constraint_exists as unique_exists,
     in_savepoint,
     ensure_unique_constraint_or_index,
+    safe_add_column,
+    safe_create_index,
+    safe_create_foreign_key,
     safe_drop_table,
 )
 
@@ -25,72 +31,7 @@ branch_labels = None
 depends_on = None
 
 
-def table_exists(table: str) -> bool:
-    try:
-        bind = op.get_bind()
-        insp = inspect(bind)
-        return table in insp.get_table_names()
-    except Exception:
-        return False
-
-
-def column_exists(table: str, column: str) -> bool:
-    if not table_exists(table):
-        return False
-    try:
-        bind = op.get_bind()
-        insp = inspect(bind)
-        return any(c['name'] == column for c in insp.get_columns(table))
-    except Exception:
-        return False
-
-
-def index_exists(table: str, index: str) -> bool:
-    if not table_exists(table):
-        return False
-    try:
-        bind = op.get_bind()
-        insp = inspect(bind)
-        return any(ix['name'] == index for ix in insp.get_indexes(table))
-    except Exception:
-        return False
-
-
-def fk_exists(table: str, name: str) -> bool:
-    if not table_exists(table):
-        return False
-    try:
-        bind = op.get_bind()
-        insp = inspect(bind)
-        return any(fk.get('name') == name for fk in insp.get_foreign_keys(table))
-    except Exception:
-        return False
-
-
-def unique_exists(table: str, name: str) -> bool:
-    if not table_exists(table):
-        return False
-    try:
-        bind = op.get_bind()
-        insp = inspect(bind)
-        return any(uq.get('name') == name for uq in insp.get_unique_constraints(table))
-    except Exception:
-        return False
-
-
-@contextmanager
-def in_savepoint():
-    """Run DDL inside a savepoint so failures don't abort the transaction."""
-    conn = op.get_bind()
-    nested = conn.begin_nested()
-    try:
-        yield
-        nested.commit()
-    except Exception:
-        try:
-            nested.rollback()
-        except Exception:
-            pass
+# Using shared helpers from migrations.postgres_helpers to reduce duplication
 
 
 def has_duplicates(table: str, columns: list[str]) -> bool:
@@ -150,41 +91,7 @@ def has_orphans(source: str, local_col: str, referent: str, remote_col: str = 'i
     return has
 
 
-def safe_add_column(table: str, col: sa.Column) -> bool:
-    if not table_exists(table):
-        return False
-    if column_exists(table, col.name):
-        return False
-    with in_savepoint():
-        try:
-            with op.batch_alter_table(table) as batch_op:
-                batch_op.add_column(col)
-            return True
-        except Exception:
-            return False
-
-
-def safe_create_index(name: str, table: str, columns: list[str], unique: bool = False) -> bool:
-    if index_exists(table, name):
-        return False
-    with in_savepoint():
-        try:
-            op.create_index(name, table, columns, unique=unique)
-            return True
-        except Exception:
-            return False
-
-
-def safe_create_fk(name: str, source: str, referent: str, local_cols, remote_cols) -> bool:
-    if fk_exists(source, name):
-        return False
-    with in_savepoint():
-        try:
-            with op.batch_alter_table(source) as batch_op:
-                batch_op.create_foreign_key(name, referent, local_cols, remote_cols)
-            return True
-        except Exception:
-            return False
+# safe_add_column, safe_create_index, and safe_create_foreign_key are imported
 
 
 def upgrade():
@@ -212,8 +119,8 @@ def upgrade():
         safe_create_index('ix_organization_addon_organization_id', 'organization_addon', ['organization_id'])
         safe_create_index('ix_organization_addon_addon_id', 'organization_addon', ['addon_id'])
         # FKs
-        safe_create_fk('fk_org_addon_org', 'organization_addon', 'organization', ['organization_id'], ['id'])
-        safe_create_fk('fk_org_addon_addon', 'organization_addon', 'addon', ['addon_id'], ['id'])
+        safe_create_foreign_key('fk_org_addon_org', 'organization_addon', 'organization', ['organization_id'], ['id'])
+        safe_create_foreign_key('fk_org_addon_addon', 'organization_addon', 'addon', ['addon_id'], ['id'])
 
     # 2) feature_flag schema alignment (key, enabled, description length)
     if table_exists('feature_flag'):
@@ -244,7 +151,7 @@ def upgrade():
         safe_add_column('recipe', sa.Column('portion_count', sa.Integer(), nullable=True))
         safe_add_column('recipe', sa.Column('portion_unit_id', sa.Integer(), nullable=True))
         if column_exists('recipe', 'portion_unit_id') and table_exists('unit'):
-            safe_create_fk('fk_recipe_portion_unit', 'recipe', 'unit', ['portion_unit_id'], ['id'])
+            safe_create_foreign_key('fk_recipe_portion_unit', 'recipe', 'unit', ['portion_unit_id'], ['id'])
 
     if table_exists('batch'):
         safe_add_column('batch', sa.Column('portion_name', sa.String(length=64), nullable=True))
@@ -252,7 +159,7 @@ def upgrade():
         safe_add_column('batch', sa.Column('final_portions', sa.Integer(), nullable=True))
         safe_add_column('batch', sa.Column('portion_unit_id', sa.Integer(), nullable=True))
         if column_exists('batch', 'portion_unit_id') and table_exists('unit'):
-            safe_create_fk('fk_batch_portion_unit', 'batch', 'unit', ['portion_unit_id'], ['id'])
+            safe_create_foreign_key('fk_batch_portion_unit', 'batch', 'unit', ['portion_unit_id'], ['id'])
 
     # 7) product fields and constraints alignment
     if table_exists('product'):
@@ -268,7 +175,7 @@ def upgrade():
             if not has_duplicates('product', ['name', 'organization_id']):
                 ensure_unique_constraint_or_index('product', 'unique_product_name_per_org', ['name', 'organization_id'])
         if column_exists('product', 'created_by') and table_exists('user'):
-            safe_create_fk('fk_product_created_by_user', 'product', 'user', ['created_by'], ['id'])
+            safe_create_foreign_key('fk_product_created_by_user', 'product', 'user', ['created_by'], ['id'])
 
     # 8) product_sku indexes/uniques (columns largely exist via earlier migrations)
     if table_exists('product_sku'):
@@ -289,15 +196,15 @@ def upgrade():
         safe_create_index('ix_product_sku_inventory_item_id', 'product_sku', ['inventory_item_id'])
         # Common FKs
         if table_exists('product') and not has_orphans('product_sku', 'product_id', 'product'):
-            safe_create_fk('fk_sku_product', 'product_sku', 'product', ['product_id'], ['id'])
+            safe_create_foreign_key('fk_sku_product', 'product_sku', 'product', ['product_id'], ['id'])
         if table_exists('product_variant') and not has_orphans('product_sku', 'variant_id', 'product_variant'):
-            safe_create_fk('fk_sku_variant', 'product_sku', 'product_variant', ['variant_id'], ['id'])
+            safe_create_foreign_key('fk_sku_variant', 'product_sku', 'product_variant', ['variant_id'], ['id'])
         if table_exists('batch') and not has_orphans('product_sku', 'batch_id', 'batch'):
-            safe_create_fk('fk_sku_batch', 'product_sku', 'batch', ['batch_id'], ['id'])
+            safe_create_foreign_key('fk_sku_batch', 'product_sku', 'batch', ['batch_id'], ['id'])
         if table_exists('inventory_item') and not has_orphans('product_sku', 'inventory_item_id', 'inventory_item'):
-            safe_create_fk('fk_sku_inventory_item', 'product_sku', 'inventory_item', ['inventory_item_id'], ['id'])
+            safe_create_foreign_key('fk_sku_inventory_item', 'product_sku', 'inventory_item', ['inventory_item_id'], ['id'])
         if table_exists('user') and not has_orphans('product_sku', 'created_by', 'user'):
-            safe_create_fk('fk_sku_created_by', 'product_sku', 'user', ['created_by'], ['id'])
+            safe_create_foreign_key('fk_sku_created_by', 'product_sku', 'user', ['created_by'], ['id'])
 
     # 9) product_sku_history alignment
     if table_exists('product_sku_history'):
@@ -310,9 +217,9 @@ def upgrade():
         safe_create_index('idx_inventory_item_remaining', 'product_sku_history', ['inventory_item_id', 'remaining_quantity'])
         safe_create_index('idx_inventory_item_timestamp', 'product_sku_history', ['inventory_item_id', 'timestamp'])
         if table_exists('organization') and not has_orphans('product_sku_history', 'organization_id', 'organization'):
-            safe_create_fk('fk_psh_org', 'product_sku_history', 'organization', ['organization_id'], ['id'])
+            safe_create_foreign_key('fk_psh_org', 'product_sku_history', 'organization', ['organization_id'], ['id'])
         if table_exists('inventory_item') and not has_orphans('product_sku_history', 'inventory_item_id', 'inventory_item'):
-            safe_create_fk('fk_psh_inventory_item', 'product_sku_history', 'inventory_item', ['inventory_item_id'], ['id'])
+            safe_create_foreign_key('fk_psh_inventory_item', 'product_sku_history', 'inventory_item', ['inventory_item_id'], ['id'])
 
     # 10) inventory_category alignment
     if table_exists('inventory_category'):
@@ -325,9 +232,9 @@ def upgrade():
             if not has_duplicates('inventory_category', ['name', 'item_type', 'organization_id']):
                 ensure_unique_constraint_or_index('inventory_category', '_invcat_name_type_org_uc', ['name', 'item_type', 'organization_id'])
         if column_exists('inventory_category', 'created_by') and table_exists('user') and not has_orphans('inventory_category', 'created_by', 'user'):
-            safe_create_fk('fk_invcat_created_by', 'inventory_category', 'user', ['created_by'], ['id'])
+            safe_create_foreign_key('fk_invcat_created_by', 'inventory_category', 'user', ['created_by'], ['id'])
         if column_exists('inventory_category', 'organization_id') and table_exists('organization') and not has_orphans('inventory_category', 'organization_id', 'organization'):
-            safe_create_fk('fk_invcat_org', 'inventory_category', 'organization', ['organization_id'], ['id'])
+            safe_create_foreign_key('fk_invcat_org', 'inventory_category', 'organization', ['organization_id'], ['id'])
 
     # 11) tag alignment
     if table_exists('tag'):
@@ -338,7 +245,7 @@ def upgrade():
             if not has_duplicates('tag', ['name', 'organization_id']):
                 ensure_unique_constraint_or_index('tag', '_tag_name_org_uc', ['name', 'organization_id'])
         if column_exists('tag', 'created_by') and table_exists('user'):
-            safe_create_fk('fk_tag_created_by', 'tag', 'user', ['created_by'], ['id'])
+            safe_create_foreign_key('fk_tag_created_by', 'tag', 'user', ['created_by'], ['id'])
 
     # 12) reservation alignment
     if table_exists('reservation'):
