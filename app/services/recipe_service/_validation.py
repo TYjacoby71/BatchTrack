@@ -38,17 +38,20 @@ def validate_recipe_data(name: str, ingredients: List[Dict] = None,
         if not is_valid:
             return {'valid': False, 'error': error}
 
-        # Validate yield amount: must be > 0, unless portioning bulk yield is provided (>0)
-        if yield_amount is None or yield_amount <= 0:
-            bulk_ok = False
-            try:
-                if portioning_data and portioning_data.get('is_portioned'):
-                    byq = float(portioning_data.get('bulk_yield_quantity') or 0)
-                    bulk_ok = byq > 0
-            except Exception:
+        # Validate yield amount only when provided explicitly. This avoids false failures
+        # during partial validations (e.g., name-only or ingredient-only updates).
+        if yield_amount is not None:
+            # Yield must be > 0 unless portioning bulk yield is provided (>0)
+            if yield_amount <= 0:
                 bulk_ok = False
-            if not bulk_ok:
-                return {'valid': False, 'error': "Yield amount must be positive"}
+                try:
+                    if portioning_data and portioning_data.get('is_portioned'):
+                        byq = float(portioning_data.get('bulk_yield_quantity') or 0)
+                        bulk_ok = byq > 0
+                except Exception:
+                    bulk_ok = False
+                if not bulk_ok:
+                    return {'valid': False, 'error': "Yield amount must be positive"}
 
         # Validate ingredients if provided
         if ingredients:
