@@ -28,10 +28,10 @@ class InventorySearchService:
 		for it in items:
 			base = {
 				'id': it.id,
-				'text': it.name,
+				'text': getattr(it, 'container_display_name', None) if it.type in ('container', 'packaging') else it.name,
 				'type': it.type,
 			}
-			if it.type == 'container':
+			if it.type in ('container', 'packaging'):
 				base.update({
 					'capacity': getattr(it, 'capacity', None),
 					'capacity_unit': getattr(it, 'capacity_unit', None),

@@ -144,15 +144,18 @@ def _load_suitable_containers(recipe: Recipe, org_id: int, total_yield: float, y
 
         container_options.append({
             'container_id': container.id,
-            'container_name': container.name,
-            'capacity': converted_capacity,  # Always in recipe yield units before fill %
-            'capacity_in_yield_unit': converted_capacity,  # Explicit for frontend
-            'yield_unit': yield_unit,  # Add yield unit for frontend
-            'conversion_successful': True,  # Mark conversion as successful
+            # Prefer computed display name reflecting style/material/type
+            'container_name': getattr(container, 'container_display_name', None) or container.name,
+            # Capacity used for calculations is always in yield units
+            'capacity': converted_capacity,
+            'capacity_in_yield_unit': converted_capacity,
+            'yield_unit': yield_unit,
+            'conversion_successful': True,
+            # Preserve original values for UI display
             'original_capacity': storage_capacity,
             'original_unit': storage_unit,
             'available_quantity': int(container.quantity or 0),
-            'containers_needed': 0,  # Will be set by strategy
+            'containers_needed': 0,
             'cost_each': 0.0
         })
 

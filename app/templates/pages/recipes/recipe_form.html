@@ -386,9 +386,10 @@
             <div class="form-group">
                 <label for="allowed_containers" class="form-label">Select Allowed Containers</label>
                 <select id="allowed_containers" name="allowed_containers[]" class="form-select container-select" multiple>
-                    {% for container in all_ingredients if container.type == 'container' %}
+                    {% for container in all_ingredients if container.type in ['container','packaging'] %}
                     <option value="{{ container.id }}" {% if recipe and recipe.allowed_containers and container.id in recipe.allowed_containers %}selected{% endif %}>
-                        {{ container.name }} ({{ container.capacity }} {{ container.capacity_unit }})
+                        {{ container.container_display_name if container.type in ['container','packaging'] else container.name }}
+                        {% if container.capacity %} ({{ container.capacity }} {{ container.capacity_unit }}){% endif %}
                     </option>
                     {% endfor %}
                 </select>
