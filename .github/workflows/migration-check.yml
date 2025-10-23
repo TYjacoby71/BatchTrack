@@ -9,7 +9,7 @@ jobs:
   drift-check:
     runs-on: ubuntu-latest
     env:
-      FLASK_APP: wsgi:app
+      FLASK_APP: wsgi:app           # make sure this is correct for your app
       PYTHONPATH: ${{ github.workspace }}
       SQLALCHEMY_DISABLE_CREATE_ALL: "1"  # ensure app doesn't call db.create_all()
     steps:
@@ -38,8 +38,9 @@ jobs:
 
           # Build schema strictly via Alembic migrations
           echo "🔧 Running migrations to build schema..."
-          flask db upgrade
 
+          flask db upgrade
+          flask db migrate -m "test_migration_check" --rev-id test_check >/dev/null 2>&1 || true
           # Ask Alembic if current models would generate new migrations
           echo "🔍 Checking if models match migration-built schema..."
           flask db migrate -m "test_migration_check" --rev-id test_check >/dev/null 2>&1 || true
@@ -59,10 +60,12 @@ jobs:
           
           # Cleanup
           rm -f "$DB_FILE"
+
           rm -f migrations/versions/*test_check*.py || true
 
       - name: Check for multiple migration heads
         run: |
+
           export DATABASE_URL="sqlite:///$(mktemp -u).db"
           flask db upgrade
           heads_count=$(flask db heads | wc -l)
@@ -72,10 +75,10 @@ jobs:
             flask db heads
             echo ""
             echo "💡 Fix this by merging heads: flask db merge heads"
+
             exit 1
-          else
-            echo "✅ Single migration head confirmed."
           fi
+
 
       - name: Validate migration sequence
         run: |
@@ -200,3 +203,4 @@ jobs:
           echo "🔐 Long-term test data preserved"
           echo ""
           echo "🚦 Ready for production deployment after manual review"
+
