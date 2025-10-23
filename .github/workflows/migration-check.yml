@@ -5,7 +5,7 @@ jobs:
   migration-check:
     runs-on: ubuntu-latest
     env:
-      FLASK_APP: wsgi:app
+      FLASK_APP: wsgi:app           # make sure this is correct for your app
       PYTHONPATH: ${{ github.workspace }}
     steps:
       - uses: actions/checkout@v4
@@ -19,36 +19,48 @@ jobs:
           python -m pip install --upgrade pip wheel
           pip install -r requirements.txt
 
-      - name: Check for migration drift
+      - name: Check for migration drift (SQLite)
         run: |
+          set -euo pipefail
           export DATABASE_URL="sqlite:///test_migrations.db"
+
+          # Fresh start
+          rm -f test_migrations.db
+          rm -f migrations/versions/*test_check*.py || true
+
+          # Build schema, then attempt autogenerate
           flask db upgrade
+          flask db migrate -m "test_migration_check" --rev-id test_check >/dev/null 2>&1 || true
 
-          # Generate a test migration (autogenerate will produce no file if no changes)
-          flask db migrate -m "test_migration_check" --rev-id test_check
-
-          # Detect drift by presence of generated file
-          if ls migrations/versions/*test_check*.py >/dev/null 2>&1; then
+          # Drift = file exists
+          if compgen -G 'migrations/versions/*test_check*.py' > /dev/null; then
             echo "❌ Migration drift detected! Models don't match migrations."
-            echo "Run 'flask db migrate' locally and commit the new migration."
+            # Show the diff file for context
+            cat migrations/versions/*test_check*.py || true
             exit 1
-          else
-            echo "✅ No migration drift detected."
           fi
 
+          # (Optional) verify downgrade->upgrade cycle works
+          flask db downgrade base
+          flask db upgrade
+
+          echo "✅ No migration drift detected and downgrade/upgrade cycle OK."
           rm -f test_migrations.db
-          rm -f migrations/versions/*test_check*.py
+          rm -f migrations/versions/*test_check*.py || true
 
       - name: Check for multiple heads
         run: |
+          set -euo pipefail
           export DATABASE_URL="sqlite:///test_heads.db"
+          rm -f test_heads.db
+
           flask db upgrade
-          heads_count=$(flask db heads | cat | wc -l)
+          heads_count="$(flask db heads | wc -l | xargs)"
           if [ "$heads_count" -gt 1 ]; then
             echo "❌ Multiple migration heads detected!"
-            flask db heads | cat
+            flask db heads || true
             exit 1
-          else
-            echo "✅ Single migration head confirmed."
           fi
+
+          echo "✅ Single migration head confirmed."
           rm -f test_heads.db
