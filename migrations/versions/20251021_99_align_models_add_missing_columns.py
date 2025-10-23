@@ -249,11 +249,7 @@ def upgrade():
         # Unique per-org (name, organization_id) if no duplicates
         if not unique_exists('product', 'unique_product_name_per_org'):
             if not has_duplicates('product', ['name', 'organization_id']):
-                try:
-                    op.create_unique_constraint('unique_product_name_per_org', 'product', ['name', 'organization_id'])
-                except Exception:
-                    # If creation fails for any reason, skip to avoid aborting the transaction
-                    pass
+                ensure_unique_constraint_or_index('product', 'unique_product_name_per_org', ['name', 'organization_id'])
         if column_exists('product', 'created_by') and table_exists('user'):
             safe_create_fk('fk_product_created_by_user', 'product', 'user', ['created_by'], ['id'])
 
@@ -263,22 +259,13 @@ def upgrade():
         # Unique constraints guarded by duplicate checks
         if not unique_exists('product_sku', 'unique_sku_combination'):
             if not has_duplicates('product_sku', ['product_id', 'variant_id', 'size_label', 'fifo_id']):
-                try:
-                    op.create_unique_constraint('unique_sku_combination', 'product_sku', ['product_id', 'variant_id', 'size_label', 'fifo_id'])
-                except Exception:
-                    pass
+                ensure_unique_constraint_or_index('product_sku', 'unique_sku_combination', ['product_id', 'variant_id', 'size_label', 'fifo_id'])
         if not unique_exists('product_sku', 'unique_barcode'):
             if not has_duplicates('product_sku', ['barcode']):
-                try:
-                    op.create_unique_constraint('unique_barcode', 'product_sku', ['barcode'])
-                except Exception:
-                    pass
+                ensure_unique_constraint_or_index('product_sku', 'unique_barcode', ['barcode'])
         if not unique_exists('product_sku', 'unique_upc'):
             if not has_duplicates('product_sku', ['upc']):
-                try:
-                    op.create_unique_constraint('unique_upc', 'product_sku', ['upc'])
-                except Exception:
-                    pass
+                ensure_unique_constraint_or_index('product_sku', 'unique_upc', ['upc'])
         safe_create_index('idx_product_variant', 'product_sku', ['product_id', 'variant_id'])
         safe_create_index('idx_active_skus', 'product_sku', ['is_active', 'is_product_active'])
         safe_create_index('idx_inventory_item', 'product_sku', ['inventory_item_id'])
@@ -319,10 +306,7 @@ def upgrade():
         if not unique_exists('inventory_category', '_invcat_name_type_org_uc'):
             # Duplicate check (coalesce item_type to empty string to treat NULLs distinctly)
             if not has_duplicates('inventory_category', ['name', 'item_type', 'organization_id']):
-                try:
-                    op.create_unique_constraint('_invcat_name_type_org_uc', 'inventory_category', ['name', 'item_type', 'organization_id'])
-                except Exception:
-                    pass
+                ensure_unique_constraint_or_index('inventory_category', '_invcat_name_type_org_uc', ['name', 'item_type', 'organization_id'])
         if column_exists('inventory_category', 'created_by') and table_exists('user') and not has_orphans('inventory_category', 'created_by', 'user'):
             safe_create_fk('fk_invcat_created_by', 'inventory_category', 'user', ['created_by'], ['id'])
         if column_exists('inventory_category', 'organization_id') and table_exists('organization') and not has_orphans('inventory_category', 'organization_id', 'organization'):
@@ -335,10 +319,7 @@ def upgrade():
         safe_add_column('tag', sa.Column('created_by', sa.Integer(), nullable=True))
         if not unique_exists('tag', '_tag_name_org_uc'):
             if not has_duplicates('tag', ['name', 'organization_id']):
-                try:
-                    op.create_unique_constraint('_tag_name_org_uc', 'tag', ['name', 'organization_id'])
-                except Exception:
-                    pass
+                ensure_unique_constraint_or_index('tag', '_tag_name_org_uc', ['name', 'organization_id'])
         if column_exists('tag', 'created_by') and table_exists('user'):
             safe_create_fk('fk_tag_created_by', 'tag', 'user', ['created_by'], ['id'])
 
@@ -417,10 +398,7 @@ def upgrade():
             sa.Column('last_stripe_sync', sa.DateTime(), nullable=False, server_default=sa.text('CURRENT_TIMESTAMP')),
         ]:
             safe_add_column('pricing_snapshots', col)
-        try:
-            op.create_unique_constraint('uq_pricing_snapshots_stripe_price_id', 'pricing_snapshots', ['stripe_price_id'])
-        except Exception:
-            pass
+        ensure_unique_constraint_or_index('pricing_snapshots', 'uq_pricing_snapshots_stripe_price_id', ['stripe_price_id'])
 
     # 15) developer/permission/role string length/nullable safety
     if table_exists('developer_permission'):
@@ -430,10 +408,7 @@ def upgrade():
         pass
     if table_exists('role'):
         safe_add_column('role', sa.Column('is_active', sa.Boolean(), nullable=True, server_default=sa.text('true')))
-        try:
-            op.create_unique_constraint('unique_role_name_org', 'role', ['name', 'organization_id'])
-        except Exception:
-            pass
+        ensure_unique_constraint_or_index('role', 'unique_role_name_org', ['name', 'organization_id'])
 
     # 16) indexes that may be missing but harmless if present
     if table_exists('inventory_item'):
