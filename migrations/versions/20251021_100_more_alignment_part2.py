@@ -88,6 +88,47 @@ def fk_exists(table: str, name: str) -> bool:
         return False
 
 
+def has_duplicates(table: str, columns: list[str]) -> bool:
+    """Return True if duplicate rows exist for the given columns (ignores rows with NULLs)."""
+    if not table_exists(table):
+        return False
+    bind = op.get_bind()
+    cols_csv = ", ".join(columns)
+    not_null_cond = " AND ".join([f"{c} IS NOT NULL" for c in columns]) or "TRUE"
+    q = text(
+        f"""
+        SELECT 1 FROM {table}
+        WHERE {not_null_cond}
+        GROUP BY {cols_csv}
+        HAVING COUNT(*) > 1
+        LIMIT 1
+        """
+    )
+    try:
+        return bind.execute(q).first() is not None
+    except Exception:
+        return True
+
+
+def has_orphans(source: str, local_col: str, referent: str, remote_col: str = 'id') -> bool:
+    if not table_exists(source) or not table_exists(referent):
+        return False
+    bind = op.get_bind()
+    q = text(
+        f"""
+        SELECT 1
+        FROM {source} s
+        LEFT JOIN {referent} r ON s.{local_col} = r.{remote_col}
+        WHERE s.{local_col} IS NOT NULL AND r.{remote_col} IS NULL
+        LIMIT 1
+        """
+    )
+    try:
+        return bind.execute(q).first() is not None
+    except Exception:
+        return True
+
+
 def safe_add_column(table: str, col: sa.Column) -> bool:
     if not table_exists(table):
         return False
@@ -133,7 +174,10 @@ def safe_drop_index(name: str, table: str) -> bool:
 
 
 def safe_create_unique(name: str, table: str, columns: list[str]) -> bool:
-    if unique_exists(table, name):
+    if unique_exists(table, name) or index_exists(table, name):
+        return False
+    # Avoid creating if duplicates exist; would abort transaction
+    if has_duplicates(table, columns):
         return False
     try:
         op.create_unique_constraint(name, table, columns)
@@ -154,6 +198,15 @@ def safe_drop_unique(name: str, table: str) -> bool:
 
 def safe_create_fk(name: str, source: str, referent: str, local_cols, remote_cols) -> bool:
     if fk_exists(source, name):
+        return False
+    # Only attempt if there are no orphaned values
+    if len(local_cols) == 1 and not isinstance(local_cols, (list, tuple)):
+        cols = [local_cols]
+    else:
+        cols = list(local_cols)
+    # Only handle single-column FK or simple first column check
+    local_col = cols[0] if cols else None
+    if local_col and has_orphans(source, local_col, referent, remote_cols[0] if remote_cols else 'id'):
         return False
     try:
         with op.batch_alter_table(source) as batch_op:
@@ -184,6 +237,16 @@ def safe_drop_fk_by_columns(table: str, local_cols: list[str]) -> bool:
 def safe_alter_not_null(table: str, column: str, nullable: bool, server_default: str | None = None):
     if not table_exists(table) or not column_exists(table, column):
         return False
+    # Pre-check data to avoid aborting the transaction on NOT NULL
+    if not nullable:
+        try:
+            bind = op.get_bind()
+            res = bind.execute(text(f"SELECT 1 FROM {table} WHERE {column} IS NULL LIMIT 1"))
+            if res.first() is not None:
+                return False
+        except Exception:
+            # If check fails, err on safe side and skip
+            return False
     try:
         with op.batch_alter_table(table) as batch_op:
             batch_op.alter_column(column, existing_type=sa.Text(), nullable=nullable, server_default=server_default)

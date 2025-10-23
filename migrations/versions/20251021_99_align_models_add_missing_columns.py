@@ -60,6 +60,63 @@ def fk_exists(table: str, name: str) -> bool:
         return False
 
 
+def unique_exists(table: str, name: str) -> bool:
+    if not table_exists(table):
+        return False
+    try:
+        bind = op.get_bind()
+        insp = inspect(bind)
+        return any(uq.get('name') == name for uq in insp.get_unique_constraints(table))
+    except Exception:
+        return False
+
+
+def has_duplicates(table: str, columns: list[str]) -> bool:
+    """Return True if any duplicate rows exist for the given columns (NULLs ignored)."""
+    if not table_exists(table):
+        return False
+    bind = op.get_bind()
+    # Build GROUP BY query that filters rows where all columns are NOT NULL
+    cols_csv = ", ".join(columns)
+    not_null_cond = " AND ".join([f"{c} IS NOT NULL" for c in columns]) or "TRUE"
+    q = text(
+        f"""
+        SELECT 1
+        FROM {table}
+        WHERE {not_null_cond}
+        GROUP BY {cols_csv}
+        HAVING COUNT(*) > 1
+        LIMIT 1
+        """
+    )
+    try:
+        return bind.execute(q).first() is not None
+    except Exception:
+        # If the query itself fails, err on the side of skipping the constraint
+        return True
+
+
+def has_orphans(source: str, local_col: str, referent: str, remote_col: str = 'id') -> bool:
+    """Return True if there are rows in source with non-null local_col not present in referent.remote_col."""
+    if not table_exists(source) or not table_exists(referent):
+        return False
+    bind = op.get_bind()
+    q = text(
+        f"""
+        SELECT 1
+        FROM {source} s
+        LEFT JOIN {referent} r ON s.{local_col} = r.{remote_col}
+        WHERE s.{local_col} IS NOT NULL AND r.{remote_col} IS NULL
+        LIMIT 1
+        """
+    )
+    try:
+        return bind.execute(q).first() is not None
+    except Exception:
+        # On error, assume unsafe
+        return True
+
+
 def safe_add_column(table: str, col: sa.Column) -> bool:
     if not table_exists(table):
         return False
@@ -164,42 +221,53 @@ def upgrade():
         safe_add_column('product', sa.Column('shopify_product_id', sa.String(length=64), nullable=True))
         safe_add_column('product', sa.Column('etsy_shop_section_id', sa.String(length=64), nullable=True))
         # unique per org name
-        try:
-            op.create_unique_constraint('unique_product_name_per_org', 'product', ['name', 'organization_id'])
-        except Exception:
-            pass
+        # Unique per-org (name, organization_id) if no duplicates
+        if not unique_exists('product', 'unique_product_name_per_org'):
+            if not has_duplicates('product', ['name', 'organization_id']):
+                try:
+                    op.create_unique_constraint('unique_product_name_per_org', 'product', ['name', 'organization_id'])
+                except Exception:
+                    # If creation fails for any reason, skip to avoid aborting the transaction
+                    pass
         if column_exists('product', 'created_by') and table_exists('user'):
             safe_create_fk('fk_product_created_by_user', 'product', 'user', ['created_by'], ['id'])
 
     # 8) product_sku indexes/uniques (columns largely exist via earlier migrations)
     if table_exists('product_sku'):
         # Ensure expected uniques and indexes
-        try:
-            op.create_unique_constraint('unique_sku_combination', 'product_sku', ['product_id', 'variant_id', 'size_label', 'fifo_id'])
-        except Exception:
-            pass
-        try:
-            op.create_unique_constraint('unique_barcode', 'product_sku', ['barcode'])
-        except Exception:
-            pass
-        try:
-            op.create_unique_constraint('unique_upc', 'product_sku', ['upc'])
-        except Exception:
-            pass
+        # Unique constraints guarded by duplicate checks
+        if not unique_exists('product_sku', 'unique_sku_combination'):
+            if not has_duplicates('product_sku', ['product_id', 'variant_id', 'size_label', 'fifo_id']):
+                try:
+                    op.create_unique_constraint('unique_sku_combination', 'product_sku', ['product_id', 'variant_id', 'size_label', 'fifo_id'])
+                except Exception:
+                    pass
+        if not unique_exists('product_sku', 'unique_barcode'):
+            if not has_duplicates('product_sku', ['barcode']):
+                try:
+                    op.create_unique_constraint('unique_barcode', 'product_sku', ['barcode'])
+                except Exception:
+                    pass
+        if not unique_exists('product_sku', 'unique_upc'):
+            if not has_duplicates('product_sku', ['upc']):
+                try:
+                    op.create_unique_constraint('unique_upc', 'product_sku', ['upc'])
+                except Exception:
+                    pass
         safe_create_index('idx_product_variant', 'product_sku', ['product_id', 'variant_id'])
         safe_create_index('idx_active_skus', 'product_sku', ['is_active', 'is_product_active'])
         safe_create_index('idx_inventory_item', 'product_sku', ['inventory_item_id'])
         safe_create_index('ix_product_sku_inventory_item_id', 'product_sku', ['inventory_item_id'])
         # Common FKs
-        if table_exists('product'):
+        if table_exists('product') and not has_orphans('product_sku', 'product_id', 'product'):
             safe_create_fk('fk_sku_product', 'product_sku', 'product', ['product_id'], ['id'])
-        if table_exists('product_variant'):
+        if table_exists('product_variant') and not has_orphans('product_sku', 'variant_id', 'product_variant'):
             safe_create_fk('fk_sku_variant', 'product_sku', 'product_variant', ['variant_id'], ['id'])
-        if table_exists('batch'):
+        if table_exists('batch') and not has_orphans('product_sku', 'batch_id', 'batch'):
             safe_create_fk('fk_sku_batch', 'product_sku', 'batch', ['batch_id'], ['id'])
-        if table_exists('inventory_item'):
+        if table_exists('inventory_item') and not has_orphans('product_sku', 'inventory_item_id', 'inventory_item'):
             safe_create_fk('fk_sku_inventory_item', 'product_sku', 'inventory_item', ['inventory_item_id'], ['id'])
-        if table_exists('user'):
+        if table_exists('user') and not has_orphans('product_sku', 'created_by', 'user'):
             safe_create_fk('fk_sku_created_by', 'product_sku', 'user', ['created_by'], ['id'])
 
     # 9) product_sku_history alignment
@@ -212,9 +280,9 @@ def upgrade():
         safe_create_index('idx_fifo_code', 'product_sku_history', ['fifo_code'])
         safe_create_index('idx_inventory_item_remaining', 'product_sku_history', ['inventory_item_id', 'remaining_quantity'])
         safe_create_index('idx_inventory_item_timestamp', 'product_sku_history', ['inventory_item_id', 'timestamp'])
-        if table_exists('organization'):
+        if table_exists('organization') and not has_orphans('product_sku_history', 'organization_id', 'organization'):
             safe_create_fk('fk_psh_org', 'product_sku_history', 'organization', ['organization_id'], ['id'])
-        if table_exists('inventory_item'):
+        if table_exists('inventory_item') and not has_orphans('product_sku_history', 'inventory_item_id', 'inventory_item'):
             safe_create_fk('fk_psh_inventory_item', 'product_sku_history', 'inventory_item', ['inventory_item_id'], ['id'])
 
     # 10) inventory_category alignment
@@ -223,13 +291,16 @@ def upgrade():
         safe_add_column('inventory_category', sa.Column('item_type', sa.String(length=64), nullable=True))
         safe_add_column('inventory_category', sa.Column('created_by', sa.Integer(), nullable=True))
         # unique per org constraint
-        try:
-            op.create_unique_constraint('_invcat_name_type_org_uc', 'inventory_category', ['name', 'item_type', 'organization_id'])
-        except Exception:
-            pass
-        if column_exists('inventory_category', 'created_by') and table_exists('user'):
+        if not unique_exists('inventory_category', '_invcat_name_type_org_uc'):
+            # Duplicate check (coalesce item_type to empty string to treat NULLs distinctly)
+            if not has_duplicates('inventory_category', ['name', 'item_type', 'organization_id']):
+                try:
+                    op.create_unique_constraint('_invcat_name_type_org_uc', 'inventory_category', ['name', 'item_type', 'organization_id'])
+                except Exception:
+                    pass
+        if column_exists('inventory_category', 'created_by') and table_exists('user') and not has_orphans('inventory_category', 'created_by', 'user'):
             safe_create_fk('fk_invcat_created_by', 'inventory_category', 'user', ['created_by'], ['id'])
-        if column_exists('inventory_category', 'organization_id') and table_exists('organization'):
+        if column_exists('inventory_category', 'organization_id') and table_exists('organization') and not has_orphans('inventory_category', 'organization_id', 'organization'):
             safe_create_fk('fk_invcat_org', 'inventory_category', 'organization', ['organization_id'], ['id'])
 
     # 11) tag alignment
@@ -237,10 +308,12 @@ def upgrade():
         safe_add_column('tag', sa.Column('description', sa.Text(), nullable=True))
         safe_add_column('tag', sa.Column('is_active', sa.Boolean(), nullable=True, server_default=sa.text('true')))
         safe_add_column('tag', sa.Column('created_by', sa.Integer(), nullable=True))
-        try:
-            op.create_unique_constraint('_tag_name_org_uc', 'tag', ['name', 'organization_id'])
-        except Exception:
-            pass
+        if not unique_exists('tag', '_tag_name_org_uc'):
+            if not has_duplicates('tag', ['name', 'organization_id']):
+                try:
+                    op.create_unique_constraint('_tag_name_org_uc', 'tag', ['name', 'organization_id'])
+                except Exception:
+                    pass
         if column_exists('tag', 'created_by') and table_exists('user'):
             safe_create_fk('fk_tag_created_by', 'tag', 'user', ['created_by'], ['id'])
 
@@ -270,7 +343,7 @@ def upgrade():
         safe_create_index('idx_reserved_item_status', 'reservation', ['reserved_item_id', 'status'])
         safe_create_index('ix_reservation_order_id', 'reservation', ['order_id'])
         # FKs best-effort
-        if table_exists('user'):
+        if table_exists('user') and not has_orphans('reservation', 'created_by', 'user'):
             safe_create_fk('fk_res_created_by', 'reservation', 'user', ['created_by'], ['id'])
 
     # 13) stats alignments

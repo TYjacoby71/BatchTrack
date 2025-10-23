@@ -11,7 +11,7 @@ This migration ensures the association table expected by the models
 
 from alembic import op
 import sqlalchemy as sa
-from sqlalchemy import inspect
+from sqlalchemy import inspect, text
 
 
 revision = '20251011_01'
@@ -47,8 +47,12 @@ def upgrade():
 
 
 def downgrade():
-    # Best-effort drop; safe if it doesn't exist
+    # Best-effort drop using existence check to avoid aborting the transaction
     try:
-        op.drop_table('tier_allowed_addon')
+        bind = op.get_bind()
+        # Use IF EXISTS to be extra safe on Postgres
+        if _table_exists('tier_allowed_addon'):
+            bind.execute(text("DROP TABLE IF EXISTS tier_allowed_addon CASCADE"))
     except Exception:
+        # Do not re-raise; keep downgrade idempotent and non-fatal
         pass
