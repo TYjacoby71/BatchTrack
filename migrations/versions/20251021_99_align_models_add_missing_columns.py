@@ -179,18 +179,24 @@ def safe_create_fk(name: str, source: str, referent: str, local_cols, remote_col
 def upgrade():
     # 1) organization_addon junction table
     if table_exists('organization') and table_exists('addon') and not table_exists('organization_addon'):
-        op.create_table(
-            'organization_addon',
-            sa.Column('id', sa.Integer(), primary_key=True, nullable=False),
-            sa.Column('organization_id', sa.Integer(), nullable=False, index=True),
-            sa.Column('addon_id', sa.Integer(), nullable=False, index=True),
-            sa.Column('active', sa.Boolean(), nullable=False, server_default=sa.text('true')),
-            sa.Column('source', sa.String(length=32), nullable=False, server_default='subscription_item'),
-            sa.Column('stripe_item_id', sa.String(length=128), nullable=True),
-            sa.Column('current_period_end', sa.DateTime(), nullable=True),
-            sa.Column('created_at', sa.DateTime(), server_default=sa.text('CURRENT_TIMESTAMP'), nullable=False),
-            sa.Column('updated_at', sa.DateTime(), server_default=sa.text('CURRENT_TIMESTAMP'), nullable=False),
-        )
+        # Guard table creation so any DDL error doesn't abort the migration tx
+        with in_savepoint():
+            try:
+                op.create_table(
+                    'organization_addon',
+                    sa.Column('id', sa.Integer(), primary_key=True, nullable=False),
+                    sa.Column('organization_id', sa.Integer(), nullable=False),
+                    sa.Column('addon_id', sa.Integer(), nullable=False),
+                    sa.Column('active', sa.Boolean(), nullable=False, server_default=sa.text('true')),
+                    sa.Column('source', sa.String(length=32), nullable=False, server_default='subscription_item'),
+                    sa.Column('stripe_item_id', sa.String(length=128), nullable=True),
+                    sa.Column('current_period_end', sa.DateTime(), nullable=True),
+                    sa.Column('created_at', sa.DateTime(), server_default=sa.text('CURRENT_TIMESTAMP'), nullable=False),
+                    sa.Column('updated_at', sa.DateTime(), server_default=sa.text('CURRENT_TIMESTAMP'), nullable=False),
+                )
+            except Exception as e:
+                # Swallow inside savepoint; indexes/FKs below are also guarded
+                print(f"   ⚠️  Skipping organization_addon table creation: {e}")
         # Indexes
         safe_create_index('ix_organization_addon_organization_id', 'organization_addon', ['organization_id'])
         safe_create_index('ix_organization_addon_addon_id', 'organization_addon', ['addon_id'])
