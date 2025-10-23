@@ -71,6 +71,23 @@ def create_app(config=None):
     # Register application components
     register_middleware(app)
     register_blueprints(app)
+    # Import models for Alembic
+    from . import models
+
+    # Only create tables if not in CI drift check mode
+    # This prevents db.create_all() from interfering with migration-only schema building
+    if not os.environ.get('SQLALCHEMY_DISABLE_CREATE_ALL'):
+        logger.info("🔧 Database initialization allowed - creating tables if needed")
+        with app.app_context():
+            try:
+                db.create_all()
+                logger.info("✅ Database tables created/verified")
+            except Exception as e:
+                logger.warning(f"⚠️  Database table creation skipped: {e}")
+    else:
+        logger.info("🔒 Database creation disabled for CI drift check")
+
+    # Register context processors
     register_template_context(app)
     register_template_filters(app)
 
@@ -86,9 +103,6 @@ def create_app(config=None):
     # Register CLI commands
     from .management import register_commands
     register_commands(app)
-
-    # Import models to ensure they're registered
-    from . import models
 
     return app
 
