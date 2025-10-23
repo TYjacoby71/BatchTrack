@@ -7,7 +7,7 @@ Create Date: 2025-10-01 00:00:00.000000
 """
 from alembic import op
 import sqlalchemy as sa
-from migrations.postgres_helpers import table_exists, safe_add_column
+from migrations.postgres_helpers import table_exists, safe_add_column, safe_drop_table
 
 
 # revision identifiers, used by Alembic.
@@ -64,12 +64,17 @@ def downgrade():
         except Exception as e:
             print(f"⚠️  Could not remove allowed_addon_keys: {e}")
 
-    # Drop addon table
+    # Drop dependent association tables first, then addon itself
+    # tier_allowed_addon depends on addon
+    safe_drop_table('tier_allowed_addon', cascade=True)
+    # organization_addon depends on addon (introduced later); drop if present
+    safe_drop_table('organization_addon', cascade=True)
+    # Finally drop addon table with cascade to remove any residual FKs
     if table_exists('addon'):
-        try:
-            op.drop_table('addon')
+        dropped = safe_drop_table('addon', cascade=True)
+        if not dropped:
+            print("⚠️  Could not drop addon table safely; dependencies may remain")
+        else:
             print("✅ Dropped addon table")
-        except Exception as e:
-            print(f"⚠️  Could not drop addon table: {e}")
 
     print("✅ Addon models and tier allowed addons downgrade completed")

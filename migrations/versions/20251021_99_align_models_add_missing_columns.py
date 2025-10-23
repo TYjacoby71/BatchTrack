@@ -11,6 +11,13 @@ It avoids destructive drops/renames for safety.
 from alembic import op
 import sqlalchemy as sa
 from sqlalchemy import inspect, text
+from contextlib import contextmanager
+from migrations.postgres_helpers import (
+    table_exists,
+    in_savepoint,
+    ensure_unique_constraint_or_index,
+    safe_drop_table,
+)
 
 revision = '20251021_99'
 down_revision = '20251021_04'
@@ -71,6 +78,21 @@ def unique_exists(table: str, name: str) -> bool:
         return False
 
 
+@contextmanager
+def in_savepoint():
+    """Run DDL inside a savepoint so failures don't abort the transaction."""
+    conn = op.get_bind()
+    nested = conn.begin_nested()
+    try:
+        yield
+        nested.commit()
+    except Exception:
+        try:
+            nested.rollback()
+        except Exception:
+            pass
+
+
 def has_duplicates(table: str, columns: list[str]) -> bool:
     """Return True if any duplicate rows exist for the given columns (NULLs ignored)."""
     if not table_exists(table):
@@ -122,33 +144,36 @@ def safe_add_column(table: str, col: sa.Column) -> bool:
         return False
     if column_exists(table, col.name):
         return False
-    try:
-        with op.batch_alter_table(table) as batch_op:
-            batch_op.add_column(col)
-        return True
-    except Exception:
-        return False
+    with in_savepoint():
+        try:
+            with op.batch_alter_table(table) as batch_op:
+                batch_op.add_column(col)
+            return True
+        except Exception:
+            return False
 
 
 def safe_create_index(name: str, table: str, columns: list[str], unique: bool = False) -> bool:
     if index_exists(table, name):
         return False
-    try:
-        op.create_index(name, table, columns, unique=unique)
-        return True
-    except Exception:
-        return False
+    with in_savepoint():
+        try:
+            op.create_index(name, table, columns, unique=unique)
+            return True
+        except Exception:
+            return False
 
 
 def safe_create_fk(name: str, source: str, referent: str, local_cols, remote_cols) -> bool:
     if fk_exists(source, name):
         return False
-    try:
-        with op.batch_alter_table(source) as batch_op:
-            batch_op.create_foreign_key(name, referent, local_cols, remote_cols)
-        return True
-    except Exception:
-        return False
+    with in_savepoint():
+        try:
+            with op.batch_alter_table(source) as batch_op:
+                batch_op.create_foreign_key(name, referent, local_cols, remote_cols)
+            return True
+        except Exception:
+            return False
 
 
 def upgrade():
@@ -417,5 +442,8 @@ def upgrade():
 
 
 def downgrade():
-    # Non-destructive downgrade to keep production safe; no-op
-    pass
+    # Best-effort cleanup of objects introduced here; keep non-destructive
+    # Drop junction table if we created it
+    if table_exists('organization_addon'):
+        # Use CASCADE to ensure any FK dependencies are removed safely
+        safe_drop_table('organization_addon', cascade=True)
