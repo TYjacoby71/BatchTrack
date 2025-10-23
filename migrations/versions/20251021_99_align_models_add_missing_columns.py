@@ -1,7 +1,7 @@
 """
 Align DB schema with current models: add missing columns, FKs, indexes.
 Revision ID: 20251021_99
-Revises: 20251021_03
+Revises: 20251021_04
 Create Date: 2025-10-21
 
 This migration is intentionally idempotent and adds only missing columns/indexes
@@ -13,7 +13,7 @@ import sqlalchemy as sa
 from sqlalchemy import inspect, text
 
 revision = '20251021_99'
-down_revision = '20251021_03'
+down_revision = '20251021_04'
 branch_labels = None
 depends_on = None
 
