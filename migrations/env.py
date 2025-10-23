@@ -2,6 +2,7 @@ import logging
 import os
 import sys
 from logging.config import fileConfig
+from sqlalchemy import text  # needed for raw SQL (e.g., SQLite temp table cleanup)
 
 from flask import current_app
 
@@ -136,6 +137,7 @@ def run_migrations_online():
     # when there are no changes to the schema
     # reference: http://alembic.zzzcomputing.com/en/latest/cookbook.html
     def process_revision_directives(context, revision, directives):
+        """Suppress file creation when no changes are detected."""
         if getattr(config.cmd_opts, 'autogenerate', False):
             script = directives[0]
             if script.upgrade_ops.is_empty():
