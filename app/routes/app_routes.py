@@ -92,7 +92,10 @@ def dashboard():
             print("---!!! DASHBOARD ALERTS ERROR (ORIGINAL SIN?) !!!---")
             print(f"Error: {alert_error}")
             print("----------------------------------------------------")
-            db.session.rollback()
+            try:
+                db.session.rollback()
+            except Exception:
+                pass
             alert_data = {'alerts': [], 'total_alerts': 0, 'hidden_count': 0}
 
         # Get inventory alerts with explicit error catching

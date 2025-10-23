@@ -23,12 +23,16 @@ class DashboardAlertService:
         """Get prioritized alerts for dashboard with cognitive load management"""
         import logging
 
-        # Get user preferences
+        # Get user preferences (guard against DB schema/availability issues)
         user_prefs = None
         if current_user and current_user.is_authenticated:
-            user_prefs = UserPreferences.get_for_user(current_user.id)
-            if user_prefs and max_alerts is None:
-                max_alerts = user_prefs.max_dashboard_alerts
+            try:
+                user_prefs = UserPreferences.get_for_user(current_user.id)
+                if user_prefs and max_alerts is None:
+                    max_alerts = user_prefs.max_dashboard_alerts
+            except Exception as prefs_error:
+                logging.warning(f"User preferences unavailable, using defaults: {prefs_error}")
+                user_prefs = None
 
         if max_alerts is None:
             max_alerts = 3  # Default fallback
