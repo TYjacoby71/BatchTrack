@@ -1,0 +1,56 @@
+name: Migration Safety Check
+on: [push, pull_request]
+
+jobs:
+  migration-check:
+    runs-on: ubuntu-latest
+    env:
+      FLASK_APP: wsgi:app
+      PYTHONPATH: ${{ github.workspace }}
+      SQLALCHEMY_DISABLE_CREATE_ALL: "1"
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip wheel
+          pip install -r requirements.txt
+
+      - name: Check for migration drift (ephemeral DB)
+        shell: bash
+        run: |
+          tmpdir="$(mktemp -d)"
+          trap 'rm -rf "$tmpdir"' EXIT
+          export DATABASE_URL="sqlite:///$tmpdir/ci.db"
+
+          # Build schema via Alembic only
+          flask db upgrade
+
+          # Clean any stale ci_check files
+          rm -f migrations/versions/*ci_check*.py || true
+
+          # Try to autogenerate a check revision; if models != schema, a file appears
+          rev="ci_check_$(date +%s)"
+          flask db migrate -m "$rev" --rev-id "$rev" || true
+
+          if compgen -G "migrations/versions/*${rev}*.py" > /dev/null; then
+            echo "❌ Migration drift detected! Models don't match migrations."
+            echo "Run 'flask db migrate' locally and commit the new migration."
+            exit 1
+          fi
+          echo "✅ No migration drift detected."
+
+      - name: Check for multiple heads
+        shell: bash
+        run: |
+          heads_count="$(flask db heads | wc -l)"
+          if [ "$heads_count" -gt 1 ]; then
+            echo "❌ Multiple migration heads detected!" 
+            flask db heads
+            exit 1
+          fi
+          echo "✅ Single migration head confirmed."
