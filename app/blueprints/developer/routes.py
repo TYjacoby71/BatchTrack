@@ -1360,6 +1360,7 @@ def inventory_analytics_stub():
 def integrations_checklist():
     """Comprehensive integrations and launch checklist (developer only)."""
     from flask import current_app
+    import os, re
     from app.services.email_service import EmailService
     from app.services.stripe_service import StripeService
     from app.models.subscription_tier import SubscriptionTier
@@ -1376,12 +1377,62 @@ def integrations_checklist():
 
     # Stripe status
     stripe_secret = current_app.config.get('STRIPE_SECRET_KEY')
+    stripe_publishable = current_app.config.get('STRIPE_PUBLISHABLE_KEY')
     stripe_webhook_secret = current_app.config.get('STRIPE_WEBHOOK_SECRET')
     tiers_count = SubscriptionTier.query.count()
     stripe_status = {
         'secret_key_present': bool(stripe_secret),
+        'publishable_key_present': bool(stripe_publishable),
         'webhook_secret_present': bool(stripe_webhook_secret),
         'tiers_configured': tiers_count > 0,
+    }
+
+    # Core environment & secrets
+    env_core = {
+        'FLASK_ENV': os.environ.get('FLASK_ENV', 'development'),
+        'REPLIT_DEPLOYMENT': os.environ.get('REPLIT_DEPLOYMENT', 'false'),
+        'SECRET_KEY_present': bool(os.environ.get('FLASK_SECRET_KEY') or current_app.config.get('SECRET_KEY')),
+        'LOG_LEVEL': current_app.config.get('LOG_LEVEL', 'WARNING'),
+    }
+
+    # Database info
+    uri = current_app.config.get('SQLALCHEMY_DATABASE_URI', '')
+    def _mask_url(u: str) -> str:
+        try:
+            return re.sub(r"//[^:@/]+:[^@/]+@", "//****:****@", u)
+        except Exception:
+            return u
+    backend = 'PostgreSQL' if uri.startswith('postgres') else ('SQLite' if 'sqlite' in uri else 'Other')
+    source = 'fallback'
+    if 'sqlite' not in uri:
+        if os.environ.get('DATABASE_INTERNAL_URL'):
+            source = 'DATABASE_INTERNAL_URL'
+        elif os.environ.get('DATABASE_URL'):
+            source = 'DATABASE_URL'
+        else:
+            source = 'config'
+    db_info = {
+        'uri': _mask_url(uri),
+        'backend': backend,
+        'source': source,
+        'DATABASE_INTERNAL_URL_present': bool(os.environ.get('DATABASE_INTERNAL_URL')),
+        'DATABASE_URL_present': bool(os.environ.get('DATABASE_URL')),
+    }
+
+    # Cache / rate limit info
+    cache_info = {
+        'RATELIMIT_STORAGE_URL': current_app.config.get('RATELIMIT_STORAGE_URL', 'memory://'),
+        'REDIS_URL_present': bool(os.environ.get('REDIS_URL')),
+    }
+
+    # OAuth & marketplace
+    oauth_status = {
+        'GOOGLE_OAUTH_CLIENT_ID_present': bool(current_app.config.get('GOOGLE_OAUTH_CLIENT_ID')),
+        'GOOGLE_OAUTH_CLIENT_SECRET_present': bool(current_app.config.get('GOOGLE_OAUTH_CLIENT_SECRET')),
+    }
+    whop_status = {
+        'WHOP_API_KEY_present': bool(current_app.config.get('WHOP_API_KEY')),
+        'WHOP_APP_ID_present': bool(current_app.config.get('WHOP_APP_ID')),
     }
 
     # Feature flags
@@ -1415,7 +1466,12 @@ def integrations_checklist():
         tiers_count=tiers_count,
         feature_flags=feature_flags,
         logging_status=logging_status,
-        shopify_status=shopify_status
+        shopify_status=shopify_status,
+        env_core=env_core,
+        db_info=db_info,
+        cache_info=cache_info,
+        oauth_status=oauth_status,
+        whop_status=whop_status,
     )
 
 

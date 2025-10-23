@@ -43,6 +43,7 @@
   <h4>2) Billing (Stripe)</h4>
   <p>Status:
     <span class="badge {% if stripe_status.secret_key_present %}bg-success{% else %}bg-danger{% endif %}">Secret Key</span>
+    <span class="badge {% if stripe_status.publishable_key_present %}bg-success{% else %}bg-danger{% endif %}">Publishable Key</span>
     <span class="badge {% if stripe_status.webhook_secret_present %}bg-success{% else %}bg-danger{% endif %}">Webhook Secret</span>
     <span class="badge {% if stripe_status.tiers_configured %}bg-success{% else %}bg-danger{% endif %}">Tiers</span>
   </p>
@@ -53,6 +54,7 @@
       <li>Configure environment:
         <ul>
           <li>STRIPE_SECRET_KEY=sk_live_xxx</li>
+          <li>STRIPE_PUBLISHABLE_KEY=pk_live_xxx</li>
           <li>STRIPE_WEBHOOK_SECRET=whsec_xxx</li>
         </ul>
       </li>
@@ -335,6 +337,32 @@
     <li>Tiers configured in DB: {% if tiers_count > 0 %}<span class="text-success">Yes</span>{% else %}<span class="text-danger">No</span>{% endif %}</li>
     <li>Feature flags set appropriately: <span class="text-muted">Review above</span></li>
   </ul>
+  <hr>
+  <h4>7) Core Environment</h4>
+  <ul>
+    <li>Environment: <code>{{ env_core.FLASK_ENV }}</code></li>
+    <li>Replit Deployment: <code>{{ env_core.REPLIT_DEPLOYMENT }}</code></li>
+    <li>SECRET_KEY present: {% if env_core.SECRET_KEY_present %}<span class="text-success">Yes</span>{% else %}<span class="text-danger">No</span>{% endif %}</li>
+  </ul>
+  <div class="alert alert-info">
+    <strong>Required environment variables:</strong>
+    <ul class="mb-0">
+      <li>Database: <code>DATABASE_INTERNAL_URL</code> (preferred) or <code>DATABASE_URL</code> — current backend: <strong>{{ db_info.backend }}</strong></li>
+      <li>Flask: <code>FLASK_SECRET_KEY</code> (or platform secret), <code>FLASK_ENV</code></li>
+      <li>Redis (optional for rate limits): <code>REDIS_URL</code></li>
+      <li>Stripe: <code>STRIPE_SECRET_KEY</code>, <code>STRIPE_PUBLISHABLE_KEY</code>, <code>STRIPE_WEBHOOK_SECRET</code></li>
+      <li>Email: depending on provider (SMTP vars or SENDGRID_API_KEY/POSTMARK_SERVER_TOKEN/MAILGUN_API_KEY & MAILGUN_DOMAIN)</li>
+      <li>OAuth (Google): <code>GOOGLE_OAUTH_CLIENT_ID</code>, <code>GOOGLE_OAUTH_CLIENT_SECRET</code></li>
+      <li>Whop (optional): <code>WHOP_API_KEY</code>, <code>WHOP_APP_ID</code></li>
+    </ul>
+  </div>
+  <div class="card p-3">
+    <h6>Database Configuration</h6>
+    <div>Current URI: <code>{{ db_info.uri }}</code></div>
+    <div>Detected source: <code>{{ db_info.source }}</code></div>
+    <div class="text-muted small">Set <code>DATABASE_INTERNAL_URL</code> or <code>DATABASE_URL</code> for Postgres; falls back to SQLite for local dev.</div>
+  </div>
+
 
   <div class="alert alert-secondary">
     For detailed requirements and status, see <a href="{{ url_for('developer.dashboard') }}">Developer Dashboard</a> and <a href="/docs/CRITICAL_PRELAUNCH.md" target="_blank">CRITICAL_PRELAUNCH.md</a>.

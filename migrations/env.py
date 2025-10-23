@@ -111,12 +111,14 @@ def run_migrations_offline():
 
     """
     url = config.get_main_option("sqlalchemy.url")
+    # Mirror online config defaults coming from Flask-Migrate init
+    conf_args = getattr(current_app.extensions.get('migrate'), 'configure_args', {})
     context.configure(
         url=url,
         target_metadata=get_metadata(),
         literal_binds=True,
-        compare_type=False,
-        compare_server_default=False,
+        compare_type=conf_args.get("compare_type", False),
+        compare_server_default=conf_args.get("compare_server_default", False),
     )
 
     with context.begin_transaction():

@@ -60,8 +60,7 @@ def create_app(config=None):
     limiter.init_app(app)
     configure_login_manager(app)
 
-    # Initialize session configuration
-    app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(days=31)
+    # Session lifetime should come from config classes; avoid overriding here
 
     # Clear all dismissed alerts on app restart - Flask 2.2+ compatible
     with app.app_context():
@@ -74,10 +73,15 @@ def create_app(config=None):
     # Import models for Alembic
     from . import models
 
-    # Only create tables if not in CI drift check mode
-    # This prevents db.create_all() from interfering with migration-only schema building
-    if not os.environ.get('SQLALCHEMY_DISABLE_CREATE_ALL'):
-        logger.info("🔧 Database initialization allowed - creating tables if needed")
+    # Only create tables when explicitly enabled for local/dev throwaway setups.
+    # Honor legacy disable flag if present.
+    create_all_disabled = os.environ.get('SQLALCHEMY_DISABLE_CREATE_ALL')
+    create_all_enabled = os.environ.get('SQLALCHEMY_ENABLE_CREATE_ALL') in {"1", "true", "True", "yes", "YES"}
+
+    if create_all_disabled:
+        logger.info("🔒 db.create_all() disabled via SQLALCHEMY_DISABLE_CREATE_ALL")
+    elif create_all_enabled:
+        logger.info("🔧 Local dev: creating tables via db.create_all()")
         with app.app_context():
             try:
                 db.create_all()
@@ -85,7 +89,7 @@ def create_app(config=None):
             except Exception as e:
                 logger.warning(f"⚠️  Database table creation skipped: {e}")
     else:
-        logger.info("🔒 Database creation disabled for CI drift check")
+        logger.info("🔒 db.create_all() not enabled; Alembic migrations are the source of truth")
 
     # Register context processors
     register_template_context(app)
