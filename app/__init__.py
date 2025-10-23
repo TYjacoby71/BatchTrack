@@ -74,18 +74,22 @@ def create_app(config=None):
     # Import models for Alembic
     from . import models
 
-    # Only create tables if not in CI drift check mode
-    # This prevents db.create_all() from interfering with migration-only schema building
-    if not os.environ.get('SQLALCHEMY_DISABLE_CREATE_ALL'):
-        logger.info("🔧 Database initialization allowed - creating tables if needed")
+    # Only create tables when explicitly enabled (development convenience only)
+    # Never in CI or production; schema should be managed by Alembic migrations.
+    enable_create_all = (
+        os.environ.get('SQLALCHEMY_ENABLE_CREATE_ALL') == '1'
+        or bool(app.config.get('SQLALCHEMY_ENABLE_CREATE_ALL'))
+    )
+    if enable_create_all:
+        logger.info("🔧 create_all enabled - creating/verifying tables for development")
         with app.app_context():
             try:
                 db.create_all()
                 logger.info("✅ Database tables created/verified")
             except Exception as e:
-                logger.warning(f"⚠️  Database table creation skipped: {e}")
+                logger.warning(f"⚠️ Table creation skipped: {e}")
     else:
-        logger.info("🔒 Database creation disabled for CI drift check")
+        logger.info("🔒 Skipping create_all; using Alembic migrations for schema management")
 
     # Register context processors
     register_template_context(app)

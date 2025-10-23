@@ -1,28 +1,81 @@
-- name: Build test DB (SQLite) and check drift
-  run: |
-    set -euo pipefail
-    export FLASK_APP="app:create_app"   # if your project needs this
-    export DATABASE_URL="sqlite:///test_ci.db"
+name: CI
+on: [push, pull_request]
 
-    # Fresh schema
-    rm -f test_ci.db
-    flask db upgrade
+jobs:
+  tests-and-migrations:
+    runs-on: ubuntu-latest
+    env:
+      FLASK_APP: wsgi:app
+      PYTHONPATH: ${{ github.workspace }}
+      # Prevent app factory from pre-creating tables; we only use Alembic in CI
+      SQLALCHEMY_DISABLE_CREATE_ALL: "1"
 
-    # Try to autogenerate a diff into a deterministic ID
-    # Alembic exits non-zero when no changes; we don't care about that,
-    # we only care if a file appears.
-    rm -f migrations/versions/*ci_test*.py || true
-    flask db migrate -m "ci_check" --rev-id ci_test >/dev/null 2>&1 || true
+    steps:
+      - uses: actions/checkout@v4
 
-    if compgen -G 'migrations/versions/*ci_test*.py' > /dev/null; then
-      echo "❌ Migration drift in CI - models changed without migration"
-      cat migrations/versions/*ci_test*.py || true
-      exit 1
-    fi
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
 
-    echo "✅ Migration safety confirmed"
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip wheel
+          pip install -r requirements.txt
 
-- name: Run tests
-  env:
-    DATABASE_URL: "sqlite:///test_ci.db"
-  run: pytest
+      - name: Migration drift check (ephemeral SQLite)
+        env:
+          SQLALCHEMY_DISABLE_CREATE_ALL: "1"
+          DATABASE_URL: "sqlite:///./.ci_migrate.db"
+        run: |
+          set -euo pipefail
+
+          # Build schema strictly via Alembic migrations
+          rm -f ./.ci_migrate.db || true
+          rm -f migrations/versions/*ci_drift_check*.py || true
+
+          flask db upgrade
+
+          # Autogenerate: if a file appears, there is drift
+          flask db migrate -m "ci_drift_check" --rev-id ci_drift_check >/dev/null 2>&1 || true
+
+          if compgen -G 'migrations/versions/*ci_drift_check*.py' > /dev/null; then
+            echo "❌ Migration drift detected. Run 'flask db migrate' locally and commit."
+            # Show the generated diff for debugging, then clean it up
+            cat migrations/versions/*ci_drift_check*.py || true
+            rm -f migrations/versions/*ci_drift_check*.py || true
+            exit 1
+          fi
+
+          echo "✅ No migration drift."
+          rm -f ./.ci_migrate.db || true
+
+      - name: Check for multiple migration heads
+        run: |
+          set -euo pipefail
+          heads_count=$(flask db heads | wc -l)
+          if [ "$heads_count" -gt 1 ]; then
+            echo "❌ Multiple migration heads detected!"
+            flask db heads
+            exit 1
+          fi
+          echo "✅ Single migration head."
+
+      - name: Prepare test DB with migrations (ephemeral)
+        env:
+          SQLALCHEMY_DISABLE_CREATE_ALL: "1"
+          DATABASE_URL: "sqlite:///./.ci_test.db"
+        run: |
+          set -euo pipefail
+          rm -f ./.ci_test.db || true
+          flask db upgrade
+
+      - name: Run tests
+        env:
+          SQLALCHEMY_DISABLE_CREATE_ALL: "1"
+          DATABASE_URL: "sqlite:///./.ci_test.db"
+        run: pytest -q
+
+      - name: Cleanup
+        if: always()
+        run: |
+          rm -f ./.ci_test.db || true
