@@ -308,7 +308,7 @@ def upgrade():
     sa.Column('organization_id', sa.Integer(), nullable=True),
     sa.Column('user_type', sa.String(length=32), nullable=True),
     sa.Column('is_organization_owner', sa.Boolean(), nullable=True),
-    sa.Column('is_active', sa.Boolean(), nullable=True),
+    sa.Column('is_active', sa.Boolean(), nullable=False, server_default=sa.false()),
     sa.Column('created_at', sa.DateTime(), nullable=True),
     sa.Column('last_login', sa.DateTime(), nullable=True),
     sa.Column('email_verified', sa.Boolean(), nullable=True),
