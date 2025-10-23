@@ -34,6 +34,14 @@ depends_on = None
 # Using shared helpers from migrations.postgres_helpers to reduce duplication
 
 
+def safe_create_fk(name: str, source: str, referent: str, local_cols, remote_cols) -> bool:
+    """Compatibility wrapper used in this migration.
+
+    Delegates to migrations.postgres_helpers.safe_create_foreign_key.
+    """
+    return safe_create_foreign_key(name, source, referent, local_cols, remote_cols)
+
+
 def has_duplicates(table: str, columns: list[str]) -> bool:
     """Return True if any duplicate rows exist for the given columns (NULLs ignored)."""
     if not table_exists(table):
