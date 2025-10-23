@@ -11,6 +11,21 @@ not covered by prior alignment. Designed to work with SQLite and Postgres.
 from alembic import op
 import sqlalchemy as sa
 from sqlalchemy import inspect, text
+from contextlib import contextmanager
+
+# Use a SAVEPOINT so failed DDL doesn't abort the outer transaction
+@contextmanager
+def in_savepoint():
+    conn = op.get_bind()
+    nested = conn.begin_nested()
+    try:
+        yield
+        nested.commit()
+    except Exception:
+        try:
+            nested.rollback()
+        except Exception:
+            pass
 
 revision = '20251021_100'
 down_revision = '20251021_99'
@@ -104,10 +119,17 @@ def has_duplicates(table: str, columns: list[str]) -> bool:
         LIMIT 1
         """
     )
-    try:
-        return bind.execute(q).first() is not None
-    except Exception:
+    # Execute in a SAVEPOINT to avoid aborting outer transaction on error
+    ran = False
+    found = False
+    with in_savepoint():
+        res = bind.execute(q).first()
+        found = res is not None
+        ran = True
+    if not ran:
+        # Assume duplicates (skip creating constraint) if check failed
         return True
+    return found
 
 
 def has_orphans(source: str, local_col: str, referent: str, remote_col: str = 'id') -> bool:
@@ -123,10 +145,16 @@ def has_orphans(source: str, local_col: str, referent: str, remote_col: str = 'i
         LIMIT 1
         """
     )
-    try:
-        return bind.execute(q).first() is not None
-    except Exception:
+    ran = False
+    exists = False
+    with in_savepoint():
+        res = bind.execute(q).first()
+        exists = res is not None
+        ran = True
+    if not ran:
+        # On error, assume unsafe (orphans present)
         return True
+    return exists
 
 
 def safe_add_column(table: str, col: sa.Column) -> bool:
@@ -134,43 +162,47 @@ def safe_add_column(table: str, col: sa.Column) -> bool:
         return False
     if column_exists(table, col.name):
         return False
-    try:
-        with op.batch_alter_table(table) as batch_op:
-            batch_op.add_column(col)
-        return True
-    except Exception:
-        return False
+    with in_savepoint():
+        try:
+            with op.batch_alter_table(table) as batch_op:
+                batch_op.add_column(col)
+            return True
+        except Exception:
+            return False
 
 
 def safe_drop_column(table: str, column: str) -> bool:
     if not table_exists(table) or not column_exists(table, column):
         return False
-    try:
-        with op.batch_alter_table(table) as batch_op:
-            batch_op.drop_column(column)
-        return True
-    except Exception:
-        return False
+    with in_savepoint():
+        try:
+            with op.batch_alter_table(table) as batch_op:
+                batch_op.drop_column(column)
+            return True
+        except Exception:
+            return False
 
 
 def safe_create_index(name: str, table: str, columns: list[str], unique: bool = False) -> bool:
     if index_exists(table, name):
         return False
-    try:
-        op.create_index(name, table, columns, unique=unique)
-        return True
-    except Exception:
-        return False
+    with in_savepoint():
+        try:
+            op.create_index(name, table, columns, unique=unique)
+            return True
+        except Exception:
+            return False
 
 
 def safe_drop_index(name: str, table: str) -> bool:
     if not index_exists(table, name):
         return False
-    try:
-        op.drop_index(name, table_name=table)
-        return True
-    except Exception:
-        return False
+    with in_savepoint():
+        try:
+            op.drop_index(name, table_name=table)
+            return True
+        except Exception:
+            return False
 
 
 def safe_create_unique(name: str, table: str, columns: list[str]) -> bool:
@@ -179,21 +211,23 @@ def safe_create_unique(name: str, table: str, columns: list[str]) -> bool:
     # Avoid creating if duplicates exist; would abort transaction
     if has_duplicates(table, columns):
         return False
-    try:
-        op.create_unique_constraint(name, table, columns)
-        return True
-    except Exception:
-        return False
+    with in_savepoint():
+        try:
+            op.create_unique_constraint(name, table, columns)
+            return True
+        except Exception:
+            return False
 
 
 def safe_drop_unique(name: str, table: str) -> bool:
     if not unique_exists(table, name):
         return False
-    try:
-        op.drop_constraint(name, table, type_='unique')
-        return True
-    except Exception:
-        return False
+    with in_savepoint():
+        try:
+            op.drop_constraint(name, table, type_='unique')
+            return True
+        except Exception:
+            return False
 
 
 def safe_create_fk(name: str, source: str, referent: str, local_cols, remote_cols) -> bool:
@@ -208,23 +242,25 @@ def safe_create_fk(name: str, source: str, referent: str, local_cols, remote_col
     local_col = cols[0] if cols else None
     if local_col and has_orphans(source, local_col, referent, remote_cols[0] if remote_cols else 'id'):
         return False
-    try:
-        with op.batch_alter_table(source) as batch_op:
-            batch_op.create_foreign_key(name, referent, local_cols, remote_cols)
-        return True
-    except Exception:
-        return False
+    with in_savepoint():
+        try:
+            with op.batch_alter_table(source) as batch_op:
+                batch_op.create_foreign_key(name, referent, local_cols, remote_cols)
+            return True
+        except Exception:
+            return False
 
 
 def safe_drop_fk_by_name(table: str, name: str) -> bool:
     if not fk_exists(table, name):
         return False
-    try:
-        with op.batch_alter_table(table) as batch_op:
-            batch_op.drop_constraint(name, type_='foreignkey')
-        return True
-    except Exception:
-        return False
+    with in_savepoint():
+        try:
+            with op.batch_alter_table(table) as batch_op:
+                batch_op.drop_constraint(name, type_='foreignkey')
+            return True
+        except Exception:
+            return False
 
 
 def safe_drop_fk_by_columns(table: str, local_cols: list[str]) -> bool:
@@ -247,18 +283,19 @@ def safe_alter_not_null(table: str, column: str, nullable: bool, server_default:
         except Exception:
             # If check fails, err on safe side and skip
             return False
-    try:
-        with op.batch_alter_table(table) as batch_op:
-            batch_op.alter_column(column, existing_type=sa.Text(), nullable=nullable, server_default=server_default)
-        return True
-    except Exception:
-        # Fallback: try without existing_type
+    with in_savepoint():
         try:
             with op.batch_alter_table(table) as batch_op:
-                batch_op.alter_column(column, nullable=nullable, server_default=server_default)
+                batch_op.alter_column(column, existing_type=sa.Text(), nullable=nullable, server_default=server_default)
             return True
         except Exception:
-            return False
+            # Fallback: try without existing_type
+            try:
+                with op.batch_alter_table(table) as batch_op:
+                    batch_op.alter_column(column, nullable=nullable, server_default=server_default)
+                return True
+            except Exception:
+                return False
 
 
 def upgrade():

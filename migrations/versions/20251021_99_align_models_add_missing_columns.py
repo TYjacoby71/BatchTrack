@@ -111,11 +111,17 @@ def has_duplicates(table: str, columns: list[str]) -> bool:
         LIMIT 1
         """
     )
-    try:
-        return bind.execute(q).first() is not None
-    except Exception:
-        # If the query itself fails, err on the side of skipping the constraint
+    # Run inside a SAVEPOINT to avoid aborting the outer transaction on error
+    ran = False
+    found = False
+    with in_savepoint():
+        res = bind.execute(q).first()
+        found = res is not None
+        ran = True
+    # If the query failed, treat as duplicates present to skip unsafe constraints
+    if not ran:
         return True
+    return found
 
 
 def has_orphans(source: str, local_col: str, referent: str, remote_col: str = 'id') -> bool:
@@ -132,11 +138,16 @@ def has_orphans(source: str, local_col: str, referent: str, remote_col: str = 'i
         LIMIT 1
         """
     )
-    try:
-        return bind.execute(q).first() is not None
-    except Exception:
-        # On error, assume unsafe
+    ran = False
+    has = False
+    with in_savepoint():
+        res = bind.execute(q).first()
+        has = res is not None
+        ran = True
+    # If error, assume unsafe (orphans present)
+    if not ran:
         return True
+    return has
 
 
 def safe_add_column(table: str, col: sa.Column) -> bool:
