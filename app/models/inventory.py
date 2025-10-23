@@ -86,7 +86,8 @@ class InventoryItem(ScopedModelMixin, db.Model):
         - Fallback to item name on any error.
         """
         try:
-            if self.type != 'container':
+            # Treat both 'container' and 'packaging' as vessel-like for display purposes
+            if self.type not in ('container', 'packaging'):
                 return self.name
             style = (self.container_style or '').strip()
             material = (self.container_material or '').strip()
@@ -113,6 +114,16 @@ class InventoryItem(ScopedModelMixin, db.Model):
             return assembled or self.name
         except Exception:
             return self.name
+
+    # Backwards-compatibility alias: many parts of the app still use
+    # 'container_type' semantically; persist to the new 'container_shape' column.
+    @property
+    def container_type(self):
+        return getattr(self, 'container_shape', None)
+
+    @container_type.setter
+    def container_type(self, value):
+        self.container_shape = value
 
     def belongs_to_user(self):
         """Check if this record belongs to the current user's organization"""
