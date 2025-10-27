@@ -39,22 +39,25 @@ def create_inventory_item(form_data, organization_id, created_by):
         if global_item and item_type != global_item.item_type:
             return False, f"Selected global item type '{global_item.item_type}' does not match item type '{item_type}'.", None
 
-        # Handle unit - get from form or default (prefer global item default)
-        unit_input = form_data.get('unit', '').strip()
-        if not unit_input and global_item and global_item.default_unit:
+        # Handle unit - prefer global item's default unit, then form input
+        unit_input = None
+        if global_item and global_item.default_unit:
+            # Use global item's default unit directly
             unit_input = global_item.default_unit
+        elif form_data.get('unit', '').strip():
+            # Fall back to form input if no global item default
+            unit_input = form_data.get('unit', '').strip()
 
         if unit_input:
-            # Try to find existing unit or create/validate
-            unit = db.session.query(Unit).filter_by(name=unit_input).first()
-            if not unit:
-                # Create new unit if it doesn't exist
-                unit = Unit(name=unit_input, symbol=unit_input)
-                db.session.add(unit)
-                db.session.flush()
-            final_unit = unit.name
+            # Just use the unit name - don't try to create units here
+            # The system should already have standard units available
+            final_unit = unit_input
         else:
-            final_unit = 'count'  # Default unit
+            # Default based on item type
+            if item_type == 'container':
+                final_unit = 'count'
+            else:
+                final_unit = 'gram'  # Default for ingredients
 
         # Handle base category selector and custom density (defer density application until after item exists)
         category_id = None
