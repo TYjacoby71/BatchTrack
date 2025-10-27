@@ -265,6 +265,19 @@ def edit_recipe(recipe_id):
 
     if request.method == 'POST':
         try:
+            # DEBUG: Log form data for yield validation debugging
+            logger.info(f"=== RECIPE EDIT FORM DEBUG ===")
+            logger.info(f"Recipe ID: {recipe_id}")
+            logger.info(f"Form predicted_yield: {request.form.get('predicted_yield')} (raw)")
+            logger.info(f"Form predicted_yield_unit: {request.form.get('predicted_yield_unit')}")
+            
+            try:
+                yield_val = float(request.form.get('predicted_yield') or 0.0)
+                logger.info(f"Converted yield value: {yield_val}")
+            except Exception as e:
+                logger.error(f"Error converting yield: {e}")
+                yield_val = 0.0
+            
             ingredients = _extract_ingredients_from_form(request.form)
 
             portioning_payload = None
@@ -307,12 +320,22 @@ def edit_recipe(recipe_id):
             except Exception:
                 portioning_payload = None
 
+            # DEBUG: Log the exact parameters being passed to update_recipe
+            update_params = {
+                'recipe_id': recipe_id,
+                'name': request.form.get('name'),
+                'yield_amount': yield_val,
+                'yield_unit': request.form.get('predicted_yield_unit') or "",
+                'portioning_data': portioning_payload
+            }
+            logger.info(f"Update recipe params: {update_params}")
+            
             success, result = update_recipe(
                 recipe_id=recipe_id,
                 name=request.form.get('name'),
                 description=request.form.get('instructions'),
                 instructions=request.form.get('instructions'),
-                yield_amount=float(request.form.get('predicted_yield') or 0.0),
+                yield_amount=yield_val,
                 yield_unit=request.form.get('predicted_yield_unit') or "",
                 ingredients=ingredients,
                 consumables=_extract_consumables_from_form(request.form),

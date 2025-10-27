@@ -37,22 +37,73 @@ def validate_recipe_data(name: str, ingredients: List[Dict] = None,
         if not is_valid:
             return {'valid': False, 'error': error}
 
+        # DEBUG: Add comprehensive yield validation debugging
+        logger.info(f"=== YIELD VALIDATION DEBUG ===")
+        logger.info(f"yield_amount: {yield_amount} (type: {type(yield_amount)})")
+        logger.info(f"recipe_id: {recipe_id}")
+        logger.info(f"portioning_data: {portioning_data}")
+
         # Validate yield amount: must be > 0 for regular recipes, or bulk yield > 0 for portioned recipes
+        # For existing recipes (recipe_id is provided), be more lenient with yield validation
         if yield_amount is not None and yield_amount > 0:
-            # Valid yield amount provided
+            logger.info("✅ Valid yield amount provided directly")
             pass
+        elif recipe_id is not None:
+            logger.info("🔍 Checking existing recipe for yield validation")
+            # For recipe edits, check if the existing recipe has a valid yield
+            # This allows editing existing recipes without requiring yield changes
+            try:
+                existing_recipe = Recipe.query.get(recipe_id)
+                logger.info(f"Existing recipe found: {existing_recipe is not None}")
+                if existing_recipe:
+                    logger.info(f"Existing recipe yield: {existing_recipe.predicted_yield}")
+
+                if existing_recipe and (existing_recipe.predicted_yield or 0) > 0:
+                    logger.info("✅ Existing recipe has valid yield, allowing edit")
+                    pass
+                else:
+                    logger.info("⚠️ Existing recipe has no valid yield, checking bulk yield")
+                    # Check bulk yield for portioned recipes
+                    bulk_ok = False
+                    try:
+                        if portioning_data and portioning_data.get('is_portioned'):
+                            byq = float(portioning_data.get('bulk_yield_quantity') or 0)
+                            logger.info(f"Bulk yield quantity: {byq}")
+                            bulk_ok = byq > 0
+                        logger.info(f"Bulk yield OK: {bulk_ok}")
+                    except Exception as e:
+                        logger.info(f"Exception checking bulk yield: {e}")
+                        bulk_ok = False
+
+                    if not bulk_ok:
+                        logger.error("❌ No valid yield found - failing validation")
+                        return {'valid': False, 'error': "Yield amount must be positive"}
+                    else:
+                        logger.info("✅ Bulk yield is valid")
+            except Exception as e:
+                logger.error(f"Exception checking existing recipe: {e}")
+                # If we can't check existing recipe, apply normal validation
+                return {'valid': False, 'error': "Yield amount must be positive"}
         else:
+            logger.info("🆕 New recipe creation - strict validation required")
+            # New recipe creation - strict validation required
             # Check if this is a portioned recipe with bulk yield
             bulk_ok = False
             try:
                 if portioning_data and portioning_data.get('is_portioned'):
                     byq = float(portioning_data.get('bulk_yield_quantity') or 0)
+                    logger.info(f"Bulk yield quantity: {byq}")
                     bulk_ok = byq > 0
-            except Exception:
+                logger.info(f"Bulk yield OK: {bulk_ok}")
+            except Exception as e:
+                logger.info(f"Exception checking bulk yield: {e}")
                 bulk_ok = False
 
             if not bulk_ok:
+                logger.error("❌ No valid yield found - failing validation")
                 return {'valid': False, 'error': "Yield amount must be positive"}
+            else:
+                logger.info("✅ Bulk yield is valid")
 
         # Validate ingredients if provided
         if ingredients:
