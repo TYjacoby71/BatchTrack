@@ -415,15 +415,12 @@ def delete_recipe(recipe_id: int) -> Tuple[bool, str]:
         if recipe.is_locked:
             return False, "Recipe is locked and cannot be deleted"
 
-        # Check for active batches
+        # Check for any batches (active or completed/cancelled)
         from ...models.batch import Batch
-        active_batches = Batch.query.filter_by(
-            recipe_id=recipe_id, 
-            status='in_progress'
-        ).count()
+        any_batches = Batch.query.filter_by(recipe_id=recipe_id).count()
 
-        if active_batches > 0:
-            return False, "Cannot delete recipe with active batches"
+        if any_batches > 0:
+            return False, "Cannot delete recipe that has been used in batches. Archive the recipe instead."
 
         recipe_name = recipe.name
 
