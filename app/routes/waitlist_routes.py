@@ -56,5 +56,10 @@ def join_waitlist():
         return jsonify({'message': 'Successfully joined waitlist'}), 200
 
     except Exception as e:
+        import traceback
         print(f"Waitlist error: {e}")
-        return jsonify({'error': 'Internal server error'}), 500
+        print(f"Traceback: {traceback.format_exc()}")
+        return jsonify({
+            'error': 'Internal server error',
+            'details': str(e) if hasattr(e, '__str__') else 'Unknown error'
+        }), 500
