@@ -12,9 +12,14 @@
             {% if is_variation %}New Variation{% else %}New Recipe{% endif %}
         {% endif %}
     </h2>
-    <a href="{{ url_for('recipes.list_recipes') }}" class="btn btn-outline-secondary">
-        <i class="fas fa-arrow-left"></i> Back to Recipes
-    </a>
+    <div class="d-flex align-items-center gap-2">
+        <span id="autosave-indicator" class="badge bg-secondary" style="display: none;">
+            <i class="fas fa-clock"></i> Auto-save enabled
+        </span>
+        <a href="{{ url_for('recipes.list_recipes') }}" class="btn btn-outline-secondary">
+            <i class="fas fa-arrow-left"></i> Back to Recipes
+        </a>
+    </div>
 </div>
 
 {% if recipe and recipe.parent %}
@@ -201,6 +206,11 @@
                 <button type="button" class="btn btn-sm btn-primary" onclick="addIngredient()">
                     <i class="fas fa-plus"></i> Add Ingredient
                 </button>
+                {% if recipe and recipe.id and edit_mode %}
+                <button type="button" class="btn btn-sm btn-success" onclick="quickAddIngredient({{ recipe.id }})" title="Add ingredient and save immediately without page reload">
+                    <i class="fas fa-plus-circle"></i> Quick Add & Save
+                </button>
+                {% endif %}
                 <button type="button" class="btn btn-sm btn-secondary" onclick="openQuickCreateInventory()">
                     <i class="fas fa-bolt"></i> Quick Create Inventory
                 </button>
@@ -454,6 +464,7 @@
 
 <script src="{{ url_for('static', filename='js/components/suggestions.js') }}"></script>
 <script src="{{ url_for('static', filename='js/recipes/recipe_form.js') }}"></script>
+<script src="{{ url_for('static', filename='js/recipes/recipe_form_ajax.js') }}"></script>
 <script src="{{ url_for('static', filename='js/recipes/skins/category_skins.js') }}"></script>
 <script src="{{ url_for('static', filename='js/recipes/skins/baking_skin.js') }}"></script>
 <script src="{{ url_for('static', filename='js/recipes/skins/cosmetics_skin.js') }}"></script>
@@ -653,8 +664,64 @@ function addIngredient(preselectId = null, presetUnit = null) {
         if (hidden) hidden.value = String(preselectId);
     }
 
+    // Pre-select unit if provided
+    if (presetUnit) {
+        const unitSelect = entry.querySelector('select[name="units[]"]');
+        if (unitSelect) {
+            unitSelect.value = presetUnit;
+        }
+    }
+
     entry.scrollIntoView({ behavior: 'smooth' });
     return entry;
+}
+
+// Quick Add Ingredient - adds and saves via AJAX without page reload
+function quickAddIngredient(recipeId) {
+    const container = document.getElementById('ingredients-container');
+    const lastEntry = container.querySelector('.ingredient-entry:last-child');
+    
+    // Check if last entry is filled
+    if (lastEntry) {
+        const ingredientId = lastEntry.querySelector('input[name="ingredient_ids[]"]').value;
+        const amount = lastEntry.querySelector('input[name="amounts[]"]').value;
+        const unit = lastEntry.querySelector('select[name="units[]"]').value;
+        
+        if (!ingredientId || !amount || !unit) {
+            showNotification('Please complete the last ingredient entry first', 'warning');
+            lastEntry.scrollIntoView({ behavior: 'smooth' });
+            return;
+        }
+        
+        // Save the last entry via AJAX
+        const lastUnit = unit; // Store for next entry
+        
+        window.addIngredientViaAjax(recipeId, {
+            ingredient_id: parseInt(ingredientId),
+            quantity: parseFloat(amount),
+            unit: unit
+        })
+        .then(data => {
+            // Add a new empty entry with the same unit pre-selected
+            const newEntry = addIngredient(null, lastUnit);
+            
+            // Focus on the ingredient search field
+            const searchInput = newEntry.querySelector('.recipe-ingredient-typeahead');
+            if (searchInput) {
+                setTimeout(() => searchInput.focus(), 100);
+            }
+        })
+        .catch(error => {
+            console.error('Failed to add ingredient:', error);
+        });
+    } else {
+        // No entries yet, just add a new one
+        const newEntry = addIngredient();
+        const searchInput = newEntry.querySelector('.recipe-ingredient-typeahead');
+        if (searchInput) {
+            setTimeout(() => searchInput.focus(), 100);
+        }
+    }
 }
 
 // Open drawers via DrawerProtocol

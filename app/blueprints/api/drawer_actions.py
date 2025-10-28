@@ -185,3 +185,81 @@ def units_quick_create_modal_get():
         return jsonify({ 'success': True, 'modal_html': modal_html })
     except Exception as e:
         return jsonify({'success': False, 'error': f'Failed to load modal: {str(e)}'}), 500
+
+# ==================== RECIPE INGREDIENT MANAGEMENT ====================
+
+@drawer_actions_bp.route('/recipe/add-ingredient/<int:recipe_id>', methods=['POST'])
+@login_required
+@require_permission('recipes.edit')
+def recipe_add_ingredient(recipe_id):
+    """Add ingredient to recipe via AJAX"""
+    try:
+        data = request.get_json()
+        ingredient_id = data.get('ingredient_id')
+        quantity = float(data.get('quantity', 0))
+        unit = data.get('unit', '')
+
+        if not ingredient_id or quantity <= 0 or not unit:
+            return jsonify({'success': False, 'error': 'Missing required fields'}), 400
+
+        # Verify recipe exists and belongs to user's org
+        recipe = Recipe.query.filter_by(
+            id=recipe_id,
+            organization_id=current_user.organization_id
+        ).first()
+
+        if not recipe:
+            return jsonify({'success': False, 'error': 'Recipe not found'}), 404
+
+        # Verify ingredient exists
+        ingredient = InventoryItem.query.filter_by(
+            id=ingredient_id,
+            organization_id=current_user.organization_id
+        ).first()
+
+        if not ingredient:
+            return jsonify({'success': False, 'error': 'Ingredient not found'}), 404
+
+        # Add ingredient to recipe
+        from app.models.recipe_ingredient import RecipeIngredient
+        
+        # Check if ingredient already exists in recipe
+        existing = RecipeIngredient.query.filter_by(
+            recipe_id=recipe_id,
+            inventory_item_id=ingredient_id
+        ).first()
+
+        if existing:
+            # Update quantity if already exists
+            existing.quantity = quantity
+            existing.unit = unit
+        else:
+            # Create new association
+            recipe_ingredient = RecipeIngredient(
+                recipe_id=recipe_id,
+                inventory_item_id=ingredient_id,
+                quantity=quantity,
+                unit=unit
+            )
+            db.session.add(recipe_ingredient)
+
+        db.session.commit()
+
+        return jsonify({
+            'success': True,
+            'message': 'Ingredient added successfully',
+            'data': {
+                'ingredient': {
+                    'id': ingredient.id,
+                    'name': ingredient.name,
+                    'quantity': quantity,
+                    'unit': unit
+                }
+            }
+        })
+
+    except ValueError:
+        return jsonify({'success': False, 'error': 'Invalid quantity value'}), 400
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'success': False, 'error': f'Failed to add ingredient: {str(e)}'}), 500
