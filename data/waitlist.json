@@ -21,5 +21,13 @@
     "business_type": "cosmetics",
     "timestamp": "2025-08-12T00:57:43.750850",
     "source": "homepage"
+  },
+  {
+    "email": "testagain@gmail.com",
+    "first_name": "test",
+    "last_name": "again",
+    "business_type": "candle_making",
+    "timestamp": "2025-10-28T19:03:17.928673",
+    "source": "homepage"
   }
 ]
