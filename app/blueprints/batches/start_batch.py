@@ -69,8 +69,7 @@ def start_batch():
             for ing in batch.batch_ingredients:
                 deduction_summary.append(f"{ing.quantity_used} {ing.unit} of {ing.inventory_item.name}")
             for cont in batch.containers:
-                container_display = cont.container.container_display_name if cont.container.type == 'container' else cont.container.name
-                deduction_summary.append(f"{cont.quantity_used} units of {container_display}")
+                deduction_summary.append(f"{cont.quantity_used} units of {cont.container.container_display_name}")
 
             if deduction_summary:
                 deducted_items = ", ".join(deduction_summary)

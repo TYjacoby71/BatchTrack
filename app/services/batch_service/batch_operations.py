@@ -458,8 +458,7 @@ class BatchOperationsService(BaseService):
                         created_by=current_user.id,
                         batch_id=batch.id
                     )
-                    container_display = container.container_display_name if container.type == 'container' else container.name
-                    restoration_summary.append(f"{batch_container.quantity_used} {container.unit} of {container_display}")
+                    restoration_summary.append(f"{batch_container.quantity_used} {container.unit} of {container.container_display_name}")
 
             # Restore extra containers
             for extra_container in extra_containers:
@@ -474,8 +473,7 @@ class BatchOperationsService(BaseService):
                         created_by=current_user.id,
                         batch_id=batch.id
                     )
-                    container_display = container.container_display_name if container.type == 'container' else container.name
-                    restoration_summary.append(f"{extra_container.quantity_used} {container.unit} of {container_display}")
+                    restoration_summary.append(f"{extra_container.quantity_used} {container.unit} of {container.container_display_name}")
 
             # Restore consumables
             for cons in batch_consumables:

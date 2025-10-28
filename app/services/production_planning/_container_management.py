@@ -142,15 +142,9 @@ def _load_suitable_containers(recipe: Recipe, org_id: int, total_yield: float, y
             logger.warning(f"Container {container.name} capacity conversion failed - skipping")
             continue
 
-        # Use container_display_name for proper display of type, style, material
-        try:
-            display_name = container.container_display_name
-        except Exception:
-            display_name = container.name
-            
         container_options.append({
             'container_id': container.id,
-            'container_name': display_name,
+            'container_name': container.container_display_name,
             'capacity': converted_capacity,  # Always in recipe yield units before fill %
             'capacity_in_yield_unit': converted_capacity,  # Explicit for frontend
             'yield_unit': yield_unit,  # Add yield unit for frontend
