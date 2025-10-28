@@ -108,7 +108,8 @@ def update_inventory_item(item_id: int, form_data: dict) -> tuple[bool, str]:
             if 'container_material' in form_data:
                 item.container_material = (form_data.get('container_material') or '').strip() or None
             if 'container_type' in form_data:
-                item.container_type = (form_data.get('container_type') or '').strip() or None
+                # InventoryItem uses container_shape field (not container_type like GlobalItem)
+                item.container_shape = (form_data.get('container_type') or '').strip() or None
             if 'container_style' in form_data:
                 item.container_style = (form_data.get('container_style') or '').strip() or None
             if 'container_color' in form_data:
