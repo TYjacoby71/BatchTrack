@@ -76,7 +76,7 @@ def register_blueprints(app):
         ('app.routes.fault_log_routes.faults_bp', 'faults_bp', '/faults', 'Fault Log'),
         ('app.routes.tag_manager_routes.tag_manager_bp', 'tag_manager_bp', '/tag-manager', 'Tag Manager'),
         ('app.routes.global_library_routes.global_library_bp', 'global_library_bp', None, 'Global Library Public'),
-        ('app.routes.waitlist_routes.waitlist_bp', 'waitlist_bp', '/waitlist', 'Waitlist'),
+        ('app.routes.waitlist_routes.waitlist_bp', 'waitlist_bp', None, 'Waitlist'),
         # Public tools mounted at /tools
         ('app.routes.tools_routes.tools_bp', 'tools_bp', '/tools', 'Public Tools')
     ]

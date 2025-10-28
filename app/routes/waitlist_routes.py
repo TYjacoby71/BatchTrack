@@ -9,6 +9,10 @@ waitlist_bp = Blueprint('waitlist', __name__)
 @waitlist_bp.route('/api/waitlist', methods=['POST'])
 def join_waitlist():
     """Handle waitlist form submissions - save to JSON only"""
+    print("=== WAITLIST ROUTE ACCESSED ===")
+    print(f"Request method: {request.method}")
+    print(f"Request content type: {request.content_type}")
+    print(f"Request data: {request.get_data()}")
     try:
         # Get JSON data from request
         data = request.get_json()
@@ -56,5 +60,10 @@ def join_waitlist():
         return jsonify({'message': 'Successfully joined waitlist'}), 200
 
     except Exception as e:
+        import traceback
         print(f"Waitlist error: {e}")
-        return jsonify({'error': 'Internal server error'}), 500
+        print(f"Traceback: {traceback.format_exc()}")
+        return jsonify({
+            'error': 'Internal server error',
+            'details': str(e) if hasattr(e, '__str__') else 'Unknown error'
+        }), 500
