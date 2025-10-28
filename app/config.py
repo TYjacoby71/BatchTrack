@@ -81,6 +81,8 @@ class TestingConfig(BaseConfig):
     SQLALCHEMY_ENGINE_OPTIONS = {
         'pool_pre_ping': True,
     }
+    # Add rate limiter storage configuration for tests
+    RATELIMIT_STORAGE_URL = os.environ.get('RATELIMIT_STORAGE_URL', 'memory://')
 
 
 class StagingConfig(BaseConfig):
