@@ -68,8 +68,8 @@ class TimezoneUtils:
                 region = TimezoneUtils._get_timezone_region(tz_name)
                 grouped[region].append((tz_name, display_name))
 
-        # Add other common timezones
-        for tz_name in sorted(pytz.common_timezones):
+        # Add ALL other timezones (not just common ones)
+        for tz_name in sorted(pytz.all_timezones):
             if tz_name not in priority_timezones:
                 display_name = TimezoneUtils._format_timezone_display(tz_name)
                 region = TimezoneUtils._get_timezone_region(tz_name)
