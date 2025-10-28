@@ -3,6 +3,8 @@ from flask import request, redirect, url_for, jsonify, session, g, flash
 from flask_login import current_user, logout_user
 import logging
 
+from .route_access import RouteAccessConfig
+
 # Configure logger
 logger = logging.getLogger(__name__)
 
@@ -14,63 +16,26 @@ def register_middleware(app):
         """
         The single, unified security checkpoint for every request.
         Checks are performed in order from least to most expensive.
+        
+        Access rules are defined in route_access.py for maintainability.
         """
-        # 1. Fast-path for completely public endpoints.
-        public_endpoints = [
-            'static', 'auth.login', 'auth.signup', 'auth.logout',
-            'homepage', 'index', 'legal.privacy_policy', 'legal.terms_of_service',
-            # Stripe webhook endpoint name
-            'billing.stripe_webhook',
-            # Public tools and exports (HTML previews only)
-            'tools_bp.tools_index', 'tools_bp.tools_soap', 'tools_bp.tools_candles', 'tools_bp.tools_lotions', 'tools_bp.tools_herbal', 'tools_bp.tools_baker',
-            'exports.soap_inci_tool', 'exports.candle_label_tool', 'exports.baker_sheet_tool', 'exports.lotion_inci_tool',
-            # Public API endpoints
-            'public_api_bp.public_global_item_search',
-            # Waitlist endpoint (public signup)
-            'waitlist.join_waitlist'
-        ]
+        # 1. Fast-path for monitoring/health checks - skip ALL middleware
+        if RouteAccessConfig.is_monitoring_request(request):
+            return
 
-        # Frequent endpoints that should have minimal logging
-        frequent_endpoints = ['server_time.get_server_time', 'api.get_dashboard_alerts']
-
-        # Skip middleware for static files and monitoring endpoints
+        # 2. Fast-path for static files
         if request.path.startswith('/static/'):
             return
 
-        # Skip ALL middleware processing for monitoring/health check requests from node/system
-        is_monitoring_request = (
-            request.headers.get('User-Agent', '').lower() == 'node' and 
-            request.method == 'HEAD' and 
-            request.path in ['/api', '/api/', '/health', '/ping']
-        )
-
-        if is_monitoring_request:
+        # 3. Fast-path for public endpoints (by endpoint name)
+        if RouteAccessConfig.is_public_endpoint(request.endpoint):
             return
 
-        # Pattern-based public paths for flexibility
-        public_paths = [
-            '/homepage',
-            '/legal/',
-            '/static/',
-            '/auth/login',
-            '/auth/signup',
-            '/auth/logout',
-            # Public tools + drafts + exports preview + public API namespace
-            '/tools',
-            '/exports/tool',
-            '/api/public'
-        ]
+        # 4. Fast-path for public paths (by path prefix)
+        if RouteAccessConfig.is_public_path(request.path):
+            return
 
-        # Check endpoint names first
-        if request.endpoint in public_endpoints:
-            return  # Stop processing, allow the request
-
-        # Pattern-based checks for paths
-        for path in public_paths:
-            if request.path.startswith(path):
-                return
-
-        # 2. Authentication check - if we get here, user must be authenticated
+        # 5. Authentication check - if we get here, user must be authenticated
         if not current_user.is_authenticated:
 
             # Better debugging: log the actual path and method being requested
@@ -88,9 +53,9 @@ def register_middleware(app):
 
             return redirect(url_for('auth.login', next=request.url))
 
-        # Block non-developers from accessing any /developer/* routes
+        # 6. Block non-developers from accessing developer-only routes
         try:
-            if request.path.startswith('/developer/'):
+            if RouteAccessConfig.is_developer_only_path(request.path):
                 user_type = getattr(current_user, 'user_type', None)
                 if user_type != 'developer':
                     accept = request.accept_mimetypes
@@ -109,18 +74,13 @@ def register_middleware(app):
         # Force reload current_user to ensure fresh session data
         from flask_login import current_user as fresh_current_user
 
-        # 3. Handle developer "super admin" and masquerade logic.
+        # 7. Handle developer "super admin" and masquerade logic.
         if getattr(fresh_current_user, 'user_type', None) == 'developer':
             selected_org_id = session.get("dev_selected_org_id")
             masquerade_org_id = session.get("masquerade_org_id")  # Support both session keys
 
-            # If no org selected, redirect to organization selection unless it's a developer-specific,
-            # auth permission page, or a public Global Library endpoint (read-only).
-            allowed_without_org = (
-                request.path.startswith("/developer/")
-                or request.path.startswith("/auth/permissions")
-                or request.path.startswith("/global-items")
-            )
+            # If no org selected, redirect to organization selection unless allowed
+            allowed_without_org = RouteAccessConfig.is_developer_no_org_required(request.path)
             if not selected_org_id and not masquerade_org_id and not allowed_without_org:
                 try:
                     flash("Please select an organization to view customer features.", "warning")
@@ -144,7 +104,7 @@ def register_middleware(app):
             # IMPORTANT: Developers bypass the billing check below.
             return
 
-        # 4. Enforce billing for all regular, authenticated users.
+        # 8. Enforce billing for all regular, authenticated users.
         if fresh_current_user.is_authenticated and getattr(fresh_current_user, 'user_type', None) != 'developer':
             # CRITICAL FIX: Guard DB calls; degrade gracefully if DB is down
             try:
@@ -200,7 +160,7 @@ def register_middleware(app):
                 except Exception:
                     pass
 
-        # 5. If all checks pass, do nothing and allow the request to proceed.
+        # 9. If all checks pass, allow the request to proceed.
         return None
 
     @app.after_request
