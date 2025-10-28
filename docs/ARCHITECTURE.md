@@ -186,6 +186,7 @@ Subscription Tier → Available Features → User Limits → Team Members → Ac
 - **Inventory Adjustment Service** (`app/services/inventory_adjustment.py`) - Handles all inventory modifications
 - **Unit Conversion Service** (`app/services/unit_conversion.py`) - Manages unit conversions and mappings
 - **Stock Check Service** (`app/services/stock_check.py`) - Validates ingredient availability
+- **Timezone Utils** (`app/utils/timezone_utils.py`) - All datetime/timezone operations (see TIMEZONE_SYSTEM.md)
 
 ### Supporting Services
 
@@ -198,4 +199,22 @@ Subscription Tier → Available Features → User Limits → Team Members → Ac
 
 ---
 
-**Next:** See [SERVICES.md](SERVICES.md) for detailed service specifications. Also see [GLOBAL_ITEM_LIBRARY.md](GLOBAL_ITEM_LIBRARY.md), [CONTAINERS_CURATION.md](CONTAINERS_CURATION.md) and [WALL_OF_DRAWERS_PROTOCOL.md](WALL_OF_DRAWERS_PROTOCOL.md).
+---
+
+## Recent Architecture Updates
+
+### 2025-10-28: Timezone-Aware DateTime Standardization
+
+**Change:** Standardized all datetime handling to use timezone-aware UTC datetimes throughout the application.
+
+**Impact:**
+- All model datetime columns now use timezone-aware defaults
+- Templates automatically convert to user's timezone
+- API responses include explicit timezone information
+- Services use consistent timezone-aware operations
+
+**See:** [TIMEZONE_SYSTEM.md](TIMEZONE_SYSTEM.md) for complete timezone documentation.
+
+---
+
+**Next:** See [SERVICES.md](SERVICES.md) for detailed service specifications. Also see [GLOBAL_ITEM_LIBRARY.md](GLOBAL_ITEM_LIBRARY.md), [CONTAINERS_CURATION.md](CONTAINERS_CURATION.md), [WALL_OF_DRAWERS_PROTOCOL.md](WALL_OF_DRAWERS_PROTOCOL.md), and [TIMEZONE_SYSTEM.md](TIMEZONE_SYSTEM.md).

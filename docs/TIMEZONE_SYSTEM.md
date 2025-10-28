@@ -8,10 +8,10 @@ BatchTrack implements a **user-centric timezone system** where each user can set
 ## Core Architecture
 
 ### 1. Storage Strategy
-- **Database Storage**: All timestamps stored in UTC (timezone-naive datetime objects)
+- **Database Storage**: All timestamps stored in UTC (timezone-aware datetime objects as of 2025-10-28)
 - **User Preferences**: Each user has a `timezone` field storing their preferred timezone string
 - **Display Layer**: Times converted to user's timezone for display only
-- **API Responses**: All API endpoints return times in user's timezone when applicable
+- **API Responses**: All API endpoints return times with explicit timezone information (ISO 8601 format)
 
 ### 2. Key Components
 
@@ -20,11 +20,13 @@ Central utility class providing all timezone operations:
 
 ```python
 # Core methods
-TimezoneUtils.utc_now()                    # Get current UTC time
+TimezoneUtils.utc_now()                    # Get current UTC time (timezone-aware)
 TimezoneUtils.to_user_timezone(dt)         # Convert UTC to user's timezone  
 TimezoneUtils.from_user_timezone(dt)       # Convert user's timezone to UTC
 TimezoneUtils.format_for_user(dt, format)  # Format datetime in user's timezone
 ```
+
+**Important (Updated 2025-10-28)**: `TimezoneUtils.utc_now()` now returns timezone-aware UTC datetimes instead of naive datetimes. All datetime operations across the application are now timezone-aware.
 
 #### User Model Integration
 - `User.timezone` field stores user's preferred timezone (e.g., 'US/Eastern')
@@ -134,11 +136,21 @@ user_timezone = current_user.timezone or 'UTC'
 
 ### 1. Adding New Datetime Fields
 
-**Always use UTC for storage:**
+**Always use timezone-aware UTC for storage:**
 ```python
+from datetime import datetime, timezone
+
 class NewModel(db.Model):
+    # Standard pattern (updated 2025-10-28)
+    created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
+    updated_at = db.Column(
+        db.DateTime, 
+        default=lambda: datetime.now(timezone.utc),
+        onupdate=lambda: datetime.now(timezone.utc)
+    )
+    
+    # Or use TimezoneUtils (also returns timezone-aware)
     created_at = db.Column(db.DateTime, default=TimezoneUtils.utc_now)
-    updated_at = db.Column(db.DateTime, default=TimezoneUtils.utc_now, onupdate=TimezoneUtils.utc_now)
 ```
 
 ### 2. Working with Expiration Dates
@@ -147,7 +159,8 @@ class NewModel(db.Model):
 ```python
 # In ExpirationService
 def calculate_expiration_date(start_date: datetime, shelf_life_days: int) -> datetime:
-    # Ensure start_date is timezone-aware (UTC)
+    # All datetimes are now timezone-aware by default (as of 2025-10-28)
+    # Legacy check for backwards compatibility
     if start_date.tzinfo is None:
         start_date = start_date.replace(tzinfo=timezone.utc)
     
@@ -188,21 +201,26 @@ def test_batch_display_timezone():
 
 ## Common Pitfalls
 
-### ❌ Mixing Timezone-Aware and Naive Datetimes
+### ❌ Using datetime.now() Without Timezone
 ```python
-# This will cause errors
-aware_dt = datetime.now(timezone.utc)
+# Wrong - depends on server timezone (naive datetime)
 naive_dt = datetime.now()
-diff = aware_dt - naive_dt  # TypeError!
+
+# Correct - always use timezone-aware UTC
+aware_dt = datetime.now(timezone.utc)
+
+# Note: As of 2025-10-28, all BatchTrack datetimes are timezone-aware
 ```
 
-### ❌ Using datetime.now() for Storage
+### ❌ Using Naive Datetimes
 ```python
-# Wrong - depends on server timezone
-created_at = datetime.now()
+# Wrong - naive datetime (no timezone info)
+created_at = datetime.utcnow()  # Deprecated!
+created_at = datetime.now()     # Server timezone!
 
-# Correct - always UTC
-created_at = TimezoneUtils.utc_now()
+# Correct - timezone-aware UTC
+created_at = datetime.now(timezone.utc)
+created_at = TimezoneUtils.utc_now()  # Also timezone-aware
 ```
 
 ### ❌ Hardcoding Timezone Conversions
@@ -270,4 +288,41 @@ print(f"User now: {TimezoneUtils.now()}")
 
 ---
 
-**⚠️ Critical Rule**: Never bypass `TimezoneUtils` for datetime operations. Always store in UTC, display in user's timezone.
+---
+
+## Recent Changes (2025-10-28)
+
+### ✅ Timezone-Aware DateTime Standardization
+
+**What Changed:**
+- `TimezoneUtils.utc_now()` now returns timezone-aware datetime objects
+- All model DateTime columns updated to use `lambda: datetime.now(timezone.utc)`
+- All templates updated to use timezone filters (`| user_timezone`, `| user_date`)
+- All services updated to use timezone-aware datetimes
+- API responses now include explicit timezone information in ISO format
+
+**Files Updated:**
+- 17 model files (48 datetime columns)
+- 8 template files (15+ datetime displays)
+- 8 service files (20+ datetime operations)
+- Core: `app/utils/timezone_utils.py`
+
+**Migration Notes:**
+- No database migration required - data remains UTC
+- Application layer now enforces timezone awareness
+- Legacy code checking for naive datetimes may need updates
+
+**Benefits:**
+- No more ambiguous timestamps
+- Proper handling of DST changes
+- API responses clearly indicate UTC timezone
+- User times displayed correctly in their local timezone
+
+---
+
+**⚠️ Critical Rules**: 
+1. Always use `datetime.now(timezone.utc)` for UTC timestamps
+2. Never use `datetime.utcnow()` (deprecated - returns naive datetime)
+3. Never use bare `datetime.now()` (server timezone dependent)
+4. Always store in UTC, display in user's timezone
+5. Never bypass `TimezoneUtils` for datetime operations
