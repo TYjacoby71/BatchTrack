@@ -718,12 +718,45 @@ class ErrorMessages:
 
 ---
 
+## Automated Testing
+
+The error message protocol is enforced by automated tests:
+
+**Test Files:**
+- `tests/test_error_message_compliance.py` - Comprehensive compliance checker
+- `tests/test_error_compliance_simple.py` - Quick compliance check
+
+**Run Tests:**
+```bash
+# All compliance tests
+pytest tests/test_error_message_compliance.py -v
+
+# Quick check
+pytest tests/test_error_compliance_simple.py -v
+
+# Standalone scan (no pytest needed)
+python3 tests/test_error_message_compliance.py
+```
+
+**Using Make:**
+```bash
+make -f Makefile.error-tests test-errors         # Run all tests
+make -f Makefile.error-tests test-errors-simple  # Quick check
+make -f Makefile.error-tests scan-errors         # Standalone scan
+```
+
+See `tests/README_ERROR_TESTS.md` for detailed testing documentation.
+
+---
+
 ## Questions?
 
 For questions about this protocol:
 1. Check existing routes for examples
 2. Review `app/utils/error_messages.py` for similar messages
-3. Ask the team lead or submit a PR for discussion
-4. Document new patterns here for future developers
+3. Run compliance tests to check your code
+4. See `tests/README_ERROR_TESTS.md` for testing guide
+5. Ask the team lead or submit a PR for discussion
+6. Document new patterns here for future developers
 
 **Remember**: Consistency is key. When in doubt, follow existing patterns.

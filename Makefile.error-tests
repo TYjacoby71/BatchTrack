@@ -1,0 +1,49 @@
+# Error Message Compliance Testing Makefile
+
+.PHONY: help test-errors test-errors-simple test-errors-full scan-errors check-infrastructure
+
+help:
+	@echo "Error Message Compliance Testing"
+	@echo "================================="
+	@echo ""
+	@echo "Available commands:"
+	@echo "  make test-errors          - Run all error compliance tests"
+	@echo "  make test-errors-simple   - Run quick compliance check"
+	@echo "  make test-errors-full     - Run comprehensive compliance scan"
+	@echo "  make scan-errors          - Standalone scan (no pytest)"
+	@echo "  make check-infrastructure - Check error system infrastructure"
+	@echo ""
+
+# Run all compliance tests
+test-errors:
+	@echo "Running error message compliance tests..."
+	pytest tests/test_error_message_compliance.py -v
+
+# Run simple tests (quick)
+test-errors-simple:
+	@echo "Running simple compliance check..."
+	pytest tests/test_error_compliance_simple.py -v
+
+# Run full comprehensive scan
+test-errors-full:
+	@echo "Running comprehensive compliance scan..."
+	pytest tests/test_error_message_compliance.py -v --tb=short
+
+# Standalone scan without pytest
+scan-errors:
+	@echo "Scanning codebase for error message violations..."
+	python3 tests/test_error_message_compliance.py
+
+# Check infrastructure only (fast)
+check-infrastructure:
+	@echo "Checking error message infrastructure..."
+	pytest tests/test_error_message_compliance.py::TestErrorMessageCompliance::test_error_messages_file_valid -v
+	pytest tests/test_error_message_compliance.py::TestErrorMessageCompliance::test_layout_template_uses_categories -v
+	pytest tests/test_error_message_compliance.py::test_error_protocol_documentation_exists -v
+
+# Show compliance report
+report-errors:
+	@echo "Generating compliance report..."
+	pytest tests/test_error_message_compliance.py --tb=no -v > error_compliance_report.txt
+	@echo "Report saved to error_compliance_report.txt"
+
