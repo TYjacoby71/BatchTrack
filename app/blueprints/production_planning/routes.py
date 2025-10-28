@@ -139,7 +139,8 @@ def debug_recipe_containers(recipe_id):
                 organization_id=current_user.organization_id,
                 category_id=container_category.id
             ).all()
-            all_containers = [{'id': c.id, 'name': c.name, 'capacity': getattr(c, 'capacity', 0)} for c in containers]
+            # Use container_display_name for proper display
+            all_containers = [{'id': c.id, 'name': c.container_display_name if c.type == 'container' else c.name, 'capacity': getattr(c, 'capacity', 0)} for c in containers]
 
         return jsonify({
             'recipe_id': recipe_id,

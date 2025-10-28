@@ -91,16 +91,18 @@ def get_batch_inventory_summary(batch_id):
         
         container_summary = []
         for container in batch_containers:
+            container_display = container.container.container_display_name if container.container.type == 'container' else container.container.name
             container_summary.append({
-                'name': container.container.name,
+                'name': container_display,
                 'quantity_used': container.quantity_used,
                 'cost_each': container.cost_each,
                 'type': 'regular'
             })
         
         for extra_container in extra_containers:
+            container_display = extra_container.container.container_display_name if extra_container.container.type == 'container' else extra_container.container.name
             container_summary.append({
-                'name': extra_container.container.name,
+                'name': container_display,
                 'quantity_used': extra_container.quantity_used,
                 'cost_each': extra_container.cost_each,
                 'type': 'extra'

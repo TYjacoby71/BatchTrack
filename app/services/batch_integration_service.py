@@ -84,9 +84,10 @@ class BatchIntegrationService:
             # Process regular containers
             for container in containers:
                 capacity = (container.container.capacity or 0) * container.quantity_used
+                container_display = container.container.container_display_name if (container.container and container.container.type == 'container') else (container.container.name if container.container else 'Unknown')
                 container_info = {
                     'id': container.id,
-                    'name': container.container.name if container.container else 'Unknown',
+                    'name': container_display,
                     'quantity': container.quantity_used,
                     'capacity': capacity,
                     'type': 'regular'
@@ -97,9 +98,10 @@ class BatchIntegrationService:
             # Process extra containers
             for extra_container in extra_containers:
                 capacity = (extra_container.container.capacity or 0) * extra_container.quantity_used
+                container_display = extra_container.container.container_display_name if (extra_container.container and extra_container.container.type == 'container') else (extra_container.container.name if extra_container.container else 'Unknown')
                 container_info = {
                     'id': extra_container.id,
-                    'name': extra_container.container.name if extra_container.container else 'Unknown',
+                    'name': container_display,
                     'quantity': extra_container.quantity_used,
                     'reason': extra_container.reason,
                     'capacity': capacity,
