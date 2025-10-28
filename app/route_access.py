@@ -50,6 +50,7 @@ class RouteAccessConfig:
         'tools_bp.tools_lotions',
         'tools_bp.tools_herbal',
         'tools_bp.tools_baker',
+        'tools_bp.tools_draft',  # Save draft from public tools (unauthenticated)
         
         # Public exports - preview tools (HTML previews)
         'exports.soap_inci_tool',
@@ -59,6 +60,9 @@ class RouteAccessConfig:
         
         # Public API endpoints
         'public_api_bp.public_global_item_search',
+        
+        # Waitlist signup (for unauthenticated users)
+        'waitlist.join_waitlist',
     ]
     
     PUBLIC_PATH_PREFIXES = [
