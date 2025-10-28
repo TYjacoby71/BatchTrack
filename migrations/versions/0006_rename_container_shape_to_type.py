@@ -1,7 +1,7 @@
 """rename container_shape to container_type
 
-Revision ID: 0004_rename_shape
-Revises: 0003_postgres_specific
+Revision ID: 0006_rename_shape
+Revises: 0005_cleanup_guardrails
 Create Date: 2025-01-15 00:00:00.000000
 
 """
@@ -10,8 +10,8 @@ import sqlalchemy as sa
 
 
 # revision identifiers, used by Alembic.
-revision = '0004_rename_shape'
-down_revision = '0003_postgres_specific'
+revision = '0006_rename_shape'
+down_revision = '0005_cleanup_guardrails'
 branch_labels = None
 depends_on = None
 
