@@ -846,7 +846,7 @@ def upgrade():
     sa.Column('capacity', sa.Float(), nullable=True),
     sa.Column('capacity_unit', sa.String(length=32), nullable=True),
     sa.Column('container_material', sa.String(length=64), nullable=True),
-    sa.Column('container_shape', sa.String(length=64), nullable=True),
+    sa.Column('container_type', sa.String(length=64), nullable=True),
     sa.Column('container_style', sa.String(length=64), nullable=True),
     sa.Column('container_color', sa.String(length=64), nullable=True),
     sa.Column('created_by', sa.Integer(), nullable=True),

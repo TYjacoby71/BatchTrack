@@ -447,7 +447,7 @@ class BatchOperationsService(BaseService):
 
             # Restore containers
             for batch_container in batch_containers:
-                container = batch_container.container
+                container = batch_container.inventory_item
                 if container:
                     process_inventory_adjustment(
                         item_id=container.id,
@@ -458,11 +458,11 @@ class BatchOperationsService(BaseService):
                         created_by=current_user.id,
                         batch_id=batch.id
                     )
-                    restoration_summary.append(f"{batch_container.quantity_used} {container.unit} of {container.name}")
+                    restoration_summary.append(f"{batch_container.quantity_used} {container.unit} of {container.container_display_name}")
 
             # Restore extra containers
             for extra_container in extra_containers:
-                container = extra_container.container
+                container = extra_container.inventory_item
                 if container:
                     process_inventory_adjustment(
                         item_id=container.id,
@@ -473,7 +473,7 @@ class BatchOperationsService(BaseService):
                         created_by=current_user.id,
                         batch_id=batch.id
                     )
-                    restoration_summary.append(f"{extra_container.quantity_used} {container.unit} of {container.name}")
+                    restoration_summary.append(f"{extra_container.quantity_used} {container.unit} of {container.container_display_name}")
 
             # Restore consumables
             for cons in batch_consumables:
