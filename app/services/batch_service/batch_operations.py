@@ -447,7 +447,7 @@ class BatchOperationsService(BaseService):
 
             # Restore containers
             for batch_container in batch_containers:
-                container = batch_container.container
+                container = batch_container.inventory_item
                 if container:
                     process_inventory_adjustment(
                         item_id=container.id,
@@ -462,7 +462,7 @@ class BatchOperationsService(BaseService):
 
             # Restore extra containers
             for extra_container in extra_containers:
-                container = extra_container.container
+                container = extra_container.inventory_item
                 if container:
                     process_inventory_adjustment(
                         item_id=container.id,

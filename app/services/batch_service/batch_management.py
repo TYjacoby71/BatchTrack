@@ -173,7 +173,7 @@ class BatchManagementService(BaseService):
             container_breakdown = []
             if batch.containers:
                 for container_usage in batch.containers:
-                    container = container_usage.container
+                    container = container_usage.inventory_item
                     if container.capacity and container.capacity_unit:
                         container_breakdown.append({
                             'container': container,
