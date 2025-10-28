@@ -145,7 +145,7 @@ def create_inventory_item(form_data, organization_id, created_by):
                 style = (form_data.get('container_style') or '').strip()
                 color = (form_data.get('container_color') or '').strip()
                 new_item.container_material = mat or None
-                new_item.container_shape = ctype or None  # InventoryItem uses container_shape
+                new_item.container_type = ctype or None
                 new_item.container_style = style or None
                 new_item.container_color = color or None
             except Exception:
@@ -167,8 +167,7 @@ def create_inventory_item(form_data, organization_id, created_by):
                     if getattr(global_item, 'container_material', None):
                         new_item.container_material = global_item.container_material
                     if getattr(global_item, 'container_type', None):
-                        # GlobalItem has container_type, InventoryItem has container_shape
-                        new_item.container_shape = global_item.container_type
+                        new_item.container_type = global_item.container_type
                     if getattr(global_item, 'container_style', None):
                         new_item.container_style = global_item.container_style
                     if getattr(global_item, 'container_color', None):

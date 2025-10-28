@@ -37,7 +37,7 @@ class InventoryItem(ScopedModelMixin, db.Model):
     capacity = db.Column(db.Float, nullable=True)  # How much this container can hold
     capacity_unit = db.Column(db.String(32), nullable=True)  # Unit for storage capacity
     container_material = db.Column(db.String(64), nullable=True)
-    container_shape = db.Column(db.String(64), nullable=True)  # bottle, jar, tube, etc.
+    container_type = db.Column(db.String(64), nullable=True)  # bottle, jar, tube, etc.
     container_style = db.Column(db.String(64), nullable=True)
     container_color = db.Column(db.String(64), nullable=True)
     created_by = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True)
@@ -90,7 +90,7 @@ class InventoryItem(ScopedModelMixin, db.Model):
                 return self.name
             style = (self.container_style or '').strip()
             material = (self.container_material or '').strip()
-            base_type = (self.container_shape or '').strip()
+            base_type = (self.container_type or '').strip()
 
             parts = []
 
