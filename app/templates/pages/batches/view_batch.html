@@ -200,7 +200,7 @@
             {% for container in batch.containers %}
                 {% set line_cost = (container.quantity_used|float or 0) * (container.cost_each|float or 0) %}
                 <tr>
-                    <td>{{ container.container.name }}</td>
+                    <td>{{ container.inventory_item.container_display_name }}</td>
                     <td>{{ "%.2f"|format(container.quantity_used|float or 0) }}</td>
                     <td>-</td>
                     <td>${{ "%.2f"|format(container.cost_each|float or 0) }}</td>
@@ -245,7 +245,7 @@
             {% for container in batch.extra_containers %}
                 {% set line_cost = (container.quantity_used|float or 0) * (container.cost_each|float or 0) %}
                 <tr>
-                    <td>{{ container.container.name }}</td>
+                    <td>{{ container.inventory_item.container_display_name }}</td>
                     <td>{{ container.quantity_used }}</td>
                     <td>-</td>
                     <td>${{ "%.2f"|format(container.cost_each) }}</td>
@@ -335,7 +335,7 @@
                     {% for container in batch.containers %}
                         {% set line_cost = (container.quantity_used|float or 0) * (container.cost_each|float or 0) %}
                         <tr>
-                            <td>{{ container.container.name }}</td>
+                            <td>{{ container.inventory_item.container_display_name }}</td>
                             <td>{{ "%.2f"|format(container.quantity_used|float or 0) }}</td>
                             <td></td>
                             <td>${{ "%.2f"|format(container.cost_each|float or 0) }}</td>
@@ -373,7 +373,7 @@
                     {% for container in batch.extra_containers %}
                         {% set line_cost = (container.quantity_used|float or 0) * (container.cost_each|float or 0) %}
                         <tr>
-                            <td>{{ container.container.name }}</td>
+                            <td>{{ container.inventory_item.container_display_name }}</td>
                             <td>{{ container.quantity_used }}</td>
                             <td></td>
                             <td>${{ "%.2f"|format(container.cost_each) }}</td>
