@@ -25,7 +25,9 @@ def register_middleware(app):
             'tools_bp.tools_index', 'tools_bp.tools_soap', 'tools_bp.tools_candles', 'tools_bp.tools_lotions', 'tools_bp.tools_herbal', 'tools_bp.tools_baker',
             'exports.soap_inci_tool', 'exports.candle_label_tool', 'exports.baker_sheet_tool', 'exports.lotion_inci_tool',
             # Public API endpoints
-            'public_api_bp.public_global_item_search'
+            'public_api_bp.public_global_item_search',
+            # Waitlist endpoint (public signup)
+            'waitlist.join_waitlist'
         ]
 
         # Frequent endpoints that should have minimal logging
