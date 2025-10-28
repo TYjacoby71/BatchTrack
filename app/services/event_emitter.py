@@ -1,6 +1,6 @@
 import uuid
 import logging
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Optional, Dict, Any
 
 from flask_login import current_user
@@ -36,7 +36,7 @@ class EventEmitter:
 
             event = DomainEvent(
                 event_name=event_name,
-                occurred_at=datetime.utcnow(),
+                occurred_at=datetime.now(timezone.utc),
                 organization_id=org_id,
                 user_id=usr_id,
                 entity_type=entity_type,

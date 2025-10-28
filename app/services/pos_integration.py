@@ -1,5 +1,5 @@
 import logging
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import Optional, List, Dict, Tuple
 from flask import current_app
 from flask_login import current_user
@@ -108,7 +108,7 @@ class POSIntegrationService:
             # 2. CREATE reservation line item (this is now the source of truth)
             expires_at = None
             if expires_in_hours:
-                expires_at = datetime.utcnow() + timedelta(hours=expires_in_hours)
+                expires_at = datetime.now(timezone.utc) + timedelta(hours=expires_in_hours)
 
             reservation = Reservation(
                 order_id=order_id,
@@ -312,7 +312,7 @@ class POSIntegrationService:
                 and_(
                     Reservation.status == 'active',
                     Reservation.expires_at.isnot(None),
-                    Reservation.expires_at < datetime.utcnow()
+                    Reservation.expires_at < datetime.now(timezone.utc)
                 )
             ).all()
 

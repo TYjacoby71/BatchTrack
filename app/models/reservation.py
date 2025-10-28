@@ -1,5 +1,5 @@
 
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from flask_login import current_user
 from ..extensions import db
 from .mixins import ScopedModelMixin
@@ -34,7 +34,7 @@ class Reservation(ScopedModelMixin, db.Model):
     source = db.Column(db.String(64), default='shopify')  # shopify, manual, etc.
     
     # TIMESTAMPS
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
     expires_at = db.Column(db.DateTime, nullable=True)  # Optional expiration
     released_at = db.Column(db.DateTime, nullable=True)
     converted_at = db.Column(db.DateTime, nullable=True)
@@ -66,22 +66,22 @@ class Reservation(ScopedModelMixin, db.Model):
         """Check if reservation has expired"""
         if not self.expires_at:
             return False
-        return datetime.utcnow() > self.expires_at
+        return datetime.now(timezone.utc) > self.expires_at
     
     def mark_released(self):
         """Mark reservation as released"""
         self.status = 'released'
-        self.released_at = datetime.utcnow()
+        self.released_at = datetime.now(timezone.utc)
     
     def mark_converted_to_sale(self):
         """Mark reservation as converted to sale"""
         self.status = 'converted_to_sale'
-        self.converted_at = datetime.utcnow()
+        self.converted_at = datetime.now(timezone.utc)
     
     def mark_expired(self):
         """Mark reservation as expired"""
         self.status = 'expired'
-        self.released_at = datetime.utcnow()
+        self.released_at = datetime.now(timezone.utc)
     
     def __repr__(self):
         return f'<Reservation {self.order_id}: {self.quantity} {self.unit}>'

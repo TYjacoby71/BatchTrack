@@ -1,6 +1,6 @@
 from flask import Blueprint, jsonify, request
 from flask_login import login_required, current_user
-from datetime import datetime
+from datetime import datetime, timezone
 from flask import session
 import logging
 
@@ -14,7 +14,7 @@ def health_check():
     """Health check endpoint for monitoring services"""
     if request.method == 'HEAD':
         return '', 200
-    return jsonify({'status': 'ok', 'timestamp': datetime.utcnow().isoformat()})
+    return jsonify({'status': 'ok', 'timestamp': datetime.now(timezone.utc).isoformat()})
 
 @api_bp.route('/server-time')
 def server_time():

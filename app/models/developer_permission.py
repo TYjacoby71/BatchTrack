@@ -1,5 +1,5 @@
 
-from datetime import datetime
+from datetime import datetime, timezone
 from ..extensions import db
 
 class DeveloperPermission(db.Model):
@@ -11,7 +11,7 @@ class DeveloperPermission(db.Model):
     description = db.Column(db.Text)
     category = db.Column(db.String(64))  # 'system', 'admin', 'developer'
     is_active = db.Column(db.Boolean, default=True)
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
     
     def __repr__(self):
         return f'<DeveloperPermission {self.name}>'

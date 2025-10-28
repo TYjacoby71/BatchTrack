@@ -126,7 +126,7 @@
               <div>
                 <small class="text-muted">
                   &nbsp;<br>
-                  {% if not product.variations and product.created_at %}Created: {{ product.created_at.strftime('%Y-%m-%d') }}{% endif %}
+                  {% if not product.variations and product.created_at %}Created: {{ product.created_at | user_date }}{% endif %}
                 </small>
               </div>
               <div>
@@ -199,7 +199,7 @@
                     <span class="badge bg-success">In Stock</span>
                   {% endif %}
                 </td>
-                <td>{{ product.created_at.strftime('%Y-%m-%d') if product.created_at else 'N/A' }}</td>
+                <td>{{ product.created_at | user_date if product.created_at else 'N/A' }}</td>
                 <td>
                   <div class="btn-group" role="group">
                     <button type="button" class="btn btn-outline-secondary btn-sm dropdown-toggle" data-bs-toggle="dropdown">
@@ -257,7 +257,7 @@
                             </td>
                             <td>{{ variation_inventory|selectattr('quantity', 'gt', 0)|sum(attribute='quantity')|round(1) }}</td>
                             <td>{{ variation_inventory|selectattr('quantity', 'gt', 0)|map(attribute='size_label')|select('defined')|list|unique|list|length }}</td>
-                            <td>{{ variation.created_at.strftime('%Y-%m-%d') if variation.created_at else 'N/A' }}</td>
+                            <td>{{ variation.created_at | user_date if variation.created_at else 'N/A' }}</td>
                             <td>
                               <div class="btn-group" role="group">
                                 <button type="button" class="btn btn-outline-secondary btn-xs dropdown-toggle" data-bs-toggle="dropdown">

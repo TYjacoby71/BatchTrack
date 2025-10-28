@@ -162,8 +162,11 @@ class TimezoneUtils:
 
     @staticmethod
     def utc_now() -> datetime:
-        """Get current UTC datetime - ALWAYS use this for database storage"""
-        return datetime.now(timezone.utc).replace(tzinfo=None)
+        """Get current UTC datetime - ALWAYS use this for database storage
+        
+        Returns timezone-aware UTC datetime for proper timezone handling.
+        """
+        return datetime.now(timezone.utc)
 
     @staticmethod
     def now() -> datetime:
@@ -223,10 +226,10 @@ class TimezoneUtils:
         if not user_timezone or not TimezoneUtils.validate_timezone(user_timezone):
             user_timezone = 'UTC'
         
-        # Convert to UTC
+        # Convert to UTC (keep timezone-aware)
         user_tz = pytz.timezone(user_timezone)
         user_dt = user_tz.localize(dt) if dt.tzinfo is None else dt
-        return user_dt.astimezone(pytz.UTC).replace(tzinfo=None)
+        return user_dt.astimezone(timezone.utc)
 
     @staticmethod
     def format_for_user(dt: datetime, format_string: str = '%Y-%m-%d %H:%M:%S', user_timezone: str = None) -> str:

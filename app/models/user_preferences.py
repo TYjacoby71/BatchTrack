@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timezone
 from ..extensions import db
 from .mixins import ScopedModelMixin
 
@@ -31,8 +31,8 @@ class UserPreferences(ScopedModelMixin, db.Model):
     # Timezone preferences (mirrors user.timezone for easy access)
     timezone = db.Column(db.String(64), default='America/New_York')
 
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
-    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
+    updated_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc))
 
     # Relationship
     user = db.relationship('User', backref='preferences')
