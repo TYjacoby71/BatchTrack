@@ -27,10 +27,10 @@ def get_fifo_details(inventory_id):
         # Get inventory item
         item = InventoryItem.query.get_or_404(inventory_id)
         
-        # Get current FIFO entries (available stock)
-        fifo_entries = InventoryHistory.query.filter_by(inventory_item_id=inventory_id) \
-            .filter(InventoryHistory.remaining_quantity > 0) \
-            .order_by(InventoryHistory.timestamp.asc()).all()
+        # Get current FIFO entries (available stock) from UnifiedInventoryHistory
+        fifo_entries = UnifiedInventoryHistory.query.filter_by(inventory_item_id=inventory_id) \
+            .filter(UnifiedInventoryHistory.remaining_quantity > 0) \
+            .order_by(UnifiedInventoryHistory.timestamp.asc()).all()
         
         # Get batch usage if batch_id provided
         batch_usage = []

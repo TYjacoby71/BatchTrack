@@ -1,12 +1,12 @@
 from datetime import datetime, timedelta, date, timezone
-from ...models import db, InventoryItem, InventoryHistory, ProductSKU, ProductSKUHistory, Batch, InventoryLot
+from ...models import db, InventoryItem, UnifiedInventoryHistory, ProductSKU, ProductSKUHistory, Batch, InventoryLot
 from sqlalchemy import and_, or_
 from sqlalchemy.orm import joinedload
 from typing import List, Dict, Optional, Tuple
 from flask_login import current_user
 import logging
 from app.services.inventory_adjustment import process_inventory_adjustment
-from app.models.inventory import InventoryHistory, InventoryItem
+from app.models.inventory import InventoryItem
 from app.models.product import ProductSKU, ProductSKUHistory
 
 # Set logger to INFO level to reduce debug noise
@@ -506,9 +506,10 @@ class ExpirationService:
         """Mark inventory as expired and remove from stock - supports lots and legacy entries"""
         try:
             if kind in ("fifo", "raw"):
-                # Prefer legacy FIFO entry when mocked in tests; otherwise use InventoryLot
-                entry = InventoryHistory.query.get(entry_id)
-                lot = None if entry else InventoryLot.query.get(entry_id)
+                # Use InventoryLot for lot-based tracking
+                lot = InventoryLot.query.get(entry_id)
+                # Fallback to UnifiedInventoryHistory for legacy entries
+                entry = None if lot else UnifiedInventoryHistory.query.get(entry_id)
 
                 if not entry and not lot:
                     return False, "Lot or FIFO entry not found"

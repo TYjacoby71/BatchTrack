@@ -77,12 +77,12 @@ class POSIntegrationService:
                 _db_session().add(reserved_item)
                 _db_session().flush()
 
-            # Get the source FIFO entry for tracking
-            from ..models import InventoryHistory
-            fifo_entries = InventoryHistory.query.filter_by(
-                inventory_item_id=item_id,
-                remaining_quantity__gt=0
-            ).order_by(InventoryHistory.timestamp.asc()).all()
+            # Get the source FIFO entry for tracking from UnifiedInventoryHistory
+            from ..models import UnifiedInventoryHistory
+            fifo_entries = UnifiedInventoryHistory.query.filter(
+                UnifiedInventoryHistory.inventory_item_id == item_id,
+                UnifiedInventoryHistory.remaining_quantity > 0
+            ).order_by(UnifiedInventoryHistory.timestamp.asc()).all()
             source_fifo_id = None
             source_batch_id = None
 
@@ -384,75 +384,5 @@ class POSIntegrationService:
         )
         return success, ("Sale processed" if success else "Sale failed")
 
-# Placeholder for FIFOService and Reservation.mark_returned(), Reservation.mark_converted_to_sale()
-# These would be defined in other modules.
-class FIFOService:
-    @staticmethod
-    def get_fifo_entries(item_id):
-        return [] # Dummy implementation
-
-class Reservation:
-    def __init__(self, order_id=None, product_item_id=None, reserved_item_id=None, quantity=None, unit=None, unit_cost=None, sale_price=None, source_fifo_id=None, source_batch_id=None, source=None, expires_at=None, notes=None, created_by=None, organization_id=None):
-        self.order_id = order_id
-        self.product_item_id = product_item_id
-        self.reserved_item_id = reserved_item_id
-        self.quantity = quantity
-        self.unit = unit
-        self.unit_cost = unit_cost
-        self.sale_price = sale_price
-        self.source_fifo_id = source_fifo_id
-        self.source_batch_id = source_batch_id
-        self.source = source
-        self.expires_at = expires_at
-        self.notes = notes
-        self.created_by = created_by
-        self.organization_id = organization_id
-        self.status = 'active' # Default status
-
-    def mark_converted_to_sale(self):
-        self.status = 'converted_to_sale'
-
-    def mark_returned(self):
-        self.status = 'returned'
-
-    def mark_expired(self):
-        self.status = 'expired'
-
-# Mocking necessary components for the provided code to be syntactically valid
-class InventoryItem:
-    query = None # Dummy
-    def __init__(self, name=None, type=None, unit=None, cost_per_unit=None, quantity=None, organization_id=None, category_id=None, is_perishable=None, shelf_life_days=None):
-        self.name = name
-        self.type = type
-        self.unit = unit
-        self.cost_per_unit = cost_per_unit
-        self.quantity = quantity
-        self.organization_id = organization_id
-        self.category_id = category_id
-        self.is_perishable = is_perishable
-        self.shelf_life_days = shelf_life_days
-        self.available_quantity = 100 # Dummy value for testing
-
-class InventoryHistory:
-    pass # Dummy
-
-class ReservationService:
-    @staticmethod
-    def release_reservation(order_id):
-        return True, "Reservation released" # Dummy
-
-# Mocking db session
-class MockDBSession:
-    def add(self, obj): pass
-    def flush(self): pass
-    def commit(self): pass
-    def rollback(self): pass
-
-db = MockDBSession()
-
-# Mocking current_user
-class MockCurrentUser:
-    is_authenticated = False
-    organization_id = 1 # Dummy org ID
-
-current_user = MockCurrentUser()
+# Import ReservationService from the correct location
+from app.services.reservation_service import ReservationService

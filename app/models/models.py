@@ -21,8 +21,8 @@ def _export(targets):
 _export([
     # Inventory / FIFO
     ("inventory", "InventoryItem", None),
-    ("inventory", "InventoryHistory", "FIFOLot"),     # alias InventoryHistory as FIFOLot
-    ("inventory", "InventoryHistory", None),
+    ("unified_inventory_history", "UnifiedInventoryHistory", "FIFOLot"),     # alias UnifiedInventoryHistory as FIFOLot
+    ("inventory", "InventoryHistory", None),  # Legacy - kept for backward compatibility
     ("inventory", "BatchInventoryLog", None),
 
     # Create Ingredient alias to InventoryItem (common pattern)
