@@ -279,4 +279,107 @@ Also fixed remaining `datetime.utcnow()` occurrences in:
 
 ---
 
+## 2025-10-28 (Part 3): Clear Storage vs Display Separation
+
+### Summary
+Added explicit documentation and utilities to clarify the critical distinction between datetime storage (UTC) and display (user timezone).
+
+### Key Principle
+**STORAGE ≠ DISPLAY**
+- **Storage**: Always UTC, timezone-aware, in database
+- **Display**: Always user's local timezone, in templates/UI
+
+### New Utilities Created
+
+**File**: `app/utils/api_datetime_helpers.py`
+Provides standardized API response formatting that includes BOTH UTC and localized times:
+
+```python
+# API response example
+{
+    "created_at": {
+        "utc": "2025-10-28T14:30:00+00:00",      # Storage format
+        "local": "2025-10-28T10:30:00-04:00",    # User's timezone
+        "display": "Oct 28, 2025 10:30 AM EDT",  # Human-readable
+        "timezone": "America/New_York"            # Explicit TZ name
+    }
+}
+```
+
+**Functions**:
+- `format_datetime_for_api(dt)` - Returns both UTC and localized versions
+- `batch_datetime_response(batch)` - Format batch timestamps
+- `reservation_datetime_response(reservation)` - Format reservation timestamps
+- `inventory_history_response(entry)` - Format inventory history
+
+### Documentation Added
+
+**In Model Methods**:
+Added clear comments distinguishing storage vs display:
+```python
+def mark_released(self):
+    """
+    Mark reservation as released.
+    
+    STORAGE: Sets released_at in UTC (timezone-aware)
+    DISPLAY: UI will convert to user's timezone
+    """
+    self.status = 'released'
+    self.released_at = datetime.now(timezone.utc)
+```
+
+**In Model Columns**:
+```python
+# TIMESTAMPS
+# STORAGE: All times stored as timezone-aware UTC
+# DISPLAY: Templates/APIs convert to user's timezone
+created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
+```
+
+### Template Updates
+Fixed remaining templates still using direct `.strftime()`:
+- `app/templates/billing/reconciliation_needed.html` - 2 changes
+- `app/templates/components/drawer/retention_modal.html` - 1 change
+- `app/templates/admin/dev_organizations.html` - 1 change
+- `app/templates/pages/products/view_sku.html` - 2 changes
+- `app/templates/pages/inventory/view.html` - 1 change
+
+### Best Practices Established
+
+**✅ DO - Store in UTC:**
+```python
+batch.completed_at = datetime.now(timezone.utc)  # STORAGE
+```
+
+**✅ DO - Display in user's timezone:**
+```html
+{{ batch.completed_at | user_timezone }}  <!-- DISPLAY -->
+```
+
+**✅ DO - Provide both in APIs:**
+```python
+return jsonify({
+    'completed_at_utc': batch.completed_at.isoformat(),     # For storage/sync
+    'completed_at_local': format_datetime_for_api(batch.completed_at)  # For display
+})
+```
+
+**❌ DON'T - Mix storage and display:**
+```python
+# Wrong - don't show UTC to users
+{{ batch.completed_at.strftime('%Y-%m-%d') }}  
+
+# Wrong - don't store user's timezone
+batch.completed_at = user_local_time
+```
+
+### Impact
+- ✅ Clear separation of concerns (storage vs display)
+- ✅ API consumers get both UTC and localized times
+- ✅ Developers understand when to use which format
+- ✅ No confusion about what timezone a datetime represents
+- ✅ External integrations can choose their preferred format
+
+---
+
 **Last Updated**: 2025-10-28

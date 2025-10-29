@@ -35,6 +35,8 @@ class Reservation(ScopedModelMixin, db.Model):
     source = db.Column(db.String(64), default='shopify')  # shopify, manual, etc.
     
     # TIMESTAMPS
+    # STORAGE: All times stored as timezone-aware UTC
+    # DISPLAY: Templates/APIs convert to user's timezone
     created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
     expires_at = db.Column(db.DateTime, nullable=True)  # Optional expiration
     released_at = db.Column(db.DateTime, nullable=True)
@@ -64,7 +66,12 @@ class Reservation(ScopedModelMixin, db.Model):
     
     @property
     def is_expired(self):
-        """Check if reservation has expired"""
+        """
+        Check if reservation has expired.
+        
+        STORAGE: expires_at stored in UTC (timezone-aware)
+        COMPARISON: Safe comparison with current UTC time
+        """
         if not self.expires_at:
             return False
         # Ensure both datetimes are timezone-aware for safe comparison
@@ -72,17 +79,32 @@ class Reservation(ScopedModelMixin, db.Model):
         return datetime.now(timezone.utc) > expires_at
     
     def mark_released(self):
-        """Mark reservation as released"""
+        """
+        Mark reservation as released.
+        
+        STORAGE: Sets released_at in UTC (timezone-aware)
+        DISPLAY: UI will convert to user's timezone
+        """
         self.status = 'released'
         self.released_at = datetime.now(timezone.utc)
     
     def mark_converted_to_sale(self):
-        """Mark reservation as converted to sale"""
+        """
+        Mark reservation as converted to sale.
+        
+        STORAGE: Sets converted_at in UTC (timezone-aware)
+        DISPLAY: UI will convert to user's timezone
+        """
         self.status = 'converted_to_sale'
         self.converted_at = datetime.now(timezone.utc)
     
     def mark_expired(self):
-        """Mark reservation as expired"""
+        """
+        Mark reservation as expired.
+        
+        STORAGE: Sets released_at in UTC (timezone-aware)
+        DISPLAY: UI will convert to user's timezone
+        """
         self.status = 'expired'
         self.released_at = datetime.now(timezone.utc)
     

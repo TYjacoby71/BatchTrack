@@ -7,11 +7,37 @@ BatchTrack implements a **user-centric timezone system** where each user can set
 
 ## Core Architecture
 
-### 1. Storage Strategy
-- **Database Storage**: All timestamps stored in UTC (timezone-aware datetime objects as of 2025-10-28)
-- **User Preferences**: Each user has a `timezone` field storing their preferred timezone string
-- **Display Layer**: Times converted to user's timezone for display only
-- **API Responses**: All API endpoints return times with explicit timezone information (ISO 8601 format)
+### 1. Storage Strategy (CRITICAL DISTINCTION)
+
+**STORAGE ≠ DISPLAY** - This is the most important principle:
+
+- **Database Storage**: All timestamps stored as timezone-aware UTC
+  ```python
+  batch.started_at = datetime.now(timezone.utc)  # STORAGE
+  ```
+  
+- **Display Layer**: Times converted to user's timezone ONLY for display
+  ```html
+  {{ batch.started_at | user_timezone }}  <!-- DISPLAY -->
+  ```
+  
+- **User Preferences**: Each user has a `timezone` field for display preferences
+- **API Responses**: Include BOTH UTC (storage) and localized (display) formats
+  ```python
+  {
+    "started_at": {
+      "utc": "2025-10-28T14:30:00+00:00",      # Storage format
+      "local": "2025-10-28T10:30:00-04:00",    # User's timezone  
+      "display": "Oct 28, 2025 10:30 AM EDT"   # Human-readable
+    }
+  }
+  ```
+
+**Why This Matters**:
+- ✅ Prevents timezone mismatches and comparison errors
+- ✅ Ensures data consistency across all users
+- ✅ Makes debugging and data analysis straightforward
+- ✅ Avoids DST transition issues
 
 ### 2. Key Components
 
