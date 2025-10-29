@@ -329,4 +329,4 @@ print(f"User now: {TimezoneUtils.now()}")
 
 - **[Storage vs Display Best Practices](STORAGE_VS_DISPLAY.md)** - Complete guide on STORAGE ≠ DISPLAY principle
 - **[Architecture Document](ARCHITECTURE.md)** - High-level system architecture
-- **[Change History](changelog/)** - For history of timezone system improvements
+- **[Change History](../changelog/)** - For history of timezone system improvements

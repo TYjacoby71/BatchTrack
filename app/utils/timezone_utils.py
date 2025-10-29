@@ -1,5 +1,5 @@
 import pytz
-from typing import Dict, List, Tuple
+from typing import Dict, List, Tuple, Optional, Any
 from datetime import datetime, timezone
 
 class TimezoneUtils:
@@ -265,3 +265,86 @@ class TimezoneUtils:
             
         user_dt = TimezoneUtils.to_user_timezone(dt, user_timezone)
         return user_dt.strftime(format_string)
+    
+    @staticmethod
+    def ensure_timezone_aware(dt: datetime, assume_utc: bool = True) -> datetime:
+        """
+        Ensure a datetime is timezone-aware.
+        Prevents TypeError when comparing datetimes from database.
+        
+        Args:
+            dt: The datetime to check
+            assume_utc: If True and datetime is naive, assume it's UTC (default: True)
+            
+        Returns:
+            Timezone-aware datetime
+        """
+        if dt is None:
+            return None
+            
+        if dt.tzinfo is None:
+            # Naive datetime - add timezone
+            if assume_utc:
+                return dt.replace(tzinfo=timezone.utc)
+            else:
+                raise ValueError("Naive datetime provided without explicit timezone handling")
+        
+        return dt
+    
+    @staticmethod
+    def safe_datetime_compare(dt1: datetime, dt2: datetime, assume_utc: bool = True) -> bool:
+        """
+        Safely compare two datetimes, handling timezone-aware and naive datetimes.
+        Prevents TypeError when comparing database datetimes with datetime.now(timezone.utc).
+        
+        Args:
+            dt1: First datetime
+            dt2: Second datetime
+            assume_utc: If True, treat naive datetimes as UTC (default: True)
+            
+        Returns:
+            True if dt1 > dt2
+        """
+        if dt1 is None or dt2 is None:
+            return False
+            
+        # Ensure both are timezone-aware
+        dt1 = TimezoneUtils.ensure_timezone_aware(dt1, assume_utc)
+        dt2 = TimezoneUtils.ensure_timezone_aware(dt2, assume_utc)
+        
+        return dt1 > dt2
+    
+    @staticmethod
+    def format_datetime_for_api(dt: datetime, user_timezone: str = None) -> Dict[str, str]:
+        """
+        Format datetime for API response with BOTH UTC and user timezone.
+        Ensures APIs clearly distinguish between storage and display formats.
+        
+        Args:
+            dt: Datetime to format (should be timezone-aware UTC)
+            user_timezone: Optional user timezone (defaults to current_user.timezone)
+            
+        Returns:
+            Dictionary with 'utc', 'local', 'display', and 'timezone' keys
+        """
+        if dt is None:
+            return {'utc': None, 'local': None, 'display': None, 'timezone': None}
+        
+        from flask_login import current_user
+        
+        # Ensure datetime is timezone-aware
+        dt = TimezoneUtils.ensure_timezone_aware(dt)
+        
+        # Get user timezone
+        if not user_timezone:
+            user_timezone = TimezoneUtils.get_user_timezone() if current_user and current_user.is_authenticated else 'UTC'
+        
+        # Convert to user timezone
+        user_dt = TimezoneUtils.to_user_timezone(dt, user_timezone)
+        
+        return {
+            'utc': dt.isoformat(),  # Always include UTC with explicit timezone
+            'local': user_dt.isoformat(),  # User's timezone with explicit offset
+            'display': user_dt.strftime('%b %d, %Y %I:%M %p %Z'),  # Human-readable
+            'timezone': user_timezone  # Make timezone explicit
+        }

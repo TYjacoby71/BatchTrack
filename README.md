@@ -59,17 +59,19 @@ python run.py
 
 For detailed development information, see:
 
-- **[Architecture Guide](docs/ARCHITECTURE.md)** - Service relationships and data flow
-- **[Services Documentation](docs/SERVICES.md)** - Detailed service specifications
-- **[User & Permission System](docs/USERS_AND_PERMISSIONS.md)** - Complete user management guide
-- **[Database Models](docs/DATABASE_MODELS.md)** - Model relationships and migrations
+### System Documentation
+- **[Architecture Guide](docs/system/ARCHITECTURE.md)** - Service relationships and data flow
+- **[Services Documentation](docs/system/SERVICES.md)** - Detailed service specifications
+- **[Database Models](docs/system/DATABASE_MODELS.md)** - Model relationships and migrations
+- **[Timezone System](docs/system/TIMEZONE_SYSTEM.md)** - Timezone handling guide
+- **[User & Permission System](docs/system/USERS_AND_PERMISSIONS.md)** - Complete user management guide
+- **[Global Item Library](docs/system/GLOBAL_ITEM_LIBRARY.md)** - Library & Shelf model and global-locked rules
+- **[Wall of Drawers Protocol](docs/system/WALL_OF_DRAWERS_PROTOCOL.md)** - In-context error resolution pattern
+
+### Development Resources
 - **[Development Guide](docs/DEVELOPMENT_GUIDE.md)** - How to add features safely
 - **[API Reference](docs/API_REFERENCE.md)** - Endpoint documentation
- - **[Global Item Library](docs/GLOBAL_ITEM_LIBRARY.md)** - Library & Shelf model and global-locked rules
- - **[Wall of Drawers Protocol](docs/WALL_OF_DRAWERS_PROTOCOL.md)** - In-context error resolution pattern
- - **[Deployment & Migrations](deploy_migration_guide.md)** - Runbook for production changes
- - **[Global Item Library](docs/GLOBAL_ITEM_LIBRARY.md)** - Library & Shelf model and global-locked rules
- - **[Wall of Drawers Protocol](docs/WALL_OF_DRAWERS_PROTOCOL.md)** - In-context error resolution pattern
+- **[Deployment & Migrations](deploy_migration_guide.md)** - Runbook for production changes
 
 ## 🔒 Development Guardrails
 
