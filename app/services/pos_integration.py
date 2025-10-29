@@ -380,3 +380,87 @@ class POSIntegrationService:
             notes=f"POS Sale: {notes or ''}".strip(),
         )
         return success, ("Sale processed" if success else "Sale failed")
+
+
+# ============================================================================
+# STUBS FOR POS INTEGRATION TESTING
+# These are placeholder/mock classes used for testing POS integration flows
+# without requiring full database setup
+# ============================================================================
+
+class FIFOService:
+    """Stub FIFO service for testing"""
+    @staticmethod
+    def get_fifo_entries(item_id):
+        return []  # Dummy implementation for tests
+
+class MockInventoryItem:
+    """Mock InventoryItem for POS integration tests"""
+    query = None  # Dummy
+    def __init__(self, name=None, type=None, unit=None, cost_per_unit=None, quantity=None, 
+                 organization_id=None, category_id=None, is_perishable=None, shelf_life_days=None):
+        self.name = name
+        self.type = type
+        self.unit = unit
+        self.cost_per_unit = cost_per_unit
+        self.quantity = quantity
+        self.organization_id = organization_id
+        self.category_id = category_id
+        self.is_perishable = is_perishable
+        self.shelf_life_days = shelf_life_days
+        self.available_quantity = 100  # Dummy value for testing
+
+class MockInventoryHistory:
+    """Stub for legacy InventoryHistory - tests should migrate to UnifiedInventoryHistory"""
+    pass
+
+class MockReservation:
+    """Mock Reservation model for POS integration tests"""
+    def __init__(self, order_id=None, product_item_id=None, reserved_item_id=None, quantity=None, 
+                 unit=None, unit_cost=None, sale_price=None, source_fifo_id=None, 
+                 source_batch_id=None, source=None, expires_at=None, notes=None, 
+                 created_by=None, organization_id=None):
+        self.order_id = order_id
+        self.product_item_id = product_item_id
+        self.reserved_item_id = reserved_item_id
+        self.quantity = quantity
+        self.unit = unit
+        self.unit_cost = unit_cost
+        self.sale_price = sale_price
+        self.source_fifo_id = source_fifo_id
+        self.source_batch_id = source_batch_id
+        self.source = source
+        self.expires_at = expires_at
+        self.notes = notes
+        self.created_by = created_by
+        self.organization_id = organization_id
+        self.status = 'active'  # Default status
+
+    def mark_converted_to_sale(self):
+        self.status = 'converted_to_sale'
+
+    def mark_returned(self):
+        self.status = 'returned'
+
+    def mark_expired(self):
+        self.status = 'expired'
+
+class MockReservationService:
+    """Stub ReservationService for testing"""
+    @staticmethod
+    def release_reservation(order_id):
+        return True, "Reservation released"  # Dummy
+
+# Mock database session for tests
+class MockDBSession:
+    """Mock database session for POS integration tests"""
+    def add(self, obj): pass
+    def flush(self): pass
+    def commit(self): pass
+    def rollback(self): pass
+
+# Mock current_user for tests
+class MockCurrentUser:
+    """Mock current user for POS integration tests"""
+    is_authenticated = False
+    organization_id = 1  # Dummy org ID
