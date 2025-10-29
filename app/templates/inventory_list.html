@@ -470,7 +470,9 @@ document.addEventListener('DOMContentLoaded', function() {
 
         // Add click handlers
         ingredientSuggestions.querySelectorAll('.suggestion-item').forEach(item => {
-            item.addEventListener('click', function() {
+            item.addEventListener('click', function(e) {
+                e.preventDefault(); // Prevent any default action/page reload
+                
                 const name = this.dataset.name;
                 const unit = this.dataset.unit;
                 const density = this.dataset.density;
@@ -642,7 +644,9 @@ document.addEventListener('DOMContentLoaded', function() {
         suggestionsEl.style.display = 'block';
 
         suggestionsEl.querySelectorAll('.suggestion-item').forEach(el => {
-            el.addEventListener('click', function() {
+            el.addEventListener('click', function(e) {
+                e.preventDefault(); // Prevent any default action/page reload
+                
                 const src = this.dataset.source;
                 nameInput.value = this.dataset.name || '';
                 if (src === 'global') {
@@ -730,7 +734,9 @@ document.addEventListener('DOMContentLoaded', function() {
         suggestionsEl.innerHTML = html;
         suggestionsEl.style.display = 'block';
         suggestionsEl.querySelectorAll('.suggestion-item').forEach(el => {
-            el.addEventListener('click', function() {
+            el.addEventListener('click', function(e) {
+                e.preventDefault(); // Prevent any default action/page reload
+                
                 nameInput.value = this.dataset.name || '';
                 if (this.dataset.source === 'global') { globalIdInput.value = this.dataset.id || ''; } else { globalIdInput.value = ''; }
                 const unitEl = document.querySelector('#addPackagingForm select[name="unit"]');
@@ -798,7 +804,9 @@ document.addEventListener('DOMContentLoaded', function() {
         suggestionsEl.innerHTML = html;
         suggestionsEl.style.display = 'block';
         suggestionsEl.querySelectorAll('.suggestion-item').forEach(el => {
-            el.addEventListener('click', function() {
+            el.addEventListener('click', function(e) {
+                e.preventDefault(); // Prevent any default action/page reload
+                
                 nameInput.value = this.dataset.name || '';
                 if (this.dataset.source === 'global') { globalIdInput.value = this.dataset.id || ''; } else { globalIdInput.value = ''; }
                 const unitEl = document.querySelector('#addConsumableForm select[name="unit"]');
