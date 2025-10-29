@@ -6,11 +6,8 @@ from flask_login import current_user
 from ..models import db, InventoryItem, Reservation
 from sqlalchemy import and_, func
 from ..utils import generate_fifo_code
-
-# Import necessary canonical functions
-# Import moved to avoid circular dependency - use canonical service instead
-# from app.blueprints.fifo.services import FIFOService
 from app.services.inventory_adjustment import process_inventory_adjustment
+from app.services.reservation_service import ReservationService
 
 def _db():
     """Get database session - works with real SQLAlchemy and test mocks"""
@@ -383,6 +380,3 @@ class POSIntegrationService:
             notes=f"POS Sale: {notes or ''}".strip(),
         )
         return success, ("Sale processed" if success else "Sale failed")
-
-# Import ReservationService from the correct location
-from app.services.reservation_service import ReservationService
