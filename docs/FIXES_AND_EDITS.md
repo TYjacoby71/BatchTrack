@@ -1,6 +1,26 @@
 # Fixes and Edits Log
 
-This document tracks significant fixes and improvements made to the BatchTrack codebase.
+**Purpose**: This document tracks all significant fixes, improvements, and changes made to the BatchTrack codebase.
+
+**📝 Note**: This file contains the CHANGELOG and edit history. For system architecture, see:
+- [ARCHITECTURE.md](ARCHITECTURE.md) - How the system works
+- [TIMEZONE_SYSTEM.md](TIMEZONE_SYSTEM.md) - Timezone handling guide
+- [STORAGE_VS_DISPLAY.md](STORAGE_VS_DISPLAY.md) - DateTime best practices
+- [SERVICES.md](SERVICES.md) - Service specifications
+
+---
+
+## Table of Contents
+
+1. [2025-10-28: Timezone System Standardization](#2025-10-28-timezone-system-standardization--auto-detection)
+   - Part 1: Core Timezone Utilities
+   - Part 2: Model DateTime Defaults
+   - Part 3: Storage vs Display Separation
+   - Part 4: Template Updates
+   - Part 5: Service Layer Updates
+   - Part 6: Timezone Auto-Detection
+   - Part 7: Smart Timezone Selection
+   - Part 8: Bugbot TypeError Fix
 
 ---
 

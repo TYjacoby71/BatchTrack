@@ -314,51 +314,23 @@ print(f"User now: {TimezoneUtils.now()}")
 
 ---
 
----
+## Critical Rules
 
-## Recent Changes (2025-10-28)
-
-### ✅ Timezone-Aware DateTime Standardization
-
-**What Changed:**
-- `TimezoneUtils.utc_now()` now returns timezone-aware datetime objects
-- All model DateTime columns updated to use `lambda: datetime.now(timezone.utc)`
-- All templates updated to use timezone filters (`| user_timezone`, `| user_date`)
-- All services updated to use timezone-aware datetimes
-- API responses now include explicit timezone information in ISO format
-
-**Files Updated:**
-- 17 model files (48 datetime columns)
-- 8 template files (15+ datetime displays)
-- 8 service files (20+ datetime operations)
-- Core: `app/utils/timezone_utils.py`
-
-**Migration Notes:**
-- No database migration required - data remains UTC
-- Application layer now enforces timezone awareness
-- Legacy code checking for naive datetimes may need updates
-
-**Benefits:**
-- No more ambiguous timestamps
-- Proper handling of DST changes
-- API responses clearly indicate UTC timezone
-- User times displayed correctly in their local timezone
-- Auto-detection of user timezone on signup
-- Smart timezone selection with 590+ zones organized by region
-- Safe datetime comparisons with `ensure_timezone_aware()` helper
-
-**New Features:**
-- Browser-based timezone auto-detection during signup
-- Top 5 suggested timezones based on detected location
-- All 590+ timezones available (not just 440 common ones)
-- Current timezone highlighted with "✓ (Detected)" marker
-- Helper utilities to prevent TypeError on datetime comparisons
+**⚠️ Always Follow These Rules**: 
+1. **Always use `datetime.now(timezone.utc)` for UTC timestamps**
+2. **Never use `datetime.utcnow()`** (deprecated - returns naive datetime)
+3. **Never use bare `datetime.now()`** (server timezone dependent)
+4. **Always store in UTC, display in user's timezone** (STORAGE ≠ DISPLAY)
+5. **Never bypass `TimezoneUtils` for datetime operations**
 
 ---
 
-**⚠️ Critical Rules**: 
-1. Always use `datetime.now(timezone.utc)` for UTC timestamps
-2. Never use `datetime.utcnow()` (deprecated - returns naive datetime)
-3. Never use bare `datetime.now()` (server timezone dependent)
-4. Always store in UTC, display in user's timezone
-5. Never bypass `TimezoneUtils` for datetime operations
+## Related Documentation
+
+- **[Storage vs Display Best Practices](STORAGE_VS_DISPLAY.md)** - Complete guide on STORAGE ≠ DISPLAY principle
+- **[Fixes and Edits Log](FIXES_AND_EDITS.md)** - Changelog of all timezone-related improvements
+- **[Architecture Document](ARCHITECTURE.md)** - High-level system architecture
+
+---
+
+**For recent changes and improvements to the timezone system, see [FIXES_AND_EDITS.md](FIXES_AND_EDITS.md)**
