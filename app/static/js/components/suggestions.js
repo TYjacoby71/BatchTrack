@@ -19,6 +19,23 @@
     return (value || '').trim().toLowerCase();
   }
 
+  function populateUnitFromSelection(inputEl, unit){
+    // Find the unit select in the same ingredient-entry or form row
+    var row = inputEl.closest('.ingredient-entry') || inputEl.closest('.row') || inputEl.closest('form');
+    if (!row) return;
+    
+    var unitSelect = row.querySelector('select[name="units[]"]') || row.querySelector('select[name="unit"]');
+    if (unitSelect && unit) {
+      // Check if the unit exists in the select options
+      var option = Array.from(unitSelect.options).find(function(opt){
+        return opt.value === unit;
+      });
+      if (option) {
+        unitSelect.value = unit;
+      }
+    }
+  }
+
   function ensureListContainer(listEl){
     if (listEl) return listEl;
     var div = document.createElement('div');
@@ -128,9 +145,17 @@
           if (source === 'inventory'){
             if (invHiddenEl) invHiddenEl.value = picked.id_numeric || picked.id || '';
             if (giHiddenEl) giHiddenEl.value = '';
+            // Populate unit from inventory item
+            if (picked.unit) {
+              populateUnitFromSelection(inputEl, picked.unit);
+            }
           } else {
             if (giHiddenEl) giHiddenEl.value = picked.id;
             if (invHiddenEl) invHiddenEl.value = '';
+            // Populate unit from global item's default_unit
+            if (picked.default_unit) {
+              populateUnitFromSelection(inputEl, picked.default_unit);
+            }
           }
         });
       }).catch(function(){
