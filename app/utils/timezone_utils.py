@@ -43,8 +43,12 @@ class TimezoneUtils:
         return list(pytz.common_timezones)
 
     @staticmethod
-    def get_grouped_timezones() -> Dict[str, List[Tuple[str, str]]]:
-        """Get timezones grouped by region with display names"""
+    def get_grouped_timezones(detected_timezone: str = None) -> Dict[str, List[Tuple[str, str]]]:
+        """Get timezones grouped by region with display names
+        
+        Args:
+            detected_timezone: Auto-detected timezone to show at top with related zones
+        """
         grouped = {
             'North America': [],
             'Europe': [],
@@ -61,6 +65,25 @@ class TimezoneUtils:
             'Europe/London', 'Europe/Paris', 'Europe/Berlin',
             'Asia/Tokyo', 'Asia/Shanghai', 'Australia/Sydney'
         ]
+        
+        # If we have a detected timezone, add it and related zones to top
+        if detected_timezone and detected_timezone in pytz.all_timezones:
+            grouped['🌍 Suggested (Based on Your Location)'] = []
+            
+            # Add detected timezone first
+            display_name = TimezoneUtils._format_timezone_display(detected_timezone)
+            grouped['🌍 Suggested (Based on Your Location)'].append((detected_timezone, f"✓ {display_name} (Detected)"))
+            
+            # Add 4 related timezones from same region
+            detected_region = TimezoneUtils._get_timezone_region(detected_timezone)
+            related_count = 0
+            for tz_name in sorted(pytz.all_timezones):
+                if related_count >= 4:
+                    break
+                if tz_name != detected_timezone and TimezoneUtils._get_timezone_region(tz_name) == detected_region:
+                    display_name = TimezoneUtils._format_timezone_display(tz_name)
+                    grouped['🌍 Suggested (Based on Your Location)'].append((tz_name, display_name))
+                    related_count += 1
 
         for tz_name in priority_timezones:
             if tz_name in pytz.all_timezones:
@@ -70,12 +93,15 @@ class TimezoneUtils:
 
         # Add ALL other timezones (not just common ones)
         for tz_name in sorted(pytz.all_timezones):
-            if tz_name not in priority_timezones:
+            if tz_name not in priority_timezones and (not detected_timezone or tz_name != detected_timezone):
                 display_name = TimezoneUtils._format_timezone_display(tz_name)
                 region = TimezoneUtils._get_timezone_region(tz_name)
+                # Skip if already in suggested section
+                if detected_timezone and tz_name in [tz[0] for tz in grouped.get('🌍 Suggested (Based on Your Location)', [])]:
+                    continue
                 grouped[region].append((tz_name, display_name))
 
-        # Remove empty regions
+        # Remove empty regions and return
         return {region: timezones for region, timezones in grouped.items() if timezones}
 
     @staticmethod

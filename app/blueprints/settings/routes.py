@@ -115,7 +115,9 @@ def index():
                     system_settings[section][key] = value
 
     # Get available timezones grouped by region
-    grouped_timezones = TimezoneUtils.get_grouped_timezones()
+    # Pass current user's timezone to highlight it
+    detected_tz = current_user.timezone if current_user.is_authenticated else None
+    grouped_timezones = TimezoneUtils.get_grouped_timezones(detected_tz)
 
     from ...services.billing_service import BillingService
     pricing_data = BillingService.get_comprehensive_pricing_data()
