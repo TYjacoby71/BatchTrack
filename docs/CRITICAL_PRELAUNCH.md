@@ -93,7 +93,7 @@
 - API consistency (improving; drawers protocol enforced)
 
 ### **🟢 READY FOR LAUNCH**
-- Timezone system (see [FIXES_AND_EDITS.md](FIXES_AND_EDITS.md) for details)
+- Timezone system (timezone-aware storage, auto-detection, smart selection)
 - Core business logic
 - Multi-tenant architecture
 - FIFO inventory system

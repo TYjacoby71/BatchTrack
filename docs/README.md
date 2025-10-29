@@ -23,7 +23,7 @@ Welcome to the BatchTrack documentation! This directory contains all technical d
 - **[TRACKING_PLAN.md](TRACKING_PLAN.md)** - Analytics and tracking
 
 ### Project Management
-- **[FIXES_AND_EDITS.md](FIXES_AND_EDITS.md)** - ⭐ **Changelog of all fixes and improvements**
+- **[changelog/](changelog/)** - ⭐ **Complete history of all fixes and improvements**
 - **[CRITICAL_PRELAUNCH.md](CRITICAL_PRELAUNCH.md)** - Pre-launch requirements checklist
 - **[LAUNCH_RUNBOOK.md](LAUNCH_RUNBOOK.md)** - Production launch procedures
 - **[FUTURE_ROADMAP.md](FUTURE_ROADMAP.md)** - Planned features and enhancements
@@ -48,7 +48,7 @@ Welcome to the BatchTrack documentation! This directory contains all technical d
 3. Review [SERVICES.md](SERVICES.md) for service layer patterns
 
 ### For Contributors
-1. Check [FIXES_AND_EDITS.md](FIXES_AND_EDITS.md) for recent changes
+1. Check [changelog/](changelog/) for recent changes
 2. Review relevant feature documentation
 3. Follow patterns in [ARCHITECTURE.md](ARCHITECTURE.md)
 
@@ -64,7 +64,7 @@ Welcome to the BatchTrack documentation! This directory contains all technical d
 | **Architecture** | ARCHITECTURE.md | How the system works |
 | **Guide** | TIMEZONE_SYSTEM.md | How to use a feature |
 | **Best Practices** | STORAGE_VS_DISPLAY.md | Coding standards |
-| **Changelog** | FIXES_AND_EDITS.md | What changed and when |
+| **Changelog** | changelog/ | What changed and when |
 | **Reference** | API_REFERENCE.md | Quick lookup |
 | **QA** | INVENTORY_UPGRADE_QA.md | Test scenarios |
 | **Planning** | FUTURE_ROADMAP.md | What's next |
@@ -95,8 +95,8 @@ Welcome to the BatchTrack documentation! This directory contains all technical d
 
 When making changes to the codebase:
 
-1. **Architecture changes** → Update [ARCHITECTURE.md](ARCHITECTURE.md)
-2. **Bug fixes or improvements** → Add entry to [FIXES_AND_EDITS.md](FIXES_AND_EDITS.md)
+1. **Architecture changes** → Update [ARCHITECTURE.md](ARCHITECTURE.md) to reflect current design
+2. **Bug fixes or improvements** → Add entry to [changelog/](changelog/)
 3. **New features** → Create/update feature documentation
 4. **API changes** → Update [API_REFERENCE.md](API_REFERENCE.md)
 

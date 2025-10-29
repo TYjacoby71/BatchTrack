@@ -205,4 +205,4 @@ Subscription Tier → Available Features → User Limits → Team Members → Ac
 - [GLOBAL_ITEM_LIBRARY.md](GLOBAL_ITEM_LIBRARY.md) - Global item curation system
 - [CONTAINERS_CURATION.md](CONTAINERS_CURATION.md) - Container management
 - [WALL_OF_DRAWERS_PROTOCOL.md](WALL_OF_DRAWERS_PROTOCOL.md) - Error handling UX pattern
-- [FIXES_AND_EDITS.md](FIXES_AND_EDITS.md) - Changelog of all system improvements and fixes
+- [changelog/](changelog/) - History of all system improvements and fixes

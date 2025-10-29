@@ -328,9 +328,5 @@ print(f"User now: {TimezoneUtils.now()}")
 ## Related Documentation
 
 - **[Storage vs Display Best Practices](STORAGE_VS_DISPLAY.md)** - Complete guide on STORAGE ≠ DISPLAY principle
-- **[Fixes and Edits Log](FIXES_AND_EDITS.md)** - Changelog of all timezone-related improvements
 - **[Architecture Document](ARCHITECTURE.md)** - High-level system architecture
-
----
-
-**For recent changes and improvements to the timezone system, see [FIXES_AND_EDITS.md](FIXES_AND_EDITS.md)**
+- **[Change History](changelog/)** - For history of timezone system improvements
