@@ -128,7 +128,7 @@ class FreshnessService:
                 if ev.affected_lot_id:
                     lot = db.session.get(InventoryLot, ev.affected_lot_id)
                     if lot:
-                        freshness_percent = FreshnessService._compute_lot_freshness_percent_at_time(lot, ev.timestamp or datetime.utcnow())
+                        freshness_percent = FreshnessService._compute_lot_freshness_percent_at_time(lot, ev.timestamp or datetime.now(timezone.utc))
                         lots_contributed += 1
 
                 # Fallback: if lot freshness can't be computed, try item's shelf life against event time

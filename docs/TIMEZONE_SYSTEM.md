@@ -317,6 +317,16 @@ print(f"User now: {TimezoneUtils.now()}")
 - Proper handling of DST changes
 - API responses clearly indicate UTC timezone
 - User times displayed correctly in their local timezone
+- Auto-detection of user timezone on signup
+- Smart timezone selection with 590+ zones organized by region
+- Safe datetime comparisons with `ensure_timezone_aware()` helper
+
+**New Features:**
+- Browser-based timezone auto-detection during signup
+- Top 5 suggested timezones based on detected location
+- All 590+ timezones available (not just 440 common ones)
+- Current timezone highlighted with "✓ (Detected)" marker
+- Helper utilities to prevent TypeError on datetime comparisons
 
 ---
 

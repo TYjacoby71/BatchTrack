@@ -3,6 +3,7 @@ from datetime import datetime, timedelta, timezone
 from flask_login import current_user
 from ..extensions import db
 from .mixins import ScopedModelMixin
+from ..utils.datetime_helpers import ensure_timezone_aware
 
 class Reservation(ScopedModelMixin, db.Model):
     """Individual reservation line items - replaces FIFO remaining_quantity tracking"""
@@ -66,7 +67,9 @@ class Reservation(ScopedModelMixin, db.Model):
         """Check if reservation has expired"""
         if not self.expires_at:
             return False
-        return datetime.now(timezone.utc) > self.expires_at
+        # Ensure both datetimes are timezone-aware for safe comparison
+        expires_at = ensure_timezone_aware(self.expires_at)
+        return datetime.now(timezone.utc) > expires_at
     
     def mark_released(self):
         """Mark reservation as released"""

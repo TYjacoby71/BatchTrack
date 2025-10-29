@@ -212,4 +212,71 @@ Potential enhancements for timezone system:
 
 ---
 
+---
+
+## 2025-10-28 (Part 2): Timezone-Aware Datetime Comparison Safety
+
+### Summary
+Fixed potential `TypeError` when comparing timezone-aware datetimes with naive datetimes loaded from database.
+
+### Problem Identified by Bugbot
+When comparing `datetime.now(timezone.utc)` (timezone-aware) with database-loaded datetimes like `self.expires_at` (potentially naive), Python raises a `TypeError`. SQLAlchemy typically returns naive datetimes, so this affects all datetime comparisons.
+
+### Solution
+Created helper utility to safely handle timezone-aware/naive datetime comparisons:
+
+**New File**: `app/utils/datetime_helpers.py`
+- `ensure_timezone_aware(dt)` - Converts naive datetime to timezone-aware
+- `safe_datetime_compare(dt1, dt2)` - Safely compares datetimes
+- `utc_now()` - Helper to get current UTC time
+
+**Files Fixed**:
+- `app/models/reservation.py` - Updated `is_expired` property to use helper
+- `app/models/inventory_lot.py` - Clarified date-only comparisons (safe)
+
+### Example of Fix
+
+**Before** (could cause TypeError):
+```python
+@property
+def is_expired(self):
+    if not self.expires_at:
+        return False
+    return datetime.now(timezone.utc) > self.expires_at  # TypeError if expires_at is naive!
+```
+
+**After** (safe):
+```python
+@property
+def is_expired(self):
+    if not self.expires_at:
+        return False
+    expires_at = ensure_timezone_aware(self.expires_at)
+    return datetime.now(timezone.utc) > expires_at  # Always safe
+```
+
+### Impact
+- ✅ Prevents `TypeError` in reservation expiration checks
+- ✅ Prevents `TypeError` in any datetime comparisons
+- ✅ Backward compatible with existing naive datetimes in database
+- ✅ Forward compatible with timezone-aware datetimes
+
+### Additional Fixes
+Also fixed remaining `datetime.utcnow()` occurrences in:
+- `app/routes/waitlist_routes.py`
+- `app/routes/tools_routes.py`
+- `app/blueprints/recipes/routes.py`
+- `app/blueprints/settings/routes.py`
+- `app/blueprints/inventory/routes.py`
+- `app/blueprints/products/sku.py`
+- `app/blueprints/developer/routes.py` (6 occurrences)
+- `app/blueprints/api/fifo_routes.py` (3 occurrences)
+- `app/blueprints/api/reservation_routes.py`
+- `app/services/statistics/_reporting.py`
+- `app/services/freshness_service.py`
+
+**Total**: All production code now uses timezone-aware datetimes consistently.
+
+---
+
 **Last Updated**: 2025-10-28

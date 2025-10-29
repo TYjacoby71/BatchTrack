@@ -122,12 +122,14 @@ def new_recipe():
     draft = session.get('tool_draft', None)
     # Expire stale drafts (>72 hours) so they don't linger indefinitely
     try:
-        from datetime import datetime, timedelta
+        from datetime import datetime, timezone, timedelta
+        from app.utils.datetime_helpers import ensure_timezone_aware
         meta = session.get('tool_draft_meta') or {}
         created_at = meta.get('created_at')
         if created_at:
             created_dt = datetime.fromisoformat(created_at)
-            if datetime.utcnow() - created_dt > timedelta(hours=72):
+            created_dt = ensure_timezone_aware(created_dt)
+            if datetime.now(timezone.utc) - created_dt > timedelta(hours=72):
                 session.pop('tool_draft', None)
                 session.pop('tool_draft_meta', None)
                 draft = None

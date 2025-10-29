@@ -6,7 +6,7 @@ from ...utils.timezone_utils import TimezoneUtils
 from ...models import db, Unit, User, InventoryItem, UserPreferences, Organization
 from ...utils.permissions import has_permission, require_permission
 from werkzeug.security import generate_password_hash, check_password_hash
-from datetime import datetime
+from datetime import datetime, timezone
 import json
 
 from . import settings_bp
@@ -188,7 +188,7 @@ def update_user_preferences():
             if hasattr(user_prefs, key):
                 setattr(user_prefs, key, value)
 
-        user_prefs.updated_at = datetime.utcnow()
+        user_prefs.updated_at = datetime.now(timezone.utc)
         db.session.commit()
 
         flash('All preferences saved successfully', 'success')
