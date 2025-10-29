@@ -50,15 +50,15 @@ def list_reservations():
 
             # Get lot information from FIFO entry if available
             if reservation.source_fifo_id:
-                from ...models import InventoryHistory
+                from ...models import UnifiedInventoryHistory
                 from ...models.product import ProductSKUHistory
 
-                # Try to get lot information from either InventoryHistory or ProductSKUHistory
+                # Try to get lot information from either UnifiedInventoryHistory or ProductSKUHistory
                 fifo_entry = None
                 if reservation.product_item and reservation.product_item.type == 'product':
                     fifo_entry = ProductSKUHistory.query.get(reservation.source_fifo_id)
                 else:
-                    fifo_entry = InventoryHistory.query.get(reservation.source_fifo_id)
+                    fifo_entry = UnifiedInventoryHistory.query.get(reservation.source_fifo_id)
 
                 if fifo_entry and hasattr(fifo_entry, 'lot_number') and fifo_entry.lot_number:
                     lot_number = fifo_entry.lot_number
@@ -163,7 +163,7 @@ def release_reservation(order_id):
 
             # Check if source FIFO entry exists
             if reservation.source_fifo_id:
-                from ...models import InventoryHistory
+                from ...models import UnifiedInventoryHistory
                 from ...models.product import ProductSKUHistory
 
                 if reservation.product_item and reservation.product_item.type == 'product':
@@ -173,8 +173,8 @@ def release_reservation(order_id):
                         print(f"    - Lot Number: {fifo_entry.lot_number if hasattr(fifo_entry, 'lot_number') else 'N/A'}")
                         print(f"    - Remaining Quantity: {fifo_entry.remaining_quantity}")
                 else:
-                    fifo_entry = InventoryHistory.query.get(reservation.source_fifo_id)
-                    print(f"  - FIFO Entry (InventoryHistory): {fifo_entry}")
+                    fifo_entry = UnifiedInventoryHistory.query.get(reservation.source_fifo_id)
+                    print(f"  - FIFO Entry (UnifiedInventoryHistory): {fifo_entry}")
                     if fifo_entry:
                         print(f"    - Lot Number: {fifo_entry.lot_number if hasattr(fifo_entry, 'lot_number') else 'N/A'}")
                         print(f"    - Remaining Quantity: {fifo_entry.remaining_quantity}")

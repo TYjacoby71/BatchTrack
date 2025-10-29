@@ -1,5 +1,5 @@
 from flask_login import current_user
-from app.models import db, InventoryItem, InventoryHistory, IngredientCategory
+from app.models import db, InventoryItem, IngredientCategory
 from app.models.inventory_lot import InventoryLot
 from app.models.unit import Unit
 from app.services.unit_conversion import ConversionEngine

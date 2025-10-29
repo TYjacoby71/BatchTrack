@@ -51,7 +51,7 @@ def create_product_from_data(data):
     and quick add functionality
     """
     try:
-        from ...models import db, InventoryItem, InventoryHistory
+        from ...models import db, InventoryItem
         from ...utils.permissions import get_effective_organization_id
 
         organization_id = get_effective_organization_id()

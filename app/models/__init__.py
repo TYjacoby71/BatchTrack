@@ -50,7 +50,7 @@ except ImportError:
 
 # Add test-expected aliases
 try:
-    from .inventory import InventoryHistory as FIFOLot
+    from .unified_inventory_history import UnifiedInventoryHistory as FIFOLot
     Ingredient = InventoryItem  # Alias for tests expecting Ingredient class
 except ImportError:
     pass

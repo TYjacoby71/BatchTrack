@@ -67,9 +67,9 @@ def api_calculate_expiration():
 @login_required
 def api_life_remaining(fifo_id):
     """Get life remaining percentage for a FIFO entry"""
-    from models import InventoryHistory
+    from app.models import UnifiedInventoryHistory
 
-    entry = InventoryHistory.query.get_or_404(fifo_id)
+    entry = UnifiedInventoryHistory.query.get_or_404(fifo_id)
     if not entry.expiration_date:
         return jsonify({'life_remaining_percent': None, 'non_perishable': True})
 
