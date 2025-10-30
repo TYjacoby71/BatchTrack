@@ -69,13 +69,13 @@ For detailed development information, see:
 ### Development Resources
 - **[Development Guide](docs/DEVELOPMENT_GUIDE.md)** - How to add features safely
 - **[API Reference](docs/API_REFERENCE.md)** - Endpoint documentation
-- **[Deployment & Migrations](deploy_migration_guide.md)** - Runbook for production changes
+- **[Deployment & Migrations](docs/deploy_migration_guide.md)** - Runbook for production changes
 
 ### Change History
 - **[Change Log Index](docs/changelog/CHANGELOG_INDEX.md)** - Complete history of all fixes and improvements
 
 ### Marketing
-- **[Marketing Index](marketing/MARKETING_INDEX.md)** - Marketing materials and content
+- **[Marketing Index](docs/MARKETING_INDEX.md)** - Marketing materials and content
 
 ## 🔒 Development Guardrails
 
