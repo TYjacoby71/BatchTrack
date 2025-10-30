@@ -60,18 +60,22 @@ python run.py
 For detailed development information, see:
 
 ### System Documentation
-- **[Architecture Guide](docs/system/ARCHITECTURE.md)** - Service relationships and data flow
-- **[Services Documentation](docs/system/SERVICES.md)** - Detailed service specifications
-- **[Database Models](docs/system/DATABASE_MODELS.md)** - Model relationships and migrations
-- **[Timezone System](docs/system/TIMEZONE_SYSTEM.md)** - Timezone handling guide
-- **[User & Permission System](docs/system/USERS_AND_PERMISSIONS.md)** - Complete user management guide
-- **[Global Item Library](docs/system/GLOBAL_ITEM_LIBRARY.md)** - Library & Shelf model and global-locked rules
-- **[Wall of Drawers Protocol](docs/system/WALL_OF_DRAWERS_PROTOCOL.md)** - In-context error resolution pattern
+- **[System Documentation Index](docs/system/SYSTEM_INDEX.md)** - Complete guide to all system docs
+  - Architecture, Services, Database Models
+  - Timezone System, User Permissions
+  - Global Item Library, Drawers Protocol
+  - And more...
 
 ### Development Resources
 - **[Development Guide](docs/DEVELOPMENT_GUIDE.md)** - How to add features safely
 - **[API Reference](docs/API_REFERENCE.md)** - Endpoint documentation
 - **[Deployment & Migrations](deploy_migration_guide.md)** - Runbook for production changes
+
+### Change History
+- **[Change Log Index](docs/changelog/CHANGELOG_INDEX.md)** - Complete history of all fixes and improvements
+
+### Marketing
+- **[Marketing Index](marketing/MARKETING_INDEX.md)** - Marketing materials and content
 
 ## 🔒 Development Guardrails
 
