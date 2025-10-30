@@ -10,7 +10,7 @@
         <div class="d-flex justify-content-between align-items-center mb-2 p-2 border rounded">
           <div>
             <strong>{{ batch.recipe.name }}</strong>
-            <small class="text-muted d-block">Started: {{ batch.started_at.strftime('%Y-%m-%d %H:%M') if batch.started_at }}</small>
+            <small class="text-muted d-block">Started: {{ batch.started_at | user_timezone if batch.started_at }}</small>
           </div>
           <a href="{{ url_for('batches.view_batch', batch_id=batch.id) }}" class="btn btn-sm btn-outline-primary">
             View

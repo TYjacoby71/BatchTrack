@@ -6,7 +6,7 @@ from ...utils.timezone_utils import TimezoneUtils
 from ...models import db, Unit, User, InventoryItem, UserPreferences, Organization
 from ...utils.permissions import has_permission, require_permission
 from werkzeug.security import generate_password_hash, check_password_hash
-from datetime import datetime
+from datetime import datetime, timezone
 import json
 
 from . import settings_bp
@@ -115,7 +115,9 @@ def index():
                     system_settings[section][key] = value
 
     # Get available timezones grouped by region
-    grouped_timezones = TimezoneUtils.get_grouped_timezones()
+    # Pass current user's timezone to highlight it
+    detected_tz = current_user.timezone if current_user.is_authenticated else None
+    grouped_timezones = TimezoneUtils.get_grouped_timezones(detected_tz)
 
     from ...services.billing_service import BillingService
     pricing_data = BillingService.get_comprehensive_pricing_data()
@@ -186,7 +188,7 @@ def update_user_preferences():
             if hasattr(user_prefs, key):
                 setattr(user_prefs, key, value)
 
-        user_prefs.updated_at = datetime.utcnow()
+        user_prefs.updated_at = datetime.now(timezone.utc)
         db.session.commit()
 
         flash('All preferences saved successfully', 'success')

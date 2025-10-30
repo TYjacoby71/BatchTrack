@@ -58,7 +58,7 @@
                                     </td>
                                     <td>{{ org.users|length }}</td>
                                     <td>{{ org.active_users_count }}</td>
-                                    <td>{{ org.created_at.strftime('%Y-%m-%d') if org.created_at else 'N/A' }}</td>
+                                    <td>{{ org.created_at | user_date if org.created_at else 'N/A' }}</td>
                                     <td>
                                         {% if not selected_org or selected_org.id != org.id %}
                                         <a href="{{ url_for('dev.select_organization', org_id=org.id) }}" 

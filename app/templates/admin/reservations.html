@@ -80,12 +80,12 @@
                                             {% endif %}
                                         </td>
                                         <td>
-                                            <small>{{ res.created_at.strftime('%m/%d %H:%M') }}</small>
+                                            <small>{{ res.created_at | user_timezone('%m/%d %H:%M') }}</small>
                                         </td>
                                         <td>
                                             {% if res.expires_at %}
                                                 <small class="expiration-time" data-expires="{{ res.expires_at.isoformat() }}">
-                                                    {{ res.expires_at.strftime('%m/%d %H:%M') }}
+                                                    {{ res.expires_at | user_timezone('%m/%d %H:%M') }}
                                                 </small>
                                             {% else %}
                                                 <span class="text-muted">Never</span>

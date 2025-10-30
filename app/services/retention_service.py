@@ -1,4 +1,4 @@
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import List, Tuple
 from flask_login import current_user
 
@@ -51,7 +51,7 @@ class RetentionService:
         if not retention_days or retention_days <= 0:
             return []
 
-        cutoff = datetime.utcnow() - timedelta(days=retention_days)
+        cutoff = datetime.now(timezone.utc) - timedelta(days=retention_days)
 
         # Exclude any recipe that is referenced by a batch
         # Join-free approach: get recipe ids used by batches, then exclude
@@ -95,7 +95,7 @@ class RetentionService:
         if not retention_days or retention_days <= 0:
             return 0, 0
 
-        now = datetime.utcnow()
+        now = datetime.now(timezone.utc)
         delete_after = now + timedelta(days=15)
 
         created = 0
@@ -152,7 +152,7 @@ class RetentionService:
     @staticmethod
     def nightly_sweep_delete_due() -> int:
         """Delete recipes whose queue entry is past delete_after_at and still safe."""
-        now = datetime.utcnow()
+        now = datetime.now(timezone.utc)
         due = RetentionDeletionQueue.query.filter(
             RetentionDeletionQueue.status == 'queued',
             RetentionDeletionQueue.delete_after_at <= now

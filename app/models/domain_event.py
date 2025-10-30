@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timezone
 
 from ..extensions import db
 from .mixins import ScopedModelMixin
@@ -10,7 +10,7 @@ class DomainEvent(ScopedModelMixin, db.Model):
 
     id = db.Column(db.Integer, primary_key=True)
     event_name = db.Column(db.String(128), nullable=False, index=True)
-    occurred_at = db.Column(db.DateTime, default=datetime.utcnow, index=True)
+    occurred_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc), index=True)
 
     # Actor and tenant context
     organization_id = db.Column(db.Integer, db.ForeignKey('organization.id'), nullable=True, index=True)
@@ -33,7 +33,7 @@ class DomainEvent(ScopedModelMixin, db.Model):
     processed_at = db.Column(db.DateTime, nullable=True)
     delivery_attempts = db.Column(db.Integer, default=0)
 
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
 
     # Relationships
     organization = db.relationship('Organization')

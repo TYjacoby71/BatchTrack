@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timezone
 from ..extensions import db
 from .mixins import ScopedModelMixin
 
@@ -10,7 +10,7 @@ class Role(ScopedModelMixin, db.Model):
     description = db.Column(db.Text)
     is_active = db.Column(db.Boolean, default=True)
     is_system_role = db.Column(db.Boolean, default=False)  # System roles cannot be deleted
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
     created_by = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True)
     organization_id = db.Column(db.Integer, db.ForeignKey('organization.id'), nullable=True)
 

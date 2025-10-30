@@ -59,17 +59,23 @@ python run.py
 
 For detailed development information, see:
 
-- **[Architecture Guide](docs/ARCHITECTURE.md)** - Service relationships and data flow
-- **[Services Documentation](docs/SERVICES.md)** - Detailed service specifications
-- **[User & Permission System](docs/USERS_AND_PERMISSIONS.md)** - Complete user management guide
-- **[Database Models](docs/DATABASE_MODELS.md)** - Model relationships and migrations
+### System Documentation
+- **[System Documentation Index](docs/system/SYSTEM_INDEX.md)** - Complete guide to all system docs
+  - Architecture, Services, Database Models
+  - Timezone System, User Permissions
+  - Global Item Library, Drawers Protocol
+  - And more...
+
+### Development Resources
 - **[Development Guide](docs/DEVELOPMENT_GUIDE.md)** - How to add features safely
 - **[API Reference](docs/API_REFERENCE.md)** - Endpoint documentation
- - **[Global Item Library](docs/GLOBAL_ITEM_LIBRARY.md)** - Library & Shelf model and global-locked rules
- - **[Wall of Drawers Protocol](docs/WALL_OF_DRAWERS_PROTOCOL.md)** - In-context error resolution pattern
- - **[Deployment & Migrations](deploy_migration_guide.md)** - Runbook for production changes
- - **[Global Item Library](docs/GLOBAL_ITEM_LIBRARY.md)** - Library & Shelf model and global-locked rules
- - **[Wall of Drawers Protocol](docs/WALL_OF_DRAWERS_PROTOCOL.md)** - In-context error resolution pattern
+- **[Deployment & Migrations](docs/deploy_migration_guide.md)** - Runbook for production changes
+
+### Change History
+- **[Change Log Index](docs/changelog/CHANGELOG_INDEX.md)** - Complete history of all fixes and improvements
+
+### Marketing
+- **[Marketing Index](docs/MARKETING_INDEX.md)** - Marketing materials and content
 
 ## 🔒 Development Guardrails
 

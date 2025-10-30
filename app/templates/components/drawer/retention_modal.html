@@ -23,7 +23,7 @@ Only non batch-linked recipes appear. Nothing is deleted until user acknowledges
             {% for r in items %}
               <tr>
                 <td>{{ r.name }}</td>
-                <td>{{ r.created_at.strftime('%Y-%m-%d') if r.created_at else '' }}</td>
+                <td>{{ r.created_at | user_date if r.created_at else '' }}</td>
                 <td>{{ r.predicted_yield }} {{ r.predicted_yield_unit }}</td>
               </tr>
             {% endfor %}

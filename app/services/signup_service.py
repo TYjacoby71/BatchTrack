@@ -81,7 +81,8 @@ class SignupService:
                 is_active=True,
                 email_verified=pending_signup.get('email_verified', False),
                 oauth_provider=pending_signup.get('oauth_provider'),
-                oauth_provider_id=pending_signup.get('oauth_provider_id')
+                oauth_provider_id=pending_signup.get('oauth_provider_id'),
+                timezone=pending_signup.get('detected_timezone', 'UTC')  # Auto-detect from browser
             )
             
             # Set password only for non-OAuth users
@@ -204,7 +205,8 @@ class SignupService:
                 organization_id=org.id,
                 user_type='customer',
                 is_organization_owner=True,
-                is_active=True
+                is_active=True,
+                timezone=signup_data.get('detected_timezone', 'UTC')  # Auto-detect from browser
             )
             # Use the pre-hashed password from metadata
             owner_user.password_hash = signup_data['password_hash']

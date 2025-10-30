@@ -49,7 +49,7 @@
                     </td>
                     <td>
                         {% if user.last_login %}
-                            {{ user.last_login.strftime('%Y-%m-%d %H:%M') }}
+                            {{ user.last_login | user_timezone }}
                         {% else %}
                             <span class="text-muted">Never</span>
                         {% endif %}

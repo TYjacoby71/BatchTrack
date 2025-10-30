@@ -186,6 +186,7 @@ Subscription Tier → Available Features → User Limits → Team Members → Ac
 - **Inventory Adjustment Service** (`app/services/inventory_adjustment.py`) - Handles all inventory modifications
 - **Unit Conversion Service** (`app/services/unit_conversion.py`) - Manages unit conversions and mappings
 - **Stock Check Service** (`app/services/stock_check.py`) - Validates ingredient availability
+- **Timezone Utils** (`app/utils/timezone_utils.py`) - All datetime/timezone operations (see TIMEZONE_SYSTEM.md)
 
 ### Supporting Services
 
@@ -198,4 +199,10 @@ Subscription Tier → Available Features → User Limits → Team Members → Ac
 
 ---
 
-**Next:** See [SERVICES.md](SERVICES.md) for detailed service specifications. Also see [GLOBAL_ITEM_LIBRARY.md](GLOBAL_ITEM_LIBRARY.md), [CONTAINERS_CURATION.md](CONTAINERS_CURATION.md) and [WALL_OF_DRAWERS_PROTOCOL.md](WALL_OF_DRAWERS_PROTOCOL.md).
+**Related Documentation:**
+- [SERVICES.md](SERVICES.md) - Detailed service specifications
+- [TIMEZONE_SYSTEM.md](TIMEZONE_SYSTEM.md) - Timezone handling guide
+- [GLOBAL_ITEM_LIBRARY.md](GLOBAL_ITEM_LIBRARY.md) - Global item curation system
+- [CONTAINERS_CURATION.md](CONTAINERS_CURATION.md) - Container management
+- [WALL_OF_DRAWERS_PROTOCOL.md](WALL_OF_DRAWERS_PROTOCOL.md) - Error handling UX pattern
+- [../changelog/](../changelog/) - History of all system improvements and fixes

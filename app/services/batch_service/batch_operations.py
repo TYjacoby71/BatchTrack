@@ -1,5 +1,5 @@
 import logging
-from datetime import datetime
+from datetime import date, datetime, timezone
 from sqlalchemy import extract
 from flask_login import current_user
 
@@ -507,7 +507,7 @@ class BatchOperationsService(BaseService):
 
             # Update batch status
             batch.status = 'cancelled'
-            batch.cancelled_at = datetime.utcnow()
+            batch.cancelled_at = datetime.now(timezone.utc)
             db.session.commit()
 
             # Emit domain event (best-effort)

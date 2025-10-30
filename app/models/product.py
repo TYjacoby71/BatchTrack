@@ -1,4 +1,4 @@
-from datetime import datetime, date
+from datetime import datetime, date, timezone
 from flask_login import current_user, UserMixin
 from ..extensions import db
 from .mixins import ScopedModelMixin
@@ -27,8 +27,8 @@ class Product(ScopedModelMixin, db.Model):
     # Status
     is_active = db.Column(db.Boolean, default=True)
     is_discontinued = db.Column(db.Boolean, default=False)
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
-    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
+    updated_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc))
     created_by = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True)
 
     # Marketplace integration (product-level)
@@ -75,7 +75,7 @@ class ProductVariant(ScopedModelMixin, db.Model):
 
     # Status
     is_active = db.Column(db.Boolean, default=True)
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
     created_by = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True)
 
     # Relationships
@@ -140,8 +140,8 @@ class ProductSKU(db.Model, ScopedModelMixin):
     is_active = db.Column(db.Boolean, default=True)
     is_product_active = db.Column(db.Boolean, default=True)
     is_discontinued = db.Column(db.Boolean, default=False)
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
-    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
+    updated_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc))
     created_by = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True)
 
     # SUPPLIER AND SOURCING
@@ -383,7 +383,7 @@ class ProductSKUHistory(ScopedModelMixin, db.Model):
 
 
     # Change tracking
-    timestamp = db.Column(db.DateTime, default=datetime.utcnow)
+    timestamp = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
     change_type = db.Column(db.String(32), nullable=False)
     quantity_change = db.Column(db.Float, nullable=False)
 

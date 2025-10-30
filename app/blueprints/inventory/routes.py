@@ -321,7 +321,7 @@ def view_inventory(id):
                          get_ingredient_categories=IngredientCategory.query.order_by(IngredientCategory.name).all,
                          User=User,
                          UnifiedInventoryHistory=UnifiedInventoryHistory,
-                         now=datetime.utcnow(),
+                         now=datetime.now(timezone.utc),
                          int_to_base36=int_to_base36,
                          fifo_filter=fifo_filter,
                          TimezoneUtils=TimezoneUtils,

@@ -288,7 +288,8 @@ def complete_signup_from_stripe():
             'referral_code': checkout_session.metadata.get('referral_code'),
             'oauth_provider': oauth_user_info.get('oauth_provider'),
             'oauth_provider_id': oauth_user_info.get('oauth_provider_id'),
-            'email_verified': bool(oauth_user_info.get('email_verified', False))
+            'email_verified': bool(oauth_user_info.get('email_verified', False)),
+            'detected_timezone': checkout_session.metadata.get('detected_timezone', 'UTC')  # Auto-detected timezone
         }
 
         logger.info(f"Built signup data: {signup_data}")

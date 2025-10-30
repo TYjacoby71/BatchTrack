@@ -7,7 +7,7 @@ Aggregates statistics data for dashboards, reports, and analytics.
 
 import logging
 from typing import Dict, Any, List
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 
 from ...extensions import db
 from ...models.statistics import (
@@ -170,7 +170,7 @@ class ReportingService:
     def _get_recent_avg_item_freshness(organization_id: int) -> float:
         """Get recent average freshness efficiency score from snapshots (last 7 days)."""
         try:
-            since = datetime.utcnow() - timedelta(days=7)
+            since = datetime.now(timezone.utc) - timedelta(days=7)
             snaps = FreshnessSnapshot.query.filter(
                 FreshnessSnapshot.organization_id == organization_id,
                 FreshnessSnapshot.snapshot_date >= since.date()

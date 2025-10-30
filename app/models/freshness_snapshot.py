@@ -1,4 +1,4 @@
-from datetime import datetime, date
+from datetime import datetime, date, timezone
 from ..extensions import db
 from .mixins import ScopedModelMixin
 
@@ -18,7 +18,7 @@ class FreshnessSnapshot(ScopedModelMixin, db.Model):
     freshness_efficiency_score = db.Column(db.Float, nullable=True)  # 0-100
 
     # Audit
-    computed_at = db.Column(db.DateTime, default=datetime.utcnow)
+    computed_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
 
     # Relationships
     organization = db.relationship('Organization')

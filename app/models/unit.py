@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timezone
 from flask_login import current_user
 from ..extensions import db
 from .mixins import ScopedModelMixin, TimestampMixin
@@ -74,7 +74,7 @@ class ConversionLog(TimestampMixin, ScopedModelMixin, db.Model):
     __tablename__ = 'conversion_log'
     id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
-    timestamp = db.Column(db.DateTime, default=datetime.utcnow, nullable=True)
+    timestamp = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc), nullable=True)
     amount = db.Column(db.Float, nullable=False)
     from_unit = db.Column(db.String(32), nullable=False)
     to_unit = db.Column(db.String(32), nullable=False)

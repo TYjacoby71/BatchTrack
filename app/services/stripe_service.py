@@ -2,7 +2,7 @@ import stripe
 import logging
 import os
 from flask import current_app
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from decimal import Decimal
 from app.extensions import db
 from app.models.stripe_event import StripeEvent
@@ -97,7 +97,7 @@ class StripeService:
 
             # Mark as processed
             stripe_event.status = 'processed'
-            stripe_event.processed_at = datetime.utcnow()
+            stripe_event.processed_at = datetime.now(timezone.utc)
             db.session.commit()
 
             return 200
@@ -338,7 +338,7 @@ class StripeService:
         # Serve from cache if fresh
         try:
             cache_key = f"price::{tier_obj.stripe_lookup_key}"
-            now = datetime.utcnow()
+            now = datetime.now(timezone.utc)
             cached = StripeService._pricing_cache.get(cache_key)
             if cached and (now - cached['ts']).total_seconds() < StripeService._pricing_cache_ttl_seconds:
                 return cached['data']
@@ -380,7 +380,7 @@ class StripeService:
                 'currency': currency,
                 'billing_cycle': billing_cycle,
                 'lookup_key': tier_obj.stripe_lookup_key,
-                'last_synced': datetime.utcnow().isoformat()
+                'last_synced': datetime.now(timezone.utc).isoformat()
             }
 
         except stripe.error.StripeError as e:
@@ -397,9 +397,9 @@ class StripeService:
                         'currency': price.currency.upper(),
                         'billing_cycle': 'yearly' if getattr(price, 'recurring', None) and price.recurring.interval == 'year' else ('monthly' if getattr(price, 'recurring', None) and price.recurring.interval == 'month' else 'one-time'),
                         'lookup_key': tier_obj.stripe_lookup_key,
-                        'last_synced': datetime.utcnow().isoformat()
+                        'last_synced': datetime.now(timezone.utc).isoformat()
                     }
-                    StripeService._pricing_cache[cache_key] = {'ts': datetime.utcnow(), 'data': data}
+                    StripeService._pricing_cache[cache_key] = {'ts': datetime.now(timezone.utc), 'data': data}
             except Exception:
                 pass
 

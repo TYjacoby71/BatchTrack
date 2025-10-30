@@ -1,5 +1,5 @@
 
-from datetime import datetime
+from datetime import datetime, timezone
 from ..extensions import db
 
 # Association table for developer roles and permissions
@@ -17,7 +17,7 @@ class DeveloperRole(db.Model):
     description = db.Column(db.Text)
     category = db.Column(db.String(32), default='developer')  # 'developer', 'admin', 'system'
     is_active = db.Column(db.Boolean, default=True)
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
     
     # Relationship to developer permissions
     permissions = db.relationship('DeveloperPermission', 

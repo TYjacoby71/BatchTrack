@@ -1,7 +1,7 @@
 from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify
 from flask_login import login_required, current_user
 from sqlalchemy import and_, or_
-from datetime import datetime, timedelta
+from datetime import datetime, timezone, timedelta
 from ...models import db, ProductSKU, UnifiedInventoryHistory, InventoryItem, Reservation
 from ...utils.unit_utils import get_global_unit_list
 from ...utils.timezone_utils import TimezoneUtils
@@ -283,7 +283,7 @@ def execute_merge():
             db.session.delete(source_sku)
 
         # Update target SKU timestamp
-        target_sku.updated_at = datetime.utcnow()
+        target_sku.updated_at = datetime.now(timezone.utc)
 
         db.session.commit()
 

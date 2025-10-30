@@ -1,5 +1,5 @@
 
-from datetime import datetime
+from datetime import datetime, timezone
 from flask_login import current_user
 from ..extensions import db
 from .mixins import ScopedModelMixin
@@ -58,16 +58,18 @@ class InventoryLot(ScopedModelMixin, db.Model):
         """Check if this lot is expired"""
         if not self.expiration_date:
             return False
-        from datetime import datetime
-        return self.expiration_date < datetime.now().date()
+        # Compare dates only (both are date objects, no timezone issues)
+        today = datetime.now(timezone.utc).date()
+        return self.expiration_date < today
     
     @property
     def days_until_expiration(self):
         """Get days until expiration (negative if already expired)"""
         if not self.expiration_date:
             return None
-        from datetime import datetime
-        delta = self.expiration_date - datetime.now().date()
+        # Compare dates only (both are date objects, no timezone issues)
+        today = datetime.now(timezone.utc).date()
+        delta = self.expiration_date - today
         return delta.days
     
     # Remove duplicate relationship declarations (kept canonical ones above)
