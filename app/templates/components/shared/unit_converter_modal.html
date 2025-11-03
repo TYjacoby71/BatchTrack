@@ -251,7 +251,7 @@ document.addEventListener('DOMContentLoaded', function() {
         }
 
         try {
-            const url = `/convert/convert/${amount}/${from}/${to}${currentSelectedIngredient ? `?ingredient_id=${currentSelectedIngredient.id}` : ''}`;
+            const url = `/conversion/convert/${amount}/${from}/${to}${currentSelectedIngredient ? `?ingredient_id=${currentSelectedIngredient.id}` : ''}`;
             const response = await fetch(url);
 
             if (!response.ok) {
