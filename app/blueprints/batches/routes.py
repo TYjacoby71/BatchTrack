@@ -153,7 +153,7 @@ def view_batch_record(batch_identifier):
         print(f"DEBUG: Rendering batch record view for {batch.status} batch")
         return render_template('pages/batches/view_batch.html',
             batch=batch,
-            current_time=datetime.now(),
+            current_time=TimezoneUtils.utc_now(),
             **nav_data,
             **context_data)
 

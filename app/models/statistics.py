@@ -95,10 +95,12 @@ class UserStats(ScopedModelMixin, db.Model):
 
     def get_monthly_stats(self, year=None, month=None):
         """Get statistics for a specific month"""
-        if not year:
-            year = datetime.now().year
-        if not month:
-            month = datetime.now().month
+        if not year or not month:
+            now = TimezoneUtils.utc_now()
+            if not year:
+                year = now.year
+            if not month:
+                month = now.month
 
         from .models import Batch
 
@@ -214,10 +216,12 @@ class OrganizationStats(db.Model):
 
     def get_monthly_stats(self, year=None, month=None):
         """Get statistics for a specific month"""
-        if not year:
-            year = datetime.now().year
-        if not month:
-            month = datetime.now().month
+        if not year or not month:
+            now = TimezoneUtils.utc_now()
+            if not year:
+                year = now.year
+            if not month:
+                month = now.month
 
         from .models import Batch
 
@@ -276,10 +280,12 @@ class Leaderboard:
     @staticmethod
     def get_monthly_batch_leaders(year=None, month=None, limit=10):
         """Get monthly batch leaders across all organizations"""
-        if not year:
-            year = datetime.now().year
-        if not month:
-            month = datetime.now().month
+        if not year or not month:
+            now = TimezoneUtils.utc_now()
+            if not year:
+                year = now.year
+            if not month:
+                month = now.month
 
         from .models import Batch, User, Organization
 

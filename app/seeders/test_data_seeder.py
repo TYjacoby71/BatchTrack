@@ -1,4 +1,4 @@
-from datetime import datetime, timedelta
+from datetime import timedelta
 from flask import current_app
 from flask_login import current_user
 from ..models import (
@@ -308,7 +308,6 @@ def seed_test_data(organization_id=None):
 
             # Create history entry for this lot creation
             from app.models.unified_inventory_history import UnifiedInventoryHistory
-            from datetime import datetime
 
             history_entry = UnifiedInventoryHistory(
                 inventory_item_id=inventory_item.id,
@@ -318,7 +317,7 @@ def seed_test_data(organization_id=None):
                 quantity_after=lot_data['quantity'],
                 unit=inventory_item.unit,
                 notes=f"Test data lot creation - {lot.batch_id}",
-                created_at=datetime.utcnow(),
+                created_at=TimezoneUtils.utc_now(),
                 organization_id=organization_id
             )
             db.session.add(history_entry)

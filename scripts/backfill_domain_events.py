@@ -1,5 +1,5 @@
 import click
-from datetime import datetime
+from app.utils.timezone_utils import TimezoneUtils
 
 from app import create_app
 from app.models import db, UnifiedInventoryHistory, Batch
@@ -21,7 +21,7 @@ def backfill_inventory_events():
             quantity_delta = float(h.quantity_change or 0)
             evt = DomainEvent(
                 event_name='inventory_adjusted',
-                occurred_at=h.timestamp or datetime.utcnow(),
+                occurred_at=h.timestamp or TimezoneUtils.utc_now(),
                 organization_id=h.organization_id,
                 user_id=h.created_by,
                 entity_type='inventory_item',

@@ -1,15 +1,16 @@
 
 import json
-from datetime import datetime
 import os
 from typing import Optional, Dict, Any
+
+from app.utils.timezone_utils import TimezoneUtils
 
 FAULT_LOG_PATH = 'faults.json'
 
 def log_fault(message: str, details: Optional[Dict[str, Any]] = None, source: str = 'system') -> bool:
     try:
         fault = {
-            'timestamp': datetime.utcnow().isoformat(),
+            'timestamp': TimezoneUtils.utc_now().isoformat(),
             'message': message,
             'source': source,
             'details': details or {},

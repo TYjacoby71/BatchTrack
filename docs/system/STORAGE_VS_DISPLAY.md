@@ -19,6 +19,14 @@ This is the single most important principle for datetime handling in BatchTrack.
 
 ---
 
+## Project Standard (2025-11-03)
+
+- **Persistence**: Use `TimezoneUtils.utc_now()` (or `datetime.now(timezone.utc)`) when writing timestamps; never persist naive datetimes.
+- **Normalization**: Call `TimezoneUtils.ensure_timezone_aware()` on any external or user-provided datetime values before storing/comparing.
+- **Presentation**: Rely on the Jinja filters registered in `app/utils/template_filters.py` (`user_timezone`, `user_date`, `user_time`, etc.) for UI rendering.
+- **Legacy Utilities**: `TimezoneUtils.convert_to_timezone()` is retained only for backward compatibility; new code should use `to_user_timezone()` / `format_for_user()`.
+- **Banned APIs**: `datetime.utcnow()` and bare `datetime.now()` are no longer allowed in code or tests.
+
 ## Storage Layer (Database)
 
 ### Rule: Always Store in UTC
