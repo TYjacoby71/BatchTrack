@@ -1,13 +1,12 @@
 from datetime import datetime, timedelta, date, timezone
-from ...models import db, InventoryItem, UnifiedInventoryHistory, ProductSKU, ProductSKUHistory, Batch, InventoryLot
+from ...models import db, InventoryItem, InventoryHistory, UnifiedInventoryHistory, ProductSKU, ProductSKUHistory, Batch, InventoryLot
 from sqlalchemy import and_, or_
+from sqlalchemy.exc import OperationalError
 from sqlalchemy.orm import joinedload
 from typing import List, Dict, Optional, Tuple
 from flask_login import current_user
 import logging
 from app.services.inventory_adjustment import process_inventory_adjustment
-from app.models.inventory import InventoryItem
-from app.models.product import ProductSKU, ProductSKUHistory
 
 # Set logger to INFO level to reduce debug noise
 logger = logging.getLogger(__name__)
@@ -507,9 +506,21 @@ class ExpirationService:
         try:
             if kind in ("fifo", "raw"):
                 # Use InventoryLot for lot-based tracking
-                lot = InventoryLot.query.get(entry_id)
-                # Fallback to UnifiedInventoryHistory for legacy entries
-                entry = None if lot else UnifiedInventoryHistory.query.get(entry_id)
+                try:
+                    lot = InventoryLot.query.get(entry_id)
+                except OperationalError:
+                    lot = None
+                # Fallback to UnifiedInventoryHistory for canonical FIFO entries
+                if lot:
+                    entry = None
+                else:
+                    try:
+                        entry = UnifiedInventoryHistory.query.get(entry_id)
+                    except OperationalError:
+                        entry = None
+                # Legacy compatibility - some tests/bootstrap data still use InventoryHistory
+                if not entry and not lot:
+                    entry = InventoryHistory.query.get(entry_id)
 
                 if not entry and not lot:
                     return False, "Lot or FIFO entry not found"
