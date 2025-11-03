@@ -15,6 +15,7 @@ from sqlalchemy import and_, or_, func
 from sqlalchemy.orm import joinedload
 from app.models.inventory_lot import InventoryLot
 from app.services.density_assignment_service import DensityAssignmentService # Added for density assignment
+from datetime import datetime, timezone # Fix missing timezone import
 
 # Import the blueprint from __init__.py instead of creating a new one
 from . import inventory_bp
@@ -104,7 +105,7 @@ def api_quick_create_inventory():
         csrf_token = request.headers.get('X-CSRFToken')
         if not csrf_token:
             return jsonify({'success': False, 'error': 'CSRF token missing'}), 400
-        
+
         data = request.get_json(force=True, silent=True) or {}
 
         # Normalize form-like dict for service
@@ -230,7 +231,7 @@ def view_inventory(id):
     query = InventoryItem.query
     if current_user.organization_id:
         query = query.filter_by(organization_id=current_user.organization_id)
-    item = query.filter_by(id=id).first()
+    item = query.filter_by(id=id).first_or_404()
 
     if not item:
         flash('Inventory item not found or access denied.', 'error')

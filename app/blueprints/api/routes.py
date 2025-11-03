@@ -1,8 +1,9 @@
-from flask import Blueprint, jsonify, request
+from flask import Blueprint, jsonify, request, current_app
 from flask_login import login_required, current_user
 from datetime import datetime, timezone
 from flask import session
 import logging
+from app.models import InventoryItem # Added for get_ingredients endpoint
 
 # Configure logging
 logger = logging.getLogger(__name__)
@@ -265,3 +266,40 @@ def get_container_suggestions():
         return jsonify({'success': True, 'suggestions': payload})
     except Exception as e:
         return jsonify({'success': False, 'error': str(e)}), 500
+
+# Added timezone endpoint
+@api_bp.route('/timezone', methods=['GET'])
+def get_timezone():
+    """Get server timezone info"""
+    from datetime import datetime
+    import pytz
+
+    server_tz = current_app.config.get('TIMEZONE', 'UTC')
+    now_utc = datetime.utcnow()
+
+    return jsonify({
+        'server_timezone': server_tz,
+        'utc_time': now_utc.isoformat(),
+        'available_timezones': pytz.all_timezones_set
+    })
+
+# Added ingredients endpoint for unit converter
+@api_bp.route('/ingredients', methods=['GET'])
+@login_required
+def get_ingredients():
+    """Get user's ingredients for unit converter"""
+    try:
+        ingredients = InventoryItem.query.filter_by(
+            organization_id=current_user.organization_id,
+            type='ingredient'
+        ).order_by(InventoryItem.name).all()
+
+        return jsonify([{
+            'id': ing.id,
+            'name': ing.name,
+            'density': ing.density,
+            'type': ing.type,
+            'unit': ing.unit
+        } for ing in ingredients])
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
