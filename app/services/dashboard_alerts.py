@@ -1,5 +1,5 @@
 from typing import Dict, List, Optional
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from flask_login import current_user
 from ..models import db, InventoryItem, Batch, ProductSKU, UserPreferences
 from ..services.combined_inventory_alerts import CombinedInventoryAlertService
