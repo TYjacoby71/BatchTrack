@@ -14,6 +14,8 @@ def convert(amount, from_unit, to_unit):
     ingredient_id = request.args.get('ingredient_id', type=int)
     density = request.args.get('density', type=float)
 
+    logger.info(f"Conversion request: {amount} {from_unit} -> {to_unit}, ingredient_id: {ingredient_id}, density: {density}")
+
     try:
         result = ConversionEngine.convert_units(
             amount,
@@ -22,12 +24,15 @@ def convert(amount, from_unit, to_unit):
             ingredient_id=ingredient_id,
             density=density
         )
+        logger.info(f"Conversion result: {result}")
         return jsonify(result), 200
-    except ValueError as e:
+    except Exception as e:
+        logger.error(f"Conversion error: {str(e)}")
         return jsonify({
+            'success': False,
             'converted_value': None,
             'conversion_type': 'error',
-            'message': str(e),
+            'error_data': {'message': str(e)},
             'requires_attention': True
         }), 400
 
