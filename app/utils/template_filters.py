@@ -11,6 +11,44 @@ from ..utils.timezone_utils import TimezoneUtils
 import re
 import pytz
 
+def format_currency(value):
+    """Format value as currency"""
+    if value is None:
+        return "$0.00"
+    try:
+        return f"${float(value):.2f}"
+    except (ValueError, TypeError):
+        return "$0.00"
+
+def format_percentage(value):
+    """Format value as percentage"""
+    if value is None:
+        return "0%"
+    try:
+        return f"{float(value):.1f}%"
+    except (ValueError, TypeError):
+        return "0%"
+
+def pluralize(count, singular, plural=None):
+    """Pluralize a word based on count"""
+    if count == 1:
+        return singular
+    if plural is None:
+        return f"{singular}s"
+    return plural
+
+def user_date(dt, format_string='%Y-%m-%d'):
+    """Format date in user's timezone"""
+    if not dt:
+        return ''
+    return TimezoneUtils.format_for_user(dt, format_string)
+
+def user_timezone(dt, format_string='%Y-%m-%d %H:%M:%S'):
+    """Format datetime in user's timezone"""
+    if not dt:
+        return ''
+    return TimezoneUtils.format_for_user(dt, format_string)
+
 def register_template_filters(app):
     """Register all template filters"""
 
