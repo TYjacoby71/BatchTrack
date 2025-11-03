@@ -280,25 +280,37 @@ document.addEventListener('DOMContentLoaded', function() {
         }
 
         try {
-            let url = `/conversion/convert/${amount}/${from}/${to}`;
-            const params = new URLSearchParams();
+            // Use the correct public API endpoint like in the candles tool
+            const requestBody = {
+                quantity: amount,
+                from_unit: from,
+                to_unit: to
+            };
             
-            if (currentSelectedIngredient && currentSelectedIngredient.id) {
-                params.append('ingredient_id', currentSelectedIngredient.id);
-                console.log('🔧 UNIT CONVERTER: Adding ingredient_id:', currentSelectedIngredient.id);
-            } else if (currentSelectedIngredient && currentSelectedIngredient.density) {
-                // For global items without ID, pass density directly
-                params.append('density', currentSelectedIngredient.density);
-                console.log('🔧 UNIT CONVERTER: Adding density:', currentSelectedIngredient.density);
+            // Add ingredient or density data if available
+            if (currentSelectedIngredient) {
+                if (currentSelectedIngredient.id) {
+                    requestBody.ingredient_id = currentSelectedIngredient.id;
+                    console.log('🔧 UNIT CONVERTER: Adding ingredient_id:', currentSelectedIngredient.id);
+                } else if (currentSelectedIngredient.density) {
+                    requestBody.density = currentSelectedIngredient.density;
+                    console.log('🔧 UNIT CONVERTER: Adding density:', currentSelectedIngredient.density);
+                }
             }
             
-            if (params.toString()) {
-                url += `?${params.toString()}`;
-            }
+            console.log('🔧 UNIT CONVERTER: Request body:', requestBody);
+            console.log('🔧 UNIT CONVERTER: Making POST request to: /api/public/convert-units');
             
-            console.log('🔧 UNIT CONVERTER: Making request to:', url);
-            const response = await fetch(url);
+            const response = await fetch('/api/public/convert-units', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(requestBody)
+            });
+            
             console.log('🔧 UNIT CONVERTER: Response status:', response.status);
+            console.log('🔧 UNIT CONVERTER: Response headers:', Object.fromEntries(response.headers.entries()));
 
             if (!response.ok) {
                 // Try to parse error message from response body
@@ -306,25 +318,35 @@ document.addEventListener('DOMContentLoaded', function() {
                 try {
                     const errorData = await response.json();
                     console.log('🔧 UNIT CONVERTER: Error response data:', errorData);
-                    errorMsg = errorData.error_data?.message || errorData.message || errorMsg;
+                    errorMsg = errorData.error_data?.message || errorData.message || errorData.error || errorMsg;
                 } catch (e) {
-                    // If response is not JSON, use status text
-                    errorMsg = response.statusText || errorMsg;
+                    // If response is not JSON, try to get text
+                    try {
+                        const errorText = await response.text();
+                        console.log('🔧 UNIT CONVERTER: Error response text:', errorText);
+                        errorMsg = errorText || response.statusText || errorMsg;
+                    } catch (e2) {
+                        errorMsg = response.statusText || errorMsg;
+                    }
                 }
                 throw new Error(errorMsg);
             }
 
             const contentType = response.headers.get('content-type');
+            console.log('🔧 UNIT CONVERTER: Response content-type:', contentType);
+            
             if (!contentType || !contentType.includes('application/json')) {
+                const responseText = await response.text();
+                console.log('🔧 UNIT CONVERTER: Non-JSON response text:', responseText);
                 throw new Error('Received non-JSON response from server.');
             }
 
             const data = await response.json();
-            console.log('🔧 UNIT CONVERTER: Response data:', data);
+            console.log('🔧 UNIT CONVERTER: Full response data:', data);
 
-            // Check for success in the ConversionEngine response format
-            if (data.success !== false && data.converted_value !== null && data.converted_value !== undefined) {
-                const convertedValue = data.converted_value;
+            // Handle both success formats from the API
+            if (data && data.success && data.data && data.data.success && data.data.converted_value !== null && data.data.converted_value !== undefined) {
+                const convertedValue = data.data.converted_value;
                 console.log('🔧 UNIT CONVERTER: Conversion successful:', convertedValue);
                 
                 // Update the result field
@@ -341,12 +363,33 @@ document.addEventListener('DOMContentLoaded', function() {
                 conversionError.style.display = 'none';
                 
                 console.log('🔧 UNIT CONVERTER: UI updated successfully');
+            } else if (data && data.success !== false && data.converted_value !== null && data.converted_value !== undefined) {
+                // Alternative success format
+                const convertedValue = data.converted_value;
+                console.log('🔧 UNIT CONVERTER: Conversion successful (alt format):', convertedValue);
+                
+                toAmount.value = convertedValue;
+                
+                const resultTextElement = document.getElementById('resultText');
+                if (resultTextElement) {
+                    resultTextElement.textContent = `${amount} ${from} = ${convertedValue} ${to}`;
+                }
+                
+                conversionResult.style.display = 'block';
+                conversionError.style.display = 'none';
+                
+                console.log('🔧 UNIT CONVERTER: UI updated successfully (alt format)');
             } else {
                 console.log('🔧 UNIT CONVERTER: Conversion failed:', data);
-                showError(data.error_data?.message || data.message || 'Conversion failed');
+                const errorMsg = (data && data.data && data.data.error_data && data.data.error_data.message) || 
+                                (data && data.data && data.data.error) || 
+                                (data && data.error) || 
+                                'Conversion failed';
+                showError(errorMsg);
             }
         } catch (error) {
             console.error('🔧 UNIT CONVERTER: Exception during conversion:', error);
+            console.error('🔧 UNIT CONVERTER: Error stack:', error.stack);
             showError('Error performing conversion: ' + error.message);
         }
     }
