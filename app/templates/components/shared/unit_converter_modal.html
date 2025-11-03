@@ -1,4 +1,3 @@
-
 {# Enhanced Unit Converter Modal Component #}
 <div class="modal fade" id="unitConverterModal" tabindex="-1" aria-labelledby="unitConverterLabel" aria-hidden="true">
   <div class="modal-dialog modal-lg">
@@ -74,7 +73,7 @@
             <p class="text-muted mb-3">
               Converting between volume and weight requires density data. Select an ingredient:
             </p>
-            
+
             <!-- Ingredient Search and Selection -->
             <div class="row">
               <div class="col-md-8">
@@ -86,7 +85,7 @@
               </div>
               <div class="col-md-4">
                 <button type="button" id="selectFromGlobalBtn" class="btn btn-outline-secondary w-100">
-                  <i class="fas fa-globe"></i> Browse Global Library
+                  <i class="fas fa-flask"></i> Select Ingredient
                 </button>
               </div>
             </div>
@@ -168,9 +167,12 @@ document.addEventListener('DOMContentLoaded', function() {
             const response = await fetch('/api/ingredients');
             if (response.ok) {
                 availableIngredients = await response.json();
+            } else {
+                throw new Error(`HTTP error! status: ${response.status}`);
             }
         } catch (error) {
             console.error('Error loading ingredients:', error);
+            showError('Failed to load ingredient data.');
         }
     }
 
@@ -178,7 +180,7 @@ document.addEventListener('DOMContentLoaded', function() {
     function needsDensity() {
         const fromType = fromUnit.selectedOptions[0]?.dataset.type;
         const toType = toUnit.selectedOptions[0]?.dataset.type;
-        
+
         return fromType && toType && 
                ((fromType === 'volume' && toType === 'weight') || 
                 (fromType === 'weight' && toType === 'volume'));
@@ -191,6 +193,7 @@ document.addEventListener('DOMContentLoaded', function() {
         } else {
             ingredientSection.style.display = 'none';
             currentSelectedIngredient = null;
+            selectedIngredient.style.display = 'none'; // Hide selected ingredient display
         }
     }
 
@@ -200,7 +203,7 @@ document.addEventListener('DOMContentLoaded', function() {
             ing.name.toLowerCase().includes(searchTerm.toLowerCase()) && 
             ing.type === 'ingredient'
         );
-        
+
         ingredientDropdown.innerHTML = '';
         filtered.slice(0, 10).forEach(ing => {
             const item = document.createElement('a');
@@ -216,7 +219,7 @@ document.addEventListener('DOMContentLoaded', function() {
             });
             ingredientDropdown.appendChild(item);
         });
-        
+
         ingredientDropdown.classList.toggle('show', filtered.length > 0);
     }
 
@@ -226,7 +229,9 @@ document.addEventListener('DOMContentLoaded', function() {
         document.getElementById('selectedIngredientDensity').textContent = ingredient.density || 'Not set';
         selectedIngredient.style.display = 'block';
         ingredientDropdown.classList.remove('show');
-        ingredientSearch.value = '';
+        ingredientSearch.value = ''; // Clear search input
+        // Optionally, hide the ingredient section if it was only for selection
+        // if (!needsDensity()) { ingredientSection.style.display = 'none'; }
     }
 
     // Perform conversion
@@ -248,6 +253,25 @@ document.addEventListener('DOMContentLoaded', function() {
         try {
             const url = `/convert/convert/${amount}/${from}/${to}${currentSelectedIngredient ? `?ingredient_id=${currentSelectedIngredient.id}` : ''}`;
             const response = await fetch(url);
+
+            if (!response.ok) {
+                // Try to parse error message from response body
+                let errorMsg = `HTTP error! status: ${response.status}`;
+                try {
+                    const errorData = await response.json();
+                    errorMsg = errorData.error_data?.message || errorMsg;
+                } catch (e) {
+                    // If response is not JSON, use status text
+                    errorMsg = response.statusText || errorMsg;
+                }
+                throw new Error(errorMsg);
+            }
+
+            const contentType = response.headers.get('content-type');
+            if (!contentType || !contentType.includes('application/json')) {
+                throw new Error('Received non-JSON response from server.');
+            }
+
             const data = await response.json();
 
             if (data.success !== false && data.converted_value !== null) {
@@ -273,7 +297,7 @@ document.addEventListener('DOMContentLoaded', function() {
     fromUnit.addEventListener('change', updateIngredientSection);
     toUnit.addEventListener('change', updateIngredientSection);
     convertButton.addEventListener('click', performConversion);
-    
+
     ingredientSearch.addEventListener('input', (e) => {
         if (e.target.value.length > 0) {
             filterIngredients(e.target.value);
@@ -292,9 +316,12 @@ document.addEventListener('DOMContentLoaded', function() {
     async function loadGlobalItems() {
         try {
             const response = await fetch('/density-reference/options');
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
             const categories = await response.json();
             const globalItemList = document.getElementById('globalItemList');
-            
+
             globalItemList.innerHTML = '';
             categories.forEach(category => {
                 const categoryDiv = document.createElement('div');
@@ -320,7 +347,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     e.preventDefault();
                     const name = e.currentTarget.dataset.name;
                     const density = parseFloat(e.currentTarget.dataset.density);
-                    
+
                     if (density) {
                         selectIngredient({
                             name: name,
@@ -328,30 +355,40 @@ document.addEventListener('DOMContentLoaded', function() {
                             id: null // Global item, no specific ID needed
                         });
                         bootstrap.Modal.getInstance(document.getElementById('globalItemModal')).hide();
+                    } else {
+                        showError(`'${name}' does not have density data.`);
                     }
                 });
             });
         } catch (error) {
             console.error('Error loading global items:', error);
+            showError('Failed to load global ingredient library.');
         }
     }
 
     // Copy result
     copyResultBtn.addEventListener('click', () => {
-        const resultText = document.getElementById('resultText').textContent;
-        navigator.clipboard.writeText(resultText).then(() => {
-            copyResultBtn.innerHTML = '<i class="fas fa-check"></i> Copied!';
-            setTimeout(() => {
-                copyResultBtn.innerHTML = '<i class="fas fa-copy"></i> Copy Result';
-            }, 2000);
-        });
+        const resultTextElement = document.getElementById('resultText');
+        if (resultTextElement) {
+            const resultText = resultTextElement.textContent;
+            navigator.clipboard.writeText(resultText).then(() => {
+                copyResultBtn.innerHTML = '<i class="fas fa-check"></i> Copied!';
+                setTimeout(() => {
+                    copyResultBtn.innerHTML = '<i class="fas fa-copy"></i> Copy Result';
+                }, 2000);
+            }).catch(err => {
+                console.error('Failed to copy text: ', err);
+                // Optionally provide user feedback that copy failed
+            });
+        }
     });
 
     // Load ingredients on modal open
-    document.getElementById('unitConverterModal').addEventListener('shown.bs.modal', loadIngredients);
+    const unitConverterModal = document.getElementById('unitConverterModal');
+    unitConverterModal.addEventListener('shown.bs.modal', loadIngredients);
 
     // Clear form when modal closes
-    document.getElementById('unitConverterModal').addEventListener('hidden.bs.modal', () => {
+    unitConverterModal.addEventListener('hidden.bs.modal', () => {
         fromAmount.value = '';
         fromUnit.value = '';
         toAmount.value = '';
@@ -362,6 +399,7 @@ document.addEventListener('DOMContentLoaded', function() {
         conversionResult.style.display = 'none';
         conversionError.style.display = 'none';
         ingredientDropdown.classList.remove('show');
+        ingredientSearch.value = ''; // Clear search input on close
     });
 });
 </script>

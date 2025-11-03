@@ -4,6 +4,7 @@ from datetime import datetime, timezone
 from flask import session
 import logging
 from app.models import InventoryItem # Added for get_ingredients endpoint
+from app import db # Assuming db is imported from app
 
 # Configure logging
 logger = logging.getLogger(__name__)
@@ -303,3 +304,45 @@ def get_ingredients():
         } for ing in ingredients])
     except Exception as e:
         return jsonify({'error': str(e)}), 500
+
+@api_bp.route('/unit-converter', methods=['POST'])
+@login_required
+@require_permission('inventory.view')
+def unit_converter():
+    """Unit conversion endpoint for the modal."""
+    try:
+        data = request.get_json() or {}
+        from_amount = float(data.get('from_amount', 0))
+        from_unit = data.get('from_unit', '')
+        to_unit = data.get('to_unit', '')
+        ingredient_id = data.get('ingredient_id')
+
+        if not all([from_amount, from_unit, to_unit]):
+            return jsonify({'success': False, 'error': 'Missing required parameters'})
+
+        # Get ingredient for density if needed
+        ingredient = None
+        if ingredient_id:
+            ingredient = db.session.get(InventoryItem, ingredient_id)
+
+        # Perform conversion using unit conversion service
+        from app.services.unit_conversion import UnitConversionService
+        result = UnitConversionService.convert_with_density(
+            from_amount, from_unit, to_unit, 
+            density=ingredient.density if ingredient else None
+        )
+
+        if result['success']:
+            return jsonify({
+                'success': True,
+                'result': result['converted_amount'],
+                'from_amount': from_amount,
+                'from_unit': from_unit,
+                'to_unit': to_unit
+            })
+        else:
+            return jsonify({'success': False, 'error': result.get('error', 'Conversion failed')})
+
+    except Exception as e:
+        current_app.logger.error(f"Unit converter API error: {str(e)}")
+        return jsonify({'success': False, 'error': str(e)})
