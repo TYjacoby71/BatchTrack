@@ -76,17 +76,12 @@
 
             <!-- Ingredient Search and Selection -->
             <div class="row">
-              <div class="col-md-8">
+              <div class="col-md-12">
                 <input type="text" 
                        id="ingredientSearch" 
                        class="form-control" 
                        placeholder="Search ingredients...">
                 <div id="ingredientDropdown" class="dropdown-menu w-100" style="max-height: 200px; overflow-y: auto;"></div>
-              </div>
-              <div class="col-md-4">
-                <button type="button" id="selectFromGlobalBtn" class="btn btn-outline-secondary w-100">
-                  <i class="fas fa-flask"></i> Select Ingredient
-                </button>
               </div>
             </div>
 
@@ -124,23 +119,7 @@
   </div>
 </div>
 
-<!-- Global Item Selection Modal -->
-<div class="modal fade" id="globalItemModal" tabindex="-1">
-  <div class="modal-dialog modal-lg">
-    <div class="modal-content">
-      <div class="modal-header">
-        <h5 class="modal-title">Select Ingredient from Global Library</h5>
-        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-      </div>
-      <div class="modal-body">
-        <input type="text" id="globalItemSearch" class="form-control mb-3" placeholder="Search global ingredients...">
-        <div id="globalItemList" style="max-height: 400px; overflow-y: auto;">
-          <!-- Populated by JavaScript -->
-        </div>
-      </div>
-    </div>
-  </div>
-</div>
+
 
 <script>
 document.addEventListener('DOMContentLoaded', function() {
@@ -155,21 +134,39 @@ document.addEventListener('DOMContentLoaded', function() {
     const selectedIngredient = document.getElementById('selectedIngredient');
     const conversionResult = document.getElementById('conversionResult');
     const conversionError = document.getElementById('conversionError');
-    const selectFromGlobalBtn = document.getElementById('selectFromGlobalBtn');
     const copyResultBtn = document.getElementById('copyResultBtn');
 
     let currentSelectedIngredient = null;
     let availableIngredients = [];
 
-    // Load available ingredients
+    // Load available ingredients (both inventory and global)
     async function loadIngredients() {
         try {
-            const response = await fetch('/api/ingredients');
-            if (response.ok) {
-                availableIngredients = await response.json();
-            } else {
-                throw new Error(`HTTP error! status: ${response.status}`);
+            // Load user's inventory ingredients
+            const inventoryResponse = await fetch('/api/ingredients');
+            let inventoryItems = [];
+            if (inventoryResponse.ok) {
+                inventoryItems = await inventoryResponse.json();
             }
+
+            // Load global density reference items
+            const globalResponse = await fetch('/density-reference/options');
+            let globalItems = [];
+            if (globalResponse.ok) {
+                const categories = await globalResponse.json();
+                globalItems = categories.flatMap(category => 
+                    category.items.map(item => ({
+                        id: null, // Global items don't have IDs
+                        name: item.name,
+                        density: item.density_g_per_ml,
+                        type: 'ingredient',
+                        isGlobal: true
+                    }))
+                );
+            }
+
+            // Combine both lists, prioritizing inventory items
+            availableIngredients = [...inventoryItems, ...globalItems];
         } catch (error) {
             console.error('Error loading ingredients:', error);
             showError('Failed to load ingredient data.');
@@ -205,13 +202,15 @@ document.addEventListener('DOMContentLoaded', function() {
         );
 
         ingredientDropdown.innerHTML = '';
-        filtered.slice(0, 10).forEach(ing => {
+        filtered.slice(0, 15).forEach(ing => {
             const item = document.createElement('a');
             item.className = 'dropdown-item';
             item.href = '#';
+            const densityText = ing.density ? `(${ing.density} g/ml)` : '(no density)';
+            const sourceText = ing.isGlobal ? ' 🌐' : '';
             item.innerHTML = `
-                ${ing.name} 
-                ${ing.density ? `<small class="text-muted">(${ing.density} g/ml)</small>` : '<small class="text-warning">(no density)</small>'}
+                ${ing.name}${sourceText}
+                <small class="text-muted">${densityText}</small>
             `;
             item.addEventListener('click', (e) => {
                 e.preventDefault();
@@ -251,7 +250,20 @@ document.addEventListener('DOMContentLoaded', function() {
         }
 
         try {
-            const url = `/conversion/convert/${amount}/${from}/${to}${currentSelectedIngredient ? `?ingredient_id=${currentSelectedIngredient.id}` : ''}`;
+            let url = `/conversion/convert/${amount}/${from}/${to}`;
+            const params = new URLSearchParams();
+            
+            if (currentSelectedIngredient && currentSelectedIngredient.id) {
+                params.append('ingredient_id', currentSelectedIngredient.id);
+            } else if (currentSelectedIngredient && currentSelectedIngredient.density) {
+                // For global items without ID, pass density directly
+                params.append('density', currentSelectedIngredient.density);
+            }
+            
+            if (params.toString()) {
+                url += `?${params.toString()}`;
+            }
+            
             const response = await fetch(url);
 
             if (!response.ok) {
@@ -306,65 +318,7 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     });
 
-    // Global library modal
-    selectFromGlobalBtn.addEventListener('click', () => {
-        const globalModal = new bootstrap.Modal(document.getElementById('globalItemModal'));
-        globalModal.show();
-        loadGlobalItems();
-    });
-
-    async function loadGlobalItems() {
-        try {
-            const response = await fetch('/density-reference/options');
-            if (!response.ok) {
-                throw new Error(`HTTP error! status: ${response.status}`);
-            }
-            const categories = await response.json();
-            const globalItemList = document.getElementById('globalItemList');
-
-            globalItemList.innerHTML = '';
-            categories.forEach(category => {
-                const categoryDiv = document.createElement('div');
-                categoryDiv.className = 'mb-3';
-                categoryDiv.innerHTML = `
-                    <h6 class="text-primary">${category.name}</h6>
-                    <div class="list-group">
-                        ${category.items.map(item => `
-                            <a href="#" class="list-group-item list-group-item-action d-flex justify-content-between align-items-center" 
-                               data-name="${item.name}" data-density="${item.density_g_per_ml || ''}">
-                                <span>${item.name}</span>
-                                <small class="text-muted">${item.density_g_per_ml ? item.density_g_per_ml + ' g/ml' : 'No density'}</small>
-                            </a>
-                        `).join('')}
-                    </div>
-                `;
-                globalItemList.appendChild(categoryDiv);
-            });
-
-            // Add click handlers for global items
-            globalItemList.querySelectorAll('.list-group-item').forEach(item => {
-                item.addEventListener('click', (e) => {
-                    e.preventDefault();
-                    const name = e.currentTarget.dataset.name;
-                    const density = parseFloat(e.currentTarget.dataset.density);
-
-                    if (density) {
-                        selectIngredient({
-                            name: name,
-                            density: density,
-                            id: null // Global item, no specific ID needed
-                        });
-                        bootstrap.Modal.getInstance(document.getElementById('globalItemModal')).hide();
-                    } else {
-                        showError(`'${name}' does not have density data.`);
-                    }
-                });
-            });
-        } catch (error) {
-            console.error('Error loading global items:', error);
-            showError('Failed to load global ingredient library.');
-        }
-    }
+    
 
     // Copy result
     copyResultBtn.addEventListener('click', () => {
