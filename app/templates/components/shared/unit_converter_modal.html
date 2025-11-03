@@ -141,15 +141,22 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Load available ingredients (both inventory and global)
     async function loadIngredients() {
+        console.log('🔧 UNIT CONVERTER: Loading ingredients...');
+        
         try {
             // Load user's inventory ingredients
+            console.log('🔧 UNIT CONVERTER: Fetching inventory ingredients...');
             const inventoryResponse = await fetch('/api/ingredients');
             let inventoryItems = [];
             if (inventoryResponse.ok) {
                 inventoryItems = await inventoryResponse.json();
+                console.log('🔧 UNIT CONVERTER: Loaded inventory items:', inventoryItems.length);
+            } else {
+                console.log('🔧 UNIT CONVERTER: Inventory request failed:', inventoryResponse.status);
             }
 
             // Load global density reference items
+            console.log('🔧 UNIT CONVERTER: Fetching global density reference...');
             const globalResponse = await fetch('/density-reference/options');
             let globalItems = [];
             if (globalResponse.ok) {
@@ -163,12 +170,16 @@ document.addEventListener('DOMContentLoaded', function() {
                         isGlobal: true
                     }))
                 );
+                console.log('🔧 UNIT CONVERTER: Loaded global items:', globalItems.length);
+            } else {
+                console.log('🔧 UNIT CONVERTER: Global density request failed:', globalResponse.status);
             }
 
             // Combine both lists, prioritizing inventory items
             availableIngredients = [...inventoryItems, ...globalItems];
+            console.log('🔧 UNIT CONVERTER: Total ingredients available:', availableIngredients.length);
         } catch (error) {
-            console.error('Error loading ingredients:', error);
+            console.error('🔧 UNIT CONVERTER: Error loading ingredients:', error);
             showError('Failed to load ingredient data.');
         }
     }
@@ -185,12 +196,17 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Show/hide ingredient selection
     function updateIngredientSection() {
-        if (needsDensity()) {
+        const densityNeeded = needsDensity();
+        console.log('🔧 UNIT CONVERTER: Updating ingredient section, density needed:', densityNeeded);
+        
+        if (densityNeeded) {
             ingredientSection.style.display = 'block';
+            console.log('🔧 UNIT CONVERTER: Showing ingredient selection section');
         } else {
             ingredientSection.style.display = 'none';
             currentSelectedIngredient = null;
             selectedIngredient.style.display = 'none'; // Hide selected ingredient display
+            console.log('🔧 UNIT CONVERTER: Hiding ingredient selection section');
         }
     }
 
@@ -223,28 +239,42 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     function selectIngredient(ingredient) {
+        console.log('🔧 UNIT CONVERTER: Selecting ingredient:', ingredient);
         currentSelectedIngredient = ingredient;
         document.getElementById('selectedIngredientName').textContent = ingredient.name;
         document.getElementById('selectedIngredientDensity').textContent = ingredient.density || 'Not set';
         selectedIngredient.style.display = 'block';
         ingredientDropdown.classList.remove('show');
         ingredientSearch.value = ''; // Clear search input
+        console.log('🔧 UNIT CONVERTER: Ingredient selected successfully');
         // Optionally, hide the ingredient section if it was only for selection
         // if (!needsDensity()) { ingredientSection.style.display = 'none'; }
     }
 
     // Perform conversion
     async function performConversion() {
+        console.log('🔧 UNIT CONVERTER: Starting conversion');
+        
         const amount = parseFloat(fromAmount.value);
         const from = fromUnit.value;
         const to = toUnit.value;
 
+        console.log('🔧 UNIT CONVERTER: Form values:', {
+            amount,
+            from,
+            to,
+            needsDensity: needsDensity(),
+            currentSelectedIngredient
+        });
+
         if (!amount || !from || !to) {
+            console.log('🔧 UNIT CONVERTER: Missing required fields');
             showError('Please fill in amount and select both units');
             return;
         }
 
         if (needsDensity() && (!currentSelectedIngredient || !currentSelectedIngredient.density)) {
+            console.log('🔧 UNIT CONVERTER: Missing density for volume/weight conversion');
             showError('Please select an ingredient with density data for volume/weight conversion');
             return;
         }
@@ -255,23 +285,28 @@ document.addEventListener('DOMContentLoaded', function() {
             
             if (currentSelectedIngredient && currentSelectedIngredient.id) {
                 params.append('ingredient_id', currentSelectedIngredient.id);
+                console.log('🔧 UNIT CONVERTER: Adding ingredient_id:', currentSelectedIngredient.id);
             } else if (currentSelectedIngredient && currentSelectedIngredient.density) {
                 // For global items without ID, pass density directly
                 params.append('density', currentSelectedIngredient.density);
+                console.log('🔧 UNIT CONVERTER: Adding density:', currentSelectedIngredient.density);
             }
             
             if (params.toString()) {
                 url += `?${params.toString()}`;
             }
             
+            console.log('🔧 UNIT CONVERTER: Making request to:', url);
             const response = await fetch(url);
+            console.log('🔧 UNIT CONVERTER: Response status:', response.status);
 
             if (!response.ok) {
                 // Try to parse error message from response body
                 let errorMsg = `HTTP error! status: ${response.status}`;
                 try {
                     const errorData = await response.json();
-                    errorMsg = errorData.error_data?.message || errorMsg;
+                    console.log('🔧 UNIT CONVERTER: Error response data:', errorData);
+                    errorMsg = errorData.error_data?.message || errorData.message || errorMsg;
                 } catch (e) {
                     // If response is not JSON, use status text
                     errorMsg = response.statusText || errorMsg;
@@ -285,16 +320,33 @@ document.addEventListener('DOMContentLoaded', function() {
             }
 
             const data = await response.json();
+            console.log('🔧 UNIT CONVERTER: Response data:', data);
 
-            if (data.success !== false && data.converted_value !== null) {
-                toAmount.value = data.converted_value;
-                document.getElementById('resultText').textContent = `${amount} ${from} = ${data.converted_value} ${to}`;
+            // Check for success in the ConversionEngine response format
+            if (data.success !== false && data.converted_value !== null && data.converted_value !== undefined) {
+                const convertedValue = data.converted_value;
+                console.log('🔧 UNIT CONVERTER: Conversion successful:', convertedValue);
+                
+                // Update the result field
+                toAmount.value = convertedValue;
+                
+                // Update the result text and show success
+                const resultTextElement = document.getElementById('resultText');
+                if (resultTextElement) {
+                    resultTextElement.textContent = `${amount} ${from} = ${convertedValue} ${to}`;
+                }
+                
+                // Show result section, hide error
                 conversionResult.style.display = 'block';
                 conversionError.style.display = 'none';
+                
+                console.log('🔧 UNIT CONVERTER: UI updated successfully');
             } else {
-                showError(data.error_data?.message || 'Conversion failed');
+                console.log('🔧 UNIT CONVERTER: Conversion failed:', data);
+                showError(data.error_data?.message || data.message || 'Conversion failed');
             }
         } catch (error) {
+            console.error('🔧 UNIT CONVERTER: Exception during conversion:', error);
             showError('Error performing conversion: ' + error.message);
         }
     }
@@ -306,9 +358,18 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     // Event listeners
-    fromUnit.addEventListener('change', updateIngredientSection);
-    toUnit.addEventListener('change', updateIngredientSection);
-    convertButton.addEventListener('click', performConversion);
+    fromUnit.addEventListener('change', () => {
+        console.log('🔧 UNIT CONVERTER: From unit changed to:', fromUnit.value);
+        updateIngredientSection();
+    });
+    toUnit.addEventListener('change', () => {
+        console.log('🔧 UNIT CONVERTER: To unit changed to:', toUnit.value);
+        updateIngredientSection();
+    });
+    convertButton.addEventListener('click', () => {
+        console.log('🔧 UNIT CONVERTER: Convert button clicked');
+        performConversion();
+    });
 
     ingredientSearch.addEventListener('input', (e) => {
         if (e.target.value.length > 0) {
