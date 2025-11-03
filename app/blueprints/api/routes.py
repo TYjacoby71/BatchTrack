@@ -5,6 +5,7 @@ from flask import session
 import logging
 from app.models import InventoryItem # Added for get_ingredients endpoint
 from app import db # Assuming db is imported from app
+from app.utils.permissions import require_permission
 
 # Configure logging
 logger = logging.getLogger(__name__)
