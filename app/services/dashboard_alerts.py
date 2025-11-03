@@ -286,8 +286,19 @@ class DashboardAlertService:
             recent_critical = 0
 
             for fault in faults:
-                fault_time = datetime.fromisoformat(fault.get('timestamp', ''))
-                if (fault_time > cutoff_time and
+                raw_timestamp = fault.get('timestamp')
+                if not raw_timestamp:
+                    continue
+
+                try:
+                    fault_time = datetime.fromisoformat(raw_timestamp.replace('Z', '+00:00'))
+                except ValueError:
+                    continue
+
+                fault_time = TimezoneUtils.ensure_timezone_aware(fault_time)
+                cutoff_time_aware = TimezoneUtils.ensure_timezone_aware(cutoff_time)
+
+                if (fault_time > cutoff_time_aware and
                     fault.get('severity', '').lower() in ['critical', 'error']):
                     recent_critical += 1
 

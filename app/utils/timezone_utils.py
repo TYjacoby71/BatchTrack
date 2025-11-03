@@ -163,6 +163,23 @@ class TimezoneUtils:
         return localized_dt.astimezone(to_timezone)
 
     @staticmethod
+    def convert_to_timezone(dt: datetime, to_timezone: str, assume_utc: bool = True) -> datetime:
+        """Backward-compatible helper that converts *dt* to *to_timezone*."""
+        if dt is None:
+            return None
+
+        if not to_timezone or not TimezoneUtils.validate_timezone(to_timezone):
+            to_timezone = 'UTC'
+
+        if dt.tzinfo is None:
+            if not assume_utc:
+                raise ValueError("Naive datetime provided without timezone; set assume_utc=True to treat as UTC")
+            dt = dt.replace(tzinfo=timezone.utc)
+
+        target_tz = pytz.timezone(to_timezone)
+        return dt.astimezone(target_tz)
+
+    @staticmethod
     def get_user_timezone_display(user_timezone: str) -> str:
         """Get display-friendly timezone name for user"""
         if not user_timezone:
