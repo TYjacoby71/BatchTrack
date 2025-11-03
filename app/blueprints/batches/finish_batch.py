@@ -1,5 +1,5 @@
 import logging
-from datetime import datetime
+from datetime import datetime, timezone
 from flask import Blueprint, request, redirect, url_for, flash, jsonify
 from flask_login import login_required, current_user
 from ...models import db, Batch, Product, ProductVariant, ProductSKU, InventoryItem
@@ -138,7 +138,7 @@ def _complete_batch_internal(batch_id, form_data):
         batch.final_quantity = final_quantity
         batch.output_unit = output_unit
         batch.status = 'completed'
-        batch.completed_at = datetime.utcnow()
+        batch.completed_at = datetime.now(timezone.utc)
         batch.is_perishable = is_perishable
         batch.shelf_life_days = shelf_life_days
         batch.expiration_date = expiration_date

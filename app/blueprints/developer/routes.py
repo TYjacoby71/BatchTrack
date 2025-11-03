@@ -36,7 +36,7 @@ except ImportError:
     class TimezoneUtils:
         @staticmethod
         def utc_now():
-            return datetime.utcnow()
+            return datetime.now(timezone.utc)
 
 developer_bp = Blueprint('developer', __name__, url_prefix='/developer')
 developer_bp.register_blueprint(system_roles_bp)
@@ -68,7 +68,7 @@ def dashboard():
     ).join(Organization, Organization.subscription_tier_id == SubscriptionTier.id).group_by(SubscriptionTier.name).all()
 
     # Recent organizations (last 30 days)
-    thirty_days_ago = datetime.utcnow() - timedelta(days=30)
+    thirty_days_ago = datetime.now(timezone.utc) - timedelta(days=30)
     recent_orgs = Organization.query.filter(
         Organization.created_at >= thirty_days_ago
     ).order_by(Organization.created_at.desc()).limit(10).all()
@@ -430,7 +430,7 @@ def delete_organization(org_id):
         # Log the deletion attempt for security audit
         from datetime import datetime
         import logging
-        logging.warning(f"ORGANIZATION DELETION: Developer {current_user.username} is deleting organization '{org.name}' (ID: {org.id}) at {datetime.utcnow()}")
+        logging.warning(f"ORGANIZATION DELETION: Developer {current_user.username} is deleting organization '{org.name}' (ID: {org.id}) at {datetime.now(timezone.utc)}")
 
         # Begin deletion process
         org_name = org.name
@@ -1289,7 +1289,7 @@ def delete_global_item(item_id):
         if not force_delete:
             from datetime import datetime
             item.is_archived = True
-            item.archived_at = datetime.utcnow()
+            item.archived_at = datetime.now(timezone.utc)
             item.archived_by = current_user.id
             db.session.commit()
         else:
@@ -2159,7 +2159,7 @@ def update_developer_user():
 
             if existing:
                 existing.is_active = True
-                existing.assigned_at = datetime.utcnow()
+                existing.assigned_at = datetime.now(timezone.utc)
                 existing.assigned_by = current_user.id
             else:
                 new_assignment = UserRoleAssignment(

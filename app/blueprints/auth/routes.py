@@ -473,6 +473,12 @@ def signup():
             'signup_source': signup_source,
             'oauth_signup': str(oauth_signup)
         }
+        
+        # Add detected timezone from browser
+        detected_timezone = request.form.get('detected_timezone')
+        if detected_timezone:
+            metadata['detected_timezone'] = detected_timezone
+            logger.info(f"Auto-detected timezone: {detected_timezone}")
 
         # Add OAuth information if present
         if oauth_user_info:

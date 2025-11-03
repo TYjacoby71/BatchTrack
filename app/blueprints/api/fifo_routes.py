@@ -44,7 +44,7 @@ def get_fifo_details(inventory_id):
             life_remaining_percent = None
             
             if entry.timestamp:
-                age_days = (datetime.utcnow() - entry.timestamp).days
+                age_days = (datetime.now(timezone.utc) - entry.timestamp).days
                 
                 if entry.is_perishable and entry.shelf_life_days:
                     life_remaining_percent = max(0, 100 - ((age_days / entry.shelf_life_days) * 100))
@@ -160,7 +160,7 @@ def get_batch_fifo_usage(inventory_id, batch_id):
         life_remaining_percent = None
         lot_display_id = None
 
-        when = ev.timestamp or datetime.utcnow()
+        when = ev.timestamp or datetime.now(timezone.utc)
 
         if ev.affected_lot_id:
             lot = db.session.get(InventoryLot, ev.affected_lot_id)
@@ -236,7 +236,7 @@ def build_merged_ingredient_summary(batch: Batch):
             age_days = None
             life_remaining_percent = None
             lot_display_id = None
-            when = ev.timestamp or datetime.utcnow()
+            when = ev.timestamp or datetime.now(timezone.utc)
 
             if ev.affected_lot_id:
                 lot = db.session.get(InventoryLot, ev.affected_lot_id)

@@ -53,7 +53,7 @@
 
                     </div>
                     <div class="col-md-6">
-                        <p><strong>Started:</strong> {{ batch.started_at.strftime('%Y-%m-%d %H:%M') }}</p>
+                        <p><strong>Started:</strong> {{ batch.started_at | user_timezone }}</p>
                         <p><strong>Status:</strong> 
                             <span class="badge bg-warning">In Progress</span>
                         </p>

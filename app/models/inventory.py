@@ -1,4 +1,4 @@
-from datetime import datetime, date
+from datetime import datetime, date, timezone
 from flask_login import current_user
 from ..extensions import db
 from .mixins import ScopedModelMixin
@@ -126,11 +126,10 @@ class InventoryItem(ScopedModelMixin, db.Model):
         if not self.is_perishable:
             return self.quantity
 
-        from datetime import datetime
         from sqlalchemy import and_
         from app.models.inventory_lot import InventoryLot
 
-        today = datetime.now().date()
+        today = datetime.now(timezone.utc).date()
         expired_total = db.session.query(db.func.sum(InventoryLot.remaining_quantity))\
             .filter(and_(
                 InventoryLot.inventory_item_id == self.id,
@@ -147,11 +146,10 @@ class InventoryItem(ScopedModelMixin, db.Model):
         if not self.is_perishable:
             return 0
 
-        from datetime import datetime
         from sqlalchemy import and_
         from app.models.inventory_lot import InventoryLot
 
-        today = datetime.now().date()
+        today = datetime.now(timezone.utc).date()
         return db.session.query(db.func.sum(InventoryLot.remaining_quantity))\
             .filter(and_(
                 InventoryLot.inventory_item_id == self.id,

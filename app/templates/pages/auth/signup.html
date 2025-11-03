@@ -185,6 +185,19 @@ function proceedToPayment() {
     tierInput.value = selectedTier;
     form.appendChild(tierInput);
     
+    // Auto-detect and add user's timezone
+    try {
+        const detectedTimezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+        const tzInput = document.createElement('input');
+        tzInput.type = 'hidden';
+        tzInput.name = 'detected_timezone';
+        tzInput.value = detectedTimezone;
+        form.appendChild(tzInput);
+        console.log('Auto-detected timezone:', detectedTimezone);
+    } catch (e) {
+        console.warn('Could not detect timezone:', e);
+    }
+    
     // Add OAuth info if present
     {% if oauth_user_info %}
     const oauthInput = document.createElement('input');

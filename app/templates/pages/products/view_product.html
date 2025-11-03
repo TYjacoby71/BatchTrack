@@ -11,7 +11,7 @@
           <h2>{{ product.name }}</h2>
           <small class="text-muted">
             Low Stock Alert: {{ product.low_stock_threshold }} | 
-            Created: {{ product.created_at.strftime('%Y-%m-%d') }}
+            Created: {{ product.created_at | user_date }}
           </small>
         </div>
         <div class="d-flex gap-2">

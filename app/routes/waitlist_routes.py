@@ -2,7 +2,7 @@
 from flask import Blueprint, request, jsonify
 import json
 import os
-from datetime import datetime
+from datetime import datetime, timezone
 
 waitlist_bp = Blueprint('waitlist', __name__)
 
@@ -26,7 +26,7 @@ def join_waitlist():
             'first_name': data.get('first_name', ''),
             'last_name': data.get('last_name', ''),
             'business_type': data.get('business_type', ''),
-            'timestamp': datetime.utcnow().isoformat(),
+            'timestamp': datetime.now(timezone.utc).isoformat(),
             'source': 'homepage'
         }
 

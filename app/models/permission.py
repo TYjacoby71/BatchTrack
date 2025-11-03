@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timezone
 from ..extensions import db
 
 class Permission(db.Model):
@@ -10,7 +10,7 @@ class Permission(db.Model):
     category = db.Column(db.String(64))  # e.g., 'alerts', 'batches', 'inventory'
 
     is_active = db.Column(db.Boolean, default=True)
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
 
     # Relationship to roles
     roles = db.relationship('Role', secondary='role_permission', back_populates='permissions')

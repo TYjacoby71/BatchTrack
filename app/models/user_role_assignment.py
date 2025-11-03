@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timezone
 from ..extensions import db
 from .mixins import ScopedModelMixin
 
@@ -11,7 +11,7 @@ class UserRoleAssignment(db.Model):
     developer_role_id = db.Column(db.Integer, db.ForeignKey('developer_role.id'), nullable=True)  # Developer role
     organization_id = db.Column(db.Integer, db.ForeignKey('organization.id'), nullable=True)
     is_active = db.Column(db.Boolean, default=True)
-    assigned_at = db.Column(db.DateTime, default=datetime.utcnow)
+    assigned_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
     assigned_by = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True)
 
     # Relationships

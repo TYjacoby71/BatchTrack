@@ -1,8 +1,9 @@
 
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from flask_login import current_user
 from ..extensions import db
 from .mixins import ScopedModelMixin
+from ..utils.timezone_utils import TimezoneUtils
 
 class Reservation(ScopedModelMixin, db.Model):
     """Individual reservation line items - replaces FIFO remaining_quantity tracking"""
@@ -34,7 +35,9 @@ class Reservation(ScopedModelMixin, db.Model):
     source = db.Column(db.String(64), default='shopify')  # shopify, manual, etc.
     
     # TIMESTAMPS
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    # STORAGE: All times stored as timezone-aware UTC
+    # DISPLAY: Templates/APIs convert to user's timezone
+    created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
     expires_at = db.Column(db.DateTime, nullable=True)  # Optional expiration
     released_at = db.Column(db.DateTime, nullable=True)
     converted_at = db.Column(db.DateTime, nullable=True)
@@ -63,25 +66,47 @@ class Reservation(ScopedModelMixin, db.Model):
     
     @property
     def is_expired(self):
-        """Check if reservation has expired"""
+        """
+        Check if reservation has expired.
+        
+        STORAGE: expires_at stored in UTC (timezone-aware)
+        COMPARISON: Safe comparison with current UTC time
+        """
         if not self.expires_at:
             return False
-        return datetime.utcnow() > self.expires_at
+        # Ensure both datetimes are timezone-aware for safe comparison
+        expires_at = TimezoneUtils.ensure_timezone_aware(self.expires_at)
+        return datetime.now(timezone.utc) > expires_at
     
     def mark_released(self):
-        """Mark reservation as released"""
+        """
+        Mark reservation as released.
+        
+        STORAGE: Sets released_at in UTC (timezone-aware)
+        DISPLAY: UI will convert to user's timezone
+        """
         self.status = 'released'
-        self.released_at = datetime.utcnow()
+        self.released_at = datetime.now(timezone.utc)
     
     def mark_converted_to_sale(self):
-        """Mark reservation as converted to sale"""
+        """
+        Mark reservation as converted to sale.
+        
+        STORAGE: Sets converted_at in UTC (timezone-aware)
+        DISPLAY: UI will convert to user's timezone
+        """
         self.status = 'converted_to_sale'
-        self.converted_at = datetime.utcnow()
+        self.converted_at = datetime.now(timezone.utc)
     
     def mark_expired(self):
-        """Mark reservation as expired"""
+        """
+        Mark reservation as expired.
+        
+        STORAGE: Sets released_at in UTC (timezone-aware)
+        DISPLAY: UI will convert to user's timezone
+        """
         self.status = 'expired'
-        self.released_at = datetime.utcnow()
+        self.released_at = datetime.now(timezone.utc)
     
     def __repr__(self):
         return f'<Reservation {self.order_id}: {self.quantity} {self.unit}>'
