@@ -355,7 +355,14 @@ document.addEventListener('DOMContentLoaded', function() {
                 // Update the result text and show success
                 const resultTextElement = document.getElementById('resultText');
                 if (resultTextElement) {
-                    resultTextElement.textContent = `${amount} ${from} = ${convertedValue} ${to}`;
+                    let resultText = `${amount} ${from} = ${convertedValue} ${to}`;
+                    
+                    // If density conversion was used and we have an ingredient, add ingredient name
+                    if (data.data.conversion_type === 'density' && currentSelectedIngredient && currentSelectedIngredient.name) {
+                        resultText += ` of ${currentSelectedIngredient.name}`;
+                    }
+                    
+                    resultTextElement.textContent = resultText;
                 }
                 
                 // Show result section, hide error
@@ -372,7 +379,14 @@ document.addEventListener('DOMContentLoaded', function() {
                 
                 const resultTextElement = document.getElementById('resultText');
                 if (resultTextElement) {
-                    resultTextElement.textContent = `${amount} ${from} = ${convertedValue} ${to}`;
+                    let resultText = `${amount} ${from} = ${convertedValue} ${to}`;
+                    
+                    // If density conversion was used and we have an ingredient, add ingredient name
+                    if (data.conversion_type === 'density' && currentSelectedIngredient && currentSelectedIngredient.name) {
+                        resultText += ` of ${currentSelectedIngredient.name}`;
+                    }
+                    
+                    resultTextElement.textContent = resultText;
                 }
                 
                 conversionResult.style.display = 'block';
