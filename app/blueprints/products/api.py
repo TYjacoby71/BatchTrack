@@ -31,10 +31,18 @@ def get_products():
 
         product_list = []
         for product in products:
+            unit = None
+            try:
+                primary_sku = product.skus.filter_by(is_active=True).first()
+                if primary_sku:
+                    unit = primary_sku.unit
+            except Exception:
+                unit = None
+
             product_list.append({
                 'id': product.id,
                 'name': product.name,
-                'product_base_unit': product.base_unit
+                'product_base_unit': unit
             })
 
         return jsonify(product_list)
