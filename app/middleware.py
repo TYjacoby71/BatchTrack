@@ -1,3 +1,4 @@
+
 import os
 from flask import request, redirect, url_for, jsonify, session, g, flash
 from flask_login import current_user, logout_user
@@ -37,7 +38,6 @@ def register_middleware(app):
 
         # 5. Authentication check - if we get here, user must be authenticated
         if not current_user.is_authenticated:
-
             # Better debugging: log the actual path and method being requested
             endpoint_info = f"endpoint={request.endpoint}, path={request.path}, method={request.method}"
             if request.endpoint is None:
@@ -67,45 +67,46 @@ def register_middleware(app):
                     except Exception:
                         pass
                     return redirect(url_for('app_routes.dashboard'))
-        except Exception:
-            # If anything goes wrong, fail closed
-            return jsonify({"error": "forbidden"}), 403
-
-        # Force reload current_user to ensure fresh session data
-        from flask_login import current_user as fresh_current_user
+        except Exception as e:
+            # Log the error but don't fail closed - allow request to proceed
+            logger.warning(f"Developer access check failed: {e}")
 
         # 7. Handle developer "super admin" and masquerade logic.
-        if getattr(fresh_current_user, 'user_type', None) == 'developer':
-            selected_org_id = session.get("dev_selected_org_id")
-            masquerade_org_id = session.get("masquerade_org_id")  # Support both session keys
+        if getattr(current_user, 'user_type', None) == 'developer':
+            try:
+                selected_org_id = session.get("dev_selected_org_id")
+                masquerade_org_id = session.get("masquerade_org_id")  # Support both session keys
 
-            # If no org selected, redirect to organization selection unless allowed
-            allowed_without_org = RouteAccessConfig.is_developer_no_org_required(request.path)
-            if not selected_org_id and not masquerade_org_id and not allowed_without_org:
-                try:
-                    flash("Please select an organization to view customer features.", "warning")
-                except Exception:
-                    pass
-                return redirect(url_for("developer.organizations"))
+                # If no org selected, redirect to organization selection unless allowed
+                allowed_without_org = RouteAccessConfig.is_developer_no_org_required(request.path)
+                if not selected_org_id and not masquerade_org_id and not allowed_without_org:
+                    try:
+                        flash("Please select an organization to view customer features.", "warning")
+                    except Exception:
+                        pass
+                    return redirect(url_for("developer.organizations"))
 
-            # If an org is selected, set it as the effective org for the request
-            effective_org_id = selected_org_id or masquerade_org_id
-            if effective_org_id:
-                try:
-                    from .models import Organization
-                    from .extensions import db
-                    g.effective_org = db.session.get(Organization, effective_org_id)
-                    g.is_developer_masquerade = True
-                except Exception:
-                    # If DB is unavailable, continue without masquerade context
-                    g.effective_org = None
-                    g.is_developer_masquerade = False
+                # If an org is selected, set it as the effective org for the request
+                effective_org_id = selected_org_id or masquerade_org_id
+                if effective_org_id:
+                    try:
+                        from .models import Organization
+                        from .extensions import db
+                        g.effective_org = db.session.get(Organization, effective_org_id)
+                        g.is_developer_masquerade = True
+                    except Exception as e:
+                        # If DB is unavailable, continue without masquerade context
+                        logger.warning(f"Could not set masquerade context: {e}")
+                        g.effective_org = None
+                        g.is_developer_masquerade = False
+            except Exception as e:
+                logger.warning(f"Developer masquerade logic failed: {e}")
 
             # IMPORTANT: Developers bypass the billing check below.
             return
 
         # 8. Enforce billing for all regular, authenticated users.
-        if fresh_current_user.is_authenticated and getattr(fresh_current_user, 'user_type', None) != 'developer':
+        if current_user.is_authenticated and getattr(current_user, 'user_type', None) != 'developer':
             # CRITICAL FIX: Guard DB calls; degrade gracefully if DB is down
             try:
                 # Force fresh database query to avoid session isolation issues
@@ -114,7 +115,7 @@ def register_middleware(app):
                 from .services.billing_service import BillingService # Import BillingService
 
                 # Get fresh user and organization data from current session
-                fresh_user = db.session.get(User, fresh_current_user.id)
+                fresh_user = db.session.get(User, current_user.id)
                 if fresh_user and fresh_user.organization_id:
                     # Force fresh load of organization to get latest billing_status
                     organization = db.session.get(Organization, fresh_user.organization_id)
@@ -126,7 +127,7 @@ def register_middleware(app):
 
                     # SIMPLE BILLING LOGIC:
                     # If billing bypass is NOT enabled, require active billing status
-                    if not tier.is_billing_exempt:
+                    if not getattr(tier, 'is_billing_exempt', True):  # Default to exempt to prevent lockouts
                         # Direct status enforcement as a guardrail
                         billing_status = getattr(organization, 'billing_status', 'active') or 'active'
                         if billing_status in ['payment_failed', 'past_due', 'suspended', 'canceled', 'cancelled']:
@@ -152,8 +153,9 @@ def register_middleware(app):
                                 except Exception:
                                     pass
                                 return redirect(url_for('billing.upgrade'))
-            except Exception:
+            except Exception as e:
                 # On DB error, rollback and degrade: allow request to proceed without billing gate
+                logger.warning(f"Billing check failed, allowing request to proceed: {e}")
                 try:
                     from .extensions import db
                     db.session.rollback()
