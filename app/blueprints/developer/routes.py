@@ -1435,6 +1435,122 @@ def integrations_checklist():
         'WHOP_APP_ID_present': bool(current_app.config.get('WHOP_APP_ID')),
     }
 
+    def _env_status(key, *, allow_config=False, config_key=None):
+        raw = os.environ.get(key)
+        if raw not in (None, ''):
+            return True, 'env'
+        if allow_config:
+            cfg_val = current_app.config.get(config_key or key)
+            if cfg_val not in (None, ''):
+                return True, 'config'
+        return False, 'missing'
+
+    def _make_item(key, description, *, required=True, recommended=None, allow_config=False, config_key=None, is_secret=False, note=None):
+        present, source = _env_status(key, allow_config=allow_config, config_key=config_key)
+        return {
+            'key': key,
+            'description': description,
+            'present': present,
+            'source': source,
+            'required': required,
+            'recommended': recommended,
+            'is_secret': is_secret,
+            'note': note,
+        }
+
+    launch_env_sections = [
+        {
+            'title': 'Core Runtime & Platform',
+            'note': 'Set these to lock the app into production mode and disable development conveniences before launch.',
+            'items': [
+                _make_item('FLASK_ENV', 'Runtime environment. Use "production" for live deployments.', required=True, recommended='production', allow_config=True, config_key='ENV'),
+                _make_item('FLASK_SECRET_KEY', 'Flask session signing secret. Use a random 32+ character string.', required=True, allow_config=True, config_key='SECRET_KEY', is_secret=True),
+                _make_item('FLASK_DEBUG', 'Flask debug flag. Must stay false/unset in production.', required=False, recommended='false / unset'),
+                _make_item('REPLIT_DEPLOYMENT', 'Platform toggle used to force production settings on Replit. Leave false unless deploying there.', required=False, recommended='false'),
+                _make_item('LOG_LEVEL', 'Application logging level. Use INFO or WARN in production.', required=True, recommended='INFO', allow_config=True),
+            ],
+        },
+        {
+            'title': 'Database & Persistence',
+            'note': 'Configure a managed Postgres instance before launch. Disable automatic table creation in production.',
+            'items': [
+                _make_item('DATABASE_INTERNAL_URL', 'Primary database connection string (preferred in production).', required=True, is_secret=True),
+                _make_item('DATABASE_URL', 'Fallback database connection string (used if internal URL not set).', required=False, is_secret=True, note='Optional: set if your platform exposes only DATABASE_URL.'),
+                _make_item('SQLALCHEMY_DISABLE_CREATE_ALL', 'Disable db.create_all() safety switch. Set to 1 in production.', required=False, recommended='1 (enabled)', note='Prevents accidental schema drift on boot.'),
+                _make_item('SQLALCHEMY_ENABLE_CREATE_ALL', 'Local dev-only override to run db.create_all(). Leave unset in production.', required=False, recommended='unset'),
+            ],
+        },
+        {
+            'title': 'Caching & Rate Limits',
+            'note': 'Use Redis (or another shared store) for rate limiting in production environments.',
+            'items': [
+                _make_item('REDIS_URL', 'Redis connection string for caching and rate limit storage.', required=False, recommended='redis://...'),
+                _make_item('RATELIMIT_STORAGE_URL', 'Flask-Limiter backend. Point at Redis in production.', required=True, recommended='redis://...', allow_config=True),
+            ],
+        },
+        {
+            'title': 'Security & Networking',
+            'note': 'Enable proxy awareness and security headers behind your load balancer. Set ENABLE_PROXY_FIX=true (or TRUST_PROXY_HEADERS=true on legacy platforms), adjust PROXY_FIX_X_* counts for each proxy hop (defaults assume one), and leave DISABLE_SECURITY_HEADERS unset.',
+            'items': [
+                _make_item('ENABLE_PROXY_FIX', 'Wrap the app in Werkzeug ProxyFix when behind a load balancer.', required=True, recommended='true (production)'),
+                _make_item('TRUST_PROXY_HEADERS', 'Legacy toggle equivalent to ENABLE_PROXY_FIX for older configs.', required=False, recommended='true (only if ENABLE_PROXY_FIX is unavailable)'),
+                _make_item('PROXY_FIX_X_FOR', 'Number of X-Forwarded-For headers to trust.', required=False, recommended='1 (single proxy)'),
+                _make_item('PROXY_FIX_X_PROTO', 'Number of X-Forwarded-Proto headers to trust.', required=False, recommended='1 (single proxy)'),
+                _make_item('PROXY_FIX_X_HOST', 'Number of X-Forwarded-Host headers to trust.', required=False, recommended='1'),
+                _make_item('PROXY_FIX_X_PORT', 'Number of X-Forwarded-Port headers to trust.', required=False, recommended='1'),
+                _make_item('PROXY_FIX_X_PREFIX', 'Number of X-Forwarded-Prefix headers to trust.', required=False, recommended='0 unless using path prefixes'),
+                _make_item('FORCE_SECURITY_HEADERS', 'Force security headers even when the app thinks it is non-production (e.g., staging).', required=False, recommended='true (staging) / unset (production)'),
+                _make_item('DISABLE_SECURITY_HEADERS', 'Emergency kill-switch for security headers. Leave unset in production.', required=False, recommended='unset'),
+                _make_item('CONTENT_SECURITY_POLICY', 'Override default Content-Security-Policy header with a custom policy.', required=False, allow_config=True, note='Leave unset to use the built-in CSP; override only after testing.'),
+                _make_item('SECURITY_HEADERS', 'JSON/YAML mapping to override default security headers.', required=False, note='Optional advanced override for header values. Configure through app config if preferred.'),
+            ],
+        },
+        {
+            'title': 'Email & Notifications',
+            'note': 'Configure exactly one provider for transactional email and confirm DNS (SPF/DKIM).',
+            'items': [
+                _make_item('EMAIL_PROVIDER', 'Email provider selector: smtp | sendgrid | postmark | mailgun.', required=True, allow_config=True, recommended='sendgrid / postmark / mailgun'),
+                _make_item('MAIL_SERVER', 'SMTP server hostname.', required=False),
+                _make_item('MAIL_PORT', 'SMTP port (587 for TLS, 465 for SSL).', required=False),
+                _make_item('MAIL_USE_TLS', 'Enable STARTTLS for SMTP.', required=False, recommended='true'),
+                _make_item('MAIL_USE_SSL', 'Enable implicit TLS for SMTP.', required=False, recommended='false unless port 465'),
+                _make_item('MAIL_USERNAME', 'SMTP username / login.', required=False, is_secret=True),
+                _make_item('MAIL_PASSWORD', 'SMTP password or app-specific password.', required=False, is_secret=True),
+                _make_item('MAIL_DEFAULT_SENDER', 'Default from-address for outbound email.', required=True, allow_config=True, recommended='verified domain address'),
+                _make_item('SENDGRID_API_KEY', 'SendGrid API key (if using SendGrid).', required=False, is_secret=True),
+                _make_item('POSTMARK_SERVER_TOKEN', 'Postmark server token (if using Postmark).', required=False, is_secret=True),
+                _make_item('MAILGUN_API_KEY', 'Mailgun REST API key (if using Mailgun).', required=False, is_secret=True),
+                _make_item('MAILGUN_DOMAIN', 'Mailgun sending domain (if using Mailgun).', required=False),
+            ],
+        },
+        {
+            'title': 'Billing & Payments',
+            'note': 'Switch to live Stripe keys and webhook secrets before you charge real customers.',
+            'items': [
+                _make_item('STRIPE_SECRET_KEY', 'Stripe secret key (live).', required=True, is_secret=True),
+                _make_item('STRIPE_PUBLISHABLE_KEY', 'Stripe publishable key (live).', required=True, is_secret=True),
+                _make_item('STRIPE_WEBHOOK_SECRET', 'Stripe webhook signing secret.', required=True, is_secret=True),
+            ],
+        },
+        {
+            'title': 'OAuth & Marketplace',
+            'note': 'Optional integrations for single sign-on and marketplace licensing.',
+            'items': [
+                _make_item('GOOGLE_OAUTH_CLIENT_ID', 'Google OAuth 2.0 client ID for login.', required=False, is_secret=True),
+                _make_item('GOOGLE_OAUTH_CLIENT_SECRET', 'Google OAuth 2.0 client secret.', required=False, is_secret=True),
+                _make_item('WHOP_API_KEY', 'Whop API key (if using Whop for licensing).', required=False, is_secret=True),
+                _make_item('WHOP_APP_ID', 'Whop app ID (if using Whop).', required=False, is_secret=True),
+            ],
+        },
+        {
+            'title': 'Maintenance & Utilities',
+            'note': 'Rarely used toggles for seeding or one-off maintenance scripts.',
+            'items': [
+                _make_item('SEED_PRESETS', 'Enable preset data seeding during migrations (internal tooling).', required=False, recommended='unset'),
+            ],
+        },
+    ]
+
     # Feature flags
     feature_flags = {
         'FEATURE_INVENTORY_ANALYTICS': bool(current_app.config.get('FEATURE_INVENTORY_ANALYTICS', False)),
@@ -1472,6 +1588,7 @@ def integrations_checklist():
         cache_info=cache_info,
         oauth_status=oauth_status,
         whop_status=whop_status,
+        launch_env_sections=launch_env_sections,
     )
 
 

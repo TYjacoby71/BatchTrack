@@ -1,16 +1,91 @@
 
 import os
-from flask import request, redirect, url_for, jsonify, session, g, flash
-from flask_login import current_user, logout_user
 import logging
+from collections.abc import Mapping
+
+from flask import request, redirect, url_for, jsonify, session, g, flash
+from flask_login import current_user
 
 from .route_access import RouteAccessConfig
+
+DEFAULT_SECURITY_HEADERS = {
+    "Strict-Transport-Security": "max-age=31536000; includeSubDomains; preload",
+    "X-Content-Type-Options": "nosniff",
+    "X-Frame-Options": "DENY",
+    "X-XSS-Protection": "1; mode=block",
+    "Referrer-Policy": "strict-origin-when-cross-origin",
+    "Content-Security-Policy": (
+        "default-src 'self'; "
+        "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://js.stripe.com https://cdn.jsdelivr.net https://code.jquery.com https://cdnjs.cloudflare.com; "
+        "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdn.jsdelivr.net https://cdnjs.cloudflare.com; "
+        "font-src 'self' https://fonts.gstatic.com https://cdnjs.cloudflare.com; "
+        "img-src 'self' data: https: blob:; "
+        "connect-src 'self' https://api.stripe.com; "
+        "frame-src https://js.stripe.com; "
+        "object-src 'none'"
+    ),
+}
+
+
+def _env_flag(name: str, default: bool = False) -> bool:
+    value = os.environ.get(name)
+    if value is None:
+        return default
+    return value.strip().lower() in {"1", "true", "yes", "on"}
 
 # Configure logger
 logger = logging.getLogger(__name__)
 
 def register_middleware(app):
     """Register all middleware functions with the Flask app."""
+
+    trust_proxy_headers = _env_flag("ENABLE_PROXY_FIX") or _env_flag("TRUST_PROXY_HEADERS")
+    if trust_proxy_headers and not getattr(app.wsgi_app, "_batchtrack_proxyfix", False):
+        try:
+            from werkzeug.middleware.proxy_fix import ProxyFix
+        except Exception as exc:  # pragma: no cover - safety net for minimal deployments
+            logger.warning("ProxyFix unavailable; unable to honor proxy header trust: %s", exc)
+        else:
+            def _safe_env_int(name: str, default: int) -> int:
+                raw = os.environ.get(name)
+                if raw is None:
+                    return default
+                try:
+                    return int(raw)
+                except (TypeError, ValueError):
+                    logger.warning("Invalid value for %s=%r; defaulting to %s", name, raw, default)
+                    return default
+
+            proxy_fix_kwargs = {
+                "x_for": _safe_env_int("PROXY_FIX_X_FOR", 1),
+                "x_proto": _safe_env_int("PROXY_FIX_X_PROTO", 1),
+                "x_host": _safe_env_int("PROXY_FIX_X_HOST", 1),
+                "x_port": _safe_env_int("PROXY_FIX_X_PORT", 1),
+                "x_prefix": _safe_env_int("PROXY_FIX_X_PREFIX", 0),
+            }
+
+            wrapped = ProxyFix(app.wsgi_app, **proxy_fix_kwargs)
+            setattr(wrapped, "_batchtrack_proxyfix", True)
+            app.wsgi_app = wrapped
+
+    secure_env = not app.debug and not app.testing
+    force_security_headers = _env_flag("FORCE_SECURITY_HEADERS")
+    disable_security_headers = _env_flag("DISABLE_SECURITY_HEADERS")
+
+    configured_headers = app.config.get("SECURITY_HEADERS")
+    security_headers = dict(DEFAULT_SECURITY_HEADERS)
+    if isinstance(configured_headers, Mapping):
+        security_headers.update(configured_headers)
+    elif configured_headers:
+        logger.warning("SECURITY_HEADERS config must be a mapping; ignoring invalid value.")
+
+    custom_csp = app.config.get("CONTENT_SECURITY_POLICY")
+    if custom_csp is None:
+        security_headers.pop("Content-Security-Policy", None)
+    elif isinstance(custom_csp, str) and custom_csp.strip():
+        security_headers["Content-Security-Policy"] = custom_csp.strip()
+    elif custom_csp:
+        logger.warning("CONTENT_SECURITY_POLICY config must be a non-empty string or None.")
 
     @app.before_request
     def single_security_checkpoint():
@@ -74,6 +149,11 @@ def register_middleware(app):
         # 7. Handle developer "super admin" and masquerade logic.
         if getattr(current_user, 'user_type', None) == 'developer':
             try:
+                logger.debug(
+                    "Developer checkpoint for %s on %s",
+                    getattr(current_user, 'id', 'unknown'),
+                    request.path,
+                )
                 selected_org_id = session.get("dev_selected_org_id")
                 masquerade_org_id = session.get("masquerade_org_id")  # Support both session keys
 
@@ -103,6 +183,13 @@ def register_middleware(app):
                 logger.warning(f"Developer masquerade logic failed: {e}")
 
             # IMPORTANT: Developers bypass the billing check below.
+            logger.info(
+                "Developer %s bypassed billing on %s %s (masquerade_org=%s)",
+                getattr(current_user, 'id', 'unknown'),
+                request.method,
+                request.path,
+                session.get("masquerade_org_id") or session.get("dev_selected_org_id"),
+            )
             return
 
         # 8. Enforce billing for all regular, authenticated users.
@@ -167,23 +254,34 @@ def register_middleware(app):
 
     @app.after_request
     def add_security_headers(response):
-        """Add security headers in production."""
-        if os.environ.get("REPLIT_DEPLOYMENT") == "true":
-            response.headers.update({
-                "Strict-Transport-Security": "max-age=31536000; includeSubDomains",
-                "X-Content-Type-Options": "nosniff",
-                "X-Frame-Options": "DENY",
-                "X-XSS-Protection": "1; mode=block",
-                "Content-Security-Policy": (
-                    "default-src 'self'; "
-                    "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://js.stripe.com https://cdn.jsdelivr.net https://code.jquery.com https://cdnjs.cloudflare.com; "
-                    "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdn.jsdelivr.net https://cdnjs.cloudflare.com; "
-                    "font-src 'self' https://fonts.gstatic.com https://cdnjs.cloudflare.com; "
-                    "img-src 'self' data: https: blob:; "
-                    "connect-src 'self' https://api.stripe.com; "
-                    "frame-src https://js.stripe.com; "
-                    "object-src 'none'"
-                ),
-                "Referrer-Policy": "strict-origin-when-cross-origin"
-            })
+        """Add security headers when running in production-like environments."""
+
+        if disable_security_headers:
+            return response
+
+        if not (secure_env or force_security_headers):
+            return response
+
+        def _is_effectively_secure() -> bool:
+            if request.is_secure:
+                return True
+            forwarded_proto = request.headers.get("X-Forwarded-Proto", "")
+            if forwarded_proto:
+                forwarded_values = {value.strip().lower() for value in forwarded_proto.split(",")}
+                if "https" in forwarded_values:
+                    return True
+            preferred_scheme = app.config.get("PREFERRED_URL_SCHEME", "http")
+            return preferred_scheme == "https"
+
+        enforce_hsts = force_security_headers or _is_effectively_secure()
+
+        for header_name, header_value in security_headers.items():
+            if header_value in (None, ""):
+                continue
+
+            if header_name.lower() == "strict-transport-security" and not enforce_hsts:
+                continue
+
+            response.headers.setdefault(header_name, header_value)
+
         return response
