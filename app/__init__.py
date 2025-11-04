@@ -41,9 +41,7 @@ def create_app(config=None):
     os.makedirs('static/product_images', exist_ok=True)
 
     # Production security settings
-    if (os.environ.get('REPLIT_DEPLOYMENT') == 'true' or 
-        os.environ.get('RENDER') or
-        app.config.get('ENV') == 'production'):
+    if os.environ.get('ENV', 'development').lower() == 'production':
         app.config.update({
             'PREFERRED_URL_SCHEME': 'https',
             'SESSION_COOKIE_SECURE': True,

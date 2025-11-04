@@ -138,14 +138,12 @@ config_map = {
 
 
 def get_config():
-    env = os.environ.get('FLASK_ENV') or os.environ.get('ENV') or 'development'
+    env = os.environ.get('ENV', 'development').lower()
     
-    # Check for production deployment on Replit or Render
-    if (os.environ.get('REPLIT_DEPLOYMENT') == 'true' or 
-        os.environ.get('RENDER') or  # Render sets this automatically
-        env == 'production'):
+    if env == 'production':
         return ProductionConfig
-    return config_map.get(env, DevelopmentConfig)
+    else:
+        return DevelopmentConfig
 
 
 # Backwards compatibility for existing imports
