@@ -2,7 +2,7 @@
 
 Audience: Internal. Purpose: day-by-day schedule, owners, checklists, go/no-go, rollback.
 
-Window: 10-14 days. Source of truth for blockers: docs/CRITICAL_PRELAUNCH.md.
+Window: 10-14 days. Source of truth for blockers: [CRITICAL_PRELAUNCH.md](CRITICAL_PRELAUNCH.md).
 
 ## Roles
 - Founder: decision maker, QA lead, comms

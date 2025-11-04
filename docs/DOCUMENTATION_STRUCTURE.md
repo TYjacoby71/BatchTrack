@@ -8,37 +8,53 @@ This document explains the organization of BatchTrack documentation.
 
 ```
 docs/
-├── system/              System architecture and feature documentation
+├── system/              Master documentation for every platform system and concept
 │   ├── ARCHITECTURE.md
 │   ├── SERVICES.md
 │   ├── DATABASE_MODELS.md
-│   ├── TIMEZONE_SYSTEM.md
-│   ├── STORAGE_VS_DISPLAY.md
-│   ├── USERS_AND_PERMISSIONS.md
+│   ├── PLAN_SNAPSHOT.md
+│   ├── API_REFERENCE.md
+│   ├── DEVELOPMENT_GUIDE.md
+│   ├── deploy_migration_guide.md
+│   ├── PUBLIC_TOOLS.md
+│   ├── EXPORTS.md
+│   ├── FREE_TIER.md
+│   ├── TRACKING_PLAN.md
+│   ├── CURRENTLY_STUBBED.md
+│   ├── DEPRECATED_FEATURES.md
 │   ├── GLOBAL_ITEM_LIBRARY.md
 │   ├── CONTAINERS_CURATION.md
-│   ├── WALL_OF_DRAWERS_PROTOCOL.md
 │   ├── CONTAINER_NAMING.md
 │   ├── GLOBAL_ITEM_JSON_STRUCTURE.md
-│   └── INVENTORY_EVENTS_TERMINOLOGY.md
+│   ├── INVENTORY_EVENTS_TERMINOLOGY.md
+│   ├── TIMEZONE_SYSTEM.md
+│   ├── STORAGE_VS_DISPLAY.md
+│   └── USERS_AND_PERMISSIONS.md
+│
+├── todo/                Launch readiness, QA, and immediate action lists
+│   ├── CRITICAL_PRELAUNCH.md
+│   ├── LAUNCH_RUNBOOK.md
+│   ├── FIX_IMMEDIATE.md
+│   ├── RETENTION_CANCELLATION_QA.md
+│   ├── INVENTORY_UPGRADE_QA.md
+│   ├── INVENTORY_COST_QA.md
+│   └── UNIT_MAPPING_QA.md
 │
 ├── changelog/           Complete history of changes
-│   ├── README.md
+│   ├── CHANGELOG_INDEX.md
 │   └── YYYY-MM-DD-description.md
 │
-├── refactor/            Refactoring documentation
+├── refactor/            Refactoring documentation and progress logs
 │   └── (various refactor docs)
 │
-└── (root level)         Project management and QA docs
-    ├── API_REFERENCE.md
-    ├── DEVELOPMENT_GUIDE.md
-    ├── CRITICAL_PRELAUNCH.md
-    ├── LAUNCH_RUNBOOK.md
+└── (root level)         Indexes, future planning, and special studies
+    ├── DOCUMENTATION_STRUCTURE.md
     ├── FUTURE_ROADMAP.md
-    ├── TRACKING_PLAN.md
-    ├── *_QA.md (QA documents)
-    └── etc.
+    ├── original-styling-analysis.md
+    └── (additional one-off analyses)
 ```
+
+Marketing documentation that describes the content workspace now lives in `marketing/README.md` alongside the site assets.
 
 ## Document Categories
 
@@ -63,18 +79,37 @@ docs/
 
 **Update when**: Making any code changes, bug fixes, or improvements
 
-### 3. Root Level Documentation
-**Purpose**: Project management, deployment, QA, and general guides
+### 3. System Documentation (`docs/system/`)
+**Purpose**: Single library for developers to understand any platform area
 
 **Types**:
-- Development guides
-- API documentation
-- Launch checklists
-- QA test plans
-- Future roadmap
-- Tracking plans
+- Architecture and service authority guides
+- API contracts and public integrations
+- Product program references (tiers, exports, analytics)
+- Operational runbooks (deployments, error handling)
+- Domain language and data structure glossaries
 
-**Update when**: Process, deployment, or testing procedures change
+**Update when**: Any system behavior, developer workflow, or external contract changes
+
+### 4. To-Do and QA (`docs/todo/`)
+**Purpose**: Track actionable checklists (launch, QA, urgent fixes)
+
+**Types**:
+- Launch readiness plans (CRITICAL_PRELAUNCH.md, LAUNCH_RUNBOOK.md)
+- QA scripts and validation suites
+- Immediate fix lists and operational runbooks
+
+**Update when**: Launch scope, QA coverage, or urgent task lists change
+
+### 5. Root Level Documentation
+**Purpose**: Product management, deployment, and general reference guides
+
+**Types**:
+- Documentation map (this file)
+- Long-range roadmap and ideation docs
+- One-off analyses and research notes
+
+**Update when**: Cross-team processes or long-range planning changes
 
 ## Documentation Rules
 
@@ -120,13 +155,14 @@ Made a code change?
     - Examples
     ↓
 2. Update docs/system/ (if design changed)
-    - Update architecture docs
-    - Update feature guides
-    - Update best practices
+    - Update architecture docs (ARCHITECTURE.md, SERVICES.md, DATABASE_MODELS.md)
+    - Refresh feature guides and domain glossaries
+    - Revise API_REFERENCE.md when contracts change
+    - Update DEVELOPMENT_GUIDE.md and deploy_migration_guide.md for workflow changes
     ↓
 3. Update root docs (if needed)
-    - API_REFERENCE.md if API changed
-    - DEVELOPMENT_GUIDE.md if process changed
+    - DOCUMENTATION_STRUCTURE.md when map or ownership shifts
+    - FUTURE_ROADMAP.md and other planning docs when strategy evolves
 ```
 
 ## Cross-References
@@ -185,4 +221,4 @@ Use `datetime.now(timezone.utc)` for storage...
 
 ---
 
-**Last Updated**: 2025-10-28
+**Last Updated**: 2025-11-04
