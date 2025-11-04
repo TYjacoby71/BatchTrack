@@ -1,3 +1,5 @@
+from datetime import datetime, timezone
+
 from flask import Blueprint, request, jsonify, render_template, redirect, flash, session, url_for
 from flask_login import login_required, current_user
 from app.models import db, InventoryItem, UnifiedInventoryHistory, Unit, IngredientCategory, User
@@ -186,7 +188,7 @@ def list_inventory():
 
         # Calculate expired quantity using only InventoryLot (lots handle FIFO tracking now)
         if item.is_perishable:
-            today = datetime.now().date()
+            today = TimezoneUtils.utc_now().date()
             # Only check InventoryLot for expired quantities
             expired_lots = InventoryLot.query.filter(
                 and_(
@@ -246,7 +248,7 @@ def view_inventory(id):
 
     # Calculate expired quantity using only InventoryLot (lots handle FIFO tracking now)
     if item.is_perishable:
-        today = datetime.now().date()
+        today = TimezoneUtils.utc_now().date()
         # Only check InventoryLot for expired quantities
         expired_lots_for_calc = InventoryLot.query.filter(
             and_(
@@ -295,7 +297,7 @@ def view_inventory(id):
     expired_entries = []
     expired_total = 0
     if item.is_perishable:
-        today = datetime.now().date()
+        today = TimezoneUtils.utc_now().date()
         # Only check InventoryLot for expired entries
         expired_entries = InventoryLot.query.filter(
             and_(

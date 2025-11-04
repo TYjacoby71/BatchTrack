@@ -4,6 +4,7 @@ from ...models import db, ProductSKU, Batch
 from ...models.product import ProductSKUHistory
 from ...services.product_service import ProductService
 from app.services.inventory_adjustment import process_inventory_adjustment
+from ...utils.timezone_utils import TimezoneUtils
 import logging
 
 # Set up logger for product inventory operations
@@ -208,9 +209,8 @@ def get_sku_fifo_status(sku_id):
     logger.info(f"Found SKU: {sku.inventory_item_id}, Product: {sku.product.name if sku.product else 'Unknown'}")
 
     from ...models import UnifiedInventoryHistory
-    from datetime import datetime
 
-    today = datetime.now().date()
+    today = TimezoneUtils.utc_now().date()
     inventory_item_id = sku.inventory_item_id
 
     # Get fresh FIFO entries (not expired, with remaining quantity)
@@ -281,9 +281,8 @@ def dispose_expired_sku(sku_id):
     notes = data.get('notes', 'Expired inventory disposal')
 
     from ...models import InventoryHistory # Assuming InventoryHistory is still needed for this specific function
-    from datetime import datetime
 
-    today = datetime.now().date()
+    today = TimezoneUtils.utc_now().date()
     inventory_item_id = sku.inventory_item_id
 
     # Get all expired entries with remaining quantity

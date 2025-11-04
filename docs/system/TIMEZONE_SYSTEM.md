@@ -59,6 +59,14 @@ TimezoneUtils.format_for_user(dt, format)  # Format datetime in user's timezone
 - Defaults to 'UTC' if not set
 - Validated against `pytz.all_timezones`
 
+## Project Standard (2025-11-03)
+
+- **Storage**: Every datetime persisted to the database or used for comparisons must be timezone-aware UTC. Use `TimezoneUtils.utc_now()` (preferred) or `datetime.now(timezone.utc)` when creating new timestamps.
+- **Input**: Any datetime parsed from user input or third-party systems must be normalized with `TimezoneUtils.ensure_timezone_aware(dt)` (use `assume_utc=True` for legacy UTC strings) before persistence or comparison.
+- **Display**: Templates and JSON responses must convert through the registered Jinja filters (`user_timezone`, `user_date`, `user_time`, etc.) or `TimezoneUtils.format_for_user()`.
+- **Legacy Helpers**: `TimezoneUtils.convert_to_timezone()` remains only as a compatibility wrapper. New code should rely on `TimezoneUtils.to_user_timezone()` / `format_for_user()`.
+- **Prohibited**: `datetime.utcnow()` and bare `datetime.now()` are no longer permitted in application code or tests.
+
 ## Implementation Patterns
 
 ### 1. Database Operations

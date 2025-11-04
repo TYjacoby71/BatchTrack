@@ -1,4 +1,4 @@
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 
 
 def test_retention_flow_ack_to_delete(client, db_session, app):
@@ -26,7 +26,7 @@ def test_retention_flow_ack_to_delete(client, db_session, app):
     # Login
     client.post('/auth/login', data={'username': 'ret_user', 'password': 'password'})
 
-    old_date = datetime.utcnow() - timedelta(days=366)
+    old_date = datetime.now(timezone.utc) - timedelta(days=366)
     recipe = Recipe(name='Old Draft', organization_id=org.id, created_at=old_date)
     db_session.add(recipe)
     db_session.commit()
@@ -58,7 +58,7 @@ def test_retention_flow_ack_to_delete(client, db_session, app):
     from app.models.retention import RetentionDeletionQueue
     q = RetentionDeletionQueue.query.filter_by(organization_id=org.id, recipe_id=recipe.id).first()
     assert q is not None
-    q.delete_after_at = datetime.utcnow() - timedelta(seconds=1)
+    q.delete_after_at = datetime.now(timezone.utc) - timedelta(seconds=1)
     db_session.commit()
 
     # Sweep

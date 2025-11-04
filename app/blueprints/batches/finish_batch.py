@@ -132,7 +132,7 @@ def _complete_batch_internal(batch_id, form_data):
             shelf_life_days = int(form_data.get('shelf_life_days', 0))
             exp_date_str = form_data.get('expiration_date')
             if exp_date_str:
-                expiration_date = datetime.strptime(exp_date_str, '%Y-%m-%d')
+                expiration_date = datetime.strptime(exp_date_str, '%Y-%m-%d').replace(tzinfo=timezone.utc)
 
         # Update batch with completion data
         batch.final_quantity = final_quantity

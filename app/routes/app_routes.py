@@ -232,17 +232,24 @@ def get_server_time():
 
     server_utc = TimezoneUtils.utc_now()
 
+    def _iso(dt):
+        aware = TimezoneUtils.ensure_timezone_aware(dt)
+        return aware.isoformat(timespec='seconds')
+
     # If user is logged in, also provide their local time
     user_time = None
     if current_user and current_user.is_authenticated:
         user_timezone = getattr(current_user, 'timezone', 'UTC')
         try:
             user_time = TimezoneUtils.convert_to_timezone(server_utc, user_timezone)
-        except:
+        except Exception:
             user_time = server_utc  # Fallback to UTC if conversion fails
 
+    server_iso = _iso(server_utc)
+    user_iso = _iso(user_time) if user_time else server_iso
+
     return jsonify({
-        'server_utc': server_utc.isoformat(),
-        'user_time': user_time.isoformat() if user_time else server_utc.isoformat(),
+        'server_utc': server_iso,
+        'user_time': user_iso,
         'timestamp': server_utc.timestamp()
     })
