@@ -259,10 +259,21 @@ class DashboardAlertService:
         """Get batches that have been in progress for more than 24 hours"""
         from ..utils.timezone_utils import TimezoneUtils
         cutoff_time = TimezoneUtils.utc_now() - timedelta(hours=24)
-        query = Batch.query.filter(
-            Batch.status == 'in_progress',
-            Batch.started_at < cutoff_time
-        )
+        
+        # Get all in-progress batches and filter with safe datetime comparison
+        query = Batch.query.filter(Batch.status == 'in_progress')
+        
+        if current_user and current_user.is_authenticated and current_user.organization_id:
+            query = query.filter(Batch.organization_id == current_user.organization_id)
+        
+        all_batches = query.all()
+        stuck_batches = []
+        
+        for batch in all_batches:
+            if batch.started_at and TimezoneUtils.safe_datetime_compare(cutoff_time, batch.started_at, assume_utc=True):
+                stuck_batches.append(batch)
+        
+        return stuck_batches
 
         # Simple organization scoping - no complex developer logic here
         if current_user and current_user.is_authenticated and current_user.organization_id:
@@ -295,10 +306,11 @@ class DashboardAlertService:
                 except ValueError:
                     continue
 
+                # Ensure both datetimes are timezone-aware for safe comparison
                 fault_time = TimezoneUtils.ensure_timezone_aware(fault_time)
                 cutoff_time_aware = TimezoneUtils.ensure_timezone_aware(cutoff_time)
 
-                if (fault_time > cutoff_time_aware and
+                if (TimezoneUtils.safe_datetime_compare(fault_time, cutoff_time_aware, assume_utc=True) and
                     fault.get('severity', '').lower() in ['critical', 'error']):
                     recent_critical += 1
 
@@ -332,7 +344,7 @@ class DashboardAlertService:
             for timer in active_timers:
                 if timer.start_time and timer.duration_seconds:
                     end_time = timer.start_time + timedelta(seconds=timer.duration_seconds)
-                    if current_time > end_time:
+                    if TimezoneUtils.safe_datetime_compare(current_time, end_time, assume_utc=True):
                         expired_timers.append(timer)
 
             return {
