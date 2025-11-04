@@ -162,8 +162,8 @@
           </div>
           <div class="col-md-6">
             <div class="form-check">
-              <input class="form-check-input" type="checkbox" id="showShelfLifeMonths" name="show_shelf_life_months">
-              <label class="form-check-label" for="showShelfLifeMonths">
+              <input class="form-check-input" type="checkbox" id="show_shelf_life_days" name="show_shelf_life_days">
+              <label class="form-check-label" for="show_shelf_life_days">
                 Shelf Life (Days)
               </label>
             </div>
@@ -341,7 +341,7 @@ document.addEventListener('DOMContentLoaded', function() {
           document.getElementById('showFlashPoint').checked = settings.show_flash_point || false;
           document.getElementById('showPhValue').checked = settings.show_ph_value || false;
           document.getElementById('showMoistureContent').checked = settings.show_moisture_content || false;
-          document.getElementById('showShelfLifeMonths').checked = settings.show_shelf_life_months || false;
+          document.getElementById('show_shelf_life_days').checked = settings.show_shelf_life_days || false; // Corrected ID
           document.getElementById('showComedogenicRating').checked = settings.show_comedogenic_rating || false;
 
           const modal = new bootstrap.Modal(document.getElementById('categoryVisibilityModal'));
@@ -367,7 +367,7 @@ document.addEventListener('DOMContentLoaded', function() {
       show_flash_point: document.getElementById('showFlashPoint').checked,
       show_ph_value: document.getElementById('showPhValue').checked,
       show_moisture_content: document.getElementById('showMoistureContent').checked,
-      show_shelf_life_months: document.getElementById('showShelfLifeMonths').checked,
+      show_shelf_life_days: document.getElementById('show_shelf_life_days').checked, // Corrected ID
       show_comedogenic_rating: document.getElementById('showComedogenicRating').checked
     };
 

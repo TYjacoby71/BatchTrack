@@ -213,7 +213,7 @@ def get_category_visibility(category_id):
             'show_flash_point': getattr(category, 'show_flash_point', False),
             'show_ph_value': getattr(category, 'show_ph_value', False),
             'show_moisture_content': getattr(category, 'show_moisture_content', False),
-            'show_shelf_life_months': getattr(category, 'show_shelf_life_months', False),
+            'show_shelf_life_days': getattr(category, 'show_shelf_life_days', False),
             'show_comedogenic_rating': getattr(category, 'show_comedogenic_rating', False)
         }
 

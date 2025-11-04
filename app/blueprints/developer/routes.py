@@ -1,4 +1,4 @@
-from flask import Blueprint, render_template, request, session, redirect, url_for, flash, jsonify
+from flask import Blueprint, render_template, request, session, redirect, flash, jsonify
 from flask_login import login_required, current_user
 from app.models import Organization, User, Permission, Role, GlobalItem
 from app.models import ProductCategory
