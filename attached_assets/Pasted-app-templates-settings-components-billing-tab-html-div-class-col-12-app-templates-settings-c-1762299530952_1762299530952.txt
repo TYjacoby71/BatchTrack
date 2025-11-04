@@ -1,0 +1,30 @@
+app/templates/settings/components/billing_tab.html-    <div class="col-12">
+app/templates/settings/components/billing_tab.html-        <div class="mb-3">
+app/templates/settings/components/billing_tab.html-            <h5><i class="fas fa-credit-card"></i> Subscription Management</h5>
+app/templates/settings/components/billing_tab.html-            <p class="text-muted">Manage your subscription plan and billing settings</p>
+app/templates/settings/components/billing_tab.html-            
+app/templates/settings/components/billing_tab.html:            <!-- Debug Info -->
+app/templates/settings/components/billing_tab.html-            {% if config.get('DEBUG') %}
+app/templates/settings/components/billing_tab.html:            <div class="alert alert-info">
+app/templates/settings/components/billing_tab.html:                <strong>Debug Mode:</strong>
+app/templates/settings/components/billing_tab.html-                <ul class="mb-0">
+app/templates/settings/components/billing_tab.html-                    <li>Stripe Secret Key: {{ '✓ Configured' if config.get('STRIPE_SECRET_KEY') else '✗ Missing' }}</li>
+app/templates/settings/components/billing_tab.html-                    <li>Webhook Secret: {{ '✓ Configured' if config.get('STRIPE_WEBHOOK_SECRET') else '✗ Missing (Dev Mode)' }}</li>
+app/templates/settings/components/billing_tab.html-                    <li>Mode: {{ 'Production' if config.get('STRIPE_WEBHOOK_SECRET') else 'Development' }}</li>
+app/templates/settings/components/billing_tab.html-                </ul>
+--
+app/templates/settings/components/profile_tab.html-            <div class="card-header">
+app/templates/settings/components/profile_tab.html-                <h5 class="mb-0"><i class="fas fa-user-edit"></i> Profile Information</h5>
+app/templates/settings/components/profile_tab.html-            </div>
+app/templates/settings/components/profile_tab.html-            <div class="card-body">
+app/templates/settings/components/profile_tab.html:                <!-- Debug info - only show in development -->
+app/templates/settings/components/profile_tab.html:                <div class="alert alert-info mb-3" style="font-family: monospace; font-size: 12px;">
+app/templates/settings/components/profile_tab.html:                    <strong>Debug Info:</strong><br>
+app/templates/settings/components/profile_tab.html-                    current_user.first_name: "{{ current_user.first_name or 'None' }}"<br>
+app/templates/settings/components/profile_tab.html-                    current_user.last_name: "{{ current_user.last_name or 'None' }}"<br>
+app/templates/settings/components/profile_tab.html-                    current_user.email: "{{ current_user.email or 'None' }}"<br>
+app/templates/settings/components/profile_tab.html-                    current_user.phone: "{{ current_user.phone or 'None' }}"<br>
+app/templates/settings/components/profile_tab.html-                    Profile data initialized: <span x-text="JSON.stringify(profile)"></span>
+--
+app/templates/settings/components/profile_tab.html-        <div class="card">
+app/templates/settings/components/profile_tab.html-            <div class="card-header">

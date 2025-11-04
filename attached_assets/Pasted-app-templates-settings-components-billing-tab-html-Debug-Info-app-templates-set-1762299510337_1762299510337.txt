@@ -1,0 +1,20 @@
+app/templates/settings/components/billing_tab.html:            <!-- Debug Info -->
+app/templates/settings/components/billing_tab.html:            {% if config.get('DEBUG') %}
+app/templates/settings/components/billing_tab.html:                <strong>Debug Mode:</strong>
+app/templates/settings/components/profile_tab.html:                <!-- Debug info - remove after fixing -->
+app/templates/settings/components/profile_tab.html:                    <strong>Debug Info:</strong><br>
+app/templates/components/shared/user_management_modal.html:    // Debug logging to see what we're getting
+app/templates/developer/organization_detail.html:                            {% if config.get('DEBUG') %}
+app/templates/developer/organization_detail.html:                                <strong>Debug:</strong> Current tier = "{{ current_tier }}", 
+app/templates/developer/integrations.html:      <input class="form-check-input" type="checkbox" id="ff_debug_mode" {% if feature_flags.get('FEATURE_DEBUG_MODE', False) %}checked{% endif %} onchange="saveFlags()">
+app/templates/developer/integrations.html:      <label class="form-check-label" for="ff_debug_mode">
+app/templates/developer/integrations.html:        Debug Mode 
+app/templates/developer/integrations.html:      <div><small class="text-muted">Enables detailed logging and debugging information for development purposes</small></div>
+app/templates/developer/integrations.html:    <strong>Recommendation:</strong> Keep PII redaction enabled in production. Use DEBUG only in secure development environments.
+app/templates/developer/integrations.html:  flags.FEATURE_DEBUG_MODE = document.getElementById('ff_debug_mode').checked;
+app/templates/billing/upgrade.html:    <!-- Enhanced Debug Info -->
+app/templates/billing/upgrade.html:    {% if config.get('DEBUG') %}
+app/templates/billing/upgrade.html:            <h6><i class="fas fa-bug"></i> Debug Information:</h6>
+app/templates/billing/upgrade.html:            <button class="btn btn-sm btn-outline-primary" onclick="loadDebugData()">
+app/templates/billing/upgrade.html:                <i class="fas fa-sync"></i> Refresh Debug Data
+app/templates/billing/upgrade.html:        <div id="debug-details" class="mt-3" style="display: none;">
