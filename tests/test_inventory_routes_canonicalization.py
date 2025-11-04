@@ -56,12 +56,16 @@ def test_batch_start_routes_all_deductions_through_canonical_service(app, db_ses
     with app.test_request_context('/'):
         login_user(test_user)
 
-        with patch('app.services.batch_service.batch_operations.process_inventory_adjustment') as mock_adjust:
+        with patch('app.services.batch_service.batch_operations.process_inventory_adjustment') as mock_adjust, \
+             patch.object(BatchOperationsService, '_process_batch_consumables', return_value=[]), \
+             patch('app.services.batch_service.batch_operations.ConversionEngine.convert_units',
+                   side_effect=lambda qty, from_unit, to_unit, **_: {'converted_value': qty}):
+
             mock_adjust.return_value = (True, None)
 
             batch, errors = BatchOperationsService.start_batch(plan_snapshot)
 
-            assert errors == []
+            assert errors == [], errors
             assert batch is not None
             assert mock_adjust.called
 

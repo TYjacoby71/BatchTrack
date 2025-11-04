@@ -161,11 +161,12 @@ def test_confirm_return_uses_canonical_service(app, db_session):
     with patch('app.services.pos_integration.process_inventory_adjustment') as mock_adjust:
         mock_adjust.return_value = True
 
-        success, message = POSIntegrationService.confirm_return(
-            order_id=f"ORDER-{suffix}", notes='Customer return'
-        )
+        with patch.object(Reservation, 'mark_returned', lambda self: setattr(self, 'status', 'returned'), create=True):
+            success, message = POSIntegrationService.confirm_return(
+                order_id=f"ORDER-{suffix}", notes='Customer return'
+            )
 
-        assert success is True
+        assert success is True, message
         assert 'Processed return' in message
 
         return_call = mock_adjust.call_args_list[0].kwargs

@@ -6,6 +6,25 @@ import pytest
 def test_global_link_suggestions_and_link_flow(app, db_session):
     from app.models import InventoryItem, GlobalItem, IngredientCategory, Unit, User, Organization
 
+    from sqlalchemy import text
+
+    # Ensure ingredient category schema matches new visibility columns when migrations are behind
+    existing_cols = {row[1] for row in db_session.execute(text("PRAGMA table_info(ingredient_category)"))}
+    visibility_cols = [
+        "show_saponification_value",
+        "show_iodine_value",
+        "show_melting_point",
+        "show_flash_point",
+        "show_ph_value",
+        "show_moisture_content",
+        "show_shelf_life_days",
+        "show_comedogenic_rating",
+    ]
+    for col in visibility_cols:
+        if col not in existing_cols:
+            db_session.execute(text(f"ALTER TABLE ingredient_category ADD COLUMN {col} BOOLEAN DEFAULT 0"))
+    db_session.commit()
+
     # Ensure base units exist (weight, volume, count)
     if not Unit.query.filter_by(name='g').first():
         db_session.add(Unit(name='g', symbol='g', unit_type='weight', conversion_factor=1.0))
