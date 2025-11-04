@@ -68,6 +68,15 @@ def edit_sku(inventory_item_id):
         if retail_price:
             sku.retail_price = float(retail_price)
 
+        # Update unit if provided
+        unit = request.form.get('unit')
+        if unit:
+            clean_unit = unit.strip()
+            if clean_unit:
+                sku.unit = clean_unit
+                if sku.inventory_item:
+                    sku.inventory_item.unit = clean_unit
+
         # Update thresholds
         low_stock_threshold = request.form.get('low_stock_threshold')
         if low_stock_threshold:

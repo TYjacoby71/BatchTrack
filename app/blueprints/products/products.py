@@ -1,4 +1,4 @@
-from flask import Blueprint, request, render_template, redirect, url_for, flash, jsonify
+from flask import Blueprint, request, render_template, redirect, url_for, flash
 from flask_login import login_required, current_user
 from ...models import db, InventoryItem
 from ...models.product import Product, ProductVariant, ProductSKU, ProductSKUHistory
@@ -44,6 +44,47 @@ from ...services.inventory_adjustment import process_inventory_adjustment
 # The second definition `_write_product_created_audit(sku)` which is likely for testing, is kept as is.
 
 products_bp = Blueprint('products', __name__, url_prefix='/products')
+
+def _extract_unit_name(unit_obj):
+    """Safely extract a human-readable unit name from a unit object."""
+    if not unit_obj:
+        return None
+
+    name = getattr(unit_obj, 'name', None)
+    if name:
+        return str(name)
+
+    symbol = getattr(unit_obj, 'symbol', None)
+    if symbol:
+        return str(symbol)
+
+    return None
+
+
+def _resolve_default_unit(unit_override: str | None = None) -> str:
+    """Determine the unit to use when none is provided by the user."""
+    try:
+        provided = (unit_override or '').strip()
+    except AttributeError:
+        provided = ''
+
+    if provided:
+        return provided
+
+    units = get_global_unit_list()
+
+    for candidate in units:
+        name = _extract_unit_name(candidate)
+        if name and name.lower() == 'count':
+            return name
+
+    if units:
+        first_name = _extract_unit_name(units[0])
+        if first_name:
+            return first_name
+
+    # Absolute fallback if the unit table is empty
+    return 'count'
 
 def create_product_from_data(data):
     """
@@ -199,13 +240,13 @@ def list_products():
 @login_required
 def new_product():
     if request.method == 'POST':
-        name = request.form.get('name')
-        unit = request.form.get('product_base_unit')
+        name = (request.form.get('name') or '').strip()
         category_id = request.form.get('category_id')
         low_stock_threshold = request.form.get('low_stock_threshold', 0)
+        unit = _resolve_default_unit(request.form.get('product_base_unit'))
 
-        if not name or not unit:
-            flash('Name and product base unit are required', 'error')
+        if not name:
+            flash('Product name is required', 'error')
             return redirect(url_for('products.new_product'))
         if not category_id or not str(category_id).isdigit():
             flash('Product category is required', 'error')
@@ -232,7 +273,6 @@ def new_product():
             # Step 1: Create the main Product
             product = Product(
                 name=name,
-                base_unit=unit,
                 category_id=int(category_id),
                 low_stock_threshold=float(low_stock_threshold) if low_stock_threshold else 0,
                 organization_id=current_user.organization_id,
@@ -293,7 +333,7 @@ def new_product():
             # Call the audit wrapper
             _write_product_created_audit(sku)
 
-            flash('Product created successfully', 'success')
+            flash(f'Product created successfully. Default SKU unit set to {unit}.', 'success')
             return redirect(url_for('products.view_product', product_id=sku.inventory_item_id))
 
         except Exception as e:
@@ -428,13 +468,12 @@ def edit_product(product_id):
         flash('Product not found', 'error')
         return redirect(url_for('products.product_list'))
 
-    name = request.form.get('name')
-    unit = request.form.get('base_unit')  # Updated to match template form field name
+    name = (request.form.get('name') or '').strip()
     category_id = request.form.get('category_id')
     low_stock_threshold = request.form.get('low_stock_threshold', 0)
 
-    if not name or not unit or not category_id:
-        flash('Name, product base unit, and category are required', 'error')
+    if not name or not category_id:
+        flash('Name and category are required', 'error')
         return redirect(url_for('products.view_product', product_id=product_id))
 
     # Check if another product has this name
@@ -449,7 +488,6 @@ def edit_product(product_id):
 
     # Update the product
     product.name = name
-    product.base_unit = unit
     product.low_stock_threshold = float(low_stock_threshold) if low_stock_threshold else 0
     try:
         product.category_id = int(category_id)
@@ -459,7 +497,6 @@ def edit_product(product_id):
     # Update all SKUs for this product
     skus = ProductSKU.query.filter_by(product_id=product.id).all()
     for sku in skus:
-        sku.unit = unit
         sku.low_stock_threshold = float(low_stock_threshold) if low_stock_threshold else 0
 
     db.session.commit()

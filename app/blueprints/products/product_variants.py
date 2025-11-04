@@ -5,6 +5,7 @@ from ...models.product import Product, ProductVariant
 from ...services.product_service import ProductService
 from ...utils.unit_utils import get_global_unit_list
 from app.services.inventory_adjustment import process_inventory_adjustment
+from .products import _resolve_default_unit
 
 # Create the product variants blueprint
 product_variants_bp = Blueprint('product_variants', __name__)
@@ -44,14 +45,18 @@ def add_variant(product_id):
             data = request.get_json()
             variant_name = data.get('name')
             description = data.get('description')
+            unit_override = data.get('unit')
         else:
             variant_name = request.form.get('name')
             description = request.form.get('description')
+            unit_override = request.form.get('unit')
 
         if not variant_name or variant_name.strip() == '':
             return jsonify({'error': 'Variant name is required'}), 400
 
         variant_name = variant_name.strip()
+
+        unit = _resolve_default_unit(unit_override)
 
         # Check if variant already exists for this product
         existing_variant = ProductVariant.query.filter_by(
@@ -79,7 +84,7 @@ def add_variant(product_id):
         inventory_item = InventoryItem(
             name=f"{product.name} - {variant_name} - Bulk",
             type='product',
-            unit=product.base_unit,
+            unit=unit,
             quantity=0.0,
             organization_id=current_user.organization_id,
             created_by=current_user.id
@@ -94,7 +99,7 @@ def add_variant(product_id):
             variant_id=new_variant.id,
             size_label='Bulk',
             sku_code=sku_code,
-            unit=product.base_unit,
+            unit=unit,
             low_stock_threshold=product.low_stock_threshold,
             description=description,
             is_active=True,

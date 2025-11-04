@@ -19,6 +19,17 @@
                             <input type="text" name="size_label" class="form-control" value="{{ sku.size_label or '' }}" placeholder="e.g., 8oz, Large, Standard">
                         </div>
                         <div class="col-md-6">
+                            <label class="form-label">Unit</label>
+                            <select name="unit" class="form-select" required>
+                                {% for unit_option in get_global_unit_list() %}
+                                    {% set option_name = unit_option.name if unit_option.name else unit_option.symbol %}
+                                    {% if option_name %}
+                                        <option value="{{ option_name }}" {% if sku.unit == option_name %}selected{% endif %}>{{ option_name }}</option>
+                                    {% endif %}
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-6">
                             <label class="form-label">Retail Price ($)</label>
                             <input type="number" name="retail_price" class="form-control" value="{{ sku.retail_price or '' }}" step="0.01" min="0" placeholder="0.00">
                         </div>

@@ -8,12 +8,7 @@
     <input type="text" name="name" class="form-control" required>
   </div>
   <div class="mb-3">
-    <label class="form-label">Units are now defined per SKU at creation.</label>
-      <option value="">Select unit...</option>
-      {% for unit in units %}
-        <option value="{{ unit.name }}">{{ unit.name }}</option>
-      {% endfor %}
-    </select>
+    <span class="form-text">Units are defined per SKU when you create them.</span>
   </div>
   <div class="mb-3">
     <label for="category_id" class="form-label">Product Category</label>
