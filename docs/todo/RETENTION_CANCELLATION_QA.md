@@ -1,6 +1,8 @@
 
 # 🔄 Retention & Cancellation Flow QA Document
 
+> **Status Snapshot (2025-11-04):** Retention/cancellation flow not yet implemented. All checklist items remain **pending** until the multi-step UX, services, and emails are built.
+
 **Purpose:** Implement multi-step cancellation flow with retention tactics to reduce churn and gather exit feedback.
 
 ---
