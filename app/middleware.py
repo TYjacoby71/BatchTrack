@@ -176,9 +176,9 @@ def register_middleware(app):
                 "X-XSS-Protection": "1; mode=block",
                 "Content-Security-Policy": (
                     "default-src 'self'; "
-                    "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://js.stripe.com; "
-                    "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; "
-                    "font-src 'self' https://fonts.gstatic.com; "
+                    "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://js.stripe.com https://cdn.jsdelivr.net https://code.jquery.com https://cdnjs.cloudflare.com; "
+                    "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdn.jsdelivr.net https://cdnjs.cloudflare.com; "
+                    "font-src 'self' https://fonts.gstatic.com https://cdnjs.cloudflare.com; "
                     "img-src 'self' data: https: blob:; "
                     "connect-src 'self' https://api.stripe.com; "
                     "frame-src https://js.stripe.com; "
