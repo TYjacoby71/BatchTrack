@@ -4,10 +4,6 @@
 <form method="POST">
   <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
   <div class="mb-3">
-    <label for="name" class="form-label">Product Name</label>
-    <input type="text" name="name" class="form-control" required>
-  </div>
-  <div class="mb-3">
     <label for="category_id" class="form-label">Product Category</label>
     <select name="category_id" id="category_id" class="form-select" required>
       <option value="">Select category...</option>
@@ -31,6 +27,11 @@
       <hr class="my-2">
       <p class="small mb-0">This structure syncs cleanly with storefronts like Shopify and Etsy.</p>
     </div>
+  </div>
+
+  <div class="mb-3">
+    <label for="name" class="form-label">Product Name</label>
+    <input type="text" name="name" class="form-control" required>
   </div>
 
   <div class="form-group mt-3 d-flex justify-content-between">
