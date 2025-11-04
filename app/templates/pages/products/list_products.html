@@ -108,7 +108,7 @@
                           <span class="me-2">{{ inv.size_label if inv.size_label else 'Bulk' }}</span>
                           <span class="badge bg-success small">{{ inv.quantity|round(1) }} {{ inv.unit if inv.unit else 'units' }}</span>
                         </div>
-                        <a href="{{ url_for('products.view_sku', sku_id=inv.sku_id) }}" class="btn btn-outline-secondary btn-xs">View SKU</a>
+                        <a href="{{ url_for('sku.view_sku', inventory_item_id=inv.sku_id) }}" class="btn btn-outline-secondary btn-xs">View SKU</a>
                       </div>
                     {% endif %}
                     {% endfor %}
