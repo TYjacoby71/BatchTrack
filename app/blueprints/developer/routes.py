@@ -774,10 +774,10 @@ def reference_categories():
 @developer_bp.route('/container-management')
 @login_required
 def container_management():
-    """Container management page for curating materials, types, colors, styles"""
+    """Container management page for curating materials, colors, styles"""
     # Load master lists from settings - these are the single source of truth
     curated_lists = load_curated_container_lists()
-    
+
     return render_template('developer/container_management.html',
                          curated_materials=curated_lists['materials'],
                          curated_types=curated_lists['types'],
@@ -791,38 +791,38 @@ def save_curated_container_lists():
     try:
         data = request.get_json()
         curated_lists = data.get('curated_lists', {})
-        
+
         # Validate the structure
         required_keys = ['materials', 'types', 'styles', 'colors']
         for key in required_keys:
             if key not in curated_lists or not isinstance(curated_lists[key], list):
                 return jsonify({'success': False, 'error': f'Invalid or missing {key} list'})
-        
+
         # Load current settings
         import json
         import os
         settings_file = 'settings.json'
         settings = {}
-        
+
         if os.path.exists(settings_file):
             try:
                 with open(settings_file, 'r') as f:
                     settings = json.load(f)
             except (json.JSONDecodeError, IOError):
                 settings = {}
-        
+
         # Update container curated lists
         if 'container_management' not in settings:
             settings['container_management'] = {}
-        
+
         settings['container_management']['curated_lists'] = curated_lists
-        
+
         # Save back to file
         with open(settings_file, 'w') as f:
             json.dump(settings, f, indent=2)
-        
+
         return jsonify({'success': True, 'message': 'Curated lists saved successfully'})
-        
+
     except Exception as e:
         return jsonify({'success': False, 'error': str(e)})
 
@@ -832,18 +832,18 @@ def load_curated_container_lists():
         import json
         import os
         settings_file = 'settings.json'
-        
+
         if os.path.exists(settings_file):
             with open(settings_file, 'r') as f:
                 settings = json.load(f)
                 curated_lists = settings.get('container_management', {}).get('curated_lists', {})
-                
+
                 # If we have saved curated lists, return them
                 if curated_lists and all(key in curated_lists for key in ['materials', 'types', 'styles', 'colors']):
                     return curated_lists
     except:
         pass
-    
+
     # First time setup: merge database values with defaults
     defaults = {
         'materials': [
@@ -863,52 +863,52 @@ def load_curated_container_lists():
             'Frosted', 'Silver', 'Gold'
         ]
     }
-    
+
     # Get existing values from database and merge with defaults
     try:
         from app.models.global_item import GlobalItem
         from app.extensions import db
-        
+
         # Get existing materials
         materials = db.session.query(GlobalItem.container_material)\
             .filter(GlobalItem.container_material.isnot(None))\
             .distinct().all()
         existing_materials = [m[0] for m in materials if m[0] and m[0] not in defaults['materials']]
-        
+
         # Get existing types
         types = db.session.query(GlobalItem.container_type)\
             .filter(GlobalItem.container_type.isnot(None))\
             .distinct().all()
         existing_types = [t[0] for t in types if t[0] and t[0] not in defaults['types']]
-        
+
         # Get existing styles
         styles = db.session.query(GlobalItem.container_style)\
             .filter(GlobalItem.container_style.isnot(None))\
             .distinct().all()
         existing_styles = [s[0] for s in styles if s[0] and s[0] not in defaults['styles']]
-        
+
         # Get existing colors
         colors = db.session.query(GlobalItem.container_color)\
             .filter(GlobalItem.container_color.isnot(None))\
             .distinct().all()
         existing_colors = [c[0] for c in colors if c[0] and c[0] not in defaults['colors']]
-        
+
         # Merge and sort
         defaults['materials'].extend(existing_materials)
         defaults['materials'] = sorted(list(set(defaults['materials'])))
-        
+
         defaults['types'].extend(existing_types)
         defaults['types'] = sorted(list(set(defaults['types'])))
-        
+
         defaults['styles'].extend(existing_styles)
         defaults['styles'] = sorted(list(set(defaults['styles'])))
-        
+
         defaults['colors'].extend(existing_colors)
         defaults['colors'] = sorted(list(set(defaults['colors'])))
-        
+
     except Exception:
         pass  # Use defaults if database query fails
-    
+
     return defaults
 
 @developer_bp.route('/system-statistics')
@@ -928,7 +928,7 @@ def system_statistics():
         'total_permissions': Permission.query.count(),
         'total_roles': Role.query.count()
     }
-    
+
     return render_template('developer/system_statistics.html', stats=stats)
 
 @developer_bp.route('/billing-integration')
@@ -1546,7 +1546,7 @@ def integrations_set_feature_flags():
         if current_user.user_type != 'developer':
             return jsonify({'success': False, 'error': 'Developer access required'}), 403
         data = request.get_json() or {}
-        
+
         # Define allowed flags
         allowed_flags = [
             # Core business features
@@ -1558,7 +1558,7 @@ def integrations_set_feature_flags():
             'FEATURE_COST_TRACKING',
             'FEATURE_EXPIRATION_TRACKING',
             'FEATURE_BULK_OPERATIONS',
-            
+
             # Developer & advanced features
             'FEATURE_INVENTORY_ANALYTICS',
             'FEATURE_DEBUG_MODE',
@@ -1566,21 +1566,21 @@ def integrations_set_feature_flags():
             'FEATURE_CSV_EXPORT',
             'FEATURE_ADVANCED_REPORTS',
             'FEATURE_GLOBAL_ITEM_LIBRARY',
-            
+
             # Notification systems
             'FEATURE_EMAIL_NOTIFICATIONS',
             'FEATURE_BROWSER_NOTIFICATIONS',
-            
+
             # Integration features
             'FEATURE_SHOPIFY_INTEGRATION',
             'FEATURE_API_ACCESS',
             'FEATURE_OAUTH_PROVIDERS',
-            
+
             # AI features
             'FEATURE_AI_RECIPE_OPTIMIZATION',
             'FEATURE_AI_DEMAND_FORECASTING',
             'FEATURE_AI_QUALITY_INSIGHTS',
-            
+
             # Public tools
             'TOOLS_SOAP',
             'TOOLS_CANDLES', 
@@ -1588,13 +1588,13 @@ def integrations_set_feature_flags():
             'TOOLS_HERBAL',
             'TOOLS_BAKING'
         ]
-        
+
         # Update app config for allowed flags
         for flag in allowed_flags:
             if flag in data:
                 value = bool(data[flag])
                 current_app.config[flag] = value
-        
+
         # Persist to settings.json for next boot
         try:
             import json, os
@@ -1602,18 +1602,18 @@ def integrations_set_feature_flags():
             if os.path.exists('settings.json'):
                 with open('settings.json', 'r') as f:
                     settings = json.load(f) or {}
-            
+
             ff = settings.get('feature_flags', {}) or {}
             for flag in allowed_flags:
                 if flag in data:
                     ff[flag] = bool(data[flag])
-                    
+
             settings['feature_flags'] = ff
             with open('settings.json', 'w') as f:
                 json.dump(settings, f, indent=2)
         except Exception:
             pass
-            
+
         return jsonify({'success': True})
     except Exception as e:
         return jsonify({'success': False, 'error': str(e)}), 500
@@ -2290,7 +2290,7 @@ def get_category_visibility():
             'show_flash_point': getattr(category, 'show_flash_point', False),
             'show_ph_value': getattr(category, 'show_ph_value', False),
             'show_moisture_content': getattr(category, 'show_moisture_content', False),
-            'show_shelf_life_months': getattr(category, 'show_shelf_life_months', False),
+            'show_shelf_life_days': getattr(category, 'show_shelf_life_days', False),
             'show_comedogenic_rating': getattr(category, 'show_comedogenic_rating', False)
         }
 
@@ -2328,7 +2328,7 @@ def update_category_visibility():
         category.show_flash_point = data.get('show_flash_point', False)
         category.show_ph_value = data.get('show_ph_value', False)
         category.show_moisture_content = data.get('show_moisture_content', False)
-        category.show_shelf_life_months = data.get('show_shelf_life_months', False)
+        category.show_shelf_life_days = data.get('show_shelf_life_days', False)
         category.show_comedogenic_rating = data.get('show_comedogenic_rating', False)
 
         db.session.commit()
@@ -2364,7 +2364,7 @@ def api_category_visibility(category_id):
             'show_flash_point': getattr(category, 'show_flash_point', False),
             'show_ph_value': getattr(category, 'show_ph_value', False),
             'show_moisture_content': getattr(category, 'show_moisture_content', False),
-            'show_shelf_life_months': getattr(category, 'show_shelf_life_months', False),
+            'show_shelf_life_days': getattr(category, 'show_shelf_life_days', False),
             'show_comedogenic_rating': getattr(category, 'show_comedogenic_rating', False)
         }
 

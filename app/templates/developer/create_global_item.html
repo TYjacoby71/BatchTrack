@@ -164,10 +164,7 @@
                 <input type="number" step="0.1" name="moisture_content_percent" class="form-control" placeholder="e.g. 2.5">
               </div>
               
-              <div class="col-md-3" id="shelfLifeMonthsSection" style="display: none;">
-                <label class="form-label">Shelf Life (months)</label>
-                <input type="number" name="shelf_life_months" class="form-control" placeholder="e.g. 12">
-              </div>
+              
               
               <div class="col-md-3" id="comedogenicSection" style="display: none;">
                 <label class="form-label">Comedogenic Rating</label>
@@ -327,7 +324,7 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // Hide all ingredient property sections first
     ['saponificationSection', 'iodineSection', 'meltingPointSection', 'flashPointSection', 
-     'phSection', 'moistureSection', 'shelfLifeMonthsSection', 'comedogenicSection'].forEach(id => {
+     'phSection', 'moistureSection', 'comedogenicSection'].forEach(id => {
       document.getElementById(id).style.display = 'none';
     });
     
@@ -368,9 +365,7 @@ document.addEventListener('DOMContentLoaded', function() {
       if (visibility.show_moisture_content) {
         document.getElementById('moistureSection').style.display = 'block';
       }
-      if (visibility.show_shelf_life_months) {
-        document.getElementById('shelfLifeMonthsSection').style.display = 'block';
-      }
+      
       if (visibility.show_comedogenic_rating) {
         document.getElementById('comedogenicSection').style.display = 'block';
       }
