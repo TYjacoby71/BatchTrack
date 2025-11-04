@@ -103,51 +103,44 @@ def list_products():
         def __init__(self, data):
             self.name = data.get('product_name', '')
             self.product_base_unit = data.get('product_base_unit', '')
-            self.created_at = data.get('last_updated')
+            self.last_updated = data.get('last_updated')
             self.inventory = []
-            # Calculate total quantity from inventory
             self.total_quantity = data.get('total_quantity', 0)
-            # Add product ID for URL generation
             self.id = data.get('product_id', None)
-
-            # Calculate aggregate inventory values
             self.total_bulk = 0
             self.total_packaged = 0
 
-            # Get actual Product and its variants
             if self.id:
                 from ...models.product import ProductSKU, Product, ProductVariant
 
-                # Find the actual Product by name
                 product = Product.query.filter_by(
                     name=self.name,
                     organization_id=current_user.organization_id
                 ).first()
 
                 if product:
-                    self.id = product.id  # Use actual product ID
+                    self.id = product.id
 
-                    # Get actual ProductVariant objects (not size labels)
                     actual_variants = ProductVariant.query.filter_by(
                         product_id=product.id,
                         is_active=True
                     ).all()
 
-                    # Create variation objects for template compatibility
                     self.variations = []
+                    variant_map = {}
                     for variant in actual_variants:
                         variant_obj = type('Variation', (), {
                             'name': variant.name,
                             'description': variant.description,
                             'id': variant.id,
-                            'sku': None  # Will be set below if there's a primary SKU
+                            'sku': None,
+                            'created_at': variant.created_at
                         })()
                         self.variations.append(variant_obj)
+                        variant_map[variant.id] = variant_obj
 
-                    # Set variant count to actual number of variants
                     self.variant_count = len(actual_variants)
 
-                    # Calculate aggregates from SKUs
                     product_skus = ProductSKU.query.filter_by(
                         product_id=product.id,
                         organization_id=current_user.organization_id,
@@ -155,16 +148,48 @@ def list_products():
                     ).all()
 
                     for sku in product_skus:
-                        if sku.inventory_item and sku.inventory_item.quantity > 0:
-                            size_label = sku.size_label if sku.size_label else 'Bulk'
-                            if size_label == 'Bulk':
-                                self.total_bulk += sku.inventory_item.quantity
+                        size_label = sku.size_label if sku.size_label else 'Bulk'
+                        quantity = float(sku.inventory_item.quantity or 0.0) if sku.inventory_item else 0.0
+                        unit = sku.unit or (sku.inventory_item.unit if sku.inventory_item else '')
+
+                        variant_obj = variant_map.get(sku.variant_id)
+                        if not variant_obj and sku.variant:
+                            variant_obj = type('Variation', (), {
+                                'name': sku.variant.name,
+                                'description': sku.variant.description,
+                                'id': sku.variant.id,
+                                'sku': None,
+                                'created_at': sku.variant.created_at
+                            })()
+                            self.variations.append(variant_obj)
+                            variant_map[sku.variant_id] = variant_obj
+
+                        if variant_obj and not getattr(variant_obj, 'sku', None):
+                            variant_obj.sku = sku.sku or sku.sku_code
+
+                        inventory_entry = type('InventoryEntry', (), {
+                            'variant': variant_obj.name if variant_obj else (sku.variant.name if sku.variant else 'Unassigned'),
+                            'size_label': size_label if size_label else 'Bulk',
+                            'quantity': quantity,
+                            'unit': unit or '',
+                            'sku_id': sku.inventory_item_id,
+                            'sku_code': sku.sku or sku.sku_code
+                        })()
+                        self.inventory.append(inventory_entry)
+
+                        if quantity > 0:
+                            if size_label.lower() == 'bulk':
+                                self.total_bulk += quantity
                             else:
-                                self.total_packaged += sku.inventory_item.quantity
+                                self.total_packaged += quantity
+
+                    self.variant_count = len(self.variations)
                 else:
-                    # Fallback for legacy data
                     self.variant_count = data.get('sku_count', 0)
                     self.variations = []
+            else:
+                self.variant_count = data.get('sku_count', 0)
+                self.variations = []
 
     # Get product IDs for the summary objects
     enhanced_product_data = []
