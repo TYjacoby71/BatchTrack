@@ -44,14 +44,20 @@ def add_variant(product_id):
             data = request.get_json()
             variant_name = data.get('name')
             description = data.get('description')
+            unit_override = data.get('unit')
         else:
             variant_name = request.form.get('name')
             description = request.form.get('description')
+            unit_override = request.form.get('unit')
 
         if not variant_name or variant_name.strip() == '':
             return jsonify({'error': 'Variant name is required'}), 400
 
         variant_name = variant_name.strip()
+
+        unit = (unit_override or '').strip() if unit_override else ''
+        if not unit:
+            return jsonify({'error': 'Unit is required to create the default SKU for this variant'}), 400
 
         # Check if variant already exists for this product
         existing_variant = ProductVariant.query.filter_by(
@@ -67,7 +73,8 @@ def add_variant(product_id):
             product_id=product.id,
             name=variant_name,
             description=description,
-            organization_id=current_user.organization_id
+            organization_id=current_user.organization_id,
+            created_by=current_user.id
         )
         db.session.add(new_variant)
         db.session.flush()  # Get the variant ID without committing
@@ -79,7 +86,7 @@ def add_variant(product_id):
         inventory_item = InventoryItem(
             name=f"{product.name} - {variant_name} - Bulk",
             type='product',
-            unit=product.base_unit,
+            unit=unit,
             quantity=0.0,
             organization_id=current_user.organization_id,
             created_by=current_user.id
@@ -94,7 +101,7 @@ def add_variant(product_id):
             variant_id=new_variant.id,
             size_label='Bulk',
             sku_code=sku_code,
-            unit=product.base_unit,
+            unit=unit,
             low_stock_threshold=product.low_stock_threshold,
             description=description,
             is_active=True,
