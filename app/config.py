@@ -97,7 +97,7 @@ class StagingConfig(BaseConfig):
         'pool_pre_ping': True,
         'pool_recycle': 1800,
     }
-    RATELIMIT_STORAGE_URL = os.environ.get('REDIS_URL') or os.environ.get('RATELIMIT_STORAGE_URL', 'memory://')
+    RATELIMIT_STORAGE_URL = os.environ.get('REDIS_URL') or 'memory://'
 
 
 class ProductionConfig(BaseConfig):

@@ -366,12 +366,12 @@ class User(UserMixin, db.Model):
             for assignment in assignments:
                 if assignment.role_id:
                     # Organization role
-                    role = Role.query.get(assignment.role_id)
+                    role = db.session.get(Role, assignment.role_id)
                     if role and role.is_active:
                         roles.append(role)
                 elif assignment.developer_role_id:
                     # Developer role
-                    dev_role = DeveloperRole.query.get(assignment.developer_role_id)
+                    dev_role = db.session.get(DeveloperRole, assignment.developer_role_id)
                     if dev_role and dev_role.is_active:
                         roles.append(dev_role)
 
