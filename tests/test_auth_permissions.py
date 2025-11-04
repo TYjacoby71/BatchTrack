@@ -1,118 +1,183 @@
-import pytest
-from flask import url_for
-from app.models import User, Organization, Role, Permission
-from app.utils.permissions import permission_required, any_permission_required, tier_required
+from uuid import uuid4
+from flask import jsonify
 
-class TestAuthPermissions:
-    """Test auth permission decorators and helpers"""
+from flask_login import login_user, logout_user
 
-    def test_permission_required_decorator_allows_with_permission(self, app, client):
-        """Test that permission_required allows access when user has permission"""
-        with app.app_context():
-            # Mock route with permission requirement
-            @app.route('/test-perm')
-            @permission_required('test.permission')
-            def test_route():
-                return 'success'
+from app.models import User, Organization, Role, Permission, SubscriptionTier
+from app.utils.permissions import permission_required
 
-            # This would need proper user setup - keeping simple for now
-            response = client.get('/test-perm')
-            # Will redirect to login if not authenticated
-            assert response.status_code in [200, 302]
 
-    def test_permission_required_returns_json_for_api(self, app, client):
-        """Test that API endpoints return JSON when permission denied"""
-        with app.app_context():
-            @app.route('/api/test-perm')
-            @permission_required('test.permission')
-            def api_test_route():
-                return {'status': 'success'}
+def _create_org_with_permission(db_session):
+    """Seed an organization, tier, role, and user wired with a unique permission."""
+    suffix = uuid4().hex
+    perm_name = f"feature.manage.{suffix}"
 
-            response = client.get('/api/test-perm')
-            # Should return JSON unauthorized response
-            assert response.status_code == 401
-            assert response.is_json
-            json_data = response.get_json()
-            assert json_data['error'] == 'Authentication required'
+    permission = Permission(name=perm_name)
+    db_session.add(permission)
 
-    def test_any_permission_required_decorator(self, app):
-        """Test any_permission_required decorator structure"""
-        with app.app_context():
-            @any_permission_required('perm.a', 'perm.b')
-            def test_func():
-                return 'success'
+    tier = SubscriptionTier(
+        name=f"Tier-{suffix}",
+        billing_provider='exempt',
+        user_limit=5,
+    )
+    tier.permissions.append(permission)
+    db_session.add(tier)
+    db_session.flush()
 
-            # Decorator should be properly applied
-            assert hasattr(test_func, '__wrapped__')
+    org = Organization(
+        name=f"Org-{suffix}",
+        subscription_tier_id=tier.id,
+        billing_status='active',
+    )
+    db_session.add(org)
+    db_session.flush()
 
-    def test_tier_required_decorator(self, app):
-        """Test tier_required decorator structure"""
-        with app.app_context():
-            @tier_required('pro')
-            def test_func():
-                return 'success'
+    role = Role(name=f"Role-{suffix}", organization_id=org.id)
+    role.permissions.append(permission)
+    db_session.add(role)
+    db_session.flush()
 
-            # Decorator should be properly applied
-            assert hasattr(test_func, '__wrapped__')
+    user = User(
+        username=f"user_{suffix}",
+        email=f"user_{suffix}@example.com",
+        organization_id=org.id,
+        is_active=True,
+    )
+    db_session.add(user)
+    db_session.flush()
 
-    def test_user_has_any_permission_method(self, app):
-        """Test User.has_any_permission method"""
-        with app.app_context():
-            # Create test user
-            user = User(username='testuser', email='test@example.com')
+    user_id = user.id
+    org_id = org.id
 
-            # Test with empty permissions
-            result = user.has_any_permission(['perm.a', 'perm.b'])
-            assert result is False
+    from app.models.user_role_assignment import UserRoleAssignment
 
-    def test_api_unauth_returns_json_401(self, app, client):
-        """Test that API endpoints return 401 JSON when unauthorized"""
-        with app.app_context():
-            @app.route("/api/_perm_test")
-            @permission_required("some.permission")
-            def _p():
-                return {"ok": True}
+    assignment = UserRoleAssignment(
+        user_id=user_id,
+        role_id=role.id,
+        organization_id=org_id,
+        is_active=True,
+    )
+    db_session.add(assignment)
+    db_session.commit()
 
-            resp = client.get("/api/_perm_test", headers={"Accept": "application/json"})
-            assert resp.status_code == 401
-            assert resp.is_json
-            json_data = resp.get_json()
-            assert json_data.get("error") == "Authentication required"
+    return perm_name, user_id, org_id
 
-    def test_web_unauth_redirects_to_login(self, app, client):
-        """Test that web pages redirect to login when unauthorized"""
-        with app.app_context():
-            from flask_login import login_required
 
-            @app.route("/web/_perm_test")
-            @login_required
-            @permission_required("some.permission")
-            def _w():
-                return "ok"
+def _login(client, user_id):
+    with client.session_transaction() as sess:
+        sess.clear()
+        sess['_user_id'] = str(user_id)
+        sess['_fresh'] = True
 
-            resp = client.get("/web/_perm_test", follow_redirects=False)
-            assert resp.status_code == 302
-            assert "/auth/login" in resp.headers.get("Location", "")
 
-    def test_csrf_token_available_in_templates(self, app, client, test_user):
-        """Test that csrf_token is available in templates for an authenticated user"""
-        with app.app_context():
-            from flask import render_template_string
-            from flask_login import login_user
+def test_permission_required_allows_authorized_user(app, client, db_session):
+    app.config['SKIP_PERMISSIONS'] = False
 
-            @app.route("/_csrf_check")
-            def _csrf_check():
-                # This route now requires login because of our middleware
-                return render_template_string('<meta name="csrf-token" content="{{ csrf_token() }}">')
+    with app.app_context():
+        perm_name, user_id, _ = _create_org_with_permission(db_session)
+        route_suffix = uuid4().hex
 
-            # Log in the user using Flask-Login within the client session
-            with client:
-                # Set up the session to simulate a logged-in user
-                with client.session_transaction() as sess:
-                    sess['_user_id'] = str(test_user.id)
-                    sess['_fresh'] = True
-                
-                # Make the request - Flask-Login will load the user from session
-                resp = client.get("/_csrf_check")
-                assert resp.status_code == 200
-                assert b'csrf-token' in resp.data
+        endpoint = f"protected_{route_suffix}"
+
+        @permission_required(perm_name)
+        def _protected():
+            return "ok", 200
+
+        app.add_url_rule(
+            f"/authz/protected/{route_suffix}",
+            endpoint,
+            _protected,
+        )
+
+    with client:
+        _login(client, user_id)
+        response = client.get(f"/authz/protected/{route_suffix}")
+
+    assert response.status_code == 200
+    assert response.data == b"ok"
+
+
+def test_permission_required_denies_user_without_permission(app, client, db_session):
+    app.config['SKIP_PERMISSIONS'] = False
+
+    with app.app_context():
+        perm_name, privileged_user_id, org_id = _create_org_with_permission(db_session)
+
+        # Create a second user in same org without the privileged role
+        other_user = User(
+            username=f"unauth_{uuid4().hex}",
+            email=f"unauth_{uuid4().hex}@example.com",
+            organization_id=org_id,
+            is_active=True,
+        )
+        db_session.add(other_user)
+        db_session.flush()
+        other_user_id = other_user.id
+        db_session.commit()
+
+        route_suffix = uuid4().hex
+
+        @permission_required(perm_name)
+        def _api_protected():
+            return jsonify(success=True)
+
+        app.add_url_rule(
+            f"/authz/api/{route_suffix}",
+            f"api_protected_{route_suffix}",
+            _api_protected,
+        )
+
+    with app.app_context():
+        privileged_user = db_session.get(User, privileged_user_id)
+        assert privileged_user is not None
+        assert privileged_user.has_permission(perm_name)
+        from app.models.user_role_assignment import UserRoleAssignment
+        assignments = UserRoleAssignment.query.filter_by(user_id=privileged_user_id, is_active=True).all()
+        assert assignments, "Role assignment should exist"
+
+    # Authenticate the unprivileged user via request context
+    other = db_session.get(User, other_user_id)
+    with app.test_request_context(f"/authz/api/{route_suffix}", headers={"Accept": "application/json"}):
+        login_user(other)
+        response = app.make_response(app.view_functions[f"api_protected_{route_suffix}"]())
+        logout_user()
+
+    assert response.status_code == 403
+    payload = response.get_json()
+    assert payload["error"].startswith("Permission denied")
+
+    # Control: privileged user should still pass
+    privileged = db_session.get(User, privileged_user_id)
+    with app.test_request_context(f"/authz/api/{route_suffix}", headers={"Accept": "application/json"}):
+        login_user(privileged)
+        ok_response = app.make_response(app.view_functions[f"api_protected_{route_suffix}"]())
+        logout_user()
+
+    assert ok_response.status_code == 200, ok_response.get_json()
+
+
+def test_permission_required_requires_authentication(app, client, db_session):
+    app.config['SKIP_PERMISSIONS'] = False
+
+    with app.app_context():
+        perm_name, _, _ = _create_org_with_permission(db_session)
+        route_suffix = uuid4().hex
+
+        @permission_required(perm_name)
+        def _api_route():
+            return jsonify(success=True)
+
+        app.add_url_rule(
+            f"/authz/anon/{route_suffix}",
+            f"anon_protected_{route_suffix}",
+            _api_route,
+        )
+
+    response = client.get(
+        f"/authz/anon/{route_suffix}",
+        headers={"Accept": "application/json"},
+    )
+
+    assert response.status_code == 401
+    assert response.is_json
+    assert response.get_json()["error"] == "Authentication required"

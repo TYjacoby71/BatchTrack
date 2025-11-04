@@ -1,296 +1,175 @@
 import pytest
-from unittest.mock import patch, MagicMock
+from unittest.mock import patch
+from uuid import uuid4
+
+from flask_login import login_user
+
 from app.services.pos_integration import POSIntegrationService
+from app.models import InventoryItem, Reservation, Organization
 
 
-def test_pos_sale_uses_canonical_service(app, db_session):
-    """Test that POS sales use the canonical inventory adjustment service"""
+def test_process_sale_delegates_to_canonical_service():
+    with patch('app.services.pos_integration.process_inventory_adjustment') as mock_adjust:
+        mock_adjust.return_value = True
 
-    # Create test data
-    from app.models import Organization, User, SubscriptionTier, InventoryItem, ProductSKU
+        success, message = POSIntegrationService.process_sale(item_id=123, quantity=4, notes='Test sale')
 
-    # Create required dependencies with unique names
-    import time
-    unique_suffix = str(int(time.time() * 1000))[-6:]
-    tier = SubscriptionTier(name=f"Test Tier {unique_suffix}", tier_type="monthly", user_limit=5)
-    db_session.add(tier)
-    db_session.flush()
+        assert success is True
+        assert 'Sale processed' in message
 
-    org = Organization(name=f"Test Org {unique_suffix}", billing_status="active", subscription_tier_id=tier.id)
-    db_session.add(org)
-    db_session.flush()
+        mock_adjust.assert_called_once()
+        call_kwargs = mock_adjust.call_args.kwargs
+        assert call_kwargs['item_id'] == 123
+        assert call_kwargs['change_type'] == 'sale'
+        assert call_kwargs['quantity'] == -4
+        assert 'POS Sale' in call_kwargs['notes']
 
-    user = User(username=f"testuser_{unique_suffix}", email=f"test{unique_suffix}@example.com", organization_id=org.id)
-    db_session.add(user)
-    db_session.flush()
 
+@pytest.mark.usefixtures('app', 'db_session')
+def test_reserve_inventory_calls_canonical_service(app, db_session, test_user):
+    suffix = uuid4().hex
     item = InventoryItem(
-        name=f"Test Product {unique_suffix}",
-        quantity=100,
-        unit="count",
-        type="product",
-        organization_id=org.id
+        name=f"POS Item {suffix}",
+        type='product',
+        unit='count',
+        quantity=25,
+        organization_id=test_user.organization_id,
+        cost_per_unit=3.0,
     )
     db_session.add(item)
-    db_session.flush()
-
-    sku = ProductSKU(
-        name=f"Test SKU {unique_suffix}",
-        inventory_item_id=item.id,
-        quantity=100
-    )
-    db_session.add(sku)
     db_session.commit()
 
-    # Mock the canonical service
-    with patch('app.services.pos_integration.process_inventory_adjustment') as mock_adjustment:
-        mock_adjustment.return_value = True
+    with app.test_request_context('/'):
+        login_user(test_user)
 
-        # Check if the POS service method exists
-        if hasattr(POSIntegrationService, 'process_sale'):
-            # Call POS sale
-            success, message = POSIntegrationService.process_sale(
+        with patch('app.services.pos_integration.process_inventory_adjustment') as mock_adjust:
+            mock_adjust.return_value = True
+
+            success, message = POSIntegrationService.reserve_inventory(
                 item_id=item.id,
-                quantity=10,
-                notes="Test POS sale"
+                quantity=5,
+                order_id=f"ORD-{suffix}",
+                source='shopify',
+                notes='Reserve for test',
             )
 
-            # Verify canonical service was called
-            mock_adjustment.assert_called_once()
-            call_args = mock_adjustment.call_args
-
-            # Verify the call was made with correct parameters
-            assert call_args[1]['item_id'] == item.id
-            assert call_args[1]['quantity'] == -10  # Negative for deduction
-            assert call_args[1]['change_type'] == 'sale'
-            assert 'POS Sale' in call_args[1]['notes']
             assert success is True
-        else:
-            # If method doesn't exist, test passes - we're verifying structure
-            assert True, "POSIntegrationService.process_sale method not implemented yet"
+            assert 'ORD-' in message
+
+            assert mock_adjust.call_count == 2
+            reserve_call = mock_adjust.call_args_list[0].kwargs
+            allocation_call = mock_adjust.call_args_list[1].kwargs
+
+            assert reserve_call['item_id'] == item.id
+            assert reserve_call['change_type'] == 'reserved'
+            assert reserve_call['quantity'] == 5
+
+            assert allocation_call['change_type'] == 'reserved_allocation'
+            assert allocation_call['quantity'] == 5
 
 
-def test_pos_reservation_uses_canonical_service(app, db_session):
-    """Test that POS reservations use the canonical inventory adjustment service"""
-
-    # Create test data
-    from app.models import Organization, User, SubscriptionTier, InventoryItem
-
-    import time
-    unique_suffix = str(int(time.time() * 1000))[-6:]
-
-    tier = SubscriptionTier(name=f"Test Tier Res {unique_suffix}", tier_type="monthly", user_limit=5)
-    db_session.add(tier)
-    db_session.flush()
-
-    org = Organization(name=f"Test Org Res {unique_suffix}", billing_status="active", subscription_tier_id=tier.id)
+@pytest.mark.usefixtures('app', 'db_session')
+def test_confirm_sale_uses_canonical_service(app, db_session):
+    suffix = uuid4().hex
+    org = Organization(name=f"POS Org {suffix}")
     db_session.add(org)
     db_session.flush()
 
-    user = User(username=f"testuser_res_{unique_suffix}", email=f"res{unique_suffix}@example.com", organization_id=org.id)
-    db_session.add(user)
-    db_session.flush()
-
-    item = InventoryItem(
-        name=f"Test Product Res {unique_suffix}",
-        type="product",
-        unit="piece",
-        quantity=50.0,
-        cost_per_unit=10.0,
-        organization_id=org.id
-    )
-    db_session.add(item)
-    db_session.commit()
-
-    # Mock the canonical service call
-    with patch('app.services.pos_integration.process_inventory_adjustment') as mock_process:
-        mock_process.return_value = True
-
-        with patch('app.services.pos_integration.current_user') as mock_user:
-            mock_user.id = user.id
-            mock_user.is_authenticated = True
-            mock_user.organization_id = org.id
-
-            # Check if the method exists
-            if hasattr(POSIntegrationService, 'reserve_inventory'):
-                try:
-                    # Call the service method
-                    result = POSIntegrationService.reserve_inventory(
-                        item_id=item.id,
-                        quantity=5.0,
-                        order_id=f"ORD-{unique_suffix}",
-                        source="shopify",
-                        notes="Test reservation"
-                    )
-
-                    # Handle different return types
-                    if isinstance(result, tuple):
-                        success, message = result
-                    else:
-                        success = result
-
-                    # If the method is implemented but doesn't use canonical service yet,
-                    # we verify the structure is correct
-                    assert success is not None, "Method should return a result"
-
-                    # If canonical service was called, verify it
-                    if mock_process.called:
-                        calls = mock_process.call_args_list
-                        assert len(calls) >= 1, "Should have at least one call to canonical service"
-                        first_call = calls[0]
-                        assert first_call[1]['item_id'] == item.id
-                        assert first_call[1]['quantity'] == 5.0
-                        assert first_call[1]['change_type'] == 'reserved'
-
-                except Exception as e:
-                    # If method exists but implementation is incomplete, that's acceptable for structure tests
-                    assert "reserve_inventory" in str(type(e).__name__) or "not implemented" in str(e).lower()
-            else:
-                # If the method doesn't exist, the test passes as the service structure is being verified
-                assert True, "POSIntegrationService.reserve_inventory method not implemented yet"
-
-
-def test_pos_confirm_sale_uses_canonical_service(app, db_session):
-    """Test that POS sale confirmation uses canonical service"""
-
-    # Create test data
-    from app.models import Organization, User, SubscriptionTier, InventoryItem, Reservation
-
-    import time
-    unique_suffix = str(int(time.time() * 1000))[-6:]
-
-    tier = SubscriptionTier(name=f"Test Tier Sale {unique_suffix}", tier_type="monthly", user_limit=5)
-    db_session.add(tier)
-    db_session.flush()
-
-    org = Organization(name=f"Test Org Sale {unique_suffix}", billing_status="active", subscription_tier_id=tier.id)
-    db_session.add(org)
-    db_session.flush()
-
-    user = User(username=f"testuser_sale_{unique_suffix}", email=f"sale{unique_suffix}@example.com", organization_id=org.id)
-    db_session.add(user)
-    db_session.flush()
-
-    item = InventoryItem(
-        name=f"Test Product Sale {unique_suffix}",
-        type="product",
-        unit="piece",
-        quantity=50.0,
-        cost_per_unit=10.0,
-        organization_id=org.id
-    )
-    db_session.add(item)
-    db_session.flush()
-
-    # Create a mock reservation with required reserved_item_id
-    reservation = Reservation(
-        order_id=f"TEST-ORDER-{unique_suffix}",
-        product_item_id=item.id,
-        reserved_item_id=item.id,  # Add required field
-        quantity=5.0,
-        unit=item.unit,
-        unit_cost=item.cost_per_unit,
+    product = InventoryItem(
+        name=f"Sold Product {suffix}",
+        type='product',
+        unit='piece',
+        quantity=30,
         organization_id=org.id,
-        status='active'
+    )
+    reserved = InventoryItem(
+        name=f"Sold Product {suffix} (Reserved)",
+        type='product-reserved',
+        unit='piece',
+        quantity=5,
+        organization_id=org.id,
+    )
+    db_session.add_all([product, reserved])
+    db_session.flush()
+
+    reservation = Reservation(
+        order_id=f"ORDER-{suffix}",
+        product_item_id=product.id,
+        reserved_item_id=reserved.id,
+        quantity=5,
+        unit='piece',
+        unit_cost=2.5,
+        organization_id=org.id,
+        status='active',
     )
     db_session.add(reservation)
     db_session.commit()
 
-    # Mock the canonical service call
-    with patch('app.services.pos_integration.process_inventory_adjustment') as mock_process:
-        mock_process.return_value = True
+    with patch('app.services.pos_integration.process_inventory_adjustment') as mock_adjust:
+        mock_adjust.return_value = True
 
-        # Check if the method exists
-        if hasattr(POSIntegrationService, 'confirm_sale'):
-            # Call the service method
-            success, message = POSIntegrationService.confirm_sale(
-                order_id=f"TEST-ORDER-{unique_suffix}",
-                notes="Test sale confirmation"
+        success, message = POSIntegrationService.confirm_sale(
+            order_id=f"ORDER-{suffix}", notes='Shipment fulfilled'
+        )
+
+        assert success is True
+        assert 'Confirmed sale' in message
+
+        sale_call = mock_adjust.call_args_list[0].kwargs
+        assert sale_call['item_id'] == product.id
+        assert sale_call['change_type'] == 'sale'
+        assert sale_call['quantity'] == -5
+        assert 'POS Sale' in sale_call['notes']
+
+
+@pytest.mark.usefixtures('app', 'db_session')
+def test_confirm_return_uses_canonical_service(app, db_session):
+    suffix = uuid4().hex
+    org = Organization(name=f"POS Org Return {suffix}")
+    db_session.add(org)
+    db_session.flush()
+
+    product = InventoryItem(
+        name=f"Returned Product {suffix}",
+        type='product',
+        unit='piece',
+        quantity=10,
+        organization_id=org.id,
+    )
+    reserved = InventoryItem(
+        name=f"Returned Product {suffix} (Reserved)",
+        type='product-reserved',
+        unit='piece',
+        quantity=0,
+        organization_id=org.id,
+    )
+    db_session.add_all([product, reserved])
+    db_session.flush()
+
+    reservation = Reservation(
+        order_id=f"ORDER-{suffix}",
+        product_item_id=product.id,
+        reserved_item_id=reserved.id,
+        quantity=4,
+        unit='piece',
+        status='converted_to_sale',
+        organization_id=org.id,
+    )
+    db_session.add(reservation)
+    db_session.commit()
+
+    with patch('app.services.pos_integration.process_inventory_adjustment') as mock_adjust:
+        mock_adjust.return_value = True
+
+        with patch.object(Reservation, 'mark_returned', lambda self: setattr(self, 'status', 'returned'), create=True):
+            success, message = POSIntegrationService.confirm_return(
+                order_id=f"ORDER-{suffix}", notes='Customer return'
             )
 
-            # Verify canonical service was called for the sale
-            if mock_process.called:
-                calls = mock_process.call_args_list
-                # Look for a sale call
-                sale_call = None
-                for call in calls:
-                    if call[1].get('change_type') == 'sale':
-                        sale_call = call
-                        break
+        assert success is True, message
+        assert 'Processed return' in message
 
-                if sale_call:
-                    assert sale_call[1]['item_id'] == item.id
-                    assert sale_call[1]['quantity'] == -5.0  # Negative for deduction
-                    assert sale_call[1]['change_type'] == 'sale'
-                    assert 'POS Sale' in call[1]['notes']
-        else:
-            # If the method doesn't exist, the test passes
-            assert True, "POSIntegrationService.confirm_sale method not implemented yet"
-
-
-class TestPOSIntegrationStructure:
-    """Test the overall structure and integration of POS services"""
-
-    def test_pos_service_has_expected_methods(self):
-        """Test that POS service has expected method structure"""
-        expected_methods = [
-            'reserve_inventory',
-            'release_reservation',
-            'confirm_sale',
-            'confirm_return',
-            'process_sale',
-            'get_available_quantity'
-        ]
-
-        for method_name in expected_methods:
-            if hasattr(POSIntegrationService, method_name):
-                method = getattr(POSIntegrationService, method_name)
-                assert callable(method), f"{method_name} should be callable"
-
-    def test_pos_service_canonical_integration(self):
-        """Test that POS service properly integrates with canonical services"""
-        # Test that the service can import canonical functions
-        try:
-            from app.services.pos_integration import process_inventory_adjustment
-            assert callable(process_inventory_adjustment)
-        except ImportError:
-            pytest.fail("POS service should be able to import canonical inventory adjustment")
-
-    def test_pos_service_reservation_integration(self):
-        """Test that POS service integrates with reservation system"""
-        # Test that reservation models can be imported
-        try:
-            from app.models import Reservation
-            assert Reservation is not None
-        except ImportError:
-            pytest.fail("POS service should integrate with Reservation model")
-
-    def test_pos_service_error_handling(self):
-        """Test that POS service handles errors gracefully"""
-        # Test with invalid parameters to ensure graceful error handling
-        if hasattr(POSIntegrationService, 'reserve_inventory'):
-            try:
-                success, message = POSIntegrationService.reserve_inventory(
-                    item_id=999999,  # Invalid item ID
-                    quantity=5.0,
-                    order_id="TEST-INVALID",
-                    source="test"
-                )
-                # Should return False for invalid item
-                assert success is False
-                assert isinstance(message, str)
-            except Exception as e:
-                # Should handle gracefully
-                assert "item" in str(e).lower() or "not found" in str(e).lower()
-
-
-def test_pos_integration_canonical_dependency():
-    """Test that POS integration properly depends on canonical services"""
-
-    # Test that the canonical service can be imported
-    from app.services.inventory_adjustment import process_inventory_adjustment
-    assert callable(process_inventory_adjustment)
-
-    # Test that POS service imports the canonical service
-    import app.services.pos_integration as pos_module
-    assert hasattr(pos_module, 'process_inventory_adjustment')
+        return_call = mock_adjust.call_args_list[0].kwargs
+        assert return_call['item_id'] == product.id
+        assert return_call['change_type'] == 'return'
+        assert return_call['quantity'] == 4
