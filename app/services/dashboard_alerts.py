@@ -275,12 +275,6 @@ class DashboardAlertService:
         
         return stuck_batches
 
-        # Simple organization scoping - no complex developer logic here
-        if current_user and current_user.is_authenticated and current_user.organization_id:
-            query = query.filter(Batch.organization_id == current_user.organization_id)
-
-        return query.all()
-
     @staticmethod
     def _get_recent_faults() -> int:
         """Get count of recent critical faults"""

@@ -21,6 +21,47 @@ from .permissions import (
 )
 
 
+def format_currency(value):
+    """Format a number as currency"""
+    if value is None:
+        return "$0.00"
+    try:
+        return f"${float(value):.2f}"
+    except (ValueError, TypeError):
+        return "$0.00"
+
+
+def format_percentage(value, decimal_places=1):
+    """Format a number as percentage"""
+    if value is None:
+        return "0%"
+    try:
+        return f"{float(value):.{decimal_places}f}%"
+    except (ValueError, TypeError):
+        return "0%"
+
+
+def pluralize(count, singular, plural=None):
+    """Return singular or plural form based on count"""
+    if count == 1:
+        return singular
+    return plural or f"{singular}s"
+
+
+def user_date(value, format_string="%Y-%m-%d"):
+    """Format date in user's timezone"""
+    if not value:
+        return ""
+    return TimezoneUtils.format_for_user(value, format_string)
+
+
+def user_timezone(value, format_string="%Y-%m-%d %H:%M:%S"):
+    """Format datetime in user's timezone"""
+    if not value:
+        return ""
+    return TimezoneUtils.format_for_user(value, format_string)
+
+
 def register_template_filters(app):
     """Register all custom Jinja2 filters and globals."""
 
