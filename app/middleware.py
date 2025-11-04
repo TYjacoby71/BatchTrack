@@ -176,11 +176,13 @@ def register_middleware(app):
                 "X-XSS-Protection": "1; mode=block",
                 "Content-Security-Policy": (
                     "default-src 'self'; "
-                    "script-src 'self' 'unsafe-inline' https://js.stripe.com; "
+                    "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://js.stripe.com; "
                     "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; "
-                    "img-src 'self' data: https:; "
+                    "font-src 'self' https://fonts.gstatic.com; "
+                    "img-src 'self' data: https: blob:; "
                     "connect-src 'self' https://api.stripe.com; "
-                    "frame-src https://js.stripe.com"
+                    "frame-src https://js.stripe.com; "
+                    "object-src 'none'"
                 ),
                 "Referrer-Policy": "strict-origin-when-cross-origin"
             })
