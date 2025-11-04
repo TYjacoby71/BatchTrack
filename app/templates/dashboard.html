@@ -148,14 +148,54 @@ document.addEventListener('DOMContentLoaded', function() {
     });
   }
 
-  // Fetch server time every 30 seconds to reduce server load
-    setInterval(function() {
-        fetch('/api/server-time')
-            .then(response => response.json())
-            .then(data => {
-                // Update time display
-            });
-    }, 30000);
+  // Update clock display
+  function updateClock(timeData) {
+    const clockElement = document.getElementById('clock-time');
+    const timezoneElement = document.getElementById('clock-timezone');
+
+    if (clockElement && (timeData.current_time || timeData.timestamp)) {
+      try {
+        // Use current_time first, then timestamp as fallback
+        const serverTime = new Date(timeData.current_time || timeData.timestamp);
+        if (!isNaN(serverTime.getTime())) {
+          clockElement.textContent = serverTime.toLocaleTimeString();
+
+          if (timezoneElement) {
+            const timezone = serverTime.toTimeString().match(/\(([A-Za-z\s].*)\)/);
+            timezoneElement.textContent = timezone ? `(${timezone[1]})` : `(${timeData.timezone || 'UTC'})`;
+          }
+        } else {
+          clockElement.textContent = 'Invalid time';
+        }
+      } catch (error) {
+        console.error('Clock update error:', error);
+        clockElement.textContent = 'Clock error';
+      }
+    }
+  }
+
+  // Fetch server time and update clock
+  function fetchServerTime() {
+    fetch('/api/server-time')
+      .then(response => response.json())
+      .then(data => {
+        updateClock(data);
+      })
+      .catch(error => {
+        console.error('Failed to fetch server time:', error);
+        // Fallback to local time
+        const clockElement = document.getElementById('clock-time');
+        if (clockElement) {
+          clockElement.textContent = new Date().toLocaleTimeString();
+        }
+      });
+  }
+
+  // Initial clock load
+  fetchServerTime();
+
+  // Update every 30 seconds
+  setInterval(fetchServerTime, 30000);
 });
 </script>
 
