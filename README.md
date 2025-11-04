@@ -57,25 +57,32 @@ python run.py
 
 ## 📚 Documentation
 
-For detailed development information, see:
+Start with the curated system library, then drill into checklists and change history as needed.
 
-### System Documentation
-- **[System Documentation Index](docs/system/SYSTEM_INDEX.md)** - Complete guide to all system docs
-  - Architecture, Services, Database Models
-  - Timezone System, User Permissions
-  - Global Item Library, Drawers Protocol
-  - And more...
+### System Documentation (`docs/system/`)
+- **[System Documentation Index](docs/system/SYSTEM_INDEX.md)** — master table of contents for every platform area
 
-### Development Resources
-- **[Development Guide](docs/DEVELOPMENT_GUIDE.md)** - How to add features safely
-- **[API Reference](docs/API_REFERENCE.md)** - Endpoint documentation
-- **[Deployment & Migrations](docs/deploy_migration_guide.md)** - Runbook for production changes
+| Topic | Key Docs |
+| --- | --- |
+| Architecture & service authority | [ARCHITECTURE.md](docs/system/ARCHITECTURE.md), [SERVICES.md](docs/system/SERVICES.md), [DATABASE_MODELS.md](docs/system/DATABASE_MODELS.md) |
+| Production planning & manufacturing | [PLAN_SNAPSHOT.md](docs/system/PLAN_SNAPSHOT.md), [GLOBAL_ITEM_LIBRARY.md](docs/system/GLOBAL_ITEM_LIBRARY.md), [CONTAINERS_CURATION.md](docs/system/CONTAINERS_CURATION.md) |
+| Developer workflow & operations | [DEVELOPMENT_GUIDE.md](docs/system/DEVELOPMENT_GUIDE.md), [deploy_migration_guide.md](docs/system/deploy_migration_guide.md), [WALL_OF_DRAWERS_PROTOCOL.md](docs/system/WALL_OF_DRAWERS_PROTOCOL.md) |
+| APIs & external interfaces | [API_REFERENCE.md](docs/system/API_REFERENCE.md), [PUBLIC_TOOLS.md](docs/system/PUBLIC_TOOLS.md), [EXPORTS.md](docs/system/EXPORTS.md) |
+| Product programs & analytics | [FREE_TIER.md](docs/system/FREE_TIER.md), [TRACKING_PLAN.md](docs/system/TRACKING_PLAN.md) |
+| Platform status & lifecycle | [CURRENTLY_STUBBED.md](docs/system/CURRENTLY_STUBBED.md), [DEPRECATED_FEATURES.md](docs/system/DEPRECATED_FEATURES.md) |
+| Time & permissions | [TIMEZONE_SYSTEM.md](docs/system/TIMEZONE_SYSTEM.md), [STORAGE_VS_DISPLAY.md](docs/system/STORAGE_VS_DISPLAY.md), [USERS_AND_PERMISSIONS.md](docs/system/USERS_AND_PERMISSIONS.md) |
 
-### Change History
-- **[Change Log Index](docs/changelog/CHANGELOG_INDEX.md)** - Complete history of all fixes and improvements
+### Operational Checklists (`docs/todo/`)
+- Launch runbooks, QA plans, and urgent fix queues — see [docs/todo/](docs/todo/) for the latest actionable workstreams
+
+### Change History (`docs/changelog/`)
+- **[Change Log Index](docs/changelog/CHANGELOG_INDEX.md)** — full record of shipped changes with links to detailed entries
+
+### Refactor Initiatives (`docs/refactor/`)
+- Progress trackers and technical debt initiatives, starting with [00_repo_map.md](docs/refactor/00_repo_map.md)
 
 ### Marketing
-- **[Marketing Workspace](marketing/README.md)** - Overview of site content, structure, and tooling
+- **[Marketing Workspace](marketing/README.md)** — Overview of site content, structure, and tooling
 
 ## 🔒 Development Guardrails
 
