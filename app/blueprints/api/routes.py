@@ -277,7 +277,7 @@ def get_timezone():
     import pytz
 
     server_tz = current_app.config.get('TIMEZONE', 'UTC')
-    now_utc = datetime.utcnow()
+    now_utc = datetime.now(timezone.utc)
 
     return jsonify({
         'server_timezone': server_tz,
