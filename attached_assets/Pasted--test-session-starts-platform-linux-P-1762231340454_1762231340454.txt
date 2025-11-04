@@ -1,0 +1,220 @@
+============================= test session starts ==============================
+platform linux -- Python 3.11.13, pytest-8.3.5, pluggy-1.5.0 -- /home/runner/workspace/.pythonlibs/bin/python
+cachedir: .pytest_cache
+rootdir: /home/runner/workspace
+collected 85 items                                                             
+
+tests/test_auth_permissions.py::TestAuthPermissions::test_permission_required_decorator_allows_with_permission PASSED [  1%]
+tests/test_auth_permissions.py::TestAuthPermissions::test_permission_required_returns_json_for_api PASSED [  2%]
+tests/test_auth_permissions.py::TestAuthPermissions::test_any_permission_required_decorator PASSED [  3%]
+tests/test_auth_permissions.py::TestAuthPermissions::test_tier_required_decorator PASSED [  4%]
+tests/test_auth_permissions.py::TestAuthPermissions::test_user_has_any_permission_method PASSED [  5%]
+tests/test_auth_permissions.py::TestAuthPermissions::test_api_unauth_returns_json_401 PASSED [  7%]
+tests/test_auth_permissions.py::TestAuthPermissions::test_web_unauth_redirects_to_login PASSED [  8%]
+tests/test_auth_permissions.py::TestAuthPermissions::test_csrf_token_available_in_templates PASSED [  9%]
+tests/test_batch_label_generator.py::test_generate_batch_label_code_defaults PASSED [ 10%]
+tests/test_batch_label_generator.py::test_generate_batch_label_code_with_prefix_and_sequence PASSED [ 11%]
+tests/test_billing_and_tier_enforcement.py::TestBillingAndTierEnforcement::test_tier_permission_is_the_hard_ceiling PASSED [ 12%]
+tests/test_billing_and_tier_enforcement.py::TestBillingAndTierEnforcement::test_billing_status_enforcement[active-200] PASSED [ 14%]
+tests/test_billing_and_tier_enforcement.py::TestBillingAndTierEnforcement::test_billing_status_enforcement[past_due-302] PASSED [ 15%]
+tests/test_billing_and_tier_enforcement.py::TestBillingAndTierEnforcement::test_billing_status_enforcement[suspended-302] PASSED [ 16%]
+tests/test_billing_and_tier_enforcement.py::TestBillingAndTierEnforcement::test_billing_status_enforcement[canceled-302] PASSED [ 17%]
+tests/test_billing_and_tier_enforcement.py::TestBillingAndTierEnforcement::test_developer_can_masquerade_regardless_of_billing PASSED [ 18%]
+tests/test_billing_and_tier_enforcement.py::TestBillingAndTierEnforcement::test_complete_security_cascade PASSED [ 20%]
+tests/test_expiration_canonicalization.py::test_expiration_service_uses_canonical_adjustment PASSED [ 21%]
+tests/test_expiration_canonicalization.py::TestExpirationCanonicalService::test_mark_fifo_expired_calls_canonical_service PASSED [ 22%]
+tests/test_expiration_canonicalization.py::TestExpirationCanonicalService::test_mark_product_expired_calls_canonical_service PASSED [ 23%]
+tests/test_extras_expiration.py::test_extras_cannot_use_expired_lot PASSED [ 24%]
+tests/test_global_link_drawer.py::test_global_link_suggestions_and_link_flow PASSED [ 25%]
+tests/test_google_oauth.py::TestGoogleOAuthCharacterization::test_oauth_service_exists PASSED [ 27%]
+tests/test_google_oauth.py::TestGoogleOAuthCharacterization::test_auth_login_endpoint_exists PASSED [ 28%]
+tests/test_google_oauth.py::TestGoogleOAuthCharacterization::test_auth_callback_endpoint_exists PASSED [ 29%]
+tests/test_google_oauth.py::TestGoogleOAuthCharacterization::test_oauth_state_validation_path PASSED [ 30%]
+tests/test_google_oauth.py::TestGoogleOAuthCharacterization::test_oauth_service_methods_exist PASSED [ 31%]
+tests/test_google_oauth.py::TestGoogleOAuthCharacterization::test_oauth_configuration_status PASSED [ 32%]
+tests/test_google_oauth.py::TestGoogleOAuthCharacterization::test_oauth_callback_invalid_state PASSED [ 34%]
+tests/test_inventory_costing_toggle.py::TestInventoryCostingToggleAndWAC::test_wac_updates_after_restock_and_deduct_fifo_mode PASSED [ 35%]
+tests/test_inventory_costing_toggle.py::TestInventoryCostingToggleAndWAC::test_wac_updates_after_restock_average_mode PASSED [ 36%]
+tests/test_inventory_fifo.py::TestInventoryFIFOCharacterization::test_single_entry_point_exists PASSED [ 37%]
+tests/test_inventory_fifo.py::TestInventoryFIFOCharacterization::test_fifo_deduction_order PASSED [ 38%]
+tests/test_inventory_fifo.py::TestInventoryFIFOCharacterization::test_inventory_adjustment_delegates_properly PASSED [ 40%]
+tests/test_inventory_routes_canonicalization.py::TestInventoryCanonicalService::test_batch_integration_uses_canonical_service PASSED [ 41%]
+tests/test_inventory_routes_canonicalization.py::TestInventoryCanonicalService::test_reservation_service_uses_canonical_service PASSED [ 42%]
+tests/test_inventory_routes_canonicalization.py::TestInventoryCanonicalService::test_pos_integration_uses_canonical_service PASSED [ 43%]
+tests/test_inventory_routes_canonicalization.py::TestInventoryCanonicalService::test_production_planning_service_integration PASSED [ 44%]
+tests/test_inventory_routes_canonicalization.py::TestInventoryCanonicalService::test_stock_check_service_integration PASSED [ 45%]
+tests/test_inventory_routes_canonicalization.py::TestInventoryCanonicalService::test_inventory_adjustment_canonical_interface PASSED [ 47%]
+tests/test_inventory_routes_canonicalization.py::TestBatchServiceCanonicalIntegration::test_batch_service_uses_canonical_adjustments PASSED [ 48%]
+tests/test_inventory_routes_canonicalization.py::TestBatchServiceCanonicalIntegration::test_production_planning_batch_handoff PASSED [ 49%]
+tests/test_inventory_routes_canonicalization.py::TestContainerManagementIntegration::test_container_analysis_integration PASSED [ 50%]
+tests/test_inventory_routes_canonicalization.py::test_service_import_compatibility PASSED [ 51%]
+tests/test_inventory_routes_canonicalization.py::test_canonical_service_consistency PASSED [ 52%]
+tests/test_plan_production_integration.py::test_plan_start_finish_non_portioned PASSED [ 54%]
+tests/test_plan_production_integration.py::test_plan_start_finish_portioned PASSED [ 55%]
+tests/test_portioning_sku_derivation.py::test_portioning_sku_labels_differ PASSED [ 56%]
+tests/test_pos_integration_canonicalization.py::test_pos_sale_uses_canonical_service PASSED [ 57%]
+tests/test_pos_integration_canonicalization.py::test_pos_reservation_uses_canonical_service PASSED [ 58%]
+tests/test_pos_integration_canonicalization.py::test_pos_confirm_sale_uses_canonical_service PASSED [ 60%]
+tests/test_pos_integration_canonicalization.py::TestPOSIntegrationStructure::test_pos_service_has_expected_methods PASSED [ 61%]
+tests/test_pos_integration_canonicalization.py::TestPOSIntegrationStructure::test_pos_service_canonical_integration PASSED [ 62%]
+tests/test_pos_integration_canonicalization.py::TestPOSIntegrationStructure::test_pos_service_reservation_integration PASSED [ 63%]
+tests/test_pos_integration_canonicalization.py::TestPOSIntegrationStructure::test_pos_service_error_handling PASSED [ 64%]
+tests/test_pos_integration_canonicalization.py::test_pos_integration_canonical_dependency PASSED [ 65%]
+tests/test_product_sku.py::TestProductSKUCharacterization::test_product_creation_flow PASSED [ 67%]
+tests/test_product_sku.py::TestProductSKUCharacterization::test_sku_generation_constraints PASSED [ 68%]
+tests/test_product_sku.py::TestProductSKUCharacterization::test_product_service_exists PASSED [ 69%]
+tests/test_product_sku.py::TestProductSKUCharacterization::test_sku_creation_validation PASSED [ 70%]
+tests/test_public_tools_and_exports_smoke.py::test_public_tools_draft_and_prefill PASSED [ 71%]
+tests/test_public_tools_and_exports_smoke.py::test_exports_tool_and_recipe_csv_pdf PASSED [ 72%]
+tests/test_reservation_canonicalization.py::TestReservationCanonicalService::test_reservation_service_imports_canonical_service PASSED [ 74%]
+tests/test_reservation_canonicalization.py::TestReservationCanonicalService::test_reservation_service_structure PASSED [ 75%]
+tests/test_reservation_canonicalization.py::TestReservationCanonicalService::test_create_reservation_uses_canonical_service PASSED [ 76%]
+tests/test_reservation_canonicalization.py::TestReservationCanonicalService::test_release_reservation_uses_canonical_service PASSED [ 77%]
+tests/test_reservation_canonicalization.py::TestReservationCanonicalService::test_reservation_model_integration PASSED [ 78%]
+tests/test_reservation_canonicalization.py::TestReservationCanonicalService::test_reservation_status_management PASSED [ 80%]
+tests/test_reservation_canonicalization.py::TestReservationCanonicalService::test_reservation_canonical_dependency PASSED [ 81%]
+tests/test_reservation_canonicalization.py::TestReservationServiceErrorHandling::test_invalid_reservation_handling PASSED [ 82%]
+tests/test_reservation_canonicalization.py::TestReservationServiceErrorHandling::test_service_initialization PASSED [ 83%]
+tests/test_reservation_canonicalization.py::TestReservationServiceErrorHandling::test_canonical_service_availability PASSED [ 84%]
+tests/test_reservation_canonicalization.py::test_reservation_service_module_imports PASSED [ 85%]
+tests/test_retention_drawer.py::test_retention_flow_ack_to_delete PASSED [ 87%]
+tests/test_signup_tiers.py::TestSignupTierCharacterization::test_signup_endpoint_exists PASSED [ 88%]
+tests/test_signup_tiers.py::TestSignupTierCharacterization::test_tier_bypass_behavior PASSED [ 89%]
+tests/test_signup_tiers.py::TestSignupTierCharacterization::test_organization_tier_assignment PASSED [ 90%]
+tests/test_signup_tiers.py::TestSignupTierCharacterization::test_permission_gating_exists PASSED [ 91%]
+tests/test_signup_tiers.py::TestSignupTierCharacterization::test_signup_service_delegation PASSED [ 92%]
+tests/test_start_batch_integration.py::test_start_batch_uses_generator_and_persists_label PASSED [ 94%]
+tests/test_stripe_webhooks.py::TestStripeWebhookCharacterization::test_stripe_service_exists PASSED [ 95%]
+tests/test_stripe_webhooks.py::TestStripeWebhookCharacterization::test_webhook_signature_verification_path_exists PASSED [ 96%]
+tests/test_stripe_webhooks.py::TestStripeWebhookCharacterization::test_webhook_idempotency_behavior PASSED [ 97%]
+tests/test_stripe_webhooks.py::TestStripeWebhookCharacterization::test_stripe_service_methods_exist PASSED [ 98%]
+tests/test_timezone_conventions.py::test_no_naive_datetime_usage PASSED  [100%]
+
+=============================== warnings summary ===============================
+tests/test_auth_permissions.py: 8 warnings
+tests/test_batch_label_generator.py: 2 warnings
+tests/test_billing_and_tier_enforcement.py: 7 warnings
+tests/test_expiration_canonicalization.py: 3 warnings
+tests/test_extras_expiration.py: 1 warning
+tests/test_global_link_drawer.py: 1 warning
+tests/test_google_oauth.py: 7 warnings
+tests/test_inventory_costing_toggle.py: 2 warnings
+tests/test_inventory_fifo.py: 3 warnings
+tests/test_inventory_routes_canonicalization.py: 11 warnings
+tests/test_plan_production_integration.py: 2 warnings
+tests/test_portioning_sku_derivation.py: 1 warning
+tests/test_pos_integration_canonicalization.py: 3 warnings
+tests/test_product_sku.py: 4 warnings
+tests/test_public_tools_and_exports_smoke.py: 2 warnings
+tests/test_reservation_canonicalization.py: 6 warnings
+tests/test_retention_drawer.py: 1 warning
+tests/test_signup_tiers.py: 5 warnings
+tests/test_start_batch_integration.py: 1 warning
+tests/test_stripe_webhooks.py: 4 warnings
+  /home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask_limiter/extension.py:333: UserWarning: Using the in-memory storage for tracking rate limits as no storage was explicitly specified. This is not recommended for production use. See: https://flask-limiter.readthedocs.io#configuring-a-storage-backend for documentation about configuring the storage backend.
+    warnings.warn(
+
+tests/test_auth_permissions.py: 8 warnings
+tests/test_batch_label_generator.py: 2 warnings
+tests/test_billing_and_tier_enforcement.py: 7 warnings
+tests/test_expiration_canonicalization.py: 1 warning
+tests/test_extras_expiration.py: 1 warning
+tests/test_global_link_drawer.py: 1 warning
+tests/test_google_oauth.py: 7 warnings
+tests/test_inventory_costing_toggle.py: 2 warnings
+tests/test_inventory_fifo.py: 3 warnings
+tests/test_inventory_routes_canonicalization.py: 11 warnings
+tests/test_plan_production_integration.py: 2 warnings
+tests/test_portioning_sku_derivation.py: 1 warning
+tests/test_pos_integration_canonicalization.py: 3 warnings
+tests/test_product_sku.py: 4 warnings
+tests/test_public_tools_and_exports_smoke.py: 2 warnings
+tests/test_reservation_canonicalization.py: 6 warnings
+tests/test_retention_drawer.py: 1 warning
+tests/test_signup_tiers.py: 5 warnings
+tests/test_start_batch_integration.py: 1 warning
+tests/test_stripe_webhooks.py: 4 warnings
+  /home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask_sqlalchemy/extension.py:881: SAWarning: Can't sort tables for DROP; an unresolvable foreign key dependency exists between tables: batch, product_sku; and backend does not support ALTER.  To restore at least a partial sort, apply use_alter=True to ForeignKey and ForeignKeyConstraint objects involved in the cycle to mark these as known cycles that will be ignored.
+    getattr(metadata, op_name)(bind=engine)
+
+tests/test_billing_and_tier_enforcement.py::TestBillingAndTierEnforcement::test_tier_permission_is_the_hard_ceiling
+tests/test_billing_and_tier_enforcement.py::TestBillingAndTierEnforcement::test_tier_permission_is_the_hard_ceiling
+  /home/runner/workspace/app/models/models.py:369: LegacyAPIWarning: The Query.get() method is considered legacy as of the 1.x series of SQLAlchemy and becomes a legacy construct in 2.0. The method is now available as Session.get() (deprecated since: 2.0) (Background on SQLAlchemy 2.0 at: https://sqlalche.me/e/b8d9)
+    role = Role.query.get(assignment.role_id)
+
+tests/test_expiration_canonicalization.py::test_expiration_service_uses_canonical_adjustment
+  /home/runner/workspace/app/blueprints/expiration/services.py:510: LegacyAPIWarning: The Query.get() method is considered legacy as of the 1.x series of SQLAlchemy and becomes a legacy construct in 2.0. The method is now available as Session.get() (deprecated since: 2.0) (Background on SQLAlchemy 2.0 at: https://sqlalche.me/e/b8d9)
+    lot = InventoryLot.query.get(entry_id)
+
+tests/test_expiration_canonicalization.py::test_expiration_service_uses_canonical_adjustment
+  /home/runner/workspace/app/blueprints/expiration/services.py:518: LegacyAPIWarning: The Query.get() method is considered legacy as of the 1.x series of SQLAlchemy and becomes a legacy construct in 2.0. The method is now available as Session.get() (deprecated since: 2.0) (Background on SQLAlchemy 2.0 at: https://sqlalche.me/e/b8d9)
+    entry = UnifiedInventoryHistory.query.get(entry_id)
+
+tests/test_expiration_canonicalization.py::test_expiration_service_uses_canonical_adjustment
+  /home/runner/workspace/app/blueprints/expiration/services.py:523: LegacyAPIWarning: The Query.get() method is considered legacy as of the 1.x series of SQLAlchemy and becomes a legacy construct in 2.0. The method is now available as Session.get() (deprecated since: 2.0) (Background on SQLAlchemy 2.0 at: https://sqlalche.me/e/b8d9)
+    entry = InventoryHistory.query.get(entry_id)
+
+tests/test_extras_expiration.py::test_extras_cannot_use_expired_lot
+tests/test_plan_production_integration.py::test_plan_start_finish_non_portioned
+tests/test_plan_production_integration.py::test_plan_start_finish_portioned
+tests/test_portioning_sku_derivation.py::test_portioning_sku_labels_differ
+tests/test_portioning_sku_derivation.py::test_portioning_sku_labels_differ
+tests/test_start_batch_integration.py::test_start_batch_uses_generator_and_persists_label
+  /home/runner/workspace/app/services/batch_service/batch_operations.py:38: LegacyAPIWarning: The Query.get() method is considered legacy as of the 1.x series of SQLAlchemy and becomes a legacy construct in 2.0. The method is now available as Session.get() (deprecated since: 2.0) (Background on SQLAlchemy 2.0 at: https://sqlalche.me/e/b8d9)
+    recipe = Recipe.query.get(snap_recipe_id)
+
+tests/test_extras_expiration.py::test_extras_cannot_use_expired_lot
+tests/test_plan_production_integration.py::test_plan_start_finish_non_portioned
+tests/test_plan_production_integration.py::test_plan_start_finish_portioned
+tests/test_portioning_sku_derivation.py::test_portioning_sku_labels_differ
+tests/test_portioning_sku_derivation.py::test_portioning_sku_labels_differ
+tests/test_start_batch_integration.py::test_start_batch_uses_generator_and_persists_label
+  /home/runner/workspace/app/services/batch_service/batch_operations.py:158: LegacyAPIWarning: The Query.get() method is considered legacy as of the 1.x series of SQLAlchemy and becomes a legacy construct in 2.0. The method is now available as Session.get() (deprecated since: 2.0) (Background on SQLAlchemy 2.0 at: https://sqlalche.me/e/b8d9)
+    fresh_batch = Batch.query.get(batch.id)
+
+tests/test_extras_expiration.py::test_extras_cannot_use_expired_lot
+  /home/runner/workspace/app/services/batch_service/batch_operations.py:668: LegacyAPIWarning: The Query.get() method is considered legacy as of the 1.x series of SQLAlchemy and becomes a legacy construct in 2.0. The method is now available as Session.get() (deprecated since: 2.0) (Background on SQLAlchemy 2.0 at: https://sqlalche.me/e/b8d9)
+    batch = Batch.query.get(batch_id)
+
+tests/test_extras_expiration.py::test_extras_cannot_use_expired_lot
+  /home/runner/workspace/app/services/batch_service/batch_operations.py:765: LegacyAPIWarning: The Query.get() method is considered legacy as of the 1.x series of SQLAlchemy and becomes a legacy construct in 2.0. The method is now available as Session.get() (deprecated since: 2.0) (Background on SQLAlchemy 2.0 at: https://sqlalche.me/e/b8d9)
+    inventory_item = InventoryItem.query.get(item["item_id"])
+
+tests/test_plan_production_integration.py::test_plan_start_finish_non_portioned
+tests/test_plan_production_integration.py::test_plan_start_finish_portioned
+  /home/runner/workspace/app/blueprints/batches/routes.py:282: LegacyAPIWarning: The Query.get() method is considered legacy as of the 1.x series of SQLAlchemy and becomes a legacy construct in 2.0. The method is now available as Session.get() (deprecated since: 2.0) (Background on SQLAlchemy 2.0 at: https://sqlalche.me/e/b8d9)
+    recipe = Recipe.query.get(recipe_id)
+
+tests/test_plan_production_integration.py::test_plan_start_finish_non_portioned
+tests/test_portioning_sku_derivation.py::test_portioning_sku_labels_differ
+tests/test_portioning_sku_derivation.py::test_portioning_sku_labels_differ
+  /home/runner/workspace/app/services/batch_service/batch_operations.py:561: LegacyAPIWarning: The Query.get() method is considered legacy as of the 1.x series of SQLAlchemy and becomes a legacy construct in 2.0. The method is now available as Session.get() (deprecated since: 2.0) (Background on SQLAlchemy 2.0 at: https://sqlalche.me/e/b8d9)
+    refreshed = Batch.query.get(batch_id)
+
+tests/test_portioning_sku_derivation.py::test_portioning_sku_labels_differ
+  /home/runner/workspace/app/services/recipe_service/_core.py:92: LegacyAPIWarning: The Query.get() method is considered legacy as of the 1.x series of SQLAlchemy and becomes a legacy construct in 2.0. The method is now available as Session.get() (deprecated since: 2.0) (Background on SQLAlchemy 2.0 at: https://sqlalche.me/e/b8d9)
+    u = Unit.query.get(buid)
+
+tests/test_portioning_sku_derivation.py::test_portioning_sku_labels_differ
+tests/test_portioning_sku_derivation.py::test_portioning_sku_labels_differ
+  /home/runner/workspace/app/blueprints/batches/finish_batch.py:343: LegacyAPIWarning: The Query.get() method is considered legacy as of the 1.x series of SQLAlchemy and becomes a legacy construct in 2.0. The method is now available as Session.get() (deprecated since: 2.0) (Background on SQLAlchemy 2.0 at: https://sqlalche.me/e/b8d9)
+    category = ProductCategory.query.get(product.category_id) if getattr(product, 'category_id', None) else None
+
+tests/test_pos_integration_canonicalization.py::test_pos_reservation_uses_canonical_service
+  /home/runner/workspace/app/services/pos_integration.py:44: LegacyAPIWarning: The Query.get() method is considered legacy as of the 1.x series of SQLAlchemy and becomes a legacy construct in 2.0. The method is now available as Session.get() (deprecated since: 2.0) (Background on SQLAlchemy 2.0 at: https://sqlalche.me/e/b8d9)
+    original_item = InventoryItem.query.get(item_id)
+
+tests/test_pos_integration_canonicalization.py::test_pos_confirm_sale_uses_canonical_service
+  /home/runner/workspace/app/services/pos_integration.py:211: LegacyAPIWarning: The Query.get() method is considered legacy as of the 1.x series of SQLAlchemy and becomes a legacy construct in 2.0. The method is now available as Session.get() (deprecated since: 2.0) (Background on SQLAlchemy 2.0 at: https://sqlalche.me/e/b8d9)
+    item = InventoryItem.query.get(reservation.product_item_id)
+
+tests/test_reservation_canonicalization.py::TestReservationCanonicalService::test_release_reservation_uses_canonical_service
+  /home/runner/workspace/app/services/reservation_service.py:106: LegacyAPIWarning: The Query.get() method is considered legacy as of the 1.x series of SQLAlchemy and becomes a legacy construct in 2.0. The method is now available as Session.get() (deprecated since: 2.0) (Background on SQLAlchemy 2.0 at: https://sqlalche.me/e/b8d9)
+    source_entry = ProductSKUHistory.query.get(reservation.source_fifo_id)
+
+tests/test_reservation_canonicalization.py::TestReservationCanonicalService::test_release_reservation_uses_canonical_service
+  /home/runner/workspace/app/services/reservation_service.py:106: SAWarning: fully NULL primary key identity cannot load any object.  This condition may raise an error in a future release.
+    source_entry = ProductSKUHistory.query.get(reservation.source_fifo_id)
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+================= 85 passed, 177 warnings in 251.43s (0:04:11) =================
