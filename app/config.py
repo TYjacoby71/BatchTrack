@@ -31,7 +31,10 @@ class BaseConfig:
     # Logging
     LOG_LEVEL = os.environ.get('LOG_LEVEL', 'WARNING')
 
-    # Email
+    # Email - Support multiple providers
+    EMAIL_PROVIDER = os.environ.get('EMAIL_PROVIDER', 'smtp').lower()
+    
+    # SMTP (default)
     MAIL_SERVER = os.environ.get('MAIL_SERVER', 'smtp.gmail.com')
     MAIL_PORT = int(os.environ.get('MAIL_PORT', 587))
     MAIL_USE_TLS = os.environ.get('MAIL_USE_TLS', 'true').lower() == 'true'
@@ -39,11 +42,22 @@ class BaseConfig:
     MAIL_USERNAME = os.environ.get('MAIL_USERNAME')
     MAIL_PASSWORD = os.environ.get('MAIL_PASSWORD')
     MAIL_DEFAULT_SENDER = os.environ.get('MAIL_DEFAULT_SENDER', 'noreply@batchtrack.app')
+    
+    # Alternative providers
+    SENDGRID_API_KEY = os.environ.get('SENDGRID_API_KEY')
+    POSTMARK_SERVER_TOKEN = os.environ.get('POSTMARK_SERVER_TOKEN')
+    MAILGUN_API_KEY = os.environ.get('MAILGUN_API_KEY')
+    MAILGUN_DOMAIN = os.environ.get('MAILGUN_DOMAIN')
 
     # Billing / OAuth
     STRIPE_PUBLISHABLE_KEY = os.environ.get('STRIPE_PUBLISHABLE_KEY')
     STRIPE_SECRET_KEY = os.environ.get('STRIPE_SECRET_KEY')
     STRIPE_WEBHOOK_SECRET = os.environ.get('STRIPE_WEBHOOK_SECRET')
+    
+    # Production validation
+    @property
+    def STRIPE_CONFIGURED(self):
+        return all([self.STRIPE_SECRET_KEY, self.STRIPE_PUBLISHABLE_KEY, self.STRIPE_WEBHOOK_SECRET])
     WHOP_API_KEY = os.environ.get('WHOP_API_KEY')
     WHOP_APP_ID = os.environ.get('WHOP_APP_ID')
     GOOGLE_OAUTH_CLIENT_ID = os.environ.get('GOOGLE_OAUTH_CLIENT_ID')
@@ -113,8 +127,20 @@ class ProductionConfig(BaseConfig):
         'pool_recycle': 1800,
         'pool_timeout': 30,
     }
-    RATELIMIT_STORAGE_URL = os.environ.get('REDIS_URL') or os.environ.get('RATELIMIT_STORAGE_URL')
+    RATELIMIT_STORAGE_URL = os.environ.get('REDIS_URL') or os.environ.get('RATELIMIT_STORAGE_URL') or 'memory://'
     LOG_LEVEL = os.environ.get('LOG_LEVEL', 'INFO')
+    
+    # Production validation
+    def validate_production_ready(self):
+        """Validate production requirements"""
+        missing = []
+        if not self.SQLALCHEMY_DATABASE_URI:
+            missing.append('DATABASE_URL')
+        if not os.environ.get('FLASK_SECRET_KEY'):
+            missing.append('FLASK_SECRET_KEY')
+        if not getattr(self, 'STRIPE_CONFIGURED', False):
+            missing.append('Stripe configuration')
+        return missing
 
 
 config_map = {
@@ -127,9 +153,11 @@ config_map = {
 
 
 def get_config():
-    env = os.environ.get('FLASK_ENV') or os.environ.get('ENV') or 'development'
+    # Force production mode if deployed on Replit
     if os.environ.get('REPLIT_DEPLOYMENT') == 'true':
         return ProductionConfig
+    
+    env = os.environ.get('FLASK_ENV') or os.environ.get('ENV') or 'development'
     return config_map.get(env, DevelopmentConfig)
 
 
