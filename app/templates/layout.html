@@ -428,5 +428,20 @@
     <script type="module" src="{{ url_for('static', filename='js/drawers/global_link_drawer.js') }}"></script>
 {% block scripts %}{% endblock %}
     <script src="{{ url_for('static', filename='js/expiration_alerts.js') }}"></script>
+
+    <!-- Simple browser clock script -->
+    <script>
+        function updateClock() {
+            const clockElement = document.getElementById('header-clock');
+            if (clockElement) {
+                const now = new Date();
+                clockElement.textContent = `🕐 ${now.toLocaleTimeString()}`;
+            }
+        }
+
+        // Update clock every second and start immediately
+        setInterval(updateClock, 1000);
+        updateClock();
+    </script>
     </body>
 </html>
