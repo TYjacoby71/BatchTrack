@@ -5,7 +5,6 @@ from ...models.product import Product, ProductVariant
 from ...services.product_service import ProductService
 from ...utils.unit_utils import get_global_unit_list
 from app.services.inventory_adjustment import process_inventory_adjustment
-from .products import _resolve_default_unit
 
 # Create the product variants blueprint
 product_variants_bp = Blueprint('product_variants', __name__)
@@ -56,7 +55,9 @@ def add_variant(product_id):
 
         variant_name = variant_name.strip()
 
-        unit = _resolve_default_unit(unit_override)
+        unit = (unit_override or '').strip() if unit_override else ''
+        if not unit:
+            return jsonify({'error': 'Unit is required to create the default SKU for this variant'}), 400
 
         # Check if variant already exists for this product
         existing_variant = ProductVariant.query.filter_by(
@@ -72,7 +73,8 @@ def add_variant(product_id):
             product_id=product.id,
             name=variant_name,
             description=description,
-            organization_id=current_user.organization_id
+            organization_id=current_user.organization_id,
+            created_by=current_user.id
         )
         db.session.add(new_variant)
         db.session.flush()  # Get the variant ID without committing

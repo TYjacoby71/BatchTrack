@@ -45,47 +45,6 @@ from ...services.inventory_adjustment import process_inventory_adjustment
 
 products_bp = Blueprint('products', __name__, url_prefix='/products')
 
-def _extract_unit_name(unit_obj):
-    """Safely extract a human-readable unit name from a unit object."""
-    if not unit_obj:
-        return None
-
-    name = getattr(unit_obj, 'name', None)
-    if name:
-        return str(name)
-
-    symbol = getattr(unit_obj, 'symbol', None)
-    if symbol:
-        return str(symbol)
-
-    return None
-
-
-def _resolve_default_unit(unit_override: str | None = None) -> str:
-    """Determine the unit to use when none is provided by the user."""
-    try:
-        provided = (unit_override or '').strip()
-    except AttributeError:
-        provided = ''
-
-    if provided:
-        return provided
-
-    units = get_global_unit_list()
-
-    for candidate in units:
-        name = _extract_unit_name(candidate)
-        if name and name.lower() == 'count':
-            return name
-
-    if units:
-        first_name = _extract_unit_name(units[0])
-        if first_name:
-            return first_name
-
-    # Absolute fallback if the unit table is empty
-    return 'count'
-
 def create_product_from_data(data):
     """
     Helper function to create products - used by both regular product creation
@@ -243,7 +202,6 @@ def new_product():
         name = (request.form.get('name') or '').strip()
         category_id = request.form.get('category_id')
         low_stock_threshold = request.form.get('low_stock_threshold', 0)
-        unit = _resolve_default_unit(request.form.get('product_base_unit'))
 
         if not name:
             flash('Product name is required', 'error')
@@ -286,69 +244,28 @@ def new_product():
                 product_id=product.id,
                 name='Base',
                 description='Default base variant',
-                organization_id=current_user.organization_id
-            )
-            db.session.add(variant)
-            db.session.flush()  # Get the variant ID
-
-            # Step 3: Create inventory item for the SKU
-            inventory_item = InventoryItem(
-                name=f"{name} - Base - Bulk",
-                type='product',  # Critical: mark as product type
-                unit=unit,
-                quantity=0.0,
                 organization_id=current_user.organization_id,
                 created_by=current_user.id
             )
-            db.session.add(inventory_item)
-            db.session.flush()  # Get the inventory_item ID
+            db.session.add(variant)
 
-            # Step 4: Create the base SKU with "Bulk" size label
-            from ...services.product_service import ProductService
-            sku_code = ProductService.generate_sku_code(name, 'Base', 'Bulk')
-
-            # Generate SKU name - never leave it empty
-            sku_name = f"{name} - Base - Bulk"
-
-            sku = ProductSKU(
-                # New foreign key relationships
-                product_id=product.id,
-                variant_id=variant.id,
-                size_label='Bulk',
-                sku_code=sku_code,
-                sku=sku_code,  # Set the required sku field
-                sku_name=sku_name,  # Always set the sku_name
-                unit=unit,
-                low_stock_threshold=float(low_stock_threshold) if low_stock_threshold else 0,
-                organization_id=current_user.organization_id,
-                created_by=current_user.id,
-                # Link to inventory item
-                inventory_item_id=inventory_item.id,
-                is_active=True,
-                is_product_active=True
-            )
-            db.session.add(sku)
             db.session.commit()
 
-            # Call the audit wrapper
-            _write_product_created_audit(sku)
-
-            flash(f'Product created successfully. Default SKU unit set to {unit}.', 'success')
-            return redirect(url_for('products.view_product', product_id=sku.inventory_item_id))
+            flash('Product created successfully.', 'success')
+            return redirect(url_for('products.view_product', product_id=product.id))
 
         except Exception as e:
             db.session.rollback()
             flash(f'Error creating product: {str(e)}', 'error')
             return redirect(url_for('products.new_product'))
 
-    units = get_global_unit_list()
     # Load product categories for selection if template supports it later
     try:
         from ...models.product_category import ProductCategory
         categories = ProductCategory.query.order_by(ProductCategory.name.asc()).all()
     except Exception:
         categories = []
-    return render_template('pages/products/new_product.html', units=units, product_categories=categories)
+    return render_template('pages/products/new_product.html', product_categories=categories)
 
 @products_bp.route('/<int:product_id>')
 @login_required
@@ -383,18 +300,23 @@ def view_product(product_id):
         organization_id=current_user.organization_id
     ).all()
 
-    if not skus:
-        flash('Product not found', 'error')
-        return redirect(url_for('products.product_list'))
-
-    # Group SKUs by variant
+    # Group SKUs by variant, including variants without SKUs
     variants = {}
+    product_variants = product.variants.filter_by(is_active=True).all()
+    for variant in product_variants:
+        variants[variant.name] = {
+            'name': variant.name,
+            'description': variant.description,
+            'skus': []
+        }
+
     for sku in skus:
-        variant_key = sku.variant.name
+        variant_rel = sku.variant
+        variant_key = variant_rel.name if variant_rel else 'Unassigned'
         if variant_key not in variants:
             variants[variant_key] = {
-                'name': sku.variant.name,
-                'description': sku.variant.description,
+                'name': variant_key,
+                'description': variant_rel.description if variant_rel else None,
                 'skus': []
             }
         variants[variant_key]['skus'].append(sku)
