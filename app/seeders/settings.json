@@ -72,7 +72,7 @@
     "TOOLS_CANDLES": true,
     "TOOLS_LOTIONS": true,
     "TOOLS_HERBAL": true,
-    "TOOLS_BAKING": false,
+    "TOOLS_BAKING": true,
     "FEATURE_FIFO_TRACKING": true,
     "FEATURE_BARCODE_SCANNING": false,
     "FEATURE_PRODUCT_VARIANTS": true,

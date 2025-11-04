@@ -127,7 +127,7 @@ def init_production_command():
 
         # Seed global inventory library (ingredients, containers, packaging, consumables)
         try:
-            from scripts.seed_global_inventory_library import seed_global_inventory_library
+            from seeders.seed_global_inventory_library import seed_global_inventory_library
             seed_global_inventory_library()
             print("✅ Global inventory library seeded")
         except Exception as e:
@@ -918,7 +918,7 @@ def seed_global_inventory_command():
     """Seed complete global inventory library (ingredients, containers, packaging, consumables)"""
     try:
         print("🔄 Seeding global inventory library...")
-        from scripts.seed_global_inventory_library import seed_global_inventory_library
+        from seeders.seed_global_inventory_library import seed_global_inventory_library
         seed_global_inventory_library()
         print('✅ Global inventory library seeded successfully!')
     except Exception as e:
