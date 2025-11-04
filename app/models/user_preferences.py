@@ -41,7 +41,8 @@ class UserPreferences(ScopedModelMixin, db.Model):
     def get_for_user(cls, user_id):
         """Get or create user preferences for a user"""
         from . import User
-        user = User.query.get(user_id)
+        from ..extensions import db
+        user = db.session.get(User, user_id)
         if not user:
             return None
 

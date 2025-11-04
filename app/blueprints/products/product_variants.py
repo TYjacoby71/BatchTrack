@@ -34,7 +34,8 @@ def add_variant(product_id):
             # For legacy data, the product_id in the URL might be a SKU ID
             # Try to find or create the actual Product record
             if base_sku.product_id:
-                product = Product.query.get(base_sku.product_id)
+                from ...extensions import db
+                product = db.session.get(Product, base_sku.product_id)
 
             if not product:
                 return jsonify({'error': 'Product record not found'}), 404

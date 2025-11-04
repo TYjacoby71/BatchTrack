@@ -54,11 +54,12 @@ def list_reservations():
                 from ...models.product import ProductSKUHistory
 
                 # Try to get lot information from either UnifiedInventoryHistory or ProductSKUHistory
+                from ...extensions import db
                 fifo_entry = None
                 if reservation.product_item and reservation.product_item.type == 'product':
-                    fifo_entry = ProductSKUHistory.query.get(reservation.source_fifo_id)
+                    fifo_entry = db.session.get(ProductSKUHistory, reservation.source_fifo_id)
                 else:
-                    fifo_entry = UnifiedInventoryHistory.query.get(reservation.source_fifo_id)
+                    fifo_entry = db.session.get(UnifiedInventoryHistory, reservation.source_fifo_id)
 
                 if fifo_entry and hasattr(fifo_entry, 'lot_number') and fifo_entry.lot_number:
                     lot_number = fifo_entry.lot_number
@@ -167,13 +168,13 @@ def release_reservation(order_id):
                 from ...models.product import ProductSKUHistory
 
                 if reservation.product_item and reservation.product_item.type == 'product':
-                    fifo_entry = ProductSKUHistory.query.get(reservation.source_fifo_id)
+                    fifo_entry = db.session.get(ProductSKUHistory, reservation.source_fifo_id)
                     print(f"  - FIFO Entry (ProductSKUHistory): {fifo_entry}")
                     if fifo_entry:
                         print(f"    - Lot Number: {fifo_entry.lot_number if hasattr(fifo_entry, 'lot_number') else 'N/A'}")
                         print(f"    - Remaining Quantity: {fifo_entry.remaining_quantity}")
                 else:
-                    fifo_entry = UnifiedInventoryHistory.query.get(reservation.source_fifo_id)
+                    fifo_entry = db.session.get(UnifiedInventoryHistory, reservation.source_fifo_id)
                     print(f"  - FIFO Entry (UnifiedInventoryHistory): {fifo_entry}")
                     if fifo_entry:
                         print(f"    - Lot Number: {fifo_entry.lot_number if hasattr(fifo_entry, 'lot_number') else 'N/A'}")

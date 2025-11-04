@@ -365,7 +365,8 @@ class BatchStats(ScopedModelMixin, db.Model):
     def create_from_planned_batch(cls, batch_id, planned_efficiency, planned_yield, planned_costs):
         """Create batch stats from production planning data"""
         from ..models import Batch
-        batch = Batch.query.get(batch_id)
+        from ..extensions import db
+        batch = db.session.get(Batch, batch_id)
         if not batch:
             return None
 
