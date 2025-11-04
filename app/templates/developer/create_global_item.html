@@ -80,7 +80,9 @@
               
               <div class="col-md-3">
                 <label class="form-label">Material</label>
-                <input type="text" name="container_material" class="form-control" placeholder="e.g. Glass, Plastic, Tin">
+                <select name="container_material" id="containerMaterial" class="form-select">
+                  <option value="">Select Material</option>
+                </select>
               </div>
               
               <div class="col-md-3">
@@ -95,17 +97,23 @@
               
               <div class="col-md-3">
                 <label class="form-label">Container Type</label>
-                <input type="text" name="container_type" class="form-control" placeholder="e.g. Jar, Bottle, Tin">
+                <select name="container_type" id="containerType" class="form-select">
+                  <option value="">Select Type</option>
+                </select>
               </div>
               
               <div class="col-md-3">
                 <label class="form-label">Container Style</label>
-                <input type="text" name="container_style" class="form-control" placeholder="e.g. Boston Round, Straight Sided">
+                <select name="container_style" id="containerStyle" class="form-select">
+                  <option value="">Select Style</option>
+                </select>
               </div>
               
               <div class="col-md-3">
                 <label class="form-label">Container Color (optional)</label>
-                <input type="text" name="container_color" class="form-control" placeholder="e.g. Clear, Amber">
+                <select name="container_color" id="containerColor" class="form-select">
+                  <option value="">Select Color</option>
+                </select>
               </div>
             </div>
 
@@ -203,6 +211,9 @@ document.addEventListener('DOMContentLoaded', function() {
   
   // Category visibility cache
   let categoryVisibilityCache = {};
+  
+  // Container options cache
+  let containerOptionsCache = null;
 
   function updateFormBasedOnType() {
     const selectedType = itemTypeSelect.value;
@@ -229,9 +240,17 @@ document.addEventListener('DOMContentLoaded', function() {
       case 'container':
         document.getElementById('containerFields').style.display = 'block';
         document.getElementById('perishableSection').style.display = 'block';
+        // Load container options when container type is selected
+        loadContainerOptions();
         break;
         
       case 'packaging':
+        document.getElementById('defaultUnitSection').style.display = 'block';
+        document.getElementById('containerFields').style.display = 'block';
+        // Packaging also uses container-like fields
+        loadContainerOptions();
+        break;
+        
       case 'consumable':
         document.getElementById('defaultUnitSection').style.display = 'block';
         break;
@@ -239,6 +258,68 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // Update shelf life visibility based on perishable checkbox
     updateShelfLifeVisibility();
+  }
+
+  async function loadContainerOptions() {
+    if (containerOptionsCache) return; // Already loaded
+    
+    try {
+      const response = await fetch('/developer/api/container-options');
+      const data = await response.json();
+      
+      if (data.success) {
+        containerOptionsCache = data.options;
+        populateContainerDropdowns();
+      } else {
+        console.warn('Failed to load container options:', data.error);
+      }
+    } catch (error) {
+      console.error('Error loading container options:', error);
+    }
+  }
+
+  function populateContainerDropdowns() {
+    if (!containerOptionsCache) return;
+    
+    // Populate materials
+    const materialSelect = document.getElementById('containerMaterial');
+    materialSelect.innerHTML = '<option value="">Select Material</option>';
+    containerOptionsCache.materials.forEach(material => {
+      const option = document.createElement('option');
+      option.value = material;
+      option.textContent = material;
+      materialSelect.appendChild(option);
+    });
+    
+    // Populate types
+    const typeSelect = document.getElementById('containerType');
+    typeSelect.innerHTML = '<option value="">Select Type</option>';
+    containerOptionsCache.types.forEach(type => {
+      const option = document.createElement('option');
+      option.value = type;
+      option.textContent = type;
+      typeSelect.appendChild(option);
+    });
+    
+    // Populate styles
+    const styleSelect = document.getElementById('containerStyle');
+    styleSelect.innerHTML = '<option value="">Select Style</option>';
+    containerOptionsCache.styles.forEach(style => {
+      const option = document.createElement('option');
+      option.value = style;
+      option.textContent = style;
+      styleSelect.appendChild(option);
+    });
+    
+    // Populate colors
+    const colorSelect = document.getElementById('containerColor');
+    colorSelect.innerHTML = '<option value="">Select Color</option>';
+    containerOptionsCache.colors.forEach(color => {
+      const option = document.createElement('option');
+      option.value = color;
+      option.textContent = color;
+      colorSelect.appendChild(option);
+    });
   }
 
   async function updateIngredientPropertiesVisibility() {
@@ -255,7 +336,7 @@ document.addEventListener('DOMContentLoaded', function() {
     try {
       // Check cache first
       if (!categoryVisibilityCache[categoryId]) {
-        const response = await fetch(`/api/category-visibility/${categoryId}`);
+        const response = await fetch(`/developer/api/category-visibility/${categoryId}`);
         const data = await response.json();
         
         if (data.success) {
