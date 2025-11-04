@@ -34,70 +34,25 @@ def get_available_json_files():
     return available_files
 
 
-def select_files_to_seed():
-    """Interactive file selection"""
-    available_files = get_available_json_files()
 
-    print("=== Global Item Library Seeder ===")
-    print("Available JSON files to seed:")
-
-    for item_type, files in available_files.items():
-        if files:
-            print(f"\n{item_type.upper()}:")
-            for i, filename in enumerate(files, 1):
-                print(f"  {i}. {filename}")
-
-    print("\nOptions:")
-    print("1. Seed all files")
-    print("2. Select specific files")
-
-    choice = input("\nEnter your choice (1 or 2): ").strip()
-
-    if choice == "1":
-        return available_files
-    elif choice == "2":
-        selected_files = {
-            'ingredients': [],
-            'containers': [],
-            'packaging': [],
-            'consumables': []
-        }
-
-        for item_type, files in available_files.items():
-            if files:
-                print(f"\nSelect {item_type} files to seed (comma-separated numbers, or 'all', or 'skip'):")
-                for i, filename in enumerate(files, 1):
-                    print(f"  {i}. {filename}")
-
-                selection = input(f"{item_type} selection: ").strip().lower()
-
-                if selection == 'all':
-                    selected_files[item_type] = files
-                elif selection == 'skip':
-                    continue
-                else:
-                    try:
-                        indices = [int(x.strip()) - 1 for x in selection.split(',')]
-                        selected_files[item_type] = [files[i] for i in indices if 0 <= i < len(files)]
-                    except (ValueError, IndexError):
-                        print(f"Invalid selection for {item_type}, skipping...")
-
-        return selected_files
-    else:
-        print("Invalid choice, exiting...")
-        return None
 
 
 def seed_global_inventory_library():
-    """Main seeder function with interactive selection that calls individual seeders"""
+    """Main seeder function that automatically seeds all available files"""
     app = create_app()
     with app.app_context():
-        selected_files = select_files_to_seed()
-        if not selected_files:
-            return
-
+        available_files = get_available_json_files()
+        
         print("\n=== Starting Global Inventory Library Seeding ===")
         print("📋 Seeding order: Ingredients → Containers → Packaging → Consumables")
+        print("📋 Processing all available JSON files automatically...")
+
+        # Show what will be seeded
+        for item_type, files in available_files.items():
+            if files:
+                print(f"   {item_type.upper()}: {len(files)} files - {', '.join(files)}")
+            else:
+                print(f"   {item_type.upper()}: No files found")
 
         # Seed in proper dependency order
         total_categories = 0
@@ -106,7 +61,7 @@ def seed_global_inventory_library():
         # 1. Ingredients (categories first, then items) - HAS DEPENDENCIES
         print("\n🔹 Step 1: Ingredients (with categories)")
         try:
-            categories_created, items_created = seed_ingredients_from_files(selected_files.get('ingredients', []))
+            categories_created, items_created = seed_ingredients_from_files(available_files.get('ingredients', []))
             total_categories += categories_created
             total_items += items_created
             print(f"   ✅ Ingredients: {categories_created} categories, {items_created} items")
@@ -119,11 +74,11 @@ def seed_global_inventory_library():
             # Generate attributes if we have existing containers
             from app.models import db, GlobalItem
             existing_containers = GlobalItem.query.filter_by(item_type='container').count()
-            if existing_containers > 0 and selected_files.get('containers'):
+            if existing_containers > 0 and available_files.get('containers'):
                 print("   📋 Generating container attributes from existing data...")
                 generate_container_attributes()
 
-            items_created = seed_containers_from_files(selected_files.get('containers', []))
+            items_created = seed_containers_from_files(available_files.get('containers', []))
             total_items += items_created
             print(f"   ✅ Containers: {items_created} items")
         except Exception as e:
@@ -132,7 +87,7 @@ def seed_global_inventory_library():
         # 3. Packaging - NO DEPENDENCIES
         print("\n🔹 Step 3: Packaging")
         try:
-            items_created = seed_packaging_from_files(selected_files.get('packaging', []))
+            items_created = seed_packaging_from_files(available_files.get('packaging', []))
             total_items += items_created
             print(f"   ✅ Packaging: {items_created} items")
         except Exception as e:
@@ -141,7 +96,7 @@ def seed_global_inventory_library():
         # 4. Consumables - NO DEPENDENCIES
         print("\n🔹 Step 4: Consumables")
         try:
-            items_created = seed_consumables_from_files(selected_files.get('consumables', []))
+            items_created = seed_consumables_from_files(available_files.get('consumables', []))
             total_items += items_created
             print(f"   ✅ Consumables: {items_created} items")
         except Exception as e:
