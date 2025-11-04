@@ -305,25 +305,29 @@ class User(UserMixin, db.Model):
     @property
     def timezone(self):
         """Get user's timezone from preferences, default to UTC"""
-        if self.preferences:
-            return self.preferences.timezone or 'UTC'
+        from .user_preferences import UserPreferences
+        preferences = UserPreferences.query.filter_by(user_id=self.id).first()
+        if preferences:
+            return preferences.timezone or 'UTC'
         return 'UTC'
 
     @timezone.setter
     def timezone(self, value):
         """Set user's timezone in preferences"""
         from .user_preferences import UserPreferences
-        if not self.preferences:
-            # Create preferences if they don't exist
+        preferences = UserPreferences.query.filter_by(user_id=self.id).first()
+        
+        if not preferences:
+            # Create preferences if they don't exist and user has organization
             if self.organization_id:
-                self.preferences = UserPreferences(
+                preferences = UserPreferences(
                     user_id=self.id,
                     organization_id=self.organization_id,
                     timezone=value or 'UTC'
                 )
-                db.session.add(self.preferences)
+                db.session.add(preferences)
         else:
-            self.preferences.timezone = value or 'UTC'
+            preferences.timezone = value or 'UTC'
 
     def ensure_organization_owner_role(self):
         """Ensure organization owner has the proper role assigned"""

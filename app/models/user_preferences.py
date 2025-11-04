@@ -35,35 +35,41 @@ class UserPreferences(ScopedModelMixin, db.Model):
     updated_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc))
 
     # Relationship
-    user = db.relationship('User', backref='preferences')
+    user = db.relationship('User', backref=db.backref('user_preferences', uselist=False))
 
     @classmethod
     def get_for_user(cls, user_id):
         """Get or create user preferences for a user"""
         from . import User
         from ..extensions import db
-        user = db.session.get(User, user_id)
-        if not user:
+        
+        try:
+            user = db.session.get(User, user_id)
+            if not user:
+                return None
+
+            # Check if preferences already exist
+            preferences = cls.query.filter_by(user_id=user_id).first()
+            if not preferences:
+                # For developers, use a default organization_id or skip preferences creation
+                if user.user_type == 'developer':
+                    # Developers don't need user preferences since they work across organizations
+                    return None
+
+                # Create default preferences for regular users
+                if not user.organization_id:
+                    # If user has no organization, can't create preferences
+                    return None
+
+                preferences = cls(
+                    user_id=user_id,
+                    organization_id=user.organization_id
+                )
+                db.session.add(preferences)
+                db.session.commit()
+
+            return preferences
+        except Exception as e:
+            print(f"Error getting user preferences for user {user_id}: {e}")
+            db.session.rollback()
             return None
-
-        # Check if preferences already exist
-        preferences = cls.query.filter_by(user_id=user_id).first()
-        if not preferences:
-            # For developers, use a default organization_id or skip preferences creation
-            if user.user_type == 'developer':
-                # Developers don't need user preferences since they work across organizations
-                return None
-
-            # Create default preferences for regular users
-            if not user.organization_id:
-                # If user has no organization, can't create preferences
-                return None
-
-            preferences = cls(
-                user_id=user_id,
-                organization_id=user.organization_id
-            )
-            db.session.add(preferences)
-            db.session.commit()
-
-        return preferences
