@@ -11,78 +11,126 @@ def load_consolidated_permissions():
     """Load permissions from the consolidated JSON file"""
     # Look for the JSON file in the root directory
     json_path = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), 'consolidated_permissions.json')
-    with open(json_path, 'r') as f:
-        return json.load(f)
+    
+    if not os.path.exists(json_path):
+        raise FileNotFoundError(f"Consolidated permissions file not found at: {json_path}")
+    
+    try:
+        with open(json_path, 'r') as f:
+            data = json.load(f)
+        
+        # Validate the structure
+        if 'organization_permissions' not in data or 'developer_permissions' not in data:
+            raise ValueError("Invalid permissions file structure - missing required sections")
+        
+        return data
+    except json.JSONDecodeError as e:
+        raise ValueError(f"Invalid JSON in consolidated permissions file: {e}")
 
 def seed_organization_permissions():
     """Seed organization permissions from consolidated file"""
-    data = load_consolidated_permissions()
-    org_permissions = data['organization_permissions']
+    try:
+        data = load_consolidated_permissions()
+        org_permissions = data['organization_permissions']
 
-    print("Seeding organization permissions...")
+        print("🔧 Seeding organization permissions...")
+        permissions_created = 0
+        permissions_updated = 0
 
-    for category_key, category_data in org_permissions.items():
-        category_name = category_data['description']
-        permissions = category_data['permissions']
+        for category_key, category_data in org_permissions.items():
+            if not isinstance(category_data, dict) or 'permissions' not in category_data:
+                print(f"⚠️  Skipping invalid category: {category_key}")
+                continue
+                
+            category_name = category_data.get('description', category_key)
+            permissions = category_data['permissions']
 
-        print(f"Processing category: {category_name}")
+            print(f"   Processing category: {category_name}")
 
-        for perm_data in permissions:
+            for perm_data in permissions:
+                if not isinstance(perm_data, dict) or 'name' not in perm_data:
+                    print(f"     ⚠️  Skipping invalid permission data: {perm_data}")
+                    continue
             # Check if permission already exists
-            existing = Permission.query.filter_by(name=perm_data['name']).first()
+                existing = Permission.query.filter_by(name=perm_data['name']).first()
 
-            if existing:
-                # Update existing permission
-                existing.description = perm_data['description']
-                existing.category = category_key
-                print(f"  Updated: {perm_data['name']}")
-            else:
-                # Create new permission
-                new_perm = Permission(
-                    name=perm_data['name'],
-                    description=perm_data['description'],
-                    category=category_key
-                )
-                db.session.add(new_perm)
-                print(f"  Created: {perm_data['name']}")
+                if existing:
+                    # Update existing permission
+                    existing.description = perm_data.get('description', perm_data['name'])
+                    existing.category = category_key
+                    permissions_updated += 1
+                    print(f"     ↻ Updated: {perm_data['name']}")
+                else:
+                    # Create new permission
+                    new_perm = Permission(
+                        name=perm_data['name'],
+                        description=perm_data.get('description', perm_data['name']),
+                        category=category_key
+                    )
+                    db.session.add(new_perm)
+                    permissions_created += 1
+                    print(f"     ✅ Created: {perm_data['name']}")
 
-    db.session.commit()
-    print("✅ Organization permissions seeded successfully!")
+        db.session.commit()
+        print(f"✅ Organization permissions seeded successfully! (Created: {permissions_created}, Updated: {permissions_updated})")
+        
+    except Exception as e:
+        db.session.rollback()
+        print(f"❌ Error seeding organization permissions: {e}")
+        raise
 
 def seed_developer_permissions():
     """Seed developer permissions from consolidated file"""
-    data = load_consolidated_permissions()
-    dev_permissions = data['developer_permissions']
+    try:
+        data = load_consolidated_permissions()
+        dev_permissions = data['developer_permissions']
 
-    print("Seeding developer permissions...")
+        print("🔧 Seeding developer permissions...")
+        permissions_created = 0
+        permissions_updated = 0
 
-    for category_key, category_data in dev_permissions.items():
-        category_name = category_data['description']
-        permissions = category_data['permissions']
+        for category_key, category_data in dev_permissions.items():
+            if not isinstance(category_data, dict) or 'permissions' not in category_data:
+                print(f"⚠️  Skipping invalid developer category: {category_key}")
+                continue
+                
+            category_name = category_data.get('description', category_key)
+            permissions = category_data['permissions']
 
-        print(f"Processing category: {category_name}")
+            print(f"   Processing category: {category_name}")
 
-        for perm_data in permissions:
-            # Check if permission already exists
-            existing = DeveloperPermission.query.filter_by(name=perm_data['name']).first()
+            for perm_data in permissions:
+                if not isinstance(perm_data, dict) or 'name' not in perm_data:
+                    print(f"     ⚠️  Skipping invalid permission data: {perm_data}")
+                    continue
+                    
+                # Check if permission already exists
+                existing = DeveloperPermission.query.filter_by(name=perm_data['name']).first()
 
-            if existing:
-                # Update existing permission
-                existing.description = perm_data['description']
-                existing.category = category_key
-                print(f"  Updated: {perm_data['name']}")
-            else:
-                # Create new permission
-                new_perm = DeveloperPermission(
-                    name=perm_data['name'],
-                    description=perm_data['description'],
-                    category=category_key
-                )
-                db.session.add(new_perm)
-                print(f"  Created: {perm_data['name']}")
+                if existing:
+                    # Update existing permission
+                    existing.description = perm_data.get('description', perm_data['name'])
+                    existing.category = category_key
+                    permissions_updated += 1
+                    print(f"     ↻ Updated: {perm_data['name']}")
+                else:
+                    # Create new permission
+                    new_perm = DeveloperPermission(
+                        name=perm_data['name'],
+                        description=perm_data.get('description', perm_data['name']),
+                        category=category_key
+                    )
+                    db.session.add(new_perm)
+                    permissions_created += 1
+                    print(f"     ✅ Created: {perm_data['name']}")
 
-    db.session.commit()
-    print("✅ Developer permissions seeded successfully!")
+        db.session.commit()
+        print(f"✅ Developer permissions seeded successfully! (Created: {permissions_created}, Updated: {permissions_updated})")
+        
+    except Exception as e:
+        db.session.rollback()
+        print(f"❌ Error seeding developer permissions: {e}")
+        raise
 
 def seed_developer_roles():
     """Create developer roles and assign permissions"""
