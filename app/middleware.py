@@ -4,7 +4,7 @@ import logging
 from collections.abc import Mapping
 
 from flask import request, redirect, url_for, jsonify, session, g, flash
-from flask_login import current_user, logout_user
+from flask_login import current_user
 
 from .route_access import RouteAccessConfig
 
@@ -149,6 +149,11 @@ def register_middleware(app):
         # 7. Handle developer "super admin" and masquerade logic.
         if getattr(current_user, 'user_type', None) == 'developer':
             try:
+                logger.debug(
+                    "Developer checkpoint for %s on %s",
+                    getattr(current_user, 'id', 'unknown'),
+                    request.path,
+                )
                 selected_org_id = session.get("dev_selected_org_id")
                 masquerade_org_id = session.get("masquerade_org_id")  # Support both session keys
 
@@ -178,6 +183,13 @@ def register_middleware(app):
                 logger.warning(f"Developer masquerade logic failed: {e}")
 
             # IMPORTANT: Developers bypass the billing check below.
+            logger.info(
+                "Developer %s bypassed billing on %s %s (masquerade_org=%s)",
+                getattr(current_user, 'id', 'unknown'),
+                request.method,
+                request.path,
+                session.get("masquerade_org_id") or session.get("dev_selected_org_id"),
+            )
             return
 
         # 8. Enforce billing for all regular, authenticated users.
