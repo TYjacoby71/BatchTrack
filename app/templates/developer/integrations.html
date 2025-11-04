@@ -156,6 +156,7 @@
       </label>
       <div><small class="text-muted">Developer feature for advanced inventory analytics and reporting</small></div>
     </div>
+    {% if config['DEBUG'] %}
     <div class="form-check form-switch mb-2">
       <input class="form-check-input" type="checkbox" id="ff_debug_mode" {% if feature_flags.get('FEATURE_DEBUG_MODE', False) %}checked{% endif %} onchange="saveFlags()">
       <label class="form-check-label" for="ff_debug_mode">
@@ -164,6 +165,7 @@
       </label>
       <div><small class="text-muted">Enables detailed logging and debugging information for development purposes</small></div>
     </div>
+    {% endif %}
     <div class="form-check form-switch mb-2">
       <input class="form-check-input" type="checkbox" id="ff_auto_backup" {% if feature_flags.get('FEATURE_AUTO_BACKUP', False) %}checked{% endif %} onchange="saveFlags()">
       <label class="form-check-label" for="ff_auto_backup">

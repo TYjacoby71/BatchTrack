@@ -138,6 +138,17 @@ config_map = {
 
 
 def get_config():
+    """
+    Returns the appropriate config class based on ENV environment variable.
+    
+    ENV=production -> ProductionConfig (DEBUG=False, secure settings)
+    ENV=development (or any other value) -> DevelopmentConfig (DEBUG=True)
+    
+    The DEBUG flag controls:
+    - Flask debug mode
+    - Debug info visibility in templates
+    - Development conveniences
+    """
     env = os.environ.get('ENV', 'development').lower()
     
     if env == 'production':
