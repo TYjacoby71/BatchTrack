@@ -15,7 +15,7 @@ DEFAULT_CATEGORIES = [
     {"name": "Preserves", "is_portioned": False, "template": "{variant} {product} ({container})"},
     {"name": "Beverages", "is_portioned": False, "template": "{variant} {product} ({container})"},
     {"name": "Miscellaneous", "is_portioned": False, "template": "{variant} {product} ({container})"},
-    
+
     # Add Uncategorized as default fallback category
     {"name": "Uncategorized", "is_portioned": False, "template": "{variant} {product}"},
 ]
@@ -24,13 +24,13 @@ DEFAULT_CATEGORIES = [
 def seed_product_categories():
     """Seed default product categories"""
     print("🔧 Seeding product categories...")
-    
+
     categories_created = 0
     categories_updated = 0
-    
+
     for row in DEFAULT_CATEGORIES:
         existing = ProductCategory.query.filter(ProductCategory.name.ilike(row["name"])).first()
-        
+
         if not existing:
             # Create new category
             new_category = ProductCategory(
@@ -54,14 +54,14 @@ def seed_product_categories():
             if existing.skin_enabled is None:
                 existing.skin_enabled = False
                 changed = True
-                
+
             if changed:
                 db.session.add(existing)
                 categories_updated += 1
                 print(f"   ↻ Updated category: {row['name']}")
             else:
                 print(f"   ↻ Category exists: {row['name']}")
-    
+
     try:
         db.session.commit()
         print(f"✅ Product categories seeded successfully! (Created: {categories_created}, Updated: {categories_updated})")
