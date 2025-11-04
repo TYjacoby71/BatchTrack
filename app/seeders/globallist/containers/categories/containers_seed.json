@@ -1,0 +1,42 @@
+
+{
+  "category_name": "Mixed Containers",
+  "material": "Mixed",
+  "default_capacity_unit": "oz",
+  "description": "Mixed container types from legacy seed file",
+  "items": [
+    {
+      "name": "Straight Sided Jar",
+      "item_type": "container",
+      "capacity": 8.0,
+      "capacity_unit": "fl oz",
+      "container_material": "Glass",
+      "container_type": "Jar",
+      "container_style": "Straight Sided",
+      "container_color": "Clear",
+      "aka_names": ["Straight-Sided Jar"]
+    },
+    {
+      "name": "Boston Round Bottle",
+      "item_type": "container",
+      "capacity": 4.0,
+      "capacity_unit": "oz",
+      "container_material": "Glass",
+      "container_type": "Bottle",
+      "container_style": "Boston Round",
+      "container_color": "Amber",
+      "aka_names": ["Boston Round"]
+    },
+    {
+      "name": "Deep Profile Tin",
+      "item_type": "container",
+      "capacity": 4.0,
+      "capacity_unit": "oz",
+      "container_material": "Aluminum",
+      "container_type": "Tin",
+      "container_style": "Deep Profile",
+      "container_color": null,
+      "aka_names": []
+    }
+  ]
+}

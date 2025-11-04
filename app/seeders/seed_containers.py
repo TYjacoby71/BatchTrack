@@ -1,6 +1,7 @@
+
 import os, sys, json, csv
 
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 
 from app import create_app
 from app.models import db, GlobalItem
@@ -124,8 +125,80 @@ def upsert_containers(input_path: str):
 		print(f'Containers created: {created}; updated: {updated}')
 
 
+def generate_container_attribute_files():
+	"""Generate JSON files for container attributes based on existing database data"""
+	app = create_app()
+	with app.app_context():
+		print("=== Generating Container Attribute Files ===")
+		
+		# Query distinct values
+		materials_query = db.session.query(GlobalItem.container_material)\
+			.filter(GlobalItem.container_material.isnot(None), GlobalItem.item_type == 'container')\
+			.distinct().all()
+		materials = sorted([m[0] for m in materials_query if m[0]])
+		
+		types_query = db.session.query(GlobalItem.container_type)\
+			.filter(GlobalItem.container_type.isnot(None), GlobalItem.item_type == 'container')\
+			.distinct().all()
+		types = sorted([t[0] for t in types_query if t[0]])
+		
+		styles_query = db.session.query(GlobalItem.container_style)\
+			.filter(GlobalItem.container_style.isnot(None), GlobalItem.item_type == 'container')\
+			.distinct().all()
+		styles = sorted([s[0] for s in styles_query if s[0]])
+		
+		colors_query = db.session.query(GlobalItem.container_color)\
+			.filter(GlobalItem.container_color.isnot(None), GlobalItem.item_type == 'container')\
+			.distinct().all()
+		colors = sorted([c[0] for c in colors_query if c[0]])
+		
+		# Create directory
+		attributes_dir = os.path.join(os.path.dirname(__file__), 'globallist', 'containers', 'attributes')
+		os.makedirs(attributes_dir, exist_ok=True)
+		
+		# Create JSON files
+		files_created = []
+		
+		if materials:
+			materials_file = os.path.join(attributes_dir, 'materials.json')
+			with open(materials_file, 'w') as f:
+				json.dump({"materials": materials}, f, indent=2)
+			files_created.append('materials.json')
+			print(f"  ✅ Created materials.json with {len(materials)} materials")
+		
+		if types:
+			types_file = os.path.join(attributes_dir, 'types.json')
+			with open(types_file, 'w') as f:
+				json.dump({"types": types}, f, indent=2)
+			files_created.append('types.json')
+			print(f"  ✅ Created types.json with {len(types)} types")
+		
+		if styles:
+			styles_file = os.path.join(attributes_dir, 'styles.json')
+			with open(styles_file, 'w') as f:
+				json.dump({"styles": styles}, f, indent=2)
+			files_created.append('styles.json')
+			print(f"  ✅ Created styles.json with {len(styles)} styles")
+		
+		if colors:
+			colors_file = os.path.join(attributes_dir, 'colors.json')
+			with open(colors_file, 'w') as f:
+				json.dump({"colors": colors}, f, indent=2)
+			files_created.append('colors.json')
+			print(f"  ✅ Created colors.json with {len(colors)} colors")
+		
+		print(f"\n📁 Container attribute files created in: {attributes_dir}")
+		return files_created
+
+
 if __name__ == '__main__':
 	if len(sys.argv) < 2:
-		print('Usage: python scripts/seed_containers.py <path-to-json-or-csv>')
+		print('Usage:')
+		print('  python app/seeders/seed_containers.py <path-to-json-or-csv>  # Seed containers from file')
+		print('  python app/seeders/seed_containers.py --generate-attributes    # Generate attribute files from DB')
 		sys.exit(1)
-	upsert_containers(sys.argv[1])
+	
+	if sys.argv[1] == '--generate-attributes':
+		generate_container_attribute_files()
+	else:
+		upsert_containers(sys.argv[1])

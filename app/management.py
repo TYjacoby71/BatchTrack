@@ -926,6 +926,22 @@ def seed_global_inventory_command():
         db.session.rollback()
         raise
 
+# New command to generate container attributes
+@click.command('generate-container-attributes')
+@with_appcontext
+def generate_container_attributes_command():
+    """Generates JSON files for container attributes (style, type, color, material)"""
+    try:
+        print("✨ Generating container attribute JSON files...")
+        from .seeders.container_attribute_generator import generate_attributes
+        generate_attributes()
+        print("✅ Container attribute JSON files generated successfully!")
+    except Exception as e:
+        print(f"❌ Error generating container attributes: {str(e)}")
+        db.session.rollback()
+        raise
+
+
 def register_commands(app):
     """Register CLI commands"""
     # Database initialization
@@ -951,6 +967,7 @@ def register_commands(app):
     app.cli.add_command(seed_test_data_command)
     app.cli.add_command(seed_permission_categories_command)
     app.cli.add_command(seed_global_inventory_command)
+    app.cli.add_command(generate_container_attributes_command)
 
     # Production maintenance commands
     app.cli.add_command(update_permissions_command)
