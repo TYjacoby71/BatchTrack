@@ -1,75 +1,55 @@
-"""
-Characterization tests for Stripe webhook handling.
-
-These tests ensure webhook idempotency and security measures work correctly.
-"""
-import json
-import pytest
-from unittest.mock import patch, MagicMock
-from app.services.stripe_service import StripeService
+from unittest.mock import patch
 
 
-class TestStripeWebhookCharacterization:
-    """Test current Stripe webhook behavior to prevent regressions."""
+def test_stripe_webhook_valid_signature_dispatches(app, client):
+    payload = b'{"id": "evt_123", "type": "test.event"}'
 
-    def test_stripe_service_exists(self, app):
-        """Test that Stripe service is properly configured."""
-        with app.app_context():
-            service = StripeService()
-            assert service is not None
+    with app.app_context():
+        app.config['STRIPE_WEBHOOK_SECRET'] = 'whsec_test'
 
-    def test_webhook_signature_verification_path_exists(self, app, client):
-        """Test that webhook signature verification is implemented."""
-        with app.app_context():
-            # Test that the webhook endpoint exists
-            response = client.post('/billing/webhooks/stripe',
-                                 data='{"test": "data"}',
-                                 headers={'Content-Type': 'application/json'})
+    with patch('app.services.stripe_service.StripeService.construct_event') as mock_construct, \
+            patch('app.services.billing_service.BillingService.handle_webhook_event') as mock_handle:
 
-            # We expect some kind of response (likely error due to missing signature)
-            # This characterizes current behavior
-            assert response.status_code in [200, 400, 401, 403]
+        mock_event = {'id': 'evt_123', 'type': 'test.event'}
+        mock_construct.return_value = mock_event
+        mock_handle.return_value = 204
 
-    @patch('stripe.Webhook.construct_event')
-    def test_webhook_idempotency_behavior(self, mock_construct, app, client):
-        """Test current webhook idempotency handling."""
-        with app.app_context():
-            # Mock a valid Stripe event
-            mock_event = MagicMock()
-            mock_event.id = 'evt_test_123'
-            mock_event.type = 'customer.subscription.updated'
-            mock_event.data = {'object': {'id': 'sub_test'}}
-            mock_construct.return_value = mock_event
-
-            # Send webhook twice to test idempotency
-            webhook_data = json.dumps({'id': 'evt_test_123', 'type': 'test'})
-            headers = {
+        response = client.post(
+            '/billing/webhooks/stripe',
+            data=payload,
+            headers={
                 'Content-Type': 'application/json',
-                'Stripe-Signature': 'test_signature'
+                'Stripe-Signature': 't=123,v1=test'
             }
+        )
 
-            response1 = client.post('/billing/webhooks/stripe', data=webhook_data, headers=headers)
-            response2 = client.post('/billing/webhooks/stripe', data=webhook_data, headers=headers)
+        assert response.status_code == 204
+        mock_construct.assert_called_once_with(payload, 't=123,v1=test', 'whsec_test')
+        mock_handle.assert_called_once_with('stripe', mock_event)
 
-            # Characterize current behavior - both should succeed
-            # but second should not have side effects
-            assert response1.status_code in [200, 400, 401, 403]
-            assert response2.status_code in [200, 400, 401, 403]
 
-    def test_stripe_service_methods_exist(self, app):
-        """Test that expected Stripe service methods exist."""
-        with app.app_context():
-            service = StripeService()
+def test_stripe_webhook_returns_400_when_signature_invalid(app, client):
+    with app.app_context():
+        app.config['STRIPE_WEBHOOK_SECRET'] = 'whsec_test'
 
-            # Verify expected interface exists
-            # These methods should exist for proper delegation
-            expected_methods = [
-                'create_customer',
-                'create_subscription',
-                'handle_webhook_event'
-            ]
+    with patch('app.services.stripe_service.StripeService.construct_event', side_effect=Exception('bad signature')) as mock_construct, \
+            patch('app.services.billing_service.BillingService.handle_webhook_event') as mock_handle:
 
-            for method in expected_methods:
-                # Don't require all methods to exist yet, but document what should be there
-                # This test will guide our refactoring
-                pass  # TODO: Assert methods exist once interface is standardized
+        response = client.post(
+            '/billing/webhooks/stripe',
+            data=b'{}',
+            headers={'Stripe-Signature': 'bad'}
+        )
+
+        assert response.status_code == 400
+        mock_construct.assert_called_once()
+        mock_handle.assert_not_called()
+
+
+def test_stripe_webhook_returns_500_when_secret_missing(app, client):
+    with app.app_context():
+        app.config.pop('STRIPE_WEBHOOK_SECRET', None)
+
+    response = client.post('/billing/webhooks/stripe', data=b'{}')
+
+    assert response.status_code == 500
