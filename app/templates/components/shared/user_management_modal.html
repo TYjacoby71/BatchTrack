@@ -200,7 +200,9 @@ function populateUserManagementModal(user) {
         document.getElementById('modalUserOrgId').textContent = 'N/A';
     }
 
+    {% if config['DEBUG'] %}
     // Debug logging to see what we're getting
+    {% endif %}
     console.log('User data in modal:', {
         id: user.id,
         is_organization_owner: user.is_organization_owner,

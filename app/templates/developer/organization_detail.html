@@ -62,7 +62,7 @@
 
                         <div class="mb-3">
                             <label for="subscription_tier" class="form-label">Subscription Tier</label>
-                            {% if config.get('DEBUG') %}
+                            {% if config['DEBUG'] %}
                             <div class="alert alert-info small">
                                 <strong>Debug:</strong> Current tier = "{{ current_tier }}", 
                                 Has tier record = {{ organization.tier is not none }},
