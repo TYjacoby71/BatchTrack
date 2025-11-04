@@ -75,7 +75,7 @@ For detailed development information, see:
 - **[Change Log Index](docs/changelog/CHANGELOG_INDEX.md)** - Complete history of all fixes and improvements
 
 ### Marketing
-- **[Marketing Index](docs/MARKETING_INDEX.md)** - Marketing materials and content
+- **[Marketing Workspace](marketing/README.md)** - Overview of site content, structure, and tooling
 
 ## 🔒 Development Guardrails
 
@@ -99,11 +99,11 @@ python scripts/dev_test_runner.py
 
 ## 🐛 Current Issues
 
-See [docs/FIX_LIST.md](docs/FIX_LIST.md) for known issues and [docs/QA_CHECKLIST.md](docs/QA_CHECKLIST.md) for testing requirements.
+See [docs/todo/FIX_IMMEDIATE.md](docs/todo/FIX_IMMEDIATE.md) for the active fix list and [docs/todo/CRITICAL_PRELAUNCH.md](docs/todo/CRITICAL_PRELAUNCH.md) for launch-blocking tasks and QA gate checks.
 
 ## 🔮 Future Features
 
-See [docs/FUTURE_FEATURES.md](docs/FUTURE_FEATURES.md) for planned enhancements.
+See [docs/FUTURE_ROADMAP.md](docs/FUTURE_ROADMAP.md) for planned enhancements.
 
 ---
 

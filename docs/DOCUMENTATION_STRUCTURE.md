@@ -22,23 +22,34 @@ docs/
 │   ├── GLOBAL_ITEM_JSON_STRUCTURE.md
 │   └── INVENTORY_EVENTS_TERMINOLOGY.md
 │
+├── todo/                Launch readiness, QA, and immediate action lists
+│   ├── CRITICAL_PRELAUNCH.md
+│   ├── LAUNCH_RUNBOOK.md
+│   ├── FIX_IMMEDIATE.md
+│   ├── RETENTION_CANCELLATION_QA.md
+│   ├── INVENTORY_UPGRADE_QA.md
+│   ├── INVENTORY_COST_QA.md
+│   └── UNIT_MAPPING_QA.md
+│
 ├── changelog/           Complete history of changes
-│   ├── README.md
+│   ├── CHANGELOG_INDEX.md
 │   └── YYYY-MM-DD-description.md
 │
 ├── refactor/            Refactoring documentation
 │   └── (various refactor docs)
 │
-└── (root level)         Project management and QA docs
+└── (root level)         Product-wide guides and reference docs
     ├── API_REFERENCE.md
     ├── DEVELOPMENT_GUIDE.md
-    ├── CRITICAL_PRELAUNCH.md
-    ├── LAUNCH_RUNBOOK.md
     ├── FUTURE_ROADMAP.md
     ├── TRACKING_PLAN.md
-    ├── *_QA.md (QA documents)
+    ├── FREE_TIER.md
+    ├── EXPORTS.md
+    ├── PUBLIC_TOOLS.md
     └── etc.
 ```
+
+Marketing documentation that describes the content workspace now lives in `marketing/README.md` alongside the site assets.
 
 ## Document Categories
 
@@ -63,18 +74,26 @@ docs/
 
 **Update when**: Making any code changes, bug fixes, or improvements
 
-### 3. Root Level Documentation
-**Purpose**: Project management, deployment, QA, and general guides
+### 3. To-Do and QA (`docs/todo/`)
+**Purpose**: Track actionable checklists (launch, QA, urgent fixes)
+
+**Types**:
+- Launch readiness plans (CRITICAL_PRELAUNCH.md, LAUNCH_RUNBOOK.md)
+- QA scripts and validation suites
+- Immediate fix lists and operational runbooks
+
+**Update when**: Launch scope, QA coverage, or urgent task lists change
+
+### 4. Root Level Documentation
+**Purpose**: Product management, deployment, and general reference guides
 
 **Types**:
 - Development guides
 - API documentation
-- Launch checklists
-- QA test plans
-- Future roadmap
-- Tracking plans
+- Roadmaps and product strategy
+- Tracking plans and public tooling notes
 
-**Update when**: Process, deployment, or testing procedures change
+**Update when**: Process, deployment, or cross-team procedures change
 
 ## Documentation Rules
 
@@ -185,4 +204,4 @@ Use `datetime.now(timezone.utc)` for storage...
 
 ---
 
-**Last Updated**: 2025-10-28
+**Last Updated**: 2025-11-04
