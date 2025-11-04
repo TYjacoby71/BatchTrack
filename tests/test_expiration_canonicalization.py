@@ -40,9 +40,11 @@ class TestExpirationCanonicalService:
     """Verify expiration operations use canonical inventory adjustment service"""
 
     @patch('app.blueprints.expiration.services.process_inventory_adjustment')
+    @patch('app.blueprints.expiration.services.InventoryLot')
+    @patch('app.blueprints.expiration.services.UnifiedInventoryHistory')
     @patch('app.blueprints.expiration.services.InventoryHistory')
     @patch('app.blueprints.expiration.services.current_user')
-    def test_mark_fifo_expired_calls_canonical_service(self, mock_user, mock_history, mock_process):
+    def test_mark_fifo_expired_calls_canonical_service(self, mock_user, mock_history, mock_unified, mock_lot, mock_process):
         """Test that marking FIFO entry as expired calls process_inventory_adjustment"""
         from app import create_app
 
@@ -55,7 +57,11 @@ class TestExpirationCanonicalService:
             mock_fifo_entry.remaining_quantity = 10.0
             mock_fifo_entry.unit = 'g'
 
+            # Mock all fallback paths - return None for first two, then the entry for the last one
+            mock_lot.query.get.return_value = None
+            mock_unified.query.get.return_value = None
             mock_history.query.get.return_value = mock_fifo_entry
+            
             mock_user.id = 1
             mock_user.is_authenticated = True
             mock_process.return_value = True
