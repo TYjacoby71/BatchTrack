@@ -68,6 +68,9 @@
             <a class="navbar-brand" href="{% if current_user.is_authenticated %}{% if current_user.user_type == 'developer' %}{{ url_for('developer.dashboard') }}{% else %}{{ url_for('app_routes.dashboard') }}{% endif %}{% else %}{{ url_for('index') }}{% endif %}">
                 BatchTrack 1.0
             </a>
+            <div class="navbar-text me-3">
+                <span id="header-clock" class="text-muted">🕐 Loading...</span>
+            </div>
             {% if current_user.is_authenticated %}
 
             {% if current_user.user_type == 'developer' %}
