@@ -42,31 +42,6 @@ function toggleUpdateForm() {
   }
 }
 
-
-
-async function updateClock() {
-  const clock = document.getElementById('clock');
-  if (clock) {
-    try {
-      // Get server time to stay in sync with timezone utilities
-      const response = await fetch('/api/server-time');
-      if (response.ok) {
-        const data = await response.json();
-        const serverTime = new Date(data.user_time || data.server_utc);
-        clock.textContent = '🕐 ' + serverTime.toLocaleTimeString();
-      } else {
-        // Fallback to local time if server endpoint unavailable
-        const now = new Date();
-        clock.textContent = '🕐 ' + now.toLocaleTimeString();
-      }
-    } catch (error) {
-      // Fallback to local time on error
-      const now = new Date();
-      clock.textContent = '🕐 ' + now.toLocaleTimeString();
-    }
-  }
-}
-
 // Global alert function for showing messages
 function showAlert(type, message) {
   // Create alert element
@@ -96,10 +71,6 @@ function showAlert(type, message) {
 }
 
 document.addEventListener('DOMContentLoaded', function() {
-  // Initialize clock - reduce frequency to 1 minute
-  updateClock();
-  setInterval(updateClock, 60000);
-
   // Debug navigation clicks
   console.log('Page loaded:', window.location.pathname);
 
