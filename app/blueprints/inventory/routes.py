@@ -148,6 +148,7 @@ def api_quick_create_inventory():
 
 @inventory_bp.route('/')
 @login_required
+@permission_required('inventory.view')
 def list_inventory():
     inventory_type = request.args.get('type')
     search = request.args.get('search', '').strip()
