@@ -5,6 +5,7 @@ from .utils.permissions import has_permission
 from .utils.timezone_utils import TimezoneUtils
 from app.utils.unit_utils import get_global_unit_list
 from app.utils.cache_manager import app_cache
+from app.utils.file_store import read_json
 
 
 def register_template_context(app):
@@ -221,13 +222,11 @@ def register_template_context(app):
         messages = {'day_1': '', 'day_3': '', 'day_5': ''}
         marketing_settings = {'promo_codes': [], 'demo_url': '', 'demo_videos': []}
         try:
-            if os.path.exists('settings.json'):
-                with open('settings.json', 'r') as f:
-                    cfg = json.load(f) or {}
-                    messages.update(cfg.get('marketing_messages', {}))
-                    marketing_settings['promo_codes'] = cfg.get('promo_codes', []) or []
-                    marketing_settings['demo_url'] = cfg.get('demo_url', '') or ''
-                    marketing_settings['demo_videos'] = cfg.get('demo_videos', []) or []
+            cfg = read_json('settings.json', default={}) or {}
+            messages.update(cfg.get('marketing_messages', {}))
+            marketing_settings['promo_codes'] = cfg.get('promo_codes', []) or []
+            marketing_settings['demo_url'] = cfg.get('demo_url', '') or ''
+            marketing_settings['demo_videos'] = cfg.get('demo_videos', []) or []
         except Exception:
             pass
 

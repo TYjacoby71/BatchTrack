@@ -46,7 +46,23 @@ def create_app(config=None):
     db.init_app(app)
     migrate.init_app(app, db)
     csrf.init_app(app)
-    limiter.init_app(app)
+
+    limiter_storage = (
+        app.config.get('RATELIMIT_STORAGE_URI')
+        or app.config.get('RATELIMIT_STORAGE_URL')
+        or 'memory://'
+    )
+    app.config['RATELIMIT_STORAGE_URI'] = limiter_storage
+
+    env_name = str(app.config.get('ENV', '')).lower()
+    if env_name in {'production', 'staging'} and limiter_storage.lower().startswith('memory://'):
+        raise RuntimeError(
+            "RATELIMIT_STORAGE_URI must point to an external store (e.g. Redis) "
+            "in production/staging. Configure the RATELIMIT_STORAGE_URI environment "
+            "variable."
+        )
+
+    limiter.init_app(app, storage_uri=limiter_storage)
     configure_login_manager(app)
 
     # Session lifetime should come from config classes; avoid overriding here

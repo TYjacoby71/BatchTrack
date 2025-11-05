@@ -17,6 +17,26 @@ def _normalize_db_url(url: str | None) -> str | None:
     return 'postgresql://' + url[len('postgres://'):] if url.startswith('postgres://') else url
 
 
+def _env_int(name: str, default: int) -> int:
+    raw = os.environ.get(name)
+    if raw is None:
+        return default
+    try:
+        return int(raw)
+    except (TypeError, ValueError):
+        return default
+
+
+def _env_float(name: str, default: float) -> float:
+    raw = os.environ.get(name)
+    if raw is None:
+        return default
+    try:
+        return float(raw)
+    except (TypeError, ValueError):
+        return default
+
+
 class BaseConfig:
     SECRET_KEY = os.environ.get('FLASK_SECRET_KEY', 'devkey-please-change-in-production')
 
@@ -34,8 +54,14 @@ class BaseConfig:
     UPLOAD_FOLDER = 'static/product_images'
     MAX_CONTENT_LENGTH = 16 * 1024 * 1024
 
-    # Rate limiting
-    RATELIMIT_STORAGE_URL = os.environ.get('RATELIMIT_STORAGE_URL', 'memory://')
+    # Rate limiting (URI is what Flask-Limiter reads)
+    _ratelimit_storage_default = (
+        os.environ.get('RATELIMIT_STORAGE_URI')
+        or os.environ.get('RATELIMIT_STORAGE_URL')
+        or 'memory://'
+    )
+    RATELIMIT_STORAGE_URL = _ratelimit_storage_default
+    RATELIMIT_STORAGE_URI = _ratelimit_storage_default
 
     # Logging
     LOG_LEVEL = os.environ.get('LOG_LEVEL', 'WARNING')
@@ -104,7 +130,13 @@ class TestingConfig(BaseConfig):
         'pool_pre_ping': True,
     }
     # Add rate limiter storage configuration for tests
-    RATELIMIT_STORAGE_URL = os.environ.get('RATELIMIT_STORAGE_URL', 'memory://')
+    _testing_ratelimit_storage = (
+        os.environ.get('RATELIMIT_STORAGE_URI')
+        or os.environ.get('RATELIMIT_STORAGE_URL')
+        or 'memory://'
+    )
+    RATELIMIT_STORAGE_URI = _testing_ratelimit_storage
+    RATELIMIT_STORAGE_URL = _testing_ratelimit_storage
 
 
 class StagingConfig(BaseConfig):
@@ -115,12 +147,20 @@ class StagingConfig(BaseConfig):
     TESTING = False
     SQLALCHEMY_DATABASE_URI = _normalize_db_url(os.environ.get('DATABASE_INTERNAL_URL')) or _normalize_db_url(os.environ.get('DATABASE_URL'))
     SQLALCHEMY_ENGINE_OPTIONS = {
-        'pool_size': 10,
-        'max_overflow': 20,
+        'pool_size': _env_int('SQLALCHEMY_POOL_SIZE', 40),
+        'max_overflow': _env_int('SQLALCHEMY_MAX_OVERFLOW', 40),
         'pool_pre_ping': True,
-        'pool_recycle': 1800,
+        'pool_recycle': _env_int('SQLALCHEMY_POOL_RECYCLE', 1800),
+        'pool_timeout': _env_int('SQLALCHEMY_POOL_TIMEOUT', 30),
+        'pool_use_lifo': True,
     }
-    RATELIMIT_STORAGE_URL = os.environ.get('REDIS_URL') or 'memory://'
+    _staging_ratelimit_storage = (
+        os.environ.get('RATELIMIT_STORAGE_URI')
+        or os.environ.get('REDIS_URL')
+        or os.environ.get('RATELIMIT_STORAGE_URL')
+    )
+    RATELIMIT_STORAGE_URI = _staging_ratelimit_storage
+    RATELIMIT_STORAGE_URL = _staging_ratelimit_storage
 
 
 class ProductionConfig(BaseConfig):
@@ -131,13 +171,20 @@ class ProductionConfig(BaseConfig):
     TESTING = False
     SQLALCHEMY_DATABASE_URI = _normalize_db_url(os.environ.get('DATABASE_INTERNAL_URL')) or _normalize_db_url(os.environ.get('DATABASE_URL'))
     SQLALCHEMY_ENGINE_OPTIONS = {
-        'pool_size': 20,
-        'max_overflow': 30,
+        'pool_size': _env_int('SQLALCHEMY_POOL_SIZE', 80),
+        'max_overflow': _env_int('SQLALCHEMY_MAX_OVERFLOW', 80),
         'pool_pre_ping': True,
-        'pool_recycle': 1800,
-        'pool_timeout': 30,
+        'pool_recycle': _env_int('SQLALCHEMY_POOL_RECYCLE', 900),
+        'pool_timeout': _env_int('SQLALCHEMY_POOL_TIMEOUT', 30),
+        'pool_use_lifo': True,
     }
-    RATELIMIT_STORAGE_URL = os.environ.get('REDIS_URL') or os.environ.get('RATELIMIT_STORAGE_URL')
+    _production_ratelimit_storage = (
+        os.environ.get('RATELIMIT_STORAGE_URI')
+        or os.environ.get('REDIS_URL')
+        or os.environ.get('RATELIMIT_STORAGE_URL')
+    )
+    RATELIMIT_STORAGE_URI = _production_ratelimit_storage
+    RATELIMIT_STORAGE_URL = _production_ratelimit_storage
     LOG_LEVEL = os.environ.get('LOG_LEVEL', 'INFO')
 
 
