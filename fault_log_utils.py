@@ -1,9 +1,9 @@
 
-import json
 import os
 from typing import Optional, Dict, Any
 
 from app.utils.timezone_utils import TimezoneUtils
+from app.utils.json_store import read_json_file, write_json_file
 
 FAULT_LOG_PATH = 'faults.json'
 
@@ -18,18 +18,11 @@ def log_fault(message: str, details: Optional[Dict[str, Any]] = None, source: st
             'status': 'NEW'
         }
 
-        faults = []
-        if os.path.exists(FAULT_LOG_PATH):
-            try:
-                with open(FAULT_LOG_PATH, 'r') as f:
-                    faults = json.load(f)
-            except json.JSONDecodeError:
-                faults = []
+        faults = read_json_file(FAULT_LOG_PATH, default=[]) or []
 
         faults.append(fault)
 
-        with open(FAULT_LOG_PATH, 'w') as f:
-            json.dump(faults, f, indent=2)
+        write_json_file(FAULT_LOG_PATH, faults)
         return True
     except Exception as e:
         print(f"Error logging fault: {str(e)}")

@@ -26,10 +26,24 @@ class BaseConfig:
     MAX_CONTENT_LENGTH = 16 * 1024 * 1024
 
     # Rate limiting
-    RATELIMIT_STORAGE_URL = os.environ.get('RATELIMIT_STORAGE_URL', 'memory://')
+    RATELIMIT_STORAGE_URI = (
+        os.environ.get('RATELIMIT_STORAGE_URI')
+        or os.environ.get('RATELIMIT_STORAGE_URL')
+        or 'memory://'
+    )
+    RATELIMIT_STORAGE_URL = RATELIMIT_STORAGE_URI  # Backwards compatibility
+
+    # Cache / shared state
+    CACHE_TYPE = os.environ.get('CACHE_TYPE')
+    CACHE_REDIS_URL = os.environ.get('CACHE_REDIS_URL') or os.environ.get('REDIS_URL')
+    CACHE_DEFAULT_TIMEOUT = int(os.environ.get('CACHE_DEFAULT_TIMEOUT', 120))
+
+    # Billing cache tuning
+    BILLING_STATUS_CACHE_TTL = int(os.environ.get('BILLING_STATUS_CACHE_TTL', 120))
 
     # Logging
     LOG_LEVEL = os.environ.get('LOG_LEVEL', 'WARNING')
+    ANON_REQUEST_LOG_LEVEL = os.environ.get('ANON_REQUEST_LOG_LEVEL', 'DEBUG')
 
     # Email - Support multiple providers
     EMAIL_PROVIDER = os.environ.get('EMAIL_PROVIDER', 'smtp').lower()
@@ -81,6 +95,12 @@ class DevelopmentConfig(BaseConfig):
         'pool_recycle': 3600,
         'echo': False,
     }
+    RATELIMIT_STORAGE_URI = (
+        os.environ.get('RATELIMIT_STORAGE_URI')
+        or os.environ.get('RATELIMIT_STORAGE_URL')
+        or 'memory://'
+    )
+    RATELIMIT_STORAGE_URL = RATELIMIT_STORAGE_URI
 
 
 class TestingConfig(BaseConfig):
@@ -108,7 +128,8 @@ class StagingConfig(BaseConfig):
         'pool_pre_ping': True,
         'pool_recycle': 1800,
     }
-    RATELIMIT_STORAGE_URL = os.environ.get('REDIS_URL') or 'memory://'
+    RATELIMIT_STORAGE_URI = os.environ.get('RATELIMIT_STORAGE_URI') or os.environ.get('REDIS_URL') or 'memory://'
+    RATELIMIT_STORAGE_URL = RATELIMIT_STORAGE_URI
 
 
 class ProductionConfig(BaseConfig):
@@ -118,13 +139,16 @@ class ProductionConfig(BaseConfig):
     TESTING = False
     SQLALCHEMY_DATABASE_URI = _normalize_db_url(os.environ.get('DATABASE_INTERNAL_URL')) or _normalize_db_url(os.environ.get('DATABASE_URL'))
     SQLALCHEMY_ENGINE_OPTIONS = {
-        'pool_size': 20,
-        'max_overflow': 30,
+        'pool_size': int(os.environ.get('SQLALCHEMY_POOL_SIZE', 80)),
+        'max_overflow': int(os.environ.get('SQLALCHEMY_MAX_OVERFLOW', 40)),
         'pool_pre_ping': True,
         'pool_recycle': 1800,
-        'pool_timeout': 30,
+        'pool_timeout': int(os.environ.get('SQLALCHEMY_POOL_TIMEOUT', 30)),
     }
-    RATELIMIT_STORAGE_URL = os.environ.get('REDIS_URL') or os.environ.get('RATELIMIT_STORAGE_URL')
+    RATELIMIT_STORAGE_URI = os.environ.get('RATELIMIT_STORAGE_URI') or os.environ.get('REDIS_URL')
+    RATELIMIT_STORAGE_URL = RATELIMIT_STORAGE_URI
+    CACHE_TYPE = os.environ.get('CACHE_TYPE', 'RedisCache')
+    CACHE_REDIS_URL = os.environ.get('CACHE_REDIS_URL') or os.environ.get('REDIS_URL')
     LOG_LEVEL = os.environ.get('LOG_LEVEL', 'INFO')
 
 

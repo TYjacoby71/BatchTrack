@@ -1,13 +1,10 @@
 
-import json
+from app.utils.json_store import read_json_file
+
 
 def get_setting(key, default=None):
-    try:
-        with open("settings.json", "r") as f:
-            data = json.load(f)
-        return data.get(key, default)
-    except:
-        return default
+    data = read_json_file("settings.json", default={}) or {}
+    return data.get(key, default)
 import logging
 from logging.handlers import RotatingFileHandler
 import os

@@ -5,8 +5,8 @@ from ..models import db, InventoryItem, Batch, ProductSKU, UserPreferences
 from ..services.combined_inventory_alerts import CombinedInventoryAlertService
 # Import moved to avoid circular dependency
 # from ..blueprints.expiration.services import ExpirationService
-import json
 import os
+from ..utils.json_store import read_json_file
 
 class DashboardAlertService:
     """Unified alert management for neurodivergent-friendly dashboard"""
@@ -282,35 +282,35 @@ class DashboardAlertService:
         if not os.path.exists(fault_file):
             return 0
 
-        try:
-            with open(fault_file, 'r') as f:
-                faults = json.load(f)
-
-            from ..utils.timezone_utils import TimezoneUtils
-            cutoff_time = TimezoneUtils.utc_now() - timedelta(hours=24)
-            recent_critical = 0
-
-            for fault in faults:
-                raw_timestamp = fault.get('timestamp')
-                if not raw_timestamp:
-                    continue
-
-                try:
-                    fault_time = datetime.fromisoformat(raw_timestamp.replace('Z', '+00:00'))
-                except ValueError:
-                    continue
-
-                # Ensure both datetimes are timezone-aware for safe comparison
-                fault_time = TimezoneUtils.ensure_timezone_aware(fault_time)
-                cutoff_time_aware = TimezoneUtils.ensure_timezone_aware(cutoff_time)
-
-                if (TimezoneUtils.safe_datetime_compare(fault_time, cutoff_time_aware, assume_utc=True) and
-                    fault.get('severity', '').lower() in ['critical', 'error']):
-                    recent_critical += 1
-
-            return recent_critical
-        except (json.JSONDecodeError, KeyError, ValueError):
+        faults = read_json_file(fault_file, default=[]) or []
+        if not faults:
             return 0
+
+        from ..utils.timezone_utils import TimezoneUtils
+        cutoff_time = TimezoneUtils.utc_now() - timedelta(hours=24)
+        recent_critical = 0
+
+        for fault in faults:
+            raw_timestamp = fault.get('timestamp')
+            if not raw_timestamp:
+                continue
+
+            try:
+                fault_time = datetime.fromisoformat(raw_timestamp.replace('Z', '+00:00'))
+            except ValueError:
+                continue
+
+            # Ensure both datetimes are timezone-aware for safe comparison
+            fault_time = TimezoneUtils.ensure_timezone_aware(fault_time)
+            cutoff_time_aware = TimezoneUtils.ensure_timezone_aware(cutoff_time)
+
+            if (
+                TimezoneUtils.safe_datetime_compare(fault_time, cutoff_time_aware, assume_utc=True)
+                and fault.get('severity', '').lower() in ['critical', 'error']
+            ):
+                recent_critical += 1
+
+        return recent_critical
 
     @staticmethod
     def _get_timer_alerts() -> Dict:
