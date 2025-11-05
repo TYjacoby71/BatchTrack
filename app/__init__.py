@@ -83,12 +83,7 @@ def create_app(config=None):
     # Register context processors
     register_template_context(app)
     # Register template filters
-    from .utils.template_filters import format_currency, format_percentage, pluralize, user_date, user_timezone
-    app.jinja_env.filters['format_currency'] = format_currency
-    app.jinja_env.filters['format_percentage'] = format_percentage
-    app.jinja_env.filters['pluralize'] = pluralize
-    app.jinja_env.filters['user_date'] = user_date
-    app.jinja_env.filters['user_timezone'] = user_timezone
+    register_template_filters(app)
 
 
     # Add core routes
