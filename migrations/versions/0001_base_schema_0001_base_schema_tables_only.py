@@ -408,7 +408,7 @@ def upgrade():
     sa.Column('show_flash_point', sa.Boolean(), nullable=True),
     sa.Column('show_ph_value', sa.Boolean(), nullable=True),
     sa.Column('show_moisture_content', sa.Boolean(), nullable=True),
-    sa.Column('show_shelf_life_months', sa.Boolean(), nullable=True),
+    sa.Column('show_shelf_life_days', sa.Boolean(), nullable=True), # Changed from months to days
     sa.Column('show_comedogenic_rating', sa.Boolean(), nullable=True),
     sa.Column('organization_id', sa.Integer(), nullable=True),
     sa.ForeignKeyConstraint(['created_by'], ['user.id'], ),
@@ -1341,7 +1341,7 @@ def upgrade():
     sa.PrimaryKeyConstraint('id'),
     sa.UniqueConstraint('organization_id')
     )
-    # Removed stray duplicate product_sku_history block (actual table defined later)
+    # Removed stray duplicate product_sku_history block (actual table defined earlier)
 
     op.create_table('recipe_consumable',
     sa.Column('id', sa.Integer(), nullable=False),
