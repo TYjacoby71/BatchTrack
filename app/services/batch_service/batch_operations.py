@@ -7,7 +7,7 @@ from app.models import db, Batch, Recipe, InventoryItem, BatchContainer, BatchIn
 from app.models.batch import BatchConsumable
 from app import models
 from app.models import ExtraBatchIngredient, ExtraBatchContainer, Product, ProductVariant
-from app.services.unit_conversion import ConversionEngine
+from app.services.unit_conversion.unit_conversion import ConversionEngine
 from app.services.inventory_adjustment import process_inventory_adjustment
 from app.utils.timezone_utils import TimezoneUtils
 from app.utils.code_generator import generate_batch_label_code
