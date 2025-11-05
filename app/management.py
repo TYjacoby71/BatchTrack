@@ -104,18 +104,9 @@ def init_production_command():
             print(f"⚠️  User/organization seeding issue: {e}")
             print("   Continuing with remaining steps...")
 
-        # Setup default categories for the organization
+        # Organization-specific setup will be handled by global inventory library seeding
         print("=== Step 3: Organization-specific data ===")
-        try:
-            from .models import Organization
-            org = Organization.query.first()
-            if org:
-                seed_categories(organization_id=org.id)
-                print("✅ Ingredient categories seeded for organization")
-            else:
-                print("⚠️  No organization found, ingredient categories not seeded")
-        except Exception as e:
-            print(f"⚠️  Ingredient category seeding issue: {e}")
+        print("   Categories will be created by global inventory library seeding...")
 
         # Seed global product categories (not organization-specific)
         try:
