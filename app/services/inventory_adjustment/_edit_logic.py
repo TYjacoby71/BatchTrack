@@ -160,7 +160,17 @@ def update_inventory_item(item_id: int, form_data: dict) -> tuple[bool, str]:
         if 'shelf_life_days' in form_data:
             try:
                 shelf_life = form_data['shelf_life_days']
-                item.shelf_life_days = int(shelf_life) if shelf_life else None
+                old_shelf_life = item.shelf_life_days
+                new_shelf_life = int(shelf_life) if shelf_life else None
+                
+                # Update the item's shelf life (affects future lots only)
+                item.shelf_life_days = new_shelf_life
+                
+                # Note: Existing lots keep their original shelf_life_days and expiration_date
+                # This is intentional - lots are immutable once created
+                if old_shelf_life != new_shelf_life:
+                    logger.info(f"Updated shelf life for item {item_id} from {old_shelf_life} to {new_shelf_life} days. Existing lots unchanged.")
+                    
             except (ValueError, TypeError):
                 return False, "Invalid shelf life days"
 

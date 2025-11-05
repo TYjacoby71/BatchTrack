@@ -7,6 +7,7 @@ import logging
 from app.models import db, InventoryItem, IngredientCategory, Unit, UnifiedInventoryHistory, GlobalItem
 from app.services.density_assignment_service import DensityAssignmentService
 from ._fifo_ops import create_new_fifo_lot
+from datetime import timezone # Import timezone for timezone-aware datetime objects
 
 logger = logging.getLogger(__name__)
 
@@ -98,16 +99,16 @@ def create_inventory_item(form_data, organization_id, created_by):
 
         # Determine if item is perishable - user input takes priority
         is_perishable = form_data.get('is_perishable') == 'on'
-        
+
         # If no explicit user input and global item has defaults, use them as fallback
         # This handles the case where form is pre-populated but user doesn't change it
         if global_item and global_item.default_is_perishable and form_data.get('is_perishable') is None:
             is_perishable = True
-            
+
         # Use recommended shelf life from global item if none provided by user
         if not shelf_life_days and global_item and global_item.recommended_shelf_life_days:
             shelf_life_days = int(global_item.recommended_shelf_life_days)
-        
+
         # Final validation: if shelf_life_days is provided, item must be perishable
         if shelf_life_days and not is_perishable:
             is_perishable = True
@@ -260,9 +261,21 @@ def create_inventory_item(form_data, organization_id, created_by):
 
         # Handle initial stock if quantity > 0
         if initial_quantity > 0:
-            # Extract custom expiration data for initial stock
+            # Extract custom expiration date for initial stock (date only, no custom shelf life)
             custom_expiration_date = form_data.get('custom_expiration_date')
-            custom_shelf_life_days = form_data.get('custom_shelf_life_days')
+
+            # Convert custom_expiration_date to proper format if provided
+            if custom_expiration_date:
+                try:
+                    from datetime import datetime
+                    if isinstance(custom_expiration_date, str):
+                        # Parse string date and make it timezone-aware UTC
+                        parsed_date = datetime.fromisoformat(custom_expiration_date.replace('Z', '+00:00'))
+                        if parsed_date.tzinfo is None:
+                            parsed_date = parsed_date.replace(tzinfo=timezone.utc)
+                        custom_expiration_date = parsed_date
+                except Exception:
+                    custom_expiration_date = None
 
             # Use the local initial stock handler (no circular dependency)
             success, adjustment_message, quantity_delta = handle_initial_stock(
@@ -272,7 +285,6 @@ def create_inventory_item(form_data, organization_id, created_by):
                 notes='Initial inventory entry',
                 created_by=created_by,
                 custom_expiration_date=custom_expiration_date,
-                custom_shelf_life_days=custom_shelf_life_days,
                 unit=final_unit
             )
 
@@ -299,7 +311,7 @@ def create_inventory_item(form_data, organization_id, created_by):
         logger.error(f"Error creating inventory item: {str(e)}")
         return False, f"Failed to create inventory item: {str(e)}", None
 
-def handle_initial_stock(item, quantity, change_type, notes=None, created_by=None, cost_override=None, custom_expiration_date=None, custom_shelf_life_days=None, **kwargs):
+def handle_initial_stock(item, quantity, change_type, notes=None, created_by=None, cost_override=None, custom_expiration_date=None, **kwargs):
     """
     Handle the initial stock entry for a newly created item.
     This is called when an item gets its very first inventory.
@@ -313,6 +325,7 @@ def handle_initial_stock(item, quantity, change_type, notes=None, created_by=Non
         final_cost = cost_override if cost_override is not None else item.cost_per_unit
 
         # Create the initial FIFO entry - works for any quantity including 0
+        # The custom_shelf_life_days parameter is removed as per the requirement.
         success, message, lot_id = create_new_fifo_lot(
             item_id=item.id,
             quantity=quantity,
@@ -322,7 +335,7 @@ def handle_initial_stock(item, quantity, change_type, notes=None, created_by=Non
             cost_per_unit=final_cost,
             created_by=created_by,
             custom_expiration_date=custom_expiration_date,
-            custom_shelf_life_days=custom_shelf_life_days
+            # custom_shelf_life_days removed here
         )
 
         if not success:

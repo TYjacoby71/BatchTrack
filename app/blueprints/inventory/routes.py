@@ -420,7 +420,6 @@ def adjust_inventory(item_id):
                 return redirect(url_for('.view_inventory', id=item_id))
 
         custom_expiration_date = form_data.get('custom_expiration_date')
-        custom_shelf_life_days = form_data.get('custom_shelf_life_days')
         notes = form_data.get('notes', '')
         input_unit = form_data.get('input_unit') or item.unit or 'count'
 
@@ -433,7 +432,6 @@ def adjust_inventory(item_id):
             created_by=current_user.id,
             cost_override=cost_override,
             custom_expiration_date=custom_expiration_date,
-            custom_shelf_life_days=custom_shelf_life_days,
             unit=input_unit
         )
 
