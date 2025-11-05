@@ -1,22 +1,37 @@
 from datetime import timedelta
-from flask import current_app
-from flask_login import current_user
-from ..models import (
-    InventoryItem, IngredientCategory, Unit, Recipe, RecipeIngredient,
-    InventoryLot, Organization, User
-)
+from typing import Dict, Optional
+
 from ..extensions import db
 from ..utils.timezone_utils import TimezoneUtils
+from ..models import (
+    InventoryItem,
+    IngredientCategory,
+    InventoryLot,
+    Organization,
+    Product,
+    ProductCategory,
+    ProductSKU,
+    ProductSKUHistory,
+    ProductVariant,
+    Recipe,
+    RecipeIngredient,
+    Reservation,
+    Unit,
+    User,
+    Batch,
+    BatchIngredient,
+    BatchContainer,
+    UnifiedInventoryHistory,
+    GlobalItem,
+)
 
 
-def seed_test_data(organization_id=None):
-    """
-    Seed comprehensive test data including:
-    - Various inventory items with different units
-    - Multiple lots (some expired, some fresh, some with no history)
-    - Test recipes with unit conversions
-    - Container items
-    """
+HONEY_CUP_TO_LB = 0.741  # Approximate density conversion for honey
+MILK_CL_TO_GALLON = 0.1 / 3.78541  # 10 cl = 0.1 L converted to gallons
+
+
+def seed_test_data(organization_id: Optional[int] = None):
+    """Seed living-account data geared toward milk & honey production."""
 
     if organization_id is None:
         org = Organization.query.first()
@@ -30,439 +45,764 @@ def seed_test_data(organization_id=None):
         print("❌ Admin user not found! Run user seeder first.")
         return
 
-    print("=== Seeding Test Data ===")
+    now = TimezoneUtils.utc_now()
+    print("=== Seeding Living Account Test Data ===")
 
-    # Get categories
-    liquid_cat = IngredientCategory.query.filter_by(name='Liquid', organization_id=organization_id).first()
-    solid_cat = IngredientCategory.query.filter_by(name='Solid', organization_id=organization_id).first()
-    oil_cat = IngredientCategory.query.filter_by(name='Oil', organization_id=organization_id).first()
-    dairy_cat = IngredientCategory.query.filter_by(name='Dairy', organization_id=organization_id).first()
-    wax_cat = IngredientCategory.query.filter_by(name='Wax', organization_id=organization_id).first()
-    container_cat = IngredientCategory.query.filter_by(name='Container', organization_id=organization_id).first()
+    def ensure_unit(name: str, symbol: str, unit_type: str, base_unit: str, conversion_factor: float):
+        unit = Unit.query.filter_by(name=name, organization_id=None).first()
+        if not unit:
+            unit = Unit(
+                name=name,
+                symbol=symbol,
+                unit_type=unit_type,
+                base_unit=base_unit,
+                conversion_factor=conversion_factor,
+                is_custom=False,
+                is_mapped=True,
+                organization_id=None,
+                created_by=admin_user.id,
+            )
+            db.session.add(unit)
+            db.session.flush()
+            print(f"   ➕ Added unit '{name}'")
+        return unit
 
-    if not liquid_cat:
-        print("❌ Categories not found! Run category seeder first.")
-        return
+    def get_or_create_category(name: str) -> IngredientCategory:
+        category = IngredientCategory.query.filter_by(name=name, organization_id=organization_id).first()
+        if not category:
+            category = IngredientCategory(name=name, organization_id=organization_id)
+            db.session.add(category)
+            db.session.flush()
+            print(f"   ➕ Created ingredient category '{name}'")
+        return category
 
-    # Get units
-    units = {
-        'count': Unit.query.filter_by(name='count').first(),
-        'lb': Unit.query.filter_by(name='lb').first(),
-        'kg': Unit.query.filter_by(name='kg').first(),
-        'gallon': Unit.query.filter_by(name='gallon').first(),
-        'liter': Unit.query.filter_by(name='liter').first(),
-        'floz': Unit.query.filter_by(name='floz').first(),
-        'ml': Unit.query.filter_by(name='ml').first(),
-        'oz': Unit.query.filter_by(name='oz').first(),
-        'gram': Unit.query.filter_by(name='gram').first(),
-        'unit': Unit.query.filter_by(name='unit').first(),
+    def ensure_global_item(name: str, item_type: str, defaults: Dict) -> GlobalItem:
+        global_item = GlobalItem.query.filter_by(name=name, item_type=item_type).first()
+        if not global_item:
+            global_item = GlobalItem(name=name, item_type=item_type, **defaults)
+            db.session.add(global_item)
+            db.session.flush()
+            print(f"   🌐 Registered global item '{name}' ({item_type})")
+        return global_item
+
+    def log_history(
+        item: InventoryItem,
+        change_type: str,
+        quantity_change: float,
+        unit: str,
+        timestamp,
+        notes: str = "",
+        batch: Optional[Batch] = None,
+        lot: Optional[InventoryLot] = None,
+        extra: Optional[Dict] = None,
+    ) -> UnifiedInventoryHistory:
+        history = UnifiedInventoryHistory(
+            inventory_item_id=item.id,
+            change_type=change_type,
+            quantity_change=quantity_change,
+            unit=unit,
+            timestamp=timestamp,
+            organization_id=organization_id,
+            created_by=admin_user.id,
+            notes=notes,
+        )
+        if batch:
+            history.batch_id = batch.id
+        if lot:
+            history.affected_lot_id = lot.id
+            history.fifo_code = lot.fifo_code
+        if extra:
+            for key, value in extra.items():
+                setattr(history, key, value)
+        db.session.add(history)
+        return history
+
+    # Ensure required units and categories exist
+    ensure_unit('cup', 'cup', 'volume', 'ml', 236.588)
+    ensure_unit('cl', 'cL', 'volume', 'ml', 10.0)
+
+    categories = {
+        name: get_or_create_category(name)
+        for name in ['Dairy', 'Syrups', 'Container', 'Other']
     }
 
-    # Test inventory items with various units for conversion testing
-    test_items = [
-        # Fruits (count units)
-        {
-            'name': 'Apples',
-            'type': 'ingredient',
-            'unit': 'count',
-            'cost_per_unit': 0.75,
-            'category_id': solid_cat.id,
-            'is_perishable': True,
-            'shelf_life_days': 7,
-            'lots': [
-                {'quantity': 50, 'unit_cost': 0.75, 'days_ago': 10, 'expired': True},  # Expired lot
-                {'quantity': 100, 'unit_cost': 0.80, 'days_ago': 2, 'expired': False},  # Fresh lot
-            ]
-        },
-        {
-            'name': 'Bananas',
-            'type': 'ingredient',
-            'unit': 'count',
-            'cost_per_unit': 0.50,
-            'category_id': solid_cat.id,
-            'is_perishable': True,
-            'shelf_life_days': 5,
-            'lots': [
-                {'quantity': 24, 'unit_cost': 0.50, 'days_ago': 6, 'expired': True},  # Expired lot
-                {'quantity': 36, 'unit_cost': 0.45, 'days_ago': 1, 'expired': False},  # Fresh lot
-            ]
-        },
+    beverage_category = ProductCategory.query.filter_by(name='Beverages').first()
+    if not beverage_category:
+        beverage_category = ProductCategory(
+            name='Beverages',
+            is_typically_portioned=False,
+            sku_name_template='{variant} {product} ({container})',
+            skin_enabled=False,
+        )
+        db.session.add(beverage_category)
+        db.session.flush()
+        print("   ➕ Created product category 'Beverages'")
 
-        # Meat (weight units)
-        {
-            'name': 'Ground Beef',
-            'type': 'ingredient',
-            'unit': 'lb',
-            'cost_per_unit': 8.99,
-            'category_id': solid_cat.id,
-            'is_perishable': True,
-            'shelf_life_days': 3,
-            'lots': [
-                {'quantity': 5.0, 'unit_cost': 8.99, 'days_ago': 1, 'expired': False},
-            ]
-        },
+    # Stage 1: Seed inventory for living operations
+    print("\n→ Building ingredient and container inventory...")
 
-        # Dairy (volume converted to weight)
+    living_inventory_plan = [
         {
+            'key': 'Whole Milk',
             'name': 'Whole Milk',
             'type': 'ingredient',
             'unit': 'gallon',
-            'cost_per_unit': 4.50,
-            'category_id': dairy_cat.id,
+            'cost_per_unit': 4.95,
+            'category': categories['Dairy'],
+            'density': 1.03,
             'is_perishable': True,
             'shelf_life_days': 7,
+            'global_item': {
+                'name': 'Whole Milk',
+                'item_type': 'ingredient',
+                'density': 1.03,
+                'default_unit': 'gallon',
+                'ingredient_category_id': categories['Dairy'].id,
+                'recommended_shelf_life_days': 7,
+            },
             'lots': [
-                {'quantity': 3.0, 'unit_cost': 4.50, 'days_ago': 2, 'expired': False},
-                {'quantity': 2.0, 'unit_cost': 4.25, 'days_ago': 5, 'expired': False},
-            ]
+                {'code': 'MILK-LOT-A', 'quantity': 2.5, 'remaining_quantity': 0.0, 'unit_cost': 4.75, 'days_ago': 32, 'expired': True, 'notes': 'Opening month delivery'},
+                {'code': 'MILK-LOT-B', 'quantity': 3.0, 'remaining_quantity': 1.8, 'unit_cost': 4.95, 'days_ago': 12, 'notes': 'Weekly restock from local dairy'},
+                {'code': 'MILK-LOT-C', 'quantity': 3.0, 'remaining_quantity': 2.74, 'unit_cost': 5.05, 'days_ago': 4, 'notes': 'Fresh restock pending current batch'},
+            ],
         },
-
-        # Liquids for volume conversions
         {
-            'name': 'Apple Cider Vinegar',
+            'key': 'Wildflower Honey',
+            'name': 'Wildflower Honey',
             'type': 'ingredient',
-            'unit': 'liter',
-            'cost_per_unit': 3.25,
-            'category_id': liquid_cat.id,
-            'is_perishable': False,
-            'shelf_life_days': None,
+            'unit': 'lb',
+            'cost_per_unit': 3.85,
+            'category': categories['Syrups'],
+            'density': 1.42,
+            'is_perishable': True,
+            'shelf_life_days': 540,
+            'global_item': {
+                'name': 'Honey',
+                'item_type': 'ingredient',
+                'density': 1.42,
+                'default_unit': 'lb',
+                'ingredient_category_id': categories['Syrups'].id,
+                'recommended_shelf_life_days': 540,
+            },
             'lots': [
-                {'quantity': 2.0, 'unit_cost': 3.25, 'days_ago': 10, 'expired': False},
-            ]
+                {'code': 'HONEY-LOT-A', 'quantity': 50.0, 'remaining_quantity': 0.0, 'unit_cost': 3.45, 'days_ago': 210, 'expired': True, 'notes': 'Legacy drum now empty'},
+                {'code': 'HONEY-LOT-B', 'quantity': 55.0, 'remaining_quantity': 20.0, 'unit_cost': 3.75, 'days_ago': 45, 'notes': 'Summer harvest purchase'},
+                {'code': 'HONEY-LOT-C', 'quantity': 55.0, 'remaining_quantity': 28.85, 'unit_cost': 3.95, 'days_ago': 8, 'notes': 'Recent cooperative delivery'},
+            ],
         },
-
-        # Oil stored in volume
         {
-            'name': 'Olive Oil',
-            'type': 'ingredient',
-            'unit': 'ml',
-            'cost_per_unit': 0.02,
-            'category_id': oil_cat.id,
-            'is_perishable': False,
-            'shelf_life_days': None,
-            'lots': [
-                {'quantity': 1000.0, 'unit_cost': 0.02, 'days_ago': 15, 'expired': False},
-            ]
-        },
-
-        # Wax (weight)
-        {
-            'name': 'Beeswax',
-            'type': 'ingredient',
-            'unit': 'oz',
-            'cost_per_unit': 1.25,
-            'category_id': wax_cat.id,
-            'is_perishable': False,
-            'shelf_life_days': None,
-            'lots': [
-                {'quantity': 32.0, 'unit_cost': 1.25, 'days_ago': 30, 'expired': False},
-            ]
-        },
-
-        # Sugar for weight conversions (kg to grams)
-        {
-            'name': 'Granulated Sugar',
-            'type': 'ingredient',
-            'unit': 'kg',
-            'cost_per_unit': 3.50,
-            'category_id': solid_cat.id,
-            'is_perishable': False,
-            'shelf_life_days': None,
-            'lots': [
-                {'quantity': 5.0, 'unit_cost': 3.50, 'days_ago': 20, 'expired': False},
-            ]
-        },
-
-        # Item with no lots/history for modal testing
-        {
-            'name': 'Vanilla Extract',
-            'type': 'ingredient',
-            'unit': 'floz',
-            'cost_per_unit': 2.00,
-            'category_id': liquid_cat.id,
-            'is_perishable': False,
-            'shelf_life_days': None,
-            'lots': []  # No lots - for testing initial entry
-        },
-
-        {
-            'name': 'Sea Salt',
-            'type': 'ingredient',
-            'unit': 'gram',
-            'cost_per_unit': 0.01,
-            'category_id': solid_cat.id,
-            'is_perishable': False,
-            'shelf_life_days': None,
-            'lots': []  # No lots - for testing initial entry
-        },
-
-        # Containers
-        {
-            'name': 'Glass 4oz Jars',
+            'key': '4 fl oz Boston Round Bottle',
+            'name': '4 fl oz Boston Round Bottle',
             'type': 'container',
             'unit': 'unit',
-            'cost_per_unit': 1.25,
-            'category_id': container_cat.id,
-            'is_perishable': False,
-            'shelf_life_days': None,
+            'cost_per_unit': 0.82,
+            'category': categories['Container'],
+            'capacity': 4.0,
+            'capacity_unit': 'floz',
+            'container_style': 'Boston Round',
+            'container_material': 'Glass',
+            'container_type': 'Bottle',
+            'global_item': {
+                'name': 'Boston Round Bottle 4 fl oz',
+                'item_type': 'container',
+                'capacity': 4.0,
+                'capacity_unit': 'floz',
+                'container_style': 'Boston Round',
+                'container_material': 'Glass',
+                'container_type': 'Bottle',
+            },
             'lots': [
-                {'quantity': 50, 'unit_cost': 1.25, 'days_ago': 14, 'expired': False},
-            ]
-        },
-
-        {
-            'name': 'Glass 10oz Jars',
-            'type': 'container',
-            'unit': 'unit',
-            'cost_per_unit': 1.75,
-            'category_id': container_cat.id,
-            'is_perishable': False,
-            'shelf_life_days': None,
-            'lots': [
-                {'quantity': 30, 'unit_cost': 1.75, 'days_ago': 14, 'expired': False},
-            ]
-        },
-
-        {
-            'name': 'Paper Plates (5-pack)',
-            'type': 'container',
-            'unit': 'unit',
-            'cost_per_unit': 3.99,
-            'category_id': container_cat.id,
-            'is_perishable': False,
-            'shelf_life_days': None,
-            'lots': [
-                {'quantity': 10, 'unit_cost': 3.99, 'days_ago': 7, 'expired': False},
-            ]
+                {'code': 'BOSTON-LOT-A', 'quantity': 120, 'remaining_quantity': 75, 'unit_cost': 0.8, 'days_ago': 35, 'notes': 'Bulk glass pallet'},
+                {'code': 'BOSTON-LOT-B', 'quantity': 80, 'remaining_quantity': 70, 'unit_cost': 0.84, 'days_ago': 7, 'notes': 'Top off order for autumn promotions'},
+                {'code': 'BOSTON-LOT-C', 'quantity': 40, 'remaining_quantity': 0, 'unit_cost': 0.86, 'days_ago': 52, 'notes': 'Legacy lot fully consumed'},
+            ],
         },
     ]
 
-    print(f"Creating {len(test_items)} test inventory items...")
+    inventory_items: Dict[str, InventoryItem] = {}
+    total_lots_created = 0
+    inventory_items_created = 0
 
-    created_items = {}
-    total_lots = 0
-
-    for item_data in test_items:
-        # Create inventory item
+    for item_data in living_inventory_plan:
         lots_data = item_data.pop('lots')
+        global_item_meta = item_data.pop('global_item')
 
-        # Check if item already exists
         existing_item = InventoryItem.query.filter_by(
             name=item_data['name'],
-            organization_id=organization_id
+            organization_id=organization_id,
         ).first()
 
         if existing_item:
-            print(f"   ⚠️  Item {item_data['name']} already exists, skipping...")
-            created_items[item_data['name']] = existing_item
-            continue
+            inventory_item = existing_item
+            inventory_item.unit = item_data['unit']
+            inventory_item.cost_per_unit = item_data['cost_per_unit']
+            inventory_item.category_id = item_data['category'].id if item_data.get('category') else None
+            inventory_item.density = item_data.get('density')
+            inventory_item.type = item_data['type']
+            inventory_item.is_perishable = item_data.get('is_perishable', False)
+            inventory_item.shelf_life_days = item_data.get('shelf_life_days')
+            inventory_item.capacity = item_data.get('capacity')
+            inventory_item.capacity_unit = item_data.get('capacity_unit')
+            inventory_item.container_style = item_data.get('container_style')
+            inventory_item.container_material = item_data.get('container_material')
+            inventory_item.container_type = item_data.get('container_type')
+            # Reset existing lots for a clean reseed
+            for lot in list(inventory_item.lots):
+                db.session.delete(lot)
+            inventory_item.quantity = 0
+            print(f"   ↻ Reset inventory item '{inventory_item.name}' to living configuration")
+        else:
+            inventory_item = InventoryItem(
+                name=item_data['name'],
+                unit=item_data['unit'],
+                cost_per_unit=item_data['cost_per_unit'],
+                category_id=item_data['category'].id if item_data.get('category') else None,
+                density=item_data.get('density'),
+                type=item_data['type'],
+                is_perishable=item_data.get('is_perishable', False),
+                shelf_life_days=item_data.get('shelf_life_days'),
+                capacity=item_data.get('capacity'),
+                capacity_unit=item_data.get('capacity_unit'),
+                container_style=item_data.get('container_style'),
+                container_material=item_data.get('container_material'),
+                container_type=item_data.get('container_type'),
+                quantity=0.0,
+                organization_id=organization_id,
+                created_by=admin_user.id,
+            )
+            db.session.add(inventory_item)
+            db.session.flush()
+            inventory_items_created += 1
+            print(f"   ✅ Created inventory item '{inventory_item.name}'")
 
-        # Add organization_id and unit (keep as string, not unit_id)
-        item_data['organization_id'] = organization_id
-        unit_name = item_data['unit']
-        # Keep unit as string since InventoryItem expects unit field, not unit_id
+        global_item = ensure_global_item(global_item_meta['name'], global_item_meta['item_type'], {
+            key: value for key, value in global_item_meta.items() if key not in {'name', 'item_type'}
+        })
+        inventory_item.global_item_id = global_item.id
+        inventory_item.reference_item_name = global_item.name
 
-        # Set default quantity to 0 (will be updated by lots)
-        item_data['quantity'] = 0.0
+        inventory_items[item_data['key']] = inventory_item
 
-        # Add storage fields - set reasonable defaults based on item type
-        item_data['capacity'] = 1.0  # Default container capacity
-        item_data['capacity_unit'] = item_data['unit']  # Use same unit as item unit
-
-        inventory_item = InventoryItem(**item_data)
-        db.session.add(inventory_item)
-        db.session.flush()  # Get the ID
-
-        created_items[inventory_item.name] = inventory_item
-
-        # Create lots for this item
-        total_quantity = 0.0
-        for lot_data in lots_data:
-            # Calculate expiration date
-            received_date = TimezoneUtils.utc_now() - timedelta(days=lot_data['days_ago'])
+        # Create lots
+        item_total_quantity = 0.0
+        for idx, lot_data in enumerate(lots_data):
+            received_date = now - timedelta(days=lot_data['days_ago'])
             expiration_date = None
-
             if inventory_item.is_perishable and inventory_item.shelf_life_days:
-                if lot_data.get('expired', False):
-                    # Force expiration by setting shelf life to 1 day and received date further back
+                if lot_data.get('expired'):
                     expiration_date = received_date + timedelta(days=1)
                 else:
                     expiration_date = received_date + timedelta(days=inventory_item.shelf_life_days)
 
             lot = InventoryLot(
                 inventory_item_id=inventory_item.id,
-                remaining_quantity=lot_data['quantity'],
+                remaining_quantity=lot_data.get('remaining_quantity', lot_data['quantity']),
                 original_quantity=lot_data['quantity'],
-                unit=inventory_item.unit,  # Use unit string directly
+                unit=inventory_item.unit,
                 unit_cost=lot_data['unit_cost'],
                 received_date=received_date,
                 expiration_date=expiration_date,
+                shelf_life_days=inventory_item.shelf_life_days,
                 source_type='restock',
-                source_notes='Test data seeder',
+                source_notes=lot_data.get('notes', 'Restock'),
                 created_by=admin_user.id,
                 organization_id=organization_id,
-                fifo_code=f"TEST-{inventory_item.id}-{len(lots_data)}-{lot_data['days_ago']}"
+                fifo_code=f"LIVING-{inventory_item.id}-{idx + 1}-{int(received_date.timestamp())}",
             )
             db.session.add(lot)
-            db.session.flush()  # Get lot ID
+            db.session.flush()
 
-            # Create history entry for this lot creation
-            from app.models.unified_inventory_history import UnifiedInventoryHistory
+            item_total_quantity += lot.remaining_quantity
+            total_lots_created += 1
 
-            history_entry = UnifiedInventoryHistory(
-                inventory_item_id=inventory_item.id,
-                affected_lot_id=lot.id,
-                action_type='lot_created',
-                quantity_change=lot_data['quantity'],
-                quantity_after=lot_data['quantity'],
+            log_history(
+                item=inventory_item,
+                change_type='lot_created',
+                quantity_change=lot.original_quantity,
                 unit=inventory_item.unit,
-                notes=f"Test data lot creation - {lot.batch_id}",
-                created_at=TimezoneUtils.utc_now(),
-                organization_id=organization_id
+                timestamp=received_date,
+                notes=f"Lot {lot_data.get('code', idx + 1)} received",
+                lot=lot,
             )
-            db.session.add(history_entry)
-            total_quantity += lot_data['quantity']
-            total_lots += 1
 
-        # Update item quantity
-        inventory_item.quantity = total_quantity
+        inventory_item.quantity = item_total_quantity
 
-        print(f"   ✅ Created {inventory_item.name} with {len(lots_data)} lots")
+    # Stage 2: Recipe configuration
+    print("\n→ Configuring milk & honey recipe...")
 
-    # Commit all inventory items and lots
-    try:
-        db.session.commit()
-        print(f"✅ Created {len(created_items)} inventory items with {total_lots} lots")
-    except Exception as e:
-        print(f"❌ Error creating inventory items: {e}")
-        db.session.rollback()
-        return
+    container_item = inventory_items['4 fl oz Boston Round Bottle']
+    recipe_name = 'Milk & Honey Elixir'
+    recipe = Recipe.query.filter_by(name=recipe_name, organization_id=organization_id).first()
 
-    # Create test recipes
-    print("\nCreating test recipes...")
-
-    recipes_data = [
-        {
-            'name': 'Simple Applesauce',
-            'instructions': 'Blend apples until smooth. Pour into glass containers.',
-            'predicted_yield': 4.0,
-            'predicted_yield_unit': 'floz',
-            'ingredients': [
-                {'name': 'Apples', 'quantity': 3, 'unit': 'count'},  # 3 apples -> 4 fl oz
-                {'name': 'Granulated Sugar', 'quantity': 50, 'unit': 'gram'},  # kg to gram conversion
-            ],
-            'containers': ['Glass 4oz Jars']
-        },
-        {
-            'name': 'Milk and Honey Mixture',
-            'instructions': 'Recipe testing gallon to liter and volume conversions',
-            'predicted_yield': 500.0,
-            'predicted_yield_unit': 'ml',
-            'ingredients': [
-                {'name': 'Whole Milk', 'quantity': 0.25, 'unit': 'gallon'},  # Gallon to liter conversion
-                {'name': 'Vanilla Extract', 'quantity': 1, 'unit': 'floz'},  # Volume mixing
-            ],
-            'containers': ['Glass 10oz Jars']
-        },
-        {
-            'name': 'Complex Conversion Test',
-            'instructions': 'Recipe testing multiple unit conversions simultaneously',
-            'predicted_yield': 1.0,
-            'predicted_yield_unit': 'liter',
-            'ingredients': [
-                {'name': 'Olive Oil', 'quantity': 250, 'unit': 'ml'},  # ml to liter
-                {'name': 'Apple Cider Vinegar', 'quantity': 0.5, 'unit': 'liter'},  # liter to ml
-                {'name': 'Beeswax', 'quantity': 2, 'unit': 'oz'},  # oz to gram conversion
-                {'name': 'Sea Salt', 'quantity': 5, 'unit': 'gram'},  # direct gram
-            ],
-            'containers': ['Glass 10oz Jars', 'Glass 4oz Jars']
-        },
-        {
-            'name': 'Fruit Salad',
-            'instructions': 'Multi-fruit recipe with perishable ingredients',
-            'predicted_yield': 2.0,
-            'predicted_yield_unit': 'lb',
-            'ingredients': [
-                {'name': 'Apples', 'quantity': 5, 'unit': 'count'},
-                {'name': 'Bananas', 'quantity': 3, 'unit': 'count'},
-                {'name': 'Granulated Sugar', 'quantity': 100, 'unit': 'gram'},
-            ],
-            'containers': ['Paper Plates (5-pack)']
-        }
-    ]
-
-    created_recipes = 0
-    for recipe_data in recipes_data:
-        # Check if recipe exists
-        existing_recipe = Recipe.query.filter_by(
-            name=recipe_data['name'],
-            organization_id=organization_id
-        ).first()
-
-        if existing_recipe:
-            print(f"   ⚠️  Recipe {recipe_data['name']} already exists, skipping...")
-            continue
-
-        # Create recipe
+    if not recipe:
         recipe = Recipe(
-            name=recipe_data['name'],
-            instructions=recipe_data['instructions'],
-            predicted_yield=recipe_data['predicted_yield'],
-            predicted_yield_unit=recipe_data['predicted_yield_unit'],
-            organization_id=organization_id  # Add organization_id
+            name=recipe_name,
+            organization_id=organization_id,
+            created_by=admin_user.id,
         )
         db.session.add(recipe)
-        db.session.flush()  # Get the ID
 
-        # Add ingredients
-        for ingredient_data in recipe_data['ingredients']:
-            inventory_item = created_items.get(ingredient_data['name'])
-            if not inventory_item:
-                print(f"   ⚠️  Ingredient {ingredient_data['name']} not found for recipe {recipe_data['name']}")
-                continue
+    recipe.instructions = (
+        "Warm milk to 120°F, dissolve honey, and blend until uniform. Cool and "
+        "bottle immediately to maintain suspension."
+    )
+    recipe.predicted_yield = 4.0
+    recipe.predicted_yield_unit = 'floz'
+    recipe.is_portioned = False
+    recipe.portioning_data = None
+    recipe.allowed_containers = [container_item.id]
+    recipe.category_id = beverage_category.id
 
-            unit = units.get(ingredient_data['unit'])
-            if not unit:
-                print(f"   ⚠️  Unit {ingredient_data['unit']} not found")
-                continue
+    # Reset recipe ingredients for deterministic seeding
+    for existing in list(recipe.recipe_ingredients):
+        db.session.delete(existing)
 
-            recipe_ingredient = RecipeIngredient(
+    recipe_ingredients_data = [
+        {'item_key': 'Wildflower Honey', 'quantity': 1.0, 'unit': 'cup', 'order': 0},
+        {'item_key': 'Whole Milk', 'quantity': 10.0, 'unit': 'cl', 'order': 1},
+    ]
+
+    for ingredient in recipe_ingredients_data:
+        inv_item = inventory_items[ingredient['item_key']]
+        recipe_ingredient = RecipeIngredient(
+            recipe=recipe,
+            inventory_item_id=inv_item.id,
+            quantity=ingredient['quantity'],
+            unit=ingredient['unit'],
+            order_position=ingredient['order'],
+            organization_id=organization_id,
+        )
+        db.session.add(recipe_ingredient)
+
+    print(f"   ✅ Recipe '{recipe_name}' refreshed with living ingredient data")
+
+    # Stage 3: Finished goods inventory, product, and SKU
+    print("\n→ Creating finished goods product & SKU...")
+
+    product_item_key = 'Milk & Honey Elixir (Finished)'
+    product_item = InventoryItem.query.filter_by(
+        name=product_item_key,
+        organization_id=organization_id,
+    ).first()
+
+    if product_item:
+        for lot in list(product_item.lots):
+            db.session.delete(lot)
+        product_item.quantity = 0
+        print("   ↻ Reset finished goods inventory")
+    else:
+        product_item = InventoryItem(
+            name=product_item_key,
+            unit='unit',
+            cost_per_unit=7.5,
+            category_id=categories['Other'].id,
+            type='product',
+            is_perishable=True,
+            shelf_life_days=45,
+            quantity=0.0,
+            organization_id=organization_id,
+            created_by=admin_user.id,
+        )
+        db.session.add(product_item)
+        db.session.flush()
+        inventory_items_created += 1
+        print("   ✅ Created finished goods inventory item")
+
+    inventory_items[product_item_key] = product_item
+
+    product = Product.query.filter_by(name='Milk & Honey Elixir', organization_id=organization_id).first()
+    if not product:
+        product = Product(
+            name='Milk & Honey Elixir',
+            description='Gently warmed whole milk blended with raw wildflower honey.',
+            category_id=beverage_category.id,
+            organization_id=organization_id,
+            created_by=admin_user.id,
+        )
+        db.session.add(product)
+        db.session.flush()
+        print("   ✅ Created product profile")
+
+    variant = ProductVariant.query.filter_by(product_id=product.id, name='Original').first()
+    if not variant:
+        variant = ProductVariant(
+            product_id=product.id,
+            name='Original',
+            description='Classic formulation',
+            organization_id=organization_id,
+            created_by=admin_user.id,
+        )
+        db.session.add(variant)
+        db.session.flush()
+        print("   ✅ Added product variant")
+
+    product_sku = ProductSKU.query.filter_by(inventory_item_id=product_item.id).first()
+    if not product_sku:
+        product_sku = ProductSKU(
+            inventory_item_id=product_item.id,
+            product_id=product.id,
+            variant_id=variant.id,
+            size_label='4 fl oz',
+            sku='MH-ELIXIR-4OZ',
+            sku_code='MH-ELIXIR-4OZ',
+            sku_name='Milk & Honey Elixir 4 fl oz',
+            unit='unit',
+            retail_price=14.0,
+            wholesale_price=9.5,
+            low_stock_threshold=12,
+            organization_id=organization_id,
+            created_by=admin_user.id,
+        )
+        db.session.add(product_sku)
+        db.session.flush()
+        print("   ✅ Created product SKU")
+
+    # Stage 4: Completed & in-progress batches
+    print("\n→ Generating historical batches...")
+
+    batch_plan = [
+        {
+            'label_code': 'MH-240901',
+            'scale': 40,
+            'status': 'completed',
+            'started_days_ago': 34,
+            'completed_days_ago': 33,
+            'final_quantity': 40,
+            'remaining_quantity': 0,
+            'notes': 'Pilot production for wholesale tastings',
+        },
+        {
+            'label_code': 'MH-240915',
+            'scale': 50,
+            'status': 'completed',
+            'started_days_ago': 20,
+            'completed_days_ago': 19,
+            'final_quantity': 50,
+            'remaining_quantity': 0,
+            'notes': 'Market release run fulfilling co-op orders',
+        },
+        {
+            'label_code': 'MH-241001',
+            'scale': 60,
+            'status': 'completed',
+            'started_days_ago': 6,
+            'completed_days_ago': 5,
+            'final_quantity': 60,
+            'remaining_quantity': 10,
+            'notes': 'Bulk run ahead of holiday demand',
+        },
+        {
+            'label_code': 'MH-Current',
+            'scale': 25,
+            'status': 'in_progress',
+            'started_days_ago': 1,
+            'completed_days_ago': None,
+            'final_quantity': None,
+            'remaining_quantity': None,
+            'notes': 'Current batch staged and heating',
+        },
+    ]
+
+    batches_by_label: Dict[str, Batch] = {}
+    completed_batch_count = 0
+    in_progress_batch_count = 0
+
+    honey_item = inventory_items['Wildflower Honey']
+    milk_item = inventory_items['Whole Milk']
+
+    for plan in batch_plan:
+        batch = Batch.query.filter_by(label_code=plan['label_code'], organization_id=organization_id).first()
+
+        started_at = now - timedelta(days=plan['started_days_ago'])
+        completed_at = None
+        if plan['status'] == 'completed':
+            completed_at = now - timedelta(days=plan['completed_days_ago'])
+
+        if batch:
+            for ingredient in list(batch.batch_ingredients):
+                db.session.delete(ingredient)
+            for container in list(batch.containers):
+                db.session.delete(container)
+            batch.scale = plan['scale']
+            batch.status = plan['status']
+            batch.projected_yield = plan['scale'] * 4.0
+            batch.projected_yield_unit = 'floz'
+            batch.batch_type = 'product'
+            batch.label_code = plan['label_code']
+            batch.recipe = recipe
+            batch.started_at = started_at
+            batch.completed_at = completed_at
+            batch.final_quantity = plan['final_quantity']
+            batch.remaining_quantity = plan['remaining_quantity']
+            batch.notes = plan['notes']
+            batch.sku_id = product_sku.id
+            batch.output_unit = 'unit'
+            batch.organization_id = organization_id
+            print(f"   ↻ Updated batch {plan['label_code']}")
+        else:
+            batch = Batch(
                 recipe_id=recipe.id,
-                inventory_item_id=inventory_item.id,
-                quantity=ingredient_data['quantity'],
-                unit=ingredient_data['unit'],  # Use unit string instead of unit_id
-                organization_id=organization_id
+                label_code=plan['label_code'],
+                batch_type='product',
+                projected_yield=plan['scale'] * 4.0,
+                projected_yield_unit='floz',
+                scale=plan['scale'],
+                status=plan['status'],
+                notes=plan['notes'],
+                started_at=started_at,
+                completed_at=completed_at,
+                final_quantity=plan['final_quantity'],
+                remaining_quantity=plan['remaining_quantity'],
+                sku_id=product_sku.id,
+                output_unit='unit',
+                organization_id=organization_id,
+                created_by=admin_user.id,
             )
-            db.session.add(recipe_ingredient)
+            db.session.add(batch)
+            print(f"   ✅ Recorded batch {plan['label_code']}")
 
-        # Add allowed containers
-        for container_name in recipe_data['containers']:
-            container_item = created_items.get(container_name)
-            if container_item:
-                recipe.allowed_containers.append(container_item)
+        if plan['status'] == 'completed':
+            completed_batch_count += 1
+        else:
+            in_progress_batch_count += 1
 
-        print(f"   ✅ Created recipe: {recipe.name}")
-        created_recipes += 1
+        honey_usage = 0.0 if plan['status'] != 'completed' else round(plan['scale'] * HONEY_CUP_TO_LB, 3)
+        milk_usage = 0.0 if plan['status'] != 'completed' else round(plan['scale'] * MILK_CL_TO_GALLON, 3)
 
+        honey_batch_ing = BatchIngredient(
+            batch=batch,
+            inventory_item_id=honey_item.id,
+            quantity_used=honey_usage,
+            unit='lb',
+            cost_per_unit=honey_item.cost_per_unit,
+            organization_id=organization_id,
+        )
+        db.session.add(honey_batch_ing)
+
+        milk_batch_ing = BatchIngredient(
+            batch=batch,
+            inventory_item_id=milk_item.id,
+            quantity_used=milk_usage,
+            unit='gallon',
+            cost_per_unit=milk_item.cost_per_unit,
+            organization_id=organization_id,
+        )
+        db.session.add(milk_batch_ing)
+
+        if plan['status'] == 'completed' and plan['final_quantity']:
+            container_batch = BatchContainer(
+                batch=batch,
+                container_id=container_item.id,
+                container_quantity=plan['final_quantity'],
+                quantity_used=plan['final_quantity'],
+                fill_quantity=4.0,
+                fill_unit='floz',
+                cost_each=container_item.cost_per_unit,
+            )
+            db.session.add(container_batch)
+
+        batches_by_label[plan['label_code']] = batch
+
+    # Stage 5: Product lots tied to batches
+    print("\n→ Building finished goods lots...")
+
+    product_lot_plan = [
+        {'batch_label': 'MH-240901', 'quantity': 40, 'remaining_quantity': 0, 'unit_cost': 6.8},
+        {'batch_label': 'MH-240915', 'quantity': 50, 'remaining_quantity': 0, 'unit_cost': 6.7},
+        {'batch_label': 'MH-241001', 'quantity': 60, 'remaining_quantity': 10, 'unit_cost': 6.65},
+    ]
+
+    product_on_hand = 0.0
+
+    for lot_idx, plan in enumerate(product_lot_plan):
+        batch = batches_by_label[plan['batch_label']]
+        completed_at = batch.completed_at or now
+        lot = InventoryLot(
+            inventory_item_id=product_item.id,
+            remaining_quantity=plan['remaining_quantity'],
+            original_quantity=plan['quantity'],
+            unit='unit',
+            unit_cost=plan['unit_cost'],
+            received_date=completed_at,
+            expiration_date=completed_at + timedelta(days=product_item.shelf_life_days or 0),
+            shelf_life_days=product_item.shelf_life_days,
+            source_type='finished_batch',
+            source_notes=f'Finished goods from {batch.label_code}',
+            batch_id=batch.id,
+            created_by=admin_user.id,
+            organization_id=organization_id,
+            fifo_code=f"FIN-{product_item.id}-{lot_idx + 1}-{int(completed_at.timestamp())}",
+        )
+        db.session.add(lot)
+        db.session.flush()
+
+        product_on_hand += plan['remaining_quantity']
+        total_lots_created += 1
+
+        log_history(
+            item=product_item,
+            change_type='batch_completed',
+            quantity_change=plan['quantity'],
+            unit='unit',
+            timestamp=completed_at,
+            notes=f'Finished goods created via {batch.label_code}',
+            batch=batch,
+            lot=lot,
+        )
+
+    product_item.quantity = product_on_hand
+
+    # Stage 6: Inventory usage & sales history
+    print("\n→ Logging inventory movements...")
+
+    for plan in batch_plan:
+        if plan['status'] != 'completed':
+            continue
+        batch = batches_by_label[plan['label_code']]
+        completed_at = batch.completed_at or now
+
+        honey_usage = round(plan['scale'] * HONEY_CUP_TO_LB, 3)
+        milk_usage = round(plan['scale'] * MILK_CL_TO_GALLON, 3)
+        container_usage = plan['final_quantity'] or 0
+
+        log_history(
+            item=honey_item,
+            change_type='batch_usage',
+            quantity_change=-honey_usage,
+            unit='lb',
+            timestamp=completed_at,
+            notes=f'Consumed for {batch.label_code}',
+            batch=batch,
+        )
+
+        log_history(
+            item=milk_item,
+            change_type='batch_usage',
+            quantity_change=-milk_usage,
+            unit='gallon',
+            timestamp=completed_at,
+            notes=f'Consumed for {batch.label_code}',
+            batch=batch,
+        )
+
+        if container_usage:
+            log_history(
+                item=container_item,
+                change_type='batch_usage',
+                quantity_change=-container_usage,
+                unit='unit',
+                timestamp=completed_at,
+                notes=f'Containers filled for {batch.label_code}',
+                batch=batch,
+            )
+
+    sales_plan = [
+        {'batch_label': 'MH-240901', 'quantity': 40, 'days_ago': 31, 'customer': 'Saturday Farmers Market', 'order_id': 'FM-2409-22', 'sale_price': 14.0},
+        {'batch_label': 'MH-240915', 'quantity': 50, 'days_ago': 18, 'customer': 'Co-op Grocer', 'order_id': 'COOP-2410', 'sale_price': 13.5},
+        {'batch_label': 'MH-241001', 'quantity': 50, 'days_ago': 2, 'customer': 'Cafe Collective', 'order_id': 'CAFE-2411', 'sale_price': 14.5},
+    ]
+
+    running_finished_qty = 0.0
+
+    # Production entries for SKU history
+    for plan in product_lot_plan:
+        batch = batches_by_label[plan['batch_label']]
+        production_time = batch.completed_at or now
+        running_finished_qty += plan['quantity']
+        sku_history = ProductSKUHistory(
+            inventory_item_id=product_item.id,
+            change_type='production_completed',
+            quantity_change=plan['quantity'],
+            remaining_quantity=running_finished_qty,
+            unit='unit',
+            unit_cost=plan['unit_cost'],
+            batch_id=batch.id,
+            fifo_code=f"SKU-{batch.label_code}-PROD",
+            timestamp=production_time,
+            organization_id=organization_id,
+            created_by=admin_user.id,
+            notes=f'Finished goods received from {batch.label_code}',
+        )
+        db.session.add(sku_history)
+
+    for sale in sales_plan:
+        batch = batches_by_label[sale['batch_label']]
+        sale_timestamp = now - timedelta(days=sale['days_ago'])
+        running_finished_qty -= sale['quantity']
+
+        log_history(
+            item=product_item,
+            change_type='sale',
+            quantity_change=-sale['quantity'],
+            unit='unit',
+            timestamp=sale_timestamp,
+            notes=f"Sold via {sale['customer']}",
+            batch=batch,
+            extra={
+                'customer': sale['customer'],
+                'order_id': sale['order_id'],
+                'sale_price': sale['sale_price'],
+            },
+        )
+
+        sku_sale = ProductSKUHistory(
+            inventory_item_id=product_item.id,
+            change_type='sale',
+            quantity_change=-sale['quantity'],
+            remaining_quantity=max(running_finished_qty, 0.0),
+            unit='unit',
+            sale_price=sale['sale_price'],
+            customer=sale['customer'],
+            order_id=sale['order_id'],
+            batch_id=batch.id,
+            fifo_code=f"SKU-{batch.label_code}-SALE",
+            timestamp=sale_timestamp,
+            organization_id=organization_id,
+            created_by=admin_user.id,
+            notes=f"Sale fulfilled for {sale['customer']}",
+        )
+        db.session.add(sku_sale)
+
+    # Align finished goods quantity with remaining SKU balance
+    product_item.quantity = max(running_finished_qty, 0.0)
+
+    # Stage 7: Active reservation
+    print("\n→ Creating active reservations...")
+
+    reservation = Reservation(
+        order_id='ORDER-1098',
+        reservation_id='RES-1098',
+        product_item_id=product_item.id,
+        reserved_item_id=product_item.id,
+        quantity=2,
+        unit='unit',
+        unit_cost=product_item.cost_per_unit,
+        sale_price=14.5,
+        customer='Cafe Collective',
+        status='active',
+        source='manual',
+        created_at=now - timedelta(days=1),
+        expires_at=now + timedelta(days=5),
+        notes='Reserve inventory for Thursday pickup after cupping event.',
+        created_by=admin_user.id,
+        organization_id=organization_id,
+    )
+    db.session.add(reservation)
+    reservations_created = 1
+
+    # Finalize
     try:
         db.session.commit()
-        print(f"✅ Created {created_recipes} test recipes")
-    except Exception as e:
-        print(f"❌ Error creating recipes: {e}")
+        print("\n=== Living Account Summary ===")
+        print(f"✅ Inventory Items Created/Updated: {inventory_items_created}")
+        print(f"✅ Inventory Lots Created: {total_lots_created}")
+        print(f"✅ Recipe Ready: {recipe.name} (yield {recipe.predicted_yield} {recipe.predicted_yield_unit})")
+        print(f"✅ Batches Completed: {completed_batch_count}")
+        print(f"✅ Batches In Progress: {in_progress_batch_count}")
+        print(f"✅ Finished Goods On Hand: {product_item.quantity} {product_item.unit}")
+        print(f"✅ Active Reservations: {reservations_created}")
+        print("🧪 Dataset ready for full living-account workflows.")
+    except Exception as exc:
         db.session.rollback()
-        return
-
-    # Summary
-    print("\n=== Test Data Summary ===")
-    print(f"✅ Inventory Items: {len(created_items)}")
-    print(f"✅ Inventory Lots: {total_lots}")
-    print(f"✅ Recipes: {created_recipes}")
-    print("\n📋 Test Scenarios Available:")
-    print("   • Unit conversions (count→volume, weight→volume, volume→volume)")
-    print("   • Expired lots (apples, bananas)")
-    print("   • Fresh lots with various ages")
-    print("   • Items with no history (vanilla extract, sea salt)")
-    print("   • Perishable and non-perishable items")
-    print("   • Container management")
-    print("   • Complex multi-ingredient recipes")
-    print("\n🧪 Ready for comprehensive system testing!")
+        print(f"❌ Error seeding living data: {exc}")
+        raise
