@@ -179,10 +179,12 @@ document.addEventListener('DOMContentLoaded', function() {
             const unitSelect = document.querySelector('#addIngredientForm select[name="unit"]');
             if (unitSelect) unitSelect.value = data.default_unit;
           }
-          // Perishable defaults
+          // Perishable defaults - trigger Alpine.js reactivity
           const perishableCheckbox = document.getElementById('addIngredientPerishable');
           if (typeof data.default_is_perishable !== 'undefined' && perishableCheckbox) {
             perishableCheckbox.checked = !!data.default_is_perishable;
+            // Trigger Alpine.js change event
+            perishableCheckbox.dispatchEvent(new Event('change'));
           }
           const shelfLifeInput = document.querySelector('#addIngredientForm input[name="shelf_life_days"]');
           if (shelfLifeInput && data.recommended_shelf_life_days) {

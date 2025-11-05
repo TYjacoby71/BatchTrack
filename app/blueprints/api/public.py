@@ -77,6 +77,8 @@ def public_global_item_search():
                 'default_unit': gi.default_unit,
                 'unit': gi.default_unit,  # Also provide as 'unit' for backward compatibility
                 'density': gi.density,
+                'default_is_perishable': gi.default_is_perishable,
+                'recommended_shelf_life_days': gi.recommended_shelf_life_days,
                 'saponification_value': getattr(gi, 'saponification_value', None),
             })
         return jsonify({'success': True, 'results': results})

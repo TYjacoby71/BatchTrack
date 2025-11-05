@@ -182,7 +182,7 @@
 </div>
 
 <!-- Add New Ingredient Form -->
-<form method="post" action="{{ url_for('inventory.add_inventory') }}" class="mb-4" id="addIngredientForm" style="display: none;" x-data="{ showShelfLife: false }">
+<form method="post" action="{{ url_for('inventory.add_inventory') }}" class="mb-4" id="addIngredientForm" style="display: none;" x-data="{ showShelfLife: false, isPerishable: false }">
   <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
   <input type="hidden" name="type" value="ingredient">
   <div class="row g-3 align-items-end">
@@ -205,18 +205,16 @@
       </select>
     </div>
     <div class="col-md-3">
-      <div x-data="{ isPerishable: false }">
-        <h5 class="mb-2">Perishable</h5>
-        <div class="d-flex align-items-center gap-2">
-          <div class="form-check mb-0">
-            <input type="checkbox" name="is_perishable" class="form-check-input" id="addIngredientPerishable" x-model="isPerishable">
-          </div>
-          <input type="number" name="shelf_life_days" class="form-control" 
-                 placeholder="Shelf Life (days)" min="1"
-                 :required="isPerishable"
-                 :disabled="!isPerishable"
-                 :class="{ 'bg-light': !isPerishable }">
+      <h5 class="mb-2">Perishable</h5>
+      <div class="d-flex align-items-center gap-2">
+        <div class="form-check mb-0">
+          <input type="checkbox" name="is_perishable" class="form-check-input" id="addIngredientPerishable" x-model="isPerishable">
         </div>
+        <input type="number" name="shelf_life_days" class="form-control" 
+               placeholder="Shelf Life (days)" min="1"
+               :required="isPerishable"
+               :disabled="!isPerishable"
+               :class="{ 'bg-light': !isPerishable }">
       </div>
     </div>
 
