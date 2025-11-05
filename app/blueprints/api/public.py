@@ -75,6 +75,7 @@ def public_global_item_search():
                 'text': gi.name,
                 'item_type': gi.item_type,
                 'default_unit': gi.default_unit,
+                'unit': gi.default_unit,  # Also provide as 'unit' for backward compatibility
                 'density': gi.density,
                 'saponification_value': getattr(gi, 'saponification_value', None),
             })

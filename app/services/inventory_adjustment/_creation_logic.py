@@ -39,14 +39,14 @@ def create_inventory_item(form_data, organization_id, created_by):
         if global_item and item_type != global_item.item_type:
             return False, f"Selected global item type '{global_item.item_type}' does not match item type '{item_type}'.", None
 
-        # Handle unit - prefer global item's default unit, then form input
+        # Handle unit - prefer user's form selection over global item defaults
         unit_input = None
-        if global_item and global_item.default_unit:
-            # Use global item's default unit directly
-            unit_input = global_item.default_unit
-        elif form_data.get('unit', '').strip():
-            # Fall back to form input if no global item default
+        if form_data.get('unit', '').strip():
+            # User explicitly selected a unit in the form - this takes priority
             unit_input = form_data.get('unit', '').strip()
+        elif global_item and global_item.default_unit:
+            # Fall back to global item's default unit if no form input
+            unit_input = global_item.default_unit
 
         if unit_input:
             # Just use the unit name - don't try to create units here

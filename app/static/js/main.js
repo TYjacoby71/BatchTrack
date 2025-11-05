@@ -150,6 +150,21 @@ document.addEventListener('DOMContentLoaded', function() {
       document.getElementById('addIngredientForm')?.appendChild(hiddenGlobalId);
     }
 
+    // Function to populate unit field when global item is selected
+    function populateUnitFromGlobalItem(globalItemData) {
+      if (globalItemData && globalItemData.default_unit) {
+        const unitSelect = document.querySelector('select[name="unit"]');
+        if (unitSelect) {
+          // Set the unit select to the global item's default unit
+          unitSelect.value = globalItemData.default_unit;
+          console.log('🔧 GLOBAL ITEM: Populated unit field with', globalItemData.default_unit);
+        }
+      }
+    }
+
+    // Make the function globally available for Select2 callbacks
+    window.populateUnitFromGlobalItem = populateUnitFromGlobalItem;
+
     $nameSelect.on('select2:select', function (e) {
       const data = e.params.data || {};
       // If selecting a global item (numeric id), set hidden FK and update visible name to text
