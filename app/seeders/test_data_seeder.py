@@ -1,4 +1,4 @@
-from datetime import timedelta
+from datetime import timedelta, timezone as dt_timezone
 from typing import Dict, List, Optional
 
 from ..extensions import db
@@ -168,6 +168,13 @@ def seed_test_data(organization_id: Optional[int] = None):
             if source_notes is not None:
                 entry.notes = source_notes
 
+    def normalize_timestamp(dt):
+        if dt is None:
+            return None
+        if dt.tzinfo is None:
+            return dt
+        return dt.astimezone(dt_timezone.utc).replace(tzinfo=None)
+
     total_lots_created = 0
 
     # ------------------------------------------------------------------
@@ -216,8 +223,8 @@ def seed_test_data(organization_id: Optional[int] = None):
             },
             "lots": [
                 {"quantity": 2.5, "unit_cost": 4.75, "days_ago": 32, "notes": "Opening month delivery", "expired": True},
-                {"quantity": 3.0, "unit_cost": 4.95, "days_ago": 12, "notes": "Weekly restock from local dairy"},
-                {"quantity": 3.0, "unit_cost": 5.05, "days_ago": 4, "notes": "Fresh restock pending current batch"},
+                {"quantity": 3.0, "unit_cost": 4.95, "days_ago": 6, "notes": "Weekly restock from local dairy"},
+                {"quantity": 3.0, "unit_cost": 5.05, "days_ago": 2, "notes": "Fresh restock pending current batch"},
             ],
         },
         {
@@ -239,8 +246,8 @@ def seed_test_data(organization_id: Optional[int] = None):
             },
             "lots": [
                 {"quantity": 50.0, "unit_cost": 3.45, "days_ago": 210, "notes": "Legacy drum now empty", "expired": True},
-                {"quantity": 55.0, "unit_cost": 3.75, "days_ago": 45, "notes": "Summer harvest purchase"},
-                {"quantity": 55.0, "unit_cost": 3.95, "days_ago": 8, "notes": "Recent cooperative delivery"},
+                {"quantity": 60.0, "unit_cost": 3.75, "days_ago": 45, "notes": "Summer harvest purchase"},
+                {"quantity": 60.0, "unit_cost": 3.95, "days_ago": 8, "notes": "Recent cooperative delivery"},
             ],
         },
         {
@@ -269,7 +276,7 @@ def seed_test_data(organization_id: Optional[int] = None):
             "lots": [
                 {"quantity": 120, "unit_cost": 0.8, "days_ago": 35, "notes": "Bulk glass pallet"},
                 {"quantity": 80, "unit_cost": 0.84, "days_ago": 7, "notes": "Top off order for autumn promotions"},
-                {"quantity": 40, "unit_cost": 0.86, "days_ago": 52, "notes": "Legacy lot fully consumed", "expired": True},
+                {"quantity": 40, "remaining_quantity": 0, "unit_cost": 0.86, "days_ago": 52, "notes": "Legacy lot fully consumed", "expired": True},
             ],
         },
     ]
@@ -550,10 +557,10 @@ def seed_test_data(organization_id: Optional[int] = None):
     }
 
     for plan in batch_plan:
-        started_at = now - timedelta(days=plan["started_days_ago"])
+        started_at = normalize_timestamp(now - timedelta(days=plan["started_days_ago"]))
         completed_at = None
         if plan.get("completed_days_ago") is not None:
-            completed_at = now - timedelta(days=plan["completed_days_ago"])
+            completed_at = normalize_timestamp(now - timedelta(days=plan["completed_days_ago"]))
 
         batch = Batch(
             recipe_id=recipe.id,
@@ -661,8 +668,9 @@ def seed_test_data(organization_id: Optional[int] = None):
                     source_type="finished_batch",
                 ).order_by(InventoryLot.id.desc()).first()
                 if finished_lot:
-                    expiration = completed_at + timedelta(days=product_item.shelf_life_days or 0) if completed_at else None
-                    update_lot_dates(finished_lot, completed_at or now, expiration_at=expiration, source_notes=f"Finished goods from {plan['label_code']}")
+                    current_stamp = completed_at or normalize_timestamp(now)
+                    expiration = current_stamp + timedelta(days=product_item.shelf_life_days or 0) if current_stamp else None
+                    update_lot_dates(finished_lot, current_stamp, expiration_at=expiration, source_notes=f"Finished goods from {plan['label_code']}")
                     total_lots_created += 1
 
             db.session.commit()
@@ -685,7 +693,7 @@ def seed_test_data(organization_id: Optional[int] = None):
     ]
 
     for sale in sales_plan:
-        sale_timestamp = now - timedelta(days=sale["days_ago"])
+        sale_timestamp = normalize_timestamp(now - timedelta(days=sale["days_ago"]))
         notes = f"Sale {sale['order_id']} - {sale['customer']}"
         process_adjustment(
             context=f"Sale {sale['order_id']}",
@@ -718,7 +726,7 @@ def seed_test_data(organization_id: Optional[int] = None):
     Reservation.query.filter_by(order_id=reservation_order_id, organization_id=organization_id).delete(synchronize_session=False)
     db.session.commit()
 
-    reservation_timestamp = now - timedelta(days=1)
+    reservation_timestamp = normalize_timestamp(now - timedelta(days=1))
     reservation_quantity = 2
     reservation_notes = f"Reservation {reservation_order_id} - Cafe Collective"
 
@@ -752,7 +760,7 @@ def seed_test_data(organization_id: Optional[int] = None):
         status="active",
         source="manual",
         created_at=reservation_timestamp,
-        expires_at=now + timedelta(days=5),
+        expires_at=normalize_timestamp(now + timedelta(days=5)),
         notes="Reserve inventory for Thursday pickup after cupping event.",
         created_by=admin_user.id,
         organization_id=organization_id,
@@ -771,7 +779,7 @@ def seed_test_data(organization_id: Optional[int] = None):
         if plan["status"] != "completed" or not plan.get("final_quantity"):
             continue
         batch = batches_by_label[plan["label_code"]]
-        completed_at = batch.completed_at or now
+        completed_at = normalize_timestamp(batch.completed_at or now)
         sku_history_events.append({
             "timestamp": completed_at,
             "change_type": "production_completed",
@@ -784,7 +792,7 @@ def seed_test_data(organization_id: Optional[int] = None):
     for sale in sales_plan:
         batch = batches_by_label[sale["batch_label"]]
         sku_history_events.append({
-            "timestamp": now - timedelta(days=sale["days_ago"]),
+            "timestamp": normalize_timestamp(now - timedelta(days=sale["days_ago"])),
             "change_type": "sale",
             "quantity": -float(sale["quantity"]),
             "sale_price": sale.get("sale_price"),
@@ -803,7 +811,10 @@ def seed_test_data(organization_id: Optional[int] = None):
         "notes": "Inventory reserved for pick-up"
     })
 
-    sku_history_events.sort(key=lambda e: e["timestamp"])
+    for event in sku_history_events:
+        event["timestamp"] = normalize_timestamp(event.get("timestamp"))
+
+    sku_history_events.sort(key=lambda e: e["timestamp"] or normalize_timestamp(TimezoneUtils.utc_now()))
     running_quantity = 0.0
     for event in sku_history_events:
         running_quantity += event["quantity"]
