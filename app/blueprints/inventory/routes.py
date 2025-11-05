@@ -181,7 +181,6 @@ def list_inventory():
 
     # Calculate freshness and expired quantities for each item
     from ...blueprints.expiration.services import ExpirationService
-    from datetime import datetime
     from sqlalchemy import and_
 
     for item in ingredients:
@@ -242,7 +241,6 @@ def view_inventory(id):
 
     # Calculate freshness and expired quantities for this item (same as list_inventory)
     from ...blueprints.expiration.services import ExpirationService
-    from datetime import datetime
     from sqlalchemy import and_
 
     item.freshness_percent = ExpirationService.get_weighted_average_freshness(item.id)
@@ -310,8 +308,6 @@ def view_inventory(id):
         ).order_by(InventoryLot.expiration_date.asc()).all()
 
         expired_total = sum(float(lot.remaining_quantity) for lot in expired_entries)
-
-    from ...utils.timezone_utils import TimezoneUtils
     return render_template('pages/inventory/view.html',
                          abs=abs,
                          item=item,
