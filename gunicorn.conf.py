@@ -49,3 +49,67 @@ accesslog = os.environ.get("GUNICORN_ACCESSLOG", "-")
 errorlog = os.environ.get("GUNICORN_ERRORLOG", "-")
 loglevel = os.environ.get("GUNICORN_LOGLEVEL", "info")
 
+import multiprocessing
+import os
+
+def _env_int(key, default=None):
+    """Get environment variable as integer with fallback"""
+    try:
+        return int(os.environ.get(key, default or 0))
+    except (ValueError, TypeError):
+        return default or 0
+
+# Server socket
+bind = os.environ.get("GUNICORN_BIND", "0.0.0.0:5000")
+backlog = 2048
+
+# Worker processes
+worker_class = os.environ.get("GUNICORN_WORKER_CLASS", "gevent")
+workers = _env_int("GUNICORN_WORKERS", max(4, multiprocessing.cpu_count() * 2 + 1))
+worker_connections = _env_int("GUNICORN_WORKER_CONNECTIONS", 1000)
+max_requests = 1000
+max_requests_jitter = 100
+
+# Timeouts
+timeout = _env_int("GUNICORN_TIMEOUT", 60)
+keepalive = _env_int("GUNICORN_KEEPALIVE", 5)
+graceful_timeout = 30
+
+# Logging
+accesslog = "-"
+errorlog = "-"
+loglevel = "info"
+
+# Security
+limit_request_line = 4096
+limit_request_fields = 100
+limit_request_field_size = 8190
+
+# Process naming
+proc_name = "batchtrack"
+
+# Preload application
+preload_app = True
+
+# SSL (if needed)
+if os.environ.get("GUNICORN_SSL_CERT"):
+    certfile = os.environ.get("GUNICORN_SSL_CERT")
+    keyfile = os.environ.get("GUNICORN_SSL_KEY")
+
+def when_ready(server):
+    server.log.info("Server is ready. Spawning workers")
+
+def worker_int(worker):
+    worker.log.info("worker received INT or QUIT signal")
+
+def pre_fork(server, worker):
+    server.log.info("Worker spawned (pid: %s)", worker.pid)
+
+def post_fork(server, worker):
+    server.log.info("Worker spawned (pid: %s)", worker.pid)
+
+def post_worker_init(worker):
+    worker.log.info("Worker initialized (pid: %s)", worker.pid)
+
+def worker_abort(worker):
+    worker.log.info("Worker aborted (pid: %s)", worker.pid)

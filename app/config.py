@@ -95,6 +95,31 @@ class BaseConfig:
     GOOGLE_OAUTH_CLIENT_ID = os.environ.get('GOOGLE_OAUTH_CLIENT_ID')
     GOOGLE_OAUTH_CLIENT_SECRET = os.environ.get('GOOGLE_OAUTH_CLIENT_SECRET')
 
+    # Database Configuration
+    SQLALCHEMY_DATABASE_URI = os.getenv('DATABASE_URL', 'sqlite:///batchtrack.db')
+    SQLALCHEMY_TRACK_MODIFICATIONS = False
+
+    # High-concurrency database pool settings
+    @staticmethod
+    def _env_int(key, default):
+        try:
+            return int(os.getenv(key, default))
+        except (ValueError, TypeError):
+            return default
+
+    SQLALCHEMY_ENGINE_OPTIONS = {
+        'pool_size': _env_int('SQLALCHEMY_POOL_SIZE', 40),
+        'max_overflow': _env_int('SQLALCHEMY_MAX_OVERFLOW', 40),
+        'pool_pre_ping': True,
+        'pool_recycle': _env_int('SQLALCHEMY_POOL_RECYCLE', 1800),
+        'pool_timeout': _env_int('SQLALCHEMY_POOL_TIMEOUT', 30),
+        'pool_use_lifo': True,
+    }
+
+    # Redis Configuration for rate limiting and caching
+    REDIS_URL = os.getenv('REDIS_URL', 'redis://localhost:6379/0')
+    RATELIMIT_STORAGE_URI = os.getenv('RATELIMIT_STORAGE_URI', REDIS_URL)
+
 
 class DevelopmentConfig(BaseConfig):
     ENV = 'development'
