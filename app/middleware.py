@@ -1,10 +1,13 @@
 
 import os
 import logging
+import time
 from collections.abc import Mapping
 
 from flask import request, redirect, url_for, jsonify, session, g, flash
 from flask_login import current_user
+from sqlalchemy import select
+from sqlalchemy.orm import joinedload, load_only
 
 from .route_access import RouteAccessConfig
 
@@ -35,6 +38,52 @@ def _env_flag(name: str, default: bool = False) -> bool:
 
 # Configure logger
 logger = logging.getLogger(__name__)
+
+
+def _parse_int(value: str | None, default: int) -> int:
+    if value is None:
+        return default
+    try:
+        return int(value)
+    except (TypeError, ValueError):
+        return default
+
+
+_UNAUTH_LOG_WINDOW_SECONDS = max(1, _parse_int(os.environ.get('UNAUTH_LOG_WINDOW_SECONDS'), 60))
+_UNAUTH_LOG_MAX_PER_WINDOW = _parse_int(os.environ.get('UNAUTH_LOG_MAX_PER_WINDOW'), 50)
+_UNAUTH_LOG_STATE = {'window': -1, 'count': 0, 'suppressed': 0}
+
+
+def _log_rate_limited_unauth(endpoint_info: str, user_agent: str | None) -> None:
+    if _UNAUTH_LOG_MAX_PER_WINDOW <= 0:
+        return
+
+    if not logger.isEnabledFor(logging.DEBUG):
+        return
+
+    current_window = int(time.time() // _UNAUTH_LOG_WINDOW_SECONDS)
+    state = _UNAUTH_LOG_STATE
+
+    if state['window'] != current_window:
+        if state['suppressed']:
+            logger.debug(
+                "Suppressed %s unauthenticated requests in previous %ss window (sampled)",
+                state['suppressed'],
+                _UNAUTH_LOG_WINDOW_SECONDS,
+            )
+        state['window'] = current_window
+        state['count'] = 0
+        state['suppressed'] = 0
+
+    if state['count'] < _UNAUTH_LOG_MAX_PER_WINDOW:
+        state['count'] += 1
+        logger.debug(
+            "Unauthenticated access attempt: %s, ua=%s",
+            endpoint_info,
+            (user_agent or 'Unknown')[:120],
+        )
+    else:
+        state['suppressed'] += 1
 
 def register_middleware(app):
     """Register all middleware functions with the Flask app."""
@@ -118,7 +167,7 @@ def register_middleware(app):
             if request.endpoint is None:
                 logger.warning(f"Unauthenticated request to UNKNOWN endpoint: {endpoint_info}, user_agent={request.headers.get('User-Agent', 'Unknown')[:100]}")
             elif not request.path.startswith('/static/'):
-                logger.info(f"Unauthenticated access attempt: {endpoint_info}")
+                _log_rate_limited_unauth(endpoint_info, request.headers.get('User-Agent'))
 
             # Return JSON 401 for API or JSON-accepting requests
             accept = request.accept_mimetypes
@@ -196,18 +245,34 @@ def register_middleware(app):
         if current_user.is_authenticated and getattr(current_user, 'user_type', None) != 'developer':
             # CRITICAL FIX: Guard DB calls; degrade gracefully if DB is down
             try:
-                # Force fresh database query to avoid session isolation issues
-                from .models import User, Organization
+                from .models import Organization
+                from .models.subscription_tier import SubscriptionTier
                 from .extensions import db
-                from .services.billing_service import BillingService # Import BillingService
+                from .services.billing_service import BillingService  # Import BillingService
 
-                # Get fresh user and organization data from current session
-                fresh_user = db.session.get(User, current_user.id)
-                if fresh_user and fresh_user.organization_id:
-                    # Force fresh load of organization to get latest billing_status
-                    organization = db.session.get(Organization, fresh_user.organization_id)
-                else:
-                    organization = None
+                organization = None
+                org_id = getattr(current_user, 'organization_id', None)
+                if org_id:
+                    stmt = (
+                        select(Organization)
+                        .options(
+                            load_only(
+                                Organization.id,
+                                Organization.billing_status,
+                                Organization.is_active,
+                                Organization.subscription_tier_id,
+                            ),
+                            joinedload(Organization.subscription_tier).load_only(
+                                SubscriptionTier.id,
+                                SubscriptionTier.billing_provider,
+                            ),
+                        )
+                        .where(Organization.id == org_id)
+                    )
+                    organization = db.session.execute(stmt).scalars().first()
+
+                if organization is not None:
+                    g.billing_gate_organization = organization
 
                 if organization and organization.subscription_tier:
                     tier = organization.subscription_tier
@@ -220,7 +285,7 @@ def register_middleware(app):
                         if billing_status in ['payment_failed', 'past_due', 'suspended', 'canceled', 'cancelled']:
                             if billing_status in ['payment_failed', 'past_due']:
                                 return redirect(url_for('billing.upgrade'))
-                            elif billing_status in ['suspended', 'canceled', 'cancelled']:
+                            if billing_status in ['suspended', 'canceled', 'cancelled']:
                                 try:
                                     flash('Your organization does not have an active subscription. Please update billing.', 'error')
                                 except Exception:
@@ -234,7 +299,7 @@ def register_middleware(app):
 
                             if access_reason in ['payment_required', 'subscription_canceled']:
                                 return redirect(url_for('billing.upgrade'))
-                            elif access_reason == 'organization_suspended':
+                            if access_reason == 'organization_suspended':
                                 try:
                                     flash('Your organization has been suspended. Please contact support.', 'error')
                                 except Exception:

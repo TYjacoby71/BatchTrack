@@ -34,8 +34,14 @@ class BaseConfig:
     UPLOAD_FOLDER = 'static/product_images'
     MAX_CONTENT_LENGTH = 16 * 1024 * 1024
 
-    # Rate limiting
-    RATELIMIT_STORAGE_URL = os.environ.get('RATELIMIT_STORAGE_URL', 'memory://')
+    # Rate limiting (URI is what Flask-Limiter reads)
+    _ratelimit_storage_default = (
+        os.environ.get('RATELIMIT_STORAGE_URI')
+        or os.environ.get('RATELIMIT_STORAGE_URL')
+        or 'memory://'
+    )
+    RATELIMIT_STORAGE_URL = _ratelimit_storage_default
+    RATELIMIT_STORAGE_URI = _ratelimit_storage_default
 
     # Logging
     LOG_LEVEL = os.environ.get('LOG_LEVEL', 'WARNING')
@@ -104,7 +110,13 @@ class TestingConfig(BaseConfig):
         'pool_pre_ping': True,
     }
     # Add rate limiter storage configuration for tests
-    RATELIMIT_STORAGE_URL = os.environ.get('RATELIMIT_STORAGE_URL', 'memory://')
+    _testing_ratelimit_storage = (
+        os.environ.get('RATELIMIT_STORAGE_URI')
+        or os.environ.get('RATELIMIT_STORAGE_URL')
+        or 'memory://'
+    )
+    RATELIMIT_STORAGE_URI = _testing_ratelimit_storage
+    RATELIMIT_STORAGE_URL = _testing_ratelimit_storage
 
 
 class StagingConfig(BaseConfig):
@@ -120,7 +132,13 @@ class StagingConfig(BaseConfig):
         'pool_pre_ping': True,
         'pool_recycle': 1800,
     }
-    RATELIMIT_STORAGE_URL = os.environ.get('REDIS_URL') or 'memory://'
+    _staging_ratelimit_storage = (
+        os.environ.get('RATELIMIT_STORAGE_URI')
+        or os.environ.get('REDIS_URL')
+        or os.environ.get('RATELIMIT_STORAGE_URL')
+    )
+    RATELIMIT_STORAGE_URI = _staging_ratelimit_storage
+    RATELIMIT_STORAGE_URL = _staging_ratelimit_storage
 
 
 class ProductionConfig(BaseConfig):
@@ -137,7 +155,13 @@ class ProductionConfig(BaseConfig):
         'pool_recycle': 1800,
         'pool_timeout': 30,
     }
-    RATELIMIT_STORAGE_URL = os.environ.get('REDIS_URL') or os.environ.get('RATELIMIT_STORAGE_URL')
+    _production_ratelimit_storage = (
+        os.environ.get('RATELIMIT_STORAGE_URI')
+        or os.environ.get('REDIS_URL')
+        or os.environ.get('RATELIMIT_STORAGE_URL')
+    )
+    RATELIMIT_STORAGE_URI = _production_ratelimit_storage
+    RATELIMIT_STORAGE_URL = _production_ratelimit_storage
     LOG_LEVEL = os.environ.get('LOG_LEVEL', 'INFO')
 
 

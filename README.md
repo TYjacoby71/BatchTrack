@@ -22,8 +22,11 @@ flask init-production
 # flask seed-units
 # flask seed-users
 
-# Run the application
+# Run the application (development server only)
 python run.py
+
+# Production / staging: use a real WSGI server
+gunicorn --bind 0.0.0.0:5000 --workers 4 wsgi:app
 ```
 
 ## 🎯 Core Mission

@@ -1,6 +1,6 @@
-import json
-import os
 from typing import Any, Dict, Optional
+
+from .file_store import read_json, write_json
 
 class SettingsService:
     """Service for managing application settings"""
@@ -12,19 +12,13 @@ class SettingsService:
 
     def load_settings(self) -> Dict[str, Any]:
         """Load settings from file"""
-        if os.path.exists(self.settings_file):
-            try:
-                with open(self.settings_file, 'r') as f:
-                    self._settings = json.load(f)
-            except (json.JSONDecodeError, IOError):
-                self._settings = {}
+        self._settings = read_json(self.settings_file, default={}) or {}
         return self._settings
 
     def save_settings(self) -> bool:
         """Save settings to file"""
         try:
-            with open(self.settings_file, 'w') as f:
-                json.dump(self._settings, f, indent=2)
+            write_json(self.settings_file, self._settings)
             return True
         except IOError:
             return False
@@ -59,11 +53,5 @@ SettingsManager = SettingsService
 
 def get_setting(key, default=None):
     """Get a setting from settings.json file"""
-    try:
-        if os.path.exists('settings.json'):
-            with open('settings.json', 'r') as f:
-                settings = json.load(f)
-                return settings.get(key, default)
-        return default
-    except:
-        return default
+    settings = read_json('settings.json', default={}) or {}
+    return settings.get(key, default)

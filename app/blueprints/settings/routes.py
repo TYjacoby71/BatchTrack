@@ -2,13 +2,12 @@ from flask import Blueprint, render_template, request, jsonify, redirect, url_fo
 from flask_login import login_required, current_user
 from . import settings_bp
 from ...extensions import db
+from ...utils.file_store import read_json, update_json
 from ...utils.timezone_utils import TimezoneUtils
 from ...models import db, Unit, User, InventoryItem, UserPreferences, Organization
 from ...utils.permissions import has_permission, require_permission
 from werkzeug.security import generate_password_hash, check_password_hash
 from datetime import datetime, timezone
-import json
-
 from . import settings_bp
 
 @settings_bp.route('/')
@@ -54,11 +53,7 @@ def index():
     is_org_owner = current_user.organization and current_user.organization.owner and current_user.organization.owner.id == current_user.id
 
     # Get system settings from file or use defaults
-    try:
-        with open("settings.json", "r") as f:
-            system_settings = json.load(f)
-    except FileNotFoundError:
-        system_settings = {}
+    system_settings = read_json("settings.json", default={}) or {}
 
     # Ensure all required sections exist with defaults
     system_defaults = {
@@ -205,19 +200,12 @@ def update_system_settings():
     try:
         data = request.get_json()
 
-        # Load existing settings
-        try:
-            with open("settings.json", "r") as f:
-                settings_data = json.load(f)
-        except FileNotFoundError:
-            settings_data = {}
+        def _mutate(settings_data):
+            settings_data = dict(settings_data or {})
+            settings_data.update(data or {})
+            return settings_data
 
-        # Update the settings
-        settings_data.update(data)
-
-        # Save updated settings
-        with open("settings.json", "w") as f:
-            json.dump(settings_data, f, indent=2)
+        update_json("settings.json", _mutate, default_factory=dict)
 
         return jsonify({'success': True, 'message': 'System settings updated successfully'})
     except Exception as e:
