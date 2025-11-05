@@ -205,18 +205,16 @@
       </select>
     </div>
     <div class="col-md-3">
-      <div x-data="{ isPerishable: false }">
-        <h5 class="mb-2">Perishable</h5>
-        <div class="d-flex align-items-center gap-2">
-          <div class="form-check mb-0">
-            <input type="checkbox" name="is_perishable" class="form-check-input" id="addIngredientPerishable" x-model="isPerishable">
-          </div>
-          <input type="number" name="shelf_life_days" class="form-control" 
-                 placeholder="Shelf Life (days)" min="1"
-                 :required="isPerishable"
-                 :disabled="!isPerishable"
-                 :class="{ 'bg-light': !isPerishable }">
+      <h5 class="mb-2">Perishable</h5>
+      <div class="d-flex align-items-center gap-2">
+        <div class="form-check mb-0">
+          <input type="checkbox" name="is_perishable" class="form-check-input" id="addIngredientPerishable" x-model="showShelfLife">
         </div>
+        <input type="number" name="shelf_life_days" class="form-control" 
+               placeholder="Shelf Life (days)" min="1"
+               :required="showShelfLife"
+               :disabled="!showShelfLife"
+               :class="{ 'bg-light': !showShelfLife }">
       </div>
     </div>
 
