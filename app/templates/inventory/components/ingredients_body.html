@@ -182,7 +182,7 @@
 </div>
 
 <!-- Add New Ingredient Form -->
-<form method="post" action="{{ url_for('inventory.add_inventory') }}" class="mb-4" id="addIngredientForm" style="display: none;" x-data="{ showShelfLife: false, isPerishable: false }" x-init="$watch('isPerishable', value => { if (!value) { $el.querySelector('input[name=shelf_life_days]').value = ''; } })"></form>
+<form method="post" action="{{ url_for('inventory.add_inventory') }}" class="mb-4" id="addIngredientForm" style="display: none;" x-data="{ showShelfLife: false, isPerishable: false }" x-init="$watch('isPerishable', value => { if (!value) { $el.querySelector('input[name=shelf_life_days]').value = ''; } })">
   <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
   <input type="hidden" name="type" value="ingredient">
   <div class="row g-3 align-items-end">
