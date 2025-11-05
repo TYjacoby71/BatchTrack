@@ -62,6 +62,13 @@ def user_timezone(value, format_string="%Y-%m-%d %H:%M:%S"):
     return TimezoneUtils.format_for_user(value, format_string)
 
 
+def nl2br(value):
+    """Convert newlines to HTML breaks"""
+    if not value:
+        return ""
+    return value.replace('\n', '<br>\n')
+
+
 def register_template_filters(app):
     """Register all custom Jinja2 filters and globals."""
 
@@ -262,6 +269,7 @@ def register_template_filters(app):
             "product_variant_name": product_variant_name,
             "ingredient_cost_currency": ingredient_cost_currency,
             "safe_float": safe_float,
+            "nl2br": nl2br,
         }
     )
 
