@@ -1,27 +1,21 @@
+
 import json
 import os
-from flask_login import current_user
 from ..models import IngredientCategory, InventoryItem
 from ..extensions import db
 
 def seed_categories(organization_id=None):
-    """Seed ingredient categories for an organization using global JSON files"""
+    """Seed global ingredient categories from JSON files (shared across all organizations)"""
 
-    if organization_id is None and current_user and current_user.is_authenticated:
-        organization_id = current_user.organization_id
+    print("🔧 Seeding global ingredient categories from JSON files...")
 
-    if not organization_id:
-        print("⚠️ Organization ID required for seeding categories. Skipping.")
-        return
-
-    # Read from the same JSON files used by global ingredient seeder
+    # Read from the JSON files in global directory
     base_dir = os.path.join(os.path.dirname(__file__), 'globallist', 'ingredients', 'categories')
 
     if not os.path.exists(base_dir):
         print(f"⚠️  Ingredient categories directory not found: {base_dir}. Skipping.")
         return
 
-    print(f"🔧 Seeding organization-specific ingredient categories from JSON files for org ID: {organization_id}...")
     created_count = 0
 
     # Get all JSON files in the categories directory
@@ -46,21 +40,22 @@ def seed_categories(organization_id=None):
             print(f"  ⚠️  Skipping {filename} due to missing 'category_name'.")
             continue
 
-        # Check if category already exists for this organization
+        # Check if global category already exists (organization_id=None means global)
         existing = IngredientCategory.query.filter_by(
             name=cat_name,
-            organization_id=organization_id
+            organization_id=None,
+            is_global_category=True
         ).first()
 
         if not existing:
-            # Create organization-specific category based on global category data
+            # Create global category that all organizations can reference
             category = IngredientCategory(
                 name=cat_name,
                 description=category_data.get('description', ''),
                 default_density=category_data.get('default_density'),
-                organization_id=organization_id,
+                organization_id=None,  # Global category - not owned by any organization
                 is_active=True,
-                is_global_category=False,  # This is organization-specific
+                is_global_category=True,  # This is a global reference category
                 show_saponification_value=category_data.get('show_saponification_value', False),
                 show_iodine_value=category_data.get('show_iodine_value', False),
                 show_melting_point=category_data.get('show_melting_point', False),
@@ -72,35 +67,36 @@ def seed_categories(organization_id=None):
             )
             db.session.add(category)
             created_count += 1
-            print(f"      ✅ Created org category: {cat_name}")
+            print(f"      ✅ Created global category: {cat_name}")
         else:
-            print(f"      ↻ Category exists: {cat_name}")
+            print(f"      ↻ Global category exists: {cat_name}")
 
     try:
         db.session.commit()
-        print(f"✅ Seeded {created_count} new ingredient categories for organization {organization_id}")
+        print(f"✅ Seeded {created_count} new global ingredient categories")
     except Exception as e:
         db.session.rollback()
-        print(f"❌ Error committing ingredient categories for organization {organization_id}: {e}")
+        print(f"❌ Error committing global ingredient categories: {e}")
 
-    # Update all items in Container category to have type='container'
-    # This part remains the same as it correctly identifies and updates items.
+    # Update all items in global Container category to have type='container'
     container_cat = IngredientCategory.query.filter_by(
         name='Container',
-        organization_id=organization_id
+        organization_id=None,
+        is_global_category=True
     ).first()
     if container_cat:
-        items = InventoryItem.query.filter_by(
-            category_id=container_cat.id,
-            organization_id=organization_id
+        from ..models import GlobalItem
+        items = GlobalItem.query.filter_by(
+            ingredient_category_id=container_cat.id,
+            item_type='ingredient'
         ).all()
         updated_items_count = 0
         for item in items:
-            if item.type != 'container':
-                item.type = 'container'
+            if item.item_type != 'container':
+                item.item_type = 'container'
                 updated_items_count += 1
         if updated_items_count > 0:
             db.session.commit()
-            print(f"      Updated {updated_items_count} items to type 'container' for organization {organization_id}")
+            print(f"      Updated {updated_items_count} global items to type 'container'")
         else:
-            print(f"      No items needed update to type 'container' for organization {organization_id}")
+            print(f"      No global items needed update to type 'container'")
