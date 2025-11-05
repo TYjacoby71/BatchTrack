@@ -43,76 +43,51 @@ def seed_global_inventory_library():
     with app.app_context():
         available_files = get_available_json_files()
         
-        print("\n=== Starting Global Inventory Library Seeding ===")
-        print("📋 Seeding order: Ingredients → Containers → Packaging → Consumables")
-        print("📋 Processing all available JSON files automatically...")
+        print("🔧 Seeding global inventory library...")
 
-        # Show what will be seeded
-        for item_type, files in available_files.items():
-            if files:
-                print(f"   {item_type.upper()}: {len(files)} files - {', '.join(files)}")
-            else:
-                print(f"   {item_type.upper()}: No files found")
-
-        # Seed in proper dependency order
         total_categories = 0
         total_items = 0
 
-        # 1. Ingredients (categories first, then items) - HAS DEPENDENCIES
-        print("\n🔹 Step 1: Ingredients (with categories)")
+        # 1. Ingredients 
         try:
             categories_created, items_created = seed_ingredients_from_files(available_files.get('ingredients', []))
             total_categories += categories_created
             total_items += items_created
-            print(f"   ✅ Ingredients: {categories_created} categories, {items_created} items")
         except Exception as e:
             print(f"   ❌ Ingredients failed: {e}")
 
-        # 2. Containers (attributes first, then items) - HAS DEPENDENCIES
-        print("\n🔹 Step 2: Containers (with attributes)")
+        # 2. Containers
         try:
-            # Generate attributes if we have existing containers
             from app.models import db, GlobalItem
             existing_containers = GlobalItem.query.filter_by(item_type='container').count()
             if existing_containers > 0 and available_files.get('containers'):
-                print("   📋 Generating container attributes from existing data...")
                 generate_container_attributes()
 
             items_created = seed_containers_from_files(available_files.get('containers', []))
             total_items += items_created
-            print(f"   ✅ Containers: {items_created} items")
         except Exception as e:
             print(f"   ❌ Containers failed: {e}")
 
-        # 3. Packaging - NO DEPENDENCIES
-        print("\n🔹 Step 3: Packaging")
+        # 3. Packaging
         try:
             items_created = seed_packaging_from_files(available_files.get('packaging', []))
             total_items += items_created
-            print(f"   ✅ Packaging: {items_created} items")
         except Exception as e:
             print(f"   ❌ Packaging failed: {e}")
 
-        # 4. Consumables - NO DEPENDENCIES
-        print("\n🔹 Step 4: Consumables")
+        # 4. Consumables
         try:
             items_created = seed_consumables_from_files(available_files.get('consumables', []))
             total_items += items_created
-            print(f"   ✅ Consumables: {items_created} items")
         except Exception as e:
             print(f"   ❌ Consumables failed: {e}")
 
-        # Commit all changes
         try:
             db.session.commit()
-            print(f"\n🎉 Global Inventory Library Seeding Complete!")
-            print(f"📊 Summary:")
-            print(f"   Categories created: {total_categories}")
-            print(f"   Items created: {total_items}")
-            print(f"📋 Seeding was additive - existing items were preserved")
+            print(f"   ✅ Global inventory library: {total_categories} categories, {total_items} items")
         except Exception as e:
             db.session.rollback()
-            print(f"\n❌ Seeding failed during final commit: {e}")
+            print(f"   ❌ Global inventory library failed: {e}")
 
 
 if __name__ == '__main__':

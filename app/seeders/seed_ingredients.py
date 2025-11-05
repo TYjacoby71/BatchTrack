@@ -15,7 +15,6 @@ def seed_ingredients_from_files(selected_files):
     if not selected_files:
         return 0, 0
     
-    print("\n=== Seeding Ingredients ===")
     created_categories = 0
     created_items = 0
     
@@ -27,18 +26,13 @@ def seed_ingredients_from_files(selected_files):
         try:
             with open(filepath, 'r') as f:
                 category_data = json.load(f)
-        except Exception as e:
-            print(f"  ⚠️  Error loading {filename}: {e}")
+        except Exception:
             continue
             
         cat_name = category_data.get('category_name', '').strip()
         if not cat_name:
-            print(f"  ⚠️  Skipping {filename} - no category name")
             continue
-            
-        print(f"\n📁 Processing ingredient category: {cat_name}")
         
-        # Create or update ingredient category
         existing_cat = IngredientCategory.query.filter_by(name=cat_name, organization_id=None).first()
         if not existing_cat:
             new_cat = IngredientCategory(
@@ -60,30 +54,22 @@ def seed_ingredients_from_files(selected_files):
             db.session.add(new_cat)
             db.session.flush()
             created_categories += 1
-            print(f"    ✅ Created category: {cat_name}")
-        else:
-            print(f"    ↻ Category exists: {cat_name}")
         
         category = existing_cat or new_cat
         
-        # Seed items in this category
-        items_in_category = 0
         for item_data in category_data.get('items', []):
             name = item_data.get('name', '').strip()
             if not name:
                 continue
                 
-            # Check if item already exists
             existing_item = GlobalItem.query.filter_by(
                 name=name,
                 item_type='ingredient'
             ).first()
             
             if existing_item:
-                print(f"      ↻ Item exists: {name}")
                 continue
                 
-            # Create new item
             new_item = GlobalItem(
                 name=name,
                 item_type='ingredient',
@@ -104,10 +90,6 @@ def seed_ingredients_from_files(selected_files):
             
             db.session.add(new_item)
             created_items += 1
-            items_in_category += 1
-            print(f"      ✅ Created item: {name}")
-        
-        print(f"    📦 Processed {items_in_category} items in {cat_name}")
     
     return created_categories, created_items
 

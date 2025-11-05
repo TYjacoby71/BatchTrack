@@ -133,9 +133,8 @@ def init_production_command():
         except Exception as e:
             print(f"⚠️  Global inventory library seeding issue: {e}")
 
-        print('\n📊 Detailed Seeding Summary (in creation order):')
+        print('\n📊 Production Seeding Summary:')
         try:
-            # Ensure session is clean in case prior steps raised and were handled
             try:
                 db.session.rollback()
             except Exception:
@@ -146,69 +145,35 @@ def init_production_command():
                 IngredientCategory, ProductCategory, Addon
             )
 
-            # Step 1: System foundations (Organization Independent)
-            print('=== Step 1: System Foundations ===')
-
-            # Permissions (created first)
+            # System foundations
             org_permissions = Permission.query.filter_by(is_active=True).count()
             dev_permissions = DeveloperPermission.query.filter_by(is_active=True).count()
-            print(f'   📋 Organization Permissions: {org_permissions}')
-            print(f'   📋 Developer Permissions: {dev_permissions}')
-
-            # Developer roles (created after permissions)
             dev_roles = DeveloperRole.query.filter_by(is_active=True).count()
-            print(f'   👤 Developer Roles: {dev_roles}')
-
-            # System roles (organization roles)
             system_roles = Role.query.filter_by(is_system_role=True).count()
-            print(f'   👥 System Roles: {system_roles}')
-
-            # Subscription tiers (created after permissions)
             sub_tiers = SubscriptionTier.query.count()
-            print(f'   💳 Subscription Tiers: {sub_tiers}')
-
-            # Add-ons (independent)
             addons = Addon.query.filter_by(is_active=True).count()
-            print(f'   🔧 Add-ons: {addons}')
-
-            # Units (independent)
             units = Unit.query.count()
-            print(f'   📏 Units: {units}')
 
-            print('\n=== Step 2: Organization-Dependent Setup ===')
-
-            # Organizations and users (depends on system foundations)
+            # Organizations and users
             organizations = Organization.query.count()
             total_users = User.query.count()
             dev_users = User.query.filter_by(user_type='developer').count()
             customer_users = User.query.filter_by(user_type='customer').count()
-            print(f'   🏢 Organizations: {organizations}')
-            print(f'   👨‍💻 Total Users: {total_users}')
-            print(f'      - Developer Users: {dev_users}')
-            print(f'      - Customer Users: {customer_users}')
 
-            print('\n=== Step 3: Organization-Specific Data ===')
-
-            # Ingredient categories (organization-specific)
+            # Data catalogs
             ingredient_categories = IngredientCategory.query.count()
-            print(f'   🧪 Ingredient Categories: {ingredient_categories}')
-
-            # Product categories (global)
             product_categories = ProductCategory.query.count()
-            print(f'   📦 Product Categories: {product_categories}')
-
-            # Global inventory library (by type)
             ingredients_count = GlobalItem.query.filter_by(item_type='ingredient').count()
             containers_count = GlobalItem.query.filter_by(item_type='container').count()
             packaging_count = GlobalItem.query.filter_by(item_type='packaging').count()
             consumables_count = GlobalItem.query.filter_by(item_type='consumable').count()
             total_global_items = GlobalItem.query.count()
 
-            print(f'   🌍 Global Inventory Library: {total_global_items} total')
-            print(f'      - Ingredients: {ingredients_count}')
-            print(f'      - Containers: {containers_count}')
-            print(f'      - Packaging: {packaging_count}')
-            print(f'      - Consumables: {consumables_count}')
+            print(f'  System:     {org_permissions} org perms, {dev_permissions} dev perms, {dev_roles} dev roles')
+            print(f'  Platform:   {sub_tiers} tiers, {addons} addons, {units} units')
+            print(f'  Users:      {organizations} orgs, {total_users} users ({dev_users} dev, {customer_users} customer)')
+            print(f'  Catalogs:   {ingredient_categories} ingredient cats, {product_categories} product cats')
+            print(f'  Library:    {total_global_items} global items ({ingredients_count} ingredients, {containers_count} containers, {packaging_count} packaging, {consumables_count} consumables)')
 
             print('\n✅ Production seeding complete!')
             print('🔒 Login: admin/admin (CHANGE IMMEDIATELY)')

@@ -42,26 +42,19 @@ def seed_organization_permissions():
                 print(f"⚠️  Skipping invalid category: {category_key}")
                 continue
                 
-            category_name = category_data.get('description', category_key)
             permissions = category_data['permissions']
-
-            print(f"   Processing category: {category_name}")
 
             for perm_data in permissions:
                 if not isinstance(perm_data, dict) or 'name' not in perm_data:
-                    print(f"     ⚠️  Skipping invalid permission data: {perm_data}")
                     continue
-            # Check if permission already exists
+                    
                 existing = Permission.query.filter_by(name=perm_data['name']).first()
 
                 if existing:
-                    # Update existing permission
                     existing.description = perm_data.get('description', perm_data['name'])
                     existing.category = category_key
                     permissions_updated += 1
-                    print(f"     ↻ Updated: {perm_data['name']}")
                 else:
-                    # Create new permission
                     new_perm = Permission(
                         name=perm_data['name'],
                         description=perm_data.get('description', perm_data['name']),
@@ -69,10 +62,9 @@ def seed_organization_permissions():
                     )
                     db.session.add(new_perm)
                     permissions_created += 1
-                    print(f"     ✅ Created: {perm_data['name']}")
 
         db.session.commit()
-        print(f"✅ Organization permissions seeded successfully! (Created: {permissions_created}, Updated: {permissions_updated})")
+        print(f"   ✅ Organization permissions: {permissions_created} created, {permissions_updated} updated")
         
     except Exception as e:
         db.session.rollback()
@@ -94,27 +86,19 @@ def seed_developer_permissions():
                 print(f"⚠️  Skipping invalid developer category: {category_key}")
                 continue
                 
-            category_name = category_data.get('description', category_key)
             permissions = category_data['permissions']
-
-            print(f"   Processing category: {category_name}")
 
             for perm_data in permissions:
                 if not isinstance(perm_data, dict) or 'name' not in perm_data:
-                    print(f"     ⚠️  Skipping invalid permission data: {perm_data}")
                     continue
                     
-                # Check if permission already exists
                 existing = DeveloperPermission.query.filter_by(name=perm_data['name']).first()
 
                 if existing:
-                    # Update existing permission
                     existing.description = perm_data.get('description', perm_data['name'])
                     existing.category = category_key
                     permissions_updated += 1
-                    print(f"     ↻ Updated: {perm_data['name']}")
                 else:
-                    # Create new permission
                     new_perm = DeveloperPermission(
                         name=perm_data['name'],
                         description=perm_data.get('description', perm_data['name']),
@@ -122,10 +106,9 @@ def seed_developer_permissions():
                     )
                     db.session.add(new_perm)
                     permissions_created += 1
-                    print(f"     ✅ Created: {perm_data['name']}")
 
         db.session.commit()
-        print(f"✅ Developer permissions seeded successfully! (Created: {permissions_created}, Updated: {permissions_updated})")
+        print(f"   ✅ Developer permissions: {permissions_created} created, {permissions_updated} updated")
         
     except Exception as e:
         db.session.rollback()
@@ -135,7 +118,6 @@ def seed_developer_permissions():
 def seed_developer_roles():
     """Create developer roles and assign permissions"""
     print("🔧 Seeding developer roles...")
-    print(f"   Current developer roles in DB: {DeveloperRole.query.count()}")
 
     # System Admin Role - full system access
     system_admin_role = DeveloperRole.query.filter_by(name='system_admin').first()
@@ -149,10 +131,8 @@ def seed_developer_roles():
         db.session.add(system_admin_role)
         db.session.flush()
 
-    # Assign all developer permissions to system_admin
     all_dev_permissions = DeveloperPermission.query.filter_by(is_active=True).all()
     system_admin_role.permissions = all_dev_permissions
-    print(f"✅ Created/updated system_admin role with {len(all_dev_permissions)} permissions")
 
     # Developer Role - limited development access
     developer_role = DeveloperRole.query.filter_by(name='developer').first()
@@ -166,7 +146,6 @@ def seed_developer_roles():
         db.session.add(developer_role)
         db.session.flush()
 
-    # Assign basic developer permissions
     dev_permissions = DeveloperPermission.query.filter(
         DeveloperPermission.name.in_([
             'dev.dashboard',
@@ -179,7 +158,6 @@ def seed_developer_roles():
         ])
     ).all()
     developer_role.permissions = dev_permissions
-    print(f"✅ Created/updated developer role with {len(dev_permissions)} permissions")
 
     # Support Role - read-only access for support staff
     support_role = DeveloperRole.query.filter_by(name='support').first()
@@ -193,23 +171,13 @@ def seed_developer_roles():
         db.session.add(support_role)
         db.session.flush()
 
-    # Assign read-only permissions
     support_permissions = DeveloperPermission.query.filter(
         DeveloperPermission.name.like('app.%.view')
     ).all()
     support_role.permissions = support_permissions
-    print(f"✅ Created/updated support role with {len(support_permissions)} permissions")
 
     db.session.commit()
-    final_count = DeveloperRole.query.count()
-    print(f"✅ Developer roles seeded successfully! (Total: {final_count})")
-    
-    # Verify system_admin role exists
-    system_admin = DeveloperRole.query.filter_by(name='system_admin').first()
-    if system_admin:
-        print(f"   ✅ system_admin role confirmed (ID: {system_admin.id})")
-    else:
-        print("   ❌ system_admin role NOT found after seeding!")
+    print(f"   ✅ Developer roles: 3 roles created/updated")
 
 def update_organization_owner_role():
     """Update organization owner role with necessary permissions (only if empty)"""
@@ -266,9 +234,8 @@ def cleanup_old_permissions():
 
 def seed_organization_roles():
     """Seed initial organization system roles (these can be used by any organization)"""
-    print("=== Seeding Organization System Roles ===")
+    print("🔧 Seeding organization system roles...")
 
-    # Organization Owner Role - Default system role for organization owners
     org_owner_role = Role.query.filter_by(name='organization_owner', is_system_role=True).first()
     if not org_owner_role:
         org_owner_role = Role(
@@ -276,58 +243,34 @@ def seed_organization_roles():
             description='Organization owner with full access to their organization',
             is_system_role=True,
             is_active=True,
-            organization_id=None  # System roles have no organization_id
+            organization_id=None
         )
         db.session.add(org_owner_role)
 
-        # Give organization owner all customer-facing permissions
         customer_permissions = Permission.query.filter(
             Permission.category.in_(['app', 'organization'])
         ).all()
         org_owner_role.permissions = customer_permissions
 
         db.session.commit()
-        print(f"✅ Created organization_owner system role with {len(customer_permissions)} permissions")
-    else:
-        print("ℹ️  organization_owner system role already exists")
 
-    # NOTE: Additional system roles can be created by developers via the system roles management UI
-    # These roles become available to ALL organizations as templates
-    # Individual organizations can also create their own custom roles (organization_id != NULL)
-
-    print("✅ Organization system roles seeded successfully!")
+    print(f"   ✅ Organization system roles: 1 role created/updated")
 
 def seed_consolidated_permissions():
     """Main seeder function"""
-    # Ensure we're in an application context
     if not current_app:
         raise RuntimeError("seed_consolidated_permissions() must be called within Flask application context")
 
-    print("=== Seeding Consolidated Permissions System ===")
+    print("🔧 Seeding consolidated permissions...")
 
-    # Seed permissions
     seed_organization_permissions()
     seed_developer_permissions()
-
-    # Seed developer roles
     seed_developer_roles()
-
-    # Seed organization roles
     seed_organization_roles()
-
-    # Update roles
     update_organization_owner_role()
-
-    # Cleanup old permissions
     cleanup_old_permissions()
 
-    print("✅ Consolidated permissions system seeded successfully!")
-
-    # Display summary
     org_count = Permission.query.filter_by(is_active=True).count()
     dev_count = DeveloperPermission.query.filter_by(is_active=True).count()
-
-    print(f"\n📊 Summary:")
-    print(f"Organization permissions: {org_count}")
-    print(f"Developer permissions: {dev_count}")
+    print(f"   ✅ Permissions complete: {org_count} org permissions, {dev_count} dev permissions")
 
