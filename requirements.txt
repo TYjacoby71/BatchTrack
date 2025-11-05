@@ -6,7 +6,7 @@ Flask-Login==0.6.2
 Flask-Mail==0.9.1
 Flask-Migrate==4.0.5
 Flask-SQLAlchemy==3.0.5
-Flask-WTF==1.1.1
+Flask-WTF==1.2.1
 Flask-Limiter==3.8.0
 gevent==24.2.1
 redis==5.1.1
@@ -30,14 +30,6 @@ gunicorn
 psycopg2-binary
 beautifulsoup4
 requests
-flask-mail
 google-auth
 google-auth-oauthlib
-Flask-Mail
-flask-mail
-Flask-Limiter
-Flask-Migrate
-Flask-WTF>=1.1.0
-MarkupSafe>=2.0.0
-Flask-WTF==1.2.1
 reportlab
