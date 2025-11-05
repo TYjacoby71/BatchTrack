@@ -1,23 +1,7 @@
-
 {
   "types": [
-    "Bag",
     "Bottle",
-    "Box",
-    "Dropper Bottle",
     "Jar",
-    "Label",
-    "Pouch",
-    "Pump Bottle",
-    "Roll-on Bottle",
-    "Safety",
-    "Spray Bottle",
-    "Squeeze Bottle",
-    "Tin",
-    "Tool",
-    "Towel",
-    "Tube",
-    "Vial",
-    "Wipe"
+    "Tin"
   ]
 }
