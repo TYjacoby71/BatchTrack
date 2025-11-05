@@ -9,7 +9,6 @@ from .extensions import db
 from .models import User, Organization, Permission
 from .seeders import (
     seed_units,
-    seed_categories,
     seed_subscriptions
 )
 from .seeders.addon_seeder import seed_addons
