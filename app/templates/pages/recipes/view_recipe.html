@@ -230,8 +230,36 @@
 
   <!-- Right Column -->
   <div class="col-lg-4">
-    <!-- Recipe Cost Card -->
+    <!-- Actions Card -->
     <div class="card mb-4">
+      <div class="card-header">
+        <h5 class="card-title mb-0"><i class="fas fa-cog"></i> Actions</h5>
+      </div>
+      <div class="card-body">
+        <div class="d-grid gap-2">
+          <a href="{{ url_for('recipes.list_recipes') }}" class="btn btn-outline-secondary">
+            <i class="fas fa-arrow-left"></i> Back to List
+          </a>
+          <a href="{{ url_for('production_planning.plan_production_route', recipe_id=recipe.id) }}" class="btn btn-success">
+            <i class="fas fa-play"></i> Plan Production
+          </a>
+          <a href="{{ url_for('recipes.edit_recipe', recipe_id=recipe.id) }}" class="btn btn-primary">
+            <i class="fas fa-edit"></i> Edit Recipe
+          </a>
+          <a href="{{ url_for('recipes.clone_recipe', recipe_id=recipe.id) }}" class="btn btn-outline-info">
+            <i class="fas fa-copy"></i> {% if recipe.parent_id %}Make New Parent{% else %}Clone Recipe{% endif %}
+          </a>
+          {% if not recipe.parent_id %}
+          <a href="{{ url_for('recipes.create_variation', recipe_id=recipe.id) }}" class="btn btn-outline-success">
+            <i class="fas fa-code-branch"></i> New Variation
+          </a>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+
+    <!-- Recipe Cost Card -->
+    <div class="card">
       <div class="card-header bg-success text-white">
         <h5 class="card-title mb-0"><i class="fas fa-dollar-sign"></i> Recipe Cost</h5>
       </div>
@@ -297,36 +325,6 @@
             <i class="fas fa-info-circle"></i> Costs will appear when inventory items have pricing data.
           </small>
         {% endif %}
-      </div>
-    </div>
-
-    
-
-    <!-- Actions Card -->
-    <div class="card">
-      <div class="card-header">
-        <h5 class="card-title mb-0"><i class="fas fa-cog"></i> Actions</h5>
-      </div>
-      <div class="card-body">
-        <div class="d-grid gap-2">
-          <a href="{{ url_for('recipes.list_recipes') }}" class="btn btn-outline-secondary">
-            <i class="fas fa-arrow-left"></i> Back to List
-          </a>
-          <a href="{{ url_for('production_planning.plan_production_route', recipe_id=recipe.id) }}" class="btn btn-success">
-            <i class="fas fa-play"></i> Plan Production
-          </a>
-          <a href="{{ url_for('recipes.edit_recipe', recipe_id=recipe.id) }}" class="btn btn-primary">
-            <i class="fas fa-edit"></i> Edit Recipe
-          </a>
-          <a href="{{ url_for('recipes.clone_recipe', recipe_id=recipe.id) }}" class="btn btn-outline-info">
-            <i class="fas fa-copy"></i> {% if recipe.parent_id %}Make New Parent{% else %}Clone Recipe{% endif %}
-          </a>
-          {% if not recipe.parent_id %}
-          <a href="{{ url_for('recipes.create_variation', recipe_id=recipe.id) }}" class="btn btn-outline-success">
-            <i class="fas fa-code-branch"></i> New Variation
-          </a>
-          {% endif %}
-        </div>
       </div>
     </div>
   </div>
