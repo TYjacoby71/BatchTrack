@@ -3,6 +3,7 @@ import os
 import logging
 import time
 from collections.abc import Mapping
+from dataclasses import dataclass
 
 from flask import request, redirect, url_for, jsonify, session, g, flash
 from flask_login import current_user
@@ -10,6 +11,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import joinedload, load_only
 
 from .route_access import RouteAccessConfig
+from .utils.cache_manager import app_cache
 
 DEFAULT_SECURITY_HEADERS = {
     "Strict-Transport-Security": "max-age=31536000; includeSubDomains; preload",
@@ -84,6 +86,60 @@ def _log_rate_limited_unauth(endpoint_info: str, user_agent: str | None) -> None
         )
     else:
         state['suppressed'] += 1
+
+
+_BILLING_CACHE_ENABLED = _env_flag('BILLING_GATE_CACHE_ENABLED', True)
+_BILLING_CACHE_TTL_SECONDS = max(5, _parse_int(os.environ.get('BILLING_GATE_CACHE_TTL_SECONDS'), 60))
+
+
+@dataclass(frozen=True)
+class _TierSnapshot:
+    id: int | None
+    is_billing_exempt: bool
+    billing_provider: str | None
+    name: str | None = None
+
+
+class _BillingSnapshot:
+    __slots__ = ('id', 'billing_status', 'is_active', '_tier')
+
+    def __init__(self, payload: Mapping[str, object]) -> None:
+        self.id = payload.get('id')
+        self.billing_status = (payload.get('billing_status') or 'active')  # type: ignore[assignment]
+        self.is_active = bool(payload.get('is_active', True))
+        tier_payload = payload.get('tier')
+        if isinstance(tier_payload, Mapping) and tier_payload.get('id') is not None:
+            self._tier = _TierSnapshot(
+                id=tier_payload.get('id'),
+                is_billing_exempt=bool(tier_payload.get('is_billing_exempt', True)),
+                billing_provider=tier_payload.get('billing_provider'),
+                name=tier_payload.get('name'),
+            )
+        else:
+            self._tier = None
+
+    @property
+    def subscription_tier(self) -> _TierSnapshot | None:
+        return self._tier
+
+    @property
+    def subscription_tier_obj(self) -> _TierSnapshot | None:
+        return self._tier
+
+
+def _serialize_organization_for_cache(organization) -> dict[str, object]:
+    tier = getattr(organization, 'subscription_tier', None)
+    return {
+        'id': getattr(organization, 'id', None),
+        'billing_status': getattr(organization, 'billing_status', 'active') or 'active',
+        'is_active': bool(getattr(organization, 'is_active', True)),
+        'tier': None if tier is None else {
+            'id': getattr(tier, 'id', None),
+            'is_billing_exempt': bool(getattr(tier, 'is_billing_exempt', True)),
+            'billing_provider': getattr(tier, 'billing_provider', None),
+            'name': getattr(tier, 'name', None),
+        },
+    }
 
 def register_middleware(app):
     """Register all middleware functions with the Flask app."""
@@ -250,38 +306,61 @@ def register_middleware(app):
                 from .extensions import db
                 from .services.billing_service import BillingService  # Import BillingService
 
-                organization = None
+                org_for_billing = None
+                org_db_instance = None
                 org_id = getattr(current_user, 'organization_id', None)
+                cache_key = f"billing:snapshot:{org_id}" if org_id else None
+
                 if org_id:
-                    stmt = (
-                        select(Organization)
-                        .options(
-                            load_only(
-                                Organization.id,
-                                Organization.billing_status,
-                                Organization.is_active,
-                                Organization.subscription_tier_id,
-                            ),
-                            joinedload(Organization.subscription_tier).load_only(
-                                SubscriptionTier.id,
-                                SubscriptionTier.billing_provider,
-                            ),
+                    cached_payload = app_cache.get(cache_key) if (_BILLING_CACHE_ENABLED and cache_key) else None
+                    if cached_payload:
+                        org_for_billing = _BillingSnapshot(cached_payload)
+                        g.billing_gate_organization = org_for_billing
+                        g.billing_gate_cache_state = 'hit'
+                    else:
+                        stmt = (
+                            select(Organization)
+                            .options(
+                                load_only(
+                                    Organization.id,
+                                    Organization.billing_status,
+                                    Organization.is_active,
+                                    Organization.subscription_tier_id,
+                                ),
+                                joinedload(Organization.subscription_tier).load_only(
+                                    SubscriptionTier.id,
+                                    SubscriptionTier.billing_provider,
+                                    SubscriptionTier.name,
+                                ),
+                            )
+                            .where(Organization.id == org_id)
                         )
-                        .where(Organization.id == org_id)
-                    )
-                    organization = db.session.execute(stmt).scalars().first()
+                        org_db_instance = db.session.execute(stmt).scalars().first()
+                        if org_db_instance:
+                            serialized = _serialize_organization_for_cache(org_db_instance)
+                            org_for_billing = _BillingSnapshot(serialized)
+                            g.billing_gate_organization = org_for_billing
+                            g.billing_gate_cache_state = 'miss' if _BILLING_CACHE_ENABLED else 'disabled'
+                            if _BILLING_CACHE_ENABLED and cache_key:
+                                app_cache.set(cache_key, serialized, ttl=_BILLING_CACHE_TTL_SECONDS)
+                    elif not _BILLING_CACHE_ENABLED:
+                        g.billing_gate_cache_state = 'disabled'
+                else:
+                    g.billing_gate_cache_state = 'skip'
 
-                if organization is not None:
-                    g.billing_gate_organization = organization
+                if org_for_billing is None and org_db_instance is not None:
+                    # Fallback when snapshot creation failed for any reason
+                    org_for_billing = org_db_instance
+                    g.billing_gate_organization = org_db_instance
 
-                if organization and organization.subscription_tier:
-                    tier = organization.subscription_tier
+                if org_for_billing and getattr(org_for_billing, 'subscription_tier', None):
+                    tier = getattr(org_for_billing, 'subscription_tier')
 
                     # SIMPLE BILLING LOGIC:
                     # If billing bypass is NOT enabled, require active billing status
                     if not getattr(tier, 'is_billing_exempt', True):  # Default to exempt to prevent lockouts
                         # Direct status enforcement as a guardrail
-                        billing_status = getattr(organization, 'billing_status', 'active') or 'active'
+                        billing_status = getattr(org_for_billing, 'billing_status', 'active') or 'active'
                         if billing_status in ['payment_failed', 'past_due', 'suspended', 'canceled', 'cancelled']:
                             if billing_status in ['payment_failed', 'past_due']:
                                 return redirect(url_for('billing.upgrade'))
@@ -293,9 +372,9 @@ def register_middleware(app):
                                 return redirect(url_for('billing.upgrade'))
 
                         # Check tier access using unified billing service
-                        access_valid, access_reason = BillingService.validate_tier_access(organization)
+                        access_valid, access_reason = BillingService.validate_tier_access(org_for_billing)
                         if not access_valid:
-                            logger.warning(f"Billing access denied for org {organization.id}: {access_reason}")
+                            logger.warning(f"Billing access denied for org {getattr(org_for_billing, 'id', 'unknown')}: {access_reason}")
 
                             if access_reason in ['payment_required', 'subscription_canceled']:
                                 return redirect(url_for('billing.upgrade'))

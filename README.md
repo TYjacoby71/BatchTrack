@@ -25,8 +25,8 @@ flask init-production
 # Run the application (development server only)
 python run.py
 
-# Production / staging: use a real WSGI server
-gunicorn --bind 0.0.0.0:5000 --workers 4 wsgi:app
+# Production / staging: use Gunicorn with cooperative workers
+gunicorn -c gunicorn.conf.py wsgi:app
 ```
 
 ## 🎯 Core Mission
@@ -106,6 +106,15 @@ Run with the app environment active:
 python scripts/clear_inventory_history.py
 python scripts/dev_test_runner.py
 ```
+
+## 🧭 Scaling Toward 10k Concurrent Users
+
+- Copy `.env.production.example` and populate real secrets, database, and Redis endpoints. `RATELIMIT_STORAGE_URI` **must** point to shared Redis in staging/production.
+- Use the supplied `gunicorn.conf.py` (gevent worker class) and size `GUNICORN_WORKERS` based on CPU allocation. Pair with PgBouncer or tuned Postgres pools (`SQLALCHEMY_POOL_SIZE`, `SQLALCHEMY_MAX_OVERFLOW`).
+- Billing middleware now caches org/tier snapshots (`BILLING_GATE_CACHE_TTL_SECONDS`) to limit database pressure—monitor `g.billing_gate_cache_state` in logs to verify hit rates.
+- Run synthetic load using `locust -f loadtests/locustfile.py` before every release; extend the script with your critical authenticated flows.
+- Optional tooling: `pip install locust` for load tests (`locust` not pinned in requirements). Runtime dependencies now include `redis` (for shared rate limiting/cache) and `gevent` (Gunicorn worker class).
+- Follow the detailed checklist in `docs/operations/SCALING_RUNBOOK.md` for infrastructure, observability, chaos drills, and success criteria at 10k+ users.
 
 ## 🐛 Current Issues
 
