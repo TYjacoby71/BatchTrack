@@ -179,18 +179,25 @@ document.addEventListener('DOMContentLoaded', function() {
             const unitSelect = document.querySelector('#addIngredientForm select[name="unit"]');
             if (unitSelect) unitSelect.value = data.default_unit;
           }
-          // Perishable defaults - trigger Alpine.js reactivity
+          // Populate perishable defaults
           const perishableCheckbox = document.getElementById('addIngredientPerishable');
+          const shelfLifeInput = document.getElementById('addIngredientShelfLife');
+          
           if (typeof data.default_is_perishable !== 'undefined' && perishableCheckbox) {
             perishableCheckbox.checked = !!data.default_is_perishable;
-            // Trigger Alpine.js change event
-            perishableCheckbox.dispatchEvent(new Event('change'));
+            // Manually trigger Alpine.js reactivity by setting the x-model value
+            const form = document.getElementById('addIngredientForm');
+            if (form && form.__x) {
+              form.__x.$data.isPerishable = !!data.default_is_perishable;
+            }
           }
-          const shelfLifeInput = document.querySelector('#addIngredientForm input[name="shelf_life_days"]');
+          
           if (shelfLifeInput && data.recommended_shelf_life_days) {
             shelfLifeInput.value = data.recommended_shelf_life_days;
           }
-        } catch (_) {}
+        } catch (error) {
+          console.log('Error applying global item defaults:', error);
+        }
       } else {
         hiddenGlobalId.value = '';
       }

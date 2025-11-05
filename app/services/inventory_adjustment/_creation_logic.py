@@ -96,17 +96,17 @@ def create_inventory_item(form_data, organization_id, created_by):
         except (ValueError, TypeError):
             pass
 
-        # Determine if item is perishable - check form first, then global defaults
+        # Determine if item is perishable - user input takes priority
         is_perishable = form_data.get('is_perishable') == 'on'
         
-        # Apply global item defaults if not explicitly set in form
-        if global_item:
-            # If checkbox not checked but global item suggests it should be perishable
-            if not is_perishable and global_item.default_is_perishable:
-                is_perishable = True
-            # Use recommended shelf life from global item if none provided
-            if not shelf_life_days and global_item.recommended_shelf_life_days:
-                shelf_life_days = int(global_item.recommended_shelf_life_days)
+        # If no explicit user input and global item has defaults, use them as fallback
+        # This handles the case where form is pre-populated but user doesn't change it
+        if global_item and global_item.default_is_perishable and form_data.get('is_perishable') is None:
+            is_perishable = True
+            
+        # Use recommended shelf life from global item if none provided by user
+        if not shelf_life_days and global_item and global_item.recommended_shelf_life_days:
+            shelf_life_days = int(global_item.recommended_shelf_life_days)
         
         # Final validation: if shelf_life_days is provided, item must be perishable
         if shelf_life_days and not is_perishable:

@@ -182,7 +182,7 @@
 </div>
 
 <!-- Add New Ingredient Form -->
-<form method="post" action="{{ url_for('inventory.add_inventory') }}" class="mb-4" id="addIngredientForm" style="display: none;" x-data="{ showShelfLife: false, isPerishable: false }">
+<form method="post" action="{{ url_for('inventory.add_inventory') }}" class="mb-4" id="addIngredientForm" style="display: none;" x-data="{ showShelfLife: false, isPerishable: false }" x-init="$watch('isPerishable', value => { if (!value) { $el.querySelector('input[name=shelf_life_days]').value = ''; } })"></form>
   <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
   <input type="hidden" name="type" value="ingredient">
   <div class="row g-3 align-items-end">
@@ -211,7 +211,7 @@
           <input type="checkbox" name="is_perishable" class="form-check-input" id="addIngredientPerishable" x-model="isPerishable">
         </div>
         <input type="number" name="shelf_life_days" class="form-control" 
-               placeholder="Shelf Life (days)" min="1"
+               placeholder="Shelf Life (days)" min="1" id="addIngredientShelfLife"
                :required="isPerishable"
                :disabled="!isPerishable"
                :class="{ 'bg-light': !isPerishable }">
