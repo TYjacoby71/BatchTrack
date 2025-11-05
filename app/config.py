@@ -2,6 +2,15 @@ import os
 from datetime import timedelta
 
 
+_DEFAULT_ENV = 'development'
+
+
+def _normalized_env(value: str | None, *, default: str = _DEFAULT_ENV) -> str:
+    if not value:
+        return default
+    return value.strip().lower() or default
+
+
 def _normalize_db_url(url: str | None) -> str | None:
     if not url:
         return None
@@ -62,6 +71,7 @@ class BaseConfig:
 
 
 class DevelopmentConfig(BaseConfig):
+    ENV = 'development'
     DEBUG = True
     DEVELOPMENT = True
     SESSION_COOKIE_SECURE = False
@@ -84,6 +94,7 @@ class DevelopmentConfig(BaseConfig):
 
 
 class TestingConfig(BaseConfig):
+    ENV = 'testing'
     TESTING = True
     WTF_CSRF_ENABLED = False
     SESSION_COOKIE_SECURE = False
@@ -97,6 +108,7 @@ class TestingConfig(BaseConfig):
 
 
 class StagingConfig(BaseConfig):
+    ENV = 'staging'
     SESSION_COOKIE_SECURE = True
     PREFERRED_URL_SCHEME = 'https'
     DEBUG = False
@@ -112,6 +124,7 @@ class StagingConfig(BaseConfig):
 
 
 class ProductionConfig(BaseConfig):
+    ENV = 'production'
     SESSION_COOKIE_SECURE = True
     PREFERRED_URL_SCHEME = 'https'
     DEBUG = False
@@ -133,28 +146,19 @@ config_map = {
     'testing': TestingConfig,
     'staging': StagingConfig,
     'production': ProductionConfig,
-    'default': DevelopmentConfig,
 }
 
 
+def get_active_config_name() -> str:
+    """Return the canonical configuration key for the current environment."""
+    env_name = _normalized_env(os.environ.get('FLASK_ENV'), default=_DEFAULT_ENV)
+    return env_name if env_name in config_map else _DEFAULT_ENV
+
+
 def get_config():
-    """
-    Returns the appropriate config class based on ENV environment variable.
-    
-    ENV=production -> ProductionConfig (DEBUG=False, secure settings)
-    ENV=development (or any other value) -> DevelopmentConfig (DEBUG=True)
-    
-    The DEBUG flag controls:
-    - Flask debug mode
-    - Debug info visibility in templates
-    - Development conveniences
-    """
-    env = os.environ.get('ENV', 'development').lower()
-    
-    if env == 'production':
-        return ProductionConfig
-    else:
-        return DevelopmentConfig
+    """Return the config class for the active environment."""
+    config_name = get_active_config_name()
+    return config_map[config_name]
 
 
 # Backwards compatibility for existing imports

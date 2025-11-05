@@ -3,7 +3,6 @@ import logging
 from flask import Flask, redirect, url_for, render_template
 from flask_login import current_user
 from sqlalchemy.pool import StaticPool
-from datetime import timedelta
 
 # Import extensions and new modules
 from .extensions import db, migrate, csrf, limiter
@@ -39,16 +38,6 @@ def create_app(config=None):
 
     app.config['UPLOAD_FOLDER'] = 'static/product_images'
     os.makedirs('static/product_images', exist_ok=True)
-
-    # Production security settings
-    if os.environ.get('ENV', 'development').lower() == 'production':
-        app.config.update({
-            'PREFERRED_URL_SCHEME': 'https',
-            'SESSION_COOKIE_SECURE': True,
-            'SESSION_COOKIE_HTTPONLY': True,
-            'PERMANENT_SESSION_LIFETIME': 1800,
-            'SESSION_COOKIE_SAMESITE': 'Lax'
-        })
 
     # SQLite engine options for tests/memory databases
     _configure_sqlite_engine_options(app)
