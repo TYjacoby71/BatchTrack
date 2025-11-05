@@ -133,22 +133,87 @@ def init_production_command():
         except Exception as e:
             print(f"⚠️  Global inventory library seeding issue: {e}")
 
-        print('✅ Production seeding complete!')
-        print('🔒 Login: admin/admin (CHANGE IMMEDIATELY)')
-        print('📝 Note: This command can be run multiple times safely')
-        print('📊 Database status:')
+        print('\n📊 Detailed Seeding Summary (in creation order):')
         try:
             # Ensure session is clean in case prior steps raised and were handled
             try:
                 db.session.rollback()
             except Exception:
                 pass
-            from .models import Organization, User, Permission, SubscriptionTier, Unit
-            print(f'   - Organizations: {Organization.query.count()}')
-            print(f'   - Users: {User.query.count()}')
-            print(f'   - Permissions: {Permission.query.count()}')
-            print(f'   - Subscription Tiers: {SubscriptionTier.query.count()}')
-            print(f'   - Units: {Unit.query.count()}')
+            from .models import (
+                Organization, User, Permission, SubscriptionTier, Unit, 
+                DeveloperPermission, DeveloperRole, Role, GlobalItem, 
+                IngredientCategory, ProductCategory, Addon
+            )
+
+            # Step 1: System foundations (Organization Independent)
+            print('=== Step 1: System Foundations ===')
+
+            # Permissions (created first)
+            org_permissions = Permission.query.filter_by(is_active=True).count()
+            dev_permissions = DeveloperPermission.query.filter_by(is_active=True).count()
+            print(f'   📋 Organization Permissions: {org_permissions}')
+            print(f'   📋 Developer Permissions: {dev_permissions}')
+
+            # Developer roles (created after permissions)
+            dev_roles = DeveloperRole.query.filter_by(is_active=True).count()
+            print(f'   👤 Developer Roles: {dev_roles}')
+
+            # System roles (organization roles)
+            system_roles = Role.query.filter_by(is_system_role=True).count()
+            print(f'   👥 System Roles: {system_roles}')
+
+            # Subscription tiers (created after permissions)
+            sub_tiers = SubscriptionTier.query.count()
+            print(f'   💳 Subscription Tiers: {sub_tiers}')
+
+            # Add-ons (independent)
+            addons = Addon.query.filter_by(is_active=True).count()
+            print(f'   🔧 Add-ons: {addons}')
+
+            # Units (independent)
+            units = Unit.query.count()
+            print(f'   📏 Units: {units}')
+
+            print('\n=== Step 2: Organization-Dependent Setup ===')
+
+            # Organizations and users (depends on system foundations)
+            organizations = Organization.query.count()
+            total_users = User.query.count()
+            dev_users = User.query.filter_by(user_type='developer').count()
+            customer_users = User.query.filter_by(user_type='customer').count()
+            print(f'   🏢 Organizations: {organizations}')
+            print(f'   👨‍💻 Total Users: {total_users}')
+            print(f'      - Developer Users: {dev_users}')
+            print(f'      - Customer Users: {customer_users}')
+
+            print('\n=== Step 3: Organization-Specific Data ===')
+
+            # Ingredient categories (organization-specific)
+            ingredient_categories = IngredientCategory.query.count()
+            print(f'   🧪 Ingredient Categories: {ingredient_categories}')
+
+            # Product categories (global)
+            product_categories = ProductCategory.query.count()
+            print(f'   📦 Product Categories: {product_categories}')
+
+            # Global inventory library (by type)
+            ingredients_count = GlobalItem.query.filter_by(item_type='ingredient').count()
+            containers_count = GlobalItem.query.filter_by(item_type='container').count()
+            packaging_count = GlobalItem.query.filter_by(item_type='packaging').count()
+            consumables_count = GlobalItem.query.filter_by(item_type='consumable').count()
+            total_global_items = GlobalItem.query.count()
+
+            print(f'   🌍 Global Inventory Library: {total_global_items} total')
+            print(f'      - Ingredients: {ingredients_count}')
+            print(f'      - Containers: {containers_count}')
+            print(f'      - Packaging: {packaging_count}')
+            print(f'      - Consumables: {consumables_count}')
+
+            print('\n✅ Production seeding complete!')
+            print('🔒 Login: admin/admin (CHANGE IMMEDIATELY)')
+            print('📝 Note: This command can be run multiple times safely')
+
         except Exception as e:
             print(f'   - Status check failed: {e}')
 
