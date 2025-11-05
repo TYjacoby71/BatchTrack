@@ -16,6 +16,7 @@ from .logging_config import configure_logging
 from .blueprints.api.drawer_actions import drawer_actions_bp
 from .blueprints.api.routes import api_bp
 from .blueprints.api.density_reference import density_reference_bp
+from .config import get_active_config_name
 
 logger = logging.getLogger(__name__)
 
@@ -28,6 +29,9 @@ def create_app(config=None):
     if config:
         app.config.update(config)
 
+    # Track the resolved environment for downstream use
+    app.config.setdefault('APP_ENV', get_active_config_name())
+
     # Testing configuration
     if app.config.get('TESTING'):
         # Keep CSRF disabled for form tests, but allow login security to function
@@ -39,16 +43,6 @@ def create_app(config=None):
 
     app.config['UPLOAD_FOLDER'] = 'static/product_images'
     os.makedirs('static/product_images', exist_ok=True)
-
-    # Production security settings
-    if os.environ.get('ENV', 'development').lower() == 'production':
-        app.config.update({
-            'PREFERRED_URL_SCHEME': 'https',
-            'SESSION_COOKIE_SECURE': True,
-            'SESSION_COOKIE_HTTPONLY': True,
-            'PERMANENT_SESSION_LIFETIME': 1800,
-            'SESSION_COOKIE_SAMESITE': 'Lax'
-        })
 
     # SQLite engine options for tests/memory databases
     _configure_sqlite_engine_options(app)

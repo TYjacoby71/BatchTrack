@@ -2,6 +2,49 @@ import os
 from datetime import timedelta
 
 
+_ENV_ALIASES = {
+    'prod': 'production',
+    'production': 'production',
+    'live': 'production',
+    'staging': 'staging',
+    'stage': 'staging',
+    'test': 'testing',
+    'testing': 'testing',
+    'qa': 'testing',
+    'dev': 'development',
+    'development': 'development',
+    'default': 'development',
+}
+
+
+def _determine_environment(default: str = 'development') -> str:
+    """Resolve the active environment name from multiple environment variables."""
+
+    def _normalize(value: str | None) -> str | None:
+        if not value:
+            return None
+        normalized = value.strip().lower()
+        return _ENV_ALIASES.get(normalized, normalized)
+
+    # Honor explicit ENV first, then FLASK_ENV
+    env_candidates = (
+        os.environ.get('ENV'),
+        os.environ.get('FLASK_ENV'),
+    )
+
+    for candidate in env_candidates:
+        normalized = _normalize(candidate)
+        if normalized in _ENV_ALIASES.values():
+            return normalized
+
+    # If FLASK_DEBUG is explicitly enabled, favor development defaults
+    flask_debug = os.environ.get('FLASK_DEBUG')
+    if flask_debug and flask_debug.strip().lower() in {'1', 'true', 'yes', 'on'}:
+        return 'development'
+
+    return _ENV_ALIASES.get(default, 'development')
+
+
 def _normalize_db_url(url: str | None) -> str | None:
     if not url:
         return None
@@ -133,28 +176,19 @@ config_map = {
     'testing': TestingConfig,
     'staging': StagingConfig,
     'production': ProductionConfig,
-    'default': DevelopmentConfig,
 }
 
 
-def get_config():
-    """
-    Returns the appropriate config class based on ENV environment variable.
-    
-    ENV=production -> ProductionConfig (DEBUG=False, secure settings)
-    ENV=development (or any other value) -> DevelopmentConfig (DEBUG=True)
-    
-    The DEBUG flag controls:
-    - Flask debug mode
-    - Debug info visibility in templates
-    - Development conveniences
-    """
-    env = os.environ.get('ENV', 'development').lower()
-    
-    if env == 'production':
-        return ProductionConfig
-    else:
-        return DevelopmentConfig
+def get_active_config_name(default: str = 'development') -> str:
+    """Return the canonical configuration key for the current environment."""
+    env_name = _determine_environment(default)
+    return env_name if env_name in config_map else default
+
+
+def get_config(default: str = 'development'):
+    """Return the config class for the active environment."""
+    config_name = get_active_config_name(default)
+    return config_map[config_name]
 
 
 # Backwards compatibility for existing imports
