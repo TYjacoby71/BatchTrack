@@ -188,6 +188,41 @@
         {% endif %}
       </div>
     </div>
+
+    <!-- Recipe Stats Card -->
+    <div class="card mb-4">
+      <div class="card-header">
+        <h5 class="card-title mb-0"><i class="fas fa-chart-bar"></i> Recipe Stats</h5>
+      </div>
+      <div class="card-body">
+        <div class="row text-center g-3">
+          <div class="col-3">
+            <div class="stat-item p-3 bg-light rounded">
+              <div class="h4 text-primary mb-1">{{ recipe.recipe_ingredients|length }}</div>
+              <small class="text-muted">Ingredients</small>
+            </div>
+          </div>
+          <div class="col-3">
+            <div class="stat-item p-3 bg-light rounded">
+              <div class="h4 text-info mb-1">{{ recipe.recipe_consumables|length }}</div>
+              <small class="text-muted">Consumables</small>
+            </div>
+          </div>
+          <div class="col-3">
+            <div class="stat-item p-3 bg-light rounded">
+              <div class="h4 text-success mb-1">{{ recipe.batches|length if recipe.batches else 0 }}</div>
+              <small class="text-muted">Batches Made</small>
+            </div>
+          </div>
+          <div class="col-3">
+            <div class="stat-item p-3 bg-light rounded">
+              <div class="h4 text-warning mb-1">{{ recipe.variations|length if recipe.variations else 0 }}</div>
+              <small class="text-muted">Variations</small>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
   </div>
 
   <!-- Right Column -->
@@ -262,43 +297,7 @@
       </div>
     </div>
 
-    <!-- Recipe Stats Card -->
-    <div class="card mb-4">
-      <div class="card-header">
-        <h5 class="card-title mb-0"><i class="fas fa-chart-bar"></i> Recipe Stats</h5>
-      </div>
-      <div class="card-body">
-        <div class="row text-center">
-          <div class="col-6">
-            <div class="stat-item">
-              <div class="h4 text-primary mb-1">{{ recipe.recipe_ingredients|length }}</div>
-              <small class="text-muted">Ingredients</small>
-            </div>
-          </div>
-          <div class="col-6">
-            <div class="stat-item">
-              <div class="h4 text-info mb-1">{{ recipe.recipe_consumables|length }}</div>
-              <small class="text-muted">Consumables</small>
-            </div>
-          </div>
-        </div>
-        <hr>
-        <div class="row text-center">
-          <div class="col-6">
-            <div class="stat-item">
-              <div class="h4 text-success mb-1">{{ recipe.batches|length if recipe.batches else 0 }}</div>
-              <small class="text-muted">Batches Made</small>
-            </div>
-          </div>
-          <div class="col-6">
-            <div class="stat-item">
-              <div class="h4 text-warning mb-1">{{ recipe.variations|length if recipe.variations else 0 }}</div>
-              <small class="text-muted">Variations</small>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
+    
 
     <!-- Actions Card -->
     <div class="card">
