@@ -9,8 +9,8 @@ from ..models.developer_role import DeveloperRole
 
 def load_consolidated_permissions():
     """Load permissions from the consolidated JSON file"""
-    # Look for the JSON file in the root directory
-    json_path = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), 'consolidated_permissions.json')
+    # Look for the JSON file in the seeders directory
+    json_path = os.path.join(os.path.dirname(__file__), 'consolidated_permissions.json')
     
     if not os.path.exists(json_path):
         raise FileNotFoundError(f"Consolidated permissions file not found at: {json_path}")
