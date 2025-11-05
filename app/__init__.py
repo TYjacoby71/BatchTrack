@@ -3,7 +3,6 @@ import logging
 from flask import Flask, redirect, url_for, render_template
 from flask_login import current_user
 from sqlalchemy.pool import StaticPool
-from datetime import timedelta
 
 # Import extensions and new modules
 from .extensions import db, migrate, csrf, limiter
@@ -16,7 +15,6 @@ from .logging_config import configure_logging
 from .blueprints.api.drawer_actions import drawer_actions_bp
 from .blueprints.api.routes import api_bp
 from .blueprints.api.density_reference import density_reference_bp
-from .config import get_active_config_name
 
 logger = logging.getLogger(__name__)
 
@@ -28,9 +26,6 @@ def create_app(config=None):
     app.config.from_object("app.config.Config")
     if config:
         app.config.update(config)
-
-    # Track the resolved environment for downstream use
-    app.config.setdefault('APP_ENV', get_active_config_name())
 
     # Testing configuration
     if app.config.get('TESTING'):

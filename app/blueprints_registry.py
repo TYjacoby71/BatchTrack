@@ -343,19 +343,26 @@ def register_blueprints(app):
         pass
 
 
-    # Print summary
-    print(f"\n=== Blueprint Registration Summary ===")
-    print(f"✅ Successful: {len(successful_registrations)}")
-    for success in successful_registrations:
-        print(f"   - {success}")
+    # Log summary (avoid noisy stdout in production)
+    app_logger = getattr(app, 'logger', logger)
+    summary_lines = [
+        "=== Blueprint Registration Summary ===",
+        f"Successful: {len(successful_registrations)}",
+        *[f"   - {success}" for success in successful_registrations]
+    ]
 
     if failed_registrations:
-        print(f"\n❌ Failed: {len(failed_registrations)}")
-        for failure in failed_registrations:
-            print(f"   - {failure}")
-        print("\n⚠️  App will continue running with available blueprints")
+        summary_lines.extend([
+            f"Failed: {len(failed_registrations)}",
+            *[f"   - {failure}" for failure in failed_registrations],
+            "App will continue running with available blueprints",
+        ])
+        log_method = app_logger.warning
     else:
-        print("\n🎉 All blueprints registered successfully!")
+        summary_lines.append("All blueprints registered successfully!")
+        log_method = app_logger.info
+
+    log_method("\n".join(summary_lines))
 
     # CSRF exemptions
     try:

@@ -2,47 +2,13 @@ import os
 from datetime import timedelta
 
 
-_ENV_ALIASES = {
-    'prod': 'production',
-    'production': 'production',
-    'live': 'production',
-    'staging': 'staging',
-    'stage': 'staging',
-    'test': 'testing',
-    'testing': 'testing',
-    'qa': 'testing',
-    'dev': 'development',
-    'development': 'development',
-    'default': 'development',
-}
+_DEFAULT_ENV = 'development'
 
 
-def _determine_environment(default: str = 'development') -> str:
-    """Resolve the active environment name from multiple environment variables."""
-
-    def _normalize(value: str | None) -> str | None:
-        if not value:
-            return None
-        normalized = value.strip().lower()
-        return _ENV_ALIASES.get(normalized, normalized)
-
-    # Honor explicit ENV first, then FLASK_ENV
-    env_candidates = (
-        os.environ.get('ENV'),
-        os.environ.get('FLASK_ENV'),
-    )
-
-    for candidate in env_candidates:
-        normalized = _normalize(candidate)
-        if normalized in _ENV_ALIASES.values():
-            return normalized
-
-    # If FLASK_DEBUG is explicitly enabled, favor development defaults
-    flask_debug = os.environ.get('FLASK_DEBUG')
-    if flask_debug and flask_debug.strip().lower() in {'1', 'true', 'yes', 'on'}:
-        return 'development'
-
-    return _ENV_ALIASES.get(default, 'development')
+def _normalized_env(value: str | None, *, default: str = _DEFAULT_ENV) -> str:
+    if not value:
+        return default
+    return value.strip().lower() or default
 
 
 def _normalize_db_url(url: str | None) -> str | None:
@@ -105,6 +71,7 @@ class BaseConfig:
 
 
 class DevelopmentConfig(BaseConfig):
+    ENV = 'development'
     DEBUG = True
     DEVELOPMENT = True
     SESSION_COOKIE_SECURE = False
@@ -127,6 +94,7 @@ class DevelopmentConfig(BaseConfig):
 
 
 class TestingConfig(BaseConfig):
+    ENV = 'testing'
     TESTING = True
     WTF_CSRF_ENABLED = False
     SESSION_COOKIE_SECURE = False
@@ -140,6 +108,7 @@ class TestingConfig(BaseConfig):
 
 
 class StagingConfig(BaseConfig):
+    ENV = 'staging'
     SESSION_COOKIE_SECURE = True
     PREFERRED_URL_SCHEME = 'https'
     DEBUG = False
@@ -155,6 +124,7 @@ class StagingConfig(BaseConfig):
 
 
 class ProductionConfig(BaseConfig):
+    ENV = 'production'
     SESSION_COOKIE_SECURE = True
     PREFERRED_URL_SCHEME = 'https'
     DEBUG = False
@@ -179,15 +149,15 @@ config_map = {
 }
 
 
-def get_active_config_name(default: str = 'development') -> str:
+def get_active_config_name() -> str:
     """Return the canonical configuration key for the current environment."""
-    env_name = _determine_environment(default)
-    return env_name if env_name in config_map else default
+    env_name = _normalized_env(os.environ.get('FLASK_ENV'), default=_DEFAULT_ENV)
+    return env_name if env_name in config_map else _DEFAULT_ENV
 
 
-def get_config(default: str = 'development'):
+def get_config():
     """Return the config class for the active environment."""
-    config_name = get_active_config_name(default)
+    config_name = get_active_config_name()
     return config_map[config_name]
 
 
