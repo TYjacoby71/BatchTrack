@@ -1468,7 +1468,7 @@ def integrations_checklist():
                 _make_item('FLASK_DEBUG', 'Flask debug flag. Must stay false/unset in production.', required=False, recommended='false / unset'),
                 _make_item('REPLIT_DEPLOYMENT', 'Platform toggle used to force production settings on Replit. Leave false unless deploying there.', required=False, recommended='false'),
                 _make_item('LOG_LEVEL', 'Application logging level. Use INFO or WARN in production.', required=True, recommended='INFO', allow_config=True),
-            ],
+            ]
         },
         {
             'title': 'Database & Persistence',
@@ -1478,7 +1478,7 @@ def integrations_checklist():
                 _make_item('DATABASE_URL', 'Fallback database connection string (used if internal URL not set).', required=False, is_secret=True, note='Optional: set if your platform exposes only DATABASE_URL.'),
                 _make_item('SQLALCHEMY_DISABLE_CREATE_ALL', 'Disable db.create_all() safety switch. Set to 1 in production.', required=False, recommended='1 (enabled)', note='Prevents accidental schema drift on boot.'),
                 _make_item('SQLALCHEMY_ENABLE_CREATE_ALL', 'Local dev-only override to run db.create_all(). Leave unset in production.', required=False, recommended='unset'),
-            ],
+            ]
         },
         {
             'title': 'Caching & Rate Limits',
@@ -1486,7 +1486,7 @@ def integrations_checklist():
             'items': [
                 _make_item('REDIS_URL', 'Redis connection string for caching and rate limit storage.', required=False, recommended='redis://...'),
                 _make_item('RATELIMIT_STORAGE_URL', 'Flask-Limiter backend. Point at Redis in production.', required=True, recommended='redis://...', allow_config=True),
-            ],
+            ]
         },
         {
             'title': 'Security & Networking',
@@ -1503,7 +1503,7 @@ def integrations_checklist():
                 _make_item('DISABLE_SECURITY_HEADERS', 'Emergency kill-switch for security headers. Leave unset in production.', required=False, recommended='unset'),
                 _make_item('CONTENT_SECURITY_POLICY', 'Override default Content-Security-Policy header with a custom policy.', required=False, allow_config=True, note='Leave unset to use the built-in CSP; override only after testing.'),
                 _make_item('SECURITY_HEADERS', 'JSON/YAML mapping to override default security headers.', required=False, note='Optional advanced override for header values. Configure through app config if preferred.'),
-            ],
+            ]
         },
         {
             'title': 'Email & Notifications',
@@ -1521,7 +1521,7 @@ def integrations_checklist():
                 _make_item('POSTMARK_SERVER_TOKEN', 'Postmark server token (if using Postmark).', required=False, is_secret=True),
                 _make_item('MAILGUN_API_KEY', 'Mailgun REST API key (if using Mailgun).', required=False, is_secret=True),
                 _make_item('MAILGUN_DOMAIN', 'Mailgun sending domain (if using Mailgun).', required=False),
-            ],
+            ]
         },
         {
             'title': 'Billing & Payments',
@@ -1530,7 +1530,7 @@ def integrations_checklist():
                 _make_item('STRIPE_SECRET_KEY', 'Stripe secret key (live).', required=True, is_secret=True),
                 _make_item('STRIPE_PUBLISHABLE_KEY', 'Stripe publishable key (live).', required=True, is_secret=True),
                 _make_item('STRIPE_WEBHOOK_SECRET', 'Stripe webhook signing secret.', required=True, is_secret=True),
-            ],
+            ]
         },
         {
             'title': 'OAuth & Marketplace',
@@ -1540,15 +1540,15 @@ def integrations_checklist():
                 _make_item('GOOGLE_OAUTH_CLIENT_SECRET', 'Google OAuth 2.0 client secret.', required=False, is_secret=True),
                 _make_item('WHOP_API_KEY', 'Whop API key (if using Whop for licensing).', required=False, is_secret=True),
                 _make_item('WHOP_APP_ID', 'Whop app ID (if using Whop).', required=False, is_secret=True),
-            ],
+            ]
         },
         {
             'title': 'Maintenance & Utilities',
             'note': 'Rarely used toggles for seeding or one-off maintenance scripts.',
             'items': [
                 _make_item('SEED_PRESETS', 'Enable preset data seeding during migrations (internal tooling).', required=False, recommended='unset'),
-            ],
-        },
+            ]
+        }
     ]
 
     # Feature flags
