@@ -1,3 +1,11 @@
+"""LEGACY SHIM: Backwards-compatible statistics facade.
+
+This module exists solely so older call sites that import
+``app.services.statistics_service.StatisticsService`` keep working while the
+application migrates to the modular services under ``app.services.statistics``.
+New code should target the modular services directly.
+"""
+
 from app.models.statistics import UserStats, OrganizationStats
 from app.extensions import db
 from flask_login import current_user
