@@ -393,63 +393,74 @@ async function openItemDetails(id){
     contentEl.style.display = 'none';
     oc.show();
 
-    // Use the same endpoint as customer side for consistency
-    const statsRes = await fetch(`/global-items/${id}/stats`);
-    if (!statsRes.ok) {
-      throw new Error(`HTTP error! status: ${statsRes.status}`);
-    }
-
-    const payload = await statsRes.json();
-    if (!payload.success) {
-      throw new Error(`API error: ${payload.error}`);
-    }
-
-    if (payload && payload.success && payload.item) {
-      const it = payload.item;
-      document.getElementById('giName').textContent = it.name || `#${id}`;
-      document.getElementById('giType').textContent = it.item_type || '';
-      document.getElementById('giCategory').textContent = it.ingredient_category_name || '';
-      document.getElementById('giUnit').textContent = it.default_unit || '';
-      document.getElementById('giDensity').textContent = (it.density != null) ? Number(it.density).toFixed(3) : '';
-
-      // Container meta
-      const isContainer = it.item_type === 'container' || it.item_type === 'packaging';
-      const metaDiv = document.getElementById('giContainerMeta');
-      if (isContainer) {
-        metaDiv.style.display = '';
-        document.getElementById('giMaterial').textContent = it.container_material || '';
-        const typeStyle = [it.container_type || '', it.container_style ? `(${it.container_style})` : ''].join(' ').trim();
-        document.getElementById('giTypeStyle').textContent = typeStyle;
-        document.getElementById('giColor').textContent = it.container_color || '';
-      } else {
-        metaDiv.style.display = 'none';
+      // Use the same endpoint as customer side for consistency
+      const statsRes = await fetch(`/global-items/${id}/stats`, {
+        credentials: 'same-origin',
+        headers: {
+          'Accept': 'application/json'
+        }
+      });
+      if (!statsRes.ok) {
+        throw new Error(`HTTP error! status: ${statsRes.status}`);
       }
 
-      // Ingredient property visibility
-      const propsDiv = document.getElementById('giIngredientStats');
-      const grid = document.getElementById('giPropsGrid');
-      grid.innerHTML = '';
-      const vis = payload.category_visibility || {};
-      const addProp = (label, value, show) => {
-        if (!show) return;
-        const v = (value == null || value === '') ? '-' : value;
-        const col = document.createElement('div');
-        col.innerHTML = `<div><strong>${label}:</strong> ${v}</div>`;
-        grid.appendChild(col);
-      };
-      const isIngredient = it.item_type === 'ingredient';
-      propsDiv.style.display = isIngredient ? '' : 'none';
-      if (isIngredient) {
-        addProp('Saponification', it.saponification_value, vis.show_saponification_value);
-        addProp('Iodine', it.iodine_value, vis.show_iodine_value);
-        addProp('Melting Point (°C)', it.melting_point_c, vis.show_melting_point);
-        addProp('Flash Point (°C)', it.flash_point_c, vis.show_flash_point);
-        addProp('pH', it.ph_value, vis.show_ph_value);
-        addProp('Moisture %', it.moisture_content_percent, vis.show_moisture_content);
-        addProp('Shelf Life (months)', it.shelf_life_months, vis.show_shelf_life_months);
-        addProp('Comedogenic', it.comedogenic_rating, vis.show_comedogenic_rating);
+      const contentType = statsRes.headers.get('content-type') || '';
+      if (!contentType.includes('application/json')) {
+        const bodyPreview = await statsRes.text();
+        throw new Error(`Unexpected response format (expected JSON). Preview: ${bodyPreview.slice(0, 160)}`);
       }
-    }
+
+      const payload = await statsRes.json();
+      if (!payload.success) {
+        throw new Error(`API error: ${payload.error}`);
+      }
+
+      if (payload && payload.success && payload.item) {
+        const it = payload.item;
+        document.getElementById('giName').textContent = it.name || `#${id}`;
+        document.getElementById('giType').textContent = it.item_type || '';
+        document.getElementById('giCategory').textContent = it.ingredient_category_name || '';
+        document.getElementById('giUnit').textContent = it.default_unit || '';
+        document.getElementById('giDensity').textContent = (it.density != null) ? Number(it.density).toFixed(3) : '';
+
+        // Container meta
+        const isContainer = it.item_type === 'container' || it.item_type === 'packaging';
+        const metaDiv = document.getElementById('giContainerMeta');
+        if (isContainer) {
+          metaDiv.style.display = '';
+          document.getElementById('giMaterial').textContent = it.container_material || '';
+          const typeStyle = [it.container_type || '', it.container_style ? `(${it.container_style})` : ''].join(' ').trim();
+          document.getElementById('giTypeStyle').textContent = typeStyle;
+          document.getElementById('giColor').textContent = it.container_color || '';
+        } else {
+          metaDiv.style.display = 'none';
+        }
+
+        // Ingredient property visibility
+        const propsDiv = document.getElementById('giIngredientStats');
+        const grid = document.getElementById('giPropsGrid');
+        grid.innerHTML = '';
+        const vis = payload.category_visibility || {};
+        const addProp = (label, value, show) => {
+          if (!show) return;
+          const v = (value == null || value === '') ? '-' : value;
+          const col = document.createElement('div');
+          col.innerHTML = `<div><strong>${label}:</strong> ${v}</div>`;
+          grid.appendChild(col);
+        };
+        const isIngredient = it.item_type === 'ingredient';
+        propsDiv.style.display = isIngredient ? '' : 'none';
+        if (isIngredient) {
+          addProp('Saponification', it.saponification_value, vis.show_saponification_value);
+          addProp('Iodine', it.iodine_value, vis.show_iodine_value);
+          addProp('Melting Point (°C)', it.melting_point_c, vis.show_melting_point);
+          addProp('Flash Point (°C)', it.flash_point_c, vis.show_flash_point);
+          addProp('pH', it.ph_value, vis.show_ph_value);
+          addProp('Moisture %', it.moisture_content_percent, vis.show_moisture_content);
+          addProp('Shelf Life (months)', it.shelf_life_months, vis.show_shelf_life_months);
+          addProp('Comedogenic', it.comedogenic_rating, vis.show_comedogenic_rating);
+        }
+      }
 
     if (payload && payload.success) {
       const c = payload.cost || {};

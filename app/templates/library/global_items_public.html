@@ -205,18 +205,29 @@ async function openItemDetails(id){
     oc.show();
 
     // Fetch item + stats
-    console.log('Fetching stats for global item:', id);
-    const statsRes = await fetch(`/global-items/${id}/stats`);
-    console.log('Response status:', statsRes.status);
+      console.log('Fetching stats for global item:', id);
+      const statsRes = await fetch(`/global-items/${id}/stats`, {
+        credentials: 'same-origin',
+        headers: {
+          'Accept': 'application/json'
+        }
+      });
+      console.log('Response status:', statsRes.status);
 
-    if (!statsRes.ok) {
-      const errorText = await statsRes.text();
-      console.error('Stats fetch failed:', statsRes.status, statsRes.statusText, errorText);
-      throw new Error(`HTTP error! status: ${statsRes.status} - ${errorText}`);
-    }
+      if (!statsRes.ok) {
+        const errorText = await statsRes.text();
+        console.error('Stats fetch failed:', statsRes.status, statsRes.statusText, errorText);
+        throw new Error(`HTTP error! status: ${statsRes.status} - ${errorText}`);
+      }
 
-    const payload = await statsRes.json();
-    console.log('Stats payload received:', payload);
+      const contentType = statsRes.headers.get('content-type') || '';
+      if (!contentType.includes('application/json')) {
+        const preview = await statsRes.text();
+        throw new Error(`Unexpected response format (expected JSON). Preview: ${preview.slice(0, 160)}`);
+      }
+
+      const payload = await statsRes.json();
+      console.log('Stats payload received:', payload);
 
     if (!payload.success) {
       console.error('API returned error:', payload.error);

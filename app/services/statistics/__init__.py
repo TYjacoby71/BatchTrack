@@ -10,11 +10,14 @@ from ._batch_stats import BatchStatisticsService
 from ._recipe_stats import RecipeStatisticsService
 from ._inventory_stats import InventoryStatisticsService
 from ._reporting import ReportingService
+from .catalog import AnalyticsCatalogService, AnalyticsCatalogError
 
 __all__ = [
     'StatisticsService',
     'BatchStatisticsService', 
     'RecipeStatisticsService',
     'InventoryStatisticsService',
-    'ReportingService'
+    'ReportingService',
+    'AnalyticsCatalogService',
+    'AnalyticsCatalogError'
 ]
