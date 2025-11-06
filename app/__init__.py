@@ -1,7 +1,6 @@
 import os
 import logging
 from flask import Flask, redirect, url_for, render_template
-from flask_login import current_user
 from sqlalchemy.pool import StaticPool
 
 # Import extensions and new modules
@@ -162,6 +161,7 @@ def _add_core_routes(app):
     @app.route("/")
     def index():
         """Main landing page with proper routing logic"""
+        from flask_login import current_user
         if current_user.is_authenticated:
             if current_user.user_type == 'developer':
                 return redirect(url_for('developer.dashboard'))  # Developers go to developer dashboard
