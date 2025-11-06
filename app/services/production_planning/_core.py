@@ -14,6 +14,7 @@ from flask_login import current_user
 
 from ...models import Recipe
 from ..stock_check import UniversalStockCheckService
+from ..statistics import StatisticsService as ModularStatisticsService
 from .types import ProductionRequest, ProductionPlan, IngredientRequirement, CostBreakdown
 from ._container_management import analyze_container_options
 from ._cost_calculation import calculate_comprehensive_costs
@@ -159,8 +160,7 @@ def execute_production_planning(request: ProductionRequest, include_containers: 
     # 7. Record planned efficiency statistics
     if plan.feasible and container_strategy:
         try:
-            from ...statistics_service import StatisticsService
-            StatisticsService.record_planned_efficiency(
+            ModularStatisticsService.record_planned_efficiency(
                 recipe_id=request.recipe_id,
                 planned_efficiency=container_strategy.containment_percentage,
                 planned_yield=plan.projected_yield,
