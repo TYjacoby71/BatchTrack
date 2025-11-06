@@ -53,6 +53,7 @@ SQLALCHEMY_POOL_TIMEOUT=30
 # Redis for rate limiting and caching (REQUIRED in production)
 REDIS_URL=redis://your-redis-host:6379/0
 RATELIMIT_STORAGE_URI=${REDIS_URL}
+SESSION_TYPE=redis
 
 # Gunicorn worker configuration
 GUNICORN_WORKERS=8                    # 2x CPU cores + 1
@@ -123,6 +124,11 @@ gunicorn -c gunicorn.conf.py wsgi:app
 - Command: `flask dispatch-domain-events` (add `--once` for ad-hoc batches, or configure as a long-running service).
 - Provide `DOMAIN_EVENT_WEBHOOK_URL` for webhook delivery; if unset, events are marked processed after logging (no external call).
 - Monitor dispatcher logs for retries; events exceeding the retry threshold are tagged with `_dispatch_errors` in the row payload.
+
+#### Shared Session Store
+
+- Flask sessions are now server-side via `Flask-Session`; production **must** point `SESSION_TYPE=redis` and reuse `REDIS_URL` so workers and instances share state.
+- If Redis is unavailable at boot, the application will log a warning and fall back to filesystem storage—treat this as local development only.
 
 ### 5. Redis Configuration
 

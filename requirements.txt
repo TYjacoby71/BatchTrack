@@ -30,6 +30,7 @@ psycopg2-binary
 beautifulsoup4
 requests
 flask-mail
+Flask-Session==0.6.0
 google-auth
 google-auth-oauthlib
 Flask-Mail

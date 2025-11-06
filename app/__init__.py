@@ -5,7 +5,7 @@ from flask_login import current_user
 from sqlalchemy.pool import StaticPool
 
 # Import extensions and new modules
-from .extensions import db, migrate, csrf, limiter, cache
+from .extensions import db, migrate, csrf, limiter, cache, server_session
 from .authz import configure_login_manager
 from .middleware import register_middleware
 from .template_context import register_template_context
@@ -58,6 +58,37 @@ def create_app(config=None):
     cache.init_app(app, config=cache_config)
     if app.config.get('ENV') == 'production' and cache_config.get('CACHE_TYPE') != 'RedisCache':
         logger.warning("Redis cache not configured; falling back to SimpleCache which is not safe for multi-instance production use.")
+
+    # Configure server-side sessions
+    session_backend = None
+    session_redis = None
+    redis_url = app.config.get('REDIS_URL')
+    if redis_url:
+        try:
+            import redis  # type: ignore
+            session_redis = redis.Redis.from_url(redis_url)
+            session_backend = 'redis'
+        except Exception as exc:
+            logger.warning("Failed to initialize Redis-backed session store (%s); falling back to filesystem.", exc)
+    if not session_backend:
+        session_backend = 'filesystem'
+        session_dir = os.path.join(app.instance_path, 'session_files')
+        os.makedirs(session_dir, exist_ok=True)
+        app.config.setdefault('SESSION_FILE_DIR', session_dir)
+
+    if session_backend == 'redis' and session_redis is not None:
+        app.config.setdefault('SESSION_TYPE', 'redis')
+        app.config.setdefault('SESSION_PERMANENT', True)
+        app.config.setdefault('SESSION_USE_SIGNER', True)
+        app.config['SESSION_REDIS'] = session_redis
+    else:
+        app.config.setdefault('SESSION_TYPE', 'filesystem')
+        app.config.setdefault('SESSION_PERMANENT', True)
+        app.config.setdefault('SESSION_USE_SIGNER', True)
+        if app.config.get('ENV') == 'production':
+            logger.warning("Server-side sessions are using filesystem storage; configure REDIS_URL for shared session state across workers.")
+
+    server_session.init_app(app)
     
     # Configure rate limiter with Redis storage in production
     limiter_storage_uri = app.config.get('RATELIMIT_STORAGE_URI')

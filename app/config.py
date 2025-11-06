@@ -40,6 +40,8 @@ class BaseConfig:
     SESSION_COOKIE_HTTPONLY = True
     SESSION_COOKIE_SAMESITE = 'Lax'
     WTF_CSRF_ENABLED = True
+    SESSION_USE_SIGNER = True
+    SESSION_PERMANENT = True
 
     # Uploads
     UPLOAD_FOLDER = 'static/product_images'
@@ -143,6 +145,7 @@ class TestingConfig(BaseConfig):
     # Add rate limiter storage configuration for tests
     RATELIMIT_STORAGE_URI = os.environ.get('RATELIMIT_STORAGE_URI', 'memory://')
     RATELIMIT_STORAGE_URL = RATELIMIT_STORAGE_URI
+    SESSION_TYPE = 'filesystem'
 
 
 class StagingConfig(BaseConfig):
