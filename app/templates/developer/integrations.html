@@ -356,7 +356,7 @@
       <div class="alert alert-secondary small mb-2">{{ section.note }}</div>
     {% endif %}
     <div class="list-group">
-      {% for item in section.items %}
+      {% for item in section.section_items %}
         <label class="list-group-item d-flex align-items-start gap-3">
           <input class="form-check-input mt-1" type="checkbox" id="env_{{ item.key }}" {% if item.present %}checked{% endif %}>
           <div>
