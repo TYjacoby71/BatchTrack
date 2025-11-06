@@ -1,58 +1,41 @@
-
-# Core Flask Framework
-Flask==3.1.0
-Werkzeug==2.2.3
-Jinja2==3.1.6
-MarkupSafe==3.0.2
-itsdangerous==2.2.0
-click==8.1.8
+alembic==1.15.2
 blinker==1.9.0
-
-# Flask Extensions (compatible versions)
-Flask-Login==0.5.0
-Flask-Mail==0.10.0
+click==8.1.8
+Flask==3.1.0
+Flask-Login==0.6.3
 Flask-Migrate==4.0.5
-Flask-SQLAlchemy==3.0.5
+Flask-SQLAlchemy==3.1.1
 Flask-WTF==1.2.1
 Flask-Limiter==3.8.0
-Flask-Bcrypt==1.0.1
-
-# Database & ORM
-SQLAlchemy==2.0.40
-alembic==1.15.2
-psycopg2-binary==2.9.9
-
-# Security & Crypto
-bcrypt==4.2.1
-WTForms==3.2.1
-
-# Production Server & Scaling
-gunicorn==23.0.0
-gevent==24.2.1
-
-# Caching & Rate Limiting (Critical for 10k users)
-redis==5.1.1
-
-# Utilities & Timezone
-pytz==2024.2
-typing_extensions==4.13.1
-
-# Payment Processing
-stripe==11.1.0
-
-# Web Scraping & HTTP
-beautifulsoup4==4.12.3
-requests==2.32.3
-
-# Google OAuth
-google-auth==2.34.0
-google-auth-oauthlib==1.2.1
-
-# PDF Generation
-reportlab==4.2.2
-
-# Testing
-pytest==8.3.5
+greenlet==3.1.1
 iniconfig==2.1.0
+itsdangerous==2.2.0
+Jinja2==3.1.6
+Mako==1.3.9
+MarkupSafe==3.0.2
 packaging==24.2
 pluggy==1.5.0
+pytest==8.3.5
+SQLAlchemy==2.0.40
+typing_extensions==4.13.1
+Werkzeug==3.1.3
+WTForms==3.2.1
+flask-bcrypt
+bcrypt
+pytz
+stripe
+gunicorn
+psycopg2-binary
+beautifulsoup4
+requests
+flask-mail
+google-auth
+google-auth-oauthlib
+Flask-Mail
+flask-mail
+Flask-Limiter
+Flask-Migrate
+Flask-WTF>=1.1.0
+MarkupSafe>=2.0.0
+Flask-WTF==1.2.1
+reportlab

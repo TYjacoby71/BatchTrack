@@ -1,6 +1,7 @@
 import os
 import logging
 from flask import Flask, redirect, url_for, render_template
+from flask_login import current_user
 from sqlalchemy.pool import StaticPool
 
 # Import extensions and new modules
@@ -45,23 +46,7 @@ def create_app(config=None):
     db.init_app(app)
     migrate.init_app(app, db)
     csrf.init_app(app)
-
-    limiter_storage = (
-        app.config.get('RATELIMIT_STORAGE_URI')
-        or app.config.get('RATELIMIT_STORAGE_URL')
-        or 'memory://'
-    )
-    app.config['RATELIMIT_STORAGE_URI'] = limiter_storage
-
-    env_name = str(app.config.get('ENV', '')).lower()
-    if env_name in {'production', 'staging'} and limiter_storage.lower().startswith('memory://'):
-        raise RuntimeError(
-            "RATELIMIT_STORAGE_URI must point to an external store (e.g. Redis) "
-            "in production/staging. Configure the RATELIMIT_STORAGE_URI environment "
-            "variable."
-        )
-
-    limiter.init_app(app, storage_uri=limiter_storage)
+    limiter.init_app(app)
     configure_login_manager(app)
 
     # Session lifetime should come from config classes; avoid overriding here
@@ -161,7 +146,6 @@ def _add_core_routes(app):
     @app.route("/")
     def index():
         """Main landing page with proper routing logic"""
-        from flask_login import current_user
         if current_user.is_authenticated:
             if current_user.user_type == 'developer':
                 return redirect(url_for('developer.dashboard'))  # Developers go to developer dashboard

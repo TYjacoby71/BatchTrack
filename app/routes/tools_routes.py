@@ -2,7 +2,6 @@ from flask import Blueprint, render_template, request, jsonify, redirect, url_fo
 from app.services.unit_conversion.unit_conversion import ConversionEngine
 from app.models import GlobalItem
 from app.models import FeatureFlag
-from app.utils.file_store import read_json
 
 # Public Tools blueprint
 # Mounted at /tools via blueprints_registry
@@ -17,9 +16,17 @@ def _is_enabled(key: str, default: bool = True) -> bool:
             return bool(flag.enabled)
         
         # Fallback to settings.json
-        settings = read_json('settings.json', default={}) or {}
-        feature_flags = settings.get('feature_flags', {})
-        return feature_flags.get(key, default)
+        from flask import current_app
+        import json
+        import os
+        
+        try:
+            with open('settings.json', 'r') as f:
+                settings = json.load(f)
+                feature_flags = settings.get('feature_flags', {})
+                return feature_flags.get(key, default)
+        except Exception:
+            return default
     except Exception:
         return default
 

@@ -26,7 +26,7 @@ def configure_login_manager(app):
         from sqlalchemy.exc import SQLAlchemyError
         from .extensions import db
         try:
-            user = db.session.get(User, int(user_id))
+            user = app.extensions['sqlalchemy'].session.get(User, int(user_id))
             if user and user.is_active:
                 if user.user_type == 'developer':
                     return user

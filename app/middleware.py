@@ -1,19 +1,12 @@
+
 import os
 import logging
-import time
 from collections.abc import Mapping
-from dataclasses import dataclass
-import redis
-import json
-from datetime import datetime, timedelta
 
 from flask import request, redirect, url_for, jsonify, session, g, flash
 from flask_login import current_user
-from sqlalchemy import select
-from sqlalchemy.orm import joinedload, load_only
 
 from .route_access import RouteAccessConfig
-from .utils.cache_manager import app_cache
 
 DEFAULT_SECURITY_HEADERS = {
     "Strict-Transport-Security": "max-age=31536000; includeSubDomains; preload",
@@ -28,7 +21,7 @@ DEFAULT_SECURITY_HEADERS = {
         "font-src 'self' https://fonts.gstatic.com https://cdnjs.cloudflare.com; "
         "img-src 'self' data: https: blob:; "
         "connect-src 'self' https://api.stripe.com; "
-        "frame-src 'self' https://js.stripe.com; "
+        "frame-src https://js.stripe.com; "
         "object-src 'none'"
     ),
 }
@@ -42,108 +35,6 @@ def _env_flag(name: str, default: bool = False) -> bool:
 
 # Configure logger
 logger = logging.getLogger(__name__)
-
-
-def _parse_int(value: str | None, default: int) -> int:
-    if value is None:
-        return default
-    try:
-        return int(value)
-    except (TypeError, ValueError):
-        return default
-
-
-_UNAUTH_LOG_WINDOW_SECONDS = max(1, _parse_int(os.environ.get('UNAUTH_LOG_WINDOW_SECONDS'), 60))
-_UNAUTH_LOG_MAX_PER_WINDOW = _parse_int(os.environ.get('UNAUTH_LOG_MAX_PER_WINDOW'), 50)
-_UNAUTH_LOG_STATE = {'window': -1, 'count': 0, 'suppressed': 0}
-
-
-def _log_rate_limited_unauth(endpoint_info: str, user_agent: str | None) -> None:
-    if _UNAUTH_LOG_MAX_PER_WINDOW <= 0:
-        return
-
-    if not logger.isEnabledFor(logging.DEBUG):
-        return
-
-    current_window = int(time.time() // _UNAUTH_LOG_WINDOW_SECONDS)
-    state = _UNAUTH_LOG_STATE
-
-    if state['window'] != current_window:
-        if state['suppressed']:
-            logger.debug(
-                "Suppressed %s unauthenticated requests in previous %ss window (sampled)",
-                state['suppressed'],
-                _UNAUTH_LOG_WINDOW_SECONDS,
-            )
-        state['window'] = current_window
-        state['count'] = 0
-        state['suppressed'] = 0
-
-    if state['count'] < _UNAUTH_LOG_MAX_PER_WINDOW:
-        state['count'] += 1
-        logger.debug(
-            "Unauthenticated access attempt: %s, ua=%s",
-            endpoint_info,
-            (user_agent or 'Unknown')[:120],
-        )
-    else:
-        state['suppressed'] += 1
-
-
-_BILLING_CACHE_ENABLED = _env_flag('BILLING_GATE_CACHE_ENABLED', True)
-_BILLING_CACHE_TTL_SECONDS = max(5, _parse_int(os.environ.get('BILLING_GATE_CACHE_TTL_SECONDS'), 60))
-
-
-@dataclass(frozen=True)
-class _TierSnapshot:
-    id: int | None
-    is_billing_exempt: bool
-    billing_provider: str | None
-    name: str | None = None
-
-
-class _BillingSnapshot:
-    """Cached billing organization data"""
-    def __init__(self, data):
-        self.id = data.get('id')
-        self.name = data.get('name')
-        self.subscription_tier_id = data.get('subscription_tier_id')
-        self.is_active = data.get('is_active', True)
-        self.created_at = data.get('created_at')
-
-    @property
-    def subscription_tier(self) -> _TierSnapshot | None:
-        # This property is kept for compatibility but the actual tier data is not cached directly
-        # A more robust solution would involve caching the tier details as well or fetching them
-        # independently when needed. For now, we return None or a minimal representation.
-        return None # Placeholder
-
-
-def _serialize_organization_for_cache(organization) -> dict[str, object]:
-    tier = getattr(organization, 'subscription_tier', None)
-    return {
-        'id': getattr(organization, 'id', None),
-        'name': getattr(organization, 'name', None),
-        'billing_status': getattr(organization, 'billing_status', 'active') or 'active',
-        'is_active': bool(getattr(organization, 'is_active', True)),
-        'subscription_tier_id': getattr(organization, 'subscription_tier_id', None),
-        'created_at': getattr(organization, 'created_at', None).isoformat() if getattr(organization, 'created_at', None) else None,
-        'tier': None if tier is None else {
-            'id': getattr(tier, 'id', None),
-            'is_billing_exempt': bool(getattr(tier, 'is_billing_exempt', True)),
-            'billing_provider': getattr(tier, 'billing_provider', None),
-            'name': getattr(tier, 'name', None),
-        },
-    }
-
-def _get_redis_client():
-    """Get Redis client for caching"""
-    try:
-        redis_url = current_app.config.get('REDIS_URL', 'redis://localhost:6379/0')
-        return redis.from_url(redis_url, decode_responses=True)
-    except Exception as e:
-        logger.error(f"Failed to connect to Redis: {e}")
-        return None
 
 def register_middleware(app):
     """Register all middleware functions with the Flask app."""
@@ -227,7 +118,7 @@ def register_middleware(app):
             if request.endpoint is None:
                 logger.warning(f"Unauthenticated request to UNKNOWN endpoint: {endpoint_info}, user_agent={request.headers.get('User-Agent', 'Unknown')[:100]}")
             elif not request.path.startswith('/static/'):
-                _log_rate_limited_unauth(endpoint_info, request.headers.get('User-Agent'))
+                logger.info(f"Unauthenticated access attempt: {endpoint_info}")
 
             # Return JSON 401 for API or JSON-accepting requests
             accept = request.accept_mimetypes
@@ -305,106 +196,50 @@ def register_middleware(app):
         if current_user.is_authenticated and getattr(current_user, 'user_type', None) != 'developer':
             # CRITICAL FIX: Guard DB calls; degrade gracefully if DB is down
             try:
-                from .models import Organization
-                from .models.subscription_tier import SubscriptionTier
+                # Force fresh database query to avoid session isolation issues
+                from .models import User, Organization
                 from .extensions import db
-                from .services.billing_service import BillingService  # Import BillingService
+                from .services.billing_service import BillingService # Import BillingService
 
-                # Get organization for billing validation with caching
-                org_for_billing = None
-                org_id = getattr(current_user, 'organization_id', None)
-                cache_key = f"billing_org:{org_id}" if org_id else None
-                app_cache_client = _get_redis_client()
-                g.billing_gate_cache_state = 'miss'
+                # Get fresh user and organization data from current session
+                fresh_user = db.session.get(User, current_user.id)
+                if fresh_user and fresh_user.organization_id:
+                    # Force fresh load of organization to get latest billing_status
+                    organization = db.session.get(Organization, fresh_user.organization_id)
+                else:
+                    organization = None
 
-                if org_id:
-                    cached_payload = app_cache_client.get(cache_key) if (_BILLING_CACHE_ENABLED and cache_key and app_cache_client) else None
-                    if cached_payload:
-                        try:
-                            org_data = json.loads(cached_payload)
-                            org_for_billing = _BillingSnapshot(org_data)
-                            g.billing_gate_cache_state = 'hit'
-                        except (json.JSONDecodeError, KeyError, TypeError):
-                            logger.warning(f"Failed to decode cached billing data for org {org_id}")
-                            cached_payload = None
+                if organization and organization.subscription_tier:
+                    tier = organization.subscription_tier
 
-                    if not cached_payload:
-                        stmt = (
-                            select(Organization)
-                            .options(
-                                load_only(
-                                    Organization.id,
-                                    Organization.billing_status,
-                                    Organization.is_active,
-                                    Organization.subscription_tier_id,
-                                    Organization.created_at,
-                                    Organization.name
-                                ),
-                                # joinedload(Organization.subscription_tier).load_only( # This join might be expensive and not needed for caching
-                                #     SubscriptionTier.id,
-                                #     SubscriptionTier.billing_provider,
-                                #     SubscriptionTier.name,
-                                # ),
-                            )
-                            .where(Organization.id == org_id)
-                        )
-                        org_db_instance = db.session.execute(stmt).scalars().first()
-
-                        if org_db_instance:
-                            serialized = _serialize_organization_for_cache(org_db_instance)
-                            org_for_billing = _BillingSnapshot(serialized)
-                            g.billing_gate_cache_state = 'miss' if _BILLING_CACHE_ENABLED else 'disabled'
-                            # Cache the organization data if Redis is available
-                            if app_cache_client and _BILLING_CACHE_ENABLED:
+                    # SIMPLE BILLING LOGIC:
+                    # If billing bypass is NOT enabled, require active billing status
+                    if not getattr(tier, 'is_billing_exempt', True):  # Default to exempt to prevent lockouts
+                        # Direct status enforcement as a guardrail
+                        billing_status = getattr(organization, 'billing_status', 'active') or 'active'
+                        if billing_status in ['payment_failed', 'past_due', 'suspended', 'canceled', 'cancelled']:
+                            if billing_status in ['payment_failed', 'past_due']:
+                                return redirect(url_for('billing.upgrade'))
+                            elif billing_status in ['suspended', 'canceled', 'cancelled']:
                                 try:
-                                    cache_data = {
-                                        'id': org_db_instance.id,
-                                        'name': org_db_instance.name,
-                                        'subscription_tier_id': org_db_instance.subscription_tier_id,
-                                        'is_active': org_db_instance.is_active,
-                                        'created_at': org_db_instance.created_at.isoformat() if org_db_instance.created_at else None
-                                    }
-                                    app_cache_client.setex(cache_key, _BILLING_CACHE_TTL_SECONDS, json.dumps(cache_data))
-                                    g.billing_gate_cache_state = 'populated'
-                                except Exception as e:
-                                    logger.warning(f"Failed to cache billing data for org {org_id}: {e}")
-                        else:
-                            # If organization not found in DB, treat as non-existent for billing purposes
-                            org_for_billing = None
-                            g.billing_gate_cache_state = 'not_found'
+                                    flash('Your organization does not have an active subscription. Please update billing.', 'error')
+                                except Exception:
+                                    pass
+                                return redirect(url_for('billing.upgrade'))
 
-                    if org_for_billing:
-                        # Validate tier access
-                        access_valid, access_reason = BillingService.validate_tier_access(org_for_billing)
-
+                        # Check tier access using unified billing service
+                        access_valid, access_reason = BillingService.validate_tier_access(organization)
                         if not access_valid:
-                            logger.warning(f"Billing access denied for org {getattr(org_for_billing, 'id', 'unknown')}: {access_reason}")
-                            g.billing_gate_blocked = True
-                            g.billing_gate_reason = access_reason
+                            logger.warning(f"Billing access denied for org {organization.id}: {access_reason}")
 
-                            # Return billing error response
-                            if request.is_json or request.path.startswith('/api/'):
-                                return jsonify({
-                                    'error': 'billing_access_denied',
-                                    'message': access_reason,
-                                    'requires_upgrade': True
-                                }), 402
-                            else:
-                                return redirect(url_for('billing.upgrade', reason=access_reason))
-                    else:
-                        # If no organization found or cached, and it's required, block access
-                        # This case might need more nuanced handling based on application logic
-                        # For now, we assume that if an org_id exists, it should be found.
-                        # If not found, we might redirect to upgrade or show an error.
-                        if org_id: # Only block if an org_id was expected
-                            logger.warning(f"Billing gate: Organization with ID {org_id} not found or could not be loaded.")
-                            # Decide on the behavior: redirect, show error, or allow if 'is_active' isn't strictly enforced
-                            # Example: Redirect to upgrade if organization is missing.
-                            # return redirect(url_for('billing.upgrade', reason='organization_not_found'))
-                            pass # Allow to proceed if not strictly enforced by default
-
-
-                g.billing_gate_organization = org_for_billing
+                            if access_reason in ['payment_required', 'subscription_canceled']:
+                                return redirect(url_for('billing.upgrade'))
+                            elif access_reason == 'organization_suspended':
+                                try:
+                                    flash('Your organization has been suspended. Please contact support.', 'error')
+                                except Exception:
+                                    pass
+                                return redirect(url_for('billing.upgrade'))
             except Exception as e:
                 # On DB error, rollback and degrade: allow request to proceed without billing gate
                 logger.warning(f"Billing check failed, allowing request to proceed: {e}")
