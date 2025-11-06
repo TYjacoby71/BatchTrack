@@ -56,6 +56,8 @@ def create_app(config=None):
         cache_config['CACHE_REDIS_URL'] = app.config['REDIS_URL']
     
     cache.init_app(app, config=cache_config)
+    if app.config.get('ENV') == 'production' and cache_config.get('CACHE_TYPE') != 'RedisCache':
+        logger.warning("Redis cache not configured; falling back to SimpleCache which is not safe for multi-instance production use.")
     
     # Configure rate limiter with Redis storage in production
     limiter_storage_uri = app.config.get('RATELIMIT_STORAGE_URI')
@@ -63,6 +65,8 @@ def create_app(config=None):
         limiter.init_app(app, storage_uri=limiter_storage_uri)
     else:
         limiter.init_app(app)
+    if app.config.get('ENV') == 'production' and (not limiter_storage_uri or str(limiter_storage_uri).startswith('memory://')):
+        logger.warning("Rate limiter is using in-memory storage; configure RATELIMIT_STORAGE_URI with Redis for production.")
     configure_login_manager(app)
 
     # Session lifetime should come from config classes; avoid overriding here

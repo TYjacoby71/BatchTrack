@@ -17,6 +17,17 @@ def _normalize_db_url(url: str | None) -> str | None:
     return 'postgresql://' + url[len('postgres://'):] if url.startswith('postgres://') else url
 
 
+def _resolve_ratelimit_uri() -> str:
+    """Resolve the rate limit storage URI with backwards compatibility."""
+    candidate = os.environ.get('RATELIMIT_STORAGE_URI') or os.environ.get('RATELIMIT_STORAGE_URL')
+    if candidate:
+        return candidate
+    redis_url = os.environ.get('REDIS_URL')
+    if redis_url:
+        return redis_url
+    return 'memory://'
+
+
 class BaseConfig:
     SECRET_KEY = os.environ.get('FLASK_SECRET_KEY', 'devkey-please-change-in-production')
 
@@ -35,7 +46,9 @@ class BaseConfig:
     MAX_CONTENT_LENGTH = 16 * 1024 * 1024
 
     # Rate limiting
-    RATELIMIT_STORAGE_URL = os.environ.get('RATELIMIT_STORAGE_URL', 'memory://')
+    _ratelimit_uri = _resolve_ratelimit_uri()
+    RATELIMIT_STORAGE_URI = _ratelimit_uri
+    RATELIMIT_STORAGE_URL = _ratelimit_uri  # Backwards compatibility
 
     # Logging
     LOG_LEVEL = os.environ.get('LOG_LEVEL', 'WARNING')
@@ -128,7 +141,8 @@ class TestingConfig(BaseConfig):
         'pool_pre_ping': True,
     }
     # Add rate limiter storage configuration for tests
-    RATELIMIT_STORAGE_URL = os.environ.get('RATELIMIT_STORAGE_URL', 'memory://')
+    RATELIMIT_STORAGE_URI = os.environ.get('RATELIMIT_STORAGE_URI', 'memory://')
+    RATELIMIT_STORAGE_URL = RATELIMIT_STORAGE_URI
 
 
 class StagingConfig(BaseConfig):
@@ -144,7 +158,9 @@ class StagingConfig(BaseConfig):
         'pool_pre_ping': True,
         'pool_recycle': 1800,
     }
-    RATELIMIT_STORAGE_URL = os.environ.get('REDIS_URL') or 'memory://'
+    _staging_ratelimit_uri = os.environ.get('RATELIMIT_STORAGE_URI') or os.environ.get('REDIS_URL') or 'memory://'
+    RATELIMIT_STORAGE_URI = _staging_ratelimit_uri
+    RATELIMIT_STORAGE_URL = _staging_ratelimit_uri
 
 
 class ProductionConfig(BaseConfig):
@@ -162,7 +178,9 @@ class ProductionConfig(BaseConfig):
         'pool_timeout': BaseConfig._env_int('SQLALCHEMY_POOL_TIMEOUT', 30),
         'pool_use_lifo': True, # Use LIFO for potentially better connection reuse
     }
-    RATELIMIT_STORAGE_URL = os.environ.get('REDIS_URL') or os.environ.get('RATELIMIT_STORAGE_URL')
+    _prod_ratelimit_uri = os.environ.get('RATELIMIT_STORAGE_URI') or os.environ.get('REDIS_URL') or os.environ.get('RATELIMIT_STORAGE_URL') or BaseConfig._ratelimit_uri
+    RATELIMIT_STORAGE_URI = _prod_ratelimit_uri
+    RATELIMIT_STORAGE_URL = _prod_ratelimit_uri
     LOG_LEVEL = os.environ.get('LOG_LEVEL', 'INFO')
 
 

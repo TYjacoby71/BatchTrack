@@ -62,6 +62,9 @@ GUNICORN_WORKER_CONNECTIONS=1000      # Connections per worker
 # Billing cache (reduces database load)
 BILLING_CACHE_ENABLED=true
 BILLING_GATE_CACHE_TTL_SECONDS=60
+
+# Domain events
+DOMAIN_EVENT_WEBHOOK_URL=https://your-domain-event-endpoint.example
 ```
 
 ### 3. Database Optimization
@@ -112,6 +115,14 @@ gunicorn -c gunicorn.conf.py wsgi:app
 - **Connections**: `1000 per worker`
 - **Timeouts**: `30s request timeout`
 - **Memory Management**: `2000 requests per worker restart`
+- The `wsgi.py` entrypoint automatically applies `gevent.monkey.patch_all()` when the dependency is installed.
+
+#### Domain Event Dispatcher Worker
+
+- Run the outbox dispatcher as a dedicated worker process to flush `domain_event` records to downstream systems.
+- Command: `flask dispatch-domain-events` (add `--once` for ad-hoc batches, or configure as a long-running service).
+- Provide `DOMAIN_EVENT_WEBHOOK_URL` for webhook delivery; if unset, events are marked processed after logging (no external call).
+- Monitor dispatcher logs for retries; events exceeding the retry threshold are tagged with `_dispatch_errors` in the row payload.
 
 ### 5. Redis Configuration
 
@@ -121,6 +132,7 @@ Redis handles:
 - Rate limiting storage
 - Billing data caching  
 - Session storage (if configured)
+- Application logs warn if `RATELIMIT_STORAGE_URI` falls back to `memory://` in production—treat that as a misconfiguration.
 
 **Minimum Redis Configuration:**
 
@@ -177,6 +189,7 @@ locust -f loadtests/locustfile.py AuthenticatedUser --host=https://your-app.repl
 - Response times by endpoint
 - Database connection pool usage
 - Redis hit/miss ratios
+- Domain event backlog (count of `domain_event` rows where `is_processed=false`)
 ```
 
 **System Metrics:**

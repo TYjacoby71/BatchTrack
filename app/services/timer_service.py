@@ -4,13 +4,100 @@ from flask_login import current_user
 from ..models import db, BatchTimer, Batch
 from ..utils.timezone_utils import TimezoneUtils
 import logging
-from sqlalchemy import text
 from .event_emitter import EventEmitter
 
 logger = logging.getLogger(__name__)
 
 class TimerService:
     """Comprehensive timer management service for batch operations"""
+
+    @staticmethod
+    def _effective_org_id(explicit_org_id: Optional[int] = None) -> Optional[int]:
+        """Resolve organization context for the current request."""
+        if explicit_org_id is not None:
+            return explicit_org_id
+        try:
+            if current_user and current_user.is_authenticated:
+                return getattr(current_user, "organization_id", None)
+        except Exception:
+            return None
+        return None
+
+    @staticmethod
+    def _scoped_query(*, organization_id: Optional[int] = None):
+        """Return a base timer query scoped to the effective organization."""
+        query = BatchTimer.query
+        org_id = TimerService._effective_org_id(organization_id)
+        if org_id:
+            query = query.filter(BatchTimer.organization_id == org_id)
+        return query
+
+    @staticmethod
+    def _is_timer_expired(timer: BatchTimer, now_utc: datetime) -> bool:
+        if not timer.start_time or not timer.duration_seconds:
+            return False
+        start = TimezoneUtils.ensure_timezone_aware(timer.start_time)
+        return now_utc >= start + timedelta(seconds=timer.duration_seconds)
+
+    @staticmethod
+    def _serialize_timer(timer: BatchTimer, *, now_utc: Optional[datetime] = None) -> Dict:
+        if now_utc is None:
+            now_utc = TimezoneUtils.utc_now()
+
+        start_time = TimezoneUtils.ensure_timezone_aware(timer.start_time) if timer.start_time else None
+        if timer.end_time:
+            end_time = TimezoneUtils.ensure_timezone_aware(timer.end_time)
+            elapsed = (end_time - start_time).total_seconds() if start_time else 0
+        elif start_time:
+            elapsed = (now_utc - start_time).total_seconds()
+        else:
+            elapsed = 0
+
+        remaining = max(0, (timer.duration_seconds or 0) - elapsed)
+        is_expired = False
+        if timer.status == 'active':
+            is_expired = TimerService._is_timer_expired(timer, now_utc)
+
+        return {
+            'id': timer.id,
+            'batch_id': timer.batch_id,
+            'status': timer.status,
+            'start_time': timer.start_time,
+            'end_time': timer.end_time,
+            'duration_seconds': timer.duration_seconds,
+            'elapsed_seconds': int(elapsed),
+            'remaining_seconds': int(remaining),
+            'is_expired': is_expired,
+            'description': timer.name,
+            'name': timer.name,
+            'organization_id': timer.organization_id,
+        }
+
+    @staticmethod
+    def _bulk_update_expired_timers(new_status: str, *, organization_id: Optional[int] = None) -> int:
+        now_utc = TimezoneUtils.utc_now()
+        query = (TimerService._scoped_query(organization_id=organization_id)
+                 .filter(BatchTimer.status == 'active')
+                 .filter(BatchTimer.start_time.isnot(None))
+                 .filter(BatchTimer.duration_seconds.isnot(None)))
+
+        timers = query.all()
+        updated = 0
+
+        for timer in timers:
+            if TimerService._is_timer_expired(timer, now_utc):
+                timer.status = new_status
+                timer.end_time = now_utc
+                updated += 1
+
+        if updated:
+            try:
+                db.session.commit()
+            except Exception:
+                db.session.rollback()
+                raise
+
+        return updated
 
     @staticmethod
     def create_timer(batch_id: int, duration_seconds: int, description: str = None) -> BatchTimer:
@@ -108,112 +195,51 @@ class TimerService:
         timer = BatchTimer.query.get(timer_id)
         if not timer:
             return {'error': 'Timer not found'}
-
-        current_time = TimezoneUtils.utc_now()
-
-        # Calculate elapsed time
-        if timer.start_time:
-            # Ensure start_time is timezone-aware
-            start_time = TimezoneUtils.ensure_timezone_aware(timer.start_time)
-            
-            if timer.end_time:
-                # Ensure end_time is timezone-aware
-                end_time = TimezoneUtils.ensure_timezone_aware(timer.end_time)
-                elapsed_seconds = (end_time - start_time).total_seconds()
-            else:
-                elapsed_seconds = (current_time - start_time).total_seconds()
-        else:
-            elapsed_seconds = 0
-
-        # Calculate remaining time
-        remaining_seconds = max(0, timer.duration_seconds - elapsed_seconds)
-
-        # Determine if timer is expired
-        is_expired = elapsed_seconds > timer.duration_seconds and timer.status == 'active'
-
-        return {
-            'id': timer.id,
-            'batch_id': timer.batch_id,
-            'status': timer.status,
-            'start_time': timer.start_time,
-            'end_time': timer.end_time,
-            'duration_seconds': timer.duration_seconds,
-            'elapsed_seconds': int(elapsed_seconds),
-            'remaining_seconds': int(remaining_seconds),
-            'is_expired': is_expired,
-            'description': timer.name
-        }
+        return TimerService._serialize_timer(timer)
 
     @staticmethod
     def get_active_timers() -> List[Dict]:
         """Get all active timers for current user's organization"""
-        query = BatchTimer.query.filter_by(status='active')
-
-        # Apply organization scoping
-        if current_user and current_user.is_authenticated and current_user.organization_id:
-            query = query.filter(BatchTimer.organization_id == current_user.organization_id)
-
-        active_timers = query.all()
-        return [TimerService.get_timer_status(timer.id) for timer in active_timers]
-
-    @staticmethod
-    def get_expired_timers() -> List[Dict]:
-        """Get all expired but still active timers"""
-        active_timers = TimerService.get_active_timers()
-        return [timer for timer in active_timers if timer.get('is_expired', False)]
+        now_utc = TimezoneUtils.utc_now()
+        query = TimerService._scoped_query().filter(BatchTimer.status == 'active')
+        timers = query.all()
+        return [TimerService._serialize_timer(timer, now_utc=now_utc) for timer in timers]
 
     @staticmethod
     def get_batch_timers(batch_id: int) -> List[Dict]:
         """Get all timers for a specific batch"""
-        query = BatchTimer.query.filter_by(batch_id=batch_id)
-
-        # Apply organization scoping
-        if current_user and current_user.is_authenticated and current_user.organization_id:
-            query = query.filter(BatchTimer.organization_id == current_user.organization_id)
-
+        now_utc = TimezoneUtils.utc_now()
+        query = TimerService._scoped_query().filter(BatchTimer.batch_id == batch_id)
         timers = query.all()
-        return [TimerService.get_timer_status(timer.id) for timer in timers]
+        return [TimerService._serialize_timer(timer, now_utc=now_utc) for timer in timers]
 
     @staticmethod
     def auto_expire_timers() -> int:
         """Automatically mark expired timers as expired and return count"""
-        expired_timers = TimerService.get_expired_timers()
-        count = 0
-
-        for timer_data in expired_timers:
-            timer = BatchTimer.query.get(timer_data['id'])
-            if timer and timer.status == 'active':
-                timer.status = 'expired'
-                timer.end_time = TimezoneUtils.utc_now()
-                count += 1
-
-        if count > 0:
-            db.session.commit()
-
-        return count
+        updated = TimerService._bulk_update_expired_timers('expired')
+        if updated:
+            logger.info("Marked %s timers as expired", updated)
+        return updated
 
     @staticmethod
     def get_timer_summary() -> Dict:
         """Get summary of timer statistics"""
-        query = BatchTimer.query
+        now_utc = TimezoneUtils.utc_now()
+        query = TimerService._scoped_query()
+        timers = query.all()
 
-        # Apply organization scoping
-        if current_user and current_user.is_authenticated and current_user.organization_id:
-            query = query.filter(BatchTimer.organization_id == current_user.organization_id)
-
-        all_timers = query.all()
-
-        active_count = len([t for t in all_timers if t.status == 'active'])
-        expired_timers = TimerService.get_expired_timers()
-        expired_count = len(expired_timers)
-        completed_count = len([t for t in all_timers if t.status == 'completed'])
+        serialized = [TimerService._serialize_timer(timer, now_utc=now_utc) for timer in timers]
+        total = len(serialized)
+        active = [timer for timer in serialized if timer['status'] == 'active']
+        completed_count = sum(1 for timer in serialized if timer['status'] == 'completed')
+        expired_active = [timer for timer in active if timer['is_expired']]
 
         return {
-            'total_timers': len(all_timers),
-            'active_count': active_count,
-            'expired_count': expired_count,
+            'total_timers': total,
+            'active_count': len(active),
+            'expired_count': len(expired_active),
             'completed_count': completed_count,
-            'expired_timers': expired_timers
+            'expired_timers': expired_active,
         }
 
     @staticmethod
@@ -235,44 +261,15 @@ class TimerService:
     def complete_expired_timers():
         """Complete all expired timers"""
         try:
-            from datetime import timedelta
-            
-            current_time = TimezoneUtils.utc_now()
-
-            # Get expired timers with proper organization scoping
-            query = BatchTimer.query.filter(BatchTimer.status == 'active')
-            
-            # Apply organization scoping
-            if current_user and current_user.is_authenticated and current_user.organization_id:
-                query = query.filter(BatchTimer.organization_id == current_user.organization_id)
-
-            expired_timers = query.all()
-
-            # Filter expired timers in Python to avoid SQL syntax issues
-            completed_count = 0
-            for timer in expired_timers:
-                if timer.start_time and timer.duration_seconds:
-                    # Ensure start_time is timezone-aware before calculation
-                    start_time = TimezoneUtils.ensure_timezone_aware(timer.start_time)
-                    expected_end_time = start_time + timedelta(seconds=timer.duration_seconds)
-                    if current_time > expected_end_time:
-                        timer.status = 'completed'
-                        timer.end_time = current_time  # Use end_time field that exists in model
-                        completed_count += 1
-                        logger.info(f"Auto-completed expired timer {timer.id} for batch {timer.batch_id}")
-
-            if completed_count > 0:
-                db.session.commit()
-                logger.info(f"Successfully completed {completed_count} expired timers")
-
+            completed_count = TimerService._bulk_update_expired_timers('completed')
+            if completed_count:
+                logger.info("Auto-completed %s expired timers", completed_count)
             return {
                 'success': True,
                 'completed_count': completed_count,
                 'message': f'Completed {completed_count} expired timers'
             }
-
         except Exception as e:
-            db.session.rollback()
             logger.error(f"Timer completion error: {str(e)}", exc_info=True)
             return {
                 'success': False,
@@ -282,35 +279,23 @@ class TimerService:
             }
 
     @staticmethod
-    def get_expired_timers():
-        """Get all currently expired but active timers"""
+    def get_expired_timers(*, serialize: bool = False):
+        """Get all currently expired but active timers.
+
+        Args:
+            serialize: When True, return serialized timer dictionaries.
+        """
         try:
-            from datetime import timedelta
-            
-            current_time = TimezoneUtils.utc_now()
-
-            expired_timers = []
-            query = BatchTimer.query.filter(
-                BatchTimer.status == 'active',
-                BatchTimer.start_time.isnot(None),
-                BatchTimer.duration_seconds.isnot(None)
-            )
-
-            # Apply organization scoping
-            if current_user and current_user.is_authenticated and current_user.organization_id:
-                query = query.filter(BatchTimer.organization_id == current_user.organization_id)
-
-            active_timers = query.all()
-
-            for timer in active_timers:
-                # Ensure start_time is timezone-aware before calculation
-                start_time = TimezoneUtils.ensure_timezone_aware(timer.start_time)
-                expected_end_time = start_time + timedelta(seconds=timer.duration_seconds)
-                if current_time >= expected_end_time:
-                    expired_timers.append(timer)
-
-            return expired_timers
-
+            now_utc = TimezoneUtils.utc_now()
+            query = (TimerService._scoped_query()
+                     .filter(BatchTimer.status == 'active')
+                     .filter(BatchTimer.start_time.isnot(None))
+                     .filter(BatchTimer.duration_seconds.isnot(None)))
+            timers = query.all()
+            expired = [timer for timer in timers if TimerService._is_timer_expired(timer, now_utc)]
+            if serialize:
+                return [TimerService._serialize_timer(timer, now_utc=now_utc) for timer in expired]
+            return expired
         except Exception as e:
             logger.error(f"Error getting expired timers: {str(e)}", exc_info=True)
             return []
