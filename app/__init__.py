@@ -5,7 +5,7 @@ from flask_login import current_user
 from sqlalchemy.pool import StaticPool
 
 # Import extensions and new modules
-from .extensions import db, migrate, csrf, limiter
+from .extensions import db, migrate, csrf, limiter, cache
 from .authz import configure_login_manager
 from .middleware import register_middleware
 from .template_context import register_template_context
@@ -46,7 +46,23 @@ def create_app(config=None):
     db.init_app(app)
     migrate.init_app(app, db)
     csrf.init_app(app)
-    limiter.init_app(app)
+    
+    # Configure cache (Redis in production, simple in development)
+    cache_config = {
+        'CACHE_TYPE': 'RedisCache' if app.config.get('REDIS_URL') else 'SimpleCache',
+        'CACHE_DEFAULT_TIMEOUT': 300,
+    }
+    if app.config.get('REDIS_URL'):
+        cache_config['CACHE_REDIS_URL'] = app.config['REDIS_URL']
+    
+    cache.init_app(app, config=cache_config)
+    
+    # Configure rate limiter with Redis storage in production
+    limiter_storage_uri = app.config.get('RATELIMIT_STORAGE_URI')
+    if limiter_storage_uri:
+        limiter.init_app(app, storage_uri=limiter_storage_uri)
+    else:
+        limiter.init_app(app)
     configure_login_manager(app)
 
     # Session lifetime should come from config classes; avoid overriding here

@@ -61,13 +61,36 @@ class BaseConfig:
     # Billing / OAuth
     STRIPE_PUBLISHABLE_KEY = os.environ.get('STRIPE_PUBLISHABLE_KEY')
     STRIPE_SECRET_KEY = os.environ.get('STRIPE_SECRET_KEY')
-    STRIPE_PUBLISHABLE_KEY = os.environ.get('STRIPE_PUBLISHABLE_KEY')
-    STRIPE_SECRET_KEY = os.environ.get('STRIPE_SECRET_KEY')
     STRIPE_WEBHOOK_SECRET = os.environ.get('STRIPE_WEBHOOK_SECRET')
     WHOP_API_KEY = os.environ.get('WHOP_API_KEY')
     WHOP_APP_ID = os.environ.get('WHOP_APP_ID')
     GOOGLE_OAUTH_CLIENT_ID = os.environ.get('GOOGLE_OAUTH_CLIENT_ID')
     GOOGLE_OAUTH_CLIENT_SECRET = os.environ.get('GOOGLE_OAUTH_CLIENT_SECRET')
+
+    # Helper to parse environment integers with fallback
+    @staticmethod
+    def _env_int(key, default):
+        """Helper to parse environment integers with fallback."""
+        try:
+            return int(os.environ.get(key, default))
+        except (ValueError, TypeError):
+            return default
+
+    # Enhanced SQLAlchemy pool configuration for high concurrency
+    # These are default values; specific environments may override them.
+    # For 10k users, ProductionConfig should be the primary beneficiary.
+    SQLALCHEMY_ENGINE_OPTIONS = {
+        'pool_size': _env_int('SQLALCHEMY_POOL_SIZE', 20), # Default for base
+        'max_overflow': _env_int('SQLALCHEMY_MAX_OVERFLOW', 30), # Default for base
+        'pool_pre_ping': True,
+        'pool_recycle': _env_int('SQLALCHEMY_POOL_RECYCLE', 1800),
+        'pool_timeout': _env_int('SQLALCHEMY_POOL_TIMEOUT', 30),
+        'pool_use_lifo': True,
+    }
+
+    # Billing cache configuration
+    BILLING_CACHE_ENABLED = os.environ.get('BILLING_CACHE_ENABLED', 'true').lower() == 'true'
+    BILLING_GATE_CACHE_TTL_SECONDS = _env_int('BILLING_GATE_CACHE_TTL_SECONDS', 60)
 
 
 class DevelopmentConfig(BaseConfig):
@@ -86,6 +109,7 @@ class DevelopmentConfig(BaseConfig):
         os.chmod(instance_path, 0o777)
         SQLALCHEMY_DATABASE_URI = 'sqlite:///' + os.path.join(instance_path, 'batchtrack.db')
 
+    # Development specific engine options, less aggressive than production
     SQLALCHEMY_ENGINE_OPTIONS = {
         'pool_pre_ping': True,
         'pool_recycle': 3600,
@@ -131,11 +155,12 @@ class ProductionConfig(BaseConfig):
     TESTING = False
     SQLALCHEMY_DATABASE_URI = _normalize_db_url(os.environ.get('DATABASE_INTERNAL_URL')) or _normalize_db_url(os.environ.get('DATABASE_URL'))
     SQLALCHEMY_ENGINE_OPTIONS = {
-        'pool_size': 20,
-        'max_overflow': 30,
+        'pool_size': BaseConfig._env_int('SQLALCHEMY_POOL_SIZE', 40), # Increased for 10k users
+        'max_overflow': BaseConfig._env_int('SQLALCHEMY_MAX_OVERFLOW', 40), # Increased for 10k users
         'pool_pre_ping': True,
-        'pool_recycle': 1800,
-        'pool_timeout': 30,
+        'pool_recycle': BaseConfig._env_int('SQLALCHEMY_POOL_RECYCLE', 1800),
+        'pool_timeout': BaseConfig._env_int('SQLALCHEMY_POOL_TIMEOUT', 30),
+        'pool_use_lifo': True, # Use LIFO for potentially better connection reuse
     }
     RATELIMIT_STORAGE_URL = os.environ.get('REDIS_URL') or os.environ.get('RATELIMIT_STORAGE_URL')
     LOG_LEVEL = os.environ.get('LOG_LEVEL', 'INFO')

@@ -39,3 +39,5 @@ Flask-WTF>=1.1.0
 MarkupSafe>=2.0.0
 Flask-WTF==1.2.1
 reportlab
+Flask-Caching
+locust
