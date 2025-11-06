@@ -57,7 +57,6 @@ class InventoryItem(ScopedModelMixin, db.Model):
     flash_point_c = db.Column(db.Float, nullable=True)  # Flash point for essential oils
     ph_value = db.Column(db.Float, nullable=True)  # pH for liquids
     moisture_content_percent = db.Column(db.Float, nullable=True)  # Moisture content
-    shelf_life_months = db.Column(db.Integer, nullable=True)  # Shelf life in months
     comedogenic_rating = db.Column(db.Integer, nullable=True)  # 0-5 scale for oils
 
     # Global library linkage (nullable)

@@ -566,7 +566,6 @@ def upgrade():
     sa.Column('flash_point_c', sa.Float(), nullable=True),
     sa.Column('ph_value', sa.Float(), nullable=True),
     sa.Column('moisture_content_percent', sa.Float(), nullable=True),
-    sa.Column('shelf_life_months', sa.Integer(), nullable=True),
     sa.Column('comedogenic_rating', sa.Integer(), nullable=True),
     sa.Column('metadata_json', sa.JSON(), nullable=True),
     sa.Column('is_archived', sa.Boolean(), nullable=False),
