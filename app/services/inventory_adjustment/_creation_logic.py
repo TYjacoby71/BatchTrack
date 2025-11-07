@@ -162,8 +162,8 @@ def create_inventory_item(form_data, organization_id, created_by):
         # Apply global item defaults after instance is created
         if global_item:
             # Density for ingredients
-            if global_item.density is not None and item_type == 'ingredient':
-                new_item.density = global_item.density
+            if global_item.density_g_per_ml is not None and item_type == 'ingredient':
+                new_item.density = global_item.density_g_per_ml
             # Capacity for containers/packaging (nullable by design)
             if global_item.capacity is not None:
                 new_item.capacity = global_item.capacity
@@ -182,6 +182,25 @@ def create_inventory_item(form_data, organization_id, created_by):
                         new_item.container_color = global_item.container_color
             except Exception:
                 pass
+
+            # Ingredient metadata defaults
+            if item_type == 'ingredient':
+                new_item.saponification_value = global_item.saponification_value
+                new_item.iodine_value = global_item.iodine_value
+                new_item.melting_point_c = global_item.melting_point_c
+                new_item.flash_point_c = global_item.flash_point_c
+                new_item.ph_value = global_item.ph_value
+                new_item.moisture_content_percent = global_item.moisture_content_percent
+                new_item.comedogenic_rating = global_item.comedogenic_rating
+                new_item.recommended_usage_rate = global_item.recommended_usage_rate
+                new_item.recommended_fragrance_load_pct = global_item.recommended_fragrance_load_pct
+                new_item.inci_name = global_item.inci_name
+                new_item.protein_content_pct = global_item.protein_content_pct
+                new_item.brewing_color_srm = global_item.brewing_color_srm
+                new_item.brewing_potential_sg = global_item.brewing_potential_sg
+                new_item.brewing_diastatic_power_lintner = global_item.brewing_diastatic_power_lintner
+                new_item.fatty_acid_profile = global_item.fatty_acid_profile
+                new_item.certifications = global_item.certifications
 
         # Resolve category linkage and density precedence
         # 1) If a category ID was chosen, link and assign its default density

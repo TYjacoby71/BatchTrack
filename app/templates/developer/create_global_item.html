@@ -69,9 +69,9 @@
             </div>
 
             <!-- Density - Only for ingredients -->
-            <div class="col-md-3" id="densitySection" style="display: block;">
+              <div class="col-md-3" id="densitySection" style="display: block;">
               <label class="form-label">Density (g/ml)</label>
-              <input type="number" step="0.001" name="density" class="form-control" placeholder="e.g. 0.920">
+                <input type="number" step="0.001" name="density_g_per_ml" class="form-control" placeholder="e.g. 0.920">
             </div>
 
             <!-- Container-specific fields -->
@@ -130,57 +130,101 @@
               <input type="number" name="recommended_shelf_life_days" class="form-control" placeholder="e.g. 365">
             </div>
 
-            <!-- Ingredient-specific properties based on category -->
-            <div id="ingredientProperties" style="display: block;">
-              <div class="col-12"><hr><h5 class="text-muted">Ingredient Properties</h5></div>
-              
-              <div class="col-md-3" id="saponificationSection" style="display: none;">
-                <label class="form-label">Saponification Value</label>
-                <input type="number" step="0.1" name="saponification_value" class="form-control" placeholder="e.g. 189">
+              <!-- Ingredient-specific properties -->
+              <div id="ingredientProperties" style="display: block;">
+                <div class="col-12"><hr><h5 class="text-muted">Ingredient Properties</h5></div>
+
+                <div class="col-md-3">
+                  <label class="form-label">Saponification Value</label>
+                  <input type="number" step="0.1" name="saponification_value" class="form-control" placeholder="e.g. 189">
+                </div>
+
+                <div class="col-md-3">
+                  <label class="form-label">Iodine Value</label>
+                  <input type="number" step="0.1" name="iodine_value" class="form-control" placeholder="e.g. 125">
+                </div>
+
+                <div class="col-md-3">
+                  <label class="form-label">Melting Point (°C)</label>
+                  <input type="number" step="0.1" name="melting_point_c" class="form-control" placeholder="e.g. 25">
+                </div>
+
+                <div class="col-md-3">
+                  <label class="form-label">Flash Point (°C)</label>
+                  <input type="number" step="0.1" name="flash_point_c" class="form-control" placeholder="e.g. 200">
+                </div>
+
+                <div class="col-md-3">
+                  <label class="form-label">pH Value</label>
+                  <input type="number" step="0.1" name="ph_value" class="form-control" placeholder="e.g. 7.0">
+                </div>
+
+                <div class="col-md-3">
+                  <label class="form-label">Moisture Content (%)</label>
+                  <input type="number" step="0.1" name="moisture_content_percent" class="form-control" placeholder="e.g. 2.5">
+                </div>
+
+                <div class="col-md-3">
+                  <label class="form-label">Comedogenic Rating</label>
+                  <select name="comedogenic_rating" class="form-select">
+                    <option value="">Select Rating</option>
+                    {% for rating in range(6) %}
+                    <option value="{{ rating }}">{{ rating }} - {% if rating == 0 %}Non-comedogenic{% elif rating == 1 %}Very low{% elif rating == 2 %}Low{% elif rating == 3 %}Moderate{% elif rating == 4 %}High{% else %}Very high{% endif %}</option>
+                    {% endfor %}
+                  </select>
+                </div>
+
+                <div class="col-md-3">
+                  <label class="form-label">INCI Name</label>
+                  <input type="text" name="inci_name" class="form-control" placeholder="e.g. Butyrospermum Parkii Butter">
+                </div>
+
+                <div class="col-md-3">
+                  <label class="form-label">Recommended Usage Rate</label>
+                  <input type="text" name="recommended_usage_rate" class="form-control" placeholder="e.g. 0.5% - 2%">
+                </div>
+
+                <div class="col-md-3">
+                  <label class="form-label">Fragrance Load %</label>
+                  <input type="text" name="recommended_fragrance_load_pct" class="form-control" placeholder="e.g. 6% - 10%">
+                </div>
+
+                <div class="col-md-3">
+                  <label class="form-label">Protein Content (%)</label>
+                  <input type="number" step="0.01" name="protein_content_pct" class="form-control" placeholder="e.g. 12.5">
+                </div>
+
+                <div class="col-md-3">
+                  <label class="form-label">Brewing Color (SRM)</label>
+                  <input type="number" step="0.1" name="brewing_color_srm" class="form-control" placeholder="e.g. 5.0">
+                </div>
+
+                <div class="col-md-3">
+                  <label class="form-label">Brewing Potential (SG)</label>
+                  <input type="number" step="0.001" name="brewing_potential_sg" class="form-control" placeholder="e.g. 1.035">
+                </div>
+
+                <div class="col-md-3">
+                  <label class="form-label">Diastatic Power (Lintner)</label>
+                  <input type="number" step="0.1" name="brewing_diastatic_power_lintner" class="form-control" placeholder="e.g. 140">
+                </div>
+
+                <div class="col-md-6">
+                  <label class="form-label">Certifications (comma-separated)</label>
+                  <input type="text" name="certifications" class="form-control" placeholder="e.g. Organic, Fair Trade">
+                </div>
+
+                <div class="col-md-6">
+                  <label class="form-label">Fatty Acid Profile (JSON)</label>
+                  <textarea name="fatty_acid_profile" class="form-control" rows="3" placeholder='{"lauric": 45, "myristic": 16}'></textarea>
+                  <small class="text-muted">Provide a JSON object mapping fatty acid names to percentages.</small>
+                </div>
               </div>
-              
-              <div class="col-md-3" id="iodineSection" style="display: none;">
-                <label class="form-label">Iodine Value</label>
-                <input type="number" step="0.1" name="iodine_value" class="form-control" placeholder="e.g. 125">
-              </div>
-              
-              <div class="col-md-3" id="meltingPointSection" style="display: none;">
-                <label class="form-label">Melting Point (°C)</label>
-                <input type="number" step="0.1" name="melting_point_c" class="form-control" placeholder="e.g. 25">
-              </div>
-              
-              <div class="col-md-3" id="flashPointSection" style="display: none;">
-                <label class="form-label">Flash Point (°C)</label>
-                <input type="number" step="0.1" name="flash_point_c" class="form-control" placeholder="e.g. 200">
-              </div>
-              
-              <div class="col-md-3" id="phSection" style="display: none;">
-                <label class="form-label">pH Value</label>
-                <input type="number" step="0.1" name="ph_value" class="form-control" placeholder="e.g. 7.0">
-              </div>
-              
-              <div class="col-md-3" id="moistureSection" style="display: none;">
-                <label class="form-label">Moisture Content (%)</label>
-                <input type="number" step="0.1" name="moisture_content_percent" class="form-control" placeholder="e.g. 2.5">
-              </div>
-              
-              
-              
-              <div class="col-md-3" id="comedogenicSection" style="display: none;">
-                <label class="form-label">Comedogenic Rating</label>
-                <select name="comedogenic_rating" class="form-select">
-                  <option value="">Select Rating</option>
-                  {% for rating in range(6) %}
-                  <option value="{{ rating }}">{{ rating }} - {% if rating == 0 %}Non-comedogenic{% elif rating == 1 %}Very low{% elif rating == 2 %}Low{% elif rating == 3 %}Moderate{% elif rating == 4 %}High{% else %}Very high{% endif %}</option>
-                  {% endfor %}
-                </select>
-              </div>
-            </div>
 
             <!-- Synonyms - Always visible -->
             <div class="col-12">
-              <label class="form-label">Synonyms (comma-separated)</label>
-              <input type="text" name="aka_names" class="form-control" placeholder="Alternative names for this item">
+              <label class="form-label">Aliases (comma-separated)</label>
+              <input type="text" name="aliases" class="form-control" placeholder="Alternative names for this item">
             </div>
           </div>
 
@@ -202,13 +246,8 @@
 <script>
 document.addEventListener('DOMContentLoaded', function() {
   const itemTypeSelect = document.getElementById('itemType');
-  const ingredientCategorySelect = document.getElementById('ingredientCategorySelect');
   const perishableCheckbox = document.getElementById('default_is_perishable');
   const shelfLifeSection = document.getElementById('shelfLifeSection');
-  
-  // Category visibility cache
-  let categoryVisibilityCache = {};
-  
   // Container options cache
   let containerOptionsCache = null;
 
@@ -231,7 +270,6 @@ document.addEventListener('DOMContentLoaded', function() {
         document.getElementById('densitySection').style.display = 'block';
         document.getElementById('perishableSection').style.display = 'block';
         document.getElementById('ingredientProperties').style.display = 'block';
-        updateIngredientPropertiesVisibility();
         break;
         
       case 'container':
@@ -319,61 +357,6 @@ document.addEventListener('DOMContentLoaded', function() {
     });
   }
 
-  async function updateIngredientPropertiesVisibility() {
-    const categoryId = ingredientCategorySelect.value;
-    
-    // Hide all ingredient property sections first
-    ['saponificationSection', 'iodineSection', 'meltingPointSection', 'flashPointSection', 
-     'phSection', 'moistureSection', 'comedogenicSection'].forEach(id => {
-      document.getElementById(id).style.display = 'none';
-    });
-    
-    if (!categoryId) return;
-    
-    try {
-      // Check cache first
-      if (!categoryVisibilityCache[categoryId]) {
-        const response = await fetch(`/developer/api/category-visibility/${categoryId}`);
-        const data = await response.json();
-        
-        if (data.success) {
-          categoryVisibilityCache[categoryId] = data.visibility;
-        } else {
-          console.warn('Failed to load category visibility:', data.error);
-          return;
-        }
-      }
-      
-      const visibility = categoryVisibilityCache[categoryId];
-      
-      // Show fields based on category visibility settings
-      if (visibility.show_saponification_value) {
-        document.getElementById('saponificationSection').style.display = 'block';
-      }
-      if (visibility.show_iodine_value) {
-        document.getElementById('iodineSection').style.display = 'block';
-      }
-      if (visibility.show_melting_point) {
-        document.getElementById('meltingPointSection').style.display = 'block';
-      }
-      if (visibility.show_flash_point) {
-        document.getElementById('flashPointSection').style.display = 'block';
-      }
-      if (visibility.show_ph_value) {
-        document.getElementById('phSection').style.display = 'block';
-      }
-      if (visibility.show_moisture_content) {
-        document.getElementById('moistureSection').style.display = 'block';
-      }
-      
-      if (visibility.show_comedogenic_rating) {
-        document.getElementById('comedogenicSection').style.display = 'block';
-      }
-    } catch (error) {
-      console.error('Error loading category visibility:', error);
-    }
-  }
-
   function updateShelfLifeVisibility() {
     if (perishableCheckbox && shelfLifeSection) {
       shelfLifeSection.style.display = perishableCheckbox.checked ? 'block' : 'none';
@@ -381,8 +364,7 @@ document.addEventListener('DOMContentLoaded', function() {
   }
 
   // Event listeners
-  itemTypeSelect.addEventListener('change', updateFormBasedOnType);
-  ingredientCategorySelect.addEventListener('change', updateIngredientPropertiesVisibility);
+    itemTypeSelect.addEventListener('change', updateFormBasedOnType);
   
   if (perishableCheckbox) {
     perishableCheckbox.addEventListener('change', updateShelfLifeVisibility);

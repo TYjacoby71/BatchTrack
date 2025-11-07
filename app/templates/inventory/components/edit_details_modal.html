@@ -198,7 +198,50 @@
                   </select>
                   <small class="form-text text-muted">Pore-clogging potential (0-5 scale)</small>
                 </div>
+                  <div class="form-group col-md-6" id="recommendedUsageField" style="display:none;">
+                    <label for="editRecommendedUsage">Recommended Usage Rate</label>
+                    <input type="text" class="form-control" id="editRecommendedUsage" name="recommended_usage_rate" value="{{ item.recommended_usage_rate or '' }}" placeholder="e.g. 0.5% - 2%">
+                  </div>
               </div>
+                <div class="form-row">
+                  <div class="form-group col-md-6" id="recommendedFragranceField" style="display:none;">
+                    <label for="editRecommendedFragrance">Fragrance Load %</label>
+                    <input type="text" class="form-control" id="editRecommendedFragrance" name="recommended_fragrance_load_pct" value="{{ item.recommended_fragrance_load_pct or '' }}" placeholder="e.g. 6% - 10%">
+                  </div>
+                  <div class="form-group col-md-6" id="inciNameField" style="display:none;">
+                    <label for="editInciName">INCI Name</label>
+                    <input type="text" class="form-control" id="editInciName" name="inci_name" value="{{ item.inci_name or '' }}" placeholder="e.g. Butyrospermum Parkii Butter">
+                  </div>
+                </div>
+                <div class="form-row">
+                  <div class="form-group col-md-4" id="proteinContentField" style="display:none;">
+                    <label for="editProteinContent">Protein Content (%)</label>
+                    <input type="number" step="0.01" class="form-control" id="editProteinContent" name="protein_content_pct" value="{{ item.protein_content_pct or '' }}" min="0" max="100">
+                  </div>
+                  <div class="form-group col-md-4" id="brewingColorField" style="display:none;">
+                    <label for="editBrewingColor">Brewing Color (SRM)</label>
+                    <input type="number" step="0.1" class="form-control" id="editBrewingColor" name="brewing_color_srm" value="{{ item.brewing_color_srm or '' }}" min="0">
+                  </div>
+                  <div class="form-group col-md-4" id="brewingPotentialField" style="display:none;">
+                    <label for="editBrewingPotential">Brewing Potential (SG)</label>
+                    <input type="number" step="0.001" class="form-control" id="editBrewingPotential" name="brewing_potential_sg" value="{{ item.brewing_potential_sg or '' }}" min="0">
+                  </div>
+                </div>
+                <div class="form-row">
+                  <div class="form-group col-md-6" id="brewingDiastaticField" style="display:none;">
+                    <label for="editBrewingDiastatic">Diastatic Power (Lintner)</label>
+                    <input type="number" step="0.1" class="form-control" id="editBrewingDiastatic" name="brewing_diastatic_power_lintner" value="{{ item.brewing_diastatic_power_lintner or '' }}" min="0">
+                  </div>
+                  <div class="form-group col-md-6" id="certificationsField" style="display:none;">
+                    <label for="editCertifications">Certifications</label>
+                    <input type="text" class="form-control" id="editCertifications" name="certifications" value="{{ (item.certifications or []) | join(', ') }}" placeholder="Comma separated e.g. Organic, Fair Trade">
+                  </div>
+                </div>
+                <div class="form-group" id="fattyAcidField" style="display:none;">
+                  <label for="editFattyAcidProfile">Fatty Acid Profile (JSON)</label>
+                  <textarea class="form-control" id="editFattyAcidProfile" name="fatty_acid_profile" rows="3" placeholder='{"lauric": 45, "myristic": 16}'>{{ item.fatty_acid_profile | tojson(indent=2) if item.fatty_acid_profile else '' }}</textarea>
+                  <small class="form-text text-muted">Provide a JSON object mapping fatty acid names to percentages.</small>
+                </div>
             </div>
           </div>
 
@@ -430,77 +473,36 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     // Function to update field visibility based on category settings
-    function updateFieldVisibility() {
-      const itemType = $('#editType').val();
-      const categoryId = $('#editCategory').val();
+  function updateFieldVisibility() {
+    const itemType = $('#editType').val();
 
-      // Hide all soap-making fields by default
-      const soapMakingFields = [
-        'saponificationValueField',
-        'iodineValueField', 
-        'meltingPointField',
-        'flashPointField',
-        'phValueField',
-        'moistureContentField',
-        'shelfLifeMonthsField',
-        'comedogenicRatingField'
-      ];
+    const soapMakingFields = [
+      'saponificationValueField',
+      'iodineValueField',
+      'meltingPointField',
+      'flashPointField',
+      'phValueField',
+      'moistureContentField',
+      'shelfLifeMonthsField',
+      'comedogenicRatingField',
+      'recommendedUsageField',
+      'recommendedFragranceField',
+      'inciNameField',
+      'proteinContentField',
+      'brewingColorField',
+      'brewingPotentialField',
+      'brewingDiastaticField',
+      'fattyAcidField',
+      'certificationsField'
+    ];
 
-      soapMakingFields.forEach(fieldId => {
-        const fieldDiv = document.getElementById(fieldId);
-        if (fieldDiv) {
-          fieldDiv.style.display = 'none';
-        }
-      });
-
-      // Only show fields for ingredients with a category
-      if (itemType === 'ingredient' && categoryId) {
-        // Get category visibility settings
-        const categoryOption = document.querySelector(`#editCategory option[value="${categoryId}"]`);
-        if (categoryOption) {
-          // Fetch visibility settings from server
-          fetch(`/api/category-visibility/${categoryId}`)
-            .then(response => response.json())
-            .then(data => {
-              if (data.success) {
-                const settings = data.visibility;
-
-                if (settings.show_saponification_value) {
-                  document.getElementById('saponificationValueField').style.display = 'block';
-                }
-                if (settings.show_iodine_value) {
-                  document.getElementById('iodineValueField').style.display = 'block';
-                }
-                if (settings.show_melting_point) {
-                  document.getElementById('meltingPointField').style.display = 'block';
-                }
-                if (settings.show_flash_point) {
-                  document.getElementById('flashPointField').style.display = 'block';
-                }
-                if (settings.show_ph_value) {
-                  document.getElementById('phValueField').style.display = 'block';
-                }
-                if (settings.show_moisture_content) {
-                  document.getElementById('moistureContentField').style.display = 'block';
-                }
-                if (settings.show_shelf_life_months) {
-                  document.getElementById('shelfLifeMonthsField').style.display = 'block';
-                }
-                if (settings.show_comedogenic_rating) {
-                  document.getElementById('comedogenicRatingField').style.display = 'block';
-                }
-              }
-            })
-            .catch(error => {
-              console.error('Error fetching category visibility:', error);
-              // Show all fields as fallback
-              soapMakingFields.forEach(fieldId => {
-                document.getElementById(fieldId).style.display = 'block';
-              });
-            });
-        }
+    soapMakingFields.forEach(fieldId => {
+      const fieldDiv = document.getElementById(fieldId);
+      if (fieldDiv) {
+        fieldDiv.style.display = itemType === 'ingredient' ? 'block' : 'none';
       }
-    }
+    });
+  }
 
     // Initial setup when the modal is shown or type changes
     $('#editDetailsModal').on('shown.bs.modal', function() {

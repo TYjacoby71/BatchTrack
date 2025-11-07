@@ -191,38 +191,6 @@ def create_unit():
         db.session.rollback()
         return jsonify({'success': False, 'error': str(e)}), 500
 
-@api_bp.route('/category-visibility/<int:category_id>')
-@login_required
-def get_category_visibility(category_id):
-    """Get visibility settings for a category"""
-    try:
-        from app.models.category import IngredientCategory
-        category = IngredientCategory.query.filter_by(
-            id=category_id,
-            organization_id=None,
-            is_global_category=True
-        ).first()
-
-        if not category:
-            return jsonify({'success': False, 'error': 'Category not found'})
-
-        visibility = {
-            'show_saponification_value': getattr(category, 'show_saponification_value', False),
-            'show_iodine_value': getattr(category, 'show_iodine_value', False),
-            'show_melting_point': getattr(category, 'show_melting_point', False),
-            'show_flash_point': getattr(category, 'show_flash_point', False),
-            'show_ph_value': getattr(category, 'show_ph_value', False),
-            'show_moisture_content': getattr(category, 'show_moisture_content', False),
-            'show_shelf_life_days': getattr(category, 'show_shelf_life_days', False),
-            'show_comedogenic_rating': getattr(category, 'show_comedogenic_rating', False)
-        }
-
-        return jsonify({'success': True, 'visibility': visibility})
-
-    except Exception as e:
-        return jsonify({'success': False, 'error': str(e)})
-
-
 @api_bp.route('/containers/suggestions', methods=['GET'])
 @login_required
 def get_container_suggestions():

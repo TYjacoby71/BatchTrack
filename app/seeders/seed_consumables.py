@@ -59,8 +59,8 @@ def seed_consumables_from_files(selected_files):
                 container_type=item_data.get('container_type'),
                 container_style=item_data.get('container_style'),
                 container_color=item_data.get('container_color'),
-                aka_names=item_data.get('aka_names', []),
-                density=item_data.get('density_g_per_ml'),
+                aliases=item_data.get('aka_names', []),
+                density_g_per_ml=item_data.get('density_g_per_ml'),
                 default_unit=item_data.get('default_unit'),
                 default_is_perishable=item_data.get('perishable', False),
                 recommended_shelf_life_days=item_data.get('shelf_life_days')

@@ -19,8 +19,8 @@ class DensityAssignmentService:
             for gi in items:
                 payload_items.append({
                     'name': gi.name,
-                    'density_g_per_ml': gi.density,
-                    'aliases': gi.aka_names or [],
+                    'density_g_per_ml': gi.density_g_per_ml,
+                    'aliases': gi.aliases or [],
                     'category': gi.ingredient_category.name if gi.ingredient_category else 'Other'
                 })
             return {'common_densities': payload_items}

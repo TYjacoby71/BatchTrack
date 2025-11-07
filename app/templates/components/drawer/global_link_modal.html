@@ -35,7 +35,7 @@
                 <td>{{ it.name }}</td>
                 <td><span class="badge bg-secondary">{{ global_item.name }}</span></td>
                 <td>{{ '%.3f'|format(it.density) if it.density else '-' }}</td>
-                <td>{{ '%.3f'|format(global_item.density) if global_item.density else '-' }}</td>
+                <td>{{ '%.3f'|format(global_item.density_g_per_ml) if global_item.density_g_per_ml else '-' }}</td>
                 <td>{{ it.unit }}</td>
               </tr>
               {% endfor %}

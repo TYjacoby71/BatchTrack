@@ -667,7 +667,7 @@ def global_item_edit(item_id):
         'name': item.name,
         'item_type': item.item_type,
         'default_unit': item.default_unit,
-        'density': item.density,
+        'density_g_per_ml': item.density_g_per_ml,
         'capacity': item.capacity,
         'capacity_unit': item.capacity_unit,
         'container_material': getattr(item, 'container_material', None),
@@ -675,15 +675,24 @@ def global_item_edit(item_id):
         'container_style': getattr(item, 'container_style', None),
         'default_is_perishable': item.default_is_perishable,
         'recommended_shelf_life_days': item.recommended_shelf_life_days,
-        'aka_names': item.aka_names,
+        'aliases': item.aliases,
+        'recommended_usage_rate': item.recommended_usage_rate,
+        'recommended_fragrance_load_pct': item.recommended_fragrance_load_pct,
+        'inci_name': item.inci_name,
+        'protein_content_pct': item.protein_content_pct,
+        'brewing_color_srm': item.brewing_color_srm,
+        'brewing_potential_sg': item.brewing_potential_sg,
+        'brewing_diastatic_power_lintner': item.brewing_diastatic_power_lintner,
+        'fatty_acid_profile': item.fatty_acid_profile,
+        'certifications': item.certifications,
     }
 
     # Apply edits
     item.name = request.form.get('name', item.name)
     item.item_type = request.form.get('item_type', item.item_type)
     item.default_unit = request.form.get('default_unit', item.default_unit)
-    density = request.form.get('density')
-    item.density = float(density) if density not in (None, '',) else None
+    density = request.form.get('density_g_per_ml')
+    item.density_g_per_ml = float(density) if density not in (None, '',) else None
     capacity = request.form.get('capacity')
     item.capacity = float(capacity) if capacity not in (None, '',) else None
     item.capacity_unit = request.form.get('capacity_unit', item.capacity_unit)
@@ -698,9 +707,42 @@ def global_item_edit(item_id):
     item.default_is_perishable = True if request.form.get('default_is_perishable') == 'on' else False
     rsl = request.form.get('recommended_shelf_life_days')
     item.recommended_shelf_life_days = int(rsl) if rsl not in (None, '',) else None
-    aka_names = request.form.get('aka_names')  # comma-separated
-    if aka_names is not None:
-        item.aka_names = [n.strip() for n in aka_names.split(',') if n.strip()]
+    aliases = request.form.get('aliases')  # comma-separated
+    if aliases is not None:
+        item.aliases = [n.strip() for n in aliases.split(',') if n.strip()]
+
+    item.recommended_usage_rate = request.form.get('recommended_usage_rate') or None
+    item.recommended_fragrance_load_pct = request.form.get('recommended_fragrance_load_pct') or None
+    item.inci_name = request.form.get('inci_name') or None
+
+    protein = request.form.get('protein_content_pct')
+    item.protein_content_pct = float(protein) if protein not in (None, '',) else None
+
+    brewing_color = request.form.get('brewing_color_srm')
+    item.brewing_color_srm = float(brewing_color) if brewing_color not in (None, '',) else None
+
+    brewing_potential = request.form.get('brewing_potential_sg')
+    item.brewing_potential_sg = float(brewing_potential) if brewing_potential not in (None, '',) else None
+
+    brewing_dp = request.form.get('brewing_diastatic_power_lintner')
+    item.brewing_diastatic_power_lintner = float(brewing_dp) if brewing_dp not in (None, '',) else None
+
+    fatty_acid_profile_raw = request.form.get('fatty_acid_profile')
+    if fatty_acid_profile_raw is not None:
+        import json
+        fatty_acid_profile_raw = fatty_acid_profile_raw.strip()
+        if fatty_acid_profile_raw:
+            try:
+                item.fatty_acid_profile = json.loads(fatty_acid_profile_raw)
+            except json.JSONDecodeError:
+                flash('Invalid JSON for fatty acid profile. Please provide valid JSON.', 'error')
+        else:
+            item.fatty_acid_profile = None
+
+    certifications_raw = request.form.get('certifications')
+    if certifications_raw is not None:
+        certifications = [c.strip() for c in certifications_raw.split(',') if c.strip()]
+        item.certifications = certifications or None
 
     # Handle ingredient category - use the ID directly
     ingredient_category_id = request.form.get('ingredient_category_id', '').strip()
@@ -1162,10 +1204,10 @@ def create_global_item():
             )
 
             # Add optional fields
-            density = request.form.get('density')
+            density = request.form.get('density_g_per_ml')
             if density:
                 try:
-                    new_item.density = float(density)
+                    new_item.density_g_per_ml = float(density)
                 except ValueError:
                     flash('Invalid density value', 'error')
                     return redirect(url_for('developer.create_global_item'))
@@ -1197,10 +1239,60 @@ def create_global_item():
                     flash('Invalid shelf life value', 'error')
                     return redirect(url_for('developer.create_global_item'))
 
-            # Handle aka_names (comma-separated)
-            aka_names = request.form.get('aka_names', '').strip()
-            if aka_names:
-                new_item.aka_names = [n.strip() for n in aka_names.split(',') if n.strip()]
+            # Ingredient-specific metadata
+            new_item.recommended_usage_rate = request.form.get('recommended_usage_rate', '').strip() or None
+            new_item.recommended_fragrance_load_pct = request.form.get('recommended_fragrance_load_pct', '').strip() or None
+            new_item.inci_name = request.form.get('inci_name', '').strip() or None
+
+            protein_content = request.form.get('protein_content_pct', '').strip()
+            if protein_content:
+                try:
+                    new_item.protein_content_pct = float(protein_content)
+                except ValueError:
+                    flash('Invalid protein content percentage', 'error')
+                    return redirect(url_for('developer.create_global_item'))
+
+            brewing_color = request.form.get('brewing_color_srm', '').strip()
+            if brewing_color:
+                try:
+                    new_item.brewing_color_srm = float(brewing_color)
+                except ValueError:
+                    flash('Invalid brewing SRM value', 'error')
+                    return redirect(url_for('developer.create_global_item'))
+
+            brewing_potential = request.form.get('brewing_potential_sg', '').strip()
+            if brewing_potential:
+                try:
+                    new_item.brewing_potential_sg = float(brewing_potential)
+                except ValueError:
+                    flash('Invalid brewing potential SG value', 'error')
+                    return redirect(url_for('developer.create_global_item'))
+
+            brewing_dp = request.form.get('brewing_diastatic_power_lintner', '').strip()
+            if brewing_dp:
+                try:
+                    new_item.brewing_diastatic_power_lintner = float(brewing_dp)
+                except ValueError:
+                    flash('Invalid brewing diastatic power value', 'error')
+                    return redirect(url_for('developer.create_global_item'))
+
+            fatty_acid_profile_raw = request.form.get('fatty_acid_profile', '').strip()
+            if fatty_acid_profile_raw:
+                import json
+                try:
+                    new_item.fatty_acid_profile = json.loads(fatty_acid_profile_raw)
+                except json.JSONDecodeError:
+                    flash('Fatty acid profile must be valid JSON.', 'error')
+                    return redirect(url_for('developer.create_global_item'))
+
+            certifications_raw = request.form.get('certifications', '').strip()
+            if certifications_raw:
+                new_item.certifications = [c.strip() for c in certifications_raw.split(',') if c.strip()]
+
+            # Handle aliases (comma-separated)
+            aliases_raw = request.form.get('aliases', '').strip()
+            if aliases_raw:
+                new_item.aliases = [n.strip() for n in aliases_raw.split(',') if n.strip()]
 
             db.session.add(new_item)
             db.session.commit()
@@ -2375,117 +2467,6 @@ def get_user_api(user_id):
         print(f"API returning user {user_id} with is_organization_owner: {is_org_owner}")
 
         return jsonify({'success': True, 'user': user_data})
-
-    except Exception as e:
-        return jsonify({'success': False, 'error': str(e)})
-
-@developer_bp.route('/reference-categories/get-visibility', methods=['GET'])
-@login_required
-def get_category_visibility():
-    """Get visibility settings for a category"""
-    try:
-        category_name = request.args.get('category', '').strip()
-
-        if not category_name:
-            return jsonify({'success': False, 'error': 'Category name is required'})
-
-        # Find the category
-        from app.models.category import IngredientCategory
-        category = IngredientCategory.query.filter_by(
-            name=category_name,
-            organization_id=None,
-            is_global_category=True
-        ).first()
-
-        if not category:
-            return jsonify({'success': False, 'error': 'Category not found'})
-
-        visibility = {
-            'show_saponification_value': getattr(category, 'show_saponification_value', False),
-            'show_iodine_value': getattr(category, 'show_iodine_value', False),
-            'show_melting_point': getattr(category, 'show_melting_point', False),
-            'show_flash_point': getattr(category, 'show_flash_point', False),
-            'show_ph_value': getattr(category, 'show_ph_value', False),
-            'show_moisture_content': getattr(category, 'show_moisture_content', False),
-            'show_shelf_life_days': getattr(category, 'show_shelf_life_days', False),
-            'show_comedogenic_rating': getattr(category, 'show_comedogenic_rating', False)
-        }
-
-        return jsonify({'success': True, 'visibility': visibility})
-
-    except Exception as e:
-        return jsonify({'success': False, 'error': str(e)})
-
-@developer_bp.route('/reference-categories/update-visibility', methods=['POST'])
-@login_required
-def update_category_visibility():
-    """Update visibility settings for a category"""
-    try:
-        data = request.get_json()
-        category_name = data.get('category', '').strip()
-
-        if not category_name:
-            return jsonify({'success': False, 'error': 'Category name is required'})
-
-        # Find the category
-        from app.models.category import IngredientCategory
-        category = IngredientCategory.query.filter_by(
-            name=category_name,
-            organization_id=None,
-            is_global_category=True
-        ).first()
-
-        if not category:
-            return jsonify({'success': False, 'error': 'Category not found'})
-
-        # Update visibility settings
-        category.show_saponification_value = data.get('show_saponification_value', False)
-        category.show_iodine_value = data.get('show_iodine_value', False)
-        category.show_melting_point = data.get('show_melting_point', False)
-        category.show_flash_point = data.get('show_flash_point', False)
-        category.show_ph_value = data.get('show_ph_value', False)
-        category.show_moisture_content = data.get('show_moisture_content', False)
-        category.show_shelf_life_days = data.get('show_shelf_life_days', False)
-        category.show_comedogenic_rating = data.get('show_comedogenic_rating', False)
-
-        db.session.commit()
-
-        return jsonify({
-            'success': True, 
-            'message': f'Visibility settings updated for category "{category_name}"'
-        })
-
-    except Exception as e:
-        db.session.rollback()
-        return jsonify({'success': False, 'error': str(e)})
-
-@developer_bp.route('/api/category-visibility/<int:category_id>')
-@login_required
-def api_category_visibility(category_id):
-    """Get visibility settings for a category by ID"""
-    try:
-        from app.models.category import IngredientCategory
-        category = IngredientCategory.query.filter_by(
-            id=category_id,
-            organization_id=None,
-            is_global_category=True
-        ).first()
-
-        if not category:
-            return jsonify({'success': False, 'error': 'Category not found'})
-
-        visibility = {
-            'show_saponification_value': getattr(category, 'show_saponification_value', False),
-            'show_iodine_value': getattr(category, 'show_iodine_value', False),
-            'show_melting_point': getattr(category, 'show_melting_point', False),
-            'show_flash_point': getattr(category, 'show_flash_point', False),
-            'show_ph_value': getattr(category, 'show_ph_value', False),
-            'show_moisture_content': getattr(category, 'show_moisture_content', False),
-            'show_shelf_life_days': getattr(category, 'show_shelf_life_days', False),
-            'show_comedogenic_rating': getattr(category, 'show_comedogenic_rating', False)
-        }
-
-        return jsonify({'success': True, 'visibility': visibility})
 
     except Exception as e:
         return jsonify({'success': False, 'error': str(e)})

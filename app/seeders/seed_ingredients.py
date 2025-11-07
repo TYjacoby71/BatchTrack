@@ -41,15 +41,7 @@ def seed_ingredients_from_files(selected_files):
                 default_density=category_data.get('default_density'),
                 is_global_category=True,
                 organization_id=None,
-                is_active=True,
-                show_saponification_value=category_data.get('show_saponification_value', False),
-                show_iodine_value=category_data.get('show_iodine_value', False),
-                show_melting_point=category_data.get('show_melting_point', False),
-                show_flash_point=category_data.get('show_flash_point', False),
-                show_ph_value=category_data.get('show_ph_value', False),
-                show_moisture_content=category_data.get('show_moisture_content', False),
-                show_shelf_life_days=category_data.get('show_shelf_life_days', False),
-                show_comedogenic_rating=category_data.get('show_comedogenic_rating', False)
+                is_active=True
             )
             db.session.add(new_cat)
             db.session.flush()
@@ -73,8 +65,8 @@ def seed_ingredients_from_files(selected_files):
             new_item = GlobalItem(
                 name=name,
                 item_type='ingredient',
-                density=item_data.get('density_g_per_ml'),
-                aka_names=item_data.get('aka_names', item_data.get('aka', [])),
+                density_g_per_ml=item_data.get('density_g_per_ml'),
+                aliases=item_data.get('aka_names', item_data.get('aka', [])),
                 default_unit=item_data.get('default_unit'),
                 ingredient_category_id=category.id,
                 default_is_perishable=item_data.get('perishable', False),
@@ -85,7 +77,16 @@ def seed_ingredients_from_files(selected_files):
                 flash_point_c=item_data.get('flash_point_c'),
                 ph_value=item_data.get('ph_value'),
                 moisture_content_percent=item_data.get('moisture_content_percent'),
-                comedogenic_rating=item_data.get('comedogenic_rating')
+                comedogenic_rating=item_data.get('comedogenic_rating'),
+                recommended_usage_rate=item_data.get('recommended_usage_rate'),
+                recommended_fragrance_load_pct=item_data.get('recommended_fragrance_load_pct'),
+                inci_name=item_data.get('inci_name'),
+                protein_content_pct=item_data.get('protein_content_pct'),
+                brewing_color_srm=item_data.get('brewing_color_srm'),
+                brewing_potential_sg=item_data.get('brewing_potential_sg'),
+                brewing_diastatic_power_lintner=item_data.get('brewing_diastatic_power_lintner'),
+                fatty_acid_profile=item_data.get('fatty_acid_profile'),
+                certifications=item_data.get('certifications')
             )
             
             db.session.add(new_item)

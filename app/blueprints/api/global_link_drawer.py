@@ -84,9 +84,26 @@ def confirm_link():
             # Apply linking rules: rename, set density, link; do not change unit
             old_name = inv.name
             inv.name = gi.name
-            if gi.density is not None:
-                inv.density = gi.density
+            if gi.density_g_per_ml is not None:
+                inv.density = gi.density_g_per_ml
             inv.global_item_id = gi.id
+            if inv.type == 'ingredient':
+                inv.saponification_value = gi.saponification_value
+                inv.iodine_value = gi.iodine_value
+                inv.melting_point_c = gi.melting_point_c
+                inv.flash_point_c = gi.flash_point_c
+                inv.ph_value = gi.ph_value
+                inv.moisture_content_percent = gi.moisture_content_percent
+                inv.comedogenic_rating = gi.comedogenic_rating
+                inv.recommended_usage_rate = gi.recommended_usage_rate
+                inv.recommended_fragrance_load_pct = gi.recommended_fragrance_load_pct
+                inv.inci_name = gi.inci_name
+                inv.protein_content_pct = gi.protein_content_pct
+                inv.brewing_color_srm = gi.brewing_color_srm
+                inv.brewing_potential_sg = gi.brewing_potential_sg
+                inv.brewing_diastatic_power_lintner = gi.brewing_diastatic_power_lintner
+                inv.fatty_acid_profile = gi.fatty_acid_profile
+                inv.certifications = gi.certifications
             # ownership auto-derives in model listeners
 
             # Persist an audit note via UnifiedInventoryHistory with zero quantity change
