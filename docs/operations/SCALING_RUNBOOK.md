@@ -128,7 +128,7 @@ gunicorn -c gunicorn.conf.py wsgi:app
 #### Shared Session Store
 
 - Flask sessions are now server-side via `Flask-Session`; production **must** point `SESSION_TYPE=redis` and reuse `REDIS_URL` so workers and instances share state.
-- If Redis is unavailable at boot, the application will log a warning and fall back to filesystem storage—treat this as local development only.
+- Provision Redis (Render Redis, Upstash, AWS ElastiCache, etc.) and copy the URL into both `REDIS_URL` and `RATELIMIT_STORAGE_URI`. If Redis is missing when `FLASK_ENV=production`, the app now raises an error and aborts startup.
 
 ### 5. Redis Configuration
 
