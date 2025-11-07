@@ -1,10 +1,8 @@
-
 {
   "category_name": "Botanicals (Dried & Whole/Parts)",
-  "default_density": 0.30,
+  "default_density": 0.3,
   "description": "For whole or partial dried botanicals that are not ground into a fine powder. Examples: Lavender Buds, Calendula Petals, Rosehips, Hops, Whole Cloves, Bay Leaves.",
   "attributes": [
-    "density",
     "moisture_content_percent",
     "recommended_usage_rate",
     "recommended_shelf_life_days",
