@@ -59,38 +59,6 @@ class InventoryItem(ScopedModelMixin, db.Model):
     moisture_content_percent = db.Column(db.Float, nullable=True)  # Moisture content
     comedogenic_rating = db.Column(db.Integer, nullable=True)  # 0-5 scale for oils
 
-    # Additional temperature & processing properties
-    boiling_point_c = db.Column(db.Float, nullable=True)  # Boiling point for distillation
-    smoke_point_c = db.Column(db.Float, nullable=True)  # Smoke point for cooking oils
-    glass_transition_temp_c = db.Column(db.Float, nullable=True)  # Glass transition temperature
-    freezing_point_c = db.Column(db.Float, nullable=True)  # Freezing point for cold processing
-
-    # Concentration & regulatory
-    concentration_percent = db.Column(db.Float, nullable=True)  # Concentration for extracts/dilutions
-    cas_number = db.Column(db.String(32), nullable=True)  # Chemical identification number
-    inci_name = db.Column(db.String(128), nullable=True)  # International cosmetic ingredient naming
-    maximum_usage_percent = db.Column(db.Float, nullable=True)  # Maximum allowed concentration
-    allergen_info = db.Column(db.Text, nullable=True)  # Allergen declarations
-    pregnancy_safe = db.Column(db.Boolean, nullable=True)  # Safety during pregnancy
-
-    # Solubility & compatibility
-    water_soluble = db.Column(db.Boolean, nullable=True)  # Water solubility
-    oil_soluble = db.Column(db.Boolean, nullable=True)  # Oil solubility
-    alcohol_soluble = db.Column(db.Boolean, nullable=True)  # Alcohol solubility
-    emulsification_required = db.Column(db.Boolean, nullable=True)  # Requires emulsification
-
-    # Optical & sensory properties
-    refractive_index = db.Column(db.Float, nullable=True)  # Optical clarity measurement
-    color_stability = db.Column(db.String(64), nullable=True)  # Light/heat stability rating
-    scent_strength = db.Column(db.Integer, nullable=True)  # Scent strength 1-10 scale
-    texture_notes = db.Column(db.Text, nullable=True)  # Texture and application notes
-
-    # Sourcing & sustainability
-    origin_country = db.Column(db.String(64), nullable=True)  # Country of origin
-    organic_certified = db.Column(db.Boolean, nullable=True)  # Organic certification
-    fair_trade_certified = db.Column(db.Boolean, nullable=True)  # Fair trade certification
-    sustainability_rating = db.Column(db.Integer, nullable=True)  # Sustainability rating 1-5
-
     # Global library linkage (nullable)
     global_item_id = db.Column(db.Integer, db.ForeignKey('global_item.id', ondelete='SET NULL'), nullable=True, index=True)
     # Ownership semantics: 'global' when linked, 'org' when unlinked/customized
