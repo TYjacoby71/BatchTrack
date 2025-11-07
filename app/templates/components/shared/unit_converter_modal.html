@@ -157,7 +157,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
             // Load global density reference items
             console.log('🔧 UNIT CONVERTER: Fetching global density reference...');
-            const globalResponse = await fetch('/api/density-reference/options');
+            const globalResponse = await fetch('/api/ingredients/global-library/density-options');
             let globalItems = [];
             if (globalResponse.ok) {
                 const categories = await globalResponse.json();

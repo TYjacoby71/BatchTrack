@@ -3,6 +3,7 @@ from flask_login import login_required, current_user
 from sqlalchemy import or_, func
 from ...models import IngredientCategory, InventoryItem, GlobalItem, db
 from ...services.statistics.global_item_stats import GlobalItemStatsService
+from ...services.density_assignment_service import DensityAssignmentService
 
 ingredient_api_bp = Blueprint('ingredient_api', __name__)
 
@@ -27,6 +28,14 @@ def get_categories():
         }
         for cat in all_categories
     ])
+
+@ingredient_api_bp.route('/global-library/density-options', methods=['GET'])
+@login_required
+def get_global_library_density_options():
+    """Expose global ingredient density options sourced from the Global Inventory Library."""
+    include_uncategorized = request.args.get('include_uncategorized', '1') not in {'0', 'false', 'False'}
+    payload = DensityAssignmentService.build_global_library_density_options(include_uncategorized=include_uncategorized)
+    return jsonify(payload)
 
 @ingredient_api_bp.route('/ingredient/<int:id>/density', methods=['GET'])
 def get_ingredient_density(id):

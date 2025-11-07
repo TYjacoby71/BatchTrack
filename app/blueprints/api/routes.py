@@ -6,7 +6,6 @@ import logging
 from app.models import InventoryItem  # Added for get_ingredients endpoint
 from app import db  # Assuming db is imported from app
 from app.utils.permissions import require_permission
-from ...services.density_assignment_service import DensityAssignmentService
 
 # Configure logging
 logger = logging.getLogger(__name__)
@@ -19,16 +18,6 @@ def health_check():
     if request.method == 'HEAD':
         return '', 200
     return jsonify({'status': 'ok', 'timestamp': datetime.now(timezone.utc).isoformat()})
-
-@api_bp.route('/density-reference/options', methods=['GET'])
-def get_density_reference_options():
-    """Return ingredient density reference groups sourced from ingredient categories."""
-    try:
-        payload = DensityAssignmentService.build_category_density_payload()
-        return jsonify(payload), 200
-    except Exception as exc:
-        logger.exception("Failed to build density reference payload: %s", exc)
-        return jsonify({'success': False, 'error': 'Unable to load density reference data'}), 500
 
 @api_bp.route('/server-time')
 def server_time():

@@ -29,8 +29,8 @@ class DensityAssignmentService:
             return {'common_densities': []}
 
     @staticmethod
-    def build_category_density_payload(include_uncategorized: bool = True) -> List[Dict[str, Any]]:
-        """Build density reference payload grouped by ingredient category."""
+    def build_global_library_density_options(include_uncategorized: bool = True) -> List[Dict[str, Any]]:
+        """Return global library ingredient density options grouped by category."""
         payload: List[Dict[str, Any]] = []
 
         categories = (
