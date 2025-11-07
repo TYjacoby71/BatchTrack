@@ -1,8 +1,73 @@
-
 {
   "category_name": "Miscellaneous",
-  "default_density": 1.00,
+  "default_density": 1.0,
   "description": "Miscellaneous items not covered by other categories.",
-  "show_shelf_life_months": true,
-  "items": []
+  "items": [
+    {
+      "name": "Citric Acid (Anhydrous)",
+      "density_g_per_ml": 1.66,
+      "aka_names": [
+        "citric acid crystals"
+      ],
+      "default_unit": "gram",
+      "ph_value": "2.1 (1% solution)",
+      "recommended_usage_rate": "0.1-2% for pH adjustment and chelation",
+      "recommended_shelf_life_days": 1825,
+      "certifications": [
+        "USP Grade",
+        "Kosher"
+      ],
+      "protein_content_pct": 0
+    },
+    {
+      "name": "Gelatin Powder (250 Bloom)",
+      "density_g_per_ml": 0.65,
+      "aka_names": [
+        "type B gelatin"
+      ],
+      "default_unit": "gram",
+      "ph_value": "5.0-6.5",
+      "recommended_usage_rate": "2-10% in gels and confections",
+      "recommended_shelf_life_days": 720,
+      "certifications": [
+        "Halal Available"
+      ],
+      "protein_content_pct": 90
+    },
+    {
+      "name": "Liquid Chlorophyll",
+      "density_g_per_ml": 1.01,
+      "aka_names": [
+        "chlorophyllin concentrate"
+      ],
+      "default_unit": "milliliter",
+      "ph_value": "7.0-8.0",
+      "recommended_usage_rate": "0.1-0.5% as natural colorant",
+      "recommended_shelf_life_days": 365,
+      "certifications": [
+        "Vegan"
+      ]
+    },
+    {
+      "name": "Maltodextrin",
+      "density_g_per_ml": 0.6,
+      "aka_names": [
+        "spray-dried maltodextrin"
+      ],
+      "default_unit": "gram",
+      "ph_value": "4.5-5.5",
+      "recommended_usage_rate": "1-20% as bulking agent",
+      "recommended_shelf_life_days": 730,
+      "certifications": [
+        "Non-GMO"
+      ]
+    }
+  ],
+  "attributes": [
+    "ph_value",
+    "recommended_usage_rate",
+    "recommended_shelf_life_days",
+    "certifications",
+    "protein_content_pct"
+  ]
 }

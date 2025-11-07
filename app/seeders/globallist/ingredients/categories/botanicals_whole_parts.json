@@ -8,5 +8,75 @@
     "recommended_shelf_life_days",
     "certifications"
   ],
-  "items": []
+  "items": [
+    {
+      "name": "Lavender Buds",
+      "density_g_per_ml": 0.21,
+      "aka_names": [
+        "lavandula angustifolia buds"
+      ],
+      "default_unit": "gram",
+      "moisture_content_percent": 8,
+      "recommended_usage_rate": "0.5-2% infusion or decorative topping",
+      "recommended_shelf_life_days": 540,
+      "certifications": [
+        "USDA Organic",
+        "Kosher"
+      ]
+    },
+    {
+      "name": "Calendula Petals",
+      "density_g_per_ml": 0.18,
+      "aka_names": [
+        "calendula officinalis petals"
+      ],
+      "default_unit": "gram",
+      "moisture_content_percent": 7,
+      "recommended_usage_rate": "0.5-1.5% in oil infusions and soaps",
+      "recommended_shelf_life_days": 540,
+      "certifications": [
+        "USDA Organic"
+      ]
+    },
+    {
+      "name": "Rosehips (Cut & Sifted)",
+      "density_g_per_ml": 0.38,
+      "aka_names": [
+        "rosa canina hips"
+      ],
+      "default_unit": "gram",
+      "moisture_content_percent": 9,
+      "recommended_usage_rate": "1-5% in tea blends or oil infusions",
+      "recommended_shelf_life_days": 365,
+      "certifications": [
+        "Fair Trade Certified"
+      ]
+    },
+    {
+      "name": "Hibiscus Flowers",
+      "density_g_per_ml": 0.32,
+      "aka_names": [
+        "hibiscus sabdariffa petals"
+      ],
+      "default_unit": "gram",
+      "moisture_content_percent": 11,
+      "recommended_usage_rate": "0.5-3% in botanical infusions and colorants",
+      "recommended_shelf_life_days": 365,
+      "certifications": []
+    },
+    {
+      "name": "German Chamomile Flowers",
+      "density_g_per_ml": 0.17,
+      "aka_names": [
+        "matricaria recutita whole flowers"
+      ],
+      "default_unit": "gram",
+      "moisture_content_percent": 7,
+      "recommended_usage_rate": "0.5-2% infusion or bath blends",
+      "recommended_shelf_life_days": 365,
+      "certifications": [
+        "EU Organic"
+      ]
+    }
+  ]
 }

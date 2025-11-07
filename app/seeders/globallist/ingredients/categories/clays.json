@@ -9,5 +9,81 @@
     "recommended_shelf_life_days",
     "certifications"
   ],
-  "items": []
+  "items": [
+    {
+      "name": "Kaolin Clay",
+      "density_g_per_ml": 2.6,
+      "aka_names": [
+        "china clay",
+        "white cosmetic clay"
+      ],
+      "default_unit": "gram",
+      "ph_value": "4.5-5.5",
+      "moisture_content_percent": 1,
+      "recommended_usage_rate": "5-60% in masks and powders",
+      "recommended_shelf_life_days": 1095,
+      "certifications": [
+        "Cosmetic Grade"
+      ]
+    },
+    {
+      "name": "Bentonite Clay",
+      "density_g_per_ml": 2.31,
+      "aka_names": [
+        "sodium bentonite"
+      ],
+      "default_unit": "gram",
+      "ph_value": "9.0-10.5",
+      "moisture_content_percent": 8,
+      "recommended_usage_rate": "5-25% in masks and poultices",
+      "recommended_shelf_life_days": 1095,
+      "certifications": [
+        "USP Grade"
+      ]
+    },
+    {
+      "name": "Rhassoul Clay",
+      "density_g_per_ml": 2.47,
+      "aka_names": [
+        "ghassoul clay",
+        "moroccan lava clay"
+      ],
+      "default_unit": "gram",
+      "ph_value": "7.0-7.5",
+      "moisture_content_percent": 6,
+      "recommended_usage_rate": "10-50% in masks and shampoos",
+      "recommended_shelf_life_days": 1095,
+      "certifications": [
+        "Ecocert Raw Material"
+      ]
+    },
+    {
+      "name": "French Green Clay",
+      "density_g_per_ml": 2.6,
+      "aka_names": [
+        "illite clay"
+      ],
+      "default_unit": "gram",
+      "ph_value": "6.5-7.5",
+      "moisture_content_percent": 5,
+      "recommended_usage_rate": "2-30% in masks and purifying bars",
+      "recommended_shelf_life_days": 1095,
+      "certifications": [
+        "Ecocert Raw Material"
+      ]
+    },
+    {
+      "name": "Fuller's Earth",
+      "density_g_per_ml": 2.4,
+      "aka_names": [
+        "multani mitti"
+      ],
+      "default_unit": "gram",
+      "ph_value": "7.0-8.0",
+      "moisture_content_percent": 10,
+      "recommended_usage_rate": "10-40% in cleansing masks",
+      "recommended_shelf_life_days": 1095,
+      "certifications": []
+    }
+  ]
 }

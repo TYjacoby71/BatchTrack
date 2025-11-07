@@ -1,41 +1,126 @@
-
 {
   "category_name": "Waxes",
   "default_density": 0.93,
   "description": "For natural and synthetic waxes used in cosmetics and candle making.",
-  "show_saponification_value": true,
-  "show_iodine_value": true,
-  "show_melting_point": true,
-  "show_shelf_life_months": true,
   "items": [
     {
-      "name": "Beeswax",
+      "name": "Beeswax (Yellow)",
       "density_g_per_ml": 0.96,
-      "aka_names": ["white beeswax", "yellow beeswax"],
+      "aka_names": [
+        "cera flava"
+      ],
       "default_unit": "gram",
       "saponification_value": 95,
-      "melting_point_c": 63
+      "iodine_value": 10,
+      "melting_point_c": 63,
+      "recommended_usage_rate": "5-30% in balms and salves",
+      "recommended_shelf_life_days": 1095,
+      "certifications": [
+        "USP Grade",
+        "Kosher"
+      ]
     },
     {
-      "name": "Soy Wax",
+      "name": "Beeswax (White)",
+      "density_g_per_ml": 0.96,
+      "aka_names": [
+        "cera alba"
+      ],
+      "default_unit": "gram",
+      "saponification_value": 95,
+      "iodine_value": 10,
+      "melting_point_c": 62,
+      "recommended_usage_rate": "5-25% in cosmetics",
+      "recommended_shelf_life_days": 1095,
+      "certifications": [
+        "USP Grade"
+      ]
+    },
+    {
+      "name": "Soy Wax (Container Blend)",
       "density_g_per_ml": 0.93,
-      "aka_names": ["soy candle wax"],
+      "aka_names": [
+        "hydrogenated soybean oil"
+      ],
       "default_unit": "gram",
-      "melting_point_c": 49
+      "saponification_value": 190,
+      "iodine_value": 70,
+      "melting_point_c": 49,
+      "recommended_usage_rate": "70-100% as primary candle wax",
+      "recommended_shelf_life_days": 730,
+      "certifications": [
+        "Renewable"
+      ]
     },
     {
-      "name": "Paraffin Wax",
+      "name": "Paraffin Wax (Fully Refined)",
       "density_g_per_ml": 0.9,
-      "aka_names": ["candle wax"],
+      "aka_names": [
+        "candle paraffin"
+      ],
       "default_unit": "gram",
-      "melting_point_c": 60
+      "saponification_value": 0,
+      "iodine_value": 0,
+      "melting_point_c": 60,
+      "recommended_usage_rate": "50-100% in pillar and container candles",
+      "recommended_shelf_life_days": 1825,
+      "certifications": []
     },
     {
-      "name": "Carnauba Wax",
+      "name": "Carnauba Wax (Type 1)",
       "density_g_per_ml": 0.999,
-      "aka_names": ["brazil wax"],
+      "aka_names": [
+        "brazil wax"
+      ],
       "default_unit": "gram",
-      "melting_point_c": 85
+      "saponification_value": 78,
+      "iodine_value": 7,
+      "melting_point_c": 85,
+      "recommended_usage_rate": "1-10% for gloss and hardness",
+      "recommended_shelf_life_days": 1095,
+      "certifications": [
+        "Vegan"
+      ]
+    },
+    {
+      "name": "Candelilla Wax",
+      "density_g_per_ml": 0.99,
+      "aka_names": [
+        "euphorbia cerifera wax"
+      ],
+      "default_unit": "gram",
+      "saponification_value": 65,
+      "iodine_value": 15,
+      "melting_point_c": 68,
+      "recommended_usage_rate": "1-12% as vegan wax alternative",
+      "recommended_shelf_life_days": 1095,
+      "certifications": [
+        "Vegan"
+      ]
+    },
+    {
+      "name": "Rice Bran Wax",
+      "density_g_per_ml": 0.98,
+      "aka_names": [
+        "oryza sativa bran wax"
+      ],
+      "default_unit": "gram",
+      "saponification_value": 75,
+      "iodine_value": 10,
+      "melting_point_c": 79,
+      "recommended_usage_rate": "1-5% to boost hardness and stability",
+      "recommended_shelf_life_days": 730,
+      "certifications": [
+        "Vegan"
+      ]
     }
+  ],
+  "attributes": [
+    "saponification_value",
+    "iodine_value",
+    "melting_point_c",
+    "recommended_usage_rate",
+    "recommended_shelf_life_days",
+    "certifications"
   ]
 }

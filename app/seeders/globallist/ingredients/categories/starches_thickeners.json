@@ -1,9 +1,89 @@
-
 {
   "category_name": "Starches & Thickeners",
   "default_density": 0.63,
   "description": "For starches and common thickeners.",
-  "show_moisture_content": true,
-  "show_shelf_life_months": true,
-  "items": []
+  "items": [
+    {
+      "name": "Cornstarch",
+      "density_g_per_ml": 0.54,
+      "aka_names": [
+        "maize starch"
+      ],
+      "default_unit": "gram",
+      "moisture_content_percent": 12,
+      "protein_content_pct": 0.3,
+      "recommended_usage_rate": "2-10% as thickener",
+      "recommended_shelf_life_days": 1095,
+      "certifications": [
+        "Non-GMO"
+      ]
+    },
+    {
+      "name": "Arrowroot Powder",
+      "density_g_per_ml": 0.56,
+      "aka_names": [
+        "maranta arundinacea starch"
+      ],
+      "default_unit": "gram",
+      "moisture_content_percent": 11,
+      "protein_content_pct": 0.2,
+      "recommended_usage_rate": "2-8% as thickener or absorbent",
+      "recommended_shelf_life_days": 730,
+      "certifications": [
+        "Gluten-Free"
+      ]
+    },
+    {
+      "name": "Tapioca Starch",
+      "density_g_per_ml": 0.58,
+      "aka_names": [
+        "cassava starch"
+      ],
+      "default_unit": "gram",
+      "moisture_content_percent": 12,
+      "protein_content_pct": 0.2,
+      "recommended_usage_rate": "2-8% as thickener and texturizer",
+      "recommended_shelf_life_days": 730,
+      "certifications": [
+        "Gluten-Free"
+      ]
+    },
+    {
+      "name": "Guar Gum",
+      "density_g_per_ml": 0.75,
+      "aka_names": [
+        "guar hydrocolloid"
+      ],
+      "default_unit": "gram",
+      "moisture_content_percent": 12,
+      "protein_content_pct": 5,
+      "recommended_usage_rate": "0.2-1% as thickener or stabilizer",
+      "recommended_shelf_life_days": 540,
+      "certifications": [
+        "Kosher"
+      ]
+    },
+    {
+      "name": "Xanthan Gum",
+      "density_g_per_ml": 0.8,
+      "aka_names": [
+        "xanthan polysaccharide"
+      ],
+      "default_unit": "gram",
+      "moisture_content_percent": 13,
+      "protein_content_pct": 7,
+      "recommended_usage_rate": "0.1-1% in gels and emulsions",
+      "recommended_shelf_life_days": 540,
+      "certifications": [
+        "Non-GMO"
+      ]
+    }
+  ],
+  "attributes": [
+    "moisture_content_percent",
+    "protein_content_pct",
+    "recommended_usage_rate",
+    "recommended_shelf_life_days",
+    "certifications"
+  ]
 }

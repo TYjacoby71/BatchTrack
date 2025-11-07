@@ -1,8 +1,87 @@
-
 {
   "category_name": "Herbs & Spices (Dried & Ground)",
   "default_density": 0.57,
   "description": "Dried ground herbs and spices.",
-  "show_shelf_life_months": true,
-  "items": []
+  "items": [
+    {
+      "name": "Ground Cinnamon",
+      "density_g_per_ml": 0.56,
+      "aka_names": [
+        "cassia cinnamon powder"
+      ],
+      "default_unit": "gram",
+      "moisture_content_percent": 10,
+      "ph_value": "5.0-5.5",
+      "recommended_usage_rate": "0.2-1% in spice blends and bakery",
+      "recommended_shelf_life_days": 730,
+      "certifications": [
+        "Fair Trade"
+      ]
+    },
+    {
+      "name": "Turmeric Powder",
+      "density_g_per_ml": 0.55,
+      "aka_names": [
+        "curcuma longa powder"
+      ],
+      "default_unit": "gram",
+      "moisture_content_percent": 9,
+      "ph_value": "6.0-6.5",
+      "recommended_usage_rate": "0.5-2% for color and flavor",
+      "recommended_shelf_life_days": 730,
+      "certifications": [
+        "Organic"
+      ]
+    },
+    {
+      "name": "Ginger Powder",
+      "density_g_per_ml": 0.53,
+      "aka_names": [
+        "zingiber officinale powder"
+      ],
+      "default_unit": "gram",
+      "moisture_content_percent": 8,
+      "ph_value": "6.0-6.5",
+      "recommended_usage_rate": "0.2-1% for spice blends",
+      "recommended_shelf_life_days": 540,
+      "certifications": [
+        "Kosher"
+      ]
+    },
+    {
+      "name": "Paprika Sweet",
+      "density_g_per_ml": 0.46,
+      "aka_names": [
+        "capsicum annuum powder"
+      ],
+      "default_unit": "gram",
+      "moisture_content_percent": 12,
+      "ph_value": "5.0-5.5",
+      "recommended_usage_rate": "0.5-3% for flavor and color",
+      "recommended_shelf_life_days": 540,
+      "certifications": [
+        "Non-GMO"
+      ]
+    },
+    {
+      "name": "Black Pepper (Ground)",
+      "density_g_per_ml": 0.55,
+      "aka_names": [
+        "piper nigrum powder"
+      ],
+      "default_unit": "gram",
+      "moisture_content_percent": 11,
+      "ph_value": "5.5-6.0",
+      "recommended_usage_rate": "0.1-0.5% in savory blends",
+      "recommended_shelf_life_days": 540,
+      "certifications": []
+    }
+  ],
+  "attributes": [
+    "moisture_content_percent",
+    "ph_value",
+    "recommended_usage_rate",
+    "recommended_shelf_life_days",
+    "certifications"
+  ]
 }

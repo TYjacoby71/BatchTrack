@@ -4,9 +4,81 @@
   "description": "For all inert pigment powders like Micas and Oxides.",
   "attributes": [
     "recommended_usage_rate",
-    "inci_name",
     "recommended_shelf_life_days",
+    "inci_name",
     "certifications"
   ],
-  "items": []
+  "items": [
+    {
+      "name": "Titanium Dioxide (Oil Dispersible)",
+      "density_g_per_ml": 4.23,
+      "aka_names": [
+        "anatase titanium dioxide"
+      ],
+      "default_unit": "gram",
+      "recommended_usage_rate": "1-5% in CP/HP soaps and cosmetics",
+      "recommended_shelf_life_days": 1825,
+      "inci_name": "Titanium Dioxide",
+      "certifications": [
+        "FDA Batch Certified"
+      ]
+    },
+    {
+      "name": "Red Iron Oxide",
+      "density_g_per_ml": 5.1,
+      "aka_names": [
+        "CI 77491"
+      ],
+      "default_unit": "gram",
+      "recommended_usage_rate": "0.1-3% in mineral makeup and soap",
+      "recommended_shelf_life_days": 1825,
+      "inci_name": "Iron Oxides (CI 77491)",
+      "certifications": [
+        "Cosmetic Grade"
+      ]
+    },
+    {
+      "name": "Yellow Iron Oxide",
+      "density_g_per_ml": 4.4,
+      "aka_names": [
+        "CI 77492"
+      ],
+      "default_unit": "gram",
+      "recommended_usage_rate": "0.1-3% in mineral makeup and soap",
+      "recommended_shelf_life_days": 1825,
+      "inci_name": "Iron Oxides (CI 77492)",
+      "certifications": [
+        "Cosmetic Grade"
+      ]
+    },
+    {
+      "name": "Ultramarine Blue",
+      "density_g_per_ml": 2.35,
+      "aka_names": [
+        "CI 77007"
+      ],
+      "default_unit": "gram",
+      "recommended_usage_rate": "0.1-1% in mineral cosmetics",
+      "recommended_shelf_life_days": 1825,
+      "inci_name": "Ultramarines (CI 77007)",
+      "certifications": [
+        "Cosmetic Grade"
+      ]
+    },
+    {
+      "name": "Sparkle Silver Mica",
+      "density_g_per_ml": 2.8,
+      "aka_names": [
+        "synthetic fluorphlogopite mica"
+      ],
+      "default_unit": "gram",
+      "recommended_usage_rate": "1-10% in cosmetics and soap swirls",
+      "recommended_shelf_life_days": 1825,
+      "inci_name": "Mica (and) Titanium Dioxide",
+      "certifications": [
+        "Vegan",
+        "Cruelty-Free"
+      ]
+    }
+  ]
 }

@@ -1,9 +1,85 @@
-
 {
   "category_name": "Preservatives & Additives",
-  "default_density": 1.10,
+  "default_density": 1.1,
   "description": "Preservatives and functional additives.",
-  "show_ph_value": true,
-  "show_shelf_life_months": true,
-  "items": []
+  "items": [
+    {
+      "name": "Optiphen Plus",
+      "density_g_per_ml": 1.02,
+      "aka_names": [
+        "phenoxyethanol blend preservative"
+      ],
+      "default_unit": "milliliter",
+      "ph_value": "Effective pH 4.0-8.0",
+      "recommended_usage_rate": "0.75-1.5% in emulsions",
+      "recommended_shelf_life_days": 730,
+      "inci_name": "Phenoxyethanol (and) Caprylyl Glycol (and) Sorbic Acid",
+      "certifications": []
+    },
+    {
+      "name": "Liquid Germall Plus",
+      "density_g_per_ml": 1.08,
+      "aka_names": [
+        "diazolidinyl urea preservative"
+      ],
+      "default_unit": "milliliter",
+      "ph_value": "Effective pH 3.0-8.0",
+      "recommended_usage_rate": "0.1-0.5% in water-based systems",
+      "recommended_shelf_life_days": 1095,
+      "inci_name": "Propylene Glycol (and) Diazolidinyl Urea (and) Iodopropynyl Butylcarbamate",
+      "certifications": []
+    },
+    {
+      "name": "Geogard ECT",
+      "density_g_per_ml": 1.05,
+      "aka_names": [
+        "preservative eco"
+      ],
+      "default_unit": "gram",
+      "ph_value": "Effective pH 3.0-8.0",
+      "recommended_usage_rate": "0.6-1.0% in natural formulations",
+      "recommended_shelf_life_days": 730,
+      "inci_name": "Benzyl Alcohol (and) Salicylic Acid (and) Glycerin (and) Sorbic Acid",
+      "certifications": [
+        "COSMOS Approved"
+      ]
+    },
+    {
+      "name": "Leucidal SF Complete",
+      "density_g_per_ml": 1.03,
+      "aka_names": [
+        "radish root & coconut ferment"
+      ],
+      "default_unit": "milliliter",
+      "ph_value": "Effective pH 3.0-8.0",
+      "recommended_usage_rate": "2-4% in natural preservative systems",
+      "recommended_shelf_life_days": 540,
+      "inci_name": "Leuconostoc/Radish Root Ferment Filtrate (and) Cocos Nucifera (Coconut) Fruit Extract",
+      "certifications": [
+        "Natural Product Association"
+      ]
+    },
+    {
+      "name": "Potassium Sorbate",
+      "density_g_per_ml": 1.36,
+      "aka_names": [
+        "E202"
+      ],
+      "default_unit": "gram",
+      "ph_value": "Effective below pH 6.0",
+      "recommended_usage_rate": "0.1-0.3% in acidic systems",
+      "recommended_shelf_life_days": 1825,
+      "inci_name": "Potassium Sorbate",
+      "certifications": [
+        "FCC Grade"
+      ]
+    }
+  ],
+  "attributes": [
+    "ph_value",
+    "recommended_usage_rate",
+    "recommended_shelf_life_days",
+    "inci_name",
+    "certifications"
+  ]
 }

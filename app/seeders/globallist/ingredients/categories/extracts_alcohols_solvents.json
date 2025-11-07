@@ -1,10 +1,80 @@
-
 {
   "category_name": "Extracts & Alcohols (Solvents)",
   "default_density": 0.86,
   "description": "Extracts and solvent alcohols.",
-  "show_ph_value": true,
-  "show_flash_point": true,
-  "show_shelf_life_months": true,
-  "items": []
+  "items": [
+    {
+      "name": "Ethanol SDA 40-B",
+      "density_g_per_ml": 0.79,
+      "aka_names": [
+        "specially denatured alcohol 40-b"
+      ],
+      "default_unit": "milliliter",
+      "ph_value": "6.5-7.5",
+      "flash_point_c": 16,
+      "recommended_usage_rate": "1-100% as solvent or disinfectant",
+      "recommended_shelf_life_days": 1825,
+      "inci_name": "Alcohol Denat.",
+      "certifications": [
+        "USP Grade"
+      ]
+    },
+    {
+      "name": "Propylene Glycol",
+      "density_g_per_ml": 1.04,
+      "aka_names": [
+        "1,2-propanediol"
+      ],
+      "default_unit": "milliliter",
+      "ph_value": "7.0",
+      "flash_point_c": 99,
+      "recommended_usage_rate": "1-10% as humectant or solvent",
+      "recommended_shelf_life_days": 1095,
+      "inci_name": "Propylene Glycol",
+      "certifications": [
+        "USP Grade"
+      ]
+    },
+    {
+      "name": "Vegetable Glycerin",
+      "density_g_per_ml": 1.26,
+      "aka_names": [
+        "glycerol"
+      ],
+      "default_unit": "milliliter",
+      "ph_value": "6.0-7.0",
+      "flash_point_c": 160,
+      "recommended_usage_rate": "1-15% as humectant",
+      "recommended_shelf_life_days": 1095,
+      "inci_name": "Glycerin",
+      "certifications": [
+        "USP Grade",
+        "Kosher"
+      ]
+    },
+    {
+      "name": "Witch Hazel Distillate (14% Alcohol)",
+      "density_g_per_ml": 0.98,
+      "aka_names": [
+        "hamamelis water"
+      ],
+      "default_unit": "milliliter",
+      "ph_value": "4.0-5.0",
+      "flash_point_c": 24,
+      "recommended_usage_rate": "5-100% in toners and sprays",
+      "recommended_shelf_life_days": 540,
+      "inci_name": "Hamamelis Virginiana (Witch Hazel) Water (and) Alcohol",
+      "certifications": [
+        "USP Grade"
+      ]
+    }
+  ],
+  "attributes": [
+    "ph_value",
+    "flash_point_c",
+    "recommended_usage_rate",
+    "recommended_shelf_life_days",
+    "inci_name",
+    "certifications"
+  ]
 }

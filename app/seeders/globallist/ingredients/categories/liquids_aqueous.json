@@ -1,98 +1,127 @@
-
 {
   "category_name": "Liquids (Aqueous)",
   "default_density": 1.0,
   "description": "For water-based liquids and hydrosols.",
-  "show_ph_value": true,
-  "show_moisture_content": true,
-  "show_shelf_life_months": true,
   "items": [
     {
-      "name": "Water",
+      "name": "Distilled Water",
       "density_g_per_ml": 1.0,
-      "aka_names": ["distilled water", "pure water", "H2O"],
+      "aka_names": [
+        "purified water"
+      ],
       "default_unit": "milliliter",
       "ph_value": 7.0,
-      "shelf_life_months": 60
+      "moisture_content_percent": 100,
+      "protein_content_pct": 0,
+      "recommended_usage_rate": "Use 10-100% as aqueous phase",
+      "recommended_shelf_life_days": 1095,
+      "certifications": [
+        "USP Grade"
+      ]
+    },
+    {
+      "name": "Rose Hydrosol",
+      "density_g_per_ml": 1.0,
+      "aka_names": [
+        "rose water"
+      ],
+      "default_unit": "milliliter",
+      "ph_value": 5.5,
+      "moisture_content_percent": 99,
+      "protein_content_pct": 0,
+      "recommended_usage_rate": "5-100% in toners and sprays",
+      "recommended_shelf_life_days": 365,
+      "certifications": [
+        "Organic"
+      ]
+    },
+    {
+      "name": "Chamomile Hydrosol",
+      "density_g_per_ml": 1.0,
+      "aka_names": [
+        "matricaria recutita hydrosol"
+      ],
+      "default_unit": "milliliter",
+      "ph_value": 6.0,
+      "moisture_content_percent": 99,
+      "protein_content_pct": 0,
+      "recommended_usage_rate": "5-100% in calming sprays and creams",
+      "recommended_shelf_life_days": 365,
+      "certifications": [
+        "Organic"
+      ]
+    },
+    {
+      "name": "Aloe Vera Juice (Preserved)",
+      "density_g_per_ml": 1.02,
+      "aka_names": [
+        "stabilized aloe juice"
+      ],
+      "default_unit": "milliliter",
+      "ph_value": 4.5,
+      "moisture_content_percent": 99,
+      "protein_content_pct": 0,
+      "recommended_usage_rate": "5-100% in gels and toners",
+      "recommended_shelf_life_days": 540,
+      "certifications": [
+        "Kosher"
+      ]
     },
     {
       "name": "Whole Milk",
       "density_g_per_ml": 1.03,
-      "aka_names": ["milk", "cow milk", "dairy milk"],
+      "aka_names": [
+        "cow milk"
+      ],
       "default_unit": "milliliter",
       "ph_value": 6.7,
-      "shelf_life_months": 1,
-      "moisture_content_percent": 87
+      "moisture_content_percent": 87,
+      "protein_content_pct": 3.3,
+      "recommended_usage_rate": "Use within 1-20% in culinary or cosmetic applications",
+      "recommended_shelf_life_days": 30,
+      "certifications": [
+        "Grade A"
+      ]
     },
     {
-      "name": "2% Milk",
-      "density_g_per_ml": 1.02,
-      "aka_names": ["reduced fat milk", "low fat milk"],
-      "default_unit": "milliliter",
-      "ph_value": 6.7,
-      "shelf_life_months": 1,
-      "moisture_content_percent": 89
-    },
-    {
-      "name": "Skim Milk",
-      "density_g_per_ml": 1.035,
-      "aka_names": ["fat free milk", "nonfat milk"],
-      "default_unit": "milliliter",
-      "ph_value": 6.7,
-      "shelf_life_months": 1,
-      "moisture_content_percent": 91
-    },
-    {
-      "name": "Heavy Cream",
-      "density_g_per_ml": 0.994,
-      "aka_names": ["heavy whipping cream", "double cream"],
+      "name": "Oat Milk (Barista)",
+      "density_g_per_ml": 1.01,
+      "aka_names": [
+        "oat beverage"
+      ],
       "default_unit": "milliliter",
       "ph_value": 6.5,
-      "shelf_life_months": 1,
-      "moisture_content_percent": 58
+      "moisture_content_percent": 90,
+      "protein_content_pct": 1,
+      "recommended_usage_rate": "Use up to 100% in beverages or lotions",
+      "recommended_shelf_life_days": 45,
+      "certifications": [
+        "Non-GMO"
+      ]
     },
     {
-      "name": "Light Cream",
-      "density_g_per_ml": 1.012,
-      "aka_names": ["coffee cream", "table cream"],
-      "default_unit": "milliliter",
-      "ph_value": 6.6,
-      "shelf_life_months": 1,
-      "moisture_content_percent": 73
-    },
-    {
-      "name": "Half and Half",
-      "density_g_per_ml": 1.025,
-      "aka_names": ["half & half", "cream"],
-      "default_unit": "milliliter",
-      "ph_value": 6.6,
-      "shelf_life_months": 1,
-      "moisture_content_percent": 80
-    },
-    {
-      "name": "Witch Hazel",
+      "name": "Witch Hazel Extract (Alcohol Free)",
       "density_g_per_ml": 0.98,
-      "aka_names": ["hamamelis water"],
+      "aka_names": [
+        "hamamelis distillate"
+      ],
       "default_unit": "milliliter",
       "ph_value": 4.2,
-      "shelf_life_months": 24
-    },
-    {
-      "name": "Rose Water",
-      "density_g_per_ml": 1.0,
-      "aka_names": ["rose hydrosol"],
-      "default_unit": "milliliter",
-      "ph_value": 5.5,
-      "shelf_life_months": 12
-    },
-    {
-      "name": "Aloe Vera Gel",
-      "density_g_per_ml": 1.02,
-      "aka_names": ["aloe gel"],
-      "default_unit": "milliliter",
-      "ph_value": 4.5,
-      "shelf_life_months": 6,
-      "moisture_content_percent": 99
+      "moisture_content_percent": 99,
+      "protein_content_pct": 0,
+      "recommended_usage_rate": "5-100% in toners and compresses",
+      "recommended_shelf_life_days": 365,
+      "certifications": [
+        "USP Grade"
+      ]
     }
+  ],
+  "attributes": [
+    "ph_value",
+    "moisture_content_percent",
+    "protein_content_pct",
+    "recommended_usage_rate",
+    "recommended_shelf_life_days",
+    "certifications"
   ]
 }

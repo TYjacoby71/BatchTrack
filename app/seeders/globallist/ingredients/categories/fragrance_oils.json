@@ -2,8 +2,79 @@
   "category_name": "Fragrance Oils",
   "default_density": 0.87,
   "description": "For synthetic fragrance oils and blends.",
-  "show_flash_point": true,
-  "show_shelf_life_months": true,
-  "ifra_category": "cat_4", 
-  "items": []
+  "ifra_category": "cat_4",
+  "items": [
+    {
+      "name": "Warm Vanilla Sugar Fragrance Oil",
+      "density_g_per_ml": 0.95,
+      "aka_names": [
+        "vanilla sugar fragrance"
+      ],
+      "default_unit": "milliliter",
+      "flash_point_c": 82,
+      "recommended_fragrance_load_pct": "6-10% in candles",
+      "recommended_usage_rate": "3-5% in soaps and lotions",
+      "recommended_shelf_life_days": 730,
+      "inci_name": "Fragrance",
+      "certifications": [
+        "IFRA Certificate Included"
+      ]
+    },
+    {
+      "name": "Ocean Breeze Fragrance Oil",
+      "density_g_per_ml": 0.89,
+      "aka_names": [
+        "sea spray fragrance"
+      ],
+      "default_unit": "milliliter",
+      "flash_point_c": 71,
+      "recommended_fragrance_load_pct": "6-9% in candles",
+      "recommended_usage_rate": "3-4% in soaps and bath products",
+      "recommended_shelf_life_days": 730,
+      "inci_name": "Fragrance",
+      "certifications": [
+        "IFRA Certificate Included"
+      ]
+    },
+    {
+      "name": "Bamboo & Coconut Fragrance Oil",
+      "density_g_per_ml": 0.91,
+      "aka_names": [
+        "bamboo coconut scent"
+      ],
+      "default_unit": "milliliter",
+      "flash_point_c": 79,
+      "recommended_fragrance_load_pct": "7-10% in candles",
+      "recommended_usage_rate": "2-4% in soaps and lotions",
+      "recommended_shelf_life_days": 730,
+      "inci_name": "Fragrance",
+      "certifications": [
+        "IFRA Certificate Included"
+      ]
+    },
+    {
+      "name": "Citrus Herb Fragrance Oil",
+      "density_g_per_ml": 0.87,
+      "aka_names": [
+        "citrus thyme fragrance"
+      ],
+      "default_unit": "milliliter",
+      "flash_point_c": 67,
+      "recommended_fragrance_load_pct": "6-8% in candles",
+      "recommended_usage_rate": "2-3% in soaps and lotions",
+      "recommended_shelf_life_days": 540,
+      "inci_name": "Fragrance",
+      "certifications": [
+        "IFRA Certificate Included"
+      ]
+    }
+  ],
+  "attributes": [
+    "flash_point_c",
+    "recommended_fragrance_load_pct",
+    "recommended_usage_rate",
+    "recommended_shelf_life_days",
+    "inci_name",
+    "certifications"
+  ]
 }
