@@ -17,6 +17,9 @@ Usage:
 
 import random
 import time
+from typing import Optional
+
+from bs4 import BeautifulSoup
 from locust import HttpUser, task, between
 
 class AnonymousUser(HttpUser):
@@ -47,22 +50,50 @@ class AnonymousUser(HttpUser):
         """Simulate signup page visits."""
         self.client.get("/auth/signup", name="signup_page")
 
-class AuthenticatedUser(HttpUser):
+class AuthenticatedMixin:
+    """Shared helpers for users that require authentication."""
+
+    login_username: str = ""
+    login_password: str = ""
+    login_name: str = "login"
+
+    def _extract_csrf(self, response) -> Optional[str]:
+        try:
+            soup = BeautifulSoup(response.text, "html.parser")
+            token_field = soup.find("input", {"name": "csrf_token"})
+            if token_field:
+                return token_field.get("value")
+        except Exception:
+            return None
+        return None
+
+    def _perform_login(self, username: str, password: str, name: str):
+        login_page = self.client.get("/auth/login", name="login_page")
+        token = self._extract_csrf(login_page)
+
+        payload = {
+            "username": username,
+            "password": password,
+        }
+        if token:
+            payload["csrf_token"] = token
+        response = self.client.post("/auth/login", data=payload, name=name)
+        if response.status_code >= 400:
+            response.failure(f"Login failed ({response.status_code})")
+        return response
+
+
+class AuthenticatedUser(AuthenticatedMixin, HttpUser):
     """Authenticated user performing typical app operations."""
     
     wait_time = between(3, 12)
     weight = 1  # 25% of traffic
+    login_username = "loadtest@example.com"
+    login_password = "replace-me"
     
     def on_start(self):
         """Login before starting tasks."""
-        # Replace with actual test credentials
-        payload = {
-            "username": "loadtest@example.com",
-            "password": "replace-me"
-        }
-        response = self.client.post("/auth/login", data=payload, name="login")
-        if response.status_code != 200:
-            print(f"Login failed: {response.status_code}")
+        self._perform_login(self.login_username, self.login_password, "login")
     
     @task(8)
     def view_dashboard(self):
@@ -114,19 +145,17 @@ class AuthenticatedUser(HttpUser):
         """Access settings."""
         self.client.get("/settings", name="settings")
 
-class AdminUser(AuthenticatedUser):
+class AdminUser(AuthenticatedMixin, HttpUser):
     """Admin user performing administrative tasks."""
     
     wait_time = between(5, 20)
     weight = 0.1  # 2.5% of traffic
+    login_username = "admin@example.com"
+    login_password = "replace-me"
     
     def on_start(self):
         """Login as admin."""
-        payload = {
-            "username": "admin@example.com", 
-            "password": "replace-me"
-        }
-        self.client.post("/auth/login", data=payload, name="admin_login")
+        self._perform_login(self.login_username, self.login_password, "admin_login")
     
     @task(3)
     def organization_dashboard(self):
@@ -143,16 +172,17 @@ class AdminUser(AuthenticatedUser):
         """Check billing status."""
         self.client.get("/organization/dashboard#billing", name="billing_status")
 
-class HighFrequencyUser(HttpUser):
+class HighFrequencyUser(AuthenticatedMixin, HttpUser):
     """Simulates rapid API usage patterns."""
     
     wait_time = between(0.5, 2)
     weight = 0.5  # 12.5% of traffic
+    login_username = "api@example.com"
+    login_password = "replace-me"
     
     def on_start(self):
         """Quick login for API-like usage."""
-        payload = {"username": "api@example.com", "password": "replace-me"}
-        self.client.post("/auth/login", data=payload, name="api_login")
+        self._perform_login(self.login_username, self.login_password, "api_login")
     
     @task(10)
     def rapid_dashboard_checks(self):
@@ -181,10 +211,43 @@ class StressTest(HttpUser):
         AuthenticatedUser.view_inventory
     ]
 
+
+class TimerHeavyUser(AuthenticatedMixin, HttpUser):
+    """Focus on timer endpoints and dashboard polling to stress check the timer service."""
+
+    wait_time = between(1, 4)
+    weight = 0.2  # optional addition to traffic mix
+    login_username = "loadtest@example.com"
+    login_password = "replace-me"
+
+    def on_start(self):
+        self._perform_login(self.login_username, self.login_password, "timer_login")
+
+    @task(6)
+    def heartbeat(self):
+        self.client.get("/api/server-time", name="server_time")
+
+    @task(4)
+    def dashboard_alerts(self):
+        self.client.get("/api/dashboard-alerts", name="dashboard_alerts")
+
+    @task(3)
+    def timer_summary(self):
+        self.client.get("/api/timer-summary", name="timer_summary")
+
+    @task(2)
+    def expired_timers(self):
+        self.client.get("/timers/api/expired-timers", name="expired_timers")
+
+    @task(1)
+    def auto_expire(self):
+        self.client.post("/timers/api/auto-expire-timers", name="auto_expire_timers")
+
 if __name__ == "__main__":
     print("Load test scenarios available:")
     print("- AnonymousUser: Public browsing (75% weight)")
     print("- AuthenticatedUser: Logged-in usage (25% weight)")  
     print("- AdminUser: Administrative tasks (2.5% weight)")
     print("- HighFrequencyUser: Rapid API usage (12.5% weight)")
+    print("- TimerHeavyUser: Timer-heavy polling (optional, add explicitly)")
     print("- StressTest: High-intensity testing")

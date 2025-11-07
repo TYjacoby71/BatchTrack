@@ -21,6 +21,7 @@ logger = logging.getLogger(__name__)
 def create_app(config=None):
     """Create and configure Flask application"""
     app = Flask(__name__, static_folder="static", static_url_path="/static")
+    os.makedirs(app.instance_path, exist_ok=True)
 
     # Load configuration
     app.config.from_object("app.config.Config")
@@ -57,7 +58,9 @@ def create_app(config=None):
     
     cache.init_app(app, config=cache_config)
     if app.config.get('ENV') == 'production' and cache_config.get('CACHE_TYPE') != 'RedisCache':
-        logger.warning("Redis cache not configured; falling back to SimpleCache which is not safe for multi-instance production use.")
+        message = "Redis cache not configured; falling back to SimpleCache is not permitted in production."
+        logger.error(message)
+        raise RuntimeError(message)
 
     # Configure server-side sessions
     session_backend = None
@@ -86,7 +89,9 @@ def create_app(config=None):
         app.config.setdefault('SESSION_PERMANENT', True)
         app.config.setdefault('SESSION_USE_SIGNER', True)
         if app.config.get('ENV') == 'production':
-            logger.warning("Server-side sessions are using filesystem storage; configure REDIS_URL for shared session state across workers.")
+            message = "Server-side sessions require Redis in production. Set REDIS_URL to a Redis instance."
+            logger.error(message)
+            raise RuntimeError(message)
 
     server_session.init_app(app)
     
@@ -97,7 +102,9 @@ def create_app(config=None):
     else:
         limiter.init_app(app)
     if app.config.get('ENV') == 'production' and (not limiter_storage_uri or str(limiter_storage_uri).startswith('memory://')):
-        logger.warning("Rate limiter is using in-memory storage; configure RATELIMIT_STORAGE_URI with Redis for production.")
+        message = "Rate limiter storage must be Redis-backed in production. Set RATELIMIT_STORAGE_URI accordingly."
+        logger.error(message)
+        raise RuntimeError(message)
     configure_login_manager(app)
 
     # Session lifetime should come from config classes; avoid overriding here
