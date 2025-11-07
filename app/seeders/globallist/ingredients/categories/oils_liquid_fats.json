@@ -5,10 +5,6 @@
   "items": [
     {
       "name": "Olive Oil (Extra Virgin)",
-      "density_g_per_ml": 0.91,
-      "aka_names": [
-        "EVOO"
-      ],
       "default_unit": "milliliter",
       "saponification_value": 190,
       "iodine_value": 85,
@@ -26,14 +22,15 @@
       "certifications": [
         "Extra Virgin",
         "Non-GMO"
-      ]
+      ],
+      "density": 0.91,
+      "aliases": [
+        "EVOO"
+      ],
+      "is_active_ingredient": false
     },
     {
       "name": "Sweet Almond Oil",
-      "density_g_per_ml": 0.91,
-      "aka_names": [
-        "prunus amygdalus dulcis oil"
-      ],
       "default_unit": "milliliter",
       "saponification_value": 192,
       "iodine_value": 95,
@@ -50,14 +47,15 @@
       "inci_name": "Prunus Amygdalus Dulcis (Sweet Almond) Oil",
       "certifications": [
         "Kosher"
-      ]
+      ],
+      "density": 0.91,
+      "aliases": [
+        "prunus amygdalus dulcis oil"
+      ],
+      "is_active_ingredient": false
     },
     {
       "name": "Avocado Oil",
-      "density_g_per_ml": 0.915,
-      "aka_names": [
-        "persea gratissima oil"
-      ],
       "default_unit": "milliliter",
       "saponification_value": 187,
       "iodine_value": 86,
@@ -74,14 +72,15 @@
       "inci_name": "Persea Gratissima (Avocado) Oil",
       "certifications": [
         "Cold Pressed"
-      ]
+      ],
+      "density": 0.915,
+      "aliases": [
+        "persea gratissima oil"
+      ],
+      "is_active_ingredient": false
     },
     {
       "name": "Sunflower Oil (High Oleic)",
-      "density_g_per_ml": 0.92,
-      "aka_names": [
-        "helianthus annuus seed oil"
-      ],
       "default_unit": "milliliter",
       "saponification_value": 188,
       "iodine_value": 90,
@@ -99,14 +98,15 @@
       "certifications": [
         "High Oleic",
         "Non-GMO"
-      ]
+      ],
+      "density": 0.92,
+      "aliases": [
+        "helianthus annuus seed oil"
+      ],
+      "is_active_ingredient": false
     },
     {
       "name": "Hemp Seed Oil (Unrefined)",
-      "density_g_per_ml": 0.923,
-      "aka_names": [
-        "cannabis sativa seed oil"
-      ],
       "default_unit": "milliliter",
       "saponification_value": 192,
       "iodine_value": 160,
@@ -123,14 +123,15 @@
       "inci_name": "Cannabis Sativa Seed Oil",
       "certifications": [
         "Cold Pressed"
-      ]
+      ],
+      "density": 0.923,
+      "aliases": [
+        "cannabis sativa seed oil"
+      ],
+      "is_active_ingredient": false
     },
     {
       "name": "Castor Oil",
-      "density_g_per_ml": 0.96,
-      "aka_names": [
-        "ricinus communis oil"
-      ],
       "default_unit": "milliliter",
       "saponification_value": 180,
       "iodine_value": 85,
@@ -147,14 +148,15 @@
       "inci_name": "Ricinus Communis (Castor) Seed Oil",
       "certifications": [
         "USP Grade"
-      ]
+      ],
+      "density": 0.96,
+      "aliases": [
+        "ricinus communis oil"
+      ],
+      "is_active_ingredient": false
     },
     {
       "name": "Jojoba Oil (Golden)",
-      "density_g_per_ml": 0.864,
-      "aka_names": [
-        "simmondsia chinensis seed oil"
-      ],
       "default_unit": "milliliter",
       "saponification_value": 92,
       "iodine_value": 85,
@@ -171,14 +173,15 @@
       "inci_name": "Simmondsia Chinensis (Jojoba) Seed Oil",
       "certifications": [
         "Organic"
-      ]
+      ],
+      "density": 0.864,
+      "aliases": [
+        "simmondsia chinensis seed oil"
+      ],
+      "is_active_ingredient": false
     },
     {
       "name": "Argan Oil",
-      "density_g_per_ml": 0.908,
-      "aka_names": [
-        "argania spinosa kernel oil"
-      ],
       "default_unit": "milliliter",
       "saponification_value": 189,
       "iodine_value": 100,
@@ -195,14 +198,15 @@
       "inci_name": "Argania Spinosa Kernel Oil",
       "certifications": [
         "Fair Trade"
-      ]
+      ],
+      "density": 0.908,
+      "aliases": [
+        "argania spinosa kernel oil"
+      ],
+      "is_active_ingredient": false
     },
     {
       "name": "Rosehip Seed Oil",
-      "density_g_per_ml": 0.92,
-      "aka_names": [
-        "rosa canina fruit oil"
-      ],
       "default_unit": "milliliter",
       "saponification_value": 189,
       "iodine_value": 170,
@@ -219,14 +223,15 @@
       "inci_name": "Rosa Canina Fruit Oil",
       "certifications": [
         "Cold Pressed"
-      ]
+      ],
+      "density": 0.92,
+      "aliases": [
+        "rosa canina fruit oil"
+      ],
+      "is_active_ingredient": false
     },
     {
       "name": "Fractionated Coconut Oil (MCT)",
-      "density_g_per_ml": 0.94,
-      "aka_names": [
-        "medium chain triglycerides"
-      ],
       "default_unit": "milliliter",
       "saponification_value": 255,
       "iodine_value": 5,
@@ -241,7 +246,12 @@
       "inci_name": "Caprylic/Capric Triglyceride",
       "certifications": [
         "Kosher"
-      ]
+      ],
+      "density": 0.94,
+      "aliases": [
+        "medium chain triglycerides"
+      ],
+      "is_active_ingredient": false
     }
   ],
   "attributes": [
@@ -253,6 +263,7 @@
     "recommended_usage_rate",
     "recommended_shelf_life_days",
     "inci_name",
-    "certifications"
+    "certifications",
+    "is_active_ingredient"
   ]
 }

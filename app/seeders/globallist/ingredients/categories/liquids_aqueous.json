@@ -1,127 +1,79 @@
 {
-  "category_name": "Liquids (Aqueous)",
+  "category_name": "Waters (Purified & Distilled)",
   "default_density": 1.0,
-  "description": "For water-based liquids and hydrosols.",
+  "description": "Highly purified water grades used as primary solvents in formulations.",
+  "attributes": [
+    "ph_value",
+    "conductivity_uS_cm",
+    "recommended_usage_rate",
+    "recommended_shelf_life_days",
+    "certifications",
+    "is_active_ingredient"
+  ],
   "items": [
     {
       "name": "Distilled Water",
-      "density_g_per_ml": 1.0,
-      "aka_names": [
+      "aliases": [
         "purified water"
       ],
+      "density": 1.0,
       "default_unit": "milliliter",
       "ph_value": 7.0,
-      "moisture_content_percent": 100,
-      "protein_content_pct": 0,
+      "conductivity_uS_cm": "< 10",
       "recommended_usage_rate": "Use 10-100% as aqueous phase",
       "recommended_shelf_life_days": 1095,
       "certifications": [
         "USP Grade"
-      ]
+      ],
+      "is_active_ingredient": false
     },
     {
-      "name": "Rose Hydrosol",
-      "density_g_per_ml": 1.0,
-      "aka_names": [
-        "rose water"
+      "name": "Deionized Water",
+      "aliases": [
+        "DI water"
       ],
+      "density": 1.0,
       "default_unit": "milliliter",
-      "ph_value": 5.5,
-      "moisture_content_percent": 99,
-      "protein_content_pct": 0,
-      "recommended_usage_rate": "5-100% in toners and sprays",
-      "recommended_shelf_life_days": 365,
+      "ph_value": "6.0-7.0",
+      "conductivity_uS_cm": "< 1",
+      "recommended_usage_rate": "Use 10-100% as solvent for actives",
+      "recommended_shelf_life_days": 730,
       "certifications": [
-        "Organic"
-      ]
+        "Laboratory Grade"
+      ],
+      "is_active_ingredient": false
     },
     {
-      "name": "Chamomile Hydrosol",
-      "density_g_per_ml": 1.0,
-      "aka_names": [
-        "matricaria recutita hydrosol"
+      "name": "Reverse Osmosis (RO) Water",
+      "aliases": [
+        "filtered water"
       ],
+      "density": 1.0,
       "default_unit": "milliliter",
-      "ph_value": 6.0,
-      "moisture_content_percent": 99,
-      "protein_content_pct": 0,
-      "recommended_usage_rate": "5-100% in calming sprays and creams",
-      "recommended_shelf_life_days": 365,
-      "certifications": [
-        "Organic"
-      ]
-    },
-    {
-      "name": "Aloe Vera Juice (Preserved)",
-      "density_g_per_ml": 1.02,
-      "aka_names": [
-        "stabilized aloe juice"
-      ],
-      "default_unit": "milliliter",
-      "ph_value": 4.5,
-      "moisture_content_percent": 99,
-      "protein_content_pct": 0,
-      "recommended_usage_rate": "5-100% in gels and toners",
+      "ph_value": "6.5-7.5",
+      "conductivity_uS_cm": "< 30",
+      "recommended_usage_rate": "Use 10-100% in base formulations",
       "recommended_shelf_life_days": 540,
       "certifications": [
-        "Kosher"
-      ]
+        "NSF Certified"
+      ],
+      "is_active_ingredient": false
     },
     {
-      "name": "Whole Milk",
-      "density_g_per_ml": 1.03,
-      "aka_names": [
-        "cow milk"
+      "name": "Ultra-Pure Water (Type I)",
+      "aliases": [
+        "Milli-Q water"
       ],
+      "density": 1.0,
       "default_unit": "milliliter",
-      "ph_value": 6.7,
-      "moisture_content_percent": 87,
-      "protein_content_pct": 3.3,
-      "recommended_usage_rate": "Use within 1-20% in culinary or cosmetic applications",
-      "recommended_shelf_life_days": 30,
-      "certifications": [
-        "Grade A"
-      ]
-    },
-    {
-      "name": "Oat Milk (Barista)",
-      "density_g_per_ml": 1.01,
-      "aka_names": [
-        "oat beverage"
-      ],
-      "default_unit": "milliliter",
-      "ph_value": 6.5,
-      "moisture_content_percent": 90,
-      "protein_content_pct": 1,
-      "recommended_usage_rate": "Use up to 100% in beverages or lotions",
-      "recommended_shelf_life_days": 45,
-      "certifications": [
-        "Non-GMO"
-      ]
-    },
-    {
-      "name": "Witch Hazel Extract (Alcohol Free)",
-      "density_g_per_ml": 0.98,
-      "aka_names": [
-        "hamamelis distillate"
-      ],
-      "default_unit": "milliliter",
-      "ph_value": 4.2,
-      "moisture_content_percent": 99,
-      "protein_content_pct": 0,
-      "recommended_usage_rate": "5-100% in toners and compresses",
+      "ph_value": "6.5-7.0",
+      "conductivity_uS_cm": "< 0.1",
+      "recommended_usage_rate": "Use 50-100% for sensitive actives and peptides",
       "recommended_shelf_life_days": 365,
       "certifications": [
-        "USP Grade"
-      ]
+        "ASTM Type I"
+      ],
+      "is_active_ingredient": false
     }
-  ],
-  "attributes": [
-    "ph_value",
-    "moisture_content_percent",
-    "protein_content_pct",
-    "recommended_usage_rate",
-    "recommended_shelf_life_days",
-    "certifications"
   ]
 }

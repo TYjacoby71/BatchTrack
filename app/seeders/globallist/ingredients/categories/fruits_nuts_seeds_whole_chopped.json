@@ -5,10 +5,6 @@
   "items": [
     {
       "name": "Almonds (Whole)",
-      "density_g_per_ml": 0.64,
-      "aka_names": [
-        "whole almonds"
-      ],
       "default_unit": "gram",
       "moisture_content_percent": 5,
       "protein_content_pct": 21,
@@ -16,14 +12,15 @@
       "recommended_shelf_life_days": 365,
       "certifications": [
         "Non-GMO Project Verified"
-      ]
+      ],
+      "density": 0.64,
+      "aliases": [
+        "whole almonds"
+      ],
+      "is_active_ingredient": false
     },
     {
       "name": "Walnuts (Chopped)",
-      "density_g_per_ml": 0.62,
-      "aka_names": [
-        "english walnuts"
-      ],
       "default_unit": "gram",
       "moisture_content_percent": 4,
       "protein_content_pct": 15,
@@ -31,14 +28,15 @@
       "recommended_shelf_life_days": 180,
       "certifications": [
         "Kosher"
-      ]
+      ],
+      "density": 0.62,
+      "aliases": [
+        "english walnuts"
+      ],
+      "is_active_ingredient": false
     },
     {
       "name": "Pumpkin Seeds (Hulled)",
-      "density_g_per_ml": 0.63,
-      "aka_names": [
-        "pepitas"
-      ],
       "default_unit": "gram",
       "moisture_content_percent": 6,
       "protein_content_pct": 30,
@@ -46,14 +44,15 @@
       "recommended_shelf_life_days": 365,
       "certifications": [
         "Organic"
-      ]
+      ],
+      "density": 0.63,
+      "aliases": [
+        "pepitas"
+      ],
+      "is_active_ingredient": false
     },
     {
       "name": "Sunflower Seeds (Hulled)",
-      "density_g_per_ml": 0.6,
-      "aka_names": [
-        "hulled sunflower kernels"
-      ],
       "default_unit": "gram",
       "moisture_content_percent": 6,
       "protein_content_pct": 20,
@@ -61,14 +60,15 @@
       "recommended_shelf_life_days": 270,
       "certifications": [
         "Non-GMO"
-      ]
+      ],
+      "density": 0.6,
+      "aliases": [
+        "hulled sunflower kernels"
+      ],
+      "is_active_ingredient": false
     },
     {
       "name": "Dried Cranberries",
-      "density_g_per_ml": 0.82,
-      "aka_names": [
-        "sweetened dried cranberries"
-      ],
       "default_unit": "gram",
       "moisture_content_percent": 14,
       "protein_content_pct": 0.5,
@@ -76,7 +76,12 @@
       "recommended_shelf_life_days": 365,
       "certifications": [
         "Kosher"
-      ]
+      ],
+      "density": 0.82,
+      "aliases": [
+        "sweetened dried cranberries"
+      ],
+      "is_active_ingredient": false
     }
   ],
   "attributes": [
@@ -84,6 +89,7 @@
     "protein_content_pct",
     "recommended_usage_rate",
     "recommended_shelf_life_days",
-    "certifications"
+    "certifications",
+    "is_active_ingredient"
   ]
 }

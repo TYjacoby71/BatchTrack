@@ -1,23 +1,23 @@
 {
-  "category_name": "Active Ingredients (Cosmetics)",
-  "default_density": 1.15,
-  "description": "For advanced cosmetic makers, specialized active ingredients (e.g., Retinoids, Peptides, Niacinamide).",
+  "category_name": "Vitamins & Functional Derivatives",
+  "default_density": 0.95,
+  "description": "Bioactive vitamins, coenzymes, and functional derivatives used for targeted skin and hair benefits.",
   "attributes": [
+    "is_active_ingredient",
     "recommended_usage_rate",
     "ph_value",
     "recommended_shelf_life_days",
     "inci_name",
-    "certifications",
-    "comedogenic_rating"
+    "certifications"
   ],
   "items": [
     {
       "name": "Niacinamide",
-      "density_g_per_ml": 0.82,
-      "aka_names": [
+      "aliases": [
         "vitamin B3",
         "nicotinamide"
       ],
+      "density": 0.82,
       "default_unit": "gram",
       "recommended_usage_rate": "2-5% in leave-on emulsions and serums",
       "ph_value": "5.0-7.0",
@@ -26,46 +26,14 @@
       "certifications": [
         "USP Grade"
       ],
-      "comedogenic_rating": 0
-    },
-    {
-      "name": "Hyaluronic Acid (LMW)",
-      "density_g_per_ml": 0.7,
-      "aka_names": [
-        "sodium hyaluronate LMW"
-      ],
-      "default_unit": "gram",
-      "recommended_usage_rate": "0.1-2% in aqueous gels or serums",
-      "ph_value": "4.0-8.0",
-      "recommended_shelf_life_days": 720,
-      "inci_name": "Sodium Hyaluronate",
-      "certifications": [
-        "COSMOS Approved"
-      ],
-      "comedogenic_rating": 0
-    },
-    {
-      "name": "Alpha Arbutin",
-      "density_g_per_ml": 1.28,
-      "aka_names": [
-        "alpha-arbutoside"
-      ],
-      "default_unit": "gram",
-      "recommended_usage_rate": "1-2% in brightening serums",
-      "ph_value": "4.5-6.5",
-      "recommended_shelf_life_days": 540,
-      "inci_name": "Alpha-Arbutin",
-      "certifications": [
-        "REACH Registered"
-      ],
-      "comedogenic_rating": 0
+      "is_active_ingredient": true
     },
     {
       "name": "Retinol (Stabilized)",
-      "density_g_per_ml": 0.95,
-      "aka_names": [
+      "aliases": [
         "vitamin A1"
       ],
+      "density": 0.95,
       "default_unit": "gram",
       "recommended_usage_rate": "0.1-1% in night treatments",
       "ph_value": "5.0-6.5",
@@ -74,23 +42,57 @@
       "certifications": [
         "Cosmetic Grade"
       ],
-      "comedogenic_rating": 1
+      "is_active_ingredient": true
     },
     {
-      "name": "Matrixyl 3000 Peptide Blend",
-      "density_g_per_ml": 1.02,
-      "aka_names": [
-        "palmitoyl tripeptide-1 and palmitoyl tetrapeptide-7"
+      "name": "Ascorbic Acid (L)",
+      "aliases": [
+        "vitamin C",
+        "l-ascorbic acid"
       ],
+      "density": 1.65,
       "default_unit": "gram",
-      "recommended_usage_rate": "2-5% in emulsions",
-      "ph_value": "4.0-6.0",
-      "recommended_shelf_life_days": 540,
-      "inci_name": "Palmitoyl Tripeptide-1 (and) Palmitoyl Tetrapeptide-7",
+      "recommended_usage_rate": "5-20% in anhydrous or low pH serums",
+      "ph_value": "2.0-3.5",
+      "recommended_shelf_life_days": 365,
+      "inci_name": "Ascorbic Acid",
       "certifications": [
-        "Ecocert Acceptable"
+        "USP Grade"
       ],
-      "comedogenic_rating": 0
+      "is_active_ingredient": true
+    },
+    {
+      "name": "DL-Panthenol",
+      "aliases": [
+        "provitamin B5",
+        "panthenol"
+      ],
+      "density": 1.2,
+      "default_unit": "gram",
+      "recommended_usage_rate": "0.5-5% in leave-on or rinse-off products",
+      "ph_value": "4.0-7.0",
+      "recommended_shelf_life_days": 720,
+      "inci_name": "Panthenol",
+      "certifications": [
+        "COSMOS Approved"
+      ],
+      "is_active_ingredient": true
+    },
+    {
+      "name": "Alpha Arbutin",
+      "aliases": [
+        "alpha-arbutoside"
+      ],
+      "density": 1.28,
+      "default_unit": "gram",
+      "recommended_usage_rate": "1-2% in brightening serums",
+      "ph_value": "4.5-6.5",
+      "recommended_shelf_life_days": 540,
+      "inci_name": "Alpha-Arbutin",
+      "certifications": [
+        "REACH Registered"
+      ],
+      "is_active_ingredient": true
     }
   ]
 }

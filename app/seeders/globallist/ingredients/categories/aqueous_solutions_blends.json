@@ -1,0 +1,95 @@
+{
+  "category_name": "Aqueous Solutions & Blends",
+  "default_density": 1.05,
+  "description": "Ready-to-use water based solutions containing dissolved actives, humectants, or functional blends.",
+  "attributes": [
+    "recommended_usage_rate",
+    "recommended_shelf_life_days",
+    "ph_value",
+    "inci_name",
+    "certifications",
+    "is_active_ingredient"
+  ],
+  "items": [
+    {
+      "name": "Hyaluronic Acid 1% Solution",
+      "aliases": [
+        "sodium hyaluronate solution"
+      ],
+      "density": 1.02,
+      "default_unit": "milliliter",
+      "ph_value": "6.0-7.0",
+      "recommended_usage_rate": "1-5% in hydrating serums and gels",
+      "recommended_shelf_life_days": 365,
+      "inci_name": "Water (and) Sodium Hyaluronate (and) Phenoxyethanol (and) Ethylhexylglycerin",
+      "certifications": [
+        "Vegan"
+      ],
+      "is_active_ingredient": true
+    },
+    {
+      "name": "Salicylic Acid 2% Solution",
+      "aliases": [
+        "BHA liquid exfoliant"
+      ],
+      "density": 1.04,
+      "default_unit": "milliliter",
+      "ph_value": "3.2-3.8",
+      "recommended_usage_rate": "1-5% in exfoliating toners and spot treatments",
+      "recommended_shelf_life_days": 365,
+      "inci_name": "Water (and) Salicylic Acid (and) Propanediol (and) Sodium Hydroxide",
+      "certifications": [
+        "Cosmetic Grade"
+      ],
+      "is_active_ingredient": true
+    },
+    {
+      "name": "Niacinamide Brightening Solution 10%",
+      "aliases": [
+        "vitamin B3 active toner"
+      ],
+      "density": 1.05,
+      "default_unit": "milliliter",
+      "ph_value": "5.0-6.0",
+      "recommended_usage_rate": "2-10% in serums or lotions",
+      "recommended_shelf_life_days": 540,
+      "inci_name": "Water (and) Niacinamide (and) Glycerin (and) Sodium PCA (and) Phenoxyethanol",
+      "certifications": [
+        "USP Grade"
+      ],
+      "is_active_ingredient": true
+    },
+    {
+      "name": "Oat Milk Concentrate",
+      "aliases": [
+        "oat beverage base"
+      ],
+      "density": 1.01,
+      "default_unit": "milliliter",
+      "ph_value": "6.5",
+      "recommended_usage_rate": "10-50% in beverages or soothing lotions",
+      "recommended_shelf_life_days": 90,
+      "inci_name": "Water (and) Avena Sativa (Oat) Kernel Extract",
+      "certifications": [
+        "Non-GMO"
+      ],
+      "is_active_ingredient": false
+    },
+    {
+      "name": "Whole Milk (Pasteurized)",
+      "aliases": [
+        "grade A milk"
+      ],
+      "density": 1.03,
+      "default_unit": "milliliter",
+      "ph_value": "6.6-6.8",
+      "recommended_usage_rate": "Use within 5-20% in culinary or cosmetic applications",
+      "recommended_shelf_life_days": 30,
+      "inci_name": "Milk",
+      "certifications": [
+        "Grade A"
+      ],
+      "is_active_ingredient": false
+    }
+  ]
+}

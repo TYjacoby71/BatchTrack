@@ -1,16 +1,10 @@
 {
-  "category_name": "Flours & Powders (Organic)",
-  "default_density": 0.6,
-  "description": "Organic flours and plant-based powders.",
+  "category_name": "Flours (Grain & Nut)",
+  "default_density": 0.60,
+  "description": "Ground grains, nuts, and seeds used as base ingredients in baking and cooking.",
   "items": [
     {
       "name": "All-Purpose Flour",
-      "density_g_per_ml": 0.6,
-      "aka_names": [
-        "AP flour",
-        "white flour",
-        "wheat flour"
-      ],
       "default_unit": "gram",
       "moisture_content_percent": 14,
       "protein_content_pct": 10,
@@ -18,15 +12,17 @@
       "recommended_shelf_life_days": 240,
       "certifications": [
         "Organic"
-      ]
+      ],
+      "density": 0.6,
+      "aliases": [
+        "AP flour",
+        "white flour",
+        "wheat flour"
+      ],
+      "is_active_ingredient": false
     },
     {
       "name": "Bread Flour",
-      "density_g_per_ml": 0.65,
-      "aka_names": [
-        "high gluten flour",
-        "strong flour"
-      ],
       "default_unit": "gram",
       "moisture_content_percent": 14,
       "protein_content_pct": 13,
@@ -34,15 +30,16 @@
       "recommended_shelf_life_days": 240,
       "certifications": [
         "Organic"
-      ]
+      ],
+      "density": 0.65,
+      "aliases": [
+        "high gluten flour",
+        "strong flour"
+      ],
+      "is_active_ingredient": false
     },
     {
       "name": "Whole Wheat Flour",
-      "density_g_per_ml": 0.65,
-      "aka_names": [
-        "wholemeal flour",
-        "graham flour"
-      ],
       "default_unit": "gram",
       "moisture_content_percent": 14,
       "protein_content_pct": 14,
@@ -50,15 +47,16 @@
       "recommended_shelf_life_days": 90,
       "certifications": [
         "Organic"
-      ]
+      ],
+      "density": 0.65,
+      "aliases": [
+        "wholemeal flour",
+        "graham flour"
+      ],
+      "is_active_ingredient": false
     },
     {
       "name": "Almond Flour",
-      "density_g_per_ml": 0.56,
-      "aka_names": [
-        "almond meal",
-        "ground almonds"
-      ],
       "default_unit": "gram",
       "moisture_content_percent": 5,
       "protein_content_pct": 21,
@@ -66,14 +64,16 @@
       "recommended_shelf_life_days": 180,
       "certifications": [
         "Gluten-Free"
-      ]
+      ],
+      "density": 0.56,
+      "aliases": [
+        "almond meal",
+        "ground almonds"
+      ],
+      "is_active_ingredient": false
     },
     {
       "name": "Coconut Flour",
-      "density_g_per_ml": 0.48,
-      "aka_names": [
-        "ground coconut"
-      ],
       "default_unit": "gram",
       "moisture_content_percent": 8,
       "protein_content_pct": 18,
@@ -81,14 +81,15 @@
       "recommended_shelf_life_days": 365,
       "certifications": [
         "Gluten-Free"
-      ]
+      ],
+      "density": 0.48,
+      "aliases": [
+        "ground coconut"
+      ],
+      "is_active_ingredient": false
     },
     {
       "name": "Oat Flour",
-      "density_g_per_ml": 0.55,
-      "aka_names": [
-        "ground oats"
-      ],
       "default_unit": "gram",
       "moisture_content_percent": 11,
       "protein_content_pct": 17,
@@ -96,15 +97,15 @@
       "recommended_shelf_life_days": 180,
       "certifications": [
         "Gluten-Free Option"
-      ]
+      ],
+      "density": 0.55,
+      "aliases": [
+        "ground oats"
+      ],
+      "is_active_ingredient": false
     },
     {
       "name": "Chickpea Flour",
-      "density_g_per_ml": 0.68,
-      "aka_names": [
-        "gram flour",
-        "besan"
-      ],
       "default_unit": "gram",
       "moisture_content_percent": 10,
       "protein_content_pct": 22,
@@ -112,14 +113,16 @@
       "recommended_shelf_life_days": 180,
       "certifications": [
         "Non-GMO"
-      ]
+      ],
+      "density": 0.68,
+      "aliases": [
+        "gram flour",
+        "besan"
+      ],
+      "is_active_ingredient": false
     },
     {
       "name": "Matcha Powder",
-      "density_g_per_ml": 0.45,
-      "aka_names": [
-        "green tea powder"
-      ],
       "default_unit": "gram",
       "moisture_content_percent": 6,
       "protein_content_pct": 30,
@@ -127,7 +130,12 @@
       "recommended_shelf_life_days": 365,
       "certifications": [
         "JAS Organic"
-      ]
+      ],
+      "density": 0.45,
+      "aliases": [
+        "green tea powder"
+      ],
+      "is_active_ingredient": false
     }
   ],
   "attributes": [
@@ -135,6 +143,7 @@
     "protein_content_pct",
     "recommended_usage_rate",
     "recommended_shelf_life_days",
-    "certifications"
+    "certifications",
+    "is_active_ingredient"
   ]
 }

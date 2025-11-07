@@ -323,6 +323,9 @@ async function openItemDetails(id){
           if (it.recommended_shelf_life_days) {
     metaParts.push(`<div><strong>Recommended Shelf Life:</strong> ${formatShelfLifeDays(it.recommended_shelf_life_days)}</div>`);
           }
+  if (typeof it.is_active_ingredient !== 'undefined') {
+    metaParts.push(`<div><strong>Active Ingredient:</strong> ${it.is_active_ingredient ? 'Yes' : 'No'}</div>`);
+  }
           metaWrapper.innerHTML = metaParts.join('') || '';
       }
 

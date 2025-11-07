@@ -85,7 +85,10 @@ def seed_ingredients_from_files(selected_files):
                 recommended_shelf_life_days=shelf_life,
                 recommended_usage_rate=item_data.get('recommended_usage_rate'),
                 recommended_fragrance_load_pct=item_data.get('recommended_fragrance_load_pct'),
-                is_active=bool(item_data.get('is_active', False)),
+                is_active_ingredient=bool(
+                    item_data.get('is_active_ingredient',
+                                  item_data.get('is_active', False))
+                ),
                 inci_name=item_data.get('inci_name'),
                 certifications=item_data.get('certifications'),
                 saponification_value=item_data.get('saponification_value'),

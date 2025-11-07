@@ -5,10 +5,6 @@
   "items": [
     {
       "name": "Lavender Essential Oil",
-      "density_g_per_ml": 0.885,
-      "aka_names": [
-        "lavandula angustifolia"
-      ],
       "default_unit": "milliliter",
       "flash_point_c": 74,
       "recommended_usage_rate": "Dermal max 2%",
@@ -18,14 +14,15 @@
       "certifications": [
         "IFRA Compliant"
       ],
-      "comedogenic_rating": 2
+      "comedogenic_rating": 2,
+      "density": 0.885,
+      "aliases": [
+        "lavandula angustifolia"
+      ],
+      "is_active_ingredient": false
     },
     {
       "name": "Tea Tree Essential Oil",
-      "density_g_per_ml": 0.89,
-      "aka_names": [
-        "melaleuca oil"
-      ],
       "default_unit": "milliliter",
       "flash_point_c": 60,
       "recommended_usage_rate": "Dermal max 15%",
@@ -35,14 +32,15 @@
       "certifications": [
         "IFRA Compliant"
       ],
-      "comedogenic_rating": 0
+      "comedogenic_rating": 0,
+      "density": 0.89,
+      "aliases": [
+        "melaleuca oil"
+      ],
+      "is_active_ingredient": false
     },
     {
       "name": "Peppermint Essential Oil",
-      "density_g_per_ml": 0.9,
-      "aka_names": [
-        "mentha piperita"
-      ],
       "default_unit": "milliliter",
       "flash_point_c": 66,
       "recommended_usage_rate": "Dermal max 5%",
@@ -52,14 +50,15 @@
       "certifications": [
         "IFRA Compliant"
       ],
-      "comedogenic_rating": 0
+      "comedogenic_rating": 0,
+      "density": 0.9,
+      "aliases": [
+        "mentha piperita"
+      ],
+      "is_active_ingredient": false
     },
     {
       "name": "Bergamot Essential Oil (FCF)",
-      "density_g_per_ml": 0.87,
-      "aka_names": [
-        "citrus aurantium bergamia oil"
-      ],
       "default_unit": "milliliter",
       "flash_point_c": 60,
       "recommended_usage_rate": "Dermal max 1%",
@@ -70,14 +69,15 @@
         "IFRA Compliant",
         "FCF"
       ],
-      "comedogenic_rating": 0
+      "comedogenic_rating": 0,
+      "density": 0.87,
+      "aliases": [
+        "citrus aurantium bergamia oil"
+      ],
+      "is_active_ingredient": false
     },
     {
       "name": "Patchouli Essential Oil",
-      "density_g_per_ml": 0.99,
-      "aka_names": [
-        "pogostemon cablin oil"
-      ],
       "default_unit": "milliliter",
       "flash_point_c": 60,
       "recommended_usage_rate": "Dermal max 5%",
@@ -87,14 +87,15 @@
       "certifications": [
         "IFRA Compliant"
       ],
-      "comedogenic_rating": 2
+      "comedogenic_rating": 2,
+      "density": 0.99,
+      "aliases": [
+        "pogostemon cablin oil"
+      ],
+      "is_active_ingredient": false
     },
     {
       "name": "Cedarwood Atlas Essential Oil",
-      "density_g_per_ml": 0.94,
-      "aka_names": [
-        "cedrus atlantica"
-      ],
       "default_unit": "milliliter",
       "flash_point_c": 96,
       "recommended_usage_rate": "Dermal max 3%",
@@ -104,7 +105,12 @@
       "certifications": [
         "IFRA Compliant"
       ],
-      "comedogenic_rating": 0
+      "comedogenic_rating": 0,
+      "density": 0.94,
+      "aliases": [
+        "cedrus atlantica"
+      ],
+      "is_active_ingredient": false
     }
   ],
   "attributes": [
@@ -114,6 +120,7 @@
     "recommended_shelf_life_days",
     "inci_name",
     "certifications",
-    "comedogenic_rating"
+    "comedogenic_rating",
+    "is_active_ingredient"
   ]
 }

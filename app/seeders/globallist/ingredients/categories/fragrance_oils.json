@@ -6,10 +6,6 @@
   "items": [
     {
       "name": "Warm Vanilla Sugar Fragrance Oil",
-      "density_g_per_ml": 0.95,
-      "aka_names": [
-        "vanilla sugar fragrance"
-      ],
       "default_unit": "milliliter",
       "flash_point_c": 82,
       "recommended_fragrance_load_pct": "6-10% in candles",
@@ -18,14 +14,15 @@
       "inci_name": "Fragrance",
       "certifications": [
         "IFRA Certificate Included"
-      ]
+      ],
+      "density": 0.95,
+      "aliases": [
+        "vanilla sugar fragrance"
+      ],
+      "is_active_ingredient": false
     },
     {
       "name": "Ocean Breeze Fragrance Oil",
-      "density_g_per_ml": 0.89,
-      "aka_names": [
-        "sea spray fragrance"
-      ],
       "default_unit": "milliliter",
       "flash_point_c": 71,
       "recommended_fragrance_load_pct": "6-9% in candles",
@@ -34,14 +31,15 @@
       "inci_name": "Fragrance",
       "certifications": [
         "IFRA Certificate Included"
-      ]
+      ],
+      "density": 0.89,
+      "aliases": [
+        "sea spray fragrance"
+      ],
+      "is_active_ingredient": false
     },
     {
       "name": "Bamboo & Coconut Fragrance Oil",
-      "density_g_per_ml": 0.91,
-      "aka_names": [
-        "bamboo coconut scent"
-      ],
       "default_unit": "milliliter",
       "flash_point_c": 79,
       "recommended_fragrance_load_pct": "7-10% in candles",
@@ -50,14 +48,15 @@
       "inci_name": "Fragrance",
       "certifications": [
         "IFRA Certificate Included"
-      ]
+      ],
+      "density": 0.91,
+      "aliases": [
+        "bamboo coconut scent"
+      ],
+      "is_active_ingredient": false
     },
     {
       "name": "Citrus Herb Fragrance Oil",
-      "density_g_per_ml": 0.87,
-      "aka_names": [
-        "citrus thyme fragrance"
-      ],
       "default_unit": "milliliter",
       "flash_point_c": 67,
       "recommended_fragrance_load_pct": "6-8% in candles",
@@ -66,7 +65,12 @@
       "inci_name": "Fragrance",
       "certifications": [
         "IFRA Certificate Included"
-      ]
+      ],
+      "density": 0.87,
+      "aliases": [
+        "citrus thyme fragrance"
+      ],
+      "is_active_ingredient": false
     }
   ],
   "attributes": [
@@ -75,6 +79,7 @@
     "recommended_usage_rate",
     "recommended_shelf_life_days",
     "inci_name",
-    "certifications"
+    "certifications",
+    "is_active_ingredient"
   ]
 }

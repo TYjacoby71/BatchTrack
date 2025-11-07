@@ -1,87 +1,89 @@
 {
-  "category_name": "Herbs & Spices (Dried & Ground)",
-  "default_density": 0.57,
-  "description": "Dried ground herbs and spices.",
+  "category_name": "Exfoliants (Particulate)",
+  "default_density": 0.75,
+  "description": "Solid particles used for mechanical exfoliation in scrubs, soaps, and polishes.",
+  "attributes": [
+    "particle_size_microns",
+    "recommended_usage_rate",
+    "recommended_shelf_life_days",
+    "certifications",
+    "is_active_ingredient"
+  ],
   "items": [
     {
-      "name": "Ground Cinnamon",
-      "density_g_per_ml": 0.56,
-      "aka_names": [
-        "cassia cinnamon powder"
+      "name": "Walnut Shell Powder",
+      "aliases": [
+        "walnut hull powder"
       ],
+      "density": 0.7,
       "default_unit": "gram",
-      "moisture_content_percent": 10,
-      "ph_value": "5.0-5.5",
-      "recommended_usage_rate": "0.2-1% in spice blends and bakery",
+      "particle_size_microns": "200-500",
+      "recommended_usage_rate": "1-10% in body scrubs and soaps",
       "recommended_shelf_life_days": 730,
       "certifications": [
-        "Fair Trade"
-      ]
+        "Cosmetic Grade"
+      ],
+      "is_active_ingredient": false
     },
     {
-      "name": "Turmeric Powder",
-      "density_g_per_ml": 0.55,
-      "aka_names": [
-        "curcuma longa powder"
+      "name": "Apricot Kernel Meal",
+      "aliases": [
+        "apricot seed powder"
       ],
+      "density": 0.68,
       "default_unit": "gram",
-      "moisture_content_percent": 9,
-      "ph_value": "6.0-6.5",
-      "recommended_usage_rate": "0.5-2% for color and flavor",
-      "recommended_shelf_life_days": 730,
-      "certifications": [
-        "Organic"
-      ]
-    },
-    {
-      "name": "Ginger Powder",
-      "density_g_per_ml": 0.53,
-      "aka_names": [
-        "zingiber officinale powder"
-      ],
-      "default_unit": "gram",
-      "moisture_content_percent": 8,
-      "ph_value": "6.0-6.5",
-      "recommended_usage_rate": "0.2-1% for spice blends",
+      "particle_size_microns": "300-600",
+      "recommended_usage_rate": "2-8% in body scrubs",
       "recommended_shelf_life_days": 540,
       "certifications": [
         "Kosher"
-      ]
+      ],
+      "is_active_ingredient": false
     },
     {
-      "name": "Paprika Sweet",
-      "density_g_per_ml": 0.46,
-      "aka_names": [
-        "capsicum annuum powder"
+      "name": "Jojoba Esters (Eco Beads)",
+      "aliases": [
+        "hydrogenated jojoba beads"
       ],
+      "density": 0.9,
       "default_unit": "gram",
-      "moisture_content_percent": 12,
-      "ph_value": "5.0-5.5",
-      "recommended_usage_rate": "0.5-3% for flavor and color",
-      "recommended_shelf_life_days": 540,
+      "particle_size_microns": "250-500",
+      "recommended_usage_rate": "1-5% in facial scrubs",
+      "recommended_shelf_life_days": 1095,
       "certifications": [
-        "Non-GMO"
-      ]
+        "Vegan"
+      ],
+      "is_active_ingredient": false
     },
     {
-      "name": "Black Pepper (Ground)",
-      "density_g_per_ml": 0.55,
-      "aka_names": [
-        "piper nigrum powder"
+      "name": "Pumice Powder (Fine)",
+      "aliases": [
+        "pumice flour"
       ],
+      "density": 0.85,
       "default_unit": "gram",
-      "moisture_content_percent": 11,
-      "ph_value": "5.5-6.0",
-      "recommended_usage_rate": "0.1-0.5% in savory blends",
-      "recommended_shelf_life_days": 540,
-      "certifications": []
+      "particle_size_microns": "120-220",
+      "recommended_usage_rate": "1-5% in heavy-duty hand scrubs",
+      "recommended_shelf_life_days": 1825,
+      "certifications": [
+        "Natural"
+      ],
+      "is_active_ingredient": false
+    },
+    {
+      "name": "Luffa Fiber (Milled)",
+      "aliases": [
+        "loofah fiber powder"
+      ],
+      "density": 0.4,
+      "default_unit": "gram",
+      "particle_size_microns": "800-1200",
+      "recommended_usage_rate": "1-4% in bar soaps or solid scrubs",
+      "recommended_shelf_life_days": 365,
+      "certifications": [
+        "Sustainably Grown"
+      ],
+      "is_active_ingredient": false
     }
-  ],
-  "attributes": [
-    "moisture_content_percent",
-    "ph_value",
-    "recommended_usage_rate",
-    "recommended_shelf_life_days",
-    "certifications"
   ]
 }

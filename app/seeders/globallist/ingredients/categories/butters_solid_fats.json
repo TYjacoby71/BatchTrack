@@ -11,15 +11,12 @@
     "recommended_usage_rate",
     "recommended_shelf_life_days",
     "inci_name",
-    "certifications"
+    "certifications",
+    "is_active_ingredient"
   ],
   "items": [
     {
       "name": "Shea Butter",
-      "density_g_per_ml": 0.92,
-      "aka_names": [
-        "african shea butter"
-      ],
       "default_unit": "gram",
       "saponification_value": 178,
       "iodine_value": 53,
@@ -36,14 +33,15 @@
       "inci_name": "Butyrospermum Parkii (Shea) Butter",
       "certifications": [
         "Fair Trade"
-      ]
+      ],
+      "density": 0.92,
+      "aliases": [
+        "african shea butter"
+      ],
+      "is_active_ingredient": false
     },
     {
       "name": "Mango Butter",
-      "density_g_per_ml": 0.91,
-      "aka_names": [
-        "mango kernel butter"
-      ],
       "default_unit": "gram",
       "saponification_value": 188,
       "iodine_value": 46,
@@ -60,14 +58,15 @@
       "inci_name": "Mangifera Indica (Mango) Seed Butter",
       "certifications": [
         "Non-GMO"
-      ]
+      ],
+      "density": 0.91,
+      "aliases": [
+        "mango kernel butter"
+      ],
+      "is_active_ingredient": false
     },
     {
       "name": "Cocoa Butter",
-      "density_g_per_ml": 0.89,
-      "aka_names": [
-        "theobroma oil"
-      ],
       "default_unit": "gram",
       "saponification_value": 192,
       "iodine_value": 37,
@@ -85,14 +84,15 @@
       "certifications": [
         "Fair Trade",
         "Rainforest Alliance"
-      ]
+      ],
+      "density": 0.89,
+      "aliases": [
+        "theobroma oil"
+      ],
+      "is_active_ingredient": false
     },
     {
       "name": "Kokum Butter",
-      "density_g_per_ml": 0.9,
-      "aka_names": [
-        "garcinia indica butter"
-      ],
       "default_unit": "gram",
       "saponification_value": 190,
       "iodine_value": 32,
@@ -107,14 +107,15 @@
       "recommended_usage_rate": "2-15% for structure and emollience",
       "recommended_shelf_life_days": 730,
       "inci_name": "Garcinia Indica Seed Butter",
-      "certifications": []
+      "certifications": [],
+      "density": 0.9,
+      "aliases": [
+        "garcinia indica butter"
+      ],
+      "is_active_ingredient": false
     },
     {
       "name": "Cupuacu Butter",
-      "density_g_per_ml": 0.984,
-      "aka_names": [
-        "theobroma grandiflorum seed butter"
-      ],
       "default_unit": "gram",
       "saponification_value": 188,
       "iodine_value": 38,
@@ -131,14 +132,15 @@
       "inci_name": "Theobroma Grandiflorum Seed Butter",
       "certifications": [
         "Rainforest Alliance"
-      ]
+      ],
+      "density": 0.984,
+      "aliases": [
+        "theobroma grandiflorum seed butter"
+      ],
+      "is_active_ingredient": false
     },
     {
       "name": "Illipe Butter",
-      "density_g_per_ml": 0.95,
-      "aka_names": [
-        "shorea stenoptera butter"
-      ],
       "default_unit": "gram",
       "saponification_value": 189,
       "iodine_value": 40,
@@ -153,14 +155,15 @@
       "recommended_usage_rate": "2-10% in balms and sticks",
       "recommended_shelf_life_days": 540,
       "inci_name": "Shorea Stenoptera Seed Butter",
-      "certifications": []
+      "certifications": [],
+      "density": 0.95,
+      "aliases": [
+        "shorea stenoptera butter"
+      ],
+      "is_active_ingredient": false
     },
     {
       "name": "Murumuru Butter",
-      "density_g_per_ml": 0.9,
-      "aka_names": [
-        "astrocaryum murumuru seed butter"
-      ],
       "default_unit": "gram",
       "saponification_value": 235,
       "iodine_value": 12,
@@ -177,14 +180,15 @@
       "inci_name": "Astrocaryum Murumuru Seed Butter",
       "certifications": [
         "Fair Trade"
-      ]
+      ],
+      "density": 0.9,
+      "aliases": [
+        "astrocaryum murumuru seed butter"
+      ],
+      "is_active_ingredient": false
     },
     {
       "name": "Ghee (Clarified Butter)",
-      "density_g_per_ml": 0.9,
-      "aka_names": [
-        "clarified butter"
-      ],
       "default_unit": "gram",
       "saponification_value": 230,
       "iodine_value": 35,
@@ -199,7 +203,12 @@
       "recommended_usage_rate": "2-6% in soap formulations",
       "recommended_shelf_life_days": 365,
       "inci_name": "Clarified Butter",
-      "certifications": []
+      "certifications": [],
+      "density": 0.9,
+      "aliases": [
+        "clarified butter"
+      ],
+      "is_active_ingredient": false
     }
   ]
 }

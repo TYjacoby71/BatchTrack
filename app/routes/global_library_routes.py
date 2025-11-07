@@ -103,6 +103,7 @@ def global_library_item_stats(item_id: int):
             'recommended_shelf_life_days': gi.recommended_shelf_life_days,
             'recommended_usage_rate': gi.recommended_usage_rate,
             'recommended_fragrance_load_pct': gi.recommended_fragrance_load_pct,
+            'is_active_ingredient': gi.is_active_ingredient,
             'inci_name': gi.inci_name,
             # Container fields
             'container_material': getattr(gi, 'container_material', None),

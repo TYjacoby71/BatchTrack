@@ -130,6 +130,17 @@
             <div id="ingredientProperties" style="display: none;">
               <div class="col-12"><hr><h5 class="text-muted">Ingredient Attributes</h5></div>
 
+              <div class="col-md-3">
+                <div class="form-check mt-2">
+                  <input type="checkbox"
+                         class="form-check-input"
+                         id="is_active_ingredient"
+                         name="is_active_ingredient"
+                         {% if item.is_active_ingredient %}checked{% endif %}>
+                  <label class="form-check-label" for="is_active_ingredient">Active Ingredient</label>
+                </div>
+              </div>
+
             <div class="col-md-3">
               <label class="form-label">Saponification Value</label>
               <input type="number" step="0.1" name="saponification_value" class="form-control" value="{{ item.saponification_value or '' }}">

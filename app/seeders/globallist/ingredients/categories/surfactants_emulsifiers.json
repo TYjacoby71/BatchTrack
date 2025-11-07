@@ -5,10 +5,6 @@
   "items": [
     {
       "name": "Polysorbate 80",
-      "density_g_per_ml": 1.08,
-      "aka_names": [
-        "tween 80"
-      ],
       "default_unit": "milliliter",
       "ph_value": "5.0-7.0 (10% solution)",
       "recommended_usage_rate": "1-10% as solubilizer/emulsifier",
@@ -16,14 +12,15 @@
       "inci_name": "Polysorbate 80",
       "certifications": [
         "Kosher"
-      ]
+      ],
+      "density": 1.08,
+      "aliases": [
+        "tween 80"
+      ],
+      "is_active_ingredient": false
     },
     {
       "name": "Polysorbate 20",
-      "density_g_per_ml": 1.07,
-      "aka_names": [
-        "tween 20"
-      ],
       "default_unit": "milliliter",
       "ph_value": "5.0-7.0 (10% solution)",
       "recommended_usage_rate": "1-5% as solubilizer for EO/FO",
@@ -31,14 +28,15 @@
       "inci_name": "Polysorbate 20",
       "certifications": [
         "Kosher"
-      ]
+      ],
+      "density": 1.07,
+      "aliases": [
+        "tween 20"
+      ],
+      "is_active_ingredient": false
     },
     {
       "name": "Cocamidopropyl Betaine (30%)",
-      "density_g_per_ml": 1.05,
-      "aka_names": [
-        "CAPB"
-      ],
       "default_unit": "milliliter",
       "ph_value": "5.0-6.0",
       "recommended_usage_rate": "5-30% in surfactant systems",
@@ -46,14 +44,15 @@
       "inci_name": "Cocamidopropyl Betaine",
       "certifications": [
         "RSPO Mass Balance"
-      ]
+      ],
+      "density": 1.05,
+      "aliases": [
+        "CAPB"
+      ],
+      "is_active_ingredient": false
     },
     {
       "name": "Decyl Glucoside",
-      "density_g_per_ml": 1.11,
-      "aka_names": [
-        "plant-derived glucoside"
-      ],
       "default_unit": "milliliter",
       "ph_value": "11.0-12.0",
       "recommended_usage_rate": "5-25% as primary surfactant",
@@ -61,14 +60,15 @@
       "inci_name": "Decyl Glucoside",
       "certifications": [
         "COSMOS Approved"
-      ]
+      ],
+      "density": 1.11,
+      "aliases": [
+        "plant-derived glucoside"
+      ],
+      "is_active_ingredient": false
     },
     {
       "name": "Sodium Lauryl Sulfoacetate",
-      "density_g_per_ml": 0.9,
-      "aka_names": [
-        "SLSa"
-      ],
       "default_unit": "gram",
       "ph_value": "5.5-7.5",
       "recommended_usage_rate": "10-60% in powdered cleansers",
@@ -76,20 +76,26 @@
       "inci_name": "Sodium Lauryl Sulfoacetate",
       "certifications": [
         "Biodegradable"
-      ]
+      ],
+      "density": 0.9,
+      "aliases": [
+        "SLSa"
+      ],
+      "is_active_ingredient": false
     },
     {
       "name": "BTMS-50",
-      "density_g_per_ml": 0.95,
-      "aka_names": [
-        "behentrimonium methosulfate 50%"
-      ],
       "default_unit": "gram",
       "ph_value": "5.0-6.0",
       "recommended_usage_rate": "1-10% in conditioners and lotions",
       "recommended_shelf_life_days": 730,
       "inci_name": "Behentrimonium Methosulfate (and) Cetyl Alcohol (and) Butylene Glycol",
-      "certifications": []
+      "certifications": [],
+      "density": 0.95,
+      "aliases": [
+        "behentrimonium methosulfate 50%"
+      ],
+      "is_active_ingredient": false
     }
   ],
   "attributes": [
@@ -97,6 +103,7 @@
     "recommended_usage_rate",
     "recommended_shelf_life_days",
     "inci_name",
-    "certifications"
+    "certifications",
+    "is_active_ingredient"
   ]
 }

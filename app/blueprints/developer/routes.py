@@ -678,7 +678,7 @@ def global_item_edit(item_id):
         'aliases': item.aliases,
         'recommended_usage_rate': item.recommended_usage_rate,
         'recommended_fragrance_load_pct': item.recommended_fragrance_load_pct,
-        'is_active': item.is_active,
+        'is_active_ingredient': item.is_active_ingredient,
         'inci_name': item.inci_name,
         'protein_content_pct': item.protein_content_pct,
         'brewing_color_srm': item.brewing_color_srm,
@@ -714,7 +714,7 @@ def global_item_edit(item_id):
 
     item.recommended_usage_rate = request.form.get('recommended_usage_rate') or None
     item.recommended_fragrance_load_pct = request.form.get('recommended_fragrance_load_pct') or None
-    item.is_active = True if request.form.get('is_active') == 'on' else False
+    item.is_active_ingredient = request.form.get('is_active_ingredient') == 'on'
     item.inci_name = request.form.get('inci_name') or None
 
     protein = request.form.get('protein_content_pct')
@@ -1222,16 +1222,17 @@ def create_global_item():
                     flash('Invalid capacity value', 'error')
                     return redirect(url_for('developer.create_global_item'))
 
-            new_item.capacity_unit = request.form.get('capacity_unit', '').strip() or None
-            # Container attributes (optional)
-            try:
-                new_item.container_material = (request.form.get('container_material') or '').strip() or None
-                new_item.container_type = (request.form.get('container_type') or '').strip() or None
-                new_item.container_style = (request.form.get('container_style') or '').strip() or None
-                new_item.container_color = (request.form.get('container_color') or '').strip() or None
-            except Exception:
-                pass
-            new_item.default_is_perishable = request.form.get('default_is_perishable') == 'on'
+              new_item.capacity_unit = request.form.get('capacity_unit', '').strip() or None
+              # Container attributes (optional)
+              try:
+                  new_item.container_material = (request.form.get('container_material') or '').strip() or None
+                  new_item.container_type = (request.form.get('container_type') or '').strip() or None
+                  new_item.container_style = (request.form.get('container_style') or '').strip() or None
+                  new_item.container_color = (request.form.get('container_color') or '').strip() or None
+              except Exception:
+                  pass
+              new_item.default_is_perishable = request.form.get('default_is_perishable') == 'on'
+              new_item.is_active_ingredient = request.form.get('is_active_ingredient') == 'on'
 
             shelf_life = request.form.get('recommended_shelf_life_days')
             if shelf_life:
