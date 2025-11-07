@@ -33,6 +33,7 @@ def upgrade():
         batch_op.alter_column('aka_names', new_column_name='aliases')
         batch_op.add_column(sa.Column('recommended_usage_rate', sa.String(length=64), nullable=True))
         batch_op.add_column(sa.Column('recommended_fragrance_load_pct', sa.String(length=64), nullable=True))
+        batch_op.add_column(sa.Column('is_active', sa.Boolean(), nullable=False, server_default=sa.text('0')))
         batch_op.add_column(sa.Column('inci_name', sa.String(length=256), nullable=True))
         batch_op.add_column(sa.Column('certifications', sa.JSON(), nullable=True))
         batch_op.add_column(sa.Column('fatty_acid_profile', sa.JSON(), nullable=True))
@@ -40,6 +41,7 @@ def upgrade():
         batch_op.add_column(sa.Column('brewing_color_srm', sa.Float(), nullable=True))
         batch_op.add_column(sa.Column('brewing_potential_sg', sa.Float(), nullable=True))
         batch_op.add_column(sa.Column('brewing_diastatic_power_lintner', sa.Float(), nullable=True))
+        batch_op.alter_column('is_active', server_default=None)
 
     if is_postgresql():
         try:
@@ -142,6 +144,7 @@ def downgrade():
         batch_op.drop_column('recommended_fragrance_load_pct')
         batch_op.drop_column('recommended_usage_rate')
         batch_op.alter_column('aliases', new_column_name='aka_names')
+        batch_op.drop_column('is_active')
 
     # Drop PostgreSQL-specific indexes created in upgrade
     if is_postgresql():

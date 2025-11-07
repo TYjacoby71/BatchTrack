@@ -678,6 +678,7 @@ def global_item_edit(item_id):
         'aliases': item.aliases,
         'recommended_usage_rate': item.recommended_usage_rate,
         'recommended_fragrance_load_pct': item.recommended_fragrance_load_pct,
+        'is_active': item.is_active,
         'inci_name': item.inci_name,
         'protein_content_pct': item.protein_content_pct,
         'brewing_color_srm': item.brewing_color_srm,
@@ -713,6 +714,7 @@ def global_item_edit(item_id):
 
     item.recommended_usage_rate = request.form.get('recommended_usage_rate') or None
     item.recommended_fragrance_load_pct = request.form.get('recommended_fragrance_load_pct') or None
+    item.is_active = True if request.form.get('is_active') == 'on' else False
     item.inci_name = request.form.get('inci_name') or None
 
     protein = request.form.get('protein_content_pct')

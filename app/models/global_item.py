@@ -20,6 +20,7 @@ class GlobalItem(db.Model):
     recommended_shelf_life_days = db.Column(db.Integer, nullable=True)
     recommended_usage_rate = db.Column(db.String(64), nullable=True)
     recommended_fragrance_load_pct = db.Column(db.String(64), nullable=True)
+    is_active = db.Column(db.Boolean, nullable=False, default=False)
 
     # Regulatory / labeling
     inci_name = db.Column(db.String(256), nullable=True)
