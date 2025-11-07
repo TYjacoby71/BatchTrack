@@ -28,6 +28,16 @@ class IngredientCategory(ScopedModelMixin, db.Model):
     show_shelf_life_days = db.Column(db.Boolean, default=False)
     show_comedogenic_rating = db.Column(db.Boolean, default=False)
 
+    # Additional attribute visibility controls
+    show_boiling_point = db.Column(db.Boolean, default=False)
+    show_smoke_point = db.Column(db.Boolean, default=False)
+    show_concentration = db.Column(db.Boolean, default=False)
+    show_cas_number = db.Column(db.Boolean, default=False)
+    show_inci_name = db.Column(db.Boolean, default=False)
+    show_solubility = db.Column(db.Boolean, default=False)
+    show_sensory_properties = db.Column(db.Boolean, default=False)
+    show_sourcing_info = db.Column(db.Boolean, default=False)
+
 class InventoryCategory(ScopedModelMixin, db.Model):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(64), nullable=False)
