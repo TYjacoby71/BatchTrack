@@ -84,8 +84,8 @@ def confirm_link():
             # Apply linking rules: rename, set density, link; do not change unit
             old_name = inv.name
             inv.name = gi.name
-            if gi.density_g_per_ml is not None:
-                inv.density = gi.density_g_per_ml
+            if gi.density is not None:
+                inv.density = gi.density
             inv.global_item_id = gi.id
             if inv.type == 'ingredient':
                 inv.saponification_value = gi.saponification_value

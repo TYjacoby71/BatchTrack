@@ -65,7 +65,7 @@ def seed_ingredients_from_files(selected_files):
             new_item = GlobalItem(
                 name=name,
                 item_type='ingredient',
-                density_g_per_ml=item_data.get('density_g_per_ml'),
+                density=item_data.get('density_g_per_ml'),
                 aliases=item_data.get('aka_names', item_data.get('aka', [])),
                 default_unit=item_data.get('default_unit'),
                 ingredient_category_id=category.id,

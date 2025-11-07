@@ -9,7 +9,7 @@ class GlobalItem(db.Model):
     name = db.Column(db.String(128), nullable=False, index=True)
     item_type = db.Column(db.String(32), nullable=False, index=True)  # ingredient, container, packaging, consumable
     aliases = db.Column(db.JSON, nullable=True)  # list of strings for alternative names
-    density_g_per_ml = db.Column(db.Float, nullable=True)  # g/ml
+    density = db.Column(db.Float, nullable=True)  # g/ml
     default_unit = db.Column(db.String(32), nullable=True)
 
     # Category relationship - proper FK to IngredientCategory

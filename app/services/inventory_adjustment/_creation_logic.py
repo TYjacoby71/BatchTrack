@@ -162,8 +162,8 @@ def create_inventory_item(form_data, organization_id, created_by):
         # Apply global item defaults after instance is created
         if global_item:
             # Density for ingredients
-            if global_item.density_g_per_ml is not None and item_type == 'ingredient':
-                new_item.density = global_item.density_g_per_ml
+            if global_item.density is not None and item_type == 'ingredient':
+                new_item.density = global_item.density
             # Capacity for containers/packaging (nullable by design)
             if global_item.capacity is not None:
                 new_item.capacity = global_item.capacity

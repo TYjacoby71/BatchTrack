@@ -667,7 +667,7 @@ def global_item_edit(item_id):
         'name': item.name,
         'item_type': item.item_type,
         'default_unit': item.default_unit,
-        'density_g_per_ml': item.density_g_per_ml,
+        'density': item.density,
         'capacity': item.capacity,
         'capacity_unit': item.capacity_unit,
         'container_material': getattr(item, 'container_material', None),
@@ -691,8 +691,8 @@ def global_item_edit(item_id):
     item.name = request.form.get('name', item.name)
     item.item_type = request.form.get('item_type', item.item_type)
     item.default_unit = request.form.get('default_unit', item.default_unit)
-    density = request.form.get('density_g_per_ml')
-    item.density_g_per_ml = float(density) if density not in (None, '',) else None
+    density = request.form.get('density')
+    item.density = float(density) if density not in (None, '',) else None
     capacity = request.form.get('capacity')
     item.capacity = float(capacity) if capacity not in (None, '',) else None
     item.capacity_unit = request.form.get('capacity_unit', item.capacity_unit)
@@ -1204,10 +1204,10 @@ def create_global_item():
             )
 
             # Add optional fields
-            density = request.form.get('density_g_per_ml')
+            density = request.form.get('density')
             if density:
                 try:
-                    new_item.density_g_per_ml = float(density)
+                    new_item.density = float(density)
                 except ValueError:
                     flash('Invalid density value', 'error')
                     return redirect(url_for('developer.create_global_item'))

@@ -93,7 +93,7 @@ def global_library_item_stats(item_id: int):
             'name': gi.name,
             'item_type': gi.item_type,
             'default_unit': gi.default_unit,
-            'density_g_per_ml': gi.density_g_per_ml,
+            'density': gi.density,
             'capacity': gi.capacity,
             'capacity_unit': gi.capacity_unit,
             'ingredient_category_id': gi.ingredient_category_id,

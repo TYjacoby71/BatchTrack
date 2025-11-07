@@ -76,8 +76,7 @@ def public_global_item_search():
                 'item_type': gi.item_type,
                 'default_unit': gi.default_unit,
                 'unit': gi.default_unit,  # Also provide as 'unit' for backward compatibility
-                'density_g_per_ml': gi.density_g_per_ml,
-                'density': gi.density_g_per_ml,  # backward compatibility
+                'density': gi.density,
                 'default_is_perishable': gi.default_is_perishable,
                 'recommended_shelf_life_days': gi.recommended_shelf_life_days,
                 'saponification_value': getattr(gi, 'saponification_value', None),

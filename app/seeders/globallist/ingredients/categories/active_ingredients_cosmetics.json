@@ -3,8 +3,13 @@
   "category_name": "Active Ingredients (Cosmetics)",
   "default_density": 1.15,
   "description": "For advanced cosmetic makers, specialized active ingredients (e.g., Retinoids, Peptides, Niacinamide).",
-  "show_ph_value": true,
-  "show_comedogenic_rating": true,
-  "show_shelf_life_months": true,
+  "attributes": [
+    "recommended_usage_rate",
+    "ph_value",
+    "recommended_shelf_life_days",
+    "inci_name",
+    "certifications",
+    "comedogenic_rating"
+  ],
   "items": []
 }

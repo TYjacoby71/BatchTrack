@@ -20,7 +20,6 @@ def upgrade():
     dialect = bind.dialect.name
 
     with op.batch_alter_table('global_item') as batch_op:
-        batch_op.alter_column('density', new_column_name='density_g_per_ml')
         batch_op.alter_column('aka_names', new_column_name='aliases')
         batch_op.add_column(sa.Column('recommended_usage_rate', sa.String(length=64), nullable=True))
         batch_op.add_column(sa.Column('recommended_fragrance_load_pct', sa.String(length=64), nullable=True))
@@ -99,7 +98,6 @@ def downgrade():
         batch_op.drop_column('recommended_fragrance_load_pct')
         batch_op.drop_column('recommended_usage_rate')
         batch_op.alter_column('aliases', new_column_name='aka_names')
-        batch_op.alter_column('density_g_per_ml', new_column_name='density')
 
     if dialect == 'postgresql':
         op.execute("DROP INDEX IF EXISTS ix_global_item_aliases_gin")

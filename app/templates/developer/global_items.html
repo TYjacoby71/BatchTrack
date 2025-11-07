@@ -79,8 +79,8 @@
       </td>
       <td>{{ gi.ingredient_category.name if gi.ingredient_category else '-' }}</td>
         <td>
-          {% if gi.density_g_per_ml is not none %}
-            {{ '%.3f'|format(gi.density_g_per_ml) }}
+          {% if gi.density is not none %}
+            {{ '%.3f'|format(gi.density) }}
           {% else %}
             -
           {% endif %}
@@ -416,7 +416,7 @@ async function openItemDetails(id){
       document.getElementById('giType').textContent = it.item_type || '';
       document.getElementById('giCategory').textContent = it.ingredient_category_name || '';
       document.getElementById('giUnit').textContent = it.default_unit || '';
-      document.getElementById('giDensity').textContent = (it.density_g_per_ml != null) ? Number(it.density_g_per_ml).toFixed(3) : '';
+        document.getElementById('giDensity').textContent = (it.density != null) ? Number(it.density).toFixed(3) : '';
 
       // Container meta
       const isContainer = it.item_type === 'container' || it.item_type === 'packaging';
@@ -438,17 +438,15 @@ async function openItemDetails(id){
         const num = Number(value);
         return Number.isFinite(num) ? num.toFixed(decimals) : value;
       };
-      const addProp = (label, value, formatter) => {
-        if (value === null || value === undefined || value === '') return;
-        const formatted = formatter ? formatter(value) : value;
-        const col = document.createElement('div');
-        col.innerHTML = `<div><strong>${label}:</strong> ${formatted}</div>`;
-        grid.appendChild(col);
-      };
-      const isIngredient = it.item_type === 'ingredient';
-      let hasProps = false;
-      if (isIngredient) {
-        const startCount = grid.childElementCount;
+        const addProp = (label, value, formatter) => {
+          const hasValue = !(value === null || value === undefined || value === '');
+          const formatted = hasValue ? (formatter ? formatter(value) : value) : '-';
+          const col = document.createElement('div');
+          col.innerHTML = `<div><strong>${label}:</strong> ${formatted}</div>`;
+          grid.appendChild(col);
+        };
+        const isIngredient = it.item_type === 'ingredient';
+        if (isIngredient) {
         addProp('Saponification', it.saponification_value);
         addProp('Iodine', it.iodine_value);
         addProp('Melting Point (°C)', it.melting_point_c);
@@ -463,12 +461,13 @@ async function openItemDetails(id){
         addProp('Brewing SRM', it.brewing_color_srm, (v) => formatNumber(v, 1));
         addProp('Brewing Potential SG', it.brewing_potential_sg, (v) => formatNumber(v, 3));
         addProp('Diastatic Power (Lintner)', it.brewing_diastatic_power_lintner, (v) => formatNumber(v, 1));
-        if (it.fatty_acid_profile && Object.keys(it.fatty_acid_profile).length > 0) {
-          addProp('Fatty Acid Profile', JSON.stringify(it.fatty_acid_profile, null, 2), (v) => `<pre class="mb-0 small">${v}</pre>`);
-        }
-        hasProps = grid.childElementCount > startCount;
+          if (it.fatty_acid_profile && Object.keys(it.fatty_acid_profile).length > 0) {
+            addProp('Fatty Acid Profile', JSON.stringify(it.fatty_acid_profile, null, 2), (v) => `<pre class="mb-0 small">${v}</pre>`);
+          } else {
+            addProp('Fatty Acid Profile', null);
+          }
       }
-      propsDiv.style.display = (isIngredient && hasProps) ? '' : 'none';
+        propsDiv.style.display = isIngredient ? '' : 'none';
     }
 
     if (payload && payload.success) {

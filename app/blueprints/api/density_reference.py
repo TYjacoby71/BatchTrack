@@ -35,7 +35,7 @@ def get_density_options():
             
             categories[cat_name]['items'].append({
                 'name': gi.name,
-                'density_g_per_ml': gi.density_g_per_ml,
+                'density_g_per_ml': gi.density,
                 'aliases': gi.aliases or []
             })
 
@@ -71,7 +71,7 @@ def get_density_reference():
             
             categories[cat_name].append({
                 'name': gi.name,
-                'density_g_per_ml': gi.density_g_per_ml or 0.0,
+                'density_g_per_ml': gi.density or 0.0,
                 'aliases': gi.aliases or [],
                 'notes': None
             })

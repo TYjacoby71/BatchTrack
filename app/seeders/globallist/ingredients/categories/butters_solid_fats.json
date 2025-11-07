@@ -3,11 +3,18 @@
   "category_name": "Butters & Solid Fats",
   "default_density": 0.91,
   "description": "For solid fats at room temperature, including butters and solid oils.",
-  "show_saponification_value": true,
-  "show_iodine_value": true,
-  "show_melting_point": true,
-  "show_shelf_life_months": true,
-  "show_comedogenic_rating": true,
+  "attributes": [
+    "density",
+    "saponification_value",
+    "iodine_value",
+    "melting_point_c",
+    "fatty_acid_profile",
+    "comedogenic_rating",
+    "recommended_usage_rate",
+    "recommended_fragrance_load_pct",
+    "inci_name",
+    "certifications"
+  ],
   "items": [
     {
       "name": "Butter",

@@ -29,7 +29,7 @@ def test_global_link_suggestions_and_link_flow(app, db_session):
     db_session.add(cat)
     db_session.flush()
 
-    gi = GlobalItem(name='Milk', item_type='ingredient', default_unit='ml', density_g_per_ml=1.03, ingredient_category_id=cat.id)
+    gi = GlobalItem(name='Milk', item_type='ingredient', default_unit='ml', density=1.03, ingredient_category_id=cat.id)
     db_session.add(gi)
     db_session.commit()
 
