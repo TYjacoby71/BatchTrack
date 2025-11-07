@@ -19,76 +19,94 @@
     </div>
 
     <!-- Search Bar -->
-    <div class="card mb-4">
-        <div class="card-body">
-            <div class="row">
-                <div class="col-md-8">
-                    <input type="text" 
-                           class="form-control" 
-                           id="searchInput" 
-                           placeholder="Search ingredients or categories..."
-                           autocomplete="off">
-                </div>
-                <div class="col-md-4">
-                    <select class="form-select" id="categoryFilter">
-                        <option value="">All Categories</option>
-                        {% for category_name in categories.keys()|sort %}
-                        <option value="{{ category_name }}">{{ category_name }}</option>
-                        {% endfor %}
-                    </select>
-                </div>
-            </div>
-        </div>
-    </div>
+      <div class="card mb-4">
+          <div class="card-body">
+              <div class="row">
+                  <div class="col-md-8">
+                      <input type="text" 
+                             class="form-control" 
+                             id="searchInput" 
+                             placeholder="Search ingredients or categories..."
+                             autocomplete="off">
+                  </div>
+                  <div class="col-md-4">
+                      <select class="form-select" id="categoryFilter">
+                          <option value="">All Categories</option>
+                          {% for group in category_groups %}
+                          <option value="{{ group.name }}">{{ group.name }}</option>
+                          {% endfor %}
+                      </select>
+                  </div>
+              </div>
+          </div>
+      </div>
 
     <!-- Density Reference Content -->
-    <div id="densityContent">
-        {% for category_name, items in categories.items() %}
-        <div class="card mb-4 category-section" data-category="{{ category_name }}">
-            <div class="card-header">
-                <h4 class="mb-0">
-                    <i class="fas fa-folder text-primary"></i> {{ category_name }}
-                    <span class="badge bg-secondary ms-2">{{ items|length }} items</span>
-                </h4>
-            </div>
-            <div class="card-body">
-                <div class="table-responsive">
-                    <table class="table table-striped table-hover table-bordered">
-                        <thead class="table-dark">
-                            <tr>
-                                <th style="width: 40%; min-width: 200px;">Ingredient</th>
-                                <th style="width: 20%; min-width: 120px; text-align: center;">Density (g/ml)</th>
-                                <th style="width: 40%; min-width: 150px;">Notes</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {% for item in items %}
-                            <tr class="ingredient-row" 
-                                data-name="{{ item.name|lower }}" 
-                                data-category="{{ category_name|lower }}">
-                                <td style="vertical-align: middle; padding: 12px;">
-                                    <strong>{{ item.name }}</strong>
-                                    {% if item.aliases %}
-                                    <br><small class="text-muted">Also known as: {{ item.aliases|join(', ') }}</small>
-                                    {% endif %}
-                                </td>
-                                <td style="vertical-align: middle; text-align: center; padding: 12px;">
-                                    <span class="badge bg-primary fs-6" style="min-width: 60px;">{{ "%.3f"|format(item.density_g_per_ml) }}</span>
-                                </td>
-                                <td style="vertical-align: middle; padding: 12px;">
-                                    <small class="text-muted">
-                                        {% if item.notes %}{{ item.notes }}{% else %}Standard density{% endif %}
-                                    </small>
-                                </td>
-                            </tr>
-                            {% endfor %}
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-        </div>
-        {% endfor %}
-    </div>
+      <div id="densityContent">
+          {% for group in category_groups %}
+          <div class="card mb-4 category-section" data-category="{{ group.name }}">
+              <div class="card-header d-flex justify-content-between align-items-center">
+                  <div>
+                      <h4 class="mb-0">
+                          <i class="fas fa-folder text-primary"></i> {{ group.name }}
+                          <span class="badge bg-secondary ms-2">{{ group.items|length }} items</span>
+                      </h4>
+                      {% if group.description %}
+                      <small class="text-muted">{{ group.description }}</small>
+                      {% endif %}
+                  </div>
+                  {% if group.default_density %}
+                  <span class="badge bg-info text-dark">
+                      Default density: {{ "%.3f"|format(group.default_density) }} g/ml
+                  </span>
+                  {% endif %}
+              </div>
+              <div class="card-body">
+                  <div class="table-responsive">
+                      <table class="table table-striped table-hover table-bordered">
+                          <thead class="table-dark">
+                              <tr>
+                                  <th style="width: 40%; min-width: 200px;">Ingredient</th>
+                                  <th style="width: 20%; min-width: 120px; text-align: center;">Density (g/ml)</th>
+                                  <th style="width: 40%; min-width: 150px;">Notes</th>
+                              </tr>
+                          </thead>
+                          <tbody>
+                              {% for item in group.items %}
+                              <tr class="ingredient-row" 
+                                  data-name="{{ item.name|lower }}" 
+                                  data-category="{{ group.name|lower }}">
+                                  <td style="vertical-align: middle; padding: 12px;">
+                                      <strong>{{ item.name }}</strong>
+                                      {% if item.aliases %}
+                                      <br><small class="text-muted">Also known as: {{ item.aliases|join(', ') }}</small>
+                                      {% endif %}
+                                  </td>
+                                  <td style="vertical-align: middle; text-align: center; padding: 12px;">
+                                      {% if item.density_g_per_ml %}
+                                      <span class="badge bg-primary fs-6" style="min-width: 60px;">{{ "%.3f"|format(item.density_g_per_ml) }}</span>
+                                      {% else %}
+                                      <span class="badge bg-secondary fs-6" style="min-width: 60px;">-</span>
+                                      {% endif %}
+                                  </td>
+                                  <td style="vertical-align: middle; padding: 12px;">
+                                      <small class="text-muted">
+                                          {% if item.metadata and item.metadata.density_notes %}
+                                              {{ item.metadata.density_notes }}
+                                          {% else %}
+                                              Standard density
+                                          {% endif %}
+                                      </small>
+                                  </td>
+                              </tr>
+                              {% endfor %}
+                          </tbody>
+                      </table>
+                  </div>
+              </div>
+          </div>
+          {% endfor %}
+      </div>
 
     <!-- No Results Message -->
     <div id="noResults" class="alert alert-warning" style="display: none;">
@@ -101,17 +119,17 @@
 document.addEventListener('DOMContentLoaded', function() {
     const searchInput = document.getElementById('searchInput');
     const categoryFilter = document.getElementById('categoryFilter');
-    const categorySections = document.querySelectorAll('.category-section');
-    const ingredientRows = document.querySelectorAll('.ingredient-row');
+      const categorySections = document.querySelectorAll('.category-section');
+      const ingredientRows = document.querySelectorAll('.ingredient-row');
     const noResults = document.getElementById('noResults');
 
     function filterContent() {
         const searchTerm = searchInput.value.toLowerCase().trim();
-        const selectedCategory = categoryFilter.value.toLowerCase();
+          const selectedCategory = categoryFilter.value.toLowerCase();
         let hasVisibleResults = false;
 
         categorySections.forEach(section => {
-            const categoryName = section.dataset.category.toLowerCase();
+              const categoryName = section.dataset.category.toLowerCase();
             let categoryHasVisibleItems = false;
 
             // Check if category matches filter

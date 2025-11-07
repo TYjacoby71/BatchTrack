@@ -5,6 +5,7 @@ from app.utils.permissions import require_permission, get_effective_organization
 from app.services.combined_inventory_alerts import CombinedInventoryAlertService
 from app.services.dashboard_alerts import DashboardAlertService
 from app.blueprints.expiration.services import ExpirationService
+from app.services.density_assignment_service import DensityAssignmentService
 import logging
 
 logger = logging.getLogger(__name__)
@@ -172,6 +173,14 @@ def api_dashboard_alerts():
         return jsonify(alert_data)
     except Exception as e:
         return jsonify({'error': str(e)}), 500
+
+
+@app_routes_bp.route('/density-reference')
+@login_required
+def density_reference():
+    """Render density reference view grouped by ingredient category."""
+    category_groups = DensityAssignmentService.build_category_density_payload()
+    return render_template('density_reference.html', category_groups=category_groups)
 
 
 

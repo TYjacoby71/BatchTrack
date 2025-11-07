@@ -1,7 +1,7 @@
 
 import json
 import os
-from typing import Optional, Dict, List, Tuple
+from typing import Optional, Dict, List, Tuple, Any
 from difflib import SequenceMatcher
 from flask import current_app
 from ..models import InventoryItem, IngredientCategory, GlobalItem
@@ -27,6 +27,78 @@ class DensityAssignmentService:
         except Exception as e:
             current_app.logger.error(f"Failed to load density reference from DB: {str(e)}")
             return {'common_densities': []}
+
+    @staticmethod
+    def build_category_density_payload(include_uncategorized: bool = True) -> List[Dict[str, Any]]:
+        """Build density reference payload grouped by ingredient category."""
+        payload: List[Dict[str, Any]] = []
+
+        categories = (
+            IngredientCategory.query.filter(
+                IngredientCategory.is_global_category.is_(True),
+                IngredientCategory.organization_id.is_(None)
+            )
+            .order_by(IngredientCategory.name.asc())
+            .all()
+        )
+
+        for category in categories:
+            items = (
+                GlobalItem.query.filter(
+                    GlobalItem.item_type == 'ingredient',
+                    GlobalItem.ingredient_category_id == category.id
+                )
+                .order_by(GlobalItem.name.asc())
+                .all()
+            )
+
+            payload.append({
+                'name': category.name,
+                'default_density': category.default_density,
+                'description': category.description,
+                'items': [
+                    {
+                        'id': gi.id,
+                        'name': gi.name,
+                        'density_g_per_ml': gi.density,
+                        'aliases': gi.aliases or [],
+                        'ingredient_category_id': gi.ingredient_category_id,
+                        'metadata': gi.metadata_json or {}
+                    }
+                    for gi in items
+                    if not getattr(gi, 'is_archived', False)
+                ]
+            })
+
+        if include_uncategorized:
+            uncategorized_items = (
+                GlobalItem.query.filter(
+                    GlobalItem.item_type == 'ingredient',
+                    GlobalItem.ingredient_category_id.is_(None)
+                )
+                .order_by(GlobalItem.name.asc())
+                .all()
+            )
+            filtered = [gi for gi in uncategorized_items if not getattr(gi, 'is_archived', False)]
+            if filtered:
+                payload.append({
+                    'name': 'Uncategorized Ingredients',
+                    'default_density': None,
+                    'description': 'Global ingredients without an assigned category.',
+                    'items': [
+                        {
+                            'id': gi.id,
+                            'name': gi.name,
+                            'density_g_per_ml': gi.density,
+                            'aliases': gi.aliases or [],
+                            'ingredient_category_id': gi.ingredient_category_id,
+                            'metadata': gi.metadata_json or {}
+                        }
+                        for gi in filtered
+                    ]
+                })
+
+        return payload
     
     @staticmethod
     def _similarity_score(name1: str, name2: str) -> float:

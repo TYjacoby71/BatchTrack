@@ -2,14 +2,14 @@
 # Deprecated & Scrapped Features Log
 
 ## Density Reference System
-- Status: Removed
+- Status: Replaced
 - Original Location: `/data/density_reference.json`
-- Related Files:
+- Related Files (legacy):
   - `templates/components/modals/density_reference_modal.html`
-  - `blueprints/api/routes.py` (density reference endpoint)
-  - `static/js/main.js` (density reference functionality)
-- Purpose: Provided density reference data for ingredient conversions
-- Reason for Removal: Simplified to use category-based density system instead
+  - `blueprints/api/density_reference.py`
+- Replacement: Density data now sourced directly from `IngredientCategory` + `GlobalItem` records and exposed via `/api/density-reference/options` (JSON) and `/density-reference` (UI).
+- Purpose: Provide density reference data for ingredient conversions
+- Reason for Change: Consolidated around ingredient categories; removed bespoke blueprint in favor of unified API
 
 ## Batch Plan Legacy Component
 - Status: Deprecated
