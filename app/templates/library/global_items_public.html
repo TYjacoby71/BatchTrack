@@ -165,6 +165,34 @@ function clearFilters() {
   window.location.href = window.location.pathname;
 }
 
+function formatShelfLifeNumber(value) {
+  const rounded = Math.round(value * 10) / 10;
+  if (Number.isFinite(rounded) && Math.abs(rounded - Math.round(rounded)) < 0.05) {
+    return Math.round(rounded).toString();
+  }
+  return Number.isFinite(rounded) ? rounded.toString() : '';
+}
+
+function formatShelfLifeDays(days) {
+  const numeric = Number(days);
+  if (!Number.isFinite(numeric) || numeric <= 0) {
+    return '–';
+  }
+  if (numeric < 60) {
+    return `${numeric} day${numeric === 1 ? '' : 's'}`;
+  }
+  if (numeric < 730) {
+    const months = numeric / 30.4375;
+    const display = formatShelfLifeNumber(months);
+    const unit = display === '1' ? 'month' : 'months';
+    return `${display} ${unit} (${numeric} days)`;
+  }
+  const years = numeric / 365;
+  const display = formatShelfLifeNumber(years);
+  const unit = display === '1' ? 'year' : 'years';
+  return `${display} ${unit} (${numeric} days)`;
+}
+
 document.addEventListener('DOMContentLoaded', function(){
   const typeFilter = document.getElementById('typeFilter');
   const categoryDiv = document.getElementById('categoryFilterDiv');
@@ -293,7 +321,7 @@ async function openItemDetails(id){
             metaParts.push(`<div><strong>Certifications:</strong> ${it.certifications.join(', ')}</div>`);
           }
           if (it.recommended_shelf_life_days) {
-            metaParts.push(`<div><strong>Recommended Shelf Life (days):</strong> ${it.recommended_shelf_life_days}</div>`);
+    metaParts.push(`<div><strong>Recommended Shelf Life:</strong> ${formatShelfLifeDays(it.recommended_shelf_life_days)}</div>`);
           }
           metaWrapper.innerHTML = metaParts.join('') || '';
       }
