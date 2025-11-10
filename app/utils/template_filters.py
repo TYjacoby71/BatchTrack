@@ -157,7 +157,7 @@ def register_template_filters(app):
         localized = TimezoneUtils.to_user_timezone(value, user_tz)
         return localized.strftime("%Y-%m-%d %H:%M:%S %Z")
 
-      @app.template_filter("humanize_days")
+    @app.template_filter("humanize_days")
     def humanize_days_filter(value, include_days: bool = True) -> str:
         return humanize_duration_days(value, include_days=include_days)
 
