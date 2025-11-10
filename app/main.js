@@ -35,5 +35,8 @@ async function cachedFetch(url, options = {}) {
 }
 
 // Global flag to prevent multiple simultaneous server-time requests
-document.addEventListener('DOMContentLoaded', function() {000);
+let serverTimeRequestInProgress = false;
+
+document.addEventListener('DOMContentLoaded', function() {
+    console.log('Main.js loaded successfully');
 });
