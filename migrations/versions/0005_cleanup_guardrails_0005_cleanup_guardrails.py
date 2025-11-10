@@ -104,20 +104,8 @@ def downgrade():
 
     bind = op.get_bind()
 
-    # Restore ingredient category toggles (safe add if not exists)
-    ingredient_category_columns = [
-        ('show_comedogenic_rating', sa.Column('show_comedogenic_rating', sa.Boolean(), nullable=True, server_default=sa.text('0'))),
-        ('show_shelf_life_days', sa.Column('show_shelf_life_days', sa.Boolean(), nullable=True, server_default=sa.text('0'))),
-        ('show_moisture_content', sa.Column('show_moisture_content', sa.Boolean(), nullable=True, server_default=sa.text('0'))),
-        ('show_ph_value', sa.Column('show_ph_value', sa.Boolean(), nullable=True, server_default=sa.text('0'))),
-        ('show_flash_point', sa.Column('show_flash_point', sa.Boolean(), nullable=True, server_default=sa.text('0'))),
-        ('show_melting_point', sa.Column('show_melting_point', sa.Boolean(), nullable=True, server_default=sa.text('0'))),
-        ('show_iodine_value', sa.Column('show_iodine_value', sa.Boolean(), nullable=True, server_default=sa.text('0'))),
-        ('show_saponification_value', sa.Column('show_saponification_value', sa.Boolean(), nullable=True, server_default=sa.text('0')))
-    ]
-    
-    for column_name, column_def in ingredient_category_columns:
-        safe_add_column('ingredient_category', column_def, verbose=False)
+    # Note: ingredient_category show_* columns were permanently removed
+    # and are not restored in downgrade as they no longer exist in models
 
     # Remove inventory item extensions (safe drop if exists)
     columns_to_drop = [
