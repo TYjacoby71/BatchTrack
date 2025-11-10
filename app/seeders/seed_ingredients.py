@@ -41,15 +41,7 @@ def seed_ingredients_from_files(selected_files):
                 default_density=category_data.get('default_density'),
                 is_global_category=True,
                 organization_id=None,
-                is_active=True,
-                show_saponification_value=category_data.get('show_saponification_value', False),
-                show_iodine_value=category_data.get('show_iodine_value', False),
-                show_melting_point=category_data.get('show_melting_point', False),
-                show_flash_point=category_data.get('show_flash_point', False),
-                show_ph_value=category_data.get('show_ph_value', False),
-                show_moisture_content=category_data.get('show_moisture_content', False),
-                show_shelf_life_days=category_data.get('show_shelf_life_days', False),
-                show_comedogenic_rating=category_data.get('show_comedogenic_rating', False)
+                is_active=True
             )
             db.session.add(new_cat)
             db.session.flush()
@@ -70,22 +62,47 @@ def seed_ingredients_from_files(selected_files):
             if existing_item:
                 continue
                 
+            density_value = item_data.get('density')
+            if density_value is None:
+                density_value = item_data.get('density_g_per_ml')
+
+            aliases = item_data.get('aliases')
+            if aliases is None:
+                aliases = item_data.get('aka_names', item_data.get('aka', []))
+
+            shelf_life = item_data.get('recommended_shelf_life_days')
+            if shelf_life is None:
+                shelf_life = item_data.get('shelf_life_days')
+
             new_item = GlobalItem(
                 name=name,
                 item_type='ingredient',
-                density=item_data.get('density_g_per_ml'),
-                aka_names=item_data.get('aka_names', item_data.get('aka', [])),
+                density=density_value,
+                aliases=aliases,
                 default_unit=item_data.get('default_unit'),
                 ingredient_category_id=category.id,
                 default_is_perishable=item_data.get('perishable', False),
-                recommended_shelf_life_days=item_data.get('shelf_life_days'),
+                recommended_shelf_life_days=shelf_life,
+                recommended_usage_rate=item_data.get('recommended_usage_rate'),
+                recommended_fragrance_load_pct=item_data.get('recommended_fragrance_load_pct'),
+                is_active_ingredient=bool(
+                    item_data.get('is_active_ingredient',
+                                  item_data.get('is_active', False))
+                ),
+                inci_name=item_data.get('inci_name'),
+                certifications=item_data.get('certifications'),
                 saponification_value=item_data.get('saponification_value'),
                 iodine_value=item_data.get('iodine_value'),
                 melting_point_c=item_data.get('melting_point_c'),
                 flash_point_c=item_data.get('flash_point_c'),
                 ph_value=item_data.get('ph_value'),
                 moisture_content_percent=item_data.get('moisture_content_percent'),
-                comedogenic_rating=item_data.get('comedogenic_rating')
+                comedogenic_rating=item_data.get('comedogenic_rating'),
+                fatty_acid_profile=item_data.get('fatty_acid_profile'),
+                protein_content_pct=item_data.get('protein_content_pct'),
+                brewing_color_srm=item_data.get('brewing_color_srm'),
+                brewing_potential_sg=item_data.get('brewing_potential_sg'),
+                brewing_diastatic_power_lintner=item_data.get('brewing_diastatic_power_lintner'),
             )
             
             db.session.add(new_item)

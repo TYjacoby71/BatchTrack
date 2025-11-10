@@ -58,15 +58,15 @@
 
 <table class="table table-striped">
   <thead>
-    <tr>
-      <th>Name</th>
-      <th>Type</th>
-      <th>Category</th>
-      <th>Density</th>
-      <th>Capacity</th>
-      <th>Perishable</th>
-      <th></th>
-    </tr>
+      <tr>
+        <th>Name</th>
+        <th>Type</th>
+        <th>Category</th>
+        <th>Density (g/ml)</th>
+        <th>Capacity</th>
+        <th>Perishable</th>
+        <th></th>
+      </tr>
   </thead>
   <tbody>
   {% for gi in items %}
@@ -78,7 +78,13 @@
         <span class="badge bg-secondary">{{ gi.item_type }}</span>
       </td>
       <td>{{ gi.ingredient_category.name if gi.ingredient_category else '-' }}</td>
-      <td>{{ gi.density or '-' }}</td>
+        <td>
+          {% if gi.density is not none %}
+            {{ '%.3f'|format(gi.density) }}
+          {% else %}
+            -
+          {% endif %}
+        </td>
       <td>{{ gi.capacity or '-' }} {{ gi.capacity_unit or '' }}</td>
       <td>{{ 'Yes' if gi.default_is_perishable else 'No' }}</td>
       <td>
@@ -410,7 +416,7 @@ async function openItemDetails(id){
       document.getElementById('giType').textContent = it.item_type || '';
       document.getElementById('giCategory').textContent = it.ingredient_category_name || '';
       document.getElementById('giUnit').textContent = it.default_unit || '';
-      document.getElementById('giDensity').textContent = (it.density != null) ? Number(it.density).toFixed(3) : '';
+        document.getElementById('giDensity').textContent = (it.density != null) ? Number(it.density).toFixed(3) : '';
 
       // Container meta
       const isContainer = it.item_type === 'container' || it.item_type === 'packaging';
@@ -425,30 +431,43 @@ async function openItemDetails(id){
         metaDiv.style.display = 'none';
       }
 
-      // Ingredient property visibility
       const propsDiv = document.getElementById('giIngredientStats');
       const grid = document.getElementById('giPropsGrid');
       grid.innerHTML = '';
-      const vis = payload.category_visibility || {};
-      const addProp = (label, value, show) => {
-        if (!show) return;
-        const v = (value == null || value === '') ? '-' : value;
-        const col = document.createElement('div');
-        col.innerHTML = `<div><strong>${label}:</strong> ${v}</div>`;
-        grid.appendChild(col);
+      const formatNumber = (value, decimals) => {
+        const num = Number(value);
+        return Number.isFinite(num) ? num.toFixed(decimals) : value;
       };
-      const isIngredient = it.item_type === 'ingredient';
-      propsDiv.style.display = isIngredient ? '' : 'none';
-      if (isIngredient) {
-        addProp('Saponification', it.saponification_value, vis.show_saponification_value);
-        addProp('Iodine', it.iodine_value, vis.show_iodine_value);
-        addProp('Melting Point (°C)', it.melting_point_c, vis.show_melting_point);
-        addProp('Flash Point (°C)', it.flash_point_c, vis.show_flash_point);
-        addProp('pH', it.ph_value, vis.show_ph_value);
-        addProp('Moisture %', it.moisture_content_percent, vis.show_moisture_content);
-        addProp('Shelf Life (months)', it.shelf_life_months, vis.show_shelf_life_months);
-        addProp('Comedogenic', it.comedogenic_rating, vis.show_comedogenic_rating);
+        const addProp = (label, value, formatter) => {
+          const hasValue = !(value === null || value === undefined || value === '');
+          const formatted = hasValue ? (formatter ? formatter(value) : value) : '-';
+          const col = document.createElement('div');
+          col.innerHTML = `<div><strong>${label}:</strong> ${formatted}</div>`;
+          grid.appendChild(col);
+        };
+        const isIngredient = it.item_type === 'ingredient';
+        if (isIngredient) {
+        addProp('Saponification', it.saponification_value);
+        addProp('Iodine', it.iodine_value);
+        addProp('Melting Point (°C)', it.melting_point_c);
+        addProp('Flash Point (°C)', it.flash_point_c);
+        addProp('pH', it.ph_value);
+        addProp('Moisture %', it.moisture_content_percent);
+        addProp('Comedogenic', it.comedogenic_rating);
+        addProp('Recommended Usage', it.recommended_usage_rate);
+        addProp('Fragrance Load %', it.recommended_fragrance_load_pct);
+        addProp('INCI', it.inci_name);
+        addProp('Protein %', it.protein_content_pct, (v) => formatNumber(v, 2));
+        addProp('Brewing SRM', it.brewing_color_srm, (v) => formatNumber(v, 1));
+        addProp('Brewing Potential SG', it.brewing_potential_sg, (v) => formatNumber(v, 3));
+        addProp('Diastatic Power (Lintner)', it.brewing_diastatic_power_lintner, (v) => formatNumber(v, 1));
+          if (it.fatty_acid_profile && Object.keys(it.fatty_acid_profile).length > 0) {
+            addProp('Fatty Acid Profile', JSON.stringify(it.fatty_acid_profile, null, 2), (v) => `<pre class="mb-0 small">${v}</pre>`);
+          } else {
+            addProp('Fatty Acid Profile', null);
+          }
       }
+        propsDiv.style.display = isIngredient ? '' : 'none';
     }
 
     if (payload && payload.success) {

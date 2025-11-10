@@ -1,98 +1,79 @@
-
 {
-  "category_name": "Liquids (Aqueous)",
+  "category_name": "Waters (Purified & Distilled)",
   "default_density": 1.0,
-  "description": "For water-based liquids and hydrosols.",
-  "show_ph_value": true,
-  "show_moisture_content": true,
-  "show_shelf_life_months": true,
+  "description": "Highly purified water grades used as primary solvents in formulations.",
+  "attributes": [
+    "ph_value",
+    "conductivity_uS_cm",
+    "recommended_usage_rate",
+    "recommended_shelf_life_days",
+    "certifications",
+    "is_active_ingredient"
+  ],
   "items": [
     {
-      "name": "Water",
-      "density_g_per_ml": 1.0,
-      "aka_names": ["distilled water", "pure water", "H2O"],
+      "name": "Distilled Water",
+      "aliases": [
+        "purified water"
+      ],
+      "density": 1.0,
       "default_unit": "milliliter",
       "ph_value": 7.0,
-      "shelf_life_months": 60
+      "conductivity_uS_cm": "< 10",
+      "recommended_usage_rate": "Use 10-100% as aqueous phase",
+      "recommended_shelf_life_days": 1095,
+      "certifications": [
+        "USP Grade"
+      ],
+      "is_active_ingredient": false
     },
     {
-      "name": "Whole Milk",
-      "density_g_per_ml": 1.03,
-      "aka_names": ["milk", "cow milk", "dairy milk"],
+      "name": "Deionized Water",
+      "aliases": [
+        "DI water"
+      ],
+      "density": 1.0,
       "default_unit": "milliliter",
-      "ph_value": 6.7,
-      "shelf_life_months": 1,
-      "moisture_content_percent": 87
+      "ph_value": "6.0-7.0",
+      "conductivity_uS_cm": "< 1",
+      "recommended_usage_rate": "Use 10-100% as solvent for actives",
+      "recommended_shelf_life_days": 730,
+      "certifications": [
+        "Laboratory Grade"
+      ],
+      "is_active_ingredient": false
     },
     {
-      "name": "2% Milk",
-      "density_g_per_ml": 1.02,
-      "aka_names": ["reduced fat milk", "low fat milk"],
+      "name": "Reverse Osmosis (RO) Water",
+      "aliases": [
+        "filtered water"
+      ],
+      "density": 1.0,
       "default_unit": "milliliter",
-      "ph_value": 6.7,
-      "shelf_life_months": 1,
-      "moisture_content_percent": 89
+      "ph_value": "6.5-7.5",
+      "conductivity_uS_cm": "< 30",
+      "recommended_usage_rate": "Use 10-100% in base formulations",
+      "recommended_shelf_life_days": 540,
+      "certifications": [
+        "NSF Certified"
+      ],
+      "is_active_ingredient": false
     },
     {
-      "name": "Skim Milk",
-      "density_g_per_ml": 1.035,
-      "aka_names": ["fat free milk", "nonfat milk"],
+      "name": "Ultra-Pure Water (Type I)",
+      "aliases": [
+        "Milli-Q water"
+      ],
+      "density": 1.0,
       "default_unit": "milliliter",
-      "ph_value": 6.7,
-      "shelf_life_months": 1,
-      "moisture_content_percent": 91
-    },
-    {
-      "name": "Heavy Cream",
-      "density_g_per_ml": 0.994,
-      "aka_names": ["heavy whipping cream", "double cream"],
-      "default_unit": "milliliter",
-      "ph_value": 6.5,
-      "shelf_life_months": 1,
-      "moisture_content_percent": 58
-    },
-    {
-      "name": "Light Cream",
-      "density_g_per_ml": 1.012,
-      "aka_names": ["coffee cream", "table cream"],
-      "default_unit": "milliliter",
-      "ph_value": 6.6,
-      "shelf_life_months": 1,
-      "moisture_content_percent": 73
-    },
-    {
-      "name": "Half and Half",
-      "density_g_per_ml": 1.025,
-      "aka_names": ["half & half", "cream"],
-      "default_unit": "milliliter",
-      "ph_value": 6.6,
-      "shelf_life_months": 1,
-      "moisture_content_percent": 80
-    },
-    {
-      "name": "Witch Hazel",
-      "density_g_per_ml": 0.98,
-      "aka_names": ["hamamelis water"],
-      "default_unit": "milliliter",
-      "ph_value": 4.2,
-      "shelf_life_months": 24
-    },
-    {
-      "name": "Rose Water",
-      "density_g_per_ml": 1.0,
-      "aka_names": ["rose hydrosol"],
-      "default_unit": "milliliter",
-      "ph_value": 5.5,
-      "shelf_life_months": 12
-    },
-    {
-      "name": "Aloe Vera Gel",
-      "density_g_per_ml": 1.02,
-      "aka_names": ["aloe gel"],
-      "default_unit": "milliliter",
-      "ph_value": 4.5,
-      "shelf_life_months": 6,
-      "moisture_content_percent": 99
+      "ph_value": "6.5-7.0",
+      "conductivity_uS_cm": "< 0.1",
+      "recommended_usage_rate": "Use 50-100% for sensitive actives and peptides",
+      "recommended_shelf_life_days": 365,
+      "certifications": [
+        "ASTM Type I"
+      ],
+      "is_active_ingredient": false
     }
   ]
 }

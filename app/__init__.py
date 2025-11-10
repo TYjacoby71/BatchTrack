@@ -14,7 +14,6 @@ from .utils.template_filters import register_template_filters
 from .logging_config import configure_logging
 from .blueprints.api.drawer_actions import drawer_actions_bp
 from .blueprints.api.routes import api_bp
-from .blueprints.api.density_reference import density_reference_bp
 
 logger = logging.getLogger(__name__)
 

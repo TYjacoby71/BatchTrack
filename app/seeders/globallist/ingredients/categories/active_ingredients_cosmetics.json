@@ -1,10 +1,98 @@
-
 {
-  "category_name": "Active Ingredients (Cosmetics)",
-  "default_density": 1.15,
-  "description": "For advanced cosmetic makers, specialized active ingredients (e.g., Retinoids, Peptides, Niacinamide).",
-  "show_ph_value": true,
-  "show_comedogenic_rating": true,
-  "show_shelf_life_months": true,
-  "items": []
+  "category_name": "Vitamins & Functional Derivatives",
+  "default_density": 0.95,
+  "description": "Bioactive vitamins, coenzymes, and functional derivatives used for targeted skin and hair benefits.",
+  "attributes": [
+    "is_active_ingredient",
+    "recommended_usage_rate",
+    "ph_value",
+    "recommended_shelf_life_days",
+    "inci_name",
+    "certifications"
+  ],
+  "items": [
+    {
+      "name": "Niacinamide",
+      "aliases": [
+        "vitamin B3",
+        "nicotinamide"
+      ],
+      "density": 0.82,
+      "default_unit": "gram",
+      "recommended_usage_rate": "2-5% in leave-on emulsions and serums",
+      "ph_value": "5.0-7.0",
+      "recommended_shelf_life_days": 730,
+      "inci_name": "Niacinamide",
+      "certifications": [
+        "USP Grade"
+      ],
+      "is_active_ingredient": true
+    },
+    {
+      "name": "Retinol (Stabilized)",
+      "aliases": [
+        "vitamin A1"
+      ],
+      "density": 0.95,
+      "default_unit": "gram",
+      "recommended_usage_rate": "0.1-1% in night treatments",
+      "ph_value": "5.0-6.5",
+      "recommended_shelf_life_days": 365,
+      "inci_name": "Retinol",
+      "certifications": [
+        "Cosmetic Grade"
+      ],
+      "is_active_ingredient": true
+    },
+    {
+      "name": "Ascorbic Acid (L)",
+      "aliases": [
+        "vitamin C",
+        "l-ascorbic acid"
+      ],
+      "density": 1.65,
+      "default_unit": "gram",
+      "recommended_usage_rate": "5-20% in anhydrous or low pH serums",
+      "ph_value": "2.0-3.5",
+      "recommended_shelf_life_days": 365,
+      "inci_name": "Ascorbic Acid",
+      "certifications": [
+        "USP Grade"
+      ],
+      "is_active_ingredient": true
+    },
+    {
+      "name": "DL-Panthenol",
+      "aliases": [
+        "provitamin B5",
+        "panthenol"
+      ],
+      "density": 1.2,
+      "default_unit": "gram",
+      "recommended_usage_rate": "0.5-5% in leave-on or rinse-off products",
+      "ph_value": "4.0-7.0",
+      "recommended_shelf_life_days": 720,
+      "inci_name": "Panthenol",
+      "certifications": [
+        "COSMOS Approved"
+      ],
+      "is_active_ingredient": true
+    },
+    {
+      "name": "Alpha Arbutin",
+      "aliases": [
+        "alpha-arbutoside"
+      ],
+      "density": 1.28,
+      "default_unit": "gram",
+      "recommended_usage_rate": "1-2% in brightening serums",
+      "ph_value": "4.5-6.5",
+      "recommended_shelf_life_days": 540,
+      "inci_name": "Alpha-Arbutin",
+      "certifications": [
+        "REACH Registered"
+      ],
+      "is_active_ingredient": true
+    }
+  ]
 }
