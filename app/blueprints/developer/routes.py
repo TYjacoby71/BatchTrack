@@ -1223,16 +1223,16 @@ def create_global_item():
                     return redirect(url_for('developer.create_global_item'))
 
               new_item.capacity_unit = request.form.get('capacity_unit', '').strip() or None
-              # Container attributes (optional)
-              try:
-                  new_item.container_material = (request.form.get('container_material') or '').strip() or None
-                  new_item.container_type = (request.form.get('container_type') or '').strip() or None
-                  new_item.container_style = (request.form.get('container_style') or '').strip() or None
-                  new_item.container_color = (request.form.get('container_color') or '').strip() or None
-              except Exception:
-                  pass
-              new_item.default_is_perishable = request.form.get('default_is_perishable') == 'on'
-              new_item.is_active_ingredient = request.form.get('is_active_ingredient') == 'on'
+            # Container attributes (optional)
+            try:
+                new_item.container_material = (request.form.get('container_material') or '').strip() or None
+                new_item.container_type = (request.form.get('container_type') or '').strip() or None
+                new_item.container_style = (request.form.get('container_style') or '').strip() or None
+                new_item.container_color = (request.form.get('container_color') or '').strip() or None
+            except Exception:
+                pass
+            new_item.default_is_perishable = request.form.get('default_is_perishable') == 'on'
+            new_item.is_active_ingredient = request.form.get('is_active_ingredient') == 'on'
 
             shelf_life = request.form.get('recommended_shelf_life_days')
             if shelf_life:
