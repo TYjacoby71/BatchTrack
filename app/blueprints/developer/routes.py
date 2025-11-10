@@ -1222,7 +1222,7 @@ def create_global_item():
                     flash('Invalid capacity value', 'error')
                     return redirect(url_for('developer.create_global_item'))
 
-              new_item.capacity_unit = request.form.get('capacity_unit', '').strip() or None
+            new_item.capacity_unit = request.form.get('capacity_unit', '').strip() or None
             # Container attributes (optional)
             try:
                 new_item.container_material = (request.form.get('container_material') or '').strip() or None
