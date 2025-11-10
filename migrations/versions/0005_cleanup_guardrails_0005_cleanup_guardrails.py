@@ -115,17 +115,23 @@ def downgrade():
         batch_op.add_column(sa.Column('show_iodine_value', sa.Boolean(), nullable=True, server_default=sa.text('0')))
         batch_op.add_column(sa.Column('show_saponification_value', sa.Boolean(), nullable=True, server_default=sa.text('0')))
 
-    # Remove inventory item extensions
-    with op.batch_alter_table('inventory_item') as batch_op:
-        batch_op.drop_column('certifications')
-        batch_op.drop_column('fatty_acid_profile')
-        batch_op.drop_column('brewing_diastatic_power_lintner')
-        batch_op.drop_column('brewing_potential_sg')
-        batch_op.drop_column('brewing_color_srm')
-        batch_op.drop_column('protein_content_pct')
-        batch_op.drop_column('inci_name')
-        batch_op.drop_column('recommended_fragrance_load_pct')
-        batch_op.drop_column('recommended_usage_rate')
+    # Remove inventory item extensions (safe drop if exists)
+    from migrations.postgres_helpers import safe_drop_column
+    
+    columns_to_drop = [
+        'certifications',
+        'fatty_acid_profile', 
+        'brewing_diastatic_power_lintner',
+        'brewing_potential_sg',
+        'brewing_color_srm',
+        'protein_content_pct',
+        'inci_name',
+        'recommended_fragrance_load_pct',
+        'recommended_usage_rate'
+    ]
+    
+    for column_name in columns_to_drop:
+        safe_drop_column('inventory_item', column_name)
 
     # Drop new index prior to renaming column back
     try:
@@ -133,18 +139,26 @@ def downgrade():
     except Exception:
         pass
 
+    # Remove global_item extensions (safe drop if exists)
+    global_item_columns_to_drop = [
+        'brewing_diastatic_power_lintner',
+        'brewing_potential_sg', 
+        'brewing_color_srm',
+        'protein_content_pct',
+        'fatty_acid_profile',
+        'certifications',
+        'inci_name',
+        'recommended_fragrance_load_pct',
+        'recommended_usage_rate',
+        'is_active_ingredient'
+    ]
+    
+    for column_name in global_item_columns_to_drop:
+        safe_drop_column('global_item', column_name)
+        
+    # Rename column (still needs batch alter)
     with op.batch_alter_table('global_item') as batch_op:
-        batch_op.drop_column('brewing_diastatic_power_lintner')
-        batch_op.drop_column('brewing_potential_sg')
-        batch_op.drop_column('brewing_color_srm')
-        batch_op.drop_column('protein_content_pct')
-        batch_op.drop_column('fatty_acid_profile')
-        batch_op.drop_column('certifications')
-        batch_op.drop_column('inci_name')
-        batch_op.drop_column('recommended_fragrance_load_pct')
-        batch_op.drop_column('recommended_usage_rate')
         batch_op.alter_column('aliases', new_column_name='aka_names')
-        batch_op.drop_column('is_active_ingredient')
 
     # Drop PostgreSQL-specific indexes created in upgrade
     if is_postgresql():
