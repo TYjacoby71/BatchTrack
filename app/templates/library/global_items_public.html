@@ -70,7 +70,7 @@
       {% for gi in items %}
       <tr>
         <td>
-          <a href="#" class="gi-detail-link" data-gi-id="{{ gi.id }}">{{ gi.name }}</a>
+          <a href="#" class="text-decoration-none js-open-global-item-stats" data-global-item-id="{{ gi.id }}">{{ gi.name }}</a>
         </td>
         <td><span class="badge bg-secondary">{{ gi.item_type }}</span></td>
         <td>{{ gi.ingredient_category.name if gi.ingredient_category else '-' }}</td>
@@ -95,45 +95,9 @@
   </table>
 </div>
 
-<!-- Item Detail Offcanvas -->
-<div class="offcanvas offcanvas-end" tabindex="-1" id="globalItemDetail" aria-labelledby="globalItemDetailLabel">
-  <div class="offcanvas-header">
-    <h5 id="globalItemDetailLabel">Global Item</h5>
-    <button type="button" class="btn-close" data-bs-dismiss="offcanvas"></button>
-  </div>
-  <div class="offcanvas-body">
-    <div id="giDetailLoading" class="text-center">Loading...</div>
-    <div id="giDetailContent" style="display:none;">
-      <div class="mb-2"><strong>Name:</strong> <span id="giName"></span></div>
-      <div class="mb-2"><strong>Type:</strong> <span id="giType"></span></div>
-      <div class="mb-2"><strong>Category:</strong> <span id="giCategory"></span></div>
-      <div class="mb-2"><strong>Default Unit:</strong> <span id="giUnit"></span></div>
-      <div class="mb-2"><strong>Density:</strong> <span id="giDensity"></span></div>
-      <div id="giContainerMeta" style="display:none;">
-        <div class="mb-2"><strong>Material:</strong> <span id="giMaterial"></span></div>
-        <div class="mb-2"><strong>Type/Style:</strong> <span id="giTypeStyle"></span></div>
-        <div class="mb-2"><strong>Color:</strong> <span id="giColor"></span></div>
-      </div>
-      <hr>
-      <div id="giIngredientStats" style="display:none;">
-        <h6>Ingredient Properties</h6>
-        <div class="row row-cols-2 g-2" id="giPropsGrid"></div>
-      </div>
-      <hr>
-      <h6>Community Cost Snapshot</h6>
-      <div id="giCostStats">No cost data yet.</div>
-      <small class="text-muted">Based on user restock unit costs (outliers excluded). High/Low show extremes.</small>
-      <hr>
-      <div id="giMeta"></div>
-    </div>
-  </div>
-  <div class="offcanvas-footer p-3 border-top">
-    <div class="d-flex justify-content-end gap-2">
-      <a id="giDevLink" href="#" class="btn btn-sm btn-outline-secondary" target="_blank" rel="noopener" style="display:none;">Developer Details</a>
-      <a id="giStoreLink" href="#" class="btn btn-sm btn-primary disabled" tabindex="-1" aria-disabled="true" style="display:none;">Store (coming soon)</a>
-    </div>
-  </div>
-</div>
+{% with show_dev_link=is_developer() %}
+  {% include 'components/drawer/global_item_stats_offcanvas.html' %}
+{% endwith %}
 
 {% endblock %}
 
@@ -209,183 +173,19 @@ document.addEventListener('DOMContentLoaded', function(){
   };
   typeFilter.addEventListener('change', updateCategoryVisibility);
   updateCategoryVisibility();
-  // Delegate clicks for detail links to avoid inline JS
-  document.querySelectorAll('.gi-detail-link').forEach(function(el){
-    el.addEventListener('click', function(e){
-      e.preventDefault();
-      const id = this.getAttribute('data-gi-id');
-      if (id) openItemDetails(id);
-    });
-  });
-  // If developer, show the Developer Details link once we know the item id
 });
+</script>
+<script type="module">
+  import { configureGlobalItemStats, bindGlobalItemStatTriggers } from "{{ url_for('static', filename='js/global_item_stats.js') }}";
 
-// If developer, show the Developer Details link once we know the item ID
-async function openItemDetails(id){
-  try {
-    const offcanvasEl = document.getElementById('globalItemDetail');
-    const oc = new bootstrap.Offcanvas(offcanvasEl);
-    const loadingEl = document.getElementById('giDetailLoading');
-    const contentEl = document.getElementById('giDetailContent');
+  const developerLinkBase = {% if is_developer() %}"{{ url_for('developer.global_item_detail', item_id=0)[:-1] }}"{% else %}null{% endif %};
 
-    loadingEl.style.display = '';
-    contentEl.style.display = 'none';
-    oc.show();
+  configureGlobalItemStats({
+    developerLinkBase
+  });
 
-    // Fetch item + stats
-    console.log('Fetching stats for global item:', id);
-    const statsRes = await fetch(`/global-items/${id}/stats`);
-    console.log('Response status:', statsRes.status);
-
-    if (!statsRes.ok) {
-      const errorText = await statsRes.text();
-      console.error('Stats fetch failed:', statsRes.status, statsRes.statusText, errorText);
-      throw new Error(`HTTP error! status: ${statsRes.status} - ${errorText}`);
-    }
-
-    const payload = await statsRes.json();
-    console.log('Stats payload received:', payload);
-
-    if (!payload.success) {
-      console.error('API returned error:', payload.error);
-      throw new Error(`API error: ${payload.error}`);
-    }
-
-    if (payload && payload.success && payload.item) {
-        const it = payload.item;
-        document.getElementById('giName').textContent = it.name || `#${id}`;
-        document.getElementById('giType').textContent = it.item_type || '';
-        document.getElementById('giCategory').textContent = it.ingredient_category_name || '';
-        document.getElementById('giUnit').textContent = it.default_unit || '';
-          document.getElementById('giDensity').textContent = (it.density != null) ? Number(it.density).toFixed(3) : '';
-
-        // Container meta
-        const isContainer = it.item_type === 'container' || it.item_type === 'packaging';
-        const metaDiv = document.getElementById('giContainerMeta');
-        if (isContainer) {
-          metaDiv.style.display = '';
-          document.getElementById('giMaterial').textContent = it.container_material || '';
-          const typeStyle = [it.container_type || '', it.container_style ? `(${it.container_style})` : ''].join(' ').trim();
-          document.getElementById('giTypeStyle').textContent = typeStyle;
-          document.getElementById('giColor').textContent = it.container_color || '';
-        } else {
-          metaDiv.style.display = 'none';
-        }
-
-          // Ingredient property visibility
-        const propsDiv = document.getElementById('giIngredientStats');
-        const grid = document.getElementById('giPropsGrid');
-        grid.innerHTML = '';
-          const formatNumber = (value, decimals) => {
-            const num = Number(value);
-            return Number.isFinite(num) ? num.toFixed(decimals) : value;
-          };
-          const addProp = (label, value, formatter) => {
-            const hasValue = !(value === null || value === undefined || value === '');
-            const formatted = hasValue ? (formatter ? formatter(value) : value) : '-';
-          const col = document.createElement('div');
-            col.innerHTML = `<div><strong>${label}:</strong> ${formatted}</div>`;
-          grid.appendChild(col);
-        };
-          const isIngredient = it.item_type === 'ingredient';
-            if (isIngredient) {
-            addProp('Saponification', it.saponification_value);
-            addProp('Iodine', it.iodine_value);
-            addProp('Melting Point (°C)', it.melting_point_c);
-            addProp('Flash Point (°C)', it.flash_point_c);
-            addProp('pH', it.ph_value);
-            addProp('Moisture %', it.moisture_content_percent);
-            addProp('Comedogenic', it.comedogenic_rating);
-            addProp('Recommended Usage', it.recommended_usage_rate);
-            addProp('Fragrance Load %', it.recommended_fragrance_load_pct);
-            addProp('INCI', it.inci_name);
-            addProp('Protein %', it.protein_content_pct, (v) => formatNumber(v, 2));
-            addProp('Brewing SRM', it.brewing_color_srm, (v) => formatNumber(v, 1));
-            addProp('Brewing Potential SG', it.brewing_potential_sg, (v) => formatNumber(v, 3));
-            addProp('Diastatic Power (Lintner)', it.brewing_diastatic_power_lintner, (v) => formatNumber(v, 1));
-              if (it.fatty_acid_profile && Object.keys(it.fatty_acid_profile).length > 0) {
-                addProp('Fatty Acid Profile', JSON.stringify(it.fatty_acid_profile, null, 2), (v) => `<pre class="mb-0 small">${v}</pre>`);
-              } else {
-                addProp('Fatty Acid Profile', null);
-              }
-        }
-          propsDiv.style.display = isIngredient ? '' : 'none';
-
-          // Certifications & aliases
-          const metaWrapper = document.getElementById('giMeta');
-          const metaParts = [];
-          if (it.aliases && it.aliases.length) {
-            metaParts.push(`<div><strong>Aliases:</strong> ${it.aliases.join(', ')}</div>`);
-          }
-          if (it.certifications && it.certifications.length) {
-            metaParts.push(`<div><strong>Certifications:</strong> ${it.certifications.join(', ')}</div>`);
-          }
-          if (it.recommended_shelf_life_days) {
-    metaParts.push(`<div><strong>Recommended Shelf Life:</strong> ${formatShelfLifeDays(it.recommended_shelf_life_days)}</div>`);
-          }
-  if (typeof it.is_active_ingredient !== 'undefined') {
-    metaParts.push(`<div><strong>Active Ingredient:</strong> ${it.is_active_ingredient ? 'Yes' : 'No'}</div>`);
-  }
-          metaWrapper.innerHTML = metaParts.join('') || '';
-      }
-
-      if (payload && payload.success){
-        const c = payload.cost || {};
-        if (c.count && c.count > 0){
-          const mean = c.mean_ex_outliers != null ? c.mean_ex_outliers.toFixed(2) : '-';
-          const low = c.low != null ? c.low.toFixed(2) : '-';
-          const high = c.high != null ? c.high.toFixed(2) : '-';
-          const minv = c.min != null ? c.min.toFixed(2) : '-';
-          const maxv = c.max != null ? c.max.toFixed(2) : '-';
-          document.getElementById('giCostStats').innerHTML = `Average: $${mean} (excluding outliers)<br>Low/High: $${low} – $${high}<br>Extremes: $${minv} – $${maxv} (n=${c.count})`;
-        } else {
-          document.getElementById('giCostStats').textContent = 'No cost data yet.';
-        }
-      } else {
-        document.getElementById('giCostStats').textContent = 'No cost data yet.';
-      }
-
-    document.getElementById('giDetailLoading').style.display = 'none';
-    document.getElementById('giDetailContent').style.display = '';
-
-    // Enable Developer Details link for developers
-    try {
-      const devLink = document.getElementById('giDevLink');
-      if (devLink) {
-        // Server will render this element regardless; show only if developer
-        {% if is_developer() %}
-        devLink.href = `/developer/global-items/${id}`;
-        devLink.style.display = '';
-        {% else %}
-        devLink.style.display = 'none';
-        {% endif %}
-      }
-    } catch (_e) {}
-  } catch (e) {
-    console.error('Failed to load item details:', e);
-    const loadingEl = document.getElementById('giDetailLoading');
-    if (loadingEl) {
-      loadingEl.innerHTML = `<div class="alert alert-danger">Failed to load item details: ${e.message}<br><small>Check console for more details</small></div>`;
-    }
-    // Also hide the content div in case of error
-    const contentEl = document.getElementById('giDetailContent');
-    if (contentEl) {
-      contentEl.style.display = 'none';
-    }
-  }
-}
-
-function getCSRFToken() {
-  const meta = document.querySelector('meta[name=csrf-token]');
-  return meta ? meta.content : '';
-}
-
-function is_developer() {
-  {% if current_user.is_authenticated and current_user.user_type == 'developer' %}
-  return true;
-  {% else %}
-  return false;
-  {% endif %}
-}
+  document.addEventListener('DOMContentLoaded', () => {
+    bindGlobalItemStatTriggers('.js-open-global-item-stats');
+  });
 </script>
 {% endblock %}

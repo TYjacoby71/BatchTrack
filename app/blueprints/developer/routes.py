@@ -1856,95 +1856,19 @@ def integrations_check_webhook():
 @login_required
 def analytics_catalog():
     """Developer catalog of analytics data points and domains."""
-    domains = [
-        {
-            'name': 'Inventory',
-            'description': 'Movements, spoilage, waste, usage, value held',
-            'sources': ['UnifiedInventoryHistory', 'InventoryLot', 'InventoryItem', 'FreshnessSnapshot', 'domain_event: inventory_adjusted'],
-            'events': ['inventory_adjusted'],
-            'data_points': [
-                'Quantity delta by change_type (restock, batch, use, spoil, expired, damaged, trash, recount, returned, refunded, release_reservation)',
-                'Unit and normalized unit conversions',
-                'Cost impact per movement (when provided)',
-                'Freshness: avg days-to-usage, avg days-to-spoilage, freshness efficiency score',
-                'Total cost held (derived, warehouse-level)',
-                'Spoilage rate and waste rate (derived from movements)'
-            ]
-        },
-        {
-            'name': 'Batches',
-            'description': 'Lifecycle, efficiency, costs, yield',
-            'sources': ['Batch', 'BatchIngredient', 'BatchContainer', 'Extra*', 'BatchStats', 'domain_event: batch_started|batch_completed|batch_cancelled'],
-            'events': ['batch_started', 'batch_completed', 'batch_cancelled'],
-            'data_points': [
-                'Planned vs actual fill efficiency (containment efficiency)',
-                'Yield variance %',
-                'Cost variance % (planned vs actual)',
-                'Total planned/actual cost',
-                'Batch duration (minutes)',
-                'Status (completed, failed, cancelled)'
-            ]
-        },
-        {
-            'name': 'Products & SKUs',
-            'description': 'On-hand, reservations, sales, unit costs',
-            'sources': ['Product', 'ProductVariant', 'ProductSKU', 'InventoryItem (type=product)'],
-            'events': ['product_created', 'product_variant_created', 'sku_created'],
-            'data_points': [
-                'On-hand quantity by SKU',
-                'Unit cost (when available)',
-                'Low stock threshold status',
-                'Reservations/sales velocity (when integrated)'
-            ]
-        },
-        {
-            'name': 'Recipes',
-            'description': 'Success rates, averages, cost baselines',
-            'sources': ['Recipe', 'RecipeIngredient', 'RecipeStats'],
-            'events': ['recipe_created', 'recipe_updated', 'recipe_deleted'],
-            'data_points': [
-                'Total/completed/failed batches per recipe',
-                'Average fill efficiency, yield variance, cost variance',
-                'Average cost per batch, per unit',
-                'Success rate %'
-            ]
-        },
-        {
-            'name': 'Timers',
-            'description': 'Task durations for batches/tasks',
-            'sources': ['BatchTimer'],
-            'events': ['timer_started', 'timer_stopped'],
-            'data_points': [
-                'Timer durations (seconds)',
-                'Active, expired, completed timers',
-                'Per-batch timing aggregates (p50/p90 to compute in warehouse)'
-            ]
-        },
-        {
-            'name': 'Global Item Library',
-            'description': 'Canonical items, adoption across orgs',
-            'sources': ['GlobalItem'],
-            'events': ['global_item_created', 'global_item_archived', 'global_item_deleted'],
-            'data_points': [
-                'Adoption across organizations (count of org-linked items)',
-                'Data quality: missing density/capacity/shelf-life'
-            ]
-        },
-        {
-            'name': 'Organizations & Users',
-            'description': 'Tenancy, active users, tiers',
-            'sources': ['Organization', 'User', 'OrganizationStats', 'UserStats'],
-            'events': [],
-            'data_points': [
-                'Org totals: batches, completed/failed/cancelled',
-                'Users: total and active',
-                'Inventory: total items and total value',
-                'Products: total products, total made'
-            ]
-        }
-    ]
+    from flask import current_app
+    from app.services.statistics import AnalyticsCatalogService, AnalyticsCatalogError
 
-    return render_template('developer/analytics_catalog.html', domains=domains)
+    try:
+        domains = AnalyticsCatalogService.get_domains()
+        summary = AnalyticsCatalogService.get_summary()
+    except AnalyticsCatalogError as exc:
+        current_app.logger.error("Failed to build analytics catalog: %s", exc, exc_info=True)
+        flash('Unable to load the analytics catalog right now. Please try again later.', 'error')
+        domains = []
+        summary = None
+
+    return render_template('developer/analytics_catalog.html', domains=domains, catalog_summary=summary)
 
 
 # ProductCategory management
