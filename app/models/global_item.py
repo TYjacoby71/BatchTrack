@@ -41,7 +41,9 @@ class GlobalItem(db.Model):
     iodine_value = db.Column(db.Float, nullable=True)  # Iodine value for oils
     melting_point_c = db.Column(db.Float, nullable=True)  # Melting point in Celsius
     flash_point_c = db.Column(db.Float, nullable=True)  # Flash point for essential oils
-    ph_value = db.Column(db.Float, nullable=True)  # pH for liquids
+    ph_value = db.Column(db.String(32), nullable=True)  # pH for liquids (display)
+    ph_min = db.Column(db.Float, nullable=True)  # Minimum pH value
+    ph_max = db.Column(db.Float, nullable=True)  # Maximum pH value
     moisture_content_percent = db.Column(db.Float, nullable=True)  # Moisture content
     comedogenic_rating = db.Column(db.Integer, nullable=True)  # 0-5 scale for oils
     fatty_acid_profile = db.Column(db.JSON, nullable=True)

@@ -3,7 +3,7 @@ import os
 import logging
 from collections.abc import Mapping
 
-from flask import request, redirect, url_for, jsonify, session, g, flash
+from flask import request, redirect, url_for, jsonify, session, g, flash, current_app
 from flask_login import current_user
 
 from .route_access import RouteAccessConfig
@@ -116,9 +116,16 @@ def register_middleware(app):
             # Better debugging: log the actual path and method being requested
             endpoint_info = f"endpoint={request.endpoint}, path={request.path}, method={request.method}"
             if request.endpoint is None:
-                logger.warning(f"Unauthenticated request to UNKNOWN endpoint: {endpoint_info}, user_agent={request.headers.get('User-Agent', 'Unknown')[:100]}")
+                logger.warning(
+                    "Unauthenticated request to UNKNOWN endpoint: %s, user_agent=%s",
+                    endpoint_info,
+                    request.headers.get('User-Agent', 'Unknown')[:100],
+                )
             elif not request.path.startswith('/static/'):
-                logger.info(f"Unauthenticated access attempt: {endpoint_info}")
+                level_name = str(current_app.config.get('ANON_REQUEST_LOG_LEVEL', 'DEBUG')).upper()
+                log_level = getattr(logging, level_name, logging.DEBUG)
+                if logger.isEnabledFor(log_level):
+                    logger.log(log_level, "Unauthenticated access attempt: %s", endpoint_info)
 
             # Return JSON 401 for API or JSON-accepting requests
             accept = request.accept_mimetypes
@@ -194,29 +201,16 @@ def register_middleware(app):
 
         # 8. Enforce billing for all regular, authenticated users.
         if current_user.is_authenticated and getattr(current_user, 'user_type', None) != 'developer':
-            # CRITICAL FIX: Guard DB calls; degrade gracefully if DB is down
             try:
-                # Force fresh database query to avoid session isolation issues
-                from .models import User, Organization
-                from .extensions import db
-                from .services.billing_service import BillingService # Import BillingService
+                from .services.billing_service import BillingService
 
-                # Get fresh user and organization data from current session
-                fresh_user = db.session.get(User, current_user.id)
-                if fresh_user and fresh_user.organization_id:
-                    # Force fresh load of organization to get latest billing_status
-                    organization = db.session.get(Organization, fresh_user.organization_id)
-                else:
-                    organization = None
+                organization_id = getattr(current_user, 'organization_id', None)
+                snapshot = BillingService.get_organization_billing_snapshot(organization_id) if organization_id else None
 
-                if organization and organization.subscription_tier:
-                    tier = organization.subscription_tier
-
-                    # SIMPLE BILLING LOGIC:
-                    # If billing bypass is NOT enabled, require active billing status
-                    if not getattr(tier, 'is_billing_exempt', True):  # Default to exempt to prevent lockouts
-                        # Direct status enforcement as a guardrail
-                        billing_status = getattr(organization, 'billing_status', 'active') or 'active'
+                if snapshot:
+                    # SIMPLE BILLING LOGIC: short-circuit for exempt tiers
+                    if not snapshot.get('is_billing_exempt', True):
+                        billing_status = snapshot.get('billing_status', 'active') or 'active'
                         if billing_status in ['payment_failed', 'past_due', 'suspended', 'canceled', 'cancelled']:
                             if billing_status in ['payment_failed', 'past_due']:
                                 return redirect(url_for('billing.upgrade'))
@@ -227,10 +221,9 @@ def register_middleware(app):
                                     pass
                                 return redirect(url_for('billing.upgrade'))
 
-                        # Check tier access using unified billing service
-                        access_valid, access_reason = BillingService.validate_tier_access(organization)
+                        access_valid, access_reason = BillingService.validate_tier_access(snapshot)
                         if not access_valid:
-                            logger.warning(f"Billing access denied for org {organization.id}: {access_reason}")
+                            logger.warning(f"Billing access denied for org {snapshot.get('organization_id')}: {access_reason}")
 
                             if access_reason in ['payment_required', 'subscription_canceled']:
                                 return redirect(url_for('billing.upgrade'))
@@ -241,7 +234,6 @@ def register_middleware(app):
                                     pass
                                 return redirect(url_for('billing.upgrade'))
             except Exception as e:
-                # On DB error, rollback and degrade: allow request to proceed without billing gate
                 logger.warning(f"Billing check failed, allowing request to proceed: {e}")
                 try:
                     from .extensions import db

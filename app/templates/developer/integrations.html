@@ -384,6 +384,10 @@
   </div>
 {% endfor %}
 
+  <div class="alert alert-info">
+    <strong>Redis provisioning:</strong> Before launch, create a managed Redis instance (Render Redis, Upstash, AWS ElastiCache, etc.). Copy the connection URL into <code>REDIS_URL</code> and mirror it into <code>RATELIMIT_STORAGE_URI</code>. The app now refuses to start in production without Redis-backed sessions, caching, and rate limiting.
+  </div>
+
 <ul>
   <li>Environment: <code>{{ env_core.FLASK_ENV }}</code></li>
   <li>Replit Deployment: <code>{{ env_core.REPLIT_DEPLOYMENT }}</code></li>
@@ -397,6 +401,19 @@
     <div>Current URI: <code>{{ db_info.uri }}</code></div>
     <div>Detected source: <code>{{ db_info.source }}</code></div>
     <div class="text-muted small">Set <code>DATABASE_INTERNAL_URL</code> or <code>DATABASE_URL</code> for Postgres; falls back to SQLite for local dev.</div>
+  </div>
+
+  <div class="card p-3 mt-3">
+    <h6>Domain Event Dispatcher</h6>
+    <p class="small text-muted mb-2">
+      The app writes every significant action into the <code>domain_event</code> outbox table. To push those events to downstream integrations, run the dispatcher alongside your web workers.
+    </p>
+    <ol class="small mb-2">
+      <li>Provision any HTTP endpoint that should receive events (or leave the webhook unset to mark events processed without delivery).</li>
+      <li>Set <code>DOMAIN_EVENT_WEBHOOK_URL=https://your-endpoint</code> (optional if you only want local logging).</li>
+      <li>Run the worker: <code>flask dispatch-domain-events</code> (use <code>--once</code> for ad-hoc batches, or keep it running as a background process/sidecar).</li>
+      <li>Monitor logs for retries; events exceeding the retry limit are marked with <code>_dispatch_errors</code> in the payload.</li>
+    </ol>
   </div>
 
 

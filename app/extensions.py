@@ -5,6 +5,7 @@ from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
 from flask_caching import Cache
 from flask_login import LoginManager
+from flask_session import Session
 
 db = SQLAlchemy()
 migrate = Migrate()
@@ -15,6 +16,8 @@ limiter = Limiter(
     default_limits=["200 per day", "50 per hour"]
 )
 
+server_session = Session()
+
 # Add Flask-Mail import with fallback
 try:
     from flask_mail import Mail
@@ -23,6 +26,13 @@ except ImportError:
     # Flask-Mail not installed - create a dummy object
     mail = None
 
+db = SQLAlchemy()
+# Enable robust autogeneration and SQLite-friendly alters
+migrate = Migrate(compare_type=True, render_as_batch=True)
+login_manager = LoginManager()
+csrf = CSRFProtect()
+limiter = Limiter(key_func=get_remote_address)
+cache = Cache()
 
 # Configure login manager
 login_manager = LoginManager()

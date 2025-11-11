@@ -3,6 +3,7 @@ from flask_login import login_required, current_user
 from app.models import Organization, User, Permission, Role, GlobalItem, IngredientProfile, PhysicalForm
 from app.models import ProductCategory
 from app.extensions import db
+from app.utils.json_store import read_json_file, write_json_file
 from datetime import datetime, timedelta, timezone
 import re
 from sqlalchemy import func
@@ -138,17 +139,8 @@ def dashboard():
     problem_orgs = [org for org in problem_orgs if org.active_users_count == 0]
 
     # Get waitlist count
-    import json
-    import os
-    waitlist_count = 0
-    waitlist_file = 'data/waitlist.json'
-    if os.path.exists(waitlist_file):
-        try:
-            with open(waitlist_file, 'r') as f:
-                waitlist_data = json.load(f)
-                waitlist_count = len(waitlist_data)
-        except (json.JSONDecodeError, IOError):
-            waitlist_count = 0
+    waitlist_data = read_json_file('data/waitlist.json', default=[]) or []
+    waitlist_count = len(waitlist_data)
 
     return render_template('developer/dashboard.html',
                          total_orgs=total_orgs,
@@ -164,35 +156,17 @@ def dashboard():
 @login_required
 def marketing_admin():
     """Manage homepage marketing content (reviews, spotlights, messages)."""
-    import json, os
-    reviews = []
-    spotlights = []
+    reviews = read_json_file('data/reviews.json', default=[]) or []
+    spotlights = read_json_file('data/spotlights.json', default=[]) or []
     messages = {'day_1': '', 'day_3': '', 'day_5': ''}
     promo_codes = []
     demo_url = ''
     demo_videos = []
-    try:
-        if os.path.exists('data/reviews.json'):
-            with open('data/reviews.json', 'r') as f:
-                reviews = json.load(f) or []
-    except Exception:
-        reviews = []
-    try:
-        if os.path.exists('data/spotlights.json'):
-            with open('data/spotlights.json', 'r') as f:
-                spotlights = json.load(f) or []
-    except Exception:
-        spotlights = []
-    try:
-        if os.path.exists('settings.json'):
-            with open('settings.json', 'r') as f:
-                cfg = json.load(f) or {}
-                messages.update(cfg.get('marketing_messages', {}))
-                promo_codes = cfg.get('promo_codes', []) or []
-                demo_url = cfg.get('demo_url', '') or ''
-                demo_videos = cfg.get('demo_videos', []) or []
-    except Exception:
-        pass
+    cfg = read_json_file('settings.json', default={}) or {}
+    messages.update(cfg.get('marketing_messages', {}))
+    promo_codes = cfg.get('promo_codes', []) or []
+    demo_url = cfg.get('demo_url', '') or ''
+    demo_videos = cfg.get('demo_videos', []) or []
     return render_template('developer/marketing_admin.html', reviews=reviews, spotlights=spotlights, messages=messages, promo_codes=promo_codes, demo_url=demo_url, demo_videos=demo_videos)
 
 @developer_bp.route('/marketing-admin/save', methods=['POST'])
@@ -200,21 +174,14 @@ def marketing_admin():
 def marketing_admin_save():
     """Save reviews, spotlights, and marketing messages (simple JSON persistence)."""
     try:
-        import json
         data = request.get_json() or {}
         if 'reviews' in data:
-            with open('data/reviews.json', 'w') as f:
-                json.dump(data['reviews'], f, indent=2)
+            write_json_file('data/reviews.json', data['reviews'])
         if 'spotlights' in data:
-            with open('data/spotlights.json', 'w') as f:
-                json.dump(data['spotlights'], f, indent=2)
+            write_json_file('data/spotlights.json', data['spotlights'])
         if 'messages' in data or 'promo_codes' in data or 'demo_url' in data or 'demo_videos' in data:
             # merge into settings.json under marketing_messages
-            try:
-                with open('settings.json', 'r') as f:
-                    cfg = json.load(f) or {}
-            except FileNotFoundError:
-                cfg = {}
+            cfg = read_json_file('settings.json', default={}) or {}
             if 'messages' in data:
                 cfg['marketing_messages'] = data['messages']
             if 'promo_codes' in data:
@@ -223,8 +190,7 @@ def marketing_admin_save():
                 cfg['demo_url'] = data['demo_url']
             if 'demo_videos' in data:
                 cfg['demo_videos'] = data['demo_videos']
-            with open('settings.json', 'w') as f:
-                json.dump(cfg, f, indent=2)
+            write_json_file('settings.json', cfg)
         return jsonify({'success': True})
     except Exception as e:
         return jsonify({'success': False, 'error': str(e)}), 500
@@ -899,17 +865,8 @@ def save_curated_container_lists():
                 return jsonify({'success': False, 'error': f'Invalid or missing {key} list'})
 
         # Load current settings
-        import json
-        import os
         settings_file = 'settings.json'
-        settings = {}
-
-        if os.path.exists(settings_file):
-            try:
-                with open(settings_file, 'r') as f:
-                    settings = json.load(f)
-            except (json.JSONDecodeError, IOError):
-                settings = {}
+        settings = read_json_file(settings_file, default={}) or {}
 
         # Update container curated lists
         if 'container_management' not in settings:
@@ -918,8 +875,7 @@ def save_curated_container_lists():
         settings['container_management']['curated_lists'] = curated_lists
 
         # Save back to file
-        with open(settings_file, 'w') as f:
-            json.dump(settings, f, indent=2)
+        write_json_file(settings_file, settings)
 
         return jsonify({'success': True, 'message': 'Curated lists saved successfully'})
 
@@ -928,21 +884,11 @@ def save_curated_container_lists():
 
 def load_curated_container_lists():
     """Load curated container lists from settings or return defaults with existing database values merged in"""
-    try:
-        import json
-        import os
-        settings_file = 'settings.json'
+    settings = read_json_file('settings.json', default={}) or {}
+    curated_lists = settings.get('container_management', {}).get('curated_lists', {})
 
-        if os.path.exists(settings_file):
-            with open(settings_file, 'r') as f:
-                settings = json.load(f)
-                curated_lists = settings.get('container_management', {}).get('curated_lists', {})
-
-                # If we have saved curated lists, return them
-                if curated_lists and all(key in curated_lists for key in ['materials', 'types', 'styles', 'colors']):
-                    return curated_lists
-    except:
-        pass
+    if curated_lists and all(key in curated_lists for key in ['materials', 'types', 'styles', 'colors']):
+        return curated_lists
 
     # First time setup: merge database values with defaults
     defaults = {
@@ -1649,11 +1595,12 @@ def integrations_checklist():
         },
         {
             'title': 'Caching & Rate Limits',
-            'note': 'Use Redis (or another shared store) for rate limiting in production environments.',
-            'section_items': [
-                _make_item('REDIS_URL', 'Redis connection string for caching and rate limit storage.', required=False, recommended='redis://...'),
+            'note': 'Use Redis (or another shared store) for server sessions, caching, and rate limiting in production.',
+            'items': [
+                _make_item('REDIS_URL', 'Redis connection string for caching, sessions, and rate limit storage.', required=True, recommended='redis://...'),
                 _make_item('RATELIMIT_STORAGE_URL', 'Flask-Limiter backend. Point at Redis in production.', required=True, recommended='redis://...', allow_config=True),
-            ]
+                _make_item('SESSION_TYPE', 'Server-side session backend. Must be "redis" in production.', required=True, recommended='redis', allow_config=True),
+            ],
         },
         {
             'title': 'Security & Networking',
@@ -1881,11 +1828,7 @@ def integrations_set_feature_flags():
 
         # Persist to settings.json for next boot
         try:
-            import json, os
-            settings = {}
-            if os.path.exists('settings.json'):
-                with open('settings.json', 'r') as f:
-                    settings = json.load(f) or {}
+            settings = read_json_file('settings.json', default={}) or {}
 
             ff = settings.get('feature_flags', {}) or {}
             for flag in allowed_flags:
@@ -1893,8 +1836,7 @@ def integrations_set_feature_flags():
                     ff[flag] = bool(data[flag])
 
             settings['feature_flags'] = ff
-            with open('settings.json', 'w') as f:
-                json.dump(settings, f, indent=2)
+            write_json_file('settings.json', settings)
         except Exception:
             pass
 
@@ -1928,95 +1870,19 @@ def integrations_check_webhook():
 @login_required
 def analytics_catalog():
     """Developer catalog of analytics data points and domains."""
-    domains = [
-        {
-            'name': 'Inventory',
-            'description': 'Movements, spoilage, waste, usage, value held',
-            'sources': ['UnifiedInventoryHistory', 'InventoryLot', 'InventoryItem', 'FreshnessSnapshot', 'domain_event: inventory_adjusted'],
-            'events': ['inventory_adjusted'],
-            'data_points': [
-                'Quantity delta by change_type (restock, batch, use, spoil, expired, damaged, trash, recount, returned, refunded, release_reservation)',
-                'Unit and normalized unit conversions',
-                'Cost impact per movement (when provided)',
-                'Freshness: avg days-to-usage, avg days-to-spoilage, freshness efficiency score',
-                'Total cost held (derived, warehouse-level)',
-                'Spoilage rate and waste rate (derived from movements)'
-            ]
-        },
-        {
-            'name': 'Batches',
-            'description': 'Lifecycle, efficiency, costs, yield',
-            'sources': ['Batch', 'BatchIngredient', 'BatchContainer', 'Extra*', 'BatchStats', 'domain_event: batch_started|batch_completed|batch_cancelled'],
-            'events': ['batch_started', 'batch_completed', 'batch_cancelled'],
-            'data_points': [
-                'Planned vs actual fill efficiency (containment efficiency)',
-                'Yield variance %',
-                'Cost variance % (planned vs actual)',
-                'Total planned/actual cost',
-                'Batch duration (minutes)',
-                'Status (completed, failed, cancelled)'
-            ]
-        },
-        {
-            'name': 'Products & SKUs',
-            'description': 'On-hand, reservations, sales, unit costs',
-            'sources': ['Product', 'ProductVariant', 'ProductSKU', 'InventoryItem (type=product)'],
-            'events': ['product_created', 'product_variant_created', 'sku_created'],
-            'data_points': [
-                'On-hand quantity by SKU',
-                'Unit cost (when available)',
-                'Low stock threshold status',
-                'Reservations/sales velocity (when integrated)'
-            ]
-        },
-        {
-            'name': 'Recipes',
-            'description': 'Success rates, averages, cost baselines',
-            'sources': ['Recipe', 'RecipeIngredient', 'RecipeStats'],
-            'events': ['recipe_created', 'recipe_updated', 'recipe_deleted'],
-            'data_points': [
-                'Total/completed/failed batches per recipe',
-                'Average fill efficiency, yield variance, cost variance',
-                'Average cost per batch, per unit',
-                'Success rate %'
-            ]
-        },
-        {
-            'name': 'Timers',
-            'description': 'Task durations for batches/tasks',
-            'sources': ['BatchTimer'],
-            'events': ['timer_started', 'timer_stopped'],
-            'data_points': [
-                'Timer durations (seconds)',
-                'Active, expired, completed timers',
-                'Per-batch timing aggregates (p50/p90 to compute in warehouse)'
-            ]
-        },
-        {
-            'name': 'Global Item Library',
-            'description': 'Canonical items, adoption across orgs',
-            'sources': ['GlobalItem'],
-            'events': ['global_item_created', 'global_item_archived', 'global_item_deleted'],
-            'data_points': [
-                'Adoption across organizations (count of org-linked items)',
-                'Data quality: missing density/capacity/shelf-life'
-            ]
-        },
-        {
-            'name': 'Organizations & Users',
-            'description': 'Tenancy, active users, tiers',
-            'sources': ['Organization', 'User', 'OrganizationStats', 'UserStats'],
-            'events': [],
-            'data_points': [
-                'Org totals: batches, completed/failed/cancelled',
-                'Users: total and active',
-                'Inventory: total items and total value',
-                'Products: total products, total made'
-            ]
-        }
-    ]
+    from flask import current_app
+    from app.services.statistics import AnalyticsCatalogService, AnalyticsCatalogError
 
-    return render_template('developer/analytics_catalog.html', domains=domains)
+    try:
+        domains = AnalyticsCatalogService.get_domains()
+        summary = AnalyticsCatalogService.get_summary()
+    except AnalyticsCatalogError as exc:
+        current_app.logger.error("Failed to build analytics catalog: %s", exc, exc_info=True)
+        flash('Unable to load the analytics catalog right now. Please try again later.', 'error')
+        domains = []
+        summary = None
+
+    return render_template('developer/analytics_catalog.html', domains=domains, catalog_summary=summary)
 
 
 # ProductCategory management
@@ -2096,19 +1962,10 @@ def delete_product_category(cat_id):
 @require_developer_permission('system_admin')
 def waitlist_statistics():
     """View waitlist statistics and data"""
-    import json
-    import os
     from datetime import datetime
 
     waitlist_file = 'data/waitlist.json'
-    waitlist_data = []
-
-    if os.path.exists(waitlist_file):
-        try:
-            with open(waitlist_file, 'r') as f:
-                waitlist_data = json.load(f)
-        except (json.JSONDecodeError, IOError):
-            waitlist_data = []
+    waitlist_data = read_json_file(waitlist_file, default=[]) or []
 
     # Process data for display
     processed_data = []

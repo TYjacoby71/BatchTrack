@@ -1,9 +1,14 @@
 from datetime import datetime, timedelta
+import logging
+from collections.abc import Mapping
+
+from flask import current_app
+from sqlalchemy import select
+
 from ..models.subscription_tier import SubscriptionTier
 from ..models.models import Organization
-from ..extensions import db
+from ..extensions import db, cache
 from ..utils.timezone_utils import TimezoneUtils
-import logging
 
 logger = logging.getLogger(__name__)
 
@@ -38,6 +43,7 @@ class BillingService:
             organization.subscription_tier_id = tier.id
             db.session.commit()
             logger.info(f"Assigned tier {tier_key} to organization {organization.id}")
+            BillingService.invalidate_organization_cache(organization.id)
 
         return tier
 
@@ -188,6 +194,9 @@ class BillingService:
     @staticmethod
     def validate_tier_access(organization):
         """Validate that organization has valid tier access"""
+        if isinstance(organization, Mapping):
+            return BillingService._validate_snapshot(organization)
+
         if not organization:
             return False, "no_organization"
 
@@ -217,3 +226,89 @@ class BillingService:
                 return False, "subscription_canceled"
 
         return True, "tier_valid"
+
+    @staticmethod
+    def _validate_snapshot(snapshot):
+        if not snapshot:
+            return False, "no_organization"
+
+        if not snapshot.get('is_active', True):
+            return False, "organization_suspended"
+
+        if snapshot.get('is_billing_exempt', False):
+            return True, "exempt_tier"
+
+        billing_status = snapshot.get('billing_status', 'active') or 'active'
+
+        if billing_status == 'active':
+            return True, "billing_active"
+        if billing_status in ['payment_failed', 'past_due']:
+            return False, "payment_required"
+        if billing_status == 'canceled':
+            return False, "subscription_canceled"
+        if billing_status == 'suspended':
+            return False, "organization_suspended"
+
+        return True, "tier_valid"
+
+    @staticmethod
+    def get_organization_billing_snapshot(organization_id):
+        """Fetch and cache the billing snapshot for an organization."""
+        if not organization_id:
+            return None
+
+        cache_key = f"billing:snapshot:{organization_id}"
+        snapshot = None
+
+        if cache:
+            snapshot = cache.get(cache_key)
+            if snapshot is not None:
+                return snapshot
+
+        stmt = (
+            select(
+                Organization.id.label('organization_id'),
+                Organization.is_active,
+                Organization.billing_status,
+                Organization.subscription_tier_id,
+                SubscriptionTier.is_billing_exempt,
+            )
+            .join(SubscriptionTier, SubscriptionTier.id == Organization.subscription_tier_id, isouter=True)
+            .where(Organization.id == organization_id)
+        )
+
+        try:
+            row = db.session.execute(stmt).mappings().one_or_none()
+        except Exception as exc:
+            logger.warning("Could not load billing snapshot for org %s: %s", organization_id, exc)
+            return None
+
+        if not row:
+            return None
+
+        snapshot = {
+            'organization_id': row.get('organization_id'),
+            'is_active': row.get('is_active', True),
+            'billing_status': row.get('billing_status') or 'active',
+            'subscription_tier_id': row.get('subscription_tier_id'),
+            'is_billing_exempt': bool(row.get('is_billing_exempt')),
+        }
+
+        if cache:
+            timeout = current_app.config.get('BILLING_STATUS_CACHE_TTL', 120)
+            try:
+                cache.set(cache_key, snapshot, timeout=timeout)
+            except Exception as exc:  # pragma: no cover - cache backend failures should not break app
+                logger.debug("Failed to cache billing snapshot for org %s: %s", organization_id, exc)
+
+        return snapshot
+
+    @staticmethod
+    def invalidate_organization_cache(organization_id):
+        if not organization_id or not cache:
+            return
+        cache_key = f"billing:snapshot:{organization_id}"
+        try:
+            cache.delete(cache_key)
+        except Exception as exc:  # pragma: no cover
+            logger.debug("Failed to invalidate billing cache for org %s: %s", organization_id, exc)

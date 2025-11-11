@@ -1,4 +1,3 @@
-
 """0005 cleanup guardrails and ingredient attribute expansion
 
 Revision ID: 0005_cleanup_guardrails
@@ -26,7 +25,7 @@ depends_on = None
 
 
 def upgrade():
-    from migrations.postgres_helpers import is_postgresql
+    from migrations.postgres_helpers import is_postgresql, is_sqlite, safe_add_column
 
     bind = op.get_bind()
 
@@ -36,20 +35,43 @@ def upgrade():
     except Exception:
         pass
 
-    # Expand global item attributes
+    # Expand global item attributes  
+    bind = op.get_bind()
+    inspector = sa.inspect(bind)
+    try:
+        columns = [col['name'] for col in inspector.get_columns('global_item')]
+        if 'aka_names' in columns:
+            with op.batch_alter_table('global_item') as batch_op:
+                batch_op.alter_column('aka_names', new_column_name='aliases')
+        elif 'aliases' not in columns:
+            # Neither column exists - this is unexpected 
+            print("⚠️  Neither 'aka_names' nor 'aliases' column found in global_item table")
+    except Exception as e:
+        print(f"⚠️  Could not rename aka_names column: {e}")
+
+    # Add new columns to global_item for enhanced ingredient data (safely)
+    safe_add_column('global_item', sa.Column('fatty_acid_profile', sa.JSON()))
+    safe_add_column('global_item', sa.Column('brewing_diastatic_power_lintner', sa.Float()))
+    safe_add_column('global_item', sa.Column('brewing_potential_sg', sa.Float()))
+    safe_add_column('global_item', sa.Column('brewing_color_srm', sa.Float()))
+    safe_add_column('global_item', sa.Column('protein_content_pct', sa.Float()))
+    safe_add_column('global_item', sa.Column('certifications', sa.JSON()))
+    safe_add_column('global_item', sa.Column('inci_name', sa.String(256)))
+    safe_add_column('global_item', sa.Column('recommended_fragrance_load_pct', sa.Float()))
+    safe_add_column('global_item', sa.Column('recommended_usage_rate', sa.String(128)))
+    safe_add_column('global_item', sa.Column('is_active_ingredient', sa.Boolean()))
+
+    # Alter is_active_ingredient server_default after it's added and set column types
     with op.batch_alter_table('global_item') as batch_op:
-        batch_op.alter_column('aka_names', new_column_name='aliases')
-        batch_op.add_column(sa.Column('recommended_usage_rate', sa.String(length=64), nullable=True))
-        batch_op.add_column(sa.Column('recommended_fragrance_load_pct', sa.String(length=64), nullable=True))
-        batch_op.add_column(sa.Column('is_active_ingredient', sa.Boolean(), nullable=False, server_default=sa.text('0')))
-        batch_op.add_column(sa.Column('inci_name', sa.String(length=256), nullable=True))
-        batch_op.add_column(sa.Column('certifications', sa.JSON(), nullable=True))
-        batch_op.add_column(sa.Column('fatty_acid_profile', sa.JSON(), nullable=True))
-        batch_op.add_column(sa.Column('protein_content_pct', sa.Float(), nullable=True))
-        batch_op.add_column(sa.Column('brewing_color_srm', sa.Float(), nullable=True))
-        batch_op.add_column(sa.Column('brewing_potential_sg', sa.Float(), nullable=True))
-        batch_op.add_column(sa.Column('brewing_diastatic_power_lintner', sa.Float(), nullable=True))
-        batch_op.alter_column('is_active_ingredient', server_default=None)
+        batch_op.alter_column('is_active_ingredient', server_default=None, nullable=False)
+        batch_op.alter_column('recommended_usage_rate',
+               existing_type=sa.VARCHAR(length=128),
+               type_=sa.String(length=64),
+               existing_nullable=True)
+        batch_op.alter_column('recommended_fragrance_load_pct',
+               existing_type=sa.Float(),
+               type_=sa.String(length=64),
+               existing_nullable=True)
 
     if is_postgresql():
         try:
@@ -61,16 +83,27 @@ def upgrade():
             pass
 
     # Mirror new attributes onto inventory items
+    # Add same columns to inventory_item for backwards compatibility (safely)
+    safe_add_column('inventory_item', sa.Column('certifications', sa.JSON()))
+    safe_add_column('inventory_item', sa.Column('fatty_acid_profile', sa.JSON()))
+    safe_add_column('inventory_item', sa.Column('brewing_diastatic_power_lintner', sa.Float()))
+    safe_add_column('inventory_item', sa.Column('brewing_potential_sg', sa.Float()))
+    safe_add_column('inventory_item', sa.Column('brewing_color_srm', sa.Float()))
+    safe_add_column('inventory_item', sa.Column('protein_content_pct', sa.Float()))
+    safe_add_column('inventory_item', sa.Column('inci_name', sa.String(256)))
+    safe_add_column('inventory_item', sa.Column('recommended_fragrance_load_pct', sa.Float()))
+    safe_add_column('inventory_item', sa.Column('recommended_usage_rate', sa.String(128)))
+
+    # Now alter the column types for inventory_item
     with op.batch_alter_table('inventory_item') as batch_op:
-        batch_op.add_column(sa.Column('recommended_usage_rate', sa.String(length=64), nullable=True))
-        batch_op.add_column(sa.Column('recommended_fragrance_load_pct', sa.String(length=64), nullable=True))
-        batch_op.add_column(sa.Column('inci_name', sa.String(length=256), nullable=True))
-        batch_op.add_column(sa.Column('protein_content_pct', sa.Float(), nullable=True))
-        batch_op.add_column(sa.Column('brewing_color_srm', sa.Float(), nullable=True))
-        batch_op.add_column(sa.Column('brewing_potential_sg', sa.Float(), nullable=True))
-        batch_op.add_column(sa.Column('brewing_diastatic_power_lintner', sa.Float(), nullable=True))
-        batch_op.add_column(sa.Column('fatty_acid_profile', sa.JSON(), nullable=True))
-        batch_op.add_column(sa.Column('certifications', sa.JSON(), nullable=True))
+        batch_op.alter_column('recommended_usage_rate',
+               existing_type=sa.VARCHAR(length=128),
+               type_=sa.String(length=64),
+               existing_nullable=True)
+        batch_op.alter_column('recommended_fragrance_load_pct',
+               existing_type=sa.Float(),
+               type_=sa.String(length=64),
+               existing_nullable=True)
 
     # Remove category-level attribute toggles
     with op.batch_alter_table('ingredient_category') as batch_op:
@@ -113,32 +146,28 @@ def upgrade():
 
 
 def downgrade():
-    from migrations.postgres_helpers import is_postgresql
+    from migrations.postgres_helpers import is_postgresql, is_sqlite, safe_add_column, safe_drop_column
 
     bind = op.get_bind()
 
-    # Restore ingredient category toggles
-    with op.batch_alter_table('ingredient_category') as batch_op:
-        batch_op.add_column(sa.Column('show_comedogenic_rating', sa.Boolean(), nullable=True, server_default=sa.text('0')))
-        batch_op.add_column(sa.Column('show_shelf_life_days', sa.Boolean(), nullable=True, server_default=sa.text('0')))
-        batch_op.add_column(sa.Column('show_moisture_content', sa.Boolean(), nullable=True, server_default=sa.text('0')))
-        batch_op.add_column(sa.Column('show_ph_value', sa.Boolean(), nullable=True, server_default=sa.text('0')))
-        batch_op.add_column(sa.Column('show_flash_point', sa.Boolean(), nullable=True, server_default=sa.text('0')))
-        batch_op.add_column(sa.Column('show_melting_point', sa.Boolean(), nullable=True, server_default=sa.text('0')))
-        batch_op.add_column(sa.Column('show_iodine_value', sa.Boolean(), nullable=True, server_default=sa.text('0')))
-        batch_op.add_column(sa.Column('show_saponification_value', sa.Boolean(), nullable=True, server_default=sa.text('0')))
+    # Note: ingredient_category show_* columns were permanently removed
+    # and are not restored in downgrade as they no longer exist in models
 
-    # Remove inventory item extensions
-    with op.batch_alter_table('inventory_item') as batch_op:
-        batch_op.drop_column('certifications')
-        batch_op.drop_column('fatty_acid_profile')
-        batch_op.drop_column('brewing_diastatic_power_lintner')
-        batch_op.drop_column('brewing_potential_sg')
-        batch_op.drop_column('brewing_color_srm')
-        batch_op.drop_column('protein_content_pct')
-        batch_op.drop_column('inci_name')
-        batch_op.drop_column('recommended_fragrance_load_pct')
-        batch_op.drop_column('recommended_usage_rate')
+    # Remove inventory item extensions (safe drop if exists)
+    columns_to_drop = [
+        'certifications',
+        'fatty_acid_profile', 
+        'brewing_diastatic_power_lintner',
+        'brewing_potential_sg',
+        'brewing_color_srm',
+        'protein_content_pct',
+        'inci_name',
+        'recommended_fragrance_load_pct',
+        'recommended_usage_rate'
+    ]
+
+    for column_name in columns_to_drop:
+        safe_drop_column('inventory_item', column_name, verbose=False)
 
     # Drop new index prior to renaming column back
     try:
@@ -146,18 +175,83 @@ def downgrade():
     except Exception:
         pass
 
-    with op.batch_alter_table('global_item') as batch_op:
-        batch_op.drop_column('brewing_diastatic_power_lintner')
-        batch_op.drop_column('brewing_potential_sg')
-        batch_op.drop_column('brewing_color_srm')
-        batch_op.drop_column('protein_content_pct')
-        batch_op.drop_column('fatty_acid_profile')
-        batch_op.drop_column('certifications')
-        batch_op.drop_column('inci_name')
-        batch_op.drop_column('recommended_fragrance_load_pct')
-        batch_op.drop_column('recommended_usage_rate')
-        batch_op.alter_column('aliases', new_column_name='aka_names')
-        batch_op.drop_column('is_active_ingredient')
+    # Revert column types before dropping (if columns still exist)
+    bind = op.get_bind()
+    inspector = sa.inspect(bind)
+    try:
+        columns = [col['name'] for col in inspector.get_columns('global_item')]
+
+        # Revert global_item column types
+        if 'recommended_usage_rate' in columns:
+            with op.batch_alter_table('global_item') as batch_op:
+                batch_op.alter_column('recommended_usage_rate',
+                       existing_type=sa.String(length=64),
+                       type_=sa.VARCHAR(length=128),
+                       existing_nullable=True)
+
+        if 'recommended_fragrance_load_pct' in columns:
+            with op.batch_alter_table('global_item') as batch_op:
+                batch_op.alter_column('recommended_fragrance_load_pct',
+                       existing_type=sa.String(length=64),
+                       type_=sa.Float(),
+                       existing_nullable=True)
+
+        if 'is_active_ingredient' in columns:
+            with op.batch_alter_table('global_item') as batch_op:
+                batch_op.alter_column('is_active_ingredient',
+                       existing_type=sa.BOOLEAN(),
+                       nullable=True)
+
+        # Revert inventory_item column types
+        inv_columns = [col['name'] for col in inspector.get_columns('inventory_item')]
+
+        if 'recommended_usage_rate' in inv_columns:
+            with op.batch_alter_table('inventory_item') as batch_op:
+                batch_op.alter_column('recommended_usage_rate',
+                       existing_type=sa.String(length=64),
+                       type_=sa.VARCHAR(length=128),
+                       existing_nullable=True)
+
+        if 'recommended_fragrance_load_pct' in inv_columns:
+            with op.batch_alter_table('inventory_item') as batch_op:
+                batch_op.alter_column('recommended_fragrance_load_pct',
+                       existing_type=sa.String(length=64),
+                       type_=sa.Float(),
+                       existing_nullable=True)
+
+    except Exception as e:
+        print(f"⚠️  Could not revert column types: {e}")
+
+    # Remove global_item extensions (safe drop if exists)
+    global_item_columns_to_drop = [
+        'brewing_diastatic_power_lintner',
+        'brewing_potential_sg', 
+        'brewing_color_srm',
+        'protein_content_pct',
+        'fatty_acid_profile',
+        'certifications',
+        'inci_name',
+        'recommended_fragrance_load_pct',
+        'recommended_usage_rate',
+        'is_active_ingredient'
+    ]
+
+    for column_name in global_item_columns_to_drop:
+        safe_drop_column('global_item', column_name, verbose=False)
+
+    # Rename column only if aliases exists (safe check)
+    bind = op.get_bind()
+    inspector = sa.inspect(bind)
+    try:
+        columns = [col['name'] for col in inspector.get_columns('global_item')]
+        if 'aliases' in columns:
+            with op.batch_alter_table('global_item') as batch_op:
+                batch_op.alter_column('aliases', new_column_name='aka_names')
+        elif 'aka_names' not in columns:
+            # Neither column exists - this is unexpected but safe to skip
+            print("⚠️  Neither 'aliases' nor 'aka_names' column found in global_item table")
+    except Exception as e:
+        print(f"⚠️  Could not rename aliases column: {e}")
 
     # Drop PostgreSQL-specific indexes created in upgrade
     if is_postgresql():

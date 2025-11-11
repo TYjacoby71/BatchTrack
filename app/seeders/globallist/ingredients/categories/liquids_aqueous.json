@@ -18,7 +18,7 @@
       ],
       "density": 1.0,
       "default_unit": "milliliter",
-      "ph_value": 7.0,
+      "ph_value": "7.0",
       "conductivity_uS_cm": "< 10",
       "recommended_usage_rate": "Use 10-100% as aqueous phase",
       "recommended_shelf_life_days": 1095,

@@ -9,44 +9,83 @@
     </a>
   </div>
 
-  <p class="text-muted">Central index of domains and data points. Wire each item to warehouse queries as they become available.</p>
+  <p class="text-muted">Single source of truth for pipelines, dashboards, and warehouse fact tables.</p>
 
+  {% if catalog_summary %}
+    <div class="alert alert-info d-flex justify-content-between align-items-center flex-wrap gap-2">
+      <span><strong>Version:</strong> {{ catalog_summary.version }}</span>
+      <span><strong>Domains:</strong> {{ catalog_summary.domain_count }}</span>
+      <span><strong>Updated:</strong> {{ catalog_summary.updated_at.strftime('%Y-%m-%d') if catalog_summary.updated_at else 'n/a' }}</span>
+    </div>
+  {% endif %}
+
+  {% if domains %}
   <div class="row g-3">
     {% for d in domains %}
-      <div class="col-md-6">
+      <div class="col-12 col-lg-6">
         <div class="card h-100">
-          <div class="card-body">
+          <div class="card-body d-flex flex-column">
             <h5 class="card-title mb-1">{{ d.name }}</h5>
             <p class="text-muted">{{ d.description }}</p>
 
-            <div class="mb-2">
-              <small class="text-uppercase text-muted">Sources</small>
-              <ul class="mb-2">
-                {% for s in d.sources %}
-                  <li><code>{{ s }}</code></li>
+            <div class="mb-3">
+              <small class="text-uppercase text-muted">Storage</small>
+              <ul class="list-unstyled mb-0 small">
+                {% for store in d.storage %}
+                  <li class="mb-2">
+                    <code class="d-block">{{ store.table }}</code>
+                    <span class="fw-semibold">{{ store.model }}</span>
+                    <span class="text-muted">— {{ store.scope }}</span>
+                    {% if store.notes %}<br><span class="text-muted">{{ store.notes }}</span>{% endif %}
+                  </li>
                 {% endfor %}
               </ul>
             </div>
 
-            {% if d.events and d.events|length %}
-            <div class="mb-2">
-              <small class="text-uppercase text-muted">Events</small>
-              <ul class="mb-2">
-                {% for e in d.events %}
-                  <li><code>{{ e }}</code></li>
-                {% endfor %}
-              </ul>
-            </div>
-            {% endif %}
-
-            <div>
-              <small class="text-uppercase text-muted">Placeholders</small>
+            <div class="mb-3">
+              <small class="text-uppercase text-muted">Metrics</small>
               <ul class="mb-0">
-                {% if d.data_points and d.data_points|length %}
-                  {% for p in d.data_points %}
-                    <li>{{ p }}</li>
-                  {% endfor %}
-                {% endif %}
+                {% for metric in d.metrics %}
+                  <li>{{ metric }}</li>
+                {% endfor %}
+              </ul>
+            </div>
+
+            <div class="mb-3">
+              <small class="text-uppercase text-muted">Dimensions & Filters</small>
+              <ul class="mb-0">
+                {% for dim in d.dimensions %}
+                  <li>{{ dim }}</li>
+                {% endfor %}
+              </ul>
+            </div>
+
+            <div class="mb-3">
+              <small class="text-uppercase text-muted">Events & Feeds</small>
+              <div class="row">
+                <div class="col-6">
+                  <ul class="mb-0">
+                    {% for e in d.events %}
+                      <li><code>{{ e }}</code></li>
+                    {% endfor %}
+                  </ul>
+                </div>
+                <div class="col-6">
+                  <ul class="mb-0">
+                    {% for feed in d.feeds %}
+                      <li>{{ feed }}</li>
+                    {% endfor %}
+                  </ul>
+                </div>
+              </div>
+            </div>
+
+            <div class="mt-auto">
+              <small class="text-uppercase text-muted">Primary Consumers</small>
+              <ul class="mb-0">
+                {% for consumer in d.consumers %}
+                  <li>{{ consumer }}</li>
+                {% endfor %}
               </ul>
             </div>
           </div>
@@ -54,5 +93,10 @@
       </div>
     {% endfor %}
   </div>
+  {% else %}
+    <div class="alert alert-warning">
+      Analytics catalog is unavailable right now.
+    </div>
+  {% endif %}
 </div>
 {% endblock %}
