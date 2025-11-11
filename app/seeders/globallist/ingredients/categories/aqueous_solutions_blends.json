@@ -66,7 +66,7 @@
       ],
       "density": 1.01,
       "default_unit": "milliliter",
-      "ph_value": "6.5",
+      "ph_value": 6.5,
       "recommended_usage_rate": "10-50% in beverages or soothing lotions",
       "recommended_shelf_life_days": 90,
       "inci_name": "Water (and) Avena Sativa (Oat) Kernel Extract",

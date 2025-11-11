@@ -70,7 +70,7 @@
       "density": 1.2,
       "default_unit": "gram",
       "recommended_usage_rate": "0.5-5% in leave-on or rinse-off products",
-      "ph_value": 5.5,
+      "ph_value": "5.5",
       "recommended_shelf_life_days": 720,
       "inci_name": "Panthenol",
       "certifications": [
@@ -86,7 +86,7 @@
       "density": 1.28,
       "default_unit": "gram",
       "recommended_usage_rate": "1-2% in brightening serums",
-      "ph_value": 5.5,
+      "ph_value": "5.5",
       "recommended_shelf_life_days": 540,
       "inci_name": "Alpha-Arbutin",
       "certifications": [
