@@ -59,9 +59,8 @@ def create_app(config=None):
     # Configure rate limiter with Redis storage in production
     limiter_storage_uri = app.config.get('RATELIMIT_STORAGE_URI')
     if limiter_storage_uri:
-        limiter.init_app(app, storage_uri=limiter_storage_uri)
-    else:
-        limiter.init_app(app)
+        app.config['RATELIMIT_STORAGE_URI'] = limiter_storage_uri
+    limiter.init_app(app)
     configure_login_manager(app)
 
     # Session lifetime should come from config classes; avoid overriding here
