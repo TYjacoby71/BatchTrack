@@ -42,16 +42,16 @@ def upgrade():
         print(f"⚠️  Could not rename aka_names column: {e}")
 
     # Add new columns to global_item for enhanced ingredient data (safely)
-    safe_add_column('global_item', 'fatty_acid_profile', sa.JSON())
-    safe_add_column('global_item', 'brewing_diastatic_power_lintner', sa.Float())
-    safe_add_column('global_item', 'brewing_potential_sg', sa.Float())
-    safe_add_column('global_item', 'brewing_color_srm', sa.Float())
-    safe_add_column('global_item', 'protein_content_pct', sa.Float())
-    safe_add_column('global_item', 'certifications', sa.JSON())
-    safe_add_column('global_item', 'inci_name', sa.String(256))
-    safe_add_column('global_item', 'recommended_fragrance_load_pct', sa.Float())
-    safe_add_column('global_item', 'recommended_usage_rate', sa.String(128))
-    safe_add_column('global_item', 'is_active_ingredient', sa.Boolean())
+    safe_add_column('global_item', sa.Column('fatty_acid_profile', sa.JSON()))
+    safe_add_column('global_item', sa.Column('brewing_diastatic_power_lintner', sa.Float()))
+    safe_add_column('global_item', sa.Column('brewing_potential_sg', sa.Float()))
+    safe_add_column('global_item', sa.Column('brewing_color_srm', sa.Float()))
+    safe_add_column('global_item', sa.Column('protein_content_pct', sa.Float()))
+    safe_add_column('global_item', sa.Column('certifications', sa.JSON()))
+    safe_add_column('global_item', sa.Column('inci_name', sa.String(256)))
+    safe_add_column('global_item', sa.Column('recommended_fragrance_load_pct', sa.Float()))
+    safe_add_column('global_item', sa.Column('recommended_usage_rate', sa.String(128)))
+    safe_add_column('global_item', sa.Column('is_active_ingredient', sa.Boolean()))
 
     # Alter is_active_ingredient server_default after it's added
     with op.batch_alter_table('global_item') as batch_op:
@@ -69,15 +69,15 @@ def upgrade():
 
     # Mirror new attributes onto inventory items
     # Add same columns to inventory_item for backwards compatibility (safely)
-    safe_add_column('inventory_item', 'certifications', sa.JSON())
-    safe_add_column('inventory_item', 'fatty_acid_profile', sa.JSON())
-    safe_add_column('inventory_item', 'brewing_diastatic_power_lintner', sa.Float())
-    safe_add_column('inventory_item', 'brewing_potential_sg', sa.Float())
-    safe_add_column('inventory_item', 'brewing_color_srm', sa.Float())
-    safe_add_column('inventory_item', 'protein_content_pct', sa.Float())
-    safe_add_column('inventory_item', 'inci_name', sa.String(256))
-    safe_add_column('inventory_item', 'recommended_fragrance_load_pct', sa.Float())
-    safe_add_column('inventory_item', 'recommended_usage_rate', sa.String(128))
+    safe_add_column('inventory_item', sa.Column('certifications', sa.JSON()))
+    safe_add_column('inventory_item', sa.Column('fatty_acid_profile', sa.JSON()))
+    safe_add_column('inventory_item', sa.Column('brewing_diastatic_power_lintner', sa.Float()))
+    safe_add_column('inventory_item', sa.Column('brewing_potential_sg', sa.Float()))
+    safe_add_column('inventory_item', sa.Column('brewing_color_srm', sa.Float()))
+    safe_add_column('inventory_item', sa.Column('protein_content_pct', sa.Float()))
+    safe_add_column('inventory_item', sa.Column('inci_name', sa.String(256)))
+    safe_add_column('inventory_item', sa.Column('recommended_fragrance_load_pct', sa.Float()))
+    safe_add_column('inventory_item', sa.Column('recommended_usage_rate', sa.String(128)))
 
     # Remove category-level attribute toggles
     with op.batch_alter_table('ingredient_category') as batch_op:
