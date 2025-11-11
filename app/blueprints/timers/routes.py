@@ -172,7 +172,7 @@ def api_batch_timers(batch_id):
 def api_expired_timers():
     """Get all expired timers"""
     try:
-        expired_timers = TimerService.get_expired_timers()
+        expired_timers = TimerService.get_expired_timers(serialize=True)
         return jsonify({'expired_timers': expired_timers})
 
     except Exception as e:
@@ -265,20 +265,20 @@ def complete_expired_timers():
 def check_expired_timers():
     """Check for expired timers without completing them"""
     try:
-        expired_timers = TimerService.get_expired_timers()
+        expired_timers = TimerService.get_expired_timers(serialize=True)
 
         # Filter by organization for non-developer users
         if current_user.organization_id:
-            expired_timers = [t for t in expired_timers if t.organization_id == current_user.organization_id]
+            expired_timers = [t for t in expired_timers if t.get('organization_id') == current_user.organization_id]
 
         return jsonify({
             'expired_count': len(expired_timers),
             'expired_timers': [{
-                'id': timer.id,
-                'name': timer.name,
-                'batch_id': timer.batch_id,
-                'start_time': timer.start_time.isoformat() if timer.start_time else None,
-                'duration_seconds': timer.duration_seconds
+                'id': timer.get('id'),
+                'name': timer.get('name'),
+                'batch_id': timer.get('batch_id'),
+                'start_time': timer.get('start_time').isoformat() if timer.get('start_time') else None,
+                'duration_seconds': timer.get('duration_seconds')
             } for timer in expired_timers]
         })
 

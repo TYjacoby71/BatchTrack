@@ -5,7 +5,7 @@ from flask_login import current_user
 from sqlalchemy.pool import StaticPool
 
 # Import extensions and new modules
-from .extensions import db, migrate, csrf, limiter, cache
+from .extensions import db, migrate, csrf, limiter, cache, server_session
 from .authz import configure_login_manager
 from .middleware import register_middleware
 from .template_context import register_template_context
@@ -20,6 +20,7 @@ logger = logging.getLogger(__name__)
 def create_app(config=None):
     """Create and configure Flask application"""
     app = Flask(__name__, static_folder="static", static_url_path="/static")
+    os.makedirs(app.instance_path, exist_ok=True)
 
     # Load configuration
     app.config.from_object("app.config.Config")
@@ -55,6 +56,43 @@ def create_app(config=None):
         cache_config['CACHE_REDIS_URL'] = app.config['REDIS_URL']
     
     cache.init_app(app, config=cache_config)
+    if app.config.get('ENV') == 'production' and cache_config.get('CACHE_TYPE') != 'RedisCache':
+        message = "Redis cache not configured; falling back to SimpleCache is not permitted in production."
+        logger.error(message)
+        raise RuntimeError(message)
+
+    # Configure server-side sessions
+    session_backend = None
+    session_redis = None
+    redis_url = app.config.get('REDIS_URL')
+    if redis_url:
+        try:
+            import redis  # type: ignore
+            session_redis = redis.Redis.from_url(redis_url)
+            session_backend = 'redis'
+        except Exception as exc:
+            logger.warning("Failed to initialize Redis-backed session store (%s); falling back to filesystem.", exc)
+    if not session_backend:
+        session_backend = 'filesystem'
+        session_dir = os.path.join(app.instance_path, 'session_files')
+        os.makedirs(session_dir, exist_ok=True)
+        app.config.setdefault('SESSION_FILE_DIR', session_dir)
+
+    if session_backend == 'redis' and session_redis is not None:
+        app.config.setdefault('SESSION_TYPE', 'redis')
+        app.config.setdefault('SESSION_PERMANENT', True)
+        app.config.setdefault('SESSION_USE_SIGNER', True)
+        app.config['SESSION_REDIS'] = session_redis
+    else:
+        app.config.setdefault('SESSION_TYPE', 'filesystem')
+        app.config.setdefault('SESSION_PERMANENT', True)
+        app.config.setdefault('SESSION_USE_SIGNER', True)
+        if app.config.get('ENV') == 'production':
+            message = "Server-side sessions require Redis in production. Set REDIS_URL to a Redis instance."
+            logger.error(message)
+            raise RuntimeError(message)
+
+    server_session.init_app(app)
     
     # Configure rate limiter with Redis storage in production
     limiter_storage_uri = app.config.get('RATELIMIT_STORAGE_URI')
@@ -62,6 +100,10 @@ def create_app(config=None):
         limiter.init_app(app, storage_uri=limiter_storage_uri)
     else:
         limiter.init_app(app)
+    if app.config.get('ENV') == 'production' and (not limiter_storage_uri or str(limiter_storage_uri).startswith('memory://')):
+        message = "Rate limiter storage must be Redis-backed in production. Set RATELIMIT_STORAGE_URI accordingly."
+        logger.error(message)
+        raise RuntimeError(message)
     configure_login_manager(app)
 
     # Session lifetime should come from config classes; avoid overriding here

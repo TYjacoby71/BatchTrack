@@ -1,3 +1,10 @@
+try:
+    from gevent import monkey  # type: ignore
+
+    monkey.patch_all()
+except Exception:
+    # gevent may not be installed in local/dev environments
+    pass
 
 from app import create_app
 

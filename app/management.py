@@ -962,6 +962,29 @@ def generate_container_attributes_command():
         raise
 
 
+@click.command('dispatch-domain-events')
+@click.option('--poll-interval', default=5.0, show_default=True, help='Seconds to wait between polls when idle.')
+@click.option('--batch-size', default=100, show_default=True, type=int, help='Maximum events to process per batch.')
+@click.option('--once', is_flag=True, help='Process a single batch instead of running continuously.')
+@with_appcontext
+def dispatch_domain_events_command(poll_interval: float, batch_size: int, once: bool):
+    """Run the asynchronous dispatcher that delivers pending domain events."""
+    from app.services.domain_event_dispatcher import DomainEventDispatcher
+
+    dispatcher = DomainEventDispatcher(batch_size=batch_size)
+
+    if once:
+        metrics = dispatcher.dispatch_pending_events()
+        click.echo(
+            f"Processed {metrics['processed']} events ({metrics['succeeded']} succeeded, {metrics['failed']} failed)."
+        )
+    else:
+        click.echo(
+            f"Starting domain event dispatcher (batch_size={batch_size}, poll_interval={poll_interval}s)..."
+        )
+        dispatcher.run_forever(poll_interval=poll_interval)
+
+
 def register_commands(app):
     """Register CLI commands"""
     # Database initialization
@@ -993,3 +1016,4 @@ def register_commands(app):
     app.cli.add_command(update_permissions_command)
     app.cli.add_command(update_subscription_tiers_command)
     app.cli.add_command(activate_users)
+    app.cli.add_command(dispatch_domain_events_command)

@@ -1523,11 +1523,12 @@ def integrations_checklist():
         },
         {
             'title': 'Caching & Rate Limits',
-            'note': 'Use Redis (or another shared store) for rate limiting in production environments.',
-            'section_items': [
-                _make_item('REDIS_URL', 'Redis connection string for caching and rate limit storage.', required=False, recommended='redis://...'),
+            'note': 'Use Redis (or another shared store) for server sessions, caching, and rate limiting in production.',
+            'items': [
+                _make_item('REDIS_URL', 'Redis connection string for caching, sessions, and rate limit storage.', required=True, recommended='redis://...'),
                 _make_item('RATELIMIT_STORAGE_URL', 'Flask-Limiter backend. Point at Redis in production.', required=True, recommended='redis://...', allow_config=True),
-            ]
+                _make_item('SESSION_TYPE', 'Server-side session backend. Must be "redis" in production.', required=True, recommended='redis', allow_config=True),
+            ],
         },
         {
             'title': 'Security & Networking',
