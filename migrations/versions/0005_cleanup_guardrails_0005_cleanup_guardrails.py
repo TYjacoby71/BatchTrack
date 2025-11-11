@@ -28,9 +28,22 @@ def upgrade():
     except Exception:
         pass
 
-    # Expand global item attributes
+    # Expand global item attributes  
+    bind = op.get_bind()
+    inspector = sa.inspect(bind)
+    try:
+        columns = [col['name'] for col in inspector.get_columns('global_item')]
+        if 'aka_names' in columns:
+            with op.batch_alter_table('global_item') as batch_op:
+                batch_op.alter_column('aka_names', new_column_name='aliases')
+        elif 'aliases' not in columns:
+            # Neither column exists - this is unexpected 
+            print("⚠️  Neither 'aka_names' nor 'aliases' column found in global_item table")
+    except Exception as e:
+        print(f"⚠️  Could not rename aka_names column: {e}")
+    
+    # Continue with other column additions
     with op.batch_alter_table('global_item') as batch_op:
-        batch_op.alter_column('aka_names', new_column_name='aliases')
         batch_op.add_column(sa.Column('recommended_usage_rate', sa.String(length=64), nullable=True))
         batch_op.add_column(sa.Column('recommended_fragrance_load_pct', sa.String(length=64), nullable=True))
         batch_op.add_column(sa.Column('is_active_ingredient', sa.Boolean(), nullable=False, server_default=sa.text('0')))
@@ -146,9 +159,19 @@ def downgrade():
     for column_name in global_item_columns_to_drop:
         safe_drop_column('global_item', column_name, verbose=False)
         
-    # Rename column (still needs batch alter)
-    with op.batch_alter_table('global_item') as batch_op:
-        batch_op.alter_column('aliases', new_column_name='aka_names')
+    # Rename column only if aliases exists (safe check)
+    bind = op.get_bind()
+    inspector = sa.inspect(bind)
+    try:
+        columns = [col['name'] for col in inspector.get_columns('global_item')]
+        if 'aliases' in columns:
+            with op.batch_alter_table('global_item') as batch_op:
+                batch_op.alter_column('aliases', new_column_name='aka_names')
+        elif 'aka_names' not in columns:
+            # Neither column exists - this is unexpected but safe to skip
+            print("⚠️  Neither 'aliases' nor 'aka_names' column found in global_item table")
+    except Exception as e:
+        print(f"⚠️  Could not rename aliases column: {e}")
 
     # Drop PostgreSQL-specific indexes created in upgrade
     if is_postgresql():
