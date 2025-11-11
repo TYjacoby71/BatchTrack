@@ -2,6 +2,15 @@ import os
 from datetime import timedelta
 
 
+_DEFAULT_ENV = 'development'
+
+
+def _normalized_env(value: str | None, *, default: str = _DEFAULT_ENV) -> str:
+    if not value:
+        return default
+    return value.strip().lower() or default
+
+
 def _normalize_db_url(url: str | None) -> str | None:
     if not url:
         return None
@@ -66,16 +75,40 @@ class BaseConfig:
     # Billing / OAuth
     STRIPE_PUBLISHABLE_KEY = os.environ.get('STRIPE_PUBLISHABLE_KEY')
     STRIPE_SECRET_KEY = os.environ.get('STRIPE_SECRET_KEY')
-    STRIPE_PUBLISHABLE_KEY = os.environ.get('STRIPE_PUBLISHABLE_KEY')
-    STRIPE_SECRET_KEY = os.environ.get('STRIPE_SECRET_KEY')
     STRIPE_WEBHOOK_SECRET = os.environ.get('STRIPE_WEBHOOK_SECRET')
     WHOP_API_KEY = os.environ.get('WHOP_API_KEY')
     WHOP_APP_ID = os.environ.get('WHOP_APP_ID')
     GOOGLE_OAUTH_CLIENT_ID = os.environ.get('GOOGLE_OAUTH_CLIENT_ID')
     GOOGLE_OAUTH_CLIENT_SECRET = os.environ.get('GOOGLE_OAUTH_CLIENT_SECRET')
 
+    # Helper to parse environment integers with fallback
+    @staticmethod
+    def _env_int(key, default):
+        """Helper to parse environment integers with fallback."""
+        try:
+            return int(os.environ.get(key, default))
+        except (ValueError, TypeError):
+            return default
+
+    # Enhanced SQLAlchemy pool configuration for high concurrency
+    # These are default values; specific environments may override them.
+    # For 10k users, ProductionConfig should be the primary beneficiary.
+    SQLALCHEMY_ENGINE_OPTIONS = {
+        'pool_size': _env_int('SQLALCHEMY_POOL_SIZE', 20), # Default for base
+        'max_overflow': _env_int('SQLALCHEMY_MAX_OVERFLOW', 30), # Default for base
+        'pool_pre_ping': True,
+        'pool_recycle': _env_int('SQLALCHEMY_POOL_RECYCLE', 1800),
+        'pool_timeout': _env_int('SQLALCHEMY_POOL_TIMEOUT', 30),
+        'pool_use_lifo': True,
+    }
+
+    # Billing cache configuration
+    BILLING_CACHE_ENABLED = os.environ.get('BILLING_CACHE_ENABLED', 'true').lower() == 'true'
+    BILLING_GATE_CACHE_TTL_SECONDS = _env_int('BILLING_GATE_CACHE_TTL_SECONDS', 60)
+
 
 class DevelopmentConfig(BaseConfig):
+    ENV = 'development'
     DEBUG = True
     DEVELOPMENT = True
     SESSION_COOKIE_SECURE = False
@@ -90,6 +123,7 @@ class DevelopmentConfig(BaseConfig):
         os.chmod(instance_path, 0o777)
         SQLALCHEMY_DATABASE_URI = 'sqlite:///' + os.path.join(instance_path, 'batchtrack.db')
 
+    # Development specific engine options, less aggressive than production
     SQLALCHEMY_ENGINE_OPTIONS = {
         'pool_pre_ping': True,
         'pool_recycle': 3600,
@@ -104,6 +138,7 @@ class DevelopmentConfig(BaseConfig):
 
 
 class TestingConfig(BaseConfig):
+    ENV = 'testing'
     TESTING = True
     WTF_CSRF_ENABLED = False
     SESSION_COOKIE_SECURE = False
@@ -117,6 +152,7 @@ class TestingConfig(BaseConfig):
 
 
 class StagingConfig(BaseConfig):
+    ENV = 'staging'
     SESSION_COOKIE_SECURE = True
     PREFERRED_URL_SCHEME = 'https'
     DEBUG = False
@@ -133,6 +169,7 @@ class StagingConfig(BaseConfig):
 
 
 class ProductionConfig(BaseConfig):
+    ENV = 'production'
     SESSION_COOKIE_SECURE = True
     PREFERRED_URL_SCHEME = 'https'
     DEBUG = False
@@ -157,28 +194,19 @@ config_map = {
     'testing': TestingConfig,
     'staging': StagingConfig,
     'production': ProductionConfig,
-    'default': DevelopmentConfig,
 }
 
 
+def get_active_config_name() -> str:
+    """Return the canonical configuration key for the current environment."""
+    env_name = _normalized_env(os.environ.get('FLASK_ENV'), default=_DEFAULT_ENV)
+    return env_name if env_name in config_map else _DEFAULT_ENV
+
+
 def get_config():
-    """
-    Returns the appropriate config class based on ENV environment variable.
-    
-    ENV=production -> ProductionConfig (DEBUG=False, secure settings)
-    ENV=development (or any other value) -> DevelopmentConfig (DEBUG=True)
-    
-    The DEBUG flag controls:
-    - Flask debug mode
-    - Debug info visibility in templates
-    - Development conveniences
-    """
-    env = os.environ.get('ENV', 'development').lower()
-    
-    if env == 'production':
-        return ProductionConfig
-    else:
-        return DevelopmentConfig
+    """Return the config class for the active environment."""
+    config_name = get_active_config_name()
+    return config_map[config_name]
 
 
 # Backwards compatibility for existing imports

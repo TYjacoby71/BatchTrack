@@ -123,7 +123,7 @@
         let densityOptions = [];
 
         // Load density options from server
-        fetch('/api/density-reference/options')
+        fetch('/api/ingredients/global-library/density-options')
             .then(response => response.json())
             .then(data => {
                 densityOptions = data;
@@ -136,62 +136,83 @@
         const searchInput = document.getElementById('densitySearchInput');
         const optionsContainer = document.getElementById('densityOptionsContainer');
 
-        function renderDensityOptions(options, searchTerm = '') {
-            if (!optionsContainer) return;
+          function renderDensityOptions(options, searchTerm = '') {
+              if (!optionsContainer) return;
 
-            optionsContainer.innerHTML = '';
+              optionsContainer.innerHTML = '';
 
-            options.forEach(category => {
-                // Filter items based on search
-                let filteredItems = category.items;
-                if (searchTerm) {
-                    filteredItems = category.items.filter(item => 
-                        item.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                        item.aliases.some(alias => alias.toLowerCase().includes(searchTerm.toLowerCase()))
-                    );
-                }
+              options.forEach(category => {
+                  const categoryName = (category.name || '').toString();
+                  const normalizedSearch = searchTerm.toLowerCase();
 
-                if (filteredItems.length === 0 && !category.name.toLowerCase().includes(searchTerm.toLowerCase())) {
-                    return; // Skip category if no matches
-                }
+                  // Filter items based on search
+                  let filteredItems = Array.isArray(category.items) ? [...category.items] : [];
+                  if (normalizedSearch) {
+                      filteredItems = filteredItems.filter(item => {
+                          const itemName = (item.name || '').toLowerCase();
+                          const aliases = Array.isArray(item.aliases) ? item.aliases : [];
+                          return itemName.includes(normalizedSearch) ||
+                              aliases.some(alias => alias.toLowerCase().includes(normalizedSearch));
+                      });
+                  }
 
-                // Category header with default option
-                const categoryDiv = document.createElement('div');
-                categoryDiv.className = 'mb-2';
-                categoryDiv.innerHTML = `
-                    <h6 class="text-primary mb-1">${category.name}</h6>
-                    <div class="form-check mb-1">
-                        <input class="form-check-input density-option" type="radio" name="densityOption" 
-                               value="category-default" 
-                               data-density="${category.default_density.toFixed(3)}"
-                               data-category="${category.name}"
-                               id="cat-${category.name.replace(/\s+/g, '-')}">
-                        <label class="form-check-label" for="cat-${category.name.replace(/\s+/g, '-')}">
-                            <strong>${category.name} (Default)</strong> - ${category.default_density.toFixed(3)} g/ml
-                        </label>
-                    </div>
-                `;
+                  const categoryMatches = categoryName.toLowerCase().includes(normalizedSearch);
+                  if (filteredItems.length === 0 && normalizedSearch && !categoryMatches) {
+                      return; // Skip category if no matches
+                  }
 
-                // Add specific items
-                filteredItems.forEach(item => {
-                    const itemDiv = document.createElement('div');
-                    itemDiv.className = 'form-check ms-3 mb-1';
-                    itemDiv.innerHTML = `
-                        <input class="form-check-input density-option" type="radio" name="densityOption" 
-                               value="reference-item" 
-                               data-density="${item.density_g_per_ml}"
-                               data-reference-item="${item.name}"
-                               id="item-${item.name.replace(/\s+/g, '-')}">
-                        <label class="form-check-label" for="item-${item.name.replace(/\s+/g, '-')}">
-                            ${item.name} - ${item.density_g_per_ml} g/ml
-                            ${item.aliases.length > 0 ? `<small class="text-muted">(${item.aliases.join(', ')})</small>` : ''}
-                        </label>
-                    `;
-                    categoryDiv.appendChild(itemDiv);
-                });
+                  const categoryDiv = document.createElement('div');
+                  categoryDiv.className = 'mb-2';
 
-                optionsContainer.appendChild(categoryDiv);
-            });
+                  const hasDefaultDensity = typeof category.default_density === 'number' && !Number.isNaN(category.default_density);
+                  const defaultDensityDisplay = hasDefaultDensity ? Number(category.default_density).toFixed(3) : null;
+
+                  let categoryHeader = `<h6 class="text-primary mb-1">${categoryName}</h6>`;
+                  if (hasDefaultDensity) {
+                      categoryHeader += `
+                          <div class="form-check mb-1">
+                              <input class="form-check-input density-option" type="radio" name="densityOption" 
+                                     value="category-default" 
+                                     data-density="${defaultDensityDisplay}"
+                                     data-category="${categoryName}"
+                                     id="cat-${categoryName.replace(/\s+/g, '-')}">
+                              <label class="form-check-label" for="cat-${categoryName.replace(/\s+/g, '-')}">
+                                  <strong>${categoryName} (Default)</strong> - ${defaultDensityDisplay} g/ml
+                              </label>
+                          </div>
+                      `;
+                  }
+
+                  categoryDiv.innerHTML = categoryHeader;
+
+                  // Add specific items
+                  filteredItems.forEach(item => {
+                      if (typeof item.density_g_per_ml !== 'number' || Number.isNaN(item.density_g_per_ml)) {
+                          return;
+                      }
+                      const densityDisplay = Number(item.density_g_per_ml).toFixed(3);
+                      const itemId = `item-${item.name.replace(/\s+/g, '-')}`;
+                      const aliases = Array.isArray(item.aliases) ? item.aliases : [];
+                      const aliasMarkup = aliases.length > 0 ? `<small class="text-muted">(${aliases.join(', ')})</small>` : '';
+
+                      const itemDiv = document.createElement('div');
+                      itemDiv.className = 'form-check ms-3 mb-1';
+                      itemDiv.innerHTML = `
+                          <input class="form-check-input density-option" type="radio" name="densityOption" 
+                                 value="reference-item" 
+                                 data-density="${densityDisplay}"
+                                 data-reference-item="${item.name}"
+                                 id="${itemId}">
+                          <label class="form-check-label" for="${itemId}">
+                              ${item.name} - ${densityDisplay} g/ml
+                              ${aliasMarkup}
+                          </label>
+                      `;
+                      categoryDiv.appendChild(itemDiv);
+                  });
+
+                  optionsContainer.appendChild(categoryDiv);
+              });
 
             // Add manual option at the end
             const manualDiv = document.createElement('div');
@@ -357,6 +378,6 @@
 })();
 
 function openDensityReference() {
-    window.open('/density-reference', '_blank');
+    window.open('/global-items?type=ingredient', '_blank');
 }
 </script>

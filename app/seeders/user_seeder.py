@@ -6,7 +6,6 @@ def seed_users_and_organization():
     """Create the default BatchTrack organization with 4 essential users"""
     from flask import current_app
 
-    # Ensure we're in an application context
     if not current_app:
         raise RuntimeError("seed_users_and_organization() must be called within Flask application context")
 
@@ -15,7 +14,7 @@ def seed_users_and_organization():
     from ..models.user_role_assignment import UserRoleAssignment
     from ..models.subscription_tier import SubscriptionTier
 
-    print("=== Creating Default Organization with Essential Users ===")
+    print("🔧 Seeding users and organization...")
 
     # Check if this is a fresh installation or re-initialization
     existing_orgs = Organization.query.count()
@@ -211,10 +210,7 @@ def seed_users_and_organization():
         print(f"ℹ️  Operator user 'operator' already exists (org_id: {existing_operator.organization_id})")
 
     db.session.commit()
-    print("✅ Default organization and essential users created successfully")
-    print(f"   - Organization: {org.name} (Exempt tier)")
-    print(f"   - 1 System developer (dev/dev123)")
-    print(f"   - 3 Organization users (admin, manager, operator)")
+    print(f"   ✅ Users and organization: 1 org, 4 users created")
 
 # Maintain backward compatibility
 def seed_users():

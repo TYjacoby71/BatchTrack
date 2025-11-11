@@ -3,7 +3,6 @@ import logging
 from flask import Flask, redirect, url_for, render_template
 from flask_login import current_user
 from sqlalchemy.pool import StaticPool
-from datetime import timedelta
 
 # Import extensions and new modules
 from .extensions import db, migrate, csrf, limiter, cache
@@ -15,7 +14,6 @@ from .utils.template_filters import register_template_filters
 from .logging_config import configure_logging
 from .blueprints.api.drawer_actions import drawer_actions_bp
 from .blueprints.api.routes import api_bp
-from .blueprints.api.density_reference import density_reference_bp
 
 logger = logging.getLogger(__name__)
 
@@ -40,16 +38,6 @@ def create_app(config=None):
     app.config['UPLOAD_FOLDER'] = 'static/product_images'
     os.makedirs('static/product_images', exist_ok=True)
 
-    # Production security settings
-    if os.environ.get('ENV', 'development').lower() == 'production':
-        app.config.update({
-            'PREFERRED_URL_SCHEME': 'https',
-            'SESSION_COOKIE_SECURE': True,
-            'SESSION_COOKIE_HTTPONLY': True,
-            'PERMANENT_SESSION_LIFETIME': 1800,
-            'SESSION_COOKIE_SAMESITE': 'Lax'
-        })
-
     # SQLite engine options for tests/memory databases
     _configure_sqlite_engine_options(app)
 
@@ -57,8 +45,23 @@ def create_app(config=None):
     db.init_app(app)
     migrate.init_app(app, db)
     csrf.init_app(app)
-    _configure_cache(app)
-    _configure_rate_limiter(app)
+    
+    # Configure cache (Redis in production, simple in development)
+    cache_config = {
+        'CACHE_TYPE': 'RedisCache' if app.config.get('REDIS_URL') else 'SimpleCache',
+        'CACHE_DEFAULT_TIMEOUT': 300,
+    }
+    if app.config.get('REDIS_URL'):
+        cache_config['CACHE_REDIS_URL'] = app.config['REDIS_URL']
+    
+    cache.init_app(app, config=cache_config)
+    
+    # Configure rate limiter with Redis storage in production
+    limiter_storage_uri = app.config.get('RATELIMIT_STORAGE_URI')
+    if limiter_storage_uri:
+        limiter.init_app(app, storage_uri=limiter_storage_uri)
+    else:
+        limiter.init_app(app)
     configure_login_manager(app)
 
     # Session lifetime should come from config classes; avoid overriding here
@@ -95,12 +98,7 @@ def create_app(config=None):
     # Register context processors
     register_template_context(app)
     # Register template filters
-    from .utils.template_filters import format_currency, format_percentage, pluralize, user_date, user_timezone
-    app.jinja_env.filters['format_currency'] = format_currency
-    app.jinja_env.filters['format_percentage'] = format_percentage
-    app.jinja_env.filters['pluralize'] = pluralize
-    app.jinja_env.filters['user_date'] = user_date
-    app.jinja_env.filters['user_timezone'] = user_timezone
+    register_template_filters(app)
 
 
     # Add core routes

@@ -343,6 +343,10 @@
 <h4>7) Core Environment</h4>
 <p class="text-muted">Work through every launch-critical environment variable and secret below. Entries auto-check when detected from the runtime, and you can tick them manually while you deploy.</p>
 
+  <div class="alert alert-warning">
+    <strong>Environment switch:</strong> Set <code>FLASK_ENV=production</code> (and leave <code>FLASK_DEBUG</code> unset/false) in every live deployment. Local development should use <code>FLASK_ENV=development</code>. All runtime behavior—debug panels, logging verbosity, session security, and rate limits—now keys off this single variable.
+  </div>
+
 {% for section in launch_env_sections %}
   <div class="mb-4">
     <div class="d-flex align-items-center justify-content-between mb-2">
@@ -352,7 +356,7 @@
       <div class="alert alert-secondary small mb-2">{{ section.note }}</div>
     {% endif %}
     <div class="list-group">
-      {% for item in section.items %}
+      {% for item in section.section_items %}
         <label class="list-group-item d-flex align-items-start gap-3">
           <input class="form-check-input mt-1" type="checkbox" id="env_{{ item.key }}" {% if item.present %}checked{% endif %}>
           <div>

@@ -113,5 +113,3 @@ See [docs/todo/FIX_IMMEDIATE.md](docs/todo/FIX_IMMEDIATE.md) for the active fix 
 See [docs/FUTURE_ROADMAP.md](docs/FUTURE_ROADMAP.md) for planned enhancements.
 
 ---
-
-**⚠️ Important:** This README provides overview only. For development work, always reference the detailed documentation in `/docs` to maintain system integrity.

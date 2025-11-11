@@ -32,9 +32,9 @@ __all__ = [
     'validate_recipe_data', 'check_recipe_stock'
 ]
 
-# Backwards compatibility shim for tests and legacy code
+# LEGACY SHIM: Backwards compatibility wrapper for consumers still importing RecipeService
 class RecipeService:
-    """Backwards compatibility shim for tests and legacy code"""
+    """LEGACY SHIM: Maintain old ``RecipeService`` import while migration completes."""
 
     @staticmethod
     def create_recipe(name, ingredients, yield_amount, unit, notes=None, category=None, tags=None, batch_size=None, organization_id=None, created_by=None):

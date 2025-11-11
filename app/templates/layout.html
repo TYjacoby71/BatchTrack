@@ -28,16 +28,10 @@
     <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
     {% block head %}{% endblock %}
     <style>
-        input[name="csrf_token"],
         input[type="hidden"][name="csrf_token"],
-        input[name="confirm_token"],
         input[type="hidden"][name="confirm_token"],
         .csrf-token,
         .confirm-token,
-        [name="csrf_token"],
-        [name="confirm_token"],
-        form > input[name="csrf_token"],
-        form > input[name="confirm_token"],
         .token-field,
         .csrf_token {
             display: none !important;

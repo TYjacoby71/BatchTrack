@@ -1,15 +1,12 @@
 
-# This file provides a minimal shim for InventoryAlertService
+# LEGACY SHIM: This file provides a minimal shim for InventoryAlertService.
 # Real functionality moved to combined_inventory_alerts.py
 
 from __future__ import annotations
 from typing import Optional, Iterable, Any
 
 class InventoryAlertService:
-    """
-    Minimal no-op shim for PR2. Blueprints can import this safely.
-    Real alerting functionality is in combined_inventory_alerts.py
-    """
+    """LEGACY SHIM: no-op compatibility surface for legacy imports."""
 
     @staticmethod
     def notify_if_low_stock(inventory_item_id: int) -> None:

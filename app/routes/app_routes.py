@@ -175,7 +175,6 @@ def api_dashboard_alerts():
         return jsonify({'error': str(e)}), 500
 
 
-
 @app_routes_bp.route('/fault-log')
 @login_required
 @permission_required('view_fault_log')

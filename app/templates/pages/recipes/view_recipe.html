@@ -1,69 +1,76 @@
+
 {% extends 'layout.html' %}
 {% from 'macros/forms.html' import csrf_form %}
+
+{% set breadcrumb_items = [
+    {'label': 'Recipes', 'url': url_for('recipes.list_recipes')},
+    {'label': recipe.name, 'url': None}
+] %}
+
 {% block content %}
+
+<!-- Recipe Header Card with merged details -->
 <div class="card mb-4">
   <div class="card-body">
-    <h2 class="mb-1">{{ recipe.name }}</h2>
-    <div>
-      {% if recipe.is_locked %}
-        <span class="badge bg-secondary">Locked</span>
-      {% endif %}
-      {% if recipe.parent_id %}
-        <p class="text-muted mb-0">Variation of:
-          <a href="{{ url_for('recipes.view_recipe', recipe_id=recipe.parent_id) }}">{{ recipe.parent.name }}</a>
-        </p>
-      {% endif %}
-    </div>
-
-    <div class="action-buttons mt-3">
-      <a href="{{ url_for('recipes.clone_recipe', recipe_id=recipe.id) }}" class="btn btn-sm btn-secondary">{% if recipe.parent_id %}Make New Parent{% else %}Duplicate{% endif %}</a>
-      {% if not recipe.parent_id %}
-      <a href="{{ url_for('recipes.create_variation', recipe_id=recipe.id) }}" class="btn btn-sm btn-info">New Variation</a>
-      {% endif %}
-      {% if recipe.is_locked %}
-        <button type="button" class="btn btn-sm btn-warning" data-bs-toggle="modal" data-bs-target="#unlockModal">
-          {% if recipe.parent_id %}Unlock Variation{% else %}Unlock Recipe{% endif %}
-        </button>
-      {% else %}
-        <form method="post" action="{{ url_for('recipes.lock_recipe', recipe_id=recipe.id) }}" style="display:inline;">
-          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-          <button type="submit" class="btn btn-sm btn-warning">
-            {% if recipe.parent_id %}Lock Variation{% else %}Lock Recipe{% endif %}
+    <div class="d-flex justify-content-between align-items-start mb-3">
+      <div class="flex-grow-1">
+        <h2 class="mb-1">{{ recipe.name }}</h2>
+        <div class="d-flex gap-2 align-items-center mb-2">
+          {% if recipe.is_locked %}
+            <span class="badge bg-secondary"><i class="fas fa-lock"></i> Locked</span>
+          {% endif %}
+          {% if recipe.parent_id %}
+            <span class="badge bg-info"><i class="fas fa-code-branch"></i> Variation</span>
+          {% endif %}
+          {% if recipe.label_prefix %}
+            <span class="badge bg-primary">{{ recipe.label_prefix }}</span>
+          {% endif %}
+        </div>
+        
+        <!-- Merged Details -->
+        <div class="row g-3 mb-3">
+          <div class="col-md-6">
+            <p class="mb-1"><strong>Label Prefix:</strong> <span class="badge bg-light text-dark">{{ recipe.label_prefix or 'BTH' }}</span></p>
+            {% if recipe.predicted_yield %}
+            <p class="mb-1"><strong>Predicted Yield:</strong> {{ recipe.predicted_yield }} {{ recipe.predicted_yield_unit }}</p>
+            {% endif %}
+          </div>
+          <div class="col-md-6">
+            {% if recipe.product_category %}
+            <p class="mb-1"><strong>Category:</strong> {{ recipe.product_category.name }}</p>
+            {% endif %}
+            {% if recipe.is_portioned and recipe.portion_name and recipe.portion_count %}
+            <p class="mb-1"><strong>Portions:</strong> {{ recipe.portion_count }} {{ recipe.portion_name }}</p>
+            {% endif %}
+          </div>
+        </div>
+        
+        {% if recipe.parent_id %}
+          <p class="text-muted mb-0">
+            <i class="fas fa-arrow-up"></i> Variation of:
+            <a href="{{ url_for('recipes.view_recipe', recipe_id=recipe.parent_id) }}" class="text-decoration-none">
+              {{ recipe.parent.name }}
+            </a>
+          </p>
+        {% endif %}
+      </div>
+      
+      <div class="d-flex gap-2 align-items-start">
+        {% if recipe.is_locked %}
+          <button type="button" class="btn btn-outline-warning" data-bs-toggle="modal" data-bs-target="#unlockModal">
+            <i class="fas fa-unlock"></i> {% if recipe.parent_id %}Unlock Variation{% else %}Unlock Recipe{% endif %}
           </button>
-        </form>
-      {% endif %}
+        {% else %}
+          <form method="post" action="{{ url_for('recipes.lock_recipe', recipe_id=recipe.id) }}" class="d-inline">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <button type="submit" class="btn btn-outline-warning">
+              <i class="fas fa-lock"></i> {% if recipe.parent_id %}Lock Variation{% else %}Lock Recipe{% endif %}
+            </button>
+          </form>
+        {% endif %}
+      </div>
     </div>
   </div>
-</div>
-
-{% if recipe.is_locked %}
-  <span class="badge bg-secondary">Locked</span>
-{% endif %}
-{% if recipe.parent_id %}
-  <p class="text-muted">Variation of: 
-    <a href="{{ url_for('recipes.view_recipe', recipe_id=recipe.parent_id) }}">
-      {{ recipe.parent.name }}
-    </a>
-  </p>
-{% endif %}
-
-<div class="action-buttons mb-3">
-  <a href="{{ url_for('recipes.clone_recipe', recipe_id=recipe.id) }}" class="btn btn-sm btn-secondary">{% if recipe.parent_id %}Make New Parent{% else %}Duplicate{% endif %}</a>
-  {% if not recipe.parent_id %}
-  <a href="{{ url_for('recipes.create_variation', recipe_id=recipe.id) }}" class="btn btn-sm btn-info">New Variation</a>
-  {% endif %}
-  {% if recipe.is_locked %}
-    <button type="button" class="btn btn-sm btn-warning" data-bs-toggle="modal" data-bs-target="#unlockModal">
-      {% if recipe.parent_id %}Unlock Variation{% else %}Unlock Recipe{% endif %}
-    </button>
-  {% else %}
-    <form method="post" action="{{ url_for('recipes.lock_recipe', recipe_id=recipe.id) }}" style="display:inline;">
-      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-      <button type="submit" class="btn btn-sm btn-warning">
-        {% if recipe.parent_id %}Lock Variation{% else %}Lock Recipe{% endif %}
-      </button>
-    </form>
-  {% endif %}
 </div>
 
 <!-- Unlock Modal -->
@@ -71,7 +78,7 @@
   <div class="modal-dialog">
     <div class="modal-content">
       <div class="modal-header">
-        <h5 class="modal-title">Enter Password to Unlock</h5>
+        <h5 class="modal-title"><i class="fas fa-key"></i> Enter Password to Unlock</h5>
         <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
       </div>
       <form method="post" action="{{ url_for('recipes.unlock_recipe', recipe_id=recipe.id) }}">
@@ -91,58 +98,263 @@
   </div>
 </div>
 
-<div class="row g-3">
-  <div class="col-lg-6">
-    <div class="card">
-      <div class="card-body">
-        <h5 class="card-title">Details</h5>
-        <p class="mb-0"><strong>Label Prefix:</strong> {{ recipe.label_prefix }}</p>
-      </div>
-    </div>
-    <div class="card">
-      <div class="card-body">
-        <h5 class="card-title">Ingredients</h5>
-        <ul class="mb-0">
-          {% for assoc in recipe.recipe_ingredients %}
-          <li>{{ assoc.inventory_item.name }}: {{ assoc.quantity }} {{ assoc.unit }}</li>
-          {% endfor %}
-        </ul>
-      </div>
-    </div>
-  </div>
-  <div class="col-lg-6">
-    <div class="card">
-      <div class="card-body">
-        <h5 class="card-title">Consumables</h5>
-        <ul class="mb-0">
-          {% if recipe.recipe_consumables %}
-            {% for assoc in recipe.recipe_consumables %}
-            <li>{{ assoc.inventory_item.name if assoc.inventory_item else assoc.inventory_item_id }}: {{ assoc.quantity }} {{ assoc.unit }}</li>
-            {% endfor %}
-          {% else %}
-            <li class="text-muted">No consumables configured</li>
-          {% endif %}
-        </ul>
-      </div>
-    </div>
+<div class="row g-4">
+  <!-- Left Column -->
+  <div class="col-lg-8">
+    <!-- Instructions Card -->
     {% if recipe.instructions %}
-    <div class="card">
+    <div class="card mb-4">
+      <div class="card-header">
+        <h5 class="card-title mb-0"><i class="fas fa-list-ol"></i> Instructions</h5>
+      </div>
       <div class="card-body">
-        <h5 class="card-title">Instructions</h5>
-        <p class="mb-0">{{ recipe.instructions }}</p>
+        <div class="recipe-instructions">
+          {{ recipe.instructions|nl2br }}
+        </div>
       </div>
     </div>
     {% endif %}
+
+    <!-- Components Card (Ingredients, Consumables, Packaging) -->
+    <div class="card mb-4">
+      <div class="card-header">
+        <h5 class="card-title mb-0"><i class="fas fa-flask"></i> Recipe Components</h5>
+      </div>
+      <div class="card-body">
+        {% if recipe.recipe_ingredients %}
+        <div class="component-section mb-4">
+          <h6 class="text-primary mb-3"><i class="fas fa-leaf"></i> Ingredients</h6>
+          <div class="table-responsive">
+            <table class="table table-sm">
+              <thead>
+                <tr>
+                  <th>Item</th>
+                  <th class="text-end">Quantity</th>
+                  <th>Unit</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for assoc in recipe.recipe_ingredients %}
+                <tr>
+                  <td>
+                    <span class="fw-medium">{{ assoc.inventory_item.name }}</span>
+                    {% if assoc.inventory_item.type != 'ingredient' %}
+                      <span class="badge bg-secondary ms-1">{{ assoc.inventory_item.type }}</span>
+                    {% endif %}
+                  </td>
+                  <td class="text-end">{{ assoc.quantity }}</td>
+                  <td>{{ assoc.unit }}</td>
+                </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        </div>
+        {% endif %}
+
+        {% if recipe.recipe_consumables %}
+        <div class="component-section mb-4">
+          <h6 class="text-info mb-3"><i class="fas fa-tools"></i> Consumables</h6>
+          <div class="table-responsive">
+            <table class="table table-sm">
+              <thead>
+                <tr>
+                  <th>Item</th>
+                  <th class="text-end">Quantity</th>
+                  <th>Unit</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for assoc in recipe.recipe_consumables %}
+                <tr>
+                  <td>
+                    <span class="fw-medium">{{ assoc.inventory_item.name if assoc.inventory_item else assoc.inventory_item_id }}</span>
+                    {% if assoc.inventory_item and assoc.inventory_item.type != 'consumable' %}
+                      <span class="badge bg-secondary ms-1">{{ assoc.inventory_item.type }}</span>
+                    {% endif %}
+                  </td>
+                  <td class="text-end">{{ assoc.quantity }}</td>
+                  <td>{{ assoc.unit }}</td>
+                </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        </div>
+        {% endif %}
+
+        {% if not recipe.recipe_ingredients and not recipe.recipe_consumables %}
+        <div class="text-center py-4 text-muted">
+          <i class="fas fa-flask fa-2x mb-3 opacity-50"></i>
+          <p>No components configured for this recipe.</p>
+        </div>
+        {% endif %}
+      </div>
+    </div>
+
+    <!-- Recipe Stats Card -->
+    <div class="card mb-4">
+      <div class="card-header">
+        <h5 class="card-title mb-0"><i class="fas fa-chart-bar"></i> Recipe Stats</h5>
+      </div>
+      <div class="card-body">
+        <div class="row text-center g-3">
+          <div class="col-3">
+            <div class="stat-item p-3 bg-light rounded">
+              <div class="h4 text-primary mb-1">{{ recipe.recipe_ingredients|length }}</div>
+              <small class="text-muted">Ingredients</small>
+            </div>
+          </div>
+          <div class="col-3">
+            <div class="stat-item p-3 bg-light rounded">
+              <div class="h4 text-info mb-1">{{ recipe.recipe_consumables|length }}</div>
+              <small class="text-muted">Consumables</small>
+            </div>
+          </div>
+          <div class="col-3">
+            <div class="stat-item p-3 bg-light rounded">
+              <div class="h4 text-success mb-1">{{ recipe.batches|length if recipe.batches else 0 }}</div>
+              <small class="text-muted">Batches Made</small>
+            </div>
+          </div>
+          <div class="col-3">
+            <div class="stat-item p-3 bg-light rounded">
+              <div class="h4 text-warning mb-1">{{ recipe.variations|length if recipe.variations else 0 }}</div>
+              <small class="text-muted">Variations</small>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Right Column -->
+  <div class="col-lg-4">
+    <!-- Actions Card -->
+    <div class="card mb-4">
+      <div class="card-header">
+        <h5 class="card-title mb-0"><i class="fas fa-cog"></i> Actions</h5>
+      </div>
+      <div class="card-body">
+        <div class="d-grid gap-2">
+          <a href="{{ url_for('recipes.list_recipes') }}" class="btn btn-outline-secondary">
+            <i class="fas fa-arrow-left"></i> Back to List
+          </a>
+          <a href="{{ url_for('production_planning.plan_production_route', recipe_id=recipe.id) }}" class="btn btn-success">
+            <i class="fas fa-play"></i> Plan Production
+          </a>
+          <a href="{{ url_for('recipes.edit_recipe', recipe_id=recipe.id) }}" class="btn btn-primary">
+            <i class="fas fa-edit"></i> Edit Recipe
+          </a>
+          <a href="{{ url_for('recipes.clone_recipe', recipe_id=recipe.id) }}" class="btn btn-outline-info">
+            <i class="fas fa-copy"></i> {% if recipe.parent_id %}Make New Parent{% else %}Clone Recipe{% endif %}
+          </a>
+          {% if not recipe.parent_id %}
+          <a href="{{ url_for('recipes.create_variation', recipe_id=recipe.id) }}" class="btn btn-outline-success">
+            <i class="fas fa-code-branch"></i> New Variation
+          </a>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+
+    <!-- Recipe Cost Card -->
+    <div class="card">
+      <div class="card-header bg-success text-white">
+        <h5 class="card-title mb-0"><i class="fas fa-dollar-sign"></i> Recipe Cost</h5>
+      </div>
+      <div class="card-body">
+        {% set total_cost = 0 %}
+        {% set has_costs = false %}
+        
+        {% if recipe.recipe_ingredients %}
+          <div class="cost-breakdown mb-3">
+            <h6 class="text-muted mb-2">Ingredients</h6>
+            {% for assoc in recipe.recipe_ingredients %}
+              {% if assoc.inventory_item and assoc.inventory_item.cost_per_unit %}
+                {% set item_cost = (assoc.quantity * assoc.inventory_item.cost_per_unit) %}
+                {% set total_cost = total_cost + item_cost %}
+                {% set has_costs = true %}
+                <div class="d-flex justify-content-between align-items-center mb-1">
+                  <small class="text-truncate me-2">{{ assoc.inventory_item.name }}</small>
+                  <small class="text-success fw-medium">${{ "%.2f"|format(item_cost) }}</small>
+                </div>
+              {% endif %}
+            {% endfor %}
+          </div>
+        {% endif %}
+
+        {% if recipe.recipe_consumables %}
+          <div class="cost-breakdown mb-3">
+            <h6 class="text-muted mb-2">Consumables</h6>
+            {% for assoc in recipe.recipe_consumables %}
+              {% if assoc.inventory_item and assoc.inventory_item.cost_per_unit %}
+                {% set item_cost = (assoc.quantity * assoc.inventory_item.cost_per_unit) %}
+                {% set total_cost = total_cost + item_cost %}
+                {% set has_costs = true %}
+                <div class="d-flex justify-content-between align-items-center mb-1">
+                  <small class="text-truncate me-2">{{ assoc.inventory_item.name }}</small>
+                  <small class="text-info fw-medium">${{ "%.2f"|format(item_cost) }}</small>
+                </div>
+              {% endif %}
+            {% endfor %}
+          </div>
+        {% endif %}
+
+        <hr>
+        <div class="d-flex justify-content-between align-items-center">
+          <strong>Total Recipe Cost:</strong>
+          {% if has_costs %}
+            <h5 class="text-success mb-0">${{ "%.2f"|format(total_cost) }}</h5>
+          {% else %}
+            <span class="text-muted">Not available</span>
+          {% endif %}
+        </div>
+        
+        {% if has_costs and recipe.predicted_yield %}
+          <div class="mt-3 pt-3 border-top">
+            <div class="d-flex justify-content-between align-items-center">
+              <small class="text-muted">Cost per {{ recipe.predicted_yield_unit }}:</small>
+              <small class="text-success fw-medium">${{ "%.3f"|format(total_cost / recipe.predicted_yield) }}</small>
+            </div>
+          </div>
+        {% endif %}
+
+        {% if not has_costs %}
+          <small class="text-muted d-block mt-2">
+            <i class="fas fa-info-circle"></i> Costs will appear when inventory items have pricing data.
+          </small>
+        {% endif %}
+      </div>
+    </div>
   </div>
 </div>
 
-<div class="d-flex gap-2 mt-3">
-  <a href="{{ url_for('production_planning.plan_production_route', recipe_id=recipe.id) }}" class="btn btn-success">
-    <i class="fas fa-play"></i> Plan Production
-  </a>
-  <form method="get" action="{{ url_for('recipes.edit_recipe', recipe_id=recipe.id) }}">
-    <button type="submit" class="btn btn-primary">Edit Recipe</button>
-  </form>
-  <a href="{{ url_for('recipes.list_recipes') }}" class="btn btn-outline-secondary">Back to List</a>
-</div>
+<style>
+.recipe-instructions {
+  line-height: 1.6;
+  white-space: pre-wrap;
+}
+
+.component-section:not(:last-child) {
+  border-bottom: 1px solid var(--color-border);
+  padding-bottom: 1rem;
+}
+
+.stat-item {
+  padding: 0.5rem 0;
+}
+
+.cost-breakdown .d-flex {
+  font-size: 0.875rem;
+}
+
+.cost-breakdown h6 {
+  font-size: 0.875rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+</style>
+
 {% endblock %}

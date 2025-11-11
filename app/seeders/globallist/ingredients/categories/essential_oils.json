@@ -1,83 +1,126 @@
-
 {
   "category_name": "Essential Oils",
   "default_density": 0.89,
   "description": "For pure essential oils and aromatherapy oils.",
-  "show_comedogenic_rating": true,
-  "show_flash_point": true,
-  "show_shelf_life_months": true,
   "items": [
     {
       "name": "Lavender Essential Oil",
-      "density_g_per_ml": 0.885,
-      "aka_names": ["lavandula angustifolia"],
       "default_unit": "milliliter",
       "flash_point_c": 74,
-      "shelf_life_months": 36,
-      "comedogenic_rating": 2
+      "recommended_usage_rate": "Dermal max 2%",
+      "recommended_fragrance_load_pct": "Up to 6% in candles",
+      "recommended_shelf_life_days": 1095,
+      "inci_name": "Lavandula Angustifolia (Lavender) Oil",
+      "certifications": [
+        "IFRA Compliant"
+      ],
+      "comedogenic_rating": 2,
+      "density": 0.885,
+      "aliases": [
+        "lavandula angustifolia"
+      ],
+      "is_active_ingredient": false
     },
     {
       "name": "Tea Tree Essential Oil",
-      "density_g_per_ml": 0.89,
-      "aka_names": ["melaleuca oil"],
       "default_unit": "milliliter",
       "flash_point_c": 60,
-      "shelf_life_months": 24,
-      "comedogenic_rating": 0
+      "recommended_usage_rate": "Dermal max 15%",
+      "recommended_fragrance_load_pct": "Up to 4% in candles",
+      "recommended_shelf_life_days": 730,
+      "inci_name": "Melaleuca Alternifolia (Tea Tree) Leaf Oil",
+      "certifications": [
+        "IFRA Compliant"
+      ],
+      "comedogenic_rating": 0,
+      "density": 0.89,
+      "aliases": [
+        "melaleuca oil"
+      ],
+      "is_active_ingredient": false
     },
     {
       "name": "Peppermint Essential Oil",
-      "density_g_per_ml": 0.9,
-      "aka_names": ["mentha piperita"],
       "default_unit": "milliliter",
       "flash_point_c": 66,
-      "shelf_life_months": 36,
-      "comedogenic_rating": 0
+      "recommended_usage_rate": "Dermal max 5%",
+      "recommended_fragrance_load_pct": "Up to 3% in candles",
+      "recommended_shelf_life_days": 1095,
+      "inci_name": "Mentha Piperita (Peppermint) Oil",
+      "certifications": [
+        "IFRA Compliant"
+      ],
+      "comedogenic_rating": 0,
+      "density": 0.9,
+      "aliases": [
+        "mentha piperita"
+      ],
+      "is_active_ingredient": false
     },
     {
-      "name": "Eucalyptus Essential Oil",
-      "density_g_per_ml": 0.92,
-      "aka_names": ["eucalyptus globulus"],
+      "name": "Bergamot Essential Oil (FCF)",
       "default_unit": "milliliter",
-      "flash_point_c": 50,
-      "shelf_life_months": 24,
-      "comedogenic_rating": 0
+      "flash_point_c": 60,
+      "recommended_usage_rate": "Dermal max 1%",
+      "recommended_fragrance_load_pct": "Up to 4% in candles",
+      "recommended_shelf_life_days": 730,
+      "inci_name": "Citrus Aurantium Bergamia (Bergamot) Fruit Oil",
+      "certifications": [
+        "IFRA Compliant",
+        "FCF"
+      ],
+      "comedogenic_rating": 0,
+      "density": 0.87,
+      "aliases": [
+        "citrus aurantium bergamia oil"
+      ],
+      "is_active_ingredient": false
     },
     {
-      "name": "Lemon Essential Oil",
-      "density_g_per_ml": 0.85,
-      "aka_names": ["citrus limon"],
+      "name": "Patchouli Essential Oil",
       "default_unit": "milliliter",
-      "flash_point_c": 48,
-      "shelf_life_months": 12,
-      "comedogenic_rating": 0
+      "flash_point_c": 60,
+      "recommended_usage_rate": "Dermal max 5%",
+      "recommended_fragrance_load_pct": "Up to 6% in candles",
+      "recommended_shelf_life_days": 1825,
+      "inci_name": "Pogostemon Cablin (Patchouli) Oil",
+      "certifications": [
+        "IFRA Compliant"
+      ],
+      "comedogenic_rating": 2,
+      "density": 0.99,
+      "aliases": [
+        "pogostemon cablin oil"
+      ],
+      "is_active_ingredient": false
     },
     {
-      "name": "Orange Essential Oil",
-      "density_g_per_ml": 0.842,
-      "aka_names": ["sweet orange oil", "citrus sinensis"],
+      "name": "Cedarwood Atlas Essential Oil",
       "default_unit": "milliliter",
-      "flash_point_c": 48,
-      "shelf_life_months": 12,
-      "comedogenic_rating": 0
-    },
-    {
-      "name": "Rosemary Essential Oil",
-      "density_g_per_ml": 0.908,
-      "aka_names": ["rosmarinus officinalis"],
-      "default_unit": "milliliter",
-      "flash_point_c": 50,
-      "shelf_life_months": 36,
-      "comedogenic_rating": 0
-    },
-    {
-      "name": "Frankincense Essential Oil",
-      "density_g_per_ml": 0.87,
-      "aka_names": ["boswellia oil"],
-      "default_unit": "milliliter",
-      "flash_point_c": 44,
-      "shelf_life_months": 48,
-      "comedogenic_rating": 1
+      "flash_point_c": 96,
+      "recommended_usage_rate": "Dermal max 3%",
+      "recommended_fragrance_load_pct": "Up to 6% in candles",
+      "recommended_shelf_life_days": 1460,
+      "inci_name": "Cedrus Atlantica Bark Oil",
+      "certifications": [
+        "IFRA Compliant"
+      ],
+      "comedogenic_rating": 0,
+      "density": 0.94,
+      "aliases": [
+        "cedrus atlantica"
+      ],
+      "is_active_ingredient": false
     }
+  ],
+  "attributes": [
+    "flash_point_c",
+    "recommended_usage_rate",
+    "recommended_fragrance_load_pct",
+    "recommended_shelf_life_days",
+    "inci_name",
+    "certifications",
+    "comedogenic_rating",
+    "is_active_ingredient"
   ]
 }

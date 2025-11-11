@@ -21,7 +21,7 @@
                 <p><strong>Current Quantity:</strong> {{ item.quantity }} {{ item.unit }}</p>
                 <p><strong>Cost per Unit:</strong> ${{ "%.2f"|format(item.cost_per_unit) }}</p>
                 {% if item.shelf_life_days %}
-                <p><strong>Shelf Life:</strong> {{ item.shelf_life_days }} days</p>
+                <p><strong>Shelf Life:</strong> {{ item.shelf_life_days|humanize_days }}</p>
                 {% endif %}
             </div>
         </div>

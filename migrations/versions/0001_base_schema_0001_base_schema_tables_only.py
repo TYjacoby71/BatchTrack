@@ -408,7 +408,7 @@ def upgrade():
     sa.Column('show_flash_point', sa.Boolean(), nullable=True),
     sa.Column('show_ph_value', sa.Boolean(), nullable=True),
     sa.Column('show_moisture_content', sa.Boolean(), nullable=True),
-    sa.Column('show_shelf_life_months', sa.Boolean(), nullable=True),
+    sa.Column('show_shelf_life_days', sa.Boolean(), nullable=True), # Changed from months to days
     sa.Column('show_comedogenic_rating', sa.Boolean(), nullable=True),
     sa.Column('organization_id', sa.Integer(), nullable=True),
     sa.ForeignKeyConstraint(['created_by'], ['user.id'], ),
@@ -564,10 +564,12 @@ def upgrade():
     sa.Column('iodine_value', sa.Float(), nullable=True),
     sa.Column('melting_point_c', sa.Float(), nullable=True),
     sa.Column('flash_point_c', sa.Float(), nullable=True),
-    sa.Column('ph_value', sa.Float(), nullable=True),
+    sa.Column('ph_value', sa.String(32), nullable=True),
+    sa.Column('ph_min', sa.Float(), nullable=True),
+    sa.Column('ph_max', sa.Float(), nullable=True),
     sa.Column('moisture_content_percent', sa.Float(), nullable=True),
-    sa.Column('shelf_life_months', sa.Integer(), nullable=True),
     sa.Column('comedogenic_rating', sa.Integer(), nullable=True),
+    sa.Column('fatty_acid_profile', sa.JSON(), nullable=True),
     sa.Column('metadata_json', sa.JSON(), nullable=True),
     sa.Column('is_archived', sa.Boolean(), nullable=False),
     sa.Column('archived_at', sa.DateTime(), nullable=True),
@@ -860,7 +862,6 @@ def upgrade():
     sa.Column('flash_point_c', sa.Float(), nullable=True),
     sa.Column('ph_value', sa.Float(), nullable=True),
     sa.Column('moisture_content_percent', sa.Float(), nullable=True),
-    sa.Column('shelf_life_months', sa.Integer(), nullable=True),
     sa.Column('comedogenic_rating', sa.Integer(), nullable=True),
     sa.Column('global_item_id', sa.Integer(), nullable=True),
     sa.Column('ownership', sa.String(length=16), nullable=True),
@@ -1341,7 +1342,7 @@ def upgrade():
     sa.PrimaryKeyConstraint('id'),
     sa.UniqueConstraint('organization_id')
     )
-    # Removed stray duplicate product_sku_history block (actual table defined later)
+    # Removed stray duplicate product_sku_history block (actual table defined earlier)
 
     op.create_table('recipe_consumable',
     sa.Column('id', sa.Integer(), nullable=False),

@@ -1,0 +1,74 @@
+{
+  "category_name": "Hydrosols & Floral Waters",
+  "default_density": 1.0,
+  "description": "Aromatic distillates and floral waters used for toners, mists, and gentle aromatherapy.",
+  "attributes": [
+    "ph_value",
+    "recommended_usage_rate",
+    "recommended_shelf_life_days",
+    "certifications",
+    "is_active_ingredient"
+  ],
+  "items": [
+    {
+      "name": "Rose Hydrosol",
+      "aliases": [
+        "rose floral water"
+      ],
+      "density": 1.0,
+      "default_unit": "milliliter",
+      "ph_value": 5.5,
+      "recommended_usage_rate": "5-100% in toners, mists, and lotions",
+      "recommended_shelf_life_days": 365,
+      "certifications": [
+        "Organic"
+      ],
+      "is_active_ingredient": false
+    },
+    {
+      "name": "Chamomile Hydrosol",
+      "aliases": [
+        "matricaria recutita hydrosol"
+      ],
+      "density": 1.0,
+      "default_unit": "milliliter",
+      "ph_value": 6.0,
+      "recommended_usage_rate": "5-100% in calming sprays and creams",
+      "recommended_shelf_life_days": 365,
+      "certifications": [
+        "Organic"
+      ],
+      "is_active_ingredient": false
+    },
+    {
+      "name": "Lavender Hydrosol",
+      "aliases": [
+        "lavandula angustifolia hydrosol"
+      ],
+      "density": 1.0,
+      "default_unit": "milliliter",
+      "ph_value": 6.5,
+      "recommended_usage_rate": "5-100% in pillow sprays, tonics, and masks",
+      "recommended_shelf_life_days": 365,
+      "certifications": [
+        "COSMOS Approved"
+      ],
+      "is_active_ingredient": false
+    },
+    {
+      "name": "Witch Hazel Distillate (Alcohol-Free)",
+      "aliases": [
+        "hamamelis water"
+      ],
+      "density": 0.98,
+      "default_unit": "milliliter",
+      "ph_value": 4.2,
+      "recommended_usage_rate": "5-100% in toners and compresses",
+      "recommended_shelf_life_days": 365,
+      "certifications": [
+        "USP Grade"
+      ],
+      "is_active_ingredient": false
+    }
+  ]
+}

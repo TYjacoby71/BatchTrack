@@ -76,24 +76,22 @@ def create_new_fifo_lot(item_id, quantity, change_type, unit=None, notes=None, c
         if cost_per_unit is None:
             cost_per_unit = item.cost_per_unit or 0.0
 
-        # Calculate expiration if needed - lots MUST inherit perishable status
+        # Calculate expiration - lots inherit shelf life from item only (no custom per-lot shelf life)
         final_expiration_date = None
         final_shelf_life_days = None
         is_perishable = item.is_perishable  # Always inherit from item
 
         if custom_expiration_date:
+            # Only allow custom expiration date, but shelf life still comes from item
             final_expiration_date = custom_expiration_date
             is_perishable = True  # If expiration is set, it's perishable
         elif item.is_perishable and item.shelf_life_days:
+            # Standard case - use item's shelf life to calculate expiration
             final_expiration_date = TimezoneUtils.utc_now() + timedelta(days=item.shelf_life_days)
-            final_shelf_life_days = item.shelf_life_days
-        elif custom_shelf_life_days and item.is_perishable:
-            final_expiration_date = TimezoneUtils.utc_now() + timedelta(days=custom_shelf_life_days)
-            final_shelf_life_days = custom_shelf_life_days
 
-        # If item is perishable, shelf_life_days should be set
+        # Lots always inherit shelf_life_days from the item (immutable once created)
         if item.is_perishable:
-            final_shelf_life_days = final_shelf_life_days or item.shelf_life_days or custom_shelf_life_days
+            final_shelf_life_days = item.shelf_life_days
 
         # Get batch_id from kwargs if provided
         batch_id = kwargs.get('batch_id')

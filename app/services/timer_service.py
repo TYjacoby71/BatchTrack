@@ -113,10 +113,15 @@ class TimerService:
 
         # Calculate elapsed time
         if timer.start_time:
+            # Ensure start_time is timezone-aware
+            start_time = TimezoneUtils.ensure_timezone_aware(timer.start_time)
+            
             if timer.end_time:
-                elapsed_seconds = (timer.end_time - timer.start_time).total_seconds()
+                # Ensure end_time is timezone-aware
+                end_time = TimezoneUtils.ensure_timezone_aware(timer.end_time)
+                elapsed_seconds = (end_time - start_time).total_seconds()
             else:
-                elapsed_seconds = (current_time - timer.start_time).total_seconds()
+                elapsed_seconds = (current_time - start_time).total_seconds()
         else:
             elapsed_seconds = 0
 
@@ -247,7 +252,9 @@ class TimerService:
             completed_count = 0
             for timer in expired_timers:
                 if timer.start_time and timer.duration_seconds:
-                    expected_end_time = timer.start_time + timedelta(seconds=timer.duration_seconds)
+                    # Ensure start_time is timezone-aware before calculation
+                    start_time = TimezoneUtils.ensure_timezone_aware(timer.start_time)
+                    expected_end_time = start_time + timedelta(seconds=timer.duration_seconds)
                     if current_time > expected_end_time:
                         timer.status = 'completed'
                         timer.end_time = current_time  # Use end_time field that exists in model
@@ -296,7 +303,9 @@ class TimerService:
             active_timers = query.all()
 
             for timer in active_timers:
-                expected_end_time = timer.start_time + timedelta(seconds=timer.duration_seconds)
+                # Ensure start_time is timezone-aware before calculation
+                start_time = TimezoneUtils.ensure_timezone_aware(timer.start_time)
+                expected_end_time = start_time + timedelta(seconds=timer.duration_seconds)
                 if current_time >= expected_end_time:
                     expired_timers.append(timer)
 
