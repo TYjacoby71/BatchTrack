@@ -14,7 +14,6 @@ from .utils.template_filters import register_template_filters
 from .logging_config import configure_logging
 from .blueprints.api.drawer_actions import drawer_actions_bp
 from .blueprints.api.routes import api_bp
-from .blueprints.api.density_reference import density_reference_bp
 
 logger = logging.getLogger(__name__)
 
@@ -171,6 +170,51 @@ def _configure_sqlite_engine_options(app):
             opts["poolclass"] = StaticPool
             opts["connect_args"] = {"check_same_thread": False}
         app.config["SQLALCHEMY_ENGINE_OPTIONS"] = opts
+
+
+def _configure_cache(app):
+    """Initialise the shared cache (Redis in production, NullCache otherwise)."""
+    env = os.environ.get('ENV', 'development').lower()
+    cache_type = app.config.get('CACHE_TYPE')
+    redis_url = app.config.get('CACHE_REDIS_URL') or app.config.get('REDIS_URL')
+    cache_timeout = app.config.get('CACHE_DEFAULT_TIMEOUT', 300)
+
+    if not cache_type:
+        if redis_url:
+            cache_type = 'RedisCache'
+        else:
+            cache_type = 'NullCache'
+
+    if cache_type == 'RedisCache' and not redis_url:
+        raise RuntimeError('CACHE_REDIS_URL (or REDIS_URL) must be set when using RedisCache.')
+
+    if cache_type == 'NullCache' and env == 'production':
+        raise RuntimeError('A shared cache backend (e.g. Redis) is required in production.')
+
+    cache_config = {
+        'CACHE_TYPE': cache_type,
+        'CACHE_DEFAULT_TIMEOUT': cache_timeout,
+    }
+
+    if cache_type == 'RedisCache':
+        cache_config['CACHE_REDIS_URL'] = redis_url
+
+    cache.init_app(app, config=cache_config)
+
+
+def _configure_rate_limiter(app):
+    """Initialise limiter with shared storage (Redis) when available."""
+    env = os.environ.get('ENV', 'development').lower()
+    storage_uri = (
+        app.config.get('RATELIMIT_STORAGE_URI')
+        or app.config.get('RATELIMIT_STORAGE_URL')
+        or 'memory://'
+    )
+
+    if storage_uri.startswith('memory://') and env == 'production':
+        raise RuntimeError('A shared rate limit storage backend is required in production.')
+
+    limiter.init_app(app, storage_uri=storage_uri)
 
 def _install_global_resilience_handlers(app):
     """Install global DB rollback and friendly maintenance handler."""

@@ -58,31 +58,37 @@
 
 <table class="table table-striped">
   <thead>
-    <tr>
-      <th>Name</th>
-      <th>Type</th>
-      <th>Category</th>
-      <th>Density</th>
-      <th>Capacity</th>
-      <th>Perishable</th>
-      <th></th>
-    </tr>
+      <tr>
+        <th>Name</th>
+        <th>Type</th>
+        <th>Category</th>
+        <th>Density (g/ml)</th>
+        <th>Capacity</th>
+        <th>Perishable</th>
+        <th></th>
+      </tr>
   </thead>
   <tbody>
   {% for gi in items %}
-    <tr>
-      <td>
-        <a href="#" class="gi-detail-link" data-gi-id="{{ gi.id }}">{{ gi.name }}</a>
-      </td>
+      <tr>
+        <td>
+          <a href="#" class="text-decoration-none js-open-global-item-stats" data-global-item-id="{{ gi.id }}">{{ gi.name }}</a>
+        </td>
       <td>
         <span class="badge bg-secondary">{{ gi.item_type }}</span>
       </td>
       <td>{{ gi.ingredient_category.name if gi.ingredient_category else '-' }}</td>
-      <td>{{ gi.density or '-' }}</td>
+        <td>
+          {% if gi.density is not none %}
+            {{ '%.3f'|format(gi.density) }}
+          {% else %}
+            -
+          {% endif %}
+        </td>
       <td>{{ gi.capacity or '-' }} {{ gi.capacity_unit or '' }}</td>
       <td>{{ 'Yes' if gi.default_is_perishable else 'No' }}</td>
-      <td>
-      <button class="btn btn-sm btn-outline-primary gi-view-btn" data-gi-id="{{ gi.id }}">
+        <td>
+        <button class="btn btn-sm btn-outline-primary js-open-global-item-stats" data-global-item-id="{{ gi.id }}">
         <i class="fas fa-eye"></i> View
       </button>
       <a href="{{ url_for('developer.global_item_detail', item_id=gi.id) }}" class="btn btn-sm btn-outline-secondary ms-1">
@@ -97,52 +103,9 @@
 </table>
 {% endblock %}
 
-<!-- Global Item Detail Offcanvas -->
-<div class="offcanvas offcanvas-end" tabindex="-1" id="globalItemDetail" aria-labelledby="globalItemDetailLabel">
-  <div class="offcanvas-header">
-    <h5 id="globalItemDetailLabel">Global Item Details</h5>
-    <button type="button" class="btn-close" data-bs-dismiss="offcanvas" aria-label="Close"></button>
-  </div>
-  <div class="offcanvas-body">
-    <div id="giDetailLoading" class="text-center">
-      <div class="spinner-border" role="status">
-        <span class="visually-hidden">Loading...</span>
-      </div>
-      <p class="mt-2">Loading item details...</p>
-    </div>
-    <div id="giDetailContent" style="display:none;">
-      <div class="mb-2"><strong>Name:</strong> <span id="giName"></span></div>
-      <div class="mb-2"><strong>Type:</strong> <span id="giType"></span></div>
-      <div class="mb-2"><strong>Category:</strong> <span id="giCategory"></span></div>
-      <div class="mb-2"><strong>Default Unit:</strong> <span id="giUnit"></span></div>
-      <div class="mb-2"><strong>Density:</strong> <span id="giDensity"></span></div>
-
-      <div id="giContainerMeta" style="display:none;">
-        <hr>
-        <h6>Container Properties</h6>
-        <div class="mb-2"><strong>Material:</strong> <span id="giMaterial"></span></div>
-        <div class="mb-2"><strong>Type/Style:</strong> <span id="giTypeStyle"></span></div>
-        <div class="mb-2"><strong>Color:</strong> <span id="giColor"></span></div>
-      </div>
-
-      <div id="giIngredientStats" style="display:none;">
-        <hr>
-        <h6>Ingredient Properties</h6>
-        <div class="row row-cols-2 g-2" id="giPropsGrid"></div>
-      </div>
-
-      <hr>
-      <h6>Community Cost Snapshot</h6>
-      <div id="giCostStats" class="mb-3">Loading cost data...</div>
-
-      <div class="mt-3">
-        <a id="giDevLink" class="btn btn-outline-primary btn-sm" href="#" style="display:none;">
-          <i class="fas fa-cog"></i> Developer View
-        </a>
-      </div>
-    </div>
-  </div>
-</div>
+{% with show_dev_link=True %}
+  {% include 'components/drawer/global_item_stats_offcanvas.html' %}
+{% endwith %}
 
 <!-- Delete Confirmation Modal -->
 <div class="modal fade" id="deleteGlobalItemModal" tabindex="-1" aria-hidden="true">
@@ -294,27 +257,6 @@ function filterItems() {
     }
 }
 
-// Initialize page functionality
-document.addEventListener('DOMContentLoaded', function() {
-  try {
-    document.querySelectorAll('.gi-detail-link').forEach(function(el){
-      el.addEventListener('click', function(e){
-        e.preventDefault();
-        const id = this.getAttribute('data-gi-id');
-        if (id) openItemDetails(id);
-      });
-    });
-    document.querySelectorAll('.gi-view-btn').forEach(function(btn){
-      btn.addEventListener('click', function(e){
-        e.preventDefault();
-        const id = this.getAttribute('data-gi-id');
-        if (id) openItemDetails(id);
-      });
-    });
-  } catch (error) {
-    console.error('Error initializing page:', error);
-  }
-});
 </script>
 <script>
 function applyFilters() {
@@ -322,7 +264,6 @@ function applyFilters() {
     const categoryFilter = document.getElementById('categoryFilter').value;
     const searchInput = document.getElementById('searchInput').value;
 
-    // Enable/disable category filter based on type selection
     const categorySelect = document.getElementById('categoryFilter');
     if (typeFilter === 'ingredient') {
         categorySelect.disabled = false;
@@ -331,7 +272,6 @@ function applyFilters() {
         categorySelect.value = '';
     }
 
-    // Build URL with filters
     const url = new URL(window.location);
 
     if (searchInput.trim()) {
@@ -356,16 +296,13 @@ function applyFilters() {
 }
 
 function handleSearchKeyup(event) {
-    // Apply search on Enter key or after a short delay
     if (event.key === 'Enter') {
         applyFilters();
     } else {
-        // Clear any existing timeout
         if (window.searchTimeout) {
             clearTimeout(window.searchTimeout);
         }
 
-        // Set a new timeout to search after 500ms of no typing
         window.searchTimeout = setTimeout(() => {
             applyFilters();
         }, 500);
@@ -373,122 +310,22 @@ function handleSearchKeyup(event) {
 }
 
 function clearFilters() {
-    // Clear all filter inputs
     document.getElementById('searchInput').value = '';
     document.getElementById('typeFilter').value = '';
     document.getElementById('categoryFilter').value = '';
 
-    // Redirect to base URL without filters
     window.location.href = window.location.pathname;
 }
+</script>
+<script type="module">
+  import { configureGlobalItemStats, bindGlobalItemStatTriggers } from "{{ url_for('static', filename='js/global_item_stats.js') }}";
 
-async function openItemDetails(id){
-  try {
-    const offcanvasEl = document.getElementById('globalItemDetail');
-    const oc = new bootstrap.Offcanvas(offcanvasEl);
-    const loadingEl = document.getElementById('giDetailLoading');
-    const contentEl = document.getElementById('giDetailContent');
+  configureGlobalItemStats({
+    developerLinkBase: "{{ url_for('developer.global_item_detail', item_id=0)[:-1] }}"
+  });
 
-    loadingEl.style.display = '';
-    contentEl.style.display = 'none';
-    oc.show();
-
-    // Use the same endpoint as customer side for consistency
-    const statsRes = await fetch(`/global-items/${id}/stats`);
-    if (!statsRes.ok) {
-      throw new Error(`HTTP error! status: ${statsRes.status}`);
-    }
-
-    const payload = await statsRes.json();
-    if (!payload.success) {
-      throw new Error(`API error: ${payload.error}`);
-    }
-
-    if (payload && payload.success && payload.item) {
-      const it = payload.item;
-      document.getElementById('giName').textContent = it.name || `#${id}`;
-      document.getElementById('giType').textContent = it.item_type || '';
-      document.getElementById('giCategory').textContent = it.ingredient_category_name || '';
-      document.getElementById('giUnit').textContent = it.default_unit || '';
-      document.getElementById('giDensity').textContent = (it.density != null) ? Number(it.density).toFixed(3) : '';
-
-      // Container meta
-      const isContainer = it.item_type === 'container' || it.item_type === 'packaging';
-      const metaDiv = document.getElementById('giContainerMeta');
-      if (isContainer) {
-        metaDiv.style.display = '';
-        document.getElementById('giMaterial').textContent = it.container_material || '';
-        const typeStyle = [it.container_type || '', it.container_style ? `(${it.container_style})` : ''].join(' ').trim();
-        document.getElementById('giTypeStyle').textContent = typeStyle;
-        document.getElementById('giColor').textContent = it.container_color || '';
-      } else {
-        metaDiv.style.display = 'none';
-      }
-
-      // Ingredient property visibility
-      const propsDiv = document.getElementById('giIngredientStats');
-      const grid = document.getElementById('giPropsGrid');
-      grid.innerHTML = '';
-      const vis = payload.category_visibility || {};
-      const addProp = (label, value, show) => {
-        if (!show) return;
-        const v = (value == null || value === '') ? '-' : value;
-        const col = document.createElement('div');
-        col.innerHTML = `<div><strong>${label}:</strong> ${v}</div>`;
-        grid.appendChild(col);
-      };
-      const isIngredient = it.item_type === 'ingredient';
-      propsDiv.style.display = isIngredient ? '' : 'none';
-      if (isIngredient) {
-        addProp('Saponification', it.saponification_value, vis.show_saponification_value);
-        addProp('Iodine', it.iodine_value, vis.show_iodine_value);
-        addProp('Melting Point (°C)', it.melting_point_c, vis.show_melting_point);
-        addProp('Flash Point (°C)', it.flash_point_c, vis.show_flash_point);
-        addProp('pH', it.ph_value, vis.show_ph_value);
-        addProp('Moisture %', it.moisture_content_percent, vis.show_moisture_content);
-        addProp('Shelf Life (months)', it.shelf_life_months, vis.show_shelf_life_months);
-        addProp('Comedogenic', it.comedogenic_rating, vis.show_comedogenic_rating);
-      }
-    }
-
-    if (payload && payload.success) {
-      const c = payload.cost || {};
-      if (c.count && c.count > 0) {
-        const mean = c.mean_ex_outliers != null ? c.mean_ex_outliers.toFixed(2) : '-';
-        const low = c.low != null ? c.low.toFixed(2) : '-';
-        const high = c.high != null ? c.high.toFixed(2) : '-';
-        const minv = c.min != null ? c.min.toFixed(2) : '-';
-        const maxv = c.max != null ? c.max.toFixed(2) : '-';
-        document.getElementById('giCostStats').innerHTML = `Average: $${mean} (excluding outliers)<br>Low/High: $${low} – $${high}<br>Extremes: $${minv} – $${maxv} (n=${c.count})`;
-      } else {
-        document.getElementById('giCostStats').textContent = 'No cost data yet.';
-      }
-    } else {
-      document.getElementById('giCostStats').textContent = 'No cost data yet.';
-    }
-
-    // Show developer link if user is a developer
-    const devLink = document.getElementById('giDevLink');
-    if (id) {
-      devLink.href = `/developer/global-items/${id}`;
-      devLink.style.display = '';
-    } else {
-      devLink.style.display = 'none';
-    }
-
-    loadingEl.style.display = 'none';
-    contentEl.style.display = '';
-  } catch (e) {
-    console.error('Failed to load item details:', e);
-    const loadingEl = document.getElementById('giDetailLoading');
-    if (loadingEl) {
-      loadingEl.innerHTML = `<div class="alert alert-danger">Failed to load item details: ${e.message || 'Unknown error'}<br><small>Error details: ${JSON.stringify(e)}</small></div>`;
-    }
-    const contentEl = document.getElementById('giDetailContent');
-    if (contentEl) {
-      contentEl.style.display = 'none';
-    }
-  }
-}
+  document.addEventListener('DOMContentLoaded', () => {
+    bindGlobalItemStatTriggers('.js-open-global-item-stats');
+  });
 </script>
 {% endblock %}

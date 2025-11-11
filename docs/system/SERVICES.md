@@ -193,21 +193,21 @@ expiring = get_expiring_inventory(days_ahead=14)
 
 ## Supporting Services
 
-### 6. Statistics Service (`app/services/statistics_service.py`)
+### 6. Statistics Service (modular)
 
 **Authority:** User and organization statistics
 
-**Key Functions:**
-- `get_user_statistics(user_id)`
-- `get_organization_statistics(organization_id)`
-- `update_batch_statistics(user_id, organization_id)`
+**Key Modules:**
+- `app/services/statistics/_core.py`
+- `app/services/statistics/_batch_stats.py`
+- `app/services/statistics/_inventory_stats.py`
+- `app/services/statistics/_recipe_stats.py`
 
 **Usage Examples:**
 ```python
-# Get user stats
-from app.services.statistics_service import get_user_statistics
+from app.services.statistics import StatisticsService
 
-stats = get_user_statistics(current_user.id)
+stats = StatisticsService.get_organization_dashboard_stats(org_id)
 ```
 
 ### 7. Reservation Service (`app/services/reservation_service.py`)

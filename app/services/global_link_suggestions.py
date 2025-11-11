@@ -42,7 +42,7 @@ class GlobalLinkSuggestionService:
             return 1.0
         # Alias match
         try:
-            aka = global_item.aka_names or []
+            aka = global_item.aliases or []
             if any((a or '').strip().lower() == iname for a in aka):
                 return 0.98
         except Exception:
