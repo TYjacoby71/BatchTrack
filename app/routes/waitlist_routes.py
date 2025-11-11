@@ -1,8 +1,7 @@
 
 from flask import Blueprint, request, jsonify
-import json
-import os
 from datetime import datetime, timezone
+from app.utils.json_store import read_json_file, write_json_file
 
 waitlist_bp = Blueprint('waitlist', __name__)
 
@@ -32,19 +31,8 @@ def join_waitlist():
 
         # Save to JSON file (persistent storage)
         waitlist_file = 'data/waitlist.json'
-        
-        # Create data directory if it doesn't exist
-        os.makedirs('data', exist_ok=True)
-        
-        waitlist = []
 
-        # Load existing waitlist
-        if os.path.exists(waitlist_file):
-            try:
-                with open(waitlist_file, 'r') as f:
-                    waitlist = json.load(f)
-            except (json.JSONDecodeError, IOError):
-                waitlist = []
+        waitlist = read_json_file(waitlist_file, default=[]) or []
 
         # Check if email already exists
         if any(entry.get('email') == waitlist_entry['email'] for entry in waitlist):
@@ -54,8 +42,7 @@ def join_waitlist():
         waitlist.append(waitlist_entry)
 
         # Save updated waitlist
-        with open(waitlist_file, 'w') as f:
-            json.dump(waitlist, f, indent=2)
+        write_json_file(waitlist_file, waitlist)
 
         return jsonify({'message': 'Successfully joined waitlist'}), 200
 

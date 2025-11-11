@@ -5,6 +5,7 @@ from app.utils.permissions import require_permission, get_effective_organization
 from app.services.combined_inventory_alerts import CombinedInventoryAlertService
 from app.services.dashboard_alerts import DashboardAlertService
 from app.blueprints.expiration.services import ExpirationService
+from app.utils.json_store import read_json_file
 import logging
 
 logger = logging.getLogger(__name__)
@@ -179,32 +180,25 @@ def api_dashboard_alerts():
 @permission_required('view_fault_log')
 def view_fault_log():
     try:
-        import json
-        import os
-        from datetime import datetime
         from flask_login import current_user
 
         fault_file = 'faults.json'
-        faults = []
+        all_faults = read_json_file(fault_file, default=[]) or []
 
-        if os.path.exists(fault_file):
-            with open(fault_file, 'r') as f:
-                all_faults = json.load(f)
-
-                # Filter faults by organization unless user is developer
-                if current_user.user_type == 'developer':
-                    # Developers can see all faults or filtered by selected org
-                    from flask import session
-                    selected_org_id = session.get('dev_selected_org_id')
-                    if selected_org_id:
-                        faults = [f for f in all_faults if f.get('organization_id') == selected_org_id]
-                    else:
-                        faults = all_faults
-                elif current_user.organization_id:
-                    # Regular users only see their organization's faults
-                    faults = [f for f in all_faults if f.get('organization_id') == current_user.organization_id]
-                else:
-                    faults = []
+        # Filter faults by organization unless user is developer
+        if current_user.user_type == 'developer':
+            # Developers can see all faults or filtered by selected org
+            from flask import session
+            selected_org_id = session.get('dev_selected_org_id')
+            if selected_org_id:
+                faults = [f for f in all_faults if f.get('organization_id') == selected_org_id]
+            else:
+                faults = all_faults
+        elif current_user.organization_id:
+            # Regular users only see their organization's faults
+            faults = [f for f in all_faults if f.get('organization_id') == current_user.organization_id]
+        else:
+            faults = []
 
         # Sort by timestamp, newest first
         faults.sort(key=lambda x: x.get('timestamp', ''), reverse=True)
