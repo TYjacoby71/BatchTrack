@@ -112,7 +112,7 @@
             <p><strong>Projected Yield:</strong> {{ batch.projected_yield }} {{ batch.projected_yield_unit }}</p>
             <p><strong>Final Yield:</strong> {% if batch.final_quantity %}{{ batch.final_quantity }} {{ batch.output_unit }}{% else %}N/A{% endif %}</p>
             {% if batch.is_perishable %}
-                <p><strong>Shelf Life:</strong> {{ batch.shelf_life_days }} days</p>
+                <p><strong>Shelf Life:</strong> {{ batch.shelf_life_days|humanize_days }}</p>
                 {% if batch.expiration_date %}
                     <p><strong>Expiration Date:</strong> {{ batch.expiration_date.strftime('%Y-%m-%d') }}</p>
                 {% endif %}
@@ -151,7 +151,7 @@
                     <p><strong>Batch Accuracy:</strong> {{ acc|round(1) }}%</p>
                 {% endif %}
                            {% if batch.is_perishable %}
-                    <p><strong>Shelf Life:</strong> {{ batch.shelf_life_days }} days</p>
+                    <p><strong>Shelf Life:</strong> {{ batch.shelf_life_days|humanize_days }}</p>
                     {% if batch.expiration_date %}
                         <p><strong>Expiration Date:</strong> {{ batch.expiration_date | user_date }}</p>
                     {% endif %}

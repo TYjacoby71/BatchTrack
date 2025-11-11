@@ -32,7 +32,7 @@ def global_library():
             IngredientCategory.name == category_filter
         )
 
-    # Apply search across name and aliases (falls back to aka_names JSON)
+    # Apply search across name and aliases
     if search_query:
         term = f"%{search_query}%"
         try:
@@ -82,8 +82,6 @@ def global_library_item_stats(item_id: int):
     
     try:
         from app.models.global_item import GlobalItem
-        from app.models.category import IngredientCategory
-
         gi = GlobalItem.query.get_or_404(item_id)
 
         rollup = GlobalItemStatsService.get_rollup(item_id)
@@ -100,6 +98,13 @@ def global_library_item_stats(item_id: int):
             'capacity_unit': gi.capacity_unit,
             'ingredient_category_id': gi.ingredient_category_id,
             'ingredient_category_name': gi.ingredient_category.name if gi.ingredient_category else None,
+            'aliases': gi.aliases or [],
+            'default_is_perishable': gi.default_is_perishable,
+            'recommended_shelf_life_days': gi.recommended_shelf_life_days,
+            'recommended_usage_rate': gi.recommended_usage_rate,
+            'recommended_fragrance_load_pct': gi.recommended_fragrance_load_pct,
+            'is_active_ingredient': gi.is_active_ingredient,
+            'inci_name': gi.inci_name,
             # Container fields
             'container_material': getattr(gi, 'container_material', None),
             'container_type': getattr(gi, 'container_type', None),
@@ -112,25 +117,17 @@ def global_library_item_stats(item_id: int):
             'flash_point_c': getattr(gi, 'flash_point_c', None),
             'ph_value': getattr(gi, 'ph_value', None),
             'moisture_content_percent': getattr(gi, 'moisture_content_percent', None),
-            'shelf_life_months': getattr(gi, 'shelf_life_months', None),
             'comedogenic_rating': getattr(gi, 'comedogenic_rating', None),
+            'fatty_acid_profile': getattr(gi, 'fatty_acid_profile', None),
+            # Baking
+            'protein_content_pct': getattr(gi, 'protein_content_pct', None),
+            # Brewing
+            'brewing_color_srm': getattr(gi, 'brewing_color_srm', None),
+            'brewing_potential_sg': getattr(gi, 'brewing_potential_sg', None),
+            'brewing_diastatic_power_lintner': getattr(gi, 'brewing_diastatic_power_lintner', None),
+            # Certifications
+            'certifications': gi.certifications or [],
         }
-
-        # Category visibility flags if ingredient category exists
-        category_visibility = None
-        if gi.ingredient_category_id:
-            cat = IngredientCategory.query.get(gi.ingredient_category_id)
-            if cat:
-                category_visibility = {
-                    'show_saponification_value': getattr(cat, 'show_saponification_value', False),
-                    'show_iodine_value': getattr(cat, 'show_iodine_value', False),
-                    'show_melting_point': getattr(cat, 'show_melting_point', False),
-                    'show_flash_point': getattr(cat, 'show_flash_point', False),
-                    'show_ph_value': getattr(cat, 'show_ph_value', False),
-                    'show_moisture_content': getattr(cat, 'show_moisture_content', False),
-                    'show_shelf_life_months': getattr(cat, 'show_shelf_life_months', False),
-                    'show_comedogenic_rating': getattr(cat, 'show_comedogenic_rating', False),
-                }
 
         from flask import jsonify
         return jsonify({
@@ -138,7 +135,6 @@ def global_library_item_stats(item_id: int):
             'item': item_payload,
             'rollup': rollup,
             'cost': cost,
-            'category_visibility': category_visibility,
         })
     except Exception as e:
         import logging

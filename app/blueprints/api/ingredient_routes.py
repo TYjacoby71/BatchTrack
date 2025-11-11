@@ -3,6 +3,7 @@ from flask_login import login_required, current_user
 from sqlalchemy import or_, func
 from ...models import IngredientCategory, InventoryItem, GlobalItem, db
 from ...services.statistics.global_item_stats import GlobalItemStatsService
+from ...services.density_assignment_service import DensityAssignmentService
 
 ingredient_api_bp = Blueprint('ingredient_api', __name__)
 
@@ -27,6 +28,14 @@ def get_categories():
         }
         for cat in all_categories
     ])
+
+@ingredient_api_bp.route('/global-library/density-options', methods=['GET'])
+@login_required
+def get_global_library_density_options():
+    """Expose global ingredient density options sourced from the Global Inventory Library."""
+    include_uncategorized = request.args.get('include_uncategorized', '1') not in {'0', 'false', 'False'}
+    payload = DensityAssignmentService.build_global_library_density_options(include_uncategorized=include_uncategorized)
+    return jsonify(payload)
 
 @ingredient_api_bp.route('/ingredient/<int:id>/density', methods=['GET'])
 def get_ingredient_density(id):
@@ -162,12 +171,12 @@ def search_global_items():
         query = query.filter(GlobalItem.item_type == item_type)
 
     ilike_term = f"%{q}%"
-    # Match by name or any synonym in aka_names (JSON)
+    # Match by name or any synonym in aliases (JSON)
     name_match = GlobalItem.name.ilike(ilike_term)
     try:
         from sqlalchemy import or_
-        aka_match = GlobalItem.aka_names.cast(db.String).ilike(ilike_term)
-        items = query.filter(or_(name_match, aka_match)).order_by(func.length(GlobalItem.name).asc()).limit(20).all()
+        alias_match = GlobalItem.aliases.cast(db.String).ilike(ilike_term)
+        items = query.filter(or_(name_match, alias_match)).order_by(func.length(GlobalItem.name).asc()).limit(20).all()
     except Exception:
         items = query.filter(name_match).order_by(func.length(GlobalItem.name).asc()).limit(20).all()
 
@@ -185,9 +194,17 @@ def search_global_items():
             'container_type': getattr(gi, 'container_type', None),
             'container_style': getattr(gi, 'container_style', None),
             'container_color': getattr(gi, 'container_color', None),
-            'aka_names': gi.aka_names,
+            'aliases': gi.aliases,
             'default_is_perishable': gi.default_is_perishable,
             'recommended_shelf_life_days': gi.recommended_shelf_life_days,
+            'recommended_usage_rate': gi.recommended_usage_rate,
+            'recommended_fragrance_load_pct': gi.recommended_fragrance_load_pct,
+            'inci_name': gi.inci_name,
+            'protein_content_pct': gi.protein_content_pct,
+            'brewing_color_srm': gi.brewing_color_srm,
+            'brewing_potential_sg': gi.brewing_potential_sg,
+            'brewing_diastatic_power_lintner': gi.brewing_diastatic_power_lintner,
+            'certifications': gi.certifications or [],
         })
 
     return jsonify({'results': results})

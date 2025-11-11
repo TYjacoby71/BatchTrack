@@ -1,10 +1,126 @@
-
 {
-  "category_name": "Clays",
-  "default_density": 2.45,
-  "description": "Mineral clays used for cosmetics.",
-  "show_ph_value": true,
-  "show_moisture_content": true,
-  "show_shelf_life_months": true,
-  "items": []
+  "category_name": "Mineral Powders & Clays",
+  "default_density": 2.5,
+  "description": "Naturally occurring mineral powders and clays used for absorbency, color, slip, and soothing properties.",
+  "attributes": [
+    "ph_value",
+    "moisture_content_percent",
+    "recommended_usage_rate",
+    "recommended_shelf_life_days",
+    "certifications",
+    "particle_size_microns",
+    "is_active_ingredient"
+  ],
+  "items": [
+    {
+      "name": "Kaolin Clay",
+      "aliases": [
+        "china clay",
+        "white cosmetic clay"
+      ],
+      "density": 2.6,
+      "default_unit": "gram",
+      "ph_value": "4.5-5.5",
+      "moisture_content_percent": 1,
+      "recommended_usage_rate": "5-60% in masks and powders",
+      "recommended_shelf_life_days": 1095,
+      "certifications": [
+        "Cosmetic Grade"
+      ],
+      "is_active_ingredient": false
+    },
+    {
+      "name": "Bentonite Clay",
+      "aliases": [
+        "sodium bentonite"
+      ],
+      "density": 2.31,
+      "default_unit": "gram",
+      "ph_value": "8.5-9.5",
+      "moisture_content_percent": 8,
+      "recommended_usage_rate": "5-25% in masks and poultices",
+      "recommended_shelf_life_days": 1095,
+      "certifications": [
+        "USP Grade"
+      ],
+      "is_active_ingredient": false
+    },
+    {
+      "name": "Rhassoul Clay",
+      "aliases": [
+        "ghassoul clay",
+        "moroccan lava clay"
+      ],
+      "density": 2.47,
+      "default_unit": "gram",
+      "ph_value": "7.0-7.5",
+      "moisture_content_percent": 6,
+      "recommended_usage_rate": "10-50% in masks and shampoos",
+      "recommended_shelf_life_days": 1095,
+      "certifications": [
+        "Ecocert Raw Material"
+      ],
+      "is_active_ingredient": false
+    },
+    {
+      "name": "French Green Clay",
+      "aliases": [
+        "illite clay"
+      ],
+      "density": 2.6,
+      "default_unit": "gram",
+      "ph_value": "6.5-7.5",
+      "moisture_content_percent": 5,
+      "recommended_usage_rate": "2-30% in masks and purifying bars",
+      "recommended_shelf_life_days": 1095,
+      "certifications": [
+        "Ecocert Raw Material"
+      ],
+      "is_active_ingredient": false
+    },
+    {
+      "name": "Fuller's Earth",
+      "aliases": [
+        "multani mitti"
+      ],
+      "density": 2.4,
+      "default_unit": "gram",
+      "ph_value": "7.0-8.0",
+      "moisture_content_percent": 10,
+      "recommended_usage_rate": "10-40% in cleansing masks",
+      "recommended_shelf_life_days": 1095,
+      "certifications": [],
+      "is_active_ingredient": false
+    },
+    {
+      "name": "Zinc Oxide (Non-Nano)",
+      "aliases": [
+        "zinc white"
+      ],
+      "density": 5.61,
+      "default_unit": "gram",
+      "particle_size_microns": "200-500",
+      "recommended_usage_rate": "1-25% in balms, powders, and mineral sunscreen bases",
+      "recommended_shelf_life_days": 1825,
+      "certifications": [
+        "USP Grade"
+      ],
+      "is_active_ingredient": false
+    },
+    {
+      "name": "Titanium Dioxide (Anatase)",
+      "aliases": [
+        "CI 77891"
+      ],
+      "density": 4.23,
+      "default_unit": "gram",
+      "particle_size_microns": "300-500",
+      "recommended_usage_rate": "1-10% for opacity and color adjustment",
+      "recommended_shelf_life_days": 1825,
+      "certifications": [
+        "FDA Batch Certified"
+      ],
+      "is_active_ingredient": false
+    }
+  ]
 }

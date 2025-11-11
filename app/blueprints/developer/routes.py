@@ -675,7 +675,17 @@ def global_item_edit(item_id):
         'container_style': getattr(item, 'container_style', None),
         'default_is_perishable': item.default_is_perishable,
         'recommended_shelf_life_days': item.recommended_shelf_life_days,
-        'aka_names': item.aka_names,
+        'aliases': item.aliases,
+        'recommended_usage_rate': item.recommended_usage_rate,
+        'recommended_fragrance_load_pct': item.recommended_fragrance_load_pct,
+        'is_active_ingredient': item.is_active_ingredient,
+        'inci_name': item.inci_name,
+        'protein_content_pct': item.protein_content_pct,
+        'brewing_color_srm': item.brewing_color_srm,
+        'brewing_potential_sg': item.brewing_potential_sg,
+        'brewing_diastatic_power_lintner': item.brewing_diastatic_power_lintner,
+        'fatty_acid_profile': item.fatty_acid_profile,
+        'certifications': item.certifications,
     }
 
     # Apply edits
@@ -698,9 +708,43 @@ def global_item_edit(item_id):
     item.default_is_perishable = True if request.form.get('default_is_perishable') == 'on' else False
     rsl = request.form.get('recommended_shelf_life_days')
     item.recommended_shelf_life_days = int(rsl) if rsl not in (None, '',) else None
-    aka_names = request.form.get('aka_names')  # comma-separated
-    if aka_names is not None:
-        item.aka_names = [n.strip() for n in aka_names.split(',') if n.strip()]
+    aliases = request.form.get('aliases')  # comma-separated
+    if aliases is not None:
+        item.aliases = [n.strip() for n in aliases.split(',') if n.strip()]
+
+    item.recommended_usage_rate = request.form.get('recommended_usage_rate') or None
+    item.recommended_fragrance_load_pct = request.form.get('recommended_fragrance_load_pct') or None
+    item.is_active_ingredient = request.form.get('is_active_ingredient') == 'on'
+    item.inci_name = request.form.get('inci_name') or None
+
+    protein = request.form.get('protein_content_pct')
+    item.protein_content_pct = float(protein) if protein not in (None, '',) else None
+
+    brewing_color = request.form.get('brewing_color_srm')
+    item.brewing_color_srm = float(brewing_color) if brewing_color not in (None, '',) else None
+
+    brewing_potential = request.form.get('brewing_potential_sg')
+    item.brewing_potential_sg = float(brewing_potential) if brewing_potential not in (None, '',) else None
+
+    brewing_dp = request.form.get('brewing_diastatic_power_lintner')
+    item.brewing_diastatic_power_lintner = float(brewing_dp) if brewing_dp not in (None, '',) else None
+
+    fatty_acid_profile_raw = request.form.get('fatty_acid_profile')
+    if fatty_acid_profile_raw is not None:
+        import json
+        fatty_acid_profile_raw = fatty_acid_profile_raw.strip()
+        if fatty_acid_profile_raw:
+            try:
+                item.fatty_acid_profile = json.loads(fatty_acid_profile_raw)
+            except json.JSONDecodeError:
+                flash('Invalid JSON for fatty acid profile. Please provide valid JSON.', 'error')
+        else:
+            item.fatty_acid_profile = None
+
+    certifications_raw = request.form.get('certifications')
+    if certifications_raw is not None:
+        certifications = [c.strip() for c in certifications_raw.split(',') if c.strip()]
+        item.certifications = certifications or None
 
     # Handle ingredient category - use the ID directly
     ingredient_category_id = request.form.get('ingredient_category_id', '').strip()
@@ -1188,6 +1232,7 @@ def create_global_item():
             except Exception:
                 pass
             new_item.default_is_perishable = request.form.get('default_is_perishable') == 'on'
+            new_item.is_active_ingredient = request.form.get('is_active_ingredient') == 'on'
 
             shelf_life = request.form.get('recommended_shelf_life_days')
             if shelf_life:
@@ -1197,10 +1242,60 @@ def create_global_item():
                     flash('Invalid shelf life value', 'error')
                     return redirect(url_for('developer.create_global_item'))
 
-            # Handle aka_names (comma-separated)
-            aka_names = request.form.get('aka_names', '').strip()
-            if aka_names:
-                new_item.aka_names = [n.strip() for n in aka_names.split(',') if n.strip()]
+            # Ingredient-specific metadata
+            new_item.recommended_usage_rate = request.form.get('recommended_usage_rate', '').strip() or None
+            new_item.recommended_fragrance_load_pct = request.form.get('recommended_fragrance_load_pct', '').strip() or None
+            new_item.inci_name = request.form.get('inci_name', '').strip() or None
+
+            protein_content = request.form.get('protein_content_pct', '').strip()
+            if protein_content:
+                try:
+                    new_item.protein_content_pct = float(protein_content)
+                except ValueError:
+                    flash('Invalid protein content percentage', 'error')
+                    return redirect(url_for('developer.create_global_item'))
+
+            brewing_color = request.form.get('brewing_color_srm', '').strip()
+            if brewing_color:
+                try:
+                    new_item.brewing_color_srm = float(brewing_color)
+                except ValueError:
+                    flash('Invalid brewing SRM value', 'error')
+                    return redirect(url_for('developer.create_global_item'))
+
+            brewing_potential = request.form.get('brewing_potential_sg', '').strip()
+            if brewing_potential:
+                try:
+                    new_item.brewing_potential_sg = float(brewing_potential)
+                except ValueError:
+                    flash('Invalid brewing potential SG value', 'error')
+                    return redirect(url_for('developer.create_global_item'))
+
+            brewing_dp = request.form.get('brewing_diastatic_power_lintner', '').strip()
+            if brewing_dp:
+                try:
+                    new_item.brewing_diastatic_power_lintner = float(brewing_dp)
+                except ValueError:
+                    flash('Invalid brewing diastatic power value', 'error')
+                    return redirect(url_for('developer.create_global_item'))
+
+            fatty_acid_profile_raw = request.form.get('fatty_acid_profile', '').strip()
+            if fatty_acid_profile_raw:
+                import json
+                try:
+                    new_item.fatty_acid_profile = json.loads(fatty_acid_profile_raw)
+                except json.JSONDecodeError:
+                    flash('Fatty acid profile must be valid JSON.', 'error')
+                    return redirect(url_for('developer.create_global_item'))
+
+            certifications_raw = request.form.get('certifications', '').strip()
+            if certifications_raw:
+                new_item.certifications = [c.strip() for c in certifications_raw.split(',') if c.strip()]
+
+            # Handle aliases (comma-separated)
+            aliases_raw = request.form.get('aliases', '').strip()
+            if aliases_raw:
+                new_item.aliases = [n.strip() for n in aliases_raw.split(',') if n.strip()]
 
             db.session.add(new_item)
             db.session.commit()
@@ -1462,36 +1557,36 @@ def integrations_checklist():
         {
             'title': 'Core Runtime & Platform',
             'note': 'Set these to lock the app into production mode and disable development conveniences before launch.',
-            'items': [
+            'section_items': [
                 _make_item('FLASK_ENV', 'Runtime environment. Use "production" for live deployments.', required=True, recommended='production', allow_config=True, config_key='ENV'),
                 _make_item('FLASK_SECRET_KEY', 'Flask session signing secret. Use a random 32+ character string.', required=True, allow_config=True, config_key='SECRET_KEY', is_secret=True),
                 _make_item('FLASK_DEBUG', 'Flask debug flag. Must stay false/unset in production.', required=False, recommended='false / unset'),
                 _make_item('REPLIT_DEPLOYMENT', 'Platform toggle used to force production settings on Replit. Leave false unless deploying there.', required=False, recommended='false'),
                 _make_item('LOG_LEVEL', 'Application logging level. Use INFO or WARN in production.', required=True, recommended='INFO', allow_config=True),
-            ],
+            ]
         },
         {
             'title': 'Database & Persistence',
             'note': 'Configure a managed Postgres instance before launch. Disable automatic table creation in production.',
-            'items': [
+            'section_items': [
                 _make_item('DATABASE_INTERNAL_URL', 'Primary database connection string (preferred in production).', required=True, is_secret=True),
                 _make_item('DATABASE_URL', 'Fallback database connection string (used if internal URL not set).', required=False, is_secret=True, note='Optional: set if your platform exposes only DATABASE_URL.'),
                 _make_item('SQLALCHEMY_DISABLE_CREATE_ALL', 'Disable db.create_all() safety switch. Set to 1 in production.', required=False, recommended='1 (enabled)', note='Prevents accidental schema drift on boot.'),
                 _make_item('SQLALCHEMY_ENABLE_CREATE_ALL', 'Local dev-only override to run db.create_all(). Leave unset in production.', required=False, recommended='unset'),
-            ],
+            ]
         },
         {
             'title': 'Caching & Rate Limits',
             'note': 'Use Redis (or another shared store) for rate limiting in production environments.',
-            'items': [
+            'section_items': [
                 _make_item('REDIS_URL', 'Redis connection string for caching and rate limit storage.', required=False, recommended='redis://...'),
                 _make_item('RATELIMIT_STORAGE_URL', 'Flask-Limiter backend. Point at Redis in production.', required=True, recommended='redis://...', allow_config=True),
-            ],
+            ]
         },
         {
             'title': 'Security & Networking',
             'note': 'Enable proxy awareness and security headers behind your load balancer. Set ENABLE_PROXY_FIX=true (or TRUST_PROXY_HEADERS=true on legacy platforms), adjust PROXY_FIX_X_* counts for each proxy hop (defaults assume one), and leave DISABLE_SECURITY_HEADERS unset.',
-            'items': [
+            'section_items': [
                 _make_item('ENABLE_PROXY_FIX', 'Wrap the app in Werkzeug ProxyFix when behind a load balancer.', required=True, recommended='true (production)'),
                 _make_item('TRUST_PROXY_HEADERS', 'Legacy toggle equivalent to ENABLE_PROXY_FIX for older configs.', required=False, recommended='true (only if ENABLE_PROXY_FIX is unavailable)'),
                 _make_item('PROXY_FIX_X_FOR', 'Number of X-Forwarded-For headers to trust.', required=False, recommended='1 (single proxy)'),
@@ -1503,12 +1598,12 @@ def integrations_checklist():
                 _make_item('DISABLE_SECURITY_HEADERS', 'Emergency kill-switch for security headers. Leave unset in production.', required=False, recommended='unset'),
                 _make_item('CONTENT_SECURITY_POLICY', 'Override default Content-Security-Policy header with a custom policy.', required=False, allow_config=True, note='Leave unset to use the built-in CSP; override only after testing.'),
                 _make_item('SECURITY_HEADERS', 'JSON/YAML mapping to override default security headers.', required=False, note='Optional advanced override for header values. Configure through app config if preferred.'),
-            ],
+            ]
         },
         {
             'title': 'Email & Notifications',
             'note': 'Configure exactly one provider for transactional email and confirm DNS (SPF/DKIM).',
-            'items': [
+            'section_items': [
                 _make_item('EMAIL_PROVIDER', 'Email provider selector: smtp | sendgrid | postmark | mailgun.', required=True, allow_config=True, recommended='sendgrid / postmark / mailgun'),
                 _make_item('MAIL_SERVER', 'SMTP server hostname.', required=False),
                 _make_item('MAIL_PORT', 'SMTP port (587 for TLS, 465 for SSL).', required=False),
@@ -1521,34 +1616,34 @@ def integrations_checklist():
                 _make_item('POSTMARK_SERVER_TOKEN', 'Postmark server token (if using Postmark).', required=False, is_secret=True),
                 _make_item('MAILGUN_API_KEY', 'Mailgun REST API key (if using Mailgun).', required=False, is_secret=True),
                 _make_item('MAILGUN_DOMAIN', 'Mailgun sending domain (if using Mailgun).', required=False),
-            ],
+            ]
         },
         {
             'title': 'Billing & Payments',
             'note': 'Switch to live Stripe keys and webhook secrets before you charge real customers.',
-            'items': [
+            'section_items': [
                 _make_item('STRIPE_SECRET_KEY', 'Stripe secret key (live).', required=True, is_secret=True),
                 _make_item('STRIPE_PUBLISHABLE_KEY', 'Stripe publishable key (live).', required=True, is_secret=True),
                 _make_item('STRIPE_WEBHOOK_SECRET', 'Stripe webhook signing secret.', required=True, is_secret=True),
-            ],
+            ]
         },
         {
             'title': 'OAuth & Marketplace',
             'note': 'Optional integrations for single sign-on and marketplace licensing.',
-            'items': [
+            'section_items': [
                 _make_item('GOOGLE_OAUTH_CLIENT_ID', 'Google OAuth 2.0 client ID for login.', required=False, is_secret=True),
                 _make_item('GOOGLE_OAUTH_CLIENT_SECRET', 'Google OAuth 2.0 client secret.', required=False, is_secret=True),
                 _make_item('WHOP_API_KEY', 'Whop API key (if using Whop for licensing).', required=False, is_secret=True),
                 _make_item('WHOP_APP_ID', 'Whop app ID (if using Whop).', required=False, is_secret=True),
-            ],
+            ]
         },
         {
             'title': 'Maintenance & Utilities',
             'note': 'Rarely used toggles for seeding or one-off maintenance scripts.',
-            'items': [
+            'section_items': [
                 _make_item('SEED_PRESETS', 'Enable preset data seeding during migrations (internal tooling).', required=False, recommended='unset'),
-            ],
-        },
+            ]
+        }
     ]
 
     # Feature flags
@@ -2299,117 +2394,6 @@ def get_user_api(user_id):
         print(f"API returning user {user_id} with is_organization_owner: {is_org_owner}")
 
         return jsonify({'success': True, 'user': user_data})
-
-    except Exception as e:
-        return jsonify({'success': False, 'error': str(e)})
-
-@developer_bp.route('/reference-categories/get-visibility', methods=['GET'])
-@login_required
-def get_category_visibility():
-    """Get visibility settings for a category"""
-    try:
-        category_name = request.args.get('category', '').strip()
-
-        if not category_name:
-            return jsonify({'success': False, 'error': 'Category name is required'})
-
-        # Find the category
-        from app.models.category import IngredientCategory
-        category = IngredientCategory.query.filter_by(
-            name=category_name,
-            organization_id=None,
-            is_global_category=True
-        ).first()
-
-        if not category:
-            return jsonify({'success': False, 'error': 'Category not found'})
-
-        visibility = {
-            'show_saponification_value': getattr(category, 'show_saponification_value', False),
-            'show_iodine_value': getattr(category, 'show_iodine_value', False),
-            'show_melting_point': getattr(category, 'show_melting_point', False),
-            'show_flash_point': getattr(category, 'show_flash_point', False),
-            'show_ph_value': getattr(category, 'show_ph_value', False),
-            'show_moisture_content': getattr(category, 'show_moisture_content', False),
-            'show_shelf_life_days': getattr(category, 'show_shelf_life_days', False),
-            'show_comedogenic_rating': getattr(category, 'show_comedogenic_rating', False)
-        }
-
-        return jsonify({'success': True, 'visibility': visibility})
-
-    except Exception as e:
-        return jsonify({'success': False, 'error': str(e)})
-
-@developer_bp.route('/reference-categories/update-visibility', methods=['POST'])
-@login_required
-def update_category_visibility():
-    """Update visibility settings for a category"""
-    try:
-        data = request.get_json()
-        category_name = data.get('category', '').strip()
-
-        if not category_name:
-            return jsonify({'success': False, 'error': 'Category name is required'})
-
-        # Find the category
-        from app.models.category import IngredientCategory
-        category = IngredientCategory.query.filter_by(
-            name=category_name,
-            organization_id=None,
-            is_global_category=True
-        ).first()
-
-        if not category:
-            return jsonify({'success': False, 'error': 'Category not found'})
-
-        # Update visibility settings
-        category.show_saponification_value = data.get('show_saponification_value', False)
-        category.show_iodine_value = data.get('show_iodine_value', False)
-        category.show_melting_point = data.get('show_melting_point', False)
-        category.show_flash_point = data.get('show_flash_point', False)
-        category.show_ph_value = data.get('show_ph_value', False)
-        category.show_moisture_content = data.get('show_moisture_content', False)
-        category.show_shelf_life_days = data.get('show_shelf_life_days', False)
-        category.show_comedogenic_rating = data.get('show_comedogenic_rating', False)
-
-        db.session.commit()
-
-        return jsonify({
-            'success': True, 
-            'message': f'Visibility settings updated for category "{category_name}"'
-        })
-
-    except Exception as e:
-        db.session.rollback()
-        return jsonify({'success': False, 'error': str(e)})
-
-@developer_bp.route('/api/category-visibility/<int:category_id>')
-@login_required
-def api_category_visibility(category_id):
-    """Get visibility settings for a category by ID"""
-    try:
-        from app.models.category import IngredientCategory
-        category = IngredientCategory.query.filter_by(
-            id=category_id,
-            organization_id=None,
-            is_global_category=True
-        ).first()
-
-        if not category:
-            return jsonify({'success': False, 'error': 'Category not found'})
-
-        visibility = {
-            'show_saponification_value': getattr(category, 'show_saponification_value', False),
-            'show_iodine_value': getattr(category, 'show_iodine_value', False),
-            'show_melting_point': getattr(category, 'show_melting_point', False),
-            'show_flash_point': getattr(category, 'show_flash_point', False),
-            'show_ph_value': getattr(category, 'show_ph_value', False),
-            'show_moisture_content': getattr(category, 'show_moisture_content', False),
-            'show_shelf_life_days': getattr(category, 'show_shelf_life_days', False),
-            'show_comedogenic_rating': getattr(category, 'show_comedogenic_rating', False)
-        }
-
-        return jsonify({'success': True, 'visibility': visibility})
 
     except Exception as e:
         return jsonify({'success': False, 'error': str(e)})

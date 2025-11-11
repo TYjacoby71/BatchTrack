@@ -1,8 +1,59 @@
-
 {
-  "category_name": "Miscellaneous",
-  "default_density": 1.00,
-  "description": "Miscellaneous items not covered by other categories.",
-  "show_shelf_life_months": true,
-  "items": []
+  "category_name": "Complex Actives & Blends",
+  "default_density": 1.05,
+  "description": "Advanced multi-component actives and proprietary complexes engineered for targeted performance.",
+  "attributes": [
+    "is_active_ingredient",
+    "recommended_usage_rate",
+    "recommended_shelf_life_days",
+    "inci_name",
+    "certifications"
+  ],
+  "items": [
+    {
+      "name": "Matrixyl 3000 Peptide Blend",
+      "aliases": [
+        "palmitoyl tripeptide-1 and palmitoyl tetrapeptide-7"
+      ],
+      "density": 1.02,
+      "default_unit": "gram",
+      "recommended_usage_rate": "2-5% in emulsions and serums",
+      "recommended_shelf_life_days": 540,
+      "inci_name": "Glycerin (and) Water (and) Palmitoyl Tripeptide-1 (and) Palmitoyl Tetrapeptide-7",
+      "certifications": [
+        "Ecocert Acceptable"
+      ],
+      "is_active_ingredient": true
+    },
+    {
+      "name": "Botanical Brightening Complex",
+      "aliases": [
+        "arbutin + licorice blend"
+      ],
+      "density": 1.04,
+      "default_unit": "milliliter",
+      "recommended_usage_rate": "3-7% in brightening gels or creams",
+      "recommended_shelf_life_days": 365,
+      "inci_name": "Water (and) Glycerin (and) Arctostaphylos Uva-Ursi Leaf Extract (and) Glycyrrhiza Glabra Root Extract",
+      "certifications": [
+        "Vegan"
+      ],
+      "is_active_ingredient": true
+    },
+    {
+      "name": "Peptide Repair Complex",
+      "aliases": [
+        "multi-peptide skin repair"
+      ],
+      "density": 1.06,
+      "default_unit": "milliliter",
+      "recommended_usage_rate": "1-3% in restorative serums",
+      "recommended_shelf_life_days": 365,
+      "inci_name": "Water (and) Acetyl Hexapeptide-8 (and) Palmitoyl Tripeptide-5 (and) Phenoxyethanol",
+      "certifications": [
+        "Cosmetic Grade"
+      ],
+      "is_active_ingredient": true
+    }
+  ]
 }

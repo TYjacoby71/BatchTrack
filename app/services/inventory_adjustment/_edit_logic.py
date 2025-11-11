@@ -7,6 +7,7 @@ from flask import session
 from app.services.density_assignment_service import DensityAssignmentService
 from sqlalchemy import and_
 import logging
+import json
 
 logger = logging.getLogger(__name__)
 
@@ -210,6 +211,56 @@ def update_inventory_item(item_id: int, form_data: dict) -> tuple[bool, str]:
                         pass
             except (ValueError, TypeError):
                 return False, "Invalid density value; please provide a numeric g/mL value"
+
+        if item.type == 'ingredient':
+            converters = {
+                'saponification_value': float,
+                'iodine_value': float,
+                'melting_point_c': float,
+                'flash_point_c': float,
+                'ph_value': float,
+                'moisture_content_percent': float,
+                'shelf_life_months': int,
+                'comedogenic_rating': int,
+                'protein_content_pct': float,
+                'brewing_color_srm': float,
+                'brewing_potential_sg': float,
+                'brewing_diastatic_power_lintner': float,
+            }
+
+            for field_name, converter in converters.items():
+                if field_name in form_data:
+                    raw_value = form_data.get(field_name)
+                    try:
+                        if raw_value in (None, '', 'null'):
+                            parsed = None
+                        else:
+                            parsed = converter(raw_value)
+                        setattr(item, field_name, parsed)
+                    except (ValueError, TypeError):
+                        return False, f"Invalid numeric value for {field_name.replace('_', ' ')}"
+
+            if 'recommended_usage_rate' in form_data:
+                item.recommended_usage_rate = (form_data.get('recommended_usage_rate') or '').strip() or None
+            if 'recommended_fragrance_load_pct' in form_data:
+                item.recommended_fragrance_load_pct = (form_data.get('recommended_fragrance_load_pct') or '').strip() or None
+            if 'inci_name' in form_data:
+                item.inci_name = (form_data.get('inci_name') or '').strip() or None
+
+            if 'fatty_acid_profile' in form_data:
+                raw_profile = (form_data.get('fatty_acid_profile') or '').strip()
+                if not raw_profile:
+                    item.fatty_acid_profile = None
+                else:
+                    try:
+                        item.fatty_acid_profile = json.loads(raw_profile)
+                    except json.JSONDecodeError:
+                        return False, "Invalid JSON for fatty acid profile"
+
+            if 'certifications' in form_data:
+                raw = form_data.get('certifications') or ''
+                certifications = [c.strip() for c in raw.split(',') if c.strip()]
+                item.certifications = certifications or None
 
         db.session.commit()
         return True, f"Updated {item.name} successfully"

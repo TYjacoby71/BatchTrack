@@ -55,13 +55,13 @@
 <div class="table-responsive">
   <table class="table table-striped">
     <thead>
-      <tr>
-        <th>Name</th>
-        <th>Type</th>
-        <th>Category</th>
-        <th>Density (default if category)</th>
-        <th>Capacity</th>
-        <th>Perishable</th>
+        <tr>
+          <th>Name</th>
+          <th>Type</th>
+          <th>Category</th>
+          <th>Density (g/ml)</th>
+          <th>Capacity</th>
+          <th>Perishable</th>
         {% if current_user.is_authenticated and current_user.user_type == 'developer' %}<th></th>{% endif %}
 
       </tr>
@@ -74,13 +74,13 @@
         </td>
         <td><span class="badge bg-secondary">{{ gi.item_type }}</span></td>
         <td>{{ gi.ingredient_category.name if gi.ingredient_category else '-' }}</td>
-        <td>
+          <td>
           {% if gi.density is not none %}
             {{ '%.3f'|format(gi.density) }}
-          {% elif gi.ingredient_category and gi.ingredient_category.default_density is not none %}
-            {{ '%.3f'|format(gi.ingredient_category.default_density) }}
-          {% else %}-{% endif %}
-        </td>
+            {% elif gi.ingredient_category and gi.ingredient_category.default_density is not none %}
+              {{ '%.3f'|format(gi.ingredient_category.default_density) }}
+            {% else %}-{% endif %}
+          </td>
         <td>{{ gi.capacity or '-' }} {{ gi.capacity_unit or '' }}</td>
         <td>{{ 'Yes' if gi.default_is_perishable else 'No' }}</td>
         {% if is_developer() %}
@@ -127,6 +127,34 @@ function handleSearchKeyup(event) {
 
 function clearFilters() {
   window.location.href = window.location.pathname;
+}
+
+function formatShelfLifeNumber(value) {
+  const rounded = Math.round(value * 10) / 10;
+  if (Number.isFinite(rounded) && Math.abs(rounded - Math.round(rounded)) < 0.05) {
+    return Math.round(rounded).toString();
+  }
+  return Number.isFinite(rounded) ? rounded.toString() : '';
+}
+
+function formatShelfLifeDays(days) {
+  const numeric = Number(days);
+  if (!Number.isFinite(numeric) || numeric <= 0) {
+    return '–';
+  }
+  if (numeric < 60) {
+    return `${numeric} day${numeric === 1 ? '' : 's'}`;
+  }
+  if (numeric < 730) {
+    const months = numeric / 30.4375;
+    const display = formatShelfLifeNumber(months);
+    const unit = display === '1' ? 'month' : 'months';
+    return `${display} ${unit} (${numeric} days)`;
+  }
+  const years = numeric / 365;
+  const display = formatShelfLifeNumber(years);
+  const unit = display === '1' ? 'year' : 'years';
+  return `${display} ${unit} (${numeric} days)`;
 }
 
 document.addEventListener('DOMContentLoaded', function(){

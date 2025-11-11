@@ -1,76 +1,214 @@
-
 {
   "category_name": "Butters & Solid Fats",
   "default_density": 0.91,
   "description": "For solid fats at room temperature, including butters and solid oils.",
-  "show_saponification_value": true,
-  "show_iodine_value": true,
-  "show_melting_point": true,
-  "show_shelf_life_months": true,
-  "show_comedogenic_rating": true,
+  "attributes": [
+    "saponification_value",
+    "iodine_value",
+    "melting_point_c",
+    "fatty_acid_profile",
+    "comedogenic_rating",
+    "recommended_usage_rate",
+    "recommended_shelf_life_days",
+    "inci_name",
+    "certifications",
+    "is_active_ingredient"
+  ],
   "items": [
     {
-      "name": "Butter",
-      "density_g_per_ml": 0.91,
-      "aka_names": ["unsalted butter", "salted butter"],
-      "default_unit": "gram",
-      "saponification_value": 227,
-      "melting_point_c": 32,
-      "shelf_life_months": 6
-    },
-    {
-      "name": "Margarine",
-      "density_g_per_ml": 0.91,
-      "aka_names": ["vegan butter", "plant butter"],
-      "default_unit": "gram",
-      "saponification_value": 190,
-      "melting_point_c": 34,
-      "shelf_life_months": 12
-    },
-    {
-      "name": "Ghee",
-      "density_g_per_ml": 0.9,
-      "aka_names": ["clarified butter"],
-      "default_unit": "gram",
-      "saponification_value": 230,
-      "melting_point_c": 35,
-      "shelf_life_months": 12
-    },
-    {
-      "name": "Coconut Butter",
-      "density_g_per_ml": 0.92,
-      "aka_names": ["coconut manna"],
-      "default_unit": "gram",
-      "saponification_value": 257,
-      "melting_point_c": 24,
-      "shelf_life_months": 24
-    },
-    {
-      "name": "Cocoa Butter",
-      "density_g_per_ml": 0.89,
-      "aka_names": ["theobroma oil"],
-      "default_unit": "gram",
-      "saponification_value": 192,
-      "melting_point_c": 34,
-      "shelf_life_months": 36
-    },
-    {
       "name": "Shea Butter",
-      "density_g_per_ml": 0.92,
-      "aka_names": ["african shea butter"],
       "default_unit": "gram",
       "saponification_value": 178,
-      "melting_point_c": 38,
-      "shelf_life_months": 24
+      "iodine_value": 53,
+      "melting_point_c": 35,
+      "fatty_acid_profile": {
+        "oleic": 45,
+        "stearic": 42,
+        "linoleic": 6,
+        "palmitic": 4
+      },
+      "comedogenic_rating": 0,
+      "recommended_usage_rate": "3-20% in creams, balms, and soaps",
+      "recommended_shelf_life_days": 730,
+      "inci_name": "Butyrospermum Parkii (Shea) Butter",
+      "certifications": [
+        "Fair Trade"
+      ],
+      "density": 0.92,
+      "aliases": [
+        "african shea butter"
+      ],
+      "is_active_ingredient": false
     },
     {
       "name": "Mango Butter",
-      "density_g_per_ml": 0.91,
-      "aka_names": ["mango kernel butter"],
       "default_unit": "gram",
       "saponification_value": 188,
-      "melting_point_c": 43,
-      "shelf_life_months": 24
+      "iodine_value": 46,
+      "melting_point_c": 33,
+      "fatty_acid_profile": {
+        "stearic": 42,
+        "oleic": 40,
+        "palmitic": 7,
+        "linoleic": 9
+      },
+      "comedogenic_rating": 2,
+      "recommended_usage_rate": "3-15% in body butters and lotions",
+      "recommended_shelf_life_days": 730,
+      "inci_name": "Mangifera Indica (Mango) Seed Butter",
+      "certifications": [
+        "Non-GMO"
+      ],
+      "density": 0.91,
+      "aliases": [
+        "mango kernel butter"
+      ],
+      "is_active_ingredient": false
+    },
+    {
+      "name": "Cocoa Butter",
+      "default_unit": "gram",
+      "saponification_value": 192,
+      "iodine_value": 37,
+      "melting_point_c": 34,
+      "fatty_acid_profile": {
+        "stearic": 35,
+        "oleic": 34,
+        "palmitic": 26,
+        "linoleic": 3
+      },
+      "comedogenic_rating": 3,
+      "recommended_usage_rate": "5-20% in anhydrous systems",
+      "recommended_shelf_life_days": 1095,
+      "inci_name": "Theobroma Cacao (Cocoa) Seed Butter",
+      "certifications": [
+        "Fair Trade",
+        "Rainforest Alliance"
+      ],
+      "density": 0.89,
+      "aliases": [
+        "theobroma oil"
+      ],
+      "is_active_ingredient": false
+    },
+    {
+      "name": "Kokum Butter",
+      "default_unit": "gram",
+      "saponification_value": 190,
+      "iodine_value": 32,
+      "melting_point_c": 38,
+      "fatty_acid_profile": {
+        "stearic": 59,
+        "oleic": 39,
+        "linoleic": 1,
+        "palmitic": 1
+      },
+      "comedogenic_rating": 1,
+      "recommended_usage_rate": "2-15% for structure and emollience",
+      "recommended_shelf_life_days": 730,
+      "inci_name": "Garcinia Indica Seed Butter",
+      "certifications": [],
+      "density": 0.9,
+      "aliases": [
+        "garcinia indica butter"
+      ],
+      "is_active_ingredient": false
+    },
+    {
+      "name": "Cupuacu Butter",
+      "default_unit": "gram",
+      "saponification_value": 188,
+      "iodine_value": 38,
+      "melting_point_c": 32,
+      "fatty_acid_profile": {
+        "oleic": 36,
+        "stearic": 34,
+        "palmitic": 30,
+        "linoleic": 3
+      },
+      "comedogenic_rating": 2,
+      "recommended_usage_rate": "2-8% in moisturizers and hair masks",
+      "recommended_shelf_life_days": 540,
+      "inci_name": "Theobroma Grandiflorum Seed Butter",
+      "certifications": [
+        "Rainforest Alliance"
+      ],
+      "density": 0.984,
+      "aliases": [
+        "theobroma grandiflorum seed butter"
+      ],
+      "is_active_ingredient": false
+    },
+    {
+      "name": "Illipe Butter",
+      "default_unit": "gram",
+      "saponification_value": 189,
+      "iodine_value": 40,
+      "melting_point_c": 37,
+      "fatty_acid_profile": {
+        "stearic": 45,
+        "oleic": 41,
+        "palmitic": 11,
+        "linoleic": 3
+      },
+      "comedogenic_rating": 1,
+      "recommended_usage_rate": "2-10% in balms and sticks",
+      "recommended_shelf_life_days": 540,
+      "inci_name": "Shorea Stenoptera Seed Butter",
+      "certifications": [],
+      "density": 0.95,
+      "aliases": [
+        "shorea stenoptera butter"
+      ],
+      "is_active_ingredient": false
+    },
+    {
+      "name": "Murumuru Butter",
+      "default_unit": "gram",
+      "saponification_value": 235,
+      "iodine_value": 12,
+      "melting_point_c": 33,
+      "fatty_acid_profile": {
+        "lauric": 47,
+        "myristic": 26,
+        "oleic": 14,
+        "palmitic": 9
+      },
+      "comedogenic_rating": 0,
+      "recommended_usage_rate": "3-10% in hair and skin butters",
+      "recommended_shelf_life_days": 540,
+      "inci_name": "Astrocaryum Murumuru Seed Butter",
+      "certifications": [
+        "Fair Trade"
+      ],
+      "density": 0.9,
+      "aliases": [
+        "astrocaryum murumuru seed butter"
+      ],
+      "is_active_ingredient": false
+    },
+    {
+      "name": "Ghee (Clarified Butter)",
+      "default_unit": "gram",
+      "saponification_value": 230,
+      "iodine_value": 35,
+      "melting_point_c": 35,
+      "fatty_acid_profile": {
+        "palmitic": 25,
+        "stearic": 12,
+        "oleic": 28,
+        "butyric": 4
+      },
+      "comedogenic_rating": 3,
+      "recommended_usage_rate": "2-6% in soap formulations",
+      "recommended_shelf_life_days": 365,
+      "inci_name": "Clarified Butter",
+      "certifications": [],
+      "density": 0.9,
+      "aliases": [
+        "clarified butter"
+      ],
+      "is_active_ingredient": false
     }
   ]
 }
