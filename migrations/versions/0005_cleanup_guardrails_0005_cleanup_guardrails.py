@@ -1,4 +1,3 @@
-
 """0005 cleanup guardrails and ingredient attribute expansion
 
 Revision ID: 0005_cleanup_guardrails
@@ -18,7 +17,7 @@ depends_on = None
 
 
 def upgrade():
-    from migrations.postgres_helpers import is_postgresql, is_sqlite
+    from migrations.postgres_helpers import is_postgresql, is_sqlite, safe_add_column
 
     bind = op.get_bind()
 
@@ -41,20 +40,23 @@ def upgrade():
             print("⚠️  Neither 'aka_names' nor 'aliases' column found in global_item table")
     except Exception as e:
         print(f"⚠️  Could not rename aka_names column: {e}")
-    
-    # Continue with other column additions
+
+    # Add new columns to global_item for enhanced ingredient data (safely)
+    safe_add_column('global_item', 'fatty_acid_profile', sa.JSON())
+    safe_add_column('global_item', 'brewing_diastatic_power_lintner', sa.Float())
+    safe_add_column('global_item', 'brewing_potential_sg', sa.Float())
+    safe_add_column('global_item', 'brewing_color_srm', sa.Float())
+    safe_add_column('global_item', 'protein_content_pct', sa.Float())
+    safe_add_column('global_item', 'certifications', sa.JSON())
+    safe_add_column('global_item', 'inci_name', sa.String(256))
+    safe_add_column('global_item', 'recommended_fragrance_load_pct', sa.Float())
+    safe_add_column('global_item', 'recommended_usage_rate', sa.String(128))
+    safe_add_column('global_item', 'is_active_ingredient', sa.Boolean())
+
+    # Alter is_active_ingredient server_default after it's added
     with op.batch_alter_table('global_item') as batch_op:
-        batch_op.add_column(sa.Column('recommended_usage_rate', sa.String(length=64), nullable=True))
-        batch_op.add_column(sa.Column('recommended_fragrance_load_pct', sa.String(length=64), nullable=True))
-        batch_op.add_column(sa.Column('is_active_ingredient', sa.Boolean(), nullable=False, server_default=sa.text('false')))
-        batch_op.add_column(sa.Column('inci_name', sa.String(length=256), nullable=True))
-        batch_op.add_column(sa.Column('certifications', sa.JSON(), nullable=True))
-        batch_op.add_column(sa.Column('fatty_acid_profile', sa.JSON(), nullable=True))
-        batch_op.add_column(sa.Column('protein_content_pct', sa.Float(), nullable=True))
-        batch_op.add_column(sa.Column('brewing_color_srm', sa.Float(), nullable=True))
-        batch_op.add_column(sa.Column('brewing_potential_sg', sa.Float(), nullable=True))
-        batch_op.add_column(sa.Column('brewing_diastatic_power_lintner', sa.Float(), nullable=True))
         batch_op.alter_column('is_active_ingredient', server_default=None)
+
 
     if is_postgresql():
         try:
@@ -66,16 +68,16 @@ def upgrade():
             pass
 
     # Mirror new attributes onto inventory items
-    with op.batch_alter_table('inventory_item') as batch_op:
-        batch_op.add_column(sa.Column('recommended_usage_rate', sa.String(length=64), nullable=True))
-        batch_op.add_column(sa.Column('recommended_fragrance_load_pct', sa.String(length=64), nullable=True))
-        batch_op.add_column(sa.Column('inci_name', sa.String(length=256), nullable=True))
-        batch_op.add_column(sa.Column('protein_content_pct', sa.Float(), nullable=True))
-        batch_op.add_column(sa.Column('brewing_color_srm', sa.Float(), nullable=True))
-        batch_op.add_column(sa.Column('brewing_potential_sg', sa.Float(), nullable=True))
-        batch_op.add_column(sa.Column('brewing_diastatic_power_lintner', sa.Float(), nullable=True))
-        batch_op.add_column(sa.Column('fatty_acid_profile', sa.JSON(), nullable=True))
-        batch_op.add_column(sa.Column('certifications', sa.JSON(), nullable=True))
+    # Add same columns to inventory_item for backwards compatibility (safely)
+    safe_add_column('inventory_item', 'certifications', sa.JSON())
+    safe_add_column('inventory_item', 'fatty_acid_profile', sa.JSON())
+    safe_add_column('inventory_item', 'brewing_diastatic_power_lintner', sa.Float())
+    safe_add_column('inventory_item', 'brewing_potential_sg', sa.Float())
+    safe_add_column('inventory_item', 'brewing_color_srm', sa.Float())
+    safe_add_column('inventory_item', 'protein_content_pct', sa.Float())
+    safe_add_column('inventory_item', 'inci_name', sa.String(256))
+    safe_add_column('inventory_item', 'recommended_fragrance_load_pct', sa.Float())
+    safe_add_column('inventory_item', 'recommended_usage_rate', sa.String(128))
 
     # Remove category-level attribute toggles
     with op.batch_alter_table('ingredient_category') as batch_op:
@@ -132,7 +134,7 @@ def downgrade():
         'recommended_fragrance_load_pct',
         'recommended_usage_rate'
     ]
-    
+
     for column_name in columns_to_drop:
         safe_drop_column('inventory_item', column_name, verbose=False)
 
@@ -155,10 +157,10 @@ def downgrade():
         'recommended_usage_rate',
         'is_active_ingredient'
     ]
-    
+
     for column_name in global_item_columns_to_drop:
         safe_drop_column('global_item', column_name, verbose=False)
-        
+
     # Rename column only if aliases exists (safe check)
     bind = op.get_bind()
     inspector = sa.inspect(bind)
