@@ -181,7 +181,8 @@ def downgrade():
                 batch_op.alter_column('recommended_fragrance_load_pct',
                        existing_type=sa.String(length=64),
                        type_=sa.Float(),
-                       existing_nullable=True)
+                       existing_nullable=True,
+                       postgresql_using='recommended_fragrance_load_pct::double precision')
 
         if 'is_active_ingredient' in columns:
             with op.batch_alter_table('global_item') as batch_op:
@@ -204,7 +205,8 @@ def downgrade():
                 batch_op.alter_column('recommended_fragrance_load_pct',
                        existing_type=sa.String(length=64),
                        type_=sa.Float(),
-                       existing_nullable=True)
+                       existing_nullable=True,
+                       postgresql_using='recommended_fragrance_load_pct::double precision')
 
     except Exception as e:
         print(f"⚠️  Could not revert column types: {e}")
