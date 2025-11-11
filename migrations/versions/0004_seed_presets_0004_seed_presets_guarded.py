@@ -5,9 +5,10 @@ Revises: 0003_postgres_specific
 Create Date: 2025-10-21 20:28:54.476996
 
 """
+import os
+
 from alembic import op
 import sqlalchemy as sa
-import os
 
 
 # revision identifiers, used by Alembic.
@@ -20,6 +21,7 @@ depends_on = None
 def upgrade():
     # Guarded seeding: only when SEED_PRESETS=1
     if os.environ.get("SEED_PRESETS") != "1":
+        print("   ℹ️ 0004_seed_presets skipped (SEED_PRESETS env not set to 1).")
         return
 
     bind = op.get_bind()
