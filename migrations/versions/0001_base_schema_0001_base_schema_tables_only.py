@@ -859,7 +859,6 @@ def upgrade():
     sa.Column('flash_point_c', sa.Float(), nullable=True),
     sa.Column('ph_value', sa.Float(), nullable=True),
     sa.Column('moisture_content_percent', sa.Float(), nullable=True),
-    sa.Column('shelf_life_months', sa.Integer(), nullable=True),
     sa.Column('comedogenic_rating', sa.Integer(), nullable=True),
     sa.Column('global_item_id', sa.Integer(), nullable=True),
     sa.Column('ownership', sa.String(length=16), nullable=True),
