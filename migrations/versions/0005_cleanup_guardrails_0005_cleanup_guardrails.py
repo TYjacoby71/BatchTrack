@@ -65,18 +65,6 @@ def upgrade():
                type_=sa.String(length=64),
                existing_nullable=True)
 
-    # Also update inventory_item column types
-    with op.batch_alter_table('inventory_item') as batch_op:
-        batch_op.alter_column('recommended_usage_rate',
-               existing_type=sa.VARCHAR(length=128),
-               type_=sa.String(length=64),
-               existing_nullable=True)
-        batch_op.alter_column('recommended_fragrance_load_pct',
-               existing_type=sa.Float(),
-               type_=sa.String(length=64),
-               existing_nullable=True)
-
-
     if is_postgresql():
         try:
             bind.execute(sa.text(
@@ -97,6 +85,17 @@ def upgrade():
     safe_add_column('inventory_item', sa.Column('inci_name', sa.String(256)))
     safe_add_column('inventory_item', sa.Column('recommended_fragrance_load_pct', sa.Float()))
     safe_add_column('inventory_item', sa.Column('recommended_usage_rate', sa.String(128)))
+
+    # Now alter the column types for inventory_item
+    with op.batch_alter_table('inventory_item') as batch_op:
+        batch_op.alter_column('recommended_usage_rate',
+               existing_type=sa.VARCHAR(length=128),
+               type_=sa.String(length=64),
+               existing_nullable=True)
+        batch_op.alter_column('recommended_fragrance_load_pct',
+               existing_type=sa.Float(),
+               type_=sa.String(length=64),
+               existing_nullable=True)
 
     # Remove category-level attribute toggles
     with op.batch_alter_table('ingredient_category') as batch_op:
