@@ -53,9 +53,28 @@ def upgrade():
     safe_add_column('global_item', sa.Column('recommended_usage_rate', sa.String(128)))
     safe_add_column('global_item', sa.Column('is_active_ingredient', sa.Boolean()))
 
-    # Alter is_active_ingredient server_default after it's added
+    # Alter is_active_ingredient server_default after it's added and set column types
     with op.batch_alter_table('global_item') as batch_op:
-        batch_op.alter_column('is_active_ingredient', server_default=None)
+        batch_op.alter_column('is_active_ingredient', server_default=None, nullable=False)
+        batch_op.alter_column('recommended_usage_rate',
+               existing_type=sa.VARCHAR(length=128),
+               type_=sa.String(length=64),
+               existing_nullable=True)
+        batch_op.alter_column('recommended_fragrance_load_pct',
+               existing_type=sa.Float(),
+               type_=sa.String(length=64),
+               existing_nullable=True)
+
+    # Also update inventory_item column types
+    with op.batch_alter_table('inventory_item') as batch_op:
+        batch_op.alter_column('recommended_usage_rate',
+               existing_type=sa.VARCHAR(length=128),
+               type_=sa.String(length=64),
+               existing_nullable=True)
+        batch_op.alter_column('recommended_fragrance_load_pct',
+               existing_type=sa.Float(),
+               type_=sa.String(length=64),
+               existing_nullable=True)
 
 
     if is_postgresql():
@@ -143,6 +162,53 @@ def downgrade():
         op.execute("DROP INDEX IF EXISTS ix_global_item_aliases_gin")
     except Exception:
         pass
+
+    # Revert column types before dropping (if columns still exist)
+    bind = op.get_bind()
+    inspector = sa.inspect(bind)
+    try:
+        columns = [col['name'] for col in inspector.get_columns('global_item')]
+
+        # Revert global_item column types
+        if 'recommended_usage_rate' in columns:
+            with op.batch_alter_table('global_item') as batch_op:
+                batch_op.alter_column('recommended_usage_rate',
+                       existing_type=sa.String(length=64),
+                       type_=sa.VARCHAR(length=128),
+                       existing_nullable=True)
+
+        if 'recommended_fragrance_load_pct' in columns:
+            with op.batch_alter_table('global_item') as batch_op:
+                batch_op.alter_column('recommended_fragrance_load_pct',
+                       existing_type=sa.String(length=64),
+                       type_=sa.Float(),
+                       existing_nullable=True)
+
+        if 'is_active_ingredient' in columns:
+            with op.batch_alter_table('global_item') as batch_op:
+                batch_op.alter_column('is_active_ingredient',
+                       existing_type=sa.BOOLEAN(),
+                       nullable=True)
+
+        # Revert inventory_item column types
+        inv_columns = [col['name'] for col in inspector.get_columns('inventory_item')]
+
+        if 'recommended_usage_rate' in inv_columns:
+            with op.batch_alter_table('inventory_item') as batch_op:
+                batch_op.alter_column('recommended_usage_rate',
+                       existing_type=sa.String(length=64),
+                       type_=sa.VARCHAR(length=128),
+                       existing_nullable=True)
+
+        if 'recommended_fragrance_load_pct' in inv_columns:
+            with op.batch_alter_table('inventory_item') as batch_op:
+                batch_op.alter_column('recommended_fragrance_load_pct',
+                       existing_type=sa.String(length=64),
+                       type_=sa.Float(),
+                       existing_nullable=True)
+
+    except Exception as e:
+        print(f"⚠️  Could not revert column types: {e}")
 
     # Remove global_item extensions (safe drop if exists)
     global_item_columns_to_drop = [
