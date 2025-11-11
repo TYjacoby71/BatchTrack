@@ -46,7 +46,7 @@ def upgrade():
     with op.batch_alter_table('global_item') as batch_op:
         batch_op.add_column(sa.Column('recommended_usage_rate', sa.String(length=64), nullable=True))
         batch_op.add_column(sa.Column('recommended_fragrance_load_pct', sa.String(length=64), nullable=True))
-        batch_op.add_column(sa.Column('is_active_ingredient', sa.Boolean(), nullable=False, server_default=sa.text('0')))
+        batch_op.add_column(sa.Column('is_active_ingredient', sa.Boolean(), nullable=False, server_default=sa.text('false')))
         batch_op.add_column(sa.Column('inci_name', sa.String(length=256), nullable=True))
         batch_op.add_column(sa.Column('certifications', sa.JSON(), nullable=True))
         batch_op.add_column(sa.Column('fatty_acid_profile', sa.JSON(), nullable=True))
