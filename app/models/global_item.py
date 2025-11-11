@@ -9,6 +9,8 @@ class GlobalItem(db.Model):
     name = db.Column(db.String(128), nullable=False, index=True)
     item_type = db.Column(db.String(32), nullable=False, index=True)  # ingredient, container, packaging, consumable
     aliases = db.Column(db.JSON, nullable=True)  # list of strings for alternative names
+    ingredient_id = db.Column(db.Integer, db.ForeignKey('ingredient.id', ondelete='SET NULL'), nullable=False)
+    physical_form_id = db.Column(db.Integer, db.ForeignKey('physical_form.id', ondelete='SET NULL'), nullable=False)
     density = db.Column(db.Float, nullable=True)  # g/ml
     default_unit = db.Column(db.String(32), nullable=True)
 
@@ -67,6 +69,18 @@ class GlobalItem(db.Model):
     # Relationships
     ingredient_category = db.relationship('IngredientCategory', backref='global_items')
     archived_by_user = db.relationship('User', foreign_keys=[archived_by])
+    ingredient = db.relationship('IngredientProfile', backref=db.backref('global_items', lazy='dynamic'))
+    physical_form = db.relationship('PhysicalForm', backref=db.backref('global_items', lazy='dynamic'))
+    function_tags = db.relationship(
+        'FunctionTag',
+        secondary='global_item_function_tag',
+        back_populates='global_items',
+    )
+    application_tags = db.relationship(
+        'ApplicationTag',
+        secondary='global_item_application_tag',
+        back_populates='global_items',
+    )
 
     def _is_postgres_url(url: str) -> bool:
         if not url:
@@ -82,5 +96,7 @@ class GlobalItem(db.Model):
 
     __table_args__ = tuple([
         db.UniqueConstraint('name', 'item_type', name='_global_item_name_type_uc'),
+        db.Index('ix_global_item_ingredient_id', 'ingredient_id'),
+        db.Index('ix_global_item_physical_form_id', 'physical_form_id'),
         *([db.Index('ix_global_item_aliases_gin', db.text('(aliases::jsonb)'), postgresql_using='gin')] if _IS_PG else []),
     ])

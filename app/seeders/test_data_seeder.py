@@ -1,4 +1,5 @@
 from datetime import timedelta, timezone as dt_timezone
+import re
 from typing import Dict, List, Optional
 
 from ..extensions import db
@@ -27,10 +28,64 @@ from ..models import (
     Unit,
     UnifiedInventoryHistory,
     User,
+    IngredientProfile,
+    PhysicalForm,
 )
 from ..models.global_item import GlobalItem
 from ..services.inventory_adjustment import process_inventory_adjustment
 from ..services.unit_conversion import ConversionEngine
+
+
+def _slugify(value: str) -> str:
+    value = value or ''
+    value = value.lower()
+    value = re.sub(r'[^a-z0-9]+', '-', value)
+    value = value.strip('-')
+    return value or 'item'
+
+
+def _unique_slug(model, base_slug: str) -> str:
+    slug = base_slug
+    counter = 1
+    while db.session.query(model.id).filter_by(slug=slug).first():
+        counter += 1
+        slug = f"{base_slug}-{counter}"
+    return slug
+
+
+def _ensure_ingredient_profile(name: str, is_active: bool = False) -> IngredientProfile:
+    base_name = (name or '').strip() or 'Generic Ingredient'
+    slug = _slugify(base_name)
+    ingredient = IngredientProfile.query.filter_by(slug=slug).first()
+    if ingredient:
+        return ingredient
+    unique_slug = _unique_slug(IngredientProfile, slug)
+    ingredient = IngredientProfile(
+        name=base_name,
+        slug=unique_slug,
+        is_active_ingredient=is_active,
+    )
+    db.session.add(ingredient)
+    db.session.flush()
+    return ingredient
+
+
+def _ensure_physical_form(name: str) -> PhysicalForm:
+    base_name = (name or '').strip()
+    if not base_name:
+        base_name = 'Unspecified'
+    slug = _slugify(base_name)
+    physical_form = PhysicalForm.query.filter_by(slug=slug).first()
+    if physical_form:
+        return physical_form
+    unique_slug = _unique_slug(PhysicalForm, slug)
+    physical_form = PhysicalForm(
+        name=base_name,
+        slug=unique_slug,
+    )
+    db.session.add(physical_form)
+    db.session.flush()
+    return physical_form
 
 
 def seed_test_data(organization_id: Optional[int] = None):
@@ -82,13 +137,33 @@ def seed_test_data(organization_id: Optional[int] = None):
             print(f"   ➕ Created ingredient category '{name}'")
         return category
 
-    def ensure_global_item(name: str, item_type: str, **kwargs) -> GlobalItem:
+    def ensure_global_item(name: str, item_type: str, *, physical_form_label: Optional[str] = None, ingredient_name: Optional[str] = None, **kwargs) -> GlobalItem:
+        ingredient = _ensure_ingredient_profile(ingredient_name or name, is_active=(item_type == 'ingredient'))
+        if not physical_form_label:
+            if item_type == 'container':
+                physical_form_label = 'Container'
+            elif item_type == 'consumable':
+                physical_form_label = 'Consumable'
+            elif item_type == 'packaging':
+                physical_form_label = 'Packaging'
+            else:
+                physical_form_label = 'Unspecified'
+        physical_form = _ensure_physical_form(physical_form_label)
         global_item = GlobalItem.query.filter_by(name=name, item_type=item_type).first()
         if not global_item:
-            global_item = GlobalItem(name=name, item_type=item_type, **kwargs)
+            global_item = GlobalItem(
+                name=name,
+                item_type=item_type,
+                ingredient=ingredient,
+                physical_form=physical_form,
+                **kwargs
+            )
             db.session.add(global_item)
             db.session.flush()
             print(f"   🌐 Registered global item '{name}' ({item_type})")
+        else:
+            global_item.ingredient = ingredient
+            global_item.physical_form = physical_form
         return global_item
 
     def reset_inventory_item(item: InventoryItem):
