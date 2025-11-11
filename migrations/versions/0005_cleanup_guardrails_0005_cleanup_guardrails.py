@@ -177,12 +177,21 @@ def downgrade():
                        existing_nullable=True)
 
         if 'recommended_fragrance_load_pct' in columns:
+            # Clean non-numeric data before conversion
+            bind.execute(sa.text("""
+                UPDATE global_item 
+                SET recommended_fragrance_load_pct = NULL 
+                WHERE recommended_fragrance_load_pct !~ '^[0-9]*\.?[0-9]+$'
+                AND recommended_fragrance_load_pct IS NOT NULL
+                AND recommended_fragrance_load_pct != ''
+            """))
+            
             with op.batch_alter_table('global_item') as batch_op:
                 batch_op.alter_column('recommended_fragrance_load_pct',
                        existing_type=sa.String(length=64),
                        type_=sa.Float(),
                        existing_nullable=True,
-                       postgresql_using='recommended_fragrance_load_pct::double precision')
+                       postgresql_using='CASE WHEN recommended_fragrance_load_pct ~ \'^[0-9]*\\.?[0-9]+$\' THEN recommended_fragrance_load_pct::double precision ELSE NULL END')
 
         if 'is_active_ingredient' in columns:
             with op.batch_alter_table('global_item') as batch_op:
@@ -201,12 +210,21 @@ def downgrade():
                        existing_nullable=True)
 
         if 'recommended_fragrance_load_pct' in inv_columns:
+            # Clean non-numeric data before conversion
+            bind.execute(sa.text("""
+                UPDATE inventory_item 
+                SET recommended_fragrance_load_pct = NULL 
+                WHERE recommended_fragrance_load_pct !~ '^[0-9]*\.?[0-9]+$'
+                AND recommended_fragrance_load_pct IS NOT NULL
+                AND recommended_fragrance_load_pct != ''
+            """))
+            
             with op.batch_alter_table('inventory_item') as batch_op:
                 batch_op.alter_column('recommended_fragrance_load_pct',
                        existing_type=sa.String(length=64),
                        type_=sa.Float(),
                        existing_nullable=True,
-                       postgresql_using='recommended_fragrance_load_pct::double precision')
+                       postgresql_using='CASE WHEN recommended_fragrance_load_pct ~ \'^[0-9]*\\.?[0-9]+$\' THEN recommended_fragrance_load_pct::double precision ELSE NULL END')
 
     except Exception as e:
         print(f"⚠️  Could not revert column types: {e}")
