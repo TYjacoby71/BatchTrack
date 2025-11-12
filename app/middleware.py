@@ -191,16 +191,15 @@ def register_middleware(app):
                 request.method in ['POST', 'PUT', 'DELETE', 'PATCH']
             )
 
-            # Skip logging for frequent developer dashboard calls
-            if request.path in ['/developer/dashboard', '/developer/organizations']:
+            # Skip logging for frequent developer dashboard calls and GET requests
+            if (request.path in ['/developer/dashboard', '/developer/organizations'] or 
+                request.method == 'GET'):
                 should_log = False
 
             if should_log and current_user and current_user.is_authenticated:
-                import random
-                if random.random() < 0.1:  # Log only 10% of requests to reduce noise
-                    user_id = getattr(current_user, 'id', 'unknown')
-                    masq_org = session.get("masquerade_org_id") or session.get("dev_selected_org_id")
-                    logger.debug(f"Developer {user_id} accessing {request.method} {request.path}")
+                # Only log actual modifications, not routine access
+                user_id = getattr(current_user, 'id', 'unknown')
+                logger.info(f"Developer {user_id} performing {request.method} {request.path}")
             return
 
         # 8. Enforce billing for all regular, authenticated users.

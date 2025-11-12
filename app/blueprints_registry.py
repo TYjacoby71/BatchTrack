@@ -1,4 +1,6 @@
 import logging
+from flask import current_app
+
 logger = logging.getLogger(__name__)
 
 def register_blueprints(app):
@@ -344,24 +346,21 @@ def register_blueprints(app):
 
     # Log summary (avoid noisy stdout in production)
     app_logger = getattr(app, 'logger', logger)
-    summary_lines = [
-        "=== Blueprint Registration Summary ===",
-        f"Successful: {len(successful_registrations)}",
-        *[f"   - {success}" for success in successful_registrations]
-    ]
+    
+    # Only log in debug mode or if there are failures
+    if app.debug or failed_registrations:
+        app_logger.info("=== Blueprint Registration Summary ===")
+        app_logger.info(f"Successful: {len(successful_registrations)}")
+        if app.debug:
+            for name in successful_registrations:
+                app_logger.info(f"   - {name}")
+        if failed_registrations:
+            app_logger.error(f"Failed: {len(failed_registrations)}")
+            for name, error in failed_registrations:
+                app_logger.error(f"   - {name}: {error}")
+        else:
+            app_logger.info("All blueprints registered successfully!")
 
-    if failed_registrations:
-        summary_lines.extend([
-            f"Failed: {len(failed_registrations)}",
-            *[f"   - {failure}" for failure in failed_registrations],
-            "App will continue running with available blueprints",
-        ])
-        log_method = app_logger.warning
-    else:
-        summary_lines.append("All blueprints registered successfully!")
-        log_method = app_logger.info
-
-    log_method("\n".join(summary_lines))
 
     # CSRF exemptions
     try:

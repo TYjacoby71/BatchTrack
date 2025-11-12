@@ -35,29 +35,26 @@
           }));
         }
       } catch (e) {
-        console.log('Retention drawer check failed', e);
-        // If it's a 401 error, user might not be authenticated - don't retry
-        if (e.status === 401) {
-          console.log('User not authenticated, skipping retention drawer');
-          return;
+        // Only log actual errors, not expected auth failures
+        if (e.status && e.status !== 401) {
+          console.warn('Retention drawer check failed:', e.status, e.message);
         }
-        // Silently fail for other errors - don't show errors for retention checks
+        // Silently skip for auth failures - this is expected on public pages
+        return;
       }
     }
     checkAndOpenRetentionDrawer();
   }
 
   document.addEventListener('DOMContentLoaded', function() {
-    console.log('🔧 DRAWER PROTOCOL: Universal listener initialized');
-    console.log('Page loaded:', window.location.pathname);
+    // Removed debug noise - only log actual problems
 
     // Skip retention drawer on authentication pages
     const authPages = ['/auth/login', '/auth/signup', '/auth/oauth', '/auth/callback'];
     const currentPath = window.location.pathname;
 
     if (authPages.some(page => currentPath.startsWith(page))) {
-        console.log('Skipping retention drawer on auth page:', currentPath);
-        return;
+        return; // Skip retention drawer on auth pages
     }
 
     // Initialize retention drawer check only for authenticated pages
