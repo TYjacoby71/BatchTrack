@@ -48,14 +48,34 @@ def create_app(config=None):
     csrf.init_app(app)
 
     # Configure cache (Redis in production, simple in development)
+    redis_url = app.config.get('CACHE_REDIS_URL') or app.config.get('REDIS_URL')
+    cache_type_raw = app.config.get('CACHE_TYPE') or ('RedisCache' if redis_url else 'SimpleCache')
+    if isinstance(cache_type_raw, str):
+        normalized = cache_type_raw.lower()
+        if normalized in {'redis', 'rediscache'}:
+            cache_type = 'RedisCache'
+        elif normalized in {'simple', 'simplecache'}:
+            cache_type = 'SimpleCache'
+        elif normalized in {'null', 'nullcache'}:
+            cache_type = 'NullCache'
+        else:
+            cache_type = cache_type_raw
+    else:
+        cache_type = cache_type_raw
+    cache_timeout = app.config.get('CACHE_DEFAULT_TIMEOUT', 300)
+
     cache_config = {
-        'CACHE_TYPE': 'RedisCache' if app.config.get('REDIS_URL') else 'SimpleCache',
-        'CACHE_DEFAULT_TIMEOUT': 300,
+        'CACHE_TYPE': cache_type,
+        'CACHE_DEFAULT_TIMEOUT': cache_timeout,
     }
-    if app.config.get('REDIS_URL'):
-        cache_config['CACHE_REDIS_URL'] = app.config['REDIS_URL']
+    if redis_url:
+        cache_config['CACHE_REDIS_URL'] = redis_url
 
     cache.init_app(app, config=cache_config)
+    if cache_type == 'RedisCache' and not redis_url:
+        message = "CACHE_TYPE=RedisCache requires CACHE_REDIS_URL (or REDIS_URL) to be configured."
+        logger.error(message)
+        raise RuntimeError(message)
     if app.config.get('ENV') == 'production' and cache_config.get('CACHE_TYPE') != 'RedisCache':
         message = "Redis cache not configured; falling back to SimpleCache is not permitted in production."
         logger.error(message)
@@ -64,7 +84,6 @@ def create_app(config=None):
     # Configure server-side sessions
     session_backend = None
     session_redis = None
-    redis_url = app.config.get('REDIS_URL')
     if redis_url:
         try:
             import redis  # type: ignore
@@ -95,7 +114,7 @@ def create_app(config=None):
     server_session.init_app(app)
 
     # Configure rate limiter with Redis storage in production
-    limiter_storage_uri = app.config.get('RATELIMIT_STORAGE_URI')
+    limiter_storage_uri = app.config.get('RATELIMIT_STORAGE_URI') or redis_url
     if limiter_storage_uri:
         app.config['RATELIMIT_STORAGE_URI'] = limiter_storage_uri
     limiter.init_app(app)

@@ -5,6 +5,15 @@ from datetime import timedelta
 _DEFAULT_ENV = 'development'
 
 
+def _resolve_redis_url() -> str | None:
+    """Return the best available Redis connection URL from known env vars."""
+    for key in ('CACHE_REDIS_URL', 'REDIS_URL', 'REDIS_TLS_URL'):
+        value = os.environ.get(key)
+        if value:
+            return value
+    return None
+
+
 def _normalized_env(value: str | None, *, default: str = _DEFAULT_ENV) -> str:
     if not value:
         return default
@@ -22,7 +31,7 @@ def _resolve_ratelimit_uri() -> str:
     candidate = os.environ.get('RATELIMIT_STORAGE_URI') or os.environ.get('RATELIMIT_STORAGE_URL')
     if candidate:
         return candidate
-    redis_url = os.environ.get('REDIS_URL')
+    redis_url = _resolve_redis_url()
     if redis_url:
         return redis_url
     return 'memory://'
@@ -60,8 +69,10 @@ class BaseConfig:
     RATELIMIT_STORAGE_URL = RATELIMIT_STORAGE_URI  # Backwards compatibility
 
     # Cache / shared state
-    CACHE_TYPE = os.environ.get('CACHE_TYPE', 'SimpleCache') # Default to SimpleCache if Redis isn't set
-    CACHE_REDIS_URL = os.environ.get('CACHE_REDIS_URL') or os.environ.get('REDIS_URL')
+    _RESOLVED_REDIS_URL = _resolve_redis_url()
+    REDIS_URL = _RESOLVED_REDIS_URL
+    CACHE_TYPE = os.environ.get('CACHE_TYPE') or ('RedisCache' if _RESOLVED_REDIS_URL else 'SimpleCache')  # Default to Redis when URL available
+    CACHE_REDIS_URL = _RESOLVED_REDIS_URL
     CACHE_DEFAULT_TIMEOUT = _env_int('CACHE_DEFAULT_TIMEOUT', 120)
 
     # Billing cache tuning
