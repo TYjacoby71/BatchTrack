@@ -182,10 +182,26 @@ def search_global_items():
 
     results = []
     for gi in items:
+        ingredient_obj = gi.ingredient if getattr(gi, 'ingredient', None) else None
+        physical_form_obj = gi.physical_form if getattr(gi, 'physical_form', None) else None
         results.append({
             'id': gi.id,
             'text': gi.name,
             'item_type': gi.item_type,
+            'ingredient': {
+                'id': ingredient_obj.id,
+                'name': ingredient_obj.name,
+                'slug': ingredient_obj.slug,
+                'inci_name': ingredient_obj.inci_name,
+                'cas_number': ingredient_obj.cas_number,
+            } if ingredient_obj else None,
+            'physical_form': {
+                'id': physical_form_obj.id,
+                'name': physical_form_obj.name,
+                'slug': physical_form_obj.slug,
+            } if physical_form_obj else None,
+            'functions': [tag.name for tag in getattr(gi, 'functions', [])],
+            'applications': [tag.name for tag in getattr(gi, 'applications', [])],
             'default_unit': gi.default_unit,
             'density': gi.density,
             'capacity': gi.capacity,

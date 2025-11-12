@@ -6,9 +6,15 @@ const defaultOptions = {
   storeLinkId: 'giStoreLink',
   nameId: 'giName',
   typeId: 'giType',
+  ingredientNameId: 'giIngredientName',
+  ingredientInciId: 'giInciName',
+  ingredientCasId: 'giCasNumber',
   categoryId: 'giCategory',
   unitId: 'giUnit',
   densityId: 'giDensity',
+  physicalFormId: 'giPhysicalForm',
+  functionsId: 'giFunctions',
+  applicationsId: 'giApplications',
   containerSectionId: 'giContainerMeta',
   containerMaterialId: 'giMaterial',
   containerTypeStyleId: 'giTypeStyle',
@@ -40,6 +46,23 @@ function setText(id, value) {
 
 function formatNumber(value, digits = 2) {
   return typeof value === 'number' && !Number.isNaN(value) ? value.toFixed(digits) : '-';
+}
+
+function formatText(value) {
+  if (value === null || value === undefined) {
+    return '–';
+  }
+  if (typeof value === 'string' && value.trim() === '') {
+    return '–';
+  }
+  return value;
+}
+
+function formatList(values) {
+  if (!Array.isArray(values) || values.length === 0) {
+    return '–';
+  }
+  return values.join(', ');
 }
 
 function showElement(el, show = true) {
@@ -119,9 +142,16 @@ export async function openGlobalItemStats(globalItemId, options = {}) {
 
   setText(opts.nameId, item.name || `#${globalItemId}`);
   setText(opts.typeId, item.item_type || '');
+  const ingredientInfo = item.ingredient || {};
+  setText(opts.ingredientNameId, formatText(ingredientInfo.name));
+  setText(opts.ingredientInciId, formatText(ingredientInfo.inci_name || item.inci_name));
+  setText(opts.ingredientCasId, formatText(ingredientInfo.cas_number));
   setText(opts.categoryId, item.ingredient_category_name || '');
   setText(opts.unitId, item.default_unit || '');
   setText(opts.densityId, item.density != null ? Number(item.density).toFixed(3) : '');
+  setText(opts.physicalFormId, formatText(item.physical_form));
+  setText(opts.functionsId, formatList(item.functions));
+  setText(opts.applicationsId, formatList(item.applications));
 
   // Container metadata
   const isContainer = item.item_type === 'container' || item.item_type === 'packaging';
@@ -174,6 +204,25 @@ export async function openGlobalItemStats(globalItemId, options = {}) {
     } else {
       costStatsEl.textContent = 'No cost data yet.';
     }
+  }
+
+  const metaEl = getElement(opts.metaId);
+  if (metaEl) {
+    const aliases = formatList(item.aliases);
+    const certifications = formatList(item.certifications);
+    const usage = formatText(item.recommended_usage_rate);
+    const fragrance = formatText(item.recommended_fragrance_load_pct);
+    const shelfLifeDays = item.recommended_shelf_life_days;
+    const shelfLifeDisplay = Number.isFinite(Number(shelfLifeDays))
+      ? `${shelfLifeDays} day${Number(shelfLifeDays) === 1 ? '' : 's'}`
+      : '–';
+    metaEl.innerHTML = `
+      <div><strong>Aliases:</strong> ${aliases}</div>
+      <div><strong>Certifications:</strong> ${certifications}</div>
+      <div><strong>Recommended Usage:</strong> ${usage}</div>
+      <div><strong>Fragrance Load:</strong> ${fragrance}</div>
+      <div><strong>Recommended Shelf Life:</strong> ${shelfLifeDisplay}</div>
+    `;
   }
 
   // Developer link

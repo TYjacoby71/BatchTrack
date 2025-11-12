@@ -70,10 +70,26 @@ def public_global_item_search():
         items = query.order_by(func.length(GlobalItem.name).asc()).limit(25).all()
         results = []
         for gi in items:
+            ingredient_obj = gi.ingredient if getattr(gi, 'ingredient', None) else None
+            physical_form_obj = gi.physical_form if getattr(gi, 'physical_form', None) else None
             results.append({
                 'id': gi.id,
                 'text': gi.name,
                 'item_type': gi.item_type,
+                'ingredient': {
+                    'id': ingredient_obj.id,
+                    'name': ingredient_obj.name,
+                    'slug': ingredient_obj.slug,
+                    'inci_name': ingredient_obj.inci_name,
+                    'cas_number': ingredient_obj.cas_number,
+                } if ingredient_obj else None,
+                'physical_form': {
+                    'id': physical_form_obj.id,
+                    'name': physical_form_obj.name,
+                    'slug': physical_form_obj.slug,
+                } if physical_form_obj else None,
+                'functions': [tag.name for tag in getattr(gi, 'functions', [])],
+                'applications': [tag.name for tag in getattr(gi, 'applications', [])],
                 'default_unit': gi.default_unit,
                 'unit': gi.default_unit,  # Also provide as 'unit' for backward compatibility
                 'density': gi.density,
@@ -82,7 +98,7 @@ def public_global_item_search():
                 'saponification_value': getattr(gi, 'saponification_value', None),
                 'recommended_usage_rate': gi.recommended_usage_rate,
                 'recommended_fragrance_load_pct': gi.recommended_fragrance_load_pct,
-              'is_active_ingredient': gi.is_active_ingredient,
+                'is_active_ingredient': gi.is_active_ingredient,
                 'inci_name': gi.inci_name,
                 'protein_content_pct': gi.protein_content_pct,
                 'brewing_color_srm': gi.brewing_color_srm,

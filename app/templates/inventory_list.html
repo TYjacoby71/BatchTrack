@@ -418,24 +418,28 @@ document.addEventListener('DOMContentLoaded', function() {
             }
 
             // Add global results that aren't already in inventory
-            if (globalResults && globalResults.results) {
+              if (globalResults && globalResults.results) {
                 globalResults.results.forEach(item => {
-                    const alreadyExists = suggestions.some(s => 
-                        s.global_item_id === item.id || 
-                        s.name.toLowerCase() === item.text.toLowerCase()
-                    );
-                    if (!alreadyExists) {
-                        suggestions.push({
-                            type: 'global',
-                            id: item.id,
-                            name: item.text,
-                            unit: item.default_unit || 'count',
-                            density: item.density || null,
-                            global_item_id: item.id
-                        });
-                    }
+                  const alreadyExists = suggestions.some(s =>
+                    s.global_item_id === item.id ||
+                    s.name.toLowerCase() === item.text.toLowerCase()
+                  );
+                  if (!alreadyExists) {
+                    const ingredientName = item.ingredient && item.ingredient.name ? item.ingredient.name : '';
+                    const physicalFormName = item.physical_form && item.physical_form.name ? item.physical_form.name : '';
+                    suggestions.push({
+                      type: 'global',
+                      id: item.id,
+                      name: item.text,
+                      unit: item.default_unit || 'count',
+                      density: item.density || null,
+                      global_item_id: item.id,
+                      ingredient_name: ingredientName,
+                      physical_form_name: physicalFormName
+                    });
+                  }
                 });
-            }
+              }
 
             displaySuggestions(suggestions);
         }).catch(err => {
@@ -450,22 +454,26 @@ document.addEventListener('DOMContentLoaded', function() {
             return;
         }
 
-        const html = suggestions.map(item => `
-            <div class="suggestion-item p-2 border-bottom" style="cursor: pointer;" 
-                 data-type="${item.type}" 
-                 data-id="${item.id}" 
+          const html = suggestions.map(item => `
+            <div class="suggestion-item p-2 border-bottom" style="cursor: pointer;"
+                 data-type="${item.type}"
+                 data-id="${item.id}"
                  data-name="${item.name}"
                  data-unit="${item.unit}"
                  data-density="${item.density || ''}"
-                 data-global-item-id="${item.global_item_id || ''}">
-                <div class="fw-bold">${item.name}</div>
-                <small class="text-muted">
-                    ${item.type === 'inventory' ? 'In Inventory' : 'From Global Library'} • 
-                    Unit: ${item.unit}
-                    ${item.density ? ` • Density: ${item.density}` : ''}
-                </small>
+                 data-global-item-id="${item.global_item_id || ''}"
+                 data-ingredient-name="${item.ingredient_name || ''}"
+                 data-physical-form="${item.physical_form_name || ''}">
+              <div class="fw-bold">${item.name}</div>
+              <small class="text-muted">
+                ${item.type === 'inventory' ? 'In Inventory' : 'From Global Library'} • 
+                Unit: ${item.unit}
+                ${item.density ? ` • Density: ${item.density}` : ''}
+                ${item.ingredient_name ? ` • Ingredient: ${item.ingredient_name}` : ''}
+                ${item.physical_form_name ? ` • Form: ${item.physical_form_name}` : ''}
+              </small>
             </div>
-        `).join('');
+          `).join('');
 
         ingredientSuggestions.innerHTML = html;
         ingredientSuggestions.style.display = 'block';
@@ -476,7 +484,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 const name = this.dataset.name;
                 const unit = this.dataset.unit;
                 const density = this.dataset.density;
-                const globalItemId = this.dataset.globalItemId;
+                  const globalItemId = this.dataset.globalItemId;
 
                 ingredientNameInput.value = name;
                 globalItemIdInput.value = globalItemId || '';
