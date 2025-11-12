@@ -2,8 +2,8 @@ import logging
 from datetime import datetime, timezone
 from flask import Blueprint, request, redirect, url_for, flash, jsonify
 from flask_login import login_required, current_user
-from ...models import db, Batch, Product, ProductVariant, ProductSKU, InventoryItem
-from ...models.product import ProductSKU, ProductSKUHistory
+from ...models import db, Batch, Product, ProductVariant, InventoryItem
+from ...models.product import ProductSKU
 from ...services.inventory_adjustment import process_inventory_adjustment
 from app.utils.permissions import role_required
 
