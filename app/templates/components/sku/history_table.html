@@ -27,8 +27,7 @@
                 </thead>
                 <tbody>
                     {% for entry in history %}
-                    {% set has_remaining = (entry.affected_lot and entry.affected_lot.remaining_quantity and entry.affected_lot.remaining_quantity > 0) or (entry.remaining_quantity and entry.remaining_quantity > 0) %}
-                    {% if not fifo_filter or has_remaining %}
+                    {% if not fifo_filter or entry.remaining_quantity > 0 %}
                     <tr>
                         <td>
                             {% if entry.timestamp %}
@@ -58,13 +57,9 @@
                                         Batch #{{ entry.batch_id }}
                                     {% endif %}
                                 </span>
-                            {% elif entry.change_type in ['restock', 'manual_addition', 'finished_batch', 'batch_production', 'batch_addition'] %}
+                            {% elif entry.change_type in ['restock', 'manual_addition', 'finished_batch'] %}
                                 <span class="text-success">
-                                    {% if entry.affected_lot and entry.affected_lot.fifo_code %}
-                                        {{ entry.affected_lot.fifo_code }}
-                                    {% else %}
-                                        New Lot
-                                    {% endif %}
+                                    New Lot
                                 </span>
                             {% else %}
                                 <span class="text-muted">-</span>
@@ -76,18 +71,14 @@
                             </span>
                         </td>
                         <td>
-                            {% if entry.affected_lot and entry.affected_lot.remaining_quantity is not none %}
-                                {{ "%.1f"|format(entry.affected_lot.remaining_quantity) }}
-                            {% elif entry.remaining_quantity is not none %}
+                            {% if entry.remaining_quantity is not none %}
                                 {{ "%.1f"|format(entry.remaining_quantity) }}
                             {% else %}
                                 <span class="text-muted">-</span>
                             {% endif %}
                         </td>
                         <td>
-                            {% if entry.affected_lot and entry.affected_lot.unit_cost %}
-                                ${{ "%.2f"|format(entry.affected_lot.unit_cost) }}
-                            {% elif entry.unit_cost %}
+                            {% if entry.unit_cost %}
                                 ${{ "%.2f"|format(entry.unit_cost) }}
                             {% else %}
                                 <span class="text-muted">-</span>
@@ -164,12 +155,11 @@
                             {% endif %}
                         </td>
                         <td>
-                            {% set exp_date_source = entry.affected_lot.expiration_date if entry.affected_lot and entry.affected_lot.expiration_date else entry.expiration_date %}
-                            {% if exp_date_source %}
-                                {% set exp_date = exp_date_source.strftime('%m/%d/%y') %}
-                                {% set exp_time = exp_date_source.strftime('%H:%M') %}
-                                {% set is_expired = exp_date_source < now %}
-                                {% set days_until = (exp_date_source.date() - now.date()).days %}
+                            {% if entry.expiration_date %}
+                                {% set exp_date = entry.expiration_date.strftime('%m/%d/%y') %}
+                                {% set exp_time = entry.expiration_date.strftime('%H:%M') %}
+                                {% set is_expired = entry.expiration_date < now %}
+                                {% set days_until = (entry.expiration_date.date() - now.date()).days %}
 
                                 <span class="badge 
                                     {% if is_expired %}
@@ -179,7 +169,7 @@
                                     {% else %}
                                         bg-success
                                     {% endif %}
-                                " title="{% if is_expired %}EXPIRED {{ (-days_until) }} days ago{% else %}Expires in {{ days_until }} days{% endif %}: {{ exp_date_source.strftime('%Y-%m-%d %H:%M') }}">
+                                " title="{% if is_expired %}EXPIRED {{ (-days_until) }} days ago{% else %}Expires in {{ days_until }} days{% endif %}: {{ entry.expiration_date.strftime('%Y-%m-%d %H:%M') }}">
                                     {% if is_expired %}
                                         <i class="fas fa-exclamation-triangle me-1"></i>
                                         EXPIRED {{ exp_date }}
@@ -208,10 +198,8 @@
                             {% endif %}
                         </td>
                         <td>
-                            {% set has_remaining = (entry.affected_lot and entry.affected_lot.remaining_quantity and entry.affected_lot.remaining_quantity > 0) or (entry.remaining_quantity and entry.remaining_quantity > 0) %}
-                            {% if has_remaining %}
-                                {% set exp_date_source = entry.affected_lot.expiration_date if entry.affected_lot and entry.affected_lot.expiration_date else entry.expiration_date %}
-                                {% set is_expired = exp_date_source and exp_date_source < now %}
+                            {% if entry.remaining_quantity and entry.remaining_quantity > 0 %}
+                                {% set is_expired = entry.expiration_date and entry.expiration_date < now %}
                                 {% if is_expired %}
                                     <button class="btn btn-sm btn-outline-danger" 
                                             onclick="markAsExpired('product', '{{ entry.id }}')"
@@ -219,12 +207,11 @@
                                         <i class="fas fa-clock"></i> Mark Expired
                                     </button>
                                 {% else %}
-                                    {% set current_qty = entry.affected_lot.remaining_quantity if entry.affected_lot and entry.affected_lot.remaining_quantity else entry.remaining_quantity %}
                                     <button class="btn btn-sm btn-outline-warning" 
                                             data-bs-toggle="modal" 
                                             data-bs-target="#adjustFifoModal"
                                             data-inventory-id="{{ entry.id }}"
-                                            data-current-quantity="{{ current_qty }}"
+                                            data-current-quantity="{{ entry.remaining_quantity }}"
                                             data-unit="{{ entry.unit }}">
                                         Adj
                                     </button>

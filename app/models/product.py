@@ -232,29 +232,26 @@ class ProductSKU(db.Model, ScopedModelMixin):
 
     @property
     def weighted_average_cost(self):
-        """Calculate weighted average cost based on FIFO lots like raw ingredients"""
-        from ..models.inventory_lot import InventoryLot
-        from sqlalchemy import and_
+        """Calculate weighted average cost based on FIFO history like raw ingredients"""
+        from ..models import ProductSKUHistory
 
-        # Get all remaining FIFO lots for this SKU
-        active_lots = InventoryLot.query.filter(
-            and_(
-                InventoryLot.inventory_item_id == self.inventory_item_id,
-                InventoryLot.organization_id == self.organization_id,
-                InventoryLot.remaining_quantity > 0
-            )
-        ).order_by(InventoryLot.received_date.asc()).all()
+        # Get all remaining FIFO entries for this SKU
+        fifo_entries = ProductSKUHistory.query.filter_by(
+            inventory_item_id=self.inventory_item_id
+        ).filter(
+            ProductSKUHistory.remaining_quantity > 0
+        ).order_by(ProductSKUHistory.timestamp.asc()).all()
 
-        if not active_lots:
+        if not fifo_entries:
             return self.cost_per_unit
 
         total_cost = 0
         total_quantity = 0
 
-        for lot in active_lots:
-            if lot.unit_cost and lot.remaining_quantity > 0:
-                total_cost += lot.unit_cost * lot.remaining_quantity
-                total_quantity += lot.remaining_quantity
+        for entry in fifo_entries:
+            if entry.cost_per_unit and entry.remaining_quantity > 0:
+                total_cost += entry.cost_per_unit * entry.remaining_quantity
+                total_quantity += entry.remaining_quantity
 
         return total_cost / total_quantity if total_quantity > 0 else self.cost_per_unit
 
@@ -377,7 +374,86 @@ class ProductSKU(db.Model, ScopedModelMixin):
     def __repr__(self):
         return f'<ProductSKU {self.display_name}>'
 
+class ProductSKUHistory(ScopedModelMixin, db.Model):
+    """FIFO-enabled history table for SKU changes"""
+    __tablename__ = 'product_sku_history'
 
+    id = db.Column(db.Integer, primary_key=True)
+    inventory_item_id = db.Column(db.Integer, db.ForeignKey('inventory_item.id'), nullable=False)
+
+
+    # Change tracking
+    timestamp = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
+    change_type = db.Column(db.String(32), nullable=False)
+    quantity_change = db.Column(db.Float, nullable=False)
+
+    # FIFO tracking
+    remaining_quantity = db.Column(db.Float, default=0.0)
+    unit = db.Column(db.String(32), nullable=False)
+
+    # Transaction details
+    unit_cost = db.Column(db.Float, nullable=True)
+    sale_price = db.Column(db.Float, nullable=True)
+    customer = db.Column(db.String(128), nullable=True)
+
+    # FIFO metadata
+    fifo_code = db.Column(db.String(64), nullable=True)
+    fifo_reference_id = db.Column(db.Integer, db.ForeignKey('product_sku_history.id'), nullable=True)
+    fifo_source = db.Column(db.String(128), nullable=True)
+
+    # Expiration tracking
+    is_perishable = db.Column(db.Boolean, default=False)
+    shelf_life_days = db.Column(db.Integer, nullable=True)
+    expiration_date = db.Column(db.DateTime, nullable=True)
+
+    # Source information
+    batch_id = db.Column(db.Integer, db.ForeignKey('batch.id'), nullable=True)
+    container_id = db.Column(db.Integer, db.ForeignKey('inventory_item.id'), nullable=True)
+    notes = db.Column(db.Text, nullable=True)
+    note = db.Column(db.Text, nullable=True)
+    created_by = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True)
+
+    # POS integration
+    order_id = db.Column(db.String(64), nullable=True)
+    reservation_id = db.Column(db.String(64), nullable=True)
+    is_reserved = db.Column(db.Boolean, default=False)
+    sale_location = db.Column(db.String(64), nullable=True)
+
+    # Additional tracking
+    quantity_used = db.Column(db.Float, default=0.0)
+    batch_number = db.Column(db.String(128), nullable=True)
+    lot_number = db.Column(db.String(128), nullable=True)
+    temperature_at_time = db.Column(db.Float, nullable=True)
+    location_id = db.Column(db.String(128), nullable=True)
+    location_name = db.Column(db.String(128), nullable=True)
+
+    # Quality and compliance
+    quality_status = db.Column(db.String(32), nullable=True)
+    compliance_status = db.Column(db.String(32), nullable=True)
+    quality_checked_by = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True)
+
+    # Marketplace tracking
+    marketplace_order_id = db.Column(db.String(128), nullable=True)
+    marketplace_source = db.Column(db.String(32), nullable=True)
+
+    # Relationships
+    inventory_item = db.relationship('InventoryItem', foreign_keys=[inventory_item_id], backref='product_history_entries')
+    batch = db.relationship('Batch', foreign_keys=[batch_id])
+    container = db.relationship('InventoryItem', foreign_keys=[container_id])
+    user = db.relationship('User', foreign_keys=[created_by])
+    quality_checker = db.relationship('User', foreign_keys=[quality_checked_by])
+    fifo_reference = db.relationship('ProductSKUHistory', remote_side=[id])
+
+    # Indexes
+    __table_args__ = (
+        db.Index('idx_inventory_item_remaining', 'inventory_item_id', 'remaining_quantity'),
+        db.Index('idx_inventory_item_timestamp', 'inventory_item_id', 'timestamp'),
+        db.Index('idx_change_type', 'change_type'),
+        db.Index('idx_fifo_code', 'fifo_code'),
+    )
+
+    def __repr__(self):
+        return f'<ProductSKUHistory {self.change_type}: {self.quantity_change}>'
 
 # Auto-fill organization_id from the linked inventory item if missing
 @event.listens_for(ProductSKU, "before_insert")

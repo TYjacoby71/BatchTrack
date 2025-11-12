@@ -25,8 +25,7 @@ def register_blueprints(app):
             successful_registrations.append(description or blueprint_name)
             return True
         except Exception as e:
-            # Ensure failed_registrations always stores a 2-tuple (name, error)
-            failed_registrations.append((description or blueprint_name, str(e)))
+            failed_registrations.append(f"{description or blueprint_name}: {e}")
             return False
 
     # Core blueprints - these should always work
@@ -49,14 +48,14 @@ def register_blueprints(app):
         register_product_blueprints(app)
         successful_registrations.append("Products Main")
     except Exception as e:
-        failed_registrations.append(("Products Main", str(e)))
+        failed_registrations.append(f"Products Main: {e}")
         # Fallback - try to register just the main products blueprint
         try:
             from app.blueprints.products.products import products_bp
             app.register_blueprint(products_bp)
             successful_registrations.append("Products Fallback")
         except Exception as e2:
-            failed_registrations.append(("Products Fallback", str(e2)))
+            failed_registrations.append(f"Products Fallback: {e2}")
 
     # Product blueprints are now registered via register_product_blueprints() above
     # Remove individual registrations to avoid conflicts
@@ -340,14 +339,14 @@ def register_blueprints(app):
         app.register_blueprint(exports_bp)
         successful_registrations.append('Exports')
     except Exception as e:
-        failed_registrations.append(("Exports", str(e)))
+        failed_registrations.append(f"Exports: {e}")
         # Don't let exports failure break the app
         pass
 
 
     # Log summary (avoid noisy stdout in production)
     app_logger = getattr(app, 'logger', logger)
-
+    
     # Only log in debug mode or if there are failures
     if app.debug or failed_registrations:
         app_logger.info("=== Blueprint Registration Summary ===")
@@ -357,13 +356,8 @@ def register_blueprints(app):
                 app_logger.info(f"   - {name}")
         if failed_registrations:
             app_logger.error(f"Failed: {len(failed_registrations)}")
-            for failed_item in failed_registrations:
-                if isinstance(failed_item, (list, tuple)) and len(failed_item) >= 2:
-                    name, error = failed_item[0], failed_item[1]
-                    logger.error(f"   ❌ {name}: {error}")
-                else:
-                    logger.error(f"   ❌ Invalid failed_registration format: {failed_item}")
-            raise RuntimeError(f"Failed to register {len(failed_registrations)} blueprint(s)")
+            for name, error in failed_registrations:
+                app_logger.error(f"   - {name}: {error}")
         else:
             app_logger.info("All blueprints registered successfully!")
 

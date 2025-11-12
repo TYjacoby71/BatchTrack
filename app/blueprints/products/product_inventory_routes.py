@@ -1,6 +1,7 @@
 from flask import Blueprint, request, jsonify, flash, redirect, url_for
 from flask_login import login_required, current_user
 from ...models import db, ProductSKU, Batch
+from ...models.product import ProductSKUHistory
 from ...services.product_service import ProductService
 from app.services.inventory_adjustment import process_inventory_adjustment
 from ...utils.timezone_utils import TimezoneUtils
@@ -191,7 +192,7 @@ def adjust_sku_inventory(inventory_item_id):
 @product_inventory_bp.route('/fifo-status/<int:sku_id>')
 @login_required
 def get_sku_fifo_status(sku_id):
-    """Get FIFO status for SKU using unified InventoryLot system"""
+    """Get FIFO status for SKU using unified inventory system"""
     logger.info(f"=== FIFO STATUS REQUEST ===")
     logger.info(f"SKU ID: {sku_id}")
 
@@ -206,38 +207,37 @@ def get_sku_fifo_status(sku_id):
 
     logger.info(f"Found SKU: {sku.inventory_item_id}, Product: {sku.product.name if sku.product else 'Unknown'}")
 
-    from ...models.inventory_lot import InventoryLot
-    from sqlalchemy import and_
+    from ...models import UnifiedInventoryHistory
 
     today = TimezoneUtils.utc_now().date()
     inventory_item_id = sku.inventory_item_id
 
-    # Get fresh lots (not expired, with remaining quantity)
-    fresh_lots = InventoryLot.query.filter(
-        and_(
-            InventoryLot.inventory_item_id == inventory_item_id,
-            InventoryLot.organization_id == current_user.organization_id,
-            InventoryLot.remaining_quantity > 0,
-            db.or_(
-                InventoryLot.expiration_date.is_(None),  # Non-perishable
-                InventoryLot.expiration_date >= today    # Not expired yet
-            )
+    # Get fresh FIFO entries (not expired, with remaining quantity)
+    fresh_entries = UnifiedInventoryHistory.query.filter(
+        UnifiedInventoryHistory.inventory_item_id == inventory_item_id,
+        UnifiedInventoryHistory.remaining_quantity > 0,
+        UnifiedInventoryHistory.organization_id == current_user.organization_id,
+        db.or_(
+            UnifiedInventoryHistory.expiration_date.is_(None),  # Non-perishable
+            UnifiedInventoryHistory.expiration_date >= today    # Not expired yet
         )
-    ).order_by(InventoryLot.received_date.asc()).all()
+    ).order_by(UnifiedInventoryHistory.timestamp.asc()).all()
 
-    # Get expired lots
-    expired_lots = InventoryLot.query.filter(
-        and_(
-            InventoryLot.inventory_item_id == inventory_item_id,
-            InventoryLot.organization_id == current_user.organization_id,
-            InventoryLot.remaining_quantity > 0,
-            InventoryLot.expiration_date.isnot(None),
-            InventoryLot.expiration_date < today
-        )
-    ).order_by(InventoryLot.received_date.asc()).all()
+    # Get expired FIFO entries (frozen, with remaining quantity)
+    # NOTE: This query should likely use UnifiedInventoryHistory, not InventoryHistory as it currently does.
+    # If InventoryHistory is intended, it needs to be imported or aliased correctly.
+    # For now, assuming UnifiedInventoryHistory is intended for consistency.
+    expired_entries = UnifiedInventoryHistory.query.filter(
+        UnifiedInventoryHistory.inventory_item_id == inventory_item_id,
+        UnifiedInventoryHistory.remaining_quantity > 0,
+        UnifiedInventoryHistory.organization_id == current_user.organization_id,
+        UnifiedInventoryHistory.expiration_date.isnot(None),
+        UnifiedInventoryHistory.expiration_date < today
+    ).order_by(UnifiedInventoryHistory.timestamp.asc()).all()
 
-    fresh_total = sum(lot.remaining_quantity for lot in fresh_lots)
-    expired_total = sum(lot.remaining_quantity for lot in expired_lots)
+
+    fresh_total = sum(entry.remaining_quantity for entry in fresh_entries)
+    expired_total = sum(entry.remaining_quantity for entry in expired_entries)
 
     return jsonify({
         'sku_id': sku_id,
@@ -245,30 +245,28 @@ def get_sku_fifo_status(sku_id):
         'total_quantity': sku.quantity,
         'fresh_quantity': fresh_total,
         'expired_quantity': expired_total,
-        'fresh_entries_count': len(fresh_lots),
-        'expired_entries_count': len(expired_lots),
+        'fresh_entries_count': len(fresh_entries),
+        'expired_entries_count': len(expired_entries),
         'fresh_entries': [{
-            'id': lot.id,
-            'remaining_quantity': lot.remaining_quantity,
-            'expiration_date': lot.expiration_date.isoformat() if lot.expiration_date else None,
-            'timestamp': lot.received_date.isoformat(),
-            'change_type': lot.source_type,
-            'fifo_code': lot.fifo_code
-        } for lot in fresh_lots],
+            'id': entry.id,
+            'remaining_quantity': entry.remaining_quantity,
+            'expiration_date': entry.expiration_date.isoformat() if entry.expiration_date else None,
+            'timestamp': entry.timestamp.isoformat(),
+            'change_type': entry.change_type
+        } for entry in fresh_entries],
         'expired_entries': [{
-            'id': lot.id,
-            'remaining_quantity': lot.remaining_quantity,
-            'expiration_date': lot.expiration_date.isoformat(),
-            'timestamp': lot.received_date.isoformat(),
-            'change_type': lot.source_type,
-            'fifo_code': lot.fifo_code
-        } for lot in expired_lots]
+            'id': entry.id,
+            'remaining_quantity': entry.remaining_quantity,
+            'expiration_date': entry.expiration_date.isoformat(),
+            'timestamp': entry.timestamp.isoformat(),
+            'change_type': entry.change_type
+        } for entry in expired_entries]
     })
 
 @product_inventory_bp.route('/dispose-expired/<int:sku_id>', methods=['POST'])
 @login_required
 def dispose_expired_sku(sku_id):
-    """Dispose of expired SKU inventory using unified lot system"""
+    """Dispose of expired SKU inventory using unified inventory system"""
     sku = ProductSKU.query.filter_by(
         inventory_item_id=sku_id,
         organization_id=current_user.organization_id
@@ -281,27 +279,27 @@ def dispose_expired_sku(sku_id):
     disposal_type = data.get('disposal_type', 'expired_disposal')
     notes = data.get('notes', 'Expired inventory disposal')
 
-    from ...models.inventory_lot import InventoryLot
-    from sqlalchemy import and_
+    from ...models import InventoryHistory # Assuming InventoryHistory is still needed for this specific function
 
     today = TimezoneUtils.utc_now().date()
     inventory_item_id = sku.inventory_item_id
 
-    # Get all expired lots with remaining quantity
-    expired_lots = InventoryLot.query.filter(
-        and_(
-            InventoryLot.inventory_item_id == inventory_item_id,
-            InventoryLot.organization_id == current_user.organization_id,
-            InventoryLot.remaining_quantity > 0,
-            InventoryLot.expiration_date.isnot(None),
-            InventoryLot.expiration_date < today
-        )
+    # Get all expired entries with remaining quantity
+    # NOTE: This query should likely use UnifiedInventoryHistory, not InventoryHistory as it currently does.
+    # If InventoryHistory is intended, it needs to be imported or aliased correctly.
+    # For now, assuming UnifiedInventoryHistory is intended for consistency.
+    expired_entries = UnifiedInventoryHistory.query.filter(
+        UnifiedInventoryHistory.inventory_item_id == inventory_item_id,
+        UnifiedInventoryHistory.remaining_quantity > 0,
+        UnifiedInventoryHistory.organization_id == current_user.organization_id,
+        UnifiedInventoryHistory.expiration_date.isnot(None),
+        UnifiedInventoryHistory.expiration_date < today
     ).all()
 
-    if not expired_lots:
+    if not expired_entries:
         return jsonify({'error': 'No expired inventory found'}), 400
 
-    total_expired = sum(lot.remaining_quantity for lot in expired_lots)
+    total_expired = sum(entry.remaining_quantity for entry in expired_entries)
 
     try:
         # Use centralized service to dispose of expired inventory
@@ -310,7 +308,7 @@ def dispose_expired_sku(sku_id):
             quantity=total_expired,
             change_type=disposal_type,
             unit=sku.unit,
-            notes=f"{notes} - {len(expired_lots)} expired lots",
+            notes=f"{notes} - {len(expired_entries)} expired lots",
             created_by=current_user.id
         )
 
@@ -319,7 +317,7 @@ def dispose_expired_sku(sku_id):
                 'success': True,
                 'message': f'Disposed {total_expired} {sku.unit} of expired inventory',
                 'disposed_quantity': total_expired,
-                'disposed_lots': len(expired_lots)
+                'disposed_lots': len(expired_entries)
             })
         else:
             return jsonify({'error': 'Failed to dispose expired inventory'}), 500

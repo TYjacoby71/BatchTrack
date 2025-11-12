@@ -32,7 +32,7 @@ from .developer_permission import DeveloperPermission
 from .developer_role import DeveloperRole
 
 # Core models (that definitely exist)
-from .product import Product, ProductVariant, ProductSKU
+from .product import Product, ProductSKU
 try:
     from .product import ProductVariant
 except ImportError:
@@ -64,6 +64,11 @@ try:
 except ImportError:
     pass
 
+try:
+    from .product import ProductSKUHistory
+except ImportError:
+    pass
+
 # Also ensure direct access to key models for backward compatibility
 try:
     from .mixins import ScopedModelMixin
@@ -75,7 +80,7 @@ from .unified_inventory_history import UnifiedInventoryHistory
 from .domain_event import DomainEvent
 from .freshness_snapshot import FreshnessSnapshot
 
-# Import inventory lot model
+# Import inventory lot model 
 from .inventory_lot import InventoryLot
 
 # Make sure all exported symbols are available

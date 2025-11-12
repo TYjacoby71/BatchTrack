@@ -1,7 +1,7 @@
 from flask import Blueprint, request, render_template, redirect, url_for, flash
 from flask_login import login_required, current_user
 from ...models import db, InventoryItem
-from ...models.product import Product, ProductVariant, ProductSKU
+from ...models.product import Product, ProductVariant, ProductSKU, ProductSKUHistory
 from ...models.batch import Batch
 from ...utils.unit_utils import get_global_unit_list
 
@@ -483,11 +483,9 @@ def delete_product(product_id):
             flash('Cannot delete product with remaining inventory', 'error')
             return redirect(url_for('products.view_product', product_id=product_id))
 
-        # Delete history records first - now handled by UnifiedInventoryHistory
-        from ...models.unified_inventory_history import UnifiedInventoryHistory
+        # Delete history records first
         for sku in skus:
-            if sku.inventory_item_id:
-                UnifiedInventoryHistory.query.filter_by(inventory_item_id=sku.inventory_item_id).delete()
+            ProductSKUHistory.query.filter_by(sku_id=sku.id).delete()
 
         # Delete the SKUs
         ProductSKU.query.filter_by(product_id=product.id).delete()
