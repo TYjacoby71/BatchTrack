@@ -153,12 +153,7 @@ def register_middleware(app):
             logger.warning(f"Developer access check failed: {e}")
 
         # 7. Handle developer "super admin" and masquerade logic.
-        if getattr(current_user, 'user_type', None) == 'developer':
-            # Only log debug for non-repetitive paths
-            if not request.path.startswith('/developer/organizations') and not request.path.startswith('/retention/api') and not request.path.startswith('/favicon.ico'):
-                user_id = getattr(current_user, 'id', 'unknown')
-                logger.debug(f"Developer checkpoint for {user_id} on {request.path}")
-            
+        if getattr(current_user, 'user_type', None) == 'developer':            
             try:
                 selected_org_id = session.get("dev_selected_org_id")
                 masquerade_org_id = session.get("masquerade_org_id")  # Support both session keys
@@ -189,9 +184,13 @@ def register_middleware(app):
                 logger.warning(f"Developer masquerade logic failed: {e}")
 
             # IMPORTANT: Developers bypass the billing check below.
-            user_id = getattr(current_user, 'id', 'unknown')
-            masq_org = session.get("masquerade_org_id") or session.get("dev_selected_org_id")
-            logger.info(f"Developer {user_id} bypassed billing on {request.method} {request.path} (masquerade_org={masq_org})")
+            # Only log for non-static paths and occasionally
+            if not request.path.startswith(('/static/', '/favicon.ico')):
+                import random
+                if random.random() < 0.1:  # Log only 10% of requests to reduce noise
+                    user_id = getattr(current_user, 'id', 'unknown')
+                    masq_org = session.get("masquerade_org_id") or session.get("dev_selected_org_id")
+                    logger.debug(f"Developer {user_id} accessing {request.method} {request.path}")
             return
 
         # 8. Enforce billing for all regular, authenticated users.

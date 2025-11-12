@@ -38,8 +38,8 @@ def configure_logging(app: Flask):
             return getattr(logging, candidate, logging.INFO)
         return logging.INFO
 
-    # Get log level from config (default INFO unless DEBUG is enabled)
-    raw_level = app.config.get('LOG_LEVEL', 'DEBUG' if app.config.get('DEBUG') else 'INFO')
+    # Get log level from config (default WARNING for cleaner output)
+    raw_level = app.config.get('LOG_LEVEL', 'WARNING' if app.config.get('DEBUG') else 'INFO')
     effective_level = _coerce_level(raw_level)
 
     # Set root logger level
@@ -47,6 +47,9 @@ def configure_logging(app: Flask):
 
     # Configure Flask's logger
     app.logger.setLevel(effective_level)
+    
+    # Prevent duplicate logging by disabling propagation for app loggers
+    logging.getLogger('app').propagate = False
 
     # Silence noisy third-party loggers unless debugging explicitly enabled
     if effective_level > logging.DEBUG:
