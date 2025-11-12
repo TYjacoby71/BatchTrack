@@ -1,9 +1,10 @@
 
-import os
 import multiprocessing
+import os
 
 # Gunicorn configuration for high-concurrency production deployment
 # Optimized for 10k+ concurrent users
+
 
 def _env_int(key, default):
     """Helper to parse environment integers with fallback."""
@@ -12,13 +13,25 @@ def _env_int(key, default):
     except (ValueError, TypeError):
         return default
 
+
+def _configured_workers():
+    cpu_count = max(multiprocessing.cpu_count(), 1)
+    # Keep defaults conservative so small instances don't overcommit memory.
+    default_workers = max(1, min(4, cpu_count))
+    if "GUNICORN_WORKERS" in os.environ:
+        return _env_int("GUNICORN_WORKERS", default_workers)
+    if "WEB_CONCURRENCY" in os.environ:
+        return _env_int("WEB_CONCURRENCY", default_workers)
+    return default_workers
+
+
 # Server socket
 bind = f"0.0.0.0:{os.environ.get('PORT', 5000)}"
 backlog = _env_int("GUNICORN_BACKLOG", 2048)
 
 # Worker processes - use gevent for async I/O
 worker_class = os.environ.get("GUNICORN_WORKER_CLASS", "gevent")
-workers = _env_int("GUNICORN_WORKERS", max(4, multiprocessing.cpu_count() * 2 + 1))
+workers = _configured_workers()
 worker_connections = _env_int("GUNICORN_WORKER_CONNECTIONS", 1000)
 
 # Timeouts and keepalive
@@ -46,4 +59,7 @@ limit_request_line = 8192
 limit_request_fields = 100
 limit_request_field_size = 8192
 
-print(f"Gunicorn config: {workers} {worker_class} workers, {worker_connections} connections each")
+print(
+    f"Gunicorn config: {workers} {worker_class} workers, "
+    f"{worker_connections} connections each"
+)
