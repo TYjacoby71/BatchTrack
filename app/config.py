@@ -114,6 +114,9 @@ class BaseConfig:
     BILLING_CACHE_ENABLED = os.environ.get('BILLING_CACHE_ENABLED', 'true').lower() == 'true'
     BILLING_GATE_CACHE_TTL_SECONDS = _env_int('BILLING_GATE_CACHE_TTL_SECONDS', 60)
 
+    # Feature flags
+    FEATURE_INVENTORY_ANALYTICS = os.environ.get('FEATURE_INVENTORY_ANALYTICS', 'true').lower() == 'true'
+
 
 class DevelopmentConfig(BaseConfig):
     ENV = 'development'
