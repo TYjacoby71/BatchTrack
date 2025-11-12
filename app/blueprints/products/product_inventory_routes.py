@@ -157,7 +157,6 @@ def adjust_sku_inventory(inventory_item_id):
                 unit=unit,
                 notes=notes,
                 created_by=current_user.id,
-                item_type='product',
                 customer=customer,
                 sale_price=sale_price,
                 order_id=order_id,
@@ -310,8 +309,7 @@ def dispose_expired_sku(sku_id):
             change_type=disposal_type,
             unit=sku.unit,
             notes=f"{notes} - {len(expired_entries)} expired lots",
-            created_by=current_user.id,
-            item_type='product'
+            created_by=current_user.id
         )
 
         if success:
@@ -361,7 +359,6 @@ def process_sale_webhook():
             unit=sku.unit,
             notes=f"Sale from {data.get('source', 'external system')}",
             created_by=current_user.id,
-            item_type='product',
             customer=data.get('customer'),
             sale_price=float(data['sale_price']),
             order_id=data.get('order_id')
@@ -414,7 +411,6 @@ def process_return_webhook():
             unit=sku.unit,
             notes=f"Return from {data.get('source', 'external system')}",
             created_by=current_user.id,
-            item_type='product',
             customer=data.get('customer'),
             order_id=data.get('original_order_id')
         )
@@ -474,7 +470,6 @@ def create_manual_reservation():
             unit=None,  # Will use item's unit
             notes=f"Manual reservation: {notes}",
             created_by=current_user.id,
-            item_type='product',
             customer=customer,
             sale_price=float(sale_price) if sale_price else None,
             order_id=order_id
@@ -542,8 +537,7 @@ def add_inventory_from_batch():
             unit=sku.unit,
             notes=f'Added from batch {batch_id}',
             batch_id=batch_id,
-            created_by=current_user.id,
-            item_type='product'
+            created_by=current_user.id
         )
 
         if success:
