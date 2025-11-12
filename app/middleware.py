@@ -157,9 +157,7 @@ def register_middleware(app):
         if getattr(current_user, 'user_type', None) == 'developer':
             try:
                 logger.debug(
-                    "Developer checkpoint for %s on %s",
-                    getattr(current_user, 'id', 'unknown'),
-                    request.path
+                    f"Developer checkpoint for {getattr(current_user, 'id', 'unknown')} on {request.path}"
                 )
                 selected_org_id = session.get("dev_selected_org_id")
                 masquerade_org_id = session.get("masquerade_org_id")  # Support both session keys
@@ -191,11 +189,7 @@ def register_middleware(app):
 
             # IMPORTANT: Developers bypass the billing check below.
             logger.info(
-                "Developer %s bypassed billing on %s %s (masquerade_org=%s)",
-                getattr(current_user, 'id', 'unknown'),
-                request.method,
-                request.path,
-                session.get("masquerade_org_id") or session.get("dev_selected_org_id")
+                f"Developer {getattr(current_user, 'id', 'unknown')} bypassed billing on {request.method} {request.path} (masquerade_org={session.get('masquerade_org_id') or session.get('dev_selected_org_id')})"
             )
             return
 
