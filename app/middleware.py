@@ -159,7 +159,7 @@ def register_middleware(app):
                 logger.debug(
                     "Developer checkpoint for %s on %s",
                     getattr(current_user, 'id', 'unknown'),
-                    request.path,
+                    request.path
                 )
             try:
                 selected_org_id = session.get("dev_selected_org_id")
