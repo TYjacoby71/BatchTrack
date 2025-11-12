@@ -1,7 +1,7 @@
 from flask import Blueprint, request, render_template, redirect, url_for, flash
 from flask_login import login_required, current_user
 from ...models import db, InventoryItem
-from ...models.product import Product, ProductVariant, ProductSKU, ProductSKUHistory
+from ...models.product import Product, ProductVariant, ProductSKU
 from ...models.batch import Batch
 from ...utils.unit_utils import get_global_unit_list
 

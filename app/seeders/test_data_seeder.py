@@ -19,7 +19,6 @@ from ..models import (
     Product,
     ProductCategory,
     ProductSKU,
-    ProductSKUHistory,
     ProductVariant,
     Recipe,
     RecipeIngredient,
@@ -94,8 +93,7 @@ def seed_test_data(organization_id: Optional[int] = None):
     def reset_inventory_item(item: InventoryItem):
         UnifiedInventoryHistory.query.filter_by(inventory_item_id=item.id).delete(synchronize_session=False)
         InventoryLot.query.filter_by(inventory_item_id=item.id).delete(synchronize_session=False)
-        if item.type == "product":
-            ProductSKUHistory.query.filter_by(inventory_item_id=item.id).delete(synchronize_session=False)
+        # ProductSKUHistory.query.filter_by(inventory_item_id=item.id).delete(synchronize_session=False) # Removed, as this is now handled by UnifiedInventoryHistory
         item.quantity = 0.0
         db.session.flush()
 
@@ -105,7 +103,7 @@ def seed_test_data(organization_id: Optional[int] = None):
             if not batch:
                 continue
             UnifiedInventoryHistory.query.filter_by(batch_id=batch.id).delete(synchronize_session=False)
-            ProductSKUHistory.query.filter_by(batch_id=batch.id).delete(synchronize_session=False)
+            # ProductSKUHistory.query.filter_by(batch_id=batch.id).delete(synchronize_session=False) # Removed, as this is now handled by UnifiedInventoryHistory
             BatchIngredient.query.filter_by(batch_id=batch.id).delete(synchronize_session=False)
             BatchContainer.query.filter_by(batch_id=batch.id).delete(synchronize_session=False)
             BatchConsumable.query.filter_by(batch_id=batch.id).delete(synchronize_session=False)
@@ -771,8 +769,8 @@ def seed_test_data(organization_id: Optional[int] = None):
     # ------------------------------------------------------------------
     # Product SKU history snapshots
     # ------------------------------------------------------------------
-    ProductSKUHistory.query.filter_by(inventory_item_id=product_item.id).delete(synchronize_session=False)
-    db.session.commit()
+    # ProductSKUHistory.query.filter_by(inventory_item_id=product_item.id).delete(synchronize_session=False) # Removed, as this is now handled by UnifiedInventoryHistory
+    # db.session.commit()
 
     sku_history_events = []
     for plan in batch_plan:
@@ -818,7 +816,7 @@ def seed_test_data(organization_id: Optional[int] = None):
     running_quantity = 0.0
     for event in sku_history_events:
         running_quantity += event["quantity"]
-        history_entry = ProductSKUHistory(
+        history_entry = UnifiedInventoryHistory( # Changed to UnifiedInventoryHistory
             inventory_item_id=product_item.id,
             change_type=event["change_type"],
             quantity_change=event["quantity"],
@@ -852,4 +850,3 @@ def seed_test_data(organization_id: Optional[int] = None):
     print(f"✅ Finished Goods On Hand: {finished_on_hand} {product_item.unit}")
     print("✅ Active Reservations: 1")
     print("🧪 Dataset reflects a month of live operations with full history logs.")
-
