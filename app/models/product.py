@@ -232,26 +232,29 @@ class ProductSKU(db.Model, ScopedModelMixin):
 
     @property
     def weighted_average_cost(self):
-        """Calculate weighted average cost based on FIFO history like raw ingredients"""
-        from ..models import ProductSKUHistory
+        """Calculate weighted average cost based on FIFO lots like raw ingredients"""
+        from ..models.inventory_lot import InventoryLot
+        from sqlalchemy import and_
 
-        # Get all remaining FIFO entries for this SKU
-        fifo_entries = ProductSKUHistory.query.filter_by(
-            inventory_item_id=self.inventory_item_id
-        ).filter(
-            ProductSKUHistory.remaining_quantity > 0
-        ).order_by(ProductSKUHistory.timestamp.asc()).all()
+        # Get all remaining FIFO lots for this SKU
+        active_lots = InventoryLot.query.filter(
+            and_(
+                InventoryLot.inventory_item_id == self.inventory_item_id,
+                InventoryLot.organization_id == self.organization_id,
+                InventoryLot.remaining_quantity > 0
+            )
+        ).order_by(InventoryLot.received_date.asc()).all()
 
-        if not fifo_entries:
+        if not active_lots:
             return self.cost_per_unit
 
         total_cost = 0
         total_quantity = 0
 
-        for entry in fifo_entries:
-            if entry.cost_per_unit and entry.remaining_quantity > 0:
-                total_cost += entry.cost_per_unit * entry.remaining_quantity
-                total_quantity += entry.remaining_quantity
+        for lot in active_lots:
+            if lot.unit_cost and lot.remaining_quantity > 0:
+                total_cost += lot.unit_cost * lot.remaining_quantity
+                total_quantity += lot.remaining_quantity
 
         return total_cost / total_quantity if total_quantity > 0 else self.cost_per_unit
 
