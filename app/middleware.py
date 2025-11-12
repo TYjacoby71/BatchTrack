@@ -1,4 +1,3 @@
-
 import os
 import logging
 from collections.abc import Mapping
@@ -155,12 +154,14 @@ def register_middleware(app):
 
         # 7. Handle developer "super admin" and masquerade logic.
         if getattr(current_user, 'user_type', None) == 'developer':
-            try:
+            # Only log debug for non-repetitive paths
+            if not request.path.startswith('/developer/organizations') and not request.path.startswith('/retention/api') and not request.path.startswith('/favicon.ico'):
                 logger.debug(
                     "Developer checkpoint for %s on %s",
                     getattr(current_user, 'id', 'unknown'),
-                    request.path,
+                    request.path
                 )
+            try:
                 selected_org_id = session.get("dev_selected_org_id")
                 masquerade_org_id = session.get("masquerade_org_id")  # Support both session keys
 
@@ -277,4 +278,3 @@ def register_middleware(app):
             response.headers.setdefault(header_name, header_value)
 
         return response
-
