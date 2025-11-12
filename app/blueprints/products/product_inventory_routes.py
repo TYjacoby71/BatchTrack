@@ -1,7 +1,6 @@
 from flask import Blueprint, request, jsonify, flash, redirect, url_for
 from flask_login import login_required, current_user
 from ...models import db, ProductSKU, Batch
-from ...models.product import ProductSKUHistory
 from ...services.product_service import ProductService
 from app.services.inventory_adjustment import process_inventory_adjustment
 from ...utils.timezone_utils import TimezoneUtils

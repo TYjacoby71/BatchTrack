@@ -483,9 +483,11 @@ def delete_product(product_id):
             flash('Cannot delete product with remaining inventory', 'error')
             return redirect(url_for('products.view_product', product_id=product_id))
 
-        # Delete history records first
+        # Delete history records first - now handled by UnifiedInventoryHistory
+        from ...models.unified_inventory_history import UnifiedInventoryHistory
         for sku in skus:
-            ProductSKUHistory.query.filter_by(sku_id=sku.id).delete()
+            if sku.inventory_item_id:
+                UnifiedInventoryHistory.query.filter_by(inventory_item_id=sku.inventory_item_id).delete()
 
         # Delete the SKUs
         ProductSKU.query.filter_by(product_id=product.id).delete()
