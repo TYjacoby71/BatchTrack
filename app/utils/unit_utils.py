@@ -6,6 +6,7 @@ from typing import Dict, List, Optional, Tuple, Union
 from dataclasses import dataclass
 from flask import g, current_app
 import time
+from flask_login import current_user
 
 @dataclass(frozen=True)
 class FallbackUnit:
@@ -26,7 +27,7 @@ def get_global_unit_list():
     cache_key = 'global_unit_list'
     if hasattr(g, cache_key):
         return getattr(g, cache_key)
-    
+
     # Check application-level cache
     from ..utils.cache_manager import app_cache
     cache_key_full = f"units:{getattr(current_user, 'organization_id', 'public') if hasattr(current_user, 'organization_id') else 'public'}"
@@ -36,11 +37,10 @@ def get_global_unit_list():
         return cached_units
 
     try:
-        from flask_login import current_user
         from ..models import Unit
 
         start_time = time.time()
-        
+
         # Base query for active units
         query = Unit.query.filter_by(is_active=True)
 
@@ -71,7 +71,7 @@ def get_global_unit_list():
 
         # Order by type and name for consistent display
         units = query.order_by(Unit.unit_type, Unit.name).all()
-        
+
         # Monitor query performance
         query_time = time.time() - start_time
         if query_time > 0.05:  # Log queries taking > 50ms
