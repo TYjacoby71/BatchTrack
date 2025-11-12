@@ -1,7 +1,7 @@
 from flask import Blueprint, request, jsonify, render_template
 from flask_login import login_required, current_user
 from sqlalchemy import and_, func, desc
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 
 from ...models import db, Reservation, InventoryItem
 from ...services.pos_integration import POSIntegrationService
@@ -107,7 +107,8 @@ def list_reservations():
                          reservation_groups=reservation_groups,
                          stats=stats,
                          status_filter=status_filter,
-                         order_id_filter=order_id_filter)
+                         order_id_filter=order_id_filter,
+                         current_time=datetime.now(timezone.utc))
 
 @reservations_bp.route('/api/reservations/create', methods=['POST'])
 @login_required
