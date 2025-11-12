@@ -377,7 +377,7 @@ def seed_test_data(organization_id: Optional[int] = None):
         db.session.add(recipe)
 
     recipe.instructions = (
-        "Warm milk to 120°F, dissolve honey, blend until uniform, cool, and bottle immediately."
+        "Warm milk to 120F, dissolve honey, blend until uniform, cool, and bottle immediately."
     )
     recipe.predicted_yield = 4.0
     recipe.predicted_yield_unit = "floz"
