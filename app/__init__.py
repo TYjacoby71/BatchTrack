@@ -97,9 +97,8 @@ def create_app(config=None):
     # Configure rate limiter with Redis storage in production
     limiter_storage_uri = app.config.get('RATELIMIT_STORAGE_URI')
     if limiter_storage_uri:
-        limiter.init_app(app, config={'RATELIMIT_STORAGE_URI': limiter_storage_uri})
-    else:
-        limiter.init_app(app)
+        app.config['RATELIMIT_STORAGE_URI'] = limiter_storage_uri
+    limiter.init_app(app)
     if app.config.get('ENV') == 'production' and (not limiter_storage_uri or str(limiter_storage_uri).startswith('memory://')):
         message = "Rate limiter storage must be Redis-backed in production. Set RATELIMIT_STORAGE_URI accordingly."
         logger.error(message)
