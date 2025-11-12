@@ -28,6 +28,14 @@ def _resolve_ratelimit_uri() -> str:
     return 'memory://'
 
 
+def _env_int(key, default):
+    """Helper to parse environment integers with fallback."""
+    try:
+        return int(os.environ.get(key, default))
+    except (ValueError, TypeError):
+        return default
+
+
 class BaseConfig:
     SECRET_KEY = os.environ.get('FLASK_SECRET_KEY', 'devkey-please-change-in-production')
 
@@ -89,15 +97,6 @@ class BaseConfig:
     WHOP_APP_ID = os.environ.get('WHOP_APP_ID')
     GOOGLE_OAUTH_CLIENT_ID = os.environ.get('GOOGLE_OAUTH_CLIENT_ID')
     GOOGLE_OAUTH_CLIENT_SECRET = os.environ.get('GOOGLE_OAUTH_CLIENT_SECRET')
-
-    # Helper to parse environment integers with fallback
-    @staticmethod
-    def _env_int(key, default):
-        """Helper to parse environment integers with fallback."""
-        try:
-            return int(os.environ.get(key, default))
-        except (ValueError, TypeError):
-            return default
 
     # Enhanced SQLAlchemy pool configuration for high concurrency
     # These are default values; specific environments may override them.
