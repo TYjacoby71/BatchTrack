@@ -43,7 +43,7 @@ class ReservationService:
         Create a new product reservation by deducting from specific FIFO lot
         This should only be called AFTER FIFO deduction has been calculated and executed
         """
-        from app.models.product import ProductSKUHistory
+        from app.models.unified_inventory_history import UnifiedInventoryHistory
 
         product_item = InventoryItem.query.get(inventory_item_id)
         if not product_item or product_item.type != 'product':
