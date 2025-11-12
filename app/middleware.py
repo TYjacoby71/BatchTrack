@@ -189,13 +189,9 @@ def register_middleware(app):
                 logger.warning(f"Developer masquerade logic failed: {e}")
 
             # IMPORTANT: Developers bypass the billing check below.
-            logger.info(
-                "Developer %s bypassed billing on %s %s (masquerade_org=%s)",
-                getattr(current_user, 'id', 'unknown'),
-                request.method,
-                request.path,
-                session.get("masquerade_org_id") or session.get("dev_selected_org_id")
-            )
+            user_id = getattr(current_user, 'id', 'unknown')
+            masq_org = session.get("masquerade_org_id") or session.get("dev_selected_org_id")
+            logger.info(f"Developer {user_id} bypassed billing on {request.method} {request.path} (masquerade_org={masq_org})")
             return
 
         # 8. Enforce billing for all regular, authenticated users.
