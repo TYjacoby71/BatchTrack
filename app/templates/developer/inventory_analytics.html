@@ -15,6 +15,7 @@
         <button class="btn btn-primary" onclick="refreshAnalytics(event)">
         <i class="fas fa-sync-alt"></i> Refresh Data
       </button>
+        <span class="badge bg-light text-muted ms-2" id="lastLoadedAt">Last updated: --</span>
     </div>
   </div>
 
@@ -216,6 +217,7 @@
 
 <script>
 let analyticsData = {};
+let lastLoadedAt = null;
 
 // Load analytics on page load
 document.addEventListener('DOMContentLoaded', function() {
@@ -236,6 +238,8 @@ async function loadAnalytics(forceRefresh = false) {
         await loadRecentActivity(forceRefresh);
         // Populate item selector
         await loadItemSelector(forceRefresh);
+
+        updateLastLoaded(new Date());
     } catch (error) {
         console.error('Error loading analytics:', error);
         showError('Failed to load analytics data');
@@ -472,6 +476,21 @@ function buildAnalyticsUrl(path, forceRefresh = false) {
     }
     const separator = path.includes('?') ? '&' : '?';
     return `${path}${separator}refresh=1&_=${Date.now()}`;
+}
+
+function updateLastLoaded(timestamp) {
+    lastLoadedAt = timestamp;
+    const badge = document.getElementById('lastLoadedAt');
+    if (!badge) {
+        return;
+    }
+    if (!timestamp) {
+        badge.textContent = 'Last updated: --';
+        badge.removeAttribute('title');
+        return;
+    }
+    badge.textContent = `Last updated: ${timestamp.toLocaleTimeString()}`;
+    badge.title = `Last updated ${timestamp.toLocaleString()}`;
 }
 
 function getActionBadgeClass(action) {
