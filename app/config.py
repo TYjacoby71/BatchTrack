@@ -193,7 +193,7 @@ class ProductionConfig(BaseConfig):
         'pool_recycle': 1800,
         'pool_timeout': int(os.environ.get('SQLALCHEMY_POOL_TIMEOUT', 30)),
     }
-    _prod_ratelimit_uri = os.environ.get('RATELIMIT_STORAGE_URI') or os.environ.get('REDIS_URL') or os.environ.get('RATELIMIT_STORAGE_URL') or BaseConfig._ratelimit_uri
+    _prod_ratelimit_uri = os.environ.get('RATELIMIT_STORAGE_URI') or os.environ.get('REDIS_URL') or os.environ.get('RATELIMIT_STORAGE_URL') or _resolve_ratelimit_uri()
     RATELIMIT_STORAGE_URI = _prod_ratelimit_uri
     RATELIMIT_STORAGE_URL = _prod_ratelimit_uri
     LOG_LEVEL = os.environ.get('LOG_LEVEL', 'INFO')
