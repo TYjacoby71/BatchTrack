@@ -995,6 +995,7 @@ def upgrade():
         batch_op.create_index(batch_op.f('ix_reservation_order_id'), ['order_id'], unique=False)
 
     # Create product_sku_history after inventory_item exists
+    # NOTE: This table is deprecated - products now use unified_inventory_history
     op.create_table('product_sku_history',
     sa.Column('id', sa.Integer(), nullable=False),
     sa.Column('inventory_item_id', sa.Integer(), nullable=False),
