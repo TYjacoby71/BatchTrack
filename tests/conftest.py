@@ -67,9 +67,34 @@ def runner(app):
 
 @pytest.fixture
 def db_session(app):
+    """Provides a database session for tests with rollback."""
     with app.app_context():
+        # Run Alembic migrations to ensure schema is up to date
+        from alembic import command
+        from alembic.config import Config
+        import os
+
+        # Get the migrations directory
+        migrations_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'migrations')
+        alembic_cfg = Config(os.path.join(migrations_dir, 'alembic.ini'))
+        alembic_cfg.set_main_option('script_location', migrations_dir)
+
+        try:
+            # Upgrade to head to ensure all migrations are applied
+            command.upgrade(alembic_cfg, 'head')
+        except Exception as e:
+            # Fallback to create_all if migrations fail
+            print(f"Migration failed, falling back to create_all: {e}")
+            db.create_all()
+
         yield db.session
         db.session.rollback()
+
+        # Clean up - drop all tables
+        try:
+            command.downgrade(alembic_cfg, 'base')
+        except Exception:
+            db.drop_all()
 
 
 @pytest.fixture
