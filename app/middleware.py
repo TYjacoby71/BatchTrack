@@ -183,9 +183,19 @@ def register_middleware(app):
             except Exception as e:
                 logger.warning(f"Developer masquerade logic failed: {e}")
 
-            # IMPORTANT: Developers bypass the billing check below.
-            # Only log for non-static paths and occasionally
-            if not request.path.startswith(('/static/', '/favicon.ico')):
+            # Log only for non-static requests and meaningful operations
+            should_log = (
+                not request.path.startswith('/static/') and
+                not request.path.startswith('/favicon.ico') and
+                not request.path.startswith('/_') and  # Skip internal routes
+                request.method in ['POST', 'PUT', 'DELETE', 'PATCH']
+            )
+
+            # Skip logging for frequent developer dashboard calls
+            if request.path in ['/developer/dashboard', '/developer/organizations']:
+                should_log = False
+
+            if should_log and current_user and current_user.is_authenticated:
                 import random
                 if random.random() < 0.1:  # Log only 10% of requests to reduce noise
                     user_id = getattr(current_user, 'id', 'unknown')

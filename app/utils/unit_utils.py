@@ -27,10 +27,13 @@ def get_global_unit_list():
     if hasattr(g, cache_key):
         return getattr(g, cache_key)
     
-    # Only log occasionally to reduce noise
-    import random
-    if random.random() < 0.1:  # Log only 10% of calls
-        logger.debug("Getting global unit list")
+    # Check application-level cache
+    from ..utils.cache_manager import app_cache
+    cache_key_full = f"units:{getattr(current_user, 'organization_id', 'public') if hasattr(current_user, 'organization_id') else 'public'}"
+    cached_units = app_cache.get(cache_key_full)
+    if cached_units:
+        setattr(g, cache_key, cached_units)
+        return cached_units
 
     try:
         from flask_login import current_user
@@ -71,11 +74,12 @@ def get_global_unit_list():
         
         # Monitor query performance
         query_time = time.time() - start_time
-        if query_time > 0.1:  # Log queries taking > 100ms
-            logger.warning(f"Slow unit query: {query_time:.3f}s")
+        if query_time > 0.05:  # Log queries taking > 50ms
+            logger.warning(f"Unit query took {query_time:.3f}s for {len(units)} units")
 
-        # Cache the result for this request
+        # Cache the result for this request and in app cache
         setattr(g, cache_key, units)
+        app_cache.set(cache_key_full, units, 300)  # 5 minute cache
 
         if not units:
             logger.warning("No units found, creating fallback units")

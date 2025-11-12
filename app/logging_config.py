@@ -61,6 +61,7 @@ def configure_logging(app: Flask):
         logging.getLogger('werkzeug').setLevel(logging.WARNING)
         logging.getLogger('flask_limiter').setLevel(logging.WARNING)
         logging.getLogger('sqlalchemy.engine').setLevel(logging.WARNING)
+        logging.getLogger('app.blueprints_registry').setLevel(logging.WARNING)
     
     # Configure format
     if os.environ.get('REPLIT_DEPLOYMENT') == 'true':
