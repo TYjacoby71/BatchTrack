@@ -114,18 +114,20 @@ def register_middleware(app):
         # 5. Authentication check - if we get here, user must be authenticated
         if not current_user.is_authenticated:
             # Better debugging: log the actual path and method being requested
-            endpoint_info = f"endpoint={request.endpoint}, path={request.path}, method={request.method}"
             if request.endpoint is None:
                 logger.warning(
-                    "Unauthenticated request to UNKNOWN endpoint: %s, user_agent=%s",
-                    endpoint_info,
+                    "Unauthenticated request to UNKNOWN endpoint: endpoint=%s, path=%s, method=%s, user_agent=%s",
+                    request.endpoint,
+                    request.path,
+                    request.method,
                     request.headers.get('User-Agent', 'Unknown')[:100],
                 )
             elif not request.path.startswith('/static/'):
                 level_name = str(current_app.config.get('ANON_REQUEST_LOG_LEVEL', 'DEBUG')).upper()
                 log_level = getattr(logging, level_name, logging.DEBUG)
                 if logger.isEnabledFor(log_level):
-                    logger.log(log_level, f"Unauthenticated access attempt: {endpoint_info}")
+                    logger.log(log_level, "Unauthenticated access attempt: endpoint=%s, path=%s, method=%s", 
+                              request.endpoint, request.path, request.method)
 
             # Return JSON 401 for API or JSON-accepting requests
             accept = request.accept_mimetypes
@@ -156,9 +158,12 @@ def register_middleware(app):
         # 7. Handle developer "super admin" and masquerade logic.
         if getattr(current_user, 'user_type', None) == 'developer':
             try:
-                logger.debug(
-                    f"Developer checkpoint for {getattr(current_user, 'id', 'unknown')} on {request.path}"
-                )
+                # Only log debug for non-repetitive paths
+                if not request.path.startswith('/developer/organizations') and not request.path.startswith('/retention/api') and not request.path.startswith('/favicon.ico'):
+                    logger.debug(
+                        f"Developer checkpoint for {getattr(current_user, 'id', 'unknown')} on {request.path}"
+                    )
+                
                 selected_org_id = session.get("dev_selected_org_id")
                 masquerade_org_id = session.get("masquerade_org_id")  # Support both session keys
 
@@ -188,9 +193,11 @@ def register_middleware(app):
                 logger.warning(f"Developer masquerade logic failed: {e}")
 
             # IMPORTANT: Developers bypass the billing check below.
-            logger.info(
-                f"Developer {getattr(current_user, 'id', 'unknown')} bypassed billing on {request.method} {request.path} (masquerade_org={session.get('masquerade_org_id') or session.get('dev_selected_org_id')})"
-            )
+            # Only log for meaningful routes, not repetitive ones
+            if not request.path.startswith('/developer/organizations') and not request.path.startswith('/retention/api') and not request.path.startswith('/favicon.ico'):
+                logger.info(
+                    f"Developer {getattr(current_user, 'id', 'unknown')} bypassed billing on {request.method} {request.path} (masquerade_org={session.get('masquerade_org_id') or session.get('dev_selected_org_id')})"
+                )
             return
 
         # 8. Enforce billing for all regular, authenticated users.
