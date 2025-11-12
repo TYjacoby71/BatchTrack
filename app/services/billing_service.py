@@ -271,7 +271,7 @@ class BillingService:
                 Organization.is_active,
                 Organization.billing_status,
                 Organization.subscription_tier_id,
-                SubscriptionTier.is_billing_exempt,
+                SubscriptionTier.billing_provider,
             )
             .join(SubscriptionTier, SubscriptionTier.id == Organization.subscription_tier_id, isouter=True)
             .where(Organization.id == organization_id)
@@ -291,7 +291,7 @@ class BillingService:
             'is_active': row.get('is_active', True),
             'billing_status': row.get('billing_status') or 'active',
             'subscription_tier_id': row.get('subscription_tier_id'),
-            'is_billing_exempt': bool(row.get('is_billing_exempt')),
+            'is_billing_exempt': row.get('billing_provider') == 'exempt',
         }
 
         if cache:
