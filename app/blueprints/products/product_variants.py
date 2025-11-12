@@ -200,7 +200,7 @@ def view_variant(product_id, variant_name):
 
         # Add batch information for cost calculations
         for batch in sku.batches:
-            if batch.quantity > 0:
+            if batch.final_quantity and batch.final_quantity > 0:
                 size_groups[key]['batches'].append(batch)
 
     # Get available containers for manual stock addition
