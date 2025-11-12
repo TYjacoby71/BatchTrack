@@ -45,3 +45,4 @@ reportlab
 Flask-Caching
 locust
 redis==5.1.1
+flask-session
