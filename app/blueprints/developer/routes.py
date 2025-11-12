@@ -1393,6 +1393,262 @@ def inventory_analytics_stub():
         return redirect(url_for('developer.dashboard'))
     return render_template('developer/inventory_analytics.html')
 
+# Inventory Analytics API Endpoints
+@developer_bp.route('/api/inventory-analytics/metrics')
+@login_required
+def api_inventory_analytics_metrics():
+    """Get key inventory analytics metrics"""
+    try:
+        from app.models import GlobalItem, InventoryItem, UnifiedInventoryHistory
+        from sqlalchemy import func
+        from datetime import timedelta
+        
+        # Total global items
+        total_items = GlobalItem.query.filter_by(is_archived=False).count()
+        
+        # Total org adoptions (inventory items linked to global items)
+        linked_adoptions = InventoryItem.query.filter(InventoryItem.global_item_id.isnot(None)).count()
+        
+        # Spoilage events in last 30 days
+        thirty_days_ago = TimezoneUtils.utc_now() - timedelta(days=30)
+        spoilage_events_30d = UnifiedInventoryHistory.query.filter(
+            UnifiedInventoryHistory.change_type.in_(['spoil', 'expired', 'damaged', 'trash']),
+            UnifiedInventoryHistory.timestamp >= thirty_days_ago
+        ).count()
+        
+        # Average cost per unit across all lots
+        from app.models.inventory_lot import InventoryLot
+        avg_cost = db.session.query(func.avg(InventoryLot.unit_cost)).filter(
+            InventoryLot.unit_cost.isnot(None),
+            InventoryLot.unit_cost > 0
+        ).scalar()
+        
+        return jsonify({
+            'total_items': total_items,
+            'linked_adoptions': linked_adoptions,
+            'spoilage_events_30d': spoilage_events_30d,
+            'avg_cost_per_unit': float(avg_cost) if avg_cost else None
+        })
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@developer_bp.route('/api/inventory-analytics/top-items')
+@login_required
+def api_inventory_analytics_top_items():
+    """Get top items by usage across organizations"""
+    try:
+        from app.models import GlobalItem, InventoryItem
+        from sqlalchemy import func
+        
+        # Get items with most org adoptions
+        top_items = db.session.query(
+            GlobalItem.id,
+            GlobalItem.name,
+            func.count(InventoryItem.id).label('org_count'),
+            func.avg(InventoryItem.cost_per_unit).label('avg_cost')
+        ).join(
+            InventoryItem, GlobalItem.id == InventoryItem.global_item_id
+        ).filter(
+            GlobalItem.is_archived == False
+        ).group_by(
+            GlobalItem.id, GlobalItem.name
+        ).order_by(
+            func.count(InventoryItem.id).desc()
+        ).limit(10).all()
+        
+        items = []
+        for item in top_items:
+            items.append({
+                'id': item.id,
+                'name': item.name,
+                'org_count': item.org_count,
+                'avg_cost': float(item.avg_cost) if item.avg_cost else None,
+                'trend': 'stable'  # Could be calculated from historical data
+            })
+        
+        return jsonify({'items': items})
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@developer_bp.route('/api/inventory-analytics/spoilage')
+@login_required
+def api_inventory_analytics_spoilage():
+    """Get spoilage analysis by item"""
+    try:
+        from app.models import GlobalItem, InventoryItem, UnifiedInventoryHistory
+        from sqlalchemy import func
+        from datetime import timedelta
+        
+        thirty_days_ago = TimezoneUtils.utc_now() - timedelta(days=30)
+        
+        # Get spoilage data by global item
+        spoilage_data = db.session.query(
+            GlobalItem.id,
+            GlobalItem.name,
+            func.count(UnifiedInventoryHistory.id).label('spoilage_count'),
+            func.sum(UnifiedInventoryHistory.cost_impact).label('cost_impact'),
+            func.count(func.distinct(UnifiedInventoryHistory.organization_id)).label('orgs_affected')
+        ).join(
+            InventoryItem, GlobalItem.id == InventoryItem.global_item_id
+        ).join(
+            UnifiedInventoryHistory, InventoryItem.id == UnifiedInventoryHistory.inventory_item_id
+        ).filter(
+            UnifiedInventoryHistory.change_type.in_(['spoil', 'expired', 'damaged', 'trash']),
+            UnifiedInventoryHistory.timestamp >= thirty_days_ago,
+            GlobalItem.is_archived == False
+        ).group_by(
+            GlobalItem.id, GlobalItem.name
+        ).order_by(
+            func.count(UnifiedInventoryHistory.id).desc()
+        ).limit(10).all()
+        
+        items = []
+        for item in spoilage_data:
+            # Calculate spoilage rate (simplified)
+            spoilage_rate = 0.1 if item.spoilage_count > 5 else item.spoilage_count * 0.02
+            items.append({
+                'id': item.id,
+                'name': item.name,
+                'spoilage_count': item.spoilage_count,
+                'spoilage_rate': spoilage_rate,
+                'cost_impact': float(item.cost_impact) if item.cost_impact else 0.0,
+                'orgs_affected': item.orgs_affected
+            })
+        
+        return jsonify({'items': items})
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@developer_bp.route('/api/inventory-analytics/data-quality')
+@login_required
+def api_inventory_analytics_data_quality():
+    """Get data quality metrics for global items"""
+    try:
+        from app.models import GlobalItem
+        from sqlalchemy import func
+        
+        total_items = GlobalItem.query.filter_by(is_archived=False).count()
+        
+        if total_items == 0:
+            return jsonify({
+                'density_coverage': 0,
+                'capacity_coverage': 0,
+                'shelf_life_coverage': 0
+            })
+        
+        # Density coverage
+        items_with_density = GlobalItem.query.filter(
+            GlobalItem.is_archived == False,
+            GlobalItem.density.isnot(None),
+            GlobalItem.density > 0
+        ).count()
+        density_coverage = (items_with_density / total_items) * 100
+        
+        # Capacity coverage
+        items_with_capacity = GlobalItem.query.filter(
+            GlobalItem.is_archived == False,
+            GlobalItem.capacity.isnot(None),
+            GlobalItem.capacity > 0
+        ).count()
+        capacity_coverage = (items_with_capacity / total_items) * 100
+        
+        # Shelf life coverage
+        items_with_shelf_life = GlobalItem.query.filter(
+            GlobalItem.is_archived == False,
+            GlobalItem.recommended_shelf_life_days.isnot(None),
+            GlobalItem.recommended_shelf_life_days > 0
+        ).count()
+        shelf_life_coverage = (items_with_shelf_life / total_items) * 100
+        
+        return jsonify({
+            'density_coverage': density_coverage,
+            'capacity_coverage': capacity_coverage,
+            'shelf_life_coverage': shelf_life_coverage
+        })
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@developer_bp.route('/api/inventory-analytics/recent-activity')
+@login_required
+def api_inventory_analytics_recent_activity():
+    """Get recent inventory activity across all organizations"""
+    try:
+        from app.models import UnifiedInventoryHistory, Organization, InventoryItem
+        
+        recent_activity = db.session.query(
+            UnifiedInventoryHistory.timestamp,
+            UnifiedInventoryHistory.change_type,
+            UnifiedInventoryHistory.quantity_change,
+            UnifiedInventoryHistory.unit,
+            UnifiedInventoryHistory.cost_impact,
+            Organization.name.label('organization_name'),
+            InventoryItem.name.label('item_name')
+        ).join(
+            Organization, UnifiedInventoryHistory.organization_id == Organization.id
+        ).join(
+            InventoryItem, UnifiedInventoryHistory.inventory_item_id == InventoryItem.id
+        ).order_by(
+            UnifiedInventoryHistory.timestamp.desc()
+        ).limit(20).all()
+        
+        activities = []
+        for activity in recent_activity:
+            activities.append({
+                'timestamp': activity.timestamp.isoformat(),
+                'organization_name': activity.organization_name,
+                'item_name': activity.item_name,
+                'action': activity.change_type,
+                'quantity_change': float(activity.quantity_change),
+                'unit': activity.unit,
+                'cost_impact': float(activity.cost_impact) if activity.cost_impact else None
+            })
+        
+        return jsonify({'activities': activities})
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@developer_bp.route('/api/inventory-analytics/items-list')
+@login_required
+def api_inventory_analytics_items_list():
+    """Get list of global items for selection"""
+    try:
+        from app.models import GlobalItem, InventoryItem
+        from sqlalchemy import func
+        
+        # Get items that have org adoptions
+        items = db.session.query(
+            GlobalItem.id,
+            GlobalItem.name
+        ).join(
+            InventoryItem, GlobalItem.id == InventoryItem.global_item_id
+        ).filter(
+            GlobalItem.is_archived == False
+        ).group_by(
+            GlobalItem.id, GlobalItem.name
+        ).having(
+            func.count(InventoryItem.id) > 0
+        ).order_by(GlobalItem.name).all()
+        
+        items_list = [{'id': item.id, 'name': item.name} for item in items]
+        
+        return jsonify({'items': items_list})
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@developer_bp.route('/api/inventory-analytics/cost-distribution/<int:item_id>')
+@login_required
+def api_inventory_analytics_cost_distribution(item_id):
+    """Get cost distribution for a specific global item"""
+    try:
+        from app.services.statistics.global_item_stats import GlobalItemStatsService
+        
+        # Get cost distribution using existing service
+        distribution = GlobalItemStatsService.get_cost_distribution(item_id)
+        
+        return jsonify(distribution)
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
 
 # ===================== Integrations & Launch Checklist =====================
 
