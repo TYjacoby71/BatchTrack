@@ -4,6 +4,8 @@ from logging.handlers import RotatingFileHandler
 import os
 from typing import Dict, List, Optional, Tuple, Union
 from dataclasses import dataclass
+from flask import g, current_app
+import time
 
 @dataclass(frozen=True)
 class FallbackUnit:
@@ -20,12 +22,22 @@ def setup_logging(app):
 
 def get_global_unit_list():
     """Get list of all active units, including both standard and organization-specific custom units"""
-    logger.info("Getting global unit list")
+    # Check for request-level cache first
+    cache_key = 'global_unit_list'
+    if hasattr(g, cache_key):
+        return getattr(g, cache_key)
+    
+    # Only log occasionally to reduce noise
+    import random
+    if random.random() < 0.1:  # Log only 10% of calls
+        logger.debug("Getting global unit list")
 
     try:
         from flask_login import current_user
         from ..models import Unit
 
+        start_time = time.time()
+        
         # Base query for active units
         query = Unit.query.filter_by(is_active=True)
 
@@ -56,6 +68,14 @@ def get_global_unit_list():
 
         # Order by type and name for consistent display
         units = query.order_by(Unit.unit_type, Unit.name).all()
+        
+        # Monitor query performance
+        query_time = time.time() - start_time
+        if query_time > 0.1:  # Log queries taking > 100ms
+            logger.warning(f"Slow unit query: {query_time:.3f}s")
+
+        # Cache the result for this request
+        setattr(g, cache_key, units)
 
         if not units:
             logger.warning("No units found, creating fallback units")
@@ -68,6 +88,8 @@ def get_global_unit_list():
                 FallbackUnit('fl oz', ('fl oz',), 1.0),
                 FallbackUnit('count', ('count',), 1.0)
             ]
+            # Cache fallback units too
+            setattr(g, cache_key, fallback_units)
             return fallback_units
 
         return units
@@ -81,11 +103,14 @@ def get_global_unit_list():
                 self.name = name
                 self.type = unit_type
 
-        return [
+        error_fallback = [
             FallbackUnitLocal('g', 'gram', 'weight'),
             FallbackUnitLocal('ml', 'milliliter', 'volume'),
             FallbackUnitLocal('count', 'count', 'quantity')
         ]
+        # Cache error fallback too
+        setattr(g, cache_key, error_fallback)
+        return error_fallback
 
 def validate_density_requirements(from_unit, to_unit, ingredient=None):
     """

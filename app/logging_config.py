@@ -49,7 +49,12 @@ def configure_logging(app: Flask):
     app.logger.setLevel(effective_level)
     
     # Prevent duplicate logging by disabling propagation for app loggers
-    logging.getLogger('app').propagate = False
+    app_logger = logging.getLogger('app')
+    app_logger.propagate = False
+    
+    # Clear any existing handlers to prevent duplicates
+    for handler in app_logger.handlers[:]:
+        app_logger.removeHandler(handler)
 
     # Silence noisy third-party loggers unless debugging explicitly enabled
     if effective_level > logging.DEBUG:
