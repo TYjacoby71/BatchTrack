@@ -46,7 +46,7 @@ def create_app(config=None):
     db.init_app(app)
     migrate.init_app(app, db)
     csrf.init_app(app)
-    
+
     # Configure cache (Redis in production, simple in development)
     cache_config = {
         'CACHE_TYPE': 'RedisCache' if app.config.get('REDIS_URL') else 'SimpleCache',
@@ -54,7 +54,7 @@ def create_app(config=None):
     }
     if app.config.get('REDIS_URL'):
         cache_config['CACHE_REDIS_URL'] = app.config['REDIS_URL']
-    
+
     cache.init_app(app, config=cache_config)
     if app.config.get('ENV') == 'production' and cache_config.get('CACHE_TYPE') != 'RedisCache':
         message = "Redis cache not configured; falling back to SimpleCache is not permitted in production."
@@ -93,7 +93,7 @@ def create_app(config=None):
             raise RuntimeError(message)
 
     server_session.init_app(app)
-    
+
     # Configure rate limiter with Redis storage in production
     limiter_storage_uri = app.config.get('RATELIMIT_STORAGE_URI')
     if limiter_storage_uri:

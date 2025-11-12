@@ -125,7 +125,7 @@ def register_middleware(app):
                 level_name = str(current_app.config.get('ANON_REQUEST_LOG_LEVEL', 'DEBUG')).upper()
                 log_level = getattr(logging, level_name, logging.DEBUG)
                 if logger.isEnabledFor(log_level):
-                    logger.log(log_level, "Unauthenticated access attempt: %s", endpoint_info)
+                    logger.log(log_level, f"Unauthenticated access attempt: {endpoint_info}")
 
             # Return JSON 401 for API or JSON-accepting requests
             accept = request.accept_mimetypes
