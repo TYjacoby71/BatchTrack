@@ -1,9 +1,109 @@
 
-{% extends 'layout.html' %}
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="csrf-token" content="{{ csrf_token() }}">
+    <title>Choose Your Plan - BatchTrack</title>
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Font Awesome -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css" rel="stylesheet">
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/theme.css') }}">
+    <script>
+      // Minimal theme bootstrap: set data-theme before paint if user preference saved
+      (function() {
+        try {
+          var t = localStorage.getItem('bt_theme');
+          if (t && t !== 'system') {
+            document.documentElement.setAttribute('data-theme', t);
+          } else {
+            document.documentElement.removeAttribute('data-theme');
+          }
+        } catch (e) {}
+      })();
+    </script>
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+    <style>
+        input[type="hidden"][name="csrf_token"],
+        input[type="hidden"][name="confirm_token"],
+        .csrf-token,
+        .confirm-token,
+        .token-field,
+        .csrf_token {
+            display: none !important;
+            visibility: hidden !important;
+            opacity: 0 !important;
+            height: 0 !important;
+            width: 0 !important;
+            position: absolute !important;
+            left: -9999px !important;
+            pointer-events: none !important;
+            overflow: hidden !important;
+            clip: rect(0,0,0,0) !important;
+            border: 0 !important;
+            margin: -1px !important;
+            padding: 0 !important;
+        }
 
-{% block title %}Choose Your Plan - BatchTrack{% endblock %}
+        .app-container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        
+        .tier-card {
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
 
-{% block content %}
+        .tier-card.selected {
+            transform: translateY(-8px);
+            box-shadow: 0 8px 25px rgba(0,0,0,0.15);
+        }
+
+        .tier-card:hover {
+            transform: translateY(-8px);
+            box-shadow: 0 8px 25px rgba(0,0,0,0.15);
+        }
+    </style>
+</head>
+<body>
+    <div class="app-container">
+    <nav class="navbar navbar-expand-lg navbar-light bg-light">
+        <div class="container-fluid">
+            <a class="navbar-brand" href="{{ url_for('index') }}">
+                BatchTrack 1.0
+            </a>
+            
+            <!-- Public Navigation for Signup Page -->
+            <div class="navbar-nav me-auto">
+            </div>
+            <ul class="navbar-nav mx-auto">
+                <li class="nav-item">
+                    <a class="nav-link" href="{{ url_for('global_library_bp.global_library') }}">
+                        📚 Global Library
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="/tools">
+                        🔧 Tools
+                    </a>
+                </li>
+            </ul>
+            <div class="ms-auto">
+                <a href="{{ url_for('auth.login') }}" class="btn btn-outline-primary me-2">
+                    <i class="fas fa-sign-in-alt me-1"></i>Login
+                </a>
+                <a href="/dev-login" class="btn btn-outline-secondary btn-sm">
+                    <i class="fas fa-code me-1"></i>Developer Access
+                </a>
+            </div>
+        </div>
+    </nav>
+
+    <main class="container-xl mt-4">
 <div class="py-4">
     <div class="row justify-content-center">
         <div class="col-md-10">
@@ -222,19 +322,33 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 </script>
 
-<style>
-.tier-card {
-    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-}
+    </main>
 
-.tier-card.selected {
-    transform: translateY(-8px);
-    box-shadow: 0 8px 25px rgba(0,0,0,0.15);
-}
+    <footer class="bg-light text-center text-muted py-3 mt-5">
+            <div class="container">
+                <div class="row">
+                    <div class="col-12">
+                        <small>
+                            &copy; {{ TimezoneUtils_global().utc_now().year }} BatchTrack. All rights reserved. |
+                            <a href="{{ url_for('legal.privacy_policy') }}" class="text-muted">Privacy Policy</a> |
+                            <a href="{{ url_for('legal.terms_of_service') }}" class="text-muted">Terms of Service</a> |
+                            <a href="{{ url_for('cookie_policy') }}" class="text-muted">Cookie Policy</a>
+                        </small>
+                    </div>
+                </div>
+            </div>
+        </footer>
+    </div>
 
-.tier-card:hover {
-    transform: translateY(-8px);
-    box-shadow: 0 8px 25px rgba(0,0,0,0.15);
-}
-</style>
-{% endblock %}
+    <!-- jQuery -->
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <!-- Bootstrap Bundle with Popper -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <!-- Custom scripts -->
+    <script type="module" src="{{ url_for('static', filename='js/core/SessionGuard.js') }}"></script>
+    <script type="module" src="{{ url_for('static', filename='js/core/DrawerProtocol.js') }}"></script>
+    <script type="module" src="{{ url_for('static', filename='js/core/DrawerInterceptor.js') }}"></script>
+    <script type="module" src="{{ url_for('static', filename='js/main.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/utils/utils.js') }}"></script>
+</body>
+</html>
