@@ -64,11 +64,6 @@ try:
 except ImportError:
     pass
 
-try:
-    from .product import ProductSKUHistory
-except ImportError:
-    pass
-
 # Also ensure direct access to key models for backward compatibility
 try:
     from .mixins import ScopedModelMixin

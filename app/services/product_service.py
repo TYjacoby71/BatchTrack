@@ -1,5 +1,5 @@
 from sqlalchemy import func
-from ..models import db, ProductSKU, ProductSKUHistory
+from ..models import db, ProductSKU
 from ..models.product import Product, ProductVariant
 from datetime import datetime
 from typing import Optional, Dict, List, Tuple

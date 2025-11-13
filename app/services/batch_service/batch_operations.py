@@ -3,7 +3,7 @@ from datetime import date, datetime, timezone
 from sqlalchemy import extract
 from flask_login import current_user
 
-from app.models import db, Batch, Recipe, InventoryItem, BatchContainer, BatchIngredient
+from app.models import db, Batch, Recipe, InventoryItem, BatchContainer, BatchIngredient, InventoryLot
 from app.models.batch import BatchConsumable
 from app import models
 from app.models import ExtraBatchIngredient, ExtraBatchContainer, Product, ProductVariant

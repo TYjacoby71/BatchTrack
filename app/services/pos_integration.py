@@ -74,21 +74,6 @@ class POSIntegrationService:
                 _db_session().add(reserved_item)
                 _db_session().flush()
 
-            # Get the source FIFO entry for tracking from UnifiedInventoryHistory
-            from ..models import UnifiedInventoryHistory
-            fifo_entries = UnifiedInventoryHistory.query.filter(
-                UnifiedInventoryHistory.inventory_item_id == item_id,
-                UnifiedInventoryHistory.remaining_quantity > 0
-            ).order_by(UnifiedInventoryHistory.timestamp.asc()).all()
-            source_fifo_id = None
-            source_batch_id = None
-
-            if fifo_entries:
-                # Use the oldest available entry for reference
-                oldest_entry = fifo_entries[0]
-                source_fifo_id = oldest_entry.id
-                source_batch_id = getattr(oldest_entry, 'batch_id', None)
-
             # 1. DEDUCT from original item using canonical service
             deduction_success = process_inventory_adjustment(
                 item_id=item_id,
@@ -101,6 +86,17 @@ class POSIntegrationService:
 
             if not deduction_success:
                 return False, "Failed to deduct from available inventory"
+
+            # Determine which lot was affected by the reservation
+            from ..models import UnifiedInventoryHistory
+            recent_entry = UnifiedInventoryHistory.query.filter_by(
+                inventory_item_id=item_id,
+                change_type='reserved',
+                order_id=order_id
+            ).order_by(UnifiedInventoryHistory.timestamp.desc()).first()
+
+            source_fifo_id = recent_entry.affected_lot_id if recent_entry and getattr(recent_entry, 'affected_lot_id', None) else None
+            source_batch_id = recent_entry.batch_id if recent_entry else None
 
             # 2. CREATE reservation line item (this is now the source of truth)
             expires_at = None
