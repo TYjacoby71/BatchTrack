@@ -65,17 +65,20 @@
 // Set up recipe data for the module
 window.recipeData = {
     id: {{ recipe.id }},
-    name: "{{ recipe.name }}",
+    name: "{{ recipe.name|safe }}",
     yield_amount: {{ recipe.predicted_yield or 0 }},
     yield_unit: "{{ recipe.predicted_yield_unit or 'units' }}",
     is_portioned: {{ 'true' if recipe.portioning_data and recipe.portioning_data.get('is_portioned') else 'false' }},
     portioning: {
         is_portioned: {{ 'true' if recipe.portioning_data and recipe.portioning_data.get('is_portioned') else 'false' }},
         portion_count: {{ recipe.portioning_data.get('portion_count') if recipe.portioning_data and recipe.portioning_data.get('portion_count') else 'null' }},
-        portion_name: "{{ recipe.portioning_data.get('portion_name') if recipe.portioning_data and recipe.portioning_data.get('portion_name') else '' }}"
+        portion_name: "{{ (recipe.portioning_data.get('portion_name') if recipe.portioning_data and recipe.portioning_data.get('portion_name') else '') | safe }}"
     },
-    category_data: {{ (recipe.category_data or {}) | tojson }}
+    category_data: {{ (recipe.category_data or {}) | tojson | safe }}
 };
+
+// Debug logging
+console.log('Recipe data loaded:', window.recipeData);
 </script>
 <script type="module" src="{{ url_for('static', filename='js/production_planning/plan_production.js') }}"></script>
 {% endblock %}

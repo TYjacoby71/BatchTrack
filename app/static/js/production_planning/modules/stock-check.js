@@ -30,6 +30,15 @@ export class StockCheckManager {
         } else {
             logger.error('Stock check button not found in DOM');
         }
+
+        // Verify DOM elements exist
+        const stockCheckResults = document.getElementById('stockCheckResults');
+        const stockCheckStatus = document.getElementById('stockCheckStatus');
+        logger.debug('DOM elements found:', {
+            button: !!stockCheckBtn,
+            results: !!stockCheckResults,
+            status: !!stockCheckStatus
+        });
     }
 
     async performStockCheck() {

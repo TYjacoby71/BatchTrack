@@ -117,7 +117,7 @@ export class ContainerManager {
     getEffectiveFillPct() {
         // If recipe provides fill pct via window.recipeData, use it; otherwise use UI toggle
         const recipePct = parseFloat(window.recipeData?.category_data?.vessel_fill_pct || '');
-        if (isFinite(recipePct) && recipePct>0) {
+        if (isFinite(recipePct) && recipePct > 0) {
             const info = document.getElementById('fillPctInfo');
             if (info) info.textContent = `(Recipe fill ${recipePct}%)`;
             // Hide UI toggle when recipe provides value
@@ -129,11 +129,11 @@ export class ContainerManager {
         }
         const toggle = document.getElementById('useFillPctToggle');
         const input = document.getElementById('fillPctInput');
-        const enabled = !!(toggle && toggle.checked);
+        const isEnabled = !!(toggle && toggle.checked);
         const val = parseFloat(input?.value || '100');
         const info = document.getElementById('fillPctInfo');
-        if (info) info.textContent = enabled ? `(Fill ${val}%)` : '';
-        return enabled && isFinite(val) && val>0 ? val : null;
+        if (info) info.textContent = isEnabled ? `(Fill ${val}%)` : '';
+        return isEnabled && isFinite(val) && val > 0 ? val : null;
     }
 
     displayContainerPlan() {
