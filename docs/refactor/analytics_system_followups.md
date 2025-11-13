@@ -1,12 +1,12 @@
 ## Analytics System Follow-Ups
 
 ### Current State
-- `AnalyticsDataService` now exposes global inventory dashboards, organization dashboards, developer dashboards, waitlist analytics, and system-wide counts with shared caching and refresh overrides.
-- Developer inventory analytics, global item stats, organization dashboard, developer dashboard, and waitlist stats all read through the service, keeping results consistent and ready for future scaling.
+- `AnalyticsDataService` now exposes global inventory dashboards, organization dashboards, developer dashboards, waitlist analytics, dashboard alerts, and system-wide counts with shared caching and refresh overrides.
+- Developer inventory analytics, global item stats, organization dashboard, developer dashboard, waitlist stats, and app dashboard alerts all read through the service, keeping results consistent and ready for future scaling.
 - Caching uses short TTLs (30–300 s) with manual refresh hooks to support real-time feel without hammering the primary database.
 
 ### Next Steps (App Side)
-- Expand the service to cover any remaining metrics that still query models directly (e.g. dashboard alerts, batch-level drill downs, customer support tooling).
+- Expand the service to cover any remaining metrics that still query models directly (e.g. batch-level drill downs, customer support tooling, marketing analytics).
 - Emit structured timestamps alongside payloads so templates can surface “Last updated” consistently.
 - Add integration tests that hit the new endpoints and assert cache invalidation/refresh behaviour.
 - Expose a developer-only endpoint or CLI hook that calls `AnalyticsDataService.invalidate_cache()` when large backfills run.

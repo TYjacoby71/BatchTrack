@@ -31,6 +31,7 @@ from ...models.inventory_lot import InventoryLot
 from ...models.subscription_tier import SubscriptionTier
 from ...utils.timezone_utils import TimezoneUtils
 from ...utils.json_store import read_json_file
+from ..dashboard_alerts import DashboardAlertService
 from .global_item_stats import GlobalItemStatsService
 from ._core import StatisticsService
 
@@ -53,6 +54,7 @@ class AnalyticsDataService:
         "organization": 60,
         "system": 60,
         "waitlist": 60,
+        "alerts": 30,
         "developer": 60,
     }
 
@@ -576,6 +578,32 @@ class AnalyticsDataService:
         }
         cls._store_cache(cache_key, payload)
         return payload
+
+    @classmethod
+    def get_dashboard_alerts(
+        cls,
+        *,
+        dismissed_alerts: Optional[List[str]] = None,
+        max_alerts: Optional[int] = None,
+        force_refresh: bool = False,
+    ) -> Dict[str, Any]:
+        """Return cached dashboard alerts keyed by dismissed list."""
+
+        dismissed_alerts = dismissed_alerts or []
+        sorted_key = tuple(sorted(dismissed_alerts))
+        limit = max_alerts or 3
+        key_suffix = "|".join(sorted_key)
+        cache_key = cls._cache_key(f"alerts:{limit}:{key_suffix}")
+        cached = cls._get_cached(cache_key, force_refresh)
+        if cached is not None:
+            return cached
+
+        alert_data = DashboardAlertService.get_dashboard_alerts(
+            max_alerts=limit,
+            dismissed_alerts=list(sorted_key),
+        )
+        cls._store_cache(cache_key, alert_data)
+        return alert_data
 
     @classmethod
     def invalidate_cache(cls):

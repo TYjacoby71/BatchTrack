@@ -166,9 +166,13 @@ def api_dashboard_alerts():
     """API endpoint to get fresh dashboard alerts"""
     try:
         dismissed_alerts = session.get('dismissed_alerts', [])
-        alert_data = DashboardAlertService.get_dashboard_alerts(
+        from app.services.statistics import AnalyticsDataService
+
+        force_refresh = (request.args.get('refresh') or '').lower() in ('1', 'true', 'yes')
+        alert_data = AnalyticsDataService.get_dashboard_alerts(
+            dismissed_alerts=dismissed_alerts,
             max_alerts=3,
-            dismissed_alerts=dismissed_alerts
+            force_refresh=force_refresh,
         )
         return jsonify(alert_data)
     except Exception as e:
