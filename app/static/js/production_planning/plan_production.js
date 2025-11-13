@@ -28,34 +28,27 @@ class PlanProductionApp {
     }
 
     init() {
-        this._bindCoreEvents();
-        this.containerManager.bindEvents();
-        this.stockChecker.bindEvents();
-        this.validation.bindEvents();
-        this.batchManager.bindEvents();
+        try {
+            this._bindCoreEvents();
+            this.containerManager.bindEvents();
+            this.stockChecker.bindEvents();
+            this.validation.bindEvents();
+            this.batchManager.bindEvents();
 
-        // Expose for inline onclicks in generated HTML
-        window.stockChecker = this.stockChecker;
-        
-        // Debug log to verify initialization
-        console.log('Stock checker initialized:', !!this.stockChecker);
+            // Expose for inline onclicks in generated HTML
+            window.stockChecker = this.stockChecker;
 
-        // Initial UI sync
-        this._updateProjectedYield();
-        this._updateProjectedPortions();
-        this.updateValidation();
+            // Debug log to verify initialization
+            console.log('Stock checker initialized:', !!this.stockChecker);
+            console.log('Recipe data:', this.recipe);
 
-        // Hide containers if recipe is portioned
-        const initData = window.recipeData || {};
-        if (initData.is_portioned === true || initData.is_portioned === 'true') {
-            const requiresContainersCheckbox = document.getElementById('requiresContainers');
-            if (requiresContainersCheckbox) {
-                requiresContainersCheckbox.checked = false;
-            }
-            const card = document.getElementById('containerManagementCard');
-            if (card) {
-                card.style.display = 'none';
-            }
+            // Initial UI sync
+            this._updateProjectedYield();
+            this._updateProjectedPortions();
+            this.updateValidation();
+        } catch (error) {
+            console.error('Error initializing PlanProductionApp:', error);
+            throw error;
         }
     }
 
