@@ -905,19 +905,10 @@ def load_curated_container_lists():
 @login_required
 def system_statistics():
     """System-wide statistics dashboard"""
-    # Gather system statistics
-    stats = {
-        'total_organizations': Organization.query.count(),
-        'active_organizations': Organization.query.filter_by(is_active=True).count(),
-        'total_users': User.query.filter(User.user_type != 'developer').count(),
-        'active_users': User.query.filter(
-            User.user_type != 'developer',
-            User.is_active == True
-        ).count(),
-        'total_global_items': GlobalItem.query.filter_by(is_archived=False).count(),
-        'total_permissions': Permission.query.count(),
-        'total_roles': Role.query.count()
-    }
+    from app.services.statistics import AnalyticsDataService
+
+    force_refresh = (request.args.get('refresh') or '').lower() in ('1', 'true', 'yes')
+    stats = AnalyticsDataService.get_system_overview(force_refresh=force_refresh)
 
     return render_template('developer/system_statistics.html', stats=stats)
 
@@ -2094,18 +2085,20 @@ def clear_organization_filter():
 @login_required
 def api_stats():
     """API endpoint for dashboard statistics"""
+    from app.services.statistics import AnalyticsDataService
+
+    force_refresh = (request.args.get('refresh') or '').lower() in ('1', 'true', 'yes')
+    overview = AnalyticsDataService.get_system_overview(force_refresh=force_refresh)
+
     stats = {
         'organizations': {
-            'total': Organization.query.count(),
-            'active': Organization.query.filter_by(is_active=True).count(),
+            'total': overview.get('total_organizations', 0),
+            'active': overview.get('active_organizations', 0),
             'by_tier': {}
         },
         'users': {
-            'total': User.query.filter(User.user_type != 'developer').count(),
-            'active': User.query.filter(
-                User.user_type != 'developer',
-                User.is_active == True
-            ).count()
+            'total': overview.get('total_users', 0),
+            'active': overview.get('active_users', 0)
         }
     }
 

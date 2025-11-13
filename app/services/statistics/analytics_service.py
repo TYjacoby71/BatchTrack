@@ -12,7 +12,7 @@ from __future__ import annotations
 
 import logging
 from datetime import timedelta
-from typing import Dict, List, Optional
+from typing import Any, Dict, List, Optional
 
 from sqlalchemy import func
 from sqlalchemy.exc import SQLAlchemyError
@@ -22,11 +22,15 @@ from ...models import (
     GlobalItem,
     InventoryItem,
     Organization,
+    Permission,
+    Role,
     UnifiedInventoryHistory,
+    User,
 )
 from ...models.inventory_lot import InventoryLot
 from ...utils.timezone_utils import TimezoneUtils
 from .global_item_stats import GlobalItemStatsService
+from ._core import StatisticsService
 
 logger = logging.getLogger(__name__)
 
@@ -34,7 +38,7 @@ logger = logging.getLogger(__name__)
 class AnalyticsDataService:
     """Single source of truth for application-facing analytics data."""
 
-    _CACHE_PREFIX = "analytics:inventory"
+    _CACHE_PREFIX = "analytics"
     _DEFAULT_TTLS = {
         "metrics": 60,  # seconds
         "top_items": 120,
@@ -44,6 +48,8 @@ class AnalyticsDataService:
         "items_list": 300,
         "global_item_rollup": 300,
         "cost_distribution": 180,
+        "organization": 60,
+        "system": 60,
     }
 
     # --------------------------------------------------------------------- #
@@ -371,7 +377,77 @@ class AnalyticsDataService:
         return result
 
     @classmethod
-    def invalidate_inventory_cache(cls):
+    def get_organization_dashboard(
+        cls, organization_id: int, *, force_refresh: bool = False
+    ) -> Dict[str, Any]:
+        """Return cached organization dashboard metrics."""
+
+        cache_key = cls._cache_key(f"organization:{organization_id}:overview")
+        cached = cls._get_cached(cache_key, force_refresh)
+        if cached is not None:
+            return cached
+
+        try:
+            payload = StatisticsService.get_organization_dashboard_stats(organization_id) or {}
+            cls._store_cache(cache_key, payload)
+            return payload
+        except Exception as exc:  # pragma: no cover - defensive
+            logger.error(
+                "Failed to build organization dashboard for org %s: %s",
+                organization_id,
+                exc,
+                exc_info=True,
+            )
+            return {}
+
+    @classmethod
+    def get_system_overview(cls, *, force_refresh: bool = False) -> Dict[str, int]:
+        """Aggregate system-wide counts for developer dashboards."""
+
+        cache_key = cls._cache_key("system:overview")
+        cached = cls._get_cached(cache_key, force_refresh)
+        if cached is not None:
+            return cached
+
+        try:
+            total_organizations = Organization.query.count()
+            active_organizations = Organization.query.filter_by(is_active=True).count()
+            total_users = User.query.filter(User.user_type != 'developer').count()
+            active_users = (
+                User.query.filter(
+                    User.user_type != 'developer',
+                    User.is_active.is_(True),
+                ).count()
+            )
+            total_global_items = GlobalItem.query.filter_by(is_archived=False).count()
+            total_permissions = Permission.query.count()
+            total_roles = Role.query.count()
+
+            payload = {
+                "total_organizations": total_organizations,
+                "active_organizations": active_organizations,
+                "total_users": total_users,
+                "active_users": active_users,
+                "total_global_items": total_global_items,
+                "total_permissions": total_permissions,
+                "total_roles": total_roles,
+            }
+            cls._store_cache(cache_key, payload)
+            return payload
+        except SQLAlchemyError as exc:
+            logger.error("Failed to compute system overview: %s", exc, exc_info=True)
+            return {
+                "total_organizations": 0,
+                "active_organizations": 0,
+                "total_users": 0,
+                "active_users": 0,
+                "total_global_items": 0,
+                "total_permissions": 0,
+                "total_roles": 0,
+            }
+
+    @classmethod
+    def invalidate_cache(cls):
         """Invalidate all cached analytics payloads."""
 
         if not cache:
@@ -393,6 +469,9 @@ class AnalyticsDataService:
                 cache.clear()
         except Exception as exc:  # pragma: no cover - defensive
             logger.debug("Failed to invalidate analytics cache: %s", exc)
+
+    # Backwards compatibility alias
+    invalidate_inventory_cache = invalidate_cache
 
     # ------------------------------------------------------------------ #
     # Internal helpers                                                    #
