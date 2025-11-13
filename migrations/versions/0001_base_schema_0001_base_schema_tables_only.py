@@ -994,60 +994,6 @@ def upgrade():
         batch_op.create_index('idx_reserved_item_status', ['reserved_item_id', 'status'], unique=False)
         batch_op.create_index(batch_op.f('ix_reservation_order_id'), ['order_id'], unique=False)
 
-    # Create product_sku_history after inventory_item exists
-    op.create_table('product_sku_history',
-    sa.Column('id', sa.Integer(), nullable=False),
-    sa.Column('inventory_item_id', sa.Integer(), nullable=False),
-    sa.Column('timestamp', sa.DateTime(), nullable=True),
-    sa.Column('change_type', sa.String(length=32), nullable=False),
-    sa.Column('quantity_change', sa.Float(), nullable=False),
-    sa.Column('remaining_quantity', sa.Float(), nullable=True),
-    sa.Column('unit', sa.String(length=32), nullable=False),
-    sa.Column('unit_cost', sa.Float(), nullable=True),
-    sa.Column('sale_price', sa.Float(), nullable=True),
-    sa.Column('customer', sa.String(length=128), nullable=True),
-    sa.Column('fifo_code', sa.String(length=64), nullable=True),
-    sa.Column('fifo_reference_id', sa.Integer(), nullable=True),
-    sa.Column('fifo_source', sa.String(length=128), nullable=True),
-    sa.Column('is_perishable', sa.Boolean(), nullable=True),
-    sa.Column('shelf_life_days', sa.Integer(), nullable=True),
-    sa.Column('expiration_date', sa.DateTime(), nullable=True),
-    sa.Column('batch_id', sa.Integer(), nullable=True),
-    sa.Column('container_id', sa.Integer(), nullable=True),
-    sa.Column('notes', sa.Text(), nullable=True),
-    sa.Column('note', sa.Text(), nullable=True),
-    sa.Column('created_by', sa.Integer(), nullable=True),
-    sa.Column('order_id', sa.String(length=64), nullable=True),
-    sa.Column('reservation_id', sa.String(length=64), nullable=True),
-    sa.Column('is_reserved', sa.Boolean(), nullable=True),
-    sa.Column('sale_location', sa.String(length=64), nullable=True),
-    sa.Column('quantity_used', sa.Float(), nullable=True),
-    sa.Column('batch_number', sa.String(length=128), nullable=True),
-    sa.Column('lot_number', sa.String(length=128), nullable=True),
-    sa.Column('temperature_at_time', sa.Float(), nullable=True),
-    sa.Column('location_id', sa.String(length=128), nullable=True),
-    sa.Column('location_name', sa.String(length=128), nullable=True),
-    sa.Column('quality_status', sa.String(length=32), nullable=True),
-    sa.Column('compliance_status', sa.String(length=32), nullable=True),
-    sa.Column('quality_checked_by', sa.Integer(), nullable=True),
-    sa.Column('marketplace_order_id', sa.String(length=128), nullable=True),
-    sa.Column('marketplace_source', sa.String(length=32), nullable=True),
-    sa.Column('organization_id', sa.Integer(), nullable=True),
-    sa.ForeignKeyConstraint(['batch_id'], ['batch.id'], ),
-    sa.ForeignKeyConstraint(['container_id'], ['inventory_item.id'], ),
-    sa.ForeignKeyConstraint(['created_by'], ['user.id'], ),
-    sa.ForeignKeyConstraint(['fifo_reference_id'], ['product_sku_history.id'], ),
-    sa.ForeignKeyConstraint(['inventory_item_id'], ['inventory_item.id'], ),
-    sa.ForeignKeyConstraint(['organization_id'], ['organization.id'], ),
-    sa.ForeignKeyConstraint(['quality_checked_by'], ['user.id'], ),
-    sa.PrimaryKeyConstraint('id')
-    )
-    with op.batch_alter_table('product_sku_history', schema=None) as batch_op:
-        batch_op.create_index('idx_change_type', ['change_type'], unique=False)
-        batch_op.create_index('idx_fifo_code', ['fifo_code'], unique=False)
-        batch_op.create_index('idx_inventory_item_remaining', ['inventory_item_id', 'remaining_quantity'], unique=False)
-        batch_op.create_index('idx_inventory_item_timestamp', ['inventory_item_id', 'timestamp'], unique=False)
-
     op.create_table('retention_deletion_queue',
     sa.Column('id', sa.Integer(), nullable=False),
     sa.Column('organization_id', sa.Integer(), nullable=False),
@@ -1342,8 +1288,6 @@ def upgrade():
     sa.PrimaryKeyConstraint('id'),
     sa.UniqueConstraint('organization_id')
     )
-    # Removed stray duplicate product_sku_history block (actual table defined earlier)
-
     op.create_table('recipe_consumable',
     sa.Column('id', sa.Integer(), nullable=False),
     sa.Column('recipe_id', sa.Integer(), nullable=False),
@@ -1505,7 +1449,6 @@ def downgrade():
                 DROP TABLE IF EXISTS batch_container CASCADE;
                 DROP TABLE IF EXISTS batch_consumable CASCADE;
                 DROP TABLE IF EXISTS retention_deletion_queue CASCADE;
-                DROP TABLE IF EXISTS product_sku_history CASCADE;
                 DROP TABLE IF EXISTS reservation CASCADE;
                 DROP TABLE IF EXISTS product_sku CASCADE;
                 DROP TABLE IF EXISTS inventory_history CASCADE;
@@ -1567,7 +1510,7 @@ def downgrade():
             'inventory_efficiency_stats', 'freshness_snapshot', 'extra_batch_ingredient',
             'extra_batch_container', 'extra_batch_consumable', 'batch_inventory_log',
             'batch_ingredient', 'batch_container', 'batch_consumable', 'retention_deletion_queue',
-            'product_sku_history', 'reservation', 'product_sku', 'inventory_history',
+            'reservation', 'product_sku', 'inventory_history',
             'batch_stats', 'user_role_assignment', 'role_permission', 'batch_timer',
             'batch', 'recipe', 'product_variant', 'global_item_alias', 'inventory_item',
             'global_item', 'user_stats', 'user_preferences', 'unit', 'tag', 'role',

@@ -8,6 +8,7 @@ import logging
 # Import necessary canonical functions
 # Use canonical inventory adjustment service
 from app.services.inventory_adjustment import process_inventory_adjustment
+from app.services.inventory_adjustment._fifo_ops import credit_specific_lot
 
 logger = logging.getLogger(__name__)
 
@@ -15,16 +16,19 @@ class ReservationService:
     """Service class for reservation operations"""
 
     @staticmethod
-    def _release_reservation_inventory(reservation, source_entry):
+    def _release_reservation_inventory(reservation):
         """Release inventory from reservation back to stock"""
         try:
-            return inv_adj.credit_specific_lot(
-                item_id=reservation.inventory_item_id,
-                fifo_entry_id=reservation.source_fifo_id,
-                qty=reservation.quantity,
-                unit=getattr(source_entry, "unit", None),
-                notes=f"Released reservation → credit back lot #{reservation.source_fifo_id}"
+            if not reservation.source_fifo_id:
+                return False
+
+            success, message = credit_specific_lot(
+                reservation.source_fifo_id,
+                reservation.quantity,
+                notes=f"Released reservation → credit back lot #{reservation.source_fifo_id}",
+                created_by=current_user.id if current_user.is_authenticated else None
             )
+            return success
         except Exception as e:
             logger.error(f"Failed to release reservation inventory: {e}")
             return False
@@ -43,7 +47,6 @@ class ReservationService:
         Create a new product reservation by deducting from specific FIFO lot
         This should only be called AFTER FIFO deduction has been calculated and executed
         """
-        from app.models.product import ProductSKUHistory
 
         product_item = InventoryItem.query.get(inventory_item_id)
         if not product_item or product_item.type != 'product':
@@ -84,7 +87,7 @@ class ReservationService:
         Release reservations by crediting back to original FIFO lots
         This is the ONLY method that should handle unreserved operations
         """
-        from app.models.product import ProductSKUHistory
+        from app.models.inventory_lot import InventoryLot
 
         # Find active reservations for this order
         reservations = Reservation.query.filter_by(
@@ -102,25 +105,17 @@ class ReservationService:
             if not reservation.product_item or reservation.product_item.type != 'product':
                 continue
 
-            # Find the original ProductSKUHistory entry to credit back to
-            source_entry = ProductSKUHistory.query.get(reservation.source_fifo_id)
-            if not source_entry:
-                print(f"Warning: Source FIFO entry {reservation.source_fifo_id} not found for reservation")
+            lot = InventoryLot.query.get(reservation.source_fifo_id) if reservation.source_fifo_id else None
+            if not lot:
+                logger.warning(f"Reservation {reservation.id} has no source lot; skipping credit")
                 continue
 
-            # Credit back using canonical service
-            inv_adj.process_inventory_adjustment(
-                item_id=reservation.inventory_item_id,
-                quantity=reservation.quantity,  # credit back
-                change_type="unreserved",
-                notes=f"Released reservation {reservation.id} (ref lot #{reservation.source_fifo_id})",
-                created_by=current_user.id if current_user.is_authenticated else None,
-                item_type="product"
-            )
-            print(f"Credited {reservation.quantity} back to lot {reservation.source_fifo_id}")
+            success = ReservationService._release_reservation_inventory(reservation)
+            if not success:
+                logger.warning(f"Failed to credit back lot {reservation.source_fifo_id} for reservation {reservation.id}")
+                continue
 
-            # Update inventory item quantity
-            reservation.product_item.quantity += reservation.quantity
+            print(f"Credited {reservation.quantity} back to lot {reservation.source_fifo_id}")
 
             # Update reserved item quantity
             reservation.reserved_item.quantity -= reservation.quantity
