@@ -33,6 +33,7 @@ def view_sku(inventory_item_id):
     total_quantity = sku.inventory_item.quantity if sku.inventory_item else 0
 
     return render_template('pages/products/view_sku.html',
+                         abs=abs,
                          sku=sku,
                          history=history,
                          total_quantity=total_quantity,
