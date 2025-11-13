@@ -55,6 +55,7 @@ class AnalyticsDataService:
         "system": 60,
         "waitlist": 60,
         "alerts": 30,
+        "faults": 60,
         "developer": 60,
     }
 
@@ -604,6 +605,36 @@ class AnalyticsDataService:
         )
         cls._store_cache(cache_key, alert_data)
         return alert_data
+
+    @classmethod
+    def get_fault_log_entries(
+        cls,
+        *,
+        organization_id: Optional[int] = None,
+        include_all: bool = False,
+        force_refresh: bool = False,
+    ) -> List[Dict[str, Any]]:
+        """Return cached fault log entries (optionally scoped to an organization)."""
+
+        base_key = cls._cache_key("faults:raw")
+        raw_entries = cls._get_cached(base_key, force_refresh)
+        if raw_entries is None:
+            raw_entries = read_json_file("faults.json", default=[]) or []
+            raw_entries.sort(key=lambda item: item.get("timestamp", ""), reverse=True)
+            cls._store_cache(base_key, raw_entries)
+
+        if include_all or organization_id is None:
+            return list(raw_entries)
+
+        scoped_key = cls._cache_key(f"faults:org:{organization_id}")
+        scoped_entries = cls._get_cached(scoped_key, force_refresh)
+        if scoped_entries is None:
+            scoped_entries = [
+                fault for fault in raw_entries
+                if fault.get("organization_id") == organization_id
+            ]
+            cls._store_cache(scoped_key, scoped_entries)
+        return list(scoped_entries)
 
     @classmethod
     def invalidate_cache(cls):
