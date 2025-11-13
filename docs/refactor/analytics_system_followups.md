@@ -1,8 +1,8 @@
 ## Analytics System Follow-Ups
 
 ### Current State
-- `AnalyticsDataService` now exposes global inventory dashboards, organization dashboards, and system-wide counts with shared caching and refresh overrides.
-- Developer inventory analytics, global item stats, organization dashboard, and developer system stats all read through the service, keeping results consistent and ready for future scaling.
+- `AnalyticsDataService` now exposes global inventory dashboards, organization dashboards, developer dashboards, waitlist analytics, and system-wide counts with shared caching and refresh overrides.
+- Developer inventory analytics, global item stats, organization dashboard, developer dashboard, and waitlist stats all read through the service, keeping results consistent and ready for future scaling.
 - Caching uses short TTLs (30–300 s) with manual refresh hooks to support real-time feel without hammering the primary database.
 
 ### Next Steps (App Side)

@@ -1962,51 +1962,16 @@ def delete_product_category(cat_id):
 @require_developer_permission('system_admin')
 def waitlist_statistics():
     """View waitlist statistics and data"""
-    from datetime import datetime
+    from app.services.statistics import AnalyticsDataService
 
-    waitlist_file = 'data/waitlist.json'
-    waitlist_data = read_json_file(waitlist_file, default=[]) or []
-
-    # Process data for display
-    processed_data = []
-    for entry in waitlist_data:
-        # Format timestamp
-        timestamp = entry.get('timestamp', '')
-        if timestamp:
-            try:
-                dt = datetime.fromisoformat(timestamp.replace('Z', '+00:00'))
-                formatted_date = dt.strftime('%Y-%m-%d %H:%M UTC')
-            except:
-                formatted_date = timestamp
-        else:
-            formatted_date = 'Unknown'
-
-        # Build full name
-        first_name = entry.get('first_name', '')
-        last_name = entry.get('last_name', '')
-        name = entry.get('name', '')  # Legacy field
-
-        if first_name or last_name:
-            full_name = f"{first_name} {last_name}".strip()
-        elif name:
-            full_name = name
-        else:
-            full_name = 'Not provided'
-
-        processed_data.append({
-            'email': entry.get('email', ''),
-            'full_name': full_name,
-            'business_type': entry.get('business_type', 'Not specified'),
-            'formatted_date': formatted_date,
-            'source': entry.get('source', 'Unknown')
-        })
-
-    # Sort by most recent first
-    processed_data.sort(key=lambda x: x.get('formatted_date', ''), reverse=True)
-
-    return render_template('developer/waitlist_statistics.html', 
-                         waitlist_data=processed_data,
-                         total_signups=len(waitlist_data))
+    force_refresh = (request.args.get('refresh') or '').lower() in ('1', 'true', 'yes')
+    stats = AnalyticsDataService.get_waitlist_statistics(force_refresh=force_refresh)
+    return render_template(
+        'developer/waitlist_statistics.html',
+        waitlist_data=stats.get('entries', []),
+        total_signups=stats.get('total', 0),
+        generated_at=stats.get('generated_at'),
+    )
 
 # Customer support filtering routes
 @developer_bp.route('/select-org/<int:org_id>')

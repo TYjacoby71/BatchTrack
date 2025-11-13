@@ -11,7 +11,7 @@ tables, warehouse sync) trivial to swap in.
 from __future__ import annotations
 
 import logging
-from datetime import timedelta
+from datetime import timedelta, datetime
 from typing import Any, Dict, List, Optional
 
 from sqlalchemy import func
@@ -52,6 +52,7 @@ class AnalyticsDataService:
         "cost_distribution": 180,
         "organization": 60,
         "system": 60,
+        "waitlist": 60,
         "developer": 60,
     }
 
@@ -520,6 +521,61 @@ class AnalyticsDataService:
                 "waitlist_count": 0,
                 "generated_at": None,
             }
+
+    @classmethod
+    def get_waitlist_statistics(cls, *, force_refresh: bool = False) -> Dict[str, Any]:
+        """Return processed waitlist entries for developer views."""
+
+        cache_key = cls._cache_key("waitlist:entries")
+        cached = cls._get_cached(cache_key, force_refresh)
+        if cached is not None:
+            return cached
+
+        waitlist_data = read_json_file("data/waitlist.json", default=[]) or []
+        processed: List[Dict[str, Any]] = []
+        for entry in waitlist_data:
+            timestamp = entry.get("timestamp")
+            formatted = "Unknown"
+            iso_value = None
+            if timestamp:
+                try:
+                    dt = datetime.fromisoformat(timestamp.replace("Z", "+00:00"))
+                    formatted = dt.strftime("%Y-%m-%d %H:%M UTC")
+                    iso_value = dt.isoformat()
+                except Exception:
+                    formatted = timestamp
+                    iso_value = timestamp
+
+            first_name = entry.get("first_name", "")
+            last_name = entry.get("last_name", "")
+            legacy_name = entry.get("name", "")
+            if first_name or last_name:
+                full_name = f"{first_name} {last_name}".strip()
+            elif legacy_name:
+                full_name = legacy_name
+            else:
+                full_name = "Not provided"
+
+            processed.append(
+                {
+                    "email": entry.get("email", ""),
+                    "full_name": full_name,
+                    "business_type": entry.get("business_type", "Not specified"),
+                    "formatted_date": formatted,
+                    "timestamp": iso_value,
+                    "source": entry.get("source", "Unknown"),
+                }
+            )
+
+        processed.sort(key=lambda item: item.get("timestamp") or "", reverse=True)
+
+        payload = {
+            "entries": processed,
+            "total": len(waitlist_data),
+            "generated_at": TimezoneUtils.utc_now().isoformat(),
+        }
+        cls._store_cache(cache_key, payload)
+        return payload
 
     @classmethod
     def invalidate_cache(cls):
