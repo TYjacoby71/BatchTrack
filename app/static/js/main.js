@@ -120,18 +120,62 @@ document.addEventListener('DOMContentLoaded', function() {
       ...select2Config,
       placeholder: 'Type ingredient name...',
       tags: true, // allow custom entries
-      ajax: {
-        url: '/api/ingredients/global-items/search',
-        dataType: 'json',
-        delay: 150,
-        data: function (params) {
-          return { q: params.term, type: 'ingredient' };
+        ajax: {
+          url: '/api/ingredients/global-items/search',
+          dataType: 'json',
+          delay: 150,
+          data: function (params) {
+            return { q: params.term, type: 'ingredient', group: 'ingredient' };
+          },
+          processResults: function (data) {
+            var expanded = [];
+            (data.results || []).forEach(function(item){
+              if (item && Array.isArray(item.forms) && item.forms.length){
+                var baseIngredientName = (item.ingredient && item.ingredient.name) || item.ingredient_name || null;
+                item.forms.forEach(function(form){
+                  var physical = form.physical_form || {};
+                  expanded.push({
+                    id: form.id,
+                    text: form.name || form.text,
+                    default_unit: form.default_unit || form.unit || item.default_unit || item.unit || null,
+                    unit: form.default_unit || form.unit || item.default_unit || item.unit || null,
+                    density: typeof form.density === 'number' ? form.density : item.density,
+                    ingredient_id: form.ingredient_id || (item.ingredient && item.ingredient.id) || item.ingredient_id || null,
+                    ingredient_name: form.ingredient_name || baseIngredientName,
+                    physical_form_id: physical.id || null,
+                    physical_form_name: physical.name || null,
+                    default_is_perishable: form.default_is_perishable,
+                    recommended_shelf_life_days: form.recommended_shelf_life_days,
+                    recommended_usage_rate: form.recommended_usage_rate || item.recommended_usage_rate,
+                    recommended_fragrance_load_pct: form.recommended_fragrance_load_pct || item.recommended_fragrance_load_pct,
+                    aliases: form.aliases || item.aliases || [],
+                    certifications: form.certifications || item.certifications || [],
+                  });
+                });
+              } else if (item) {
+                expanded.push({
+                  id: item.id,
+                  text: item.text || item.name,
+                    default_unit: item.default_unit || item.unit || null,
+                    unit: item.default_unit || item.unit || null,
+                  density: item.density,
+                  ingredient_id: (item.ingredient && item.ingredient.id) || item.ingredient_id || null,
+                  ingredient_name: (item.ingredient && item.ingredient.name) || item.ingredient_name || null,
+                  physical_form_id: (item.physical_form && item.physical_form.id) || null,
+                  physical_form_name: (item.physical_form && item.physical_form.name) || item.physical_form_name || null,
+                  default_is_perishable: item.default_is_perishable,
+                  recommended_shelf_life_days: item.recommended_shelf_life_days,
+                  recommended_usage_rate: item.recommended_usage_rate,
+                  recommended_fragrance_load_pct: item.recommended_fragrance_load_pct,
+                  aliases: item.aliases || [],
+                  certifications: item.certifications || [],
+                });
+              }
+            });
+            return { results: expanded };
+          },
+          cache: true
         },
-        processResults: function (data) {
-          return data;
-        },
-        cache: true
-      },
       minimumInputLength: 1,
       createTag: function (params) {
         const term = $.trim(params.term);

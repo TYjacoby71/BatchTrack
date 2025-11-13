@@ -377,8 +377,8 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 });
 
-// Ingredient name search functionality
-document.addEventListener('DOMContentLoaded', function() {
+  // Ingredient name search functionality
+  document.addEventListener('DOMContentLoaded', function() {
     const ingredientNameInput = document.getElementById('ingredientNameInput');
     const ingredientSuggestions = document.getElementById('ingredientSuggestions');
     const globalItemIdInput = document.getElementById('selectedGlobalItemId');
@@ -389,7 +389,47 @@ document.addEventListener('DOMContentLoaded', function() {
         return;
     }
 
-    ingredientNameInput.addEventListener('input', function() {
+      function expandGlobalItems(items) {
+          const expanded = [];
+          (items || []).forEach(item => {
+              if (item && Array.isArray(item.forms) && item.forms.length) {
+                  const baseIngredientName = (item.ingredient && item.ingredient.name) || item.ingredient_name || null;
+                  item.forms.forEach(form => {
+                      const physical = form.physical_form || {};
+                      expanded.push({
+                          type: 'global',
+                          id: form.id,
+                          name: form.name || form.text,
+                          default_unit: form.default_unit || form.unit || item.default_unit || null,
+                          density: typeof form.density === 'number' ? form.density : item.density,
+                          ingredient_id: form.ingredient_id || (item.ingredient && item.ingredient.id) || item.ingredient_id || null,
+                          ingredient_name: form.ingredient_name || baseIngredientName,
+                          physical_form_id: physical.id || null,
+                          physical_form_name: physical.name || null,
+                          aliases: form.aliases || item.aliases || [],
+                          certifications: form.certifications || item.certifications || [],
+                      });
+                  });
+              } else if (item) {
+                  expanded.push({
+                      type: 'global',
+                      id: item.id,
+                      name: item.text || item.name,
+                      default_unit: item.default_unit || item.unit || null,
+                      density: item.density,
+                      ingredient_id: (item.ingredient && item.ingredient.id) || item.ingredient_id || null,
+                      ingredient_name: (item.ingredient && item.ingredient.name) || item.ingredient_name || null,
+                      physical_form_id: (item.physical_form && item.physical_form.id) || null,
+                      physical_form_name: (item.physical_form && item.physical_form.name) || item.physical_form_name || null,
+                      aliases: item.aliases || [],
+                      certifications: item.certifications || [],
+                  });
+              }
+          });
+          return expanded;
+      }
+
+      ingredientNameInput.addEventListener('input', function() {
         const query = this.value.trim();
         if (query.length < 2) {
             ingredientSuggestions.style.display = 'none';
@@ -397,9 +437,9 @@ document.addEventListener('DOMContentLoaded', function() {
         }
 
         // Search both inventory items and global items
-        Promise.all([
-            fetch(`/api/ingredients/ingredients/search?q=${encodeURIComponent(query)}`).then(r => r.json()).catch(() => ({results: []})),
-            fetch(`/api/ingredients/global-items/search?q=${encodeURIComponent(query)}&type=ingredient`).then(r => r.json()).catch(() => ({results: []}))
+          Promise.all([
+              fetch(`/api/ingredients/ingredients/search?q=${encodeURIComponent(query)}`).then(r => r.json()).catch(() => ({results: []})),
+              fetch(`/api/ingredients/global-items/search?q=${encodeURIComponent(query)}&type=ingredient&group=ingredient`).then(r => r.json()).catch(() => ({results: []}))
         ]).then(([invResults, globalResults]) => {
             const suggestions = [];
 
@@ -418,28 +458,29 @@ document.addEventListener('DOMContentLoaded', function() {
             }
 
             // Add global results that aren't already in inventory
-              if (globalResults && globalResults.results) {
-                globalResults.results.forEach(item => {
-                  const alreadyExists = suggestions.some(s =>
-                    s.global_item_id === item.id ||
-                    s.name.toLowerCase() === item.text.toLowerCase()
-                  );
-                  if (!alreadyExists) {
-                    const ingredientName = item.ingredient && item.ingredient.name ? item.ingredient.name : '';
-                    const physicalFormName = item.physical_form && item.physical_form.name ? item.physical_form.name : '';
-                    suggestions.push({
-                      type: 'global',
-                      id: item.id,
-                      name: item.text,
-                      unit: item.default_unit || 'count',
-                      density: item.density || null,
-                      global_item_id: item.id,
-                      ingredient_name: ingredientName,
-                      physical_form_name: physicalFormName
-                    });
-                  }
-                });
-              }
+            if (globalResults && globalResults.results) {
+              const globalExpanded = expandGlobalItems(globalResults.results);
+              globalExpanded.forEach(item => {
+                const alreadyExists = suggestions.some(s =>
+                  s.global_item_id === item.id ||
+                  s.name.toLowerCase() === (item.name || '').toLowerCase()
+                );
+                if (!alreadyExists) {
+                  suggestions.push({
+                    type: 'global',
+                    id: item.id,
+                    name: item.name,
+                    unit: item.default_unit || 'count',
+                    density: item.density || null,
+                    global_item_id: item.id,
+                    ingredient_name: item.ingredient_name || '',
+                    ingredient_id: item.ingredient_id || '',
+                    physical_form_name: item.physical_form_name || '',
+                    physical_form_id: item.physical_form_id || ''
+                  });
+                }
+              });
+            }
 
             displaySuggestions(suggestions);
         }).catch(err => {
@@ -454,7 +495,10 @@ document.addEventListener('DOMContentLoaded', function() {
             return;
         }
 
-          const html = suggestions.map(item => `
+          const html = suggestions.map(item => {
+            const densityValue = item.density != null ? parseFloat(item.density) : NaN;
+            const densityDisplay = !isNaN(densityValue) ? ` • Density: ${densityValue.toFixed(3)} g/ml` : '';
+            return `
             <div class="suggestion-item p-2 border-bottom" style="cursor: pointer;"
                  data-type="${item.type}"
                  data-id="${item.id}"
@@ -462,18 +506,21 @@ document.addEventListener('DOMContentLoaded', function() {
                  data-unit="${item.unit}"
                  data-density="${item.density || ''}"
                  data-global-item-id="${item.global_item_id || ''}"
+                 data-ingredient-id="${item.ingredient_id || ''}"
                  data-ingredient-name="${item.ingredient_name || ''}"
-                 data-physical-form="${item.physical_form_name || ''}">
+                 data-physical-form="${item.physical_form_name || ''}"
+                 data-physical-form-id="${item.physical_form_id || ''}">
               <div class="fw-bold">${item.name}</div>
               <small class="text-muted">
                 ${item.type === 'inventory' ? 'In Inventory' : 'From Global Library'} • 
                 Unit: ${item.unit}
-                ${item.density ? ` • Density: ${item.density}` : ''}
+                ${densityDisplay}
                 ${item.ingredient_name ? ` • Ingredient: ${item.ingredient_name}` : ''}
                 ${item.physical_form_name ? ` • Form: ${item.physical_form_name}` : ''}
               </small>
             </div>
-          `).join('');
+          `;
+          }).join('');
 
         ingredientSuggestions.innerHTML = html;
         ingredientSuggestions.style.display = 'block';

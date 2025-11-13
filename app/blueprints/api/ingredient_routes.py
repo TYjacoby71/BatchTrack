@@ -1,3 +1,5 @@
+from collections import OrderedDict
+
 from flask import Blueprint, jsonify, request
 from flask_login import login_required, current_user
 from sqlalchemy import or_, func
@@ -180,28 +182,44 @@ def search_global_items():
     except Exception:
         items = query.filter(name_match).order_by(func.length(GlobalItem.name).asc()).limit(20).all()
 
+    group_mode = request.args.get('group') == 'ingredient' and (not item_type or item_type == 'ingredient')
+    grouped = OrderedDict() if group_mode else None
     results = []
+
     for gi in items:
         ingredient_obj = gi.ingredient if getattr(gi, 'ingredient', None) else None
+        ingredient_category_obj = ingredient_obj.category if ingredient_obj and getattr(ingredient_obj, 'category', None) else None
         physical_form_obj = gi.physical_form if getattr(gi, 'physical_form', None) else None
-        results.append({
-            'id': gi.id,
-            'text': gi.name,
-            'item_type': gi.item_type,
-            'ingredient': {
+        ingredient_payload = None
+        if ingredient_obj:
+            ingredient_payload = {
                 'id': ingredient_obj.id,
                 'name': ingredient_obj.name,
                 'slug': ingredient_obj.slug,
                 'inci_name': ingredient_obj.inci_name,
                 'cas_number': ingredient_obj.cas_number,
-            } if ingredient_obj else None,
-            'physical_form': {
+                'ingredient_category_id': ingredient_obj.ingredient_category_id,
+                'ingredient_category_name': ingredient_category_obj.name if ingredient_category_obj else None,
+            }
+        physical_form_payload = None
+        if physical_form_obj:
+            physical_form_payload = {
                 'id': physical_form_obj.id,
                 'name': physical_form_obj.name,
                 'slug': physical_form_obj.slug,
-            } if physical_form_obj else None,
-            'functions': [tag.name for tag in getattr(gi, 'functions', [])],
-            'applications': [tag.name for tag in getattr(gi, 'applications', [])],
+            }
+        function_names = [tag.name for tag in getattr(gi, 'functions', [])]
+        application_names = [tag.name for tag in getattr(gi, 'applications', [])]
+        ingredient_category_name = gi.ingredient_category.name if gi.ingredient_category else None
+
+        item_payload = {
+            'id': gi.id,
+            'text': gi.name,
+            'item_type': gi.item_type,
+            'ingredient': ingredient_payload,
+            'physical_form': physical_form_payload,
+            'functions': function_names,
+            'applications': application_names,
             'default_unit': gi.default_unit,
             'density': gi.density,
             'capacity': gi.capacity,
@@ -221,7 +239,65 @@ def search_global_items():
             'brewing_potential_sg': gi.brewing_potential_sg,
             'brewing_diastatic_power_lintner': gi.brewing_diastatic_power_lintner,
             'certifications': gi.certifications or [],
-        })
+            'ingredient_category_id': gi.ingredient_category_id,
+            'ingredient_category_name': ingredient_category_name,
+        }
+        results.append(item_payload)
+
+        if group_mode:
+            group_key = ingredient_payload['id'] if ingredient_payload else f"item-{gi.id}"
+            group_entry = grouped.get(group_key)
+            if not group_entry:
+                group_entry = {
+                    'id': ingredient_payload['id'] if ingredient_payload else gi.id,
+                    'ingredient_id': ingredient_payload['id'] if ingredient_payload else None,
+                    'text': ingredient_payload['name'] if ingredient_payload else gi.name,
+                    'item_type': gi.item_type,
+                    'ingredient': ingredient_payload,
+                    'ingredient_category_id': (ingredient_payload['ingredient_category_id']
+                                               if ingredient_payload else gi.ingredient_category_id),
+                    'ingredient_category_name': (ingredient_payload['ingredient_category_name']
+                                                 if ingredient_payload else ingredient_category_name),
+                    'forms': [],
+                }
+                grouped[group_key] = group_entry
+
+            group_entry['forms'].append({
+                'id': gi.id,
+                'name': gi.name,
+                'text': gi.name,
+                'item_type': gi.item_type,
+                'ingredient_id': ingredient_payload['id'] if ingredient_payload else None,
+                'ingredient_name': ingredient_payload['name'] if ingredient_payload else None,
+                'physical_form': physical_form_payload,
+                'default_unit': gi.default_unit,
+                'density': gi.density,
+                'default_is_perishable': gi.default_is_perishable,
+                'recommended_shelf_life_days': gi.recommended_shelf_life_days,
+                'recommended_usage_rate': gi.recommended_usage_rate,
+                'recommended_fragrance_load_pct': gi.recommended_fragrance_load_pct,
+                'aliases': gi.aliases or [],
+                'certifications': gi.certifications or [],
+                'functions': function_names,
+                'applications': application_names,
+                'inci_name': gi.inci_name,
+                'protein_content_pct': gi.protein_content_pct,
+                'brewing_color_srm': gi.brewing_color_srm,
+                'brewing_potential_sg': gi.brewing_potential_sg,
+                'brewing_diastatic_power_lintner': gi.brewing_diastatic_power_lintner,
+                'ingredient_category_id': gi.ingredient_category_id,
+                'ingredient_category_name': ingredient_category_name,
+                'saponification_value': getattr(gi, 'saponification_value', None),
+                'iodine_value': getattr(gi, 'iodine_value', None),
+                'melting_point_c': getattr(gi, 'melting_point_c', None),
+                'flash_point_c': getattr(gi, 'flash_point_c', None),
+                'moisture_content_percent': getattr(gi, 'moisture_content_percent', None),
+                'comedogenic_rating': getattr(gi, 'comedogenic_rating', None),
+                'ph_value': getattr(gi, 'ph_value', None),
+            })
+
+    if group_mode:
+        return jsonify({'results': list(grouped.values())})
 
     return jsonify({'results': results})
 

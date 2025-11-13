@@ -26,7 +26,7 @@
     return div;
   }
 
-  function renderSuggestions(listEl, groups, onPick){
+    function renderSuggestions(listEl, groups, onPick){
     listEl.innerHTML = '';
     var hasAny = false;
     groups.forEach(function(group){
@@ -41,7 +41,22 @@
         var a = document.createElement('a');
         a.href = '#';
         a.className = 'list-group-item list-group-item-action';
-        a.textContent = r.text;
+          var primaryLabel = r.text || '';
+          var metaBits = [];
+          if (r.ingredient_name && r.ingredient_name !== primaryLabel) {
+            metaBits.push(r.ingredient_name);
+          }
+          if (r.physical_form_name) {
+            metaBits.push(r.physical_form_name);
+          }
+          if (r.default_unit) {
+            metaBits.push('Unit: ' + r.default_unit);
+          }
+          if (typeof r.density === 'number') {
+            metaBits.push('Density: ' + r.density.toFixed(3) + ' g/ml');
+          }
+          a.innerHTML = '<div class="fw-semibold">' + primaryLabel + '</div>' +
+            (metaBits.length ? '<div class="small text-muted">' + metaBits.join(' • ') + '</div>' : '');
         a.addEventListener('click', function(e){
           e.preventDefault();
           onPick(r, group.source);
@@ -69,6 +84,51 @@
       inputEl.parentNode.appendChild(listEl);
     }
 
+      function expandGlobalItems(items){
+        var expanded = [];
+        (items || []).forEach(function(item){
+          if (item && Array.isArray(item.forms) && item.forms.length){
+            var baseIngredientName = (item.ingredient && item.ingredient.name) || item.ingredient_name || null;
+            item.forms.forEach(function(form){
+              var physical = form.physical_form || {};
+              expanded.push({
+                id: form.id,
+                text: form.name || form.text,
+                item_type: form.item_type || item.item_type,
+                default_unit: form.default_unit || form.unit || item.default_unit || item.unit || null,
+                density: typeof form.density === 'number' ? form.density : item.density,
+                ingredient_id: form.ingredient_id || (item.ingredient && item.ingredient.id) || item.ingredient_id || null,
+                ingredient_name: form.ingredient_name || baseIngredientName,
+                physical_form_id: physical.id || null,
+                physical_form_name: physical.name || null,
+                physical_form_slug: physical.slug || null,
+                aliases: form.aliases || item.aliases || [],
+                certifications: form.certifications || item.certifications || [],
+                default_is_perishable: form.default_is_perishable,
+                recommended_shelf_life_days: form.recommended_shelf_life_days,
+                recommended_usage_rate: form.recommended_usage_rate || item.recommended_usage_rate,
+                recommended_fragrance_load_pct: form.recommended_fragrance_load_pct || item.recommended_fragrance_load_pct,
+                functions: form.functions || item.functions || [],
+                applications: form.applications || item.applications || [],
+              });
+            });
+          } else if (item) {
+            var clone = Object.assign({}, item);
+            if (!clone.ingredient_name && item.ingredient && item.ingredient.name) {
+              clone.ingredient_name = item.ingredient.name;
+            }
+            if (!clone.physical_form_name && item.physical_form && item.physical_form.name) {
+              clone.physical_form_name = item.physical_form.name;
+            }
+            if (!clone.default_unit && item.unit) {
+              clone.default_unit = item.unit;
+            }
+            expanded.push(clone);
+          }
+        });
+        return expanded;
+      }
+
     var doSearch = debounce(function(){
       var q = (inputEl.value || '').trim();
       if (!q){
@@ -78,17 +138,17 @@
       }
       var invPromise;
       var giPromise;
-      if (context === 'public'){
+        if (context === 'public'){
         // Public context: no inventory; global-only public endpoint
         invPromise = Promise.resolve({ results: [] });
-        giPromise = fetch('/api/public/global-items/search?q=' + encodeURIComponent(q) + '&type=ingredient')
+          giPromise = fetch('/api/public/global-items/search?q=' + encodeURIComponent(q) + '&type=ingredient&group=ingredient')
           .then(function(r){ return r.json(); })
           .catch(function(){ return { results: [] }; });
       } else {
         invPromise = fetch('/api/ingredients/ingredients/search?q=' + encodeURIComponent(q))
           .then(function(r){ return r.json(); })
           .catch(function(){ return { results: [] }; });
-        giPromise = fetch('/api/ingredients/global-items/search?q=' + encodeURIComponent(q) + '&type=ingredient')
+          giPromise = fetch('/api/ingredients/global-items/search?q=' + encodeURIComponent(q) + '&type=ingredient&group=ingredient')
           .then(function(r){ return r.json(); })
           .catch(function(){ return { results: [] }; });
       }
@@ -97,7 +157,7 @@
         var inv = results[0] || {results: []};
         var gi = results[1] || {results: []};
         var invResults = inv.results || [];
-        var giResults = gi.results || [];
+          var giResults = expandGlobalItems(gi.results || []);
 
         // Build maps for dedupe
         var invByGlobalId = new Map();
