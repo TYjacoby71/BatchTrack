@@ -18,7 +18,42 @@
               <th style="white-space: nowrap;">Unit Cost</th>
               <th style="white-space: nowrap;">Total Value</th>
               <th style="white-space: nowrap;">Source</th>
-              <th style="white-space: nowrap;">FIFO Code</th>
+              <th style="white-space: nowrap;">FIFO Code
+                <i class="fas fa-info-circle text-muted ms-1"
+                   data-bs-toggle="popover"
+                   data-bs-placement="top"
+                   data-bs-trigger="click"
+                   data-bs-html="true"
+                   data-bs-content="
+                     <div class='fifo-prefix-guide'>
+                       <h6 class='mb-2'>FIFO ID Prefixes</h6>
+                       <div class='row'>
+                         <div class='col-6'>
+                           <strong>LOT</strong> - Inventory Lots<br>
+                           <strong>SLD</strong> - Sold<br>
+                           <strong>SHP</strong> - Shipped<br>
+                           <strong>SPL</strong> - Spoilage<br>
+                           <strong>TRS</strong> - Trash<br>
+                           <strong>DMG</strong> - Damaged<br>
+                           <strong>BCH</strong> - Batch<br>
+                           <strong>RCN</strong> - Recount
+                         </div>
+                         <div class='col-6'>
+                           <strong>REF</strong> - Refunded<br>
+                           <strong>RTN</strong> - Returned<br>
+                           <strong>CST</strong> - Cost Override<br>
+                           <strong>ADD</strong> - Manual Addition<br>
+                           <strong>TST</strong> - Tester<br>
+                           <strong>GFT</strong> - Gift<br>
+                           <strong>QFL</strong> - Quality Fail<br>
+                           <strong>Note:</strong> finished_batch shows batch label
+                         </div>
+                       </div>
+                     </div>"
+                   title="FIFO ID Reference"
+                   style="cursor: pointer;">
+                </i>
+              </th>
               <th style="white-space: nowrap;">Expiration</th>
               <th style="white-space: nowrap;">Customer</th>
               <th style="white-space: nowrap;">Order</th>
@@ -94,10 +129,12 @@
                     {% endif %}
                   </td>
                   <td style="white-space: nowrap;">
-                    {% if entry.fifo_code %}
-                      <span class="font-monospace">{{ entry.fifo_code }}</span>
-                    {% elif lot and lot.fifo_code %}
-                      <span class="font-monospace">{{ lot.fifo_code }}</span>
+                    {% set fifo_display = entry.fifo_code or (lot.fifo_code if lot else None) %}
+                    {% if fifo_display %}
+                      <a href="{{ url_for('inventory.view_inventory', id=sku.inventory_item_id) }}#entry-{{ entry.id }}"
+                         class="text-decoration-none font-monospace">
+                        {{ fifo_display }}
+                      </a>
                     {% else %}
                       <span class="text-muted">-</span>
                     {% endif %}
