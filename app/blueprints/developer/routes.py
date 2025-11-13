@@ -1102,192 +1102,438 @@ def calculate_category_density():
 @developer_bp.route('/global-items/create', methods=['GET', 'POST'])
 @login_required
 def create_global_item():
-    """Create a new global item"""
-    if request.method == 'POST':
-        try:
-            # Extract form data
-            name = request.form.get('name', '').strip()
-            item_type = request.form.get('item_type', 'ingredient')
-            default_unit = request.form.get('default_unit', '').strip() or None
-            # Get ingredient category id from form
-            ingredient_category_id_str = request.form.get('ingredient_category_id', '').strip() or None
+    """Create or update global items (developer-only)"""
+    from sqlalchemy import func
+    from app.models.category import IngredientCategory
+    from app.models.ingredient_reference import IngredientDefinition, PhysicalForm
 
-            # Validation
-            if not name:
-                flash('Name is required', 'error')
-                return redirect(url_for('developer.create_global_item'))
+    def _slugify(value: str | None) -> str | None:
+        if not value:
+            return None
+        import re
+        slug = re.sub(r'[^a-z0-9]+', '-', value.strip().lower())
+        slug = slug.strip('-')
+        return slug or None
 
-            # Validate ingredient_category_id
-            ingredient_category_id = None
-            if ingredient_category_id_str:
-                if ingredient_category_id_str.isdigit():
-                    # Verify the category exists and is a global ingredient category
-                    from app.models.category import IngredientCategory
-                    category = IngredientCategory.query.filter_by(
-                        id=int(ingredient_category_id_str),
-                        organization_id=None,  # Global categories are global
-                        is_global_category=True
-                    ).first()
-                    if category:
-                        ingredient_category_id = category.id
-                    else:
-                        flash(f'Ingredient category ID "{ingredient_category_id_str}" not found or is not a valid reference category.', 'error')
-                        return redirect(url_for('developer.create_global_item'))
-                else:
-                    flash(f'Invalid Ingredient Category ID format: "{ingredient_category_id_str}"', 'error')
-                    return redirect(url_for('developer.create_global_item'))
+    def _validate_category_id(category_id_str: str | None):
+        if not category_id_str:
+            return None
+        if not category_id_str.isdigit():
+            flash(f'Invalid Ingredient Category ID format: "{category_id_str}"', 'error')
+            return False
+        category = IngredientCategory.query.filter_by(
+            id=int(category_id_str),
+            organization_id=None,
+            is_global_category=True
+        ).first()
+        if not category:
+            flash(f'Ingredient category "{category_id_str}" not found or not a reference category.', 'error')
+            return False
+        return category.id
 
-            # Check for duplicate
-            existing = GlobalItem.query.filter_by(name=name, item_type=item_type).first()
-            if existing and not existing.is_archived:
-                flash(f'Global item "{name}" of type "{item_type}" already exists', 'error')
-                return redirect(url_for('developer.create_global_item'))
-
-            # Create new global item
-            new_item = GlobalItem(
-                name=name,
-                item_type=item_type,
-                default_unit=default_unit,
-                ingredient_category_id=ingredient_category_id
-            )
-
-            # Add optional fields
-            density = request.form.get('density')
-            if density:
-                try:
-                    new_item.density = float(density)
-                except ValueError:
-                    flash('Invalid density value', 'error')
-                    return redirect(url_for('developer.create_global_item'))
-
-            capacity = request.form.get('capacity')
-            if capacity:
-                try:
-                    new_item.capacity = float(capacity)
-                except ValueError:
-                    flash('Invalid capacity value', 'error')
-                    return redirect(url_for('developer.create_global_item'))
-
-            new_item.capacity_unit = request.form.get('capacity_unit', '').strip() or None
-            # Container attributes (optional)
-            try:
-                new_item.container_material = (request.form.get('container_material') or '').strip() or None
-                new_item.container_type = (request.form.get('container_type') or '').strip() or None
-                new_item.container_style = (request.form.get('container_style') or '').strip() or None
-                new_item.container_color = (request.form.get('container_color') or '').strip() or None
-            except Exception:
-                pass
-            new_item.default_is_perishable = request.form.get('default_is_perishable') == 'on'
-            new_item.is_active_ingredient = request.form.get('is_active_ingredient') == 'on'
-
-            shelf_life = request.form.get('recommended_shelf_life_days')
-            if shelf_life:
-                try:
-                    new_item.recommended_shelf_life_days = int(shelf_life)
-                except ValueError:
-                    flash('Invalid shelf life value', 'error')
-                    return redirect(url_for('developer.create_global_item'))
-
-            # Ingredient-specific metadata
-            new_item.recommended_usage_rate = request.form.get('recommended_usage_rate', '').strip() or None
-            new_item.recommended_fragrance_load_pct = request.form.get('recommended_fragrance_load_pct', '').strip() or None
-            new_item.inci_name = request.form.get('inci_name', '').strip() or None
-
-            protein_content = request.form.get('protein_content_pct', '').strip()
-            if protein_content:
-                try:
-                    new_item.protein_content_pct = float(protein_content)
-                except ValueError:
-                    flash('Invalid protein content percentage', 'error')
-                    return redirect(url_for('developer.create_global_item'))
-
-            brewing_color = request.form.get('brewing_color_srm', '').strip()
-            if brewing_color:
-                try:
-                    new_item.brewing_color_srm = float(brewing_color)
-                except ValueError:
-                    flash('Invalid brewing SRM value', 'error')
-                    return redirect(url_for('developer.create_global_item'))
-
-            brewing_potential = request.form.get('brewing_potential_sg', '').strip()
-            if brewing_potential:
-                try:
-                    new_item.brewing_potential_sg = float(brewing_potential)
-                except ValueError:
-                    flash('Invalid brewing potential SG value', 'error')
-                    return redirect(url_for('developer.create_global_item'))
-
-            brewing_dp = request.form.get('brewing_diastatic_power_lintner', '').strip()
-            if brewing_dp:
-                try:
-                    new_item.brewing_diastatic_power_lintner = float(brewing_dp)
-                except ValueError:
-                    flash('Invalid brewing diastatic power value', 'error')
-                    return redirect(url_for('developer.create_global_item'))
-
-            fatty_acid_profile_raw = request.form.get('fatty_acid_profile', '').strip()
-            if fatty_acid_profile_raw:
-                import json
-                try:
-                    new_item.fatty_acid_profile = json.loads(fatty_acid_profile_raw)
-                except json.JSONDecodeError:
-                    flash('Fatty acid profile must be valid JSON.', 'error')
-                    return redirect(url_for('developer.create_global_item'))
-
-            certifications_raw = request.form.get('certifications', '').strip()
-            if certifications_raw:
-                new_item.certifications = [c.strip() for c in certifications_raw.split(',') if c.strip()]
-
-            # Handle aliases (comma-separated)
-            aliases_raw = request.form.get('aliases', '').strip()
-            if aliases_raw:
-                new_item.aliases = [n.strip() for n in aliases_raw.split(',') if n.strip()]
-
-            db.session.add(new_item)
-            db.session.commit()
-
-            # Emit event
-            try:
-                from app.services.event_emitter import EventEmitter
-                from flask_login import current_user
-                # Resolve category name for telemetry
-                category_name = None
-                if ingredient_category_id:
-                    from app.models.category import IngredientCategory
-                    cat_obj = IngredientCategory.query.get(ingredient_category_id)
-                    category_name = cat_obj.name if cat_obj else None
-                EventEmitter.emit(
-                    event_name='global_item_created',
-                    properties={
-                        'name': name,
-                        'item_type': item_type,
-                        'ingredient_category': category_name
-                    },
-                    user_id=getattr(current_user, 'id', None),
-                    entity_type='global_item',
-                    entity_id=new_item.id
-                )
-            except Exception:
-                pass
-
-            flash(f'Global item "{name}" created successfully', 'success')
-            return redirect(url_for('developer.global_item_detail', item_id=new_item.id))
-
-        except Exception as e:
-            db.session.rollback()
-            flash(f'Error creating global item: {str(e)}', 'error')
+    def _handle_generic_post():
+        """Legacy path for non-ingredient global items (containers, packaging, consumables)."""
+        name = request.form.get('name', '').strip()
+        item_type = request.form.get('item_type', '').strip()
+        if item_type == 'ingredient':
+            flash('Use the ingredient workflow to create ingredient items.', 'error')
+            return redirect(url_for('developer.create_global_item'))
+        if not name:
+            flash('Name is required', 'error')
             return redirect(url_for('developer.create_global_item'))
 
-    # GET request - show form
-    # Get available global ingredient categories from IngredientCategory table
-    from app.models.category import IngredientCategory
+        default_unit = request.form.get('default_unit', '').strip() or None
+        ingredient_category_id = None
+        ingredient_category_id_str = request.form.get('ingredient_category_id', '').strip()
+        if ingredient_category_id_str:
+            category_id = _validate_category_id(ingredient_category_id_str)
+            if category_id is False:
+                return redirect(url_for('developer.create_global_item'))
+            ingredient_category_id = category_id
+
+        existing = GlobalItem.query.filter_by(name=name, item_type=item_type).first()
+        if existing and not existing.is_archived:
+            flash(f'Global item "{name}" of type "{item_type}" already exists', 'error')
+            return redirect(url_for('developer.create_global_item'))
+
+        new_item = GlobalItem(
+            name=name,
+            item_type=item_type,
+            default_unit=default_unit,
+            ingredient_category_id=ingredient_category_id
+        )
+
+        density = (request.form.get('density') or '').strip()
+        if density:
+            try:
+                new_item.density = float(density)
+            except ValueError:
+                flash('Invalid density value', 'error')
+                return redirect(url_for('developer.create_global_item'))
+
+        capacity = (request.form.get('capacity') or '').strip()
+        if capacity:
+            try:
+                new_item.capacity = float(capacity)
+            except ValueError:
+                flash('Invalid capacity value', 'error')
+                return redirect(url_for('developer.create_global_item'))
+
+        new_item.capacity_unit = (request.form.get('capacity_unit') or '').strip() or None
+        new_item.container_material = (request.form.get('container_material') or '').strip() or None
+        new_item.container_type = (request.form.get('container_type') or '').strip() or None
+        new_item.container_style = (request.form.get('container_style') or '').strip() or None
+        new_item.container_color = (request.form.get('container_color') or '').strip() or None
+        new_item.default_is_perishable = request.form.get('default_is_perishable') == 'on'
+
+        shelf_life = (request.form.get('recommended_shelf_life_days') or '').strip()
+        if shelf_life:
+            try:
+                new_item.recommended_shelf_life_days = int(shelf_life)
+            except ValueError:
+                flash('Invalid shelf life value', 'error')
+                return redirect(url_for('developer.create_global_item'))
+
+        new_item.recommended_usage_rate = (request.form.get('recommended_usage_rate') or '').strip() or None
+        new_item.recommended_fragrance_load_pct = (request.form.get('recommended_fragrance_load_pct') or '').strip() or None
+        new_item.inci_name = (request.form.get('inci_name') or '').strip() or None
+
+        protein_content = (request.form.get('protein_content_pct') or '').strip()
+        if protein_content:
+            try:
+                new_item.protein_content_pct = float(protein_content)
+            except ValueError:
+                flash('Invalid protein content percentage', 'error')
+                return redirect(url_for('developer.create_global_item'))
+
+        for field_name, attr in [
+            ('brewing_color_srm', 'brewing_color_srm'),
+            ('brewing_potential_sg', 'brewing_potential_sg'),
+            ('brewing_diastatic_power_lintner', 'brewing_diastatic_power_lintner'),
+        ]:
+            field_val = (request.form.get(field_name) or '').strip()
+            if field_val:
+                try:
+                    setattr(new_item, attr, float(field_val))
+                except ValueError:
+                    flash(f'Invalid value for {field_name.replace("_", " ")}', 'error')
+                    return redirect(url_for('developer.create_global_item'))
+
+        fatty_acid_profile_raw = (request.form.get('fatty_acid_profile') or '').strip()
+        if fatty_acid_profile_raw:
+            import json
+            try:
+                new_item.fatty_acid_profile = json.loads(fatty_acid_profile_raw)
+            except json.JSONDecodeError:
+                flash('Fatty acid profile must be valid JSON.', 'error')
+                return redirect(url_for('developer.create_global_item'))
+
+        certifications_raw = (request.form.get('certifications') or '').strip()
+        if certifications_raw:
+            new_item.certifications = [c.strip() for c in certifications_raw.split(',') if c.strip()]
+
+        aliases_raw = (request.form.get('aliases') or '').strip()
+        if aliases_raw:
+            new_item.aliases = [n.strip() for n in aliases_raw.split(',') if n.strip()]
+
+        db.session.add(new_item)
+        db.session.commit()
+
+        try:
+            from app.services.event_emitter import EventEmitter
+            from flask_login import current_user
+            category_name = None
+            if ingredient_category_id:
+                category_obj = IngredientCategory.query.get(ingredient_category_id)
+                category_name = category_obj.name if category_obj else None
+            EventEmitter.emit(
+                event_name='global_item_created',
+                properties={
+                    'name': name,
+                    'item_type': item_type,
+                    'ingredient_category': category_name
+                },
+                user_id=getattr(current_user, 'id', None),
+                entity_type='global_item',
+                entity_id=new_item.id
+            )
+        except Exception:
+            pass
+
+        flash(f'Global item "{name}" created successfully', 'success')
+        return redirect(url_for('developer.global_item_detail', item_id=new_item.id))
+
+    def _handle_ingredient_post():
+        """Two-layer ingredient workflow: ingredient definition + form-specific item."""
+        ingredient_mode = request.form.get('ingredient_mode', 'existing')
+        ingredient_category_id = None
+        category_id_str = (request.form.get('ingredient_category_id') or '').strip()
+        if category_id_str:
+            category_id = _validate_category_id(category_id_str)
+            if category_id is False:
+                return redirect(url_for('developer.create_global_item'))
+            ingredient_category_id = category_id
+
+        ingredient = None
+        if ingredient_mode == 'existing':
+            existing_ingredient_id = (request.form.get('existing_ingredient_id') or '').strip()
+            if not existing_ingredient_id or not existing_ingredient_id.isdigit():
+                flash('Select a valid ingredient before continuing.', 'error')
+                return redirect(url_for('developer.create_global_item'))
+            ingredient = IngredientDefinition.query.get(int(existing_ingredient_id))
+            if not ingredient:
+                flash('Selected ingredient could not be found.', 'error')
+                return redirect(url_for('developer.create_global_item'))
+            if ingredient_category_id and ingredient.ingredient_category_id != ingredient_category_id:
+                ingredient.ingredient_category_id = ingredient_category_id
+        else:
+            new_ingredient_name = (request.form.get('new_ingredient_name') or '').strip()
+            if not new_ingredient_name:
+                flash('Ingredient name is required.', 'error')
+                return redirect(url_for('developer.create_global_item'))
+            if IngredientDefinition.query.filter(func.lower(IngredientDefinition.name) == new_ingredient_name.lower()).first():
+                flash('An ingredient with that name already exists. Please select it from the list.', 'error')
+                return redirect(url_for('developer.create_global_item'))
+            slug_value = (request.form.get('new_ingredient_slug') or '').strip() or _slugify(new_ingredient_name)
+            if slug_value and IngredientDefinition.query.filter(IngredientDefinition.slug == slug_value).first():
+                flash('Ingredient slug already in use. Choose a different slug.', 'error')
+                return redirect(url_for('developer.create_global_item'))
+            if ingredient_category_id is None:
+                flash('Ingredient category is required for new ingredients.', 'error')
+                return redirect(url_for('developer.create_global_item'))
+
+            ingredient = IngredientDefinition(
+                name=new_ingredient_name,
+                slug=slug_value,
+                inci_name=(request.form.get('new_ingredient_inci') or '').strip() or None,
+                cas_number=(request.form.get('new_ingredient_cas') or '').strip() or None,
+                description=(request.form.get('new_ingredient_description') or '').strip() or None,
+                ingredient_category_id=ingredient_category_id,
+                is_active=True,
+            )
+            db.session.add(ingredient)
+            db.session.flush()
+
+        physical_form_mode = request.form.get('physical_form_mode', 'existing')
+        physical_form = None
+        if physical_form_mode == 'existing':
+            existing_physical_form_id = (request.form.get('existing_physical_form_id') or '').strip()
+            if not existing_physical_form_id or not existing_physical_form_id.isdigit():
+                flash('Select a valid physical form to continue.', 'error')
+                redirect_args = {'ingredient_id': ingredient.id} if ingredient else {}
+                return redirect(url_for('developer.create_global_item', **redirect_args))
+            physical_form = PhysicalForm.query.get(int(existing_physical_form_id))
+            if not physical_form:
+                flash('Selected physical form could not be found.', 'error')
+                redirect_args = {'ingredient_id': ingredient.id} if ingredient else {}
+                return redirect(url_for('developer.create_global_item', **redirect_args))
+        else:
+            new_physical_form_name = (request.form.get('new_physical_form_name') or '').strip()
+            if not new_physical_form_name:
+                flash('Physical form name is required.', 'error')
+                redirect_args = {'ingredient_id': ingredient.id} if ingredient else {}
+                return redirect(url_for('developer.create_global_item', **redirect_args))
+            existing_form = PhysicalForm.query.filter(func.lower(PhysicalForm.name) == new_physical_form_name.lower()).first()
+            if existing_form:
+                physical_form = existing_form
+            else:
+                slug_value = (request.form.get('new_physical_form_slug') or '').strip() or _slugify(new_physical_form_name)
+                physical_form = PhysicalForm(name=new_physical_form_name, slug=slug_value, is_active=True)
+                db.session.add(physical_form)
+                db.session.flush()
+
+        redirect_args = {}
+        if ingredient and ingredient.id:
+            redirect_args['ingredient_id'] = ingredient.id
+        if physical_form and physical_form.id:
+            redirect_args['physical_form_id'] = physical_form.id
+
+        item_name = (request.form.get('item_name') or '').strip()
+        if not item_name:
+            flash('Item name is required.', 'error')
+            return redirect(url_for('developer.create_global_item', **redirect_args))
+
+        existing_item_id = (request.form.get('existing_global_item_id') or '').strip()
+        global_item = None
+        if existing_item_id and existing_item_id.isdigit():
+            global_item = GlobalItem.query.get(int(existing_item_id))
+            if not global_item:
+                flash('Unable to load the selected item for editing.', 'error')
+                return redirect(url_for('developer.create_global_item', **redirect_args))
+        if not global_item:
+            global_item = GlobalItem.query.filter_by(
+                item_type='ingredient',
+                ingredient_id=ingredient.id,
+                physical_form_id=physical_form.id,
+                is_archived=False,
+            ).first()
+        creating_new = False
+        if not global_item:
+            global_item = GlobalItem(
+                name=item_name,
+                item_type='ingredient',
+                ingredient_id=ingredient.id,
+                physical_form_id=physical_form.id,
+            )
+            creating_new = True
+            db.session.add(global_item)
+
+        global_item.name = item_name
+        global_item.ingredient_id = ingredient.id
+        global_item.physical_form_id = physical_form.id
+        global_item.ingredient_category_id = ingredient.ingredient_category_id
+        global_item.default_unit = (request.form.get('item_default_unit') or '').strip() or None
+
+        density_value = (request.form.get('item_density') or '').strip()
+        if density_value:
+            try:
+                global_item.density = float(density_value)
+            except ValueError:
+                flash('Invalid density value.', 'error')
+                return redirect(url_for('developer.create_global_item', **redirect_args))
+        else:
+            global_item.density = None
+
+        global_item.default_is_perishable = request.form.get('item_default_is_perishable') == 'on'
+        global_item.is_active_ingredient = request.form.get('item_is_active_ingredient') == 'on'
+
+        shelf_life_value = (request.form.get('item_recommended_shelf_life_days') or '').strip()
+        if shelf_life_value:
+            try:
+                global_item.recommended_shelf_life_days = int(shelf_life_value)
+            except ValueError:
+                flash('Invalid shelf life value.', 'error')
+                return redirect(url_for('developer.create_global_item', **redirect_args))
+        else:
+            global_item.recommended_shelf_life_days = None
+
+        global_item.recommended_usage_rate = (request.form.get('item_recommended_usage_rate') or '').strip() or None
+        global_item.recommended_fragrance_load_pct = (request.form.get('item_recommended_fragrance_load_pct') or '').strip() or None
+
+        item_inci = (request.form.get('item_inci_name') or '').strip()
+        global_item.inci_name = item_inci or ingredient.inci_name
+
+        for field_name, attr in [
+            ('item_saponification_value', 'saponification_value'),
+            ('item_iodine_value', 'iodine_value'),
+            ('item_melting_point_c', 'melting_point_c'),
+            ('item_flash_point_c', 'flash_point_c'),
+            ('item_moisture_content_percent', 'moisture_content_percent'),
+            ('item_protein_content_pct', 'protein_content_pct'),
+            ('item_brewing_color_srm', 'brewing_color_srm'),
+            ('item_brewing_potential_sg', 'brewing_potential_sg'),
+            ('item_brewing_diastatic_power_lintner', 'brewing_diastatic_power_lintner'),
+        ]:
+            field_val = (request.form.get(field_name) or '').strip()
+            if field_val:
+                try:
+                    setattr(global_item, attr, float(field_val))
+                except ValueError:
+                    flash(f'Invalid value for {field_name.replace("_", " ")}.', 'error')
+                    return redirect(url_for('developer.create_global_item', **redirect_args))
+            else:
+                setattr(global_item, attr, None)
+
+        comedogenic_rating_value = (request.form.get('item_comedogenic_rating') or '').strip()
+        if comedogenic_rating_value:
+            try:
+                global_item.comedogenic_rating = int(comedogenic_rating_value)
+            except ValueError:
+                flash('Comedogenic rating must be an integer.', 'error')
+                return redirect(url_for('developer.create_global_item', **redirect_args))
+        else:
+            global_item.comedogenic_rating = None
+
+        global_item.ph_value = (request.form.get('item_ph_value') or '').strip() or None
+
+        fatty_acid_profile_raw = (request.form.get('item_fatty_acid_profile') or '').strip()
+        if fatty_acid_profile_raw:
+            import json
+            try:
+                global_item.fatty_acid_profile = json.loads(fatty_acid_profile_raw)
+            except json.JSONDecodeError:
+                flash('Fatty acid profile must be valid JSON.', 'error')
+                return redirect(url_for('developer.create_global_item', **redirect_args))
+        else:
+            global_item.fatty_acid_profile = None
+
+        certifications_raw = (request.form.get('item_certifications') or '').strip()
+        if certifications_raw:
+            global_item.certifications = [c.strip() for c in certifications_raw.split(',') if c.strip()]
+        else:
+            global_item.certifications = None
+
+        aliases_raw = (request.form.get('item_aliases') or '').strip()
+        if aliases_raw:
+            global_item.aliases = [alias.strip() for alias in aliases_raw.split(',') if alias.strip()]
+        else:
+            global_item.aliases = None
+
+        db.session.add(global_item)
+        db.session.commit()
+
+        message = 'created' if creating_new else 'updated'
+        flash(f'Global ingredient item "{global_item.name}" {message} successfully.', 'success')
+        return redirect(url_for('developer.global_item_detail', item_id=global_item.id))
+
+    if request.method == 'POST':
+        try:
+            form_variant = request.form.get('form_variant') or ('ingredient' if request.form.get('item_type') == 'ingredient' else 'generic')
+            if form_variant == 'generic':
+                return _handle_generic_post()
+            return _handle_ingredient_post()
+        except Exception as e:
+            db.session.rollback()
+            flash(f'Error saving global item: {str(e)}', 'error')
+            return redirect(url_for('developer.create_global_item'))
+
+    # GET request - assemble context for template
     global_ingredient_categories = IngredientCategory.query.filter_by(
-        organization_id=None, 
+        organization_id=None,
         is_active=True,
         is_global_category=True
     ).order_by(IngredientCategory.name).all()
 
-    return render_template('developer/create_global_item.html', global_ingredient_categories=global_ingredient_categories)
+    ingredient_definitions = IngredientDefinition.query.order_by(IngredientDefinition.name.asc()).all()
+    physical_forms = PhysicalForm.query.order_by(PhysicalForm.name.asc()).all()
+
+    selected_ingredient = None
+    selected_physical_form = None
+    existing_item = None
+    existing_items = []
+
+    selected_ingredient_id = request.args.get('ingredient_id', type=int)
+    selected_physical_form_id = request.args.get('physical_form_id', type=int)
+
+    if selected_ingredient_id:
+        selected_ingredient = IngredientDefinition.query.get(selected_ingredient_id)
+        if selected_ingredient:
+            existing_items = GlobalItem.query.filter_by(
+                item_type='ingredient',
+                ingredient_id=selected_ingredient.id,
+                is_archived=False,
+            ).order_by(GlobalItem.name.asc()).all()
+    if selected_physical_form_id:
+        selected_physical_form = PhysicalForm.query.get(selected_physical_form_id)
+
+    if selected_ingredient and selected_physical_form:
+        existing_item = GlobalItem.query.filter_by(
+            item_type='ingredient',
+            ingredient_id=selected_ingredient.id,
+            physical_form_id=selected_physical_form.id,
+            is_archived=False,
+        ).first()
+
+    return render_template(
+        'developer/create_global_item.html',
+        global_ingredient_categories=global_ingredient_categories,
+        ingredient_definitions=ingredient_definitions,
+        physical_forms=physical_forms,
+        selected_ingredient=selected_ingredient,
+        selected_physical_form=selected_physical_form,
+        existing_item=existing_item,
+        existing_items=existing_items,
+    )
 
 @developer_bp.route('/global-items/<int:item_id>/delete', methods=['POST'])
 @login_required

@@ -13,6 +13,9 @@ class IngredientDefinition(db.Model):
     inci_name = db.Column(db.String(256), nullable=True)
     cas_number = db.Column(db.String(64), nullable=True)
     description = db.Column(db.Text, nullable=True)
+    ingredient_category_id = db.Column(
+        db.Integer, db.ForeignKey('ingredient_category.id', ondelete='SET NULL'), nullable=True
+    )
     is_active = db.Column(db.Boolean, nullable=False, default=True)
     created_at = db.Column(db.DateTime, default=TimezoneUtils.utc_now, nullable=False)
     updated_at = db.Column(
@@ -21,6 +24,8 @@ class IngredientDefinition(db.Model):
         onupdate=TimezoneUtils.utc_now,
         nullable=False,
     )
+
+    category = db.relationship('IngredientCategory', backref='ingredient_definitions')
 
 
 class PhysicalForm(db.Model):

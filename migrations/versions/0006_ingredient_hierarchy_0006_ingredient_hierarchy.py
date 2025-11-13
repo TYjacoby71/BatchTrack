@@ -25,6 +25,7 @@ def upgrade():
         sa.Column('id', sa.Integer(), primary_key=True),
         sa.Column('name', sa.String(length=128), nullable=False),
         sa.Column('slug', sa.String(length=128), nullable=True, unique=True),
+        sa.Column('ingredient_category_id', sa.Integer(), sa.ForeignKey('ingredient_category.id', ondelete='SET NULL'), nullable=True),
         sa.Column('inci_name', sa.String(length=256), nullable=True),
         sa.Column('cas_number', sa.String(length=64), nullable=True),
         sa.Column('description', sa.Text(), nullable=True),
@@ -34,6 +35,7 @@ def upgrade():
     )
     op.create_index('ix_ingredient_name', 'ingredient', ['name'])
     op.create_index('ix_ingredient_slug', 'ingredient', ['slug'])
+    op.create_index('ix_ingredient_category_id', 'ingredient', ['ingredient_category_id'])
 
     op.create_table(
         'physical_form',
@@ -123,6 +125,7 @@ def upgrade():
         global_item_table.c.id,
         global_item_table.c.name,
         global_item_table.c.inci_name,
+        global_item_table.c.ingredient_category_id,
     ).where(global_item_table.c.item_type == 'ingredient').order_by(global_item_table.c.id)
 
     rows = list(bind.execute(select_stmt))
@@ -132,6 +135,7 @@ def upgrade():
             name=row.name,
             slug=slug_value,
             inci_name=row.inci_name,
+            ingredient_category_id=row.ingredient_category_id,
             is_active=True,
             created_at=now,
             updated_at=now,
@@ -169,6 +173,7 @@ def downgrade():
     op.drop_table('application_tag')
     op.drop_table('function_tag')
     op.drop_table('physical_form')
+    op.drop_index('ix_ingredient_category_id', table_name='ingredient')
     op.drop_index('ix_ingredient_slug', table_name='ingredient')
     op.drop_index('ix_ingredient_name', table_name='ingredient')
     op.drop_table('ingredient')

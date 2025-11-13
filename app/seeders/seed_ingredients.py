@@ -348,7 +348,6 @@ def seed_ingredients_from_files(selected_files):
                 global_item = GlobalItem(
                     name=name,
                     item_type='ingredient',
-                    ingredient_category_id=category.id,
                     aliases=item_data.get('aliases', []),
                     density=item_data.get('density', category_data.get('default_density')),
                     default_unit=item_data.get('default_unit', 'gram'),
@@ -379,6 +378,9 @@ def seed_ingredients_from_files(selected_files):
 
             global_item.ingredient_category_id = category.id
             if ingredient:
+                if getattr(ingredient, 'ingredient_category_id', None) != category.id:
+                    ingredient.ingredient_category_id = category.id
+                    db.session.add(ingredient)
                 global_item.ingredient = ingredient
             if physical_form:
                 global_item.physical_form = physical_form
