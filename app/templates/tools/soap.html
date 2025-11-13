@@ -138,18 +138,20 @@
           if (item && Array.isArray(item.forms) && item.forms.length){
             const ingredientName = (item.ingredient && item.ingredient.name) || '';
             item.forms.forEach(form=>{
+              const display = form.display_name || form.text || form.name || (ingredientName ? `${ingredientName} — ${form.name || form.text || ''}` : (form.name || form.text || ''));
               expanded.push({
                 id: form.id,
-                text: form.name || form.text,
-                display: ingredientName ? `${ingredientName} — ${form.name || form.text}` : (form.name || form.text),
+                text: form.text || form.name || display,
+                display: display,
                 saponification_value: form.saponification_value || item.saponification_value || null,
               });
             });
           } else if (item){
+            const display = item.display_name || item.text || item.name || '';
             expanded.push({
               id: item.id,
-              text: item.text || item.name,
-              display: item.text || item.name,
+              text: item.text || item.name || display,
+              display: display,
               saponification_value: item.saponification_value || null,
             });
           }

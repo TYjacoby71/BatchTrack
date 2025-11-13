@@ -84,47 +84,52 @@
       inputEl.parentNode.appendChild(listEl);
     }
 
-      function expandGlobalItems(items){
+    function expandGlobalItems(items){
         var expanded = [];
         (items || []).forEach(function(item){
-          if (item && Array.isArray(item.forms) && item.forms.length){
-            var baseIngredientName = (item.ingredient && item.ingredient.name) || item.ingredient_name || null;
-            item.forms.forEach(function(form){
-              var physical = form.physical_form || {};
+        if (item && Array.isArray(item.forms) && item.forms.length){
+          var baseIngredientName = (item.ingredient && item.ingredient.name) || item.ingredient_name || null;
+          item.forms.forEach(function(form){
+            var physical = form.physical_form || {};
+            var display = form.display_name || form.text || form.name || (baseIngredientName && (physical && physical.name) ? (baseIngredientName + ' (' + physical.name + ')') : (item.display_name || item.text || item.name || ''));
               expanded.push({
-                id: form.id,
-                text: form.name || form.text,
-                item_type: form.item_type || item.item_type,
-                default_unit: form.default_unit || form.unit || item.default_unit || item.unit || null,
-                density: typeof form.density === 'number' ? form.density : item.density,
-                ingredient_id: form.ingredient_id || (item.ingredient && item.ingredient.id) || item.ingredient_id || null,
-                ingredient_name: form.ingredient_name || baseIngredientName,
-                physical_form_id: physical.id || null,
-                physical_form_name: physical.name || null,
-                physical_form_slug: physical.slug || null,
-                aliases: form.aliases || item.aliases || [],
-                certifications: form.certifications || item.certifications || [],
-                default_is_perishable: form.default_is_perishable,
-                recommended_shelf_life_days: form.recommended_shelf_life_days,
-                recommended_usage_rate: form.recommended_usage_rate || item.recommended_usage_rate,
-                recommended_fragrance_load_pct: form.recommended_fragrance_load_pct || item.recommended_fragrance_load_pct,
-                functions: form.functions || item.functions || [],
-                applications: form.applications || item.applications || [],
-              });
+              id: form.id,
+              text: display,
+              item_type: form.item_type || item.item_type,
+              default_unit: form.default_unit || form.unit || item.default_unit || item.unit || null,
+              density: typeof form.density === 'number' ? form.density : item.density,
+                global_item_id: form.id,
+              ingredient_id: form.ingredient_id || (item.ingredient && item.ingredient.id) || item.ingredient_id || null,
+              ingredient_name: form.ingredient_name || baseIngredientName,
+              physical_form_id: form.physical_form_id || (physical && physical.id) || null,
+              physical_form_name: form.physical_form_name || (physical && physical.name) || null,
+              physical_form_slug: physical.slug || null,
+              aliases: form.aliases || item.aliases || [],
+              certifications: form.certifications || item.certifications || [],
+              default_is_perishable: form.default_is_perishable,
+              recommended_shelf_life_days: form.recommended_shelf_life_days,
+              recommended_usage_rate: form.recommended_usage_rate || item.recommended_usage_rate,
+              recommended_fragrance_load_pct: form.recommended_fragrance_load_pct || item.recommended_fragrance_load_pct,
+              functions: form.functions || item.functions || [],
+              applications: form.applications || item.applications || [],
             });
-          } else if (item) {
-            var clone = Object.assign({}, item);
-            if (!clone.ingredient_name && item.ingredient && item.ingredient.name) {
-              clone.ingredient_name = item.ingredient.name;
-            }
-            if (!clone.physical_form_name && item.physical_form && item.physical_form.name) {
-              clone.physical_form_name = item.physical_form.name;
-            }
-            if (!clone.default_unit && item.unit) {
-              clone.default_unit = item.unit;
-            }
-            expanded.push(clone);
+          });
+        } else if (item) {
+          var displayName = item.display_name || item.text || item.name || '';
+          var clone = Object.assign({}, item);
+          clone.text = displayName;
+          if (!clone.ingredient_name && item.ingredient && item.ingredient.name) {
+            clone.ingredient_name = item.ingredient.name;
           }
+          if (!clone.physical_form_name && item.physical_form && item.physical_form.name) {
+            clone.physical_form_name = item.physical_form.name;
+          }
+          if (!clone.default_unit && item.unit) {
+            clone.default_unit = item.unit;
+          }
+            clone.global_item_id = item.id;
+            expanded.push(clone);
+        }
         });
         return expanded;
       }

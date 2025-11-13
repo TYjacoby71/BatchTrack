@@ -392,39 +392,43 @@ document.addEventListener('DOMContentLoaded', function() {
       function expandGlobalItems(items) {
           const expanded = [];
           (items || []).forEach(item => {
-              if (item && Array.isArray(item.forms) && item.forms.length) {
-                  const baseIngredientName = (item.ingredient && item.ingredient.name) || item.ingredient_name || null;
-                  item.forms.forEach(form => {
-                      const physical = form.physical_form || {};
-                      expanded.push({
-                          type: 'global',
-                          id: form.id,
-                          name: form.name || form.text,
-                          default_unit: form.default_unit || form.unit || item.default_unit || null,
-                          density: typeof form.density === 'number' ? form.density : item.density,
-                          ingredient_id: form.ingredient_id || (item.ingredient && item.ingredient.id) || item.ingredient_id || null,
-                          ingredient_name: form.ingredient_name || baseIngredientName,
-                          physical_form_id: physical.id || null,
-                          physical_form_name: physical.name || null,
-                          aliases: form.aliases || item.aliases || [],
-                          certifications: form.certifications || item.certifications || [],
-                      });
-                  });
-              } else if (item) {
-                  expanded.push({
-                      type: 'global',
-                      id: item.id,
-                      name: item.text || item.name,
-                      default_unit: item.default_unit || item.unit || null,
-                      density: item.density,
-                      ingredient_id: (item.ingredient && item.ingredient.id) || item.ingredient_id || null,
-                      ingredient_name: (item.ingredient && item.ingredient.name) || item.ingredient_name || null,
-                      physical_form_id: (item.physical_form && item.physical_form.id) || null,
-                      physical_form_name: (item.physical_form && item.physical_form.name) || item.physical_form_name || null,
-                      aliases: item.aliases || [],
-                      certifications: item.certifications || [],
-                  });
-              }
+            if (item && Array.isArray(item.forms) && item.forms.length) {
+                const baseIngredientName = (item.ingredient && item.ingredient.name) || item.ingredient_name || null;
+                item.forms.forEach(form => {
+                    const physical = form.physical_form || {};
+                    const display = form.display_name || form.text || form.name || (baseIngredientName && (physical && physical.name) ? `${baseIngredientName} (${physical.name})` : (item.display_name || item.text || item.name || ''));
+                    expanded.push({
+                        type: 'global',
+                        id: form.id,
+                        name: display,
+                        unit: form.default_unit || form.unit || item.default_unit || item.unit || 'count',
+                        density: typeof form.density === 'number' ? form.density : item.density || null,
+                        global_item_id: form.id,
+                        ingredient_id: form.ingredient_id || (item.ingredient && item.ingredient.id) || item.ingredient_id || null,
+                        ingredient_name: form.ingredient_name || baseIngredientName || '',
+                        physical_form_id: form.physical_form_id || (physical && physical.id) || null,
+                        physical_form_name: form.physical_form_name || (physical && physical.name) || '',
+                        aliases: form.aliases || item.aliases || [],
+                        certifications: form.certifications || item.certifications || [],
+                    });
+                });
+            } else if (item) {
+                const display = item.display_name || item.text || item.name || '';
+                expanded.push({
+                    type: 'global',
+                    id: item.id,
+                    name: display,
+                    unit: item.default_unit || item.unit || 'count',
+                    density: item.density || null,
+                    global_item_id: item.id,
+                    ingredient_id: (item.ingredient && item.ingredient.id) || item.ingredient_id || null,
+                    ingredient_name: (item.ingredient && item.ingredient.name) || item.ingredient_name || null,
+                    physical_form_id: (item.physical_form && item.physical_form.id) || item.physical_form_id || null,
+                    physical_form_name: (item.physical_form && item.physical_form.name) || item.physical_form_name || null,
+                    aliases: item.aliases || [],
+                    certifications: item.certifications || [],
+                });
+            }
           });
           return expanded;
       }
@@ -459,20 +463,20 @@ document.addEventListener('DOMContentLoaded', function() {
 
             // Add global results that aren't already in inventory
             if (globalResults && globalResults.results) {
-              const globalExpanded = expandGlobalItems(globalResults.results);
+                const globalExpanded = expandGlobalItems(globalResults.results);
               globalExpanded.forEach(item => {
                 const alreadyExists = suggestions.some(s =>
-                  s.global_item_id === item.id ||
+                    (s.global_item_id && item.global_item_id && String(s.global_item_id) === String(item.global_item_id)) ||
                   s.name.toLowerCase() === (item.name || '').toLowerCase()
                 );
                 if (!alreadyExists) {
                   suggestions.push({
                     type: 'global',
-                    id: item.id,
+                      id: item.global_item_id || item.id,
                     name: item.name,
-                    unit: item.default_unit || 'count',
+                      unit: item.unit || item.default_unit || 'count',
                     density: item.density || null,
-                    global_item_id: item.id,
+                      global_item_id: item.global_item_id || item.id,
                     ingredient_name: item.ingredient_name || '',
                     ingredient_id: item.ingredient_id || '',
                     physical_form_name: item.physical_form_name || '',

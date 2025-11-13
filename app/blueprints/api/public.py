@@ -99,9 +99,18 @@ def public_global_item_search():
             function_names = [tag.name for tag in getattr(gi, 'functions', [])]
             application_names = [tag.name for tag in getattr(gi, 'applications', [])]
 
+            display_name = gi.name
+            if ingredient_payload and physical_form_payload:
+                display_name = f"{ingredient_payload['name']} ({physical_form_payload['name']})"
+            elif ingredient_payload:
+                display_name = ingredient_payload['name']
+
             item_payload = {
                 'id': gi.id,
-                'text': gi.name,
+                'name': display_name,
+                'text': display_name,
+                'display_name': display_name,
+                'raw_name': gi.name,
                 'item_type': gi.item_type,
                 'ingredient': ingredient_payload,
                 'physical_form': physical_form_payload,
@@ -122,6 +131,8 @@ def public_global_item_search():
                 'brewing_potential_sg': gi.brewing_potential_sg,
                 'brewing_diastatic_power_lintner': gi.brewing_diastatic_power_lintner,
                 'certifications': gi.certifications or [],
+                'ingredient_name': ingredient_payload['name'] if ingredient_payload else None,
+                'physical_form_name': physical_form_payload['name'] if physical_form_payload else None,
             }
             results.append(item_payload)
 
@@ -132,7 +143,9 @@ def public_global_item_search():
                     group_entry = {
                         'id': ingredient_payload['id'] if ingredient_payload else gi.id,
                         'ingredient_id': ingredient_payload['id'] if ingredient_payload else None,
-                        'text': ingredient_payload['name'] if ingredient_payload else gi.name,
+                        'name': ingredient_payload['name'] if ingredient_payload else display_name,
+                        'text': ingredient_payload['name'] if ingredient_payload else display_name,
+                        'display_name': ingredient_payload['name'] if ingredient_payload else display_name,
                         'item_type': gi.item_type,
                         'ingredient': ingredient_payload,
                         'ingredient_category_id': ingredient_payload['ingredient_category_id'] if ingredient_payload else None,
@@ -143,12 +156,15 @@ def public_global_item_search():
 
                 group_entry['forms'].append({
                     'id': gi.id,
-                    'name': gi.name,
-                    'text': gi.name,
+                    'name': display_name,
+                    'text': display_name,
+                    'display_name': display_name,
+                    'raw_name': gi.name,
                     'item_type': gi.item_type,
                     'ingredient_id': ingredient_payload['id'] if ingredient_payload else None,
                     'ingredient_name': ingredient_payload['name'] if ingredient_payload else None,
                     'physical_form': physical_form_payload,
+                    'physical_form_name': physical_form_payload['name'] if physical_form_payload else None,
                     'default_unit': gi.default_unit,
                     'unit': gi.default_unit,
                     'density': gi.density,

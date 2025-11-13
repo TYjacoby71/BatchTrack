@@ -212,9 +212,18 @@ def search_global_items():
         application_names = [tag.name for tag in getattr(gi, 'applications', [])]
         ingredient_category_name = gi.ingredient_category.name if gi.ingredient_category else None
 
+        display_name = gi.name
+        if ingredient_payload and physical_form_payload:
+            display_name = f"{ingredient_payload['name']} ({physical_form_payload['name']})"
+        elif ingredient_payload:
+            display_name = ingredient_payload['name']
+
         item_payload = {
             'id': gi.id,
-            'text': gi.name,
+            'name': display_name,
+            'text': display_name,
+            'display_name': display_name,
+            'raw_name': gi.name,
             'item_type': gi.item_type,
             'ingredient': ingredient_payload,
             'physical_form': physical_form_payload,
@@ -241,6 +250,15 @@ def search_global_items():
             'certifications': gi.certifications or [],
             'ingredient_category_id': gi.ingredient_category_id,
             'ingredient_category_name': ingredient_category_name,
+            'ingredient_name': ingredient_payload['name'] if ingredient_payload else None,
+            'physical_form_name': physical_form_payload['name'] if physical_form_payload else None,
+            'saponification_value': getattr(gi, 'saponification_value', None),
+            'iodine_value': getattr(gi, 'iodine_value', None),
+            'melting_point_c': getattr(gi, 'melting_point_c', None),
+            'flash_point_c': getattr(gi, 'flash_point_c', None),
+            'moisture_content_percent': getattr(gi, 'moisture_content_percent', None),
+            'comedogenic_rating': getattr(gi, 'comedogenic_rating', None),
+            'ph_value': getattr(gi, 'ph_value', None),
         }
         results.append(item_payload)
 
@@ -251,7 +269,9 @@ def search_global_items():
                 group_entry = {
                     'id': ingredient_payload['id'] if ingredient_payload else gi.id,
                     'ingredient_id': ingredient_payload['id'] if ingredient_payload else None,
-                    'text': ingredient_payload['name'] if ingredient_payload else gi.name,
+                    'name': ingredient_payload['name'] if ingredient_payload else display_name,
+                    'text': ingredient_payload['name'] if ingredient_payload else display_name,
+                    'display_name': ingredient_payload['name'] if ingredient_payload else display_name,
                     'item_type': gi.item_type,
                     'ingredient': ingredient_payload,
                     'ingredient_category_id': (ingredient_payload['ingredient_category_id']
@@ -264,12 +284,15 @@ def search_global_items():
 
             group_entry['forms'].append({
                 'id': gi.id,
-                'name': gi.name,
-                'text': gi.name,
+                'name': display_name,
+                'text': display_name,
+                'display_name': display_name,
+                'raw_name': gi.name,
                 'item_type': gi.item_type,
                 'ingredient_id': ingredient_payload['id'] if ingredient_payload else None,
                 'ingredient_name': ingredient_payload['name'] if ingredient_payload else None,
                 'physical_form': physical_form_payload,
+                'physical_form_name': physical_form_payload['name'] if physical_form_payload else None,
                 'default_unit': gi.default_unit,
                 'density': gi.density,
                 'default_is_perishable': gi.default_is_perishable,
