@@ -90,14 +90,20 @@
       </div>
 
       <!-- Sizes & Inventory -->
-      <div class="card mb-4" id="sizes">
-        <div class="card-header d-flex justify-content-between align-items-center">
-          <h3>Sizes & Inventory</h3>
-          <button type="button" class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#addManualStockModal">
-            <i class="fas fa-plus"></i> Add Manual Stock
-          </button>
-        </div>
-        <div class="card-body">
+        {% set unit_options = get_global_unit_list() %}
+        <div class="card mb-4" id="sizes">
+          <div class="card-header d-flex justify-content-between align-items-center">
+            <h3>Sizes & Inventory</h3>
+            <div class="d-flex gap-2">
+              <button type="button" class="btn btn-outline-primary btn-sm" data-bs-toggle="modal" data-bs-target="#createSkuModal">
+                <i class="fas fa-plus-circle"></i> Create SKU
+              </button>
+              <button type="button" class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#addManualStockModal">
+                <i class="fas fa-boxes"></i> Manage Stock
+              </button>
+            </div>
+          </div>
+          <div class="card-body">
           {% if size_groups %}
             <div class="table-responsive">
               <table class="table table-striped">
@@ -225,7 +231,51 @@
   </div>
 </div>
 
-<!-- Add Manual Stock Modal -->
+  <!-- Create SKU Modal -->
+  <div class="modal fade" id="createSkuModal" tabindex="-1">
+    <div class="modal-dialog">
+      <div class="modal-content">
+        <form method="POST" action="{{ url_for('product_variants.create_sku_for_variant', product_id=product.id, variant_name=variation.name) }}">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <div class="modal-header">
+            <h5 class="modal-title">Create SKU for {{ variation.name }}</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+          </div>
+          <div class="modal-body">
+            <div class="mb-3">
+              <label class="form-label" for="size_label">Size Label</label>
+              <input type="text" class="form-control" id="size_label" name="size_label" placeholder="e.g., 12 fl oz Bottle" required>
+            </div>
+            <div class="mb-3">
+              <label class="form-label" for="sku_unit">Unit</label>
+              <select class="form-select" id="sku_unit" name="unit" required>
+                <option value="" disabled selected>Select unit</option>
+                {% for unit in unit_options %}
+                  <option value="{{ unit['name'] }}">{{ unit['name'] }}</option>
+                {% endfor %}
+              </select>
+            </div>
+            <div class="mb-3">
+              <label class="form-label" for="low_stock_threshold">Low Stock Threshold (optional)</label>
+              <input type="number" min="0" step="0.01" class="form-control" id="low_stock_threshold" name="low_stock_threshold" placeholder="{{ product.low_stock_threshold or 0 }}">
+              <small class="text-muted">Defaults to the product threshold if left blank.</small>
+            </div>
+            <div class="alert alert-info">
+              The SKU will be created with zero inventory. Use “Manage Stock” or finish a batch to add quantity.
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+            <button type="submit" class="btn btn-primary">
+              <i class="fas fa-save"></i> Create SKU
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- Manage Stock Modal -->
 <div class="modal fade" id="addManualStockModal" tabindex="-1">
   <div class="modal-dialog">
     <div class="modal-content">
@@ -269,26 +319,33 @@ document.addEventListener('DOMContentLoaded', function() {
     });
   }
 
-    // Global functions
-    window.confirmDeleteVariant = function(productId, variantName) {
-        if (confirm(`Are you sure you want to delete variant "${variantName}"? This cannot be undone and will only work if there's no inventory.`)) {
-            const form = document.createElement('form');
-            form.method = 'POST';
-            form.action = `/products/${productId}/variant/${encodeURIComponent(variantName)}/delete`;
+  // Initialize popovers (for FIFO code legend)
+  if (typeof bootstrap !== 'undefined') {
+    document.querySelectorAll('[data-bs-toggle="popover"]').forEach(function(popoverEl) {
+      new bootstrap.Popover(popoverEl);
+    });
+  }
 
-            const csrfToken = document.querySelector('input[name="csrf_token"]');
-            if (csrfToken) {
-                const csrfInput = document.createElement('input');
-                csrfInput.type = 'hidden';
-                csrfInput.name = 'csrf_token';
-                csrfInput.value = csrfToken.value;
-                form.appendChild(csrfInput);
-            }
+  // Global functions
+  window.confirmDeleteVariant = function(productId, variantName) {
+    if (confirm(`Are you sure you want to delete variant "${variantName}"? This cannot be undone and will only work if there's no inventory.`)) {
+      const form = document.createElement('form');
+      form.method = 'POST';
+      form.action = `/products/${productId}/variant/${encodeURIComponent(variantName)}/delete`;
 
-            document.body.appendChild(form);
-            form.submit();
-        }
-    };
+      const csrfToken = document.querySelector('input[name="csrf_token"]');
+      if (csrfToken) {
+        const csrfInput = document.createElement('input');
+        csrfInput.type = 'hidden';
+        csrfInput.name = 'csrf_token';
+        csrfInput.value = csrfToken.value;
+        form.appendChild(csrfInput);
+      }
+
+      document.body.appendChild(form);
+      form.submit();
+    }
+  };
 });
 </script>
 {% endblock %}
