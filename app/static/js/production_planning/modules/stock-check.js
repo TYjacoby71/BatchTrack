@@ -21,8 +21,7 @@ export class StockCheckManager {
         logger.debug('Stock check button found:', !!stockCheckBtn);
 
         if (stockCheckBtn) {
-            stockCheckBtn.addEventListener('click', (e) => {
-                e.preventDefault();
+            stockCheckBtn.addEventListener('click', () => {
                 logger.debug('Button clicked!');
                 this.performStockCheck();
             });
@@ -30,15 +29,6 @@ export class StockCheckManager {
         } else {
             logger.error('Stock check button not found in DOM');
         }
-
-        // Verify DOM elements exist
-        const stockCheckResults = document.getElementById('stockCheckResults');
-        const stockCheckStatus = document.getElementById('stockCheckStatus');
-        logger.debug('DOM elements found:', {
-            button: !!stockCheckBtn,
-            results: !!stockCheckResults,
-            status: !!stockCheckStatus
-        });
     }
 
     async performStockCheck() {
