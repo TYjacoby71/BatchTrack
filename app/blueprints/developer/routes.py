@@ -2090,11 +2090,13 @@ def api_stats():
     force_refresh = (request.args.get('refresh') or '').lower() in ('1', 'true', 'yes')
     overview = AnalyticsDataService.get_system_overview(force_refresh=force_refresh)
 
+    tier_counts = overview.get('tiers') or {}
+
     stats = {
         'organizations': {
             'total': overview.get('total_organizations', 0),
             'active': overview.get('active_organizations', 0),
-            'by_tier': {}
+            'by_tier': tier_counts
         },
         'users': {
             'total': overview.get('total_users', 0),
@@ -2104,14 +2106,9 @@ def api_stats():
 
     # Subscription tier breakdown - get from SubscriptionTier model
     from app.models.subscription_tier import SubscriptionTier
+    # Ensure all known tiers appear even if zero (to maintain API contract)
     for tier in ['exempt', 'free', 'solo', 'team', 'enterprise']:
-        tier_record = SubscriptionTier.query.filter_by(key=tier).first()
-        if tier_record:
-            stats['organizations']['by_tier'][tier] = Organization.query.filter_by(
-                subscription_tier_id=tier_record.id
-            ).count()
-        else:
-            stats['organizations']['by_tier'][tier] = 0
+        stats['organizations']['by_tier'].setdefault(tier, 0)
 
     return jsonify(stats)
 

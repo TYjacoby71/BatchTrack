@@ -321,6 +321,12 @@ class AnalyticsCatalogService:
                     "scope": "organization",
                     "notes": "Churn cohort data powering retention drawers.",
                 },
+                  {
+                      "model": "AnalyticsDataService",
+                      "table": "statistics.analytics_service",
+                      "scope": "application_cache",
+                      "notes": "System dashboards aggregating user and workforce metrics.",
+                  },
             ],
             metrics=[
                 "Total / active users per organization",
@@ -380,6 +386,12 @@ class AnalyticsCatalogService:
                     "scope": "global",
                     "notes": "Monthly MRR, tier assignments and invoice status snapshots.",
                 },
+                  {
+                      "model": "AnalyticsDataService",
+                      "table": "statistics.analytics_service",
+                      "scope": "application_cache",
+                      "notes": "Developer and organization dashboards with cached KPIs.",
+                  },
             ],
             metrics=[
                 "Total / active organizations by tier",

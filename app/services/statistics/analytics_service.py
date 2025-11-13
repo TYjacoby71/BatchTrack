@@ -28,6 +28,7 @@ from ...models import (
     User,
 )
 from ...models.inventory_lot import InventoryLot
+from ...models.subscription_tier import SubscriptionTier
 from ...utils.timezone_utils import TimezoneUtils
 from .global_item_stats import GlobalItemStatsService
 from ._core import StatisticsService
@@ -422,6 +423,7 @@ class AnalyticsDataService:
             total_global_items = GlobalItem.query.filter_by(is_archived=False).count()
             total_permissions = Permission.query.count()
             total_roles = Role.query.count()
+            tier_counts = cls._get_subscription_tier_counts()
 
             payload = {
                 "total_organizations": total_organizations,
@@ -431,6 +433,7 @@ class AnalyticsDataService:
                 "total_global_items": total_global_items,
                 "total_permissions": total_permissions,
                 "total_roles": total_roles,
+                "tiers": tier_counts,
             }
             cls._store_cache(cache_key, payload)
             return payload
@@ -444,6 +447,7 @@ class AnalyticsDataService:
                 "total_global_items": 0,
                 "total_permissions": 0,
                 "total_roles": 0,
+                "tiers": {},
             }
 
     @classmethod
@@ -502,6 +506,38 @@ class AnalyticsDataService:
             cache.set(key, value, timeout=ttl)
         except Exception as exc:  # pragma: no cover - defensive
             logger.debug("Cache set failed for %s: %s", key, exc)
+
+    @classmethod
+    def _get_subscription_tier_counts(cls) -> Dict[str, int]:
+        """Return counts of organizations by subscription tier key."""
+
+        try:
+            rows = (
+                db.session.query(
+                    SubscriptionTier.key,
+                    func.count(Organization.id).label("org_count"),
+                )
+                .outerjoin(Organization, Organization.subscription_tier_id == SubscriptionTier.id)
+                .group_by(SubscriptionTier.id, SubscriptionTier.key)
+                .all()
+            )
+            # Include explicit keys even if zero to preserve known tiers
+            counts = {row.key: row.org_count for row in rows if row.key}
+
+            # Ensure standard tiers always present
+            for key in ["exempt", "free", "solo", "team", "enterprise"]:
+                counts.setdefault(key, 0)
+
+            # Count orgs without a mapped tier
+            unspecified = (
+                Organization.query.filter(Organization.subscription_tier_id.is_(None)).count()
+            )
+            if unspecified:
+                counts["unspecified"] = unspecified
+            return counts
+        except SQLAlchemyError as exc:  # pragma: no cover - defensive
+            logger.debug("Failed to compute subscription tier counts: %s", exc)
+            return {}
 
 
 __all__ = ["AnalyticsDataService"]
