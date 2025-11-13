@@ -606,6 +606,17 @@ def seed_test_data(organization_id: Optional[int] = None):
                     batch_id=batch.id,
                     defer_commit=True,
                 )
+                
+                # Create BatchIngredient record
+                batch_ingredient = BatchIngredient(
+                    batch_id=batch.id,
+                    inventory_item_id=honey_item.id,
+                    quantity_used=honey_required,
+                    unit=honey_item.unit,
+                    cost_per_unit=honey_item.cost_per_unit,
+                    organization_id=organization_id
+                )
+                db.session.add(batch_ingredient)
 
             # Milk consumption
             milk_assoc = ingredient_map.get(milk_item.id)
@@ -627,6 +638,17 @@ def seed_test_data(organization_id: Optional[int] = None):
                     batch_id=batch.id,
                     defer_commit=True,
                 )
+                
+                # Create BatchIngredient record
+                batch_ingredient = BatchIngredient(
+                    batch_id=batch.id,
+                    inventory_item_id=milk_item.id,
+                    quantity_used=milk_required,
+                    unit=milk_item.unit,
+                    cost_per_unit=milk_item.cost_per_unit,
+                    organization_id=organization_id
+                )
+                db.session.add(batch_ingredient)
 
             # Container consumption matches final output
             container_required = plan.get("final_quantity", 0) or 0
@@ -642,6 +664,18 @@ def seed_test_data(organization_id: Optional[int] = None):
                     batch_id=batch.id,
                     defer_commit=True,
                 )
+                
+                # Create BatchContainer record
+                batch_container = BatchContainer(
+                    batch_id=batch.id,
+                    container_id=container_item.id,
+                    container_quantity=int(container_required),
+                    quantity_used=int(container_required),
+                    fill_quantity=4.0,  # 4 fl oz per container
+                    fill_unit="floz",
+                    cost_each=container_item.cost_per_unit
+                )
+                db.session.add(batch_container)
 
             # Finished goods lot
             if plan.get("final_quantity"):
