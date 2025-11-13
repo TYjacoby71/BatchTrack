@@ -52,49 +52,38 @@ developer_bp.register_blueprint(addons_bp)
 @login_required
 def dashboard():
     """Main developer system dashboard"""
-    # System statistics
-    total_orgs = Organization.query.count()
-    active_orgs = Organization.query.filter_by(is_active=True).count()
-    total_users = User.query.filter(User.user_type != 'developer').count()
-    active_users = User.query.filter(
-        User.user_type != 'developer',
-        User.is_active == True
-    ).count()
+    from app.services.statistics import AnalyticsDataService
 
-    # Subscription tier breakdown - get from organization's subscription tiers
-    from app.models.subscription_tier import SubscriptionTier
-    subscription_stats = db.session.query(
-        SubscriptionTier.name,
-        func.count(Organization.id).label('count')
-    ).join(Organization, Organization.subscription_tier_id == SubscriptionTier.id).group_by(SubscriptionTier.name).all()
+    force_refresh = (request.args.get('refresh') or '').lower() in ('1', 'true', 'yes')
+    dashboard_data = AnalyticsDataService.get_developer_dashboard(force_refresh=force_refresh)
+    overview = dashboard_data.get('overview') or {}
+    tier_breakdown = overview.get('tiers') or {}
+    recent_orgs = dashboard_data.get('recent_organizations') or []
+    problem_orgs = dashboard_data.get('attention_organizations') or []
+    waitlist_count = dashboard_data.get('waitlist_count', 0)
 
-    # Recent organizations (last 30 days)
-    thirty_days_ago = datetime.now(timezone.utc) - timedelta(days=30)
-    recent_orgs = Organization.query.filter(
-        Organization.created_at >= thirty_days_ago
-    ).order_by(Organization.created_at.desc()).limit(10).all()
+    generated_iso = dashboard_data.get('generated_at')
+    generated_display = None
+    if generated_iso:
+        try:
+            generated_dt = datetime.fromisoformat(generated_iso)
+            generated_display = generated_dt.strftime('%Y-%m-%d %H:%M UTC')
+        except ValueError:
+            generated_display = generated_iso
 
-    # Organizations needing attention (no active users, overdue payments, etc.)
-    problem_orgs = Organization.query.filter(
-        Organization.is_active == True
-    ).all()
-
-    # Filter for orgs with no active users
-    problem_orgs = [org for org in problem_orgs if org.active_users_count == 0]
-
-    # Get waitlist count
-    waitlist_data = read_json_file('data/waitlist.json', default=[]) or []
-    waitlist_count = len(waitlist_data)
-
-    return render_template('developer/dashboard.html',
-                         total_orgs=total_orgs,
-                         active_orgs=active_orgs,
-                         total_users=total_users,
-                         active_users=active_users,
-                         subscription_stats=subscription_stats,
-                         recent_orgs=recent_orgs,
-                         problem_orgs=problem_orgs,
-                         waitlist_count=waitlist_count)
+    return render_template(
+        'developer/dashboard.html',
+        total_orgs=overview.get('total_organizations', 0),
+        active_orgs=overview.get('active_organizations', 0),
+        total_users=overview.get('total_users', 0),
+        active_users=overview.get('active_users', 0),
+        tier_breakdown=tier_breakdown,
+        recent_orgs=recent_orgs,
+        problem_orgs=problem_orgs,
+        waitlist_count=waitlist_count,
+        dashboard_generated_at=generated_display,
+        force_refresh=force_refresh,
+    )
 
 @developer_bp.route('/marketing-admin')
 @login_required

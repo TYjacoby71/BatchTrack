@@ -30,6 +30,7 @@ from ...models import (
 from ...models.inventory_lot import InventoryLot
 from ...models.subscription_tier import SubscriptionTier
 from ...utils.timezone_utils import TimezoneUtils
+from ...utils.json_store import read_json_file
 from .global_item_stats import GlobalItemStatsService
 from ._core import StatisticsService
 
@@ -51,6 +52,7 @@ class AnalyticsDataService:
         "cost_distribution": 180,
         "organization": 60,
         "system": 60,
+        "developer": 60,
     }
 
     # --------------------------------------------------------------------- #
@@ -448,6 +450,75 @@ class AnalyticsDataService:
                 "total_permissions": 0,
                 "total_roles": 0,
                 "tiers": {},
+            }
+
+    @classmethod
+    def get_developer_dashboard(cls, *, force_refresh: bool = False) -> Dict[str, Any]:
+        """Aggregate data for the developer dashboard."""
+
+        cache_key = cls._cache_key("developer:dashboard")
+        cached = cls._get_cached(cache_key, force_refresh)
+        if cached is not None:
+            return cached
+
+        try:
+            now = TimezoneUtils.utc_now()
+            overview = cls.get_system_overview(force_refresh=force_refresh)
+
+            thirty_days_ago = now - timedelta(days=30)
+            recent_org_rows = (
+                Organization.query.filter(Organization.created_at >= thirty_days_ago)
+                .order_by(Organization.created_at.desc())
+                .limit(10)
+                .all()
+            )
+            recent_orgs = [
+                {
+                    "id": org.id,
+                    "name": org.name,
+                    "subscription_tier": getattr(org.subscription_tier, "name", None),
+                    "created_at": org.created_at.isoformat() if org.created_at else None,
+                    "created_at_display": org.created_at.strftime("%m/%d")
+                    if org.created_at
+                    else None,
+                }
+                for org in recent_org_rows
+            ]
+
+            attention_orgs = []
+            active_orgs = Organization.query.filter(Organization.is_active.is_(True)).all()
+            for org in active_orgs:
+                active_users_count = getattr(org, "active_users_count", 0)
+                if active_users_count == 0:
+                    attention_orgs.append(
+                        {
+                            "id": org.id,
+                            "name": org.name,
+                            "subscription_tier": getattr(org.subscription_tier, "name", None),
+                            "reason": "no_active_users",
+                        }
+                    )
+
+            waitlist_entries = read_json_file("data/waitlist.json", default=[]) or []
+            waitlist_count = len(waitlist_entries)
+
+            payload = {
+                "overview": overview,
+                "recent_organizations": recent_orgs,
+                "attention_organizations": attention_orgs,
+                "waitlist_count": waitlist_count,
+                "generated_at": now.isoformat(),
+            }
+            cls._store_cache(cache_key, payload)
+            return payload
+        except Exception as exc:  # pragma: no cover - defensive
+            logger.error("Failed to build developer dashboard analytics: %s", exc, exc_info=True)
+            return {
+                "overview": {},
+                "recent_organizations": [],
+                "attention_organizations": [],
+                "waitlist_count": 0,
+                "generated_at": None,
             }
 
     @classmethod

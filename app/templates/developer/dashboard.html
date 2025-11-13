@@ -17,8 +17,15 @@
                             </h2>
                             <p class="text-muted mb-0">System administration and business operations</p>
                         </div>
-                        <div>
-                            <a href="{{ url_for('developer.organizations') }}" class="btn btn-outline-primary me-2">
+                          <div class="text-end">
+                              {% if dashboard_generated_at %}
+                              <div class="mb-2">
+                                  <span class="badge bg-light text-muted">
+                                      Last updated {{ dashboard_generated_at }}
+                                  </span>
+                              </div>
+                              {% endif %}
+                              <a href="{{ url_for('developer.organizations') }}" class="btn btn-outline-primary me-2">
                                 <i class="fas fa-filter"></i> Customer Support
                             </a>
                             <a href="{{ url_for('developer.system_settings') }}" class="btn btn-outline-primary me-2">
@@ -83,7 +90,7 @@
         <div class="col-12">
             <div class="card border-success">
                 <div class="card-body text-center">
-                    <div class="d-flex justify-content-between align-items-center">
+                      <div class="d-flex justify-content-between align-items-center flex-wrap gap-3">
                         <div>
                             <i class="fas fa-envelope fa-2x text-success"></i>
                         </div>
@@ -95,12 +102,38 @@
                             <p class="text-muted mb-0">Ready for beta access when we launch</p>
                         </div>
                         <div>
-                            <a href="{{ url_for('developer.waitlist_statistics') }}" class="btn btn-success">
+                              <a href="{{ url_for('developer.waitlist_statistics') }}" class="btn btn-success btn-sm">
                                 <i class="fas fa-chart-bar"></i> View Details
                             </a>
                         </div>
                     </div>
                 </div>
+      {% if tier_breakdown %}
+      <div class="row mb-4">
+          <div class="col-12">
+              <div class="card">
+                  <div class="card-header">
+                      <h6 class="mb-0">
+                          <i class="fas fa-layer-group"></i> Subscription Tier Breakdown
+                      </h6>
+                  </div>
+                  <div class="card-body">
+                      <div class="row">
+                          {% for tier, count in tier_breakdown.items() %}
+                          <div class="col-sm-6 col-md-3 col-lg-2 mb-3 text-center">
+                              <div class="border rounded py-3">
+                                  <span class="badge bg-secondary text-uppercase mb-2">{{ tier }}</span>
+                                  <div class="fs-4 fw-semibold">{{ count }}</div>
+                              </div>
+                          </div>
+                          {% endfor %}
+                      </div>
+                  </div>
+              </div>
+          </div>
+      </div>
+      {% endif %}
+
             </div>
         </div>
     </div>
@@ -242,18 +275,18 @@
                     </h6>
                 </div>
                 <div class="card-body">
-                    {% if recent_orgs %}
+                      {% if recent_orgs %}
                     <div class="list-group list-group-flush">
                         {% for org in recent_orgs %}
                         <div class="list-group-item d-flex justify-content-between align-items-center">
                             <div>
                                 <strong>{{ org.name }}</strong>
-                                <small class="text-muted d-block">{{ org.subscription_tier|title }}</small>
+                                  <small class="text-muted d-block">{{ org.subscription_tier or 'Unassigned' }}</small>
                             </div>
                             <div class="text-end">
-                                <small class="text-muted">{{ org.created_at.strftime('%m/%d') }}</small>
+                                  <small class="text-muted">{{ org.created_at_display or '—' }}</small>
                                 <br>
-                                <a href="{{ url_for('developer.organization_detail', org_id=org.id) }}" 
+                                  <a href="{{ url_for('developer.organization_detail', org_id=org.id) }}"
                                    class="btn btn-sm btn-outline-primary">View</a>
                             </div>
                         </div>
@@ -281,10 +314,16 @@
                         <div class="list-group-item d-flex justify-content-between align-items-center">
                             <div>
                                 <strong>{{ org.name }}</strong>
-                                <small class="text-warning d-block">No active users</small>
+                                  <small class="text-warning d-block">
+                                      {% if org.reason == 'no_active_users' %}
+                                          No active users
+                                      {% else %}
+                                          Needs review
+                                      {% endif %}
+                                  </small>
                             </div>
                             <div>
-                                <a href="{{ url_for('developer.organization_detail', org_id=org.id) }}" 
+                                  <a href="{{ url_for('developer.organization_detail', org_id=org.id) }}"
                                    class="btn btn-sm btn-warning">Review</a>
                             </div>
                         </div>
