@@ -93,11 +93,6 @@
                         🔧 Tools
                     </a>
                 </li>
-                <li class="nav-item">
-                    <a class="nav-link" href="{{ url_for('global_library_bp.global_library') }}">
-                        📚 Global Library
-                    </a>
-                </li>
             </ul>
             <div class="dropdown me-2">
                 <button class="btn btn-light dropdown-toggle" type="button" id="customerDropdown" data-bs-toggle="dropdown" aria-expanded="false">
@@ -287,11 +282,6 @@
                     </a>
                 </li>
                 <li class="nav-item">
-                    <a class="nav-link" href="{{ url_for('global_library_bp.global_library') }}">
-                        📚 Global Library
-                    </a>
-                </li>
-                <li class="nav-item">
                     <div class="navbar-text">
                         <span id="header-clock" class="text-muted">🕐 Loading...</span>
                     </div>
@@ -368,16 +358,6 @@
             </div>
             {% endif %}
 
-            {% else %}
-            <!-- Navigation for Unauthenticated Users -->
-            <ul class="navbar-nav mx-auto">
-                <li class="nav-item">
-                    <a class="nav-link" href="{{ url_for('auth.login') }}">Login</a>
-                </li>
-                <li class="nav-item">
-                    <a class="nav-link" href="{{ url_for('auth.signup') }}">Sign Up</a>
-                </li>
-            </ul>
             {% endif %}
         </div>
     </nav>

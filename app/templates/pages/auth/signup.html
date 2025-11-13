@@ -1,4 +1,8 @@
+
 {% extends 'layout.html' %}
+
+{% block title %}Choose Your Plan - BatchTrack{% endblock %}
+
 {% block content %}
 <div class="py-4">
     <div class="row justify-content-center">
@@ -23,7 +27,7 @@
                     <div class="row" id="tierSelection">
                         {% for tier_key, tier_data in available_tiers.items() %}
                         <div class="col-lg-4 col-md-6 mb-4">
-                            <div class="card tier-card h-100 border-2"
+                            <div class="card tier-card h-100 border-2" 
                                  data-tier="{{ tier_key }}"
                                  style="cursor: pointer; transition: all 0.3s; position: relative;"
                                  onclick="selectTier('{{ tier_key }}')"
@@ -35,7 +39,7 @@
                                     <div class="h1 text-primary mb-3">
                                         {{ tier_data.price_display }}
                                     </div>
-
+                                    
                                     <div class="text-muted mb-4">
                                         {% if tier_data.user_limit == -1 %}
                                             <strong>Unlimited users</strong>
@@ -57,7 +61,7 @@
                                         {% endif %}
                                     </ul>
                                 </div>
-
+                                
                                 <div class="card-footer bg-transparent text-center">
                                     <div class="tier-selection-indicator">
                                         <i class="fas fa-check-circle text-success fs-4" style="display: none;"></i>
@@ -86,7 +90,7 @@
                                         <p class="text-muted mb-4" id="selectedTierText">
                                             You've selected the <strong>Team Plan</strong>. Click continue to proceed with payment.
                                         </p>
-
+                                        
                                         <div class="d-flex gap-3 justify-content-center">
                         <a href="{{ url_for('auth.login') }}" class="btn btn-outline-secondary">
                                                 <i class="fas fa-arrow-left me-2"></i>Back to Login
@@ -112,7 +116,7 @@ let availableTiers = {{ available_tiers|tojson }};
 
 function selectTier(tierKey) {
     selectedTier = tierKey;
-
+    
     // Update visual selection
     document.querySelectorAll('.tier-card').forEach(card => {
         const isSelected = card.dataset.tier === tierKey;
@@ -161,26 +165,26 @@ function proceedToPayment() {
         alert('Please select a plan first.');
         return;
     }
-
+    
     // Create a form to submit the tier selection
     const form = document.createElement('form');
     form.method = 'POST';
     form.action = '{{ url_for("auth.signup") }}';
-
+    
     // Add CSRF token
     const csrfInput = document.createElement('input');
     csrfInput.type = 'hidden';
     csrfInput.name = 'csrf_token';
     csrfInput.value = '{{ csrf_token() }}';
     form.appendChild(csrfInput);
-
+    
     // Add selected tier
     const tierInput = document.createElement('input');
     tierInput.type = 'hidden';
     tierInput.name = 'selected_tier';
     tierInput.value = selectedTier;
     form.appendChild(tierInput);
-
+    
     // Auto-detect and add user's timezone
     try {
         const detectedTimezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
@@ -193,7 +197,7 @@ function proceedToPayment() {
     } catch (e) {
         console.warn('Could not detect timezone:', e);
     }
-
+    
     // Add OAuth info if present
     {% if oauth_user_info %}
     const oauthInput = document.createElement('input');
@@ -202,7 +206,7 @@ function proceedToPayment() {
     oauthInput.value = 'true';
     form.appendChild(oauthInput);
     {% endif %}
-
+    
     document.body.appendChild(form);
     form.submit();
 }
@@ -219,18 +223,18 @@ document.addEventListener('DOMContentLoaded', function() {
 </script>
 
 <style>
-        .tier-card {
-            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-        }
+.tier-card {
+    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+}
 
-        .tier-card.selected {
-            transform: translateY(-8px);
-            box-shadow: 0 8px 25px rgba(0,0,0,0.15);
-        }
+.tier-card.selected {
+    transform: translateY(-8px);
+    box-shadow: 0 8px 25px rgba(0,0,0,0.15);
+}
 
-        .tier-card:hover {
-            transform: translateY(-8px);
-            box-shadow: 0 8px 25px rgba(0,0,0,0.15);
-        }
+.tier-card:hover {
+    transform: translateY(-8px);
+    box-shadow: 0 8px 25px rgba(0,0,0,0.15);
+}
 </style>
 {% endblock %}
