@@ -36,6 +36,9 @@ class PlanProductionApp {
 
         // Expose for inline onclicks in generated HTML
         window.stockChecker = this.stockChecker;
+        
+        // Debug log to verify initialization
+        console.log('Stock checker initialized:', !!this.stockChecker);
 
         // Initial UI sync
         this._updateProjectedYield();

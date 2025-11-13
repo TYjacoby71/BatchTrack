@@ -21,7 +21,8 @@ export class StockCheckManager {
         logger.debug('Stock check button found:', !!stockCheckBtn);
 
         if (stockCheckBtn) {
-            stockCheckBtn.addEventListener('click', () => {
+            stockCheckBtn.addEventListener('click', (e) => {
+                e.preventDefault();
                 logger.debug('Button clicked!');
                 this.performStockCheck();
             });
