@@ -175,7 +175,8 @@ def list_inventory():
         query = query.filter(InventoryItem.quantity > 0)
 
     ingredients = query.all()
-    units = get_global_unit_list()
+    # Get units within the session to avoid detached instance errors
+    units = Unit.scoped().filter(Unit.is_active == True).all()
     categories = IngredientCategory.query.all()
     total_value = sum(item.quantity * item.cost_per_unit for item in ingredients)
 
