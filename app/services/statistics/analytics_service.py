@@ -720,20 +720,20 @@ class AnalyticsDataService:
 
     @classmethod
     def _get_subscription_tier_counts(cls) -> Dict[str, int]:
-        """Return counts of organizations by subscription tier key."""
+        """Return counts of organizations by subscription tier name."""
 
         try:
             rows = (
                 db.session.query(
-                    SubscriptionTier.key,
+                    SubscriptionTier.name,
                     func.count(Organization.id).label("org_count"),
                 )
                 .outerjoin(Organization, Organization.subscription_tier_id == SubscriptionTier.id)
-                .group_by(SubscriptionTier.id, SubscriptionTier.key)
+                .group_by(SubscriptionTier.id, SubscriptionTier.name)
                 .all()
             )
-            # Include explicit keys even if zero to preserve known tiers
-            counts = {row.key: row.org_count for row in rows if row.key}
+            # Include explicit names even if zero to preserve known tiers
+            counts = {row.name.lower() if row.name else 'unknown': row.org_count for row in rows if row.name}
 
             # Ensure standard tiers always present
             for key in ["exempt", "free", "solo", "team", "enterprise"]:
