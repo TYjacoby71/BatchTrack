@@ -5,6 +5,7 @@ Revises: 0005_cleanup_guardrails
 Create Date: 2025-11-14 18:32:00.000000
 """
 
+import json
 from alembic import op
 import sqlalchemy as sa
 from sqlalchemy.orm import Session
@@ -40,6 +41,148 @@ def _rename_parent_column():
 
     with safe_batch_alter_table('recipe') as batch_op:
         batch_op.alter_column('parent_id', new_column_name='parent_recipe_id', existing_type=sa.Integer)
+
+
+def _ensure_backup_table():
+    """Create the lineage backup table if it does not already exist."""
+    if table_exists('recipe_lineage_backup'):
+        return
+    op.create_table(
+        'recipe_lineage_backup',
+        sa.Column('id', sa.Integer, primary_key=True),
+        sa.Column('snapshot', sa.Text, nullable=False),
+        sa.Column('created_at', sa.DateTime, nullable=False, server_default=sa.text('CURRENT_TIMESTAMP')),
+    )
+
+
+def _store_lineage_backup(bind):
+    """Persist lineage metadata so downgrades can restore on re-upgrade."""
+    if not table_exists('recipe'):
+        return
+
+    metadata = sa.MetaData()
+    reflect_tables = ['recipe']
+    if table_exists('recipe_lineage'):
+        reflect_tables.append('recipe_lineage')
+    metadata.reflect(bind=bind, only=reflect_tables)
+
+    recipe_table = metadata.tables['recipe']
+    lineage_table = metadata.tables.get('recipe_lineage')
+
+    recipe_rows = bind.execute(
+        sa.select(
+            recipe_table.c.id,
+            recipe_table.c.parent_recipe_id,
+            recipe_table.c.cloned_from_id,
+            recipe_table.c.root_recipe_id
+        )
+    ).mappings().all()
+
+    lineage_rows = []
+    if lineage_table is not None:
+        lineage_rows = bind.execute(
+            sa.select(
+                lineage_table.c.recipe_id,
+                lineage_table.c.source_recipe_id,
+                lineage_table.c.event_type,
+                lineage_table.c.user_id,
+                lineage_table.c.notes,
+                lineage_table.c.organization_id,
+                lineage_table.c.created_at
+            )
+        ).mappings().all()
+
+    payload = {
+        'recipes': [dict(row) for row in recipe_rows if any(row[k] is not None for k in ('parent_recipe_id', 'cloned_from_id', 'root_recipe_id'))],
+        'lineage': [dict(row) for row in lineage_rows],
+    }
+
+    if not payload['recipes'] and not payload['lineage']:
+        return
+
+    _ensure_backup_table()
+    metadata.reflect(bind=bind, only=['recipe_lineage_backup'])
+    backup_table = metadata.tables['recipe_lineage_backup']
+    bind.execute(
+        backup_table.insert().values(
+            snapshot=json.dumps(payload, default=str)
+        )
+    )
+
+
+def _restore_lineage_from_backup(bind):
+    """Rehydrate lineage metadata captured during downgrade."""
+    if not table_exists('recipe_lineage_backup'):
+        return
+
+    metadata = sa.MetaData()
+    metadata.reflect(bind=bind, only=['recipe_lineage_backup'])
+    backup_table = metadata.tables['recipe_lineage_backup']
+
+    latest = bind.execute(
+        sa.select(
+            backup_table.c.id,
+            backup_table.c.snapshot
+        ).order_by(backup_table.c.id.desc())
+    ).first()
+
+    if not latest:
+        op.drop_table('recipe_lineage_backup')
+        return
+
+    snapshot = latest.snapshot
+    if isinstance(snapshot, str):
+        try:
+            snapshot = json.loads(snapshot)
+        except json.JSONDecodeError:
+            snapshot = None
+
+    if not snapshot:
+        bind.execute(backup_table.delete().where(backup_table.c.id == latest.id))
+        op.drop_table('recipe_lineage_backup')
+        return
+
+    target_tables = ['recipe']
+    if table_exists('recipe_lineage'):
+        target_tables.append('recipe_lineage')
+    target_metadata = sa.MetaData()
+    target_metadata.reflect(bind=bind, only=target_tables)
+    recipe_table = target_metadata.tables['recipe']
+    lineage_table = target_metadata.tables.get('recipe_lineage')
+
+    for row in snapshot.get('recipes', []):
+        stmt = (
+            recipe_table.update()
+            .where(recipe_table.c.id == row.get('id'))
+            .values(
+                parent_recipe_id=row.get('parent_recipe_id'),
+                cloned_from_id=row.get('cloned_from_id'),
+                root_recipe_id=row.get('root_recipe_id')
+            )
+        )
+        bind.execute(stmt)
+
+    lineage_payload = snapshot.get('lineage') or []
+    if lineage_payload and lineage_table is not None:
+        bind.execute(
+            lineage_table.insert(),
+            [
+                {
+                    'recipe_id': item.get('recipe_id'),
+                    'source_recipe_id': item.get('source_recipe_id'),
+                    'event_type': item.get('event_type'),
+                    'user_id': item.get('user_id'),
+                    'notes': item.get('notes'),
+                    'organization_id': item.get('organization_id'),
+                    'created_at': item.get('created_at'),
+                }
+                for item in lineage_payload
+            ]
+        )
+
+    # Remove the consumed backup row and table to keep schema tidy when on 0006+
+    bind.execute(backup_table.delete().where(backup_table.c.id == latest.id))
+    op.drop_table('recipe_lineage_backup')
 
 
 def _backfill_root_ids(bind):
@@ -122,10 +265,15 @@ def upgrade():
     safe_create_index('ix_recipe_lineage_source_recipe_id', 'recipe_lineage', ['source_recipe_id'])
     safe_create_index('ix_recipe_lineage_event_type', 'recipe_lineage', ['event_type'])
 
+    _restore_lineage_from_backup(bind)
     _backfill_root_ids(bind)
 
 
 def downgrade():
+    bind = op.get_bind()
+
+    _store_lineage_backup(bind)
+
     # Drop lineage table
     if table_exists('recipe_lineage'):
         safe_drop_index('ix_recipe_lineage_event_type', 'recipe_lineage')
