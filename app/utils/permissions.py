@@ -413,9 +413,12 @@ class AuthorizationHierarchy:
                 return False
 
             # Step 3: Check user role permissions
-            # Organization owners get all tier-allowed permissions (tier gate already enforced above).
+            # Organization owners should have the organization_owner role with proper permissions
+            # They still need to check permissions, but get all tier-allowed permissions
             if getattr(user, 'is_organization_owner', False):
-                return True
+                # Organization owners get all permissions that are allowed by their tier
+                # This ensures they respect subscription tier limits but get full access within their tier
+                return permission_name in tier_permissions
 
             # Other users need role-based permissions
             try:
