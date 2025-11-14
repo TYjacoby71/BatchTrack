@@ -1,0 +1,77 @@
+~/workspace$ flask seed-users
+[2025-11-14 22:52:23,813] INFO in blueprints_registry: === Blueprint Registration Summary ===
+[2025-11-14 22:52:23,813] INFO in blueprints_registry: Successful: 28
+[2025-11-14 22:52:23,813] INFO in blueprints_registry:    - Authentication
+[2025-11-14 22:52:23,813] INFO in blueprints_registry:    - Admin
+[2025-11-14 22:52:23,813] INFO in blueprints_registry:    - Developer
+[2025-11-14 22:52:23,813] INFO in blueprints_registry:    - Inventory
+[2025-11-14 22:52:23,814] INFO in blueprints_registry:    - Recipes
+[2025-11-14 22:52:23,814] INFO in blueprints_registry:    - Batches
+[2025-11-14 22:52:23,814] INFO in blueprints_registry:    - Organization
+[2025-11-14 22:52:23,814] INFO in blueprints_registry:    - Billing
+[2025-11-14 22:52:23,814] INFO in blueprints_registry:    - Settings
+[2025-11-14 22:52:23,814] INFO in blueprints_registry:    - Timers
+[2025-11-14 22:52:23,814] INFO in blueprints_registry:    - Expiration
+[2025-11-14 22:52:23,814] INFO in blueprints_registry:    - Conversion
+[2025-11-14 22:52:23,814] INFO in blueprints_registry:    - Products Main
+[2025-11-14 22:52:23,814] INFO in blueprints_registry:    - Public API
+[2025-11-14 22:52:23,814] INFO in blueprints_registry:    - Main API
+[2025-11-14 22:52:23,814] INFO in blueprints_registry:    - Drawer Actions
+[2025-11-14 22:52:23,814] INFO in blueprints_registry:    - Retention Drawer API
+[2025-11-14 22:52:23,814] INFO in blueprints_registry:    - Global Link Drawer API
+[2025-11-14 22:52:23,814] INFO in blueprints_registry:    - App Routes
+[2025-11-14 22:52:23,814] INFO in blueprints_registry:    - Legal Routes
+[2025-11-14 22:52:23,814] INFO in blueprints_registry:    - Bulk Stock
+[2025-11-14 22:52:23,814] INFO in blueprints_registry:    - Fault Log
+[2025-11-14 22:52:23,814] INFO in blueprints_registry:    - Tag Manager
+[2025-11-14 22:52:23,814] INFO in blueprints_registry:    - Global Library Public
+[2025-11-14 22:52:23,815] INFO in blueprints_registry:    - Waitlist
+[2025-11-14 22:52:23,815] INFO in blueprints_registry:    - Public Tools
+[2025-11-14 22:52:23,815] INFO in blueprints_registry:    - Production Planning
+[2025-11-14 22:52:23,815] INFO in blueprints_registry:    - Exports
+[2025-11-14 22:52:23,815] INFO in blueprints_registry: All blueprints registered successfully!
+[2025-11-14 22:52:23,815] INFO in __init__: 🔒 db.create_all() not enabled; Alembic migrations are the source of truth
+🔄 Seeding users and organization...
+🔧 Seeding users and organization...
+ℹ️  Found 1 existing organizations - using first organization
+ℹ️  Using organization: BatchTrack Organization (ID: 1)
+   - Subscription tier: 1 (Exempt Plan)
+✅ Found system_admin developer role (ID: 1)
+ℹ️  Developer user 'dev' already exists
+ℹ️  Admin user 'admin' already exists (org_id: 1)
+ℹ️  Manager user 'manager' already exists (org_id: 1)
+ℹ️  Operator user 'operator' already exists (org_id: 1)
+❌ User seeding failed: cannot access local variable 'exempt_tier' where it is not associated with a value
+Traceback (most recent call last):
+  File "/home/runner/workspace/.pythonlibs/bin/flask", line 8, in <module>
+    sys.exit(main())
+             ^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/cli.py", line 1129, in main
+    cli.main()
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/click/core.py", line 1082, in main
+    rv = self.invoke(ctx)
+         ^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/click/core.py", line 1697, in invoke
+    return _process_result(sub_ctx.command.invoke(sub_ctx))
+                           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/click/core.py", line 1443, in invoke
+    return ctx.invoke(self.callback, **ctx.params)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/click/core.py", line 788, in invoke
+    return __callback(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/click/decorators.py", line 33, in new_func
+    return f(get_current_context(), *args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/cli.py", line 400, in decorator
+    return ctx.invoke(f, *args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/click/core.py", line 788, in invoke
+    return __callback(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/app/management.py", line 224, in seed_users_command
+    seed_users_and_organization()
+  File "/home/runner/workspace/app/seeders/user_seeder.py", line 220, in seed_users_and_organization
+    subscription_tier_id=exempt_tier.id,
+                         ^^^^^^^^^^^
+UnboundLocalError: cannot access local variable 'exempt_tier' where it is not associated with a value
