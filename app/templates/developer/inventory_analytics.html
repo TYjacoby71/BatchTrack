@@ -216,6 +216,16 @@
 </div>
 
 <script>
+const analyticsEndpoints = {
+    metrics: "{{ url_for('developer.api_inventory_analytics_metrics') }}",
+    topItems: "{{ url_for('developer.api_inventory_analytics_top_items') }}",
+    spoilage: "{{ url_for('developer.api_inventory_analytics_spoilage') }}",
+    dataQuality: "{{ url_for('developer.api_inventory_analytics_data_quality') }}",
+    recentActivity: "{{ url_for('developer.api_inventory_analytics_recent_activity') }}",
+    itemsList: "{{ url_for('developer.api_inventory_analytics_items_list') }}",
+    costDistributionBase: "{{ url_for('developer.api_inventory_analytics_cost_distribution', item_id=0)[:-1] }}"
+};
+
 let analyticsData = {};
 let lastLoadedAt = null;
 
@@ -226,17 +236,11 @@ document.addEventListener('DOMContentLoaded', function() {
 
 async function loadAnalytics(forceRefresh = false) {
     try {
-        // Load key metrics
         await loadKeyMetrics(forceRefresh);
-        // Load top items
         await loadTopItems(forceRefresh);
-        // Load spoilage data
         await loadSpoilageAnalysis(forceRefresh);
-        // Load data quality metrics
         await loadDataQuality(forceRefresh);
-        // Load recent activity
         await loadRecentActivity(forceRefresh);
-        // Populate item selector
         await loadItemSelector(forceRefresh);
 
         updateLastLoaded(new Date());
@@ -248,7 +252,7 @@ async function loadAnalytics(forceRefresh = false) {
 
 async function loadKeyMetrics(forceRefresh = false) {
     try {
-        const response = await fetch(buildAnalyticsUrl('/api/developer/inventory-analytics/metrics', forceRefresh));
+        const response = await fetch(buildAnalyticsUrl(analyticsEndpoints.metrics, forceRefresh));
         if (response.ok) {
             const data = await response.json();
             document.getElementById('totalItems').textContent = data.total_items || 0;
@@ -263,7 +267,7 @@ async function loadKeyMetrics(forceRefresh = false) {
 
 async function loadTopItems(forceRefresh = false) {
     try {
-        const response = await fetch(buildAnalyticsUrl('/api/developer/inventory-analytics/top-items', forceRefresh));
+        const response = await fetch(buildAnalyticsUrl(analyticsEndpoints.topItems, forceRefresh));
         if (response.ok) {
             const data = await response.json();
             const tbody = document.querySelector('#topItemsTable tbody');
@@ -291,7 +295,7 @@ async function loadTopItems(forceRefresh = false) {
 
 async function loadSpoilageAnalysis(forceRefresh = false) {
     try {
-        const response = await fetch(buildAnalyticsUrl('/api/developer/inventory-analytics/spoilage', forceRefresh));
+        const response = await fetch(buildAnalyticsUrl(analyticsEndpoints.spoilage, forceRefresh));
         if (response.ok) {
             const data = await response.json();
             const tbody = document.querySelector('#spoilageTable tbody');
@@ -319,7 +323,7 @@ async function loadSpoilageAnalysis(forceRefresh = false) {
 
 async function loadDataQuality(forceRefresh = false) {
     try {
-        const response = await fetch(buildAnalyticsUrl('/api/developer/inventory-analytics/data-quality', forceRefresh));
+        const response = await fetch(buildAnalyticsUrl(analyticsEndpoints.dataQuality, forceRefresh));
         if (response.ok) {
             const data = await response.json();
             
@@ -349,7 +353,7 @@ async function loadDataQuality(forceRefresh = false) {
 
 async function loadRecentActivity(forceRefresh = false) {
     try {
-        const response = await fetch(buildAnalyticsUrl('/api/developer/inventory-analytics/recent-activity', forceRefresh));
+        const response = await fetch(buildAnalyticsUrl(analyticsEndpoints.recentActivity, forceRefresh));
         if (response.ok) {
             const data = await response.json();
             const tbody = document.querySelector('#recentActivityTable tbody');
@@ -379,7 +383,7 @@ async function loadRecentActivity(forceRefresh = false) {
 
 async function loadItemSelector(forceRefresh = false) {
     try {
-        const response = await fetch(buildAnalyticsUrl('/api/developer/inventory-analytics/items-list', forceRefresh));
+        const response = await fetch(buildAnalyticsUrl(analyticsEndpoints.itemsList, forceRefresh));
         if (response.ok) {
             const data = await response.json();
             const selector = document.getElementById('itemSelector');
@@ -407,7 +411,8 @@ async function loadCostDistribution(forceRefresh = false) {
     }
     
     try {
-        const response = await fetch(buildAnalyticsUrl(`/api/developer/inventory-analytics/cost-distribution/${itemId}`, forceRefresh));
+        const endpoint = `${analyticsEndpoints.costDistributionBase}${itemId}`;
+        const response = await fetch(buildAnalyticsUrl(endpoint, forceRefresh));
         if (response.ok) {
             const data = await response.json();
             renderCostDistribution(data);
