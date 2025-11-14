@@ -18,7 +18,12 @@
                             </h2>
                             <p class="text-muted mb-0">Monitor and manage waitlist signups</p>
                         </div>
-                        <div>
+                          <div class="text-end">
+                              {% if generated_at %}
+                              <div class="mb-2">
+                                  <span class="badge bg-light text-muted">Last updated {{ generated_at }}</span>
+                              </div>
+                              {% endif %}
                             <a href="{{ url_for('developer.dashboard') }}" class="btn btn-outline-secondary">
                                 <i class="fas fa-arrow-left"></i> Back to Dashboard
                             </a>

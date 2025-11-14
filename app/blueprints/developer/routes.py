@@ -52,66 +52,63 @@ developer_bp.register_blueprint(addons_bp)
 @login_required
 def dashboard():
     """Main developer system dashboard"""
-    # System statistics
-    total_orgs = Organization.query.count()
-    active_orgs = Organization.query.filter_by(is_active=True).count()
-    total_users = User.query.filter(User.user_type != 'developer').count()
-    active_users = User.query.filter(
-        User.user_type != 'developer',
-        User.is_active == True
-    ).count()
+    from app.services.statistics import AnalyticsDataService
 
-    # Subscription tier breakdown - get from organization's subscription tiers
-    from app.models.subscription_tier import SubscriptionTier
-    subscription_stats = db.session.query(
-        SubscriptionTier.name,
-        func.count(Organization.id).label('count')
-    ).join(Organization, Organization.subscription_tier_id == SubscriptionTier.id).group_by(SubscriptionTier.name).all()
+    force_refresh = (request.args.get('refresh') or '').lower() in ('1', 'true', 'yes')
+    dashboard_data = AnalyticsDataService.get_developer_dashboard(force_refresh=force_refresh)
+    overview = dashboard_data.get('overview') or {}
+    tier_breakdown = overview.get('tiers') or {}
+    recent_orgs = dashboard_data.get('recent_organizations') or []
+    problem_orgs = dashboard_data.get('attention_organizations') or []
+    waitlist_count = dashboard_data.get('waitlist_count', 0)
 
-    # Recent organizations (last 30 days)
-    thirty_days_ago = datetime.now(timezone.utc) - timedelta(days=30)
-    recent_orgs = Organization.query.filter(
-        Organization.created_at >= thirty_days_ago
-    ).order_by(Organization.created_at.desc()).limit(10).all()
+    generated_iso = dashboard_data.get('generated_at')
+    generated_display = None
+    if generated_iso:
+        try:
+            generated_dt = datetime.fromisoformat(generated_iso)
+            generated_display = generated_dt.strftime('%Y-%m-%d %H:%M UTC')
+        except ValueError:
+            generated_display = generated_iso
 
-    # Organizations needing attention (no active users, overdue payments, etc.)
-    problem_orgs = Organization.query.filter(
-        Organization.is_active == True
-    ).all()
-
-    # Filter for orgs with no active users
-    problem_orgs = [org for org in problem_orgs if org.active_users_count == 0]
-
-    # Get waitlist count
-    waitlist_data = read_json_file('data/waitlist.json', default=[]) or []
-    waitlist_count = len(waitlist_data)
-
-    return render_template('developer/dashboard.html',
-                         total_orgs=total_orgs,
-                         active_orgs=active_orgs,
-                         total_users=total_users,
-                         active_users=active_users,
-                         subscription_stats=subscription_stats,
-                         recent_orgs=recent_orgs,
-                         problem_orgs=problem_orgs,
-                         waitlist_count=waitlist_count)
+    return render_template(
+        'developer/dashboard.html',
+        total_orgs=overview.get('total_organizations', 0),
+        active_orgs=overview.get('active_organizations', 0),
+        total_users=overview.get('total_users', 0),
+        active_users=overview.get('active_users', 0),
+        tier_breakdown=tier_breakdown,
+        recent_orgs=recent_orgs,
+        problem_orgs=problem_orgs,
+        waitlist_count=waitlist_count,
+        dashboard_generated_at=generated_display,
+        force_refresh=force_refresh,
+    )
 
 @developer_bp.route('/marketing-admin')
 @login_required
 def marketing_admin():
     """Manage homepage marketing content (reviews, spotlights, messages)."""
-    reviews = read_json_file('data/reviews.json', default=[]) or []
-    spotlights = read_json_file('data/spotlights.json', default=[]) or []
+    from app.services.statistics import AnalyticsDataService
+
+    marketing_data = AnalyticsDataService.get_marketing_content()
+    reviews = marketing_data.get('reviews', [])
+    spotlights = marketing_data.get('spotlights', [])
     messages = {'day_1': '', 'day_3': '', 'day_5': ''}
-    promo_codes = []
-    demo_url = ''
-    demo_videos = []
-    cfg = read_json_file('settings.json', default={}) or {}
-    messages.update(cfg.get('marketing_messages', {}))
-    promo_codes = cfg.get('promo_codes', []) or []
-    demo_url = cfg.get('demo_url', '') or ''
-    demo_videos = cfg.get('demo_videos', []) or []
-    return render_template('developer/marketing_admin.html', reviews=reviews, spotlights=spotlights, messages=messages, promo_codes=promo_codes, demo_url=demo_url, demo_videos=demo_videos)
+    messages.update(marketing_data.get('marketing_messages', {}))
+    promo_codes = marketing_data.get('promo_codes', []) or []
+    demo_url = marketing_data.get('demo_url', '') or ''
+    demo_videos = marketing_data.get('demo_videos', []) or []
+
+    return render_template(
+        'developer/marketing_admin.html',
+        reviews=reviews,
+        spotlights=spotlights,
+        messages=messages,
+        promo_codes=promo_codes,
+        demo_url=demo_url,
+        demo_videos=demo_videos
+    )
 
 @developer_bp.route('/marketing-admin/save', methods=['POST'])
 @login_required
@@ -905,19 +902,10 @@ def load_curated_container_lists():
 @login_required
 def system_statistics():
     """System-wide statistics dashboard"""
-    # Gather system statistics
-    stats = {
-        'total_organizations': Organization.query.count(),
-        'active_organizations': Organization.query.filter_by(is_active=True).count(),
-        'total_users': User.query.filter(User.user_type != 'developer').count(),
-        'active_users': User.query.filter(
-            User.user_type != 'developer',
-            User.is_active == True
-        ).count(),
-        'total_global_items': GlobalItem.query.filter_by(is_archived=False).count(),
-        'total_permissions': Permission.query.count(),
-        'total_roles': Role.query.count()
-    }
+    from app.services.statistics import AnalyticsDataService
+
+    force_refresh = (request.args.get('refresh') or '').lower() in ('1', 'true', 'yes')
+    stats = AnalyticsDataService.get_system_overview(force_refresh=force_refresh)
 
     return render_template('developer/system_statistics.html', stats=stats)
 
@@ -1398,37 +1386,11 @@ def inventory_analytics_stub():
 @login_required
 def api_inventory_analytics_metrics():
     """Get key inventory analytics metrics"""
+    from app.services.statistics import AnalyticsDataService
+
     try:
-        from app.models import GlobalItem, InventoryItem, UnifiedInventoryHistory
-        from sqlalchemy import func
-        from datetime import timedelta
-        
-        # Total global items
-        total_items = GlobalItem.query.filter_by(is_archived=False).count()
-        
-        # Total org adoptions (inventory items linked to global items)
-        linked_adoptions = InventoryItem.query.filter(InventoryItem.global_item_id.isnot(None)).count()
-        
-        # Spoilage events in last 30 days
-        thirty_days_ago = TimezoneUtils.utc_now() - timedelta(days=30)
-        spoilage_events_30d = UnifiedInventoryHistory.query.filter(
-            UnifiedInventoryHistory.change_type.in_(['spoil', 'expired', 'damaged', 'trash']),
-            UnifiedInventoryHistory.timestamp >= thirty_days_ago
-        ).count()
-        
-        # Average cost per unit across all lots
-        from app.models.inventory_lot import InventoryLot
-        avg_cost = db.session.query(func.avg(InventoryLot.unit_cost)).filter(
-            InventoryLot.unit_cost.isnot(None),
-            InventoryLot.unit_cost > 0
-        ).scalar()
-        
-        return jsonify({
-            'total_items': total_items,
-            'linked_adoptions': linked_adoptions,
-            'spoilage_events_30d': spoilage_events_30d,
-            'avg_cost_per_unit': float(avg_cost) if avg_cost else None
-        })
+        force_refresh = (request.args.get('refresh') or '').lower() in ('1', 'true', 'yes')
+        return jsonify(AnalyticsDataService.get_inventory_metrics(force_refresh=force_refresh))
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
@@ -1436,36 +1398,11 @@ def api_inventory_analytics_metrics():
 @login_required
 def api_inventory_analytics_top_items():
     """Get top items by usage across organizations"""
+    from app.services.statistics import AnalyticsDataService
+
     try:
-        from app.models import GlobalItem, InventoryItem
-        from sqlalchemy import func
-        
-        # Get items with most org adoptions
-        top_items = db.session.query(
-            GlobalItem.id,
-            GlobalItem.name,
-            func.count(InventoryItem.id).label('org_count'),
-            func.avg(InventoryItem.cost_per_unit).label('avg_cost')
-        ).join(
-            InventoryItem, GlobalItem.id == InventoryItem.global_item_id
-        ).filter(
-            GlobalItem.is_archived == False
-        ).group_by(
-            GlobalItem.id, GlobalItem.name
-        ).order_by(
-            func.count(InventoryItem.id).desc()
-        ).limit(10).all()
-        
-        items = []
-        for item in top_items:
-            items.append({
-                'id': item.id,
-                'name': item.name,
-                'org_count': item.org_count,
-                'avg_cost': float(item.avg_cost) if item.avg_cost else None,
-                'trend': 'stable'  # Could be calculated from historical data
-            })
-        
+        force_refresh = (request.args.get('refresh') or '').lower() in ('1', 'true', 'yes')
+        items = AnalyticsDataService.get_top_global_items(force_refresh=force_refresh)
         return jsonify({'items': items})
     except Exception as e:
         return jsonify({'error': str(e)}), 500
@@ -1474,47 +1411,11 @@ def api_inventory_analytics_top_items():
 @login_required
 def api_inventory_analytics_spoilage():
     """Get spoilage analysis by item"""
+    from app.services.statistics import AnalyticsDataService
+
     try:
-        from app.models import GlobalItem, InventoryItem, UnifiedInventoryHistory
-        from sqlalchemy import func
-        from datetime import timedelta
-        
-        thirty_days_ago = TimezoneUtils.utc_now() - timedelta(days=30)
-        
-        # Get spoilage data by global item
-        spoilage_data = db.session.query(
-            GlobalItem.id,
-            GlobalItem.name,
-            func.count(UnifiedInventoryHistory.id).label('spoilage_count'),
-            func.sum(UnifiedInventoryHistory.cost_impact).label('cost_impact'),
-            func.count(func.distinct(UnifiedInventoryHistory.organization_id)).label('orgs_affected')
-        ).join(
-            InventoryItem, GlobalItem.id == InventoryItem.global_item_id
-        ).join(
-            UnifiedInventoryHistory, InventoryItem.id == UnifiedInventoryHistory.inventory_item_id
-        ).filter(
-            UnifiedInventoryHistory.change_type.in_(['spoil', 'expired', 'damaged', 'trash']),
-            UnifiedInventoryHistory.timestamp >= thirty_days_ago,
-            GlobalItem.is_archived == False
-        ).group_by(
-            GlobalItem.id, GlobalItem.name
-        ).order_by(
-            func.count(UnifiedInventoryHistory.id).desc()
-        ).limit(10).all()
-        
-        items = []
-        for item in spoilage_data:
-            # Calculate spoilage rate (simplified)
-            spoilage_rate = 0.1 if item.spoilage_count > 5 else item.spoilage_count * 0.02
-            items.append({
-                'id': item.id,
-                'name': item.name,
-                'spoilage_count': item.spoilage_count,
-                'spoilage_rate': spoilage_rate,
-                'cost_impact': float(item.cost_impact) if item.cost_impact else 0.0,
-                'orgs_affected': item.orgs_affected
-            })
-        
+        force_refresh = (request.args.get('refresh') or '').lower() in ('1', 'true', 'yes')
+        items = AnalyticsDataService.get_spoilage_analysis(force_refresh=force_refresh)
         return jsonify({'items': items})
     except Exception as e:
         return jsonify({'error': str(e)}), 500
@@ -1523,48 +1424,11 @@ def api_inventory_analytics_spoilage():
 @login_required
 def api_inventory_analytics_data_quality():
     """Get data quality metrics for global items"""
+    from app.services.statistics import AnalyticsDataService
+
     try:
-        from app.models import GlobalItem
-        from sqlalchemy import func
-        
-        total_items = GlobalItem.query.filter_by(is_archived=False).count()
-        
-        if total_items == 0:
-            return jsonify({
-                'density_coverage': 0,
-                'capacity_coverage': 0,
-                'shelf_life_coverage': 0
-            })
-        
-        # Density coverage
-        items_with_density = GlobalItem.query.filter(
-            GlobalItem.is_archived == False,
-            GlobalItem.density.isnot(None),
-            GlobalItem.density > 0
-        ).count()
-        density_coverage = (items_with_density / total_items) * 100
-        
-        # Capacity coverage
-        items_with_capacity = GlobalItem.query.filter(
-            GlobalItem.is_archived == False,
-            GlobalItem.capacity.isnot(None),
-            GlobalItem.capacity > 0
-        ).count()
-        capacity_coverage = (items_with_capacity / total_items) * 100
-        
-        # Shelf life coverage
-        items_with_shelf_life = GlobalItem.query.filter(
-            GlobalItem.is_archived == False,
-            GlobalItem.recommended_shelf_life_days.isnot(None),
-            GlobalItem.recommended_shelf_life_days > 0
-        ).count()
-        shelf_life_coverage = (items_with_shelf_life / total_items) * 100
-        
-        return jsonify({
-            'density_coverage': density_coverage,
-            'capacity_coverage': capacity_coverage,
-            'shelf_life_coverage': shelf_life_coverage
-        })
+        force_refresh = (request.args.get('refresh') or '').lower() in ('1', 'true', 'yes')
+        return jsonify(AnalyticsDataService.get_data_quality_summary(force_refresh=force_refresh))
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
@@ -1572,37 +1436,11 @@ def api_inventory_analytics_data_quality():
 @login_required
 def api_inventory_analytics_recent_activity():
     """Get recent inventory activity across all organizations"""
+    from app.services.statistics import AnalyticsDataService
+
     try:
-        from app.models import UnifiedInventoryHistory, Organization, InventoryItem
-        
-        recent_activity = db.session.query(
-            UnifiedInventoryHistory.timestamp,
-            UnifiedInventoryHistory.change_type,
-            UnifiedInventoryHistory.quantity_change,
-            UnifiedInventoryHistory.unit,
-            UnifiedInventoryHistory.cost_impact,
-            Organization.name.label('organization_name'),
-            InventoryItem.name.label('item_name')
-        ).join(
-            Organization, UnifiedInventoryHistory.organization_id == Organization.id
-        ).join(
-            InventoryItem, UnifiedInventoryHistory.inventory_item_id == InventoryItem.id
-        ).order_by(
-            UnifiedInventoryHistory.timestamp.desc()
-        ).limit(20).all()
-        
-        activities = []
-        for activity in recent_activity:
-            activities.append({
-                'timestamp': activity.timestamp.isoformat(),
-                'organization_name': activity.organization_name,
-                'item_name': activity.item_name,
-                'action': activity.change_type,
-                'quantity_change': float(activity.quantity_change),
-                'unit': activity.unit,
-                'cost_impact': float(activity.cost_impact) if activity.cost_impact else None
-            })
-        
+        force_refresh = (request.args.get('refresh') or '').lower() in ('1', 'true', 'yes')
+        activities = AnalyticsDataService.get_recent_inventory_activity(force_refresh=force_refresh)
         return jsonify({'activities': activities})
     except Exception as e:
         return jsonify({'error': str(e)}), 500
@@ -1611,27 +1449,12 @@ def api_inventory_analytics_recent_activity():
 @login_required
 def api_inventory_analytics_items_list():
     """Get list of global items for selection"""
+    from app.services.statistics import AnalyticsDataService
+
     try:
-        from app.models import GlobalItem, InventoryItem
-        from sqlalchemy import func
-        
-        # Get items that have org adoptions
-        items = db.session.query(
-            GlobalItem.id,
-            GlobalItem.name
-        ).join(
-            InventoryItem, GlobalItem.id == InventoryItem.global_item_id
-        ).filter(
-            GlobalItem.is_archived == False
-        ).group_by(
-            GlobalItem.id, GlobalItem.name
-        ).having(
-            func.count(InventoryItem.id) > 0
-        ).order_by(GlobalItem.name).all()
-        
-        items_list = [{'id': item.id, 'name': item.name} for item in items]
-        
-        return jsonify({'items': items_list})
+        force_refresh = (request.args.get('refresh') or '').lower() in ('1', 'true', 'yes')
+        items = AnalyticsDataService.get_inventory_item_options(force_refresh=force_refresh)
+        return jsonify({'items': items})
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
@@ -1639,12 +1462,13 @@ def api_inventory_analytics_items_list():
 @login_required
 def api_inventory_analytics_cost_distribution(item_id):
     """Get cost distribution for a specific global item"""
+    from app.services.statistics import AnalyticsDataService
+
     try:
-        from app.services.statistics.global_item_stats import GlobalItemStatsService
-        
-        # Get cost distribution using existing service
-        distribution = GlobalItemStatsService.get_cost_distribution(item_id)
-        
+        force_refresh = (request.args.get('refresh') or '').lower() in ('1', 'true', 'yes')
+        distribution = AnalyticsDataService.get_cost_distribution(
+            item_id, force_refresh=force_refresh
+        )
         return jsonify(distribution)
     except Exception as e:
         return jsonify({'error': str(e)}), 500
@@ -2146,51 +1970,16 @@ def delete_product_category(cat_id):
 @require_developer_permission('system_admin')
 def waitlist_statistics():
     """View waitlist statistics and data"""
-    from datetime import datetime
+    from app.services.statistics import AnalyticsDataService
 
-    waitlist_file = 'data/waitlist.json'
-    waitlist_data = read_json_file(waitlist_file, default=[]) or []
-
-    # Process data for display
-    processed_data = []
-    for entry in waitlist_data:
-        # Format timestamp
-        timestamp = entry.get('timestamp', '')
-        if timestamp:
-            try:
-                dt = datetime.fromisoformat(timestamp.replace('Z', '+00:00'))
-                formatted_date = dt.strftime('%Y-%m-%d %H:%M UTC')
-            except:
-                formatted_date = timestamp
-        else:
-            formatted_date = 'Unknown'
-
-        # Build full name
-        first_name = entry.get('first_name', '')
-        last_name = entry.get('last_name', '')
-        name = entry.get('name', '')  # Legacy field
-
-        if first_name or last_name:
-            full_name = f"{first_name} {last_name}".strip()
-        elif name:
-            full_name = name
-        else:
-            full_name = 'Not provided'
-
-        processed_data.append({
-            'email': entry.get('email', ''),
-            'full_name': full_name,
-            'business_type': entry.get('business_type', 'Not specified'),
-            'formatted_date': formatted_date,
-            'source': entry.get('source', 'Unknown')
-        })
-
-    # Sort by most recent first
-    processed_data.sort(key=lambda x: x.get('formatted_date', ''), reverse=True)
-
-    return render_template('developer/waitlist_statistics.html', 
-                         waitlist_data=processed_data,
-                         total_signups=len(waitlist_data))
+    force_refresh = (request.args.get('refresh') or '').lower() in ('1', 'true', 'yes')
+    stats = AnalyticsDataService.get_waitlist_statistics(force_refresh=force_refresh)
+    return render_template(
+        'developer/waitlist_statistics.html',
+        waitlist_data=stats.get('entries', []),
+        total_signups=stats.get('total', 0),
+        generated_at=stats.get('generated_at'),
+    )
 
 # Customer support filtering routes
 @developer_bp.route('/select-org/<int:org_id>')
@@ -2258,31 +2047,30 @@ def clear_organization_filter():
 @login_required
 def api_stats():
     """API endpoint for dashboard statistics"""
+    from app.services.statistics import AnalyticsDataService
+
+    force_refresh = (request.args.get('refresh') or '').lower() in ('1', 'true', 'yes')
+    overview = AnalyticsDataService.get_system_overview(force_refresh=force_refresh)
+
+    tier_counts = overview.get('tiers') or {}
+
     stats = {
         'organizations': {
-            'total': Organization.query.count(),
-            'active': Organization.query.filter_by(is_active=True).count(),
-            'by_tier': {}
+            'total': overview.get('total_organizations', 0),
+            'active': overview.get('active_organizations', 0),
+            'by_tier': tier_counts
         },
         'users': {
-            'total': User.query.filter(User.user_type != 'developer').count(),
-            'active': User.query.filter(
-                User.user_type != 'developer',
-                User.is_active == True
-            ).count()
+            'total': overview.get('total_users', 0),
+            'active': overview.get('active_users', 0)
         }
     }
 
     # Subscription tier breakdown - get from SubscriptionTier model
     from app.models.subscription_tier import SubscriptionTier
+    # Ensure all known tiers appear even if zero (to maintain API contract)
     for tier in ['exempt', 'free', 'solo', 'team', 'enterprise']:
-        tier_record = SubscriptionTier.query.filter_by(key=tier).first()
-        if tier_record:
-            stats['organizations']['by_tier'][tier] = Organization.query.filter_by(
-                subscription_tier_id=tier_record.id
-            ).count()
-        else:
-            stats['organizations']['by_tier'][tier] = 0
+        stats['organizations']['by_tier'].setdefault(tier, 0)
 
     return jsonify(stats)
 

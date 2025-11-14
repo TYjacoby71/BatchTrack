@@ -1,6 +1,6 @@
 from flask import Blueprint, render_template, request
 from app.models import db, GlobalItem
-from app.services.statistics.global_item_stats import GlobalItemStatsService
+from app.services.statistics import AnalyticsDataService
 from app.models.category import IngredientCategory
 
 global_library_bp = Blueprint('global_library_bp', __name__)
@@ -84,8 +84,8 @@ def global_library_item_stats(item_id: int):
         from app.models.global_item import GlobalItem
         gi = GlobalItem.query.get_or_404(item_id)
 
-        rollup = GlobalItemStatsService.get_rollup(item_id)
-        cost = GlobalItemStatsService.get_cost_distribution(item_id)
+        rollup = AnalyticsDataService.get_global_item_rollup(item_id)
+        cost = AnalyticsDataService.get_cost_distribution(item_id)
 
         # Basic item details for sidebar population
         item_payload = {
