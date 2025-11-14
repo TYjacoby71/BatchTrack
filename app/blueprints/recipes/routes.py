@@ -922,11 +922,27 @@ def _create_variation_template(parent):
         existing_variations = Recipe.query.filter_by(parent_recipe_id=parent.id).count()
         variation_prefix = f"{parent.label_prefix}V{existing_variations + 1}"
     
-    return Recipe(
+    template = Recipe(
         name=f"{parent.name} Variation",
         instructions=parent.instructions,
         label_prefix=variation_prefix,
         parent_recipe_id=parent.id,
         predicted_yield=parent.predicted_yield,
-        predicted_yield_unit=parent.predicted_yield_unit
+        predicted_yield_unit=parent.predicted_yield_unit,
+        category_id=parent.category_id
     )
+
+    # Carry over structured settings so the entire form mirrors the parent
+    template.allowed_containers = list(parent.allowed_containers or [])
+
+    if parent.portioning_data:
+        template.portioning_data = parent.portioning_data.copy() if isinstance(parent.portioning_data, dict) else parent.portioning_data
+    template.is_portioned = parent.is_portioned
+    template.portion_name = parent.portion_name
+    template.portion_count = parent.portion_count
+    template.portion_unit_id = parent.portion_unit_id
+
+    if parent.category_data:
+        template.category_data = parent.category_data.copy() if isinstance(parent.category_data, dict) else parent.category_data
+
+    return template
