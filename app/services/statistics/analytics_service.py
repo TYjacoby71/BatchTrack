@@ -57,6 +57,7 @@ class AnalyticsDataService:
         "alerts": 30,
         "faults": 60,
         "developer": 60,
+        "marketing": 300,
     }
 
     # --------------------------------------------------------------------- #
@@ -635,6 +636,30 @@ class AnalyticsDataService:
             ]
             cls._store_cache(scoped_key, scoped_entries)
         return list(scoped_entries)
+
+    @classmethod
+    def get_marketing_content(cls, *, force_refresh: bool = False) -> Dict[str, Any]:
+        """Return marketing review/spotlight configuration."""
+
+        cache_key = cls._cache_key("marketing:content")
+        cached = cls._get_cached(cache_key, force_refresh)
+        if cached is not None:
+            return cached
+
+        reviews = read_json_file("data/reviews.json", default=[]) or []
+        spotlights = read_json_file("data/spotlights.json", default=[]) or []
+        settings = read_json_file("settings.json", default={}) or {}
+
+        payload = {
+            "reviews": reviews,
+            "spotlights": spotlights,
+            "marketing_messages": settings.get("marketing_messages", {}),
+            "promo_codes": settings.get("promo_codes", []) or [],
+            "demo_url": settings.get("demo_url"),
+            "demo_videos": settings.get("demo_videos", []) or [],
+        }
+        cls._store_cache(cache_key, payload)
+        return payload
 
     @classmethod
     def invalidate_cache(cls):

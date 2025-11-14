@@ -89,18 +89,26 @@ def dashboard():
 @login_required
 def marketing_admin():
     """Manage homepage marketing content (reviews, spotlights, messages)."""
-    reviews = read_json_file('data/reviews.json', default=[]) or []
-    spotlights = read_json_file('data/spotlights.json', default=[]) or []
+    from app.services.statistics import AnalyticsDataService
+
+    marketing_data = AnalyticsDataService.get_marketing_content()
+    reviews = marketing_data.get('reviews', [])
+    spotlights = marketing_data.get('spotlights', [])
     messages = {'day_1': '', 'day_3': '', 'day_5': ''}
-    promo_codes = []
-    demo_url = ''
-    demo_videos = []
-    cfg = read_json_file('settings.json', default={}) or {}
-    messages.update(cfg.get('marketing_messages', {}))
-    promo_codes = cfg.get('promo_codes', []) or []
-    demo_url = cfg.get('demo_url', '') or ''
-    demo_videos = cfg.get('demo_videos', []) or []
-    return render_template('developer/marketing_admin.html', reviews=reviews, spotlights=spotlights, messages=messages, promo_codes=promo_codes, demo_url=demo_url, demo_videos=demo_videos)
+    messages.update(marketing_data.get('marketing_messages', {}))
+    promo_codes = marketing_data.get('promo_codes', []) or []
+    demo_url = marketing_data.get('demo_url', '') or ''
+    demo_videos = marketing_data.get('demo_videos', []) or []
+
+    return render_template(
+        'developer/marketing_admin.html',
+        reviews=reviews,
+        spotlights=spotlights,
+        messages=messages,
+        promo_codes=promo_codes,
+        demo_url=demo_url,
+        demo_videos=demo_videos
+    )
 
 @developer_bp.route('/marketing-admin/save', methods=['POST'])
 @login_required
