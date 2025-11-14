@@ -246,20 +246,20 @@
             <i class="fas fa-edit"></i> Edit Recipe
           </a>
           {% if recipe.parent_id %}
-                                    <form method="POST" action="{{ url_for('recipes.make_parent_recipe', recipe_id=recipe.id) }}" class="d-inline" onsubmit="return confirm('This will convert this variation into a standalone parent recipe. This action cannot be undone. Continue?')">
-                                        <button type="submit" class="btn btn-success">
-                                            <i class="fas fa-level-up-alt"></i> Make New Parent
-                                        </button>
-                                    </form>
-                                    {% endif %}
-                                    <a href="{{ url_for('recipes.create_variation', recipe_id=recipe.id) }}" class="btn btn-outline-primary">
-                                        <i class="fas fa-code-branch"></i> Create Variation
-                                    </a>
-          {% if not recipe.parent_id %}
-          <a href="{{ url_for('recipes.create_variation', recipe_id=recipe.id) }}" class="btn btn-outline-success">
-            <i class="fas fa-code-branch"></i> New Variation
-          </a>
+            <form method="POST" action="{{ url_for('recipes.make_parent_recipe', recipe_id=recipe.id) }}" onsubmit="return confirm('This will convert this variation into a standalone parent recipe. This action cannot be undone. Continue?')">
+              <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+              <button type="submit" class="btn btn-success">
+                <i class="fas fa-level-up-alt"></i> Make New Parent
+              </button>
+            </form>
+          {% else %}
+            <a href="{{ url_for('recipes.create_variation', recipe_id=recipe.id) }}" class="btn btn-outline-success">
+              <i class="fas fa-code-branch"></i> New Variation
+            </a>
           {% endif %}
+          <a href="{{ url_for('recipes.clone_recipe', recipe_id=recipe.id) }}" class="btn btn-outline-info">
+            <i class="fas fa-copy"></i> Clone Recipe
+          </a>
         </div>
       </div>
     </div>
