@@ -1,6 +1,6 @@
 """0006 recipe lineage upgrade
 
-Revision ID: 0006
+Revision ID: 0006_recipe_lineage_upgrade
 Revises: 0005_cleanup_guardrails
 Create Date: 2025-11-14 18:32:00.000000
 """
@@ -24,7 +24,7 @@ from migrations.postgres_helpers import (
 
 
 # revision identifiers, used by Alembic.
-revision = '0006'
+revision = '0006_recipe_lineage_upgrade'
 down_revision = '0005_cleanup_guardrails'
 branch_labels = None
 depends_on = None
