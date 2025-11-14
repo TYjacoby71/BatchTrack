@@ -156,7 +156,7 @@ def organizations():
 def create_organization():
     """Create new organization with owner user"""
     # Load available tiers for the form (DB only)
-    from ..models.subscription_tier import SubscriptionTier as _ST
+    from app.models.subscription_tier import SubscriptionTier as _ST
     available_tiers = {str(t.id): {'name': t.name} for t in _ST.query.order_by(_ST.name).all()}
 
     if request.method == 'POST':
@@ -279,7 +279,7 @@ def organization_detail(org_id):
         users.append(user_dict)
 
     # Build subscription tiers from DB for the dropdown
-    from ..models.subscription_tier import SubscriptionTier as _ST
+    from app.models.subscription_tier import SubscriptionTier as _ST
     try:
         all_db_tiers = _ST.query.order_by(_ST.name).all()
         tiers_config = {str(t.id): {'name': t.name, 'is_available': t.has_valid_integration or t.is_billing_exempt} for t in all_db_tiers}
