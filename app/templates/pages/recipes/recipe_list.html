@@ -68,7 +68,7 @@
 
 <!-- Recipes Card View -->
 <div class="row" id="recipesContainer">
-    {% for recipe in recipes if not recipe.parent_id %}
+    {% for recipe in recipes if not recipe.parent_recipe_id %}
     <div class="col-xl-4 col-lg-6 col-md-12 mb-4 recipe-card" data-recipe-name="{{ recipe.name|lower }}" data-batches="{{ recipe.batches|length }}" data-variations="{{ recipe.variations|length }}">
         <div class="card h-100 shadow-sm">
             <div class="card-header d-flex justify-content-between align-items-center">
@@ -186,7 +186,7 @@
                     </tr>
                 </thead>
                 <tbody>
-                    {% for recipe in recipes if not recipe.parent_id %}
+                    {% for recipe in recipes if not recipe.parent_recipe_id %}
                     <tr class="recipe-row" data-recipe-name="{{ recipe.name|lower }}" data-batches="{{ recipe.batches|length }}" data-variations="{{ recipe.variations|length }}">
                         <td>
                             <strong>{{ recipe.name }}</strong>

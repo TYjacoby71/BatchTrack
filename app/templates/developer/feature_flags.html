@@ -1,0 +1,111 @@
+{% extends 'layout.html' %}
+
+{% block title %}Feature Flags{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <div class="card shadow-sm border-0 mb-4">
+        <div class="card-body d-flex flex-column flex-lg-row justify-content-between align-items-start gap-3">
+            <div>
+                <h2 class="mb-2"><i class="fas fa-toggle-on text-primary me-2"></i> Feature Flags</h2>
+                <p class="text-muted mb-0">Centralized switchboard for developer and production toggles. Changes apply immediately and persist to <code>settings.json</code>.</p>
+            </div>
+            <div class="text-end w-100 w-lg-auto">
+                <div id="flagSaveStatus" class="alert alert-info py-2 px-3 small mb-0" style="display:none;"></div>
+            </div>
+        </div>
+    </div>
+
+    {% for section in feature_flag_sections %}
+    <div class="card shadow-sm border-0 mb-4">
+        <div class="card-header bg-white border-0">
+            <h5 class="mb-1">{{ section.title }}</h5>
+            <p class="text-muted small mb-0">{{ section.description }}</p>
+        </div>
+        <div class="card-body">
+            <div class="row g-3">
+                {% for flag in section.flags %}
+                <div class="col-md-6">
+                    <div class="border rounded p-3 h-100">
+                        <div class="d-flex justify-content-between align-items-start">
+                            <div class="form-check form-switch">
+                                <input class="form-check-input feature-flag-toggle" type="checkbox" role="switch"
+                                       id="flag_{{ flag.key }}" data-flag-key="{{ flag.key }}"
+                                       {% if flag_state.get(flag.key) %}checked{% endif %}>
+                                <label class="form-check-label fw-semibold" for="flag_{{ flag.key }}">{{ flag.label }}</label>
+                            </div>
+                            <span class="badge {% if flag.status == 'wired' %}bg-success{% else %}bg-secondary{% endif %}">
+                                {{ flag.status | capitalize }}
+                            </span>
+                        </div>
+                        <p class="text-muted small mb-0 mt-2">{{ flag.description }}</p>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+(function() {
+    const statusBanner = document.getElementById('flagSaveStatus');
+    const toggles = document.querySelectorAll('.feature-flag-toggle');
+    let debounceHandle = null;
+
+    function getCSRFToken() {
+        const meta = document.querySelector('meta[name="csrf-token"]');
+        return meta ? meta.getAttribute('content') : '';
+    }
+
+    function showStatus(message, variant) {
+        if (!statusBanner) return;
+        statusBanner.textContent = message;
+        statusBanner.className = `alert alert-${variant} py-2 px-3 small mb-0`;
+        statusBanner.style.display = 'block';
+        clearTimeout(statusBanner._hideTimeout);
+        statusBanner._hideTimeout = setTimeout(() => {
+            statusBanner.style.display = 'none';
+        }, 3000);
+    }
+
+    async function saveFlags() {
+        const payload = {};
+        toggles.forEach(toggle => {
+            payload[toggle.dataset.flagKey] = toggle.checked;
+        });
+
+        try {
+            const resp = await fetch('{{ url_for('developer.integrations_set_feature_flags') }}', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': getCSRFToken()
+                },
+                body: JSON.stringify(payload)
+            });
+            if (resp.ok) {
+                showStatus('Feature flags updated', 'success');
+            } else {
+                showStatus('Failed to update feature flags', 'danger');
+            }
+        } catch (error) {
+            console.error('Failed to update feature flags', error);
+            showStatus('Failed to update feature flags', 'danger');
+        }
+    }
+
+    toggles.forEach(toggle => {
+        toggle.addEventListener('change', () => {
+            if (debounceHandle) {
+                clearTimeout(debounceHandle);
+            }
+            debounceHandle = setTimeout(saveFlags, 200);
+        });
+    });
+})();
+</script>
+{% endblock %}

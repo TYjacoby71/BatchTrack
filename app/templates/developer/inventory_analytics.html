@@ -12,9 +12,10 @@
       <a href="{{ url_for('developer.analytics_catalog') }}" class="btn btn-outline-secondary me-2">
         <i class="fas fa-database"></i> Analytics Catalog
       </a>
-      <button class="btn btn-primary" onclick="refreshAnalytics()">
+        <button class="btn btn-primary" onclick="refreshAnalytics(event)">
         <i class="fas fa-sync-alt"></i> Refresh Data
       </button>
+        <span class="badge bg-light text-muted ms-2" id="lastLoadedAt">Last updated: --</span>
     </div>
   </div>
 
@@ -215,36 +216,43 @@
 </div>
 
 <script>
+const analyticsEndpoints = {
+    metrics: "{{ url_for('developer.api_inventory_analytics_metrics') }}",
+    topItems: "{{ url_for('developer.api_inventory_analytics_top_items') }}",
+    spoilage: "{{ url_for('developer.api_inventory_analytics_spoilage') }}",
+    dataQuality: "{{ url_for('developer.api_inventory_analytics_data_quality') }}",
+    recentActivity: "{{ url_for('developer.api_inventory_analytics_recent_activity') }}",
+    itemsList: "{{ url_for('developer.api_inventory_analytics_items_list') }}",
+    costDistributionBase: "{{ url_for('developer.api_inventory_analytics_cost_distribution', item_id=0)[:-1] }}"
+};
+
 let analyticsData = {};
+let lastLoadedAt = null;
 
 // Load analytics on page load
 document.addEventListener('DOMContentLoaded', function() {
     loadAnalytics();
 });
 
-async function loadAnalytics() {
+async function loadAnalytics(forceRefresh = false) {
     try {
-        // Load key metrics
-        await loadKeyMetrics();
-        // Load top items
-        await loadTopItems();
-        // Load spoilage data
-        await loadSpoilageAnalysis();
-        // Load data quality metrics
-        await loadDataQuality();
-        // Load recent activity
-        await loadRecentActivity();
-        // Populate item selector
-        await loadItemSelector();
+        await loadKeyMetrics(forceRefresh);
+        await loadTopItems(forceRefresh);
+        await loadSpoilageAnalysis(forceRefresh);
+        await loadDataQuality(forceRefresh);
+        await loadRecentActivity(forceRefresh);
+        await loadItemSelector(forceRefresh);
+
+        updateLastLoaded(new Date());
     } catch (error) {
         console.error('Error loading analytics:', error);
         showError('Failed to load analytics data');
     }
 }
 
-async function loadKeyMetrics() {
+async function loadKeyMetrics(forceRefresh = false) {
     try {
-        const response = await fetch('/api/developer/inventory-analytics/metrics');
+        const response = await fetch(buildAnalyticsUrl(analyticsEndpoints.metrics, forceRefresh));
         if (response.ok) {
             const data = await response.json();
             document.getElementById('totalItems').textContent = data.total_items || 0;
@@ -257,9 +265,9 @@ async function loadKeyMetrics() {
     }
 }
 
-async function loadTopItems() {
+async function loadTopItems(forceRefresh = false) {
     try {
-        const response = await fetch('/api/developer/inventory-analytics/top-items');
+        const response = await fetch(buildAnalyticsUrl(analyticsEndpoints.topItems, forceRefresh));
         if (response.ok) {
             const data = await response.json();
             const tbody = document.querySelector('#topItemsTable tbody');
@@ -270,8 +278,8 @@ async function loadTopItems() {
                     const row = document.createElement('tr');
                     row.innerHTML = `
                         <td>${escapeHtml(item.name)}</td>
-                        <td>${item.org_count}</td>
-                        <td>$${item.avg_cost ? item.avg_cost.toFixed(2) : 'N/A'}</td>
+                        <td>${item.org_count ?? 0}</td>
+                        <td>$${typeof item.avg_cost === 'number' ? item.avg_cost.toFixed(2) : 'N/A'}</td>
                         <td><span class="badge ${item.trend === 'up' ? 'bg-success' : item.trend === 'down' ? 'bg-danger' : 'bg-secondary'}">${item.trend || 'stable'}</span></td>
                     `;
                     tbody.appendChild(row);
@@ -285,9 +293,9 @@ async function loadTopItems() {
     }
 }
 
-async function loadSpoilageAnalysis() {
+async function loadSpoilageAnalysis(forceRefresh = false) {
     try {
-        const response = await fetch('/api/developer/inventory-analytics/spoilage');
+        const response = await fetch(buildAnalyticsUrl(analyticsEndpoints.spoilage, forceRefresh));
         if (response.ok) {
             const data = await response.json();
             const tbody = document.querySelector('#spoilageTable tbody');
@@ -298,8 +306,8 @@ async function loadSpoilageAnalysis() {
                     const row = document.createElement('tr');
                     row.innerHTML = `
                         <td>${escapeHtml(item.name)}</td>
-                        <td>${item.spoilage_rate ? (item.spoilage_rate * 100).toFixed(1) + '%' : 'N/A'}</td>
-                        <td>$${item.cost_impact ? item.cost_impact.toFixed(2) : '0.00'}</td>
+                        <td>${typeof item.spoilage_rate === 'number' ? (item.spoilage_rate * 100).toFixed(1) + '%' : 'N/A'}</td>
+                        <td>$${typeof item.cost_impact === 'number' ? item.cost_impact.toFixed(2) : '0.00'}</td>
                         <td>${item.orgs_affected || 0}</td>
                     `;
                     tbody.appendChild(row);
@@ -313,9 +321,9 @@ async function loadSpoilageAnalysis() {
     }
 }
 
-async function loadDataQuality() {
+async function loadDataQuality(forceRefresh = false) {
     try {
-        const response = await fetch('/api/developer/inventory-analytics/data-quality');
+        const response = await fetch(buildAnalyticsUrl(analyticsEndpoints.dataQuality, forceRefresh));
         if (response.ok) {
             const data = await response.json();
             
@@ -343,9 +351,9 @@ async function loadDataQuality() {
     }
 }
 
-async function loadRecentActivity() {
+async function loadRecentActivity(forceRefresh = false) {
     try {
-        const response = await fetch('/api/developer/inventory-analytics/recent-activity');
+        const response = await fetch(buildAnalyticsUrl(analyticsEndpoints.recentActivity, forceRefresh));
         if (response.ok) {
             const data = await response.json();
             const tbody = document.querySelector('#recentActivityTable tbody');
@@ -355,12 +363,12 @@ async function loadRecentActivity() {
                 data.activities.forEach(activity => {
                     const row = document.createElement('tr');
                     row.innerHTML = `
-                        <td>${new Date(activity.timestamp).toLocaleString()}</td>
+                        <td>${activity.timestamp ? new Date(activity.timestamp).toLocaleString() : 'N/A'}</td>
                         <td>${escapeHtml(activity.organization_name)}</td>
                         <td>${escapeHtml(activity.item_name)}</td>
                         <td><span class="badge ${getActionBadgeClass(activity.action)}">${activity.action}</span></td>
-                        <td>${activity.quantity_change > 0 ? '+' : ''}${activity.quantity_change} ${activity.unit}</td>
-                        <td>${activity.cost_impact ? '$' + activity.cost_impact.toFixed(2) : 'N/A'}</td>
+                        <td>${typeof activity.quantity_change === 'number' && activity.quantity_change > 0 ? '+' : ''}${activity.quantity_change ?? 0} ${activity.unit || ''}</td>
+                        <td>${typeof activity.cost_impact === 'number' ? '$' + activity.cost_impact.toFixed(2) : 'N/A'}</td>
                     `;
                     tbody.appendChild(row);
                 });
@@ -373,9 +381,9 @@ async function loadRecentActivity() {
     }
 }
 
-async function loadItemSelector() {
+async function loadItemSelector(forceRefresh = false) {
     try {
-        const response = await fetch('/api/developer/inventory-analytics/items-list');
+        const response = await fetch(buildAnalyticsUrl(analyticsEndpoints.itemsList, forceRefresh));
         if (response.ok) {
             const data = await response.json();
             const selector = document.getElementById('itemSelector');
@@ -395,7 +403,7 @@ async function loadItemSelector() {
     }
 }
 
-async function loadCostDistribution() {
+async function loadCostDistribution(forceRefresh = false) {
     const itemId = document.getElementById('itemSelector').value;
     if (!itemId) {
         document.getElementById('costDistributionChart').innerHTML = '<p class="text-muted text-center">Select an item to view cost distribution</p>';
@@ -403,7 +411,8 @@ async function loadCostDistribution() {
     }
     
     try {
-        const response = await fetch(`/api/developer/inventory-analytics/cost-distribution/${itemId}`);
+        const endpoint = `${analyticsEndpoints.costDistributionBase}${itemId}`;
+        const response = await fetch(buildAnalyticsUrl(endpoint, forceRefresh));
         if (response.ok) {
             const data = await response.json();
             renderCostDistribution(data);
@@ -452,15 +461,41 @@ function renderCostDistribution(data) {
     container.innerHTML = html;
 }
 
-function refreshAnalytics() {
-    const button = event.target;
+function refreshAnalytics(evt) {
+    const button = evt?.target || document.querySelector('button[onclick]');
     button.disabled = true;
     button.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Refreshing...';
     
-    loadAnalytics().finally(() => {
+    Promise.resolve()
+        .then(() => loadAnalytics(true))
+        .then(() => loadCostDistribution(true))
+        .finally(() => {
         button.disabled = false;
         button.innerHTML = '<i class="fas fa-sync-alt"></i> Refresh Data';
     });
+}
+
+function buildAnalyticsUrl(path, forceRefresh = false) {
+    if (!forceRefresh) {
+        return path;
+    }
+    const separator = path.includes('?') ? '&' : '?';
+    return `${path}${separator}refresh=1&_=${Date.now()}`;
+}
+
+function updateLastLoaded(timestamp) {
+    lastLoadedAt = timestamp;
+    const badge = document.getElementById('lastLoadedAt');
+    if (!badge) {
+        return;
+    }
+    if (!timestamp) {
+        badge.textContent = 'Last updated: --';
+        badge.removeAttribute('title');
+        return;
+    }
+    badge.textContent = `Last updated: ${timestamp.toLocaleTimeString()}`;
+    badge.title = `Last updated ${timestamp.toLocaleString()}`;
 }
 
 function getActionBadgeClass(action) {

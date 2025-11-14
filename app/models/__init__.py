@@ -8,7 +8,7 @@ from .models import (
     db, Organization, User, InventoryItem, InventoryHistory, BatchInventoryLog,
     Recipe, RecipeIngredient
 )
-from .recipe import RecipeConsumable
+from .recipe import RecipeConsumable, RecipeLineage
 from .batch import (
     Batch,
     BatchIngredient,

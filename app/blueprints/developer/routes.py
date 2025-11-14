@@ -1,4 +1,4 @@
-from flask import Blueprint, render_template, request, session, redirect, flash, jsonify, url_for
+from flask import Blueprint, render_template, request, session, redirect, flash, jsonify, url_for, current_app
 from flask_login import login_required, current_user
 from app.models import Organization, User, Permission, Role, GlobalItem
 from app.models import ProductCategory
@@ -48,70 +48,139 @@ developer_bp.register_blueprint(addons_bp)
 # Developer access control is handled centrally in `app/middleware.py`.
 # This eliminates the dual security checkpoints that were causing routing conflicts
 
+FEATURE_FLAG_SECTIONS = [
+    {
+        'title': 'Core business features',
+        'description': 'Enable or disable the production features that every organization depends on.',
+        'flags': [
+            {'key': 'FEATURE_FIFO_TRACKING', 'label': 'FIFO Inventory Tracking', 'status': 'wired', 'description': 'First-in-first-out inventory tracking via the inventory adjustment service.'},
+            {'key': 'FEATURE_BARCODE_SCANNING', 'label': 'Barcode Scanning', 'status': 'stub', 'description': 'Placeholder for future scanner integrations.'},
+            {'key': 'FEATURE_PRODUCT_VARIANTS', 'label': 'Product Variants System', 'status': 'wired', 'description': 'Manage SKUs with variants powered by ProductService.'},
+            {'key': 'FEATURE_AUTO_SKU_GENERATION', 'label': 'Auto-generate SKUs', 'status': 'wired', 'description': 'Automatically create SKU codes when products are saved.'},
+            {'key': 'FEATURE_RECIPE_VARIATIONS', 'label': 'Recipe Variations', 'status': 'wired', 'description': 'Support parent/child recipe relationships.'},
+            {'key': 'FEATURE_COST_TRACKING', 'label': 'Cost Tracking & Profit Margins', 'status': 'wired', 'description': 'Costing engine + FIFO/average cost calculations.'},
+            {'key': 'FEATURE_EXPIRATION_TRACKING', 'label': 'Expiration Date Tracking', 'status': 'wired', 'description': 'Lot-based expiration alerts and services.'},
+            {'key': 'FEATURE_BULK_OPERATIONS', 'label': 'Bulk Inventory Operations', 'status': 'wired', 'description': 'Bulk stock adjustments and checks.'},
+        ],
+    },
+    {
+        'title': 'Developer & advanced features',
+        'description': 'Capabilities intended for internal tooling or staging environments.',
+        'flags': [
+            {'key': 'FEATURE_INVENTORY_ANALYTICS', 'label': 'Inventory Analytics (Developer)', 'status': 'wired', 'description': 'Developer-only analytics dashboard and APIs.'},
+            {'key': 'FEATURE_DEBUG_MODE', 'label': 'Debug Mode', 'status': 'stub', 'description': 'Verbose logging & unsafe diagnostics.'},
+            {'key': 'FEATURE_AUTO_BACKUP', 'label': 'Auto-backup System', 'status': 'stub', 'description': 'Nightly exports of core tables.'},
+            {'key': 'FEATURE_CSV_EXPORT', 'label': 'CSV Export', 'status': 'wired', 'description': 'Downloadable CSV exports for reports.'},
+            {'key': 'FEATURE_ADVANCED_REPORTS', 'label': 'Advanced Reports', 'status': 'stub', 'description': 'Future premium reporting suite.'},
+            {'key': 'FEATURE_GLOBAL_ITEM_LIBRARY', 'label': 'Global Item Library Access', 'status': 'wired', 'description': 'Org access to the shared global inventory library.'},
+        ],
+    },
+    {
+        'title': 'Notifications & integrations',
+        'description': 'Toggle customer-facing communications and external app hooks.',
+        'flags': [
+            {'key': 'FEATURE_EMAIL_NOTIFICATIONS', 'label': 'Email Notifications', 'status': 'wired', 'description': 'Transactional + lifecycle email delivery.'},
+            {'key': 'FEATURE_BROWSER_NOTIFICATIONS', 'label': 'Browser Push Notifications', 'status': 'stub', 'description': 'Web push notifications to the browser.'},
+            {'key': 'FEATURE_SHOPIFY_INTEGRATION', 'label': 'Shopify Integration', 'status': 'stub', 'description': 'Future e-commerce sync pipeline.'},
+            {'key': 'FEATURE_API_ACCESS', 'label': 'REST API Access', 'status': 'stub', 'description': 'Public REST API for third-party apps.'},
+            {'key': 'FEATURE_OAUTH_PROVIDERS', 'label': 'OAuth Login Providers', 'status': 'wired', 'description': 'Google/Facebook sign-in support.'},
+        ],
+    },
+    {
+        'title': 'AI & forecasting experiments',
+        'description': 'Aspirational features that are not yet implemented.',
+        'flags': [
+            {'key': 'FEATURE_AI_RECIPE_OPTIMIZATION', 'label': 'AI Recipe Optimization', 'status': 'stub', 'description': 'ML-assisted formulation suggestions.'},
+            {'key': 'FEATURE_AI_DEMAND_FORECASTING', 'label': 'AI Demand Forecasting', 'status': 'stub', 'description': 'Predict demand to guide purchasing.'},
+            {'key': 'FEATURE_AI_QUALITY_INSIGHTS', 'label': 'AI Quality Insights', 'status': 'stub', 'description': 'Automated quality checks & anomaly detection.'},
+        ],
+    },
+    {
+        'title': 'Public tool availability',
+        'description': 'Control which calculator suites are exposed on the marketing site.',
+        'flags': [
+            {'key': 'TOOLS_SOAP', 'label': 'Soap Making Tools', 'status': 'wired', 'description': 'Saponification & curing calculators.'},
+            {'key': 'TOOLS_CANDLES', 'label': 'Candle Making Tools', 'status': 'wired', 'description': 'Wick, wax, and fragrance load calculators.'},
+            {'key': 'TOOLS_LOTIONS', 'label': 'Lotion & Cosmetic Tools', 'status': 'wired', 'description': 'Batch math for cosmetics and topicals.'},
+            {'key': 'TOOLS_HERBAL', 'label': 'Herbalist Tools', 'status': 'wired', 'description': 'Tincture and infusion helpers.'},
+            {'key': 'TOOLS_BAKING', 'label': 'Baking Tools', 'status': 'wired', 'description': 'Recipe scaling for bakers & confectioners.'},
+        ],
+    },
+]
+
+FEATURE_FLAG_KEYS = [flag['key'] for section in FEATURE_FLAG_SECTIONS for flag in section['flags']]
+
 @developer_bp.route('/dashboard')
 @login_required
 def dashboard():
     """Main developer system dashboard"""
-    # System statistics
-    total_orgs = Organization.query.count()
-    active_orgs = Organization.query.filter_by(is_active=True).count()
-    total_users = User.query.filter(User.user_type != 'developer').count()
-    active_users = User.query.filter(
-        User.user_type != 'developer',
-        User.is_active == True
-    ).count()
+    from app.services.statistics import AnalyticsDataService
 
-    # Subscription tier breakdown - get from organization's subscription tiers
-    from app.models.subscription_tier import SubscriptionTier
-    subscription_stats = db.session.query(
-        SubscriptionTier.name,
-        func.count(Organization.id).label('count')
-    ).join(Organization, Organization.subscription_tier_id == SubscriptionTier.id).group_by(SubscriptionTier.name).all()
+    force_refresh = (request.args.get('refresh') or '').lower() in ('1', 'true', 'yes')
+    dashboard_data = AnalyticsDataService.get_developer_dashboard(force_refresh=force_refresh)
+    overview = dashboard_data.get('overview') or {}
+    tier_breakdown = overview.get('tiers') or {}
+    recent_orgs = dashboard_data.get('recent_organizations') or []
+    problem_orgs = dashboard_data.get('attention_organizations') or []
+    waitlist_count = dashboard_data.get('waitlist_count', 0)
+    new_orgs_count = dashboard_data.get('recent_count') or len(recent_orgs)
+    attention_count = dashboard_data.get('attention_count') or len(problem_orgs)
+    fault_feed = AnalyticsDataService.get_fault_log_entries(include_all=True, force_refresh=force_refresh)
+    support_queue = fault_feed[:4]
+    support_queue_total = len(fault_feed)
 
-    # Recent organizations (last 30 days)
-    thirty_days_ago = datetime.now(timezone.utc) - timedelta(days=30)
-    recent_orgs = Organization.query.filter(
-        Organization.created_at >= thirty_days_ago
-    ).order_by(Organization.created_at.desc()).limit(10).all()
+    generated_iso = dashboard_data.get('generated_at')
+    generated_display = None
+    if generated_iso:
+        try:
+            generated_dt = datetime.fromisoformat(generated_iso)
+            generated_display = generated_dt.strftime('%Y-%m-%d %H:%M UTC')
+        except ValueError:
+            generated_display = generated_iso
 
-    # Organizations needing attention (no active users, overdue payments, etc.)
-    problem_orgs = Organization.query.filter(
-        Organization.is_active == True
-    ).all()
-
-    # Filter for orgs with no active users
-    problem_orgs = [org for org in problem_orgs if org.active_users_count == 0]
-
-    # Get waitlist count
-    waitlist_data = read_json_file('data/waitlist.json', default=[]) or []
-    waitlist_count = len(waitlist_data)
-
-    return render_template('developer/dashboard.html',
-                         total_orgs=total_orgs,
-                         active_orgs=active_orgs,
-                         total_users=total_users,
-                         active_users=active_users,
-                         subscription_stats=subscription_stats,
-                         recent_orgs=recent_orgs,
-                         problem_orgs=problem_orgs,
-                         waitlist_count=waitlist_count)
+    return render_template(
+        'developer/dashboard.html',
+        total_orgs=overview.get('total_organizations', 0),
+        active_orgs=overview.get('active_organizations', 0),
+        total_users=overview.get('total_users', 0),
+        active_users=overview.get('active_users', 0),
+        new_orgs_count=new_orgs_count,
+        attention_count=attention_count,
+        tier_breakdown=tier_breakdown,
+        recent_orgs=recent_orgs,
+        problem_orgs=problem_orgs,
+        support_queue=support_queue,
+        support_queue_total=support_queue_total,
+        waitlist_count=waitlist_count,
+        dashboard_generated_at=generated_display,
+        force_refresh=force_refresh,
+        breadcrumb_items=[{'label': 'Developer Dashboard'}],
+    )
 
 @developer_bp.route('/marketing-admin')
 @login_required
 def marketing_admin():
     """Manage homepage marketing content (reviews, spotlights, messages)."""
-    reviews = read_json_file('data/reviews.json', default=[]) or []
-    spotlights = read_json_file('data/spotlights.json', default=[]) or []
+    from app.services.statistics import AnalyticsDataService
+
+    marketing_data = AnalyticsDataService.get_marketing_content()
+    reviews = marketing_data.get('reviews', [])
+    spotlights = marketing_data.get('spotlights', [])
     messages = {'day_1': '', 'day_3': '', 'day_5': ''}
-    promo_codes = []
-    demo_url = ''
-    demo_videos = []
-    cfg = read_json_file('settings.json', default={}) or {}
-    messages.update(cfg.get('marketing_messages', {}))
-    promo_codes = cfg.get('promo_codes', []) or []
-    demo_url = cfg.get('demo_url', '') or ''
-    demo_videos = cfg.get('demo_videos', []) or []
-    return render_template('developer/marketing_admin.html', reviews=reviews, spotlights=spotlights, messages=messages, promo_codes=promo_codes, demo_url=demo_url, demo_videos=demo_videos)
+    messages.update(marketing_data.get('marketing_messages', {}))
+    promo_codes = marketing_data.get('promo_codes', []) or []
+    demo_url = marketing_data.get('demo_url', '') or ''
+    demo_videos = marketing_data.get('demo_videos', []) or []
+
+    return render_template(
+        'developer/marketing_admin.html',
+        reviews=reviews,
+        spotlights=spotlights,
+        messages=messages,
+        promo_codes=promo_codes,
+        demo_url=demo_url,
+        demo_videos=demo_videos
+    )
 
 @developer_bp.route('/marketing-admin/save', methods=['POST'])
 @login_required
@@ -140,26 +209,55 @@ def marketing_admin_save():
         return jsonify({'success': False, 'error': str(e)}), 500
 
 @developer_bp.route('/organizations')
+@developer_bp.route('/customer-support')
 @login_required
 def organizations():
-    """Organization management and customer support filtering"""
-    organizations = Organization.query.all()
+    """Customer support dashboard for organization triage"""
+    organizations = Organization.query.order_by(Organization.name.asc()).all()
     selected_org_id = session.get('dev_selected_org_id')
-    selected_org = None
+    selected_org = Organization.query.get(selected_org_id) if selected_org_id else None
 
-    if selected_org_id:
-        selected_org = Organization.query.get(selected_org_id)
+    from app.services.statistics import AnalyticsDataService
+    dashboard_snapshot = AnalyticsDataService.get_developer_dashboard()
+    waitlist_count = dashboard_snapshot.get('waitlist_count', 0)
+    attention_orgs = dashboard_snapshot.get('attention_organizations') or []
+    attention_org_ids = {org['id'] for org in attention_orgs}
+    recent_orgs = dashboard_snapshot.get('recent_organizations') or []
 
-    return render_template('developer/organizations.html', 
-                         organizations=organizations,
-                         selected_org=selected_org)
+    fault_feed = AnalyticsDataService.get_fault_log_entries(include_all=True)
+    support_queue = fault_feed[:8]
+
+    support_metrics = {
+        'total_orgs': len(organizations),
+        'active_orgs': len([org for org in organizations if org.is_active]),
+        'attention_count': len(attention_orgs),
+        'waitlist_count': waitlist_count,
+        'open_tickets': len(fault_feed),
+        'recent_signups': recent_orgs[:5],
+    }
+
+    return render_template(
+        'developer/customer_support.html',
+        organizations=organizations,
+        selected_org=selected_org,
+        attention_orgs=attention_orgs,
+        attention_org_ids=attention_org_ids,
+        support_queue=support_queue,
+        support_metrics=support_metrics,
+        waitlist_count=waitlist_count,
+        recent_orgs=recent_orgs[:6],
+        breadcrumb_items=[
+            {'label': 'Developer Dashboard', 'url': url_for('developer.dashboard')},
+            {'label': 'Customer Support'}
+        ],
+    )
 
 @developer_bp.route('/organizations/create', methods=['GET', 'POST'])
 @login_required
 def create_organization():
     """Create new organization with owner user"""
     # Load available tiers for the form (DB only)
-    from ..models.subscription_tier import SubscriptionTier as _ST
+    from app.models.subscription_tier import SubscriptionTier as _ST
     available_tiers = {str(t.id): {'name': t.name} for t in _ST.query.order_by(_ST.name).all()}
 
     if request.method == 'POST':
@@ -282,7 +380,7 @@ def organization_detail(org_id):
         users.append(user_dict)
 
     # Build subscription tiers from DB for the dropdown
-    from ..models.subscription_tier import SubscriptionTier as _ST
+    from app.models.subscription_tier import SubscriptionTier as _ST
     try:
         all_db_tiers = _ST.query.order_by(_ST.name).all()
         tiers_config = {str(t.id): {'name': t.name, 'is_available': t.has_valid_integration or t.is_billing_exempt} for t in all_db_tiers}
@@ -301,12 +399,19 @@ def organization_detail(org_id):
     print(f"DEBUG: Effective tier id: {current_tier}")
     print(f"DEBUG: Available tiers: {list(tiers_config.keys())}")
 
-    return render_template('developer/organization_detail.html',
-                         organization=org,
-                         users=users,
-                         users_objects=users_query,  # Pass original objects for template iteration
-                         tiers_config=tiers_config,
-                         current_tier=current_tier)
+    return render_template(
+        'developer/organization_detail.html',
+        organization=org,
+        users=users,
+        users_objects=users_query,
+        tiers_config=tiers_config,
+        current_tier=current_tier,
+        breadcrumb_items=[
+            {'label': 'Developer Dashboard', 'url': url_for('developer.dashboard')},
+            {'label': 'Customer Support', 'url': url_for('developer.organizations')},
+            {'label': org.name}
+        ],
+    )
 
 @developer_bp.route('/organizations/<int:org_id>/edit', methods=['POST'])
 @login_required
@@ -514,16 +619,25 @@ def toggle_user_active(user_id):
 @developer_bp.route('/system-settings')
 @require_developer_permission('system_admin')
 def system_settings():
-    """System settings and configuration"""
-    # Get system statistics
-    stats = {
-        'total_permissions': Permission.query.count(),
-        'total_roles': Role.query.count(),
-        'total_organizations': Organization.query.count(),
-        'total_users': User.query.count()
-    }
+    """Legacy endpoint retained for backwards compatibility."""
+    flash('System settings have moved to Feature Flags & Integrations.', 'info')
+    return redirect(url_for('developer.feature_flags'))
 
-    return render_template('developer/system_settings.html', stats=stats)
+@developer_bp.route('/feature-flags')
+@login_required
+@permission_required('dev.system_admin')
+def feature_flags():
+    """Dedicated feature flag dashboard."""
+    flag_state = {key: bool(current_app.config.get(key, False)) for key in FEATURE_FLAG_KEYS}
+    return render_template(
+        'developer/feature_flags.html',
+        feature_flag_sections=FEATURE_FLAG_SECTIONS,
+        flag_state=flag_state,
+        breadcrumb_items=[
+            {'label': 'Developer Dashboard', 'url': url_for('developer.dashboard')},
+            {'label': 'Feature Flags'}
+        ],
+    )
 
 @developer_bp.route('/global-items')
 @login_required
@@ -565,8 +679,20 @@ def global_items_admin():
             # Fallback to name-only search
             query = query.filter(GlobalItem.name.ilike(term))
 
-    # Get filtered results
-    items = query.order_by(GlobalItem.item_type.asc(), GlobalItem.name.asc()).limit(500).all()
+    # Pagination controls
+    page = request.args.get('page', type=int) or 1
+    if page < 1:
+        page = 1
+    per_page_options = [20, 30, 40, 50]
+    per_page = request.args.get('page_size', type=int) or per_page_options[0]
+    if per_page not in per_page_options:
+        per_page = per_page_options[0]
+
+    pagination = query.order_by(
+        GlobalItem.item_type.asc(),
+        GlobalItem.name.asc()
+    ).paginate(page=page, per_page=per_page, error_out=False)
+    items = pagination.items
 
     # Get unique ingredient categories for filter dropdown (ingredients only, global scope)
     from app.models.category import IngredientCategory
@@ -591,6 +717,25 @@ def global_items_admin():
             organization_id=None, is_active=True, is_global_category=True
         ).order_by(IngredientCategory.name).all()]
 
+    # Preserve filters for pagination links
+    filter_params = {}
+    if item_type:
+        filter_params['type'] = item_type
+    if category_filter:
+        filter_params['category'] = category_filter
+    if search_query:
+        filter_params['search'] = search_query
+    if per_page != per_page_options[0]:
+        filter_params['page_size'] = per_page
+
+    def build_page_url(page_number: int):
+        params = dict(filter_params)
+        params['page'] = page_number
+        return url_for('developer.global_items_admin', **params)
+
+    first_item_index = ((pagination.page - 1) * pagination.per_page) + 1 if pagination.total else 0
+    last_item_index = min(pagination.page * pagination.per_page, pagination.total)
+
     return render_template(
         'developer/global_items.html',
         items=items,
@@ -598,6 +743,17 @@ def global_items_admin():
         selected_type=item_type,
         selected_category=category_filter,
         search_query=search_query,
+        pagination=pagination,
+        per_page=per_page,
+        per_page_options=per_page_options,
+        filter_params=filter_params,
+        build_page_url=build_page_url,
+        first_item_index=first_item_index,
+        last_item_index=last_item_index,
+        breadcrumb_items=[
+            {'label': 'Developer Dashboard', 'url': url_for('developer.dashboard')},
+            {'label': 'Global Item Library'}
+        ],
     )
 
 @developer_bp.route('/global-items/<int:item_id>')
@@ -905,19 +1061,10 @@ def load_curated_container_lists():
 @login_required
 def system_statistics():
     """System-wide statistics dashboard"""
-    # Gather system statistics
-    stats = {
-        'total_organizations': Organization.query.count(),
-        'active_organizations': Organization.query.filter_by(is_active=True).count(),
-        'total_users': User.query.filter(User.user_type != 'developer').count(),
-        'active_users': User.query.filter(
-            User.user_type != 'developer',
-            User.is_active == True
-        ).count(),
-        'total_global_items': GlobalItem.query.filter_by(is_archived=False).count(),
-        'total_permissions': Permission.query.count(),
-        'total_roles': Role.query.count()
-    }
+    from app.services.statistics import AnalyticsDataService
+
+    force_refresh = (request.args.get('refresh') or '').lower() in ('1', 'true', 'yes')
+    stats = AnalyticsDataService.get_system_overview(force_refresh=force_refresh)
 
     return render_template('developer/system_statistics.html', stats=stats)
 
@@ -1391,7 +1538,105 @@ def inventory_analytics_stub():
     if not enabled:
         flash('Inventory analytics is not enabled for this environment.', 'info')
         return redirect(url_for('developer.dashboard'))
-    return render_template('developer/inventory_analytics.html')
+    return render_template(
+        'developer/inventory_analytics.html',
+        breadcrumb_items=[
+            {'label': 'Developer Dashboard', 'url': url_for('developer.dashboard')},
+            {'label': 'Inventory Analytics'}
+        ]
+    )
+
+# Inventory Analytics API Endpoints
+@developer_bp.route('/api/inventory-analytics/metrics')
+@login_required
+def api_inventory_analytics_metrics():
+    """Get key inventory analytics metrics"""
+    from app.services.statistics import AnalyticsDataService
+
+    try:
+        force_refresh = (request.args.get('refresh') or '').lower() in ('1', 'true', 'yes')
+        return jsonify(AnalyticsDataService.get_inventory_metrics(force_refresh=force_refresh))
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@developer_bp.route('/api/inventory-analytics/top-items')
+@login_required
+def api_inventory_analytics_top_items():
+    """Get top items by usage across organizations"""
+    from app.services.statistics import AnalyticsDataService
+
+    try:
+        force_refresh = (request.args.get('refresh') or '').lower() in ('1', 'true', 'yes')
+        items = AnalyticsDataService.get_top_global_items(force_refresh=force_refresh)
+        return jsonify({'items': items})
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@developer_bp.route('/api/inventory-analytics/spoilage')
+@login_required
+def api_inventory_analytics_spoilage():
+    """Get spoilage analysis by item"""
+    from app.services.statistics import AnalyticsDataService
+
+    try:
+        force_refresh = (request.args.get('refresh') or '').lower() in ('1', 'true', 'yes')
+        items = AnalyticsDataService.get_spoilage_analysis(force_refresh=force_refresh)
+        return jsonify({'items': items})
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@developer_bp.route('/api/inventory-analytics/data-quality')
+@login_required
+def api_inventory_analytics_data_quality():
+    """Get data quality metrics for global items"""
+    from app.services.statistics import AnalyticsDataService
+
+    try:
+        force_refresh = (request.args.get('refresh') or '').lower() in ('1', 'true', 'yes')
+        return jsonify(AnalyticsDataService.get_data_quality_summary(force_refresh=force_refresh))
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@developer_bp.route('/api/inventory-analytics/recent-activity')
+@login_required
+def api_inventory_analytics_recent_activity():
+    """Get recent inventory activity across all organizations"""
+    from app.services.statistics import AnalyticsDataService
+
+    try:
+        force_refresh = (request.args.get('refresh') or '').lower() in ('1', 'true', 'yes')
+        activities = AnalyticsDataService.get_recent_inventory_activity(force_refresh=force_refresh)
+        return jsonify({'activities': activities})
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@developer_bp.route('/api/inventory-analytics/items-list')
+@login_required
+def api_inventory_analytics_items_list():
+    """Get list of global items for selection"""
+    from app.services.statistics import AnalyticsDataService
+
+    try:
+        force_refresh = (request.args.get('refresh') or '').lower() in ('1', 'true', 'yes')
+        items = AnalyticsDataService.get_inventory_item_options(force_refresh=force_refresh)
+        return jsonify({'items': items})
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@developer_bp.route('/api/inventory-analytics/cost-distribution/<int:item_id>')
+@login_required
+def api_inventory_analytics_cost_distribution(item_id):
+    """Get cost distribution for a specific global item"""
+    from app.services.statistics import AnalyticsDataService
+
+    try:
+        force_refresh = (request.args.get('refresh') or '').lower() in ('1', 'true', 'yes')
+        distribution = AnalyticsDataService.get_cost_distribution(
+            item_id, force_refresh=force_refresh
+        )
+        return jsonify(distribution)
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
 
 # Inventory Analytics API Endpoints
 @developer_bp.route('/api/inventory-analytics/metrics')
@@ -1753,6 +1998,7 @@ def integrations_checklist():
             'recommended': recommended,
             'is_secret': is_secret,
             'note': note,
+            'allow_config': allow_config,
         }
 
     launch_env_sections = [
@@ -1771,19 +2017,19 @@ def integrations_checklist():
             'title': 'Database & Persistence',
             'note': 'Configure a managed Postgres instance before launch. Disable automatic table creation in production.',
             'section_items': [
-                _make_item('DATABASE_INTERNAL_URL', 'Primary database connection string (preferred in production).', required=True, is_secret=True),
-                _make_item('DATABASE_URL', 'Fallback database connection string (used if internal URL not set).', required=False, is_secret=True, note='Optional: set if your platform exposes only DATABASE_URL.'),
+                _make_item('DATABASE_INTERNAL_URL', 'Primary database connection string (preferred in production).', required=True, is_secret=True, note='Provision managed Postgres (Render, Supabase, RDS). Copy the full postgres:// URI with username, password, host, and database name.'),
+                _make_item('DATABASE_URL', 'Fallback database connection string (used if internal URL not set).', required=False, is_secret=True, note='Render automatically injects DATABASE_URL. Mirror DATABASE_INTERNAL_URL when both exist.'),
                 _make_item('SQLALCHEMY_DISABLE_CREATE_ALL', 'Disable db.create_all() safety switch. Set to 1 in production.', required=False, recommended='1 (enabled)', note='Prevents accidental schema drift on boot.'),
                 _make_item('SQLALCHEMY_ENABLE_CREATE_ALL', 'Local dev-only override to run db.create_all(). Leave unset in production.', required=False, recommended='unset'),
             ]
         },
         {
             'title': 'Caching & Rate Limits',
-            'note': 'Use Redis (or another shared store) for server sessions, caching, and rate limiting in production.',
-            'items': [
-                _make_item('REDIS_URL', 'Redis connection string for caching, sessions, and rate limit storage.', required=True, recommended='redis://...'),
-                _make_item('RATELIMIT_STORAGE_URL', 'Flask-Limiter backend. Point at Redis in production.', required=True, recommended='redis://...', allow_config=True),
-                _make_item('SESSION_TYPE', 'Server-side session backend. Must be "redis" in production.', required=True, recommended='redis', allow_config=True),
+            'note': 'Provision a managed Redis instance (Render Redis, Upstash, ElastiCache). Use the same connection URI for caching, Flask sessions, and rate limiting.',
+            'section_items': [
+                _make_item('REDIS_URL', 'Redis connection string for caching, sessions, and rate limit storage.', required=True, recommended='redis://', note='Create the service, copy the full tls-enabled URI, and paste it in Render → Environment.', allow_config=True),
+                _make_item('RATELIMIT_STORAGE_URL', 'Flask-Limiter backend. Should mirror REDIS_URL in production.', required=True, recommended='redis://', allow_config=True),
+                _make_item('SESSION_TYPE', 'Server-side session backend. Must be "redis" in production.', required=True, recommended='redis', allow_config=True, note='Set to redis so user sessions live in Redis instead of cookies.'),
             ],
         },
         {
@@ -1807,27 +2053,27 @@ def integrations_checklist():
             'title': 'Email & Notifications',
             'note': 'Configure exactly one provider for transactional email and confirm DNS (SPF/DKIM).',
             'section_items': [
-                _make_item('EMAIL_PROVIDER', 'Email provider selector: smtp | sendgrid | postmark | mailgun.', required=True, allow_config=True, recommended='sendgrid / postmark / mailgun'),
-                _make_item('MAIL_SERVER', 'SMTP server hostname.', required=False),
+                _make_item('EMAIL_PROVIDER', 'Email provider selector: smtp | sendgrid | postmark | mailgun.', required=True, allow_config=True, recommended='sendgrid / postmark / mailgun', note='Match this to the provider you configure below.'),
+                _make_item('MAIL_SERVER', 'SMTP server hostname.', required=False, note='Only needed for the SMTP option (e.g., smtp.sendgrid.net).'),
                 _make_item('MAIL_PORT', 'SMTP port (587 for TLS, 465 for SSL).', required=False),
                 _make_item('MAIL_USE_TLS', 'Enable STARTTLS for SMTP.', required=False, recommended='true'),
                 _make_item('MAIL_USE_SSL', 'Enable implicit TLS for SMTP.', required=False, recommended='false unless port 465'),
                 _make_item('MAIL_USERNAME', 'SMTP username / login.', required=False, is_secret=True),
                 _make_item('MAIL_PASSWORD', 'SMTP password or app-specific password.', required=False, is_secret=True),
-                _make_item('MAIL_DEFAULT_SENDER', 'Default from-address for outbound email.', required=True, allow_config=True, recommended='verified domain address'),
-                _make_item('SENDGRID_API_KEY', 'SendGrid API key (if using SendGrid).', required=False, is_secret=True),
-                _make_item('POSTMARK_SERVER_TOKEN', 'Postmark server token (if using Postmark).', required=False, is_secret=True),
-                _make_item('MAILGUN_API_KEY', 'Mailgun REST API key (if using Mailgun).', required=False, is_secret=True),
-                _make_item('MAILGUN_DOMAIN', 'Mailgun sending domain (if using Mailgun).', required=False),
+                _make_item('MAIL_DEFAULT_SENDER', 'Default from-address for outbound email.', required=True, allow_config=True, recommended='verified domain address', note='Use a domain whose DNS records include SPF/DKIM.'),
+                _make_item('SENDGRID_API_KEY', 'SendGrid API key (if using SendGrid).', required=False, is_secret=True, note='Create in SendGrid dashboard → Email API → API Keys.'),
+                _make_item('POSTMARK_SERVER_TOKEN', 'Postmark server token (if using Postmark).', required=False, is_secret=True, note='Copy from Postmark Server Settings → API Tokens.'),
+                _make_item('MAILGUN_API_KEY', 'Mailgun REST API key (if using Mailgun).', required=False, is_secret=True, note='Available in Mailgun dashboard under API Security.'),
+                _make_item('MAILGUN_DOMAIN', 'Mailgun sending domain (if using Mailgun).', required=False, note='Use the exact domain you verified in Mailgun.'),
             ]
         },
         {
             'title': 'Billing & Payments',
             'note': 'Switch to live Stripe keys and webhook secrets before you charge real customers.',
             'section_items': [
-                _make_item('STRIPE_SECRET_KEY', 'Stripe secret key (live).', required=True, is_secret=True),
-                _make_item('STRIPE_PUBLISHABLE_KEY', 'Stripe publishable key (live).', required=True, is_secret=True),
-                _make_item('STRIPE_WEBHOOK_SECRET', 'Stripe webhook signing secret.', required=True, is_secret=True),
+                _make_item('STRIPE_SECRET_KEY', 'Stripe secret key (live).', required=True, is_secret=True, note='Stripe Dashboard → Developers → API Keys → Secret key. Use the live key, not test, for production.'),
+                _make_item('STRIPE_PUBLISHABLE_KEY', 'Stripe publishable key (live).', required=True, is_secret=True, note='Paired with the secret key for Checkout/Elements.'),
+                _make_item('STRIPE_WEBHOOK_SECRET', 'Stripe webhook signing secret.', required=True, is_secret=True, note='Create a webhook endpoint pointing to /billing/webhooks/stripe then copy the signing secret.'),
             ]
         },
         {
@@ -1957,55 +2203,12 @@ def integrations_stripe_events():
 def integrations_set_feature_flags():
     """Set feature flags (developer only; stored in-app and persisted to settings.json)."""
     try:
-        from flask import current_app
         if current_user.user_type != 'developer':
             return jsonify({'success': False, 'error': 'Developer access required'}), 403
         data = request.get_json() or {}
 
-        # Define allowed flags
-        allowed_flags = [
-            # Core business features
-            'FEATURE_FIFO_TRACKING',
-            'FEATURE_BARCODE_SCANNING',
-            'FEATURE_PRODUCT_VARIANTS',
-            'FEATURE_AUTO_SKU_GENERATION',
-            'FEATURE_RECIPE_VARIATIONS',
-            'FEATURE_COST_TRACKING',
-            'FEATURE_EXPIRATION_TRACKING',
-            'FEATURE_BULK_OPERATIONS',
-
-            # Developer & advanced features
-            'FEATURE_INVENTORY_ANALYTICS',
-            'FEATURE_DEBUG_MODE',
-            'FEATURE_AUTO_BACKUP',
-            'FEATURE_CSV_EXPORT',
-            'FEATURE_ADVANCED_REPORTS',
-            'FEATURE_GLOBAL_ITEM_LIBRARY',
-
-            # Notification systems
-            'FEATURE_EMAIL_NOTIFICATIONS',
-            'FEATURE_BROWSER_NOTIFICATIONS',
-
-            # Integration features
-            'FEATURE_SHOPIFY_INTEGRATION',
-            'FEATURE_API_ACCESS',
-            'FEATURE_OAUTH_PROVIDERS',
-
-            # AI features
-            'FEATURE_AI_RECIPE_OPTIMIZATION',
-            'FEATURE_AI_DEMAND_FORECASTING',
-            'FEATURE_AI_QUALITY_INSIGHTS',
-
-            # Public tools
-            'TOOLS_SOAP',
-            'TOOLS_CANDLES', 
-            'TOOLS_LOTIONS',
-            'TOOLS_HERBAL',
-            'TOOLS_BAKING'
-        ]
-
         # Update app config for allowed flags
-        for flag in allowed_flags:
+        for flag in FEATURE_FLAG_KEYS:
             if flag in data:
                 value = bool(data[flag])
                 current_app.config[flag] = value
@@ -2015,7 +2218,7 @@ def integrations_set_feature_flags():
             settings = read_json_file('settings.json', default={}) or {}
 
             ff = settings.get('feature_flags', {}) or {}
-            for flag in allowed_flags:
+            for flag in FEATURE_FLAG_KEYS:
                 if flag in data:
                     ff[flag] = bool(data[flag])
 
@@ -2146,51 +2349,16 @@ def delete_product_category(cat_id):
 @require_developer_permission('system_admin')
 def waitlist_statistics():
     """View waitlist statistics and data"""
-    from datetime import datetime
+    from app.services.statistics import AnalyticsDataService
 
-    waitlist_file = 'data/waitlist.json'
-    waitlist_data = read_json_file(waitlist_file, default=[]) or []
-
-    # Process data for display
-    processed_data = []
-    for entry in waitlist_data:
-        # Format timestamp
-        timestamp = entry.get('timestamp', '')
-        if timestamp:
-            try:
-                dt = datetime.fromisoformat(timestamp.replace('Z', '+00:00'))
-                formatted_date = dt.strftime('%Y-%m-%d %H:%M UTC')
-            except:
-                formatted_date = timestamp
-        else:
-            formatted_date = 'Unknown'
-
-        # Build full name
-        first_name = entry.get('first_name', '')
-        last_name = entry.get('last_name', '')
-        name = entry.get('name', '')  # Legacy field
-
-        if first_name or last_name:
-            full_name = f"{first_name} {last_name}".strip()
-        elif name:
-            full_name = name
-        else:
-            full_name = 'Not provided'
-
-        processed_data.append({
-            'email': entry.get('email', ''),
-            'full_name': full_name,
-            'business_type': entry.get('business_type', 'Not specified'),
-            'formatted_date': formatted_date,
-            'source': entry.get('source', 'Unknown')
-        })
-
-    # Sort by most recent first
-    processed_data.sort(key=lambda x: x.get('formatted_date', ''), reverse=True)
-
-    return render_template('developer/waitlist_statistics.html', 
-                         waitlist_data=processed_data,
-                         total_signups=len(waitlist_data))
+    force_refresh = (request.args.get('refresh') or '').lower() in ('1', 'true', 'yes')
+    stats = AnalyticsDataService.get_waitlist_statistics(force_refresh=force_refresh)
+    return render_template(
+        'developer/waitlist_statistics.html',
+        waitlist_data=stats.get('entries', []),
+        total_signups=stats.get('total', 0),
+        generated_at=stats.get('generated_at'),
+    )
 
 # Customer support filtering routes
 @developer_bp.route('/select-org/<int:org_id>')
@@ -2258,31 +2426,30 @@ def clear_organization_filter():
 @login_required
 def api_stats():
     """API endpoint for dashboard statistics"""
+    from app.services.statistics import AnalyticsDataService
+
+    force_refresh = (request.args.get('refresh') or '').lower() in ('1', 'true', 'yes')
+    overview = AnalyticsDataService.get_system_overview(force_refresh=force_refresh)
+
+    tier_counts = overview.get('tiers') or {}
+
     stats = {
         'organizations': {
-            'total': Organization.query.count(),
-            'active': Organization.query.filter_by(is_active=True).count(),
-            'by_tier': {}
+            'total': overview.get('total_organizations', 0),
+            'active': overview.get('active_organizations', 0),
+            'by_tier': tier_counts
         },
         'users': {
-            'total': User.query.filter(User.user_type != 'developer').count(),
-            'active': User.query.filter(
-                User.user_type != 'developer',
-                User.is_active == True
-            ).count()
+            'total': overview.get('total_users', 0),
+            'active': overview.get('active_users', 0)
         }
     }
 
     # Subscription tier breakdown - get from SubscriptionTier model
     from app.models.subscription_tier import SubscriptionTier
+    # Ensure all known tiers appear even if zero (to maintain API contract)
     for tier in ['exempt', 'free', 'solo', 'team', 'enterprise']:
-        tier_record = SubscriptionTier.query.filter_by(key=tier).first()
-        if tier_record:
-            stats['organizations']['by_tier'][tier] = Organization.query.filter_by(
-                subscription_tier_id=tier_record.id
-            ).count()
-        else:
-            stats['organizations']['by_tier'][tier] = 0
+        stats['organizations']['by_tier'].setdefault(tier, 0)
 
     return jsonify(stats)
 
