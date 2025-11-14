@@ -53,15 +53,15 @@ def fix_recipe_prefixes():
             print(f"\n🔍 Processing recipe: {recipe.name} (ID: {recipe.id})")
             
             # Generate base prefix from recipe name
-            if recipe.parent_id:
+            if recipe.parent_recipe_id:
                 # This is a variation - handle specially
-                parent_recipe = Recipe.query.get(recipe.parent_id)
+                parent_recipe = Recipe.query.get(recipe.parent_recipe_id)
                 if parent_recipe and parent_recipe.label_prefix and parent_recipe.label_prefix not in ['NONE', 'None', '']:
                     # Use parent prefix with variation suffix
                     base_prefix = parent_recipe.label_prefix
                     # Count existing variations with same base prefix
                     existing_variations = Recipe.query.filter(
-                        Recipe.parent_id == recipe.parent_id,
+                        Recipe.parent_recipe_id == recipe.parent_recipe_id,
                         Recipe.label_prefix.like(f"{base_prefix}%"),
                         Recipe.id != recipe.id  # Don't count this recipe
                     ).count()

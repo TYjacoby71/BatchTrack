@@ -29,7 +29,9 @@ class Recipe(ScopedModelMixin, db.Model):
     instructions = db.Column(db.Text)
     label_prefix = db.Column(db.String(8))
     qr_image = db.Column(db.String(128))
-    parent_id = db.Column(db.Integer, db.ForeignKey('recipe.id'), nullable=True)
+    parent_recipe_id = db.Column(db.Integer, db.ForeignKey('recipe.id'), nullable=True, index=True)
+    cloned_from_id = db.Column(db.Integer, db.ForeignKey('recipe.id'), nullable=True, index=True)
+    root_recipe_id = db.Column(db.Integer, db.ForeignKey('recipe.id'), nullable=True, index=True)
     is_locked = db.Column(db.Boolean, default=False)
     predicted_yield = db.Column(db.Float, default=0.0)
     predicted_yield_unit = db.Column(db.String(50), default="oz")
@@ -40,7 +42,27 @@ class Recipe(ScopedModelMixin, db.Model):
     # Timestamps for retention calculations
     created_at = db.Column(db.DateTime, default=TimezoneUtils.utc_now)
     updated_at = db.Column(db.DateTime, default=TimezoneUtils.utc_now, onupdate=TimezoneUtils.utc_now)
-    parent = db.relationship('Recipe', remote_side=[id], backref='variations')
+    parent = db.relationship(
+        'Recipe',
+        remote_side=[id],
+        foreign_keys=[parent_recipe_id],
+        backref='variations',
+        primaryjoin="Recipe.parent_recipe_id==Recipe.id"
+    )
+    cloned_from = db.relationship(
+        'Recipe',
+        remote_side=[id],
+        foreign_keys=[cloned_from_id],
+        backref='clones',
+        primaryjoin="Recipe.cloned_from_id==Recipe.id"
+    )
+    root_recipe = db.relationship(
+        'Recipe',
+        remote_side=[id],
+        foreign_keys=[root_recipe_id],
+        backref='lineage_descendants',
+        primaryjoin="Recipe.root_recipe_id==Recipe.id"
+    )
     recipe_ingredients = db.relationship('RecipeIngredient', backref='recipe', cascade="all, delete-orphan")
     # Consumables used during production (e.g., gloves, filters). Snapshot at batch start.
     recipe_consumables = db.relationship('RecipeConsumable', backref='recipe', cascade="all, delete-orphan")
@@ -75,6 +97,9 @@ class Recipe(ScopedModelMixin, db.Model):
     __table_args__ = tuple([
         db.Index('ix_recipe_org', 'organization_id'),
         db.Index('ix_recipe_category_id', 'category_id'),
+        db.Index('ix_recipe_parent_recipe_id', 'parent_recipe_id'),
+        db.Index('ix_recipe_cloned_from_id', 'cloned_from_id'),
+        db.Index('ix_recipe_root_recipe_id', 'root_recipe_id'),
         *([db.Index('ix_recipe_category_data_gin', db.text('(category_data::jsonb)'), postgresql_using='gin')] if _IS_PG else []),
         db.Index('ix_recipe_soap_superfat', 'soap_superfat'),
         db.Index('ix_recipe_soap_water_pct', 'soap_water_pct'),
@@ -138,3 +163,18 @@ def _assign_default_category_before_insert(mapper, connection, target):
     except Exception:
         # As a last resort, do nothing and let DB raise if truly impossible
         pass
+
+
+class RecipeLineage(ScopedModelMixin, db.Model):
+    __tablename__ = 'recipe_lineage'
+
+    id = db.Column(db.Integer, primary_key=True)
+    recipe_id = db.Column(db.Integer, db.ForeignKey('recipe.id'), nullable=False)
+    source_recipe_id = db.Column(db.Integer, db.ForeignKey('recipe.id'), nullable=True)
+    event_type = db.Column(db.String(32), nullable=False)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True)
+    notes = db.Column(db.Text, nullable=True)
+    created_at = db.Column(db.DateTime, default=TimezoneUtils.utc_now, nullable=False)
+
+    recipe = db.relationship('Recipe', foreign_keys=[recipe_id], backref='lineage_events')
+    source_recipe = db.relationship('Recipe', foreign_keys=[source_recipe_id], backref='lineage_source_events', viewonly=True)
