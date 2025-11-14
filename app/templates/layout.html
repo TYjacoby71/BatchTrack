@@ -237,7 +237,7 @@
                     <!-- Customer Support -->
                     <li><h6 class="dropdown-header">Customer Support</h6></li>
                     <li><a class="dropdown-item" href="{{ url_for('developer.organizations') }}">
-                        <i class="fas fa-filter"></i> View as Customer
+                        <i class="fas fa-headset"></i> Customer Support
                         {% if session.get('dev_selected_org_id') %}
                         <span class="badge bg-primary ms-1">Active</span>
                         {% endif %}
@@ -255,8 +255,8 @@
                     <li><a class="dropdown-item" href="{{ url_for('developer.integrations_checklist') }}">
                         <i class="fas fa-plug"></i> Integrations & Launch
                     </a></li>
-                    <li><a class="dropdown-item" href="{{ url_for('developer.system_settings') }}">
-                        <i class="fas fa-cog"></i> System Settings
+                    <li><a class="dropdown-item" href="{{ url_for('developer.feature_flags') }}">
+                        <i class="fas fa-toggle-on"></i> Feature Flags
                     </a></li>
 
                     <li><hr class="dropdown-divider"></li>

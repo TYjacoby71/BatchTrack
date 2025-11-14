@@ -1,0 +1,296 @@
+{% extends 'layout.html' %}
+
+{% block title %}Customer Support{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <!-- Metrics overview -->
+    <div class="row g-3 mb-4">
+        <div class="col-sm-6 col-xl-3">
+            <div class="card h-100 shadow-sm border-0">
+                <div class="card-body">
+                    <div class="text-muted text-uppercase small">Organizations</div>
+                    <div class="d-flex align-items-baseline gap-3">
+                        <h3 class="mb-0">{{ support_metrics.total_orgs }}</h3>
+                        <span class="badge bg-light text-success border">{{ support_metrics.active_orgs }} active</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-sm-6 col-xl-3">
+            <div class="card h-100 shadow-sm border-0">
+                <div class="card-body">
+                    <div class="text-muted text-uppercase small">Needs attention</div>
+                    <div class="d-flex align-items-baseline gap-3">
+                        <h3 class="mb-0">{{ support_metrics.attention_count }}</h3>
+                        <span class="badge {% if support_metrics.attention_count %}bg-warning text-dark{% else %}bg-success{% endif %}">
+                            {% if support_metrics.attention_count %}Open Issues{% else %}All clear{% endif %}
+                        </span>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-sm-6 col-xl-3">
+            <div class="card h-100 shadow-sm border-0">
+                <div class="card-body">
+                    <div class="text-muted text-uppercase small">Waitlist</div>
+                    <div class="d-flex align-items-baseline gap-3">
+                        <h3 class="mb-0">{{ support_metrics.waitlist_count }}</h3>
+                        <span class="badge bg-light text-success border">Prospects</span>
+                    </div>
+                    <small class="text-muted">Synced from homepage form</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-sm-6 col-xl-3">
+            <div class="card h-100 shadow-sm border-0">
+                <div class="card-body">
+                    <div class="text-muted text-uppercase small">Support tickets</div>
+                    <div class="d-flex align-items-baseline gap-3">
+                        <h3 class="mb-0">{{ support_metrics.open_tickets }}</h3>
+                        <span class="badge bg-danger text-white">Open</span>
+                    </div>
+                    <small class="text-muted">Fault log + manual queue</small>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    {% if selected_org %}
+    <div class="alert alert-primary d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3 mb-4">
+        <div>
+            <strong>Customer support mode enabled:</strong>
+            Viewing as <span class="text-uppercase">{{ selected_org.name }}</span>
+            {% if selected_org.tier %}
+            <span class="badge bg-light text-dark border ms-1">{{ selected_org.tier.name }}</span>
+            {% endif %}
+        </div>
+        <div class="d-flex flex-wrap gap-2">
+            <a href="{{ url_for('developer.view_as_organization', org_id=selected_org.id) }}" class="btn btn-outline-light btn-sm">
+                <i class="fas fa-sign-in-alt"></i> Masquerade
+            </a>
+            <a href="{{ url_for('developer.organization_detail', org_id=selected_org.id) }}" class="btn btn-outline-light btn-sm">
+                <i class="fas fa-info-circle"></i> Org profile
+            </a>
+            <a href="{{ url_for('developer.clear_organization_filter') }}" class="btn btn-light btn-sm text-primary">
+                <i class="fas fa-times"></i> Clear
+            </a>
+        </div>
+    </div>
+    {% endif %}
+
+    <div class="row">
+        <div class="col-lg-8">
+            <div class="card shadow-sm mb-4">
+                <div class="card-header bg-white border-0 d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3">
+                    <div>
+                        <h5 class="mb-0"><i class="fas fa-building"></i> Organizations</h5>
+                        <small class="text-muted">Search any organization and jump into support actions.</small>
+                    </div>
+                    <div class="d-flex flex-wrap gap-2">
+                        <a href="{{ url_for('developer.create_organization') }}" class="btn btn-primary">
+                            <i class="fas fa-plus"></i> Create organization
+                        </a>
+                        <a href="{{ url_for('developer.subscription_tiers.manage_tiers') }}" class="btn btn-outline-secondary">
+                            <i class="fas fa-layer-group"></i> Tiers
+                        </a>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <div class="row g-3 align-items-center mb-4">
+                        <div class="col-md-8">
+                            <div class="input-group">
+                                <span class="input-group-text"><i class="fas fa-search"></i></span>
+                                <input type="search" id="orgSearch" class="form-control" placeholder="Search by name, tier, owner, email">
+                            </div>
+                        </div>
+                        <div class="col-md-4 text-md-end">
+                            <span class="text-muted small">{{ support_metrics.total_orgs }} organizations</span>
+                        </div>
+                    </div>
+                    <div class="row g-3" id="orgCards">
+                        {% for org in organizations %}
+                        <div class="col-md-6 org-card"
+                             data-org-name="{{ org.name|lower }}"
+                             data-org-tier="{{ org.tier.name|lower if org.tier else 'exempt' }}"
+                             data-org-status="{{ 'active' if org.is_active else 'inactive' }}">
+                            <div class="card h-100 {% if org.id in attention_org_ids %}border-warning{% else %}border-0 shadow-sm{% endif %}">
+                                <div class="card-body d-flex flex-column">
+                                    <div class="d-flex justify-content-between align-items-start">
+                                        <div>
+                                            <strong>{{ org.name }}</strong>
+                                            <div class="small text-muted">{{ org.contact_email or 'No contact email' }}</div>
+                                        </div>
+                                        <div class="text-end">
+                                            {% if org.tier %}
+                                            <span class="badge bg-light text-dark border text-uppercase">{{ org.tier.name }}</span>
+                                            {% else %}
+                                            <span class="badge bg-secondary">Free</span>
+                                            {% endif %}
+                                            <div class="small {% if org.is_active %}text-success{% else %}text-danger{% endif %}">
+                                                {{ 'Active' if org.is_active else 'Inactive' }}
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="d-flex gap-3 align-items-center my-3 text-muted small">
+                                        <span><i class="fas fa-users me-1"></i>{{ org.users|length }} users</span>
+                                        <span><i class="fas fa-signal me-1"></i>{{ org.active_users_count }} active</span>
+                                        <span><i class="fas fa-clock me-1"></i>{{ org.created_at.strftime('%b %d, %Y') if org.created_at }}</span>
+                                    </div>
+                                    <div class="d-flex flex-wrap gap-2 mt-auto">
+                                        <a href="{{ url_for('developer.organization_detail', org_id=org.id) }}" class="btn btn-outline-primary btn-sm">
+                                            <i class="fas fa-eye"></i> Details
+                                        </a>
+                                        <a href="{{ url_for('developer.select_organization', org_id=org.id) }}" class="btn btn-outline-secondary btn-sm">
+                                            <i class="fas fa-headset"></i> View in app
+                                        </a>
+                                        <a href="{{ url_for('developer.view_as_organization', org_id=org.id) }}" class="btn btn-outline-dark btn-sm">
+                                            <i class="fas fa-sign-in-alt"></i> Masquerade
+                                        </a>
+                                    </div>
+                                    {% if org.id in attention_org_ids %}
+                                    <div class="mt-3 alert alert-warning py-2 px-3 small">
+                                        <i class="fas fa-exclamation-triangle me-1"></i> Flagged in analytics queue
+                                    </div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-4">
+            <div class="card shadow-sm mb-4">
+                <div class="card-header bg-white border-0 d-flex justify-content-between align-items-center">
+                    <h6 class="mb-0"><i class="fas fa-clipboard-list"></i> Support queue</h6>
+                    <span class="badge bg-light text-danger border">{{ support_metrics.open_tickets }} open</span>
+                </div>
+                <div class="card-body">
+                    {% if support_queue %}
+                    <div class="list-group list-group-flush">
+                        {% for ticket in support_queue %}
+                        <div class="list-group-item px-0">
+                            <div class="d-flex justify-content-between">
+                                <strong>{{ ticket.message }}</strong>
+                                <span class="badge {% if (ticket.status or '').upper() in ['NEW','OPEN'] %}bg-danger{% else %}bg-secondary{% endif %}">
+                                    {{ (ticket.status or 'open').upper() }}
+                                </span>
+                            </div>
+                            <small class="text-muted">{{ ticket.timestamp or '—' }}</small>
+                            {% if ticket.details and ticket.details.error %}
+                            <div class="small text-muted">{{ ticket.details.error }}</div>
+                            {% endif %}
+                        </div>
+                        {% endfor %}
+                    </div>
+                    {% else %}
+                    <p class="text-muted mb-0">No tickets in the queue. Great job!</p>
+                    {% endif %}
+                    <div class="d-grid gap-2 mt-3">
+                        <a href="{{ url_for('developer.waitlist_statistics') }}" class="btn btn-outline-success btn-sm">
+                            <i class="fas fa-envelope-open-text"></i> Waitlist insights
+                        </a>
+                        <a href="{{ url_for('developer.integrations_checklist') }}" class="btn btn-outline-secondary btn-sm">
+                            <i class="fas fa-plug"></i> Integrations checklist
+                        </a>
+                    </div>
+                </div>
+            </div>
+            <div class="card shadow-sm">
+                <div class="card-header bg-white border-0">
+                    <h6 class="mb-0"><i class="fas fa-exclamation-triangle text-warning"></i> Organizations needing attention</h6>
+                </div>
+                <div class="card-body">
+                    {% if attention_orgs %}
+                    <div class="list-group list-group-flush">
+                        {% for org in attention_orgs[:6] %}
+                        <div class="list-group-item px-0 d-flex justify-content-between align-items-start">
+                            <div>
+                                <strong>{{ org.name }}</strong>
+                                <div class="small text-muted">{{ org.subscription_tier or 'Unassigned tier' }}</div>
+                                <div class="small text-warning">
+                                    {% if org.reason == 'no_active_users' %}No active users{% else %}Needs review{% endif %}
+                                </div>
+                            </div>
+                            <a href="{{ url_for('developer.organization_detail', org_id=org.id) }}" class="btn btn-sm btn-outline-warning">
+                                Review
+                            </a>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    {% else %}
+                    <p class="text-muted mb-0">No open attention items.</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card shadow-sm mt-4">
+        <div class="card-header bg-white border-0 d-flex justify-content-between align-items-center">
+            <h6 class="mb-0"><i class="fas fa-clock"></i> Recent signups</h6>
+            <a href="{{ url_for('developer.create_organization') }}" class="btn btn-sm btn-outline-primary">Add another</a>
+        </div>
+        <div class="card-body">
+            {% if recent_orgs %}
+            <div class="table-responsive">
+                <table class="table table-sm align-middle mb-0">
+                    <thead>
+                        <tr>
+                            <th>Name</th>
+                            <th>Tier</th>
+                            <th>Created</th>
+                            <th class="text-end">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for org in recent_orgs %}
+                        <tr>
+                            <td>{{ org.name }}</td>
+                            <td>{{ org.subscription_tier or 'Unassigned' }}</td>
+                            <td>{{ org.created_at_display or '—' }}</td>
+                            <td class="text-end">
+                                <a href="{{ url_for('developer.organization_detail', org_id=org.id) }}" class="btn btn-sm btn-outline-primary">View</a>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <p class="text-muted mb-0">No organizations have signed up recently.</p>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+(function() {
+    const searchInput = document.getElementById('orgSearch');
+    const cards = document.querySelectorAll('#orgCards .org-card');
+    if (!searchInput || !cards.length) {
+        return;
+    }
+    function filterCards() {
+        const term = searchInput.value.trim().toLowerCase();
+        cards.forEach(card => {
+            const name = card.dataset.orgName || '';
+            const tier = card.dataset.orgTier || '';
+            if (!term || name.includes(term) || tier.includes(term)) {
+                card.classList.remove('d-none');
+            } else {
+                card.classList.add('d-none');
+            }
+        });
+    }
+    searchInput.addEventListener('input', () => {
+        window.clearTimeout(searchInput._debounce);
+        searchInput._debounce = setTimeout(filterCards, 150);
+    });
+})();
+</script>
+{% endblock %}

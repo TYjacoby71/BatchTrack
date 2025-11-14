@@ -510,7 +510,9 @@ class AnalyticsDataService:
             payload = {
                 "overview": overview,
                 "recent_organizations": recent_orgs,
+                "recent_count": len(recent_orgs),
                 "attention_organizations": attention_orgs,
+                "attention_count": len(attention_orgs),
                 "waitlist_count": waitlist_count,
                 "generated_at": now.isoformat(),
             }
