@@ -209,8 +209,35 @@ def seed_users_and_organization():
     else:
         print(f"ℹ️  Operator user 'operator' already exists (org_id: {existing_operator.organization_id})")
 
+    # 5. Create tourguide user (demo/test account)
+    existing_tourguide = User.query.filter_by(username='tourguide').first()
+    if not existing_tourguide:
+        tourguide_user = User(
+            username='tourguide',
+            password_hash=generate_password_hash('tourguide123'),
+            first_name='Tour',
+            last_name='Guide',
+            email='tourguide@example.com',
+            phone='555-0126',
+            organization_id=org.id,
+            user_type='customer',
+            is_organization_owner=False,
+            is_active=True
+        )
+        db.session.add(tourguide_user)
+        db.session.flush()
+
+        # Assign operator role if it exists (basic permissions for demo)
+        if operator_role:
+            tourguide_user.assign_role(operator_role)
+            print(f"✅ Created tourguide user: tourguide/tourguide123 with operator role")
+        else:
+            print(f"✅ Created tourguide user: tourguide/tourguide123 (no operator role found)")
+    else:
+        print(f"ℹ️  Tourguide user 'tourguide' already exists (org_id: {existing_tourguide.organization_id})")
+
     db.session.commit()
-    print(f"   ✅ Users and organization: 1 org, 4 users created")
+    print(f"   ✅ Users and organization: 1 org, 5 users created")
 
 # Maintain backward compatibility
 def seed_users():
