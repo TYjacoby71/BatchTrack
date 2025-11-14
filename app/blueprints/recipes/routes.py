@@ -388,7 +388,8 @@ def clone_recipe(recipe_id):
                 'label_prefix': cloned_recipe.label_prefix,
                 'predicted_yield': cloned_recipe.predicted_yield,
                 'predicted_yield_unit': cloned_recipe.predicted_yield_unit,
-                'allowed_containers': cloned_recipe.allowed_containers
+                'allowed_containers': cloned_recipe.allowed_containers,
+                'category_id': cloned_recipe.category_id
             }
             
             ingredients = [(ri.inventory_item_id, ri.quantity, ri.unit) for ri in cloned_recipe.recipe_ingredients]
@@ -400,6 +401,7 @@ def clone_recipe(recipe_id):
             # Create template object with extracted data
             template_recipe = Recipe(**clone_data)
             
+            # Get fresh form data AFTER rollback to avoid detached instances
             form_data = _get_recipe_form_data()
 
             return render_template('pages/recipes/recipe_form.html',
@@ -412,6 +414,8 @@ def clone_recipe(recipe_id):
             flash(f"Error cloning recipe: {result}", "error")
 
     except Exception as e:
+        # Ensure rollback on any error
+        db.session.rollback()
         flash(f"Error cloning recipe: {str(e)}", "error")
         logger.exception(f"Error cloning recipe: {str(e)}")
 
