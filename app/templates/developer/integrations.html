@@ -18,21 +18,69 @@
     <li>Postmark Server Token: {{ 'OK' if email_keys.Postmark else 'Missing' }}</li>
     <li>Mailgun API/Domain: {{ 'OK' if email_keys.Mailgun else 'Missing' }}</li>
   </ul>
-  <div class="alert alert-info">
-    <strong>Setup instructions:</strong>
-    <ol class="mb-0">
-      <li>Pick a provider (SendGrid, SES, Postmark, Mailgun) and create an account.</li>
-      <li>Add domain DNS for SPF/DKIM (and DMARC optional) in your provider dashboard.</li>
-      <li>Set environment variables:
-        <ul>
-          <li>EMAIL_PROVIDER=smtp|sendgrid|postmark|mailgun</li>
-          <li>SMTP: MAIL_SERVER, MAIL_USERNAME, MAIL_PASSWORD, MAIL_DEFAULT_SENDER</li>
-          <li>SendGrid: SENDGRID_API_KEY, MAIL_DEFAULT_SENDER</li>
-          <li>Postmark: POSTMARK_SERVER_TOKEN, MAIL_DEFAULT_SENDER</li>
-          <li>Mailgun: MAILGUN_API_KEY, MAILGUN_DOMAIN, MAIL_DEFAULT_SENDER</li>
-        </ul>
-      </li>
-    </ol>
+  
+  <!-- Email Configuration Instructions -->
+  <div class="accordion mb-3" id="emailAccordion">
+    <div class="accordion-item">
+      <h2 class="accordion-header">
+        <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#emailInstructions">
+          📧 Email Provider Setup Instructions
+        </button>
+      </h2>
+      <div id="emailInstructions" class="accordion-collapse collapse" data-bs-parent="#emailAccordion">
+        <div class="accordion-body">
+          <h6>EMAIL_PROVIDER</h6>
+          <p><strong>What it does:</strong> Selects which email service to use for sending transactional emails (verification, password reset, notifications).</p>
+          <p><strong>Valid options:</strong> <code>smtp</code>, <code>sendgrid</code>, <code>postmark</code>, <code>mailgun</code></p>
+          <p><strong>What you need to do:</strong> Set to your chosen provider, e.g., <code>EMAIL_PROVIDER=sendgrid</code></p>
+          
+          <hr>
+          <h6>SMTP Configuration (Generic)</h6>
+          <div class="row">
+            <div class="col-md-6">
+              <p><strong>MAIL_SERVER:</strong> Your SMTP server hostname (e.g., <code>smtp.gmail.com</code>)</p>
+              <p><strong>MAIL_PORT:</strong> Port number (587 for TLS, 465 for SSL, 25 for unencrypted)</p>
+              <p><strong>MAIL_USE_TLS:</strong> Enable STARTTLS encryption. Set to <code>true</code> for port 587</p>
+            </div>
+            <div class="col-md-6">
+              <p><strong>MAIL_USE_SSL:</strong> Enable implicit SSL. Set to <code>true</code> for port 465, <code>false</code> otherwise</p>
+              <p><strong>MAIL_USERNAME:</strong> Your SMTP login username</p>
+              <p><strong>MAIL_PASSWORD:</strong> Your SMTP password or app-specific password</p>
+            </div>
+          </div>
+          
+          <hr>
+          <h6>Provider-Specific Setup</h6>
+          <div class="row">
+            <div class="col-md-3">
+              <strong>SendGrid</strong>
+              <p><code>SENDGRID_API_KEY</code>: API key from SendGrid dashboard</p>
+              <p>DNS: Add SPF/DKIM records to your domain</p>
+            </div>
+            <div class="col-md-3">
+              <strong>Postmark</strong>
+              <p><code>POSTMARK_SERVER_TOKEN</code>: Server token from Postmark</p>
+              <p>DNS: Verify domain ownership and DKIM</p>
+            </div>
+            <div class="col-md-3">
+              <strong>Mailgun</strong>
+              <p><code>MAILGUN_API_KEY</code>: Private API key</p>
+              <p><code>MAILGUN_DOMAIN</code>: Your verified domain</p>
+              <p>DNS: Add MX, TXT records as shown</p>
+            </div>
+            <div class="col-md-3">
+              <strong>All Providers</strong>
+              <p><code>MAIL_DEFAULT_SENDER</code>: From address for all emails</p>
+              <p>Must be verified/authorized with your provider</p>
+            </div>
+          </div>
+          
+          <div class="alert alert-warning mt-3">
+            <strong>Important:</strong> Always verify your sending domain with SPF and DKIM records to avoid emails going to spam.
+          </div>
+        </div>
+      </div>
+    </div>
   </div>
   <form method="post" action="{{ url_for('developer.integrations_test_email') }}">
     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
@@ -47,20 +95,64 @@
     <span class="badge {% if stripe_status.webhook_secret_present %}bg-success{% else %}bg-danger{% endif %}">Webhook Secret</span>
     <span class="badge {% if stripe_status.tiers_configured %}bg-success{% else %}bg-danger{% endif %}">Tiers</span>
   </p>
-  <div class="alert alert-info">
-    <strong>Setup instructions:</strong>
-    <ol class="mb-0">
-      <li>Create a Stripe account and products/prices with lookup keys per tier.</li>
-      <li>Configure environment:
-        <ul>
-          <li>STRIPE_SECRET_KEY=sk_live_xxx</li>
-          <li>STRIPE_PUBLISHABLE_KEY=pk_live_xxx</li>
-          <li>STRIPE_WEBHOOK_SECRET=whsec_xxx</li>
-        </ul>
-      </li>
-      <li>Set your webhook endpoint to: <code>/billing/webhooks/stripe</code> in Stripe and paste the webhook signing secret into STRIPE_WEBHOOK_SECRET.</li>
-      <li>Ensure subscription tiers in the database include the Stripe lookup keys.</li>
-    </ol>
+  
+  <!-- Stripe Configuration Instructions -->
+  <div class="accordion mb-3" id="stripeAccordion">
+    <div class="accordion-item">
+      <h2 class="accordion-header">
+        <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#stripeInstructions">
+          💳 Stripe Billing Setup Instructions
+        </button>
+      </h2>
+      <div id="stripeInstructions" class="accordion-collapse collapse" data-bs-parent="#stripeAccordion">
+        <div class="accordion-body">
+          <h6>STRIPE_SECRET_KEY</h6>
+          <p><strong>What it does:</strong> Authenticates your app with Stripe's API for creating customers, subscriptions, and processing payments.</p>
+          <p><strong>Format:</strong> <code>sk_test_...</code> for development, <code>sk_live_...</code> for production</p>
+          <p><strong>Where to find:</strong> Stripe Dashboard → Developers → API keys → Secret key</p>
+          <p><strong>Security:</strong> Keep this secret! Never expose in client-side code.</p>
+          
+          <hr>
+          <h6>STRIPE_PUBLISHABLE_KEY</h6>
+          <p><strong>What it does:</strong> Used in frontend JavaScript for Stripe Elements and Checkout sessions.</p>
+          <p><strong>Format:</strong> <code>pk_test_...</code> for development, <code>pk_live_...</code> for production</p>
+          <p><strong>Where to find:</strong> Stripe Dashboard → Developers → API keys → Publishable key</p>
+          <p><strong>Note:</strong> Safe to expose in frontend code, but still treat as sensitive.</p>
+          
+          <hr>
+          <h6>STRIPE_WEBHOOK_SECRET</h6>
+          <p><strong>What it does:</strong> Verifies that webhook events actually came from Stripe (prevents spoofing).</p>
+          <p><strong>Format:</strong> <code>whsec_...</code></p>
+          <p><strong>Setup steps:</strong></p>
+          <ol>
+            <li>In Stripe Dashboard → Developers → Webhooks</li>
+            <li>Click "Add endpoint"</li>
+            <li>Set URL to: <code>https://yourdomain.com/billing/webhooks/stripe</code></li>
+            <li>Select events: <code>customer.subscription.*</code>, <code>checkout.session.completed</code>, <code>invoice.payment_succeeded</code>, <code>invoice.payment_failed</code></li>
+            <li>Save and copy the "Signing secret" to this environment variable</li>
+          </ol>
+          
+          <hr>
+          <h6>Products & Pricing Setup</h6>
+          <p><strong>What you need to do:</strong></p>
+          <ol>
+            <li>Create Products in Stripe Dashboard → Products</li>
+            <li>For each product, create Prices with <strong>lookup keys</strong>:
+              <ul>
+                <li><code>batchtrack_solo_monthly</code></li>
+                <li><code>batchtrack_team_monthly</code></li>
+                <li><code>batchtrack_enterprise_monthly</code></li>
+              </ul>
+            </li>
+            <li>Ensure your database subscription tiers have matching <code>stripe_lookup_key</code> values</li>
+          </ol>
+          
+          <div class="alert alert-warning mt-3">
+            <strong>Test vs Live Mode:</strong> Use test keys during development. Switch to live keys only when ready to charge real customers.
+          </div>
+        </div>
+      </div>
+    </div>
   </div>
   <form method="post" action="{{ url_for('developer.integrations_test_stripe') }}">
     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
@@ -76,6 +168,53 @@
   <hr>
   <h4>3) Feature Flags & System Toggles</h4>
   <p>Features are broad functional areas. Permissions control specific actions within those features.</p>
+
+  <!-- Feature Flags Instructions -->
+  <div class="accordion mb-3" id="flagsAccordion">
+    <div class="accordion-item">
+      <h2 class="accordion-header">
+        <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#flagsInstructions">
+          🚩 Feature Flags Guide - What Each Flag Does
+        </button>
+      </h2>
+      <div id="flagsInstructions" class="accordion-collapse collapse" data-bs-parent="#flagsAccordion">
+        <div class="accordion-body">
+          <p><strong>How Feature Flags Work:</strong> These control which features are available to users. When enabled, the functionality appears in menus and UI. When disabled, it's hidden.</p>
+          
+          <h6>Core Business Features</h6>
+          <ul>
+            <li><strong>FIFO Tracking:</strong> First-in-first-out inventory cost calculation. Disable if you want average cost only.</li>
+            <li><strong>Barcode Scanning:</strong> QR/barcode integration (not yet implemented). Enable for future use.</li>
+            <li><strong>Product Variants:</strong> Multiple SKUs per product (size, color variations). Core feature.</li>
+            <li><strong>Auto-generate SKUs:</strong> Automatic SKU code creation. Disable for manual SKU entry only.</li>
+            <li><strong>Recipe Variations:</strong> Parent/child recipe relationships. Enables recipe families.</li>
+            <li><strong>Cost Tracking:</strong> Profit margin calculations and costing engine. Essential for pricing.</li>
+            <li><strong>Expiration Tracking:</strong> Lot-based expiry dates and alerts. Critical for compliance.</li>
+            <li><strong>Bulk Operations:</strong> Bulk inventory adjustments. Disable for single-item-only workflows.</li>
+          </ul>
+          
+          <h6>Notification Systems</h6>
+          <ul>
+            <li><strong>Email Notifications:</strong> System-generated email alerts. Requires email provider setup.</li>
+            <li><strong>Browser Push:</strong> Real-time browser notifications (not implemented yet).</li>
+          </ul>
+          
+          <h6>Public Tools Availability</h6>
+          <ul>
+            <li><strong>Soap Making Tools:</strong> Saponification calculators, lye calculations.</li>
+            <li><strong>Candle Making:</strong> Fragrance load calculators, wick sizing.</li>
+            <li><strong>Lotions & Cosmetics:</strong> Emulsifier ratios, preservative calculations.</li>
+            <li><strong>Herbalist Tools:</strong> Tincture ratios, extraction calculations.</li>
+            <li><strong>Baking Tools:</strong> Baker's percentage calculators, hydration ratios.</li>
+          </ul>
+          
+          <div class="alert alert-info">
+            <strong>Recommendation:</strong> Keep core business features enabled. Disable only specific tools your users don't need.
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
 
   <div class="card p-3">
     <div id="flagSaveStatus" class="alert alert-success d-none" role="alert">
@@ -317,6 +456,53 @@
   <hr>
   <h4>4) POS/Shopify</h4>
   <p>Status: <span class="badge bg-secondary">{{ shopify_status.status|capitalize }}</span></p>
+  
+  <!-- POS/Shopify Instructions -->
+  <div class="accordion mb-3" id="shopifyAccordion">
+    <div class="accordion-item">
+      <h2 class="accordion-header">
+        <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#shopifyInstructions">
+          🛍️ POS/Shopify Integration (Coming Soon)
+        </button>
+      </h2>
+      <div id="shopifyInstructions" class="accordion-collapse collapse" data-bs-parent="#shopifyAccordion">
+        <div class="accordion-body">
+          <p><strong>Current Status:</strong> This integration is currently stubbed and not yet implemented.</p>
+          
+          <h6>When Available, You'll Need:</h6>
+          <ul>
+            <li><strong>SHOPIFY_API_KEY:</strong> Your app's API key from Shopify Partners dashboard</li>
+            <li><strong>SHOPIFY_API_SECRET:</strong> Your app's secret key (never expose publicly)</li>
+            <li><strong>SHOPIFY_WEBHOOK_SECRET:</strong> For verifying webhook authenticity</li>
+            <li><strong>SHOPIFY_SCOPES:</strong> Permissions your app needs (read_products, write_inventory, etc.)</li>
+          </ul>
+          
+          <h6>Planned Features:</h6>
+          <ul>
+            <li>Two-way inventory sync</li>
+            <li>Product catalog synchronization</li>
+            <li>Order fulfillment updates</li>
+            <li>Real-time stock level updates</li>
+            <li>Webhook event processing</li>
+          </ul>
+          
+          <h6>Setup Steps (Future):</h6>
+          <ol>
+            <li>Create a Shopify Partner account</li>
+            <li>Create a new app in the Partner dashboard</li>
+            <li>Configure OAuth scopes and webhook URLs</li>
+            <li>Install the app on your Shopify store</li>
+            <li>Configure sync preferences in BatchTrack</li>
+          </ol>
+          
+          <div class="alert alert-info">
+            <strong>Interested in this feature?</strong> Contact support to be notified when Shopify integration is available.
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <div class="alert alert-secondary">
     POS/Shopify is currently stubbed. When ready, we will add a provider adapter (webhooks and API client) and expose configuration here.
   </div>
@@ -327,6 +513,65 @@
     <li>LOG_LEVEL: <code>{{ logging_status.LOG_LEVEL }}</code></li>
     <li>PII Redaction: {% if logging_status.LOG_REDACT_PII %}<span class="text-success">On</span>{% else %}<span class="text-danger">Off</span>{% endif %}</li>
   </ul>
+  
+  <!-- Logging & Security Instructions -->
+  <div class="accordion mb-3" id="loggingAccordion">
+    <div class="accordion-item">
+      <h2 class="accordion-header">
+        <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#loggingInstructions">
+          📊 Logging & Security Configuration Guide
+        </button>
+      </h2>
+      <div id="loggingInstructions" class="accordion-collapse collapse" data-bs-parent="#loggingAccordion">
+        <div class="accordion-body">
+          <h6>LOG_LEVEL</h6>
+          <p><strong>What it controls:</strong> How much detail appears in your application logs.</p>
+          <div class="row">
+            <div class="col-md-6">
+              <p><strong>Available levels (most to least verbose):</strong></p>
+              <ul>
+                <li><code>DEBUG</code> - Everything including variable dumps</li>
+                <li><code>INFO</code> - General operational messages</li>
+                <li><code>WARNING</code> - Warnings and recoverable errors</li>
+                <li><code>ERROR</code> - Errors and exceptions only</li>
+                <li><code>CRITICAL</code> - Only critical failures</li>
+              </ul>
+            </div>
+            <div class="col-md-6">
+              <p><strong>Recommendations:</strong></p>
+              <ul>
+                <li><strong>Development:</strong> <code>DEBUG</code> or <code>INFO</code></li>
+                <li><strong>Staging:</strong> <code>INFO</code></li>
+                <li><strong>Production:</strong> <code>WARNING</code> or <code>ERROR</code></li>
+              </ul>
+              <p><strong>Performance note:</strong> DEBUG logging can slow down your app significantly.</p>
+            </div>
+          </div>
+          
+          <hr>
+          <h6>LOG_REDACT_PII</h6>
+          <p><strong>What it does:</strong> Automatically removes personally identifiable information from logs (emails, names, addresses).</p>
+          <p><strong>When enabled:</strong> <code>user@example.com</code> becomes <code>[REDACTED_EMAIL]</code></p>
+          <p><strong>When to use:</strong></p>
+          <ul>
+            <li><strong>Always enable in production</strong> - Required for GDPR/CCPA compliance</li>
+            <li><strong>Enable in staging</strong> - If using real user data</li>
+            <li><strong>Optional in development</strong> - Can disable for easier debugging</li>
+          </ul>
+          
+          <hr>
+          <h6>Security Headers</h6>
+          <p><strong>ENABLE_PROXY_FIX:</strong> Set to <code>true</code> when behind load balancers (Cloudflare, AWS ALB, etc.)</p>
+          <p><strong>DISABLE_SECURITY_HEADERS:</strong> Emergency kill-switch. Only use if headers break your app.</p>
+          
+          <div class="alert alert-danger">
+            <strong>Security Warning:</strong> Never disable PII redaction in production environments with real customer data!
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <div class="alert alert-info">
     <strong>Recommendation:</strong> Keep PII redaction enabled in production. Use DEBUG only in secure development environments.
   </div>
@@ -346,6 +591,84 @@
   <div class="alert alert-warning">
     <strong>Environment switch:</strong> Set <code>FLASK_ENV=production</code> (and leave <code>FLASK_DEBUG</code> unset/false) in every live deployment. Local development should use <code>FLASK_ENV=development</code>. All runtime behavior—debug panels, logging verbosity, session security, and rate limits—now keys off this single variable.
   </div>
+
+<!-- Environment Variables Instructions -->
+<div class="accordion mb-3" id="envAccordion">
+  <div class="accordion-item">
+    <h2 class="accordion-header">
+      <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#envInstructions">
+        ⚙️ Environment Variables & Secrets - Complete Setup Guide
+      </button>
+    </h2>
+    <div id="envInstructions" class="accordion-collapse collapse" data-bs-parent="#envAccordion">
+      <div class="accordion-body">
+        <h6>How to Set Environment Variables</h6>
+        <div class="row">
+          <div class="col-md-4">
+            <strong>Replit (Secrets)</strong>
+            <ol>
+              <li>Click lock icon 🔒 in sidebar</li>
+              <li>Add key-value pairs</li>
+              <li>Secrets are encrypted at rest</li>
+            </ol>
+          </div>
+          <div class="col-md-4">
+            <strong>Local Development</strong>
+            <ol>
+              <li>Create <code>.env</code> file</li>
+              <li>Add: <code>KEY=value</code></li>
+              <li>Never commit <code>.env</code> to git</li>
+            </ol>
+          </div>
+          <div class="col-md-4">
+            <strong>Production Servers</strong>
+            <ol>
+              <li>Use your host's env var system</li>
+              <li>Docker: <code>-e KEY=value</code></li>
+              <li>Or export in shell: <code>export KEY=value</code></li>
+            </ol>
+          </div>
+        </div>
+        
+        <hr>
+        <h6>Critical Security Variables</h6>
+        <div class="row">
+          <div class="col-md-6">
+            <p><strong>FLASK_SECRET_KEY</strong><br>
+            <span class="text-danger">🔐 CRITICAL SECRET</span><br>
+            Must be 32+ random characters. Used for session signing, CSRF protection, password resets.<br>
+            <strong>Generate with:</strong> <code>python -c "import secrets; print(secrets.token_hex(32))"</code></p>
+            
+            <p><strong>DATABASE_INTERNAL_URL / DATABASE_URL</strong><br>
+            <span class="text-warning">🔐 SECRET</span><br>
+            Connection string with username/password. Format: <code>postgresql://user:pass@host:5432/db</code></p>
+          </div>
+          <div class="col-md-6">
+            <p><strong>REDIS_URL</strong><br>
+            <span class="text-warning">🔐 SECRET</span><br>
+            For sessions, rate limiting, caching. Format: <code>redis://user:pass@host:6379/0</code></p>
+            
+            <p><strong>Stripe Keys</strong><br>
+            <span class="text-danger">🔐 SECRET</span><br>
+            Never expose secret keys in frontend. Webhook secret verifies Stripe's identity.</p>
+          </div>
+        </div>
+        
+        <hr>
+        <h6>Production vs Development</h6>
+        <div class="alert alert-warning">
+          <strong>FLASK_ENV=production</strong> changes everything:
+          <ul class="mb-0">
+            <li>Disables debug mode and stack traces</li>
+            <li>Requires Redis for sessions (memory sessions disabled)</li>
+            <li>Enables security headers and proxy trust</li>
+            <li>Changes logging levels and error handling</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
 
 {% for section in launch_env_sections %}
   <div class="mb-4">
