@@ -209,48 +209,8 @@ def seed_users_and_organization():
     else:
         print(f"ℹ️  Operator user 'operator' already exists (org_id: {existing_operator.organization_id})")
 
-    # 5. Create tourguide user (demo/test account) with exempt organization
-    existing_tourguide = User.query.filter_by(username='tourguide').first()
-    if not existing_tourguide:
-        # Create or get exempt organization for tourguide
-        tourguide_org = Organization.query.filter_by(name='Tourguide Demo Organization').first()
-        if not tourguide_org:
-            tourguide_org = Organization(
-                name='Tourguide Demo Organization',
-                subscription_tier_id=exempt_tier.id,
-                contact_email='tourguide@example.com',
-                is_active=True
-            )
-            db.session.add(tourguide_org)
-            db.session.flush()
-            print(f"✅ Created exempt organization for tourguide: {tourguide_org.name}")
-
-        tourguide_user = User(
-            username='tourguide',
-            password_hash=generate_password_hash('tourguide123'),
-            first_name='Tour',
-            last_name='Guide',
-            email='tourguide@example.com',
-            phone='555-0126',
-            organization_id=tourguide_org.id,
-            user_type='customer',
-            is_organization_owner=True,  # Make tourguide the owner of their exempt org
-            is_active=True
-        )
-        db.session.add(tourguide_user)
-        db.session.flush()
-
-        # Assign organization owner role for full exempt access
-        if org_owner_role:
-            tourguide_user.assign_role(org_owner_role)
-            print(f"✅ Created tourguide user: tourguide/tourguide123 with exempt tier and owner role")
-        else:
-            print(f"✅ Created tourguide user: tourguide/tourguide123 with exempt tier (no owner role found)")
-    else:
-        print(f"ℹ️  Tourguide user 'tourguide' already exists (org_id: {existing_tourguide.organization_id})")
-
     db.session.commit()
-    print(f"   ✅ Users and organizations: 2 orgs (1 standard, 1 exempt), 5 users created")
+    print(f"   ✅ Users and organization: 1 org, 4 users created")
 
 # Maintain backward compatibility
 def seed_users():
