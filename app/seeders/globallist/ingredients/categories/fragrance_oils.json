@@ -19,7 +19,13 @@
       "aliases": [
         "vanilla sugar fragrance"
       ],
-      "is_active_ingredient": false
+      "is_active_ingredient": false,
+      "ingredient": {
+        "name": "Warm Vanilla Sugar Fragrance Oil",
+        "slug": "warm-vanilla-sugar-fragrance-oil",
+        "inci_name": "Fragrance"
+      },
+      "physical_form": "Liquid"
     },
     {
       "name": "Ocean Breeze Fragrance Oil",
@@ -36,7 +42,13 @@
       "aliases": [
         "sea spray fragrance"
       ],
-      "is_active_ingredient": false
+      "is_active_ingredient": false,
+      "ingredient": {
+        "name": "Ocean Breeze Fragrance Oil",
+        "slug": "ocean-breeze-fragrance-oil",
+        "inci_name": "Fragrance"
+      },
+      "physical_form": "Liquid"
     },
     {
       "name": "Bamboo & Coconut Fragrance Oil",
@@ -53,7 +65,13 @@
       "aliases": [
         "bamboo coconut scent"
       ],
-      "is_active_ingredient": false
+      "is_active_ingredient": false,
+      "ingredient": {
+        "name": "Bamboo & Coconut Fragrance Oil",
+        "slug": "bamboo-coconut-fragrance-oil",
+        "inci_name": "Fragrance"
+      },
+      "physical_form": "Liquid"
     },
     {
       "name": "Citrus Herb Fragrance Oil",
@@ -70,7 +88,13 @@
       "aliases": [
         "citrus thyme fragrance"
       ],
-      "is_active_ingredient": false
+      "is_active_ingredient": false,
+      "ingredient": {
+        "name": "Citrus Herb Fragrance Oil",
+        "slug": "citrus-herb-fragrance-oil",
+        "inci_name": "Fragrance"
+      },
+      "physical_form": "Liquid"
     }
   ],
   "attributes": [

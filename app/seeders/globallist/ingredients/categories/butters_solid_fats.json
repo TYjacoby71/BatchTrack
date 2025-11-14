@@ -38,7 +38,13 @@
       "aliases": [
         "african shea butter"
       ],
-      "is_active_ingredient": false
+      "is_active_ingredient": false,
+      "ingredient": {
+        "name": "Shea Butter",
+        "slug": "shea-butter",
+        "inci_name": "Butyrospermum Parkii (Shea) Butter"
+      },
+      "physical_form": "Butter"
     },
     {
       "name": "Mango Butter",
@@ -63,7 +69,13 @@
       "aliases": [
         "mango kernel butter"
       ],
-      "is_active_ingredient": false
+      "is_active_ingredient": false,
+      "ingredient": {
+        "name": "Mango Butter",
+        "slug": "mango-butter",
+        "inci_name": "Mangifera Indica (Mango) Seed Butter"
+      },
+      "physical_form": "Butter"
     },
     {
       "name": "Cocoa Butter",
@@ -89,7 +101,13 @@
       "aliases": [
         "theobroma oil"
       ],
-      "is_active_ingredient": false
+      "is_active_ingredient": false,
+      "ingredient": {
+        "name": "Cocoa Butter",
+        "slug": "cocoa-butter",
+        "inci_name": "Theobroma Cacao (Cocoa) Seed Butter"
+      },
+      "physical_form": "Butter"
     },
     {
       "name": "Kokum Butter",
@@ -112,7 +130,13 @@
       "aliases": [
         "garcinia indica butter"
       ],
-      "is_active_ingredient": false
+      "is_active_ingredient": false,
+      "ingredient": {
+        "name": "Kokum Butter",
+        "slug": "kokum-butter",
+        "inci_name": "Garcinia Indica Seed Butter"
+      },
+      "physical_form": "Butter"
     },
     {
       "name": "Cupuacu Butter",
@@ -137,7 +161,13 @@
       "aliases": [
         "theobroma grandiflorum seed butter"
       ],
-      "is_active_ingredient": false
+      "is_active_ingredient": false,
+      "ingredient": {
+        "name": "Cupuacu Butter",
+        "slug": "cupuacu-butter",
+        "inci_name": "Theobroma Grandiflorum Seed Butter"
+      },
+      "physical_form": "Butter"
     },
     {
       "name": "Illipe Butter",
@@ -160,7 +190,13 @@
       "aliases": [
         "shorea stenoptera butter"
       ],
-      "is_active_ingredient": false
+      "is_active_ingredient": false,
+      "ingredient": {
+        "name": "Illipe Butter",
+        "slug": "illipe-butter",
+        "inci_name": "Shorea Stenoptera Seed Butter"
+      },
+      "physical_form": "Butter"
     },
     {
       "name": "Murumuru Butter",
@@ -185,7 +221,13 @@
       "aliases": [
         "astrocaryum murumuru seed butter"
       ],
-      "is_active_ingredient": false
+      "is_active_ingredient": false,
+      "ingredient": {
+        "name": "Murumuru Butter",
+        "slug": "murumuru-butter",
+        "inci_name": "Astrocaryum Murumuru Seed Butter"
+      },
+      "physical_form": "Butter"
     },
     {
       "name": "Ghee (Clarified Butter)",
@@ -208,7 +250,13 @@
       "aliases": [
         "clarified butter"
       ],
-      "is_active_ingredient": false
+      "is_active_ingredient": false,
+      "ingredient": {
+        "name": "Ghee",
+        "slug": "ghee",
+        "inci_name": "Clarified Butter"
+      },
+      "physical_form": "Butter"
     }
   ]
 }

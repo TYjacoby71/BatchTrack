@@ -17,7 +17,12 @@
         "raw honey",
         "clover honey"
       ],
-      "is_active_ingredient": false
+      "is_active_ingredient": false,
+      "ingredient": {
+        "name": "Honey",
+        "slug": "honey"
+      },
+      "physical_form": "Granulated"
     },
     {
       "name": "Maple Syrup",
@@ -32,7 +37,12 @@
       "aliases": [
         "pure maple syrup"
       ],
-      "is_active_ingredient": false
+      "is_active_ingredient": false,
+      "ingredient": {
+        "name": "Maple Syrup",
+        "slug": "maple-syrup"
+      },
+      "physical_form": "Syrup"
     },
     {
       "name": "Corn Syrup",
@@ -47,7 +57,12 @@
       "aliases": [
         "light corn syrup"
       ],
-      "is_active_ingredient": false
+      "is_active_ingredient": false,
+      "ingredient": {
+        "name": "Corn Syrup",
+        "slug": "corn-syrup"
+      },
+      "physical_form": "Syrup"
     },
     {
       "name": "Agave Nectar",
@@ -62,7 +77,12 @@
       "aliases": [
         "agave syrup"
       ],
-      "is_active_ingredient": false
+      "is_active_ingredient": false,
+      "ingredient": {
+        "name": "Agave Nectar",
+        "slug": "agave-nectar"
+      },
+      "physical_form": "Granulated"
     },
     {
       "name": "Molasses (Blackstrap)",
@@ -77,7 +97,12 @@
       "aliases": [
         "blackstrap molasses"
       ],
-      "is_active_ingredient": false
+      "is_active_ingredient": false,
+      "ingredient": {
+        "name": "Molasses",
+        "slug": "molasses"
+      },
+      "physical_form": "Blackstrap"
     },
     {
       "name": "Golden Syrup",
@@ -92,7 +117,12 @@
       "aliases": [
         "light treacle"
       ],
-      "is_active_ingredient": false
+      "is_active_ingredient": false,
+      "ingredient": {
+        "name": "Golden Syrup",
+        "slug": "golden-syrup"
+      },
+      "physical_form": "Syrup"
     },
     {
       "name": "Rice Syrup",
@@ -107,7 +137,12 @@
       "aliases": [
         "brown rice syrup"
       ],
-      "is_active_ingredient": false
+      "is_active_ingredient": false,
+      "ingredient": {
+        "name": "Rice Syrup",
+        "slug": "rice-syrup"
+      },
+      "physical_form": "Syrup"
     },
     {
       "name": "White Sugar",
@@ -122,7 +157,12 @@
       "aliases": [
         "granulated sugar"
       ],
-      "is_active_ingredient": false
+      "is_active_ingredient": false,
+      "ingredient": {
+        "name": "White Sugar",
+        "slug": "white-sugar"
+      },
+      "physical_form": "Granulated"
     },
     {
       "name": "Brown Sugar",
@@ -138,7 +178,12 @@
         "light brown sugar",
         "dark brown sugar"
       ],
-      "is_active_ingredient": false
+      "is_active_ingredient": false,
+      "ingredient": {
+        "name": "Brown Sugar",
+        "slug": "brown-sugar"
+      },
+      "physical_form": "Granulated"
     },
     {
       "name": "Powdered Sugar",
@@ -153,7 +198,12 @@
       "aliases": [
         "confectioners sugar"
       ],
-      "is_active_ingredient": false
+      "is_active_ingredient": false,
+      "ingredient": {
+        "name": "Powdered Sugar",
+        "slug": "powdered-sugar"
+      },
+      "physical_form": "Powder"
     },
     {
       "name": "Raw Sugar",
@@ -168,7 +218,12 @@
       "aliases": [
         "turbinado sugar"
       ],
-      "is_active_ingredient": false
+      "is_active_ingredient": false,
+      "ingredient": {
+        "name": "Raw Sugar",
+        "slug": "raw-sugar"
+      },
+      "physical_form": "Granulated"
     },
     {
       "name": "Coconut Sugar",
@@ -183,7 +238,12 @@
       "aliases": [
         "palm sugar"
       ],
-      "is_active_ingredient": false
+      "is_active_ingredient": false,
+      "ingredient": {
+        "name": "Coconut Sugar",
+        "slug": "coconut-sugar"
+      },
+      "physical_form": "Granulated"
     }
   ],
   "attributes": [

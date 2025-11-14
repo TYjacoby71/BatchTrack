@@ -19,7 +19,13 @@
       "aliases": [
         "lavandula angustifolia"
       ],
-      "is_active_ingredient": false
+      "is_active_ingredient": false,
+      "ingredient": {
+        "name": "Lavender Essential Oil",
+        "slug": "lavender-essential-oil",
+        "inci_name": "Lavandula Angustifolia (Lavender) Oil"
+      },
+      "physical_form": "Liquid"
     },
     {
       "name": "Tea Tree Essential Oil",
@@ -37,7 +43,13 @@
       "aliases": [
         "melaleuca oil"
       ],
-      "is_active_ingredient": false
+      "is_active_ingredient": false,
+      "ingredient": {
+        "name": "Tea Tree Essential Oil",
+        "slug": "tea-tree-essential-oil",
+        "inci_name": "Melaleuca Alternifolia (Tea Tree) Leaf Oil"
+      },
+      "physical_form": "Liquid"
     },
     {
       "name": "Peppermint Essential Oil",
@@ -55,7 +67,13 @@
       "aliases": [
         "mentha piperita"
       ],
-      "is_active_ingredient": false
+      "is_active_ingredient": false,
+      "ingredient": {
+        "name": "Peppermint Essential Oil",
+        "slug": "peppermint-essential-oil",
+        "inci_name": "Mentha Piperita (Peppermint) Oil"
+      },
+      "physical_form": "Liquid"
     },
     {
       "name": "Bergamot Essential Oil (FCF)",
@@ -74,7 +92,13 @@
       "aliases": [
         "citrus aurantium bergamia oil"
       ],
-      "is_active_ingredient": false
+      "is_active_ingredient": false,
+      "ingredient": {
+        "name": "Bergamot Essential Oil",
+        "slug": "bergamot-essential-oil",
+        "inci_name": "Citrus Aurantium Bergamia (Bergamot) Fruit Oil"
+      },
+      "physical_form": "Fcf"
     },
     {
       "name": "Patchouli Essential Oil",
@@ -92,7 +116,13 @@
       "aliases": [
         "pogostemon cablin oil"
       ],
-      "is_active_ingredient": false
+      "is_active_ingredient": false,
+      "ingredient": {
+        "name": "Patchouli Essential Oil",
+        "slug": "patchouli-essential-oil",
+        "inci_name": "Pogostemon Cablin (Patchouli) Oil"
+      },
+      "physical_form": "Liquid"
     },
     {
       "name": "Cedarwood Atlas Essential Oil",
@@ -110,7 +140,13 @@
       "aliases": [
         "cedrus atlantica"
       ],
-      "is_active_ingredient": false
+      "is_active_ingredient": false,
+      "ingredient": {
+        "name": "Cedarwood Atlas Essential Oil",
+        "slug": "cedarwood-atlas-essential-oil",
+        "inci_name": "Cedrus Atlantica Bark Oil"
+      },
+      "physical_form": "Liquid"
     }
   ],
   "attributes": [

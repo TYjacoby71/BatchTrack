@@ -23,7 +23,12 @@
       "certifications": [
         "Organic"
       ],
-      "is_active_ingredient": false
+      "is_active_ingredient": false,
+      "ingredient": {
+        "name": "Rose Hydrosol",
+        "slug": "rose-hydrosol"
+      },
+      "physical_form": "Hydrosol"
     },
     {
       "name": "Chamomile Hydrosol",
@@ -38,7 +43,12 @@
       "certifications": [
         "Organic"
       ],
-      "is_active_ingredient": false
+      "is_active_ingredient": false,
+      "ingredient": {
+        "name": "Chamomile Hydrosol",
+        "slug": "chamomile-hydrosol"
+      },
+      "physical_form": "Hydrosol"
     },
     {
       "name": "Lavender Hydrosol",
@@ -53,7 +63,12 @@
       "certifications": [
         "COSMOS Approved"
       ],
-      "is_active_ingredient": false
+      "is_active_ingredient": false,
+      "ingredient": {
+        "name": "Lavender Hydrosol",
+        "slug": "lavender-hydrosol"
+      },
+      "physical_form": "Hydrosol"
     },
     {
       "name": "Witch Hazel Distillate (Alcohol-Free)",
@@ -68,7 +83,12 @@
       "certifications": [
         "USP Grade"
       ],
-      "is_active_ingredient": false
+      "is_active_ingredient": false,
+      "ingredient": {
+        "name": "Witch Hazel Distillate",
+        "slug": "witch-hazel-distillate"
+      },
+      "physical_form": "Alcohol-Free"
     }
   ]
 }

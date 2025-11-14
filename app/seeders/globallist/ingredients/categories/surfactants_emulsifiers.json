@@ -17,7 +17,13 @@
       "aliases": [
         "tween 80"
       ],
-      "is_active_ingredient": false
+      "is_active_ingredient": false,
+      "ingredient": {
+        "name": "Polysorbate 80",
+        "slug": "polysorbate-80",
+        "inci_name": "Polysorbate 80"
+      },
+      "physical_form": "Surfactant"
     },
     {
       "name": "Polysorbate 20",
@@ -33,7 +39,13 @@
       "aliases": [
         "tween 20"
       ],
-      "is_active_ingredient": false
+      "is_active_ingredient": false,
+      "ingredient": {
+        "name": "Polysorbate 20",
+        "slug": "polysorbate-20",
+        "inci_name": "Polysorbate 20"
+      },
+      "physical_form": "Surfactant"
     },
     {
       "name": "Cocamidopropyl Betaine (30%)",
@@ -49,7 +61,13 @@
       "aliases": [
         "CAPB"
       ],
-      "is_active_ingredient": false
+      "is_active_ingredient": false,
+      "ingredient": {
+        "name": "Cocamidopropyl Betaine",
+        "slug": "cocamidopropyl-betaine",
+        "inci_name": "Cocamidopropyl Betaine"
+      },
+      "physical_form": "30%"
     },
     {
       "name": "Decyl Glucoside",
@@ -65,7 +83,13 @@
       "aliases": [
         "plant-derived glucoside"
       ],
-      "is_active_ingredient": false
+      "is_active_ingredient": false,
+      "ingredient": {
+        "name": "Decyl Glucoside",
+        "slug": "decyl-glucoside",
+        "inci_name": "Decyl Glucoside"
+      },
+      "physical_form": "Surfactant"
     },
     {
       "name": "Sodium Lauryl Sulfoacetate",
@@ -81,7 +105,13 @@
       "aliases": [
         "SLSa"
       ],
-      "is_active_ingredient": false
+      "is_active_ingredient": false,
+      "ingredient": {
+        "name": "Sodium Lauryl Sulfoacetate",
+        "slug": "sodium-lauryl-sulfoacetate",
+        "inci_name": "Sodium Lauryl Sulfoacetate"
+      },
+      "physical_form": "Surfactant"
     },
     {
       "name": "BTMS-50",
@@ -95,7 +125,13 @@
       "aliases": [
         "behentrimonium methosulfate 50%"
       ],
-      "is_active_ingredient": false
+      "is_active_ingredient": false,
+      "ingredient": {
+        "name": "BTMS-50",
+        "slug": "btms-50",
+        "inci_name": "Behentrimonium Methosulfate (and) Cetyl Alcohol (and) Butylene Glycol"
+      },
+      "physical_form": "Surfactant"
     }
   ],
   "attributes": [

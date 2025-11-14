@@ -25,7 +25,12 @@
       "certifications": [
         "Non-GMO"
       ],
-      "is_active_ingredient": false
+      "is_active_ingredient": false,
+      "ingredient": {
+        "name": "Cornstarch",
+        "slug": "cornstarch"
+      },
+      "physical_form": "Powder"
     },
     {
       "name": "Arrowroot Powder",
@@ -41,7 +46,12 @@
       "certifications": [
         "Gluten-Free"
       ],
-      "is_active_ingredient": false
+      "is_active_ingredient": false,
+      "ingredient": {
+        "name": "Arrowroot Powder",
+        "slug": "arrowroot-powder"
+      },
+      "physical_form": "Powder"
     },
     {
       "name": "Tapioca Starch",
@@ -57,7 +67,12 @@
       "certifications": [
         "Gluten-Free"
       ],
-      "is_active_ingredient": false
+      "is_active_ingredient": false,
+      "ingredient": {
+        "name": "Tapioca Starch",
+        "slug": "tapioca-starch"
+      },
+      "physical_form": "Powder"
     },
     {
       "name": "Guar Gum",
@@ -73,7 +88,12 @@
       "certifications": [
         "Kosher"
       ],
-      "is_active_ingredient": false
+      "is_active_ingredient": false,
+      "ingredient": {
+        "name": "Guar Gum",
+        "slug": "guar-gum"
+      },
+      "physical_form": "Powder"
     },
     {
       "name": "Xanthan Gum",
@@ -89,7 +109,12 @@
       "certifications": [
         "Non-GMO"
       ],
-      "is_active_ingredient": false
+      "is_active_ingredient": false,
+      "ingredient": {
+        "name": "Xanthan Gum",
+        "slug": "xanthan-gum"
+      },
+      "physical_form": "Powder"
     },
     {
       "name": "Maltodextrin",
@@ -105,7 +130,12 @@
       "certifications": [
         "Non-GMO"
       ],
-      "is_active_ingredient": false
+      "is_active_ingredient": false,
+      "ingredient": {
+        "name": "Maltodextrin",
+        "slug": "maltodextrin"
+      },
+      "physical_form": "Powder"
     },
     {
       "name": "Gelatin Powder (250 Bloom)",
@@ -121,7 +151,12 @@
       "certifications": [
         "Halal Available"
       ],
-      "is_active_ingredient": false
+      "is_active_ingredient": false,
+      "ingredient": {
+        "name": "Gelatin Powder",
+        "slug": "gelatin-powder"
+      },
+      "physical_form": "250 Bloom"
     }
   ]
 }

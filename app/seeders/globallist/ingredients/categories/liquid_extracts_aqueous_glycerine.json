@@ -25,7 +25,13 @@
       "certifications": [
         "Kosher"
       ],
-      "is_active_ingredient": true
+      "is_active_ingredient": true,
+      "ingredient": {
+        "name": "Aloe Vera Extract",
+        "slug": "aloe-vera-extract",
+        "inci_name": "Aloe Barbadensis Leaf Juice"
+      },
+      "physical_form": "1:1"
     },
     {
       "name": "Green Tea Extract (Water Soluble)",
@@ -41,7 +47,13 @@
       "certifications": [
         "COSMOS Approved"
       ],
-      "is_active_ingredient": true
+      "is_active_ingredient": true,
+      "ingredient": {
+        "name": "Green Tea Extract",
+        "slug": "green-tea-extract",
+        "inci_name": "Camellia Sinensis Leaf Extract (and) Glycerin (and) Water"
+      },
+      "physical_form": "Water Soluble"
     },
     {
       "name": "Calendula Glycerite",
@@ -57,7 +69,13 @@
       "certifications": [
         "Organic"
       ],
-      "is_active_ingredient": true
+      "is_active_ingredient": true,
+      "ingredient": {
+        "name": "Calendula Glycerite",
+        "slug": "calendula-glycerite",
+        "inci_name": "Glycerin (and) Calendula Officinalis Flower Extract"
+      },
+      "physical_form": "Liquid"
     }
   ]
 }
