@@ -436,6 +436,43 @@ def delete_recipe_route(recipe_id):
 
     return redirect(url_for('recipes.list_recipes'))
 
+@recipes_bp.route('/<int:recipe_id>/make-parent', methods=['POST'])
+@login_required
+def make_parent_recipe(recipe_id):
+    """Convert a variation recipe into a standalone parent recipe"""
+    try:
+        recipe = Recipe.query.get(recipe_id)
+        if not recipe:
+            flash('Recipe not found.', 'error')
+            return redirect(url_for('recipes.list_recipes'))
+
+        if not recipe.parent_id:
+            flash('Recipe is already a parent recipe.', 'error')
+            return redirect(url_for('recipes.view_recipe', recipe_id=recipe_id))
+
+        # Store original parent for flash message
+        original_parent = recipe.parent
+
+        # Convert variation to parent by removing parent relationship
+        recipe.parent_id = None
+        
+        # Update the name to remove "Variation" suffix if present
+        if recipe.name.endswith(" Variation"):
+            recipe.name = recipe.name.replace(" Variation", "")
+
+        db.session.commit()
+        
+        flash(f'Recipe "{recipe.name}" has been converted to a parent recipe and is no longer a variation of "{original_parent.name}".', 'success')
+        logger.info(f"Converted recipe {recipe_id} from variation to parent recipe")
+
+        return redirect(url_for('recipes.view_recipe', recipe_id=recipe_id))
+
+    except Exception as e:
+        db.session.rollback()
+        logger.error(f"Error converting recipe {recipe_id} to parent: {str(e)}")
+        flash('An error occurred while converting the recipe to a parent.', 'error')
+        return redirect(url_for('recipes.view_recipe', recipe_id=recipe_id))
+
 @recipes_bp.route('/<int:recipe_id>/lock', methods=['POST'])
 @login_required
 def lock_recipe(recipe_id):
