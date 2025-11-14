@@ -1,16 +1,13 @@
 import logging
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import Optional, List, Dict, Tuple
 from flask import current_app
 from flask_login import current_user
 from ..models import db, InventoryItem, Reservation
 from sqlalchemy import and_, func
 from ..utils import generate_fifo_code
-
-# Import necessary canonical functions
-# Import moved to avoid circular dependency - use canonical service instead
-# from app.blueprints.fifo.services import FIFOService
 from app.services.inventory_adjustment import process_inventory_adjustment
+from app.services.reservation_service import ReservationService
 
 def _db():
     """Get database session - works with real SQLAlchemy and test mocks"""
@@ -77,21 +74,6 @@ class POSIntegrationService:
                 _db_session().add(reserved_item)
                 _db_session().flush()
 
-            # Get the source FIFO entry for tracking
-            from ..models import InventoryHistory
-            fifo_entries = InventoryHistory.query.filter_by(
-                inventory_item_id=item_id,
-                remaining_quantity__gt=0
-            ).order_by(InventoryHistory.timestamp.asc()).all()
-            source_fifo_id = None
-            source_batch_id = None
-
-            if fifo_entries:
-                # Use the oldest available entry for reference
-                oldest_entry = fifo_entries[0]
-                source_fifo_id = oldest_entry.id
-                source_batch_id = getattr(oldest_entry, 'batch_id', None)
-
             # 1. DEDUCT from original item using canonical service
             deduction_success = process_inventory_adjustment(
                 item_id=item_id,
@@ -105,10 +87,21 @@ class POSIntegrationService:
             if not deduction_success:
                 return False, "Failed to deduct from available inventory"
 
+            # Determine which lot was affected by the reservation
+            from ..models import UnifiedInventoryHistory
+            recent_entry = UnifiedInventoryHistory.query.filter_by(
+                inventory_item_id=item_id,
+                change_type='reserved',
+                order_id=order_id
+            ).order_by(UnifiedInventoryHistory.timestamp.desc()).first()
+
+            source_fifo_id = recent_entry.affected_lot_id if recent_entry and getattr(recent_entry, 'affected_lot_id', None) else None
+            source_batch_id = recent_entry.batch_id if recent_entry else None
+
             # 2. CREATE reservation line item (this is now the source of truth)
             expires_at = None
             if expires_in_hours:
-                expires_at = datetime.utcnow() + timedelta(hours=expires_in_hours)
+                expires_at = datetime.now(timezone.utc) + timedelta(hours=expires_in_hours)
 
             reservation = Reservation(
                 order_id=order_id,
@@ -312,7 +305,7 @@ class POSIntegrationService:
                 and_(
                     Reservation.status == 'active',
                     Reservation.expires_at.isnot(None),
-                    Reservation.expires_at < datetime.utcnow()
+                    Reservation.expires_at < datetime.now(timezone.utc)
                 )
             ).all()
 
@@ -384,15 +377,45 @@ class POSIntegrationService:
         )
         return success, ("Sale processed" if success else "Sale failed")
 
-# Placeholder for FIFOService and Reservation.mark_returned(), Reservation.mark_converted_to_sale()
-# These would be defined in other modules.
+
+# ============================================================================
+# STUBS FOR POS INTEGRATION TESTING
+# These are placeholder/mock classes used for testing POS integration flows
+# without requiring full database setup
+# ============================================================================
+
 class FIFOService:
+    """Stub FIFO service for testing"""
     @staticmethod
     def get_fifo_entries(item_id):
-        return [] # Dummy implementation
+        return []  # Dummy implementation for tests
 
-class Reservation:
-    def __init__(self, order_id=None, product_item_id=None, reserved_item_id=None, quantity=None, unit=None, unit_cost=None, sale_price=None, source_fifo_id=None, source_batch_id=None, source=None, expires_at=None, notes=None, created_by=None, organization_id=None):
+class MockInventoryItem:
+    """Mock InventoryItem for POS integration tests"""
+    query = None  # Dummy
+    def __init__(self, name=None, type=None, unit=None, cost_per_unit=None, quantity=None, 
+                 organization_id=None, category_id=None, is_perishable=None, shelf_life_days=None):
+        self.name = name
+        self.type = type
+        self.unit = unit
+        self.cost_per_unit = cost_per_unit
+        self.quantity = quantity
+        self.organization_id = organization_id
+        self.category_id = category_id
+        self.is_perishable = is_perishable
+        self.shelf_life_days = shelf_life_days
+        self.available_quantity = 100  # Dummy value for testing
+
+class MockInventoryHistory:
+    """Stub for legacy InventoryHistory - tests should migrate to UnifiedInventoryHistory"""
+    pass
+
+class MockReservation:
+    """Mock Reservation model for POS integration tests"""
+    def __init__(self, order_id=None, product_item_id=None, reserved_item_id=None, quantity=None, 
+                 unit=None, unit_cost=None, sale_price=None, source_fifo_id=None, 
+                 source_batch_id=None, source=None, expires_at=None, notes=None, 
+                 created_by=None, organization_id=None):
         self.order_id = order_id
         self.product_item_id = product_item_id
         self.reserved_item_id = reserved_item_id
@@ -407,7 +430,7 @@ class Reservation:
         self.notes = notes
         self.created_by = created_by
         self.organization_id = organization_id
-        self.status = 'active' # Default status
+        self.status = 'active'  # Default status
 
     def mark_converted_to_sale(self):
         self.status = 'converted_to_sale'
@@ -418,41 +441,22 @@ class Reservation:
     def mark_expired(self):
         self.status = 'expired'
 
-# Mocking necessary components for the provided code to be syntactically valid
-class InventoryItem:
-    query = None # Dummy
-    def __init__(self, name=None, type=None, unit=None, cost_per_unit=None, quantity=None, organization_id=None, category_id=None, is_perishable=None, shelf_life_days=None):
-        self.name = name
-        self.type = type
-        self.unit = unit
-        self.cost_per_unit = cost_per_unit
-        self.quantity = quantity
-        self.organization_id = organization_id
-        self.category_id = category_id
-        self.is_perishable = is_perishable
-        self.shelf_life_days = shelf_life_days
-        self.available_quantity = 100 # Dummy value for testing
-
-class InventoryHistory:
-    pass # Dummy
-
-class ReservationService:
+class MockReservationService:
+    """Stub ReservationService for testing"""
     @staticmethod
     def release_reservation(order_id):
-        return True, "Reservation released" # Dummy
+        return True, "Reservation released"  # Dummy
 
-# Mocking db session
+# Mock database session for tests
 class MockDBSession:
+    """Mock database session for POS integration tests"""
     def add(self, obj): pass
     def flush(self): pass
     def commit(self): pass
     def rollback(self): pass
 
-db = MockDBSession()
-
-# Mocking current_user
+# Mock current_user for tests
 class MockCurrentUser:
+    """Mock current user for POS integration tests"""
     is_authenticated = False
-    organization_id = 1 # Dummy org ID
-
-current_user = MockCurrentUser()
+    organization_id = 1  # Dummy org ID

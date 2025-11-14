@@ -156,6 +156,7 @@
       </label>
       <div><small class="text-muted">Developer feature for advanced inventory analytics and reporting</small></div>
     </div>
+    {% if config['DEBUG'] %}
     <div class="form-check form-switch mb-2">
       <input class="form-check-input" type="checkbox" id="ff_debug_mode" {% if feature_flags.get('FEATURE_DEBUG_MODE', False) %}checked{% endif %} onchange="saveFlags()">
       <label class="form-check-label" for="ff_debug_mode">
@@ -164,6 +165,7 @@
       </label>
       <div><small class="text-muted">Enables detailed logging and debugging information for development purposes</small></div>
     </div>
+    {% endif %}
     <div class="form-check form-switch mb-2">
       <input class="form-check-input" type="checkbox" id="ff_auto_backup" {% if feature_flags.get('FEATURE_AUTO_BACKUP', False) %}checked{% endif %} onchange="saveFlags()">
       <label class="form-check-label" for="ff_auto_backup">
@@ -338,24 +340,62 @@
     <li>Feature flags set appropriately: <span class="text-muted">Review above</span></li>
   </ul>
   <hr>
-  <h4>7) Core Environment</h4>
-  <ul>
-    <li>Environment: <code>{{ env_core.FLASK_ENV }}</code></li>
-    <li>Replit Deployment: <code>{{ env_core.REPLIT_DEPLOYMENT }}</code></li>
-    <li>SECRET_KEY present: {% if env_core.SECRET_KEY_present %}<span class="text-success">Yes</span>{% else %}<span class="text-danger">No</span>{% endif %}</li>
-  </ul>
-  <div class="alert alert-info">
-    <strong>Required environment variables:</strong>
-    <ul class="mb-0">
-      <li>Database: <code>DATABASE_INTERNAL_URL</code> (preferred) or <code>DATABASE_URL</code> — current backend: <strong>{{ db_info.backend }}</strong></li>
-      <li>Flask: <code>FLASK_SECRET_KEY</code> (or platform secret), <code>FLASK_ENV</code></li>
-      <li>Redis (optional for rate limits): <code>REDIS_URL</code></li>
-      <li>Stripe: <code>STRIPE_SECRET_KEY</code>, <code>STRIPE_PUBLISHABLE_KEY</code>, <code>STRIPE_WEBHOOK_SECRET</code></li>
-      <li>Email: depending on provider (SMTP vars or SENDGRID_API_KEY/POSTMARK_SERVER_TOKEN/MAILGUN_API_KEY & MAILGUN_DOMAIN)</li>
-      <li>OAuth (Google): <code>GOOGLE_OAUTH_CLIENT_ID</code>, <code>GOOGLE_OAUTH_CLIENT_SECRET</code></li>
-      <li>Whop (optional): <code>WHOP_API_KEY</code>, <code>WHOP_APP_ID</code></li>
-    </ul>
+<h4>7) Core Environment</h4>
+<p class="text-muted">Work through every launch-critical environment variable and secret below. Entries auto-check when detected from the runtime, and you can tick them manually while you deploy.</p>
+
+  <div class="alert alert-warning">
+    <strong>Environment switch:</strong> Set <code>FLASK_ENV=production</code> (and leave <code>FLASK_DEBUG</code> unset/false) in every live deployment. Local development should use <code>FLASK_ENV=development</code>. All runtime behavior—debug panels, logging verbosity, session security, and rate limits—now keys off this single variable.
   </div>
+
+{% for section in launch_env_sections %}
+  <div class="mb-4">
+    <div class="d-flex align-items-center justify-content-between mb-2">
+      <h5 class="mb-0">{{ section.title }}</h5>
+    </div>
+    {% if section.note %}
+      <div class="alert alert-secondary small mb-2">{{ section.note }}</div>
+    {% endif %}
+    <div class="list-group">
+      {% for item in section.section_items %}
+        <label class="list-group-item d-flex align-items-start gap-3">
+          <input class="form-check-input mt-1" type="checkbox" id="env_{{ item.key }}" {% if item.present %}checked{% endif %}>
+          <div>
+            <div class="fw-semibold">
+              {{ item.key }}
+              {% if not item.required %}<span class="badge bg-secondary ms-2">Optional</span>{% endif %}
+              {% if item.is_secret %}<span class="badge bg-warning text-dark ms-2">Secret</span>{% endif %}
+            </div>
+            <div class="small text-muted">{{ item.description }}</div>
+            <div class="small {% if item.present %}text-success{% else %}text-danger{% endif %}">
+              {% if item.present %}
+                Detected via {{ 'environment' if item.source == 'env' else 'configuration' }}
+              {% else %}
+                Not detected
+              {% endif %}
+              {% if item.recommended %}<span class="text-muted ms-2">Recommended: {{ item.recommended }}</span>{% endif %}
+            </div>
+            {% if item.note %}
+              <div class="small text-muted">{{ item.note }}</div>
+            {% endif %}
+          </div>
+        </label>
+      {% endfor %}
+    </div>
+  </div>
+{% endfor %}
+
+  <div class="alert alert-info">
+    <strong>Redis provisioning:</strong> Before launch, create a managed Redis instance (Render Redis, Upstash, AWS ElastiCache, etc.). Copy the connection URL into <code>REDIS_URL</code> and mirror it into <code>RATELIMIT_STORAGE_URI</code>. The app now refuses to start in production without Redis-backed sessions, caching, and rate limiting.
+  </div>
+
+<ul>
+  <li>Environment: <code>{{ env_core.FLASK_ENV }}</code></li>
+  <li>Replit Deployment: <code>{{ env_core.REPLIT_DEPLOYMENT }}</code></li>
+  <li>SECRET_KEY present: {% if env_core.SECRET_KEY_present %}<span class="text-success">Yes</span>{% else %}<span class="text-danger">No</span>{% endif %}</li>
+</ul>
+<div class="alert alert-info">
+  <strong>Database backend:</strong> <span class="text-uppercase">{{ db_info.backend }}</span> via <code>{{ db_info.source }}</code>. Ensure migrations run before flip to production.
+</div>
   <div class="card p-3">
     <h6>Database Configuration</h6>
     <div>Current URI: <code>{{ db_info.uri }}</code></div>
@@ -363,9 +403,22 @@
     <div class="text-muted small">Set <code>DATABASE_INTERNAL_URL</code> or <code>DATABASE_URL</code> for Postgres; falls back to SQLite for local dev.</div>
   </div>
 
+  <div class="card p-3 mt-3">
+    <h6>Domain Event Dispatcher</h6>
+    <p class="small text-muted mb-2">
+      The app writes every significant action into the <code>domain_event</code> outbox table. To push those events to downstream integrations, run the dispatcher alongside your web workers.
+    </p>
+    <ol class="small mb-2">
+      <li>Provision any HTTP endpoint that should receive events (or leave the webhook unset to mark events processed without delivery).</li>
+      <li>Set <code>DOMAIN_EVENT_WEBHOOK_URL=https://your-endpoint</code> (optional if you only want local logging).</li>
+      <li>Run the worker: <code>flask dispatch-domain-events</code> (use <code>--once</code> for ad-hoc batches, or keep it running as a background process/sidecar).</li>
+      <li>Monitor logs for retries; events exceeding the retry limit are marked with <code>_dispatch_errors</code> in the payload.</li>
+    </ol>
+  </div>
 
-  <div class="alert alert-secondary">
-    For detailed requirements and status, see <a href="{{ url_for('developer.dashboard') }}">Developer Dashboard</a> and <a href="/docs/CRITICAL_PRELAUNCH.md" target="_blank">CRITICAL_PRELAUNCH.md</a>.
+
+    <div class="alert alert-secondary">
+      For detailed requirements and status, see <a href="{{ url_for('developer.dashboard') }}">Developer Dashboard</a> and <a href="/docs/todo/CRITICAL_PRELAUNCH.md" target="_blank">CRITICAL_PRELAUNCH.md</a>.
   </div>
 
 </div>

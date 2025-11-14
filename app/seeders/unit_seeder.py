@@ -21,7 +21,7 @@ def seed_units():
         {"name": "ton", "symbol": "ton", "unit_type": "weight", "base_unit": "gram", "conversion_factor": 907184.74, "is_custom": False, "is_mapped": True, "created_by": None},
 
         # Volume Units
-        {"name": "ml", "symbol": "ml", "unit_type": "volume", "base_unit": "ml", "conversion_factor": 1.0, "is_custom": False, "is_mapped": True, "created_by": None},
+        {"name": "milliliter", "symbol": "mL", "unit_type": "volume", "base_unit": "ml", "conversion_factor": 1.0, "is_custom": False, "is_mapped": True, "created_by": None},
         {"name": "liter", "symbol": "L", "unit_type": "volume", "base_unit": "ml", "conversion_factor": 1000.0, "is_custom": False, "is_mapped": True, "created_by": None},
         {"name": "tsp", "symbol": "tsp", "unit_type": "volume", "base_unit": "ml", "conversion_factor": 4.92892, "is_custom": False, "is_mapped": True, "created_by": None},
         {"name": "tbsp", "symbol": "tbsp", "unit_type": "volume", "base_unit": "ml", "conversion_factor": 14.7868, "is_custom": False, "is_mapped": True, "created_by": None},
@@ -65,6 +65,20 @@ def seed_units():
         {"name": "unit", "symbol": "unit", "unit_type": "count", "base_unit": "count", "conversion_factor": 1.0, "is_custom": False, "is_mapped": True, "created_by": None},
         {"name": "batch", "symbol": "batch", "unit_type": "count", "base_unit": "count", "conversion_factor": 1.0, "is_custom": False, "is_mapped": True, "created_by": None},
         {"name": "pair", "symbol": "pair", "unit_type": "count", "base_unit": "count", "conversion_factor": 2.0, "is_custom": False, "is_mapped": True, "created_by": None},
+        
+        # Additional Count Units (from unit_count_seeder)
+        {"name": "Piece", "symbol": "pc", "unit_type": "count", "base_unit": "count", "conversion_factor": 1.0, "is_custom": False, "is_mapped": True, "created_by": None},
+        {"name": "Bar", "symbol": None, "unit_type": "count", "base_unit": "count", "conversion_factor": 1.0, "is_custom": False, "is_mapped": True, "created_by": None},
+        {"name": "Slice", "symbol": None, "unit_type": "count", "base_unit": "count", "conversion_factor": 1.0, "is_custom": False, "is_mapped": True, "created_by": None},
+        {"name": "Cookie", "symbol": None, "unit_type": "count", "base_unit": "count", "conversion_factor": 1.0, "is_custom": False, "is_mapped": True, "created_by": None},
+        {"name": "Bottle", "symbol": None, "unit_type": "count", "base_unit": "count", "conversion_factor": 1.0, "is_custom": False, "is_mapped": True, "created_by": None},
+        {"name": "Jar", "symbol": None, "unit_type": "count", "base_unit": "count", "conversion_factor": 1.0, "is_custom": False, "is_mapped": True, "created_by": None},
+        {"name": "Tablet", "symbol": None, "unit_type": "count", "base_unit": "count", "conversion_factor": 1.0, "is_custom": False, "is_mapped": True, "created_by": None},
+        {"name": "Capsule", "symbol": None, "unit_type": "count", "base_unit": "count", "conversion_factor": 1.0, "is_custom": False, "is_mapped": True, "created_by": None},
+        {"name": "Bomb", "symbol": None, "unit_type": "count", "base_unit": "count", "conversion_factor": 1.0, "is_custom": False, "is_mapped": True, "created_by": None},
+        {"name": "Loaf", "symbol": None, "unit_type": "count", "base_unit": "count", "conversion_factor": 1.0, "is_custom": False, "is_mapped": True, "created_by": None},
+        {"name": "Cupcake", "symbol": None, "unit_type": "count", "base_unit": "count", "conversion_factor": 1.0, "is_custom": False, "is_mapped": True, "created_by": None},
+        {"name": "Muffin", "symbol": None, "unit_type": "count", "base_unit": "count", "conversion_factor": 1.0, "is_custom": False, "is_mapped": True, "created_by": None},
 
         # Time Units
         {"name": "second", "symbol": "s", "unit_type": "time", "base_unit": "second", "conversion_factor": 1.0, "is_custom": False, "is_mapped": True, "created_by": None},

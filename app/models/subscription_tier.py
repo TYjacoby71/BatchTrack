@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timezone
 from ..extensions import db
 from sqlalchemy.orm import backref
 
@@ -64,8 +64,8 @@ class SubscriptionTier(db.Model):
     whop_product_key = db.Column(db.String(128), nullable=True)
 
     # Metadata
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
-    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
+    updated_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc))
 
     # Relationships
     permissions = db.relationship('Permission', secondary=subscription_tier_permission,

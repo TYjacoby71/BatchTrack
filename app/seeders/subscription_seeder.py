@@ -28,7 +28,6 @@ def create_exempt_tier():
         exempt_tier = SubscriptionTier.query.filter_by(name='Exempt Plan').first()
 
         if not exempt_tier:
-            print("✅ Creating exempt tier")
             exempt_tier = SubscriptionTier(
                 name='Exempt Plan',
                 description='System tier for exempt accounts - unlimited access',
@@ -76,7 +75,6 @@ def create_free_tier():
         free_tier = SubscriptionTier.query.filter_by(name='Free Tools').first()
 
         if not free_tier:
-            print("✅ Creating free tier")
             free_tier = SubscriptionTier(
                 name='Free Tools',
                 description='Recipe-only starter. Inventory read-only. No batches.',
@@ -123,7 +121,6 @@ def create_solo_tier():
         solo_tier = SubscriptionTier.query.filter_by(name='Solo Maker').first()
 
         if not solo_tier:
-            print("✅ Creating solo tier")
             solo_tier = SubscriptionTier(
                 name='Solo Maker',
                 description='Perfect for individual makers and small producers',
@@ -182,7 +179,6 @@ def create_team_tier():
         team_tier = SubscriptionTier.query.filter_by(name='Team Plan').first()
 
         if not team_tier:
-            print("✅ Creating team tier")
             team_tier = SubscriptionTier(
                 name='Team Plan',
                 description='Collaboration tools for small teams',
@@ -228,7 +224,6 @@ def create_enterprise_tier():
         enterprise_tier = SubscriptionTier.query.filter_by(name='Enterprise Plan').first()
 
         if not enterprise_tier:
-            print("✅ Creating enterprise tier")
             enterprise_tier = SubscriptionTier(
                 name='Enterprise Plan',
                 description='Full-scale production management',
@@ -274,17 +269,15 @@ def seed_subscription_tiers():
     if not current_app:
         raise RuntimeError("seed_subscription_tiers() must be called within Flask application context")
 
-    print("=== Seeding Complete Subscription System ===")
+    print("🔧 Seeding subscription tiers...")
     successful_tiers = []
-    failed_tiers = []
 
-    # Create all tiers - continue even if some fail
     tier_creators = [
-        ("Exempt tier", create_exempt_tier),
-        ("Free tier", create_free_tier),
-        ("Solo tier", create_solo_tier),
-        ("Team tier", create_team_tier),
-        ("Enterprise tier", create_enterprise_tier)
+        ("exempt", create_exempt_tier),
+        ("free", create_free_tier),
+        ("solo", create_solo_tier),
+        ("team", create_team_tier),
+        ("enterprise", create_enterprise_tier)
     ]
 
     for tier_name, creator_func in tier_creators:
@@ -292,26 +285,15 @@ def seed_subscription_tiers():
             tier = creator_func()
             if tier:
                 successful_tiers.append(tier_name)
-            else:
-                failed_tiers.append(tier_name)
         except Exception as e:
             print(f"⚠️ Failed to create {tier_name}: {e}")
-            failed_tiers.append(tier_name)
 
-    # Final commit attempt
     try:
         db.session.commit()
-        print("✅ Subscription tier seeding completed!")
+        print(f"   ✅ Subscription tiers: {len(successful_tiers)} tiers created/updated")
     except Exception as e:
-        print(f"⚠️ Final commit had issues: {e}")
+        print(f"⚠️ Subscription tiers failed: {e}")
         db.session.rollback()
-
-    # Report results
-    if successful_tiers:
-        print(f"✅ Successfully created/verified: {', '.join(successful_tiers)}")
-    if failed_tiers:
-        print(f"⚠️ Had issues with: {', '.join(failed_tiers)}")
-        print("   - These tiers may need manual attention")
 
 def migrate_existing_organizations():
     """Migrate existing organizations to use tier IDs"""
@@ -344,21 +326,8 @@ def migrate_existing_organizations():
 
 def seed_subscriptions():
     """Seed all subscription tiers and migrate organizations"""
-    from flask import current_app
-
-    # Ensure we're in an application context
     if not current_app:
         raise RuntimeError("seed_subscriptions() must be called within Flask application context")
 
-    print("=== Seeding Complete Subscription System ===")
-
-    # Step 1: Create all subscription tiers (with error recovery)
     seed_subscription_tiers()
-
-    # Step 2: Migrate existing organizations if any exist (with error recovery)
     migrate_existing_organizations()
-
-    print("✅ Complete subscription system seeding completed!")
-    print("   - Tiers processed with error recovery")
-    print("   - Organizations migrated with error recovery")
-    print("   - System ready for production use")

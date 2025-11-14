@@ -1,12 +1,12 @@
 from typing import Dict, List, Optional
-from datetime import datetime, timedelta
+from datetime import datetime, timezone, timedelta
 from flask_login import current_user
 from ..models import db, InventoryItem, Batch, ProductSKU, UserPreferences
 from ..services.combined_inventory_alerts import CombinedInventoryAlertService
 # Import moved to avoid circular dependency
 # from ..blueprints.expiration.services import ExpirationService
-import json
 import os
+from ..utils.json_store import read_json_file
 
 class DashboardAlertService:
     """Unified alert management for neurodivergent-friendly dashboard"""
@@ -259,16 +259,21 @@ class DashboardAlertService:
         """Get batches that have been in progress for more than 24 hours"""
         from ..utils.timezone_utils import TimezoneUtils
         cutoff_time = TimezoneUtils.utc_now() - timedelta(hours=24)
-        query = Batch.query.filter(
-            Batch.status == 'in_progress',
-            Batch.started_at < cutoff_time
-        )
-
-        # Simple organization scoping - no complex developer logic here
+        
+        # Get all in-progress batches and filter with safe datetime comparison
+        query = Batch.query.filter(Batch.status == 'in_progress')
+        
         if current_user and current_user.is_authenticated and current_user.organization_id:
             query = query.filter(Batch.organization_id == current_user.organization_id)
-
-        return query.all()
+        
+        all_batches = query.all()
+        stuck_batches = []
+        
+        for batch in all_batches:
+            if batch.started_at and TimezoneUtils.safe_datetime_compare(cutoff_time, batch.started_at, assume_utc=True):
+                stuck_batches.append(batch)
+        
+        return stuck_batches
 
     @staticmethod
     def _get_recent_faults() -> int:
@@ -277,23 +282,35 @@ class DashboardAlertService:
         if not os.path.exists(fault_file):
             return 0
 
-        try:
-            with open(fault_file, 'r') as f:
-                faults = json.load(f)
-
-            from ..utils.timezone_utils import TimezoneUtils
-            cutoff_time = TimezoneUtils.utc_now() - timedelta(hours=24)
-            recent_critical = 0
-
-            for fault in faults:
-                fault_time = datetime.fromisoformat(fault.get('timestamp', ''))
-                if (fault_time > cutoff_time and
-                    fault.get('severity', '').lower() in ['critical', 'error']):
-                    recent_critical += 1
-
-            return recent_critical
-        except (json.JSONDecodeError, KeyError, ValueError):
+        faults = read_json_file(fault_file, default=[]) or []
+        if not faults:
             return 0
+
+        from ..utils.timezone_utils import TimezoneUtils
+        cutoff_time = TimezoneUtils.utc_now() - timedelta(hours=24)
+        recent_critical = 0
+
+        for fault in faults:
+            raw_timestamp = fault.get('timestamp')
+            if not raw_timestamp:
+                continue
+
+            try:
+                fault_time = datetime.fromisoformat(raw_timestamp.replace('Z', '+00:00'))
+            except ValueError:
+                continue
+
+            # Ensure both datetimes are timezone-aware for safe comparison
+            fault_time = TimezoneUtils.ensure_timezone_aware(fault_time)
+            cutoff_time_aware = TimezoneUtils.ensure_timezone_aware(cutoff_time)
+
+            if (
+                TimezoneUtils.safe_datetime_compare(fault_time, cutoff_time_aware, assume_utc=True)
+                and fault.get('severity', '').lower() in ['critical', 'error']
+            ):
+                recent_critical += 1
+
+        return recent_critical
 
     @staticmethod
     def _get_timer_alerts() -> Dict:
@@ -321,7 +338,7 @@ class DashboardAlertService:
             for timer in active_timers:
                 if timer.start_time and timer.duration_seconds:
                     end_time = timer.start_time + timedelta(seconds=timer.duration_seconds)
-                    if current_time > end_time:
+                    if TimezoneUtils.safe_datetime_compare(current_time, end_time, assume_utc=True):
                         expired_timers.append(timer)
 
             return {

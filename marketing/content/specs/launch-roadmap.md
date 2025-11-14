@@ -96,5 +96,5 @@ Deadline: Day 7
 - Start changelog entries
 
 ## Notes
-- See `/workspace/docs/CRITICAL_PRELAUNCH.md` for blockers
-- See `/workspace/docs/FUTURE_ROADMAP.md` for post‑launch features
+- See `/workspace/docs/todo/CRITICAL_PRELAUNCH.md` for blockers
+- See `/workspace/docs/FUTURE_ROADMAP.md` for post-launch features

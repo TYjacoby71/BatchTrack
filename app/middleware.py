@@ -1,7 +1,36 @@
 import os
-from flask import request, redirect, url_for, jsonify, session, g, flash
-from flask_login import current_user, logout_user
 import logging
+from collections.abc import Mapping
+
+from flask import request, redirect, url_for, jsonify, session, g, flash, current_app
+from flask_login import current_user
+
+from .route_access import RouteAccessConfig
+
+DEFAULT_SECURITY_HEADERS = {
+    "Strict-Transport-Security": "max-age=31536000; includeSubDomains; preload",
+    "X-Content-Type-Options": "nosniff",
+    "X-Frame-Options": "DENY",
+    "X-XSS-Protection": "1; mode=block",
+    "Referrer-Policy": "strict-origin-when-cross-origin",
+    "Content-Security-Policy": (
+        "default-src 'self'; "
+        "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://js.stripe.com https://cdn.jsdelivr.net https://code.jquery.com https://cdnjs.cloudflare.com; "
+        "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdn.jsdelivr.net https://cdnjs.cloudflare.com; "
+        "font-src 'self' https://fonts.gstatic.com https://cdnjs.cloudflare.com; "
+        "img-src 'self' data: https: blob:; "
+        "connect-src 'self' https://api.stripe.com; "
+        "frame-src https://js.stripe.com; "
+        "object-src 'none'"
+    ),
+}
+
+
+def _env_flag(name: str, default: bool = False) -> bool:
+    value = os.environ.get(name)
+    if value is None:
+        return default
+    return value.strip().lower() in {"1", "true", "yes", "on"}
 
 # Configure logger
 logger = logging.getLogger(__name__)
@@ -9,74 +38,93 @@ logger = logging.getLogger(__name__)
 def register_middleware(app):
     """Register all middleware functions with the Flask app."""
 
+    trust_proxy_headers = _env_flag("ENABLE_PROXY_FIX") or _env_flag("TRUST_PROXY_HEADERS")
+    if trust_proxy_headers and not getattr(app.wsgi_app, "_batchtrack_proxyfix", False):
+        try:
+            from werkzeug.middleware.proxy_fix import ProxyFix
+        except Exception as exc:  # pragma: no cover - safety net for minimal deployments
+            logger.warning("ProxyFix unavailable; unable to honor proxy header trust: %s", exc)
+        else:
+            def _safe_env_int(name: str, default: int) -> int:
+                raw = os.environ.get(name)
+                if raw is None:
+                    return default
+                try:
+                    return int(raw)
+                except (TypeError, ValueError):
+                    logger.warning("Invalid value for %s=%r; defaulting to %s", name, raw, default)
+                    return default
+
+            proxy_fix_kwargs = {
+                "x_for": _safe_env_int("PROXY_FIX_X_FOR", 1),
+                "x_proto": _safe_env_int("PROXY_FIX_X_PROTO", 1),
+                "x_host": _safe_env_int("PROXY_FIX_X_HOST", 1),
+                "x_port": _safe_env_int("PROXY_FIX_X_PORT", 1),
+                "x_prefix": _safe_env_int("PROXY_FIX_X_PREFIX", 0),
+            }
+
+            wrapped = ProxyFix(app.wsgi_app, **proxy_fix_kwargs)
+            setattr(wrapped, "_batchtrack_proxyfix", True)
+            app.wsgi_app = wrapped
+
+    secure_env = not app.debug and not app.testing
+    force_security_headers = _env_flag("FORCE_SECURITY_HEADERS")
+    disable_security_headers = _env_flag("DISABLE_SECURITY_HEADERS")
+
+    configured_headers = app.config.get("SECURITY_HEADERS")
+    security_headers = dict(DEFAULT_SECURITY_HEADERS)
+    if isinstance(configured_headers, Mapping):
+        security_headers.update(configured_headers)
+    elif configured_headers:
+        logger.warning("SECURITY_HEADERS config must be a mapping; ignoring invalid value.")
+
+    custom_csp = app.config.get("CONTENT_SECURITY_POLICY")
+    if custom_csp is None:
+        security_headers.pop("Content-Security-Policy", None)
+    elif isinstance(custom_csp, str) and custom_csp.strip():
+        security_headers["Content-Security-Policy"] = custom_csp.strip()
+    elif custom_csp:
+        logger.warning("CONTENT_SECURITY_POLICY config must be a non-empty string or None.")
+
     @app.before_request
     def single_security_checkpoint():
         """
         The single, unified security checkpoint for every request.
         Checks are performed in order from least to most expensive.
+
+        Access rules are defined in route_access.py for maintainability.
         """
-        # 1. Fast-path for completely public endpoints.
-        public_endpoints = [
-            'static', 'auth.login', 'auth.signup', 'auth.logout',
-            'homepage', 'index', 'legal.privacy_policy', 'legal.terms_of_service',
-            # Stripe webhook endpoint name
-            'billing.stripe_webhook',
-            # Public tools and exports (HTML previews only)
-            'tools_bp.tools_index', 'tools_bp.tools_soap', 'tools_bp.tools_candles', 'tools_bp.tools_lotions', 'tools_bp.tools_herbal', 'tools_bp.tools_baker',
-            'exports.soap_inci_tool', 'exports.candle_label_tool', 'exports.baker_sheet_tool', 'exports.lotion_inci_tool',
-            # Public API endpoints
-            'public_api_bp.public_global_item_search'
-        ]
+        # 1. Fast-path for monitoring/health checks - skip ALL middleware
+        if RouteAccessConfig.is_monitoring_request(request):
+            return
 
-        # Frequent endpoints that should have minimal logging
-        frequent_endpoints = ['server_time.get_server_time', 'api.get_dashboard_alerts']
-
-        # Skip middleware for static files and monitoring endpoints
+        # 2. Fast-path for static files
         if request.path.startswith('/static/'):
             return
 
-        # Skip ALL middleware processing for monitoring/health check requests from node/system
-        is_monitoring_request = (
-            request.headers.get('User-Agent', '').lower() == 'node' and 
-            request.method == 'HEAD' and 
-            request.path in ['/api', '/api/', '/health', '/ping']
-        )
-
-        if is_monitoring_request:
+        # 3. Fast-path for public endpoints (by endpoint name)
+        if RouteAccessConfig.is_public_endpoint(request.endpoint):
             return
 
-        # Pattern-based public paths for flexibility
-        public_paths = [
-            '/homepage',
-            '/legal/',
-            '/static/',
-            '/auth/login',
-            '/auth/signup',
-            '/auth/logout',
-            # Public tools + drafts + exports preview + public API namespace
-            '/tools',
-            '/exports/tool',
-            '/api/public'
-        ]
+        # 4. Fast-path for public paths (by path prefix)
+        if RouteAccessConfig.is_public_path(request.path):
+            return
 
-        # Check endpoint names first
-        if request.endpoint in public_endpoints:
-            return  # Stop processing, allow the request
-
-        # Pattern-based checks for paths
-        for path in public_paths:
-            if request.path.startswith(path):
-                return
-
-        # 2. Authentication check - if we get here, user must be authenticated
+        # 5. Authentication check - if we get here, user must be authenticated
         if not current_user.is_authenticated:
-
             # Better debugging: log the actual path and method being requested
             endpoint_info = f"endpoint={request.endpoint}, path={request.path}, method={request.method}"
             if request.endpoint is None:
-                logger.warning(f"Unauthenticated request to UNKNOWN endpoint: {endpoint_info}, user_agent={request.headers.get('User-Agent', 'Unknown')[:100]}")
+                logger.warning(
+                    "Unauthenticated request to UNKNOWN endpoint: %s, user_agent=%s",
+                    endpoint_info,
+                    request.headers.get('User-Agent', 'Unknown')[:100],
+                )
             elif not request.path.startswith('/static/'):
-                logger.info(f"Unauthenticated access attempt: {endpoint_info}")
+                level_name = str(current_app.config.get('ANON_REQUEST_LOG_LEVEL', 'DEBUG')).upper()
+                log_level = getattr(logging, level_name, logging.DEBUG)
+                if logger.isEnabledFor(log_level):
+                    logger.log(log_level, f"Unauthenticated access attempt: {endpoint_info}")
 
             # Return JSON 401 for API or JSON-accepting requests
             accept = request.accept_mimetypes
@@ -86,9 +134,9 @@ def register_middleware(app):
 
             return redirect(url_for('auth.login', next=request.url))
 
-        # Block non-developers from accessing any /developer/* routes
+        # 6. Block non-developers from accessing developer-only routes
         try:
-            if request.path.startswith('/developer/'):
+            if RouteAccessConfig.is_developer_only_path(request.path):
                 user_type = getattr(current_user, 'user_type', None)
                 if user_type != 'developer':
                     accept = request.accept_mimetypes
@@ -100,73 +148,72 @@ def register_middleware(app):
                     except Exception:
                         pass
                     return redirect(url_for('app_routes.dashboard'))
-        except Exception:
-            # If anything goes wrong, fail closed
-            return jsonify({"error": "forbidden"}), 403
+        except Exception as e:
+            # Log the error but don't fail closed - allow request to proceed
+            logger.warning(f"Developer access check failed: {e}")
 
-        # Force reload current_user to ensure fresh session data
-        from flask_login import current_user as fresh_current_user
+        # 7. Handle developer "super admin" and masquerade logic.
+        if getattr(current_user, 'user_type', None) == 'developer':            
+            try:
+                selected_org_id = session.get("dev_selected_org_id")
+                masquerade_org_id = session.get("masquerade_org_id")  # Support both session keys
 
-        # 3. Handle developer "super admin" and masquerade logic.
-        if getattr(fresh_current_user, 'user_type', None) == 'developer':
-            selected_org_id = session.get("dev_selected_org_id")
-            masquerade_org_id = session.get("masquerade_org_id")  # Support both session keys
+                # If no org selected, redirect to organization selection unless allowed
+                allowed_without_org = RouteAccessConfig.is_developer_no_org_required(request.path)
+                if not selected_org_id and not masquerade_org_id and not allowed_without_org:
+                    try:
+                        flash("Please select an organization to view customer features.", "warning")
+                    except Exception:
+                        pass
+                    return redirect(url_for("developer.organizations"))
 
-            # If no org selected, redirect to organization selection unless it's a developer-specific,
-            # auth permission page, or a public Global Library endpoint (read-only).
-            allowed_without_org = (
-                request.path.startswith("/developer/")
-                or request.path.startswith("/auth/permissions")
-                or request.path.startswith("/global-items")
+                # If an org is selected, set it as the effective org for the request
+                effective_org_id = selected_org_id or masquerade_org_id
+                if effective_org_id:
+                    try:
+                        from .models import Organization
+                        from .extensions import db
+                        g.effective_org = db.session.get(Organization, effective_org_id)
+                        g.is_developer_masquerade = True
+                    except Exception as e:
+                        # If DB is unavailable, continue without masquerade context
+                        logger.warning(f"Could not set masquerade context: {e}")
+                        g.effective_org = None
+                        g.is_developer_masquerade = False
+            except Exception as e:
+                logger.warning(f"Developer masquerade logic failed: {e}")
+
+            # Log only for non-static requests and meaningful operations
+            should_log = (
+                not request.path.startswith('/static/') and
+                not request.path.startswith('/favicon.ico') and
+                not request.path.startswith('/_') and  # Skip internal routes
+                request.method in ['POST', 'PUT', 'DELETE', 'PATCH']
             )
-            if not selected_org_id and not masquerade_org_id and not allowed_without_org:
-                try:
-                    flash("Please select an organization to view customer features.", "warning")
-                except Exception:
-                    pass
-                return redirect(url_for("developer.organizations"))
 
-            # If an org is selected, set it as the effective org for the request
-            effective_org_id = selected_org_id or masquerade_org_id
-            if effective_org_id:
-                try:
-                    from .models import Organization
-                    from .extensions import db
-                    g.effective_org = db.session.get(Organization, effective_org_id)
-                    g.is_developer_masquerade = True
-                except Exception:
-                    # If DB is unavailable, continue without masquerade context
-                    g.effective_org = None
-                    g.is_developer_masquerade = False
+            # Skip logging for frequent developer dashboard calls and GET requests
+            if (request.path in ['/developer/dashboard', '/developer/organizations'] or 
+                request.method == 'GET'):
+                should_log = False
 
-            # IMPORTANT: Developers bypass the billing check below.
+            if should_log and current_user and current_user.is_authenticated:
+                # Only log actual modifications, not routine access
+                user_id = getattr(current_user, 'id', 'unknown')
+                logger.info(f"Developer {user_id} performing {request.method} {request.path}")
             return
 
-        # 4. Enforce billing for all regular, authenticated users.
-        if fresh_current_user.is_authenticated and getattr(fresh_current_user, 'user_type', None) != 'developer':
-            # CRITICAL FIX: Guard DB calls; degrade gracefully if DB is down
+        # 8. Enforce billing for all regular, authenticated users.
+        if current_user.is_authenticated and getattr(current_user, 'user_type', None) != 'developer':
             try:
-                # Force fresh database query to avoid session isolation issues
-                from .models import User, Organization
-                from .extensions import db
-                from .services.billing_service import BillingService # Import BillingService
+                from .services.billing_service import BillingService
 
-                # Get fresh user and organization data from current session
-                fresh_user = db.session.get(User, fresh_current_user.id)
-                if fresh_user and fresh_user.organization_id:
-                    # Force fresh load of organization to get latest billing_status
-                    organization = db.session.get(Organization, fresh_user.organization_id)
-                else:
-                    organization = None
+                organization_id = getattr(current_user, 'organization_id', None)
+                snapshot = BillingService.get_organization_billing_snapshot(organization_id) if organization_id else None
 
-                if organization and organization.subscription_tier:
-                    tier = organization.subscription_tier
-
-                    # SIMPLE BILLING LOGIC:
-                    # If billing bypass is NOT enabled, require active billing status
-                    if not tier.is_billing_exempt:
-                        # Direct status enforcement as a guardrail
-                        billing_status = getattr(organization, 'billing_status', 'active') or 'active'
+                if snapshot:
+                    # SIMPLE BILLING LOGIC: short-circuit for exempt tiers
+                    if not snapshot.get('is_billing_exempt', True):
+                        billing_status = snapshot.get('billing_status', 'active') or 'active'
                         if billing_status in ['payment_failed', 'past_due', 'suspended', 'canceled', 'cancelled']:
                             if billing_status in ['payment_failed', 'past_due']:
                                 return redirect(url_for('billing.upgrade'))
@@ -177,10 +224,9 @@ def register_middleware(app):
                                     pass
                                 return redirect(url_for('billing.upgrade'))
 
-                        # Check tier access using unified billing service
-                        access_valid, access_reason = BillingService.validate_tier_access(organization)
+                        access_valid, access_reason = BillingService.validate_tier_access(snapshot)
                         if not access_valid:
-                            logger.warning(f"Billing access denied for org {organization.id}: {access_reason}")
+                            logger.warning(f"Billing access denied for org {snapshot.get('organization_id')}: {access_reason}")
 
                             if access_reason in ['payment_required', 'subscription_canceled']:
                                 return redirect(url_for('billing.upgrade'))
@@ -190,25 +236,47 @@ def register_middleware(app):
                                 except Exception:
                                     pass
                                 return redirect(url_for('billing.upgrade'))
-            except Exception:
-                # On DB error, rollback and degrade: allow request to proceed without billing gate
+            except Exception as e:
+                logger.warning(f"Billing check failed, allowing request to proceed: {e}")
                 try:
                     from .extensions import db
                     db.session.rollback()
                 except Exception:
                     pass
 
-        # 5. If all checks pass, do nothing and allow the request to proceed.
+        # 9. If all checks pass, allow the request to proceed.
         return None
 
     @app.after_request
     def add_security_headers(response):
-        """Add security headers in production."""
-        if os.environ.get("REPLIT_DEPLOYMENT") == "true":
-            response.headers.update({
-                "Strict-Transport-Security": "max-age=31536000; includeSubDomains",
-                "X-Content-Type-Options": "nosniff",
-                "X-Frame-Options": "DENY",
-                "X-XSS-Protection": "1; mode=block",
-            })
+        """Add security headers when running in production-like environments."""
+
+        if disable_security_headers:
+            return response
+
+        if not (secure_env or force_security_headers):
+            return response
+
+        def _is_effectively_secure() -> bool:
+            if request.is_secure:
+                return True
+            forwarded_proto = request.headers.get("X-Forwarded-Proto", "")
+            if forwarded_proto:
+                forwarded_values = {value.strip().lower() for value in forwarded_proto.split(",")}
+                if "https" in forwarded_values:
+                    return True
+            preferred_scheme = app.config.get("PREFERRED_URL_SCHEME", "http")
+            return preferred_scheme == "https"
+
+        enforce_hsts = force_security_headers or _is_effectively_secure()
+
+        for header_name, header_value in security_headers.items():
+            if header_value in (None, ""):
+                continue
+
+            if header_name.lower() == "strict-transport-security" and not enforce_hsts:
+                continue
+
+            response.headers.setdefault(header_name, header_value)
+
         return response

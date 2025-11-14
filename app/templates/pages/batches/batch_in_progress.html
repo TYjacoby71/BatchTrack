@@ -53,7 +53,7 @@
 
                     </div>
                     <div class="col-md-6">
-                        <p><strong>Started:</strong> {{ batch.started_at.strftime('%Y-%m-%d %H:%M') }}</p>
+                        <p><strong>Started:</strong> {{ batch.started_at | user_timezone }}</p>
                         <p><strong>Status:</strong> 
                             <span class="badge bg-warning">In Progress</span>
                         </p>
@@ -191,7 +191,7 @@
                         {% for container in batch.containers %}
                             {% set line_cost = (container.quantity_used|float or 0) * (container.cost_each|float or 0) %}
                             <tr>
-                                <td>{{ container.container.name }}</td>
+                                <td>{{ container.inventory_item.container_display_name }}</td>
                                 <td>{{ container.quantity_used }}</td>
                                 <td></td>
                                 <td>${{ "%.2f"|format(container.cost_each|float or 0) }}</td>
@@ -244,7 +244,7 @@
                         {% for container in batch.extra_containers %}
                             {% set line_cost = (container.quantity_used|float or 0) * (container.cost_each|float or 0) %}
                             <tr>
-                                <td>{{ container.container.name }}</td>
+                                <td>{{ container.inventory_item.container_display_name }}</td>
                                 <td>{{ container.quantity_used }}</td>
                                 <td></td>
                                 <td>${{ "%.2f"|format(container.cost_each|float or 0) }}</td>

@@ -728,6 +728,15 @@
 
             try {
                 const formData = new FormData(form);
+
+                // Debug logging
+                console.log('Form data:', {
+                    email: formData.get('email'),
+                    first_name: formData.get('first_name'),
+                    last_name: formData.get('last_name'),
+                    business_type: formData.get('business_type')
+                });
+
                 const response = await fetch('/api/waitlist', {
                     method: 'POST',
                     headers: {

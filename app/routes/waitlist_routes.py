@@ -1,14 +1,17 @@
 
 from flask import Blueprint, request, jsonify
-import json
-import os
-from datetime import datetime
+from datetime import datetime, timezone
+from app.utils.json_store import read_json_file, write_json_file
 
 waitlist_bp = Blueprint('waitlist', __name__)
 
 @waitlist_bp.route('/api/waitlist', methods=['POST'])
 def join_waitlist():
     """Handle waitlist form submissions - save to JSON only"""
+    print("=== WAITLIST ROUTE ACCESSED ===")
+    print(f"Request method: {request.method}")
+    print(f"Request content type: {request.content_type}")
+    print(f"Request data: {request.get_data()}")
     try:
         # Get JSON data from request
         data = request.get_json()
@@ -22,25 +25,14 @@ def join_waitlist():
             'first_name': data.get('first_name', ''),
             'last_name': data.get('last_name', ''),
             'business_type': data.get('business_type', ''),
-            'timestamp': datetime.utcnow().isoformat(),
+            'timestamp': datetime.now(timezone.utc).isoformat(),
             'source': 'homepage'
         }
 
         # Save to JSON file (persistent storage)
         waitlist_file = 'data/waitlist.json'
-        
-        # Create data directory if it doesn't exist
-        os.makedirs('data', exist_ok=True)
-        
-        waitlist = []
 
-        # Load existing waitlist
-        if os.path.exists(waitlist_file):
-            try:
-                with open(waitlist_file, 'r') as f:
-                    waitlist = json.load(f)
-            except (json.JSONDecodeError, IOError):
-                waitlist = []
+        waitlist = read_json_file(waitlist_file, default=[]) or []
 
         # Check if email already exists
         if any(entry.get('email') == waitlist_entry['email'] for entry in waitlist):
@@ -50,11 +42,15 @@ def join_waitlist():
         waitlist.append(waitlist_entry)
 
         # Save updated waitlist
-        with open(waitlist_file, 'w') as f:
-            json.dump(waitlist, f, indent=2)
+        write_json_file(waitlist_file, waitlist)
 
         return jsonify({'message': 'Successfully joined waitlist'}), 200
 
     except Exception as e:
+        import traceback
         print(f"Waitlist error: {e}")
-        return jsonify({'error': 'Internal server error'}), 500
+        print(f"Traceback: {traceback.format_exc()}")
+        return jsonify({
+            'error': 'Internal server error',
+            'details': str(e) if hasattr(e, '__str__') else 'Unknown error'
+        }), 500

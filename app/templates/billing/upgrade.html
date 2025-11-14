@@ -5,7 +5,7 @@
 {% block content %}
 <div class="container-fluid">
     <!-- Enhanced Debug Info -->
-    {% if config.get('DEBUG') %}
+    {% if config['DEBUG'] %}
     <div class="alert alert-info">
         <div class="d-flex justify-content-between align-items-start mb-3">
             <h6><i class="fas fa-bug"></i> Debug Information:</h6>
@@ -173,12 +173,14 @@ document.addEventListener('DOMContentLoaded', function() {
     // Cancel subscription functionality removed
 });
 
+{% if config['DEBUG'] %}
 function debugCheckout(tierKey, tierName) {
         console.log(`Attempting checkout for tier: ${tierName} (${tierKey})`);
         console.log(`Checkout URL: {{ url_for('billing.checkout', tier='__TIER__') }}`.replace('__TIER__', tierKey));
 
         // Additional debug info can be added here as needed.
     }
+{% endif %}
 
     function loadDebugData() {
         fetch('/billing/debug', {

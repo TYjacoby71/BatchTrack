@@ -28,7 +28,7 @@
             <div class="alert alert-warning mb-3">
               <small>
                 <i class="fas fa-clock me-1"></i>
-                This batch is marked as perishable with {{ batch.shelf_life_days }} day shelf life.
+                  This batch is marked as perishable with {{ batch.shelf_life_days|humanize_days }} shelf life.
                 Products created will inherit these settings at the inventory item level.
               </small>
             </div>
@@ -149,7 +149,7 @@
                       {% set container_id = container.container_id %}
                       {% if container_id not in combined_containers %}
                         {% set _ = combined_containers.update({container_id: {
-                          'container': container.container,
+                          'container': container.inventory_item,
                           'total_used': container.quantity_used or container.container_quantity,
                           'max_available': container.quantity_used or container.container_quantity,
                           'types': ['regular']
@@ -169,7 +169,7 @@
                         {% set container_id = extra_container.container_id %}
                         {% if container_id not in combined_containers %}
                           {% set _ = combined_containers.update({container_id: {
-                            'container': extra_container.container,
+                            'container': extra_container.inventory_item,
                             'total_used': extra_container.quantity_used or extra_container.container_quantity,
                             'max_available': extra_container.quantity_used or extra_container.container_quantity,
                             'types': ['extra'],
@@ -192,7 +192,7 @@
                     {% for container_id, data in combined_containers.items() %}
                     <tr {% if 'extra' in data.types %}class="table-warning"{% endif %}>
                       <td>
-                        {{ data.container.name }}
+                        {{ data.container.container_display_name }}
                         {% if 'extra' in data.types %}
                           <small class="text-muted">(includes extra)</small>
                         {% endif %}

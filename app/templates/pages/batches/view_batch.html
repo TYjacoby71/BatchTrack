@@ -45,15 +45,15 @@
                 <p><strong>Status:</strong> <span class="badge">{{ batch.status|title }}</span></p>
             </div>
             <div class="batch-info-right">
-                <p><strong>Started:</strong> {{ batch.started_at.strftime('%Y-%m-%d %H:%M') }}</p>
-                {% if batch.completed_at %}
-                <p><strong>Completed:</strong> {{ batch.completed_at.strftime('%Y-%m-%d %H:%M') }}</p>
-                {% elif batch.failed_at %}
-                <p><strong>Failed:</strong> {{ batch.failed_at.strftime('%Y-%m-%d %H:%M') }}</p>
-                {% elif batch.cancelled_at %}
-                <p><strong>Cancelled:</strong> {{ batch.cancelled_at.strftime('%Y-%m-%d %H:%M') }}</p>
-                {% endif %}
-                <p><strong>Print Date:</strong> {{ current_time.strftime('%Y-%m-%d %H:%M') }}</p>
+                <p><strong>Started:</strong> {{ batch.started_at | user_timezone }}</p>
+            {% if batch.completed_at %}
+                <p><strong>Completed:</strong> {{ batch.completed_at | user_timezone }}</p>
+            {% elif batch.failed_at %}
+                <p><strong>Failed:</strong> {{ batch.failed_at | user_timezone }}</p>
+            {% elif batch.cancelled_at %}
+                <p><strong>Cancelled:</strong> {{ batch.cancelled_at | user_timezone }}</p>
+            {% endif %}
+                <p><strong>Print Date:</strong> {{ current_time | user_timezone }}</p>
             </div>
         </div>
     </div>
@@ -112,7 +112,7 @@
             <p><strong>Projected Yield:</strong> {{ batch.projected_yield }} {{ batch.projected_yield_unit }}</p>
             <p><strong>Final Yield:</strong> {% if batch.final_quantity %}{{ batch.final_quantity }} {{ batch.output_unit }}{% else %}N/A{% endif %}</p>
             {% if batch.is_perishable %}
-                <p><strong>Shelf Life:</strong> {{ batch.shelf_life_days }} days</p>
+                <p><strong>Shelf Life:</strong> {{ batch.shelf_life_days|humanize_days }}</p>
                 {% if batch.expiration_date %}
                     <p><strong>Expiration Date:</strong> {{ batch.expiration_date.strftime('%Y-%m-%d') }}</p>
                 {% endif %}
@@ -151,9 +151,9 @@
                     <p><strong>Batch Accuracy:</strong> {{ acc|round(1) }}%</p>
                 {% endif %}
                            {% if batch.is_perishable %}
-                    <p><strong>Shelf Life:</strong> {{ batch.shelf_life_days }} days</p>
+                    <p><strong>Shelf Life:</strong> {{ batch.shelf_life_days|humanize_days }}</p>
                     {% if batch.expiration_date %}
-                        <p><strong>Expiration Date:</strong> {{ batch.expiration_date.strftime('%Y-%m-%d') }}</p>
+                        <p><strong>Expiration Date:</strong> {{ batch.expiration_date | user_date }}</p>
                     {% endif %}
                 {% endif %}
             </div>
@@ -200,7 +200,7 @@
             {% for container in batch.containers %}
                 {% set line_cost = (container.quantity_used|float or 0) * (container.cost_each|float or 0) %}
                 <tr>
-                    <td>{{ container.container.name }}</td>
+                    <td>{{ container.inventory_item.container_display_name }}</td>
                     <td>{{ "%.2f"|format(container.quantity_used|float or 0) }}</td>
                     <td>-</td>
                     <td>${{ "%.2f"|format(container.cost_each|float or 0) }}</td>
@@ -245,7 +245,7 @@
             {% for container in batch.extra_containers %}
                 {% set line_cost = (container.quantity_used|float or 0) * (container.cost_each|float or 0) %}
                 <tr>
-                    <td>{{ container.container.name }}</td>
+                    <td>{{ container.inventory_item.container_display_name }}</td>
                     <td>{{ container.quantity_used }}</td>
                     <td>-</td>
                     <td>${{ "%.2f"|format(container.cost_each) }}</td>
@@ -335,7 +335,7 @@
                     {% for container in batch.containers %}
                         {% set line_cost = (container.quantity_used|float or 0) * (container.cost_each|float or 0) %}
                         <tr>
-                            <td>{{ container.container.name }}</td>
+                            <td>{{ container.inventory_item.container_display_name }}</td>
                             <td>{{ "%.2f"|format(container.quantity_used|float or 0) }}</td>
                             <td></td>
                             <td>${{ "%.2f"|format(container.cost_each|float or 0) }}</td>
@@ -373,7 +373,7 @@
                     {% for container in batch.extra_containers %}
                         {% set line_cost = (container.quantity_used|float or 0) * (container.cost_each|float or 0) %}
                         <tr>
-                            <td>{{ container.container.name }}</td>
+                            <td>{{ container.inventory_item.container_display_name }}</td>
                             <td>{{ container.quantity_used }}</td>
                             <td></td>
                             <td>${{ "%.2f"|format(container.cost_each) }}</td>
@@ -464,7 +464,7 @@
 
 <!-- Print Footer (only visible when printing) -->
 <div class="print-only print-footer" style="display: none;">
-    <p>BatchTrack Production Report - Generated on {{ current_time.strftime('%Y-%m-%d %H:%M') }}</p>
+    <p>BatchTrack Production Report - Generated on {{ current_time | user_timezone }}</p>
 </div>
 <style>
 .btn-outline-primary:hover {

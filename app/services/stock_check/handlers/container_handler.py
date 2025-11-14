@@ -44,7 +44,7 @@ class ContainerHandler(BaseInventoryHandler):
         logger.info(f"CONTAINER_HANDLER: Found {len(available_containers)} containers in database")
 
         for cont in available_containers:
-            logger.info(f"CONTAINER_HANDLER: - {cont.name} (ID: {cont.id}, qty: {cont.quantity})")
+            logger.info(f"CONTAINER_HANDLER: - {cont.container_display_name} (ID: {cont.id}, qty: {cont.quantity})")
             logger.info(f"CONTAINER_HANDLER: - Capacity: {getattr(cont, 'capacity', 'None')} {getattr(cont, 'capacity_unit', 'None')}")
 
         if not available_containers:
@@ -54,14 +54,14 @@ class ContainerHandler(BaseInventoryHandler):
         # For now, return the first suitable container
         # TODO: This should be enhanced to return the best container option
         container = available_containers[0]
-        logger.info(f"CONTAINER_HANDLER: Using container: {container.name}")
+        logger.info(f"CONTAINER_HANDLER: Using container: {container.container_display_name}")
 
         # Containers have capacity and capacity_unit fields
         storage_capacity = getattr(container, 'capacity', 0)
         storage_unit = getattr(container, 'capacity_unit', 'ml')
         available_quantity = container.quantity
 
-        logger.info(f"CONTAINER_HANDLER: Container {container.name}: {available_quantity} units, capacity {storage_capacity} {storage_unit}")
+        logger.info(f"CONTAINER_HANDLER: Container {container.container_display_name}: {available_quantity} units, capacity {storage_capacity} {storage_unit}")
 
         try:
             # Convert container capacity to recipe yield unit for proper comparison
@@ -96,7 +96,7 @@ class ContainerHandler(BaseInventoryHandler):
 
             return StockCheckResult(
                 item_id=container.id,
-                item_name=container.name,
+                item_name=container.container_display_name,
                 category=InventoryCategory.CONTAINER,
                 needed_quantity=containers_needed,
                 needed_unit="count",
@@ -130,7 +130,7 @@ class ContainerHandler(BaseInventoryHandler):
 
             return StockCheckResult(
                 item_id=container.id,
-                item_name=container.name,
+                item_name=container.container_display_name,
                 category=InventoryCategory.CONTAINER,
                 needed_quantity=1,
                 needed_unit="count",
@@ -153,7 +153,7 @@ class ContainerHandler(BaseInventoryHandler):
 
         return {
             'id': container.id,
-            'name': container.name,
+            'name': container.container_display_name,
             'unit': container.unit,
             'quantity': container.quantity,
             'capacity': getattr(container, 'capacity', 0),
@@ -218,7 +218,7 @@ class ContainerHandler(BaseInventoryHandler):
 
             return StockCheckResult(
                 item_id=container.id,
-                item_name=container.name,
+                item_name=container.container_display_name,
                 needed_quantity=needed_quantity,
                 needed_unit=request.unit or 'count',
                 available_quantity=available_quantity,
@@ -229,7 +229,7 @@ class ContainerHandler(BaseInventoryHandler):
                     'capacity': getattr(container, 'capacity', 0),
                     'capacity_unit': getattr(container, 'capacity_unit', 'ml'),
                     'item_id': container.id,
-                    'item_name': container.name,
+                    'item_name': container_display,
                     'stock_qty': available_quantity
                 }
             )

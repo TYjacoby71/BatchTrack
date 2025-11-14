@@ -1,7 +1,7 @@
 from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify
 from flask_login import login_required, current_user
-from sqlalchemy import and_, or_
-from datetime import datetime, timedelta
+from sqlalchemy import or_
+from datetime import datetime, timezone, timedelta
 from ...models import db, ProductSKU, UnifiedInventoryHistory, InventoryItem, Reservation
 from ...utils.unit_utils import get_global_unit_list
 from ...utils.timezone_utils import TimezoneUtils
@@ -33,6 +33,7 @@ def view_sku(inventory_item_id):
     total_quantity = sku.inventory_item.quantity if sku.inventory_item else 0
 
     return render_template('pages/products/view_sku.html',
+                         abs=abs,
                          sku=sku,
                          history=history,
                          total_quantity=total_quantity,
@@ -68,6 +69,15 @@ def edit_sku(inventory_item_id):
         if retail_price:
             sku.retail_price = float(retail_price)
 
+        # Update unit if provided
+        unit = request.form.get('unit')
+        if unit:
+            clean_unit = unit.strip()
+            if clean_unit:
+                sku.unit = clean_unit
+                if sku.inventory_item:
+                    sku.inventory_item.unit = clean_unit
+
         # Update thresholds
         low_stock_threshold = request.form.get('low_stock_threshold')
         if low_stock_threshold:
@@ -90,33 +100,35 @@ def edit_sku(inventory_item_id):
 
                     # Update FIFO entries with expiration data using ExpirationService
                     from ...blueprints.expiration.services import ExpirationService
-                    from ...models.product import ProductSKUHistory
+                    from ...models.inventory_lot import InventoryLot
 
-                    # Get all FIFO entries with remaining quantity for this SKU
-                    fifo_entries = UnifiedInventoryHistory.query.filter(
-                        and_(
-                            UnifiedInventoryHistory.inventory_item_id == sku.inventory_item_id,
-                            UnifiedInventoryHistory.remaining_quantity > 0
-                        )
+                    lots = InventoryLot.query.filter(
+                        InventoryLot.inventory_item_id == sku.inventory_item_id
                     ).all()
 
-                    # Update each FIFO entry with expiration data
-                    for entry in fifo_entries:
-                        entry.is_perishable = True
-                        entry.shelf_life_days = int(shelf_life_days)
-                        if entry.timestamp:
-                            entry.expiration_date = ExpirationService.calculate_expiration_date(
-                                entry.timestamp, int(shelf_life_days)
+                    for lot in lots:
+                        lot.shelf_life_days = int(shelf_life_days)
+                        if lot.received_date:
+                            lot.expiration_date = ExpirationService.calculate_expiration_date(
+                                lot.received_date, int(shelf_life_days)
                             )
+
+                        history_entries = UnifiedInventoryHistory.query.filter(
+                            UnifiedInventoryHistory.affected_lot_id == lot.id
+                        ).all()
+                        for entry in history_entries:
+                            entry.is_perishable = True
+                            entry.shelf_life_days = int(shelf_life_days)
+                            if entry.timestamp:
+                                entry.expiration_date = ExpirationService.calculate_expiration_date(
+                                    entry.timestamp, int(shelf_life_days)
+                                )
             else:
                 sku.inventory_item.shelf_life_days = None
 
                 # Clear expiration data from FIFO entries when marking as non-perishable
                 fifo_entries = UnifiedInventoryHistory.query.filter(
-                    and_(
-                        UnifiedInventoryHistory.inventory_item_id == sku.inventory_item_id,
-                        UnifiedInventoryHistory.remaining_quantity > 0
-                    )
+                    UnifiedInventoryHistory.inventory_item_id == sku.inventory_item_id
                 ).all()
 
                 for entry in fifo_entries:
@@ -283,7 +295,7 @@ def execute_merge():
             db.session.delete(source_sku)
 
         # Update target SKU timestamp
-        target_sku.updated_at = datetime.utcnow()
+        target_sku.updated_at = datetime.now(timezone.utc)
 
         db.session.commit()
 

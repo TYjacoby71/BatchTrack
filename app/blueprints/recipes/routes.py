@@ -122,12 +122,14 @@ def new_recipe():
     draft = session.get('tool_draft', None)
     # Expire stale drafts (>72 hours) so they don't linger indefinitely
     try:
-        from datetime import datetime, timedelta
+        from datetime import datetime, timezone, timedelta
+        from app.utils.timezone_utils import TimezoneUtils
         meta = session.get('tool_draft_meta') or {}
         created_at = meta.get('created_at')
         if created_at:
             created_dt = datetime.fromisoformat(created_at)
-            if datetime.utcnow() - created_dt > timedelta(hours=72):
+            created_dt = TimezoneUtils.ensure_timezone_aware(created_dt)
+            if datetime.now(timezone.utc) - created_dt > timedelta(hours=72):
                 session.pop('tool_draft', None)
                 session.pop('tool_draft_meta', None)
                 draft = None
@@ -265,6 +267,19 @@ def edit_recipe(recipe_id):
 
     if request.method == 'POST':
         try:
+            # DEBUG: Log form data for yield validation debugging
+            logger.info(f"=== RECIPE EDIT FORM DEBUG ===")
+            logger.info(f"Recipe ID: {recipe_id}")
+            logger.info(f"Form predicted_yield: {request.form.get('predicted_yield')} (raw)")
+            logger.info(f"Form predicted_yield_unit: {request.form.get('predicted_yield_unit')}")
+            
+            try:
+                yield_val = float(request.form.get('predicted_yield') or 0.0)
+                logger.info(f"Converted yield value: {yield_val}")
+            except Exception as e:
+                logger.error(f"Error converting yield: {e}")
+                yield_val = 0.0
+            
             ingredients = _extract_ingredients_from_form(request.form)
 
             portioning_payload = None
@@ -307,12 +322,22 @@ def edit_recipe(recipe_id):
             except Exception:
                 portioning_payload = None
 
+            # DEBUG: Log the exact parameters being passed to update_recipe
+            update_params = {
+                'recipe_id': recipe_id,
+                'name': request.form.get('name'),
+                'yield_amount': yield_val,
+                'yield_unit': request.form.get('predicted_yield_unit') or "",
+                'portioning_data': portioning_payload
+            }
+            logger.info(f"Update recipe params: {update_params}")
+            
             success, result = update_recipe(
                 recipe_id=recipe_id,
                 name=request.form.get('name'),
                 description=request.form.get('instructions'),
                 instructions=request.form.get('instructions'),
-                yield_amount=float(request.form.get('predicted_yield') or 0.0),
+                yield_amount=yield_val,
                 yield_unit=request.form.get('predicted_yield_unit') or "",
                 ingredients=ingredients,
                 consumables=_extract_consumables_from_form(request.form),
@@ -363,7 +388,8 @@ def clone_recipe(recipe_id):
                 'label_prefix': cloned_recipe.label_prefix,
                 'predicted_yield': cloned_recipe.predicted_yield,
                 'predicted_yield_unit': cloned_recipe.predicted_yield_unit,
-                'allowed_containers': cloned_recipe.allowed_containers
+                'allowed_containers': cloned_recipe.allowed_containers,
+                'category_id': cloned_recipe.category_id
             }
             
             ingredients = [(ri.inventory_item_id, ri.quantity, ri.unit) for ri in cloned_recipe.recipe_ingredients]
@@ -375,6 +401,7 @@ def clone_recipe(recipe_id):
             # Create template object with extracted data
             template_recipe = Recipe(**clone_data)
             
+            # Get fresh form data AFTER rollback to avoid detached instances
             form_data = _get_recipe_form_data()
 
             return render_template('pages/recipes/recipe_form.html',
@@ -387,6 +414,8 @@ def clone_recipe(recipe_id):
             flash(f"Error cloning recipe: {result}", "error")
 
     except Exception as e:
+        # Ensure rollback on any error
+        db.session.rollback()
         flash(f"Error cloning recipe: {str(e)}", "error")
         logger.exception(f"Error cloning recipe: {str(e)}")
 
@@ -406,6 +435,43 @@ def delete_recipe_route(recipe_id):
         flash('An error occurred while deleting the recipe.', 'error')
 
     return redirect(url_for('recipes.list_recipes'))
+
+@recipes_bp.route('/<int:recipe_id>/make-parent', methods=['POST'])
+@login_required
+def make_parent_recipe(recipe_id):
+    """Convert a variation recipe into a standalone parent recipe"""
+    try:
+        recipe = Recipe.query.get(recipe_id)
+        if not recipe:
+            flash('Recipe not found.', 'error')
+            return redirect(url_for('recipes.list_recipes'))
+
+        if not recipe.parent_id:
+            flash('Recipe is already a parent recipe.', 'error')
+            return redirect(url_for('recipes.view_recipe', recipe_id=recipe_id))
+
+        # Store original parent for flash message
+        original_parent = recipe.parent
+
+        # Convert variation to parent by removing parent relationship
+        recipe.parent_id = None
+        
+        # Update the name to remove "Variation" suffix if present
+        if recipe.name.endswith(" Variation"):
+            recipe.name = recipe.name.replace(" Variation", "")
+
+        db.session.commit()
+        
+        flash(f'Recipe "{recipe.name}" has been converted to a parent recipe and is no longer a variation of "{original_parent.name}".', 'success')
+        logger.info(f"Converted recipe {recipe_id} from variation to parent recipe")
+
+        return redirect(url_for('recipes.view_recipe', recipe_id=recipe_id))
+
+    except Exception as e:
+        db.session.rollback()
+        logger.error(f"Error converting recipe {recipe_id} to parent: {str(e)}")
+        flash('An error occurred while converting the recipe to a parent.', 'error')
+        return redirect(url_for('recipes.view_recipe', recipe_id=recipe_id))
 
 @recipes_bp.route('/<int:recipe_id>/lock', methods=['POST'])
 @login_required

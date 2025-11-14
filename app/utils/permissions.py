@@ -226,7 +226,8 @@ def get_effective_organization():
             if org_id:
                 try:
                     from ..models import Organization
-                    org = Organization.query.get(org_id)
+                    from ..extensions import db
+                    org = db.session.get(Organization, org_id)
                     if not org:
                         # Organization was deleted - clear masquerade
                         session.pop('dev_selected_org_id', None)

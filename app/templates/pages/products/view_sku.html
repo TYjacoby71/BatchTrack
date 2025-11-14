@@ -198,7 +198,7 @@ async function markAsExpired(type, id) {
                                 <tr>
                                     <td>
                                         {% if entry.timestamp %}
-                                            {{ entry.timestamp.strftime('%m/%d/%y') }}
+                                            {{ entry.timestamp | user_timezone('%m/%d/%y') }}
                                         {% else %}
                                             <span class="text-muted">-</span>
                                         {% endif %}
@@ -221,7 +221,7 @@ async function markAsExpired(type, id) {
                                     </td>
                                     <td>
                                         <span class="badge bg-danger">
-                                            {{ entry.expiration_date.strftime('%m/%d/%y') }}
+                                            {{ entry.expiration_date | user_date }}
                                         </span>
                                     </td>
                                     <td>

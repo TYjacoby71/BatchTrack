@@ -90,8 +90,9 @@ def convert_units():
         if not all([from_unit_id, to_unit_id, quantity is not None]):
             return jsonify({'success': False, 'error': 'Missing required parameters'}), 400
             
-        from_unit = Unit.query.get(from_unit_id)
-        to_unit = Unit.query.get(to_unit_id)
+        from app.extensions import db
+        from_unit = db.session.get(Unit, from_unit_id)
+        to_unit = db.session.get(Unit, to_unit_id)
         
         if not from_unit or not to_unit:
             return jsonify({'success': False, 'error': 'Invalid unit ID'}), 400

@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timezone
 from ..extensions import db
 
 
@@ -19,8 +19,8 @@ class RetentionDeletionQueue(db.Model):
     delete_after_at = db.Column(db.DateTime, nullable=True)
 
     # Audit
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
-    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
+    updated_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc))
 
     # Relationships
     recipe = db.relationship('Recipe')
@@ -38,7 +38,7 @@ class StorageAddonPurchase(db.Model):
     stripe_session_id = db.Column(db.String(255), nullable=True)
     stripe_price_lookup_key = db.Column(db.String(128), nullable=True)
     retention_extension_days = db.Column(db.Integer, default=0)
-    purchased_at = db.Column(db.DateTime, default=datetime.utcnow)
+    purchased_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
 
     organization = db.relationship('Organization')
 
@@ -52,8 +52,8 @@ class StorageAddonSubscription(db.Model):
     price_lookup_key = db.Column(db.String(128), nullable=True)
     status = db.Column(db.String(32), nullable=False, default='active')  # active, trialing, past_due, canceled
     current_period_end = db.Column(db.DateTime, nullable=True)
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
-    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
+    updated_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc))
 
     organization = db.relationship('Organization')
 

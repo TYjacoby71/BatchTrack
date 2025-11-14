@@ -21,8 +21,8 @@ def _export(targets):
 _export([
     # Inventory / FIFO
     ("inventory", "InventoryItem", None),
-    ("inventory", "InventoryHistory", "FIFOLot"),     # alias InventoryHistory as FIFOLot
-    ("inventory", "InventoryHistory", None),
+    ("unified_inventory_history", "UnifiedInventoryHistory", "FIFOLot"),     # alias UnifiedInventoryHistory as FIFOLot
+    ("inventory", "InventoryHistory", None),  # Legacy - kept for backward compatibility
     ("inventory", "BatchInventoryLog", None),
 
     # Create Ingredient alias to InventoryItem (common pattern)
@@ -305,25 +305,29 @@ class User(UserMixin, db.Model):
     @property
     def timezone(self):
         """Get user's timezone from preferences, default to UTC"""
-        if self.preferences:
-            return self.preferences.timezone or 'UTC'
+        from .user_preferences import UserPreferences
+        preferences = UserPreferences.query.filter_by(user_id=self.id).first()
+        if preferences:
+            return preferences.timezone or 'UTC'
         return 'UTC'
 
     @timezone.setter
     def timezone(self, value):
         """Set user's timezone in preferences"""
         from .user_preferences import UserPreferences
-        if not self.preferences:
-            # Create preferences if they don't exist
+        preferences = UserPreferences.query.filter_by(user_id=self.id).first()
+        
+        if not preferences:
+            # Create preferences if they don't exist and user has organization
             if self.organization_id:
-                self.preferences = UserPreferences(
+                preferences = UserPreferences(
                     user_id=self.id,
                     organization_id=self.organization_id,
                     timezone=value or 'UTC'
                 )
-                db.session.add(self.preferences)
+                db.session.add(preferences)
         else:
-            self.preferences.timezone = value or 'UTC'
+            preferences.timezone = value or 'UTC'
 
     def ensure_organization_owner_role(self):
         """Ensure organization owner has the proper role assigned"""
@@ -366,12 +370,12 @@ class User(UserMixin, db.Model):
             for assignment in assignments:
                 if assignment.role_id:
                     # Organization role
-                    role = Role.query.get(assignment.role_id)
+                    role = db.session.get(Role, assignment.role_id)
                     if role and role.is_active:
                         roles.append(role)
                 elif assignment.developer_role_id:
                     # Developer role
-                    dev_role = DeveloperRole.query.get(assignment.developer_role_id)
+                    dev_role = db.session.get(DeveloperRole, assignment.developer_role_id)
                     if dev_role and dev_role.is_active:
                         roles.append(dev_role)
 

@@ -75,8 +75,20 @@ def public_global_item_search():
                 'text': gi.name,
                 'item_type': gi.item_type,
                 'default_unit': gi.default_unit,
+                'unit': gi.default_unit,  # Also provide as 'unit' for backward compatibility
                 'density': gi.density,
+                'default_is_perishable': gi.default_is_perishable,
+                'recommended_shelf_life_days': gi.recommended_shelf_life_days,
                 'saponification_value': getattr(gi, 'saponification_value', None),
+                'recommended_usage_rate': gi.recommended_usage_rate,
+                'recommended_fragrance_load_pct': gi.recommended_fragrance_load_pct,
+              'is_active_ingredient': gi.is_active_ingredient,
+                'inci_name': gi.inci_name,
+                'protein_content_pct': gi.protein_content_pct,
+                'brewing_color_srm': gi.brewing_color_srm,
+                'brewing_potential_sg': gi.brewing_potential_sg,
+                'brewing_diastatic_power_lintner': gi.brewing_diastatic_power_lintner,
+                'certifications': gi.certifications or [],
             })
         return jsonify({'success': True, 'results': results})
     except Exception as e:

@@ -6,16 +6,33 @@
       
 
       <!-- Variation Summary Card -->
-      <div class="card mb-4">
-        <div class="card-header d-flex justify-content-between align-items-center">
-          <h3>{{ product.name }} - {{ variation.name }}</h3>
-          <div>
-            <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-toggle="modal" data-bs-target="#editVariationModal">
-              <i class="fas fa-edit"></i> Edit Variation
-            </button>
-          </div>
-        </div>
-        <div class="card-body">
+        <div class="card mb-4">
+            <div class="card-header d-flex justify-content-between align-items-center">
+              <h3>{{ product.name }} - {{ variation.name }}</h3>
+              <div class="btn-group">
+                <button type="button" class="btn btn-outline-secondary btn-sm dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false">
+                  <i class="fas fa-sliders-h"></i> Variant Actions
+                </button>
+                <ul class="dropdown-menu dropdown-menu-end">
+                  <li>
+                    <button class="dropdown-item" type="button" data-bs-toggle="modal" data-bs-target="#editVariationModal">
+                      <i class="fas fa-edit me-2"></i>Edit Variant Details
+                    </button>
+                  </li>
+                  <li>
+                    <button class="dropdown-item" type="button" data-bs-toggle="modal" data-bs-target="#createSkuModal">
+                      <i class="fas fa-plus-circle me-2"></i>Create SKU
+                    </button>
+                  </li>
+                  <li>
+                    <button class="dropdown-item" type="button" data-bs-toggle="modal" data-bs-target="#manageStockModal">
+                      <i class="fas fa-boxes me-2"></i>Add / Remove Stock
+                    </button>
+                  </li>
+                </ul>
+              </div>
+            </div>
+          <div class="card-body">
           {% if variation.description %}
           <div class="row mb-3">
             <div class="col-12">
@@ -90,14 +107,20 @@
       </div>
 
       <!-- Sizes & Inventory -->
-      <div class="card mb-4" id="sizes">
-        <div class="card-header d-flex justify-content-between align-items-center">
-          <h3>Sizes & Inventory</h3>
-          <button type="button" class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#addManualStockModal">
-            <i class="fas fa-plus"></i> Add Manual Stock
-          </button>
-        </div>
-        <div class="card-body">
+        {% set unit_options = get_global_unit_list() %}
+        <div class="card mb-4" id="sizes">
+          <div class="card-header d-flex justify-content-between align-items-center">
+            <h3>Sizes & Inventory</h3>
+            <div class="d-flex gap-2">
+              <button type="button" class="btn btn-outline-primary btn-sm" data-bs-toggle="modal" data-bs-target="#createSkuModal">
+                <i class="fas fa-plus-circle"></i> Create SKU
+              </button>
+              <button type="button" class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#manageStockModal">
+                <i class="fas fa-boxes"></i> Add/Remove Stock
+              </button>
+            </div>
+          </div>
+          <div class="card-body">
           {% if size_groups %}
             <div class="table-responsive">
               <table class="table table-striped">
@@ -125,18 +148,18 @@
                     {% endif %}
                   {% endfor %}
                   <tr class="{% if group.total_quantity <= 0 %}table-secondary text-muted{% endif %}">
-                    <td>
-                      {% if group.skus %}
-                      <a href="{{ url_for('sku.view_sku', inventory_item_id=group.skus[0].inventory_item_id) }}">
-                        {{ size_display }}
-                      </a>
-                      {% else %}
-                        {{ size_display }}
-                      {% endif %}
-                      {% if group.total_quantity <= 0 and has_history %}
-                        <small class="badge bg-secondary ms-1">No Stock</small>
-                      {% endif %}
-                    </td>
+                      <td>
+                        {% if group.skus %}
+                        <a href="{{ url_for('sku.view_sku', inventory_item_id=group.skus[0].inventory_item_id) }}">
+                          {{ size_display }}
+                        </a>
+                        {% else %}
+                          {{ size_display }}
+                        {% endif %}
+                        {% if group.total_quantity <= 0 and has_history %}
+                          <small class="badge bg-secondary ms-1">No Stock</small>
+                        {% endif %}
+                      </td>
                     <td>{{ group.unit }}</td>
                     <td>
                       <span class="{% if group.total_quantity <= 0 %}text-muted{% endif %}">
@@ -158,22 +181,28 @@
                         <button class="btn btn-outline-secondary btn-sm dropdown-toggle" type="button" data-bs-toggle="dropdown">
                           <i class="fas fa-ellipsis-v"></i>
                         </button>
-                        <ul class="dropdown-menu">
-                          <li>
+                          <ul class="dropdown-menu">
                             {% if group.skus %}
-                            <a class="dropdown-item" href="{{ url_for('sku.view_sku', inventory_item_id=group.skus[0].inventory_item_id) }}">
-                              <i class="fas fa-eye"></i> View SKU
-                            </a>
+                            <li>
+                              <button class="dropdown-item js-manage-stock" type="button"
+                                      data-sku-id="{{ group.skus[0].inventory_item_id }}">
+                                <i class="fas fa-boxes me-2"></i> Adjust Stock
+                              </button>
+                            </li>
+                            <li>
+                              <a class="dropdown-item" href="{{ url_for('sku.view_sku', inventory_item_id=group.skus[0].inventory_item_id) }}">
+                                <i class="fas fa-pen me-2"></i> View / Edit SKU
+                              </a>
+                            </li>
+                            <li><hr class="dropdown-divider"></li>
                             {% endif %}
-                          </li>
-                          <li><hr class="dropdown-divider"></li>
-                          <li>
-                            <a class="dropdown-item" href="{{ url_for('sku.select_skus_to_merge') }}">
-                              <i class="fas fa-compress-arrows-alt"></i> Merge SKUs
-                            </a>
-                          </li>
-                        </ul>
-                      </div>
+                            <li>
+                              <a class="dropdown-item" href="{{ url_for('sku.select_skus_to_merge') }}">
+                                <i class="fas fa-compress-arrows-alt me-2"></i> Merge SKUs
+                              </a>
+                            </li>
+                          </ul>
+                        </div>
                     </td>
                   </tr>
                   {% endfor %}
@@ -225,29 +254,125 @@
   </div>
 </div>
 
-<!-- Add Manual Stock Modal -->
-<div class="modal fade" id="addManualStockModal" tabindex="-1">
-  <div class="modal-dialog">
-    <div class="modal-content">
-      <div class="modal-header">
-        <h5 class="modal-title">Manage Stock</h5>
-        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-      </div>
-      <div class="modal-body">
-        <p>To add or adjust stock for this variant, please use the SKU management page.</p>
-        <p class="text-muted">This provides access to full inventory tracking and batch management.</p>
-      </div>
-      <div class="modal-footer">
-        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-        {% if size_groups %}
-        <a href="/products/{{ product.id }}" class="btn btn-primary">
-          Go to Item Management
-        </a>
-        {% endif %}
+  <!-- Create SKU Modal -->
+  <div class="modal fade" id="createSkuModal" tabindex="-1">
+    <div class="modal-dialog">
+      <div class="modal-content">
+        <form method="POST" action="{{ url_for('product_variants.create_sku_for_variant', product_id=product.id, variant_name=variation.name) }}">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <div class="modal-header">
+            <h5 class="modal-title">Create SKU for {{ variation.name }}</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+          </div>
+          <div class="modal-body">
+            <div class="mb-3">
+              <label class="form-label" for="size_label">Size Label</label>
+              <input type="text" class="form-control" id="size_label" name="size_label" placeholder="e.g., 12 fl oz Bottle" required>
+            </div>
+            <div class="mb-3">
+              <label class="form-label" for="sku_unit">Unit</label>
+              <select class="form-select" id="sku_unit" name="unit" required>
+                <option value="" disabled selected>Select unit</option>
+                {% for unit in unit_options %}
+                  <option value="{{ unit['name'] }}">{{ unit['name'] }}</option>
+                {% endfor %}
+              </select>
+            </div>
+            <div class="mb-3">
+              <label class="form-label" for="low_stock_threshold">Low Stock Threshold (optional)</label>
+              <input type="number" min="0" step="0.01" class="form-control" id="low_stock_threshold" name="low_stock_threshold" placeholder="{{ product.low_stock_threshold or 0 }}">
+              <small class="text-muted">Defaults to the product threshold if left blank.</small>
+            </div>
+            <div class="alert alert-info">
+              The SKU will be created with zero inventory. Use “Manage Stock” or finish a batch to add quantity.
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+            <button type="submit" class="btn btn-primary">
+              <i class="fas fa-save"></i> Create SKU
+            </button>
+          </div>
+        </form>
       </div>
     </div>
   </div>
-</div>
+
+  <!-- Manage Stock Modal -->
+  <div class="modal fade" id="manageStockModal" tabindex="-1">
+    <div class="modal-dialog">
+      <div class="modal-content">
+        <form id="manageStockForm" method="POST">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <div class="modal-header">
+            <h5 class="modal-title">Adjust Inventory</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+          </div>
+          <div class="modal-body">
+            {% if size_groups %}
+              <div class="mb-3">
+                <label class="form-label" for="manageStockSku">SKU</label>
+                <select class="form-select" id="manageStockSku" name="sku_id" required>
+                  <option value="" disabled selected>Select SKU</option>
+                  {% for group_key, group in size_groups.items() %}
+                    {% for sku in group.skus %}
+                      <option value="{{ sku.inventory_item_id }}"
+                              data-adjust-url="{{ url_for('product_inventory.adjust_sku_inventory', inventory_item_id=sku.inventory_item_id) }}"
+                              data-unit="{{ sku.unit }}">
+                        {{ group.size_label or 'Bulk' }} — {{ sku.unit }}
+                      </option>
+                    {% endfor %}
+                  {% endfor %}
+                </select>
+              </div>
+              <div class="row g-2">
+                <div class="col-md-6">
+                  <label class="form-label" for="manageStockChangeType">Action</label>
+                  <select class="form-select" id="manageStockChangeType" name="change_type">
+                    <option value="manual_addition">Add Stock</option>
+                    <option value="spoil">Remove Stock</option>
+                  </select>
+                </div>
+                <div class="col-md-6">
+                  <label class="form-label" for="manageStockQuantity">Quantity</label>
+                  <div class="input-group">
+                    <input type="number" step="0.01" min="0" class="form-control" id="manageStockQuantity" name="quantity" required>
+                    <span class="input-group-text" id="manageStockUnitDisplay">unit</span>
+                  </div>
+                </div>
+              </div>
+              <input type="hidden" id="manageStockUnit" name="unit">
+              <div class="mt-3">
+                <label class="form-label" for="manageStockNotes">Notes (optional)</label>
+                <textarea class="form-control" id="manageStockNotes" name="notes" rows="2"></textarea>
+              </div>
+              <div class="alert alert-secondary mt-3">
+                <small class="text-muted">
+                  Positive quantities add stock; to remove inventory choose “Remove Stock.” FIFO lots update automatically.
+                </small>
+              </div>
+            {% else %}
+              <div class="alert alert-info mb-0">
+                No SKUs exist for this variant yet. Create a SKU first to manage stock.
+              </div>
+            {% endif %}
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+            {% if size_groups %}
+              <button type="submit" class="btn btn-primary">
+                <i class="fas fa-save"></i> Submit Adjustment
+              </button>
+            {% else %}
+              <button type="button" class="btn btn-primary" data-bs-dismiss="modal" data-bs-toggle="modal" data-bs-target="#createSkuModal">
+                <i class="fas fa-plus-circle"></i> Create SKU
+              </button>
+            {% endif %}
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
 
 <script>
 document.addEventListener('DOMContentLoaded', function() {
@@ -269,26 +394,118 @@ document.addEventListener('DOMContentLoaded', function() {
     });
   }
 
-    // Global functions
-    window.confirmDeleteVariant = function(productId, variantName) {
-        if (confirm(`Are you sure you want to delete variant "${variantName}"? This cannot be undone and will only work if there's no inventory.`)) {
-            const form = document.createElement('form');
-            form.method = 'POST';
-            form.action = `/products/${productId}/variant/${encodeURIComponent(variantName)}/delete`;
+  // Manage stock modal behavior
+  const manageStockModal = document.getElementById('manageStockModal');
+  const manageStockForm = document.getElementById('manageStockForm');
+  const manageStockSkuSelect = document.getElementById('manageStockSku');
+  const manageStockUnitInput = document.getElementById('manageStockUnit');
+  const manageStockUnitDisplay = document.getElementById('manageStockUnitDisplay');
 
-            const csrfToken = document.querySelector('input[name="csrf_token"]');
-            if (csrfToken) {
-                const csrfInput = document.createElement('input');
-                csrfInput.type = 'hidden';
-                csrfInput.name = 'csrf_token';
-                csrfInput.value = csrfToken.value;
-                form.appendChild(csrfInput);
-            }
+  const updateManageStockTarget = () => {
+    if (!manageStockSkuSelect) return;
+    const selected = manageStockSkuSelect.options[manageStockSkuSelect.selectedIndex];
+    if (!selected) return;
+    const adjustUrl = selected.getAttribute('data-adjust-url') || '';
+    const unit = selected.getAttribute('data-unit') || '';
+    if (manageStockForm) {
+      manageStockForm.action = adjustUrl;
+    }
+    if (manageStockUnitInput) {
+      manageStockUnitInput.value = unit;
+    }
+    if (manageStockUnitDisplay) {
+      manageStockUnitDisplay.textContent = unit || 'unit';
+    }
+  };
 
-            document.body.appendChild(form);
-            form.submit();
+  if (manageStockSkuSelect) {
+    manageStockSkuSelect.addEventListener('change', updateManageStockTarget);
+  }
+
+  document.querySelectorAll('.js-manage-stock').forEach(function(btn) {
+    btn.addEventListener('click', function() {
+      const targetSku = this.getAttribute('data-sku-id');
+      if (manageStockSkuSelect) {
+        for (let i = 0; i < manageStockSkuSelect.options.length; i++) {
+          const opt = manageStockSkuSelect.options[i];
+          if (opt.value === targetSku) {
+            manageStockSkuSelect.selectedIndex = i;
+            break;
+          }
         }
-    };
+        updateManageStockTarget();
+      }
+      if (manageStockModal) {
+        manageStockModal.setAttribute('data-selected-sku', targetSku || '');
+      }
+      if (typeof bootstrap !== 'undefined' && manageStockModal) {
+        bootstrap.Modal.getOrCreateInstance(manageStockModal).show();
+      }
+    });
+  });
+
+  if (manageStockModal && manageStockForm) {
+    manageStockModal.addEventListener('show.bs.modal', function () {
+      const selectedSkuId = manageStockModal.getAttribute('data-selected-sku');
+      if (manageStockSkuSelect) {
+        if (selectedSkuId) {
+          for (let i = 0; i < manageStockSkuSelect.options.length; i++) {
+            const opt = manageStockSkuSelect.options[i];
+            if (opt.value === selectedSkuId) {
+              manageStockSkuSelect.selectedIndex = i;
+              break;
+            }
+          }
+        } else {
+          // default to first real option
+          if (manageStockSkuSelect.options.length > 1) {
+            manageStockSkuSelect.selectedIndex = 1;
+          }
+        }
+        updateManageStockTarget();
+      }
+      const quantityField = document.getElementById('manageStockQuantity');
+      if (quantityField) quantityField.value = '';
+      const notesField = document.getElementById('manageStockNotes');
+      if (notesField) notesField.value = '';
+      const changeTypeField = document.getElementById('manageStockChangeType');
+      if (changeTypeField) changeTypeField.value = 'manual_addition';
+    });
+    manageStockModal.addEventListener('shown.bs.modal', function () {
+      updateManageStockTarget();
+    });
+    manageStockModal.addEventListener('hidden.bs.modal', function () {
+      manageStockModal.removeAttribute('data-selected-sku');
+    });
+  }
+
+  // Initialize popovers (for FIFO code legend)
+  if (typeof bootstrap !== 'undefined') {
+    document.querySelectorAll('[data-bs-toggle="popover"]').forEach(function(popoverEl) {
+      new bootstrap.Popover(popoverEl);
+    });
+  }
+
+  // Global functions
+  window.confirmDeleteVariant = function(productId, variantName) {
+    if (confirm(`Are you sure you want to delete variant "${variantName}"? This cannot be undone and will only work if there's no inventory.`)) {
+      const form = document.createElement('form');
+      form.method = 'POST';
+      form.action = `/products/${productId}/variant/${encodeURIComponent(variantName)}/delete`;
+
+      const csrfToken = document.querySelector('input[name="csrf_token"]');
+      if (csrfToken) {
+        const csrfInput = document.createElement('input');
+        csrfInput.type = 'hidden';
+        csrfInput.name = 'csrf_token';
+        csrfInput.value = csrfToken.value;
+        form.appendChild(csrfInput);
+      }
+
+      document.body.appendChild(form);
+      form.submit();
+    }
+  };
 });
 </script>
 {% endblock %}

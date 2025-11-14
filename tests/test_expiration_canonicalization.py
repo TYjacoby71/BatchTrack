@@ -40,9 +40,11 @@ class TestExpirationCanonicalService:
     """Verify expiration operations use canonical inventory adjustment service"""
 
     @patch('app.blueprints.expiration.services.process_inventory_adjustment')
+    @patch('app.blueprints.expiration.services.InventoryLot')
+    @patch('app.blueprints.expiration.services.UnifiedInventoryHistory')
     @patch('app.blueprints.expiration.services.InventoryHistory')
     @patch('app.blueprints.expiration.services.current_user')
-    def test_mark_fifo_expired_calls_canonical_service(self, mock_user, mock_history, mock_process):
+    def test_mark_fifo_expired_calls_canonical_service(self, mock_user, mock_history, mock_unified, mock_lot, mock_process):
         """Test that marking FIFO entry as expired calls process_inventory_adjustment"""
         from app import create_app
 
@@ -55,7 +57,11 @@ class TestExpirationCanonicalService:
             mock_fifo_entry.remaining_quantity = 10.0
             mock_fifo_entry.unit = 'g'
 
+            # Mock all fallback paths - return None for first two, then the entry for the last one
+            mock_lot.query.get.return_value = None
+            mock_unified.query.get.return_value = None
             mock_history.query.get.return_value = mock_fifo_entry
+            
             mock_user.id = 1
             mock_user.is_authenticated = True
             mock_process.return_value = True
@@ -77,22 +83,22 @@ class TestExpirationCanonicalService:
             assert "Successfully marked FIFO entry" in message
 
     @patch('app.blueprints.expiration.services.process_inventory_adjustment')
-    @patch('app.blueprints.expiration.services.ProductSKUHistory')
+    @patch('app.blueprints.expiration.services.InventoryLot')
     @patch('app.blueprints.expiration.services.current_user')
-    def test_mark_product_expired_calls_canonical_service(self, mock_user, mock_sku_history, mock_process):
+    def test_mark_product_expired_calls_canonical_service(self, mock_user, mock_lot_model, mock_process):
         """Test that marking product SKU as expired calls process_inventory_adjustment"""
         from app import create_app
 
         app = create_app({'TESTING': True})
         with app.app_context():
-            # Mock the product SKU history entry
-            mock_sku_entry = MagicMock()
-            mock_sku_entry.id = 789
-            mock_sku_entry.inventory_item_id = 101
-            mock_sku_entry.remaining_quantity = 20.0
-            mock_sku_entry.unit = 'ml'
+            # Mock the product lot entry
+            mock_lot_entry = MagicMock()
+            mock_lot_entry.id = 789
+            mock_lot_entry.inventory_item_id = 101
+            mock_lot_entry.remaining_quantity = 20.0
+            mock_lot_entry.unit = 'ml'
 
-            mock_sku_history.query.get.return_value = mock_sku_entry
+            mock_lot_model.query.get.return_value = mock_lot_entry
             mock_user.id = 2
             mock_user.is_authenticated = True
             mock_process.return_value = True
@@ -107,8 +113,7 @@ class TestExpirationCanonicalService:
                 change_type="spoil",
                 unit='ml',
                 notes="Expired product lot disposal #789: Product expired",
-                created_by=2,
-                item_type='product'
+                created_by=2
             )
 
             assert success is True

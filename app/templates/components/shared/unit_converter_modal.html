@@ -1,33 +1,481 @@
-
-{# Unit Converter Modal Component #}
+{# Enhanced Unit Converter Modal Component #}
 <div class="modal fade" id="unitConverterModal" tabindex="-1" aria-labelledby="unitConverterLabel" aria-hidden="true">
-  <div class="modal-dialog">
-    <div class="modal-content p-3">
-      <div class="d-flex justify-content-between align-items-center mb-3">
-        <h5 id="unitConverterLabel">Unit Converter</h5>
-        <a href="{{ url_for('conversion_bp.manage_units') }}" class="btn btn-sm btn-outline-secondary">Unit Manager</a>
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="unitConverterLabel">
+          <i class="fas fa-exchange-alt text-primary"></i> Unit Converter
+        </h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
       </div>
-      <form id="converterForm" method="post" action="/convert">
-        {{ csrf_token() }}
-        <div class="mb-2">
-          <input type="number" name="amount" step="any" class="form-control" placeholder="Amount" required>
+      <div class="modal-body">
+        <div class="alert alert-info">
+          <i class="fas fa-info-circle"></i>
+          Convert between different units. For volume/weight conversions, select an ingredient with density data.
         </div>
-        <div class="mb-2">
-          <select name="from_unit" class="form-select" required>
-            {% for unit in global_units %}
-              <option value="{{ unit.name }}">{{ unit.name }}</option>
-            {% endfor %}
-          </select>
+
+        <!-- Main Conversion Interface -->
+        <div class="row align-items-center mb-4">
+          <!-- From Section -->
+          <div class="col-md-5">
+            <label class="form-label fw-bold">From</label>
+            <div class="mb-2">
+              <input type="number" 
+                     id="fromAmount" 
+                     class="form-control form-control-lg text-center" 
+                     placeholder="Enter amount" 
+                     step="any" 
+                     min="0">
+            </div>
+            <select id="fromUnit" class="form-select">
+              <option value="">Select unit...</option>
+              {% for unit in global_units %}
+                <option value="{{ unit.name }}" data-type="{{ unit.unit_type }}">{{ unit.name }}</option>
+              {% endfor %}
+            </select>
+          </div>
+
+          <!-- Convert Arrow/Button -->
+          <div class="col-md-2 text-center">
+            <button type="button" id="convertButton" class="btn btn-primary btn-lg rounded-circle" style="width: 60px; height: 60px;">
+              <i class="fas fa-arrow-right"></i>
+            </button>
+          </div>
+
+          <!-- To Section -->
+          <div class="col-md-5">
+            <label class="form-label fw-bold">To</label>
+            <div class="mb-2">
+              <input type="text" 
+                     id="toAmount" 
+                     class="form-control form-control-lg text-center bg-light" 
+                     placeholder="Result" 
+                     readonly>
+            </div>
+            <select id="toUnit" class="form-select">
+              <option value="">Select unit...</option>
+              {% for unit in global_units %}
+                <option value="{{ unit.name }}" data-type="{{ unit.unit_type }}">{{ unit.name }}</option>
+              {% endfor %}
+            </select>
+          </div>
         </div>
-        <div class="mb-2">
-          <select name="to_unit" class="form-select" required>
-            {% for unit in global_units %}
-              <option value="{{ unit.name }}">{{ unit.name }}</option>
-            {% endfor %}
-          </select>
+
+        <!-- Ingredient Selection (shown when needed for density) -->
+        <div id="ingredientSelectionSection" class="card border-warning" style="display: none;">
+          <div class="card-header bg-warning bg-opacity-10">
+            <h6 class="mb-0">
+              <i class="fas fa-flask text-warning"></i>
+              Ingredient Selection Required
+            </h6>
+          </div>
+          <div class="card-body">
+            <p class="text-muted mb-3">
+              Converting between volume and weight requires density data. Select an ingredient:
+            </p>
+
+            <!-- Ingredient Search and Selection -->
+            <div class="row">
+              <div class="col-md-12">
+                <input type="text" 
+                       id="ingredientSearch" 
+                       class="form-control" 
+                       placeholder="Search ingredients...">
+                <div id="ingredientDropdown" class="dropdown-menu w-100" style="max-height: 200px; overflow-y: auto;"></div>
+              </div>
+            </div>
+
+            <div id="selectedIngredient" class="mt-3" style="display: none;">
+              <div class="alert alert-success">
+                <strong>Selected:</strong> <span id="selectedIngredientName"></span>
+                <br><small>Density: <span id="selectedIngredientDensity"></span> g/ml</small>
+              </div>
+            </div>
+          </div>
         </div>
-        <button type="submit" class="btn btn-primary">Convert</button>
-      </form>
+
+        <!-- Conversion Result Display -->
+        <div id="conversionResult" class="mt-4" style="display: none;">
+          <div class="card border-success">
+            <div class="card-body text-center">
+              <h5 class="text-success mb-0" id="resultText"></h5>
+              <button type="button" id="copyResultBtn" class="btn btn-sm btn-outline-secondary mt-2">
+                <i class="fas fa-copy"></i> Copy Result
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Error Display -->
+        <div id="conversionError" class="alert alert-danger mt-3" style="display: none;"></div>
+      </div>
+      <div class="modal-footer">
+        <a href="{{ url_for('conversion_bp.manage_units') }}" class="btn btn-outline-secondary">
+          <i class="fas fa-cogs"></i> Unit Manager
+        </a>
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+      </div>
     </div>
   </div>
 </div>
+
+
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const fromAmount = document.getElementById('fromAmount');
+    const fromUnit = document.getElementById('fromUnit');
+    const toAmount = document.getElementById('toAmount');
+    const toUnit = document.getElementById('toUnit');
+    const convertButton = document.getElementById('convertButton');
+    const ingredientSection = document.getElementById('ingredientSelectionSection');
+    const ingredientSearch = document.getElementById('ingredientSearch');
+    const ingredientDropdown = document.getElementById('ingredientDropdown');
+    const selectedIngredient = document.getElementById('selectedIngredient');
+    const conversionResult = document.getElementById('conversionResult');
+    const conversionError = document.getElementById('conversionError');
+    const copyResultBtn = document.getElementById('copyResultBtn');
+
+    let currentSelectedIngredient = null;
+    let availableIngredients = [];
+
+    // Load available ingredients (both inventory and global)
+    async function loadIngredients() {
+        console.log('🔧 UNIT CONVERTER: Loading ingredients...');
+        
+        try {
+            // Load user's inventory ingredients
+            console.log('🔧 UNIT CONVERTER: Fetching inventory ingredients...');
+            const inventoryResponse = await fetch('/api/ingredients');
+            let inventoryItems = [];
+            if (inventoryResponse.ok) {
+                inventoryItems = await inventoryResponse.json();
+                console.log('🔧 UNIT CONVERTER: Loaded inventory items:', inventoryItems.length);
+            } else {
+                console.log('🔧 UNIT CONVERTER: Inventory request failed:', inventoryResponse.status);
+            }
+
+            // Load global density reference items
+            console.log('🔧 UNIT CONVERTER: Fetching global density reference...');
+            const globalResponse = await fetch('/api/ingredients/global-library/density-options');
+            let globalItems = [];
+            if (globalResponse.ok) {
+                const categories = await globalResponse.json();
+                globalItems = categories.flatMap(category => 
+                    category.items
+                        .filter(item => typeof item.density_g_per_ml === 'number' && !Number.isNaN(item.density_g_per_ml))
+                        .map(item => ({
+                        id: null, // Global items don't have IDs
+                        name: item.name,
+                        density: item.density_g_per_ml,
+                        type: 'ingredient',
+                        isGlobal: true
+                    }))
+                );
+                console.log('🔧 UNIT CONVERTER: Loaded global items:', globalItems.length);
+            } else {
+                console.log('🔧 UNIT CONVERTER: Global density request failed:', globalResponse.status);
+            }
+
+            // Combine both lists, prioritizing inventory items
+            availableIngredients = [...inventoryItems, ...globalItems];
+            console.log('🔧 UNIT CONVERTER: Total ingredients available:', availableIngredients.length);
+        } catch (error) {
+            console.error('🔧 UNIT CONVERTER: Error loading ingredients:', error);
+            showError('Failed to load ingredient data.');
+        }
+    }
+
+    // Check if conversion needs density
+    function needsDensity() {
+        const fromType = fromUnit.selectedOptions[0]?.dataset.type;
+        const toType = toUnit.selectedOptions[0]?.dataset.type;
+
+        return fromType && toType && 
+               ((fromType === 'volume' && toType === 'weight') || 
+                (fromType === 'weight' && toType === 'volume'));
+    }
+
+    // Show/hide ingredient selection
+    function updateIngredientSection() {
+        const densityNeeded = needsDensity();
+        console.log('🔧 UNIT CONVERTER: Updating ingredient section, density needed:', densityNeeded);
+        
+        if (densityNeeded) {
+            ingredientSection.style.display = 'block';
+            console.log('🔧 UNIT CONVERTER: Showing ingredient selection section');
+        } else {
+            ingredientSection.style.display = 'none';
+            currentSelectedIngredient = null;
+            selectedIngredient.style.display = 'none'; // Hide selected ingredient display
+            console.log('🔧 UNIT CONVERTER: Hiding ingredient selection section');
+        }
+    }
+
+    // Filter and display ingredients
+    function filterIngredients(searchTerm) {
+        const filtered = availableIngredients.filter(ing => 
+            ing.name.toLowerCase().includes(searchTerm.toLowerCase()) && 
+            ing.type === 'ingredient'
+        );
+
+        ingredientDropdown.innerHTML = '';
+        filtered.slice(0, 15).forEach(ing => {
+            const item = document.createElement('a');
+            item.className = 'dropdown-item';
+            item.href = '#';
+            const densityText = (typeof ing.density === 'number' && !Number.isNaN(ing.density)) 
+                ? `(${ing.density} g/ml)` 
+                : '(no density)';
+            const sourceText = ing.isGlobal ? ' 🌐' : '';
+            item.innerHTML = `
+                ${ing.name}${sourceText}
+                <small class="text-muted">${densityText}</small>
+            `;
+            item.addEventListener('click', (e) => {
+                e.preventDefault();
+                selectIngredient(ing);
+            });
+            ingredientDropdown.appendChild(item);
+        });
+
+        ingredientDropdown.classList.toggle('show', filtered.length > 0);
+    }
+
+    function selectIngredient(ingredient) {
+        console.log('🔧 UNIT CONVERTER: Selecting ingredient:', ingredient);
+        currentSelectedIngredient = ingredient;
+        document.getElementById('selectedIngredientName').textContent = ingredient.name;
+        document.getElementById('selectedIngredientDensity').textContent = ingredient.density || 'Not set';
+        selectedIngredient.style.display = 'block';
+        ingredientDropdown.classList.remove('show');
+        ingredientSearch.value = ''; // Clear search input
+        console.log('🔧 UNIT CONVERTER: Ingredient selected successfully');
+        // Optionally, hide the ingredient section if it was only for selection
+        // if (!needsDensity()) { ingredientSection.style.display = 'none'; }
+    }
+
+    // Perform conversion
+    async function performConversion() {
+        console.log('🔧 UNIT CONVERTER: Starting conversion');
+        
+        const amount = parseFloat(fromAmount.value);
+        const from = fromUnit.value;
+        const to = toUnit.value;
+
+        console.log('🔧 UNIT CONVERTER: Form values:', {
+            amount,
+            from,
+            to,
+            needsDensity: needsDensity(),
+            currentSelectedIngredient
+        });
+
+        if (!amount || !from || !to) {
+            console.log('🔧 UNIT CONVERTER: Missing required fields');
+            showError('Please fill in amount and select both units');
+            return;
+        }
+
+        if (needsDensity() && (!currentSelectedIngredient || !currentSelectedIngredient.density)) {
+            console.log('🔧 UNIT CONVERTER: Missing density for volume/weight conversion');
+            showError('Please select an ingredient with density data for volume/weight conversion');
+            return;
+        }
+
+        try {
+            // Use the correct public API endpoint like in the candles tool
+            const requestBody = {
+                quantity: amount,
+                from_unit: from,
+                to_unit: to
+            };
+            
+            // Add ingredient or density data if available
+            if (currentSelectedIngredient) {
+                if (currentSelectedIngredient.id) {
+                    requestBody.ingredient_id = currentSelectedIngredient.id;
+                    console.log('🔧 UNIT CONVERTER: Adding ingredient_id:', currentSelectedIngredient.id);
+                } else if (currentSelectedIngredient.density) {
+                    requestBody.density = currentSelectedIngredient.density;
+                    console.log('🔧 UNIT CONVERTER: Adding density:', currentSelectedIngredient.density);
+                }
+            }
+            
+            console.log('🔧 UNIT CONVERTER: Request body:', requestBody);
+            console.log('🔧 UNIT CONVERTER: Making POST request to: /api/public/convert-units');
+            
+            const response = await fetch('/api/public/convert-units', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(requestBody)
+            });
+            
+            console.log('🔧 UNIT CONVERTER: Response status:', response.status);
+            console.log('🔧 UNIT CONVERTER: Response headers:', Object.fromEntries(response.headers.entries()));
+
+            if (!response.ok) {
+                // Try to parse error message from response body
+                let errorMsg = `HTTP error! status: ${response.status}`;
+                try {
+                    const errorData = await response.json();
+                    console.log('🔧 UNIT CONVERTER: Error response data:', errorData);
+                    errorMsg = errorData.error_data?.message || errorData.message || errorData.error || errorMsg;
+                } catch (e) {
+                    // If response is not JSON, try to get text
+                    try {
+                        const errorText = await response.text();
+                        console.log('🔧 UNIT CONVERTER: Error response text:', errorText);
+                        errorMsg = errorText || response.statusText || errorMsg;
+                    } catch (e2) {
+                        errorMsg = response.statusText || errorMsg;
+                    }
+                }
+                throw new Error(errorMsg);
+            }
+
+            const contentType = response.headers.get('content-type');
+            console.log('🔧 UNIT CONVERTER: Response content-type:', contentType);
+            
+            if (!contentType || !contentType.includes('application/json')) {
+                const responseText = await response.text();
+                console.log('🔧 UNIT CONVERTER: Non-JSON response text:', responseText);
+                throw new Error('Received non-JSON response from server.');
+            }
+
+            const data = await response.json();
+            console.log('🔧 UNIT CONVERTER: Full response data:', data);
+
+            // Handle both success formats from the API
+            if (data && data.success && data.data && data.data.success && data.data.converted_value !== null && data.data.converted_value !== undefined) {
+                const convertedValue = data.data.converted_value;
+                console.log('🔧 UNIT CONVERTER: Conversion successful:', convertedValue);
+                
+                // Update the result field
+                toAmount.value = convertedValue;
+                
+                // Update the result text and show success
+                const resultTextElement = document.getElementById('resultText');
+                if (resultTextElement) {
+                    let resultText = `${amount} ${from} = ${convertedValue} ${to}`;
+                    
+                    // If density conversion was used and we have an ingredient, add ingredient name
+                    if (data.data.conversion_type === 'density' && currentSelectedIngredient && currentSelectedIngredient.name) {
+                        resultText += ` of ${currentSelectedIngredient.name}`;
+                    }
+                    
+                    resultTextElement.textContent = resultText;
+                }
+                
+                // Show result section, hide error
+                conversionResult.style.display = 'block';
+                conversionError.style.display = 'none';
+                
+                console.log('🔧 UNIT CONVERTER: UI updated successfully');
+            } else if (data && data.success !== false && data.converted_value !== null && data.converted_value !== undefined) {
+                // Alternative success format
+                const convertedValue = data.converted_value;
+                console.log('🔧 UNIT CONVERTER: Conversion successful (alt format):', convertedValue);
+                
+                toAmount.value = convertedValue;
+                
+                const resultTextElement = document.getElementById('resultText');
+                if (resultTextElement) {
+                    let resultText = `${amount} ${from} = ${convertedValue} ${to}`;
+                    
+                    // If density conversion was used and we have an ingredient, add ingredient name
+                    if (data.conversion_type === 'density' && currentSelectedIngredient && currentSelectedIngredient.name) {
+                        resultText += ` of ${currentSelectedIngredient.name}`;
+                    }
+                    
+                    resultTextElement.textContent = resultText;
+                }
+                
+                conversionResult.style.display = 'block';
+                conversionError.style.display = 'none';
+                
+                console.log('🔧 UNIT CONVERTER: UI updated successfully (alt format)');
+            } else {
+                console.log('🔧 UNIT CONVERTER: Conversion failed:', data);
+                const errorMsg = (data && data.data && data.data.error_data && data.data.error_data.message) || 
+                                (data && data.data && data.data.error) || 
+                                (data && data.error) || 
+                                'Conversion failed';
+                showError(errorMsg);
+            }
+        } catch (error) {
+            console.error('🔧 UNIT CONVERTER: Exception during conversion:', error);
+            console.error('🔧 UNIT CONVERTER: Error stack:', error.stack);
+            showError('Error performing conversion: ' + error.message);
+        }
+    }
+
+    function showError(message) {
+        conversionError.textContent = message;
+        conversionError.style.display = 'block';
+        conversionResult.style.display = 'none';
+    }
+
+    // Event listeners
+    fromUnit.addEventListener('change', () => {
+        console.log('🔧 UNIT CONVERTER: From unit changed to:', fromUnit.value);
+        updateIngredientSection();
+    });
+    toUnit.addEventListener('change', () => {
+        console.log('🔧 UNIT CONVERTER: To unit changed to:', toUnit.value);
+        updateIngredientSection();
+    });
+    convertButton.addEventListener('click', () => {
+        console.log('🔧 UNIT CONVERTER: Convert button clicked');
+        performConversion();
+    });
+
+    ingredientSearch.addEventListener('input', (e) => {
+        if (e.target.value.length > 0) {
+            filterIngredients(e.target.value);
+        } else {
+            ingredientDropdown.classList.remove('show');
+        }
+    });
+
+    
+
+    // Copy result
+    copyResultBtn.addEventListener('click', () => {
+        const resultTextElement = document.getElementById('resultText');
+        if (resultTextElement) {
+            const resultText = resultTextElement.textContent;
+            navigator.clipboard.writeText(resultText).then(() => {
+                copyResultBtn.innerHTML = '<i class="fas fa-check"></i> Copied!';
+                setTimeout(() => {
+                    copyResultBtn.innerHTML = '<i class="fas fa-copy"></i> Copy Result';
+                }, 2000);
+            }).catch(err => {
+                console.error('Failed to copy text: ', err);
+                // Optionally provide user feedback that copy failed
+            });
+        }
+    });
+
+    // Load ingredients on modal open
+    const unitConverterModal = document.getElementById('unitConverterModal');
+    unitConverterModal.addEventListener('shown.bs.modal', loadIngredients);
+
+    // Clear form when modal closes
+    unitConverterModal.addEventListener('hidden.bs.modal', () => {
+        fromAmount.value = '';
+        fromUnit.value = '';
+        toAmount.value = '';
+        toUnit.value = '';
+        currentSelectedIngredient = null;
+        ingredientSection.style.display = 'none';
+        selectedIngredient.style.display = 'none';
+        conversionResult.style.display = 'none';
+        conversionError.style.display = 'none';
+        ingredientDropdown.classList.remove('show');
+        ingredientSearch.value = ''; // Clear search input on close
+    });
+});
+</script>

@@ -1,9 +1,10 @@
 import logging
-from datetime import datetime
+from datetime import datetime, timezone
 from flask import Blueprint, request, redirect, url_for, flash, jsonify
 from flask_login import login_required, current_user
-from ...models import db, Batch, Product, ProductVariant, ProductSKU, InventoryItem, InventoryHistory
-from ...models.product import ProductSKU, ProductSKUHistory
+from ...models import db, Batch, Product, ProductVariant, InventoryItem
+from ...models.inventory_lot import InventoryLot
+from ...models.product import ProductSKU
 from ...services.inventory_adjustment import process_inventory_adjustment
 from app.utils.permissions import role_required
 
@@ -132,13 +133,13 @@ def _complete_batch_internal(batch_id, form_data):
             shelf_life_days = int(form_data.get('shelf_life_days', 0))
             exp_date_str = form_data.get('expiration_date')
             if exp_date_str:
-                expiration_date = datetime.strptime(exp_date_str, '%Y-%m-%d')
+                expiration_date = datetime.strptime(exp_date_str, '%Y-%m-%d').replace(tzinfo=timezone.utc)
 
         # Update batch with completion data
         batch.final_quantity = final_quantity
         batch.output_unit = output_unit
         batch.status = 'completed'
-        batch.completed_at = datetime.utcnow()
+        batch.completed_at = datetime.now(timezone.utc)
         batch.is_perishable = is_perishable
         batch.shelf_life_days = shelf_life_days
         batch.expiration_date = expiration_date
@@ -283,7 +284,8 @@ def _create_product_output(batch, product_id, variant_id, final_quantity, output
         logger.info(f"Batch {batch.label_code}: Total ingredient cost ${total_ingredient_cost:.2f}, Unit cost ${ingredient_unit_cost:.2f} per {output_unit}")
 
         # Process container allocations with cost calculation
-        container_skus = _process_container_allocations(batch, product, variant, form_data, expiration_date, ingredient_unit_cost)
+        container_skus, container_lots = _process_container_allocations(batch, product, variant, form_data, expiration_date, ingredient_unit_cost)
+        created_lots = [lot for lot in container_lots if lot]
 
         # Calculate total product volume used in containers
         total_container_volume = 0
@@ -301,7 +303,10 @@ def _create_product_output(batch, product_id, variant_id, final_quantity, output
             bulk_unit = output_unit
             # No product base unit; units are defined at SKU/Inventory level
 
-            _create_bulk_sku(product, variant, bulk_quantity, bulk_unit, expiration_date, batch, ingredient_unit_cost)
+            bulk_sku, bulk_lot = _create_bulk_sku(product, variant, bulk_quantity, bulk_unit, expiration_date, batch, ingredient_unit_cost)
+            if bulk_lot:
+                logger.info(f"Bulk quantity tied to lot {bulk_lot.display_code} (ID {bulk_lot.id})")
+                created_lots.append(bulk_lot)
 
         # For portioned batches, create portion-based SKU if final_portions provided
         if getattr(batch, 'is_portioned', False) and final_portions and final_portions > 0:
@@ -388,11 +393,19 @@ def _create_product_output(batch, product_id, variant_id, final_quantity, output
                 )
                 if not success:
                     raise ValueError('Failed to credit portion inventory')
+
+                portion_lot = InventoryLot.query.filter_by(
+                    inventory_item_id=sku.inventory_item_id,
+                    batch_id=batch.id
+                ).order_by(InventoryLot.created_at.desc()).first()
+                if portion_lot:
+                    logger.info(f"Portion SKU {sku.sku_code} tied to lot {portion_lot.display_code} (ID {portion_lot.id})")
+                    created_lots.append(portion_lot)
             except Exception as e:
                 logger.error(f"Error creating portion-based SKU: {e}")
 
         logger.info(f"Created product output for batch {batch.label_code}: {len(container_skus)} container SKUs, {bulk_quantity if not getattr(batch, 'is_portioned', False) else 0} {bulk_unit if (bulk_quantity > 0 and not getattr(batch, 'is_portioned', False)) else ''} bulk")
-        return {'total_container_volume': total_container_volume}
+        return {'total_container_volume': total_container_volume, 'created_lots': [lot for lot in created_lots if lot]}
 
     except Exception as e:
         logger.error(f"Error creating product output: {str(e)}")
@@ -417,6 +430,7 @@ def _derive_size_label_from_portions(batch, final_bulk_quantity, bulk_unit, fina
 def _process_container_allocations(batch, product, variant, form_data, expiration_date, ingredient_unit_cost):
     """Process container allocations and create SKUs"""
     container_skus = []
+    created_lots = []
 
     # Calculate total containers used vs passed to product for cost allocation
     container_usage = {}  # container_id -> {'used': total_used, 'passed': passed_to_product}
@@ -466,7 +480,7 @@ def _process_container_allocations(batch, product, variant, form_data, expiratio
                 logger.info(f"Container cost calculation: {usage_info['used']} used × ${usage_info['cost_each']} = ${total_container_cost}, divided by {final_quantity} passed = ${adjusted_container_cost_per_unit:.2f} per container")
 
                 # Create container SKU - final_quantity is number of containers
-                container_sku = _create_container_sku(
+                container_sku, container_lot = _create_container_sku(
                     product=product,
                     variant=variant,
                     container_item=container_item,
@@ -484,6 +498,9 @@ def _process_container_allocations(batch, product, variant, form_data, expiratio
                     'container_capacity': container_item.capacity or 1  # Volume per container
                 })
 
+                if container_lot:
+                    created_lots.append(container_lot)
+
                 logger.info(f"Created container SKU for {final_quantity} x {container_item.name} containers")
 
             except Exception as e:
@@ -492,7 +509,7 @@ def _process_container_allocations(batch, product, variant, form_data, expiratio
                 logger.error(f"Container processing traceback: {traceback.format_exc()}")
                 continue
 
-    return container_skus
+    return container_skus, created_lots
 
 
 def _create_container_sku(product, variant, container_item, quantity, batch, expiration_date, ingredient_unit_cost, adjusted_container_cost):
@@ -583,7 +600,16 @@ def _create_container_sku(product, variant, container_item, quantity, batch, exp
             raise ValueError(f"Failed to add container inventory for {size_label}")
 
         logger.info(f"Successfully created/updated container SKU: {product_sku.sku_code} with {quantity} containers at ${total_cost_per_container:.2f} per container")
-        return product_sku
+
+        new_lot = InventoryLot.query.filter_by(
+            inventory_item_id=product_sku.inventory_item_id,
+            batch_id=batch.id
+        ).order_by(InventoryLot.created_at.desc()).first()
+
+        if new_lot:
+            logger.info(f"Linked container SKU {product_sku.sku_code} to lot {new_lot.display_code} (ID {new_lot.id})")
+
+        return product_sku, new_lot
 
     except Exception as e:
         logger.error(f"Error creating container SKU: {str(e)}")
@@ -626,7 +652,15 @@ def _create_bulk_sku(product, variant, quantity, unit, expiration_date, batch, i
             raise ValueError(f"Failed to add bulk inventory for {quantity} {unit}")
 
         logger.info(f"Created/updated bulk SKU: {bulk_sku.sku_code} with {quantity} {unit} at ${ingredient_unit_cost:.2f} per {unit}")
-        return bulk_sku
+        bulk_lot = InventoryLot.query.filter_by(
+            inventory_item_id=bulk_sku.inventory_item_id,
+            batch_id=batch.id
+        ).order_by(InventoryLot.created_at.desc()).first()
+
+        if bulk_lot:
+            logger.info(f"Linked bulk SKU {bulk_sku.sku_code} to lot {bulk_lot.display_code} (ID {bulk_lot.id})")
+
+        return bulk_sku, bulk_lot
 
     except Exception as e:
         logger.error(f"Error creating bulk SKU: {str(e)}")

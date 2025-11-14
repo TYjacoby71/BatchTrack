@@ -17,16 +17,6 @@ class IngredientCategory(ScopedModelMixin, db.Model):
     
     # Global category integration  
     is_global_category = db.Column(db.Boolean, default=False)  # True if this is a global/reference category (seeded from JSON)
-    
-    # Visibility controls for soap-making and cosmetic formulation fields
-    show_saponification_value = db.Column(db.Boolean, default=False)
-    show_iodine_value = db.Column(db.Boolean, default=False)
-    show_melting_point = db.Column(db.Boolean, default=False)
-    show_flash_point = db.Column(db.Boolean, default=False)
-    show_ph_value = db.Column(db.Boolean, default=False)
-    show_moisture_content = db.Column(db.Boolean, default=False)
-    show_shelf_life_months = db.Column(db.Boolean, default=False)
-    show_comedogenic_rating = db.Column(db.Boolean, default=False)
 
 class InventoryCategory(ScopedModelMixin, db.Model):
     id = db.Column(db.Integer, primary_key=True)

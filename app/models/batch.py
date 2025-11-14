@@ -123,7 +123,7 @@ class BatchContainer(ScopedModelMixin, db.Model):
     cost_each = db.Column(db.Float)  # Cost per container
 
     batch = db.relationship('Batch', backref='containers')
-    container = db.relationship('InventoryItem')
+    inventory_item = db.relationship('InventoryItem')
 
 class BatchConsumable(ScopedModelMixin, db.Model):
     __tablename__ = 'batch_consumable'
@@ -158,7 +158,7 @@ class ExtraBatchContainer(ScopedModelMixin, db.Model):
     reason = db.Column(db.String(20), nullable=False, default='extra_yield')  # Track why container was added
 
     batch = db.relationship('Batch', backref='extra_containers')
-    container = db.relationship('InventoryItem')
+    inventory_item = db.relationship('InventoryItem')
 
 class BatchTimer(ScopedModelMixin, db.Model):
     __tablename__ = 'batch_timer'

@@ -7,6 +7,7 @@ import logging
 from app.models import db, InventoryItem, IngredientCategory, Unit, UnifiedInventoryHistory, GlobalItem
 from app.services.density_assignment_service import DensityAssignmentService
 from ._fifo_ops import create_new_fifo_lot
+from datetime import timezone # Import timezone for timezone-aware datetime objects
 
 logger = logging.getLogger(__name__)
 
@@ -39,22 +40,25 @@ def create_inventory_item(form_data, organization_id, created_by):
         if global_item and item_type != global_item.item_type:
             return False, f"Selected global item type '{global_item.item_type}' does not match item type '{item_type}'.", None
 
-        # Handle unit - get from form or default (prefer global item default)
-        unit_input = form_data.get('unit', '').strip()
-        if not unit_input and global_item and global_item.default_unit:
+        # Handle unit - prefer user's form selection over global item defaults
+        unit_input = None
+        if form_data.get('unit', '').strip():
+            # User explicitly selected a unit in the form - this takes priority
+            unit_input = form_data.get('unit', '').strip()
+        elif global_item and global_item.default_unit:
+            # Fall back to global item's default unit if no form input
             unit_input = global_item.default_unit
 
         if unit_input:
-            # Try to find existing unit or create/validate
-            unit = db.session.query(Unit).filter_by(name=unit_input).first()
-            if not unit:
-                # Create new unit if it doesn't exist
-                unit = Unit(name=unit_input, symbol=unit_input)
-                db.session.add(unit)
-                db.session.flush()
-            final_unit = unit.name
+            # Just use the unit name - don't try to create units here
+            # The system should already have standard units available
+            final_unit = unit_input
         else:
-            final_unit = 'count'  # Default unit
+            # Default based on item type
+            if item_type == 'container':
+                final_unit = 'count'
+            else:
+                final_unit = 'gram'  # Default for ingredients
 
         # Handle base category selector and custom density (defer density application until after item exists)
         category_id = None
@@ -93,14 +97,21 @@ def create_inventory_item(form_data, organization_id, created_by):
         except (ValueError, TypeError):
             pass
 
-        # Determine if item is perishable
-        is_perishable = bool(shelf_life_days) or form_data.get('is_perishable') == 'on'
-        # Apply perishable defaults from global item if not explicitly set
-        if global_item:
-            if form_data.get('is_perishable') is None and global_item.default_is_perishable is not None:
-                is_perishable = bool(global_item.default_is_perishable)
-            if not shelf_life_days and global_item.recommended_shelf_life_days:
-                shelf_life_days = int(global_item.recommended_shelf_life_days)
+        # Determine if item is perishable - user input takes priority
+        is_perishable = form_data.get('is_perishable') == 'on'
+
+        # If no explicit user input and global item has defaults, use them as fallback
+        # This handles the case where form is pre-populated but user doesn't change it
+        if global_item and global_item.default_is_perishable and form_data.get('is_perishable') is None:
+            is_perishable = True
+
+        # Use recommended shelf life from global item if none provided by user
+        if not shelf_life_days and global_item and global_item.recommended_shelf_life_days:
+            shelf_life_days = int(global_item.recommended_shelf_life_days)
+
+        # Final validation: if shelf_life_days is provided, item must be perishable
+        if shelf_life_days and not is_perishable:
+            is_perishable = True
 
         # Create the new inventory item with quantity = 0
         # The initial stock will be added via process_inventory_adjustment
@@ -171,6 +182,25 @@ def create_inventory_item(form_data, organization_id, created_by):
                         new_item.container_color = global_item.container_color
             except Exception:
                 pass
+
+            # Ingredient metadata defaults
+            if item_type == 'ingredient':
+                new_item.saponification_value = global_item.saponification_value
+                new_item.iodine_value = global_item.iodine_value
+                new_item.melting_point_c = global_item.melting_point_c
+                new_item.flash_point_c = global_item.flash_point_c
+                new_item.ph_value = global_item.ph_value
+                new_item.moisture_content_percent = global_item.moisture_content_percent
+                new_item.comedogenic_rating = global_item.comedogenic_rating
+                new_item.recommended_usage_rate = global_item.recommended_usage_rate
+                new_item.recommended_fragrance_load_pct = global_item.recommended_fragrance_load_pct
+                new_item.inci_name = global_item.inci_name
+                new_item.protein_content_pct = global_item.protein_content_pct
+                new_item.brewing_color_srm = global_item.brewing_color_srm
+                new_item.brewing_potential_sg = global_item.brewing_potential_sg
+                new_item.brewing_diastatic_power_lintner = global_item.brewing_diastatic_power_lintner
+                new_item.fatty_acid_profile = global_item.fatty_acid_profile
+                new_item.certifications = global_item.certifications
 
         # Resolve category linkage and density precedence
         # 1) If a category ID was chosen, link and assign its default density
@@ -250,9 +280,21 @@ def create_inventory_item(form_data, organization_id, created_by):
 
         # Handle initial stock if quantity > 0
         if initial_quantity > 0:
-            # Extract custom expiration data for initial stock
+            # Extract custom expiration date for initial stock (date only, no custom shelf life)
             custom_expiration_date = form_data.get('custom_expiration_date')
-            custom_shelf_life_days = form_data.get('custom_shelf_life_days')
+
+            # Convert custom_expiration_date to proper format if provided
+            if custom_expiration_date:
+                try:
+                    from datetime import datetime
+                    if isinstance(custom_expiration_date, str):
+                        # Parse string date and make it timezone-aware UTC
+                        parsed_date = datetime.fromisoformat(custom_expiration_date.replace('Z', '+00:00'))
+                        if parsed_date.tzinfo is None:
+                            parsed_date = parsed_date.replace(tzinfo=timezone.utc)
+                        custom_expiration_date = parsed_date
+                except Exception:
+                    custom_expiration_date = None
 
             # Use the local initial stock handler (no circular dependency)
             success, adjustment_message, quantity_delta = handle_initial_stock(
@@ -262,7 +304,6 @@ def create_inventory_item(form_data, organization_id, created_by):
                 notes='Initial inventory entry',
                 created_by=created_by,
                 custom_expiration_date=custom_expiration_date,
-                custom_shelf_life_days=custom_shelf_life_days,
                 unit=final_unit
             )
 
@@ -289,7 +330,7 @@ def create_inventory_item(form_data, organization_id, created_by):
         logger.error(f"Error creating inventory item: {str(e)}")
         return False, f"Failed to create inventory item: {str(e)}", None
 
-def handle_initial_stock(item, quantity, change_type, notes=None, created_by=None, cost_override=None, custom_expiration_date=None, custom_shelf_life_days=None, **kwargs):
+def handle_initial_stock(item, quantity, change_type, notes=None, created_by=None, cost_override=None, custom_expiration_date=None, **kwargs):
     """
     Handle the initial stock entry for a newly created item.
     This is called when an item gets its very first inventory.
@@ -303,6 +344,7 @@ def handle_initial_stock(item, quantity, change_type, notes=None, created_by=Non
         final_cost = cost_override if cost_override is not None else item.cost_per_unit
 
         # Create the initial FIFO entry - works for any quantity including 0
+        # The custom_shelf_life_days parameter is removed as per the requirement.
         success, message, lot_id = create_new_fifo_lot(
             item_id=item.id,
             quantity=quantity,
@@ -312,7 +354,7 @@ def handle_initial_stock(item, quantity, change_type, notes=None, created_by=Non
             cost_per_unit=final_cost,
             created_by=created_by,
             custom_expiration_date=custom_expiration_date,
-            custom_shelf_life_days=custom_shelf_life_days
+            # custom_shelf_life_days removed here
         )
 
         if not success:

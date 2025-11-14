@@ -42,31 +42,6 @@ function toggleUpdateForm() {
   }
 }
 
-
-
-async function updateClock() {
-  const clock = document.getElementById('clock');
-  if (clock) {
-    try {
-      // Get server time to stay in sync with timezone utilities
-      const response = await fetch('/api/server-time');
-      if (response.ok) {
-        const data = await response.json();
-        const serverTime = new Date(data.user_time || data.server_utc);
-        clock.textContent = '🕐 ' + serverTime.toLocaleTimeString();
-      } else {
-        // Fallback to local time if server endpoint unavailable
-        const now = new Date();
-        clock.textContent = '🕐 ' + now.toLocaleTimeString();
-      }
-    } catch (error) {
-      // Fallback to local time on error
-      const now = new Date();
-      clock.textContent = '🕐 ' + now.toLocaleTimeString();
-    }
-  }
-}
-
 // Global alert function for showing messages
 function showAlert(type, message) {
   // Create alert element
@@ -96,10 +71,6 @@ function showAlert(type, message) {
 }
 
 document.addEventListener('DOMContentLoaded', function() {
-  // Initialize clock - reduce frequency to 1 minute
-  updateClock();
-  setInterval(updateClock, 60000);
-
   // Debug navigation clicks
   console.log('Page loaded:', window.location.pathname);
 
@@ -179,6 +150,21 @@ document.addEventListener('DOMContentLoaded', function() {
       document.getElementById('addIngredientForm')?.appendChild(hiddenGlobalId);
     }
 
+    // Function to populate unit field when global item is selected
+    function populateUnitFromGlobalItem(globalItemData) {
+      if (globalItemData && globalItemData.default_unit) {
+        const unitSelect = document.querySelector('select[name="unit"]');
+        if (unitSelect) {
+          // Set the unit select to the global item's default unit
+          unitSelect.value = globalItemData.default_unit;
+          console.log('🔧 GLOBAL ITEM: Populated unit field with', globalItemData.default_unit);
+        }
+      }
+    }
+
+    // Make the function globally available for Select2 callbacks
+    window.populateUnitFromGlobalItem = populateUnitFromGlobalItem;
+
     $nameSelect.on('select2:select', function (e) {
       const data = e.params.data || {};
       // If selecting a global item (numeric id), set hidden FK and update visible name to text
@@ -193,16 +179,25 @@ document.addEventListener('DOMContentLoaded', function() {
             const unitSelect = document.querySelector('#addIngredientForm select[name="unit"]');
             if (unitSelect) unitSelect.value = data.default_unit;
           }
-          // Perishable defaults
+          // Populate perishable defaults
           const perishableCheckbox = document.getElementById('addIngredientPerishable');
+          const shelfLifeInput = document.getElementById('addIngredientShelfLife');
+          
           if (typeof data.default_is_perishable !== 'undefined' && perishableCheckbox) {
             perishableCheckbox.checked = !!data.default_is_perishable;
+            // Manually trigger Alpine.js reactivity by setting the x-model value
+            const form = document.getElementById('addIngredientForm');
+            if (form && form.__x) {
+              form.__x.$data.isPerishable = !!data.default_is_perishable;
+            }
           }
-          const shelfLifeInput = document.querySelector('#addIngredientForm input[name="shelf_life_days"]');
+          
           if (shelfLifeInput && data.recommended_shelf_life_days) {
             shelfLifeInput.value = data.recommended_shelf_life_days;
           }
-        } catch (_) {}
+        } catch (error) {
+          console.log('Error applying global item defaults:', error);
+        }
       } else {
         hiddenGlobalId.value = '';
       }

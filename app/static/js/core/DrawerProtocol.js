@@ -26,7 +26,10 @@ class DrawerProtocol {
             this.handleDrawerRequest(event.detail);
         });
 
-        console.log('🔧 DRAWER PROTOCOL: Universal listener initialized');
+        // Only log in debug mode
+        if (window.location.search.includes('debug=true')) {
+            console.log('🔧 DRAWER PROTOCOL: Universal listener initialized');
+        }
     }
 
     /**
@@ -105,7 +108,7 @@ class DrawerProtocol {
      */
     async executeRetryOperation(operation, data) {
         console.log(`🔧 DRAWER PROTOCOL: Executing retry operation: ${operation}`, data);
-        
+
         switch (operation) {
             case 'stock_check':
                 // Trigger stock check retry
@@ -115,7 +118,7 @@ class DrawerProtocol {
                     console.warn('🔧 DRAWER PROTOCOL: Stock checker not available for retry');
                 }
                 break;
-            
+
             default:
                 console.warn(`🔧 DRAWER PROTOCOL: Unknown retry operation: ${operation}`);
         }
@@ -124,7 +127,7 @@ class DrawerProtocol {
     async openModal(url, successEvent) {
         try {
             console.log(`🔧 DRAWER PROTOCOL: Opening modal from ${url}`);
-            
+
             // Check for existing modal with same ID to prevent duplicates
             const existingModal = document.querySelector('#densityFixModal');
             if (existingModal) {
@@ -142,7 +145,7 @@ class DrawerProtocol {
 
             const response = await fetch(url);
             const data = await response.json();
-            
+
             console.log('🔧 DRAWER PROTOCOL: Modal fetch response:', data);
 
             if (data.success) {
@@ -239,14 +242,14 @@ class DrawerProtocol {
                 console.log(`🔧 DRAWER PROTOCOL: ==================== EXECUTING RETRY ====================`);
                 console.log(`🔧 DRAWER PROTOCOL: Matched key: ${key}`);
                 console.log(`🔧 DRAWER PROTOCOL: Callback function:`, callback);
-                
+
                 try {
                     callback(eventDetail);
                     console.log(`🔧 DRAWER PROTOCOL: Retry callback executed successfully for ${key}`);
                 } catch (callbackError) {
                     console.error(`🔧 DRAWER PROTOCOL: Error in retry callback:`, callbackError);
                 }
-                
+
                 this.retryCallbacks.delete(key);
                 console.log(`🔧 DRAWER PROTOCOL: Callback ${key} removed from retry callbacks`);
                 executed = true;
@@ -260,21 +263,21 @@ class DrawerProtocol {
         }
 
         console.log('🔧 DRAWER PROTOCOL: No exact match found, trying fallback...');
-        
+
         // Fallback: if nothing matched, execute any remaining callback once
         const iterator = this.retryCallbacks.entries().next();
         if (!iterator.done) {
             const [key, callback] = iterator.value;
             console.log(`🔧 DRAWER PROTOCOL: ==================== FALLBACK RETRY ====================`);
             console.log(`🔧 DRAWER PROTOCOL: Fallback executing retry for ${key}`);
-            
+
             try {
                 callback(eventDetail);
                 console.log(`🔧 DRAWER PROTOCOL: Fallback retry callback executed successfully for ${key}`);
             } catch (callbackError) {
                 console.error(`🔧 DRAWER PROTOCOL: Error in fallback retry callback:`, callbackError);
             }
-            
+
             this.retryCallbacks.delete(key);
             console.log(`🔧 DRAWER PROTOCOL: Fallback callback ${key} removed from retry callbacks`);
         } else {

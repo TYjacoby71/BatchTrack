@@ -5,6 +5,7 @@ from .utils.permissions import has_permission
 from .utils.timezone_utils import TimezoneUtils
 from app.utils.unit_utils import get_global_unit_list
 from app.utils.cache_manager import app_cache
+from .utils.json_store import read_json_file
 
 
 def register_template_context(app):
@@ -160,7 +161,6 @@ def register_template_context(app):
     @app.context_processor
     def _inject_marketing_content():
         """Inject public marketing content and stats for homepage."""
-        import json, os
         from sqlalchemy import func
         try:
             from .models import Organization, User
@@ -171,24 +171,11 @@ def register_template_context(app):
             SubscriptionTier = None
 
         # Load reviews
-        reviews = []
-        try:
-            if os.path.exists('data/reviews.json'):
-                with open('data/reviews.json', 'r') as f:
-                    reviews = json.load(f) or []
-        except Exception:
-            reviews = []
+        reviews = read_json_file('data/reviews.json', default=[]) or []
 
         # Load business spotlights
-        spotlights = []
-        try:
-            if os.path.exists('data/spotlights.json'):
-                with open('data/spotlights.json', 'r') as f:
-                    all_spotlights = json.load(f) or []
-                    # Only show approved
-                    spotlights = [s for s in all_spotlights if s.get('approved')]
-        except Exception:
-            spotlights = []
+        all_spotlights = read_json_file('data/spotlights.json', default=[]) or []
+        spotlights = [s for s in all_spotlights if s.get('approved')]
 
         # Stats
         total_active_users = 0
@@ -220,16 +207,11 @@ def register_template_context(app):
         # Marketing messages (review asks day 1/3/5)
         messages = {'day_1': '', 'day_3': '', 'day_5': ''}
         marketing_settings = {'promo_codes': [], 'demo_url': '', 'demo_videos': []}
-        try:
-            if os.path.exists('settings.json'):
-                with open('settings.json', 'r') as f:
-                    cfg = json.load(f) or {}
-                    messages.update(cfg.get('marketing_messages', {}))
-                    marketing_settings['promo_codes'] = cfg.get('promo_codes', []) or []
-                    marketing_settings['demo_url'] = cfg.get('demo_url', '') or ''
-                    marketing_settings['demo_videos'] = cfg.get('demo_videos', []) or []
-        except Exception:
-            pass
+        cfg = read_json_file('settings.json', default={}) or {}
+        messages.update(cfg.get('marketing_messages', {}))
+        marketing_settings['promo_codes'] = cfg.get('promo_codes', []) or []
+        marketing_settings['demo_url'] = cfg.get('demo_url', '') or ''
+        marketing_settings['demo_videos'] = cfg.get('demo_videos', []) or []
 
         return dict(
             marketing_reviews=reviews,

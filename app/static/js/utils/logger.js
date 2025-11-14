@@ -69,7 +69,7 @@ export const perf = (message, startTime) => logger.perf(message, startTime);
 // Default export for backwards compatibility
 export default logger;
 
-// Show debug status only if debugging is enabled
-if (logger.debugEnabled) {
+// Show debug status only if debugging is enabled and in development
+if (logger.debugEnabled && window.location.hostname.includes('replit.dev')) {
     console.log('🔧 DEBUG MODE: Frontend debugging enabled');
 }

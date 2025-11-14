@@ -11,7 +11,7 @@
           <h2>{{ product.name }}</h2>
           <small class="text-muted">
             Low Stock Alert: {{ product.low_stock_threshold }} | 
-            Created: {{ product.created_at.strftime('%Y-%m-%d') }}
+            Created: {{ product.created_at | user_date }}
           </small>
         </div>
         <div class="d-flex gap-2">
@@ -315,17 +315,29 @@
         <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
       </div>
       <div class="modal-body">
-        <form id="addVariantForm">
-          <input type="hidden" name="product_id" value="{{ product.id }}">
-          <div class="mb-3">
-            <label class="form-label">Variant Name</label>
-            <input type="text" name="name" class="form-control" required>
-          </div>
-          <div class="mb-3">
-            <label class="form-label">Description</label>
-            <textarea name="description" class="form-control" rows="3"></textarea>
-          </div>
-        </form>
+          <form id="addVariantForm">
+            <input type="hidden" name="product_id" value="{{ product.id }}">
+            <div class="mb-3">
+              <label class="form-label">Variant Name</label>
+              <input type="text" name="name" class="form-control" required>
+            </div>
+            <div class="mb-3">
+              <label class="form-label">Description</label>
+              <textarea name="description" class="form-control" rows="3"></textarea>
+            </div>
+            <div class="mb-3">
+              <label class="form-label">Default SKU Unit</label>
+              <select name="unit" class="form-select" required>
+                <option value="">Select unit...</option>
+                {% for unit_option in get_global_unit_list() %}
+                  {% set option_name = unit_option.name if unit_option.name else unit_option.symbol %}
+                  {% if option_name %}
+                    <option value="{{ option_name }}">{{ option_name }}</option>
+                  {% endif %}
+                {% endfor %}
+              </select>
+            </div>
+          </form>
       </div>
       <div class="modal-footer">
         <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">Cancel</button>

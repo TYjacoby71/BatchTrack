@@ -22,7 +22,7 @@
                         <h5>Your Current Status:</h5>
                         <ul class="list-unstyled">
                             <li><strong>Requested Tier:</strong> {{ requested_tier.title() }}</li>
-                            <li><strong>Grace Period Expires:</strong> {{ grace_expires.strftime('%B %d, %Y at %I:%M %p') }}</li>
+                            <li><strong>Grace Period Expires:</strong> {{ grace_expires | user_timezone('%B %d, %Y at %I:%M %p') }}</li>
                             <li><strong>Service Status:</strong> 
                                 <span class="badge bg-warning">Temporary Access</span>
                             </li>
@@ -31,7 +31,7 @@
 
                     <div class="alert alert-warning">
                         <h6>Action Required:</h6>
-                        <p>To continue using BatchTrack beyond {{ grace_expires.strftime('%B %d') }}, please complete your billing setup now.</p>
+                        <p>To continue using BatchTrack beyond {{ grace_expires | user_date }}, please complete your billing setup now.</p>
                     </div>
 
                     <div class="row">

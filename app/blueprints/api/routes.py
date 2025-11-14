@@ -1,8 +1,11 @@
-from flask import Blueprint, jsonify, request
+from flask import Blueprint, jsonify, request, current_app
 from flask_login import login_required, current_user
-from datetime import datetime
+from datetime import datetime, timezone
 from flask import session
 import logging
+from app.models import InventoryItem  # Added for get_ingredients endpoint
+from app import db  # Assuming db is imported from app
+from app.utils.permissions import require_permission
 
 # Configure logging
 logger = logging.getLogger(__name__)
@@ -14,7 +17,7 @@ def health_check():
     """Health check endpoint for monitoring services"""
     if request.method == 'HEAD':
         return '', 200
-    return jsonify({'status': 'ok', 'timestamp': datetime.utcnow().isoformat()})
+    return jsonify({'status': 'ok', 'timestamp': datetime.now(timezone.utc).isoformat()})
 
 @api_bp.route('/server-time')
 def server_time():
@@ -188,38 +191,6 @@ def create_unit():
         db.session.rollback()
         return jsonify({'success': False, 'error': str(e)}), 500
 
-@api_bp.route('/category-visibility/<int:category_id>')
-@login_required
-def get_category_visibility(category_id):
-    """Get visibility settings for a category"""
-    try:
-        from app.models.category import IngredientCategory
-        category = IngredientCategory.query.filter_by(
-            id=category_id,
-            organization_id=None,
-            is_global_category=True
-        ).first()
-
-        if not category:
-            return jsonify({'success': False, 'error': 'Category not found'})
-
-        visibility = {
-            'show_saponification_value': getattr(category, 'show_saponification_value', False),
-            'show_iodine_value': getattr(category, 'show_iodine_value', False),
-            'show_melting_point': getattr(category, 'show_melting_point', False),
-            'show_flash_point': getattr(category, 'show_flash_point', False),
-            'show_ph_value': getattr(category, 'show_ph_value', False),
-            'show_moisture_content': getattr(category, 'show_moisture_content', False),
-            'show_shelf_life_months': getattr(category, 'show_shelf_life_months', False),
-            'show_comedogenic_rating': getattr(category, 'show_comedogenic_rating', False)
-        }
-
-        return jsonify({'success': True, 'visibility': visibility})
-
-    except Exception as e:
-        return jsonify({'success': False, 'error': str(e)})
-
-
 @api_bp.route('/containers/suggestions', methods=['GET'])
 @login_required
 def get_container_suggestions():
@@ -265,3 +236,82 @@ def get_container_suggestions():
         return jsonify({'success': True, 'suggestions': payload})
     except Exception as e:
         return jsonify({'success': False, 'error': str(e)}), 500
+
+# Added timezone endpoint
+@api_bp.route('/timezone', methods=['GET'])
+def get_timezone():
+    """Get server timezone info"""
+    from datetime import datetime
+    import pytz
+
+    server_tz = current_app.config.get('TIMEZONE', 'UTC')
+    now_utc = datetime.now(timezone.utc)
+
+    return jsonify({
+        'server_timezone': server_tz,
+        'utc_time': now_utc.isoformat(),
+        'available_timezones': pytz.all_timezones_set
+    })
+
+# Added ingredients endpoint for unit converter
+@api_bp.route('/ingredients', methods=['GET'])
+@login_required
+def get_ingredients():
+    """Get user's ingredients for unit converter"""
+    try:
+        ingredients = InventoryItem.query.filter_by(
+            organization_id=current_user.organization_id,
+            type='ingredient'
+        ).order_by(InventoryItem.name).all()
+
+        return jsonify([{
+            'id': ing.id,
+            'name': ing.name,
+            'density': ing.density,
+            'type': ing.type,
+            'unit': ing.unit
+        } for ing in ingredients])
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@api_bp.route('/unit-converter', methods=['POST'])
+@login_required
+@require_permission('inventory.view')
+def unit_converter():
+    """Unit conversion endpoint for the modal."""
+    try:
+        data = request.get_json() or {}
+        from_amount = float(data.get('from_amount', 0))
+        from_unit = data.get('from_unit', '')
+        to_unit = data.get('to_unit', '')
+        ingredient_id = data.get('ingredient_id')
+
+        if not all([from_amount, from_unit, to_unit]):
+            return jsonify({'success': False, 'error': 'Missing required parameters'})
+
+        # Get ingredient for density if needed
+        ingredient = None
+        if ingredient_id:
+            ingredient = db.session.get(InventoryItem, ingredient_id)
+
+        # Perform conversion using unit conversion service
+        from app.services.unit_conversion import UnitConversionService
+        result = UnitConversionService.convert_with_density(
+            from_amount, from_unit, to_unit, 
+            density=ingredient.density if ingredient else None
+        )
+
+        if result['success']:
+            return jsonify({
+                'success': True,
+                'result': result['converted_amount'],
+                'from_amount': from_amount,
+                'from_unit': from_unit,
+                'to_unit': to_unit
+            })
+        else:
+            return jsonify({'success': False, 'error': result.get('error', 'Conversion failed')})
+
+    except Exception as e:
+        current_app.logger.error(f"Unit converter API error: {str(e)}")
+        return jsonify({'success': False, 'error': str(e)})

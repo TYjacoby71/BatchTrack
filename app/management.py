@@ -9,7 +9,6 @@ from .extensions import db
 from .models import User, Organization, Permission
 from .seeders import (
     seed_units,
-    seed_categories,
     seed_subscriptions
 )
 from .seeders.addon_seeder import seed_addons
@@ -104,18 +103,9 @@ def init_production_command():
             print(f"⚠️  User/organization seeding issue: {e}")
             print("   Continuing with remaining steps...")
 
-        # Setup default categories for the organization
+        # Organization-specific setup will be handled by global inventory library seeding
         print("=== Step 3: Organization-specific data ===")
-        try:
-            from .models import Organization
-            org = Organization.query.first()
-            if org:
-                seed_categories(organization_id=org.id)
-                print("✅ Ingredient categories seeded for organization")
-            else:
-                print("⚠️  No organization found, ingredient categories not seeded")
-        except Exception as e:
-            print(f"⚠️  Ingredient category seeding issue: {e}")
+        print("   Categories will be created by global inventory library seeding...")
 
         # Seed global product categories (not organization-specific)
         try:
@@ -127,28 +117,58 @@ def init_production_command():
 
         # Seed global inventory library (ingredients, containers, packaging, consumables)
         try:
-            from scripts.seed_global_inventory_library import seed_global_inventory_library
+            from .seeders.seed_global_inventory_library import seed_global_inventory_library
             seed_global_inventory_library()
             print("✅ Global inventory library seeded")
         except Exception as e:
             print(f"⚠️  Global inventory library seeding issue: {e}")
 
-        print('✅ Production seeding complete!')
-        print('🔒 Login: admin/admin (CHANGE IMMEDIATELY)')
-        print('📝 Note: This command can be run multiple times safely')
-        print('📊 Database status:')
+        print('\n📊 Production Seeding Summary:')
         try:
-            # Ensure session is clean in case prior steps raised and were handled
             try:
                 db.session.rollback()
             except Exception:
                 pass
-            from .models import Organization, User, Permission, SubscriptionTier, Unit
-            print(f'   - Organizations: {Organization.query.count()}')
-            print(f'   - Users: {User.query.count()}')
-            print(f'   - Permissions: {Permission.query.count()}')
-            print(f'   - Subscription Tiers: {SubscriptionTier.query.count()}')
-            print(f'   - Units: {Unit.query.count()}')
+            from .models import (
+                Organization, User, Permission, SubscriptionTier, Unit, 
+                DeveloperPermission, DeveloperRole, Role, GlobalItem, 
+                IngredientCategory, ProductCategory, Addon
+            )
+
+            # System foundations
+            org_permissions = Permission.query.filter_by(is_active=True).count()
+            dev_permissions = DeveloperPermission.query.filter_by(is_active=True).count()
+            dev_roles = DeveloperRole.query.filter_by(is_active=True).count()
+            system_roles = Role.query.filter_by(is_system_role=True).count()
+            sub_tiers = SubscriptionTier.query.count()
+            addons = Addon.query.filter_by(is_active=True).count()
+            units = Unit.query.count()
+
+            # Organizations and users
+            organizations = Organization.query.count()
+            total_users = User.query.count()
+            dev_users = User.query.filter_by(user_type='developer').count()
+            customer_users = User.query.filter_by(user_type='customer').count()
+
+            # Data catalogs
+            ingredient_categories = IngredientCategory.query.count()
+            product_categories = ProductCategory.query.count()
+            ingredients_count = GlobalItem.query.filter_by(item_type='ingredient').count()
+            containers_count = GlobalItem.query.filter_by(item_type='container').count()
+            packaging_count = GlobalItem.query.filter_by(item_type='packaging').count()
+            consumables_count = GlobalItem.query.filter_by(item_type='consumable').count()
+            total_global_items = GlobalItem.query.count()
+
+            print(f'  System:     {org_permissions} org perms, {dev_permissions} dev perms, {dev_roles} dev roles')
+            print(f'  Platform:   {sub_tiers} tiers, {addons} addons, {units} units')
+            print(f'  Users:      {organizations} orgs, {total_users} users ({dev_users} dev, {customer_users} customer)')
+            print(f'  Catalogs:   {ingredient_categories} ingredient cats, {product_categories} product cats')
+            print(f'  Library:    {total_global_items} global items ({ingredients_count} ingredients, {containers_count} containers, {packaging_count} packaging, {consumables_count} consumables)')
+
+            print('\n✅ Production seeding complete!')
+            print('🔒 Login: admin/admin (CHANGE IMMEDIATELY)')
+            print('📝 Note: This command can be run multiple times safely')
+
         except Exception as e:
             print(f'   - Status check failed: {e}')
 
@@ -918,13 +938,52 @@ def seed_global_inventory_command():
     """Seed complete global inventory library (ingredients, containers, packaging, consumables)"""
     try:
         print("🔄 Seeding global inventory library...")
-        from scripts.seed_global_inventory_library import seed_global_inventory_library
+        from .seeders.seed_global_inventory_library import seed_global_inventory_library
         seed_global_inventory_library()
         print('✅ Global inventory library seeded successfully!')
     except Exception as e:
         print(f'❌ Global inventory seeding failed: {str(e)}')
         db.session.rollback()
         raise
+
+# New command to generate container attributes
+@click.command('generate-container-attributes')
+@with_appcontext
+def generate_container_attributes_command():
+    """Generates JSON files for container attributes (style, type, color, material)"""
+    try:
+        print("✨ Generating container attribute JSON files...")
+        from .seeders.container_attribute_generator import generate_attributes
+        generate_attributes()
+        print("✅ Container attribute JSON files generated successfully!")
+    except Exception as e:
+        print(f"❌ Error generating container attributes: {str(e)}")
+        db.session.rollback()
+        raise
+
+
+@click.command('dispatch-domain-events')
+@click.option('--poll-interval', default=5.0, show_default=True, help='Seconds to wait between polls when idle.')
+@click.option('--batch-size', default=100, show_default=True, type=int, help='Maximum events to process per batch.')
+@click.option('--once', is_flag=True, help='Process a single batch instead of running continuously.')
+@with_appcontext
+def dispatch_domain_events_command(poll_interval: float, batch_size: int, once: bool):
+    """Run the asynchronous dispatcher that delivers pending domain events."""
+    from app.services.domain_event_dispatcher import DomainEventDispatcher
+
+    dispatcher = DomainEventDispatcher(batch_size=batch_size)
+
+    if once:
+        metrics = dispatcher.dispatch_pending_events()
+        click.echo(
+            f"Processed {metrics['processed']} events ({metrics['succeeded']} succeeded, {metrics['failed']} failed)."
+        )
+    else:
+        click.echo(
+            f"Starting domain event dispatcher (batch_size={batch_size}, poll_interval={poll_interval}s)..."
+        )
+        dispatcher.run_forever(poll_interval=poll_interval)
+
 
 def register_commands(app):
     """Register CLI commands"""
@@ -951,8 +1010,10 @@ def register_commands(app):
     app.cli.add_command(seed_test_data_command)
     app.cli.add_command(seed_permission_categories_command)
     app.cli.add_command(seed_global_inventory_command)
+    app.cli.add_command(generate_container_attributes_command)
 
     # Production maintenance commands
     app.cli.add_command(update_permissions_command)
     app.cli.add_command(update_subscription_tiers_command)
     app.cli.add_command(activate_users)
+    app.cli.add_command(dispatch_domain_events_command)

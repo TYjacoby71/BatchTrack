@@ -3,6 +3,7 @@
 {% block title %}Billing Debug - Developer Tools{% endblock %}
 
 {% block content %}
+{% if config['DEBUG'] %}
 <div class="container-fluid">
     <div class="row">
         <div class="col-12">
@@ -100,4 +101,16 @@
         </div>
     </div>
 </div>
+{% else %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <div class="alert alert-info">
+                <i class="fas fa-info-circle me-2"></i>
+                Debug information is only available in development mode.
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
 {% endblock %}

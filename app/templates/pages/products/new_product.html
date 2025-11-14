@@ -4,18 +4,6 @@
 <form method="POST">
   <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
   <div class="mb-3">
-    <label for="name" class="form-label">Product Name</label>
-    <input type="text" name="name" class="form-control" required>
-  </div>
-  <div class="mb-3">
-    <label class="form-label">Units are now defined per SKU at creation.</label>
-      <option value="">Select unit...</option>
-      {% for unit in units %}
-        <option value="{{ unit.name }}">{{ unit.name }}</option>
-      {% endfor %}
-    </select>
-  </div>
-  <div class="mb-3">
     <label for="category_id" class="form-label">Product Category</label>
     <select name="category_id" id="category_id" class="form-select" required>
       <option value="">Select category...</option>
@@ -24,9 +12,88 @@
       {% endfor %}
     </select>
   </div>
+
+  <div class="mt-4">
+    <h5 class="fw-semibold">How to structure your product</h5>
+    <p class="text-muted mb-1">Keep each level focused so inventory, batches, and storefront listings stay organized:</p>
+    <ul class="text-muted small mb-3">
+      <li><strong>Product Name</strong>: the base item or recipe line (e.g., <em>Goat Milk Soap</em>, <em>Amber Jar Candle</em>).</li>
+      <li><strong>Variant</strong>: the primary differentiator such as scent, flavor, color, or formulation (e.g., <em>Lavender</em>, <em>Vanilla Bean</em>).</li>
+      <li><strong>SKU</strong>: the sellable size or configuration you create later (e.g., <em>4.5 oz Bar</em>, <em>8 oz Tin</em>).</li>
+    </ul>
+    <div id="product-guidance" class="alert alert-info d-none">
+      <h6 class="alert-heading"><i class="fas fa-lightbulb me-2"></i> Category Tips</h6>
+      <p id="guidance-text" class="mb-0"></p>
+      <hr class="my-2">
+      <p class="small mb-0">This structure syncs cleanly with storefronts like Shopify and Etsy.</p>
+    </div>
+  </div>
+
+  <div class="mb-3">
+    <label for="name" class="form-label">Product Name</label>
+    <input type="text" name="name" class="form-control" required>
+  </div>
+
   <div class="form-group mt-3 d-flex justify-content-between">
     <a href="{{ url_for('products.list_products') }}" class="btn btn-secondary">Cancel</a>
     <button type="submit" class="btn btn-success">Save Product</button>
   </div>
 </form>
+{% endblock %}
+
+{% block scripts %}
+  {{ super() }}
+  <script>
+    document.addEventListener('DOMContentLoaded', function() {
+      const categorySelect = document.getElementById('category_id');
+      const guidanceBox = document.getElementById('product-guidance');
+      const guidanceText = document.getElementById('guidance-text');
+
+      if (!categorySelect || !guidanceBox || !guidanceText) {
+        return;
+      }
+
+      const guidanceContent = {
+        'Soap': `Name the base recipe (e.g., <strong>Goat Milk Soap</strong>). Use variants for scents like <strong>Lavender</strong> or <strong>Eucalyptus</strong>, then SKU sizes such as <strong>4.5 oz Bar</strong>.`,
+        'Soaps': `Name the base recipe (e.g., <strong>Goat Milk Soap</strong>). Use variants for scents like <strong>Oatmeal & Honey</strong>, then SKU bar sizes.`,
+        'Candle': `Name the vessel or format (e.g., <strong>Amber Jar Candle</strong>). Variants carry fragrances such as <strong>Sea Salt & Orchid</strong>; SKUs capture jar size or wick style.`,
+        'Candles': `Name the vessel or format (e.g., <strong>Amber Jar Candle</strong>). Variants carry fragrances such as <strong>Oakmoss</strong>; SKUs capture jar size or wick style.`,
+        'Cosmetics': `Name the product line (e.g., <strong>Whipped Tallow Balm</strong>). Variants note scent or skin focus like <strong>Unscented</strong>; SKUs represent jar size.`,
+        'Baked Goods': `Name the core item (e.g., <strong>Sourdough Loaf</strong>). Variants capture flavors or add-ins such as <strong>Rosemary</strong>; SKUs represent loaf size or packaging.`,
+        'Tallow': `Name the base item (e.g., <strong>Grass-Fed Tallow Balm</strong>). Variants cover blend or essential oil; SKUs handle jar size or bundle.`,
+        'Default': `Keep the product name broad enough to group related variants. Use variants for the main differentiator and SKUs for size, pack, or bundle.`
+      };
+
+      function resolveGuidance(selectedName) {
+        if (!selectedName) {
+          return guidanceContent['Default'];
+        }
+
+        const normalized = selectedName.trim();
+        if (guidanceContent[normalized]) {
+          return guidanceContent[normalized];
+        }
+
+        const singular = normalized.replace(/s$/i, '');
+        return guidanceContent[singular] || guidanceContent['Default'];
+      }
+
+      function updateGuidance() {
+        const selectedOption = categorySelect.options[categorySelect.selectedIndex];
+        const content = resolveGuidance(selectedOption ? selectedOption.text : '');
+
+        if (!content) {
+          guidanceBox.classList.add('d-none');
+          guidanceText.innerHTML = '';
+          return;
+        }
+
+        guidanceText.innerHTML = content;
+        guidanceBox.classList.remove('d-none');
+      }
+
+      categorySelect.addEventListener('change', updateGuidance);
+      updateGuidance();
+    });
+  </script>
 {% endblock %}

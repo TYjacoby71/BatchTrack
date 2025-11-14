@@ -1,4 +1,4 @@
-from flask import Blueprint, request, jsonify, flash, redirect, url_for
+from flask import Blueprint, request, jsonify
 from flask_login import current_user, login_required
 from ...models import db, InventoryItem
 from ...models.product import ProductSKU
@@ -144,7 +144,7 @@ def convert_reservation_to_sale(reservation_id):
 @login_required
 def expire_old_reservations():
     """Expire reservations that have passed their expiration date"""
-    from datetime import datetime
+    from datetime import datetime, timezone
     # Audit entries are now handled by FIFO operations automatically
 
     try:
@@ -152,7 +152,7 @@ def expire_old_reservations():
         expired_reservations = Reservation.query.filter(
             Reservation.status == 'active',
             Reservation.expires_at.isnot(None),
-            Reservation.expires_at < datetime.utcnow(),
+            Reservation.expires_at < datetime.now(timezone.utc),
             Reservation.organization_id == current_user.organization_id
         ).all()
 

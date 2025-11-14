@@ -1,14 +1,488 @@
+
 {% extends 'layout.html' %}
+{% block title %}Inventory Analytics (Global){% endblock %}
 {% block content %}
-<h2>Inventory Analytics (Global)</h2>
-<p>This is a stub for global inventory analytics. Planned widgets:</p>
-<ul>
-  <li>Top global items by usage and cost</li>
-  <li>Spoilage/expiry trends across orgs</li>
-  <li>Cost trends by region</li>
-  <li>Outlier detection for density/capacity</li>
-  <li>Data quality dashboard (missing density, capacity, shelf-life)</li>
-  <li>Global search and filter</li>
-  <li>Export CSV</li>
-</ul>
+<div class="container-fluid py-4">
+  <div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+      <h2 class="mb-1"><i class="fas fa-chart-line text-primary"></i> Inventory Analytics (Global)</h2>
+      <p class="text-muted mb-0">Cross-organization inventory insights and performance metrics</p>
+    </div>
+    <div>
+      <a href="{{ url_for('developer.analytics_catalog') }}" class="btn btn-outline-secondary me-2">
+        <i class="fas fa-database"></i> Analytics Catalog
+      </a>
+      <button class="btn btn-primary" onclick="refreshAnalytics()">
+        <i class="fas fa-sync-alt"></i> Refresh Data
+      </button>
+    </div>
+  </div>
+
+  <!-- Key Metrics Cards -->
+  <div class="row mb-4" id="metricsCards">
+    <div class="col-md-3">
+      <div class="card border-primary">
+        <div class="card-body text-center">
+          <i class="fas fa-boxes fa-2x text-primary mb-2"></i>
+          <h3 class="mb-1" id="totalItems">-</h3>
+          <p class="text-muted mb-0">Global Items</p>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-3">
+      <div class="card border-success">
+        <div class="card-body text-center">
+          <i class="fas fa-link fa-2x text-success mb-2"></i>
+          <h3 class="mb-1" id="linkedItems">-</h3>
+          <p class="text-muted mb-0">Org Adoptions</p>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-3">
+      <div class="card border-warning">
+        <div class="card-body text-center">
+          <i class="fas fa-exclamation-triangle fa-2x text-warning mb-2"></i>
+          <h3 class="mb-1" id="spoilageEvents">-</h3>
+          <p class="text-muted mb-0">Spoilage Events (30d)</p>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-3">
+      <div class="card border-info">
+        <div class="card-body text-center">
+          <i class="fas fa-dollar-sign fa-2x text-info mb-2"></i>
+          <h3 class="mb-1" id="avgCostImpact">-</h3>
+          <p class="text-muted mb-0">Avg Cost/Unit</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Main Analytics Content -->
+  <div class="row">
+    <!-- Top Items by Usage -->
+    <div class="col-lg-6 mb-4">
+      <div class="card h-100">
+        <div class="card-header">
+          <h6 class="mb-0"><i class="fas fa-fire"></i> Top Items by Usage</h6>
+        </div>
+        <div class="card-body">
+          <div class="table-responsive">
+            <table class="table table-sm" id="topItemsTable">
+              <thead>
+                <tr>
+                  <th>Item</th>
+                  <th>Organizations</th>
+                  <th>Avg Cost</th>
+                  <th>Usage Trend</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td colspan="4" class="text-center text-muted">Loading...</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Spoilage Trends -->
+    <div class="col-lg-6 mb-4">
+      <div class="card h-100">
+        <div class="card-header">
+          <h6 class="mb-0"><i class="fas fa-chart-area"></i> Spoilage Analysis</h6>
+        </div>
+        <div class="card-body">
+          <div class="table-responsive">
+            <table class="table table-sm" id="spoilageTable">
+              <thead>
+                <tr>
+                  <th>Item</th>
+                  <th>Spoilage Rate</th>
+                  <th>Cost Impact</th>
+                  <th>Orgs Affected</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td colspan="4" class="text-center text-muted">Loading...</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="row">
+    <!-- Cost Distribution -->
+    <div class="col-lg-8 mb-4">
+      <div class="card h-100">
+        <div class="card-header">
+          <h6 class="mb-0"><i class="fas fa-chart-bar"></i> Cost Distribution Analysis</h6>
+        </div>
+        <div class="card-body">
+          <div class="mb-3">
+            <select class="form-select form-select-sm" id="itemSelector" onchange="loadCostDistribution()">
+              <option value="">Select an item to analyze...</option>
+            </select>
+          </div>
+          <div id="costDistributionChart">
+            <p class="text-muted text-center">Select an item to view cost distribution</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Data Quality Dashboard -->
+    <div class="col-lg-4 mb-4">
+      <div class="card h-100">
+        <div class="card-header">
+          <h6 class="mb-0"><i class="fas fa-shield-alt"></i> Data Quality</h6>
+        </div>
+        <div class="card-body">
+          <div class="mb-3">
+            <div class="d-flex justify-content-between">
+              <span>Density Coverage</span>
+              <span id="densityCoverage">-%</span>
+            </div>
+            <div class="progress mb-2">
+              <div class="progress-bar bg-primary" role="progressbar" id="densityProgress" style="width: 0%"></div>
+            </div>
+          </div>
+          <div class="mb-3">
+            <div class="d-flex justify-content-between">
+              <span>Capacity Coverage</span>
+              <span id="capacityCoverage">-%</span>
+            </div>
+            <div class="progress mb-2">
+              <div class="progress-bar bg-success" role="progressbar" id="capacityProgress" style="width: 0%"></div>
+            </div>
+          </div>
+          <div class="mb-3">
+            <div class="d-flex justify-content-between">
+              <span>Shelf Life Coverage</span>
+              <span id="shelfLifeCoverage">-%</span>
+            </div>
+            <div class="progress mb-2">
+              <div class="progress-bar bg-info" role="progressbar" id="shelfLifeProgress" style="width: 0%"></div>
+            </div>
+          </div>
+          <hr>
+          <div class="text-center">
+            <h4 id="qualityScore" class="text-primary">-%</h4>
+            <p class="text-muted mb-0">Overall Quality Score</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Recent Activity -->
+  <div class="row">
+    <div class="col-12">
+      <div class="card">
+        <div class="card-header">
+          <h6 class="mb-0"><i class="fas fa-history"></i> Recent Inventory Activity (All Organizations)</h6>
+        </div>
+        <div class="card-body">
+          <div class="table-responsive">
+            <table class="table table-sm" id="recentActivityTable">
+              <thead>
+                <tr>
+                  <th>Timestamp</th>
+                  <th>Organization</th>
+                  <th>Item</th>
+                  <th>Action</th>
+                  <th>Quantity</th>
+                  <th>Cost Impact</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td colspan="6" class="text-center text-muted">Loading...</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+let analyticsData = {};
+
+// Load analytics on page load
+document.addEventListener('DOMContentLoaded', function() {
+    loadAnalytics();
+});
+
+async function loadAnalytics() {
+    try {
+        // Load key metrics
+        await loadKeyMetrics();
+        // Load top items
+        await loadTopItems();
+        // Load spoilage data
+        await loadSpoilageAnalysis();
+        // Load data quality metrics
+        await loadDataQuality();
+        // Load recent activity
+        await loadRecentActivity();
+        // Populate item selector
+        await loadItemSelector();
+    } catch (error) {
+        console.error('Error loading analytics:', error);
+        showError('Failed to load analytics data');
+    }
+}
+
+async function loadKeyMetrics() {
+    try {
+        const response = await fetch('/api/developer/inventory-analytics/metrics');
+        if (response.ok) {
+            const data = await response.json();
+            document.getElementById('totalItems').textContent = data.total_items || 0;
+            document.getElementById('linkedItems').textContent = data.linked_adoptions || 0;
+            document.getElementById('spoilageEvents').textContent = data.spoilage_events_30d || 0;
+            document.getElementById('avgCostImpact').textContent = data.avg_cost_per_unit ? `$${data.avg_cost_per_unit.toFixed(2)}` : 'N/A';
+        }
+    } catch (error) {
+        console.error('Error loading key metrics:', error);
+    }
+}
+
+async function loadTopItems() {
+    try {
+        const response = await fetch('/api/developer/inventory-analytics/top-items');
+        if (response.ok) {
+            const data = await response.json();
+            const tbody = document.querySelector('#topItemsTable tbody');
+            tbody.innerHTML = '';
+            
+            if (data.items && data.items.length > 0) {
+                data.items.forEach(item => {
+                    const row = document.createElement('tr');
+                    row.innerHTML = `
+                        <td>${escapeHtml(item.name)}</td>
+                        <td>${item.org_count}</td>
+                        <td>$${item.avg_cost ? item.avg_cost.toFixed(2) : 'N/A'}</td>
+                        <td><span class="badge ${item.trend === 'up' ? 'bg-success' : item.trend === 'down' ? 'bg-danger' : 'bg-secondary'}">${item.trend || 'stable'}</span></td>
+                    `;
+                    tbody.appendChild(row);
+                });
+            } else {
+                tbody.innerHTML = '<tr><td colspan="4" class="text-center text-muted">No data available</td></tr>';
+            }
+        }
+    } catch (error) {
+        console.error('Error loading top items:', error);
+    }
+}
+
+async function loadSpoilageAnalysis() {
+    try {
+        const response = await fetch('/api/developer/inventory-analytics/spoilage');
+        if (response.ok) {
+            const data = await response.json();
+            const tbody = document.querySelector('#spoilageTable tbody');
+            tbody.innerHTML = '';
+            
+            if (data.items && data.items.length > 0) {
+                data.items.forEach(item => {
+                    const row = document.createElement('tr');
+                    row.innerHTML = `
+                        <td>${escapeHtml(item.name)}</td>
+                        <td>${item.spoilage_rate ? (item.spoilage_rate * 100).toFixed(1) + '%' : 'N/A'}</td>
+                        <td>$${item.cost_impact ? item.cost_impact.toFixed(2) : '0.00'}</td>
+                        <td>${item.orgs_affected || 0}</td>
+                    `;
+                    tbody.appendChild(row);
+                });
+            } else {
+                tbody.innerHTML = '<tr><td colspan="4" class="text-center text-muted">No spoilage data available</td></tr>';
+            }
+        }
+    } catch (error) {
+        console.error('Error loading spoilage analysis:', error);
+    }
+}
+
+async function loadDataQuality() {
+    try {
+        const response = await fetch('/api/developer/inventory-analytics/data-quality');
+        if (response.ok) {
+            const data = await response.json();
+            
+            // Update density coverage
+            const densityCoverage = Math.round(data.density_coverage || 0);
+            document.getElementById('densityCoverage').textContent = `${densityCoverage}%`;
+            document.getElementById('densityProgress').style.width = `${densityCoverage}%`;
+            
+            // Update capacity coverage
+            const capacityCoverage = Math.round(data.capacity_coverage || 0);
+            document.getElementById('capacityCoverage').textContent = `${capacityCoverage}%`;
+            document.getElementById('capacityProgress').style.width = `${capacityCoverage}%`;
+            
+            // Update shelf life coverage
+            const shelfLifeCoverage = Math.round(data.shelf_life_coverage || 0);
+            document.getElementById('shelfLifeCoverage').textContent = `${shelfLifeCoverage}%`;
+            document.getElementById('shelfLifeProgress').style.width = `${shelfLifeCoverage}%`;
+            
+            // Calculate overall quality score
+            const qualityScore = Math.round((densityCoverage + capacityCoverage + shelfLifeCoverage) / 3);
+            document.getElementById('qualityScore').textContent = `${qualityScore}%`;
+        }
+    } catch (error) {
+        console.error('Error loading data quality:', error);
+    }
+}
+
+async function loadRecentActivity() {
+    try {
+        const response = await fetch('/api/developer/inventory-analytics/recent-activity');
+        if (response.ok) {
+            const data = await response.json();
+            const tbody = document.querySelector('#recentActivityTable tbody');
+            tbody.innerHTML = '';
+            
+            if (data.activities && data.activities.length > 0) {
+                data.activities.forEach(activity => {
+                    const row = document.createElement('tr');
+                    row.innerHTML = `
+                        <td>${new Date(activity.timestamp).toLocaleString()}</td>
+                        <td>${escapeHtml(activity.organization_name)}</td>
+                        <td>${escapeHtml(activity.item_name)}</td>
+                        <td><span class="badge ${getActionBadgeClass(activity.action)}">${activity.action}</span></td>
+                        <td>${activity.quantity_change > 0 ? '+' : ''}${activity.quantity_change} ${activity.unit}</td>
+                        <td>${activity.cost_impact ? '$' + activity.cost_impact.toFixed(2) : 'N/A'}</td>
+                    `;
+                    tbody.appendChild(row);
+                });
+            } else {
+                tbody.innerHTML = '<tr><td colspan="6" class="text-center text-muted">No recent activity</td></tr>';
+            }
+        }
+    } catch (error) {
+        console.error('Error loading recent activity:', error);
+    }
+}
+
+async function loadItemSelector() {
+    try {
+        const response = await fetch('/api/developer/inventory-analytics/items-list');
+        if (response.ok) {
+            const data = await response.json();
+            const selector = document.getElementById('itemSelector');
+            selector.innerHTML = '<option value="">Select an item to analyze...</option>';
+            
+            if (data.items && data.items.length > 0) {
+                data.items.forEach(item => {
+                    const option = document.createElement('option');
+                    option.value = item.id;
+                    option.textContent = item.name;
+                    selector.appendChild(option);
+                });
+            }
+        }
+    } catch (error) {
+        console.error('Error loading item selector:', error);
+    }
+}
+
+async function loadCostDistribution() {
+    const itemId = document.getElementById('itemSelector').value;
+    if (!itemId) {
+        document.getElementById('costDistributionChart').innerHTML = '<p class="text-muted text-center">Select an item to view cost distribution</p>';
+        return;
+    }
+    
+    try {
+        const response = await fetch(`/api/developer/inventory-analytics/cost-distribution/${itemId}`);
+        if (response.ok) {
+            const data = await response.json();
+            renderCostDistribution(data);
+        }
+    } catch (error) {
+        console.error('Error loading cost distribution:', error);
+    }
+}
+
+function renderCostDistribution(data) {
+    const container = document.getElementById('costDistributionChart');
+    
+    if (!data.histogram || data.histogram.length === 0) {
+        container.innerHTML = '<p class="text-muted text-center">No cost data available for this item</p>';
+        return;
+    }
+    
+    // Simple text-based histogram
+    let html = '<div class="mb-3">';
+    html += `<p><strong>Cost Range:</strong> $${data.min?.toFixed(2) || 'N/A'} - $${data.max?.toFixed(2) || 'N/A'}</p>`;
+    html += `<p><strong>Average (excluding outliers):</strong> $${data.mean_ex_outliers?.toFixed(2) || 'N/A'}</p>`;
+    html += `<p><strong>Sample Size:</strong> ${data.count} organizations</p>`;
+    html += '</div>';
+    
+    html += '<div class="histogram">';
+    const maxCount = Math.max(...data.histogram.map(bin => bin.count));
+    
+    data.histogram.forEach(bin => {
+        const percentage = maxCount > 0 ? (bin.count / maxCount) * 100 : 0;
+        html += `
+            <div class="d-flex align-items-center mb-1">
+                <span class="me-2" style="width: 80px; font-size: 0.8em;">$${bin.bin_start.toFixed(2)}</span>
+                <div class="progress flex-grow-1 me-2" style="height: 20px;">
+                    <div class="progress-bar bg-info" style="width: ${percentage}%"></div>
+                </div>
+                <span style="width: 30px; font-size: 0.8em;">${bin.count}</span>
+            </div>
+        `;
+    });
+    html += '</div>';
+    
+    if (data.outliers_low_count > 0 || data.outliers_high_count > 0) {
+        html += `<p class="text-muted mt-2"><small>Outliers: ${data.outliers_low_count} low, ${data.outliers_high_count} high</small></p>`;
+    }
+    
+    container.innerHTML = html;
+}
+
+function refreshAnalytics() {
+    const button = event.target;
+    button.disabled = true;
+    button.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Refreshing...';
+    
+    loadAnalytics().finally(() => {
+        button.disabled = false;
+        button.innerHTML = '<i class="fas fa-sync-alt"></i> Refresh Data';
+    });
+}
+
+function getActionBadgeClass(action) {
+    switch (action.toLowerCase()) {
+        case 'restock': return 'bg-success';
+        case 'spoil': return 'bg-danger';
+        case 'use': return 'bg-primary';
+        case 'batch': return 'bg-info';
+        case 'trash': return 'bg-warning';
+        default: return 'bg-secondary';
+    }
+}
+
+function escapeHtml(text) {
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+}
+
+function showError(message) {
+    // You could implement a toast notification here
+    console.error(message);
+}
+</script>
 {% endblock %}

@@ -5,11 +5,9 @@ from ...extensions import db
 from ...utils.timezone_utils import TimezoneUtils
 from ...models import db, Unit, User, InventoryItem, UserPreferences, Organization
 from ...utils.permissions import has_permission, require_permission
+from ...utils.json_store import read_json_file, write_json_file
 from werkzeug.security import generate_password_hash, check_password_hash
-from datetime import datetime
-import json
-
-from . import settings_bp
+from datetime import datetime, timezone
 
 @settings_bp.route('/')
 @settings_bp.route('')
@@ -54,11 +52,7 @@ def index():
     is_org_owner = current_user.organization and current_user.organization.owner and current_user.organization.owner.id == current_user.id
 
     # Get system settings from file or use defaults
-    try:
-        with open("settings.json", "r") as f:
-            system_settings = json.load(f)
-    except FileNotFoundError:
-        system_settings = {}
+    system_settings = read_json_file("settings.json", default={}) or {}
 
     # Ensure all required sections exist with defaults
     system_defaults = {
@@ -115,7 +109,9 @@ def index():
                     system_settings[section][key] = value
 
     # Get available timezones grouped by region
-    grouped_timezones = TimezoneUtils.get_grouped_timezones()
+    # Pass current user's timezone to highlight it
+    detected_tz = current_user.timezone if current_user.is_authenticated else None
+    grouped_timezones = TimezoneUtils.get_grouped_timezones(detected_tz)
 
     from ...services.billing_service import BillingService
     pricing_data = BillingService.get_comprehensive_pricing_data()
@@ -186,7 +182,7 @@ def update_user_preferences():
             if hasattr(user_prefs, key):
                 setattr(user_prefs, key, value)
 
-        user_prefs.updated_at = datetime.utcnow()
+        user_prefs.updated_at = datetime.now(timezone.utc)
         db.session.commit()
 
         flash('All preferences saved successfully', 'success')
@@ -204,18 +200,13 @@ def update_system_settings():
         data = request.get_json()
 
         # Load existing settings
-        try:
-            with open("settings.json", "r") as f:
-                settings_data = json.load(f)
-        except FileNotFoundError:
-            settings_data = {}
+        settings_data = read_json_file("settings.json", default={}) or {}
 
         # Update the settings
         settings_data.update(data)
 
         # Save updated settings
-        with open("settings.json", "w") as f:
-            json.dump(settings_data, f, indent=2)
+        write_json_file("settings.json", settings_data)
 
         return jsonify({'success': True, 'message': 'System settings updated successfully'})
     except Exception as e:

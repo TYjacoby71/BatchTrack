@@ -37,11 +37,11 @@ def get_engine():
     across environments (SQLite locally, Postgres on Render).
     """
     try:
-        # Flask-SQLAlchemy < 3
-        return current_app.extensions['migrate'].db.get_engine()
-    except (TypeError, AttributeError):
         # Flask-SQLAlchemy >= 3
         return current_app.extensions['migrate'].db.engine
+    except (TypeError, AttributeError):
+        # Flask-SQLAlchemy < 3 (fallback)
+        return current_app.extensions['migrate'].db.get_engine()
 
 
 def get_engine_url():

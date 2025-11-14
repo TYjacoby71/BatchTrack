@@ -57,19 +57,32 @@ python run.py
 
 ## 📚 Documentation
 
-For detailed development information, see:
+Start with the curated system library, then drill into checklists and change history as needed.
 
-- **[Architecture Guide](docs/ARCHITECTURE.md)** - Service relationships and data flow
-- **[Services Documentation](docs/SERVICES.md)** - Detailed service specifications
-- **[User & Permission System](docs/USERS_AND_PERMISSIONS.md)** - Complete user management guide
-- **[Database Models](docs/DATABASE_MODELS.md)** - Model relationships and migrations
-- **[Development Guide](docs/DEVELOPMENT_GUIDE.md)** - How to add features safely
-- **[API Reference](docs/API_REFERENCE.md)** - Endpoint documentation
- - **[Global Item Library](docs/GLOBAL_ITEM_LIBRARY.md)** - Library & Shelf model and global-locked rules
- - **[Wall of Drawers Protocol](docs/WALL_OF_DRAWERS_PROTOCOL.md)** - In-context error resolution pattern
- - **[Deployment & Migrations](deploy_migration_guide.md)** - Runbook for production changes
- - **[Global Item Library](docs/GLOBAL_ITEM_LIBRARY.md)** - Library & Shelf model and global-locked rules
- - **[Wall of Drawers Protocol](docs/WALL_OF_DRAWERS_PROTOCOL.md)** - In-context error resolution pattern
+### System Documentation (`docs/system/`)
+- **[System Documentation Index](docs/system/SYSTEM_INDEX.md)** — master table of contents for every platform area
+
+| Topic | Key Docs |
+| --- | --- |
+| Architecture & service authority | [ARCHITECTURE.md](docs/system/ARCHITECTURE.md), [SERVICES.md](docs/system/SERVICES.md), [DATABASE_MODELS.md](docs/system/DATABASE_MODELS.md) |
+| Production planning & manufacturing | [PLAN_SNAPSHOT.md](docs/system/PLAN_SNAPSHOT.md), [GLOBAL_ITEM_LIBRARY.md](docs/system/GLOBAL_ITEM_LIBRARY.md), [CONTAINERS_CURATION.md](docs/system/CONTAINERS_CURATION.md) |
+| Developer workflow & operations | [DEVELOPMENT_GUIDE.md](docs/system/DEVELOPMENT_GUIDE.md), [deploy_migration_guide.md](docs/system/deploy_migration_guide.md), [WALL_OF_DRAWERS_PROTOCOL.md](docs/system/WALL_OF_DRAWERS_PROTOCOL.md) |
+| APIs & external interfaces | [API_REFERENCE.md](docs/system/API_REFERENCE.md), [PUBLIC_TOOLS.md](docs/system/PUBLIC_TOOLS.md), [EXPORTS.md](docs/system/EXPORTS.md) |
+| Product programs & analytics | [FREE_TIER.md](docs/system/FREE_TIER.md), [TRACKING_PLAN.md](docs/system/TRACKING_PLAN.md) |
+| Platform status & lifecycle | [CURRENTLY_STUBBED.md](docs/system/CURRENTLY_STUBBED.md), [DEPRECATED_FEATURES.md](docs/system/DEPRECATED_FEATURES.md) |
+| Time & permissions | [TIMEZONE_SYSTEM.md](docs/system/TIMEZONE_SYSTEM.md), [STORAGE_VS_DISPLAY.md](docs/system/STORAGE_VS_DISPLAY.md), [USERS_AND_PERMISSIONS.md](docs/system/USERS_AND_PERMISSIONS.md) |
+
+### Operational Checklists (`docs/todo/`)
+- Launch runbooks, QA plans, and urgent fix queues — see [docs/todo/](docs/todo/) for the latest actionable workstreams
+
+### Change History (`docs/changelog/`)
+- **[Change Log Index](docs/changelog/CHANGELOG_INDEX.md)** — full record of shipped changes with links to detailed entries
+
+### Refactor Initiatives (`docs/refactor/`)
+- Progress trackers and technical debt initiatives, starting with [00_repo_map.md](docs/refactor/00_repo_map.md)
+
+### Marketing
+- **[Marketing Workspace](marketing/README.md)** — Overview of site content, structure, and tooling
 
 ## 🔒 Development Guardrails
 
@@ -93,12 +106,10 @@ python scripts/dev_test_runner.py
 
 ## 🐛 Current Issues
 
-See [docs/FIX_LIST.md](docs/FIX_LIST.md) for known issues and [docs/QA_CHECKLIST.md](docs/QA_CHECKLIST.md) for testing requirements.
+See [docs/todo/FIX_IMMEDIATE.md](docs/todo/FIX_IMMEDIATE.md) for the active fix list and [docs/todo/CRITICAL_PRELAUNCH.md](docs/todo/CRITICAL_PRELAUNCH.md) for launch-blocking tasks and QA gate checks.
 
 ## 🔮 Future Features
 
-See [docs/FUTURE_FEATURES.md](docs/FUTURE_FEATURES.md) for planned enhancements.
+See [docs/FUTURE_ROADMAP.md](docs/FUTURE_ROADMAP.md) for planned enhancements.
 
 ---
-
-**⚠️ Important:** This README provides overview only. For development work, always reference the detailed documentation in `/docs` to maintain system integrity.

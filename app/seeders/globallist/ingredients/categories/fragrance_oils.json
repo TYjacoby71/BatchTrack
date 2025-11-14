@@ -2,8 +2,84 @@
   "category_name": "Fragrance Oils",
   "default_density": 0.87,
   "description": "For synthetic fragrance oils and blends.",
-  "show_flash_point": true,
-  "show_shelf_life_months": true,
-  "ifra_category": "cat_4", 
-  "items": []
+  "ifra_category": "cat_4",
+  "items": [
+    {
+      "name": "Warm Vanilla Sugar Fragrance Oil",
+      "default_unit": "milliliter",
+      "flash_point_c": 82,
+      "recommended_fragrance_load_pct": "6-10% in candles",
+      "recommended_usage_rate": "3-5% in soaps and lotions",
+      "recommended_shelf_life_days": 730,
+      "inci_name": "Fragrance",
+      "certifications": [
+        "IFRA Certificate Included"
+      ],
+      "density": 0.95,
+      "aliases": [
+        "vanilla sugar fragrance"
+      ],
+      "is_active_ingredient": false
+    },
+    {
+      "name": "Ocean Breeze Fragrance Oil",
+      "default_unit": "milliliter",
+      "flash_point_c": 71,
+      "recommended_fragrance_load_pct": "6-9% in candles",
+      "recommended_usage_rate": "3-4% in soaps and bath products",
+      "recommended_shelf_life_days": 730,
+      "inci_name": "Fragrance",
+      "certifications": [
+        "IFRA Certificate Included"
+      ],
+      "density": 0.89,
+      "aliases": [
+        "sea spray fragrance"
+      ],
+      "is_active_ingredient": false
+    },
+    {
+      "name": "Bamboo & Coconut Fragrance Oil",
+      "default_unit": "milliliter",
+      "flash_point_c": 79,
+      "recommended_fragrance_load_pct": "7-10% in candles",
+      "recommended_usage_rate": "2-4% in soaps and lotions",
+      "recommended_shelf_life_days": 730,
+      "inci_name": "Fragrance",
+      "certifications": [
+        "IFRA Certificate Included"
+      ],
+      "density": 0.91,
+      "aliases": [
+        "bamboo coconut scent"
+      ],
+      "is_active_ingredient": false
+    },
+    {
+      "name": "Citrus Herb Fragrance Oil",
+      "default_unit": "milliliter",
+      "flash_point_c": 67,
+      "recommended_fragrance_load_pct": "6-8% in candles",
+      "recommended_usage_rate": "2-3% in soaps and lotions",
+      "recommended_shelf_life_days": 540,
+      "inci_name": "Fragrance",
+      "certifications": [
+        "IFRA Certificate Included"
+      ],
+      "density": 0.87,
+      "aliases": [
+        "citrus thyme fragrance"
+      ],
+      "is_active_ingredient": false
+    }
+  ],
+  "attributes": [
+    "flash_point_c",
+    "recommended_fragrance_load_pct",
+    "recommended_usage_rate",
+    "recommended_shelf_life_days",
+    "inci_name",
+    "certifications",
+    "is_active_ingredient"
+  ]
 }

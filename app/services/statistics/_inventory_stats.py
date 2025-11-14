@@ -8,7 +8,7 @@ freshness analysis, and cost impact calculations.
 
 import logging
 from typing import Dict, Any, Optional
-from datetime import datetime, date
+from datetime import date
 from flask_login import current_user
 
 from ...extensions import db
@@ -145,7 +145,7 @@ class InventoryStatisticsService:
         try:
             from datetime import timedelta
             
-            since_date = datetime.now() - timedelta(days=days)
+            since_date = TimezoneUtils.utc_now() - timedelta(days=days)
             
             spoilage_logs = UnifiedInventoryHistory.query.filter(
                 UnifiedInventoryHistory.organization_id == organization_id,

@@ -1,222 +1,120 @@
 import pytest
-from unittest.mock import patch, MagicMock
-from app.services.batch_integration_service import BatchIntegrationService
-from app.services.reservation_service import ReservationService
-from app.services.pos_integration import POSIntegrationService
+from unittest.mock import patch
+from uuid import uuid4
+
+from flask_login import login_user
+
+from app.models import (
+    InventoryItem,
+    Recipe,
+    RecipeIngredient,
+    InventoryHistory,
+)
+from app.services.batch_service.batch_operations import BatchOperationsService
+from app.blueprints.expiration.services import ExpirationService
 
 
-class TestInventoryCanonicalService:
-    """Test that all inventory operations use the canonical inventory adjustment service"""
+@pytest.mark.usefixtures('app', 'db_session')
+def test_batch_start_routes_all_deductions_through_canonical_service(app, db_session, test_user):
+    ingredient = InventoryItem(
+        name=f"Canon Ingredient {uuid4().hex}",
+        type='ingredient',
+        unit='g',
+        quantity=500,
+        organization_id=test_user.organization_id,
+    )
+    db_session.add(ingredient)
+    db_session.flush()
 
-    def test_batch_integration_uses_canonical_service(self, app):
-        """Test that batch operations use canonical inventory adjustment service"""
-        with app.app_context():
-            # Test that the BatchIntegrationService can be imported and instantiated
-            service = BatchIntegrationService()
-            assert service is not None
+    recipe = Recipe(
+        name=f"Batch Recipe {uuid4().hex}",
+        predicted_yield=100,
+        predicted_yield_unit='g',
+        organization_id=test_user.organization_id,
+        created_by=test_user.id,
+    )
+    db_session.add(recipe)
+    db_session.flush()
 
-            # Check that the service has expected methods
-            expected_methods = ['process_ingredient_deduction', 'process_container_allocation']
-            for method_name in expected_methods:
-                if hasattr(service, method_name):
-                    method = getattr(service, method_name)
-                    assert callable(method), f"{method_name} should be callable"
+    assoc = RecipeIngredient(
+        recipe_id=recipe.id,
+        inventory_item_id=ingredient.id,
+        quantity=100,
+        unit='g',
+    )
+    db_session.add(assoc)
+    db_session.commit()
 
-    def test_reservation_service_uses_canonical_service(self, app):
-        """Test that reservation operations use canonical service"""
-        with app.app_context():
-            # Verify ReservationService is structured to use canonical patterns
-            service = ReservationService()
-            assert service is not None
+    plan_snapshot = {
+        'recipe_id': recipe.id,
+        'scale': 1.0,
+        'batch_type': 'ingredient',
+        'notes': '',
+        'containers': [],
+    }
 
-            # Check for expected methods
-            expected_methods = ['create_reservation', 'release_reservation', 'confirm_sale']
-            for method_name in expected_methods:
-                if hasattr(service, method_name):
-                    method = getattr(service, method_name)
-                    assert callable(method), f"{method_name} should be callable"
+    with app.test_request_context('/'):
+        login_user(test_user)
 
-    def test_pos_integration_uses_canonical_service(self, app):
-        """Test that POS integration uses canonical service"""
-        with app.app_context():
-            with patch('app.services.pos_integration.process_inventory_adjustment') as mock_process:
-                mock_process.return_value = (True, "Success")
+        with patch('app.services.batch_service.batch_operations.process_inventory_adjustment') as mock_adjust, \
+             patch.object(BatchOperationsService, '_process_batch_consumables', return_value=[]), \
+             patch('app.services.batch_service.batch_operations.ConversionEngine.convert_units',
+                   side_effect=lambda qty, from_unit, to_unit, **_: {'converted_value': qty}):
 
-                # Test that POS operations would use canonical service
-                # The test verifies the service structure and import capability
-                service = POSIntegrationService()
-                assert service is not None
+            mock_adjust.return_value = (True, None)
 
-                # Check for expected methods
-                expected_methods = ['reserve_inventory', 'confirm_sale', 'confirm_return']
-                for method_name in expected_methods:
-                    if hasattr(service, method_name):
-                        method = getattr(service, method_name)
-                        assert callable(method), f"{method_name} should be callable"
+            batch, errors = BatchOperationsService.start_batch(plan_snapshot)
 
-    def test_production_planning_service_integration(self, app):
-        """Test that production planning service integrates properly"""
-        with app.app_context():
-            from app.services.production_planning import plan_production_comprehensive
+            assert errors == [], errors
+            assert batch is not None
+            assert mock_adjust.called
 
-            # Test that the main planning function exists and is callable
-            assert callable(plan_production_comprehensive)
-
-            # Test with minimal parameters to verify basic structure
-            try:
-                # This should handle gracefully even with invalid recipe_id
-                result = plan_production_comprehensive(recipe_id=999999, scale=1.0)
-                assert isinstance(result, dict)
-                assert 'success' in result
-            except Exception as e:
-                # If it fails, it should fail gracefully with proper error handling
-                assert "Recipe" in str(e) or "not found" in str(e)
-
-    def test_stock_check_service_integration(self, app):
-        """Test that stock check service integrates with the new systems"""
-        with app.app_context():
-            from app.services.stock_check import UniversalStockCheckService
-
-            # Test that the service can be imported and has expected structure
-            service = UniversalStockCheckService()
-            assert service is not None
-
-            # Check for expected methods
-            expected_methods = ['check_recipe_availability', 'check_ingredient_availability']
-            for method_name in expected_methods:
-                if hasattr(service, method_name):
-                    method = getattr(service, method_name)
-                    assert callable(method), f"{method_name} should be callable"
-
-    def test_inventory_adjustment_canonical_interface(self, app):
-        """Test that the canonical inventory adjustment service has the expected interface"""
-        with app.app_context():
-            from app.services.inventory_adjustment import process_inventory_adjustment
-
-            # Test that the canonical function exists and is callable
-            assert callable(process_inventory_adjustment)
-
-            # Test that it handles required parameters gracefully
-            try:
-                # This should handle gracefully even with minimal parameters
-                result = process_inventory_adjustment(
-                    item_id=999999, 
-                    quantity=1.0, 
-                    change_type='test'
-                )
-                # Should return a boolean indicating success/failure
-                assert isinstance(result, bool)
-            except Exception as e:
-                # If it fails, it should fail gracefully with proper error handling
-                assert any(keyword in str(e).lower() for keyword in ['item', 'not found', 'invalid'])
+            calls = [c.kwargs for c in mock_adjust.call_args_list]
+            ingredient_calls = [c for c in calls if c.get('item_id') == ingredient.id]
+            assert ingredient_calls, "Ingredient deduction must hit canonical service"
+            assert ingredient_calls[0]['change_type'] == 'batch'
 
 
-class TestBatchServiceCanonicalIntegration:
-    """Test that batch service operations use canonical patterns"""
+@pytest.mark.usefixtures('app', 'db_session')
+def test_expiration_service_uses_canonical_adjustment(app, db_session, test_user):
+    item = InventoryItem(
+        name=f"Perishable {uuid4().hex}",
+        type='ingredient',
+        unit='ml',
+        quantity=50,
+        organization_id=test_user.organization_id,
+    )
+    db_session.add(item)
+    db_session.flush()
 
-    def test_batch_service_uses_canonical_adjustments(self, app):
-        """Test that batch operations use the canonical inventory adjustment service"""
-        with app.app_context():
-            from app.services.batch_service import BatchService
+    history = InventoryHistory(
+        inventory_item_id=item.id,
+        change_type='restock',
+        quantity_change=50,
+        remaining_quantity=50,
+        unit='ml',
+    )
+    db_session.add(history)
+    db_session.commit()
 
-            # Test that the service can be imported
-            if hasattr(BatchService, 'create_batch'):
-                # Test that the method exists and is callable
-                method = getattr(BatchService, 'create_batch')
-                assert callable(method), "create_batch should be callable"
-            else:
-                # If the method doesn't exist, test passes as we're verifying structure
-                assert True, "BatchService.create_batch method not implemented yet"
+    with app.test_request_context('/'):
+        login_user(test_user)
 
-    def test_production_planning_batch_handoff(self, app):
-        """Test that production planning properly hands off to batch creation"""
-        with app.app_context():
-            from app.services.production_planning._batch_preparation import prepare_batch_data
+        with patch('app.blueprints.expiration.services.process_inventory_adjustment') as mock_adjust:
+            mock_adjust.return_value = True
 
-            # Test that batch preparation function exists
-            assert callable(prepare_batch_data)
-
-            # Test with mock production plan
-            from app.services.production_planning.types import ProductionPlan, ProductionRequest, CostBreakdown
-
-            # Create a minimal mock production plan with cost breakdown
-            request = ProductionRequest(recipe_id=1, scale=1.0)
-            cost_breakdown = CostBreakdown(yield_amount=1, yield_unit='count')
-            plan = ProductionPlan(
-                request=request,
-                feasible=True,
-                ingredient_requirements=[],
-                projected_yield={'amount': 1, 'unit': 'count'},
-                cost_breakdown=cost_breakdown
+            success, message = ExpirationService.mark_as_expired(
+                kind='fifo',
+                entry_id=history.id,
+                quantity=10,
+                notes='Spoiled test stock',
             )
 
-            try:
-                result = prepare_batch_data(plan)
-                assert isinstance(result, dict)
-                assert 'recipe_id' in result
-                assert 'scale' in result
-            except Exception as e:
-                # Should handle gracefully
-                assert "feasible" in str(e) or "production plan" in str(e)
+            assert success is True
+            assert 'Successfully marked' in message
 
-
-class TestContainerManagementIntegration:
-    """Test that container management integrates with the new systems"""
-
-    def test_container_analysis_integration(self, app):
-        """Test that container analysis works with production planning"""
-        with app.app_context():
-            from app.services.production_planning._container_management import analyze_container_options
-
-            # Test that the function exists and is callable
-            assert callable(analyze_container_options)
-
-            # Test with minimal parameters
-            try:
-                strategy, options = analyze_container_options(
-                    recipe=None, 
-                    scale=1.0, 
-                    preferred_container_id=None, 
-                    organization_id=1
-                )
-                # Should return tuple of strategy and options
-                assert isinstance(options, list)
-            except Exception as e:
-                # Should handle gracefully with null recipe
-                assert "recipe" in str(e).lower() or "not found" in str(e).lower()
-
-
-def test_service_import_compatibility(app):
-    """Test that all critical services can be imported without errors"""
-    with app.app_context():
-        # Test critical service imports
-        critical_imports = [
-            'app.services.inventory_adjustment',
-            'app.services.production_planning',
-            'app.services.stock_check',
-            'app.services.pos_integration',
-            'app.services.reservation_service',
-            'app.services.batch_integration_service'
-        ]
-
-        for import_path in critical_imports:
-            try:
-                __import__(import_path)
-            except ImportError as e:
-                pytest.fail(f"Failed to import {import_path}: {e}")
-
-
-def test_canonical_service_consistency(app):
-    """Test that canonical services maintain consistent interfaces"""
-    with app.app_context():
-        # Test that the main canonical function exists
-        from app.services.inventory_adjustment import process_inventory_adjustment
-
-        # Test function signature compatibility
-        import inspect
-        sig = inspect.signature(process_inventory_adjustment)
-
-        # Should have required parameters
-        required_params = ['item_id', 'quantity', 'change_type']
-        for param in required_params:
-            assert param in sig.parameters, f"Missing required parameter: {param}"
+            mock_adjust.assert_called_once()
+            call_kwargs = mock_adjust.call_args.kwargs
+            assert call_kwargs['item_id'] == item.id
+            assert call_kwargs['change_type'] == 'spoil'
+            assert call_kwargs['quantity'] == -10

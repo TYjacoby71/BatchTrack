@@ -2,6 +2,7 @@ from flask import Blueprint, render_template, request, jsonify, redirect, url_fo
 from app.services.unit_conversion.unit_conversion import ConversionEngine
 from app.models import GlobalItem
 from app.models import FeatureFlag
+from app.utils.json_store import read_json_file
 
 # Public Tools blueprint
 # Mounted at /tools via blueprints_registry
@@ -16,17 +17,9 @@ def _is_enabled(key: str, default: bool = True) -> bool:
             return bool(flag.enabled)
         
         # Fallback to settings.json
-        from flask import current_app
-        import json
-        import os
-        
-        try:
-            with open('settings.json', 'r') as f:
-                settings = json.load(f)
-                feature_flags = settings.get('feature_flags', {})
-                return feature_flags.get(key, default)
-        except Exception:
-            return default
+        settings = read_json_file('settings.json', default={}) or {}
+        feature_flags = settings.get('feature_flags', {})
+        return feature_flags.get(key, default)
     except Exception:
         return default
 
@@ -123,7 +116,7 @@ def tools_draft():
         data['containers'] = _norm_lines(data.get('containers'), 'container')
     # Merge to preserve any prior progress and keep across redirects
     try:
-        from datetime import datetime
+        from datetime import datetime, timezone
         existing = session.get('tool_draft', {})
         if not isinstance(existing, dict):
             existing = {}
@@ -135,8 +128,8 @@ def tools_draft():
         if not isinstance(meta, dict):
             meta = {}
         if not meta.get('created_at'):
-            meta['created_at'] = datetime.utcnow().isoformat()
-        meta['last_updated_at'] = datetime.utcnow().isoformat()
+            meta['created_at'] = datetime.now(timezone.utc).isoformat()
+        meta['last_updated_at'] = datetime.now(timezone.utc).isoformat()
         meta['source'] = 'public_tools'
         session['tool_draft_meta'] = meta
 

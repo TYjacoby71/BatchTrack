@@ -95,10 +95,12 @@ class UserStats(ScopedModelMixin, db.Model):
 
     def get_monthly_stats(self, year=None, month=None):
         """Get statistics for a specific month"""
-        if not year:
-            year = datetime.now().year
-        if not month:
-            month = datetime.now().month
+        if not year or not month:
+            now = TimezoneUtils.utc_now()
+            if not year:
+                year = now.year
+            if not month:
+                month = now.month
 
         from .models import Batch
 
@@ -214,10 +216,12 @@ class OrganizationStats(db.Model):
 
     def get_monthly_stats(self, year=None, month=None):
         """Get statistics for a specific month"""
-        if not year:
-            year = datetime.now().year
-        if not month:
-            month = datetime.now().month
+        if not year or not month:
+            now = TimezoneUtils.utc_now()
+            if not year:
+                year = now.year
+            if not month:
+                month = now.month
 
         from .models import Batch
 
@@ -276,10 +280,12 @@ class Leaderboard:
     @staticmethod
     def get_monthly_batch_leaders(year=None, month=None, limit=10):
         """Get monthly batch leaders across all organizations"""
-        if not year:
-            year = datetime.now().year
-        if not month:
-            month = datetime.now().month
+        if not year or not month:
+            now = TimezoneUtils.utc_now()
+            if not year:
+                year = now.year
+            if not month:
+                month = now.month
 
         from .models import Batch, User, Organization
 
@@ -359,7 +365,8 @@ class BatchStats(ScopedModelMixin, db.Model):
     def create_from_planned_batch(cls, batch_id, planned_efficiency, planned_yield, planned_costs):
         """Create batch stats from production planning data"""
         from ..models import Batch
-        batch = Batch.query.get(batch_id)
+        from ..extensions import db
+        batch = db.session.get(Batch, batch_id)
         if not batch:
             return None
 

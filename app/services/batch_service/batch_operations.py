@@ -1,13 +1,13 @@
 import logging
-from datetime import datetime
+from datetime import date, datetime, timezone
 from sqlalchemy import extract
 from flask_login import current_user
 
-from app.models import db, Batch, Recipe, InventoryItem, BatchContainer, BatchIngredient
+from app.models import db, Batch, Recipe, InventoryItem, BatchContainer, BatchIngredient, InventoryLot
 from app.models.batch import BatchConsumable
 from app import models
 from app.models import ExtraBatchIngredient, ExtraBatchContainer, Product, ProductVariant
-from app.services.unit_conversion import ConversionEngine
+from app.services.unit_conversion.unit_conversion import ConversionEngine
 from app.services.inventory_adjustment import process_inventory_adjustment
 from app.utils.timezone_utils import TimezoneUtils
 from app.utils.code_generator import generate_batch_label_code
@@ -447,7 +447,7 @@ class BatchOperationsService(BaseService):
 
             # Restore containers
             for batch_container in batch_containers:
-                container = batch_container.container
+                container = batch_container.inventory_item
                 if container:
                     process_inventory_adjustment(
                         item_id=container.id,
@@ -458,11 +458,11 @@ class BatchOperationsService(BaseService):
                         created_by=current_user.id,
                         batch_id=batch.id
                     )
-                    restoration_summary.append(f"{batch_container.quantity_used} {container.unit} of {container.name}")
+                    restoration_summary.append(f"{batch_container.quantity_used} {container.unit} of {container.container_display_name}")
 
             # Restore extra containers
             for extra_container in extra_containers:
-                container = extra_container.container
+                container = extra_container.inventory_item
                 if container:
                     process_inventory_adjustment(
                         item_id=container.id,
@@ -473,7 +473,7 @@ class BatchOperationsService(BaseService):
                         created_by=current_user.id,
                         batch_id=batch.id
                     )
-                    restoration_summary.append(f"{extra_container.quantity_used} {container.unit} of {container.name}")
+                    restoration_summary.append(f"{extra_container.quantity_used} {container.unit} of {container.container_display_name}")
 
             # Restore consumables
             for cons in batch_consumables:
@@ -507,7 +507,7 @@ class BatchOperationsService(BaseService):
 
             # Update batch status
             batch.status = 'cancelled'
-            batch.cancelled_at = datetime.utcnow()
+            batch.cancelled_at = datetime.now(timezone.utc)
             db.session.commit()
 
             # Emit domain event (best-effort)

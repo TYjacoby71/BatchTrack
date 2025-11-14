@@ -1,4 +1,6 @@
-from flask import Blueprint, request, jsonify, render_template, redirect, flash, session, url_for
+from datetime import datetime, timezone
+
+from flask import Blueprint, url_for, request, jsonify, render_template, redirect, flash, session, url_for
 from flask_login import login_required, current_user
 from app.models import db, InventoryItem, UnifiedInventoryHistory, Unit, IngredientCategory, User
 from app.utils.permissions import permission_required, role_required
@@ -15,6 +17,7 @@ from sqlalchemy import and_, or_, func
 from sqlalchemy.orm import joinedload
 from app.models.inventory_lot import InventoryLot
 from app.services.density_assignment_service import DensityAssignmentService # Added for density assignment
+from datetime import datetime, timezone # Fix missing timezone import
 
 # Import the blueprint from __init__.py instead of creating a new one
 from . import inventory_bp
@@ -104,7 +107,7 @@ def api_quick_create_inventory():
         csrf_token = request.headers.get('X-CSRFToken')
         if not csrf_token:
             return jsonify({'success': False, 'error': 'CSRF token missing'}), 400
-        
+
         data = request.get_json(force=True, silent=True) or {}
 
         # Normalize form-like dict for service
@@ -145,6 +148,7 @@ def api_quick_create_inventory():
 
 @inventory_bp.route('/')
 @login_required
+@permission_required('inventory.view')
 def list_inventory():
     inventory_type = request.args.get('type')
     search = request.args.get('search', '').strip()
@@ -171,13 +175,13 @@ def list_inventory():
         query = query.filter(InventoryItem.quantity > 0)
 
     ingredients = query.all()
-    units = get_global_unit_list()
+    # Get units within the session to avoid detached instance errors
+    units = Unit.scoped().filter(Unit.is_active == True).all()
     categories = IngredientCategory.query.all()
     total_value = sum(item.quantity * item.cost_per_unit for item in ingredients)
 
     # Calculate freshness and expired quantities for each item
     from ...blueprints.expiration.services import ExpirationService
-    from datetime import datetime
     from sqlalchemy import and_
 
     for item in ingredients:
@@ -185,7 +189,7 @@ def list_inventory():
 
         # Calculate expired quantity using only InventoryLot (lots handle FIFO tracking now)
         if item.is_perishable:
-            today = datetime.now().date()
+            today = TimezoneUtils.utc_now().date()
             # Only check InventoryLot for expired quantities
             expired_lots = InventoryLot.query.filter(
                 and_(
@@ -230,7 +234,7 @@ def view_inventory(id):
     query = InventoryItem.query
     if current_user.organization_id:
         query = query.filter_by(organization_id=current_user.organization_id)
-    item = query.filter_by(id=id).first()
+    item = query.filter_by(id=id).first_or_404()
 
     if not item:
         flash('Inventory item not found or access denied.', 'error')
@@ -238,14 +242,13 @@ def view_inventory(id):
 
     # Calculate freshness and expired quantities for this item (same as list_inventory)
     from ...blueprints.expiration.services import ExpirationService
-    from datetime import datetime
     from sqlalchemy import and_
 
     item.freshness_percent = ExpirationService.get_weighted_average_freshness(item.id)
 
     # Calculate expired quantity using only InventoryLot (lots handle FIFO tracking now)
     if item.is_perishable:
-        today = datetime.now().date()
+        today = TimezoneUtils.utc_now().date()
         # Only check InventoryLot for expired quantities
         expired_lots_for_calc = InventoryLot.query.filter(
             and_(
@@ -294,7 +297,7 @@ def view_inventory(id):
     expired_entries = []
     expired_total = 0
     if item.is_perishable:
-        today = datetime.now().date()
+        today = TimezoneUtils.utc_now().date()
         # Only check InventoryLot for expired entries
         expired_entries = InventoryLot.query.filter(
             and_(
@@ -306,8 +309,6 @@ def view_inventory(id):
         ).order_by(InventoryLot.expiration_date.asc()).all()
 
         expired_total = sum(float(lot.remaining_quantity) for lot in expired_entries)
-
-    from ...utils.timezone_utils import TimezoneUtils
     return render_template('pages/inventory/view.html',
                          abs=abs,
                          item=item,
@@ -321,7 +322,7 @@ def view_inventory(id):
                          get_ingredient_categories=IngredientCategory.query.order_by(IngredientCategory.name).all,
                          User=User,
                          UnifiedInventoryHistory=UnifiedInventoryHistory,
-                         now=datetime.utcnow(),
+                         now=datetime.now(timezone.utc),
                          int_to_base36=int_to_base36,
                          fifo_filter=fifo_filter,
                          TimezoneUtils=TimezoneUtils,
@@ -416,7 +417,6 @@ def adjust_inventory(item_id):
                 return redirect(url_for('.view_inventory', id=item_id))
 
         custom_expiration_date = form_data.get('custom_expiration_date')
-        custom_shelf_life_days = form_data.get('custom_shelf_life_days')
         notes = form_data.get('notes', '')
         input_unit = form_data.get('input_unit') or item.unit or 'count'
 
@@ -429,7 +429,6 @@ def adjust_inventory(item_id):
             created_by=current_user.id,
             cost_override=cost_override,
             custom_expiration_date=custom_expiration_date,
-            custom_shelf_life_days=custom_shelf_life_days,
             unit=input_unit
         )
 

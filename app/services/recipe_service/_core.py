@@ -239,6 +239,13 @@ def update_recipe(recipe_id: int, name: str = None, description: str = None,
         Tuple of (success: bool, recipe_or_error: Recipe|str)
     """
     try:
+        # DEBUG: Log update_recipe parameters
+        logger.info(f"=== UPDATE_RECIPE DEBUG ===")
+        logger.info(f"recipe_id: {recipe_id}")
+        logger.info(f"name: {name}")
+        logger.info(f"yield_amount: {yield_amount} (type: {type(yield_amount)})")
+        logger.info(f"yield_unit: {yield_unit}")
+        logger.info(f"portioning_data: {portioning_data}")
         recipe = Recipe.query.get(recipe_id)
         if not recipe:
             return False, "Recipe not found"
@@ -304,6 +311,14 @@ def update_recipe(recipe_id: int, name: str = None, description: str = None,
 
         # Update ingredients if provided
         if ingredients is not None:
+            # DEBUG: Log validation parameters
+            logger.info(f"=== VALIDATION CALL DEBUG ===")
+            logger.info(f"Calling validate_recipe_data with:")
+            logger.info(f"  name: {recipe.name}")
+            logger.info(f"  ingredients count: {len(ingredients) if ingredients else 0}")
+            logger.info(f"  yield_amount: {recipe.predicted_yield} (from existing recipe)")
+            logger.info(f"  recipe_id: {recipe_id}")
+            
             # Validate new ingredients
             validation_result = validate_recipe_data(
                 name=recipe.name,
@@ -400,15 +415,12 @@ def delete_recipe(recipe_id: int) -> Tuple[bool, str]:
         if recipe.is_locked:
             return False, "Recipe is locked and cannot be deleted"
 
-        # Check for active batches
+        # Check for any batches (active or completed/cancelled)
         from ...models.batch import Batch
-        active_batches = Batch.query.filter_by(
-            recipe_id=recipe_id, 
-            status='in_progress'
-        ).count()
+        any_batches = Batch.query.filter_by(recipe_id=recipe_id).count()
 
-        if active_batches > 0:
-            return False, "Cannot delete recipe with active batches"
+        if any_batches > 0:
+            return False, "Cannot delete recipe that has been used in batches. Archive the recipe instead."
 
         recipe_name = recipe.name
 

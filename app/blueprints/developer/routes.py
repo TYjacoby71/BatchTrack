@@ -1,9 +1,10 @@
-from flask import Blueprint, render_template, request, session, redirect, url_for, flash, jsonify
+from flask import Blueprint, render_template, request, session, redirect, flash, jsonify, url_for
 from flask_login import login_required, current_user
 from app.models import Organization, User, Permission, Role, GlobalItem
 from app.models import ProductCategory
 from app.extensions import db
-from datetime import datetime, timedelta
+from app.utils.json_store import read_json_file, write_json_file
+from datetime import datetime, timedelta, timezone
 from sqlalchemy import func
 from .system_roles import system_roles_bp
 from .subscription_tiers import subscription_tiers_bp
@@ -36,7 +37,7 @@ except ImportError:
     class TimezoneUtils:
         @staticmethod
         def utc_now():
-            return datetime.utcnow()
+            return datetime.now(timezone.utc)
 
 developer_bp = Blueprint('developer', __name__, url_prefix='/developer')
 developer_bp.register_blueprint(system_roles_bp)
@@ -68,7 +69,7 @@ def dashboard():
     ).join(Organization, Organization.subscription_tier_id == SubscriptionTier.id).group_by(SubscriptionTier.name).all()
 
     # Recent organizations (last 30 days)
-    thirty_days_ago = datetime.utcnow() - timedelta(days=30)
+    thirty_days_ago = datetime.now(timezone.utc) - timedelta(days=30)
     recent_orgs = Organization.query.filter(
         Organization.created_at >= thirty_days_ago
     ).order_by(Organization.created_at.desc()).limit(10).all()
@@ -82,17 +83,8 @@ def dashboard():
     problem_orgs = [org for org in problem_orgs if org.active_users_count == 0]
 
     # Get waitlist count
-    import json
-    import os
-    waitlist_count = 0
-    waitlist_file = 'data/waitlist.json'
-    if os.path.exists(waitlist_file):
-        try:
-            with open(waitlist_file, 'r') as f:
-                waitlist_data = json.load(f)
-                waitlist_count = len(waitlist_data)
-        except (json.JSONDecodeError, IOError):
-            waitlist_count = 0
+    waitlist_data = read_json_file('data/waitlist.json', default=[]) or []
+    waitlist_count = len(waitlist_data)
 
     return render_template('developer/dashboard.html',
                          total_orgs=total_orgs,
@@ -108,35 +100,17 @@ def dashboard():
 @login_required
 def marketing_admin():
     """Manage homepage marketing content (reviews, spotlights, messages)."""
-    import json, os
-    reviews = []
-    spotlights = []
+    reviews = read_json_file('data/reviews.json', default=[]) or []
+    spotlights = read_json_file('data/spotlights.json', default=[]) or []
     messages = {'day_1': '', 'day_3': '', 'day_5': ''}
     promo_codes = []
     demo_url = ''
     demo_videos = []
-    try:
-        if os.path.exists('data/reviews.json'):
-            with open('data/reviews.json', 'r') as f:
-                reviews = json.load(f) or []
-    except Exception:
-        reviews = []
-    try:
-        if os.path.exists('data/spotlights.json'):
-            with open('data/spotlights.json', 'r') as f:
-                spotlights = json.load(f) or []
-    except Exception:
-        spotlights = []
-    try:
-        if os.path.exists('settings.json'):
-            with open('settings.json', 'r') as f:
-                cfg = json.load(f) or {}
-                messages.update(cfg.get('marketing_messages', {}))
-                promo_codes = cfg.get('promo_codes', []) or []
-                demo_url = cfg.get('demo_url', '') or ''
-                demo_videos = cfg.get('demo_videos', []) or []
-    except Exception:
-        pass
+    cfg = read_json_file('settings.json', default={}) or {}
+    messages.update(cfg.get('marketing_messages', {}))
+    promo_codes = cfg.get('promo_codes', []) or []
+    demo_url = cfg.get('demo_url', '') or ''
+    demo_videos = cfg.get('demo_videos', []) or []
     return render_template('developer/marketing_admin.html', reviews=reviews, spotlights=spotlights, messages=messages, promo_codes=promo_codes, demo_url=demo_url, demo_videos=demo_videos)
 
 @developer_bp.route('/marketing-admin/save', methods=['POST'])
@@ -144,21 +118,14 @@ def marketing_admin():
 def marketing_admin_save():
     """Save reviews, spotlights, and marketing messages (simple JSON persistence)."""
     try:
-        import json
         data = request.get_json() or {}
         if 'reviews' in data:
-            with open('data/reviews.json', 'w') as f:
-                json.dump(data['reviews'], f, indent=2)
+            write_json_file('data/reviews.json', data['reviews'])
         if 'spotlights' in data:
-            with open('data/spotlights.json', 'w') as f:
-                json.dump(data['spotlights'], f, indent=2)
+            write_json_file('data/spotlights.json', data['spotlights'])
         if 'messages' in data or 'promo_codes' in data or 'demo_url' in data or 'demo_videos' in data:
             # merge into settings.json under marketing_messages
-            try:
-                with open('settings.json', 'r') as f:
-                    cfg = json.load(f) or {}
-            except FileNotFoundError:
-                cfg = {}
+            cfg = read_json_file('settings.json', default={}) or {}
             if 'messages' in data:
                 cfg['marketing_messages'] = data['messages']
             if 'promo_codes' in data:
@@ -167,8 +134,7 @@ def marketing_admin_save():
                 cfg['demo_url'] = data['demo_url']
             if 'demo_videos' in data:
                 cfg['demo_videos'] = data['demo_videos']
-            with open('settings.json', 'w') as f:
-                json.dump(cfg, f, indent=2)
+            write_json_file('settings.json', cfg)
         return jsonify({'success': True})
     except Exception as e:
         return jsonify({'success': False, 'error': str(e)}), 500
@@ -430,7 +396,7 @@ def delete_organization(org_id):
         # Log the deletion attempt for security audit
         from datetime import datetime
         import logging
-        logging.warning(f"ORGANIZATION DELETION: Developer {current_user.username} is deleting organization '{org.name}' (ID: {org.id}) at {datetime.utcnow()}")
+        logging.warning(f"ORGANIZATION DELETION: Developer {current_user.username} is deleting organization '{org.name}' (ID: {org.id}) at {datetime.now(timezone.utc)}")
 
         # Begin deletion process
         org_name = org.name
@@ -675,7 +641,17 @@ def global_item_edit(item_id):
         'container_style': getattr(item, 'container_style', None),
         'default_is_perishable': item.default_is_perishable,
         'recommended_shelf_life_days': item.recommended_shelf_life_days,
-        'aka_names': item.aka_names,
+        'aliases': item.aliases,
+        'recommended_usage_rate': item.recommended_usage_rate,
+        'recommended_fragrance_load_pct': item.recommended_fragrance_load_pct,
+        'is_active_ingredient': item.is_active_ingredient,
+        'inci_name': item.inci_name,
+        'protein_content_pct': item.protein_content_pct,
+        'brewing_color_srm': item.brewing_color_srm,
+        'brewing_potential_sg': item.brewing_potential_sg,
+        'brewing_diastatic_power_lintner': item.brewing_diastatic_power_lintner,
+        'fatty_acid_profile': item.fatty_acid_profile,
+        'certifications': item.certifications,
     }
 
     # Apply edits
@@ -698,9 +674,43 @@ def global_item_edit(item_id):
     item.default_is_perishable = True if request.form.get('default_is_perishable') == 'on' else False
     rsl = request.form.get('recommended_shelf_life_days')
     item.recommended_shelf_life_days = int(rsl) if rsl not in (None, '',) else None
-    aka_names = request.form.get('aka_names')  # comma-separated
-    if aka_names is not None:
-        item.aka_names = [n.strip() for n in aka_names.split(',') if n.strip()]
+    aliases = request.form.get('aliases')  # comma-separated
+    if aliases is not None:
+        item.aliases = [n.strip() for n in aliases.split(',') if n.strip()]
+
+    item.recommended_usage_rate = request.form.get('recommended_usage_rate') or None
+    item.recommended_fragrance_load_pct = request.form.get('recommended_fragrance_load_pct') or None
+    item.is_active_ingredient = request.form.get('is_active_ingredient') == 'on'
+    item.inci_name = request.form.get('inci_name') or None
+
+    protein = request.form.get('protein_content_pct')
+    item.protein_content_pct = float(protein) if protein not in (None, '',) else None
+
+    brewing_color = request.form.get('brewing_color_srm')
+    item.brewing_color_srm = float(brewing_color) if brewing_color not in (None, '',) else None
+
+    brewing_potential = request.form.get('brewing_potential_sg')
+    item.brewing_potential_sg = float(brewing_potential) if brewing_potential not in (None, '',) else None
+
+    brewing_dp = request.form.get('brewing_diastatic_power_lintner')
+    item.brewing_diastatic_power_lintner = float(brewing_dp) if brewing_dp not in (None, '',) else None
+
+    fatty_acid_profile_raw = request.form.get('fatty_acid_profile')
+    if fatty_acid_profile_raw is not None:
+        import json
+        fatty_acid_profile_raw = fatty_acid_profile_raw.strip()
+        if fatty_acid_profile_raw:
+            try:
+                item.fatty_acid_profile = json.loads(fatty_acid_profile_raw)
+            except json.JSONDecodeError:
+                flash('Invalid JSON for fatty acid profile. Please provide valid JSON.', 'error')
+        else:
+            item.fatty_acid_profile = None
+
+    certifications_raw = request.form.get('certifications')
+    if certifications_raw is not None:
+        certifications = [c.strip() for c in certifications_raw.split(',') if c.strip()]
+        item.certifications = certifications or None
 
     # Handle ingredient category - use the ID directly
     ingredient_category_id = request.form.get('ingredient_category_id', '').strip()
@@ -774,10 +784,10 @@ def reference_categories():
 @developer_bp.route('/container-management')
 @login_required
 def container_management():
-    """Container management page for curating materials, types, colors, styles"""
+    """Container management page for curating materials, colors, styles"""
     # Load master lists from settings - these are the single source of truth
     curated_lists = load_curated_container_lists()
-    
+
     return render_template('developer/container_management.html',
                          curated_materials=curated_lists['materials'],
                          curated_types=curated_lists['types'],
@@ -791,59 +801,39 @@ def save_curated_container_lists():
     try:
         data = request.get_json()
         curated_lists = data.get('curated_lists', {})
-        
+
         # Validate the structure
         required_keys = ['materials', 'types', 'styles', 'colors']
         for key in required_keys:
             if key not in curated_lists or not isinstance(curated_lists[key], list):
                 return jsonify({'success': False, 'error': f'Invalid or missing {key} list'})
-        
+
         # Load current settings
-        import json
-        import os
         settings_file = 'settings.json'
-        settings = {}
-        
-        if os.path.exists(settings_file):
-            try:
-                with open(settings_file, 'r') as f:
-                    settings = json.load(f)
-            except (json.JSONDecodeError, IOError):
-                settings = {}
-        
+        settings = read_json_file(settings_file, default={}) or {}
+
         # Update container curated lists
         if 'container_management' not in settings:
             settings['container_management'] = {}
-        
+
         settings['container_management']['curated_lists'] = curated_lists
-        
+
         # Save back to file
-        with open(settings_file, 'w') as f:
-            json.dump(settings, f, indent=2)
-        
+        write_json_file(settings_file, settings)
+
         return jsonify({'success': True, 'message': 'Curated lists saved successfully'})
-        
+
     except Exception as e:
         return jsonify({'success': False, 'error': str(e)})
 
 def load_curated_container_lists():
     """Load curated container lists from settings or return defaults with existing database values merged in"""
-    try:
-        import json
-        import os
-        settings_file = 'settings.json'
-        
-        if os.path.exists(settings_file):
-            with open(settings_file, 'r') as f:
-                settings = json.load(f)
-                curated_lists = settings.get('container_management', {}).get('curated_lists', {})
-                
-                # If we have saved curated lists, return them
-                if curated_lists and all(key in curated_lists for key in ['materials', 'types', 'styles', 'colors']):
-                    return curated_lists
-    except:
-        pass
-    
+    settings = read_json_file('settings.json', default={}) or {}
+    curated_lists = settings.get('container_management', {}).get('curated_lists', {})
+
+    if curated_lists and all(key in curated_lists for key in ['materials', 'types', 'styles', 'colors']):
+        return curated_lists
+
     # First time setup: merge database values with defaults
     defaults = {
         'materials': [
@@ -863,52 +853,52 @@ def load_curated_container_lists():
             'Frosted', 'Silver', 'Gold'
         ]
     }
-    
+
     # Get existing values from database and merge with defaults
     try:
         from app.models.global_item import GlobalItem
         from app.extensions import db
-        
+
         # Get existing materials
         materials = db.session.query(GlobalItem.container_material)\
             .filter(GlobalItem.container_material.isnot(None))\
             .distinct().all()
         existing_materials = [m[0] for m in materials if m[0] and m[0] not in defaults['materials']]
-        
+
         # Get existing types
         types = db.session.query(GlobalItem.container_type)\
             .filter(GlobalItem.container_type.isnot(None))\
             .distinct().all()
         existing_types = [t[0] for t in types if t[0] and t[0] not in defaults['types']]
-        
+
         # Get existing styles
         styles = db.session.query(GlobalItem.container_style)\
             .filter(GlobalItem.container_style.isnot(None))\
             .distinct().all()
         existing_styles = [s[0] for s in styles if s[0] and s[0] not in defaults['styles']]
-        
+
         # Get existing colors
         colors = db.session.query(GlobalItem.container_color)\
             .filter(GlobalItem.container_color.isnot(None))\
             .distinct().all()
         existing_colors = [c[0] for c in colors if c[0] and c[0] not in defaults['colors']]
-        
+
         # Merge and sort
         defaults['materials'].extend(existing_materials)
         defaults['materials'] = sorted(list(set(defaults['materials'])))
-        
+
         defaults['types'].extend(existing_types)
         defaults['types'] = sorted(list(set(defaults['types'])))
-        
+
         defaults['styles'].extend(existing_styles)
         defaults['styles'] = sorted(list(set(defaults['styles'])))
-        
+
         defaults['colors'].extend(existing_colors)
         defaults['colors'] = sorted(list(set(defaults['colors'])))
-        
+
     except Exception:
         pass  # Use defaults if database query fails
-    
+
     return defaults
 
 @developer_bp.route('/system-statistics')
@@ -928,7 +918,7 @@ def system_statistics():
         'total_permissions': Permission.query.count(),
         'total_roles': Role.query.count()
     }
-    
+
     return render_template('developer/system_statistics.html', stats=stats)
 
 @developer_bp.route('/billing-integration')
@@ -1188,6 +1178,7 @@ def create_global_item():
             except Exception:
                 pass
             new_item.default_is_perishable = request.form.get('default_is_perishable') == 'on'
+            new_item.is_active_ingredient = request.form.get('is_active_ingredient') == 'on'
 
             shelf_life = request.form.get('recommended_shelf_life_days')
             if shelf_life:
@@ -1197,10 +1188,60 @@ def create_global_item():
                     flash('Invalid shelf life value', 'error')
                     return redirect(url_for('developer.create_global_item'))
 
-            # Handle aka_names (comma-separated)
-            aka_names = request.form.get('aka_names', '').strip()
-            if aka_names:
-                new_item.aka_names = [n.strip() for n in aka_names.split(',') if n.strip()]
+            # Ingredient-specific metadata
+            new_item.recommended_usage_rate = request.form.get('recommended_usage_rate', '').strip() or None
+            new_item.recommended_fragrance_load_pct = request.form.get('recommended_fragrance_load_pct', '').strip() or None
+            new_item.inci_name = request.form.get('inci_name', '').strip() or None
+
+            protein_content = request.form.get('protein_content_pct', '').strip()
+            if protein_content:
+                try:
+                    new_item.protein_content_pct = float(protein_content)
+                except ValueError:
+                    flash('Invalid protein content percentage', 'error')
+                    return redirect(url_for('developer.create_global_item'))
+
+            brewing_color = request.form.get('brewing_color_srm', '').strip()
+            if brewing_color:
+                try:
+                    new_item.brewing_color_srm = float(brewing_color)
+                except ValueError:
+                    flash('Invalid brewing SRM value', 'error')
+                    return redirect(url_for('developer.create_global_item'))
+
+            brewing_potential = request.form.get('brewing_potential_sg', '').strip()
+            if brewing_potential:
+                try:
+                    new_item.brewing_potential_sg = float(brewing_potential)
+                except ValueError:
+                    flash('Invalid brewing potential SG value', 'error')
+                    return redirect(url_for('developer.create_global_item'))
+
+            brewing_dp = request.form.get('brewing_diastatic_power_lintner', '').strip()
+            if brewing_dp:
+                try:
+                    new_item.brewing_diastatic_power_lintner = float(brewing_dp)
+                except ValueError:
+                    flash('Invalid brewing diastatic power value', 'error')
+                    return redirect(url_for('developer.create_global_item'))
+
+            fatty_acid_profile_raw = request.form.get('fatty_acid_profile', '').strip()
+            if fatty_acid_profile_raw:
+                import json
+                try:
+                    new_item.fatty_acid_profile = json.loads(fatty_acid_profile_raw)
+                except json.JSONDecodeError:
+                    flash('Fatty acid profile must be valid JSON.', 'error')
+                    return redirect(url_for('developer.create_global_item'))
+
+            certifications_raw = request.form.get('certifications', '').strip()
+            if certifications_raw:
+                new_item.certifications = [c.strip() for c in certifications_raw.split(',') if c.strip()]
+
+            # Handle aliases (comma-separated)
+            aliases_raw = request.form.get('aliases', '').strip()
+            if aliases_raw:
+                new_item.aliases = [n.strip() for n in aliases_raw.split(',') if n.strip()]
 
             db.session.add(new_item)
             db.session.commit()
@@ -1289,7 +1330,7 @@ def delete_global_item(item_id):
         if not force_delete:
             from datetime import datetime
             item.is_archived = True
-            item.archived_at = datetime.utcnow()
+            item.archived_at = datetime.now(timezone.utc)
             item.archived_by = current_user.id
             db.session.commit()
         else:
@@ -1351,6 +1392,262 @@ def inventory_analytics_stub():
         flash('Inventory analytics is not enabled for this environment.', 'info')
         return redirect(url_for('developer.dashboard'))
     return render_template('developer/inventory_analytics.html')
+
+# Inventory Analytics API Endpoints
+@developer_bp.route('/api/inventory-analytics/metrics')
+@login_required
+def api_inventory_analytics_metrics():
+    """Get key inventory analytics metrics"""
+    try:
+        from app.models import GlobalItem, InventoryItem, UnifiedInventoryHistory
+        from sqlalchemy import func
+        from datetime import timedelta
+        
+        # Total global items
+        total_items = GlobalItem.query.filter_by(is_archived=False).count()
+        
+        # Total org adoptions (inventory items linked to global items)
+        linked_adoptions = InventoryItem.query.filter(InventoryItem.global_item_id.isnot(None)).count()
+        
+        # Spoilage events in last 30 days
+        thirty_days_ago = TimezoneUtils.utc_now() - timedelta(days=30)
+        spoilage_events_30d = UnifiedInventoryHistory.query.filter(
+            UnifiedInventoryHistory.change_type.in_(['spoil', 'expired', 'damaged', 'trash']),
+            UnifiedInventoryHistory.timestamp >= thirty_days_ago
+        ).count()
+        
+        # Average cost per unit across all lots
+        from app.models.inventory_lot import InventoryLot
+        avg_cost = db.session.query(func.avg(InventoryLot.unit_cost)).filter(
+            InventoryLot.unit_cost.isnot(None),
+            InventoryLot.unit_cost > 0
+        ).scalar()
+        
+        return jsonify({
+            'total_items': total_items,
+            'linked_adoptions': linked_adoptions,
+            'spoilage_events_30d': spoilage_events_30d,
+            'avg_cost_per_unit': float(avg_cost) if avg_cost else None
+        })
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@developer_bp.route('/api/inventory-analytics/top-items')
+@login_required
+def api_inventory_analytics_top_items():
+    """Get top items by usage across organizations"""
+    try:
+        from app.models import GlobalItem, InventoryItem
+        from sqlalchemy import func
+        
+        # Get items with most org adoptions
+        top_items = db.session.query(
+            GlobalItem.id,
+            GlobalItem.name,
+            func.count(InventoryItem.id).label('org_count'),
+            func.avg(InventoryItem.cost_per_unit).label('avg_cost')
+        ).join(
+            InventoryItem, GlobalItem.id == InventoryItem.global_item_id
+        ).filter(
+            GlobalItem.is_archived == False
+        ).group_by(
+            GlobalItem.id, GlobalItem.name
+        ).order_by(
+            func.count(InventoryItem.id).desc()
+        ).limit(10).all()
+        
+        items = []
+        for item in top_items:
+            items.append({
+                'id': item.id,
+                'name': item.name,
+                'org_count': item.org_count,
+                'avg_cost': float(item.avg_cost) if item.avg_cost else None,
+                'trend': 'stable'  # Could be calculated from historical data
+            })
+        
+        return jsonify({'items': items})
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@developer_bp.route('/api/inventory-analytics/spoilage')
+@login_required
+def api_inventory_analytics_spoilage():
+    """Get spoilage analysis by item"""
+    try:
+        from app.models import GlobalItem, InventoryItem, UnifiedInventoryHistory
+        from sqlalchemy import func
+        from datetime import timedelta
+        
+        thirty_days_ago = TimezoneUtils.utc_now() - timedelta(days=30)
+        
+        # Get spoilage data by global item
+        spoilage_data = db.session.query(
+            GlobalItem.id,
+            GlobalItem.name,
+            func.count(UnifiedInventoryHistory.id).label('spoilage_count'),
+            func.sum(UnifiedInventoryHistory.cost_impact).label('cost_impact'),
+            func.count(func.distinct(UnifiedInventoryHistory.organization_id)).label('orgs_affected')
+        ).join(
+            InventoryItem, GlobalItem.id == InventoryItem.global_item_id
+        ).join(
+            UnifiedInventoryHistory, InventoryItem.id == UnifiedInventoryHistory.inventory_item_id
+        ).filter(
+            UnifiedInventoryHistory.change_type.in_(['spoil', 'expired', 'damaged', 'trash']),
+            UnifiedInventoryHistory.timestamp >= thirty_days_ago,
+            GlobalItem.is_archived == False
+        ).group_by(
+            GlobalItem.id, GlobalItem.name
+        ).order_by(
+            func.count(UnifiedInventoryHistory.id).desc()
+        ).limit(10).all()
+        
+        items = []
+        for item in spoilage_data:
+            # Calculate spoilage rate (simplified)
+            spoilage_rate = 0.1 if item.spoilage_count > 5 else item.spoilage_count * 0.02
+            items.append({
+                'id': item.id,
+                'name': item.name,
+                'spoilage_count': item.spoilage_count,
+                'spoilage_rate': spoilage_rate,
+                'cost_impact': float(item.cost_impact) if item.cost_impact else 0.0,
+                'orgs_affected': item.orgs_affected
+            })
+        
+        return jsonify({'items': items})
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@developer_bp.route('/api/inventory-analytics/data-quality')
+@login_required
+def api_inventory_analytics_data_quality():
+    """Get data quality metrics for global items"""
+    try:
+        from app.models import GlobalItem
+        from sqlalchemy import func
+        
+        total_items = GlobalItem.query.filter_by(is_archived=False).count()
+        
+        if total_items == 0:
+            return jsonify({
+                'density_coverage': 0,
+                'capacity_coverage': 0,
+                'shelf_life_coverage': 0
+            })
+        
+        # Density coverage
+        items_with_density = GlobalItem.query.filter(
+            GlobalItem.is_archived == False,
+            GlobalItem.density.isnot(None),
+            GlobalItem.density > 0
+        ).count()
+        density_coverage = (items_with_density / total_items) * 100
+        
+        # Capacity coverage
+        items_with_capacity = GlobalItem.query.filter(
+            GlobalItem.is_archived == False,
+            GlobalItem.capacity.isnot(None),
+            GlobalItem.capacity > 0
+        ).count()
+        capacity_coverage = (items_with_capacity / total_items) * 100
+        
+        # Shelf life coverage
+        items_with_shelf_life = GlobalItem.query.filter(
+            GlobalItem.is_archived == False,
+            GlobalItem.recommended_shelf_life_days.isnot(None),
+            GlobalItem.recommended_shelf_life_days > 0
+        ).count()
+        shelf_life_coverage = (items_with_shelf_life / total_items) * 100
+        
+        return jsonify({
+            'density_coverage': density_coverage,
+            'capacity_coverage': capacity_coverage,
+            'shelf_life_coverage': shelf_life_coverage
+        })
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@developer_bp.route('/api/inventory-analytics/recent-activity')
+@login_required
+def api_inventory_analytics_recent_activity():
+    """Get recent inventory activity across all organizations"""
+    try:
+        from app.models import UnifiedInventoryHistory, Organization, InventoryItem
+        
+        recent_activity = db.session.query(
+            UnifiedInventoryHistory.timestamp,
+            UnifiedInventoryHistory.change_type,
+            UnifiedInventoryHistory.quantity_change,
+            UnifiedInventoryHistory.unit,
+            UnifiedInventoryHistory.cost_impact,
+            Organization.name.label('organization_name'),
+            InventoryItem.name.label('item_name')
+        ).join(
+            Organization, UnifiedInventoryHistory.organization_id == Organization.id
+        ).join(
+            InventoryItem, UnifiedInventoryHistory.inventory_item_id == InventoryItem.id
+        ).order_by(
+            UnifiedInventoryHistory.timestamp.desc()
+        ).limit(20).all()
+        
+        activities = []
+        for activity in recent_activity:
+            activities.append({
+                'timestamp': activity.timestamp.isoformat(),
+                'organization_name': activity.organization_name,
+                'item_name': activity.item_name,
+                'action': activity.change_type,
+                'quantity_change': float(activity.quantity_change),
+                'unit': activity.unit,
+                'cost_impact': float(activity.cost_impact) if activity.cost_impact else None
+            })
+        
+        return jsonify({'activities': activities})
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@developer_bp.route('/api/inventory-analytics/items-list')
+@login_required
+def api_inventory_analytics_items_list():
+    """Get list of global items for selection"""
+    try:
+        from app.models import GlobalItem, InventoryItem
+        from sqlalchemy import func
+        
+        # Get items that have org adoptions
+        items = db.session.query(
+            GlobalItem.id,
+            GlobalItem.name
+        ).join(
+            InventoryItem, GlobalItem.id == InventoryItem.global_item_id
+        ).filter(
+            GlobalItem.is_archived == False
+        ).group_by(
+            GlobalItem.id, GlobalItem.name
+        ).having(
+            func.count(InventoryItem.id) > 0
+        ).order_by(GlobalItem.name).all()
+        
+        items_list = [{'id': item.id, 'name': item.name} for item in items]
+        
+        return jsonify({'items': items_list})
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@developer_bp.route('/api/inventory-analytics/cost-distribution/<int:item_id>')
+@login_required
+def api_inventory_analytics_cost_distribution(item_id):
+    """Get cost distribution for a specific global item"""
+    try:
+        from app.services.statistics.global_item_stats import GlobalItemStatsService
+        
+        # Get cost distribution using existing service
+        distribution = GlobalItemStatsService.get_cost_distribution(item_id)
+        
+        return jsonify(distribution)
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
 
 
 # ===================== Integrations & Launch Checklist =====================
@@ -1435,6 +1732,123 @@ def integrations_checklist():
         'WHOP_APP_ID_present': bool(current_app.config.get('WHOP_APP_ID')),
     }
 
+    def _env_status(key, *, allow_config=False, config_key=None):
+        raw = os.environ.get(key)
+        if raw not in (None, ''):
+            return True, 'env'
+        if allow_config:
+            cfg_val = current_app.config.get(config_key or key)
+            if cfg_val not in (None, ''):
+                return True, 'config'
+        return False, 'missing'
+
+    def _make_item(key, description, *, required=True, recommended=None, allow_config=False, config_key=None, is_secret=False, note=None):
+        present, source = _env_status(key, allow_config=allow_config, config_key=config_key)
+        return {
+            'key': key,
+            'description': description,
+            'present': present,
+            'source': source,
+            'required': required,
+            'recommended': recommended,
+            'is_secret': is_secret,
+            'note': note,
+        }
+
+    launch_env_sections = [
+        {
+            'title': 'Core Runtime & Platform',
+            'note': 'Set these to lock the app into production mode and disable development conveniences before launch.',
+            'section_items': [
+                _make_item('FLASK_ENV', 'Runtime environment. Use "production" for live deployments.', required=True, recommended='production', allow_config=True, config_key='ENV'),
+                _make_item('FLASK_SECRET_KEY', 'Flask session signing secret. Use a random 32+ character string.', required=True, allow_config=True, config_key='SECRET_KEY', is_secret=True),
+                _make_item('FLASK_DEBUG', 'Flask debug flag. Must stay false/unset in production.', required=False, recommended='false / unset'),
+                _make_item('REPLIT_DEPLOYMENT', 'Platform toggle used to force production settings on Replit. Leave false unless deploying there.', required=False, recommended='false'),
+                _make_item('LOG_LEVEL', 'Application logging level. Use INFO or WARN in production.', required=True, recommended='INFO', allow_config=True),
+            ]
+        },
+        {
+            'title': 'Database & Persistence',
+            'note': 'Configure a managed Postgres instance before launch. Disable automatic table creation in production.',
+            'section_items': [
+                _make_item('DATABASE_INTERNAL_URL', 'Primary database connection string (preferred in production).', required=True, is_secret=True),
+                _make_item('DATABASE_URL', 'Fallback database connection string (used if internal URL not set).', required=False, is_secret=True, note='Optional: set if your platform exposes only DATABASE_URL.'),
+                _make_item('SQLALCHEMY_DISABLE_CREATE_ALL', 'Disable db.create_all() safety switch. Set to 1 in production.', required=False, recommended='1 (enabled)', note='Prevents accidental schema drift on boot.'),
+                _make_item('SQLALCHEMY_ENABLE_CREATE_ALL', 'Local dev-only override to run db.create_all(). Leave unset in production.', required=False, recommended='unset'),
+            ]
+        },
+        {
+            'title': 'Caching & Rate Limits',
+            'note': 'Use Redis (or another shared store) for server sessions, caching, and rate limiting in production.',
+            'items': [
+                _make_item('REDIS_URL', 'Redis connection string for caching, sessions, and rate limit storage.', required=True, recommended='redis://...'),
+                _make_item('RATELIMIT_STORAGE_URL', 'Flask-Limiter backend. Point at Redis in production.', required=True, recommended='redis://...', allow_config=True),
+                _make_item('SESSION_TYPE', 'Server-side session backend. Must be "redis" in production.', required=True, recommended='redis', allow_config=True),
+            ],
+        },
+        {
+            'title': 'Security & Networking',
+            'note': 'Enable proxy awareness and security headers behind your load balancer. Set ENABLE_PROXY_FIX=true (or TRUST_PROXY_HEADERS=true on legacy platforms), adjust PROXY_FIX_X_* counts for each proxy hop (defaults assume one), and leave DISABLE_SECURITY_HEADERS unset.',
+            'section_items': [
+                _make_item('ENABLE_PROXY_FIX', 'Wrap the app in Werkzeug ProxyFix when behind a load balancer.', required=True, recommended='true (production)'),
+                _make_item('TRUST_PROXY_HEADERS', 'Legacy toggle equivalent to ENABLE_PROXY_FIX for older configs.', required=False, recommended='true (only if ENABLE_PROXY_FIX is unavailable)'),
+                _make_item('PROXY_FIX_X_FOR', 'Number of X-Forwarded-For headers to trust.', required=False, recommended='1 (single proxy)'),
+                _make_item('PROXY_FIX_X_PROTO', 'Number of X-Forwarded-Proto headers to trust.', required=False, recommended='1 (single proxy)'),
+                _make_item('PROXY_FIX_X_HOST', 'Number of X-Forwarded-Host headers to trust.', required=False, recommended='1'),
+                _make_item('PROXY_FIX_X_PORT', 'Number of X-Forwarded-Port headers to trust.', required=False, recommended='1'),
+                _make_item('PROXY_FIX_X_PREFIX', 'Number of X-Forwarded-Prefix headers to trust.', required=False, recommended='0 unless using path prefixes'),
+                _make_item('FORCE_SECURITY_HEADERS', 'Force security headers even when the app thinks it is non-production (e.g., staging).', required=False, recommended='true (staging) / unset (production)'),
+                _make_item('DISABLE_SECURITY_HEADERS', 'Emergency kill-switch for security headers. Leave unset in production.', required=False, recommended='unset'),
+                _make_item('CONTENT_SECURITY_POLICY', 'Override default Content-Security-Policy header with a custom policy.', required=False, allow_config=True, note='Leave unset to use the built-in CSP; override only after testing.'),
+                _make_item('SECURITY_HEADERS', 'JSON/YAML mapping to override default security headers.', required=False, note='Optional advanced override for header values. Configure through app config if preferred.'),
+            ]
+        },
+        {
+            'title': 'Email & Notifications',
+            'note': 'Configure exactly one provider for transactional email and confirm DNS (SPF/DKIM).',
+            'section_items': [
+                _make_item('EMAIL_PROVIDER', 'Email provider selector: smtp | sendgrid | postmark | mailgun.', required=True, allow_config=True, recommended='sendgrid / postmark / mailgun'),
+                _make_item('MAIL_SERVER', 'SMTP server hostname.', required=False),
+                _make_item('MAIL_PORT', 'SMTP port (587 for TLS, 465 for SSL).', required=False),
+                _make_item('MAIL_USE_TLS', 'Enable STARTTLS for SMTP.', required=False, recommended='true'),
+                _make_item('MAIL_USE_SSL', 'Enable implicit TLS for SMTP.', required=False, recommended='false unless port 465'),
+                _make_item('MAIL_USERNAME', 'SMTP username / login.', required=False, is_secret=True),
+                _make_item('MAIL_PASSWORD', 'SMTP password or app-specific password.', required=False, is_secret=True),
+                _make_item('MAIL_DEFAULT_SENDER', 'Default from-address for outbound email.', required=True, allow_config=True, recommended='verified domain address'),
+                _make_item('SENDGRID_API_KEY', 'SendGrid API key (if using SendGrid).', required=False, is_secret=True),
+                _make_item('POSTMARK_SERVER_TOKEN', 'Postmark server token (if using Postmark).', required=False, is_secret=True),
+                _make_item('MAILGUN_API_KEY', 'Mailgun REST API key (if using Mailgun).', required=False, is_secret=True),
+                _make_item('MAILGUN_DOMAIN', 'Mailgun sending domain (if using Mailgun).', required=False),
+            ]
+        },
+        {
+            'title': 'Billing & Payments',
+            'note': 'Switch to live Stripe keys and webhook secrets before you charge real customers.',
+            'section_items': [
+                _make_item('STRIPE_SECRET_KEY', 'Stripe secret key (live).', required=True, is_secret=True),
+                _make_item('STRIPE_PUBLISHABLE_KEY', 'Stripe publishable key (live).', required=True, is_secret=True),
+                _make_item('STRIPE_WEBHOOK_SECRET', 'Stripe webhook signing secret.', required=True, is_secret=True),
+            ]
+        },
+        {
+            'title': 'OAuth & Marketplace',
+            'note': 'Optional integrations for single sign-on and marketplace licensing.',
+            'section_items': [
+                _make_item('GOOGLE_OAUTH_CLIENT_ID', 'Google OAuth 2.0 client ID for login.', required=False, is_secret=True),
+                _make_item('GOOGLE_OAUTH_CLIENT_SECRET', 'Google OAuth 2.0 client secret.', required=False, is_secret=True),
+                _make_item('WHOP_API_KEY', 'Whop API key (if using Whop for licensing).', required=False, is_secret=True),
+                _make_item('WHOP_APP_ID', 'Whop app ID (if using Whop).', required=False, is_secret=True),
+            ]
+        },
+        {
+            'title': 'Maintenance & Utilities',
+            'note': 'Rarely used toggles for seeding or one-off maintenance scripts.',
+            'section_items': [
+                _make_item('SEED_PRESETS', 'Enable preset data seeding during migrations (internal tooling).', required=False, recommended='unset'),
+            ]
+        }
+    ]
+
     # Feature flags
     feature_flags = {
         'FEATURE_INVENTORY_ANALYTICS': bool(current_app.config.get('FEATURE_INVENTORY_ANALYTICS', False)),
@@ -1472,6 +1886,7 @@ def integrations_checklist():
         cache_info=cache_info,
         oauth_status=oauth_status,
         whop_status=whop_status,
+        launch_env_sections=launch_env_sections,
     )
 
 
@@ -1546,7 +1961,7 @@ def integrations_set_feature_flags():
         if current_user.user_type != 'developer':
             return jsonify({'success': False, 'error': 'Developer access required'}), 403
         data = request.get_json() or {}
-        
+
         # Define allowed flags
         allowed_flags = [
             # Core business features
@@ -1558,7 +1973,7 @@ def integrations_set_feature_flags():
             'FEATURE_COST_TRACKING',
             'FEATURE_EXPIRATION_TRACKING',
             'FEATURE_BULK_OPERATIONS',
-            
+
             # Developer & advanced features
             'FEATURE_INVENTORY_ANALYTICS',
             'FEATURE_DEBUG_MODE',
@@ -1566,21 +1981,21 @@ def integrations_set_feature_flags():
             'FEATURE_CSV_EXPORT',
             'FEATURE_ADVANCED_REPORTS',
             'FEATURE_GLOBAL_ITEM_LIBRARY',
-            
+
             # Notification systems
             'FEATURE_EMAIL_NOTIFICATIONS',
             'FEATURE_BROWSER_NOTIFICATIONS',
-            
+
             # Integration features
             'FEATURE_SHOPIFY_INTEGRATION',
             'FEATURE_API_ACCESS',
             'FEATURE_OAUTH_PROVIDERS',
-            
+
             # AI features
             'FEATURE_AI_RECIPE_OPTIMIZATION',
             'FEATURE_AI_DEMAND_FORECASTING',
             'FEATURE_AI_QUALITY_INSIGHTS',
-            
+
             # Public tools
             'TOOLS_SOAP',
             'TOOLS_CANDLES', 
@@ -1588,32 +2003,27 @@ def integrations_set_feature_flags():
             'TOOLS_HERBAL',
             'TOOLS_BAKING'
         ]
-        
+
         # Update app config for allowed flags
         for flag in allowed_flags:
             if flag in data:
                 value = bool(data[flag])
                 current_app.config[flag] = value
-        
+
         # Persist to settings.json for next boot
         try:
-            import json, os
-            settings = {}
-            if os.path.exists('settings.json'):
-                with open('settings.json', 'r') as f:
-                    settings = json.load(f) or {}
-            
+            settings = read_json_file('settings.json', default={}) or {}
+
             ff = settings.get('feature_flags', {}) or {}
             for flag in allowed_flags:
                 if flag in data:
                     ff[flag] = bool(data[flag])
-                    
+
             settings['feature_flags'] = ff
-            with open('settings.json', 'w') as f:
-                json.dump(settings, f, indent=2)
+            write_json_file('settings.json', settings)
         except Exception:
             pass
-            
+
         return jsonify({'success': True})
     except Exception as e:
         return jsonify({'success': False, 'error': str(e)}), 500
@@ -1644,95 +2054,19 @@ def integrations_check_webhook():
 @login_required
 def analytics_catalog():
     """Developer catalog of analytics data points and domains."""
-    domains = [
-        {
-            'name': 'Inventory',
-            'description': 'Movements, spoilage, waste, usage, value held',
-            'sources': ['UnifiedInventoryHistory', 'InventoryLot', 'InventoryItem', 'FreshnessSnapshot', 'domain_event: inventory_adjusted'],
-            'events': ['inventory_adjusted'],
-            'data_points': [
-                'Quantity delta by change_type (restock, batch, use, spoil, expired, damaged, trash, recount, returned, refunded, release_reservation)',
-                'Unit and normalized unit conversions',
-                'Cost impact per movement (when provided)',
-                'Freshness: avg days-to-usage, avg days-to-spoilage, freshness efficiency score',
-                'Total cost held (derived, warehouse-level)',
-                'Spoilage rate and waste rate (derived from movements)'
-            ]
-        },
-        {
-            'name': 'Batches',
-            'description': 'Lifecycle, efficiency, costs, yield',
-            'sources': ['Batch', 'BatchIngredient', 'BatchContainer', 'Extra*', 'BatchStats', 'domain_event: batch_started|batch_completed|batch_cancelled'],
-            'events': ['batch_started', 'batch_completed', 'batch_cancelled'],
-            'data_points': [
-                'Planned vs actual fill efficiency (containment efficiency)',
-                'Yield variance %',
-                'Cost variance % (planned vs actual)',
-                'Total planned/actual cost',
-                'Batch duration (minutes)',
-                'Status (completed, failed, cancelled)'
-            ]
-        },
-        {
-            'name': 'Products & SKUs',
-            'description': 'On-hand, reservations, sales, unit costs',
-            'sources': ['Product', 'ProductVariant', 'ProductSKU', 'InventoryItem (type=product)'],
-            'events': ['product_created', 'product_variant_created', 'sku_created'],
-            'data_points': [
-                'On-hand quantity by SKU',
-                'Unit cost (when available)',
-                'Low stock threshold status',
-                'Reservations/sales velocity (when integrated)'
-            ]
-        },
-        {
-            'name': 'Recipes',
-            'description': 'Success rates, averages, cost baselines',
-            'sources': ['Recipe', 'RecipeIngredient', 'RecipeStats'],
-            'events': ['recipe_created', 'recipe_updated', 'recipe_deleted'],
-            'data_points': [
-                'Total/completed/failed batches per recipe',
-                'Average fill efficiency, yield variance, cost variance',
-                'Average cost per batch, per unit',
-                'Success rate %'
-            ]
-        },
-        {
-            'name': 'Timers',
-            'description': 'Task durations for batches/tasks',
-            'sources': ['BatchTimer'],
-            'events': ['timer_started', 'timer_stopped'],
-            'data_points': [
-                'Timer durations (seconds)',
-                'Active, expired, completed timers',
-                'Per-batch timing aggregates (p50/p90 to compute in warehouse)'
-            ]
-        },
-        {
-            'name': 'Global Item Library',
-            'description': 'Canonical items, adoption across orgs',
-            'sources': ['GlobalItem'],
-            'events': ['global_item_created', 'global_item_archived', 'global_item_deleted'],
-            'data_points': [
-                'Adoption across organizations (count of org-linked items)',
-                'Data quality: missing density/capacity/shelf-life'
-            ]
-        },
-        {
-            'name': 'Organizations & Users',
-            'description': 'Tenancy, active users, tiers',
-            'sources': ['Organization', 'User', 'OrganizationStats', 'UserStats'],
-            'events': [],
-            'data_points': [
-                'Org totals: batches, completed/failed/cancelled',
-                'Users: total and active',
-                'Inventory: total items and total value',
-                'Products: total products, total made'
-            ]
-        }
-    ]
+    from flask import current_app
+    from app.services.statistics import AnalyticsCatalogService, AnalyticsCatalogError
 
-    return render_template('developer/analytics_catalog.html', domains=domains)
+    try:
+        domains = AnalyticsCatalogService.get_domains()
+        summary = AnalyticsCatalogService.get_summary()
+    except AnalyticsCatalogError as exc:
+        current_app.logger.error("Failed to build analytics catalog: %s", exc, exc_info=True)
+        flash('Unable to load the analytics catalog right now. Please try again later.', 'error')
+        domains = []
+        summary = None
+
+    return render_template('developer/analytics_catalog.html', domains=domains, catalog_summary=summary)
 
 
 # ProductCategory management
@@ -1812,19 +2146,10 @@ def delete_product_category(cat_id):
 @require_developer_permission('system_admin')
 def waitlist_statistics():
     """View waitlist statistics and data"""
-    import json
-    import os
     from datetime import datetime
 
     waitlist_file = 'data/waitlist.json'
-    waitlist_data = []
-
-    if os.path.exists(waitlist_file):
-        try:
-            with open(waitlist_file, 'r') as f:
-                waitlist_data = json.load(f)
-        except (json.JSONDecodeError, IOError):
-            waitlist_data = []
+    waitlist_data = read_json_file(waitlist_file, default=[]) or []
 
     # Process data for display
     processed_data = []
@@ -2159,7 +2484,7 @@ def update_developer_user():
 
             if existing:
                 existing.is_active = True
-                existing.assigned_at = datetime.utcnow()
+                existing.assigned_at = datetime.now(timezone.utc)
                 existing.assigned_by = current_user.id
             else:
                 new_assignment = UserRoleAssignment(
@@ -2262,82 +2587,15 @@ def get_user_api(user_id):
     except Exception as e:
         return jsonify({'success': False, 'error': str(e)})
 
-@developer_bp.route('/reference-categories/get-visibility', methods=['GET'])
-@login_required
-def get_category_visibility():
-    """Get visibility settings for a category"""
+@developer_bp.route('/api/container-options')
+@login_required  
+def api_container_options():
+    """Get curated container options for dropdowns"""
     try:
-        category_name = request.args.get('category', '').strip()
-
-        if not category_name:
-            return jsonify({'success': False, 'error': 'Category name is required'})
-
-        # Find the category
-        from app.models.category import IngredientCategory
-        category = IngredientCategory.query.filter_by(
-            name=category_name,
-            organization_id=None,
-            is_global_category=True
-        ).first()
-
-        if not category:
-            return jsonify({'success': False, 'error': 'Category not found'})
-
-        visibility = {
-            'show_saponification_value': getattr(category, 'show_saponification_value', False),
-            'show_iodine_value': getattr(category, 'show_iodine_value', False),
-            'show_melting_point': getattr(category, 'show_melting_point', False),
-            'show_flash_point': getattr(category, 'show_flash_point', False),
-            'show_ph_value': getattr(category, 'show_ph_value', False),
-            'show_moisture_content': getattr(category, 'show_moisture_content', False),
-            'show_shelf_life_months': getattr(category, 'show_shelf_life_months', False),
-            'show_comedogenic_rating': getattr(category, 'show_comedogenic_rating', False)
-        }
-
-        return jsonify({'success': True, 'visibility': visibility})
-
-    except Exception as e:
-        return jsonify({'success': False, 'error': str(e)})
-
-@developer_bp.route('/reference-categories/update-visibility', methods=['POST'])
-@login_required
-def update_category_visibility():
-    """Update visibility settings for a category"""
-    try:
-        data = request.get_json()
-        category_name = data.get('category', '').strip()
-
-        if not category_name:
-            return jsonify({'success': False, 'error': 'Category name is required'})
-
-        # Find the category
-        from app.models.category import IngredientCategory
-        category = IngredientCategory.query.filter_by(
-            name=category_name,
-            organization_id=None,
-            is_global_category=True
-        ).first()
-
-        if not category:
-            return jsonify({'success': False, 'error': 'Category not found'})
-
-        # Update visibility settings
-        category.show_saponification_value = data.get('show_saponification_value', False)
-        category.show_iodine_value = data.get('show_iodine_value', False)
-        category.show_melting_point = data.get('show_melting_point', False)
-        category.show_flash_point = data.get('show_flash_point', False)
-        category.show_ph_value = data.get('show_ph_value', False)
-        category.show_moisture_content = data.get('show_moisture_content', False)
-        category.show_shelf_life_months = data.get('show_shelf_life_months', False)
-        category.show_comedogenic_rating = data.get('show_comedogenic_rating', False)
-
-        db.session.commit()
-
+        curated_lists = load_curated_container_lists()
         return jsonify({
-            'success': True, 
-            'message': f'Visibility settings updated for category "{category_name}"'
+            'success': True,
+            'options': curated_lists
         })
-
     except Exception as e:
-        db.session.rollback()
         return jsonify({'success': False, 'error': str(e)})

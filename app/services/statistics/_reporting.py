@@ -7,7 +7,7 @@ Aggregates statistics data for dashboards, reports, and analytics.
 
 import logging
 from typing import Dict, Any, List
-from datetime import datetime, timedelta
+from datetime import timedelta
 
 from ...extensions import db
 from ...models.statistics import (
@@ -15,6 +15,7 @@ from ...models.statistics import (
     InventoryEfficiencyStats, OrganizationLeaderboardStats
 )
 from ...models.freshness_snapshot import FreshnessSnapshot
+from ...utils.timezone_utils import TimezoneUtils
 
 logger = logging.getLogger(__name__)
 
@@ -114,7 +115,7 @@ class ReportingService:
     def get_efficiency_trends(organization_id: int, days: int = 30) -> Dict[str, Any]:
         """Get efficiency trends over specified period"""
         try:
-            since_date = datetime.now() - timedelta(days=days)
+            since_date = TimezoneUtils.utc_now() - timedelta(days=days)
             
             batches = BatchStats.query.filter(
                 BatchStats.organization_id == organization_id,
@@ -154,7 +155,7 @@ class ReportingService:
     def _get_monthly_batch_count(organization_id: int) -> int:
         """Get batch count for current month"""
         try:
-            now = datetime.now()
+            now = TimezoneUtils.utc_now()
             month_start = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
             
             return BatchStats.query.filter(
@@ -170,7 +171,7 @@ class ReportingService:
     def _get_recent_avg_item_freshness(organization_id: int) -> float:
         """Get recent average freshness efficiency score from snapshots (last 7 days)."""
         try:
-            since = datetime.utcnow() - timedelta(days=7)
+            since = TimezoneUtils.utc_now() - timedelta(days=7)
             snaps = FreshnessSnapshot.query.filter(
                 FreshnessSnapshot.organization_id == organization_id,
                 FreshnessSnapshot.snapshot_date >= since.date()

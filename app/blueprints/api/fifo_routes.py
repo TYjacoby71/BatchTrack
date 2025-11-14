@@ -27,10 +27,10 @@ def get_fifo_details(inventory_id):
         # Get inventory item
         item = InventoryItem.query.get_or_404(inventory_id)
         
-        # Get current FIFO entries (available stock)
-        fifo_entries = InventoryHistory.query.filter_by(inventory_item_id=inventory_id) \
-            .filter(InventoryHistory.remaining_quantity > 0) \
-            .order_by(InventoryHistory.timestamp.asc()).all()
+        # Get current FIFO entries (available stock) from UnifiedInventoryHistory
+        fifo_entries = UnifiedInventoryHistory.query.filter_by(inventory_item_id=inventory_id) \
+            .filter(UnifiedInventoryHistory.remaining_quantity > 0) \
+            .order_by(UnifiedInventoryHistory.timestamp.asc()).all()
         
         # Get batch usage if batch_id provided
         batch_usage = []
@@ -44,7 +44,7 @@ def get_fifo_details(inventory_id):
             life_remaining_percent = None
             
             if entry.timestamp:
-                age_days = (datetime.utcnow() - entry.timestamp).days
+                age_days = (datetime.now(timezone.utc) - entry.timestamp).days
                 
                 if entry.is_perishable and entry.shelf_life_days:
                     life_remaining_percent = max(0, 100 - ((age_days / entry.shelf_life_days) * 100))
@@ -92,7 +92,7 @@ def get_batch_inventory_summary(batch_id):
         container_summary = []
         for container in batch_containers:
             container_summary.append({
-                'name': container.container.name,
+                'name': container.inventory_item.container_display_name,
                 'quantity_used': container.quantity_used,
                 'cost_each': container.cost_each,
                 'type': 'regular'
@@ -100,7 +100,7 @@ def get_batch_inventory_summary(batch_id):
         
         for extra_container in extra_containers:
             container_summary.append({
-                'name': extra_container.container.name,
+                'name': extra_container.inventory_item.container_display_name,
                 'quantity_used': extra_container.quantity_used,
                 'cost_each': extra_container.cost_each,
                 'type': 'extra'
@@ -160,7 +160,7 @@ def get_batch_fifo_usage(inventory_id, batch_id):
         life_remaining_percent = None
         lot_display_id = None
 
-        when = ev.timestamp or datetime.utcnow()
+        when = ev.timestamp or datetime.now(timezone.utc)
 
         if ev.affected_lot_id:
             lot = db.session.get(InventoryLot, ev.affected_lot_id)
@@ -236,7 +236,7 @@ def build_merged_ingredient_summary(batch: Batch):
             age_days = None
             life_remaining_percent = None
             lot_display_id = None
-            when = ev.timestamp or datetime.utcnow()
+            when = ev.timestamp or datetime.now(timezone.utc)
 
             if ev.affected_lot_id:
                 lot = db.session.get(InventoryLot, ev.affected_lot_id)

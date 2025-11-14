@@ -29,21 +29,39 @@ class PiiRedactionFilter(logging.Filter):
 
 def configure_logging(app: Flask):
     """Configure application logging based on environment with optional PII redaction."""
-    
-    # Get log level from config
-    log_level = getattr(app.config, 'LOG_LEVEL', 'INFO')
-    
+
+    def _coerce_level(value):
+        if isinstance(value, int):
+            return value
+        if isinstance(value, str):
+            candidate = value.strip().upper()
+            return getattr(logging, candidate, logging.INFO)
+        return logging.INFO
+
+    # Get log level from config (default WARNING for cleaner output)
+    raw_level = app.config.get('LOG_LEVEL', 'WARNING' if app.config.get('DEBUG') else 'INFO')
+    effective_level = _coerce_level(raw_level)
+
     # Set root logger level
-    logging.getLogger().setLevel(getattr(logging, log_level))
-    
+    logging.getLogger().setLevel(effective_level)
+
     # Configure Flask's logger
-    app.logger.setLevel(getattr(logging, log_level))
+    app.logger.setLevel(effective_level)
     
-    # Silence noisy third-party loggers in production
-    if log_level != 'DEBUG':
+    # Prevent duplicate logging by disabling propagation for app loggers
+    app_logger = logging.getLogger('app')
+    app_logger.propagate = False
+    
+    # Clear any existing handlers to prevent duplicates
+    for handler in app_logger.handlers[:]:
+        app_logger.removeHandler(handler)
+
+    # Silence noisy third-party loggers unless debugging explicitly enabled
+    if effective_level > logging.DEBUG:
         logging.getLogger('werkzeug').setLevel(logging.WARNING)
         logging.getLogger('flask_limiter').setLevel(logging.WARNING)
         logging.getLogger('sqlalchemy.engine').setLevel(logging.WARNING)
+        logging.getLogger('app.blueprints_registry').setLevel(logging.WARNING)
     
     # Configure format
     if os.environ.get('REPLIT_DEPLOYMENT') == 'true':

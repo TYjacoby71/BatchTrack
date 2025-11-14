@@ -1,9 +1,127 @@
-
 {
-  "category_name": "Starches & Thickeners",
-  "default_density": 0.63,
-  "description": "For starches and common thickeners.",
-  "show_moisture_content": true,
-  "show_shelf_life_months": true,
-  "items": []
+  "category_name": "Starches & Gums (Thickeners & Binders)",
+  "default_density": 0.7,
+  "description": "Plant- and protein-derived thickeners, binders, and stabilizers for food and cosmetic formulations.",
+  "attributes": [
+    "moisture_content_percent",
+    "protein_content_pct",
+    "recommended_usage_rate",
+    "recommended_shelf_life_days",
+    "certifications",
+    "is_active_ingredient"
+  ],
+  "items": [
+    {
+      "name": "Cornstarch",
+      "aliases": [
+        "maize starch"
+      ],
+      "density": 0.54,
+      "default_unit": "gram",
+      "moisture_content_percent": 12,
+      "protein_content_pct": 0.3,
+      "recommended_usage_rate": "2-10% as thickener",
+      "recommended_shelf_life_days": 1095,
+      "certifications": [
+        "Non-GMO"
+      ],
+      "is_active_ingredient": false
+    },
+    {
+      "name": "Arrowroot Powder",
+      "aliases": [
+        "maranta arundinacea starch"
+      ],
+      "density": 0.56,
+      "default_unit": "gram",
+      "moisture_content_percent": 11,
+      "protein_content_pct": 0.2,
+      "recommended_usage_rate": "2-8% as thickener or absorbent",
+      "recommended_shelf_life_days": 730,
+      "certifications": [
+        "Gluten-Free"
+      ],
+      "is_active_ingredient": false
+    },
+    {
+      "name": "Tapioca Starch",
+      "aliases": [
+        "cassava starch"
+      ],
+      "density": 0.58,
+      "default_unit": "gram",
+      "moisture_content_percent": 12,
+      "protein_content_pct": 0.2,
+      "recommended_usage_rate": "2-8% as thickener and texturizer",
+      "recommended_shelf_life_days": 730,
+      "certifications": [
+        "Gluten-Free"
+      ],
+      "is_active_ingredient": false
+    },
+    {
+      "name": "Guar Gum",
+      "aliases": [
+        "guar hydrocolloid"
+      ],
+      "density": 0.75,
+      "default_unit": "gram",
+      "moisture_content_percent": 12,
+      "protein_content_pct": 5,
+      "recommended_usage_rate": "0.2-1% as thickener or stabilizer",
+      "recommended_shelf_life_days": 540,
+      "certifications": [
+        "Kosher"
+      ],
+      "is_active_ingredient": false
+    },
+    {
+      "name": "Xanthan Gum",
+      "aliases": [
+        "xanthan polysaccharide"
+      ],
+      "density": 0.8,
+      "default_unit": "gram",
+      "moisture_content_percent": 13,
+      "protein_content_pct": 7,
+      "recommended_usage_rate": "0.1-1% in gels and emulsions",
+      "recommended_shelf_life_days": 540,
+      "certifications": [
+        "Non-GMO"
+      ],
+      "is_active_ingredient": false
+    },
+    {
+      "name": "Maltodextrin",
+      "aliases": [
+        "spray-dried maltodextrin"
+      ],
+      "density": 0.6,
+      "default_unit": "gram",
+      "moisture_content_percent": 6,
+      "protein_content_pct": 0,
+      "recommended_usage_rate": "1-20% as bulking agent or encapsulation aid",
+      "recommended_shelf_life_days": 730,
+      "certifications": [
+        "Non-GMO"
+      ],
+      "is_active_ingredient": false
+    },
+    {
+      "name": "Gelatin Powder (250 Bloom)",
+      "aliases": [
+        "type B gelatin"
+      ],
+      "density": 0.65,
+      "default_unit": "gram",
+      "moisture_content_percent": 8,
+      "protein_content_pct": 90,
+      "recommended_usage_rate": "2-10% in gels and confectionery",
+      "recommended_shelf_life_days": 720,
+      "certifications": [
+        "Halal Available"
+      ],
+      "is_active_ingredient": false
+    }
+  ]
 }

@@ -41,12 +41,9 @@
                   <button class="btn btn-sm btn-outline-secondary me-2" onclick="calculateCategoryDensity('{{ category }}')">
                     <i class="fas fa-calculator"></i> Auto
                   </button>
-                  <button class="btn btn-sm btn-outline-danger me-2" onclick="deleteCategory('{{ category }}')">
-                    <i class="fas fa-trash"></i> Delete
-                  </button>
-                  <button class="btn btn-sm btn-outline-info" onclick="editCategoryVisibility('{{ category }}')">
-                    <i class="fas fa-eye"></i> Visibility
-                  </button>
+                    <button class="btn btn-sm btn-outline-danger" onclick="deleteCategory('{{ category }}')">
+                      <i class="fas fa-trash"></i> Delete
+                    </button>
                 </div>
               </div>
             </div>
@@ -94,93 +91,6 @@
           <li><strong>Examples:</strong> Oils, Waxes, Dairy, Containers, Essential Oils</li>
           <li><strong>Deletion:</strong> Categories with active items cannot be deleted</li>
         </ul>
-      </div>
-    </div>
-  </div>
-</div>
-
-<!-- Category Visibility Modal -->
-<div class="modal fade" id="categoryVisibilityModal" tabindex="-1">
-  <div class="modal-dialog">
-    <div class="modal-content">
-      <div class="modal-header">
-        <h5 class="modal-title">Configure Field Visibility</h5>
-        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-      </div>
-      <div class="modal-body">
-        <h6 id="visibilityModalTitle">Category: <span id="visibilityModalCategory"></span></h6>
-        <p class="text-muted small">Select which soap-making and cosmetic formulation fields should be visible for ingredients in this category.</p>
-
-        <div class="row g-3">
-          <div class="col-md-6">
-            <div class="form-check">
-              <input class="form-check-input" type="checkbox" id="showSaponificationValue">
-              <label class="form-check-label" for="showSaponificationValue">
-                Saponification Value
-              </label>
-            </div>
-          </div>
-          <div class="col-md-6">
-            <div class="form-check">
-              <input class="form-check-input" type="checkbox" id="showIodineValue">
-              <label class="form-check-label" for="showIodineValue">
-                Iodine Value
-              </label>
-            </div>
-          </div>
-          <div class="col-md-6">
-            <div class="form-check">
-              <input class="form-check-input" type="checkbox" id="showMeltingPoint">
-              <label class="form-check-label" for="showMeltingPoint">
-                Melting Point
-              </label>
-            </div>
-          </div>
-          <div class="col-md-6">
-            <div class="form-check">
-              <input class="form-check-input" type="checkbox" id="showFlashPoint">
-              <label class="form-check-label" for="showFlashPoint">
-                Flash Point
-              </label>
-            </div>
-          </div>
-          <div class="col-md-6">
-            <div class="form-check">
-              <input class="form-check-input" type="checkbox" id="showPhValue">
-              <label class="form-check-label" for="showPhValue">
-                pH Value
-              </label>
-            </div>
-          </div>
-          <div class="col-md-6">
-            <div class="form-check">
-              <input class="form-check-input" type="checkbox" id="showMoistureContent">
-              <label class="form-check-label" for="showMoistureContent">
-                Moisture Content
-              </label>
-            </div>
-          </div>
-          <div class="col-md-6">
-            <div class="form-check">
-              <input class="form-check-input" type="checkbox" id="showShelfLifeMonths">
-              <label class="form-check-label" for="showShelfLifeMonths">
-                Shelf Life (Months)
-              </label>
-            </div>
-          </div>
-          <div class="col-md-6">
-            <div class="form-check">
-              <input class="form-check-input" type="checkbox" id="showComedogenicRating">
-              <label class="form-check-label" for="showComedogenicRating">
-                Comedogenic Rating
-              </label>
-            </div>
-          </div>
-        </div>
-      </div>
-      <div class="modal-footer">
-        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-        <button type="button" class="btn btn-primary" onclick="saveCategoryVisibility()">Save Visibility</button>
       </div>
     </div>
   </div>
@@ -323,77 +233,5 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 });
 
-  let currentEditingCategory = null;
-
-  function editCategoryVisibility(categoryName) {
-    currentEditingCategory = categoryName;
-    document.getElementById('visibilityModalCategory').textContent = categoryName;
-
-    // Fetch current visibility settings
-    fetch(`{{ url_for("developer.get_category_visibility") }}?category=${encodeURIComponent(categoryName)}`)
-      .then(response => response.json())
-      .then(data => {
-        if (data.success) {
-          const settings = data.visibility;
-          document.getElementById('showSaponificationValue').checked = settings.show_saponification_value || false;
-          document.getElementById('showIodineValue').checked = settings.show_iodine_value || false;
-          document.getElementById('showMeltingPoint').checked = settings.show_melting_point || false;
-          document.getElementById('showFlashPoint').checked = settings.show_flash_point || false;
-          document.getElementById('showPhValue').checked = settings.show_ph_value || false;
-          document.getElementById('showMoistureContent').checked = settings.show_moisture_content || false;
-          document.getElementById('showShelfLifeMonths').checked = settings.show_shelf_life_months || false;
-          document.getElementById('showComedogenicRating').checked = settings.show_comedogenic_rating || false;
-
-          const modal = new bootstrap.Modal(document.getElementById('categoryVisibilityModal'));
-          modal.show();
-        } else {
-          alert('Error loading visibility settings: ' + data.error);
-        }
-      })
-      .catch(error => {
-        console.error('Error:', error);
-        alert('Error loading visibility settings');
-      });
-  }
-
-  function saveCategoryVisibility() {
-    if (!currentEditingCategory) return;
-
-    const visibilitySettings = {
-      category: currentEditingCategory,
-      show_saponification_value: document.getElementById('showSaponificationValue').checked,
-      show_iodine_value: document.getElementById('showIodineValue').checked,
-      show_melting_point: document.getElementById('showMeltingPoint').checked,
-      show_flash_point: document.getElementById('showFlashPoint').checked,
-      show_ph_value: document.getElementById('showPhValue').checked,
-      show_moisture_content: document.getElementById('showMoistureContent').checked,
-      show_shelf_life_months: document.getElementById('showShelfLifeMonths').checked,
-      show_comedogenic_rating: document.getElementById('showComedogenicRating').checked
-    };
-
-    fetch('{{ url_for("developer.update_category_visibility") }}', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'X-CSRFToken': getCSRFToken()
-      },
-      body: JSON.stringify(visibilitySettings)
-    })
-    .then(response => response.json())
-    .then(data => {
-      if (data.success) {
-        const modal = bootstrap.Modal.getInstance(document.getElementById('categoryVisibilityModal'));
-        modal.hide();
-        // Show success message
-        alert('Visibility settings saved successfully');
-      } else {
-        alert('Error: ' + data.error);
-      }
-    })
-    .catch(error => {
-      console.error('Error:', error);
-      alert('Error saving visibility settings');
-    });
-  }
 </script>
 {% endblock %}
