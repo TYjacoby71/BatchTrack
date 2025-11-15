@@ -116,7 +116,7 @@ gunicorn -c gunicorn.conf.py wsgi:app
 - **Connections**: `1000 per worker`
 - **Timeouts**: `30s request timeout`
 - **Memory Management**: `2000 requests per worker restart`
-- The `wsgi.py` entrypoint automatically applies `gevent.monkey.patch_all()` when the dependency is installed.
+- The `wsgi.py` entrypoint automatically applies `gevent.monkey.patch_all()` when the dependency is installed, but skips patching `thread`/`threading` on Python 3.13+ to avoid upstream gevent bugs (override with `GEVENT_PATCH_THREADS=1` if needed).
 
 #### Domain Event Dispatcher Worker
 
