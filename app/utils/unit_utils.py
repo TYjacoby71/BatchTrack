@@ -2,155 +2,77 @@ from ..models import Unit
 import logging
 from logging.handlers import RotatingFileHandler
 import os
-from typing import Dict, List, Optional, Tuple, Union, Iterable, Any
+from typing import Dict, List, Optional, Tuple, Union
 from dataclasses import dataclass
 from flask import g, current_app
 import time
 from flask_login import current_user
 
 @dataclass(frozen=True)
-class UnitOption:
-    """Session-independent representation of a unit for caching/rendering."""
-    id: Optional[int]
+class FallbackUnit:
     name: str
-    unit_type: str = 'count'
-    base_unit: Optional[str] = None
-    conversion_factor: Optional[float] = None
-    symbol: Optional[str] = None
-    is_custom: bool = False
-    is_mapped: bool = False
-    organization_id: Optional[int] = None
-    created_by: Optional[int] = None
-
-    @property
-    def is_base_unit(self) -> bool:
-        return self.base_unit is None or self.base_unit == self.name
-
-    @property
-    def user_id(self) -> Optional[int]:
-        # Preserve previous attribute access pattern
-        return self.created_by
-
-
-def _to_unit_option(unit: Any) -> UnitOption:
-    """Convert ORM instances or fallback dicts into UnitOption dataclasses."""
-    if isinstance(unit, UnitOption):
-        return unit
-    return UnitOption(
-        id=getattr(unit, 'id', None),
-        name=getattr(unit, 'name', '') or '',
-        unit_type=getattr(unit, 'unit_type', 'count') or 'count',
-        base_unit=getattr(unit, 'base_unit', None),
-        conversion_factor=getattr(unit, 'conversion_factor', None),
-        symbol=getattr(unit, 'symbol', None),
-        is_custom=bool(getattr(unit, 'is_custom', False)),
-        is_mapped=bool(getattr(unit, 'is_mapped', False)),
-        organization_id=getattr(unit, 'organization_id', None),
-        created_by=getattr(unit, 'created_by', getattr(unit, 'user_id', None)),
-    )
-
-
-def _normalize_unit_collection(units: Iterable[Any]) -> List[UnitOption]:
-    return [_to_unit_option(unit) for unit in units]
+    aliases: tuple[str, ...] = ()
+    to_base_multiplier: float = 1.0
 
 # Set up logger for this module
 logger = logging.getLogger(__name__)
-
-def setup_logging(app):
-    """Deprecated: logging is configured via app.logging_config.configure_logging."""
-    logger.debug('setup_logging called (deprecated). Using centralized logging_config instead.')
-
-def get_global_unit_list():
-    """Get list of all active units, including both standard and organization-specific custom units"""
-    # Check for request-level cache first
-    cache_key = 'global_unit_list'
-    if hasattr(g, cache_key):
-        return getattr(g, cache_key)
-
-    # Check application-level cache
-    from ..utils.cache_manager import app_cache
-    cache_key_full = f"units:{getattr(current_user, 'organization_id', 'public') if hasattr(current_user, 'organization_id') else 'public'}"
+@@ -33,8 +72,12 @@ def get_global_unit_list():
+cache_key_full = f"units:{getattr(current_user, 'organization_id', 'public') if hasattr(current_user, 'organization_id') else 'public'}"
     cached_units = app_cache.get(cache_key_full)
     if cached_units:
-        safe_units = _normalize_unit_collection(cached_units)
-        setattr(g, cache_key, safe_units)
-        # Upgrade cache if it was storing ORM instances
-        if cached_units and not isinstance(cached_units[0], UnitOption):
-            app_cache.set(cache_key_full, safe_units, 300)
-        return safe_units
+        setattr(g, cache_key, cached_units)
+        return cached_units
 
     try:
         from ..models import Unit
-
-        start_time = time.time()
-
-        # Base query for active units
-        query = Unit.query.filter_by(is_active=True)
-
-        # If user is authenticated, include their organization's custom units
-        if current_user and current_user.is_authenticated:
-            if current_user.organization_id:
-                # Regular user: show standard units + their org's custom units
-                query = query.filter(
-                    (Unit.is_custom == False) |
-                    (Unit.organization_id == current_user.organization_id)
-                )
-            elif current_user.user_type == 'developer':
-                # Developer: check for selected organization
-                from flask import session
-                selected_org_id = session.get('dev_selected_org_id')
-                if selected_org_id:
-                    query = query.filter(
-                        (Unit.is_custom == False) |
-                        (Unit.organization_id == selected_org_id)
-                    )
-                # Otherwise show all units for system-wide developer access
-            else:
-                # User without organization: only show standard units
-                query = query.filter(Unit.is_custom == False)
-        else:
-            # Unauthenticated: only show standard units
-            query = query.filter(Unit.is_custom == False)
+@@ -71,48 +114,41 @@ def get_global_unit_list():
 
         # Order by type and name for consistent display
-        units = query.order_by(Unit.unit_type, Unit.name).all()
-        safe_units = _normalize_unit_collection(units)
+units = query.order_by(Unit.unit_type, Unit.name).all()
 
         # Monitor query performance
-        query_time = time.time() - start_time
-        if query_time > 0.05:  # Log queries taking > 50ms
+query_time = time.time() - start_time
+if query_time > 0.05:  # Log queries taking > 50ms
             logger.warning(f"Unit query took {query_time:.3f}s for {len(units)} units")
 
         # Cache the result for this request and in app cache
-        setattr(g, cache_key, safe_units)
-        app_cache.set(cache_key_full, safe_units, 300)  # 5 minute cache
+setattr(g, cache_key, units)
+app_cache.set(cache_key_full, units, 300)  # 5 minute cache
 
-        if not safe_units:
+if not units:
             logger.warning("No units found, creating fallback units")
+            # Create fallback units if none exist
             fallback_units = [
-                UnitOption(id=None, name='oz', unit_type='weight', base_unit='oz'),
-                UnitOption(id=None, name='g', unit_type='weight', base_unit='g'),
-                UnitOption(id=None, name='lb', unit_type='weight', base_unit='lb'),
-                UnitOption(id=None, name='ml', unit_type='volume', base_unit='ml'),
-                UnitOption(id=None, name='fl oz', unit_type='volume', base_unit='fl oz'),
-                UnitOption(id=None, name='count', unit_type='count', base_unit='count')
+                FallbackUnit('oz', ('oz',), 1.0),
+                FallbackUnit('g', ('g',), 1.0),
+                FallbackUnit('lb', ('lb',), 1.0),
+                FallbackUnit('ml', ('ml',), 1.0),
+                FallbackUnit('fl oz', ('fl oz',), 1.0),
+                FallbackUnit('count', ('count',), 1.0)
             ]
             # Cache fallback units too
             setattr(g, cache_key, fallback_units)
             return fallback_units
 
-        return safe_units
+return units
 
-    except Exception as e:
-        logger.error(f"Error getting global unit list: {e}")
+except Exception as e:
+logger.error(f"Error getting global unit list: {e}")
         # Create fallback unit objects
+class FallbackUnitLocal: # Renamed to avoid conflict with the dataclass
+            def __init__(self, symbol, name, unit_type):
+                self.symbol = symbol
+                self.name = name
+                self.type = unit_type
+
         error_fallback = [
-            UnitOption(id=None, name='gram', symbol='g', unit_type='weight'),
-            UnitOption(id=None, name='milliliter', symbol='ml', unit_type='volume'),
-            UnitOption(id=None, name='count', symbol='count', unit_type='count')
+            FallbackUnitLocal('g', 'gram', 'weight'),
+            FallbackUnitLocal('ml', 'milliliter', 'volume'),
+            FallbackUnitLocal('count', 'count', 'quantity')
         ]
-        setattr(g, cache_key, error_fallback)
-        return error_fallback
+        # Cache error fallback too
+setattr(g, cache_key, error_fallback)
+return error_fallback
 
 def validate_density_requirements(from_unit, to_unit, ingredient=None):
     """
@@ -159,17 +81,12 @@ def validate_density_requirements(from_unit, to_unit, ingredient=None):
     """
     if from_unit.unit_type == to_unit.unit_type:
         return False, None
-
     if {'volume', 'weight'} <= {from_unit.unit_type, to_unit.unit_type}:
         if not ingredient:
             return True, "Ingredient context required for volume ↔ weight conversion"
-
         if ingredient.density:
             return False, None
-
         if ingredient.category and ingredient.category.default_density:
             return False, None
-
         return True, f"Density required for {ingredient.name}. Set ingredient density or category."
-
     return False, None
