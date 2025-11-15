@@ -1,8 +1,33 @@
 import pytest
+import sqlalchemy as sa
 from flask_login import login_user
 from app.models import InventoryItem
 from app.services.inventory_adjustment import process_inventory_adjustment
 from app.services.inventory_adjustment._creation_logic import _resolve_cost_per_unit
+from app.extensions import db
+
+
+@pytest.fixture(autouse=True)
+def ensure_inventory_item_schema(app):
+    """Ensure SQLite test DB has all columns expected by InventoryItem model."""
+    with app.app_context():
+        inspector = sa.inspect(db.engine)
+        try:
+            existing_columns = {col["name"] for col in inspector.get_columns("inventory_item")}
+        except sa.exc.NoSuchTableError:
+            InventoryItem.__table__.create(bind=db.engine, checkfirst=True)
+            inspector = sa.inspect(db.engine)
+            existing_columns = {col["name"] for col in inspector.get_columns("inventory_item")}
+
+        missing_columns = []
+        for column in InventoryItem.__table__.columns:
+            if column.name not in existing_columns:
+                column_type = column.type.compile(db.engine.dialect)
+                db.session.execute(sa.text(f'ALTER TABLE inventory_item ADD COLUMN {column.name} {column_type}'))
+                missing_columns.append(column.name)
+
+        if missing_columns:
+            db.session.commit()
 
 
 @pytest.mark.usefixtures("app", "db_session", "test_user", "test_org")
