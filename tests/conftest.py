@@ -4,6 +4,7 @@ Pytest configuration and shared fixtures for BatchTrack tests.
 import os
 import tempfile
 import pytest
+from sqlalchemy import inspect, text
 from app import create_app
 from app.extensions import db
 from app.models.models import User, Organization, SubscriptionTier, Permission, Role
@@ -41,12 +42,15 @@ def app():
             os.environ.pop('SQLALCHEMY_DISABLE_CREATE_ALL', None)
             db.create_all()
 
+        _ensure_active_session_token_column()
+
         # Create basic test data
         _create_test_data()
 
-        yield app
+    yield app
 
-        # Clean up database
+    # Clean up database
+    with app.app_context():
         db.drop_all()
 
     os.close(db_fd)
@@ -150,6 +154,16 @@ def _create_test_data():
         organization_id=org.id  # This is correct - organization_id is a foreign key
     )
     db.session.add(user)
+    db.session.commit()
+
+
+def _ensure_active_session_token_column():
+    """SQLite migrations occasionally drop new columns; ensure it exists for tests."""
+    inspector = inspect(db.engine)
+    user_columns = [col['name'] for col in inspector.get_columns('user')]
+    if 'active_session_token' in user_columns:
+        return
+    db.session.execute(text('ALTER TABLE "user" ADD COLUMN active_session_token VARCHAR(255)'))
     db.session.commit()
 
 

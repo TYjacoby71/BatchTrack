@@ -8,6 +8,7 @@ from ...services.billing_service import BillingService
 from ...services.stripe_service import StripeService
 from ...services.whop_service import WhopService
 from ...services.signup_service import SignupService
+from ...services.session_service import SessionService
 from ...models.models import Organization, User
 from ...models.subscription_tier import SubscriptionTier
 from ...models.role import Role
@@ -394,6 +395,9 @@ def complete_signup_from_stripe():
 
         # Log in the user
         login_user(owner_user)
+        SessionService.rotate_user_session(owner_user)
+        owner_user.last_login = TimezoneUtils.utc_now()
+        db.session.commit()
         logger.info(f"User {owner_user.username} logged in successfully")
 
         # Clear pending signup data

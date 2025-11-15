@@ -248,6 +248,7 @@ class User(UserMixin, db.Model):
     is_active = db.Column(db.Boolean, default=True)
     created_at = db.Column(db.DateTime, default=TimezoneUtils.utc_now)
     last_login = db.Column(db.DateTime, nullable=True)
+    active_session_token = db.Column(db.String(255), nullable=True)
     # role_id removed - using UserRoleAssignment table instead
 
     # Email verification fields
