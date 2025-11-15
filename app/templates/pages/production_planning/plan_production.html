@@ -57,6 +57,56 @@
             {% include 'components/production/batch_actions.html' %}
         </div>
     </div>
+
+    <!-- Insufficient Stock Confirmation Modal -->
+    <div class="modal fade" id="insufficientStockModal" tabindex="-1" aria-labelledby="insufficientStockModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-lg modal-dialog-scrollable">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="insufficientStockModalLabel">
+                        <i class="fas fa-exclamation-triangle text-danger me-2"></i>
+                        Not Enough Inventory
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <p class="text-muted">
+                        The following ingredients or consumables do not have enough stock to cover this batch. Review the shortages below or add inventory before proceeding.
+                    </p>
+                    <div class="table-responsive mb-3">
+                        <table class="table table-sm">
+                            <thead>
+                                <tr>
+                                    <th>Item</th>
+                                    <th>Needed</th>
+                                    <th>Available</th>
+                                    <th>Status</th>
+                                </tr>
+                            </thead>
+                            <tbody id="insufficientStockList">
+                                <tr>
+                                    <td colspan="4" class="text-center text-muted">
+                                        <em>No shortages detected.</em>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                    <div class="alert alert-warning mb-0">
+                        Required ingredients are missing for this recipe. Would you like to push through and start without them?
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-danger" id="confirmForceStartBtn">
+                        <i class="fas fa-exclamation-circle me-1"></i>
+                        Start Without Ingredients
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
 </div>
 {% endblock %}
 

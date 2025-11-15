@@ -12,6 +12,10 @@ from app.services.event_emitter import EventEmitter
 
 logger = logging.getLogger(__name__)
 
+ADDITIVE_OPERATIONS = set()
+for group in ADDITIVE_OPERATION_GROUPS.values():
+    ADDITIVE_OPERATIONS.update(group.get('operations', []))
+
 def process_inventory_adjustment(item_id, change_type, quantity, notes=None, created_by=None, cost_override=None, custom_expiration_date=None, custom_shelf_life_days=None, customer=None, sale_price=None, order_id=None, target_quantity=None, unit=None, batch_id=None, defer_commit=False):
     """
     CENTRAL DELEGATOR - The single entry point for ALL inventory adjustments.
@@ -42,7 +46,10 @@ def process_inventory_adjustment(item_id, change_type, quantity, notes=None, cre
         qty_float = float(quantity)
     except Exception:
         qty_float = 0.0
-    effective_change_type = 'initial_stock' if (is_initial_stock and qty_float > 0) else change_type
+    if is_initial_stock and qty_float > 0 and change_type in ADDITIVE_OPERATIONS:
+        effective_change_type = 'initial_stock'
+    else:
+        effective_change_type = change_type
 
     try:
         # Normalize quantity to the item's canonical unit if a different unit was provided
