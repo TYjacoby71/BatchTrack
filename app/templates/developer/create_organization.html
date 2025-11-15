@@ -1,4 +1,5 @@
 {% extends 'layout.html' %}
+{% set form_data = form_data or {} %}
 
 {% block title %}Create Organization{% endblock %}
 
@@ -13,21 +14,22 @@
                     </h4>
                 </div>
                 <div class="card-body">
-                    <form method="POST">
+                        <form method="POST">
                         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                         <div class="row">
                             <div class="col-md-8">
                                 <div class="mb-3">
                                     <label for="name" class="form-label">Organization Name *</label>
-                                    <input type="text" class="form-control" id="name" name="name" required>
+                                        <input type="text" class="form-control" id="name" name="name" required value="{{ form_data.get('name', '') }}">
                                 </div>
                             </div>
                             <div class="col-md-4">
                                 <div class="mb-3">
                                     <label for="subscription_tier" class="form-label">Subscription Tier</label>
-                                    <select class="form-select" id="subscription_tier" name="subscription_tier" required>
+                                        {% set selected_tier = form_data.get('subscription_tier', 'free') %}
+                                        <select class="form-select" id="subscription_tier" name="subscription_tier" required>
                                         {% for tier_key, tier_data in available_tiers.items() %}
-                                        <option value="{{ tier_key }}">
+                                            <option value="{{ tier_key }}" {% if selected_tier == tier_key %}selected{% endif %}>
                                             {{ tier_data.name }}
                                             {% if tier_key == 'exempt' %}
                                             (No Billing)
@@ -46,18 +48,19 @@
                                 <div class="mb-3">
                                     <label for="creation_reason" class="form-label">Reason for Creation</label>
                                     <select class="form-select" id="creation_reason" name="creation_reason" required>
-                                        <option value="">Select reason...</option>
-                                        <option value="customer_support">Customer Support - Signup Issues</option>
-                                        <option value="enterprise_onboarding">Enterprise Client Onboarding</option>
-                                        <option value="data_migration">Data Migration from Other System</option>
-                                        <option value="internal_testing">Internal Testing</option>
-                                        <option value="special_arrangement">Special Business Arrangement</option>
+                                        {% set selected_reason = form_data.get('creation_reason', '') %}
+                                        <option value="" {% if not selected_reason %}selected{% endif %}>Select reason...</option>
+                                        <option value="customer_support" {% if selected_reason == 'customer_support' %}selected{% endif %}>Customer Support - Signup Issues</option>
+                                        <option value="enterprise_onboarding" {% if selected_reason == 'enterprise_onboarding' %}selected{% endif %}>Enterprise Client Onboarding</option>
+                                        <option value="data_migration" {% if selected_reason == 'data_migration' %}selected{% endif %}>Data Migration from Other System</option>
+                                        <option value="internal_testing" {% if selected_reason == 'internal_testing' %}selected{% endif %}>Internal Testing</option>
+                                        <option value="special_arrangement" {% if selected_reason == 'special_arrangement' %}selected{% endif %}>Special Business Arrangement</option>
                                     </select>
                                 </div>
 
                                 <div class="mb-3">
                                     <label for="notes" class="form-label">Notes</label>
-                                    <textarea class="form-control" id="notes" name="notes" rows="3" placeholder="Optional notes about this organization creation..."></textarea>
+                                    <textarea class="form-control" id="notes" name="notes" rows="3" placeholder="Optional notes about this organization creation...">{{ form_data.get('notes', '') }}</textarea>
                                 </div>
                             </div>
                         </div>
@@ -69,13 +72,13 @@
                             <div class="col-md-6">
                                 <div class="mb-3">
                                     <label for="username" class="form-label">Username *</label>
-                                    <input type="text" class="form-control" id="username" name="username" required>
+                                    <input type="text" class="form-control" id="username" name="username" required value="{{ form_data.get('username', '') }}">
                                 </div>
                             </div>
                             <div class="col-md-6">
                                 <div class="mb-3">
                                     <label for="email" class="form-label">Email Address *</label>
-                                    <input type="email" class="form-control" id="email" name="email" required>
+                                    <input type="email" class="form-control" id="email" name="email" required value="{{ form_data.get('email', '') }}">
                                 </div>
                             </div>
                         </div>
@@ -84,13 +87,13 @@
                             <div class="col-md-6">
                                 <div class="mb-3">
                                     <label for="first_name" class="form-label">First Name</label>
-                                    <input type="text" class="form-control" id="first_name" name="first_name">
+                                    <input type="text" class="form-control" id="first_name" name="first_name" value="{{ form_data.get('first_name', '') }}">
                                 </div>
                             </div>
                             <div class="col-md-6">
                                 <div class="mb-3">
                                     <label for="last_name" class="form-label">Last Name</label>
-                                    <input type="text" class="form-control" id="last_name" name="last_name">
+                                    <input type="text" class="form-control" id="last_name" name="last_name" value="{{ form_data.get('last_name', '') }}">
                                 </div>
                             </div>
                         </div>
@@ -99,13 +102,13 @@
                             <div class="col-md-6">
                                 <div class="mb-3">
                                     <label for="password" class="form-label">Password *</label>
-                                    <input type="password" class="form-control" id="password" name="password" required>
+                                    <input type="password" class="form-control" id="password" name="password" required value="{{ form_data.get('password', '') }}">
                                 </div>
                             </div>
                             <div class="col-md-6">
                                 <div class="mb-3">
                                     <label for="phone" class="form-label">Phone Number</label>
-                                    <input type="tel" class="form-control" id="phone" name="phone">
+                                    <input type="tel" class="form-control" id="phone" name="phone" value="{{ form_data.get('phone', '') }}">
                                 </div>
                             </div>
                         </div>

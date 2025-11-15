@@ -260,43 +260,51 @@ def create_organization():
     from app.models.subscription_tier import SubscriptionTier as _ST
     available_tiers = {str(t.id): {'name': t.name} for t in _ST.query.order_by(_ST.name).all()}
 
+    def render_form(form_data=None):
+        return render_template(
+            'developer/create_organization.html',
+            available_tiers=available_tiers,
+            form_data=form_data or {}
+        )
+
     if request.method == 'POST':
+        form_data = request.form
         # Organization details
-        name = request.form.get('name')
-        subscription_tier = request.form.get('subscription_tier', 'free')
-        creation_reason = request.form.get('creation_reason')
-        notes = request.form.get('notes', '')
+        name = form_data.get('name')
+        subscription_tier = form_data.get('subscription_tier', 'free')
+        creation_reason = form_data.get('creation_reason')
+        notes = form_data.get('notes', '')
 
         # User details
-        username = request.form.get('username')
-        email = request.form.get('email')
-        first_name = request.form.get('first_name')
-        last_name = request.form.get('last_name')
-        password = request.form.get('password')
-        phone = request.form.get('phone')
+        username = form_data.get('username')
+        email = form_data.get('email')
+        first_name = form_data.get('first_name')
+        last_name = form_data.get('last_name')
+        password = form_data.get('password')
+        phone = form_data.get('phone')
 
         # Validation
         if not name:
             flash('Organization name is required', 'error')
-            return redirect(url_for('developer.create_organization'))
+            return render_form(form_data)
 
         if not username:
             flash('Username is required', 'error')
-            return redirect(url_for('developer.create_organization'))
+            return render_form(form_data)
 
         if not email:
             flash('Email is required', 'error')
-            return redirect(url_for('developer.create_organization'))
+            return render_form(form_data)
 
         if not password:
             flash('Password is required', 'error')
-            return redirect(url_for('developer.create_organization'))
+            return render_form(form_data)
 
         # Check if username already exists
         existing_user = User.query.filter_by(username=username).first()
         if existing_user:
             flash('Username already exists', 'error')
-            return redirect(url_for('developer.create_organization'))
+            return render_form(form_data)
 
         try:
             # Create organization
@@ -349,9 +357,9 @@ def create_organization():
         except Exception as e:
             db.session.rollback()
             flash(f'Error creating organization: {str(e)}', 'error')
-            return redirect(url_for('developer.create_organization'))
+            return render_form(form_data)
 
-    return render_template('developer/create_organization.html', available_tiers=available_tiers)
+    return render_form()
 
 @developer_bp.route('/organizations/<int:org_id>')
 @login_required
@@ -1316,19 +1324,35 @@ def calculate_category_density():
 @login_required
 def create_global_item():
     """Create a new global item"""
+
+    def render_form(form_data=None):
+        from app.models.category import IngredientCategory
+        global_ingredient_categories = IngredientCategory.query.filter_by(
+            organization_id=None,
+            is_active=True,
+            is_global_category=True
+        ).order_by(IngredientCategory.name).all()
+
+        return render_template(
+            'developer/create_global_item.html',
+            global_ingredient_categories=global_ingredient_categories,
+            form_data=form_data or {}
+        )
+
     if request.method == 'POST':
+        form_data = request.form
         try:
             # Extract form data
-            name = request.form.get('name', '').strip()
-            item_type = request.form.get('item_type', 'ingredient')
-            default_unit = request.form.get('default_unit', '').strip() or None
+            name = form_data.get('name', '').strip()
+            item_type = form_data.get('item_type', 'ingredient')
+            default_unit = form_data.get('default_unit', '').strip() or None
             # Get ingredient category id from form
-            ingredient_category_id_str = request.form.get('ingredient_category_id', '').strip() or None
+            ingredient_category_id_str = form_data.get('ingredient_category_id', '').strip() or None
 
             # Validation
             if not name:
                 flash('Name is required', 'error')
-                return redirect(url_for('developer.create_global_item'))
+                return render_form(form_data)
 
             # Validate ingredient_category_id
             ingredient_category_id = None
@@ -1345,16 +1369,16 @@ def create_global_item():
                         ingredient_category_id = category.id
                     else:
                         flash(f'Ingredient category ID "{ingredient_category_id_str}" not found or is not a valid reference category.', 'error')
-                        return redirect(url_for('developer.create_global_item'))
+                        return render_form(form_data)
                 else:
                     flash(f'Invalid Ingredient Category ID format: "{ingredient_category_id_str}"', 'error')
-                    return redirect(url_for('developer.create_global_item'))
+                    return render_form(form_data)
 
             # Check for duplicate
             existing = GlobalItem.query.filter_by(name=name, item_type=item_type).first()
             if existing and not existing.is_archived:
                 flash(f'Global item "{name}" of type "{item_type}" already exists', 'error')
-                return redirect(url_for('developer.create_global_item'))
+                return render_form(form_data)
 
             # Create new global item
             new_item = GlobalItem(
@@ -1365,94 +1389,94 @@ def create_global_item():
             )
 
             # Add optional fields
-            density = request.form.get('density')
+            density = form_data.get('density')
             if density:
                 try:
                     new_item.density = float(density)
                 except ValueError:
                     flash('Invalid density value', 'error')
-                    return redirect(url_for('developer.create_global_item'))
+                    return render_form(form_data)
 
-            capacity = request.form.get('capacity')
+            capacity = form_data.get('capacity')
             if capacity:
                 try:
                     new_item.capacity = float(capacity)
                 except ValueError:
                     flash('Invalid capacity value', 'error')
-                    return redirect(url_for('developer.create_global_item'))
+                    return render_form(form_data)
 
-            new_item.capacity_unit = request.form.get('capacity_unit', '').strip() or None
+            new_item.capacity_unit = form_data.get('capacity_unit', '').strip() or None
             # Container attributes (optional)
             try:
-                new_item.container_material = (request.form.get('container_material') or '').strip() or None
-                new_item.container_type = (request.form.get('container_type') or '').strip() or None
-                new_item.container_style = (request.form.get('container_style') or '').strip() or None
-                new_item.container_color = (request.form.get('container_color') or '').strip() or None
+                new_item.container_material = (form_data.get('container_material') or '').strip() or None
+                new_item.container_type = (form_data.get('container_type') or '').strip() or None
+                new_item.container_style = (form_data.get('container_style') or '').strip() or None
+                new_item.container_color = (form_data.get('container_color') or '').strip() or None
             except Exception:
                 pass
-            new_item.default_is_perishable = request.form.get('default_is_perishable') == 'on'
-            new_item.is_active_ingredient = request.form.get('is_active_ingredient') == 'on'
+            new_item.default_is_perishable = form_data.get('default_is_perishable') == 'on'
+            new_item.is_active_ingredient = form_data.get('is_active_ingredient') == 'on'
 
-            shelf_life = request.form.get('recommended_shelf_life_days')
+            shelf_life = form_data.get('recommended_shelf_life_days')
             if shelf_life:
                 try:
                     new_item.recommended_shelf_life_days = int(shelf_life)
                 except ValueError:
                     flash('Invalid shelf life value', 'error')
-                    return redirect(url_for('developer.create_global_item'))
+                    return render_form(form_data)
 
             # Ingredient-specific metadata
-            new_item.recommended_usage_rate = request.form.get('recommended_usage_rate', '').strip() or None
-            new_item.recommended_fragrance_load_pct = request.form.get('recommended_fragrance_load_pct', '').strip() or None
-            new_item.inci_name = request.form.get('inci_name', '').strip() or None
+            new_item.recommended_usage_rate = form_data.get('recommended_usage_rate', '').strip() or None
+            new_item.recommended_fragrance_load_pct = form_data.get('recommended_fragrance_load_pct', '').strip() or None
+            new_item.inci_name = form_data.get('inci_name', '').strip() or None
 
-            protein_content = request.form.get('protein_content_pct', '').strip()
+            protein_content = form_data.get('protein_content_pct', '').strip()
             if protein_content:
                 try:
                     new_item.protein_content_pct = float(protein_content)
                 except ValueError:
                     flash('Invalid protein content percentage', 'error')
-                    return redirect(url_for('developer.create_global_item'))
+                    return render_form(form_data)
 
-            brewing_color = request.form.get('brewing_color_srm', '').strip()
+            brewing_color = form_data.get('brewing_color_srm', '').strip()
             if brewing_color:
                 try:
                     new_item.brewing_color_srm = float(brewing_color)
                 except ValueError:
                     flash('Invalid brewing SRM value', 'error')
-                    return redirect(url_for('developer.create_global_item'))
+                    return render_form(form_data)
 
-            brewing_potential = request.form.get('brewing_potential_sg', '').strip()
+            brewing_potential = form_data.get('brewing_potential_sg', '').strip()
             if brewing_potential:
                 try:
                     new_item.brewing_potential_sg = float(brewing_potential)
                 except ValueError:
                     flash('Invalid brewing potential SG value', 'error')
-                    return redirect(url_for('developer.create_global_item'))
+                    return render_form(form_data)
 
-            brewing_dp = request.form.get('brewing_diastatic_power_lintner', '').strip()
+            brewing_dp = form_data.get('brewing_diastatic_power_lintner', '').strip()
             if brewing_dp:
                 try:
                     new_item.brewing_diastatic_power_lintner = float(brewing_dp)
                 except ValueError:
                     flash('Invalid brewing diastatic power value', 'error')
-                    return redirect(url_for('developer.create_global_item'))
+                    return render_form(form_data)
 
-            fatty_acid_profile_raw = request.form.get('fatty_acid_profile', '').strip()
+            fatty_acid_profile_raw = form_data.get('fatty_acid_profile', '').strip()
             if fatty_acid_profile_raw:
                 import json
                 try:
                     new_item.fatty_acid_profile = json.loads(fatty_acid_profile_raw)
                 except json.JSONDecodeError:
                     flash('Fatty acid profile must be valid JSON.', 'error')
-                    return redirect(url_for('developer.create_global_item'))
+                    return render_form(form_data)
 
-            certifications_raw = request.form.get('certifications', '').strip()
+            certifications_raw = form_data.get('certifications', '').strip()
             if certifications_raw:
                 new_item.certifications = [c.strip() for c in certifications_raw.split(',') if c.strip()]
 
             # Handle aliases (comma-separated)
-            aliases_raw = request.form.get('aliases', '').strip()
+            aliases_raw = form_data.get('aliases', '').strip()
             if aliases_raw:
                 new_item.aliases = [n.strip() for n in aliases_raw.split(',') if n.strip()]
 
@@ -1489,18 +1513,9 @@ def create_global_item():
         except Exception as e:
             db.session.rollback()
             flash(f'Error creating global item: {str(e)}', 'error')
-            return redirect(url_for('developer.create_global_item'))
+            return render_form(form_data)
 
-    # GET request - show form
-    # Get available global ingredient categories from IngredientCategory table
-    from app.models.category import IngredientCategory
-    global_ingredient_categories = IngredientCategory.query.filter_by(
-        organization_id=None, 
-        is_active=True,
-        is_global_category=True
-    ).order_by(IngredientCategory.name).all()
-
-    return render_template('developer/create_global_item.html', global_ingredient_categories=global_ingredient_categories)
+    return render_form()
 
 @developer_bp.route('/global-items/<int:item_id>/delete', methods=['POST'])
 @login_required
