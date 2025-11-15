@@ -1,10 +1,11 @@
 from flask import Blueprint, render_template, request, session, redirect, flash, jsonify, url_for, current_app
 from flask_login import login_required, current_user
-from app.models import Organization, User, Permission, Role, GlobalItem
+from app.models import Organization, User, Permission, Role, GlobalItem, IngredientProfile, PhysicalForm
 from app.models import ProductCategory
 from app.extensions import db
 from app.utils.json_store import read_json_file, write_json_file
 from datetime import datetime, timedelta, timezone
+import re
 from sqlalchemy import func
 from .system_roles import system_roles_bp
 from .subscription_tiers import subscription_tiers_bp
@@ -44,6 +45,61 @@ developer_bp.register_blueprint(system_roles_bp)
 developer_bp.register_blueprint(subscription_tiers_bp)
 from .addons import addons_bp
 developer_bp.register_blueprint(addons_bp)
+
+
+def _dev_slugify(value: str) -> str:
+    value = value or ''
+    value = value.lower()
+    value = re.sub(r'[^a-z0-9]+', '-', value)
+    value = value.strip('-')
+    return value or 'item'
+
+
+def _ensure_dev_ingredient(name: str, is_active: bool = False) -> IngredientProfile:
+    base_name = (name or '').strip() or 'Generic Ingredient'
+    slug = _dev_slugify(base_name)
+    ingredient = IngredientProfile.query.filter_by(slug=slug).first()
+    if ingredient:
+        if is_active and not ingredient.is_active_ingredient:
+            ingredient.is_active_ingredient = True
+        return ingredient
+    # Guarantee uniqueness
+    unique_slug = slug
+    counter = 1
+    while IngredientProfile.query.filter_by(slug=unique_slug).first():
+        counter += 1
+        unique_slug = f"{slug}-{counter}"
+    ingredient = IngredientProfile(
+        name=base_name,
+        slug=unique_slug,
+        is_active_ingredient=is_active,
+    )
+    db.session.add(ingredient)
+    db.session.flush()
+    return ingredient
+
+
+def _ensure_dev_physical_form(label: str) -> PhysicalForm:
+    base_name = (label or '').strip()
+    if not base_name:
+        base_name = 'Unspecified'
+    slug = _dev_slugify(base_name)
+    physical_form = PhysicalForm.query.filter_by(slug=slug).first()
+    if physical_form:
+        return physical_form
+    unique_slug = slug
+    counter = 1
+    while PhysicalForm.query.filter_by(slug=unique_slug).first():
+        counter += 1
+        unique_slug = f"{slug}-{counter}"
+    physical_form = PhysicalForm(
+        name=base_name,
+        slug=unique_slug,
+    )
+    db.session.add(physical_form)
+    db.session.flush()
+    return physical_form
+
 
 # Developer access control is handled centrally in `app/middleware.py`.
 # This eliminates the dual security checkpoints that were causing routing conflicts
@@ -1356,10 +1412,26 @@ def create_global_item():
                 flash(f'Global item "{name}" of type "{item_type}" already exists', 'error')
                 return redirect(url_for('developer.create_global_item'))
 
+            ingredient_name = request.form.get('ingredient_name', '').strip() or name
+            physical_form_label = request.form.get('physical_form', '').strip()
+            ingredient_profile = _ensure_dev_ingredient(ingredient_name, is_active=item_type == 'ingredient')
+            if not physical_form_label:
+                if item_type == 'container':
+                    physical_form_label = 'Container'
+                elif item_type == 'consumable':
+                    physical_form_label = 'Consumable'
+                elif item_type == 'packaging':
+                    physical_form_label = 'Packaging'
+                else:
+                    physical_form_label = 'Unspecified'
+            physical_form = _ensure_dev_physical_form(physical_form_label)
+
             # Create new global item
             new_item = GlobalItem(
                 name=name,
                 item_type=item_type,
+                ingredient=ingredient_profile,
+                physical_form=physical_form,
                 default_unit=default_unit,
                 ingredient_category_id=ingredient_category_id
             )
