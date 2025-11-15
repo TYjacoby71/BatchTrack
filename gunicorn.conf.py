@@ -29,10 +29,10 @@ def _configured_workers():
 bind = f"0.0.0.0:{os.environ.get('PORT', 5000)}"
 backlog = _env_int("GUNICORN_BACKLOG", 2048)
 
-# Worker processes - use gevent for async I/O
-worker_class = os.environ.get("GUNICORN_WORKER_CLASS", "gevent")
+# Worker processes - use sync for stability with threading
+worker_class = os.environ.get("GUNICORN_WORKER_CLASS", "sync")
 workers = _configured_workers()
-worker_connections = _env_int("GUNICORN_WORKER_CONNECTIONS", 1000)
+# worker_connections not needed for sync workers
 
 # Timeouts and keepalive
 timeout = _env_int("GUNICORN_TIMEOUT", 30)
