@@ -232,8 +232,8 @@
     <button type="button" class="btn btn-sm btn-primary" onclick="addIngredient()">
         <i class="fas fa-plus"></i> Add Ingredient
     </button>
-{% endif %}
-            <div class="btn-group" role="group">
+        {% endif %}
+            <div id="ingredientActionControlsTop" class="btn-group" role="group" aria-label="Ingredient quick actions">
                 <button type="button" class="btn btn-sm btn-primary" onclick="addIngredient()">
                     <i class="fas fa-plus"></i> Add Ingredient
                 </button>
@@ -325,6 +325,24 @@
                     <p>No ingredients added yet. Click "Add Ingredient" to get started.</p>
                 </div>
                 {% endif %}
+            </div>
+            <div id="ingredientActionControlsBottom" class="ingredient-actions-floating d-none" aria-hidden="true">
+                <div class="d-flex flex-column flex-md-row align-items-md-center gap-3 w-100">
+                    <div class="flex-grow-1 text-muted small">
+                        Keep adding ingredients without scrolling—quick actions stay docked here.
+                    </div>
+                    <div class="d-flex flex-wrap gap-2 justify-content-end">
+                        <button type="button" class="btn btn-primary" onclick="addIngredient()">
+                            <i class="fas fa-plus"></i> Add Ingredient
+                        </button>
+                        <button type="button" class="btn btn-secondary" onclick="openQuickCreateInventory()">
+                            <i class="fas fa-bolt"></i> Quick Create Inventory
+                        </button>
+                        <button type="button" class="btn btn-outline-secondary" onclick="openQuickCreateUnit()">
+                            <i class="fas fa-ruler"></i> Quick Create Unit
+                        </button>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
@@ -479,6 +497,56 @@ PRESELECT_INGREDIENT_ID = PRESELECT_INGREDIENT_ID ? (parseInt(PRESELECT_INGREDIE
 let SHOULD_ADD_LINE = (formEl.getAttribute('data-should-add-line') || 'false') === 'true';
 let ingredientReturnContext = 'main';
 let originalYieldUnit = (formEl.getAttribute('data-original-yield-unit') || '').trim();
+const ingredientActionTop = document.getElementById('ingredientActionControlsTop');
+const ingredientActionBottom = document.getElementById('ingredientActionControlsBottom');
+let ingredientActionFloatVisible = false;
+
+function getIngredientLineCount() {
+    const container = document.getElementById('ingredients-container');
+    if (!container) return 0;
+    return container.querySelectorAll('.ingredient-entry').length;
+}
+
+function showFloatingIngredientActions() {
+    if (!ingredientActionBottom) return;
+    if (ingredientActionFloatVisible) return;
+    ingredientActionFloatVisible = true;
+    ingredientActionBottom.classList.remove('d-none');
+    ingredientActionBottom.setAttribute('aria-hidden', 'false');
+    const trigger = window.requestAnimationFrame || function(cb){ return setTimeout(cb, 16); };
+    trigger(() => ingredientActionBottom.classList.add('is-visible'));
+}
+
+function hideFloatingIngredientActions() {
+    if (!ingredientActionBottom) return;
+    if (!ingredientActionFloatVisible && ingredientActionBottom.classList.contains('d-none')) return;
+    ingredientActionFloatVisible = false;
+    ingredientActionBottom.classList.remove('is-visible');
+    ingredientActionBottom.setAttribute('aria-hidden', 'true');
+    let finished = false;
+    function finish() {
+        if (finished) return;
+        finished = true;
+        ingredientActionBottom.classList.add('d-none');
+        ingredientActionBottom.removeEventListener('transitionend', finish);
+    }
+    ingredientActionBottom.addEventListener('transitionend', finish);
+    setTimeout(finish, 250);
+}
+
+function syncIngredientActionAnchors() {
+    const hasIngredients = getIngredientLineCount() > 0;
+    if (ingredientActionTop) {
+        ingredientActionTop.classList.toggle('d-none', hasIngredients);
+    }
+    if (hasIngredients) {
+        showFloatingIngredientActions();
+    } else {
+        hideFloatingIngredientActions();
+    }
+}
+
+syncIngredientActionAnchors();
 
 document.addEventListener('DOMContentLoaded', function() {
     // Initialize Bootstrap popovers
@@ -536,6 +604,7 @@ document.addEventListener('DOMContentLoaded', function() {
                         </div>
                     `;
                 }
+                  syncIngredientActionAnchors();
             }
         }
     });
@@ -633,6 +702,7 @@ document.addEventListener('DOMContentLoaded', function() {
     if (useSkinToggle){
         useSkinToggle.addEventListener('change', syncSkinVisibility);
     }
+    syncIngredientActionAnchors();
 });
 
 function addIngredient(preselectId = null, presetUnit = null) {
@@ -680,6 +750,7 @@ function addIngredient(preselectId = null, presetUnit = null) {
         </div>
     `;
     container.appendChild(entry);
+    syncIngredientActionAnchors();
 
     if (preselectId) {
         const hidden = entry.querySelector('input[name="ingredient_ids[]"]');

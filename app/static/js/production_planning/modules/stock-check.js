@@ -6,6 +6,8 @@ const logger = {
     error: (msg, ...args) => baseLogger.error(`STOCK_CHECK: ${msg}`, ...args)
 };
 
+const BLOCKING_STATUSES = new Set(['NEEDED', 'OUT_OF_STOCK', 'DENSITY_MISSING', 'ERROR']);
+
 // Stock Check Management Module
 export class StockCheckManager {
     constructor(mainManager) {
@@ -110,6 +112,7 @@ export class StockCheckManager {
 
         // Handle the USCS response structure
         const ingredientData = this.stockCheckResults.stock_check || [];
+        const blockingItems = [];
         const allAvailable = this.stockCheckResults.status === 'ok'; // Assuming 'ok' means all available
 
         logger.debug('Stock data:', ingredientData);
@@ -119,6 +122,8 @@ export class StockCheckManager {
             stockResults.innerHTML = '<div class="alert alert-warning"><i class="fas fa-exclamation-triangle"></i> There are no ingredients selected in this recipe. Please edit your recipe and add ingredients.</div>';
             this.main.stockChecked = true;
             this.main.stockCheckPassed = true;  // No ingredients means no stock issues
+            this.main.stockIssues = [];
+            this.main.stockOverrideAcknowledged = false;
             this.main.updateValidation();
             return;
         }
@@ -153,6 +158,13 @@ export class StockCheckManager {
                 statusClass = 'bg-warning';
                 displayAvailable = result.formatted_available || 'Fix Conversion';
                 allIngredientsAvailable = false;
+                blockingItems.push({
+                    name: result.ingredient_name || result.item_name || 'Unknown',
+                    needed,
+                    available,
+                    unit: result.available_unit || result.needed_unit || result.unit || '',
+                    status
+                });
 
                 // Debug: log the full result structure for conversion errors
                 console.log('🔧 STOCK CHECK DEBUG: Full conversion error result:', JSON.stringify(result, null, 2));
@@ -180,6 +192,17 @@ export class StockCheckManager {
 
                 // Use formatted_available if provided, otherwise format the raw value
                 displayAvailable = result.formatted_available || `${available.toFixed(2)} ${result.stock_unit || result.available_unit || ''}`;
+
+                const normalizedStatus = (result.status || status || '').toString().toUpperCase();
+                if (!isAvailable || BLOCKING_STATUSES.has(normalizedStatus)) {
+                    blockingItems.push({
+                        name: result.ingredient_name || result.item_name || 'Unknown',
+                        needed,
+                        available,
+                        unit: result.available_unit || result.needed_unit || result.unit || '',
+                        status: normalizedStatus || (isAvailable ? 'OK' : 'NEEDED')
+                    });
+                }
             }
 
             const displayUnit = result.available_unit || result.needed_unit || result.unit || '';
@@ -211,7 +234,10 @@ export class StockCheckManager {
 
         // Update the main status
         this.main.stockChecked = true;
-        this.main.stockCheckPassed = allIngredientsAvailable;
+        this.main.stockCheckPassed = allIngredientsAvailable && blockingItems.length === 0;
+        this.main.stockOverrideAcknowledged = false;
+        this.main.stockIssues = blockingItems;
+        this.main.stockCheckResults = ingredientData;
         this.main.updateValidation();
 
         // Store processed results for CSV/shopping list
