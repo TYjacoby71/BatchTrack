@@ -250,7 +250,7 @@ def seed_test_data(organization_id: Optional[int] = None):
             "key": "container",
             "name": "4 fl oz Boston Round Bottle",
             "type": "container",
-            "unit": "unit",
+            "unit": "count",
             "cost_per_unit": 0.82,
             "category": categories["Container"],
             "density": None,
