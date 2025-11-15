@@ -627,11 +627,77 @@ def system_settings():
 @login_required
 @permission_required('dev.system_admin')
 def feature_flags():
-    """Dedicated feature flag dashboard."""
-    flag_state = {key: bool(current_app.config.get(key, False)) for key in FEATURE_FLAG_KEYS}
+    """Feature flags management page"""
+    from app.models.feature_flag import FeatureFlag
+
+    # Get all feature flags from database
+    db_flags = FeatureFlag.query.all()
+    flag_state = {flag.key: flag.enabled for flag in db_flags}
+
+    # Define feature flag sections and their flags
+    feature_flag_sections = [
+        {
+            'title': 'Core business features',
+            'description': 'Enable or disable the production features that every organization depends on.',
+            'flags': [
+                {'key': 'FEATURE_FIFO_TRACKING', 'label': 'FIFO Inventory Tracking', 'status': 'wired', 'description': 'First-in-first-out inventory tracking via the inventory adjustment service.'},
+                {'key': 'FEATURE_BARCODE_SCANNING', 'label': 'Barcode Scanning', 'status': 'stub', 'description': 'Placeholder for future scanner integrations.'},
+                {'key': 'FEATURE_PRODUCT_VARIANTS', 'label': 'Product Variants System', 'status': 'wired', 'description': 'Manage SKUs with variants powered by ProductService.'},
+                {'key': 'FEATURE_AUTO_SKU_GENERATION', 'label': 'Auto-generate SKUs', 'status': 'wired', 'description': 'Automatically create SKU codes when products are saved.'},
+                {'key': 'FEATURE_RECIPE_VARIATIONS', 'label': 'Recipe Variations', 'status': 'wired', 'description': 'Support parent/child recipe relationships.'},
+                {'key': 'FEATURE_COST_TRACKING', 'label': 'Cost Tracking & Profit Margins', 'status': 'wired', 'description': 'Costing engine + FIFO/average cost calculations.'},
+                {'key': 'FEATURE_EXPIRATION_TRACKING', 'label': 'Expiration Date Tracking', 'status': 'wired', 'description': 'Lot-based expiration alerts and services.'},
+                {'key': 'FEATURE_BULK_OPERATIONS', 'label': 'Bulk Inventory Operations', 'status': 'wired', 'description': 'Bulk stock adjustments and checks.'},
+            ],
+        },
+        {
+            'title': 'Developer & advanced features',
+            'description': 'Capabilities intended for internal tooling or staging environments.',
+            'flags': [
+                {'key': 'FEATURE_INVENTORY_ANALYTICS', 'label': 'Inventory Analytics (Developer)', 'status': 'wired', 'description': 'Developer-only analytics dashboard and APIs.'},
+                {'key': 'FEATURE_DEBUG_MODE', 'label': 'Debug Mode', 'status': 'stub', 'description': 'Verbose logging & unsafe diagnostics.'},
+                {'key': 'FEATURE_AUTO_BACKUP', 'label': 'Auto-backup System', 'status': 'stub', 'description': 'Nightly exports of core tables.'},
+                {'key': 'FEATURE_CSV_EXPORT', 'label': 'CSV Export', 'status': 'wired', 'description': 'Downloadable CSV exports for reports.'},
+                {'key': 'FEATURE_ADVANCED_REPORTS', 'label': 'Advanced Reports', 'status': 'stub', 'description': 'Future premium reporting suite.'},
+                {'key': 'FEATURE_GLOBAL_ITEM_LIBRARY', 'label': 'Global Item Library Access', 'status': 'wired', 'description': 'Org access to the shared global inventory library.'},
+            ],
+        },
+        {
+            'title': 'Notifications & integrations',
+            'description': 'Toggle customer-facing communications and external app hooks.',
+            'flags': [
+                {'key': 'FEATURE_EMAIL_NOTIFICATIONS', 'label': 'Email Notifications', 'status': 'wired', 'description': 'Transactional + lifecycle email delivery.'},
+                {'key': 'FEATURE_BROWSER_NOTIFICATIONS', 'label': 'Browser Push Notifications', 'status': 'stub', 'description': 'Web push notifications to the browser.'},
+                {'key': 'FEATURE_SHOPIFY_INTEGRATION', 'label': 'Shopify Integration', 'status': 'stub', 'description': 'Future e-commerce sync pipeline.'},
+                {'key': 'FEATURE_API_ACCESS', 'label': 'REST API Access', 'status': 'stub', 'description': 'Public REST API for third-party apps.'},
+                {'key': 'FEATURE_OAUTH_PROVIDERS', 'label': 'OAuth Login Providers', 'status': 'wired', 'description': 'Google/Facebook sign-in support.'},
+            ],
+        },
+        {
+            'title': 'AI & forecasting experiments',
+            'description': 'Aspirational features that are not yet implemented.',
+            'flags': [
+                {'key': 'FEATURE_AI_RECIPE_OPTIMIZATION', 'label': 'AI Recipe Optimization', 'status': 'stub', 'description': 'ML-assisted formulation suggestions.'},
+                {'key': 'FEATURE_AI_DEMAND_FORECASTING', 'label': 'AI Demand Forecasting', 'status': 'stub', 'description': 'Predict demand to guide purchasing.'},
+                {'key': 'FEATURE_AI_QUALITY_INSIGHTS', 'label': 'AI Quality Insights', 'status': 'stub', 'description': 'Automated quality checks & anomaly detection.'},
+            ],
+        },
+        {
+            'title': 'Public tool availability',
+            'description': 'Control which calculator suites are exposed on the marketing site.',
+            'flags': [
+                {'key': 'TOOLS_SOAP', 'label': 'Soap Making Tools', 'status': 'wired', 'description': 'Saponification & curing calculators.'},
+                {'key': 'TOOLS_CANDLES', 'label': 'Candle Making Tools', 'status': 'wired', 'description': 'Wick, wax, and fragrance load calculators.'},
+                {'key': 'TOOLS_LOTIONS', 'label': 'Lotion & Cosmetic Tools', 'status': 'wired', 'description': 'Batch math for cosmetics and topicals.'},
+                {'key': 'TOOLS_HERBAL', 'label': 'Herbalist Tools', 'status': 'wired', 'description': 'Tincture and infusion helpers.'},
+                {'key': 'TOOLS_BAKING', 'label': 'Baking Tools', 'status': 'wired', 'description': 'Recipe scaling for bakers & confectioners.'},
+            ],
+        },
+    ]
+
     return render_template(
         'developer/feature_flags.html',
-        feature_flag_sections=FEATURE_FLAG_SECTIONS,
+        feature_flag_sections=feature_flag_sections,
         flag_state=flag_state,
         breadcrumb_items=[
             {'label': 'Developer Dashboard', 'url': url_for('developer.dashboard')},
@@ -1944,37 +2010,38 @@ def integrations_stripe_events():
         return jsonify({'success': False, 'error': str(e)}), 500
 
 
-@developer_bp.route('/integrations/feature-flags', methods=['POST'])
+@developer_bp.route('/integrations/feature-flags/set', methods=['POST'])
 @login_required
 def integrations_set_feature_flags():
-    """Set feature flags (developer only; stored in-app and persisted to settings.json)."""
+    """Set feature flags via AJAX"""
+    from app.models.feature_flag import FeatureFlag
+    from app.extensions import db
+
     try:
-        if current_user.user_type != 'developer':
-            return jsonify({'success': False, 'error': 'Developer access required'}), 403
-        data = request.get_json() or {}
+        data = request.get_json()
+        if not data:
+            return jsonify({'success': False, 'error': 'No data provided'}), 400
 
-        # Update app config for allowed flags
-        for flag in FEATURE_FLAG_KEYS:
-            if flag in data:
-                value = bool(data[flag])
-                current_app.config[flag] = value
+        # Update feature flags in database
+        for flag_key, enabled in data.items():
+            feature_flag = FeatureFlag.query.filter_by(key=flag_key).first()
+            if feature_flag:
+                feature_flag.enabled = bool(enabled)
+            else:
+                # Create new feature flag if it doesn't exist
+                feature_flag = FeatureFlag(
+                    key=flag_key,
+                    enabled=bool(enabled),
+                    description=f"Auto-created flag for {flag_key}"
+                )
+                db.session.add(feature_flag)
 
-        # Persist to settings.json for next boot
-        try:
-            settings = read_json_file('settings.json', default={}) or {}
-
-            ff = settings.get('feature_flags', {}) or {}
-            for flag in FEATURE_FLAG_KEYS:
-                if flag in data:
-                    ff[flag] = bool(data[flag])
-
-            settings['feature_flags'] = ff
-            write_json_file('settings.json', settings)
-        except Exception:
-            pass
+        db.session.commit()
 
         return jsonify({'success': True})
+
     except Exception as e:
+        db.session.rollback()
         return jsonify({'success': False, 'error': str(e)}), 500
 
 
