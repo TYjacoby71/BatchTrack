@@ -180,6 +180,13 @@ def api_dashboard_alerts():
         return jsonify({'error': str(e)}), 500
 
 
+@app_routes_bp.route('/auth-check', methods=['GET'])
+@login_required
+def auth_check():
+    """Lightweight endpoint to verify authentication status without heavy DB work."""
+    return jsonify({'status': 'ok'})
+
+
 @app_routes_bp.route('/fault-log')
 @login_required
 @permission_required('view_fault_log')

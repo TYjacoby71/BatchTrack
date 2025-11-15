@@ -3,6 +3,8 @@ import logging
 from flask import session, flash, current_app, redirect, url_for
 from flask_login import login_user
 from ..models import db, User, Organization, Role, SubscriptionTier
+from ..utils.timezone_utils import TimezoneUtils
+from .session_service import SessionService
 # Import moved to avoid circular dependency
 # from ..blueprints.developer.subscription_tiers import load_tiers_config
 
@@ -138,14 +140,17 @@ class SignupService:
             else:
                 # OAuth user - log them in immediately
                 login_user(owner_user)
+                SessionService.rotate_user_session(owner_user)
+                owner_user.last_login = TimezoneUtils.utc_now()
+                db.session.commit()
                 logger.info(f"User {owner_user.username} logged in successfully")
 
-                # Clear pending signup data
-                session.pop('pending_signup', None)
-                logger.info("Cleared pending signup data from session")
+            # Clear pending signup data
+            session.pop('pending_signup', None)
+            logger.info("Cleared pending signup data from session")
 
-                flash(f'Welcome to BatchTrack! Your {tier.title()} account is ready to use.', 'success')
-                return redirect(url_for('app_routes.dashboard'))
+            flash(f'Welcome to BatchTrack! Your {tier.title()} account is ready to use.', 'success')
+            return redirect(url_for('app_routes.dashboard'))
 
         except Exception as e:
             db.session.rollback()
@@ -224,6 +229,9 @@ class SignupService:
             # Log in the user
             from flask_login import login_user
             login_user(owner_user)
+            SessionService.rotate_user_session(owner_user)
+            owner_user.last_login = TimezoneUtils.utc_now()
+            db.session.commit()
             
             logger.info("Stripe signup completed successfully")
             return True
