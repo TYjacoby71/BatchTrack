@@ -30,6 +30,9 @@ class BatchOperationsService(BaseService):
             snap_scale = float(plan_snapshot.get('scale', 1.0))
             snap_batch_type = plan_snapshot.get('batch_type', 'ingredient')
             snap_notes = plan_snapshot.get('notes', '')
+            forced_summary = plan_snapshot.get('forced_start_summary')
+            if forced_summary:
+                snap_notes = f"{snap_notes}\n{forced_summary}" if snap_notes else forced_summary
             snap_projected_yield = float(plan_snapshot.get('projected_yield') or 0.0)
             snap_projected_yield_unit = plan_snapshot.get('projected_yield_unit') or ''
             snap_portioning = plan_snapshot.get('portioning') or {}

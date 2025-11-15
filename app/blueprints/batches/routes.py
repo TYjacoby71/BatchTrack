@@ -42,6 +42,29 @@ def _extract_stock_issues(stock_items):
             })
     return issues
 
+
+def _format_quantity(amount):
+    try:
+        value = float(amount or 0)
+        return f"{value:g}"
+    except (TypeError, ValueError):
+        return str(amount or 0)
+
+
+def _build_forced_start_note(stock_issues):
+    if not stock_issues:
+        return None
+    parts = []
+    for issue in stock_issues:
+        name = issue.get('name') or 'Unknown item'
+        qty = _format_quantity(issue.get('needed_quantity'))
+        unit = (issue.get('needed_unit') or issue.get('available_unit') or '').strip()
+        portion = f"{qty} {unit} of {name}".strip()
+        parts.append(portion)
+    if not parts:
+        return None
+    return "Started batch without: " + "; ".join(parts)
+
 @batches_bp.route('/api/batch-remaining-details/<int:batch_id>')
 @login_required
 def get_batch_remaining_details(batch_id):
@@ -325,6 +348,7 @@ def api_start_batch():
             for issue in stock_issues
             if issue.get('item_id') and (issue.get('category') or '').lower() == 'ingredient'
         ]
+        forced_note = _build_forced_start_note(stock_issues) if force_start and stock_issues else None
 
         if stock_issues and not force_start:
             return jsonify({
@@ -346,6 +370,8 @@ def api_start_batch():
             plan_dict['stock_issues'] = stock_issues
             if force_start and skip_ingredient_ids:
                 plan_dict['skip_ingredient_ids'] = skip_ingredient_ids
+        if forced_note:
+            plan_dict['forced_start_summary'] = forced_note
         plan_dict['forced_start'] = force_start
         batch, errors = BatchOperationsService.start_batch(plan_dict)
 

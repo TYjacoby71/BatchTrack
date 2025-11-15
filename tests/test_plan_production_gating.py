@@ -99,3 +99,6 @@ def test_api_start_batch_requires_override_before_force(app, monkeypatch):
 
         plan_snapshot = captured_plan['value']
         assert plan_snapshot.get('skip_ingredient_ids') == [ingredient_id]
+        summary = plan_snapshot.get('forced_start_summary')
+        assert summary and 'Started batch without:' in summary
+        assert 'Test Oil' in summary
