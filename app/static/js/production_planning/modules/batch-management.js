@@ -3,6 +3,7 @@
 export class BatchManager {
     constructor(mainManager) {
         this.main = mainManager;
+        this.overrideModal = null;
     }
 
     bindEvents() {
@@ -10,10 +11,30 @@ export class BatchManager {
         if (startBatchBtn) {
             startBatchBtn.addEventListener('click', () => this.startBatch());
         }
+
+        const confirmForceBtn = document.getElementById('confirmForceStartBtn');
+        if (confirmForceBtn) {
+            confirmForceBtn.addEventListener('click', () => {
+                this.main.stockOverrideAcknowledged = true;
+                this.hideOverrideModal();
+                this.startBatch(true);
+            });
+        }
     }
 
-    async startBatch() {
+    async startBatch(forceOverride = false) {
         if (!this.main.recipe) return;
+
+        if (!this.main.stockChecked) {
+            this.showErrorMessage('Please run a stock check before starting a batch.');
+            return;
+        }
+
+        const shouldForce = forceOverride || this.main.stockOverrideAcknowledged;
+        if (!shouldForce && !this.main.stockCheckPassed) {
+            this.showInsufficientModal();
+            return;
+        }
 
         try {
             const flatPortion = this.getFlatPortionFields();
@@ -27,10 +48,18 @@ export class BatchManager {
                 // Absolute: send flat portion fields only
                 ...(flatPortion || {}),
                 projected_yield: (this.main.baseYield || 0) * (this.main.scale || 1),
-                projected_yield_unit: this.main.unit
+                projected_yield_unit: this.main.unit,
+                force_start: shouldForce
             };
 
             const result = await this.main.apiCall('/batches/api/start-batch', payload);
+
+            if (result.requires_override) {
+                this.main.stockIssues = result.stock_issues || [];
+                this.main.stockOverrideAcknowledged = false;
+                this.showInsufficientModal(result.stock_issues || []);
+                return;
+            }
 
             if (result.success) {
                 this.showSuccessMessage(result.message);
@@ -43,6 +72,59 @@ export class BatchManager {
         } catch (error) {
             console.error('Start batch error:', error);
             alert('Error starting batch. Please try again.');
+        }
+    }
+
+    showInsufficientModal(issues = null) {
+        const modalEl = document.getElementById('insufficientStockModal');
+        if (!modalEl) {
+            alert('Insufficient inventory detected. Please add stock before continuing.');
+            return;
+        }
+
+        const listEl = document.getElementById('insufficientStockList');
+        const shortages = (issues && issues.length ? issues : this.main.stockIssues) || [];
+        if (listEl) {
+            if (!shortages.length) {
+                listEl.innerHTML = `
+                    <tr>
+                        <td colspan="4" class="text-muted text-center">
+                            <em>No shortages detected.</em>
+                        </td>
+                    </tr>
+                `;
+            } else {
+                listEl.innerHTML = shortages.map(item => {
+                    const needed = Number(item.needed || item.needed_quantity || item.quantity_needed || 0);
+                    const available = Number(item.available ?? item.available_quantity ?? 0);
+                    const unit = item.unit || item.needed_unit || item.available_unit || '';
+                    const status = (item.status || 'NEEDED').toString().toUpperCase();
+                    return `
+                        <tr>
+                            <td>${item.name || item.item_name || 'Unknown'}</td>
+                            <td>${needed.toFixed(2)} ${unit}</td>
+                            <td>${available.toFixed(2)} ${unit}</td>
+                            <td><span class="badge bg-danger">${status}</span></td>
+                        </tr>
+                    `;
+                }).join('');
+            }
+        }
+
+        if (!this.overrideModal && window.bootstrap?.Modal) {
+            this.overrideModal = new window.bootstrap.Modal(modalEl);
+        }
+
+        if (this.overrideModal) {
+            this.overrideModal.show();
+        } else {
+            alert('Insufficient inventory detected. Bootstrap modal is not available.');
+        }
+    }
+
+    hideOverrideModal() {
+        if (this.overrideModal) {
+            this.overrideModal.hide();
         }
     }
 
