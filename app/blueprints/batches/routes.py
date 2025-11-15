@@ -26,8 +26,8 @@ BLOCKING_STOCK_STATUSES = {'NEEDED', 'OUT_OF_STOCK', 'ERROR', 'DENSITY_MISSING'}
 def _extract_stock_issues(stock_items):
     issues = []
     for item in stock_items or []:
-        needed = item.get('needed_quantity') or item.get('needed_amount') or 0
-        available = item.get('available_quantity') or 0
+        needed = float(item.get('needed_quantity') or item.get('needed_amount') or 0)
+        available = float(item.get('available_quantity') or 0)
         status = (item.get('status') or '').upper()
         if status in BLOCKING_STOCK_STATUSES or available < needed:
             issues.append({
@@ -37,7 +37,8 @@ def _extract_stock_issues(stock_items):
                 'available_quantity': available,
                 'needed_unit': item.get('needed_unit'),
                 'available_unit': item.get('available_unit'),
-                'status': status or ('LOW' if available < needed else 'UNKNOWN')
+                'status': status or ('LOW' if available < needed else 'UNKNOWN'),
+                'category': item.get('category')
             })
     return issues
 
@@ -319,6 +320,12 @@ def api_start_batch():
             logger.error(f"Error during stock validation: {e}")
             return jsonify({'success': False, 'message': 'Inventory validation failed. Please try again.'}), 500
 
+        skip_ingredient_ids = [
+            issue['item_id']
+            for issue in stock_issues
+            if issue.get('item_id') and (issue.get('category') or '').lower() == 'ingredient'
+        ]
+
         if stock_issues and not force_start:
             return jsonify({
                 'success': False,
@@ -337,6 +344,8 @@ def api_start_batch():
         plan_dict = snapshot_obj.to_dict()
         if stock_issues:
             plan_dict['stock_issues'] = stock_issues
+            if force_start and skip_ingredient_ids:
+                plan_dict['skip_ingredient_ids'] = skip_ingredient_ids
         plan_dict['forced_start'] = force_start
         batch, errors = BatchOperationsService.start_batch(plan_dict)
 

@@ -133,8 +133,16 @@ class BatchOperationsService(BaseService):
             # Handle containers if required
             container_errors = cls._process_batch_containers(batch, containers_data, defer_commit=True)
 
+            skip_ingredient_ids = set(plan_snapshot.get('skip_ingredient_ids', [])) if isinstance(plan_snapshot, dict) else set()
+
             # Process ingredient deductions
-            ingredient_errors = cls._process_batch_ingredients(batch, recipe, snap_scale, defer_commit=True)
+            ingredient_errors = cls._process_batch_ingredients(
+                batch,
+                recipe,
+                snap_scale,
+                skip_ingredient_ids=skip_ingredient_ids,
+                defer_commit=True
+            )
 
             # Process consumable deductions
             consumable_errors = cls._process_batch_consumables(batch, recipe, snap_scale, defer_commit=True)
@@ -245,13 +253,18 @@ class BatchOperationsService(BaseService):
         return errors
 
     @classmethod
-    def _process_batch_ingredients(cls, batch, recipe, scale, defer_commit=False):
+    def _process_batch_ingredients(cls, batch, recipe, scale, skip_ingredient_ids=None, defer_commit=False):
         """Process ingredient deductions for batch start"""
         errors = []
         try:
+            skip_ids = set(skip_ingredient_ids or [])
             for assoc in recipe.recipe_ingredients:
                 ingredient = assoc.inventory_item
                 if not ingredient:
+                    continue
+
+                if ingredient.id in skip_ids:
+                    logger.info(f"Skipping deduction for {ingredient.name} (forced start with insufficient stock).")
                     continue
 
                 required_amount = assoc.quantity * scale

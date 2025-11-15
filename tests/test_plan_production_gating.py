@@ -54,14 +54,17 @@ def _build_recipe_with_missing_inventory():
     db.session.add(recipe_ingredient)
     db.session.commit()
 
-    return user, recipe
+    return user, recipe, ingredient.id
 
 
 def test_api_start_batch_requires_override_before_force(app, monkeypatch):
     with app.app_context():
-        user, recipe = _build_recipe_with_missing_inventory()
+        user, recipe, ingredient_id = _build_recipe_with_missing_inventory()
+
+        captured_plan = {}
 
         def fake_start_batch(cls, plan_snapshot):
+            captured_plan['value'] = plan_snapshot
             return SimpleNamespace(id=555), []
 
         monkeypatch.setattr(
@@ -93,3 +96,6 @@ def test_api_start_batch_requires_override_before_force(app, monkeypatch):
             data = response.get_json()
             assert data['success'] is True
             assert data['batch_id'] == 555
+
+        plan_snapshot = captured_plan['value']
+        assert plan_snapshot.get('skip_ingredient_ids') == [ingredient_id]
