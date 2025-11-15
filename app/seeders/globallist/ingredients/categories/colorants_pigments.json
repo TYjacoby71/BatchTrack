@@ -23,7 +23,13 @@
       "certifications": [
         "FDA Batch Certified"
       ],
-      "is_active_ingredient": false
+      "is_active_ingredient": false,
+      "ingredient": {
+        "name": "Titanium Dioxide",
+        "slug": "titanium-dioxide",
+        "inci_name": "Titanium Dioxide"
+      },
+      "physical_form": "Oil Dispersible"
     },
     {
       "name": "Red Iron Oxide",
@@ -38,7 +44,13 @@
       "certifications": [
         "Cosmetic Grade"
       ],
-      "is_active_ingredient": false
+      "is_active_ingredient": false,
+      "ingredient": {
+        "name": "Red Iron Oxide",
+        "slug": "red-iron-oxide",
+        "inci_name": "Iron Oxides (CI 77491)"
+      },
+      "physical_form": "Pigment"
     },
     {
       "name": "Yellow Iron Oxide",
@@ -53,7 +65,13 @@
       "certifications": [
         "Cosmetic Grade"
       ],
-      "is_active_ingredient": false
+      "is_active_ingredient": false,
+      "ingredient": {
+        "name": "Yellow Iron Oxide",
+        "slug": "yellow-iron-oxide",
+        "inci_name": "Iron Oxides (CI 77492)"
+      },
+      "physical_form": "Pigment"
     },
     {
       "name": "Ultramarine Blue",
@@ -68,7 +86,13 @@
       "certifications": [
         "Cosmetic Grade"
       ],
-      "is_active_ingredient": false
+      "is_active_ingredient": false,
+      "ingredient": {
+        "name": "Ultramarine Blue",
+        "slug": "ultramarine-blue",
+        "inci_name": "Ultramarines (CI 77007)"
+      },
+      "physical_form": "Pigment"
     },
     {
       "name": "Sparkle Silver Mica",
@@ -84,7 +108,13 @@
         "Vegan",
         "Cruelty-Free"
       ],
-      "is_active_ingredient": false
+      "is_active_ingredient": false,
+      "ingredient": {
+        "name": "Sparkle Silver Mica",
+        "slug": "sparkle-silver-mica",
+        "inci_name": "Mica (and) Titanium Dioxide"
+      },
+      "physical_form": "Pigment"
     },
     {
       "name": "Liquid Chlorophyll",
@@ -99,7 +129,13 @@
       "certifications": [
         "Vegan"
       ],
-      "is_active_ingredient": false
+      "is_active_ingredient": false,
+      "ingredient": {
+        "name": "Liquid Chlorophyll",
+        "slug": "liquid-chlorophyll",
+        "inci_name": "Water (and) Chlorophyllin-Copper Complex"
+      },
+      "physical_form": "Liquid"
     }
   ]
 }

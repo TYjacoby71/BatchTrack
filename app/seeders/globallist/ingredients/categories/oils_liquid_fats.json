@@ -27,7 +27,13 @@
       "aliases": [
         "EVOO"
       ],
-      "is_active_ingredient": false
+      "is_active_ingredient": false,
+      "ingredient": {
+        "name": "Olive Oil",
+        "slug": "olive-oil",
+        "inci_name": "Olea Europaea (Olive) Fruit Oil"
+      },
+      "physical_form": "Extra Virgin"
     },
     {
       "name": "Sweet Almond Oil",
@@ -52,7 +58,13 @@
       "aliases": [
         "prunus amygdalus dulcis oil"
       ],
-      "is_active_ingredient": false
+      "is_active_ingredient": false,
+      "ingredient": {
+        "name": "Sweet Almond Oil",
+        "slug": "sweet-almond-oil",
+        "inci_name": "Prunus Amygdalus Dulcis (Sweet Almond) Oil"
+      },
+      "physical_form": "Liquid"
     },
     {
       "name": "Avocado Oil",
@@ -77,7 +89,13 @@
       "aliases": [
         "persea gratissima oil"
       ],
-      "is_active_ingredient": false
+      "is_active_ingredient": false,
+      "ingredient": {
+        "name": "Avocado Oil",
+        "slug": "avocado-oil",
+        "inci_name": "Persea Gratissima (Avocado) Oil"
+      },
+      "physical_form": "Liquid"
     },
     {
       "name": "Sunflower Oil (High Oleic)",
@@ -103,7 +121,13 @@
       "aliases": [
         "helianthus annuus seed oil"
       ],
-      "is_active_ingredient": false
+      "is_active_ingredient": false,
+      "ingredient": {
+        "name": "Sunflower Oil",
+        "slug": "sunflower-oil",
+        "inci_name": "Helianthus Annuus (Sunflower) Seed Oil"
+      },
+      "physical_form": "High Oleic"
     },
     {
       "name": "Hemp Seed Oil (Unrefined)",
@@ -128,7 +152,13 @@
       "aliases": [
         "cannabis sativa seed oil"
       ],
-      "is_active_ingredient": false
+      "is_active_ingredient": false,
+      "ingredient": {
+        "name": "Hemp Seed Oil",
+        "slug": "hemp-seed-oil",
+        "inci_name": "Cannabis Sativa Seed Oil"
+      },
+      "physical_form": "Unrefined"
     },
     {
       "name": "Castor Oil",
@@ -153,7 +183,13 @@
       "aliases": [
         "ricinus communis oil"
       ],
-      "is_active_ingredient": false
+      "is_active_ingredient": false,
+      "ingredient": {
+        "name": "Castor Oil",
+        "slug": "castor-oil",
+        "inci_name": "Ricinus Communis (Castor) Seed Oil"
+      },
+      "physical_form": "Liquid"
     },
     {
       "name": "Jojoba Oil (Golden)",
@@ -178,7 +214,13 @@
       "aliases": [
         "simmondsia chinensis seed oil"
       ],
-      "is_active_ingredient": false
+      "is_active_ingredient": false,
+      "ingredient": {
+        "name": "Jojoba Oil",
+        "slug": "jojoba-oil",
+        "inci_name": "Simmondsia Chinensis (Jojoba) Seed Oil"
+      },
+      "physical_form": "Golden"
     },
     {
       "name": "Argan Oil",
@@ -203,7 +245,13 @@
       "aliases": [
         "argania spinosa kernel oil"
       ],
-      "is_active_ingredient": false
+      "is_active_ingredient": false,
+      "ingredient": {
+        "name": "Argan Oil",
+        "slug": "argan-oil",
+        "inci_name": "Argania Spinosa Kernel Oil"
+      },
+      "physical_form": "Liquid"
     },
     {
       "name": "Rosehip Seed Oil",
@@ -228,7 +276,13 @@
       "aliases": [
         "rosa canina fruit oil"
       ],
-      "is_active_ingredient": false
+      "is_active_ingredient": false,
+      "ingredient": {
+        "name": "Rosehip Seed Oil",
+        "slug": "rosehip-seed-oil",
+        "inci_name": "Rosa Canina Fruit Oil"
+      },
+      "physical_form": "Seed"
     },
     {
       "name": "Fractionated Coconut Oil (MCT)",
@@ -251,7 +305,13 @@
       "aliases": [
         "medium chain triglycerides"
       ],
-      "is_active_ingredient": false
+      "is_active_ingredient": false,
+      "ingredient": {
+        "name": "Fractionated Coconut Oil",
+        "slug": "fractionated-coconut-oil",
+        "inci_name": "Caprylic/Capric Triglyceride"
+      },
+      "physical_form": "Mct"
     }
   ],
   "attributes": [

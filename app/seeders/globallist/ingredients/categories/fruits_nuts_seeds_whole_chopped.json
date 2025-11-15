@@ -17,7 +17,12 @@
       "aliases": [
         "whole almonds"
       ],
-      "is_active_ingredient": false
+      "is_active_ingredient": false,
+      "ingredient": {
+        "name": "Almonds",
+        "slug": "almonds"
+      },
+      "physical_form": "Whole"
     },
     {
       "name": "Walnuts (Chopped)",
@@ -33,7 +38,12 @@
       "aliases": [
         "english walnuts"
       ],
-      "is_active_ingredient": false
+      "is_active_ingredient": false,
+      "ingredient": {
+        "name": "Walnuts",
+        "slug": "walnuts"
+      },
+      "physical_form": "Chopped"
     },
     {
       "name": "Pumpkin Seeds (Hulled)",
@@ -49,7 +59,12 @@
       "aliases": [
         "pepitas"
       ],
-      "is_active_ingredient": false
+      "is_active_ingredient": false,
+      "ingredient": {
+        "name": "Pumpkin Seeds",
+        "slug": "pumpkin-seeds"
+      },
+      "physical_form": "Hulled"
     },
     {
       "name": "Sunflower Seeds (Hulled)",
@@ -65,7 +80,12 @@
       "aliases": [
         "hulled sunflower kernels"
       ],
-      "is_active_ingredient": false
+      "is_active_ingredient": false,
+      "ingredient": {
+        "name": "Sunflower Seeds",
+        "slug": "sunflower-seeds"
+      },
+      "physical_form": "Hulled"
     },
     {
       "name": "Dried Cranberries",
@@ -81,7 +101,12 @@
       "aliases": [
         "sweetened dried cranberries"
       ],
-      "is_active_ingredient": false
+      "is_active_ingredient": false,
+      "ingredient": {
+        "name": "Dried Cranberries",
+        "slug": "dried-cranberries"
+      },
+      "physical_form": "Pieces"
     }
   ],
   "attributes": [

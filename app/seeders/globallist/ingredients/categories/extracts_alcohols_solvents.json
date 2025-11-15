@@ -25,7 +25,13 @@
       "certifications": [
         "USP Grade"
       ],
-      "is_active_ingredient": false
+      "is_active_ingredient": false,
+      "ingredient": {
+        "name": "Ethanol SDA 40-B",
+        "slug": "ethanol-sda-40-b",
+        "inci_name": "Alcohol Denat."
+      },
+      "physical_form": "Liquid"
     },
     {
       "name": "Propylene Glycol",
@@ -41,7 +47,13 @@
       "certifications": [
         "USP Grade"
       ],
-      "is_active_ingredient": false
+      "is_active_ingredient": false,
+      "ingredient": {
+        "name": "Propylene Glycol",
+        "slug": "propylene-glycol",
+        "inci_name": "Propylene Glycol"
+      },
+      "physical_form": "Liquid"
     },
     {
       "name": "Dipropylene Glycol (Fragrance Grade)",
@@ -57,7 +69,13 @@
       "certifications": [
         "IFRA Compliant"
       ],
-      "is_active_ingredient": false
+      "is_active_ingredient": false,
+      "ingredient": {
+        "name": "Dipropylene Glycol",
+        "slug": "dipropylene-glycol",
+        "inci_name": "Dipropylene Glycol"
+      },
+      "physical_form": "Fragrance Grade"
     },
     {
       "name": "Vegetable Glycerin",
@@ -74,7 +92,13 @@
         "USP Grade",
         "Kosher"
       ],
-      "is_active_ingredient": false
+      "is_active_ingredient": false,
+      "ingredient": {
+        "name": "Vegetable Glycerin",
+        "slug": "vegetable-glycerin",
+        "inci_name": "Glycerin"
+      },
+      "physical_form": "Liquid"
     }
   ]
 }

@@ -1,6 +1,6 @@
 {
   "category_name": "Flours (Grain & Nut)",
-  "default_density": 0.60,
+  "default_density": 0.6,
   "description": "Ground grains, nuts, and seeds used as base ingredients in baking and cooking.",
   "items": [
     {
@@ -19,7 +19,12 @@
         "white flour",
         "wheat flour"
       ],
-      "is_active_ingredient": false
+      "is_active_ingredient": false,
+      "ingredient": {
+        "name": "All-Purpose Flour",
+        "slug": "all-purpose-flour"
+      },
+      "physical_form": "Powder"
     },
     {
       "name": "Bread Flour",
@@ -36,7 +41,12 @@
         "high gluten flour",
         "strong flour"
       ],
-      "is_active_ingredient": false
+      "is_active_ingredient": false,
+      "ingredient": {
+        "name": "Bread Flour",
+        "slug": "bread-flour"
+      },
+      "physical_form": "Powder"
     },
     {
       "name": "Whole Wheat Flour",
@@ -53,7 +63,12 @@
         "wholemeal flour",
         "graham flour"
       ],
-      "is_active_ingredient": false
+      "is_active_ingredient": false,
+      "ingredient": {
+        "name": "Whole Wheat Flour",
+        "slug": "whole-wheat-flour"
+      },
+      "physical_form": "Whole"
     },
     {
       "name": "Almond Flour",
@@ -70,7 +85,12 @@
         "almond meal",
         "ground almonds"
       ],
-      "is_active_ingredient": false
+      "is_active_ingredient": false,
+      "ingredient": {
+        "name": "Almond Flour",
+        "slug": "almond-flour"
+      },
+      "physical_form": "Powder"
     },
     {
       "name": "Coconut Flour",
@@ -86,7 +106,12 @@
       "aliases": [
         "ground coconut"
       ],
-      "is_active_ingredient": false
+      "is_active_ingredient": false,
+      "ingredient": {
+        "name": "Coconut Flour",
+        "slug": "coconut-flour"
+      },
+      "physical_form": "Powder"
     },
     {
       "name": "Oat Flour",
@@ -102,7 +127,12 @@
       "aliases": [
         "ground oats"
       ],
-      "is_active_ingredient": false
+      "is_active_ingredient": false,
+      "ingredient": {
+        "name": "Oat Flour",
+        "slug": "oat-flour"
+      },
+      "physical_form": "Powder"
     },
     {
       "name": "Chickpea Flour",
@@ -119,7 +149,12 @@
         "gram flour",
         "besan"
       ],
-      "is_active_ingredient": false
+      "is_active_ingredient": false,
+      "ingredient": {
+        "name": "Chickpea Flour",
+        "slug": "chickpea-flour"
+      },
+      "physical_form": "Powder"
     },
     {
       "name": "Matcha Powder",
@@ -135,7 +170,12 @@
       "aliases": [
         "green tea powder"
       ],
-      "is_active_ingredient": false
+      "is_active_ingredient": false,
+      "ingredient": {
+        "name": "Matcha Powder",
+        "slug": "matcha-powder"
+      },
+      "physical_form": "Powder"
     }
   ],
   "attributes": [

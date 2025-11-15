@@ -23,7 +23,12 @@
       "certifications": [
         "COSMOS Approved"
       ],
-      "is_active_ingredient": true
+      "is_active_ingredient": true,
+      "ingredient": {
+        "name": "Hyaluronic Acid",
+        "slug": "hyaluronic-acid"
+      },
+      "physical_form": "Powder"
     },
     {
       "name": "Carbomer 940",
@@ -38,7 +43,12 @@
       "certifications": [
         "Cosmetic Grade"
       ],
-      "is_active_ingredient": false
+      "is_active_ingredient": false,
+      "ingredient": {
+        "name": "Carbomer 940",
+        "slug": "carbomer-940"
+      },
+      "physical_form": "Polymer"
     },
     {
       "name": "Polyquaternium-7",
@@ -47,13 +57,18 @@
       ],
       "density": 1.05,
       "default_unit": "milliliter",
-      "hydration_instructions": "Use as-supplied solution; add during cool-down phase below 40\u00b0C.",
+      "hydration_instructions": "Use as-supplied solution; add during cool-down phase below 40°C.",
       "recommended_usage_rate": "0.5-5% in hair conditioners and body washes",
       "recommended_shelf_life_days": 730,
       "certifications": [
         "INCI Registered"
       ],
-      "is_active_ingredient": false
+      "is_active_ingredient": false,
+      "ingredient": {
+        "name": "Polyquaternium-7",
+        "slug": "polyquaternium-7"
+      },
+      "physical_form": "Polymer"
     }
   ]
 }

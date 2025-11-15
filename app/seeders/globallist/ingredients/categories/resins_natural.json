@@ -23,7 +23,12 @@
       "certifications": [
         "Wildcrafted"
       ],
-      "is_active_ingredient": false
+      "is_active_ingredient": false,
+      "ingredient": {
+        "name": "Benzoin Resin",
+        "slug": "benzoin-resin"
+      },
+      "physical_form": "Sumatra"
     },
     {
       "name": "Myrrh Resin",
@@ -38,7 +43,12 @@
       "certifications": [
         "Fair Trade"
       ],
-      "is_active_ingredient": false
+      "is_active_ingredient": false,
+      "ingredient": {
+        "name": "Myrrh Resin",
+        "slug": "myrrh-resin"
+      },
+      "physical_form": "Resin"
     },
     {
       "name": "Frankincense Tears",
@@ -53,7 +63,12 @@
       "certifications": [
         "Organic"
       ],
-      "is_active_ingredient": false
+      "is_active_ingredient": false,
+      "ingredient": {
+        "name": "Frankincense Tears",
+        "slug": "frankincense-tears"
+      },
+      "physical_form": "Resin"
     }
   ]
 }

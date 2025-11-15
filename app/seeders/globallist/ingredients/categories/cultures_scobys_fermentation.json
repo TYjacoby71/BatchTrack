@@ -28,7 +28,12 @@
         "Vegan"
       ],
       "protein_content_pct": 2,
-      "is_active_ingredient": false
+      "is_active_ingredient": false,
+      "ingredient": {
+        "name": "Kombucha SCOBY",
+        "slug": "kombucha-scoby"
+      },
+      "physical_form": "Culture"
     },
     {
       "name": "Water Kefir Grains",
@@ -45,7 +50,12 @@
         "Vegan"
       ],
       "protein_content_pct": 3,
-      "is_active_ingredient": false
+      "is_active_ingredient": false,
+      "ingredient": {
+        "name": "Water Kefir Grains",
+        "slug": "water-kefir-grains"
+      },
+      "physical_form": "Culture"
     },
     {
       "name": "Sourdough Starter (100% Hydration)",
@@ -60,7 +70,12 @@
       "recommended_shelf_life_days": 7,
       "certifications": [],
       "protein_content_pct": 11,
-      "is_active_ingredient": false
+      "is_active_ingredient": false,
+      "ingredient": {
+        "name": "Sourdough Starter",
+        "slug": "sourdough-starter"
+      },
+      "physical_form": "100% Hydration"
     },
     {
       "name": "Yogurt Starter Culture",
@@ -77,7 +92,12 @@
         "Kosher"
       ],
       "protein_content_pct": 40,
-      "is_active_ingredient": false
+      "is_active_ingredient": false,
+      "ingredient": {
+        "name": "Yogurt Starter Culture",
+        "slug": "yogurt-starter-culture"
+      },
+      "physical_form": "Culture"
     }
   ]
 }

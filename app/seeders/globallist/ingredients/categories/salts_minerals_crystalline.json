@@ -18,7 +18,12 @@
         "sodium chloride",
         "iodized salt"
       ],
-      "is_active_ingredient": false
+      "is_active_ingredient": false,
+      "ingredient": {
+        "name": "Table Salt",
+        "slug": "table-salt"
+      },
+      "physical_form": "Crystal"
     },
     {
       "name": "Sea Salt (Fine)",
@@ -34,7 +39,12 @@
       "aliases": [
         "fine sea salt"
       ],
-      "is_active_ingredient": false
+      "is_active_ingredient": false,
+      "ingredient": {
+        "name": "Sea Salt",
+        "slug": "sea-salt"
+      },
+      "physical_form": "Fine"
     },
     {
       "name": "Himalayan Pink Salt",
@@ -50,7 +60,12 @@
       "aliases": [
         "rock salt"
       ],
-      "is_active_ingredient": false
+      "is_active_ingredient": false,
+      "ingredient": {
+        "name": "Himalayan Pink Salt",
+        "slug": "himalayan-pink-salt"
+      },
+      "physical_form": "Crystal"
     },
     {
       "name": "Epsom Salt",
@@ -66,7 +81,12 @@
       "aliases": [
         "magnesium sulfate"
       ],
-      "is_active_ingredient": false
+      "is_active_ingredient": false,
+      "ingredient": {
+        "name": "Epsom Salt",
+        "slug": "epsom-salt"
+      },
+      "physical_form": "Crystal"
     },
     {
       "name": "Dead Sea Salt",
@@ -82,7 +102,12 @@
       "aliases": [
         "mineral salt blend"
       ],
-      "is_active_ingredient": false
+      "is_active_ingredient": false,
+      "ingredient": {
+        "name": "Dead Sea Salt",
+        "slug": "dead-sea-salt"
+      },
+      "physical_form": "Crystal"
     },
     {
       "name": "Calcium Chloride Flakes",
@@ -98,7 +123,12 @@
       "aliases": [
         "CaCl2"
       ],
-      "is_active_ingredient": false
+      "is_active_ingredient": false,
+      "ingredient": {
+        "name": "Calcium Chloride Flakes",
+        "slug": "calcium-chloride-flakes"
+      },
+      "physical_form": "Flakes"
     }
   ],
   "attributes": [
