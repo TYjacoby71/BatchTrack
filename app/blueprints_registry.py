@@ -356,8 +356,8 @@ def register_blueprints(app):
                 app_logger.info(f"   - {name}")
         if failed_registrations:
             app_logger.error(f"Failed: {len(failed_registrations)}")
-            for name, error in failed_registrations:
-                app_logger.error(f"   - {name}: {error}")
+            for error in failed_registrations:
+                app_logger.error(f"   - {error}")
         else:
             app_logger.info("All blueprints registered successfully!")
 

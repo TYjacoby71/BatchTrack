@@ -56,3 +56,19 @@ def get_setting(key, default=None):
     """Get a setting from settings.json file"""
     settings = read_json_file('settings.json', default={}) or {}
     return settings.get(key, default)
+
+def get_settings():
+    """Get all settings from settings.json file"""
+    return read_json_file('settings.json', default={}) or {}
+
+def is_feature_enabled(feature_key):
+    """Check if a feature flag is enabled"""
+    from app.models.feature_flag import FeatureFlag
+
+    try:
+        flag = FeatureFlag.query.filter_by(key=feature_key).first()
+        return flag.enabled if flag else False
+    except Exception:
+        # Fallback to JSON file if database is not available
+        settings = get_settings()
+        return settings.get('feature_flags', {}).get(feature_key, False)
