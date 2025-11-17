@@ -60,27 +60,34 @@ def analyze_container_options(
 
         if not container_options:
             if conversion_failures and api_format:
-                from .drawer_errors import generate_drawer_payload_for_container_error
-                drawer_payload = generate_drawer_payload_for_container_error(
-                    error_code='YIELD_CONTAINER_MISMATCH',
-                    recipe=recipe,
-                    mismatch_context={
-                        'yield_unit': yield_unit,
-                        'failures': conversion_failures
-                    }
+                # Check if this is a yield container mismatch
+                has_mismatch_error = any(
+                    failure.get('error_code') == 'YIELD_CONTAINER_MISMATCH'
+                    for failure in conversion_failures
                 )
-                strategy = {
-                    'success': False,
-                    'requires_drawer': True,
-                    'drawer_payload': drawer_payload,
-                    'error': f"No containers match the recipe yield unit ({yield_unit}).",
-                    'error_code': 'YIELD_CONTAINER_MISMATCH',
-                    'status': 'error',
-                    'container_options': [],
-                    'yield_amount': total_yield,
-                    'yield_unit': yield_unit
-                }
-                return strategy, []
+                
+                if has_mismatch_error:
+                    from .drawer_errors import generate_drawer_payload_for_container_error
+                    drawer_payload = generate_drawer_payload_for_container_error(
+                        error_code='YIELD_CONTAINER_MISMATCH',
+                        recipe=recipe,
+                        mismatch_context={
+                            'yield_unit': yield_unit,
+                            'failures': conversion_failures
+                        }
+                    )
+                    strategy = {
+                        'success': False,
+                        'requires_drawer': True,
+                        'drawer_payload': drawer_payload,
+                        'error': f"No containers match the recipe yield unit ({yield_unit}).",
+                        'error_code': 'YIELD_CONTAINER_MISMATCH',
+                        'status': 'error',
+                        'container_options': [],
+                        'yield_amount': total_yield,
+                        'yield_unit': yield_unit
+                    }
+                    return strategy, []
 
             raise ValueError(
                 f"No containers with valid capacity data found for recipe '{recipe.name}'. "
@@ -211,34 +218,33 @@ def _load_suitable_containers(
         logger.warning(f"Recipe '{recipe.name}' has {len(containers)} containers configured, but none have valid capacity data or are convertible to {yield_unit}")
         # Return empty list instead of raising error - let caller handle
 
-    # Check if any containers match the yield unit
+    # Check if any containers have units that directly match the yield unit
     compatible_containers = []
-    for container in containers: # Changed from available_containers to containers to check all original containers
-        # We need to check original units here before conversion
+    for container in containers:
         storage_unit = getattr(container, 'capacity_unit', None)
         if storage_unit == yield_unit:
             compatible_containers.append(container)
 
-    if not compatible_containers and not conversion_failures: # Only trigger if no compatible containers and no conversion failures
-        # No compatible containers found - generate drawer payload
-        from app.services.production_planning.drawer_errors import generate_drawer_payload_for_container_error
-
-        drawer_payload = generate_drawer_payload_for_container_error(
-            'YIELD_CONTAINER_MISMATCH',
-            recipe,
-            mismatch_context={'yield_unit': yield_unit}
+    # If no compatible containers AND we have conversion failures, 
+    # this indicates a unit mismatch rather than missing density
+    if not compatible_containers and conversion_failures:
+        # Check if all conversion failures are due to missing density
+        all_missing_density = all(
+            failure.get('error_code') == 'MISSING_DENSITY' 
+            for failure in conversion_failures
         )
-
-        logger.warning(f"No containers found with yield unit {yield_unit} for recipe {recipe.id}")
-
-        if api_format:
-            # The existing logic already handles returning None for strategy and empty list for options
-            # We need to add the drawer payload to this return structure.
-            # The analysis function handles the drawer_payload based on the returned strategy.
-            # For now, we return an empty list and let the calling function handle the error code.
-            # This part needs to be carefully integrated with how analyze_container_options handles the return.
-            # For now, we will just ensure conversion_failures captures the issue.
-            pass # Let the existing logic in analyze_container_options handle the return.
+        
+        if all_missing_density:
+            # This is a unit mismatch case - containers exist but can't convert to yield unit
+            logger.warning(f"Unit mismatch: No containers found with yield unit {yield_unit} for recipe {recipe.id}")
+            conversion_failures.append({
+                'container_id': None,
+                'container_name': 'Unit Mismatch',
+                'from_unit': 'mixed',
+                'to_unit': yield_unit,
+                'error_code': 'YIELD_CONTAINER_MISMATCH',
+                'error_message': f'No containers match recipe yield unit {yield_unit}'
+            })
 
     return container_options, conversion_failures
 
