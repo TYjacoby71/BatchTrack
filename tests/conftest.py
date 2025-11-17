@@ -4,6 +4,7 @@ Pytest configuration and shared fixtures for BatchTrack tests.
 import os
 import tempfile
 import pytest
+from sqlalchemy import inspect, text
 from app import create_app
 from app.extensions import db
 from app.models.models import User, Organization, SubscriptionTier, Permission, Role
@@ -41,12 +42,15 @@ def app():
             os.environ.pop('SQLALCHEMY_DISABLE_CREATE_ALL', None)
             db.create_all()
 
+        _ensure_sqlite_schema_columns()
+
         # Create basic test data
         _create_test_data()
 
-        yield app
+    yield app
 
-        # Clean up database
+    # Clean up database
+    with app.app_context():
         db.drop_all()
 
     os.close(db_fd)
@@ -151,6 +155,83 @@ def _create_test_data():
     )
     db.session.add(user)
     db.session.commit()
+
+
+def _ensure_sqlite_schema_columns():
+    """SQLite migrations can drop renamed columns; ensure critical columns exist for tests."""
+    inspector = inspect(db.engine)
+
+    def ensure_columns(table_name: str, column_defs: dict[str, str]):
+        nonlocal inspector
+        try:
+            existing = {col['name'] for col in inspector.get_columns(table_name)}
+        except Exception:
+            return
+        missing = {name: ddl for name, ddl in column_defs.items() if name not in existing}
+        if not missing:
+            return
+        for column_name, ddl in missing.items():
+            db.session.execute(text(f'ALTER TABLE "{table_name}" ADD COLUMN {column_name} {ddl}'))
+        db.session.commit()
+        inspector = inspect(db.engine)
+
+    from app.models.recipe import RecipeLineage
+    RecipeLineage.__table__.create(db.engine, checkfirst=True)
+
+    ensure_columns('user', {
+        'active_session_token': 'VARCHAR(255)'
+    })
+
+    ensure_columns('recipe', {
+        'parent_recipe_id': 'INTEGER',
+        'cloned_from_id': 'INTEGER',
+        'root_recipe_id': 'INTEGER'
+    })
+
+    ensure_columns('inventory_item', {
+        'recommended_fragrance_load_pct': 'VARCHAR(64)',
+        'inci_name': 'VARCHAR(256)',
+        'protein_content_pct': 'FLOAT',
+        'brewing_color_srm': 'FLOAT',
+        'brewing_potential_sg': 'FLOAT',
+        'brewing_diastatic_power_lintner': 'FLOAT',
+        'fatty_acid_profile': 'TEXT',
+        'certifications': 'TEXT'
+    })
+
+    ensure_columns('global_item', {
+        'aliases': 'TEXT',
+        'recommended_shelf_life_days': 'INTEGER',
+        'recommended_usage_rate': 'VARCHAR(64)',
+        'recommended_fragrance_load_pct': 'VARCHAR(64)',
+        'is_active_ingredient': 'BOOLEAN',
+        'inci_name': 'VARCHAR(256)',
+        'certifications': 'TEXT',
+        'capacity': 'FLOAT',
+        'capacity_unit': 'VARCHAR(32)',
+        'container_material': 'VARCHAR(64)',
+        'container_type': 'VARCHAR(64)',
+        'container_style': 'VARCHAR(64)',
+        'container_color': 'VARCHAR(64)',
+        'saponification_value': 'FLOAT',
+        'iodine_value': 'FLOAT',
+        'melting_point_c': 'FLOAT',
+        'flash_point_c': 'FLOAT',
+        'ph_value': 'VARCHAR(32)',
+        'ph_min': 'FLOAT',
+        'ph_max': 'FLOAT',
+        'moisture_content_percent': 'FLOAT',
+        'comedogenic_rating': 'INTEGER',
+        'fatty_acid_profile': 'TEXT',
+        'protein_content_pct': 'FLOAT',
+        'brewing_color_srm': 'FLOAT',
+        'brewing_potential_sg': 'FLOAT',
+        'brewing_diastatic_power_lintner': 'FLOAT',
+        'metadata_json': 'TEXT',
+        'is_archived': 'BOOLEAN',
+        'archived_at': 'DATETIME',
+        'archived_by': 'INTEGER'
+    })
 
 
 @pytest.fixture
