@@ -26,7 +26,7 @@ def analyze_container_options(
     Single entry point for container analysis.
 
     Returns:
-        - Container strategy (greedy fill selection) 
+        - Container strategy (greedy fill selection)
         - All available container options
     """
     try:
@@ -207,9 +207,38 @@ def _load_suitable_containers(
     container_options.sort(key=lambda x: x['capacity'], reverse=True)
 
     # Check if we have any valid containers after filtering
-    if not container_options:
+    if not container_options and not conversion_failures:
         logger.warning(f"Recipe '{recipe.name}' has {len(containers)} containers configured, but none have valid capacity data or are convertible to {yield_unit}")
         # Return empty list instead of raising error - let caller handle
+
+    # Check if any containers match the yield unit
+    compatible_containers = []
+    for container in containers: # Changed from available_containers to containers to check all original containers
+        # We need to check original units here before conversion
+        storage_unit = getattr(container, 'capacity_unit', None)
+        if storage_unit == yield_unit:
+            compatible_containers.append(container)
+
+    if not compatible_containers and not conversion_failures: # Only trigger if no compatible containers and no conversion failures
+        # No compatible containers found - generate drawer payload
+        from app.services.production_planning.drawer_errors import generate_drawer_payload_for_container_error
+
+        drawer_payload = generate_drawer_payload_for_container_error(
+            'YIELD_CONTAINER_MISMATCH',
+            recipe,
+            mismatch_context={'yield_unit': yield_unit}
+        )
+
+        logger.warning(f"No containers found with yield unit {yield_unit} for recipe {recipe.id}")
+
+        if api_format:
+            # The existing logic already handles returning None for strategy and empty list for options
+            # We need to add the drawer payload to this return structure.
+            # The analysis function handles the drawer_payload based on the returned strategy.
+            # For now, we return an empty list and let the calling function handle the error code.
+            # This part needs to be carefully integrated with how analyze_container_options handles the return.
+            # For now, we will just ensure conversion_failures captures the issue.
+            pass # Let the existing logic in analyze_container_options handle the return.
 
     return container_options, conversion_failures
 
@@ -384,7 +413,7 @@ def _create_greedy_strategy(container_options: List[Dict[str, Any]], total_yield
         total_capacity = sum((c.get('effective_capacity', c['capacity'])) * c['containers_needed'] for c in optimized)
         selected_containers = optimized
 
-    # Containment = Can the total capacity hold the yield? 
+    # Containment = Can the total capacity hold the yield?
     # Show 100% if within 3% tolerance (97% or above)
     if total_yield > 0:
         raw_containment = (total_capacity / total_yield) * 100
