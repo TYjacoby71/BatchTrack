@@ -60,6 +60,8 @@ class RouteAccessConfig:
         
         # Public API endpoints
         'public_api_bp.public_global_item_search',
+        'global_library_bp.global_library',
+        'global_library_bp.global_item_detail',
         
         # Waitlist signup (for unauthenticated users)
         'waitlist.join_waitlist',
