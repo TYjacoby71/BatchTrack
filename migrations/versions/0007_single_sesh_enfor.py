@@ -1,6 +1,6 @@
 """0007 single session enforcement
 
-Revision ID: 0007_single_session_enforcement
+Revision ID: 0007_single_sesh_enfor
 Revises: 0006_recipe_lineage_upgrade
 Create Date: 2025-11-15 00:00:00.000000
 """
@@ -16,7 +16,7 @@ from migrations.postgres_helpers import (
 
 
 # revision identifiers, used by Alembic.
-revision = '0007_single_session_enforcement'
+revision = '0007_single_sesh_enfor'
 down_revision = '0006_recipe_lineage_upgrade'
 branch_labels = None
 depends_on = None
