@@ -66,6 +66,8 @@
             recipe_id: Number(recipeId),
             yield_amount: payload.yield_amount,
             yield_unit: payload.yield_unit,
+            source: 'container_unit_mismatch',
+            refresh_plan: true,
           },
         }),
       );
