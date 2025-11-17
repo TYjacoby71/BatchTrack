@@ -29,6 +29,13 @@ def _extract_stock_issues(stock_items):
         needed = float(item.get('needed_quantity') or item.get('needed_amount') or 0)
         available = float(item.get('available_quantity') or 0)
         status = (item.get('status') or '').upper()
+        raw_category = (
+            item.get('category')
+            or item.get('type')
+            or item.get('item_type')
+            or ''
+        )
+        normalized_category = raw_category.strip().lower() or 'ingredient'
         if status in BLOCKING_STOCK_STATUSES or available < needed:
             issues.append({
                 'item_id': item.get('item_id'),
@@ -38,7 +45,7 @@ def _extract_stock_issues(stock_items):
                 'needed_unit': item.get('needed_unit'),
                 'available_unit': item.get('available_unit'),
                 'status': status or ('LOW' if available < needed else 'UNKNOWN'),
-                'category': item.get('category')
+                'category': normalized_category
             })
     return issues
 
