@@ -152,6 +152,44 @@
     </div>
   </div>
 
+  <div class="card shadow-sm mt-4">
+    <div class="card-header bg-white border-0">
+      <h4 class="mb-1">Load Test Mutations — How to Configure</h4>
+      <p class="text-muted small mb-0">Use these variables only in staging or disposable environments when you want Locust to exercise write-heavy workflows.</p>
+    </div>
+    <div class="card-body">
+      <div class="alert alert-info small">
+        <strong>Quick command:</strong>
+        <code>LOCUST_ENABLE_MUTATIONS=1 LOCUST_MUTATION_USERNAME=loadtest@example.com LOCUST_MUTATION_PASSWORD=secret locust -f loadtests/locustfile.py DataMutationUser --headless --host=https://staging.your-app</code>
+      </div>
+      <div class="row g-3">
+        <div class="col-md-6">
+          <div class="border rounded p-3 h-100">
+            <h6 class="fw-semibold">Required to toggle writes</h6>
+            <ul class="small mb-0">
+              <li><code>LOCUST_ENABLE_MUTATIONS</code>: Accepts <code>1</code>/<code>true</code>/<code>on</code>. Leave unset for read-only tests.</li>
+              <li><code>LOCUST_MUTATION_USERNAME</code>: Email or username of the dedicated staging user that can start/finish batches and adjust inventory.</li>
+              <li><code>LOCUST_MUTATION_PASSWORD</code>: Password for that user (store in your secrets manager).</li>
+            </ul>
+          </div>
+        </div>
+        <div class="col-md-6">
+          <div class="border rounded p-3 h-100">
+            <h6 class="fw-semibold">Optional tuning</h6>
+            <ul class="small mb-0">
+              <li><code>LOCUST_MUTATION_RECIPE_IDS</code>: Comma list like <code>12,18,24</code> to force specific recipes for batch starts. Leave blank to auto-discover.</li>
+              <li><code>LOCUST_MUTATION_INVENTORY_IDS</code>: Comma list like <code>45,51,79</code> for inventory adjustments. Leave blank to auto-discover.</li>
+              <li><code>LOCUST_MUTATION_WEIGHT</code>: Float between 0 and 1 (default 0.2) that controls how much DataMutationUser traffic you mix into other user classes.</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+      <p class="text-muted small mt-3 mb-0">
+        When <code>LOCUST_ENABLE_MUTATIONS</code> is active, Locust logs in with the credentials above, pulls CSRF tokens, and runs the write paths (start batches, fail batches, inventory adjustments, custom units, profile updates). Keep these variables unset in production so your regular 5k-user tests stay read-only.
+      </p>
+    </div>
+  </div>
+
   <div class="alert alert-warning mt-4">
     <strong>Redis provisioning:</strong> Before launch, create a managed Redis instance (Render Redis, Upstash, AWS ElastiCache). Copy the connection URL into <code>REDIS_URL</code> and mirror it into <code>RATELIMIT_STORAGE_URL</code>. The app now refuses to start in production without Redis-backed sessions, caching, and rate limiting.
   </div>

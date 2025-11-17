@@ -1920,6 +1920,18 @@ def integrations_checklist():
             'section_items': [
                 _make_item('SEED_PRESETS', 'Enable preset data seeding during migrations (internal tooling).', required=False, recommended='unset'),
             ]
+        },
+        {
+            'title': 'Load Testing & Data Mutations',
+            'note': 'Control the Locust DataMutationUser flows. Leave everything unset for read-only load tests; only configure these in staging or disposable environments.',
+            'section_items': [
+                _make_item('LOCUST_ENABLE_MUTATIONS', 'Enable write-heavy Locust tasks (DataMutationUser). Accepts 1/true/on to enable.', required=False, recommended='0 / unset', note='Keep unset in production. Set to 1 when you want to simulate starting/finishing batches, inventory adjustments, etc.'),
+                _make_item('LOCUST_MUTATION_USERNAME', 'Email/username the mutating Locust user should log in with when LOCUST_ENABLE_MUTATIONS=1.', required=False, note='Create a dedicated staging user with permissions to manage batches/inventory.'),
+                _make_item('LOCUST_MUTATION_PASSWORD', 'Password for the mutating Locust user.', required=False, is_secret=True, note='Store in your secret manager; never reuse a real user password.'),
+                _make_item('LOCUST_MUTATION_RECIPE_IDS', 'Optional comma-separated recipe ID list to target during batch starts.', required=False, note='Format: "12,18,24". Leave empty to let Locust auto-discover recipes via /recipes.'),
+                _make_item('LOCUST_MUTATION_INVENTORY_IDS', 'Optional comma-separated inventory item IDs for adjustment tasks.', required=False, note='Format: "45,51,79". Leave unset to auto-discover via /inventory/api/search.'),
+                _make_item('LOCUST_MUTATION_WEIGHT', 'Relative traffic weight (0-1) for DataMutationUser when included in mixed tests.', required=False, recommended='0.2', note='Higher weight means more write-heavy traffic relative to other user classes.'),
+            ]
         }
     ]
 
