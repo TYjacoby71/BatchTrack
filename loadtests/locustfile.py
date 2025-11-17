@@ -22,18 +22,25 @@ Usage:
     LOCUST_ENABLE_MUTATIONS=1 LOCUST_MUTATION_USERNAME=loadtest+mutations@example.com \
         LOCUST_MUTATION_PASSWORD=replace-me locust -f loadtests/locustfile.py DataMutationUser \
         --headless --host=https://staging.your-app.example
+
+    # Automatic bootstrap (creates org/users + seeds data + runs mutations)
+    LOCUST_BOOTSTRAP_DATA=1 locust -f loadtests/locustfile.py DataMutationUser \
+        --headless --host=https://staging.your-app.example
 """
 
 import os
 import random
 import re
 import time
+import threading
 from collections import deque
 from typing import Optional
 
 from bs4 import BeautifulSoup
 from locust import HttpUser, LoadTestShape, between, task
 from locust.exception import StopUser
+
+from loadtests.bootstrap import bootstrap_loadtest_org, load_mutation_accounts
 
 
 def _parse_id_list(env_key: str) -> list[int]:
@@ -55,17 +62,59 @@ def _env_flag(name: str, default: str = "0") -> bool:
     return (os.environ.get(name, default) or "").strip().lower() in {"1", "true", "yes", "on"}
 
 
+BOOTSTRAP_REQUESTED = _env_flag("LOCUST_BOOTSTRAP_DATA")
 MUTATION_SCENARIOS_ENABLED = _env_flag("LOCUST_ENABLE_MUTATIONS")
-try:
-    DEFAULT_MUTATION_WEIGHT = float(os.environ.get("LOCUST_MUTATION_WEIGHT",
-                                                 "0.2" if MUTATION_SCENARIOS_ENABLED else "0"))
-except ValueError:
-    DEFAULT_MUTATION_WEIGHT = 0.0
 
 MUTATION_USERNAME = os.environ.get("LOCUST_MUTATION_USERNAME", "loadtest+mutations@example.com")
 MUTATION_PASSWORD = os.environ.get("LOCUST_MUTATION_PASSWORD", "replace-me")
+MUTATION_ACCOUNTS_FILE = os.environ.get(
+    "LOCUST_MUTATION_ACCOUNTS_FILE",
+    os.path.join(os.path.dirname(__file__), "_generated_accounts.json"),
+)
+
 SEEDED_RECIPE_IDS = _parse_id_list("LOCUST_MUTATION_RECIPE_IDS")
 SEEDED_INVENTORY_IDS = _parse_id_list("LOCUST_MUTATION_INVENTORY_IDS")
+
+if MUTATION_USERNAME and MUTATION_PASSWORD:
+    MUTATION_SCENARIOS_ENABLED = True
+
+should_bootstrap = False
+if BOOTSTRAP_REQUESTED:
+    should_bootstrap = True
+elif MUTATION_SCENARIOS_ENABLED and not MUTATION_USERNAME and not os.path.exists(MUTATION_ACCOUNTS_FILE):
+    should_bootstrap = True
+
+if should_bootstrap:
+    try:
+        bootstrap_loadtest_org(MUTATION_ACCOUNTS_FILE)
+        MUTATION_SCENARIOS_ENABLED = True
+    except Exception as exc:  # pragma: no cover - defensive logging
+        print(f"⚠️  Load-test bootstrap failed: {exc}")
+
+MUTATION_ACCOUNTS = load_mutation_accounts(MUTATION_ACCOUNTS_FILE)
+if MUTATION_ACCOUNTS and not MUTATION_SCENARIOS_ENABLED:
+    MUTATION_SCENARIOS_ENABLED = True
+
+try:
+    DEFAULT_MUTATION_WEIGHT = float(
+        os.environ.get("LOCUST_MUTATION_WEIGHT", "0.2" if MUTATION_SCENARIOS_ENABLED else "0")
+    )
+except ValueError:
+    DEFAULT_MUTATION_WEIGHT = 0.0
+
+MUTATION_ACCOUNT_LOCK = threading.Lock()
+MUTATION_ACCOUNT_ROTATION = deque()
+
+
+def _next_mutation_account() -> Optional[dict]:
+    if not MUTATION_ACCOUNTS:
+        return None
+    with MUTATION_ACCOUNT_LOCK:
+        if not MUTATION_ACCOUNT_ROTATION:
+            MUTATION_ACCOUNT_ROTATION.extend(MUTATION_ACCOUNTS)
+        account = MUTATION_ACCOUNT_ROTATION[0]
+        MUTATION_ACCOUNT_ROTATION.rotate(-1)
+        return dict(account)
 
 class AnonymousUser(HttpUser):
     """Anonymous user browsing public content."""
@@ -326,6 +375,13 @@ class DataMutationUser(AuthenticatedMixin, HttpUser):
 
     def __init__(self, environment):
         super().__init__(environment)
+        account = _next_mutation_account()
+        if account:
+            self.login_username = account.get("username", self.login_username)
+            self.login_password = account.get("password", self.login_password)
+            self.account_role_label = account.get("role", "worker")
+        else:
+            self.account_role_label = "env" if self.login_username else None
         self.known_recipe_ids: list[int] = list(SEEDED_RECIPE_IDS)
         self.inventory_item_ids: list[int] = list(SEEDED_INVENTORY_IDS)
         self.inventory_cache: dict[int, dict] = {}
@@ -334,6 +390,8 @@ class DataMutationUser(AuthenticatedMixin, HttpUser):
     def on_start(self):
         if not MUTATION_SCENARIOS_ENABLED:
             raise StopUser("Mutating flows disabled (set LOCUST_ENABLE_MUTATIONS=1 to enable).")
+        if not self.login_username or not self.login_password:
+            raise StopUser("No mutation credentials available (provide env vars or bootstrap accounts).")
         self._perform_login(self.login_username, self.login_password, "mutator_login")
         self._refresh_csrf_token(seed_path="/settings", metric_name="mutator_csrf_seed")
         self._prime_recipe_ids()

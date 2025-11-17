@@ -160,13 +160,14 @@
     <div class="card-body">
       <div class="alert alert-info small">
         <strong>Quick command:</strong>
-        <code>LOCUST_ENABLE_MUTATIONS=1 LOCUST_MUTATION_USERNAME=loadtest@example.com LOCUST_MUTATION_PASSWORD=secret locust -f loadtests/locustfile.py DataMutationUser --headless --host=https://staging.your-app</code>
+          <code>LOCUST_BOOTSTRAP_DATA=1 LOCUST_ENABLE_MUTATIONS=1 locust -f loadtests/locustfile.py DataMutationUser --headless --host=https://staging.your-app</code>
       </div>
       <div class="row g-3">
         <div class="col-md-6">
           <div class="border rounded p-3 h-100">
             <h6 class="fw-semibold">Required to toggle writes</h6>
             <ul class="small mb-0">
+                <li><code>LOCUST_BOOTSTRAP_DATA</code>: Set to <code>1</code> to auto-create a disposable org with two accounts (owner + worker) and seed inventory/recipes before the test runs.</li>
               <li><code>LOCUST_ENABLE_MUTATIONS</code>: Accepts <code>1</code>/<code>true</code>/<code>on</code>. Leave unset for read-only tests.</li>
               <li><code>LOCUST_MUTATION_USERNAME</code>: Email or username of the dedicated staging user that can start/finish batches and adjust inventory.</li>
               <li><code>LOCUST_MUTATION_PASSWORD</code>: Password for that user (store in your secrets manager).</li>
@@ -179,13 +180,14 @@
             <ul class="small mb-0">
               <li><code>LOCUST_MUTATION_RECIPE_IDS</code>: Comma list like <code>12,18,24</code> to force specific recipes for batch starts. Leave blank to auto-discover.</li>
               <li><code>LOCUST_MUTATION_INVENTORY_IDS</code>: Comma list like <code>45,51,79</code> for inventory adjustments. Leave blank to auto-discover.</li>
+                <li><code>LOCUST_MUTATION_ACCOUNTS_FILE</code>: Path to the JSON file that stores the generated test accounts (default <code>loadtests/_generated_accounts.json</code>).</li>
               <li><code>LOCUST_MUTATION_WEIGHT</code>: Float between 0 and 1 (default 0.2) that controls how much DataMutationUser traffic you mix into other user classes.</li>
             </ul>
           </div>
         </div>
       </div>
       <p class="text-muted small mt-3 mb-0">
-        When <code>LOCUST_ENABLE_MUTATIONS</code> is active, Locust logs in with the credentials above, pulls CSRF tokens, and runs the write paths (start batches, fail batches, inventory adjustments, custom units, profile updates). Keep these variables unset in production so your regular 5k-user tests stay read-only.
+          When <code>LOCUST_ENABLE_MUTATIONS</code> (or <code>LOCUST_BOOTSTRAP_DATA</code>) is active, Locust logs in with the configured accounts (or the auto-generated owner/worker pair), captures CSRF tokens, and runs the write paths (start batches, fail batches, inventory adjustments, custom units, profile updates). Keep these variables unset in production so your regular 5k-user tests stay read-only.
       </p>
     </div>
   </div>
