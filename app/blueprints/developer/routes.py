@@ -318,12 +318,12 @@ def create_organization():
 
             # Assign subscription tier to organization
             from app.models.subscription_tier import SubscriptionTier
-            tier_record = SubscriptionTier.query.filter_by(key=subscription_tier).first()
+            tier_record = SubscriptionTier.find_by_identifier(subscription_tier)
             if tier_record:
                 org.subscription_tier_id = tier_record.id
             else:
                 # Default to exempt tier if tier not found
-                exempt_tier = SubscriptionTier.query.filter_by(key='exempt').first()
+                exempt_tier = SubscriptionTier.find_by_identifier('exempt')
                 if exempt_tier:
                     org.subscription_tier_id = exempt_tier.id
 
@@ -441,9 +441,10 @@ def edit_organization(org_id):
     new_tier = request.form.get('subscription_tier')
     print(f"DEBUG: Updating tier from '{old_tier}' to '{new_tier}'")
 
+    tier_record = None
     if new_tier:
         from app.models.subscription_tier import SubscriptionTier
-        tier_record = SubscriptionTier.query.filter_by(key=new_tier).first()
+        tier_record = SubscriptionTier.find_by_identifier(new_tier)
         if tier_record:
             print(f"DEBUG: Updating organization tier to '{new_tier}'")
             org.subscription_tier_id = tier_record.id
@@ -472,7 +473,7 @@ def upgrade_organization(org_id):
     new_tier = request.form.get('tier')
 
     from app.models.subscription_tier import SubscriptionTier
-    tier_record = SubscriptionTier.query.filter_by(key=new_tier).first()
+    tier_record = SubscriptionTier.find_by_identifier(new_tier)
 
     if tier_record:
         org.subscription_tier_id = tier_record.id
