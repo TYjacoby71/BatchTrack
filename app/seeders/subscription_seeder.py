@@ -34,10 +34,9 @@ def create_exempt_tier():
                 tier_type='monthly',
                 user_limit=-1,  # Unlimited users
                 max_users=None,
-                max_recipes=None,
-                max_batches=None,
-                max_products=None,
-                max_batchbot_requests=None,
+                max_recipes=-1,
+                max_products=-1,
+                max_batchbot_requests=-1,
                 # NOTE: Column may be NOT NULL in some deployments; use -1 to denote "unlimited"
                 max_monthly_batches=-1,
                 retention_policy='subscribed',  # Keep data while subscribed
@@ -82,7 +81,6 @@ def create_free_tier():
                 user_limit=1,
                 max_users=1,
                 max_recipes=10,
-                max_batches=0,  # No batches allowed
                 max_products=None,
                 max_batchbot_requests=0,
                 max_monthly_batches=0,
@@ -128,7 +126,6 @@ def create_solo_tier():
                 user_limit=1,
                 max_users=1,
                 max_recipes=50,
-                max_batches=None,  # Unlimited batches
                 max_products=25,
                 max_batchbot_requests=100,
                 max_monthly_batches=200,
@@ -186,7 +183,6 @@ def create_team_tier():
                 user_limit=10,
                 max_users=10,
                 max_recipes=200,
-                max_batches=None,  # Unlimited batches
                 max_products=100,
                 max_batchbot_requests=500,
                 max_monthly_batches=1000,
@@ -230,10 +226,9 @@ def create_enterprise_tier():
                 tier_type='monthly',
                 user_limit=-1,  # Unlimited users
                 max_users=None,
-                max_recipes=None,  # Unlimited recipes
-                max_batches=None,  # Unlimited batches
-                max_products=None,  # Unlimited products
-                max_batchbot_requests=None,  # Unlimited AI requests
+                max_recipes=-1,  # Unlimited recipes
+                max_products=-1,  # Unlimited products
+                max_batchbot_requests=-1,  # Unlimited AI requests
                 # NOTE: Column may be NOT NULL in some deployments; use -1 to denote "unlimited"
                 max_monthly_batches=-1,  # Unlimited monthly batches
                 retention_policy='subscribed',  # Keep data while subscribed
