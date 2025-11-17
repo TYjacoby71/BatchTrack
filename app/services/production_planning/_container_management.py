@@ -58,6 +58,12 @@ def analyze_container_options(
             recipe, org_id, total_yield, yield_unit, product_density
         )
 
+        logger.info(f"🔍 ANALYSIS DEBUG: Recipe {recipe.id} analysis results:")
+        logger.info(f"🔍 ANALYSIS DEBUG: - Container options: {len(container_options)}")
+        logger.info(f"🔍 ANALYSIS DEBUG: - Conversion failures: {len(conversion_failures)}")
+        for failure in conversion_failures:
+            logger.info(f"🔍 ANALYSIS DEBUG: - Failure: {failure.get('error_code')} - {failure.get('error_message')}")
+
         if not container_options:
             if conversion_failures and api_format:
                 # Check if this is a yield container mismatch
@@ -66,7 +72,10 @@ def analyze_container_options(
                     for failure in conversion_failures
                 )
                 
+                logger.info(f"🔍 ANALYSIS DEBUG: Has mismatch error: {has_mismatch_error}")
+                
                 if has_mismatch_error:
+                    logger.info(f"🔍 ANALYSIS DEBUG: Generating YIELD_CONTAINER_MISMATCH drawer payload")
                     from .drawer_errors import generate_drawer_payload_for_container_error
                     drawer_payload = generate_drawer_payload_for_container_error(
                         error_code='YIELD_CONTAINER_MISMATCH',
@@ -87,6 +96,7 @@ def analyze_container_options(
                         'yield_amount': total_yield,
                         'yield_unit': yield_unit
                     }
+                    logger.info(f"🔍 ANALYSIS DEBUG: Returning YIELD_CONTAINER_MISMATCH strategy: {strategy}")
                     return strategy, []
 
             raise ValueError(
@@ -152,9 +162,12 @@ def _load_suitable_containers(
     product_density: Optional[float]
 ) -> Tuple[List[Dict[str, Any]], List[Dict[str, Any]]]:
     """Load containers allowed for this recipe and convert capacities"""
+    
+    logger.info(f"🔍 CONTAINER DEBUG: Loading containers for recipe {recipe.id} with yield unit '{yield_unit}'")
 
     # Get recipe's allowed containers - Recipe model uses 'allowed_containers' field
     allowed_container_ids = getattr(recipe, 'allowed_containers', [])
+    logger.info(f"🔍 CONTAINER DEBUG: Recipe {recipe.id} has allowed containers: {allowed_container_ids}")
 
     if not allowed_container_ids:
         raise ValueError(f"Recipe '{recipe.name}' has no containers configured")
@@ -165,9 +178,17 @@ def _load_suitable_containers(
         InventoryItem.organization_id == org_id,
         InventoryItem.quantity > 0
     ).all()
+    
+    logger.info(f"🔍 CONTAINER DEBUG: Found {len(containers)} available containers")
+    for container in containers:
+        storage_unit = getattr(container, 'capacity_unit', None)
+        logger.info(f"🔍 CONTAINER DEBUG: Container '{container.name}' has unit '{storage_unit}' (yield unit: '{yield_unit}')")
 
     container_options = []
     conversion_failures: List[Dict[str, Any]] = []
+
+    # Track if any containers have directly compatible units
+    has_compatible_units = False
 
     for container in containers:
         # Get container capacity
@@ -175,14 +196,20 @@ def _load_suitable_containers(
         storage_unit = getattr(container, 'capacity_unit', None)
 
         if not storage_capacity or not storage_unit:
-            logger.warning(f"Container {container.name} missing capacity data - skipping")
+            logger.warning(f"🔍 CONTAINER DEBUG: Container {container.name} missing capacity data - skipping")
             continue
+
+        # Check for direct unit compatibility
+        if storage_unit == yield_unit:
+            has_compatible_units = True
+            logger.info(f"🔍 CONTAINER DEBUG: Container '{container.name}' has compatible unit '{storage_unit}'")
 
         # Convert capacity to recipe yield units
         converted_capacity, conversion_issue = _convert_capacity(
             storage_capacity, storage_unit, yield_unit, product_density, recipe
         )
         if conversion_issue:
+            logger.info(f"🔍 CONTAINER DEBUG: Container '{container.name}' conversion failed: {conversion_issue}")
             conversion_failures.append({
                 'container_id': container.id,
                 'container_name': container.container_display_name,
@@ -193,9 +220,10 @@ def _load_suitable_containers(
             })
             continue
         if converted_capacity <= 0:
-            logger.warning(f"Container {container.name} capacity conversion failed - skipping")
+            logger.warning(f"🔍 CONTAINER DEBUG: Container {container.name} capacity conversion failed - skipping")
             continue
 
+        logger.info(f"🔍 CONTAINER DEBUG: Container '{container.name}' converted successfully: {converted_capacity} {yield_unit}")
         container_options.append({
             'container_id': container.id,
             'container_name': container.container_display_name,
@@ -213,38 +241,28 @@ def _load_suitable_containers(
     # Sort by capacity (largest first for greedy algorithm)
     container_options.sort(key=lambda x: x['capacity'], reverse=True)
 
-    # Check if we have any valid containers after filtering
-    if not container_options and not conversion_failures:
-        logger.warning(f"Recipe '{recipe.name}' has {len(containers)} containers configured, but none have valid capacity data or are convertible to {yield_unit}")
-        # Return empty list instead of raising error - let caller handle
-
-    # Check if any containers have units that directly match the yield unit
-    compatible_containers = []
-    for container in containers:
-        storage_unit = getattr(container, 'capacity_unit', None)
-        if storage_unit == yield_unit:
-            compatible_containers.append(container)
-
-    # If no compatible containers AND we have conversion failures, 
-    # this indicates a unit mismatch rather than missing density
-    if not compatible_containers and conversion_failures:
-        # Check if all conversion failures are due to missing density
-        all_missing_density = all(
-            failure.get('error_code') == 'MISSING_DENSITY' 
-            for failure in conversion_failures
-        )
+    logger.info(f"🔍 CONTAINER DEBUG: Final results - container_options: {len(container_options)}, conversion_failures: {len(conversion_failures)}")
+    logger.info(f"🔍 CONTAINER DEBUG: Has compatible units: {has_compatible_units}")
+    
+    # CRITICAL: If we have containers but none could convert and none have compatible units,
+    # this is a yield/container unit mismatch
+    if not container_options and conversion_failures and not has_compatible_units:
+        logger.warning(f"🔍 CONTAINER DEBUG: YIELD CONTAINER MISMATCH DETECTED - no compatible units found")
         
-        if all_missing_density:
-            # This is a unit mismatch case - containers exist but can't convert to yield unit
-            logger.warning(f"Unit mismatch: No containers found with yield unit {yield_unit} for recipe {recipe.id}")
-            conversion_failures.append({
-                'container_id': None,
-                'container_name': 'Unit Mismatch',
-                'from_unit': 'mixed',
-                'to_unit': yield_unit,
-                'error_code': 'YIELD_CONTAINER_MISMATCH',
-                'error_message': f'No containers match recipe yield unit {yield_unit}'
-            })
+        # Check the types of conversion failures
+        failure_codes = [f.get('error_code') for f in conversion_failures]
+        logger.info(f"🔍 CONTAINER DEBUG: Conversion failure codes: {failure_codes}")
+        
+        # Add explicit yield container mismatch error
+        conversion_failures.append({
+            'container_id': None,
+            'container_name': 'Unit Mismatch',
+            'from_unit': 'mixed',
+            'to_unit': yield_unit,
+            'error_code': 'YIELD_CONTAINER_MISMATCH',
+            'error_message': f'No containers match recipe yield unit {yield_unit}'
+        })
+        logger.info(f"🔍 CONTAINER DEBUG: Added YIELD_CONTAINER_MISMATCH to conversion failures")
 
     return container_options, conversion_failures
 

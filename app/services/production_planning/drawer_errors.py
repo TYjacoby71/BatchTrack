@@ -33,6 +33,8 @@ def generate_drawer_payload_for_container_error(error_code: str, recipe, **conte
         recipe_id = getattr(recipe, 'id', None)
         yield_unit = (context.get('mismatch_context') or {}).get('yield_unit')
         
+        logger.info(f"🔍 DRAWER DEBUG: Generating YIELD_CONTAINER_MISMATCH payload for recipe {recipe_id}, yield_unit: {yield_unit}")
+        
         from flask import url_for
         modal_url = None
         if recipe_id:
@@ -48,7 +50,7 @@ def generate_drawer_payload_for_container_error(error_code: str, recipe, **conte
                     recipe_id=recipe_id
                 )
 
-        return {
+        payload = {
             'version': '1.0',
             'modal_url': modal_url,
             'success_event': 'recipe.yield.updated',
@@ -57,6 +59,9 @@ def generate_drawer_payload_for_container_error(error_code: str, recipe, **conte
             'error_message': 'Recipe yield unit does not match any available containers.',
             'correlation_id': correlation_id
         }
+        
+        logger.info(f"🔍 DRAWER DEBUG: Generated payload: {payload}")
+        return payload
 
     # Unknown/unsupported error code: return minimal info (no drawer)
     return {
