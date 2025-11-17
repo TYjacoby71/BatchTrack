@@ -13,6 +13,10 @@ Usage:
 
     # Authenticated user flows
     locust -f loadtests/locustfile.py AuthenticatedUser --host=https://your-app.replit.app
+
+    # 5k concurrent user endurance test (headless)
+    locust -f loadtests/locustfile.py --headless --shape-class FiveKUserLoadShape \
+        --host=https://your-app.replit.app --run-time=45m
 """
 
 import random
@@ -20,7 +24,7 @@ import time
 from typing import Optional
 
 from bs4 import BeautifulSoup
-from locust import HttpUser, task, between
+from locust import HttpUser, LoadTestShape, between, task
 
 class AnonymousUser(HttpUser):
     """Anonymous user browsing public content."""
@@ -243,6 +247,33 @@ class TimerHeavyUser(AuthenticatedMixin, HttpUser):
     def auto_expire(self):
         self.client.post("/timers/api/auto-expire-timers", name="auto_expire_timers")
 
+
+class FiveKUserLoadShape(LoadTestShape):
+    """
+    Structured load shape that ramps to 5k concurrent users, sustains the load,
+    and then ramps back down. Use with --shape-class FiveKUserLoadShape.
+    """
+
+    stages = [
+        {"duration": 120, "users": 500, "spawn_rate": 200},    # warm-up (~2m)
+        {"duration": 240, "users": 2000, "spawn_rate": 400},   # rapid ramp (~4m)
+        {"duration": 360, "users": 3500, "spawn_rate": 300},   # approach peak (~6m)
+        {"duration": 900, "users": 5000, "spawn_rate": 200},   # sustain peak (~15m)
+        {"duration": 300, "users": 3000, "spawn_rate": 150},   # controlled cooldown (~5m)
+        {"duration": 180, "users": 0, "spawn_rate": 300},      # ramp down (~3m)
+    ]
+
+    def tick(self):
+        run_time = self.get_run_time()
+        elapsed = 0
+
+        for stage in self.stages:
+            elapsed += stage["duration"]
+            if run_time < elapsed:
+                return stage["users"], stage["spawn_rate"]
+
+        return None
+
 if __name__ == "__main__":
     print("Load test scenarios available:")
     print("- AnonymousUser: Public browsing (75% weight)")
@@ -251,3 +282,4 @@ if __name__ == "__main__":
     print("- HighFrequencyUser: Rapid API usage (12.5% weight)")
     print("- TimerHeavyUser: Timer-heavy polling (optional, add explicitly)")
     print("- StressTest: High-intensity testing")
+    print("- FiveKUserLoadShape: Ramp/hold/ramp-down to 5k concurrent virtual users")
