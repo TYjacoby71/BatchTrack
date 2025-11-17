@@ -28,20 +28,15 @@ def app():
     })
 
     with app.app_context():
-        try:
-            os.environ.setdefault('SQLALCHEMY_DISABLE_CREATE_ALL', '1')
-            from flask_migrate import upgrade
-            upgrade()
-        except Exception:
-            os.environ.pop('SQLALCHEMY_DISABLE_CREATE_ALL', None)
-            db.drop_all()
-            db.create_all()
+        db.drop_all()
+        db.create_all()
 
         _create_test_data()
 
         yield app
 
         db.drop_all()
+
 
     os.close(db_fd)
     os.unlink(db_path)
@@ -65,8 +60,6 @@ def db_session(app):
     with app.app_context():
         yield db.session
         db.session.rollback()
-
-        db.drop_all()
 
 
 @pytest.fixture
