@@ -202,10 +202,15 @@ body {
   background-color: var(--color-navbar) !important;
 }
 
-/* Fixed navbar spacing for homepage */
-.navbar.fixed-top ~ .hero-section,
-.navbar.fixed-top + * .hero-section {
-  padding-top: calc(76px + 2rem) !important;
+/* Fixed navbar spacing - add padding to body when navbar is fixed */
+body {
+  padding-top: 76px; /* Account for fixed navbar height */
+}
+
+/* Hero section spacing adjustment */
+.hero-section {
+  padding-top: 3rem !important;
+  padding-bottom: 3rem !important;
 }
 
 /* List group improvements */
