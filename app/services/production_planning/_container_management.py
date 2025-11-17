@@ -71,9 +71,9 @@ def analyze_container_options(
                     failure.get('error_code') == 'YIELD_CONTAINER_MISMATCH'
                     for failure in conversion_failures
                 )
-                
+
                 logger.info(f"🔍 ANALYSIS DEBUG: Has mismatch error: {has_mismatch_error}")
-                
+
                 if has_mismatch_error:
                     logger.info(f"🔍 ANALYSIS DEBUG: Generating YIELD_CONTAINER_MISMATCH drawer payload")
                     from .drawer_errors import generate_drawer_payload_for_container_error
@@ -85,9 +85,9 @@ def analyze_container_options(
                             'failures': conversion_failures
                         }
                     )
+                    # Return drawer payload directly in the response structure that DrawerInterceptor expects
                     strategy = {
                         'success': False,
-                        'requires_drawer': True,
                         'drawer_payload': drawer_payload,
                         'error': f"No containers match the recipe yield unit ({yield_unit}).",
                         'error_code': 'YIELD_CONTAINER_MISMATCH',
@@ -162,7 +162,7 @@ def _load_suitable_containers(
     product_density: Optional[float]
 ) -> Tuple[List[Dict[str, Any]], List[Dict[str, Any]]]:
     """Load containers allowed for this recipe and convert capacities"""
-    
+
     logger.info(f"🔍 CONTAINER DEBUG: Loading containers for recipe {recipe.id} with yield unit '{yield_unit}'")
 
     # Get recipe's allowed containers - Recipe model uses 'allowed_containers' field
@@ -178,7 +178,7 @@ def _load_suitable_containers(
         InventoryItem.organization_id == org_id,
         InventoryItem.quantity > 0
     ).all()
-    
+
     logger.info(f"🔍 CONTAINER DEBUG: Found {len(containers)} available containers")
     for container in containers:
         storage_unit = getattr(container, 'capacity_unit', None)
@@ -245,21 +245,21 @@ def _load_suitable_containers(
 
     logger.info(f"🔍 CONTAINER DEBUG: Final results - container_options: {len(container_options)}, conversion_failures: {len(conversion_failures)}")
     logger.info(f"🔍 CONTAINER DEBUG: Has compatible units: {has_compatible_units}")
-    
+
     # CRITICAL: If we have containers but none could convert and none have compatible units,
     # this is a yield/container unit mismatch
     logger.info(f"🔍 CONTAINER DEBUG: Final mismatch check:")
     logger.info(f"🔍 CONTAINER DEBUG: - container_options: {len(container_options)}")
     logger.info(f"🔍 CONTAINER DEBUG: - conversion_failures: {len(conversion_failures)}")
     logger.info(f"🔍 CONTAINER DEBUG: - has_compatible_units: {has_compatible_units}")
-    
+
     if not container_options and conversion_failures and not has_compatible_units:
         logger.warning(f"🔍 CONTAINER DEBUG: YIELD CONTAINER MISMATCH DETECTED - no compatible units found")
-        
+
         # Check the types of conversion failures
         failure_codes = [f.get('error_code') for f in conversion_failures]
         logger.info(f"🔍 CONTAINER DEBUG: Conversion failure codes: {failure_codes}")
-        
+
         # Add explicit yield container mismatch error
         conversion_failures.append({
             'container_id': None,
