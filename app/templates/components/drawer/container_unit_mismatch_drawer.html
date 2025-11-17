@@ -52,23 +52,78 @@
 
                 <div class="mb-4">
                     <h6 class="text-muted text-uppercase fw-bold small">Let’s Get This Fixed</h6>
-                    <ol class="ps-3">
-                        <li class="mb-2">
-                            <strong>Confirm the recipe yield unit.</strong>
-                            Make sure the predicted yield is expressed in the unit you actually bottle or package (e.g., <code>fl oz</code> for liquids, <code>g</code> for lipstick fill weights).
-                        </li>
-                        <li class="mb-2">
-                            <strong>Align container capacity units.</strong>
-                            Containers must have a capacity unit that can convert to the recipe yield unit. Update the inventory item’s capacity unit (e.g., use <code>fl oz</code> instead of <code>count</code>) or add containers that already match.
-                            <div class="small text-muted mt-1">
-                                Example: Lipstick tubes measure grams, so the recipe should yield a weight. Cosmetics jars measure fluid ounces, so the recipe should yield a volume.
-                            </div>
-                        </li>
-                        <li>
-                            <strong>If you need to move forward now, disable containers for this batch.</strong>
-                            Uncheck “Requires Containers” in Plan Production to proceed without auto-fill.
-                        </li>
-                    </ol>
+                    <div class="card mb-3 shadow-sm border-warning">
+                        <div class="card-body">
+                            <h6 class="fw-bold mb-3">1. Update the recipe yield (recommended)</h6>
+                            <form id="yieldFixForm"
+                                  data-update-url="{{ url_for('drawer_actions.container_unit_mismatch_update_yield', recipe_id=recipe.id) }}">
+                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                <div class="row g-2 align-items-end">
+                                    <div class="col-md-5">
+                                        <label class="form-label small text-muted">Predicted Yield Amount</label>
+                                        <input type="number"
+                                               class="form-control form-control-sm"
+                                               name="predicted_yield"
+                                               min="0"
+                                               step="0.01"
+                                               value="{{ recipe.predicted_yield or 0 }}">
+                                    </div>
+                                    <div class="col-md-5">
+                                        <label class="form-label small text-muted">Unit</label>
+                                        <select class="form-select form-select-sm" name="predicted_yield_unit" required>
+                                            {% for unit in unit_options %}
+                                                <option value="{{ unit.name }}"
+                                                    {% if unit.name == (recipe.predicted_yield_unit or '') %}selected{% endif %}>
+                                                    {{ unit.name }}
+                                                </option>
+                                            {% endfor %}
+                                        </select>
+                                    </div>
+                                    <div class="col-md-2 d-grid">
+                                        <button type="submit" class="btn btn-primary btn-sm">
+                                            <i class="fas fa-sync-alt me-1"></i> Save &amp; Refresh
+                                        </button>
+                                    </div>
+                                </div>
+                                <div class="form-text mt-2">
+                                    Example: Lipstick tubes measure grams, so the recipe should yield a weight. Cosmetics jars measure fluid ounces, so the recipe should yield volume.
+                                </div>
+                                <div class="alert alert-success mt-3 py-2 px-3 d-none" id="yieldFixSuccess">
+                                    <i class="fas fa-check-circle me-1"></i>
+                                    Yield updated. Refreshing plan…
+                                </div>
+                                <div class="alert alert-danger mt-3 py-2 px-3 d-none" id="yieldFixError"></div>
+                            </form>
+                        </div>
+                    </div>
+
+                    <div class="card mb-3 shadow-sm">
+                        <div class="card-body">
+                            <h6 class="fw-bold mb-2">2. Add or edit containers</h6>
+                            <p class="text-muted mb-2">
+                                Update container capacity units in inventory so they match the recipe yield unit. This takes you out of the planning flow.
+                            </p>
+                            <a class="btn btn-outline-secondary btn-sm"
+                               href="{{ url_for('inventory.list_inventory') }}"
+                               target="_blank" rel="noopener">
+                                <i class="fas fa-box-open me-1"></i> Go to Inventory
+                            </a>
+                        </div>
+                    </div>
+
+                    <div class="card shadow-sm border-0">
+                        <div class="card-body">
+                            <h6 class="fw-bold mb-2">3. Continue without containers</h6>
+                            <p class="text-muted mb-2">
+                                Disable container requirements for this batch and proceed manually.
+                            </p>
+                            <button type="button"
+                                    class="btn btn-outline-danger btn-sm"
+                                    id="disableContainersBtn">
+                                <i class="fas fa-ban me-1"></i> Disable containers for now
+                            </button>
+                        </div>
+                    </div>
                 </div>
             </div>
             <div class="modal-footer d-flex flex-wrap justify-content-between">
@@ -76,14 +131,6 @@
                     Need help? <a href="mailto:support@batchtrack.com">Contact support</a>.
                 </div>
                 <div class="d-flex gap-2">
-                    <a class="btn btn-outline-secondary" href="{{ url_for('inventory.list_inventory') }}" target="_blank" rel="noopener">
-                        <i class="fas fa-box-open me-1"></i>
-                        Manage Containers
-                    </a>
-                    <a class="btn btn-outline-primary" href="{{ url_for('recipes.edit_recipe', recipe_id=recipe.id) }}" target="_blank" rel="noopener">
-                        <i class="fas fa-pen-to-square me-1"></i>
-                        Edit Recipe Yield
-                    </a>
                     <button type="button" class="btn btn-primary" data-bs-dismiss="modal">
                         Got It
                     </button>
@@ -92,3 +139,97 @@
         </div>
     </div>
 </div>
+<script>
+(function() {
+    const modal = document.getElementById('containerUnitMismatchDrawer');
+    if (!modal) return;
+
+    const recipeId = {{ recipe.id }};
+    const form = modal.querySelector('#yieldFixForm');
+    const successAlert = modal.querySelector('#yieldFixSuccess');
+    const errorAlert = modal.querySelector('#yieldFixError');
+    const disableBtn = modal.querySelector('#disableContainersBtn');
+
+    function showSuccess(message) {
+        if (successAlert) {
+            successAlert.textContent = message || 'Yield updated. Refreshing plan…';
+            successAlert.classList.remove('d-none');
+        }
+        if (errorAlert) {
+            errorAlert.classList.add('d-none');
+        }
+    }
+
+    function showError(message) {
+        if (errorAlert) {
+            errorAlert.textContent = message || 'Unable to update yield.';
+            errorAlert.classList.remove('d-none');
+        }
+        if (successAlert) {
+            successAlert.classList.add('d-none');
+        }
+    }
+
+    if (form) {
+        form.addEventListener('submit', async (event) => {
+            event.preventDefault();
+            const submitBtn = form.querySelector('button[type="submit"]');
+            const formData = new FormData(form);
+            const updateUrl = form.dataset.updateUrl;
+
+            if (submitBtn) {
+                submitBtn.disabled = true;
+                submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Saving';
+            }
+
+            try {
+                const response = await fetch(updateUrl, {
+                    method: 'POST',
+                    headers: { 'Accept': 'application/json' },
+                    body: formData
+                });
+                const payload = await response.json();
+                if (!response.ok || !payload.success) {
+                    throw new Error(payload.error || 'Failed to update recipe yield');
+                }
+
+                showSuccess('Yield updated. Refreshing plan…');
+                window.dispatchEvent(new CustomEvent('recipe.yield.updated', {
+                    detail: {
+                        recipe_id: recipeId,
+                        yield_amount: payload.yield_amount,
+                        yield_unit: payload.yield_unit
+                    }
+                }));
+
+                setTimeout(() => {
+                    const bootstrapModal = bootstrap.Modal.getInstance(modal);
+                    if (bootstrapModal) {
+                        bootstrapModal.hide();
+                    }
+                }, 600);
+            } catch (err) {
+                console.error('Failed to update yield', err);
+                showError(err.message);
+            } finally {
+                if (submitBtn) {
+                    submitBtn.disabled = false;
+                    submitBtn.innerHTML = '<i class="fas fa-sync-alt me-1"></i> Save &amp; Refresh';
+                }
+            }
+        });
+    }
+
+    if (disableBtn) {
+        disableBtn.addEventListener('click', () => {
+            window.dispatchEvent(new CustomEvent('container.requirements.disable', {
+                detail: { recipe_id: recipeId }
+            }));
+            const bootstrapModal = bootstrap.Modal.getInstance(modal);
+            if (bootstrapModal) {
+                bootstrapModal.hide();
+            }
+        });
+    }
+})();
+</script>
