@@ -29,10 +29,12 @@ class PlanProductionApp {
         this.stockChecker = new StockChecker(this);
         this.validation = new ValidationManager(this);
         this.batchManager = new BatchManager(this);
+        window.planProductionApp = this;
     }
 
     init() {
         this._bindCoreEvents();
+        this._registerGlobalEvents();
         this.containerManager.bindEvents();
         this.stockChecker.bindEvents();
         this.validation.bindEvents();
@@ -58,6 +60,54 @@ class PlanProductionApp {
                 card.style.display = 'none';
             }
         }
+    }
+
+    _registerGlobalEvents() {
+        window.addEventListener('recipe.yield.updated', (event) => {
+            const detail = event.detail || {};
+            if (!detail || detail.recipe_id !== this.recipe.id) {
+                return;
+            }
+
+            if (typeof detail.yield_amount !== 'undefined') {
+                this.baseYield = Number(detail.yield_amount) || 0;
+                window.recipeData.yield_amount = this.baseYield;
+            }
+            if (detail.yield_unit) {
+                this.unit = detail.yield_unit;
+                window.recipeData.yield_unit = detail.yield_unit;
+            }
+
+            this._updateProjectedYield();
+            this._updateProjectedPortions();
+
+            if (this.requiresContainers) {
+                const fillPct = this.containerManager.getEffectiveFillPct();
+                this.containerManager.planFetcher.fetchContainerPlan({ fill_pct: fillPct });
+            }
+        });
+
+        window.addEventListener('container.requirements.disable', (event) => {
+            const detail = event.detail || {};
+            if (detail.recipe_id && detail.recipe_id !== this.recipe.id) {
+                return;
+            }
+            this._disableContainersRequirement();
+        });
+    }
+
+    _disableContainersRequirement() {
+        const requiresContainersCheckbox = document.getElementById('requiresContainers');
+        if (requiresContainersCheckbox) {
+            requiresContainersCheckbox.checked = false;
+        }
+        this.requiresContainers = false;
+        const card = document.getElementById('containerManagementCard');
+        if (card) {
+            card.style.display = 'none';
+        }
+        this.containerManager.clearContainerResults();
+        this.updateValidation();
     }
 
     _bindCoreEvents() {

@@ -54,10 +54,38 @@ def analyze_container_options(
             raise ValueError(f"Recipe '{recipe.name}' has no predicted yield configured")
 
         # Load and filter containers
-        container_options = _load_suitable_containers(recipe, org_id, total_yield, yield_unit, product_density)
+        container_options, conversion_failures = _load_suitable_containers(
+            recipe, org_id, total_yield, yield_unit, product_density
+        )
 
         if not container_options:
-            raise ValueError(f"No containers with valid capacity data found for recipe '{recipe.name}'. Check that containers have capacity and capacity_unit values, and are convertible to {yield_unit}.")
+            if conversion_failures and api_format:
+                from .drawer_errors import generate_drawer_payload_for_container_error
+                drawer_payload = generate_drawer_payload_for_container_error(
+                    error_code='YIELD_CONTAINER_MISMATCH',
+                    recipe=recipe,
+                    mismatch_context={
+                        'yield_unit': yield_unit,
+                        'failures': conversion_failures
+                    }
+                )
+                strategy = {
+                    'success': False,
+                    'requires_drawer': True,
+                    'drawer_payload': drawer_payload,
+                    'error': f"No containers match the recipe yield unit ({yield_unit}).",
+                    'error_code': 'YIELD_CONTAINER_MISMATCH',
+                    'status': 'error',
+                    'container_options': [],
+                    'yield_amount': total_yield,
+                    'yield_unit': yield_unit
+                }
+                return strategy, []
+
+            raise ValueError(
+                f"No containers with valid capacity data found for recipe '{recipe.name}'. "
+                f"Ensure containers have capacity unit values convertible to {yield_unit}."
+            )
 
         # Create greedy fill strategy
         # Determine effective fill pct (prefer recipe, otherwise client-provided)
@@ -109,7 +137,13 @@ def analyze_container_options(
         raise
 
 
-def _load_suitable_containers(recipe: Recipe, org_id: int, total_yield: float, yield_unit: str, product_density: Optional[float]) -> List[Dict[str, Any]]:
+def _load_suitable_containers(
+    recipe: Recipe,
+    org_id: int,
+    total_yield: float,
+    yield_unit: str,
+    product_density: Optional[float]
+) -> Tuple[List[Dict[str, Any]], List[Dict[str, Any]]]:
     """Load containers allowed for this recipe and convert capacities"""
 
     # Get recipe's allowed containers - Recipe model uses 'allowed_containers' field
@@ -126,6 +160,7 @@ def _load_suitable_containers(recipe: Recipe, org_id: int, total_yield: float, y
     ).all()
 
     container_options = []
+    conversion_failures: List[Dict[str, Any]] = []
 
     for container in containers:
         # Get container capacity
@@ -137,7 +172,19 @@ def _load_suitable_containers(recipe: Recipe, org_id: int, total_yield: float, y
             continue
 
         # Convert capacity to recipe yield units
-        converted_capacity = _convert_capacity(storage_capacity, storage_unit, yield_unit, product_density, recipe)
+        converted_capacity, conversion_issue = _convert_capacity(
+            storage_capacity, storage_unit, yield_unit, product_density, recipe
+        )
+        if conversion_issue:
+            conversion_failures.append({
+                'container_id': container.id,
+                'container_name': container.container_display_name,
+                'from_unit': storage_unit,
+                'to_unit': yield_unit,
+                'error_code': conversion_issue.get('error_code'),
+                'error_message': conversion_issue.get('error_message')
+            })
+            continue
         if converted_capacity <= 0:
             logger.warning(f"Container {container.name} capacity conversion failed - skipping")
             continue
@@ -164,17 +211,23 @@ def _load_suitable_containers(recipe: Recipe, org_id: int, total_yield: float, y
         logger.warning(f"Recipe '{recipe.name}' has {len(containers)} containers configured, but none have valid capacity data or are convertible to {yield_unit}")
         # Return empty list instead of raising error - let caller handle
 
-    return container_options
+    return container_options, conversion_failures
 
 
-def _convert_capacity(capacity: float, from_unit: str, to_unit: str, product_density: Optional[float], recipe: Recipe) -> float:
+def _convert_capacity(
+    capacity: float,
+    from_unit: str,
+    to_unit: str,
+    product_density: Optional[float],
+    recipe: Recipe
+) -> Tuple[float, Optional[Dict[str, Any]]]:
     """Convert container capacity to recipe yield units.
 
     If a cross-type conversion (volume ↔ weight) is required and no product_density
     is provided, raise a MissingProductDensityError to trigger the drawer protocol.
     """
     if from_unit == to_unit:
-        return capacity
+        return capacity, None
 
     try:
         from ...services.unit_conversion import ConversionEngine
@@ -183,22 +236,32 @@ def _convert_capacity(capacity: float, from_unit: str, to_unit: str, product_den
 
         if isinstance(result, dict):
             if result.get('success'):
-                return float(result.get('converted_value', 0.0))
+                return float(result.get('converted_value', 0.0)), None
             # Detect missing density from conversion engine
             if result.get('error_code') == 'MISSING_DENSITY':
                 raise MissingProductDensityError(from_unit=from_unit, to_unit=to_unit)
-            # Other structured failures
+
             logger.warning(f"Capacity conversion failed {from_unit}->{to_unit}: {result}")
-            return 0.0
+            return 0.0, {
+                'error_code': result.get('error_code') or 'CONVERSION_ERROR',
+                'error_message': (result.get('error_data') or {}).get('message') or result.get('error_message'),
+                'from_unit': from_unit,
+                'to_unit': to_unit
+            }
 
         # Primitive return
-        return float(result)
+        return float(result), None
     except MissingProductDensityError:
         # Bubble up for the caller to construct a drawer payload
         raise
     except Exception as e:
         logger.warning(f"Cannot convert {capacity} {from_unit} to {to_unit}: {e}")
-        return 0.0
+        return 0.0, {
+            'error_code': 'CONVERSION_EXCEPTION',
+            'error_message': str(e),
+            'from_unit': from_unit,
+            'to_unit': to_unit
+        }
 
 
 class MissingProductDensityError(Exception):
