@@ -202,7 +202,9 @@ def _load_suitable_containers(
         # Check for direct unit compatibility
         if storage_unit == yield_unit:
             has_compatible_units = True
-            logger.info(f"🔍 CONTAINER DEBUG: Container '{container.name}' has compatible unit '{storage_unit}'")
+            logger.info(f"🔍 CONTAINER DEBUG: Container '{container.name}' has compatible unit '{storage_unit}' == '{yield_unit}' ✓")
+        else:
+            logger.info(f"🔍 CONTAINER DEBUG: Container '{container.name}' has incompatible unit '{storage_unit}' != '{yield_unit}' ✗")
 
         # Convert capacity to recipe yield units
         converted_capacity, conversion_issue = _convert_capacity(
@@ -246,6 +248,11 @@ def _load_suitable_containers(
     
     # CRITICAL: If we have containers but none could convert and none have compatible units,
     # this is a yield/container unit mismatch
+    logger.info(f"🔍 CONTAINER DEBUG: Final mismatch check:")
+    logger.info(f"🔍 CONTAINER DEBUG: - container_options: {len(container_options)}")
+    logger.info(f"🔍 CONTAINER DEBUG: - conversion_failures: {len(conversion_failures)}")
+    logger.info(f"🔍 CONTAINER DEBUG: - has_compatible_units: {has_compatible_units}")
+    
     if not container_options and conversion_failures and not has_compatible_units:
         logger.warning(f"🔍 CONTAINER DEBUG: YIELD CONTAINER MISMATCH DETECTED - no compatible units found")
         
@@ -263,6 +270,8 @@ def _load_suitable_containers(
             'error_message': f'No containers match recipe yield unit {yield_unit}'
         })
         logger.info(f"🔍 CONTAINER DEBUG: Added YIELD_CONTAINER_MISMATCH to conversion failures")
+    else:
+        logger.info(f"🔍 CONTAINER DEBUG: No mismatch detected - conditions not met")
 
     return container_options, conversion_failures
 

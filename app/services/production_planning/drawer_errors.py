@@ -6,7 +6,10 @@ Owns container-planning specific drawer payloads (e.g., missing product density)
 
 from typing import Dict, Any
 import uuid
+import logging
 from flask import url_for
+
+logger = logging.getLogger(__name__)
 
 
 def generate_drawer_payload_for_container_error(error_code: str, recipe, **context: Any) -> Dict:
