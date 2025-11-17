@@ -18,6 +18,13 @@ export class ValidationManager {
             issues.push('Select batch type');
         }
 
+        // Enforce stock check execution
+        if (!this.main.stockChecked) {
+            issues.push('Run stock check');
+        } else if (!this.main.stockCheckPassed) {
+            warnings.push('Stock shortages detected - confirmation required');
+        }
+
         // Check container requirements if enabled
         if (this.main.requiresContainers && this.main.containerManager.containerPlan) {
             const containmentPercentage = this.main.containerManager.containerPlan.containment_percentage || 0;

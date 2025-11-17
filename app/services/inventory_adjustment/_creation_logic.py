@@ -11,6 +11,36 @@ from datetime import timezone # Import timezone for timezone-aware datetime obje
 
 logger = logging.getLogger(__name__)
 
+
+def _resolve_cost_per_unit(form_data, initial_quantity):
+    """Convert form inputs into a per-unit cost."""
+    try:
+        quantity_value = float(initial_quantity)
+    except (ValueError, TypeError):
+        quantity_value = 0.0
+
+    cost_entry_type = (form_data.get('cost_entry_type') or 'per_unit').strip().lower()
+    if cost_entry_type not in {'per_unit', 'total'}:
+        cost_entry_type = 'per_unit'
+
+    raw_cost_value = None
+    try:
+        cost_input = form_data.get('cost_per_unit')
+        if cost_input not in (None, '', 'null'):
+            raw_cost_value = float(cost_input)
+    except (ValueError, TypeError):
+        raw_cost_value = None
+
+    if raw_cost_value is None:
+        return 0.0, None
+
+    if cost_entry_type == 'total':
+        if quantity_value <= 0:
+            return 0.0, "Total cost entry requires a positive quantity when using total cost mode."
+        return raw_cost_value / quantity_value, None
+
+    return raw_cost_value, None
+
 def create_inventory_item(form_data, organization_id, created_by):
     """
     Create a new inventory item from form data.
@@ -72,14 +102,6 @@ def create_inventory_item(form_data, organization_id, created_by):
                 category_id = None
 
         # Extract numeric fields with defaults
-        cost_per_unit = 0.0
-        try:
-            cost_input = form_data.get('cost_per_unit')
-            if cost_input:
-                cost_per_unit = float(cost_input)
-        except (ValueError, TypeError):
-            pass
-
         shelf_life_days = None
         try:
             shelf_life_input = form_data.get('shelf_life_days')
@@ -96,6 +118,10 @@ def create_inventory_item(form_data, organization_id, created_by):
                 initial_quantity = float(quantity_input)
         except (ValueError, TypeError):
             pass
+
+        cost_per_unit, cost_error = _resolve_cost_per_unit(form_data, initial_quantity)
+        if cost_error:
+            return False, cost_error, None
 
         # Determine if item is perishable - user input takes priority
         is_perishable = form_data.get('is_perishable') == 'on'

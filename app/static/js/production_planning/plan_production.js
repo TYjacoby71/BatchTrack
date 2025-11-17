@@ -20,6 +20,10 @@ class PlanProductionApp {
         this.scale = this._readScale();
         this.batchType = '';
         this.requiresContainers = false;
+        this.stockChecked = false;
+        this.stockCheckPassed = false;
+        this.stockIssues = [];
+        this.stockOverrideAcknowledged = false;
 
         this.containerManager = new ContainerManager(this);
         this.stockChecker = new StockChecker(this);
@@ -111,6 +115,7 @@ class PlanProductionApp {
         if (scaleInput) {
             scaleInput.addEventListener('input', () => {
                 this.scale = this._readScale();
+                this._invalidateStockCheck('the batch scale changed');
                 this._updateProjectedYield();
                 this._updateProjectedPortions();
                 if (this.requiresContainers) {
@@ -132,6 +137,7 @@ class PlanProductionApp {
         const requiresContainersCheckbox = document.getElementById('requiresContainers');
         if (requiresContainersCheckbox) {
             requiresContainersCheckbox.addEventListener('change', () => {
+                this._invalidateStockCheck('container requirements changed');
                 const portioned = (window.recipeData?.is_portioned === true || window.recipeData?.is_portioned === 'true');
                 if (portioned && requiresContainersCheckbox.checked) {
                     // Show info card with bounce instead of enabling containers
@@ -160,6 +166,25 @@ class PlanProductionApp {
                 this.updateValidation();
             });
         }
+    }
+
+    _invalidateStockCheck(reason = 'a configuration change') {
+        this.stockChecked = false;
+        this.stockCheckPassed = false;
+        this.stockOverrideAcknowledged = false;
+        this.stockIssues = [];
+
+        const statusElement = document.getElementById('stockCheckStatus');
+        if (statusElement) {
+            statusElement.innerHTML = `
+                <div class="alert alert-info">
+                    <i class="fas fa-info-circle"></i>
+                    Stock check required because ${reason}.
+                </div>
+            `;
+        }
+
+        this.updateValidation();
     }
 
     _readScale() {

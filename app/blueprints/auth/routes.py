@@ -16,6 +16,7 @@ from .whop_auth import WhopAuth # Import WhopAuth
 from ...services.oauth_service import OAuthService
 from ...services.email_service import EmailService
 from ...extensions import limiter
+from ...services.session_service import SessionService
 from datetime import datetime, timedelta
 
 logger = logging.getLogger(__name__)
@@ -61,6 +62,7 @@ def login():
 
             # Log the user in
             login_user(user)
+            SessionService.rotate_user_session(user)
 
             # Clear dismissed alerts from session on login
             session.pop('dismissed_alerts', None)
@@ -178,6 +180,7 @@ def oauth_callback():
 
             # Log them in
             login_user(user)
+            SessionService.rotate_user_session(user)
 
             # Clear dismissed alerts from session on OAuth login
             session.pop('dismissed_alerts', None)
@@ -301,6 +304,13 @@ def logout():
         session.pop('tool_draft_meta', None)
     except Exception:
         pass
+    if current_user.is_authenticated:
+        current_user.active_session_token = None
+        try:
+            db.session.commit()
+        except Exception:
+            db.session.rollback()
+    SessionService.clear_session_state()
     logout_user()
     return redirect(url_for('homepage'))
 
@@ -310,6 +320,9 @@ def dev_login():
     dev_user = User.query.filter_by(username='dev').first()
     if dev_user:
         login_user(dev_user)
+        SessionService.rotate_user_session(dev_user)
+        dev_user.last_login = TimezoneUtils.utc_now()
+        db.session.commit()
         flash('Developer access granted', 'success')
         return redirect(url_for('developer.dashboard'))
     else:
@@ -577,6 +590,7 @@ def whop_login():
         #     user.roles.append(role) # Assuming a many-to-many relationship for roles
 
         login_user(user)
+        SessionService.rotate_user_session(user)
         user.last_login = TimezoneUtils.utc_now()
         db.session.commit()
         flash('Successfully logged in with Whop license.', 'success')
