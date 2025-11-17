@@ -4,9 +4,10 @@ import sys
 
 def _gevent_patch_kwargs():
     """
-    Avoid patching Python's threading subsystem on Python 3.13+ because
-    gevent 24.x triggers KeyError/AssertionError callbacks when wrapping
-    threading.Timer. Allow opt-in overrides via GEVENT_PATCH_THREADS.
+    [PATCH-001] Avoid patching Python's threading subsystem on Python 3.13+
+    because gevent 24.x triggers KeyError/AssertionError callbacks when
+    wrapping threading.Timer. Allow opt-in overrides via GEVENT_PATCH_THREADS.
+    See docs/operations/PATCHES.md for details.
     """
     env_value = os.environ.get("GEVENT_PATCH_THREADS")
     should_patch_threads: bool
