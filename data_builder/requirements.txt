@@ -1,0 +1,6 @@
+httpx>=0.27.0
+openai>=1.51.0
+pydantic>=2.8.2
+python-dotenv>=1.0.1
+sqlalchemy>=2.0.32
+tenacity>=8.5.0

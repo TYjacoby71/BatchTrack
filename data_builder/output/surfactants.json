@@ -1,0 +1,37 @@
+{
+  "ingredients": [
+    {
+      "ingredient": {
+        "common_name": "Acetic Acid",
+        "inci_name": "Acetic Acid",
+        "cas_number": "000-00-0",
+        "description": "Synthetic placeholder data for Acetic Acid.",
+        "is_active_ingredient": true,
+        "safety_notes": "Not evaluated in dry-run mode.",
+        "taxonomies": {
+          "ingredient_category_tags": [
+            "Surfactants"
+          ],
+          "function_tags": [
+            "Placeholder Function"
+          ],
+          "application_tags": [
+            "Skin Care > Prototyping"
+          ]
+        }
+      },
+      "items": [
+        {
+          "item_name": "Acetic Acid, Liquid",
+          "physical_form": "Liquid",
+          "density_g_ml": 0.56,
+          "shelf_life_days": 365,
+          "ph_value": "5.0-7.0",
+          "attributes": {
+            "source": "dry_run"
+          }
+        }
+      ]
+    }
+  ]
+}
