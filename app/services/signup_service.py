@@ -47,12 +47,7 @@ class SignupService:
 
         try:
             # Get the subscription tier
-            # tier is expected to be a DB id as string
-            try:
-                tier_id = int(tier)
-            except (TypeError, ValueError):
-                tier_id = None
-            subscription_tier = SubscriptionTier.query.get(tier_id) if tier_id is not None else None
+            subscription_tier = SubscriptionTier.find_by_identifier(tier)
             if not subscription_tier:
                 raise Exception(f"Subscription tier '{tier}' not found")
 
@@ -182,7 +177,7 @@ class SignupService:
         
         try:
             # Get the subscription tier
-            subscription_tier = SubscriptionTier.query.filter_by(key=tier).first()
+            subscription_tier = SubscriptionTier.find_by_identifier(tier)
             if not subscription_tier:
                 raise Exception(f"Subscription tier '{tier}' not found")
 

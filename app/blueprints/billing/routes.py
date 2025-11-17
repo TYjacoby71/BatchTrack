@@ -265,13 +265,20 @@ def complete_signup_from_stripe():
             return redirect(url_for('auth.signup'))
 
         # Get tier from checkout metadata or session metadata
-        tier = checkout_session.metadata.get('tier') or customer.metadata.get('tier')
-        if not tier:
+        tier_identifier = (
+            checkout_session.metadata.get('tier_id')
+            or checkout_session.metadata.get('tier')
+            or customer.metadata.get('tier_id')
+            or customer.metadata.get('tier')
+            or checkout_session.metadata.get('lookup_key')
+            or customer.metadata.get('lookup_key')
+        )
+        if not tier_identifier:
             logger.error("No tier found in checkout session or customer metadata")
             flash('Subscription tier not found', 'error')
             return redirect(url_for('auth.signup'))
 
-        logger.info(f"Processing signup for tier: {tier}")
+        logger.info(f"Processing signup for tier identifier: {tier_identifier}")
 
         # Get pending signup data from session (if available)
         pending_signup = session.get('pending_signup', {})
@@ -302,9 +309,9 @@ def complete_signup_from_stripe():
         from flask_login import login_user
 
         # Get the subscription tier
-        subscription_tier = SubscriptionTier.query.filter_by(key=tier).first()
+        subscription_tier = SubscriptionTier.find_by_identifier(tier_identifier)
         if not subscription_tier:
-            logger.error(f"Subscription tier '{tier}' not found in database")
+            logger.error(f"Subscription tier '{tier_identifier}' not found in database")
             flash('Invalid subscription plan', 'error')
             return redirect(url_for('auth.signup'))
 
@@ -380,7 +387,7 @@ def complete_signup_from_stripe():
                 owner_user.email,
                 owner_user.first_name,
                 org.name,
-                tier.title()
+                subscription_tier.name
             )
 
             if not signup_data.get('oauth_provider'):
@@ -404,7 +411,7 @@ def complete_signup_from_stripe():
         session.pop('pending_signup', None)
         logger.info("Cleared pending signup data from session")
 
-        flash(f'Welcome to BatchTrack! Your {tier.title()} account is ready to use.', 'success')
+        flash(f'Welcome to BatchTrack! Your {subscription_tier.name} account is ready to use.', 'success')
         return redirect(url_for('app_routes.dashboard'))
 
     except Exception as e:
