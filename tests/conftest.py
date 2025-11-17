@@ -28,25 +28,19 @@ def app():
     })
 
     with app.app_context():
-        # Prefer Alembic migrations to build schema if available; fallback to create_all for unit tests
         try:
             os.environ.setdefault('SQLALCHEMY_DISABLE_CREATE_ALL', '1')
-            # Build schema solely via migrations for closer prod parity
-            from flask.cli import ScriptInfo
-            # Invoke upgrade programmatically
             from flask_migrate import upgrade
             upgrade()
         except Exception:
-            # If migrations are not runnable in test context, fall back to create_all
             os.environ.pop('SQLALCHEMY_DISABLE_CREATE_ALL', None)
+            db.drop_all()
             db.create_all()
 
-        # Create basic test data
         _create_test_data()
 
         yield app
 
-        # Clean up database
         db.drop_all()
 
     os.close(db_fd)
@@ -69,32 +63,10 @@ def runner(app):
 def db_session(app):
     """Provides a database session for tests with rollback."""
     with app.app_context():
-        # Run Alembic migrations to ensure schema is up to date
-        from alembic import command
-        from alembic.config import Config
-        import os
-
-        # Get the migrations directory
-        migrations_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'migrations')
-        alembic_cfg = Config(os.path.join(migrations_dir, 'alembic.ini'))
-        alembic_cfg.set_main_option('script_location', migrations_dir)
-
-        try:
-            # Upgrade to head to ensure all migrations are applied
-            command.upgrade(alembic_cfg, 'head')
-        except Exception as e:
-            # Fallback to create_all if migrations fail
-            print(f"Migration failed, falling back to create_all: {e}")
-            db.create_all()
-
         yield db.session
         db.session.rollback()
 
-        # Clean up - drop all tables
-        try:
-            command.downgrade(alembic_cfg, 'base')
-        except Exception:
-            db.drop_all()
+        db.drop_all()
 
 
 @pytest.fixture
