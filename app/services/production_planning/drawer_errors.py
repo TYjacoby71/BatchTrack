@@ -32,15 +32,26 @@ def generate_drawer_payload_for_container_error(error_code: str, recipe, **conte
         correlation_id = str(uuid.uuid4())
         recipe_id = getattr(recipe, 'id', None)
         yield_unit = (context.get('mismatch_context') or {}).get('yield_unit')
-        modal_url = url_for(
-            'drawer_actions.container_unit_mismatch_modal',
-            recipe_id=recipe_id,
-            yield_unit=yield_unit
-        ) if recipe_id else None
+        
+        from flask import url_for
+        modal_url = None
+        if recipe_id:
+            if yield_unit:
+                modal_url = url_for(
+                    'drawer_actions.container_unit_mismatch_modal',
+                    recipe_id=recipe_id,
+                    yield_unit=yield_unit
+                )
+            else:
+                modal_url = url_for(
+                    'drawer_actions.container_unit_mismatch_modal',
+                    recipe_id=recipe_id
+                )
 
         return {
             'version': '1.0',
             'modal_url': modal_url,
+            'success_event': 'recipe.yield.updated',
             'error_type': 'container_planning',
             'error_code': error_code,
             'error_message': 'Recipe yield unit does not match any available containers.',
