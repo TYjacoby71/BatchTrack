@@ -33,7 +33,7 @@ def generate_drawer_payload_for_container_error(error_code: str, recipe, **conte
         recipe_id = getattr(recipe, 'id', None)
         yield_unit = (context.get('mismatch_context') or {}).get('yield_unit')
         modal_url = url_for(
-            'drawer_actions.container_unit_mismatch_modal',
+            'drawers.container_unit_mismatch_modal',
             recipe_id=recipe_id,
             yield_unit=yield_unit
         ) if recipe_id else None

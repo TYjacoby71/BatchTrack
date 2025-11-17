@@ -56,7 +56,7 @@
                         <div class="card-body">
                             <h6 class="fw-bold mb-3">1. Update the recipe yield (recommended)</h6>
                             <form id="yieldFixForm"
-                                  data-update-url="{{ url_for('drawer_actions.container_unit_mismatch_update_yield', recipe_id=recipe.id) }}">
+                                  data-update-url="{{ url_for('drawers.container_unit_mismatch_update_yield', recipe_id=recipe.id) }}">
                                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                                 <div class="row g-2 align-items-end">
                                     <div class="col-md-5">
