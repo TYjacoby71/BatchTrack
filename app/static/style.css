@@ -202,6 +202,12 @@ body {
   background-color: var(--color-navbar) !important;
 }
 
+/* Fixed navbar spacing for homepage */
+.navbar.fixed-top ~ .hero-section,
+.navbar.fixed-top + * .hero-section {
+  padding-top: calc(76px + 2rem) !important;
+}
+
 /* List group improvements */
 .list-group-item {
   border-radius: var(--radius-2);
