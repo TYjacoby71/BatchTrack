@@ -64,7 +64,8 @@ def generate_drawer_payload_for_container_error(error_code: str, recipe, **conte
         }
         
         logger.info(f"🔍 DRAWER DEBUG: Generated payload: {payload}")
-        return payload
+        logger.info(f"🔍 DRAWER DEBUG: Modal URL generated: {modal_url}")
+        return payloadayload
 
     # Unknown/unsupported error code: return minimal info (no drawer)
     return {
