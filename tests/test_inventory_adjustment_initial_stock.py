@@ -31,9 +31,10 @@ def test_batch_deduction_does_not_create_initial_stock(app):
         db.session.add(ingredient)
         db.session.commit()
 
-        login_user(user)
+        with app.test_request_context():
+            login_user(user)
 
-        success, message = process_inventory_adjustment(
+            success, message = process_inventory_adjustment(
             item_id=ingredient.id,
             change_type='batch',
             quantity=50,

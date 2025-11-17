@@ -218,7 +218,9 @@ def create_recipe(name: str, description: str = "", instructions: str = "",
             )
             db.session.add(recipe_consumable)
 
-        # Prepare lineage metadata before commit
+        db.session.commit()
+
+        # Log lineage metadata after commit to ensure recipe.id is available
         lineage_event = 'CREATE'
         lineage_source_id = None
         if parent_recipe_id:
@@ -229,8 +231,6 @@ def create_recipe(name: str, description: str = "", instructions: str = "",
             lineage_source_id = cloned_from_id
 
         _log_lineage_event(recipe, lineage_event, lineage_source_id)
-
-        db.session.commit()
         logger.info(f"Created recipe {recipe.id}: {name}")
 
         # Emit recipe_created

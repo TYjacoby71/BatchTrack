@@ -9,6 +9,7 @@ import math
 from typing import List, Optional, Dict, Any, Tuple
 from flask_login import current_user
 from ...models import Recipe, InventoryItem
+from ...services.unit_conversion import ConversionEngine # Import ConversionEngine
 
 logger = logging.getLogger(__name__)
 
@@ -26,7 +27,7 @@ def analyze_container_options(
     Single entry point for container analysis.
 
     Returns:
-        - Container strategy (greedy fill selection) 
+        - Container strategy (greedy fill selection)
         - All available container options
     """
     try:
@@ -54,10 +55,55 @@ def analyze_container_options(
             raise ValueError(f"Recipe '{recipe.name}' has no predicted yield configured")
 
         # Load and filter containers
-        container_options = _load_suitable_containers(recipe, org_id, total_yield, yield_unit, product_density)
+        container_options, conversion_failures = _load_suitable_containers(
+            recipe, org_id, total_yield, yield_unit, product_density
+        )
+
+        logger.info(f"🔍 ANALYSIS DEBUG: Recipe {recipe.id} analysis results:")
+        logger.info(f"🔍 ANALYSIS DEBUG: - Container options: {len(container_options)}")
+        logger.info(f"🔍 ANALYSIS DEBUG: - Conversion failures: {len(conversion_failures)}")
+        for failure in conversion_failures:
+            logger.info(f"🔍 ANALYSIS DEBUG: - Failure: {failure.get('error_code')} - {failure.get('error_message')}")
 
         if not container_options:
-            raise ValueError(f"No containers with valid capacity data found for recipe '{recipe.name}'. Check that containers have capacity and capacity_unit values, and are convertible to {yield_unit}.")
+            if conversion_failures and api_format:
+                # Check if this is a yield container mismatch
+                has_mismatch_error = any(
+                    failure.get('error_code') == 'YIELD_CONTAINER_MISMATCH'
+                    for failure in conversion_failures
+                )
+
+                logger.info(f"🔍 ANALYSIS DEBUG: Has mismatch error: {has_mismatch_error}")
+
+                if has_mismatch_error:
+                    logger.info(f"🔍 ANALYSIS DEBUG: Generating YIELD_CONTAINER_MISMATCH drawer payload")
+                    from .drawer_errors import generate_drawer_payload_for_container_error
+                    drawer_payload = generate_drawer_payload_for_container_error(
+                        error_code='YIELD_CONTAINER_MISMATCH',
+                        recipe=recipe,
+                        mismatch_context={
+                            'yield_unit': yield_unit,
+                            'failures': conversion_failures
+                        }
+                    )
+                    # Return drawer payload structure that DrawerInterceptor expects
+                    strategy = {
+                        'success': False,
+                        'drawer_payload': drawer_payload,  # This is what DrawerInterceptor looks for
+                        'error': f"No containers match the recipe yield unit ({yield_unit}).",
+                        'error_code': 'YIELD_CONTAINER_MISMATCH',
+                        'status': 'error',
+                        'container_options': [],
+                        'yield_amount': total_yield,
+                        'yield_unit': yield_unit
+                    }
+                    logger.info(f"🔍 ANALYSIS DEBUG: Returning YIELD_CONTAINER_MISMATCH strategy with drawer_payload: {drawer_payload}")
+                    return strategy, []
+
+            raise ValueError(
+                f"No containers with valid capacity data found for recipe '{recipe.name}'. "
+                f"Ensure containers have capacity unit values convertible to {yield_unit}."
+            )
 
         # Create greedy fill strategy
         # Determine effective fill pct (prefer recipe, otherwise client-provided)
@@ -109,23 +155,108 @@ def analyze_container_options(
         raise
 
 
-def _load_suitable_containers(recipe: Recipe, org_id: int, total_yield: float, yield_unit: str, product_density: Optional[float]) -> List[Dict[str, Any]]:
+def _load_suitable_containers(
+    recipe: Recipe,
+    org_id: int,
+    total_yield: float,
+    yield_unit: str,
+    product_density: Optional[float]
+) -> Tuple[List[Dict[str, Any]], List[Dict[str, Any]]]:
     """Load containers allowed for this recipe and convert capacities"""
+
+    logger.info(f"🔍 CONTAINER DEBUG: Loading containers for recipe {recipe.id} with yield unit '{yield_unit}'")
 
     # Get recipe's allowed containers - Recipe model uses 'allowed_containers' field
     allowed_container_ids = getattr(recipe, 'allowed_containers', [])
+    logger.info(f"🔍 CONTAINER DEBUG: Recipe {recipe.id} has allowed containers: {allowed_container_ids}")
 
     if not allowed_container_ids:
         raise ValueError(f"Recipe '{recipe.name}' has no containers configured")
 
-    # Load containers from database in one query (avoid N+1)
-    containers = InventoryItem.query.filter(
-        InventoryItem.id.in_(allowed_container_ids),
-        InventoryItem.organization_id == org_id,
-        InventoryItem.quantity > 0
-    ).all()
+    # Fetch inventory data for allowed containers (including out-of-stock for mismatch check)
+    inventory_items = {}
+    if allowed_container_ids:
+        containers_query = InventoryItem.query.filter(
+            InventoryItem.id.in_(allowed_container_ids),
+            InventoryItem.organization_id == org_id
+        )
+        for item in containers_query:
+            inventory_items[item.id] = item
+
+    # === YIELD/CONTAINER UNIT MISMATCH CHECK (FIRST) ===
+    # Check if recipe yield unit matches any container capacity unit
+    recipe_yield_unit = recipe.predicted_yield_unit or 'count'
+    container_units = set()
+
+    logger.info(f"🔍 CONTAINER MISMATCH DEBUG: Starting check for recipe {recipe.id}")
+    logger.info(f"🔍 CONTAINER MISMATCH DEBUG: Recipe yield unit: {recipe_yield_unit}")
+    logger.info(f"🔍 CONTAINER MISMATCH DEBUG: Allowed container IDs: {allowed_container_ids}")
+    logger.info(f"🔍 CONTAINER MISMATCH DEBUG: Available inventory items: {list(inventory_items.keys())}")
+
+    for container_id in allowed_container_ids:
+        container = inventory_items.get(container_id)
+        logger.info(f"🔍 CONTAINER MISMATCH DEBUG: Container {container_id}: {container}")
+        if container:
+            capacity_unit = getattr(container, 'capacity_unit', None) or 'count'
+            container_units.add(capacity_unit)
+            logger.info(f"🔍 CONTAINER MISMATCH DEBUG: Container {container_id} capacity_unit: {capacity_unit}")
+
+    logger.info(f"🔍 CONTAINER MISMATCH DEBUG: Final container units: {container_units}")
+
+    # If no units match, this is a mismatch - trigger drawer
+    if container_units and recipe_yield_unit not in container_units:
+        logger.info(f"🔍 CONTAINER MISMATCH DEBUG: MISMATCH DETECTED! Recipe yield '{recipe_yield_unit}' not in container units {container_units}")
+        return [], [{
+            'container_id': None,
+            'container_name': 'Unit Mismatch',
+            'from_unit': 'mixed',
+            'to_unit': recipe_yield_unit,
+            'error_code': 'YIELD_CONTAINER_MISMATCH',
+            'error_message': f'No containers match recipe yield unit {recipe_yield_unit}'
+        }]
+    else:
+        logger.info(f"🔍 CONTAINER MISMATCH DEBUG: No mismatch detected - yield unit '{recipe_yield_unit}' matches one of container units {container_units}")
+
+    # Now filter for only containers with stock for actual selection
+    inventory_items = {k: v for k, v in inventory_items.items() if v.quantity > 0}
+
+    # === PRODUCT DENSITY CHECK ===
+    # Check if we need product density for unit conversion
+    if yield_unit != 'count' and any(
+        (container.capacity_unit or 'count') != 'count' and
+        not ConversionEngine.can_convert_units(1.0, yield_unit, container.capacity_unit or 'count')
+        for container in inventory_items.values()
+    ):
+        logger.info(f"🔍 DENSITY CHECK: Product density required to convert between units")
+
+        # Check if we have product density set for this recipe
+        product_density = getattr(recipe, 'product_density', None)
+        if not product_density:
+            logger.info(f"🔍 DENSITY CHECK: Missing product density for recipe {recipe.id}")
+            # Instead of raising, return a failure list with the error code
+            # This allows the analyze_container_options to handle it and potentially open a drawer
+            return [], [{
+                'container_id': None,
+                'container_name': 'Missing Density',
+                'from_unit': yield_unit,
+                'to_unit': 'container units',
+                'error_code': 'MISSING_PRODUCT_DENSITY',
+                'error_message': f'Missing product density for conversion {yield_unit} -> container units'
+            }]
+
+    # Load and filter containers (now that checks are done)
+    containers = list(inventory_items.values()) # Use filtered items
+
+    logger.info(f"🔍 CONTAINER DEBUG: Found {len(containers)} available containers with stock")
+    for container in containers:
+        storage_unit = getattr(container, 'capacity_unit', None)
+        logger.info(f"🔍 CONTAINER DEBUG: Container '{container.name}' has unit '{storage_unit}' (yield unit: '{yield_unit}')")
 
     container_options = []
+    conversion_failures: List[Dict[str, Any]] = []
+
+    # Track if any containers have directly compatible units
+    has_compatible_units = False
 
     for container in containers:
         # Get container capacity
@@ -133,15 +264,36 @@ def _load_suitable_containers(recipe: Recipe, org_id: int, total_yield: float, y
         storage_unit = getattr(container, 'capacity_unit', None)
 
         if not storage_capacity or not storage_unit:
-            logger.warning(f"Container {container.name} missing capacity data - skipping")
+            logger.warning(f"🔍 CONTAINER DEBUG: Container {container.name} missing capacity data - skipping")
             continue
+
+        # Check for direct unit compatibility
+        if storage_unit == yield_unit:
+            has_compatible_units = True
+            logger.info(f"🔍 CONTAINER DEBUG: Container '{container.name}' has compatible unit '{storage_unit}' == '{yield_unit}' ✓")
+        else:
+            logger.info(f"🔍 CONTAINER DEBUG: Container '{container.name}' has incompatible unit '{storage_unit}' != '{yield_unit}' ✗")
 
         # Convert capacity to recipe yield units
-        converted_capacity = _convert_capacity(storage_capacity, storage_unit, yield_unit, product_density, recipe)
+        converted_capacity, conversion_issue = _convert_capacity(
+            storage_capacity, storage_unit, yield_unit, product_density, recipe
+        )
+        if conversion_issue:
+            logger.info(f"🔍 CONTAINER DEBUG: Container '{container.name}' conversion failed: {conversion_issue}")
+            conversion_failures.append({
+                'container_id': container.id,
+                'container_name': container.container_display_name,
+                'from_unit': storage_unit,
+                'to_unit': yield_unit,
+                'error_code': conversion_issue.get('error_code'),
+                'error_message': conversion_issue.get('error_message')
+            })
+            continue
         if converted_capacity <= 0:
-            logger.warning(f"Container {container.name} capacity conversion failed - skipping")
+            logger.warning(f"🔍 CONTAINER DEBUG: Container {container.name} capacity conversion failed - skipping")
             continue
 
+        logger.info(f"🔍 CONTAINER DEBUG: Container '{container.name}' converted successfully: {converted_capacity} {yield_unit}")
         container_options.append({
             'container_id': container.id,
             'container_name': container.container_display_name,
@@ -159,46 +311,73 @@ def _load_suitable_containers(recipe: Recipe, org_id: int, total_yield: float, y
     # Sort by capacity (largest first for greedy algorithm)
     container_options.sort(key=lambda x: x['capacity'], reverse=True)
 
-    # Check if we have any valid containers after filtering
-    if not container_options:
-        logger.warning(f"Recipe '{recipe.name}' has {len(containers)} containers configured, but none have valid capacity data or are convertible to {yield_unit}")
-        # Return empty list instead of raising error - let caller handle
+    logger.info(f"🔍 CONTAINER DEBUG: Final results - container_options: {len(container_options)}, conversion_failures: {len(conversion_failures)}")
+    logger.info(f"🔍 CONTAINER DEBUG: Has compatible units: {has_compatible_units}")
 
-    return container_options
+    # CRITICAL: If we have containers but none could convert and none have compatible units,
+    # this is a yield/container unit mismatch
+    logger.info(f"🔍 CONTAINER DEBUG: Final mismatch check:")
+    logger.info(f"🔍 CONTAINER DEBUG: - container_options: {len(container_options)}")
+    logger.info(f"🔍 CONTAINER DEBUG: - conversion_failures: {len(conversion_failures)}")
+    logger.info(f"🔍 CONTAINER DEBUG: - has_compatible_units: {has_compatible_units}")
+
+    # The yield/container mismatch is now handled earlier by checking units directly
+    # If conversion_failures exist here, it's due to other conversion errors, not unit mismatch
+    if not container_options and conversion_failures:
+         # This condition is now less likely to be hit for YIELD_CONTAINER_MISMATCH
+         # but could catch other conversion issues that prevent any valid options.
+         pass
+
+    return container_options, conversion_failures
 
 
-def _convert_capacity(capacity: float, from_unit: str, to_unit: str, product_density: Optional[float], recipe: Recipe) -> float:
+def _convert_capacity(
+    capacity: float,
+    from_unit: str,
+    to_unit: str,
+    product_density: Optional[float],
+    recipe: Recipe
+) -> Tuple[float, Optional[Dict[str, Any]]]:
     """Convert container capacity to recipe yield units.
 
     If a cross-type conversion (volume ↔ weight) is required and no product_density
     is provided, raise a MissingProductDensityError to trigger the drawer protocol.
     """
     if from_unit == to_unit:
-        return capacity
+        return capacity, None
 
     try:
-        from ...services.unit_conversion import ConversionEngine
         # Attempt conversion with provided product density if any
         result = ConversionEngine.convert_units(capacity, from_unit, to_unit, density=product_density)
 
         if isinstance(result, dict):
             if result.get('success'):
-                return float(result.get('converted_value', 0.0))
+                return float(result.get('converted_value', 0.0)), None
             # Detect missing density from conversion engine
             if result.get('error_code') == 'MISSING_DENSITY':
                 raise MissingProductDensityError(from_unit=from_unit, to_unit=to_unit)
-            # Other structured failures
+
             logger.warning(f"Capacity conversion failed {from_unit}->{to_unit}: {result}")
-            return 0.0
+            return 0.0, {
+                'error_code': result.get('error_code') or 'CONVERSION_ERROR',
+                'error_message': (result.get('error_data') or {}).get('message') or result.get('error_message'),
+                'from_unit': from_unit,
+                'to_unit': to_unit
+            }
 
         # Primitive return
-        return float(result)
+        return float(result), None
     except MissingProductDensityError:
         # Bubble up for the caller to construct a drawer payload
         raise
     except Exception as e:
         logger.warning(f"Cannot convert {capacity} {from_unit} to {to_unit}: {e}")
-        return 0.0
+        return 0.0, {
+            'error_code': 'CONVERSION_EXCEPTION',
+            'error_message': str(e),
+            'from_unit': from_unit,
+            'to_unit': to_unit
+        }
 
 
 class MissingProductDensityError(Exception):
@@ -321,7 +500,7 @@ def _create_greedy_strategy(container_options: List[Dict[str, Any]], total_yield
         total_capacity = sum((c.get('effective_capacity', c['capacity'])) * c['containers_needed'] for c in optimized)
         selected_containers = optimized
 
-    # Containment = Can the total capacity hold the yield? 
+    # Containment = Can the total capacity hold the yield?
     # Show 100% if within 3% tolerance (97% or above)
     if total_yield > 0:
         raw_containment = (total_capacity / total_yield) * 100
