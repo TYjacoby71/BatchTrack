@@ -1,0 +1,577 @@
+    
+            payload = {
+                'recipe_id': recipe.id,
+                'scale': 1.0,
+                'batch_type': 'ingredient',
+                'notes': '',
+                'containers': []
+            }
+    
+            with app.test_request_context('/batches/api/start-batch', method='POST', json=payload):
+                login_user(user)
+                response = api_start_batch()
+                data = response.get_json()
+                assert data['requires_override'] is True
+                assert data['success'] is False
+                assert data['stock_issues'], "Expected stock issues to be returned when gating triggers"
+    
+            payload['force_start'] = True
+            with app.test_request_context('/batches/api/start-batch', method='POST', json=payload):
+                login_user(user)
+                response = api_start_batch()
+                data = response.get_json()
+                assert data['success'] is True
+                assert data['batch_id'] == 555
+    
+            plan_snapshot = captured_plan['value']
+>           assert plan_snapshot.get('skip_ingredient_ids') == [ingredient_id]
+E           AssertionError: assert None == [1]
+E            +  where None = <built-in method get of dict object at 0x7f8ec20ad8c0>('skip_ingredient_ids')
+E            +    where <built-in method get of dict object at 0x7f8ec20ad8c0> = {'batch_type': 'ingredient', 'category_extension': {}, 'consumables_plan': [], 'containers': [], ...}.get
+
+tests/test_plan_production_gating.py:101: AssertionError
+---------------------------- Captured stdout setup -----------------------------
+   ✅ brewing_diastatic_power_lintner column added successfully
+   ✅ brewing_potential_sg column added successfully
+   ✅ brewing_color_srm column added successfully
+   ✅ protein_content_pct column added successfully
+   ✅ certifications column added successfully
+   ✅ inci_name column added successfully
+   ✅ recommended_fragrance_load_pct column added successfully
+   ✅ recommended_usage_rate column added successfully
+   ✅ is_active_ingredient column added successfully
+   ✅ certifications column added successfully
+   ✅ fatty_acid_profile column added successfully
+   ✅ brewing_diastatic_power_lintner column added successfully
+   ✅ brewing_potential_sg column added successfully
+   ✅ brewing_color_srm column added successfully
+   ✅ protein_content_pct column added successfully
+   ✅ inci_name column added successfully
+   ✅ recommended_fragrance_load_pct column added successfully
+   ✅ recommended_usage_rate column added successfully
+   ✅ cloned_from_id column added successfully
+   ✅ root_recipe_id column added successfully
+   ✅ Created index ix_recipe_parent_recipe_id on recipe
+   ✅ Created index ix_recipe_cloned_from_id on recipe
+   ✅ Created index ix_recipe_root_recipe_id on recipe
+   ✅ Created index ix_recipe_lineage_recipe_id on recipe_lineage
+   ✅ Created index ix_recipe_lineage_source_recipe_id on recipe_lineage
+   ✅ Created index ix_recipe_lineage_event_type on recipe_lineage
+---------------------------- Captured stderr setup -----------------------------
+INFO  [alembic.env] Imported model module: app.models.addon
+INFO  [alembic.env] Imported model module: app.models.batch
+INFO  [alembic.env] Imported model module: app.models.billing_snapshot
+INFO  [alembic.env] Imported model module: app.models.category
+INFO  [alembic.env] Imported model module: app.models.developer_permission
+INFO  [alembic.env] Imported model module: app.models.developer_role
+INFO  [alembic.env] Imported model module: app.models.domain_event
+INFO  [alembic.env] Imported model module: app.models.feature_flag
+INFO  [alembic.env] Imported model module: app.models.freshness_snapshot
+INFO  [alembic.env] Imported model module: app.models.global_item
+INFO  [alembic.env] Imported model module: app.models.global_item_alias
+INFO  [alembic.env] Imported model module: app.models.inventory
+INFO  [alembic.env] Imported model module: app.models.inventory_lot
+INFO  [alembic.env] Imported model module: app.models.mixins
+INFO  [alembic.env] Imported model module: app.models.models
+INFO  [alembic.env] Imported model module: app.models.permission
+INFO  [alembic.env] Imported model module: app.models.pricing_snapshot
+INFO  [alembic.env] Imported model module: app.models.product
+INFO  [alembic.env] Imported model module: app.models.product_category
+INFO  [alembic.env] Imported model module: app.models.recipe
+INFO  [alembic.env] Imported model module: app.models.reservation
+INFO  [alembic.env] Imported model module: app.models.retention
+INFO  [alembic.env] Imported model module: app.models.role
+INFO  [alembic.env] Imported model module: app.models.statistics
+INFO  [alembic.env] Imported model module: app.models.stripe_event
+INFO  [alembic.env] Imported model module: app.models.subscription_tier
+INFO  [alembic.env] Imported model module: app.models.unified_inventory_history
+INFO  [alembic.env] Imported model module: app.models.unit
+INFO  [alembic.env] Imported model module: app.models.user_preferences
+INFO  [alembic.env] Imported model module: app.models.user_role_assignment
+INFO  [alembic.runtime.migration] Context impl SQLiteImpl.
+INFO  [alembic.runtime.migration] Will assume non-transactional DDL.
+INFO  [alembic.runtime.migration] Running upgrade  -> 0001_base_schema, 0001 base schema (tables only)
+INFO  [alembic.runtime.migration] Running upgrade 0001_base_schema -> 0002_constraints_indexes_fks, 0002 add constraints/indexes/fks
+INFO  [alembic.runtime.migration] Running upgrade 0002_constraints_indexes_fks -> 0003_postgres_specific, 0003 postgres-specific extensions/enums/indexes
+INFO  [alembic.runtime.migration] Running upgrade 0003_postgres_specific -> 0004_seed_presets, 0004 seed presets (guarded)
+INFO  [alembic.runtime.migration] Running upgrade 0004_seed_presets -> 0005_cleanup_guardrails, 0005 cleanup guardrails and ingredient attribute expansion
+INFO  [alembic.runtime.migration] Running upgrade 0005_cleanup_guardrails -> 0006_recipe_lineage_upgrade, 0006 recipe lineage upgrade
+INFO  [alembic.runtime.migration] Running upgrade 0006_recipe_lineage_upgrade -> 0007_single_sesh_enfor, 0007 single session enforcement
+_____________________ test_plan_start_finish_non_portioned _____________________
+
+app = <Flask 'app'>, client = <FlaskClient <Flask 'app'>>
+db_session = <sqlalchemy.orm.scoping.scoped_session object at 0x7f8eccc1d5d0>
+
+    def test_plan_start_finish_non_portioned(app, client, db_session):
+        # Arrange: create a simple recipe
+        from app.models import Recipe
+        r = Recipe(name='Simple Syrup', predicted_yield=10.0, predicted_yield_unit='oz', category_id=1)
+        db_session.add(r)
+        db_session.commit()
+    
+        # Act: start batch with no portioning
+        resp = _api(client, app, '/batches/api/start-batch', {
+            'recipe_id': r.id,
+            'scale': 1,
+            'batch_type': 'ingredient',
+            'notes': '',
+            'requires_containers': False,
+            'containers': []
+        })
+>       assert resp.status_code == 200
+E       assert 400 == 200
+E        +  where 400 = <WrapperTestResponse streamed [400 BAD REQUEST]>.status_code
+
+tests/test_plan_production_integration.py:37: AssertionError
+---------------------------- Captured stdout setup -----------------------------
+   ✅ brewing_diastatic_power_lintner column added successfully
+   ✅ brewing_potential_sg column added successfully
+   ✅ brewing_color_srm column added successfully
+   ✅ protein_content_pct column added successfully
+   ✅ certifications column added successfully
+   ✅ inci_name column added successfully
+   ✅ recommended_fragrance_load_pct column added successfully
+   ✅ recommended_usage_rate column added successfully
+   ✅ is_active_ingredient column added successfully
+   ✅ certifications column added successfully
+   ✅ fatty_acid_profile column added successfully
+   ✅ brewing_diastatic_power_lintner column added successfully
+   ✅ brewing_potential_sg column added successfully
+   ✅ brewing_color_srm column added successfully
+   ✅ protein_content_pct column added successfully
+   ✅ inci_name column added successfully
+   ✅ recommended_fragrance_load_pct column added successfully
+   ✅ recommended_usage_rate column added successfully
+   ✅ cloned_from_id column added successfully
+   ✅ root_recipe_id column added successfully
+   ✅ Created index ix_recipe_parent_recipe_id on recipe
+   ✅ Created index ix_recipe_cloned_from_id on recipe
+   ✅ Created index ix_recipe_root_recipe_id on recipe
+   ✅ Created index ix_recipe_lineage_recipe_id on recipe_lineage
+   ✅ Created index ix_recipe_lineage_source_recipe_id on recipe_lineage
+   ✅ Created index ix_recipe_lineage_event_type on recipe_lineage
+Migration failed, falling back to create_all: (sqlite3.OperationalError) table addon already exists
+[SQL: 
+CREATE TABLE addon (
+    id INTEGER NOT NULL, 
+    "key" VARCHAR(64) NOT NULL, 
+    name VARCHAR(128) NOT NULL, 
+    description TEXT, 
+    permission_name VARCHAR(128), 
+    function_key VARCHAR(64), 
+    retention_extension_days INTEGER, 
+    billing_type VARCHAR(32) NOT NULL, 
+    stripe_lookup_key VARCHAR(128), 
+    is_active BOOLEAN NOT NULL, 
+    created_at DATETIME NOT NULL, 
+    updated_at DATETIME NOT NULL, 
+    PRIMARY KEY (id), 
+    UNIQUE ("key")
+)
+
+]
+(Background on this error at: https://sqlalche.me/e/20/e3q8)
+---------------------------- Captured stderr setup -----------------------------
+INFO  [alembic.env] Imported model module: app.models.addon
+INFO  [alembic.env] Imported model module: app.models.batch
+INFO  [alembic.env] Imported model module: app.models.billing_snapshot
+INFO  [alembic.env] Imported model module: app.models.category
+INFO  [alembic.env] Imported model module: app.models.developer_permission
+INFO  [alembic.env] Imported model module: app.models.developer_role
+INFO  [alembic.env] Imported model module: app.models.domain_event
+INFO  [alembic.env] Imported model module: app.models.feature_flag
+INFO  [alembic.env] Imported model module: app.models.freshness_snapshot
+INFO  [alembic.env] Imported model module: app.models.global_item
+INFO  [alembic.env] Imported model module: app.models.global_item_alias
+INFO  [alembic.env] Imported model module: app.models.inventory
+INFO  [alembic.env] Imported model module: app.models.inventory_lot
+INFO  [alembic.env] Imported model module: app.models.mixins
+INFO  [alembic.env] Imported model module: app.models.models
+INFO  [alembic.env] Imported model module: app.models.permission
+INFO  [alembic.env] Imported model module: app.models.pricing_snapshot
+INFO  [alembic.env] Imported model module: app.models.product
+INFO  [alembic.env] Imported model module: app.models.product_category
+INFO  [alembic.env] Imported model module: app.models.recipe
+INFO  [alembic.env] Imported model module: app.models.reservation
+INFO  [alembic.env] Imported model module: app.models.retention
+INFO  [alembic.env] Imported model module: app.models.role
+INFO  [alembic.env] Imported model module: app.models.statistics
+INFO  [alembic.env] Imported model module: app.models.stripe_event
+INFO  [alembic.env] Imported model module: app.models.subscription_tier
+INFO  [alembic.env] Imported model module: app.models.unified_inventory_history
+INFO  [alembic.env] Imported model module: app.models.unit
+INFO  [alembic.env] Imported model module: app.models.user_preferences
+INFO  [alembic.env] Imported model module: app.models.user_role_assignment
+INFO  [alembic.runtime.migration] Context impl SQLiteImpl.
+INFO  [alembic.runtime.migration] Will assume non-transactional DDL.
+INFO  [alembic.runtime.migration] Running upgrade  -> 0001_base_schema, 0001 base schema (tables only)
+INFO  [alembic.runtime.migration] Running upgrade 0001_base_schema -> 0002_constraints_indexes_fks, 0002 add constraints/indexes/fks
+INFO  [alembic.runtime.migration] Running upgrade 0002_constraints_indexes_fks -> 0003_postgres_specific, 0003 postgres-specific extensions/enums/indexes
+INFO  [alembic.runtime.migration] Running upgrade 0003_postgres_specific -> 0004_seed_presets, 0004 seed presets (guarded)
+INFO  [alembic.runtime.migration] Running upgrade 0004_seed_presets -> 0005_cleanup_guardrails, 0005 cleanup guardrails and ingredient attribute expansion
+INFO  [alembic.runtime.migration] Running upgrade 0005_cleanup_guardrails -> 0006_recipe_lineage_upgrade, 0006 recipe lineage upgrade
+INFO  [alembic.runtime.migration] Running upgrade 0006_recipe_lineage_upgrade -> 0007_single_sesh_enfor, 0007 single session enforcement
+INFO  [alembic.env] Imported model module: app.models.addon
+INFO  [alembic.env] Imported model module: app.models.batch
+INFO  [alembic.env] Imported model module: app.models.billing_snapshot
+INFO  [alembic.env] Imported model module: app.models.category
+INFO  [alembic.env] Imported model module: app.models.developer_permission
+INFO  [alembic.env] Imported model module: app.models.developer_role
+INFO  [alembic.env] Imported model module: app.models.domain_event
+INFO  [alembic.env] Imported model module: app.models.feature_flag
+INFO  [alembic.env] Imported model module: app.models.freshness_snapshot
+INFO  [alembic.env] Imported model module: app.models.global_item
+INFO  [alembic.env] Imported model module: app.models.global_item_alias
+INFO  [alembic.env] Imported model module: app.models.inventory
+INFO  [alembic.env] Imported model module: app.models.inventory_lot
+INFO  [alembic.env] Imported model module: app.models.mixins
+INFO  [alembic.env] Imported model module: app.models.models
+INFO  [alembic.env] Imported model module: app.models.permission
+INFO  [alembic.env] Imported model module: app.models.pricing_snapshot
+INFO  [alembic.env] Imported model module: app.models.product
+INFO  [alembic.env] Imported model module: app.models.product_category
+INFO  [alembic.env] Imported model module: app.models.recipe
+INFO  [alembic.env] Imported model module: app.models.reservation
+INFO  [alembic.env] Imported model module: app.models.retention
+INFO  [alembic.env] Imported model module: app.models.role
+INFO  [alembic.env] Imported model module: app.models.statistics
+INFO  [alembic.env] Imported model module: app.models.stripe_event
+INFO  [alembic.env] Imported model module: app.models.subscription_tier
+INFO  [alembic.env] Imported model module: app.models.unified_inventory_history
+INFO  [alembic.env] Imported model module: app.models.unit
+INFO  [alembic.env] Imported model module: app.models.user_preferences
+INFO  [alembic.env] Imported model module: app.models.user_role_assignment
+INFO  [alembic.runtime.migration] Context impl SQLiteImpl.
+INFO  [alembic.runtime.migration] Will assume non-transactional DDL.
+INFO  [alembic.runtime.migration] Running upgrade  -> 0001_base_schema, 0001 base schema (tables only)
+--------------------------- Captured stderr teardown ---------------------------
+INFO  [alembic.env] Imported model module: app.models.addon
+INFO  [alembic.env] Imported model module: app.models.batch
+INFO  [alembic.env] Imported model module: app.models.billing_snapshot
+INFO  [alembic.env] Imported model module: app.models.category
+INFO  [alembic.env] Imported model module: app.models.developer_permission
+INFO  [alembic.env] Imported model module: app.models.developer_role
+INFO  [alembic.env] Imported model module: app.models.domain_event
+INFO  [alembic.env] Imported model module: app.models.feature_flag
+INFO  [alembic.env] Imported model module: app.models.freshness_snapshot
+INFO  [alembic.env] Imported model module: app.models.global_item
+INFO  [alembic.env] Imported model module: app.models.global_item_alias
+INFO  [alembic.env] Imported model module: app.models.inventory
+INFO  [alembic.env] Imported model module: app.models.inventory_lot
+INFO  [alembic.env] Imported model module: app.models.mixins
+INFO  [alembic.env] Imported model module: app.models.models
+INFO  [alembic.env] Imported model module: app.models.permission
+INFO  [alembic.env] Imported model module: app.models.pricing_snapshot
+INFO  [alembic.env] Imported model module: app.models.product
+INFO  [alembic.env] Imported model module: app.models.product_category
+INFO  [alembic.env] Imported model module: app.models.recipe
+INFO  [alembic.env] Imported model module: app.models.reservation
+INFO  [alembic.env] Imported model module: app.models.retention
+INFO  [alembic.env] Imported model module: app.models.role
+INFO  [alembic.env] Imported model module: app.models.statistics
+INFO  [alembic.env] Imported model module: app.models.stripe_event
+INFO  [alembic.env] Imported model module: app.models.subscription_tier
+INFO  [alembic.env] Imported model module: app.models.unified_inventory_history
+INFO  [alembic.env] Imported model module: app.models.unit
+INFO  [alembic.env] Imported model module: app.models.user_preferences
+INFO  [alembic.env] Imported model module: app.models.user_role_assignment
+INFO  [alembic.runtime.migration] Context impl SQLiteImpl.
+INFO  [alembic.runtime.migration] Will assume non-transactional DDL.
+_______________________ test_plan_start_finish_portioned _______________________
+
+app = <Flask 'app'>, client = <FlaskClient <Flask 'app'>>
+db_session = <sqlalchemy.orm.scoping.scoped_session object at 0x7f8eccc1d5d0>
+
+    def test_plan_start_finish_portioned(app, client, db_session):
+        # Arrange: create a portioned recipe
+        from app.models import Recipe
+        r = Recipe(
+            name='Goat Milk Soap',
+            predicted_yield=10.0,
+            predicted_yield_unit='oz',
+            category_id=1,
+            portioning_data={'is_portioned': True, 'portion_name': 'bars', 'portion_count': 20},
+            is_portioned=True,
+            portion_name='bars',
+            portion_count=20
+        )
+        db_session.add(r)
+        db_session.commit()
+    
+        # Act: start batch with flat portion fields
+        resp = _api(client, app, '/batches/api/start-batch', {
+            'recipe_id': r.id,
+            'scale': 1,
+            'batch_type': 'product',
+            'notes': '',
+            'requires_containers': False,
+            'containers': [],
+            'is_portioned': True,
+            'portion_name': 'bars',
+            'portion_count': 20
+        })
+>       assert resp.status_code == 200
+E       assert 400 == 200
+E        +  where 400 = <WrapperTestResponse streamed [400 BAD REQUEST]>.status_code
+
+tests/test_plan_production_integration.py:88: AssertionError
+---------------------------- Captured stdout setup -----------------------------
+   ✅ brewing_diastatic_power_lintner column added successfully
+   ✅ brewing_potential_sg column added successfully
+   ✅ brewing_color_srm column added successfully
+   ✅ protein_content_pct column added successfully
+   ✅ certifications column added successfully
+   ✅ inci_name column added successfully
+   ✅ recommended_fragrance_load_pct column added successfully
+   ✅ recommended_usage_rate column added successfully
+   ✅ is_active_ingredient column added successfully
+   ✅ certifications column added successfully
+   ✅ fatty_acid_profile column added successfully
+   ✅ brewing_diastatic_power_lintner column added successfully
+   ✅ brewing_potential_sg column added successfully
+   ✅ brewing_color_srm column added successfully
+   ✅ protein_content_pct column added successfully
+   ✅ inci_name column added successfully
+   ✅ recommended_fragrance_load_pct column added successfully
+   ✅ recommended_usage_rate column added successfully
+   ✅ cloned_from_id column added successfully
+   ✅ root_recipe_id column added successfully
+   ✅ Created index ix_recipe_parent_recipe_id on recipe
+   ✅ Created index ix_recipe_cloned_from_id on recipe
+   ✅ Created index ix_recipe_root_recipe_id on recipe
+   ✅ Created index ix_recipe_lineage_recipe_id on recipe_lineage
+   ✅ Created index ix_recipe_lineage_source_recipe_id on recipe_lineage
+   ✅ Created index ix_recipe_lineage_event_type on recipe_lineage
+Migration failed, falling back to create_all: (sqlite3.OperationalError) table addon already exists
+[SQL: 
+CREATE TABLE addon (
+    id INTEGER NOT NULL, 
+    "key" VARCHAR(64) NOT NULL, 
+    name VARCHAR(128) NOT NULL, 
+    description TEXT, 
+    permission_name VARCHAR(128), 
+    function_key VARCHAR(64), 
+    retention_extension_days INTEGER, 
+    billing_type VARCHAR(32) NOT NULL, 
+    stripe_lookup_key VARCHAR(128), 
+    is_active BOOLEAN NOT NULL, 
+    created_at DATETIME NOT NULL, 
+    updated_at DATETIME NOT NULL, 
+    PRIMARY KEY (id), 
+    UNIQUE ("key")
+)
+
+]
+(Background on this error at: https://sqlalche.me/e/20/e3q8)
+---------------------------- Captured stderr setup -----------------------------
+INFO  [alembic.env] Imported model module: app.models.addon
+INFO  [alembic.env] Imported model module: app.models.batch
+INFO  [alembic.env] Imported model module: app.models.billing_snapshot
+INFO  [alembic.env] Imported model module: app.models.category
+INFO  [alembic.env] Imported model module: app.models.developer_permission
+INFO  [alembic.env] Imported model module: app.models.developer_role
+INFO  [alembic.env] Imported model module: app.models.domain_event
+INFO  [alembic.env] Imported model module: app.models.feature_flag
+INFO  [alembic.env] Imported model module: app.models.freshness_snapshot
+INFO  [alembic.env] Imported model module: app.models.global_item
+INFO  [alembic.env] Imported model module: app.models.global_item_alias
+INFO  [alembic.env] Imported model module: app.models.inventory
+INFO  [alembic.env] Imported model module: app.models.inventory_lot
+INFO  [alembic.env] Imported model module: app.models.mixins
+INFO  [alembic.env] Imported model module: app.models.models
+INFO  [alembic.env] Imported model module: app.models.permission
+INFO  [alembic.env] Imported model module: app.models.pricing_snapshot
+INFO  [alembic.env] Imported model module: app.models.product
+INFO  [alembic.env] Imported model module: app.models.product_category
+INFO  [alembic.env] Imported model module: app.models.recipe
+INFO  [alembic.env] Imported model module: app.models.reservation
+INFO  [alembic.env] Imported model module: app.models.retention
+INFO  [alembic.env] Imported model module: app.models.role
+INFO  [alembic.env] Imported model module: app.models.statistics
+INFO  [alembic.env] Imported model module: app.models.stripe_event
+INFO  [alembic.env] Imported model module: app.models.subscription_tier
+INFO  [alembic.env] Imported model module: app.models.unified_inventory_history
+INFO  [alembic.env] Imported model module: app.models.unit
+INFO  [alembic.env] Imported model module: app.models.user_preferences
+INFO  [alembic.env] Imported model module: app.models.user_role_assignment
+INFO  [alembic.runtime.migration] Context impl SQLiteImpl.
+INFO  [alembic.runtime.migration] Will assume non-transactional DDL.
+INFO  [alembic.runtime.migration] Running upgrade  -> 0001_base_schema, 0001 base schema (tables only)
+INFO  [alembic.runtime.migration] Running upgrade 0001_base_schema -> 0002_constraints_indexes_fks, 0002 add constraints/indexes/fks
+INFO  [alembic.runtime.migration] Running upgrade 0002_constraints_indexes_fks -> 0003_postgres_specific, 0003 postgres-specific extensions/enums/indexes
+INFO  [alembic.runtime.migration] Running upgrade 0003_postgres_specific -> 0004_seed_presets, 0004 seed presets (guarded)
+INFO  [alembic.runtime.migration] Running upgrade 0004_seed_presets -> 0005_cleanup_guardrails, 0005 cleanup guardrails and ingredient attribute expansion
+INFO  [alembic.runtime.migration] Running upgrade 0005_cleanup_guardrails -> 0006_recipe_lineage_upgrade, 0006 recipe lineage upgrade
+INFO  [alembic.runtime.migration] Running upgrade 0006_recipe_lineage_upgrade -> 0007_single_sesh_enfor, 0007 single session enforcement
+INFO  [alembic.env] Imported model module: app.models.addon
+INFO  [alembic.env] Imported model module: app.models.batch
+INFO  [alembic.env] Imported model module: app.models.billing_snapshot
+INFO  [alembic.env] Imported model module: app.models.category
+INFO  [alembic.env] Imported model module: app.models.developer_permission
+INFO  [alembic.env] Imported model module: app.models.developer_role
+INFO  [alembic.env] Imported model module: app.models.domain_event
+INFO  [alembic.env] Imported model module: app.models.feature_flag
+INFO  [alembic.env] Imported model module: app.models.freshness_snapshot
+INFO  [alembic.env] Imported model module: app.models.global_item
+INFO  [alembic.env] Imported model module: app.models.global_item_alias
+INFO  [alembic.env] Imported model module: app.models.inventory
+INFO  [alembic.env] Imported model module: app.models.inventory_lot
+INFO  [alembic.env] Imported model module: app.models.mixins
+INFO  [alembic.env] Imported model module: app.models.models
+INFO  [alembic.env] Imported model module: app.models.permission
+INFO  [alembic.env] Imported model module: app.models.pricing_snapshot
+INFO  [alembic.env] Imported model module: app.models.product
+INFO  [alembic.env] Imported model module: app.models.product_category
+INFO  [alembic.env] Imported model module: app.models.recipe
+INFO  [alembic.env] Imported model module: app.models.reservation
+INFO  [alembic.env] Imported model module: app.models.retention
+INFO  [alembic.env] Imported model module: app.models.role
+INFO  [alembic.env] Imported model module: app.models.statistics
+INFO  [alembic.env] Imported model module: app.models.stripe_event
+INFO  [alembic.env] Imported model module: app.models.subscription_tier
+INFO  [alembic.env] Imported model module: app.models.unified_inventory_history
+INFO  [alembic.env] Imported model module: app.models.unit
+INFO  [alembic.env] Imported model module: app.models.user_preferences
+INFO  [alembic.env] Imported model module: app.models.user_role_assignment
+INFO  [alembic.runtime.migration] Context impl SQLiteImpl.
+INFO  [alembic.runtime.migration] Will assume non-transactional DDL.
+INFO  [alembic.runtime.migration] Running upgrade  -> 0001_base_schema, 0001 base schema (tables only)
+--------------------------- Captured stderr teardown ---------------------------
+INFO  [alembic.env] Imported model module: app.models.addon
+INFO  [alembic.env] Imported model module: app.models.batch
+INFO  [alembic.env] Imported model module: app.models.billing_snapshot
+INFO  [alembic.env] Imported model module: app.models.category
+INFO  [alembic.env] Imported model module: app.models.developer_permission
+INFO  [alembic.env] Imported model module: app.models.developer_role
+INFO  [alembic.env] Imported model module: app.models.domain_event
+INFO  [alembic.env] Imported model module: app.models.feature_flag
+INFO  [alembic.env] Imported model module: app.models.freshness_snapshot
+INFO  [alembic.env] Imported model module: app.models.global_item
+INFO  [alembic.env] Imported model module: app.models.global_item_alias
+INFO  [alembic.env] Imported model module: app.models.inventory
+INFO  [alembic.env] Imported model module: app.models.inventory_lot
+INFO  [alembic.env] Imported model module: app.models.mixins
+INFO  [alembic.env] Imported model module: app.models.models
+INFO  [alembic.env] Imported model module: app.models.permission
+INFO  [alembic.env] Imported model module: app.models.pricing_snapshot
+INFO  [alembic.env] Imported model module: app.models.product
+INFO  [alembic.env] Imported model module: app.models.product_category
+INFO  [alembic.env] Imported model module: app.models.recipe
+INFO  [alembic.env] Imported model module: app.models.reservation
+INFO  [alembic.env] Imported model module: app.models.retention
+INFO  [alembic.env] Imported model module: app.models.role
+INFO  [alembic.env] Imported model module: app.models.statistics
+INFO  [alembic.env] Imported model module: app.models.stripe_event
+INFO  [alembic.env] Imported model module: app.models.subscription_tier
+INFO  [alembic.env] Imported model module: app.models.unified_inventory_history
+INFO  [alembic.env] Imported model module: app.models.unit
+INFO  [alembic.env] Imported model module: app.models.user_preferences
+INFO  [alembic.env] Imported model module: app.models.user_role_assignment
+INFO  [alembic.runtime.migration] Context impl SQLiteImpl.
+INFO  [alembic.runtime.migration] Will assume non-transactional DDL.
+=============================== warnings summary ===============================
+tests/developer/test_analytics_catalog.py: 1 warning
+tests/test_auth_permissions.py: 3 warnings
+tests/test_batch_label_generator.py: 2 warnings
+tests/test_billing_and_tier_enforcement.py: 7 warnings
+tests/test_expiration_canonicalization.py: 1 warning
+tests/test_extras_expiration.py: 1 warning
+tests/test_global_link_drawer.py: 1 warning
+tests/test_google_oauth.py: 7 warnings
+tests/test_inventory_adjustment_initial_stock.py: 1 warning
+tests/test_inventory_costing_toggle.py: 4 warnings
+tests/test_inventory_fifo.py: 3 warnings
+tests/test_inventory_routes_canonicalization.py: 2 warnings
+tests/test_plan_production_gating.py: 1 warning
+tests/test_plan_production_integration.py: 2 warnings
+tests/test_portioning_sku_derivation.py: 1 warning
+tests/test_pos_integration_canonicalization.py: 3 warnings
+tests/test_public_tools_and_exports_smoke.py: 2 warnings
+tests/test_reservation_canonicalization.py: 6 warnings
+tests/test_retention_drawer.py: 1 warning
+tests/test_signup_tiers.py: 5 warnings
+tests/test_single_session_enforcement.py: 1 warning
+tests/test_start_batch_integration.py: 1 warning
+tests/test_stripe_webhooks.py: 3 warnings
+  /home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask_sqlalchemy/extension.py:881: SAWarning: Can't sort tables for DROP; an unresolvable foreign key dependency exists between tables: batch, product_sku; and backend does not support ALTER.  To restore at least a partial sort, apply use_alter=True to ForeignKey and ForeignKeyConstraint objects involved in the cycle to mark these as known cycles that will be ignored.
+    getattr(metadata, op_name)(bind=engine)
+
+tests/test_expiration_canonicalization.py::test_expiration_service_uses_canonical_adjustment
+tests/test_inventory_routes_canonicalization.py::test_expiration_service_uses_canonical_adjustment
+  /home/runner/workspace/app/blueprints/expiration/services.py:512: LegacyAPIWarning: The Query.get() method is considered legacy as of the 1.x series of SQLAlchemy and becomes a legacy construct in 2.0. The method is now available as Session.get() (deprecated since: 2.0) (Background on SQLAlchemy 2.0 at: https://sqlalche.me/e/b8d9)
+    lot = InventoryLot.query.get(entry_id)
+
+tests/test_expiration_canonicalization.py::test_expiration_service_uses_canonical_adjustment
+tests/test_inventory_routes_canonicalization.py::test_expiration_service_uses_canonical_adjustment
+  /home/runner/workspace/app/blueprints/expiration/services.py:520: LegacyAPIWarning: The Query.get() method is considered legacy as of the 1.x series of SQLAlchemy and becomes a legacy construct in 2.0. The method is now available as Session.get() (deprecated since: 2.0) (Background on SQLAlchemy 2.0 at: https://sqlalche.me/e/b8d9)
+    entry = UnifiedInventoryHistory.query.get(entry_id)
+
+tests/test_expiration_canonicalization.py::test_expiration_service_uses_canonical_adjustment
+tests/test_inventory_routes_canonicalization.py::test_expiration_service_uses_canonical_adjustment
+  /home/runner/workspace/app/blueprints/expiration/services.py:525: LegacyAPIWarning: The Query.get() method is considered legacy as of the 1.x series of SQLAlchemy and becomes a legacy construct in 2.0. The method is now available as Session.get() (deprecated since: 2.0) (Background on SQLAlchemy 2.0 at: https://sqlalche.me/e/b8d9)
+    entry = InventoryHistory.query.get(entry_id)
+
+tests/test_extras_expiration.py::test_extras_cannot_use_expired_lot
+tests/test_inventory_routes_canonicalization.py::test_batch_start_routes_all_deductions_through_canonical_service
+tests/test_portioning_sku_derivation.py::test_portioning_sku_labels_differ
+tests/test_portioning_sku_derivation.py::test_portioning_sku_labels_differ
+tests/test_start_batch_integration.py::test_start_batch_uses_generator_and_persists_label
+  /home/runner/workspace/app/services/batch_service/batch_operations.py:41: LegacyAPIWarning: The Query.get() method is considered legacy as of the 1.x series of SQLAlchemy and becomes a legacy construct in 2.0. The method is now available as Session.get() (deprecated since: 2.0) (Background on SQLAlchemy 2.0 at: https://sqlalche.me/e/b8d9)
+    recipe = Recipe.query.get(snap_recipe_id)
+
+tests/test_extras_expiration.py::test_extras_cannot_use_expired_lot
+tests/test_inventory_routes_canonicalization.py::test_batch_start_routes_all_deductions_through_canonical_service
+tests/test_portioning_sku_derivation.py::test_portioning_sku_labels_differ
+tests/test_portioning_sku_derivation.py::test_portioning_sku_labels_differ
+tests/test_start_batch_integration.py::test_start_batch_uses_generator_and_persists_label
+  /home/runner/workspace/app/services/batch_service/batch_operations.py:169: LegacyAPIWarning: The Query.get() method is considered legacy as of the 1.x series of SQLAlchemy and becomes a legacy construct in 2.0. The method is now available as Session.get() (deprecated since: 2.0) (Background on SQLAlchemy 2.0 at: https://sqlalche.me/e/b8d9)
+    fresh_batch = Batch.query.get(batch.id)
+
+tests/test_extras_expiration.py::test_extras_cannot_use_expired_lot
+  /home/runner/workspace/app/services/batch_service/batch_operations.py:684: LegacyAPIWarning: The Query.get() method is considered legacy as of the 1.x series of SQLAlchemy and becomes a legacy construct in 2.0. The method is now available as Session.get() (deprecated since: 2.0) (Background on SQLAlchemy 2.0 at: https://sqlalche.me/e/b8d9)
+    batch = Batch.query.get(batch_id)
+
+tests/test_extras_expiration.py::test_extras_cannot_use_expired_lot
+  /home/runner/workspace/app/services/batch_service/batch_operations.py:781: LegacyAPIWarning: The Query.get() method is considered legacy as of the 1.x series of SQLAlchemy and becomes a legacy construct in 2.0. The method is now available as Session.get() (deprecated since: 2.0) (Background on SQLAlchemy 2.0 at: https://sqlalche.me/e/b8d9)
+    inventory_item = InventoryItem.query.get(item["item_id"])
+
+tests/test_plan_production_gating.py::test_api_start_batch_requires_override_before_force
+tests/test_plan_production_gating.py::test_api_start_batch_requires_override_before_force
+tests/test_plan_production_integration.py::test_plan_start_finish_non_portioned
+tests/test_plan_production_integration.py::test_plan_start_finish_portioned
+  /home/runner/workspace/app/blueprints/batches/routes.py:329: LegacyAPIWarning: The Query.get() method is considered legacy as of the 1.x series of SQLAlchemy and becomes a legacy construct in 2.0. The method is now available as Session.get() (deprecated since: 2.0) (Background on SQLAlchemy 2.0 at: https://sqlalche.me/e/b8d9)
+    recipe = Recipe.query.get(recipe_id)
+
+tests/test_portioning_sku_derivation.py::test_portioning_sku_labels_differ
+  /home/runner/workspace/app/services/recipe_service/_core.py:105: LegacyAPIWarning: The Query.get() method is considered legacy as of the 1.x series of SQLAlchemy and becomes a legacy construct in 2.0. The method is now available as Session.get() (deprecated since: 2.0) (Background on SQLAlchemy 2.0 at: https://sqlalche.me/e/b8d9)
+    u = Unit.query.get(buid)
+
+tests/test_portioning_sku_derivation.py::test_portioning_sku_labels_differ
+tests/test_portioning_sku_derivation.py::test_portioning_sku_labels_differ
+  /home/runner/workspace/app/blueprints/batches/finish_batch.py:348: LegacyAPIWarning: The Query.get() method is considered legacy as of the 1.x series of SQLAlchemy and becomes a legacy construct in 2.0. The method is now available as Session.get() (deprecated since: 2.0) (Background on SQLAlchemy 2.0 at: https://sqlalche.me/e/b8d9)
+    category = ProductCategory.query.get(product.category_id) if getattr(product, 'category_id', None) else None
+
+tests/test_portioning_sku_derivation.py::test_portioning_sku_labels_differ
+tests/test_portioning_sku_derivation.py::test_portioning_sku_labels_differ
+  /home/runner/workspace/app/services/batch_service/batch_operations.py:577: LegacyAPIWarning: The Query.get() method is considered legacy as of the 1.x series of SQLAlchemy and becomes a legacy construct in 2.0. The method is now available as Session.get() (deprecated since: 2.0) (Background on SQLAlchemy 2.0 at: https://sqlalche.me/e/b8d9)
+    refreshed = Batch.query.get(batch_id)
+
+tests/test_pos_integration_canonicalization.py::test_reserve_inventory_calls_canonical_service
+  /home/runner/workspace/app/services/pos_integration.py:44: LegacyAPIWarning: The Query.get() method is considered legacy as of the 1.x series of SQLAlchemy and becomes a legacy construct in 2.0. The method is now available as Session.get() (deprecated since: 2.0) (Background on SQLAlchemy 2.0 at: https://sqlalche.me/e/b8d9)
+    original_item = InventoryItem.query.get(item_id)
+
+tests/test_pos_integration_canonicalization.py::test_confirm_sale_uses_canonical_service
+  /home/runner/workspace/app/services/pos_integration.py:207: LegacyAPIWarning: The Query.get() method is considered legacy as of the 1.x series of SQLAlchemy and becomes a legacy construct in 2.0. The method is now available as Session.get() (deprecated since: 2.0) (Background on SQLAlchemy 2.0 at: https://sqlalche.me/e/b8d9)
+    item = InventoryItem.query.get(reservation.product_item_id)
+
+tests/test_pos_integration_canonicalization.py::test_confirm_return_uses_canonical_service
+  /home/runner/workspace/app/services/pos_integration.py:265: LegacyAPIWarning: The Query.get() method is considered legacy as of the 1.x series of SQLAlchemy and becomes a legacy construct in 2.0. The method is now available as Session.get() (deprecated since: 2.0) (Background on SQLAlchemy 2.0 at: https://sqlalche.me/e/b8d9)
+    item = InventoryItem.query.get(reservation.product_item_id)
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+=========================== short test summary info ============================
+FAILED tests/test_inventory_adjustment_initial_stock.py::test_batch_deduction_does_not_create_initial_stock - RuntimeError: Working outside of request context.
+FAILED tests/test_plan_production_gating.py::test_api_start_batch_requires_override_before_force - AssertionError: assert None == [1]
+FAILED tests/test_plan_production_integration.py::test_plan_start_finish_non_portioned - assert 400 == 200
+FAILED tests/test_plan_production_integration.py::test_plan_start_finish_portioned - assert 400 == 200
+============ 4 failed, 66 passed, 89 warnings in 270.80s (0:04:30) =============
