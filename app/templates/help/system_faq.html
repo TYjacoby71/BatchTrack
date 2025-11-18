@@ -1,0 +1,34 @@
+{% extends 'layout.html' %}
+{% block content %}
+<div class="py-4">
+  <div class="text-center mb-4">
+    <h1 class="mb-2">Commonly Asked Questions</h1>
+    <p class="text-muted">Every answer links back to the detailed instructions so you can go deeper without leaving the app.</p>
+  </div>
+
+  <div class="accordion" id="faqAccordion">
+    {% for faq in faqs %}
+    <div class="accordion-item">
+      <h2 class="accordion-header" id="faqHeading{{ loop.index }}">
+        <button class="accordion-button {% if not loop.first %}collapsed{% endif %}" type="button" data-bs-toggle="collapse" data-bs-target="#faqCollapse{{ loop.index }}">
+          {{ faq.question }}
+        </button>
+      </h2>
+      <div id="faqCollapse{{ loop.index }}" class="accordion-collapse collapse {% if loop.first %}show{% endif %}" data-bs-parent="#faqAccordion">
+        <div class="accordion-body">
+          <p>{{ faq.answer }}</p>
+          {% if faq.link %}
+          {% set link_label, link_endpoint, link_anchor = faq.link %}
+          <a class="btn btn-sm btn-outline-primary" href="{{ url_for(link_endpoint) }}#{{ link_anchor }}">View {{ link_label }}</a>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+
+  <div class="text-center mt-4">
+    <a href="{{ url_for('help_routes.help_overview') }}" class="btn btn-primary">Back to How-It-Works Guide</a>
+  </div>
+</div>
+{% endblock %}

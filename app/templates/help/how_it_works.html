@@ -1,0 +1,62 @@
+{% extends 'layout.html' %}
+{% block content %}
+<div class="py-4">
+  <div class="mb-4 text-center">
+    <h1 class="mb-2">How BatchTrack Works</h1>
+    <p class="text-muted">From your first login to finished products, here’s how to move through the system step by step.</p>
+  </div>
+
+  <div class="row g-4">
+    <div class="col-lg-4">
+      <div class="card h-100 shadow-sm">
+        <div class="card-header fw-bold">Quick Links</div>
+        <div class="list-group list-group-flush">
+          <a class="list-group-item list-group-item-action" href="{{ url_for('help_routes.help_overview') }}#first-login">First Login Checklist</a>
+          <a class="list-group-item list-group-item-action" href="{{ url_for('help_routes.help_overview') }}#inventory-creation">Add Inventory</a>
+          <a class="list-group-item list-group-item-action" href="{{ url_for('help_routes.help_overview') }}#recipes">Create Recipes</a>
+          <a class="list-group-item list-group-item-action" href="{{ url_for('help_routes.help_overview') }}#plan-production">Plan Production</a>
+          <a class="list-group-item list-group-item-action" href="{{ url_for('help_routes.help_overview') }}#batch-in-progress">Track Batches</a>
+          <a class="list-group-item list-group-item-action" href="{{ url_for('help_routes.help_overview') }}#product-variants">Products & SKUs</a>
+          <a class="list-group-item list-group-item-action" href="{{ url_for('help_routes.help_overview') }}#public-tools">Public Tools</a>
+        </div>
+      </div>
+
+      <div class="card mt-4">
+        <div class="card-body">
+          <h5 class="card-title">Need Answers Fast?</h5>
+          <p class="card-text">The <a href="{{ url_for('help_routes.help_faq') }}" class="text-decoration-none">Commonly Asked Questions</a> page links every question directly to these instructions.</p>
+          <a href="{{ url_for('help_routes.help_faq') }}" class="btn btn-outline-primary w-100">View FAQ</a>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-lg-8">
+      <div class="mb-4" id="first-login">
+        <h2 class="h4">First Login Checklist</h2>
+        <p>When a new account signs in, the dashboard shows empty states that guide makers to their next step. Decide whether you want to populate inventory first or write a recipe, then follow the on-screen ribbons that link back to this page.</p>
+        <ul>
+          <li>Inventory-first teams add ingredients, containers, consumables, and packaging so costs and conversions work out of the gate.</li>
+          <li>Recipe-first teams can sketch formulas immediately, but they’ll still be prompted to link lines to inventory for automation.</li>
+          <li>The same flow repeats for staging/preview environments so every teammate experiences a consistent launch.</li>
+        </ul>
+      </div>
+
+      {% for section in sections %}
+      <div class="mb-5" id="{{ section.slug }}">
+        <div class="d-flex align-items-center mb-2">
+          <div class="rounded-circle bg-primary text-white me-2" style="width:32px;height:32px;display:flex;align-items:center;justify-content:center;">
+            {{ loop.index }}
+          </div>
+          <h2 class="h4 mb-0">{{ section.title }}</h2>
+        </div>
+        <ul>
+          {% for point in section.points %}
+          <li>{{ point }}</li>
+          {% endfor %}
+        </ul>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+</div>
+{% endblock %}
