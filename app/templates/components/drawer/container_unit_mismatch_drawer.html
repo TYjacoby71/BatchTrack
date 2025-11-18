@@ -84,7 +84,7 @@
                                         </select>
                                     </div>
                                     <div class="col-md-2 d-grid">
-                                        <button type="submit" class="btn btn-primary btn-sm">
+                                        <button type="submit" class="btn btn-primary btn-sm" onclick="console.log('🔧 CONTAINER DRAWER: Save & Refresh button clicked');">
                                             <i class="fas fa-sync-alt me-1"></i> Save &amp; Refresh
                                         </button>
                                     </div>
@@ -142,3 +142,17 @@
         </div>
     </div>
 </div>
+
+<script>
+console.log('🔧 CONTAINER DRAWER: Modal script executing');
+console.log('🔧 CONTAINER DRAWER: Checking for containerUnitMismatchDrawer global');
+
+// Ensure the drawer is properly initialized
+if (window.containerUnitMismatchDrawer && typeof window.containerUnitMismatchDrawer.initializeModal === 'function') {
+    console.log('🔧 CONTAINER DRAWER: initializeModal function found, calling it');
+    window.containerUnitMismatchDrawer.initializeModal();
+} else {
+    console.warn('🔧 CONTAINER DRAWER: initializeModal function not found on window.containerUnitMismatchDrawer');
+    console.log('🔧 CONTAINER DRAWER: window.containerUnitMismatchDrawer =', window.containerUnitMismatchDrawer);
+}
+</script>

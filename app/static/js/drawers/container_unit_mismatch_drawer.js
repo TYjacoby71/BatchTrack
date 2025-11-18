@@ -1,6 +1,8 @@
 
 (function() {
   'use strict';
+  
+  console.log('🔧 CONTAINER DRAWER JS: Script is loading');
 
   function isYieldForm(target) {
     return target && target.matches('#yieldFixForm');
@@ -99,8 +101,10 @@
       return;
     }
 
+    console.log('🔧 CONTAINER DRAWER: Disable button clicked');
     const modal = findModal(btn);
     const recipeId = Number(btn.dataset.recipeId);
+    
     window.dispatchEvent(
       new CustomEvent('container.requirements.disable', {
         detail: { recipe_id: recipeId }
@@ -116,11 +120,12 @@
   }
 
   function initializeModal() {
+    console.log('🔧 CONTAINER DRAWER: initializeModal called');
     // This function is called by DrawerProtocol after modal is rendered
-    console.log('Container unit mismatch drawer initialized');
   }
 
   function init() {
+    console.log('🔧 CONTAINER DRAWER JS: Initializing event listeners');
     document.body.addEventListener('submit', handleYieldSubmit);
     document.body.addEventListener('click', handleDisableClick);
   }
@@ -130,10 +135,16 @@
     window.containerUnitMismatchDrawer = {};
   }
   window.containerUnitMismatchDrawer.initializeModal = initializeModal;
+  
+  console.log('🔧 CONTAINER DRAWER JS: Functions exposed to window.containerUnitMismatchDrawer', window.containerUnitMismatchDrawer);
 
+  console.log('🔧 CONTAINER DRAWER JS: Setting up initialization, readyState:', document.readyState);
+  
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', init);
   } else {
     init();
   }
+  
+  console.log('🔧 CONTAINER DRAWER JS: Script fully loaded');
 })();

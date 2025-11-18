@@ -141,13 +141,25 @@ class DrawerProtocol {
 
     rehydrateScripts(root) {
         const scripts = root.querySelectorAll('script');
-        scripts.forEach((script) => {
+        console.log('🔧 DRAWER PROTOCOL: Found', scripts.length, 'scripts to rehydrate');
+        
+        scripts.forEach((script, index) => {
+            console.log('🔧 DRAWER PROTOCOL: Rehydrating script', index, 'with content length:', script.textContent?.length);
+            console.log('🔧 DRAWER PROTOCOL: Script content preview:', script.textContent?.substring(0, 200));
+            
             const replacement = document.createElement('script');
             for (const { name, value } of Array.from(script.attributes)) {
                 replacement.setAttribute(name, value);
             }
             replacement.textContent = script.textContent;
-            script.replaceWith(replacement);
+            
+            try {
+                script.replaceWith(replacement);
+                console.log('🔧 DRAWER PROTOCOL: Successfully rehydrated script', index);
+            } catch (error) {
+                console.error('🔧 DRAWER PROTOCOL: Error rehydrating script', index, error);
+                console.log('🔧 DRAWER PROTOCOL: Problematic script content:', script.textContent);
+            }
         });
     }
 
