@@ -54,6 +54,16 @@
           <li>{{ point }}</li>
           {% endfor %}
         </ul>
+        {% if section.details %}
+        {% for detail in section.details %}
+        <div class="card mb-3">
+          <div class="card-body">
+            <h5 class="card-title">{{ detail.title }}</h5>
+            <div class="card-text">{{ detail.body|safe }}</div>
+          </div>
+        </div>
+        {% endfor %}
+        {% endif %}
         {% if section.gallery %}
         <div class="card border-dashed">
           <div class="card-body">
