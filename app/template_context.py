@@ -225,13 +225,14 @@ def register_template_context(app):
         'get_global_unit_list': get_global_unit_list
     })
 
+    app.add_template_filter(static_file_exists_filter, "static_file_exists")
 
-@app.template_filter("static_file_exists")
+
 def static_file_exists_filter(relative_path: str) -> bool:
     """Check whether a file exists inside the static folder."""
     try:
         from pathlib import Path
-        static_folder = Path(app.static_folder or "static")
+        static_folder = Path(getattr(current_app, "static_folder", None) or "static")
         return (static_folder / relative_path).exists()
     except Exception:
         return False
