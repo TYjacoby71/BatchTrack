@@ -1,4 +1,9 @@
-<div class="modal fade" id="containerUnitMismatchDrawer" tabindex="-1" aria-labelledby="containerUnitMismatchDrawerLabel" aria-hidden="true" data-recipe-id="{{ recipe.id }}">
+<div class="modal fade"
+     id="containerUnitMismatchDrawer"
+     tabindex="-1"
+     aria-labelledby="containerUnitMismatchDrawerLabel"
+     aria-hidden="true"
+     data-recipe-id="{{ recipe.id }}">
     <div class="modal-dialog modal-lg modal-dialog-centered">
         <div class="modal-content">
             <div class="modal-header bg-warning text-dark">
@@ -19,7 +24,6 @@
                         Auto-fill can’t proceed until the yield unit and container capacity units are compatible.
                     </div>
                 </div>
-
                 {% if container_items %}
                 <div class="mb-3">
                     <h6 class="text-muted text-uppercase fw-bold small">Allowed Containers</h6>
@@ -49,14 +53,14 @@
                     </div>
                 </div>
                 {% endif %}
-
                 <div class="mb-4">
                     <h6 class="text-muted text-uppercase fw-bold small">Let’s Get This Fixed</h6>
                     <div class="card mb-3 shadow-sm border-warning">
                         <div class="card-body">
                             <h6 class="fw-bold mb-3">1. Update the recipe yield (recommended)</h6>
                             <form id="yieldFixForm"
-                                  data-update-url="{{ url_for('drawer_actions.container_unit_mismatch_update_yield', recipe_id=recipe.id) }}">
+                                  data-recipe-id="{{ recipe.id }}"
+                                  data-update-url="{{ url_for('drawers.container_unit_mismatch_update_yield', recipe_id=recipe.id) }}">
                                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                                 <div class="row g-2 align-items-end">
                                     <div class="col-md-5">
@@ -96,7 +100,6 @@
                             </form>
                         </div>
                     </div>
-
                     <div class="card mb-3 shadow-sm">
                         <div class="card-body">
                             <h6 class="fw-bold mb-2">2. Add or edit containers</h6>
@@ -110,16 +113,16 @@
                             </a>
                         </div>
                     </div>
-
                     <div class="card shadow-sm border-0">
                         <div class="card-body">
                             <h6 class="fw-bold mb-2">3. Continue without containers</h6>
                             <p class="text-muted mb-2">
                                 Disable container requirements for this batch and proceed manually.
                             </p>
-                            <button type="button"
-                                    class="btn btn-outline-danger btn-sm"
-                                    id="disableContainersBtn">
+                              <button type="button"
+                                      class="btn btn-outline-danger btn-sm"
+                                      id="disableContainersBtn"
+                                      data-recipe-id="{{ recipe.id }}">
                                 <i class="fas fa-ban me-1"></i> Disable containers for now
                             </button>
                         </div>
@@ -139,12 +142,3 @@
         </div>
     </div>
 </div>
-<script>
-// Initialize modal handlers when modal is created
-(function() {
-    const modal = document.getElementById('containerUnitMismatchDrawer');
-    if (modal && window.containerUnitMismatchDrawer) {
-        window.containerUnitMismatchDrawer.initializeModal(modal);
-    }
-})();
-</script>
