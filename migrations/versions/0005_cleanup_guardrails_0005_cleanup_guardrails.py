@@ -178,7 +178,7 @@ def downgrade():
 
         if 'recommended_fragrance_load_pct' in columns:
             # Clean non-numeric data before conversion
-            bind.execute(sa.text("""
+            bind.execute(sa.text(r"""
                 UPDATE global_item 
                 SET recommended_fragrance_load_pct = NULL 
                 WHERE recommended_fragrance_load_pct !~ '^[0-9]*\.?[0-9]+$'
@@ -211,7 +211,7 @@ def downgrade():
 
         if 'recommended_fragrance_load_pct' in inv_columns:
             # Clean non-numeric data before conversion
-            bind.execute(sa.text("""
+            bind.execute(sa.text(r"""
                 UPDATE inventory_item 
                 SET recommended_fragrance_load_pct = NULL 
                 WHERE recommended_fragrance_load_pct !~ '^[0-9]*\.?[0-9]+$'
