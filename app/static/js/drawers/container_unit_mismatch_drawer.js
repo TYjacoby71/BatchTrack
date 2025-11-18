@@ -1,4 +1,7 @@
-(function () {
+
+(function() {
+  'use strict';
+
   function isYieldForm(target) {
     return target && target.matches('#yieldFixForm');
   }
@@ -51,7 +54,7 @@
       const response = await fetch(updateUrl, {
         method: 'POST',
         headers: { Accept: 'application/json' },
-        body: new FormData(form),
+        body: new FormData(form)
       });
       const payload = await response.json();
 
@@ -67,9 +70,9 @@
             yield_amount: payload.yield_amount,
             yield_unit: payload.yield_unit,
             source: 'container_unit_mismatch',
-            refresh_plan: true,
-          },
-        }),
+            refresh_plan: true
+          }
+        })
       );
 
       setTimeout(() => {
@@ -100,9 +103,10 @@
     const recipeId = Number(btn.dataset.recipeId);
     window.dispatchEvent(
       new CustomEvent('container.requirements.disable', {
-        detail: { recipe_id: recipeId },
-      }),
+        detail: { recipe_id: recipeId }
+      })
     );
+    
     if (modal) {
       const instance = bootstrap.Modal.getInstance(modal);
       if (instance) {
