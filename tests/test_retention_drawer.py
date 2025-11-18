@@ -32,25 +32,25 @@ def test_retention_flow_ack_to_delete(client, db_session, app):
     db_session.commit()
 
     # Act: check drawer
-    r = client.get('/retention/api/check')
+    r = client.get('/api/drawers/retention/check')
     assert r.status_code == 200
     assert r.json['needs_drawer'] is True
     assert r.json['count'] >= 1
 
     # Get modal
-    r = client.get('/retention/api/modal')
+    r = client.get('/api/drawers/retention/modal')
     assert r.status_code == 200
     assert r.json['success'] is True
     assert 'Data Retention Notice' in r.json['modal_html']
 
     # Acknowledge
-    r = client.post('/retention/api/acknowledge', json={'acknowledge': True})
+    r = client.post('/api/drawers/retention/acknowledge', json={'acknowledge': True})
     assert r.status_code == 200
     assert r.json['success'] is True
     assert r.json['queued'] >= 1
 
     # Drawer should not show again now for same items
-    r = client.get('/retention/api/check')
+    r = client.get('/api/drawers/retention/check')
     assert r.status_code == 200
     assert r.json['needs_drawer'] in [False, True]  # could be more items in other tests
 
