@@ -764,7 +764,7 @@ function addIngredient(preselectId = null, presetUnit = null) {
 // Open drawers via DrawerProtocol
 function openQuickCreateInventory() {
     const detail = {
-        modal_url: '/api/drawer-actions/inventory/quick-create-modal',
+        modal_url: '/api/drawers/inventory/quick-create-modal',
         success_event: 'inventory.created',
         error_type: 'inventory',
         error_code: 'quick_create'
@@ -774,7 +774,7 @@ function openQuickCreateInventory() {
 
 function openQuickCreateUnit() {
     const detail = {
-        modal_url: '/api/drawer-actions/units/quick-create-modal',
+        modal_url: '/api/drawers/units/quick-create-modal',
         success_event: 'unit.created',
         error_type: 'units',
         error_code: 'quick_create'

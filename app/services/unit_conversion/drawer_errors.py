@@ -33,12 +33,12 @@ def handle_conversion_error(conversion_result):
                 'ingredient_name': error_data.get('ingredient_name'),
                 'from_unit': error_data.get('from_unit'),
                 'to_unit': error_data.get('to_unit'),
-                'api_endpoint': f"/api/drawer-actions/conversion/density-modal/{ingredient_id}",
+                'api_endpoint': f"/api/drawers/conversion/density-modal/{ingredient_id}",
                 'help_link': '/conversion/units'
             },
             'drawer_payload': {
                 'version': '1.0',
-                'modal_url': f"/api/drawer-actions/conversion/density-modal/{ingredient_id}",
+                'modal_url': f"/api/drawers/conversion/density-modal/{ingredient_id}",
                 'success_event': 'conversion.density.updated',
                 'error_type': 'conversion',
                 'error_code': 'MISSING_DENSITY',
@@ -60,12 +60,12 @@ def handle_conversion_error(conversion_result):
             'drawer_data': {
                 'from_unit': from_unit,
                 'to_unit': to_unit,
-                'api_endpoint': f"/api/drawer-actions/conversion/unit-mapping-modal?from_unit={from_unit}&to_unit={to_unit}",
+                'api_endpoint': f"/api/drawers/conversion/unit-mapping-modal?from_unit={from_unit}&to_unit={to_unit}",
                 'unit_manager_link': '/conversion/units'
             },
             'drawer_payload': {
                 'version': '1.0',
-                'modal_url': f"/api/drawer-actions/conversion/unit-mapping-modal?from_unit={from_unit}&to_unit={to_unit}",
+                'modal_url': f"/api/drawers/conversion/unit-mapping-modal?from_unit={from_unit}&to_unit={to_unit}",
                 'success_event': 'conversion.unit_mapping.created',
                 'error_type': 'conversion',
                 'error_code': 'MISSING_CUSTOM_MAPPING',
@@ -122,7 +122,7 @@ def generate_drawer_payload_for_conversion_error(error_code, error_data, retry_o
         ingredient_id = error_data.get('ingredient_id')
         payload = {
             'version': '1.0',
-            'modal_url': f"/api/drawer-actions/conversion/density-modal/{ingredient_id}",
+            'modal_url': f"/api/drawers/conversion/density-modal/{ingredient_id}",
             'success_event': 'conversion.density.updated',
             'error_type': 'conversion',
             'error_code': error_code,
@@ -134,7 +134,7 @@ def generate_drawer_payload_for_conversion_error(error_code, error_data, retry_o
         to_unit = error_data.get('to_unit')
         payload = {
             'version': '1.0',
-            'modal_url': f"/api/drawer-actions/conversion/unit-mapping-modal?from_unit={from_unit}&to_unit={to_unit}",
+            'modal_url': f"/api/drawers/conversion/unit-mapping-modal?from_unit={from_unit}&to_unit={to_unit}",
             'success_event': 'conversion.unit_mapping.created',
             'error_type': 'conversion',
             'error_code': error_code,
