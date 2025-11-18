@@ -1735,6 +1735,13 @@ def integrations_checklist():
     from app.services.stripe_service import StripeService
     from app.models.subscription_tier import SubscriptionTier
 
+    def _env_or_config_value(key):
+        """Read latest value from environment, falling back to Flask config snapshot."""
+        value = os.environ.get(key)
+        if value not in (None, ''):
+            return value
+        return current_app.config.get(key)
+
     # Email provider status
     email_provider = (current_app.config.get('EMAIL_PROVIDER') or 'smtp').lower()
     email_configured = EmailService.is_configured()
@@ -1746,9 +1753,9 @@ def integrations_checklist():
     }
 
     # Stripe status
-    stripe_secret = current_app.config.get('STRIPE_SECRET_KEY')
-    stripe_publishable = current_app.config.get('STRIPE_PUBLISHABLE_KEY')
-    stripe_webhook_secret = current_app.config.get('STRIPE_WEBHOOK_SECRET')
+    stripe_secret = _env_or_config_value('STRIPE_SECRET_KEY')
+    stripe_publishable = _env_or_config_value('STRIPE_PUBLISHABLE_KEY')
+    stripe_webhook_secret = _env_or_config_value('STRIPE_WEBHOOK_SECRET')
     tiers_count = SubscriptionTier.query.count()
     stripe_status = {
         'secret_key_present': bool(stripe_secret),

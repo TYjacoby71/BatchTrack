@@ -69,8 +69,10 @@
     <tbody>
       {% for gi in items %}
       <tr>
-        <td>
-          <a href="#" class="text-decoration-none js-open-global-item-stats" data-global-item-id="{{ gi.id }}">{{ gi.name }}</a>
+          <td>
+            <a href="{{ url_for('global_library_bp.global_item_detail', item_id=gi.id, slug=slugify(gi.name)) }}"
+               class="text-decoration-none js-open-global-item-stats"
+               data-global-item-id="{{ gi.id }}">{{ gi.name }}</a>
         </td>
         <td><span class="badge bg-secondary">{{ gi.item_type }}</span></td>
         <td>{{ gi.ingredient_category.name if gi.ingredient_category else '-' }}</td>

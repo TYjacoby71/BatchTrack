@@ -1,5 +1,8 @@
 
 import os
+
+from sqlalchemy import event
+
 from ..extensions import db
 from ..utils.timezone_utils import TimezoneUtils
 
@@ -86,3 +89,23 @@ class GlobalItem(db.Model):
         db.UniqueConstraint('name', 'item_type', name='_global_item_name_type_uc'),
         *([db.Index('ix_global_item_aliases_gin', db.text('(aliases::jsonb)'), postgresql_using='gin')] if _IS_PG else []),
     ])
+
+
+def _apply_metadata_defaults(target):
+    try:
+        from app.services.global_item_metadata_service import GlobalItemMetadataService
+    except Exception:
+        return
+    new_metadata = GlobalItemMetadataService.merge_metadata(target)
+    if new_metadata != (target.metadata_json or {}):
+        target.metadata_json = new_metadata
+
+
+@event.listens_for(GlobalItem, "before_insert")
+def _global_item_metadata_before_insert(mapper, connection, target):
+    _apply_metadata_defaults(target)
+
+
+@event.listens_for(GlobalItem, "before_update")
+def _global_item_metadata_before_update(mapper, connection, target):
+    _apply_metadata_defaults(target)

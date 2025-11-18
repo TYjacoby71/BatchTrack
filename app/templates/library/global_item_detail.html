@@ -1,0 +1,173 @@
+{% extends 'layout.html' %}
+
+{% block content %}
+<div class="mb-3">
+  <a href="{{ url_for('global_library_bp.global_library') }}" class="text-decoration-none text-muted">&larr; Back to Global Library</a>
+</div>
+
+<div class="row g-4">
+  <div class="col-lg-8">
+    <div class="d-flex align-items-center mb-3 flex-wrap gap-2">
+      <h1 class="mb-0">{{ item.name }}</h1>
+      <span class="badge bg-primary text-uppercase">{{ item.item_type }}</span>
+      {% if item.ingredient_category %}
+      <span class="badge bg-light text-dark border">{{ item.ingredient_category.name }}</span>
+      {% endif %}
+    </div>
+    {% if metadata.summary %}
+    <p class="lead text-muted">{{ metadata.summary }}</p>
+    {% else %}
+    <p class="lead text-muted">Authoritative specs for {{ item.name }} from the BatchTrack global inventory library.</p>
+    {% endif %}
+
+    <div class="card mb-4">
+      <div class="card-header">Core Specs</div>
+      <div class="card-body">
+        <div class="row">
+          <div class="col-md-6 mb-3">
+            <div class="text-muted text-uppercase small">Density (g/ml)</div>
+            <div class="fs-5">{{ item.density if item.density is not none else "—" }}</div>
+          </div>
+          <div class="col-md-6 mb-3">
+            <div class="text-muted text-uppercase small">Default Unit</div>
+            <div class="fs-5">{{ item.default_unit or "—" }}</div>
+          </div>
+          <div class="col-md-6 mb-3">
+            <div class="text-muted text-uppercase small">Capacity</div>
+            <div class="fs-5">
+              {% if item.capacity %}
+                {{ item.capacity }} {{ item.capacity_unit or "" }}
+              {% else %}—{% endif %}
+            </div>
+          </div>
+          <div class="col-md-6 mb-3">
+            <div class="text-muted text-uppercase small">Perishable</div>
+            <div class="fs-5">{{ "Yes" if item.default_is_perishable else "No" }}</div>
+            {% if item.recommended_shelf_life_days %}
+            <div class="small text-muted">Shelf life: {{ item.recommended_shelf_life_days }} days</div>
+            {% endif %}
+          </div>
+        </div>
+        {% if item.aliases %}
+        <div class="mt-3">
+          <div class="text-muted text-uppercase small mb-1">Also Known As</div>
+          <div class="d-flex flex-wrap gap-2">
+            {% for alias in item.aliases %}
+            <span class="badge bg-secondary bg-opacity-10 text-secondary">{{ alias }}</span>
+            {% endfor %}
+          </div>
+        </div>
+        {% endif %}
+      </div>
+    </div>
+
+    {% if metadata.use_cases %}
+    <div class="card mb-4">
+      <div class="card-header">Use Cases</div>
+      <div class="card-body">
+        <ul class="mb-0">
+          {% for use_case in metadata.use_cases %}
+          <li>{{ use_case }}</li>
+          {% endfor %}
+        </ul>
+      </div>
+    </div>
+    {% endif %}
+
+    {% if metadata.guidance %}
+    <div class="card mb-4">
+      <div class="card-header">Formulation Guidance</div>
+      <div class="card-body">
+        {{ metadata.guidance | safe }}
+      </div>
+    </div>
+    {% endif %}
+
+    {% if metadata.faqs %}
+    <div class="card mb-4">
+      <div class="card-header">FAQ</div>
+      <div class="card-body">
+        <div class="accordion" id="faqAccordion">
+          {% for faq in metadata.faqs %}
+          <div class="accordion-item">
+            <h2 class="accordion-header" id="faqHeading{{ loop.index }}">
+              <button class="accordion-button {% if not loop.first %}collapsed{% endif %}" type="button" data-bs-toggle="collapse" data-bs-target="#faqCollapse{{ loop.index }}">
+                {{ faq.question }}
+              </button>
+            </h2>
+            <div id="faqCollapse{{ loop.index }}" class="accordion-collapse collapse {% if loop.first %}show{% endif %}" data-bs-parent="#faqAccordion">
+              <div class="accordion-body">
+                {{ faq.answer | safe }}
+              </div>
+            </div>
+          </div>
+          {% endfor %}
+        </div>
+      </div>
+    </div>
+    {% endif %}
+  </div>
+
+  <div class="col-lg-4">
+    <div class="card mb-4">
+      <div class="card-header">Adoption Insights</div>
+      <div class="card-body">
+        <div class="mb-3">
+          <div class="text-muted small text-uppercase">Organizations</div>
+          <div class="fs-4">{{ rollup.organizations or 0 }}</div>
+        </div>
+        <div class="mb-3">
+          <div class="text-muted small text-uppercase">Recipes</div>
+          <div class="fs-4">{{ rollup.recipes or 0 }}</div>
+        </div>
+        <div>
+          <div class="text-muted small text-uppercase">Last Updated</div>
+          <div class="fs-6">{{ item.updated_at.strftime('%b %d, %Y') if item.updated_at else "—" }}</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card mb-4">
+      <div class="card-header">Cost Snapshot</div>
+      <div class="card-body">
+        {% if cost and cost.stats %}
+        <div class="mb-2">Median Cost: <strong>{{ cost.stats.median or "—" }}</strong></div>
+        <div class="progress" style="height: 6px;">
+          <div class="progress-bar" role="progressbar" style="width: 100%;"></div>
+        </div>
+        <div class="small text-muted mt-2">Range: {{ cost.stats.min or "—" }} – {{ cost.stats.max or "—" }}</div>
+        {% else %}
+        <p class="text-muted mb-0">Add supplier data to unlock cost benchmarking.</p>
+        {% endif %}
+      </div>
+    </div>
+
+    <div class="card mb-4">
+      <div class="card-header">Get Full Access</div>
+      <div class="card-body">
+        <p class="text-muted">Save {{ item.name }} to recipes, attach suppliers, and sync inventory across your team.</p>
+        <a class="btn btn-primary w-100 mb-2" href="{{ url_for('auth.signup') }}">Start Free Trial</a>
+        <a class="btn btn-outline-secondary w-100" href="{{ url_for('auth.login') }}">Log In</a>
+      </div>
+    </div>
+
+    {% if related_items %}
+    <div class="card">
+      <div class="card-header">Related Items</div>
+      <div class="list-group list-group-flush">
+        {% for rel in related_items %}
+        <a class="list-group-item list-group-item-action" href="{{ url_for('global_library_bp.global_item_detail', item_id=rel.id, slug=slugify(rel.name)) }}">
+          {{ rel.name }}
+          <div class="small text-muted">{{ rel.item_type }}</div>
+        </a>
+        {% endfor %}
+      </div>
+    </div>
+    {% endif %}
+  </div>
+</div>
+
+<script type="application/ld+json">
+{{ structured_data | safe }}
+</script>
+{% endblock %}
