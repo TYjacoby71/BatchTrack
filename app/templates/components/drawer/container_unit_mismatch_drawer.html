@@ -147,22 +147,35 @@
 console.log('🔧 CONTAINER DRAWER: Modal script executing');
 console.log('🔧 CONTAINER DRAWER: Checking for containerUnitMismatchDrawer global');
 
-// Wait a moment for the drawer script to be fully loaded and executed
-setTimeout(() => {
+// Function to safely initialize the drawer
+function safeInitializeDrawer(attempts = 0) {
+    const maxAttempts = 10;
+    
     if (window.containerUnitMismatchDrawer && typeof window.containerUnitMismatchDrawer.initializeModal === 'function') {
         console.log('🔧 CONTAINER DRAWER: initializeModal function found, calling it');
-        window.containerUnitMismatchDrawer.initializeModal();
-    } else {
-        console.warn('🔧 CONTAINER DRAWER: initializeModal function not found on window.containerUnitMismatchDrawer');
+        try {
+            window.containerUnitMismatchDrawer.initializeModal();
+        } catch (error) {
+            console.error('🔧 CONTAINER DRAWER: Error calling initializeModal:', error);
+        }
+    } else if (attempts < maxAttempts) {
+        console.log('🔧 CONTAINER DRAWER: Waiting for drawer script... attempt', attempts + 1);
         console.log('🔧 CONTAINER DRAWER: window.containerUnitMismatchDrawer =', window.containerUnitMismatchDrawer);
-        
-        // Try to initialize it anyway in case it's just a timing issue
-        if (window.containerUnitMismatchDrawer) {
-            console.log('🔧 CONTAINER DRAWER: Attempting to create initializeModal function');
+        setTimeout(() => safeInitializeDrawer(attempts + 1), 50);
+    } else {
+        console.warn('🔧 CONTAINER DRAWER: Max attempts reached, drawer may not initialize properly');
+        // Create a fallback function
+        if (!window.containerUnitMismatchDrawer) {
+            window.containerUnitMismatchDrawer = {};
+        }
+        if (typeof window.containerUnitMismatchDrawer.initializeModal !== 'function') {
             window.containerUnitMismatchDrawer.initializeModal = function() {
                 console.log('🔧 CONTAINER DRAWER: Fallback initializeModal called');
             };
         }
     }
-}, 100);
+}
+
+// Start the safe initialization
+safeInitializeDrawer();
 </script>

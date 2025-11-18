@@ -131,10 +131,9 @@
   }
 
   // Expose functions globally for DrawerProtocol
-  if (!window.containerUnitMismatchDrawer) {
-    window.containerUnitMismatchDrawer = {};
-  }
-  window.containerUnitMismatchDrawer.initializeModal = initializeModal;
+  window.containerUnitMismatchDrawer = {
+    initializeModal: initializeModal
+  };
   
   console.log('🔧 CONTAINER DRAWER JS: Functions exposed to window.containerUnitMismatchDrawer', window.containerUnitMismatchDrawer);
 
