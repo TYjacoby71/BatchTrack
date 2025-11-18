@@ -1,10 +1,12 @@
 from flask import Blueprint, render_template
+from flask_login import login_required
 
 help_bp = Blueprint("help_routes", __name__)
 
 
 @help_bp.route("/help")
 @help_bp.route("/help/how-it-works")
+@login_required
 def help_overview():
     sections = [
         {
@@ -309,6 +311,7 @@ def help_overview():
 
 
 @help_bp.route("/help/system-faq")
+@login_required
 def help_faq():
     faqs = [
         {

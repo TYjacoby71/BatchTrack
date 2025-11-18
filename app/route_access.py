@@ -62,8 +62,6 @@ class RouteAccessConfig:
         'public_api_bp.public_global_item_search',
         'global_library_bp.global_library',
         'global_library_bp.global_item_detail',
-          'help_routes.help_overview',
-          'help_routes.help_faq',
         
         # Waitlist signup (for unauthenticated users)
         'waitlist.join_waitlist',
@@ -79,7 +77,6 @@ class RouteAccessConfig:
         '/tools',              # Public calculator tools
         '/exports/tool',       # Public export previews
         '/api/public',         # Public API namespace
-          '/help',
     ]
     
     # ============================================================================

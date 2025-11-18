@@ -151,9 +151,11 @@
                     <li class="nav-item">
                         <a class="nav-link" href="#about">About</a>
                     </li>
+                      {% if current_user.is_authenticated %}
                       <li class="nav-item">
                           <a class="nav-link" href="{{ url_for('help_routes.help_overview') }}">Help</a>
                       </li>
+                      {% endif %}
                     <li class="nav-item">
                         <a class="nav-link" href="#contact">Contact</a>
                     </li>
