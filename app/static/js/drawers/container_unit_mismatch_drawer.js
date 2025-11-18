@@ -24,6 +24,23 @@
     }
   }
 
+  function resolveCsrfToken(form) {
+    if (!form) {
+      return (
+        (typeof window !== 'undefined' && typeof window.getCSRFToken === 'function' && window.getCSRFToken()) ||
+        document.querySelector('meta[name="csrf-token"]')?.content ||
+        ''
+      );
+    }
+
+    return (
+      form.querySelector('input[name="csrf_token"]')?.value ||
+      document.querySelector('meta[name="csrf-token"]')?.content ||
+      (typeof window !== 'undefined' && typeof window.getCSRFToken === 'function' && window.getCSRFToken()) ||
+      ''
+    );
+  }
+
   async function handleYieldSubmit(event) {
     if (!isYieldForm(event.target)) {
       return;
@@ -37,6 +54,7 @@
     const successAlert = modal?.querySelector('#yieldFixSuccess');
     const errorAlert = modal?.querySelector('#yieldFixError');
     const updateUrl = form.dataset.updateUrl;
+    const csrfToken = resolveCsrfToken(form);
 
     if (!updateUrl) {
       console.warn('Container drawer missing update URL');
@@ -55,10 +73,21 @@
     try {
       const response = await fetch(updateUrl, {
         method: 'POST',
-        headers: { Accept: 'application/json' },
+        credentials: 'same-origin',
+        headers: {
+          Accept: 'application/json',
+          ...(csrfToken ? { 'X-CSRFToken': csrfToken } : {}),
+        },
         body: new FormData(form)
       });
-      const payload = await response.json();
+      const rawBody = await response.text();
+      let payload;
+      try {
+        payload = rawBody ? JSON.parse(rawBody) : {};
+      } catch (parseError) {
+        console.error('Container drawer: non-JSON response received', parseError, rawBody);
+        throw new Error('Server returned an unexpected response while saving. Please refresh and try again.');
+      }
 
       if (!response.ok || !payload.success) {
         throw new Error(payload.error || 'Failed to update recipe yield');
