@@ -4,6 +4,7 @@ import os
 from flask import current_app
 from datetime import datetime, timedelta, timezone
 from decimal import Decimal
+from stripe import error as stripe_error
 from app.extensions import db
 from app.models.stripe_event import StripeEvent
 from app.models.subscription_tier import SubscriptionTier
@@ -362,30 +363,37 @@ class StripeService:
         if not tier_obj.stripe_lookup_key:
             return None
 
+        price_obj = None
         try:
-            # Use lookup_key to find the price - this is the industry standard
-            prices = stripe.Price.list(
-                lookup_keys=[tier_obj.stripe_lookup_key],
-                active=True,
-                limit=1
+            price_obj, resolution_strategy = StripeService._resolve_price_for_lookup_key(
+                tier_obj.stripe_lookup_key
             )
 
-            if not prices.data:
-                logger.warning(f"No active Stripe price found for lookup key: {tier_obj.stripe_lookup_key}")
+            if not price_obj:
+                logger.warning(
+                    "No active Stripe price found for lookup key %s; ensure the price exists and is active",
+                    tier_obj.stripe_lookup_key,
+                )
                 return None
 
-            price = prices.data[0]
-
             # Format pricing data
-            amount = price.unit_amount / 100
-            currency = price.currency.upper()
+            amount = price_obj.unit_amount / 100
+            currency = price_obj.currency.upper()
 
             billing_cycle = 'one-time'
-            if price.recurring:
-                billing_cycle = 'yearly' if price.recurring.interval == 'year' else 'monthly'
+            if price_obj.recurring:
+                billing_cycle = 'yearly' if price_obj.recurring.interval == 'year' else 'monthly'
+
+            if resolution_strategy != 'lookup_key':
+                logger.info(
+                    "Resolved Stripe price %s for lookup key %s using %s fallback",
+                    price_obj.id,
+                    tier_obj.stripe_lookup_key,
+                    resolution_strategy,
+                )
 
             return {
-                'price_id': price.id,
+                'price_id': price_obj.id,
                 'amount': amount,
                 'formatted_price': f'${amount:.0f}',
                 'currency': currency,
@@ -394,25 +402,66 @@ class StripeService:
                 'last_synced': datetime.now(timezone.utc).isoformat()
             }
 
-        except stripe.error.StripeError as e:
+        except stripe_error.StripeError as e:
             logger.error(f"Stripe error fetching price for {tier_obj.stripe_lookup_key}: {e}")
             return None
         finally:
             # Cache successful lookups
             try:
-                if 'price' in locals():
+                if price_obj:
                     data = {
-                        'price_id': price.id,
-                        'amount': price.unit_amount / 100,
-                        'formatted_price': f"${price.unit_amount / 100:.0f}",
-                        'currency': price.currency.upper(),
-                        'billing_cycle': 'yearly' if getattr(price, 'recurring', None) and price.recurring.interval == 'year' else ('monthly' if getattr(price, 'recurring', None) and price.recurring.interval == 'month' else 'one-time'),
+                        'price_id': price_obj.id,
+                        'amount': price_obj.unit_amount / 100,
+                        'formatted_price': f"${price_obj.unit_amount / 100:.0f}",
+                        'currency': price_obj.currency.upper(),
+                        'billing_cycle': 'yearly' if getattr(price_obj, 'recurring', None) and price_obj.recurring.interval == 'year' else ('monthly' if getattr(price_obj, 'recurring', None) and price_obj.recurring.interval == 'month' else 'one-time'),
                         'lookup_key': tier_obj.stripe_lookup_key,
                         'last_synced': datetime.now(timezone.utc).isoformat()
                     }
                     StripeService._pricing_cache[cache_key] = {'ts': datetime.now(timezone.utc), 'data': data}
             except Exception:
                 pass
+    
+    @staticmethod
+    def _resolve_price_for_lookup_key(lookup_key: str):
+        """
+        Attempt to resolve a Stripe price for the given lookup key.
+        Returns a tuple of (price_object, resolution_strategy).
+        """
+        price_obj = None
+        strategy = 'lookup_key'
+
+        try:
+            price_list = stripe.Price.list(
+                lookup_keys=[lookup_key],
+                active=True,
+                limit=1
+            )
+
+            if price_list.data:
+                return price_list.data[0], strategy
+
+            logger.warning(
+                "Stripe lookup by lookup_key failed for %s; attempting to treat it as a price ID",
+                lookup_key,
+            )
+
+            if lookup_key.startswith('price_'):
+                strategy = 'price_id_fallback'
+                price_obj = stripe.Price.retrieve(lookup_key)
+                if getattr(price_obj, 'active', False):
+                    return price_obj, strategy
+                logger.warning(
+                    "Stripe price %s retrieved via fallback is not active",
+                    lookup_key,
+                )
+                return None, strategy
+
+            return None, 'lookup_key'
+
+        except stripe_error.StripeError:
+            # Propagate to caller for centralized logging/handling
+            raise
 
     @staticmethod
     def create_checkout_session_for_tier(
@@ -455,7 +504,6 @@ class StripeService:
                 billing_address_collection='auto',
                 phone_number_collection={'enabled': phone_required},
                 allow_promotion_codes=allow_promo,
-                customer_creation='always',
                 metadata={
                     'tier_id': str(tier_obj.id),
                     'tier_name': tier_obj.name,
@@ -473,7 +521,7 @@ class StripeService:
             )
             return session
 
-        except stripe.error.StripeError as e:
+        except stripe_error.StripeError as e:
             logger.error(
                 "Failed to create checkout session for tier %s (ID: %s): %s",
                 tier_obj.name,
@@ -522,7 +570,7 @@ class StripeService:
                 logger.info(f"Synced tier {tier_obj.name} (ID: {tier_obj.id}) with Stripe product {product.name}")
                 return True
 
-        except stripe.error.StripeError as e:
+        except stripe_error.StripeError as e:
             logger.error(f"Error syncing product from Stripe: {e}")
             return False
 
@@ -604,7 +652,7 @@ class StripeService:
             )
             return session
 
-        except stripe.error.StripeError as e:
+        except stripe_error.StripeError as e:
             logger.error(f"Failed to create portal session: {e}")
             return None
 
