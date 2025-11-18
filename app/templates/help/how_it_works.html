@@ -73,10 +73,19 @@
             <div class="row g-3">
               {% for label in section.gallery %}
               <div class="col-md-6">
+                {% set image_name = section.slug ~ '-' ~ loop.index ~ '.png' %}
+                {% set image_path = 'images/help/' ~ section.slug ~ '/' ~ image_name %}
+                {% if image_path|static_file_exists %}
+                <div class="placeholder-image-slot h-100">
+                  <img src="{{ url_for('static', filename=image_path) }}" class="img-fluid rounded mb-2" alt="{{ label }}">
+                  <p class="small text-muted mb-0">{{ label }}</p>
+                </div>
+                {% else %}
                 <div class="border rounded p-3 h-100 placeholder-image-slot">
                   <strong>{{ label }}</strong>
-                  <p class="small text-muted mb-0">Recommended filename: <code>{{ section.slug }}-{{ loop.index }}.png</code></p>
+                  <p class="small text-muted mb-0">Add <code>{{ image_name }}</code> under <code>static/{{ image_path }}</code></p>
                 </div>
+                {% endif %}
               </div>
               {% endfor %}
             </div>

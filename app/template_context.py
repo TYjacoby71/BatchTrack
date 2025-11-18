@@ -224,3 +224,14 @@ def register_template_context(app):
     app.jinja_env.globals.update({
         'get_global_unit_list': get_global_unit_list
     })
+
+
+@app.template_filter("static_file_exists")
+def static_file_exists_filter(relative_path: str) -> bool:
+    """Check whether a file exists inside the static folder."""
+    try:
+        from pathlib import Path
+        static_folder = Path(app.static_folder or "static")
+        return (static_folder / relative_path).exists()
+    except Exception:
+        return False
