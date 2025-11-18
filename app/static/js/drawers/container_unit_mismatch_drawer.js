@@ -130,12 +130,12 @@
     document.body.addEventListener('click', handleDisableClick);
   }
 
-  // Expose functions globally for DrawerProtocol
-  window.containerUnitMismatchDrawer = {
-    initializeModal: initializeModal
-  };
+  // Expose functions globally for DrawerProtocol - assign after function declarations
+  window.containerUnitMismatchDrawer = window.containerUnitMismatchDrawer || {};
+  window.containerUnitMismatchDrawer.initializeModal = initializeModal;
   
   console.log('🔧 CONTAINER DRAWER JS: Functions exposed to window.containerUnitMismatchDrawer', window.containerUnitMismatchDrawer);
+  console.log('🔧 CONTAINER DRAWER JS: initializeModal type:', typeof window.containerUnitMismatchDrawer.initializeModal);
 
   console.log('🔧 CONTAINER DRAWER JS: Setting up initialization, readyState:', document.readyState);
   
