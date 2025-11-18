@@ -48,7 +48,6 @@
             margin: -1px !important;
             padding: 0 !important;
         }
-
         .app-container {
             max-width: 1200px; /* Adjust as needed */
             margin: 0 auto;
@@ -63,7 +62,6 @@
                 BatchTrack 1.0
             </a>
             {% if current_user.is_authenticated %}
-
             {% if current_user.user_type == 'developer' %}
             <!-- Developer Navigation -->
             <div class="navbar-nav me-auto">
@@ -78,7 +76,6 @@
                     {% endif %}
                 </span>
             </div>
-
             <!-- Show both menus when developer is viewing an organization -->
             {% if session.get('dev_selected_org_id') %}
             <!-- Customer Menu (when developer is viewing as customer) -->
@@ -101,18 +98,14 @@
                 <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="customerDropdown">
                     <!-- User Dashboard -->
                     <li><a class="dropdown-item" href="{{ url_for('app_routes.dashboard') }}">User Dashboard</a></li>
-
                     <li><hr class="dropdown-divider"></li>
-
                     <!-- Core Features -->
                     <li><h6 class="dropdown-header">Core Features</h6></li>
                     <li><a class="dropdown-item" href="{{ url_for('inventory.list_inventory') }}">Inventory</a></li>
                     <li><a class="dropdown-item" href="{{ url_for('recipes.list_recipes') }}">Recipes</a></li>
                     <li><a class="dropdown-item" href="{{ url_for('batches.list_batches') }}">Batches</a></li>
                     <li><a class="dropdown-item" href="{{ url_for('products.list_products') }}">Products</a></li>
-
                     <li><hr class="dropdown-divider"></li>
-
                     <!-- Production Tools -->
                     <li><h6 class="dropdown-header">Production Tools</h6></li>
                     <li>
@@ -124,27 +117,20 @@
                     <li><a class="dropdown-item" href="{{ url_for('timers.list_timers') }}">Timers</a></li>
                     <li><a class="dropdown-item" href="{{ url_for('reservation.list_reservations') }}">Reservations</a></li>
                     <li><a class="dropdown-item" href="{{ url_for('bulk_stock.bulk_stock_check') }}">Bulk Stock Check</a></li>
-
                     <li><hr class="dropdown-divider"></li>
-
                     <!-- Resources -->
                     <li><h6 class="dropdown-header">Resources</h6></li>
                     <li><a class="dropdown-item" href="{{ url_for('global_library_bp.global_library') }}">Global Inventory Library</a></li>
-
                     <li><hr class="dropdown-divider"></li>
-
                     <!-- Admin -->
                     <li><h6 class="dropdown-header">Admin</h6></li>
                     <li><a class="dropdown-item" href="{{ url_for('organization.dashboard') }}">Organization Dashboard</a></li>
                     <li><a class="dropdown-item" href="{{ url_for('settings.index') }}">Settings</a></li>
-
                     <li><hr class="dropdown-divider"></li>
-
                     <li><a class="dropdown-item" href="{{ url_for('auth.logout') }}">Logout</a></li>
                 </ul>
             </div>
             {% endif %}
-
             <!-- Developer Menu (always available) -->
             <div class="dropdown ms-auto">
                 <button class="btn btn-danger dropdown-toggle" type="button" id="devDropdown" data-bs-toggle="dropdown" aria-expanded="false">
@@ -155,9 +141,7 @@
                     <li><a class="dropdown-item" href="{{ url_for('developer.dashboard') }}">
                         <i class="fas fa-tachometer-alt"></i> Developer Dashboard
                     </a></li>
-
                     <li><hr class="dropdown-divider"></li>
-
                     <!-- Organization Management -->
                     <li><h6 class="dropdown-header">Organization Management</h6></li>
                     <li><a class="dropdown-item" href="{{ url_for('developer.create_organization') }}">
@@ -175,9 +159,7 @@
                     <li><a class="dropdown-item" href="{{ url_for('auth.manage_permissions') }}">
                         <i class="fas fa-key"></i> Permissions
                     </a></li>
-
                     <li><hr class="dropdown-divider"></li>
-
                     <!-- Global Library -->
                     <li><h6 class="dropdown-header">Global Library</h6></li>
                     <li><a class="dropdown-item" href="{{ url_for('developer.global_items_admin') }}">
@@ -192,9 +174,7 @@
                     <li><a class="dropdown-item" href="{{ url_for('developer.container_management') }}">
                         <i class="fas fa-box-open"></i> Container Management
                     </a></li>
-
                     <li><hr class="dropdown-divider"></li>
-
                     <!-- Analytics -->
                     <li><h6 class="dropdown-header">Analytics</h6></li>
                     <li><a class="dropdown-item" href="{{ url_for('developer.analytics_catalog') }}">
@@ -206,9 +186,7 @@
                     <li><a class="dropdown-item" href="{{ url_for('developer.system_statistics') }}">
                         <i class="fas fa-chart-bar"></i> System Statistics
                     </a></li>
-
                     <li><hr class="dropdown-divider"></li>
-
                     <!-- Billing -->
                     <li><h6 class="dropdown-header">Billing</h6></li>
                     <li><a class="dropdown-item" href="{{ url_for('developer.subscription_tiers.manage_tiers') }}">
@@ -220,9 +198,7 @@
                     <li><a class="dropdown-item" href="{{ url_for('developer.billing_integration') }}">
                         <i class="fas fa-credit-card"></i> Billing Integration
                     </a></li>
-
                     <li><hr class="dropdown-divider"></li>
-
                     <!-- Marketing -->
                     <li><h6 class="dropdown-header">Marketing</h6></li>
                     <li><a class="dropdown-item" href="{{ url_for('developer.marketing_admin') }}">
@@ -231,9 +207,7 @@
                     <li><a class="dropdown-item" href="{{ url_for('developer.waitlist_statistics') }}">
                         <i class="fas fa-envelope"></i> Waitlist
                     </a></li>
-
                     <li><hr class="dropdown-divider"></li>
-
                     <!-- Customer Support -->
                     <li><h6 class="dropdown-header">Customer Support</h6></li>
                     <li><a class="dropdown-item" href="{{ url_for('developer.organizations') }}">
@@ -247,9 +221,7 @@
                         <i class="fas fa-times"></i> Clear Customer Filter
                     </a></li>
                     {% endif %}
-
                     <li><hr class="dropdown-divider"></li>
-
                     <!-- System -->
                     <li><h6 class="dropdown-header">System</h6></li>
                     <li><a class="dropdown-item" href="{{ url_for('developer.integrations_checklist') }}">
@@ -258,14 +230,12 @@
                     <li><a class="dropdown-item" href="{{ url_for('developer.feature_flags') }}">
                         <i class="fas fa-toggle-on"></i> Feature Flags
                     </a></li>
-
                     <li><hr class="dropdown-divider"></li>
                     <li><a class="dropdown-item" href="{{ url_for('auth.logout') }}">
                         <i class="fas fa-sign-out-alt"></i> Logout
                     </a></li>
                 </ul>
             </div>
-
             {% else %}
             <!-- Customer Navigation -->
             <div class="navbar-nav me-auto">
@@ -294,9 +264,7 @@
                 <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="directoryDropdown">
                     <!-- User Dashboard -->
                     <li><a class="dropdown-item" href="{{ url_for('app_routes.dashboard') }}">User Dashboard</a></li>
-
                     <li><hr class="dropdown-divider"></li>
-
                     <!-- Core Features -->
                     <li><h6 class="dropdown-header">Core Features</h6></li>
                     {% if current_user.is_authenticated and has_permission(current_user, 'inventory.view') %}
@@ -311,9 +279,7 @@
                     {% if current_user.is_authenticated and has_permission(current_user, 'products.view') %}
                     <li><a class="dropdown-item" href="{{ url_for('products.list_products') }}">Products</a></li>
                     {% endif %}
-
                     <li><hr class="dropdown-divider"></li>
-
                     <!-- Production Tools -->
                     <li><h6 class="dropdown-header">Production Tools</h6></li>
                     <li>
@@ -331,15 +297,11 @@
                     {% if current_user.is_authenticated and has_permission(current_user, 'products.view') %}
                     <li><a class="dropdown-item" href="{{ url_for('bulk_stock.bulk_stock_check') }}">Bulk Stock Check</a></li>
                     {% endif %}
-
                     <li><hr class="dropdown-divider"></li>
-
                     <!-- Resources -->
                     <li><h6 class="dropdown-header">Resources</h6></li>
                     <li><a class="dropdown-item" href="{{ url_for('global_library_bp.global_library') }}">Global Inventory Library</a></li>
-
                     <li><hr class="dropdown-divider"></li>
-
                     <!-- Admin -->
                     <li><h6 class="dropdown-header">Admin</h6></li>
                     {% if current_user.is_authenticated and has_permission(current_user, 'organization.view') %}
@@ -350,18 +312,14 @@
                     {% if current_user.is_authenticated %}
                     <li><a class="dropdown-item" href="{{ url_for('settings.index') }}">Settings</a></li>
                     {% endif %}
-
                     <li><hr class="dropdown-divider"></li>
-
                     <li><a class="dropdown-item" href="{{ url_for('auth.logout') }}">Logout</a></li>
                 </ul>
             </div>
             {% endif %}
-
             {% endif %}
         </div>
     </nav>
-
     <main class="container-xl mt-4">
         <div class="section-spacing">
             {% if breadcrumb_items is defined and breadcrumb_items %}
@@ -383,17 +341,13 @@
                         <div class="alert alert-info">{{ message }}</div>
                     {% endfor %}
                 {% endif %}
-
             {% endwith %}
-
             {% set TimezoneUtils = TimezoneUtils_global() %}
             {% block content %}{% endblock %}
         </div>
     </main>
-
     {% include 'components/shared/unit_converter_modal.html' %}
     </div>
-
     <footer class="bg-light text-center text-muted py-3 mt-5">
             <div class="container">
                 <div class="row">
@@ -408,7 +362,6 @@
                 </div>
             </div>
         </footer>
-
     <!-- jQuery -->
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <!-- Select2 -->
@@ -439,7 +392,6 @@
                 clockElement.textContent = `🕐 ${now.toLocaleTimeString()}`;
             }
         }
-
         // Update clock every second and start immediately
         setInterval(updateClock, 1000);
         updateClock();

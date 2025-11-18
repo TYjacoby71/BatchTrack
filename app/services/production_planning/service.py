@@ -81,4 +81,3 @@ class PlanProductionService:
             requires_containers=bool(len(container_selection) > 0),
             category_extension=category_extension
         )
-

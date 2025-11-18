@@ -61,7 +61,7 @@
                                     <div class="form-text">How many days before deletion to start notifying users.</div>
                                 </div>
 
-                                
+
                             </div>
 
                             <div class="col-md-6">
@@ -105,7 +105,7 @@
                                     <div class="form-text">Must match a Stripe price lookup key</div>
                                 </div>
 
-                                
+
 
                                 <div id="whop_fields" class="mb-3" style="display: none;">
                                     <label for="whop_product_key" class="form-label">Whop Product Key *</label>
@@ -171,6 +171,39 @@
                             <div class="form-text">These add-ons are granted on this tier without purchase.</div>
                         </div>
 
+                        <div class="row">
+                                    <div class="col-md-6">
+                                        <div class="mb-3">
+                                            <label for="max_recipes" class="form-label">Max Recipes (Total)</label>
+                                            <input type="number" class="form-control" id="max_recipes" name="max_recipes" placeholder="Enter number or -1 for unlimited" min="-1">
+                                            <div class="form-text">Total recipes allowed. Use -1 for unlimited.</div>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="mb-3">
+                                            <label for="max_products" class="form-label">Max Products (Total)</label>
+                                            <input type="number" class="form-control" id="max_products" name="max_products" placeholder="Enter number or -1 for unlimited" min="-1">
+                                            <div class="form-text">Total products allowed. Use -1 for unlimited.</div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <div class="mb-3">
+                                            <label for="max_batchbot_requests" class="form-label">Max BatchBot Requests (Monthly)</label>
+                                            <input type="number" class="form-control" id="max_batchbot_requests" name="max_batchbot_requests" placeholder="Enter number or -1 for unlimited" min="-1">
+                                            <div class="form-text">AI requests per month. Use -1 for unlimited.</div>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="mb-3">
+                                            <label for="max_monthly_batches" class="form-label">Max Monthly Batches</label>
+                                            <input type="number" class="form-control" id="max_monthly_batches" name="max_monthly_batches" placeholder="Enter number or -1 for unlimited" min="-1">
+                                            <div class="form-text">Batches per month. Use -1 for unlimited.</div>
+                                        </div>
+                                    </div>
+                                </div>
+
                         <div class="d-flex gap-2">
                             <button type="submit" class="btn btn-primary">Create Tier</button>
                             <a href="{{ url_for('developer.subscription_tiers.manage_tiers') }}" class="btn btn-secondary">Cancel</a>
@@ -188,12 +221,12 @@ function toggleBillingFields() {
     const isExempt = document.getElementById('is_billing_exempt').checked;
 
     const stripeFields = document.getElementById('stripe_fields');
-    
+
     const whopFields = document.getElementById('whop_fields');
 
     // Hide all fields by default
     stripeFields.style.display = 'none';
-    
+
     whopFields.style.display = 'none';
 
     // Show relevant fields if not exempt
