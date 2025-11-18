@@ -15,6 +15,10 @@ def help_overview():
                 "Provision your workspace (install deps, migrate, seed) so every teammate sees the same baseline data.",
                 "Set up organizations, roles, and permissions so each user only sees what their subscription tier allows.",
             ],
+            "gallery": [
+                "Screenshot: Blank dashboard with Add Inventory / Add Recipe CTAs",
+                "Screenshot: Provisioning checklist or CLI output after seeding",
+            ],
         },
         {
             "slug": "inventory",
@@ -23,6 +27,11 @@ def help_overview():
                 "Use the global drawer when adding inventory to keep identity data clean—global items are curated, org items stay editable.",
                 "From the inventory list you can quick-adjust, open the modal for stats/history/lots, or edit to recount and recast.",
                 "Assign custom densities, categories, and ownership when needed; every restock/deduction routes through the Inventory Adjustment Service.",
+            ],
+            "gallery": [
+                "Screenshot: Inventory quick-add drawer highlighting global suggestions",
+                "Screenshot: Inventory list modal showing stats/history/lots tabs",
+                "Screenshot: Inventory edit form with recount/recast controls",
             ],
         },
         {
@@ -33,6 +42,10 @@ def help_overview():
                 "Understand bulk vs portioned yields—bulk is container-defined (lotions, candles), portioned is self-defined (bars of soap).",
                 "Clone and unlock recipes to manage variations without rebuilding everything from scratch.",
             ],
+            "gallery": [
+                "Screenshot: Recipe form highlighting ingredients/consumables/containers tabs",
+                "Screenshot: Variation list showing clones vs parents",
+            ],
         },
         {
             "slug": "planning",
@@ -41,6 +54,12 @@ def help_overview():
                 "Plan Production builds an immutable PlanSnapshot, including intermediate components and target SKUs.",
                 "Container auto-selection converts projected yield into vessel capacity; you can override it manually at any time.",
                 "Batch screens track timers, extras, notes, costing, and the finish/cancel/fail workflows that control deductions.",
+            ],
+            "gallery": [
+                "Screenshot: Production Planning config card (batch type, intermediates, containers)",
+                "Screenshot: Stock check modal with drawer prompt",
+                "Screenshot: Batch in-progress page showing timers/extras",
+                "Screenshot: Finish batch modal highlighting container confirmation",
             ],
         },
         {
@@ -51,6 +70,11 @@ def help_overview():
                 "Reservations hold finished goods for wholesale/subscription orders so you never oversell.",
                 "Store external IDs (Shopify/Square) on SKUs to keep ecommerce channels in sync.",
             ],
+            "gallery": [
+                "Screenshot: Product detail with variants tab",
+                "Screenshot: SKU builder showing external ID field",
+                "Screenshot: Reservations list for a product",
+            ],
         },
         {
             "slug": "public-tools",
@@ -59,6 +83,10 @@ def help_overview():
                 "Share the /tools calculators so prospects can draft recipes before signing up.",
                 "Drafts persist through /tools/draft and prefill /recipes/new once users authenticate.",
                 "Use this page and the FAQ as the public knowledge base until the full onboarding tour ships.",
+            ],
+            "gallery": [
+                "Screenshot: Public tools landing cards",
+                "Screenshot: Draft saved modal prompting signup/login",
             ],
         },
     ]

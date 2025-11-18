@@ -54,9 +54,35 @@
           <li>{{ point }}</li>
           {% endfor %}
         </ul>
+        {% if section.gallery %}
+        <div class="card border-dashed">
+          <div class="card-body">
+            <h6 class="text-uppercase text-muted mb-2">Image Placeholders</h6>
+            <p class="small text-muted mb-3">Drop screenshots for this section into <code>/app/static/images/help/{{ section.slug }}/</code>. The final onboarding tour can render them as a slideshow.</p>
+            <div class="row g-3">
+              {% for label in section.gallery %}
+              <div class="col-md-6">
+                <div class="border rounded p-3 h-100 placeholder-image-slot">
+                  <strong>{{ label }}</strong>
+                  <p class="small text-muted mb-0">Recommended filename: <code>{{ section.slug }}-{{ loop.index }}.png</code></p>
+                </div>
+              </div>
+              {% endfor %}
+            </div>
+          </div>
+        </div>
+        {% endif %}
       </div>
       {% endfor %}
     </div>
   </div>
 </div>
+<style>
+  .border-dashed {
+    border: 2px dashed rgba(0,0,0,0.1);
+  }
+  .placeholder-image-slot {
+    background: rgba(0,0,0,0.02);
+  }
+</style>
 {% endblock %}
