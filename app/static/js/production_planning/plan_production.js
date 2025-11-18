@@ -81,7 +81,29 @@ class PlanProductionApp {
             this._updateProjectedYield();
             this._updateProjectedPortions();
 
-            if (this.requiresContainers) {
+            if (detail.refresh_plan) {
+                const requiresContainersCheckbox = document.getElementById('requiresContainers');
+                const wantsContainers = !!requiresContainersCheckbox?.checked;
+
+                if (!this.requiresContainers && wantsContainers) {
+                    this.requiresContainers = true;
+                    const card = document.getElementById('containerManagementCard');
+                    if (card) {
+                        card.style.display = 'block';
+                    }
+                }
+
+                if (this.containerManager?.planFetcher?.clearCache) {
+                    this.containerManager.planFetcher.clearCache();
+                }
+
+                if (this.requiresContainers || wantsContainers) {
+                    const fillPct = this.containerManager.getEffectiveFillPct();
+                    this.containerManager.planFetcher.fetchContainerPlan({ fill_pct: fillPct });
+                }
+
+                this._invalidateStockCheck('the recipe yield changed');
+            } else if (this.requiresContainers) {
                 const fillPct = this.containerManager.getEffectiveFillPct();
                 this.containerManager.planFetcher.fetchContainerPlan({ fill_pct: fillPct });
             }

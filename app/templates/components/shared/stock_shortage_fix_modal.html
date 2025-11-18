@@ -54,7 +54,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 return;
             }
             
-            fetch(`/api/drawer-actions/inventory/quick-restock/{{ item.id }}`, {
+            fetch(`/api/drawers/inventory/quick-restock/{{ item.id }}`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
