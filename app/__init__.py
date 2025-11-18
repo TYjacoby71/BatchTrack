@@ -41,18 +41,24 @@ def create_app(config=None):
     # SQLite engine options for tests/memory databases
     _configure_sqlite_engine_options(app)
 
+    # Ensure core environment-driven settings land in Flask config
+    redis_url_env = os.environ.get("REDIS_URL")
+    if redis_url_env and not app.config.get("REDIS_URL"):
+        app.config["REDIS_URL"] = redis_url_env
+
     # Initialize extensions
     db.init_app(app)
     migrate.init_app(app, db)
     csrf.init_app(app)
 
     # Configure cache (Redis in production, simple in development)
+    redis_url = app.config.get('REDIS_URL')
     cache_config = {
-        'CACHE_TYPE': 'RedisCache' if app.config.get('REDIS_URL') else 'SimpleCache',
+        'CACHE_TYPE': 'RedisCache' if redis_url else 'SimpleCache',
         'CACHE_DEFAULT_TIMEOUT': 300,
     }
-    if app.config.get('REDIS_URL'):
-        cache_config['CACHE_REDIS_URL'] = app.config['REDIS_URL']
+    if redis_url:
+        cache_config['CACHE_REDIS_URL'] = redis_url
 
     cache.init_app(app, config=cache_config)
     if app.config.get('ENV') == 'production' and cache_config.get('CACHE_TYPE') != 'RedisCache':
@@ -63,11 +69,11 @@ def create_app(config=None):
     # Configure server-side sessions
     session_backend = None
     session_redis = None
-    redis_url = app.config.get('REDIS_URL')
-    if redis_url:
+    session_redis_url = app.config.get('REDIS_URL')
+    if session_redis_url:
         try:
             import redis  # type: ignore
-            session_redis = redis.Redis.from_url(redis_url)
+            session_redis = redis.Redis.from_url(session_redis_url)
             session_backend = 'redis'
         except Exception as exc:
             logger.warning("Failed to initialize Redis-backed session store (%s); falling back to filesystem.", exc)
