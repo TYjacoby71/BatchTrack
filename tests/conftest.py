@@ -28,18 +28,19 @@ def app():
         # Don't disable login - we need to test permissions properly
     })
 
-    try:
-        with app.app_context():
-            db.drop_all()
-            db.create_all()
-            _create_test_data()
+    with app.app_context():
+        db.drop_all()
+        db.create_all()
 
-        yield app
-    finally:
-        with app.app_context():
-            db.drop_all()
-        os.close(db_fd)
-        os.unlink(db_path)
+        _create_test_data()
+
+    yield app
+
+        db.drop_all()
+
+
+    os.close(db_fd)
+    os.unlink(db_path)
 
 
 @pytest.fixture

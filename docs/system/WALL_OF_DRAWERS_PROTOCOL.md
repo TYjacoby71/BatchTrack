@@ -53,16 +53,14 @@ def build_drawer_payload(modal_url: str, *, error_type: str, error_code: str, su
 ## Frontend Flow
 
 - `app/static/js/core/DrawerInterceptor.js` wraps `window.fetch`, extracts `drawer_payload`, dispatches `openDrawer`.
-- `app/static/js/core/DrawerProtocol.js` listens for `openDrawer` and:
-  - stores retry callbacks/operations keyed by event + correlation id
-  - redirects or fetches modal HTML
-  - injects the HTML into a `.drawer-wrapper`, executing inline scripts
-  - listens for `success_event`, runs the retry, cleans up the modal
-  - emits `drawer.analytics` events for observability
-- `app/static/js/drawers/drawer_cadence.js` proactively calls `/api/drawers/check` to surface cadence-based drawers (retention, global link, etc.) without bespoke pollers.
-- Drawer-specific helpers live under `app/static/js/drawers/` when a modal needs extra behavior (e.g., `container_unit_mismatch_drawer.js`).
+- `app/static/js/core/DrawerProtocol.js` handles `openDrawer`:
+  - stores retry callback or operation
+  - redirects or fetches modal HTML from `modal_url`
+  - injects HTML, initializes Bootstrap modal
+  - listens for `success_event`, executes retry, cleans up
+  - enforces a11y baseline (focus trap, escape to close) via Bootstrap; modals must include labels/roles
 
-Example modal template: `app/templates/components/drawer/container_unit_mismatch_drawer.html`
+Example modal: `app/templates/components/drawer/density_fix_modal.html`
 
 ### Common success events
 
@@ -76,20 +74,15 @@ Use a specific, namespaced event per drawer so `DrawerProtocol` can bind and ret
 
 ### File Locations & Conventions
 
-- **Frontend core**
-  - Interceptor: `app/static/js/core/DrawerInterceptor.js`
-  - Protocol: `app/static/js/core/DrawerProtocol.js`
-  - Cadence poller: `app/static/js/drawers/drawer_cadence.js`
-  - Drawer-specific helpers: `app/static/js/drawers/*.js`
-- **Backend**
-  - Drawer API + registry: `app/blueprints/api/drawers/__init__.py`
-  - Per-drawer action modules: `app/blueprints/api/drawers/drawer_actions/*.py`
-  - Payload builder: `app/services/drawers/payloads.py`
-  - Service-level drawer logic: `<service>/drawer_errors.py`
-- **Templates**
-  - Modal HTML: `app/templates/components/drawer/*.html`
+- Frontend core
+  - Universal interceptor: `app/static/js/core/DrawerInterceptor.js`
+  - Universal protocol (listener): `app/static/js/core/DrawerProtocol.js`
+- Drawer-specific JS (optional helpers): `app/static/js/drawers/*.js` (e.g., `global_link_drawer.js`)
+- Drawer HTML templates: `app/templates/components/drawer/*.html`
+- Drawer actions API hub: `app/blueprints/api/drawer_actions.py` (prefix: `/api/drawer-actions`)
+- Service-side payload builder: `app/services/drawers/payloads.py`
 
-All core scripts are loaded globally via `app/templates/layout.html` so drawers work everywhere.
+Ensure both core JS files are loaded globally (e.g., in `app/templates/layout.html` after Bootstrap) so all pages benefit from automatic drawer handling.
 
 ## Backend Pattern
 
@@ -97,22 +90,33 @@ All core scripts are loaded globally via `app/templates/layout.html` so drawers 
 - Unit Conversion: `app/services/unit_conversion/drawer_errors.py` handles `MISSING_DENSITY`, `MISSING_CUSTOM_MAPPING`, unknown units.
 - Container Planning: `app/services/production_planning/drawer_errors.py` handles `MISSING_PRODUCT_DENSITY` (redirect).
 
-### Drawer API Blueprint & Registry
+### Drawer Actions API
 
-`app/blueprints/api/drawers/__init__.py` owns:
+Controller for serving drawer modals:
 
-- `DrawerRegistry`: keeps a catalog of drawer actions + cadence checks.
-- `/api/drawers/check`: runs registered cadence checks (`?include=x` to scope) and returns pending payloads.
-- Imports `drawer_actions/*` for side-effect registration. Each module:
-  - Registers its action metadata with `register_drawer_action`
-  - Defines the modal/submit routes under `/api/drawers/...`
-  - Optionally registers cadence checks via `register_cadence_check`
+- `app/blueprints/api/drawer_actions.py`
 
-Cadence examples:
+Minimal API usage:
 
-- Retention drawers: `/api/drawers/retention/*`
-- Global link drawers: `/api/drawers/global-link/*`
-- Containers, conversion, quick-create, etc. live under `drawer_actions/`.
+```python
+result = ConversionEngine.convert_units(...)
+if not result['success']:
+    drawer_info = handle_conversion_error(result)
+    result.update(drawer_info)
+return jsonify(result)
+```
+
+Minimal drawer actions endpoint:
+
+```python
+@drawer_actions_bp.route('/conversion/density-modal/<int:ingredient_id>')
+@login_required
+@require_permission('inventory.view')
+def conversion_density_modal_get(ingredient_id):
+    # Lookup scoped record(s), then:
+    modal_html = render_template('components/drawer/density_fix_modal.html', ingredient=ingredient)
+    return jsonify({'success': True, 'modal_html': modal_html})
+```
 
 ## Developer Do / Don't
 
@@ -124,46 +128,13 @@ Cadence examples:
 - Don't have backend call drawer endpoints; let the browser make the second request.
 - Don't duplicate drawer rules across services; keep domain expertise local.
 
-## Adding a New Drawer (Detailed Checklist)
+## Adding a New Drawer
 
-1. **Decide ownership**
-   - Pick/extend the owning service’s `drawer_errors.py`.
-   - Choose `error_type`, `error_code`, `success_event`, and retry semantics.
-
-2. **Create/extend payload mapping**
-   - Build payloads via `build_drawer_payload(...)`.
-   - Include `success_event`, `correlation_id`, and `retry` hints (either `retry` or legacy `retry_operation` + `retry_data`).
-
-3. **Return payloads from service/controller**
-   - On user-fixable errors, attach `drawer_payload` at the top level (or inside `data.drawer_payload` for nested APIs).
-   - Log when payloads are emitted for traceability.
-
-4. **Register drawer action**
-   - Add a new module under `app/blueprints/api/drawers/drawer_actions/`.
-   - Call `register_drawer_action('feature.case', endpoint='drawers.my_action', success_event='feature.completed', description='…')`.
-   - Define the modal GET route (returns `{success, modal_html}`).
-   - Define any POST routes hit by the modal.
-   - Secure with `@login_required` + `@require_permission(...)`.
-
-5. **Create modal template**
-   - Add `app/templates/components/drawer/<name>.html`.
-   - Use Bootstrap modal markup, include CSRF tokens, success/error banners, etc.
-   - Emit the agreed `success_event` (via inline script or dedicated JS file).
-
-6. **Add optional JS helper**
-   - For drawers needing client logic beyond basic form posts, add `app/static/js/drawers/<name>.js`.
-   - Load it globally via `layout.html` if the drawer can appear anywhere.
-
-7. **Hook into cadence (optional)**
-   - If the drawer should be polled periodically, register a cadence check with `register_cadence_check('id')` in the drawer action module.
-   - Ensure the cadence handler returns either `None` or a full payload (and ideally sets `payload['source']`).
-
-8. **Testing**
-   - Add/extend pytest coverage to hit `/api/drawers/...` endpoints.
-   - Exercise service flows to confirm payloads and retries.
-   - Validate frontend behavior (DrawerInterceptor + DrawerProtocol auto-open the drawer).
-
-Following this checklist keeps drawer UX consistent and discoverable across services.
+1. Add/extend `<service>/drawer_errors.py` mapping for the error (choose `error_type` and `error_code`).
+2. Implement a drawer actions endpoint under `app/blueprints/api/drawer_actions.py` returning `{ success, modal_html }`.
+3. Create a modal template in `app/templates/components/drawer/` that emits a specific `success_event` when the user completes the fix.
+4. From the calling API/service, attach `drawer_payload` using the standard builder, including `modal_url` and `success_event`. Include retry metadata (`retry` or legacy `retry_operation`/`retry_data`).
+5. Optionally add a drawer-specific helper in `app/static/js/drawers/` for client-side behaviors unique to this drawer.
 
 ### Minimal End-to-End Example
 
@@ -173,7 +144,7 @@ Following this checklist keeps drawer UX consistent and discoverable across serv
 from app.services.drawers.payloads import build_drawer_payload
 
 payload = build_drawer_payload(
-    modal_url=f"/api/drawers/conversion/density-modal/{ingredient.id}",
+    modal_url=f"/api/drawer-actions/conversion/density-modal/{ingredient.id}",
     error_type='conversion',
     error_code='MISSING_DENSITY',
     success_event='densityUpdated'
@@ -186,7 +157,7 @@ return jsonify(response)
 - Drawer actions route returns modal HTML:
 
 ```python
-@drawers_bp.route('/conversion/density-modal/<int:ingredient_id>')
+@drawer_actions_bp.route('/conversion/density-modal/<int:ingredient_id>')
 def density_modal(ingredient_id):
     modal_html = render_template('components/drawer/density_fix_modal.html', ingredient=ingredient)
     return jsonify({'success': True, 'modal_html': modal_html})

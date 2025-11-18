@@ -48,10 +48,10 @@ Errors:
 
 ## Drawer Actions
 
-- GET `/api/drawers/conversion/density-modal/:ingredient_id` — Density fix modal
-- GET `/api/drawers/conversion/unit-mapping-modal` — Unit mapping modal
+- GET `/api/drawer-actions/conversion/density-modal/:ingredient_id` — Density fix modal
+- GET `/api/drawer-actions/conversion/unit-mapping-modal` — Unit mapping modal
 
-See controller: `app/blueprints/api/drawers/`.
+See controller: `app/blueprints/api/drawer_actions.py`.
 # API Reference
 
 This document provides a comprehensive reference for all API endpoints available in BatchTrack.

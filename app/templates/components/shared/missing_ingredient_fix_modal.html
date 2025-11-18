@@ -73,7 +73,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 return;
             }
             
-            fetch(`/api/drawers/recipe/add-ingredient/{{ recipe.id }}`, {
+            fetch(`/api/drawer-actions/recipe/add-ingredient/{{ recipe.id }}`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',

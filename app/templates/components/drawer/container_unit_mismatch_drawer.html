@@ -1,9 +1,4 @@
-<div class="modal fade"
-     id="containerUnitMismatchDrawer"
-     tabindex="-1"
-     aria-labelledby="containerUnitMismatchDrawerLabel"
-     aria-hidden="true"
-     data-recipe-id="{{ recipe.id }}">
+<div class="modal fade" id="containerUnitMismatchDrawer" tabindex="-1" aria-labelledby="containerUnitMismatchDrawerLabel" aria-hidden="true" data-recipe-id="{{ recipe.id }}">
     <div class="modal-dialog modal-lg modal-dialog-centered">
         <div class="modal-content">
             <div class="modal-header bg-warning text-dark">
@@ -24,6 +19,7 @@
                         Auto-fill can’t proceed until the yield unit and container capacity units are compatible.
                     </div>
                 </div>
+
                 {% if container_items %}
                 <div class="mb-3">
                     <h6 class="text-muted text-uppercase fw-bold small">Allowed Containers</h6>
@@ -53,14 +49,14 @@
                     </div>
                 </div>
                 {% endif %}
+
                 <div class="mb-4">
                     <h6 class="text-muted text-uppercase fw-bold small">Let’s Get This Fixed</h6>
                     <div class="card mb-3 shadow-sm border-warning">
                         <div class="card-body">
                             <h6 class="fw-bold mb-3">1. Update the recipe yield (recommended)</h6>
                             <form id="yieldFixForm"
-                                  data-recipe-id="{{ recipe.id }}"
-                                  data-update-url="{{ url_for('drawers.container_unit_mismatch_update_yield', recipe_id=recipe.id) }}">
+                                  data-update-url="{{ url_for('drawer_actions.container_unit_mismatch_update_yield', recipe_id=recipe.id) }}">
                                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                                 <div class="row g-2 align-items-end">
                                     <div class="col-md-5">
@@ -84,7 +80,7 @@
                                         </select>
                                     </div>
                                     <div class="col-md-2 d-grid">
-                                        <button type="submit" class="btn btn-primary btn-sm" onclick="console.log('🔧 CONTAINER DRAWER: Save & Refresh button clicked');">
+                                        <button type="submit" class="btn btn-primary btn-sm">
                                             <i class="fas fa-sync-alt me-1"></i> Save &amp; Refresh
                                         </button>
                                     </div>
@@ -100,6 +96,7 @@
                             </form>
                         </div>
                     </div>
+
                     <div class="card mb-3 shadow-sm">
                         <div class="card-body">
                             <h6 class="fw-bold mb-2">2. Add or edit containers</h6>
@@ -113,16 +110,16 @@
                             </a>
                         </div>
                     </div>
+
                     <div class="card shadow-sm border-0">
                         <div class="card-body">
                             <h6 class="fw-bold mb-2">3. Continue without containers</h6>
                             <p class="text-muted mb-2">
                                 Disable container requirements for this batch and proceed manually.
                             </p>
-                              <button type="button"
-                                      class="btn btn-outline-danger btn-sm"
-                                      id="disableContainersBtn"
-                                      data-recipe-id="{{ recipe.id }}">
+                            <button type="button"
+                                    class="btn btn-outline-danger btn-sm"
+                                    id="disableContainersBtn">
                                 <i class="fas fa-ban me-1"></i> Disable containers for now
                             </button>
                         </div>
@@ -142,40 +139,12 @@
         </div>
     </div>
 </div>
-
 <script>
-console.log('🔧 CONTAINER DRAWER: Modal script executing');
-console.log('🔧 CONTAINER DRAWER: Checking for containerUnitMismatchDrawer global');
-
-// Function to safely initialize the drawer
-function safeInitializeDrawer(attempts = 0) {
-    const maxAttempts = 10;
-    
-    if (window.containerUnitMismatchDrawer && typeof window.containerUnitMismatchDrawer.initializeModal === 'function') {
-        console.log('🔧 CONTAINER DRAWER: initializeModal function found, calling it');
-        try {
-            window.containerUnitMismatchDrawer.initializeModal();
-        } catch (error) {
-            console.error('🔧 CONTAINER DRAWER: Error calling initializeModal:', error);
-        }
-    } else if (attempts < maxAttempts) {
-        console.log('🔧 CONTAINER DRAWER: Waiting for drawer script... attempt', attempts + 1);
-        console.log('🔧 CONTAINER DRAWER: window.containerUnitMismatchDrawer =', window.containerUnitMismatchDrawer);
-        setTimeout(() => safeInitializeDrawer(attempts + 1), 50);
-    } else {
-        console.warn('🔧 CONTAINER DRAWER: Max attempts reached, drawer may not initialize properly');
-        // Create a fallback function
-        if (!window.containerUnitMismatchDrawer) {
-            window.containerUnitMismatchDrawer = {};
-        }
-        if (typeof window.containerUnitMismatchDrawer.initializeModal !== 'function') {
-            window.containerUnitMismatchDrawer.initializeModal = function() {
-                console.log('🔧 CONTAINER DRAWER: Fallback initializeModal called');
-            };
-        }
+// Initialize modal handlers when modal is created
+(function() {
+    const modal = document.getElementById('containerUnitMismatchDrawer');
+    if (modal && window.containerUnitMismatchDrawer) {
+        window.containerUnitMismatchDrawer.initializeModal(modal);
     }
-}
-
-// Start the safe initialization
-safeInitializeDrawer();
+})();
 </script>

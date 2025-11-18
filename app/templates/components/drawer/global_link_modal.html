@@ -79,7 +79,7 @@
         const selected = Array.from(checkboxes).filter(cb => cb.checked).map(cb => cb.value);
         try {
           const globalItemId = Number(modal.getAttribute('data-global-item-id'));
-          const res = await fetch('/api/drawers/global-link/confirm', {
+          const res = await fetch('/global-link/api/confirm', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json', 'X-CSRFToken': (document.querySelector('meta[name="csrf-token"]') || {}).content },
             body: JSON.stringify({ global_item_id: globalItemId, item_ids: selected })

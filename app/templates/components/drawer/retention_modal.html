@@ -34,8 +34,8 @@ Only non batch-linked recipes appear. Nothing is deleted until user acknowledges
           <a href="/billing/upgrade" target="_blank" class="btn btn-primary"><i class="fas fa-crown"></i> Upgrade Plan</a>
           <a href="/settings#billing" class="btn btn-outline-secondary"><i class="fas fa-credit-card"></i> Manage in Billing</a>
           <div class="ms-auto">
-            <a href="/api/drawers/retention/export?format=csv" class="btn btn-outline-secondary"><i class="fas fa-file-csv"></i> Export CSV</a>
-            <a href="/api/drawers/retention/export?format=json" class="btn btn-outline-secondary"><i class="fas fa-file-code"></i> Export JSON</a>
+            <a href="/retention/api/export?format=csv" class="btn btn-outline-secondary"><i class="fas fa-file-csv"></i> Export CSV</a>
+            <a href="/retention/api/export?format=json" class="btn btn-outline-secondary"><i class="fas fa-file-code"></i> Export JSON</a>
             <button class="btn btn-danger ms-2" id="acknowledgeBtn"><i class="fas fa-check"></i> Acknowledge</button>
           </div>
         </div>
@@ -46,7 +46,7 @@ Only non batch-linked recipes appear. Nothing is deleted until user acknowledges
 <script>
 document.getElementById('acknowledgeBtn').addEventListener('click', async function() {
   try {
-        const res = await fetch('/api/drawers/retention/acknowledge', { method: 'POST', headers: {'Content-Type':'application/json','X-CSRFToken': document.querySelector('meta[name="csrf-token"]').getAttribute('content')}, body: JSON.stringify({ acknowledge: true }) });
+    const res = await fetch('/retention/api/acknowledge', { method: 'POST', headers: {'Content-Type':'application/json','X-CSRFToken': document.querySelector('meta[name="csrf-token"]').getAttribute('content')}, body: JSON.stringify({ acknowledge: true }) });
     const data = await res.json();
     if (data.success) {
       const modalEl = document.getElementById('retentionDrawerModal');
