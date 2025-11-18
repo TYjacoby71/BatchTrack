@@ -6,6 +6,7 @@ from flask import request, redirect, url_for, jsonify, session, g, flash, curren
 from flask_login import current_user
 
 from .route_access import RouteAccessConfig
+from .extensions import db
 
 DEFAULT_SECURITY_HEADERS = {
     "Strict-Transport-Security": "max-age=31536000; includeSubDomains; preload",
@@ -206,40 +207,43 @@ def register_middleware(app):
         if current_user.is_authenticated and getattr(current_user, 'user_type', None) != 'developer':
             try:
                 from .services.billing_service import BillingService
+                from .models import Organization
 
-                organization_id = getattr(current_user, 'organization_id', None)
-                snapshot = BillingService.get_organization_billing_snapshot(organization_id) if organization_id else None
+                organization = getattr(current_user, 'organization', None)
+                if not organization:
+                    org_id = getattr(current_user, 'organization_id', None)
+                    if org_id:
+                        organization = db.session.get(Organization, org_id)
 
-                if snapshot:
-                    # SIMPLE BILLING LOGIC: short-circuit for exempt tiers
-                    if not snapshot.get('is_billing_exempt', True):
-                        billing_status = snapshot.get('billing_status', 'active') or 'active'
-                        if billing_status in ['payment_failed', 'past_due', 'suspended', 'canceled', 'cancelled']:
-                            if billing_status in ['payment_failed', 'past_due']:
-                                return redirect(url_for('billing.upgrade'))
-                            elif billing_status in ['suspended', 'canceled', 'cancelled']:
-                                try:
-                                    flash('Your organization does not have an active subscription. Please update billing.', 'error')
-                                except Exception:
-                                    pass
-                                return redirect(url_for('billing.upgrade'))
+                if organization:
+                    tier_obj = getattr(organization, 'subscription_tier_obj', None)
+                    billing_status = (organization.billing_status or 'active').lower()
 
-                        access_valid, access_reason = BillingService.validate_tier_access(snapshot)
-                        if not access_valid:
-                            logger.warning(f"Billing access denied for org {snapshot.get('organization_id')}: {access_reason}")
+                    if tier_obj and not tier_obj.is_billing_exempt:
+                        if billing_status in ['payment_failed', 'past_due']:
+                            return redirect(url_for('billing.upgrade'))
+                        if billing_status in ['suspended', 'canceled', 'cancelled']:
+                            try:
+                                flash('Your organization does not have an active subscription. Please update billing.', 'error')
+                            except Exception:
+                                pass
+                            return redirect(url_for('billing.upgrade'))
 
-                            if access_reason in ['payment_required', 'subscription_canceled']:
-                                return redirect(url_for('billing.upgrade'))
-                            elif access_reason == 'organization_suspended':
-                                try:
-                                    flash('Your organization has been suspended. Please contact support.', 'error')
-                                except Exception:
-                                    pass
-                                return redirect(url_for('billing.upgrade'))
+                    access_valid, access_reason = BillingService.validate_tier_access(organization)
+                    if not access_valid:
+                        logger.warning(f"Billing access denied for org {getattr(organization, 'id', None)}: {access_reason}")
+
+                        if access_reason in ['payment_required', 'subscription_canceled']:
+                            return redirect(url_for('billing.upgrade'))
+                        if access_reason == 'organization_suspended':
+                            try:
+                                flash('Your organization has been suspended. Please contact support.', 'error')
+                            except Exception:
+                                pass
+                            return redirect(url_for('billing.upgrade'))
             except Exception as e:
                 logger.warning(f"Billing check failed, allowing request to proceed: {e}")
                 try:
-                    from .extensions import db
                     db.session.rollback()
                 except Exception:
                     pass

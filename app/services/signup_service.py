@@ -409,12 +409,6 @@ class SignupService:
             except Exception as email_error:
                 logger.warning("Failed to send password setup email: %s", email_error)
 
-            try:
-                from .billing_service import BillingService as _BillingService
-                _BillingService.invalidate_organization_cache(org.id)
-            except Exception:
-                pass
-
             EventEmitter.emit(
                 "billing.stripe_checkout_completed",
                 organization_id=org.id,

@@ -380,12 +380,6 @@ class AnalyticsCatalogService:
                     "scope": "global",
                     "notes": "Derived leaderboard metrics for multi-tenant comparisons.",
                 },
-                {
-                    "model": "BillingSnapshot",
-                    "table": "billing_snapshot",
-                    "scope": "global",
-                    "notes": "Monthly MRR, tier assignments and invoice status snapshots.",
-                },
                   {
                       "model": "AnalyticsDataService",
                       "table": "statistics.analytics_service",

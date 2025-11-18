@@ -10,7 +10,6 @@ from app.models.subscription_tier import SubscriptionTier
 from app.models.models import Organization
 from app.models.pending_signup import PendingSignup
 from .signup_service import SignupService
-from .billing_service import BillingService
 from ..utils.timezone_utils import TimezoneUtils
 
 
@@ -200,7 +199,6 @@ class StripeService:
                     db.session.add(assoc)
 
             db.session.commit()
-            BillingService.invalidate_organization_cache(org.id)
         except Exception as e:
             logger.error(f"Error handling subscription.created: {e}")
 
@@ -246,8 +244,6 @@ class StripeService:
                     org.is_active = False
 
             db.session.commit()
-            if org:
-                BillingService.invalidate_organization_cache(org.id)
         except Exception as e:
             logger.error(f"Error handling subscription.updated: {e}")
 
@@ -282,8 +278,6 @@ class StripeService:
                 org.is_active = False
 
             db.session.commit()
-            if org:
-                BillingService.invalidate_organization_cache(org.id)
         except Exception as e:
             logger.error(f"Error handling subscription.deleted: {e}")
 
@@ -313,7 +307,6 @@ class StripeService:
                     pass
 
             db.session.commit()
-            BillingService.invalidate_organization_cache(org.id)
         except Exception as exc:
             logger.error(f"Error handling payment succeeded: {exc}")
             db.session.rollback()
@@ -335,7 +328,6 @@ class StripeService:
             org.billing_status = 'payment_failed'
             org.subscription_status = 'past_due'
             db.session.commit()
-            BillingService.invalidate_organization_cache(org.id)
         except Exception as exc:
             logger.error(f"Error handling payment failed: {exc}")
             db.session.rollback()

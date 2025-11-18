@@ -25,7 +25,6 @@ from .product_category import ProductCategory
 from .feature_flag import FeatureFlag
 from .stripe_event import StripeEvent
 from .pricing_snapshot import PricingSnapshot
-from .billing_snapshot import BillingSnapshot
 from .user_preferences import UserPreferences
 from .user_role_assignment import UserRoleAssignment
 from .developer_permission import DeveloperPermission
