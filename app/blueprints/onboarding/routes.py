@@ -18,26 +18,55 @@ def welcome():
         flash('No organization found for your account.', 'error')
         return redirect(url_for('app_routes.dashboard'))
 
+    requires_password_setup = bool(getattr(user, 'password_reset_token', None))
+    password_errors = []
+
     if request.method == 'POST':
-        org_name = (request.form.get('org_name') or organization.name or '').strip()
-        org_contact_email = (request.form.get('org_contact_email') or organization.contact_email or '').strip()
-        user_first = (request.form.get('first_name') or user.first_name or '').strip()
-        user_last = (request.form.get('last_name') or user.last_name or '').strip()
-        user_phone = (request.form.get('user_phone') or user.phone or '').strip()
+        form_name = request.form.get('form_name') or 'details'
 
-        organization.name = org_name or organization.name
-        organization.contact_email = org_contact_email or organization.contact_email
-        user.first_name = user_first
-        user.last_name = user_last
-        user.phone = user_phone or None
-        user.last_login = user.last_login or TimezoneUtils.utc_now()
+        if form_name == 'password':
+            new_password = (request.form.get('new_password') or '').strip()
+            confirm_password = (request.form.get('confirm_password') or '').strip()
 
-        db.session.commit()
-        flash('Setup details saved.', 'success')
+            if not new_password or not confirm_password:
+                password_errors.append('Please enter and confirm your new password.')
+            elif new_password != confirm_password:
+                password_errors.append('Passwords do not match.')
+            elif len(new_password) < 8:
+                password_errors.append('Password must be at least 8 characters long.')
 
-        if request.form.get('complete_checklist') == 'true':
-            session.pop('onboarding_welcome', None)
-            return redirect(url_for('app_routes.dashboard'))
+            if not password_errors:
+                user.set_password(new_password)
+                user.password_reset_token = None
+                user.password_reset_sent_at = None
+                db.session.commit()
+                requires_password_setup = False
+                flash('Your password has been updated.', 'success')
+                return redirect(url_for('onboarding.welcome'))
+
+        else:
+            org_name = (request.form.get('org_name') or organization.name or '').strip()
+            org_contact_email = (request.form.get('org_contact_email') or organization.contact_email or '').strip()
+            user_first = (request.form.get('first_name') or user.first_name or '').strip()
+            user_last = (request.form.get('last_name') or user.last_name or '').strip()
+            user_phone = (request.form.get('user_phone') or user.phone or '').strip()
+
+            organization.name = org_name or organization.name
+            organization.contact_email = org_contact_email or organization.contact_email
+            user.first_name = user_first
+            user.last_name = user_last
+            user.phone = user_phone or None
+            user.last_login = user.last_login or TimezoneUtils.utc_now()
+
+            db.session.commit()
+            flash('Setup details saved.', 'success')
+
+            if request.form.get('complete_checklist') == 'true':
+                if requires_password_setup:
+                    flash('Please create your password before continuing to the dashboard.', 'warning')
+                else:
+                    session.pop('onboarding_welcome', None)
+                    return redirect(url_for('app_routes.dashboard'))
     else:
         if session.pop('onboarding_welcome', None):
             flash('Thanks for joining BatchTrack! Let’s finish setting up your workspace.', 'success')
@@ -46,6 +75,12 @@ def welcome():
     show_team_step = bool(organization.subscription_tier_obj and organization.subscription_tier_obj.user_limit not in (None, 1))
 
     checklist = [
+        {
+            'key': 'password',
+            'label': 'Create your password',
+            'description': 'Secure your account with a password before inviting anyone else.',
+            'complete': not requires_password_setup,
+        },
         {
             'key': 'org_name',
             'label': 'Name your workspace',
@@ -80,4 +115,6 @@ def welcome():
         checklist=checklist,
         show_team_step=show_team_step,
         team_size=team_size,
+        requires_password_setup=requires_password_setup,
+        password_errors=password_errors,
     )
