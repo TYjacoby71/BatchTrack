@@ -41,6 +41,7 @@ except ImportError:
 from .subscription_tier import SubscriptionTier
 from .permission import Permission
 from .role import Role
+from .pending_signup import PendingSignup
 
 # OPTIONAL exports — don't crash if the module or names aren't present
 try:

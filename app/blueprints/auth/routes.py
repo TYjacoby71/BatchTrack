@@ -17,6 +17,7 @@ from ...services.oauth_service import OAuthService
 from ...services.email_service import EmailService
 from ...extensions import limiter
 from ...services.session_service import SessionService
+from ...services.signup_service import SignupService
 from datetime import datetime, timedelta
 
 logger = logging.getLogger(__name__)
@@ -438,10 +439,14 @@ def signup():
 
     # Check for OAuth user info from session
     oauth_user_info = session.get('oauth_user_info')
+    prefill_email = request.form.get('contact_email') or (oauth_user_info.get('email') if oauth_user_info else '')
+    prefill_phone = request.form.get('contact_phone') or ''
 
     if request.method == 'POST':
         selected_tier = request.form.get('selected_tier')
         oauth_signup = request.form.get('oauth_signup') == 'true'
+        contact_email = (request.form.get('contact_email') or '').strip()
+        contact_phone = (request.form.get('contact_phone') or '').strip()
 
         if not selected_tier:
             flash('Please select a subscription plan', 'error')
@@ -450,7 +455,9 @@ def signup():
                          referral_code=referral_code,
                          promo_code=promo_code,
                          available_tiers=available_tiers,
-                         oauth_user_info=oauth_user_info)
+                         oauth_user_info=oauth_user_info,
+                         contact_email=contact_email,
+                         contact_phone=contact_phone)
 
         if selected_tier not in available_tiers:
             flash('Invalid subscription plan selected', 'error')
@@ -459,11 +466,25 @@ def signup():
                          referral_code=referral_code,
                          promo_code=promo_code,
                          available_tiers=available_tiers,
-                         oauth_user_info=oauth_user_info)
+                         oauth_user_info=oauth_user_info,
+                         contact_email=contact_email,
+                         contact_phone=contact_phone)
+
+        if not contact_email or not contact_phone:
+            flash('Email and phone number are required before checkout.', 'error')
+            return render_template('pages/auth/signup.html',
+                         signup_source=signup_source,
+                         referral_code=referral_code,
+                         promo_code=promo_code,
+                         available_tiers=available_tiers,
+                         oauth_user_info=oauth_user_info,
+                         contact_email=contact_email,
+                         contact_phone=contact_phone)
 
         # Create Stripe checkout session
         from ...services.stripe_service import StripeService
         from ...models import SubscriptionTier
+        from ...services.signup_service import SignupService
 
         try:
             tier_id = int(selected_tier)
@@ -509,30 +530,54 @@ def signup():
         if promo_code:
             metadata['promo_code'] = promo_code
 
+        detected_timezone = request.form.get('detected_timezone')
+
+        try:
+            pending_signup = SignupService.create_pending_signup_record(
+                tier=tier_obj,
+                email=contact_email,
+                phone=contact_phone,
+                signup_source=signup_source,
+                referral_code=referral_code,
+                promo_code=promo_code,
+                detected_timezone=detected_timezone,
+                oauth_user_info=oauth_user_info,
+                metadata={'preselected_tier': selected_tier, **metadata}
+            )
+        except Exception as exc:
+            logger.error("Failed to create pending signup: %s", exc)
+            flash('Unable to start checkout right now. Please try again later.', 'error')
+            return render_template('pages/auth/signup.html',
+                         signup_source=signup_source,
+                         referral_code=referral_code,
+                         promo_code=promo_code,
+                         available_tiers=available_tiers,
+                         oauth_user_info=oauth_user_info,
+                         contact_email=contact_email,
+                         contact_phone=contact_phone)
+
+        metadata['pending_signup_id'] = str(pending_signup.id)
+
         success_url = url_for('billing.complete_signup_from_stripe', _external=True) + '?session_id={CHECKOUT_SESSION_ID}'
         cancel_url = url_for('auth.signup', _external=True)
 
-        # Let Stripe collect all user info
         stripe_session = StripeService.create_checkout_session_for_tier(
             tier_obj,
-            customer_email=oauth_user_info.get('email') if oauth_user_info else None,
-            customer_name=None,  # Let Stripe collect this
+            customer_email=contact_email,
             success_url=success_url,
             cancel_url=cancel_url,
-            metadata=metadata
+            metadata=metadata,
+            client_reference_id=str(pending_signup.id),
         )
 
         if stripe_session:
-            # Store minimal signup info for completion
-            session['pending_signup'] = {
-                'selected_tier': selected_tier,
-                'signup_source': signup_source,
-                'referral_code': referral_code,
-                'promo_code': promo_code,
-                'oauth_user_info': oauth_user_info
-            }
+            pending_signup.stripe_checkout_session_id = stripe_session.id
+            pending_signup.mark_status('checkout_created')
+            db.session.commit()
             return redirect(stripe_session.url)
         else:
+            pending_signup.mark_status('failed', error='session_creation_failed')
+            db.session.commit()
             flash('Payment system temporarily unavailable. Please try again later.', 'error')
 
     # Choose a default tier id for UI selection (first available)
@@ -546,7 +591,9 @@ def signup():
                          oauth_user_info=oauth_user_info,
                          oauth_available=OAuthService.is_oauth_configured(),
                          preselected_tier=preselected_tier,
-                         default_tier_id=default_tier_id)
+                         default_tier_id=default_tier_id,
+                         contact_email=prefill_email,
+                         contact_phone=prefill_phone)
 
 # Whop License Login Route
 @auth_bp.route('/whop-login', methods=['POST'])
