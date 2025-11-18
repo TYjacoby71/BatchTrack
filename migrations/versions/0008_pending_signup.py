@@ -34,7 +34,7 @@ def upgrade():
         sa.Column('tier_id', sa.Integer(), sa.ForeignKey('subscription_tier.id'), nullable=False),
         sa.Column('oauth_provider', sa.String(length=64), nullable=True),
         sa.Column('oauth_provider_id', sa.String(length=255), nullable=True),
-        sa.Column('metadata', sa.JSON(), nullable=True),
+        sa.Column('extra_metadata', sa.JSON(), nullable=True),
         sa.Column('client_reference_id', sa.String(length=255), nullable=True, unique=True),
         sa.Column('stripe_checkout_session_id', sa.String(length=255), nullable=True, unique=True),
         sa.Column('stripe_customer_id', sa.String(length=255), nullable=True),

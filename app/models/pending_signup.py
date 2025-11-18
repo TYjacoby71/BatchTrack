@@ -28,7 +28,7 @@ class PendingSignup(db.Model):
     oauth_provider = db.Column(db.String(64), nullable=True)
     oauth_provider_id = db.Column(db.String(255), nullable=True)
 
-    metadata = db.Column(db.JSON, nullable=True)
+    extra_metadata = db.Column(db.JSON, nullable=True)
 
     client_reference_id = db.Column(db.String(255), unique=True, nullable=True)
     stripe_checkout_session_id = db.Column(db.String(255), unique=True, nullable=True)

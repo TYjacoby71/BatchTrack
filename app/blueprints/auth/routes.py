@@ -542,7 +542,7 @@ def signup():
                 promo_code=promo_code,
                 detected_timezone=detected_timezone,
                 oauth_user_info=oauth_user_info,
-                metadata={'preselected_tier': selected_tier, **metadata}
+                extra_metadata={'preselected_tier': selected_tier, **metadata}
             )
         except Exception as exc:
             logger.error("Failed to create pending signup: %s", exc)

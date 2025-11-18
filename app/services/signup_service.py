@@ -263,7 +263,7 @@ class SignupService:
         promo_code: Optional[str],
         detected_timezone: Optional[str],
         oauth_user_info: Optional[dict],
-        metadata: Optional[dict] = None,
+        extra_metadata: Optional[dict] = None,
     ) -> PendingSignup:
         """Persist a pending signup row before redirecting the user to Stripe."""
         cleaned_email = (email or "").strip().lower()
@@ -280,7 +280,7 @@ class SignupService:
             tier_id=tier.id,
             oauth_provider=(oauth_user_info or {}).get('oauth_provider'),
             oauth_provider_id=(oauth_user_info or {}).get('oauth_provider_id'),
-            metadata=metadata or {},
+            extra_metadata=extra_metadata or {},
         )
 
         db.session.add(pending)
@@ -342,7 +342,7 @@ class SignupService:
         org_name = (
             session_metadata.get('org_name')
             or customer_metadata.get('org_name')
-            or pending_signup.metadata.get('org_name') if pending_signup.metadata else None
+            or pending_signup.extra_metadata.get('org_name') if pending_signup.extra_metadata else None
         )
         if not org_name:
             org_name = f"{first_name or 'New'}'s Workspace"
