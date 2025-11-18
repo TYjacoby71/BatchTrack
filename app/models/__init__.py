@@ -25,7 +25,6 @@ from .product_category import ProductCategory
 from .feature_flag import FeatureFlag
 from .stripe_event import StripeEvent
 from .pricing_snapshot import PricingSnapshot
-from .billing_snapshot import BillingSnapshot
 from .user_preferences import UserPreferences
 from .user_role_assignment import UserRoleAssignment
 from .developer_permission import DeveloperPermission
@@ -41,6 +40,7 @@ except ImportError:
 from .subscription_tier import SubscriptionTier
 from .permission import Permission
 from .role import Role
+from .pending_signup import PendingSignup
 
 # OPTIONAL exports — don't crash if the module or names aren't present
 try:

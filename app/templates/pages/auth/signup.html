@@ -77,6 +77,27 @@
                         {% endfor %}
                     </div>
 
+                      <!-- Contact Information -->
+                      <div class="card mt-4">
+                          <div class="card-body">
+                              <h5 class="mb-3"><i class="fas fa-id-card me-2"></i>Your Contact Details</h5>
+                              <p class="text-muted">We only need the basics so Stripe can send your receipt and we can personalize your workspace later.</p>
+                              <div class="row g-3">
+                                  <div class="col-md-6">
+                                      <label for="signupEmail" class="form-label">Email Address</label>
+                                      <input type="email" class="form-control form-control-lg" id="signupEmail" placeholder="you@example.com" value="{{ contact_email or '' }}" required>
+                                  </div>
+                                  <div class="col-md-6">
+                                      <label for="signupPhone" class="form-label">Phone Number</label>
+                                      <input type="tel" class="form-control form-control-lg" id="signupPhone" placeholder="(555) 123-4567" value="{{ contact_phone or '' }}" required>
+                                  </div>
+                              </div>
+                              <small class="text-muted d-block mt-2">
+                                  Coupon or promo codes can be entered on the Stripe checkout page.
+                              </small>
+                          </div>
+                      </div>
+
                     <!-- Selected Tier Confirmation -->
                     <div class="text-center mt-5" id="confirmationSection">
                         <div class="row justify-content-center">
@@ -165,6 +186,20 @@ function proceedToPayment() {
         alert('Please select a plan first.');
         return;
     }
+
+    const emailField = document.getElementById('signupEmail');
+    const phoneField = document.getElementById('signupPhone');
+    const emailValue = emailField ? emailField.value.trim() : '';
+    const phoneValue = phoneField ? phoneField.value.trim() : '';
+
+    if (!emailValue) {
+        alert('Please enter your email before continuing.');
+        return;
+    }
+    if (!phoneValue) {
+        alert('Please enter your phone number before continuing.');
+        return;
+    }
     
     // Create a form to submit the tier selection
     const form = document.createElement('form');
@@ -184,6 +219,18 @@ function proceedToPayment() {
     tierInput.name = 'selected_tier';
     tierInput.value = selectedTier;
     form.appendChild(tierInput);
+
+    const emailInput = document.createElement('input');
+    emailInput.type = 'hidden';
+    emailInput.name = 'contact_email';
+    emailInput.value = emailValue;
+    form.appendChild(emailInput);
+
+    const phoneInput = document.createElement('input');
+    phoneInput.type = 'hidden';
+    phoneInput.name = 'contact_phone';
+    phoneInput.value = phoneValue;
+    form.appendChild(phoneInput);
     
     // Auto-detect and add user's timezone
     try {

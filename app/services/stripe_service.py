@@ -8,6 +8,8 @@ from app.extensions import db
 from app.models.stripe_event import StripeEvent
 from app.models.subscription_tier import SubscriptionTier
 from app.models.models import Organization
+from app.models.pending_signup import PendingSignup
+from .signup_service import SignupService
 from ..utils.timezone_utils import TimezoneUtils
 
 
@@ -115,44 +117,14 @@ class StripeService:
         try:
             obj = event.get('data', {}).get('object', {})
             session_id = obj.get('id')
-            customer_email = (obj.get('customer_details') or {}).get('email')
             if not StripeService.initialize_stripe():
                 return
             import stripe
-            # Expand line items to read price lookup keys
-            checkout = stripe.checkout.Session.retrieve(session_id, expand=['line_items.data.price'])
-            line_items = checkout.get('line_items', {}).get('data', [])
-            price = line_items[0]['price'] if line_items else None
-            lookup_key = price.get('id') if price else None  # In real Stripe, lookup_key is on Price; id used if lookup_key not accessible here
-
-            # Identify organization by customer email
-            from flask import current_app
-            from ..extensions import db
-            from ..models.models import Organization, User
-            from ..models.subscription_tier import SubscriptionTier
-            from ..models.addon import Addon, OrganizationAddon
-
-            org = None
-            try:
-                user = User.query.filter_by(email=customer_email).first()
-                org = user.organization if user else None
-            except Exception:
-                org = None
-            if not org:
-                return
-
-            # Activate matching add-on by lookup key
-            matching_addon = Addon.query.filter_by(stripe_lookup_key=lookup_key).first()
-            if matching_addon:
-                assoc = OrganizationAddon(
-                    organization_id=org.id,
-                    addon_id=matching_addon.id,
-                    active=True,
-                    source='subscription_item',
-                    stripe_item_id=session_id
-                )
-                db.session.add(assoc)
-                db.session.commit()
+            checkout = stripe.checkout.Session.retrieve(
+                session_id,
+                expand=['customer', 'customer_details', 'line_items.data.price']
+            )
+            StripeService._provision_checkout_session(checkout)
         except Exception as e:
             logger.error(f"Error handling checkout.session.completed: {e}")
             return
@@ -314,12 +286,51 @@ class StripeService:
     @staticmethod
     def _handle_payment_succeeded(event):
         """Handle invoice.payment_succeeded event"""
-        pass
+        try:
+            invoice = event.get('data', {}).get('object', {})
+            customer_id = invoice.get('customer')
+            if not customer_id:
+                return
+
+            org = Organization.query.filter_by(stripe_customer_id=customer_id).first()
+            if not org:
+                logger.warning("Payment succeeded for unknown customer %s", customer_id)
+                return
+
+            org.billing_status = 'active'
+            org.subscription_status = 'active'
+            next_payment_time = invoice.get('next_payment_attempt') or invoice.get('period_end')
+            if next_payment_time:
+                try:
+                    org.next_billing_date = datetime.utcfromtimestamp(next_payment_time).date()
+                except Exception:
+                    pass
+
+            db.session.commit()
+        except Exception as exc:
+            logger.error(f"Error handling payment succeeded: {exc}")
+            db.session.rollback()
 
     @staticmethod
     def _handle_payment_failed(event):
         """Handle invoice.payment_failed event"""
-        pass
+        try:
+            invoice = event.get('data', {}).get('object', {})
+            customer_id = invoice.get('customer')
+            if not customer_id:
+                return
+
+            org = Organization.query.filter_by(stripe_customer_id=customer_id).first()
+            if not org:
+                logger.warning("Payment failed for unknown customer %s", customer_id)
+                return
+
+            org.billing_status = 'payment_failed'
+            org.subscription_status = 'past_due'
+            db.session.commit()
+        except Exception as exc:
+            logger.error(f"Error handling payment failed: {exc}")
+            db.session.rollback()
 
     @staticmethod
     def initialize_stripe():
@@ -404,8 +415,18 @@ class StripeService:
                 pass
 
     @staticmethod
-    def create_checkout_session_for_tier(tier_obj, customer_email, customer_name, success_url, cancel_url, metadata=None):
-        """Create checkout session using tier's lookup key - industry standard"""
+    def create_checkout_session_for_tier(
+        tier_obj,
+        *,
+        customer_email: str,
+        success_url: str,
+        cancel_url: str,
+        metadata: dict | None = None,
+        client_reference_id: str | None = None,
+        phone_required: bool = True,
+        allow_promo: bool = True,
+    ):
+        """Create checkout session using tier's lookup key with minimal required inputs."""
         if not StripeService.initialize_stripe():
             return None
 
@@ -415,38 +436,50 @@ class StripeService:
             logger.error(f"No pricing found for tier {tier_obj.name} (ID: {tier_obj.id})")
             return None
 
-        try:
-            # Create customer first (industry standard)
-            customer = stripe.Customer.create(
-                email=customer_email,
-                name=customer_name,
-                metadata=metadata or {}
-            )
+        if not customer_email:
+            logger.error("Customer email is required to create Stripe checkout session")
+            return None
 
-            # Create checkout session with live price ID
+        try:
             session = stripe.checkout.Session.create(
-                customer=customer.id,
+                mode='subscription',
                 payment_method_types=['card'],
                 line_items=[{
                     'price': pricing['price_id'],
                     'quantity': 1,
                 }],
-                mode='subscription',
                 success_url=success_url,
                 cancel_url=cancel_url,
+                customer_email=customer_email,
+                client_reference_id=client_reference_id,
+                billing_address_collection='auto',
+                phone_number_collection={'enabled': phone_required},
+                allow_promotion_codes=allow_promo,
+                customer_creation='always',
                 metadata={
                     'tier_id': str(tier_obj.id),
                     'tier_name': tier_obj.name,
                     'lookup_key': tier_obj.stripe_lookup_key,
                     **(metadata or {})
-                }
+                },
             )
 
-            logger.info(f"Created checkout session for tier {tier_obj.name} (ID: {tier_obj.id}) with price {pricing['price_id']}")
+            logger.info(
+                "Created checkout session %s for tier %s (%s) with price %s",
+                session.id,
+                tier_obj.name,
+                tier_obj.id,
+                pricing['price_id'],
+            )
             return session
 
         except stripe.error.StripeError as e:
-            logger.error(f"Failed to create checkout session for tier {tier_obj.name} (ID: {tier_obj.id}): {e}")
+            logger.error(
+                "Failed to create checkout session for tier %s (ID: %s): %s",
+                tier_obj.name,
+                tier_obj.id,
+                e,
+            )
             return None
 
     @staticmethod
@@ -576,6 +609,27 @@ class StripeService:
             return None
 
     @staticmethod
+    def cancel_subscription(stripe_customer_id: str) -> bool:
+        """Cancel all active subscriptions for a given Stripe customer."""
+        if not stripe_customer_id:
+            return False
+        if not StripeService.initialize_stripe():
+            return False
+        import stripe
+        try:
+            subs = stripe.Subscription.list(customer=stripe_customer_id, status='active', limit=20)
+            cancelled = False
+            for sub in subs.auto_paging_iter():
+                stripe.Subscription.delete(sub.id)
+                cancelled = True
+            if not cancelled:
+                logger.info("No active subscriptions to cancel for customer %s", stripe_customer_id)
+            return cancelled
+        except Exception as exc:
+            logger.error(f"Failed to cancel subscription for customer {stripe_customer_id}: {exc}")
+            return False
+
+    @staticmethod
     def get_all_available_pricing():
         """Get live pricing for Stripe tiers only"""
         stripe_tiers = SubscriptionTier.query.filter_by(
@@ -619,47 +673,115 @@ class StripeService:
             return False
 
     @staticmethod
-    def create_one_time_checkout_by_lookup_key(lookup_key, customer_email, success_url, cancel_url, metadata=None):
-        """Create a one-time checkout session for an add-on using a price lookup key."""
+    def finalize_checkout_session(session_id: str):
+        """Finalize (or refinalize) a Stripe checkout session by ID."""
+        if not session_id:
+            return None
         if not StripeService.initialize_stripe():
             return None
+        import stripe
+        checkout = stripe.checkout.Session.retrieve(
+            session_id,
+            expand=['customer', 'customer_details', 'line_items.data.price']
+        )
+        return StripeService._provision_checkout_session(checkout)
+
+    @staticmethod
+    def _provision_checkout_session(checkout_session):
+        """Internal helper shared by webhook + success URL to build accounts."""
+        pending_id = StripeService._get_pending_signup_id_from_session(checkout_session)
+        if not pending_id:
+            logger.info("Checkout session %s missing pending signup reference", getattr(checkout_session, 'id', 'unknown'))
+            return None
+
+        pending = db.session.get(PendingSignup, pending_id)
+        if not pending:
+            logger.warning("Pending signup %s not found for checkout session %s", pending_id, getattr(checkout_session, 'id', 'unknown'))
+            return None
+
+        import stripe
+        customer_obj = getattr(checkout_session, 'customer', None)
+        if isinstance(customer_obj, str):
+            customer_obj = stripe.Customer.retrieve(customer_obj)
+
+        try:
+            org, user = SignupService.complete_pending_signup_from_checkout(pending, checkout_session, customer_obj)
+
+            # Store metadata back on customer for future subscription events
+            if getattr(customer_obj, 'id', None) and org:
+                StripeService.update_customer_metadata(customer_obj.id, {
+                    'organization_id': str(org.id),
+                    'tier_id': str(org.subscription_tier_id or ''),
+                })
+            return org, user
+        except Exception as exc:
+            logger.error("Failed provisioning checkout session %s: %s", getattr(checkout_session, 'id', 'unknown'), exc)
+            raise
+
+    @staticmethod
+    def _get_pending_signup_id_from_session(checkout_session):
+        metadata = getattr(checkout_session, 'metadata', {}) or {}
+        client_reference_id = getattr(checkout_session, 'client_reference_id', None)
+        candidate = metadata.get('pending_signup_id') or client_reference_id
+        if not candidate:
+            return None
+        try:
+            return int(candidate)
+        except (TypeError, ValueError):
+            return None
+
+    @staticmethod
+    def _create_checkout_session_by_lookup_key(
+        lookup_key,
+        customer_email,
+        success_url,
+        cancel_url,
+        metadata=None,
+        mode='subscription'
+    ):
+        if not StripeService.initialize_stripe():
+            return None
+        import stripe
+        try:
+            session = stripe.checkout.Session.create(
+                mode=mode,
+                line_items=[{
+                    'price': lookup_key,
+                    'quantity': 1
+                }],
+                customer_email=customer_email,
+                success_url=success_url,
+                cancel_url=cancel_url,
+                allow_promotion_codes=True,
+                billing_address_collection='auto',
+                phone_number_collection={'enabled': True},
+                metadata=metadata or {}
+            )
+            return session
+        except Exception as e:
+            logger.error(f"Stripe {mode} checkout error: {e}")
+            return None
+
+    @staticmethod
+    def create_one_time_checkout_by_lookup_key(lookup_key, customer_email, success_url, cancel_url, metadata=None):
+        """Create a one-time checkout session for an add-on using a price lookup key."""
+        return StripeService._create_checkout_session_by_lookup_key(
+            lookup_key,
+            customer_email,
+            success_url,
+            cancel_url,
+            metadata=metadata,
+            mode='payment'
+        )
 
     @staticmethod
     def create_subscription_checkout_by_lookup_key(lookup_key, customer_email, success_url, cancel_url, metadata=None):
         """Create a subscription checkout session for a recurring add-on using price lookup key."""
-        if not StripeService.initialize_stripe():
-            return None
-        import stripe
-        try:
-            session = stripe.checkout.Session.create(
-                mode='subscription',
-                line_items=[{
-                    'price': lookup_key,
-                    'quantity': 1
-                }],
-                customer_email=customer_email,
-                success_url=success_url,
-                cancel_url=cancel_url,
-                metadata=metadata or {}
-            )
-            return session
-        except Exception as e:
-            logger.error(f"Stripe subscription checkout error: {e}")
-            return None
-        import stripe
-        try:
-            session = stripe.checkout.Session.create(
-                mode='payment',
-                line_items=[{
-                    'price': lookup_key,
-                    'quantity': 1
-                }],
-                customer_email=customer_email,
-                success_url=success_url,
-                cancel_url=cancel_url,
-                metadata=metadata or {}
-            )
-            return session
-        except Exception as e:
-            logger.error(f"Stripe one-time checkout error: {e}")
-            return None
+        return StripeService._create_checkout_session_by_lookup_key(
+            lookup_key,
+            customer_email,
+            success_url,
+            cancel_url,
+            metadata=metadata,
+            mode='subscription'
+        )
