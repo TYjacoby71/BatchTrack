@@ -17,6 +17,9 @@ Developers operate outside organizations by design. Review [Manage Organizations
 
 ## Inventory & Global Library
 
+### How do I add inventory into the system?
+Follow the walkthrough under [Add Inventory](/help/system-instructions#add-inventory) to lock identity data, capture stock levels, and keep FIFO history clean.
+
 ### Where do densities and default units come from?
 They originate in the curated global library. Learn how seeding, metadata, and developer audits work in [Curate the Global Item Library](/help/system-instructions#global-library).
 
@@ -28,11 +31,17 @@ Yes—metadata is generated automatically on insert/update, and you can run the 
 
 ## Recipes, Planning, and Batches
 
+### How do I create a recipe or formulation?
+Use the step-by-step flow in [Create a Recipe](/help/system-instructions#add-recipe) to define ingredients, consumables, containers, and category data.
+
 ### What protects in-progress batches when recipes change later?
 The PlanSnapshot freezes everything at plan time. Read [Plan Production with PlanSnapshot](/help/system-instructions#plan-snapshot).
 
 ### How do I scale recipes and start batches without double-deducting inventory?
 Follow the flow in [Start, Monitor, and Finish Batches](/help/system-instructions#batches). FIFO deductions and batch rows are created exactly once.
+
+### How do I plan production and kick off a batch run?
+See [Plan & Start Production](/help/system-instructions#plan-production) for the exact screen flow from stock check to batch start.
 
 ### Where do portioning rules and container selections live?
 They’re stored inside the PlanSnapshot and referenced when batches start. See [Plan Production with PlanSnapshot](/help/system-instructions#plan-snapshot).
@@ -47,6 +56,9 @@ Expiration, reservation, and inventory alerts roll up through the services outli
 
 ### Can I reserve finished goods for specific customers?
 Yes, via the Reservation Service and product workflows in [Manage Products, SKUs, and Outputs](/help/system-instructions#products).
+
+### How do I manage product variations (sizes, scents, bundles)?
+Use the instructions in [Create Product Variants](/help/system-instructions#product-variants) to add variants, map ingredients, and tie batches to finished SKUs.
 
 ## Public Surface & Integrations
 
