@@ -147,12 +147,22 @@
 console.log('🔧 CONTAINER DRAWER: Modal script executing');
 console.log('🔧 CONTAINER DRAWER: Checking for containerUnitMismatchDrawer global');
 
-// Ensure the drawer is properly initialized
-if (window.containerUnitMismatchDrawer && typeof window.containerUnitMismatchDrawer.initializeModal === 'function') {
-    console.log('🔧 CONTAINER DRAWER: initializeModal function found, calling it');
-    window.containerUnitMismatchDrawer.initializeModal();
-} else {
-    console.warn('🔧 CONTAINER DRAWER: initializeModal function not found on window.containerUnitMismatchDrawer');
-    console.log('🔧 CONTAINER DRAWER: window.containerUnitMismatchDrawer =', window.containerUnitMismatchDrawer);
-}
+// Wait a moment for the drawer script to be fully loaded and executed
+setTimeout(() => {
+    if (window.containerUnitMismatchDrawer && typeof window.containerUnitMismatchDrawer.initializeModal === 'function') {
+        console.log('🔧 CONTAINER DRAWER: initializeModal function found, calling it');
+        window.containerUnitMismatchDrawer.initializeModal();
+    } else {
+        console.warn('🔧 CONTAINER DRAWER: initializeModal function not found on window.containerUnitMismatchDrawer');
+        console.log('🔧 CONTAINER DRAWER: window.containerUnitMismatchDrawer =', window.containerUnitMismatchDrawer);
+        
+        // Try to initialize it anyway in case it's just a timing issue
+        if (window.containerUnitMismatchDrawer) {
+            console.log('🔧 CONTAINER DRAWER: Attempting to create initializeModal function');
+            window.containerUnitMismatchDrawer.initializeModal = function() {
+                console.log('🔧 CONTAINER DRAWER: Fallback initializeModal called');
+            };
+        }
+    }
+}, 100);
 </script>

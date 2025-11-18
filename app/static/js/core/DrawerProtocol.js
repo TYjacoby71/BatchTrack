@@ -240,5 +240,3 @@ class DrawerProtocol {
 if (!window.drawerProtocol) {
     window.drawerProtocol = new DrawerProtocol();
 }
-
-export { DrawerProtocol };
