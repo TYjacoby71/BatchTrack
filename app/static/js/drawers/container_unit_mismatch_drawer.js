@@ -115,10 +115,21 @@
     }
   }
 
+  function initializeModal() {
+    // This function is called by DrawerProtocol after modal is rendered
+    console.log('Container unit mismatch drawer initialized');
+  }
+
   function init() {
     document.body.addEventListener('submit', handleYieldSubmit);
     document.body.addEventListener('click', handleDisableClick);
   }
+
+  // Expose functions globally for DrawerProtocol
+  if (!window.containerUnitMismatchDrawer) {
+    window.containerUnitMismatchDrawer = {};
+  }
+  window.containerUnitMismatchDrawer.initializeModal = initializeModal;
 
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', init);
