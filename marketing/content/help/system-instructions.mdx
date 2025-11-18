@@ -1,0 +1,73 @@
+---
+title: BatchTrack Operations Guide
+description: Plain-language walkthrough of the core BatchTrack workflows for both prospective and current users.
+---
+
+# BatchTrack Operations Guide
+
+Use this guide as the “public-side” orientation. Each section summarizes what happens inside the app and the mindset you can bring whether you are exploring BatchTrack or already running production on it.
+
+## Provision & Seed the Workspace {#provision-and-seed}
+- Install the app (`pip install -r requirements.txt`), run `flask db upgrade`, then seed via `flask init-production`.
+- Set `FLASK_APP=run.py` (or use the provided Makefile tasks) and start with `python run.py`.
+- Re-run the same steps for staging/preview environments so every teammate sees the same baseline data.
+
+## Manage Organizations, Roles, and Permissions {#organizations-and-permissions}
+- Developers live outside any customer org; owners & team members always carry an `organization_id`.
+- Use the Organization Dashboard to create custom roles, invite team members, and respect subscription limits.
+- In templates and routes, always check `has_permission(...)` so features stay tier-aware.
+
+## Curate the Global Item Library {#global-library}
+- Seed curated ingredients/containers via `scripts/seed_global_items_from_density_reference.py`.
+- Maintain data through `/developer/global-items`; customers only link to entries, they never edit them.
+- Metadata (summary, use cases, FAQs) is generated automatically when new `GlobalItem`s are inserted or synced.
+
+## Create Inventory from Global Templates {#inventory-creation}
+- Use the Drawer Picker to select a `GlobalItem`; identity fields lock while org-specific fields stay editable.
+- Track quantity, lot, cost, expiration, and ownership (`global` vs `org`) on the `InventoryItem`.
+- All quantity changes go through the Inventory Adjustment Service so FIFO history stays accurate.
+
+## Author Recipes & Category Data {#recipes}
+- Ingredients, consumables, and containers are defined under each recipe; category-specific JSON lives in `recipe.category_data`.
+- Link recipe lines to inventory/global items wherever possible for density-aware conversions.
+- Store portioning defaults (names, units, counts) before planning production.
+
+## Plan Production with PlanSnapshot {#plan-snapshot}
+- `PlanProductionService.build_plan()` freezes scaled ingredients, consumables, containers, and portioning.
+- Send the snapshot untouched to `POST /batches/api/start-batch`; it becomes the immutable `batch.plan_snapshot`.
+- Any recipe edits after planning will never mutate in-progress batches thanks to this snapshot.
+
+## Start, Monitor, and Finish Batches {#batches}
+- Starting a batch deducts inventory through FIFO, records projected yield, and spawns batch rows for ingredients, consumables, and containers.
+- Track progress by comparing actual usage to the snapshot, add extras when needed, and finish to record final yield & spawn products.
+- Timers, reservations, and alerts close out automatically when the batch completes.
+
+## Restock, Deduct, and Audit Inventory {#inventory-adjustments}
+- Use helpers like `adjust_inventory`, `restock_inventory`, and `record_spoilage` with explicit reasons and supplier/cost info.
+- Drawer payloads surface when density or unit mapping data is missing, helping users fix issues without leaving the workflow.
+- Every adjustment writes to inventory history and keeps FIFO lots in sync.
+
+## Track Expiration, Alerts, and Reservations {#alerts}
+- Expiration Service derives shelf-life from inventory & global defaults; alerts roll up through Dashboard Alert Service.
+- Reservation Service blocks finished goods for customers, and Combined Inventory Alert Service unifies stock + expiration warnings.
+- Dashboards surface the highest-priority alerts first with contextual links.
+
+## Use Public Tools, Drafts, and Exports {#public-tools}
+- `/tools` hosts calculators (soap, candles, lotions, herbal, baker) that anyone can use before signing up.
+- Drafts post to `/tools/draft`, store in session, and auto-fill `/recipes/new` after the user authenticates.
+- `/exports/...` routes render HTML, CSV, and PDF for both authenticated recipes and public drafts.
+
+## Integrate via APIs & Webhooks {#api}
+- Authenticated APIs follow Flask-Login sessions; developer-only endpoints allow org impersonation for support.
+- Drawer endpoints (`/api/drawer-actions/...`) feed missing data modals, keeping flows recoverable.
+- Public APIs are intentionally narrow: global-item search, unit listings, and unit conversion for the calculators.
+
+## Billing, Tiers, and Feature Flags {#billing}
+- Stripe webhooks update the Billing Snapshot, which the Billing Service uses to enforce feature and user limits.
+- `has_subscription_feature(...)` toggles UI features per tier; developer-only feature flags live in `settings.json`.
+- Keep `docs/changelog` and `docs/system/FREE_TIER.md` updated when pricing or limits change.
+
+## Deployments, Migrations, and Monitoring {#devops}
+- Every schema change gets an Alembic migration; run them in org-safe order and never bypass services.
+- Middleware enforces security headers and logs unauthenticated hits; monitor logs plus the churn in `docs/changelog`.
+- Post-release, update the CAQ (below) when new patterns emerge so the public side always reflects the live system.
