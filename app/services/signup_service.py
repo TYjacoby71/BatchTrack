@@ -268,7 +268,7 @@ class SignupService:
         """Persist a pending signup row before redirecting the user to Stripe."""
         cleaned_email = (email or "").strip().lower()
         if not cleaned_email:
-            raise ValueError("Email is required for pending signup")
+            cleaned_email = SignupService._generate_placeholder_email()
 
         pending = PendingSignup(
             email=cleaned_email,
@@ -482,3 +482,7 @@ class SignupService:
             candidate = f"{base}{counter}"
             counter += 1
         return candidate
+
+    @staticmethod
+    def _generate_placeholder_email() -> str:
+        return f"pending+{secrets.token_hex(6)}@signup.batchtrack"

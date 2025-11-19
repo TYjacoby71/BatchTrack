@@ -466,7 +466,7 @@ class StripeService:
     def create_checkout_session_for_tier(
         tier_obj,
         *,
-        customer_email: str,
+        customer_email: str | None,
         success_url: str,
         cancel_url: str,
         metadata: dict | None = None,
@@ -484,32 +484,54 @@ class StripeService:
             logger.error(f"No pricing found for tier {tier_obj.name} (ID: {tier_obj.id})")
             return None
 
-        if not customer_email:
-            logger.error("Customer email is required to create Stripe checkout session")
-            return None
-
         try:
-            session = stripe.checkout.Session.create(
-                mode='subscription',
-                payment_method_types=['card'],
-                line_items=[{
+            session_params = {
+                'mode': 'subscription',
+                'payment_method_types': ['card'],
+                'line_items': [{
                     'price': pricing['price_id'],
                     'quantity': 1,
                 }],
-                success_url=success_url,
-                cancel_url=cancel_url,
-                customer_email=customer_email,
-                client_reference_id=client_reference_id,
-                billing_address_collection='auto',
-                phone_number_collection={'enabled': phone_required},
-                allow_promotion_codes=allow_promo,
-                metadata={
+                'success_url': success_url,
+                'cancel_url': cancel_url,
+                'client_reference_id': client_reference_id,
+                'billing_address_collection': 'auto',
+                'phone_number_collection': {'enabled': phone_required},
+                'allow_promotion_codes': allow_promo,
+                'customer_creation': 'always',
+                'customer_update': {'name': 'auto', 'address': 'auto'},
+                'metadata': {
                     'tier_id': str(tier_obj.id),
                     'tier_name': tier_obj.name,
                     'lookup_key': tier_obj.stripe_lookup_key,
                     **(metadata or {})
                 },
-            )
+                'custom_fields': [
+                    {
+                        'key': 'workspace_name',
+                        'label': {'type': 'custom', 'custom': 'Workspace / brand name'},
+                        'type': 'text',
+                        'text': {'minimum_length': 2, 'maximum_length': 60},
+                    },
+                    {
+                        'key': 'first_name',
+                        'label': {'type': 'custom', 'custom': 'First name'},
+                        'type': 'text',
+                        'text': {'minimum_length': 1, 'maximum_length': 40},
+                    },
+                    {
+                        'key': 'last_name',
+                        'label': {'type': 'custom', 'custom': 'Last name'},
+                        'type': 'text',
+                        'text': {'minimum_length': 1, 'maximum_length': 60},
+                    },
+                ],
+            }
+
+            if customer_email:
+                session_params['customer_email'] = customer_email
+
+            session = stripe.checkout.Session.create(**session_params)
 
             logger.info(
                 "Created checkout session %s for tier %s (%s) with price %s",
