@@ -24,6 +24,11 @@ def _is_enabled(key: str, default: bool = True) -> bool:
         return default
 
 
+def _render_tool(template_name: str, flag_key: str):
+    enabled = _is_enabled(flag_key, True)
+    return render_template(template_name, tool_enabled=enabled)
+
+
 @tools_bp.route('/')
 def tools_index():
     """Public tools landing. Embeds calculators with progressive disclosure.
@@ -41,38 +46,23 @@ def tools_index():
 
 @tools_bp.route('/soap')
 def tools_soap():
-    if not _is_enabled('TOOLS_SOAP', True):
-        flash('Soap tools are currently unavailable.', 'warning')
-        return redirect(url_for('tools_bp.tools_index'))
-    return render_template('tools/soap.html')
+    return _render_tool('tools/soap.html', 'TOOLS_SOAP')
 
 @tools_bp.route('/candles')
 def tools_candles():
-    if not _is_enabled('TOOLS_CANDLES', True):
-        flash('Candle tools are currently unavailable.', 'warning')
-        return redirect(url_for('tools_bp.tools_index'))
-    return render_template('tools/candles.html')
+    return _render_tool('tools/candles.html', 'TOOLS_CANDLES')
 
 @tools_bp.route('/lotions')
 def tools_lotions():
-    if not _is_enabled('TOOLS_LOTIONS', True):
-        flash('Lotion tools are currently unavailable.', 'warning')
-        return redirect(url_for('tools_bp.tools_index'))
-    return render_template('tools/lotions.html')
+    return _render_tool('tools/lotions.html', 'TOOLS_LOTIONS')
 
 @tools_bp.route('/herbal')
 def tools_herbal():
-    if not _is_enabled('TOOLS_HERBAL', True):
-        flash('Herbal tools are currently unavailable.', 'warning')
-        return redirect(url_for('tools_bp.tools_index'))
-    return render_template('tools/herbal.html')
+    return _render_tool('tools/herbal.html', 'TOOLS_HERBAL')
 
 @tools_bp.route('/baker')
 def tools_baker():
-    if not _is_enabled('TOOLS_BAKING', True):
-        flash('Baker tools are currently unavailable.', 'warning')
-        return redirect(url_for('tools_bp.tools_index'))
-    return render_template('tools/baker.html')
+    return _render_tool('tools/baker.html', 'TOOLS_BAKING')
 
 
 @tools_bp.route('/draft', methods=['POST'])

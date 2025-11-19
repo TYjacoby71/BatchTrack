@@ -1,7 +1,19 @@
 {% extends 'layout.html' %}
 {% block content %}
+{% set tool_enabled = tool_enabled if tool_enabled is defined else True %}
 <div class="py-1">
-  <h2 class="mb-3">Baker Tools</h2>
+  <h2 class="mb-3 d-flex align-items-center gap-2">
+    Baker Tools
+    {% if not tool_enabled %}
+    <span class="badge bg-secondary">Coming Soon</span>
+    {% endif %}
+  </h2>
+  {% if not tool_enabled %}
+  <div class="alert alert-warning d-flex align-items-center" role="alert">
+    <i class="fas fa-hourglass-half me-2"></i>
+    Formula scaling is almost ready. Walk through the interface now and watch for the production launch.
+  </div>
+  {% endif %}
   <script>window.RECIPE_CATEGORY_NAME = 'Baked Goods';</script>
   <p class="text-muted">Baker’s percentage with flour as 100%. Use grams.</p>
 
