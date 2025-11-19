@@ -1,0 +1,42 @@
+ Handling signal: term
+[2025-11-19 00:12:08 +0000] [63] [INFO] Worker exiting (pid: 63)
+[2025-11-19 00:12:09 +0000] [61] [INFO] Worker exiting (pid: 61)
+[2025-11-19 00:12:09 +0000] [62] [INFO] Worker exiting (pid: 62)
+[2025-11-19 00:12:09 +0000] [60] [INFO] Worker exiting (pid: 60)
+[2025-11-19 00:12:13 +0000] [58] [INFO] Shutting down: Master
+Gunicorn config: 4 gevent workers, 1000 connections each
+     ==> Detected service running on port 10000
+     ==> Docs on specifying a port: https://render.com/docs/web-services#port-binding
+  File "/opt/render/project/src/.venv/lib/python3.13/site-packages/gunicorn/workers/ggevent.py", line 127, in handle_request
+    super().handle_request(listener_name, req, sock, addr)
+    ~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/render/project/src/.venv/lib/python3.13/site-packages/gunicorn/workers/base_async.py", line 107, in handle_request
+    respiter = self.wsgi(environ, resp.start_response)
+  File "/opt/render/project/src/.venv/lib/python3.13/site-packages/flask/app.py", line 1536, in __call__
+    return self.wsgi_app(environ, start_response)
+           ~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/render/project/src/.venv/lib/python3.13/site-packages/flask/app.py", line 1514, in wsgi_app
+    response = self.handle_exception(e)
+  File "/opt/render/project/src/.venv/lib/python3.13/site-packages/flask/app.py", line 1511, in wsgi_app
+    response = self.full_dispatch_request()
+  File "/opt/render/project/src/.venv/lib/python3.13/site-packages/flask/app.py", line 919, in full_dispatch_request
+    rv = self.handle_user_exception(e)
+  File "/opt/render/project/src/.venv/lib/python3.13/site-packages/flask/app.py", line 917, in full_dispatch_request
+    rv = self.dispatch_request()
+  File "/opt/render/project/src/.venv/lib/python3.13/site-packages/flask/app.py", line 902, in dispatch_request
+    return self.ensure_sync(self.view_functions[rule.endpoint])(**view_args)  # type: ignore[no-any-return]
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^
+  File "/opt/render/project/src/.venv/lib/python3.13/site-packages/flask_limiter/extension.py", line 1303, in __inner
+    return cast(R, flask.current_app.ensure_sync(obj)(*a, **k))
+                   ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^
+  File "/opt/render/project/src/app/blueprints/auth/routes.py", line 415, in signup
+    from ...services.stripe_service import StripeService
+  File "/opt/render/project/src/app/services/stripe_service.py", line 7, in <module>
+    import stripe.error as stripe_error
+ModuleNotFoundError: No module named 'stripe.error'
+Gunicorn config: 4 gevent workers, 1000 connections each
+10.24.154.63 "GET /auth/signup?source=homepage_trial HTTP/1.1" 500 0 "-" "-" 12310
+Unauthenticated request to UNKNOWN endpoint: endpoint=None, path=/favicon.ico, method=GET, user_agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Sa
+Gunicorn config: 4 gevent workers, 1000 connections each
+10.25.63.137 "GET /favicon.ico HTTP/1.1" 302 307 "https://batchtrack.onrender.com/auth/signup?source=homepage_trial" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36" 22752
+10.25.25.86 "GET /auth/login?next=https://batchtrack.onrender.com/favicon.ico HTTP/1.1" 200 41706 "https://batchtrack.onrender.com/auth/signup?source=homepage_trial" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36" 63056
