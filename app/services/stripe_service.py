@@ -4,7 +4,6 @@ import os
 from flask import current_app
 from datetime import datetime, timedelta, timezone
 from decimal import Decimal
-import stripe.error as stripe_error
 from app.extensions import db
 from app.models.stripe_event import StripeEvent
 from app.models.subscription_tier import SubscriptionTier
