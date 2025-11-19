@@ -77,6 +77,7 @@ class RouteAccessConfig:
         '/auth/signup',
         '/auth/logout',
         '/tools',              # Public calculator tools
+        '/tools/',             # Explicit trailing-slash variant for public tools
         '/exports/tool',       # Public export previews
         '/api/public',         # Public API namespace
         '/help',               # Public help center

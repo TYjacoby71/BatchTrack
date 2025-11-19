@@ -22,10 +22,10 @@
     "FEATURE_AI_RECIPE_OPTIMIZATION": false,
     "FEATURE_AI_DEMAND_FORECASTING": false,
     "FEATURE_AI_QUALITY_INSIGHTS": false,
-    "TOOLS_SOAP": false,
-    "TOOLS_CANDLES": false,
-    "TOOLS_LOTIONS": false,
-    "TOOLS_HERBAL": false,
-    "TOOLS_BAKING": false
+    "TOOLS_SOAP": true,
+    "TOOLS_CANDLES": true,
+    "TOOLS_LOTIONS": true,
+    "TOOLS_HERBAL": true,
+    "TOOLS_BAKING": true
   }
 }
