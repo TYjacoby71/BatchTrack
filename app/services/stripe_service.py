@@ -38,7 +38,7 @@ class StripeService:
         """Construct Stripe event from webhook payload"""
         return stripe.Webhook.construct_event(payload, sig_header, webhook_secret)
 
-    
+
 
     @staticmethod
     def get_customer(customer_id: str):
@@ -62,14 +62,14 @@ class StripeService:
     def handle_webhook_event(event: dict) -> int:
         """Handle Stripe webhook event with idempotency"""
         from sqlalchemy.exc import IntegrityError
-        
+
         # Insert-first pattern to handle concurrent replays
         stripe_event = StripeEvent(
             event_id=event["id"],
             event_type=event["type"],
             status='received'
         )
-        
+
         try:
             db.session.add(stripe_event)
             db.session.commit()
@@ -402,7 +402,7 @@ class StripeService:
                 'last_synced': datetime.now(timezone.utc).isoformat()
             }
 
-        except stripe_error.StripeError as e:
+        except stripe.error.StripeError as e:
             logger.error(f"Stripe error fetching price for {tier_obj.stripe_lookup_key}: {e}")
             return None
         finally:
@@ -421,7 +421,7 @@ class StripeService:
                     StripeService._pricing_cache[cache_key] = {'ts': datetime.now(timezone.utc), 'data': data}
             except Exception:
                 pass
-    
+
     @staticmethod
     def _resolve_price_for_lookup_key(lookup_key: str):
         """
@@ -459,7 +459,7 @@ class StripeService:
 
             return None, 'lookup_key'
 
-        except stripe_error.StripeError:
+        except stripe.error.StripeError:
             # Propagate to caller for centralized logging/handling
             raise
 
@@ -521,7 +521,7 @@ class StripeService:
             )
             return session
 
-        except stripe_error.StripeError as e:
+        except stripe.error.StripeError as e:
             logger.error(
                 "Failed to create checkout session for tier %s (ID: %s): %s",
                 tier_obj.name,
@@ -570,7 +570,7 @@ class StripeService:
                 logger.info(f"Synced tier {tier_obj.name} (ID: {tier_obj.id}) with Stripe product {product.name}")
                 return True
 
-        except stripe_error.StripeError as e:
+        except stripe.error.StripeError as e:
             logger.error(f"Error syncing product from Stripe: {e}")
             return False
 
@@ -652,7 +652,7 @@ class StripeService:
             )
             return session
 
-        except stripe_error.StripeError as e:
+        except stripe.error.StripeError as e:
             logger.error(f"Failed to create portal session: {e}")
             return None
 
