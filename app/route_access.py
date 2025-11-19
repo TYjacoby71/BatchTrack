@@ -42,6 +42,8 @@ class RouteAccessConfig:
         
         # Billing webhooks (Stripe callbacks)
         'billing.stripe_webhook',
+        'billing.complete_signup_from_stripe',
+        'billing.complete_signup_from_whop',
         
         # Public tools - category-specific calculators
         'tools_bp.tools_index',
