@@ -12,8 +12,8 @@ def help_overview():
             "title": "Getting Started",
             "points": [
                 "Follow the first-login checklist to choose whether you add inventory or recipes first.",
-                "Provision your workspace (install deps, migrate, seed) so every teammate sees the same baseline data.",
-                "Set up organizations, roles, and permissions so each user only sees what their subscription tier allows.",
+                "Capture your core inventory or recipe data on day one so dashboards surface real insights.",
+                "Invite teammates and assign roles so everyone knows their next action in BatchTrack.",
             ],
             "details": [
                 {
@@ -22,36 +22,35 @@ def help_overview():
 <ol>
   <li><strong>Decide your starting path.</strong> Inventory-first teams populate ingredients/containers so costs and conversions work; recipe-first teams can create formulas immediately but should link every line to inventory.</li>
   <li><strong>Follow the dashboard ribbons.</strong> The blank state surfaces “Add Inventory” and “Add Recipe” buttons, each linking back to these instructions.</li>
-  <li><strong>Repeat this flow for staging/preview.</strong> Seed each environment the same way so teammates always see consistent data.</li>
+    <li><strong>Repeat this flow for every workspace.</strong> Keeping the experience consistent helps teammates share the same reference data.</li>
 </ol>
                     """,
                 },
                 {
-                    "title": "Provision & Seed the Workspace",
+                    "title": "Invite Your Team & Set Goals",
                     "body": """
 <ol>
-  <li><code>pip install -r requirements.txt</code> to install dependencies.</li>
-  <li>Run <code>flask db upgrade</code> to apply migrations.</li>
-  <li>Seed core data with <code>flask init-production</code> (or individual commands like <code>flask seed-units</code>).</li>
-  <li>Set <code>FLASK_APP=run.py</code> (or use the Makefile) and start the server with <code>python run.py</code>.</li>
-  <li>Document any feature flags/env vars so future teammates can recreate the environment quickly.</li>
+  <li><strong>Open</strong> <em>Organization → Teammates</em> to invite coworkers and assign owner/manager roles.</li>
+  <li><strong>Decide</strong> which KPIs you want to highlight first—low stock alerts, production throughput, or order readiness.</li>
+  <li><strong>Use</strong> the dashboard ribbons to pin those priorities so every login reinforces the same goals.</li>
+  <li><strong>Review</strong> the inline help cards in inventory, recipes, and planning for quick reminders while you work.</li>
 </ol>
                     """,
                 },
                 {
-                    "title": "Manage Organizations, Roles, and Permissions",
+                    "title": "Guide Teammates with Roles & Permissions",
                     "body": """
 <ul>
-  <li>Developers never receive an <code>organization_id</code>; org owners and team members always do.</li>
-  <li>Create custom roles from <strong>Organization → Dashboard</strong>, assign permissions, and invite teammates.</li>
-  <li>Guard UI/actions with <code>has_permission(...)</code> and <code>has_subscription_feature(...)</code> so tiers stay respected.</li>
+  <li>Use <strong>Organization → Roles</strong> to define who can edit inventory, plan production, or finish batches.</li>
+  <li>Owners can unlock subscription-tier features, while contributors can stay focused on the tasks they handle every day.</li>
+  <li>Pair every new user with a role when they join so navigation only surfaces the workflows they need.</li>
 </ul>
                     """,
                 },
             ],
             "gallery": [
                 "Screenshot: Blank dashboard with Add Inventory / Add Recipe CTAs",
-                "Screenshot: Provisioning checklist or CLI output after seeding",
+                "Screenshot: Organization teammates list showing role assignments",
             ],
         },
         {
@@ -269,32 +268,32 @@ def help_overview():
                     """,
                 },
                 {
-                    "title": "Integrate via APIs & Webhooks",
+                    "title": "Turn Drafts into Ready-to-Produce Recipes",
+                    "body": """
+<ol>
+  <li><strong>Save</strong> a draft after experimenting inside the public calculators.</li>
+  <li><strong>Log in</strong> and open <em>Recipes → New Recipe</em>; BatchTrack auto-detects the draft and fills ingredients, consumables, and containers.</li>
+  <li><strong>Tune</strong> instructions, notes, and yield, then move directly into production planning when you're satisfied.</li>
+</ol>
+                    """,
+                },
+                {
+                    "title": "Choose the Right Plan",
                     "body": """
 <ul>
-  <li>Authenticated APIs rely on Flask-Login sessions; developer-only endpoints support org impersonation.</li>
-  <li>Drawer endpoints (<code>/api/drawer-actions/... </code>) return the data needed to resolve density/unit issues.</li>
-  <li>Public APIs expose unit listings, unit conversion, and global-item search for calculators.</li>
+  <li>Compare tiers inside <strong>Billing → Plans</strong> to align features with your production volume.</li>
+  <li>Seat counts, reservations, and analytics limits are spelled out so you can scale intentionally.</li>
+  <li>Invoices and usage snapshots live in the same screen, keeping finance teams informed without exporting data.</li>
 </ul>
                     """,
                 },
                 {
-                    "title": "Billing, Tiers, and Feature Flags",
+                    "title": "Stay Informed & Get Help",
                     "body": """
 <ul>
-  <li>Stripe webhook updates the Billing Snapshot; Billing Service enforces feature access and seat counts.</li>
-  <li>Use <code>has_subscription_feature(...)</code> to hide premium functionality in templates.</li>
-  <li>Developer feature flags live in <code>settings.json</code> so experiments stay scoped.</li>
-</ul>
-                    """,
-                },
-                {
-                    "title": "Deployments, Migrations, and Monitoring",
-                    "body": """
-<ul>
-  <li>Every schema change needs an Alembic migration—never bypass services.</li>
-  <li>Middleware enforces security headers and logs anonymous hits; monitor logs plus <code>docs/changelog</code>.</li>
-  <li>Update this help page and the FAQ whenever flows change so onboarding stays current.</li>
+  <li>Use this help center plus the FAQ for day-to-day workflow questions.</li>
+  <li>New feature callouts appear inline, and deeper release notes live under <em>Docs → Changelog</em>.</li>
+  <li>If you need human support, submit a ticket from the in-app support link so the team sees your recent activity.</li>
 </ul>
                     """,
                 },
