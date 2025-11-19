@@ -314,6 +314,7 @@ class SignupService:
         session_metadata = SignupService._object_to_dict(getattr(checkout_session, 'metadata', {}))
         customer_details = SignupService._object_to_dict(getattr(checkout_session, 'customer_details', {}))
         customer_metadata = SignupService._object_to_dict(getattr(customer_obj, 'metadata', {}))
+        custom_fields = getattr(checkout_session, 'custom_fields', None)
 
         pending_signup.stripe_checkout_session_id = pending_signup.stripe_checkout_session_id or getattr(checkout_session, 'id', None)
         pending_signup.stripe_customer_id = pending_signup.stripe_customer_id or getattr(customer_obj, 'id', None)
@@ -332,17 +333,27 @@ class SignupService:
             getattr(customer_obj, 'phone', None),
             pending_signup.phone,
         )
+        pending_signup.email = email
+        pending_signup.phone = phone
 
         full_name = SignupService._first_non_empty(
             customer_details.get('name'),
             getattr(customer_obj, 'name', None),
         )
         first_name, last_name = SignupService._split_name(full_name)
+        custom_first = SignupService._extract_custom_field(custom_fields, 'first_name')
+        custom_last = SignupService._extract_custom_field(custom_fields, 'last_name')
+        if custom_first and not first_name:
+            first_name = custom_first
+        if custom_last and not last_name:
+            last_name = custom_last
 
+        workspace_field = SignupService._extract_custom_field(custom_fields, 'workspace_name')
         org_name = (
-            session_metadata.get('org_name')
+            workspace_field
+            or session_metadata.get('org_name')
             or customer_metadata.get('org_name')
-            or pending_signup.extra_metadata.get('org_name') if pending_signup.extra_metadata else None
+            or (pending_signup.extra_metadata.get('org_name') if pending_signup.extra_metadata else None)
         )
         if not org_name:
             org_name = f"{first_name or 'New'}'s Workspace"
@@ -486,3 +497,17 @@ class SignupService:
     @staticmethod
     def _generate_placeholder_email() -> str:
         return f"pending+{secrets.token_hex(6)}@signup.batchtrack"
+
+    @staticmethod
+    def _extract_custom_field(custom_fields, key: str):
+        try:
+            for field in custom_fields or []:
+                current_key = getattr(field, 'key', None) if not isinstance(field, dict) else field.get('key')
+                if current_key != key:
+                    continue
+                payload = getattr(field, 'text', None) if not isinstance(field, dict) else field.get('text')
+                if isinstance(payload, dict):
+                    return payload.get('value')
+        except Exception:
+            return None
+        return None
