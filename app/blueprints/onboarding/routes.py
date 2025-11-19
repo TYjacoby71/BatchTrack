@@ -1,8 +1,11 @@
+import re
+
 from flask import Blueprint, render_template, request, redirect, url_for, flash, session
 from flask_login import login_required, current_user
 
 from ...extensions import db
 from ...utils.timezone_utils import TimezoneUtils
+from ...models import User
 
 onboarding_bp = Blueprint('onboarding', __name__, url_prefix='/onboarding')
 
@@ -50,23 +53,41 @@ def welcome():
             user_first = (request.form.get('first_name') or user.first_name or '').strip()
             user_last = (request.form.get('last_name') or user.last_name or '').strip()
             user_phone = (request.form.get('user_phone') or user.phone or '').strip()
+            desired_username = (request.form.get('username') or user.username or '').strip()
 
             organization.name = org_name or organization.name
             organization.contact_email = org_contact_email or organization.contact_email
             user.first_name = user_first
             user.last_name = user_last
             user.phone = user_phone or None
+
+            username_errors = []
+            if desired_username and desired_username != user.username:
+                existing = User.query.filter(User.username == desired_username, User.id != user.id).first()
+                if existing:
+                    username_errors.append('That username is already taken.')
+                elif len(desired_username) < 3:
+                    username_errors.append('Username must be at least 3 characters.')
+                elif not re.fullmatch(r'[A-Za-z0-9_]+', desired_username):
+                    username_errors.append('Username can only contain letters, numbers, and underscores.')
+                else:
+                    user.username = desired_username
+
             user.last_login = user.last_login or TimezoneUtils.utc_now()
 
-            db.session.commit()
-            flash('Setup details saved.', 'success')
+            if username_errors:
+                for err in username_errors:
+                    flash(err, 'error')
+            else:
+                db.session.commit()
+                flash('Setup details saved.', 'success')
 
-            if request.form.get('complete_checklist') == 'true':
-                if requires_password_setup:
-                    flash('Please create your password before continuing to the dashboard.', 'warning')
-                else:
-                    session.pop('onboarding_welcome', None)
-                    return redirect(url_for('app_routes.dashboard'))
+                if request.form.get('complete_checklist') == 'true':
+                    if requires_password_setup:
+                        flash('Please create your password before continuing to the dashboard.', 'warning')
+                    else:
+                        session.pop('onboarding_welcome', None)
+                        return redirect(url_for('app_routes.dashboard'))
     else:
         if session.pop('onboarding_welcome', None):
             flash('Thanks for joining BatchTrack! Let’s finish setting up your workspace.', 'success')

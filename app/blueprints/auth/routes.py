@@ -470,17 +470,6 @@ def signup():
                          contact_email=contact_email,
                          contact_phone=contact_phone)
 
-        if not contact_email or not contact_phone:
-            flash('Email and phone number are required before checkout.', 'error')
-            return render_template('pages/auth/signup.html',
-                         signup_source=signup_source,
-                         referral_code=referral_code,
-                         promo_code=promo_code,
-                         available_tiers=available_tiers,
-                         oauth_user_info=oauth_user_info,
-                         contact_email=contact_email,
-                         contact_phone=contact_phone)
-
         # Create Stripe checkout session
         from ...services.stripe_service import StripeService
         from ...models import SubscriptionTier
@@ -536,7 +525,7 @@ def signup():
             pending_signup = SignupService.create_pending_signup_record(
                 tier=tier_obj,
                 email=contact_email,
-                phone=contact_phone,
+                phone=contact_phone or None,
                 signup_source=signup_source,
                 referral_code=referral_code,
                 promo_code=promo_code,
@@ -563,7 +552,7 @@ def signup():
 
         stripe_session = StripeService.create_checkout_session_for_tier(
             tier_obj,
-            customer_email=contact_email,
+            customer_email=contact_email or None,
             success_url=success_url,
             cancel_url=cancel_url,
             metadata=metadata,
