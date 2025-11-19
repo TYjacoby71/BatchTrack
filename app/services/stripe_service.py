@@ -12,6 +12,20 @@ from app.models.pending_signup import PendingSignup
 from .signup_service import SignupService
 from ..utils.timezone_utils import TimezoneUtils
 
+try:
+    from stripe import exceptions as stripe_exceptions  # Stripe >= 11
+except (ImportError, AttributeError):
+    stripe_exceptions = None
+
+if stripe_exceptions and hasattr(stripe_exceptions, 'StripeError'):
+    StripeError = stripe_exceptions.StripeError
+else:
+    StripeError = getattr(getattr(stripe, 'error', None), 'StripeError', None)
+    if StripeError is None:
+        class StripeError(Exception):
+            """Fallback Stripe error base when SDK structure changes."""
+            pass
+
 
 logger = logging.getLogger(__name__)
 
@@ -401,7 +415,7 @@ class StripeService:
                 'last_synced': datetime.now(timezone.utc).isoformat()
             }
 
-        except stripe.error.StripeError as e:
+        except StripeError as e:
             logger.error(f"Stripe error fetching price for {tier_obj.stripe_lookup_key}: {e}")
             return None
         finally:
@@ -458,7 +472,7 @@ class StripeService:
 
             return None, 'lookup_key'
 
-        except stripe.error.StripeError:
+        except StripeError:
             # Propagate to caller for centralized logging/handling
             raise
 
@@ -498,7 +512,6 @@ class StripeService:
                 'billing_address_collection': 'auto',
                 'phone_number_collection': {'enabled': phone_required},
                 'allow_promotion_codes': allow_promo,
-                'customer_creation': 'always',
                 'customer_update': {'name': 'auto', 'address': 'auto'},
                 'metadata': {
                     'tier_id': str(tier_obj.id),
@@ -528,6 +541,9 @@ class StripeService:
                 ],
             }
 
+            if session_params.get('mode') == 'payment':
+                session_params['customer_creation'] = 'always'
+
             if customer_email:
                 session_params['customer_email'] = customer_email
 
@@ -542,7 +558,7 @@ class StripeService:
             )
             return session
 
-        except stripe.error.StripeError as e:
+        except StripeError as e:
             logger.error(
                 "Failed to create checkout session for tier %s (ID: %s): %s",
                 tier_obj.name,
@@ -591,7 +607,7 @@ class StripeService:
                 logger.info(f"Synced tier {tier_obj.name} (ID: {tier_obj.id}) with Stripe product {product.name}")
                 return True
 
-        except stripe.error.StripeError as e:
+        except StripeError as e:
             logger.error(f"Error syncing product from Stripe: {e}")
             return False
 
@@ -673,7 +689,7 @@ class StripeService:
             )
             return session
 
-        except stripe.error.StripeError as e:
+        except StripeError as e:
             logger.error(f"Failed to create portal session: {e}")
             return None
 
