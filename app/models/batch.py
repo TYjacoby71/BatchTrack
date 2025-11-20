@@ -92,25 +92,28 @@ class Batch(ScopedModelMixin, db.Model):
         cls.baker_yeast_pct = db.Column(sa.Numeric(), sa.Computed("(((plan_snapshot -> 'category_extension') ->> 'baker_yeast_pct'))::numeric", persisted=True), nullable=True)
         cls.cosm_emulsifier_pct = db.Column(sa.Numeric(), sa.Computed("(((plan_snapshot -> 'category_extension') ->> 'cosm_emulsifier_pct'))::numeric", persisted=True), nullable=True)
         cls.cosm_preservative_pct = db.Column(sa.Numeric(), sa.Computed("(((plan_snapshot -> 'category_extension') ->> 'cosm_preservative_pct'))::numeric", persisted=True), nullable=True)
+        
+        # Add indexes for the computed columns (PostgreSQL only)
+        # Note: These indexes are also created in Alembic migrations for production
+        cls.__table__.indexes.update({
+            db.Index('ix_batch_vessel_fill_pct', cls.vessel_fill_pct),
+            db.Index('ix_batch_candle_fragrance_pct', cls.candle_fragrance_pct),
+            db.Index('ix_batch_candle_vessel_ml', cls.candle_vessel_ml),
+            db.Index('ix_batch_soap_superfat', cls.soap_superfat),
+            db.Index('ix_batch_soap_water_pct', cls.soap_water_pct),
+            db.Index('ix_batch_soap_lye_type', cls.soap_lye_type),
+            db.Index('ix_batch_baker_base_flour_g', cls.baker_base_flour_g),
+            db.Index('ix_batch_baker_water_pct', cls.baker_water_pct),
+            db.Index('ix_batch_baker_salt_pct', cls.baker_salt_pct),
+            db.Index('ix_batch_baker_yeast_pct', cls.baker_yeast_pct),
+            db.Index('ix_batch_cosm_emulsifier_pct', cls.cosm_emulsifier_pct),
+            db.Index('ix_batch_cosm_preservative_pct', cls.cosm_preservative_pct),
+        })
 
-    __table_args__ = tuple([
+    # Define table args without computed column indexes - they'll be added dynamically
+    __table_args__ = (
         db.Index('ix_batch_org', 'organization_id'),
-        # PostgreSQL computed column indexes are handled in Alembic migrations
-        *([
-            db.Index('ix_batch_vessel_fill_pct', 'vessel_fill_pct'),
-            db.Index('ix_batch_candle_fragrance_pct', 'candle_fragrance_pct'),
-            db.Index('ix_batch_candle_vessel_ml', 'candle_vessel_ml'),
-            db.Index('ix_batch_soap_superfat', 'soap_superfat'),
-            db.Index('ix_batch_soap_water_pct', 'soap_water_pct'),
-            db.Index('ix_batch_soap_lye_type', 'soap_lye_type'),
-            db.Index('ix_batch_baker_base_flour_g', 'baker_base_flour_g'),
-            db.Index('ix_batch_baker_water_pct', 'baker_water_pct'),
-            db.Index('ix_batch_baker_salt_pct', 'baker_salt_pct'),
-            db.Index('ix_batch_baker_yeast_pct', 'baker_yeast_pct'),
-            db.Index('ix_batch_cosm_emulsifier_pct', 'cosm_emulsifier_pct'),
-            db.Index('ix_batch_cosm_preservative_pct', 'cosm_preservative_pct'),
-        ] if _IS_PG else [])
-    ])
+    )
 
 class BatchIngredient(ScopedModelMixin, db.Model):
     __tablename__ = 'batch_ingredient'
