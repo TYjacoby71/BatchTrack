@@ -166,7 +166,11 @@ class BillingService:
         if tier.billing_provider == 'stripe':
             from .stripe_service import StripeService
             return StripeService.create_checkout_session_for_tier(
-                tier, user_email, user_name, success_url, cancel_url, metadata
+                tier,
+                customer_email=user_email,
+                success_url=success_url,
+                cancel_url=cancel_url,
+                metadata=metadata,
             )
         elif tier.billing_provider == 'whop':
             # Whop is stubbed for now
