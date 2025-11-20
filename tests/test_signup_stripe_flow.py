@@ -96,3 +96,50 @@ def test_signup_flow_creates_org_and_user(app, client, monkeypatch):
         assert user.organization_id == org.id
         assert user.email == 'solo@applicant.com'
         assert pending.status == 'account_created'
+
+
+def test_complete_signup_route_logs_in_user(app, client, monkeypatch):
+    with app.app_context():
+        solo = SubscriptionTier(
+            name='Solo Live',
+            user_limit=1,
+            billing_provider='stripe',
+            is_customer_facing=True,
+            stripe_lookup_key='price_solo_live',
+        )
+        db.session.add(solo)
+        db.session.flush()
+
+        org = Organization(name='Solo Org', subscription_tier_id=solo.id, billing_status='active')
+        db.session.add(org)
+        db.session.flush()
+
+        user = User(
+            username='solo_owner',
+            email='owner@solo.com',
+            organization_id=org.id,
+            user_type='customer',
+            is_active=True,
+            is_organization_owner=True,
+        )
+        user.set_password('temp-pass')
+        db.session.add(user)
+        db.session.commit()
+
+        def fake_finalize(session_id):
+            assert session_id == 'cs_live'
+            return org, user
+
+        monkeypatch.setattr(BillingService, 'finalize_checkout_session', fake_finalize)
+
+        response = client.get(
+            '/billing/complete-signup-from-stripe',
+            query_string={'session_id': 'cs_live'},
+            follow_redirects=False,
+        )
+
+        assert response.status_code == 302
+        assert response.headers['Location'].endswith('/onboarding/welcome')
+
+        with client.session_transaction() as sess:
+            assert sess.get('_user_id') == str(user.id)
