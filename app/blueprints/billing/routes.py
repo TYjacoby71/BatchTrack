@@ -181,7 +181,8 @@ def checkout(tier, billing_cycle='month'):
             f"{current_user.first_name} {current_user.last_name}",
             url_for('billing.complete_signup_from_stripe', _external=True),
             url_for('billing.upgrade', _external=True),
-            metadata={'tier': tier, 'billing_cycle': billing_cycle}
+            metadata={'tier': tier, 'billing_cycle': billing_cycle},
+            existing_customer_id=getattr(organization, 'stripe_customer_id', None),
         )
         
         if checkout_session:

@@ -487,6 +487,7 @@ class StripeService:
         client_reference_id: str | None = None,
         phone_required: bool = True,
         allow_promo: bool = True,
+        existing_customer_id: str | None = None,
     ):
         """Create checkout session using tier's lookup key with minimal required inputs."""
         if not StripeService.initialize_stripe():
@@ -512,7 +513,6 @@ class StripeService:
                 'billing_address_collection': 'auto',
                 'phone_number_collection': {'enabled': phone_required},
                 'allow_promotion_codes': allow_promo,
-                'customer_update': {'name': 'auto', 'address': 'auto'},
                 'metadata': {
                     'tier_id': str(tier_obj.id),
                     'tier_name': tier_obj.name,
@@ -544,7 +544,10 @@ class StripeService:
             if session_params.get('mode') == 'payment':
                 session_params['customer_creation'] = 'always'
 
-            if customer_email:
+            if existing_customer_id:
+                session_params['customer'] = existing_customer_id
+                session_params['customer_update'] = {'name': 'auto', 'address': 'auto'}
+            elif customer_email:
                 session_params['customer_email'] = customer_email
 
             session = stripe.checkout.Session.create(**session_params)

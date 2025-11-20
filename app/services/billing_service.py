@@ -148,7 +148,15 @@ class BillingService:
             return {'tiers': {}, 'available': False, 'error': str(e)}
 
     @staticmethod
-    def create_checkout_session(tier_key, user_email, user_name, success_url, cancel_url, metadata=None):
+    def create_checkout_session(
+        tier_key,
+        user_email,
+        user_name,
+        success_url,
+        cancel_url,
+        metadata=None,
+        existing_customer_id=None,
+    ):
         """Create checkout session with appropriate provider. tier_key is a tier ID string."""
         try:
             tier_id = int(tier_key)
@@ -166,7 +174,15 @@ class BillingService:
         if tier.billing_provider == 'stripe':
             from .stripe_service import StripeService
             return StripeService.create_checkout_session_for_tier(
-                tier, user_email, user_name, success_url, cancel_url, metadata
+                tier,
+                customer_email=user_email,
+                success_url=success_url,
+                cancel_url=cancel_url,
+                metadata=metadata,
+                client_reference_id=None,
+                phone_required=True,
+                allow_promo=True,
+                existing_customer_id=existing_customer_id,
             )
         elif tier.billing_provider == 'whop':
             # Whop is stubbed for now
