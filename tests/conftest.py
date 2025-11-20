@@ -16,11 +16,6 @@ def app():
     # Create a temporary file to use as the database
     db_fd, db_path = tempfile.mkstemp()
 
-    # Override DATABASE_URL in environment before importing models
-    import os
-    original_db_url = os.environ.get('DATABASE_URL')
-    os.environ['DATABASE_URL'] = f'sqlite:///{db_path}'
-
     app = create_app({
         'TESTING': True,
         'DATABASE_URL': f'sqlite:///{db_path}',
@@ -45,12 +40,6 @@ def app():
             db.drop_all()
         os.close(db_fd)
         os.unlink(db_path)
-        
-        # Restore original DATABASE_URL
-        if original_db_url:
-            os.environ['DATABASE_URL'] = original_db_url
-        else:
-            os.environ.pop('DATABASE_URL', None)
 
 
 @pytest.fixture
