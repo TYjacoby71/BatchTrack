@@ -42,7 +42,7 @@
             <div class="card-body">
                 <p>Unlock more features and users with our premium plans.</p>
                 <div class="d-flex gap-2">
-                    <a href="{{ url_for('billing.billing') }}" class="btn btn-light">View All Plans</a>
+                    <a href="{{ url_for('billing.upgrade') }}" class="btn btn-light">View All Plans</a>
                     {% if org.subscription and org.subscription.stripe_customer_id %}
                     <a href="{{ url_for('billing.customer_portal') }}" class="btn btn-outline-secondary">
                         <i class="fas fa-cog"></i> Manage Billing
