@@ -1732,7 +1732,6 @@ def integrations_checklist():
     from flask import current_app
     import os, re
     from app.services.email_service import EmailService
-    from app.services.stripe_service import StripeService
     from app.models.subscription_tier import SubscriptionTier
 
     def _env_or_config_value(key):
@@ -1997,8 +1996,8 @@ def integrations_test_email():
 def integrations_test_stripe():
     """Test Stripe connectivity (no secrets shown)."""
     try:
-        from app.services.stripe_service import StripeService
-        ok = StripeService.initialize_stripe()
+        from app.services.billing_service import BillingService
+        ok = BillingService.ensure_stripe()
         if not ok:
             return jsonify({'success': False, 'error': 'Stripe secret not configured'}), 400
         # Try a harmless list call

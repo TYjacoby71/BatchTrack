@@ -1,6 +1,7 @@
 import pytest
 from flask_login import login_user
 from app.models import db, User, Organization, SubscriptionTier, Role, Permission
+from app.services.billing_service import BillingService
 
 # FIX 1: Add the missing import for AppPermission
 from app.utils.permissions import AppPermission
@@ -254,3 +255,72 @@ class TestBillingAndTierEnforcement:
             # Even basic permissions should be blocked now by middleware
             # (This would be caught by the middleware before permission check)
             assert org.billing_status != 'active'  # Confirms billing is bad
+
+    def test_create_checkout_session_preserves_urls(self, app, monkeypatch):
+        """Regression test: ensure upgrade flow forwards success/cancel URLs correctly."""
+        with app.app_context():
+            tier = SubscriptionTier(
+                name='Solo',
+                billing_provider='stripe',
+                stripe_lookup_key='price_solo',
+                is_customer_facing=True
+            )
+            db.session.add(tier)
+            db.session.commit()
+
+            captured = {}
+            sentinel = object()
+
+            def fake_create_checkout_session_for_tier(
+                tier_obj,
+                *,
+                customer_email,
+                success_url,
+                cancel_url,
+                metadata,
+                client_reference_id,
+                phone_required,
+                allow_promo,
+                existing_customer_id,
+            ):
+                captured['tier'] = tier_obj
+                captured['customer_email'] = customer_email
+                captured['success_url'] = success_url
+                captured['cancel_url'] = cancel_url
+                captured['metadata'] = metadata
+                captured['existing_customer_id'] = existing_customer_id
+                captured['client_reference_id'] = client_reference_id
+                captured['phone_required'] = phone_required
+                captured['allow_promo'] = allow_promo
+                return sentinel
+
+            monkeypatch.setattr(
+                BillingService,
+                'create_checkout_session_for_tier',
+                fake_create_checkout_session_for_tier,
+            )
+
+            metadata = {'tier': 'solo', 'billing_cycle': 'month'}
+            success_url = 'https://example.com/success'
+            cancel_url = 'https://example.com/cancel'
+
+            result = BillingService.create_checkout_session(
+                str(tier.id),
+                'owner@example.com',
+                'Owner Name',
+                success_url,
+                cancel_url,
+                metadata=metadata,
+                existing_customer_id='cus_123',
+            )
+
+            assert result is sentinel
+            assert captured['tier'].id == tier.id
+            assert captured['customer_email'] == 'owner@example.com'
+            assert captured['success_url'] == success_url
+            assert captured['cancel_url'] == cancel_url
+            assert captured['metadata'] == metadata
+            assert captured['existing_customer_id'] == 'cus_123'
+            assert captured['client_reference_id'] is None
+            assert captured['phone_required'] is True
+            assert captured['allow_promo'] is True

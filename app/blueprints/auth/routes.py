@@ -18,6 +18,7 @@ from ...services.email_service import EmailService
 from ...extensions import limiter
 from ...services.session_service import SessionService
 from ...services.signup_service import SignupService
+from ...services.billing_service import BillingService
 from datetime import datetime, timedelta
 
 logger = logging.getLogger(__name__)
@@ -347,12 +348,11 @@ def signup_data():
         features = [p.name for p in getattr(tier_obj, 'permissions', [])]
 
         # Get live pricing from Stripe if available, otherwise use fallback
-        from ...services.stripe_service import StripeService
         live_pricing = None
         if tier_obj.stripe_lookup_key:
             try:
-                live_pricing = StripeService.get_live_pricing_for_tier(tier_obj)
-            except:
+                live_pricing = BillingService.get_live_pricing_for_tier(tier_obj)
+            except Exception:
                 live_pricing = None
 
         # Use live pricing if available, otherwise show as contact sales
@@ -412,12 +412,11 @@ def signup():
         features = [p.name for p in getattr(tier_obj, 'permissions', [])]
 
         # Get live pricing from Stripe if available, otherwise use fallback
-        from ...services.stripe_service import StripeService
         live_pricing = None
         if tier_obj.stripe_lookup_key:
             try:
-                live_pricing = StripeService.get_live_pricing_for_tier(tier_obj)
-            except:
+                live_pricing = BillingService.get_live_pricing_for_tier(tier_obj)
+            except Exception:
                 live_pricing = None
 
         # Use live pricing if available, otherwise show as contact sales
@@ -471,10 +470,8 @@ def signup():
                          contact_phone=contact_phone)
 
         # Create Stripe checkout session
-        from ...services.stripe_service import StripeService
         from ...models import SubscriptionTier
         from ...services.signup_service import SignupService
-
         try:
             tier_id = int(selected_tier)
             tier_obj = SubscriptionTier.query.get(tier_id)
@@ -550,7 +547,7 @@ def signup():
         success_url = url_for('billing.complete_signup_from_stripe', _external=True) + '?session_id={CHECKOUT_SESSION_ID}'
         cancel_url = url_for('auth.signup', _external=True)
 
-        stripe_session = StripeService.create_checkout_session_for_tier(
+        stripe_session = BillingService.create_checkout_session_for_tier(
             tier_obj,
             customer_email=contact_email or None,
             success_url=success_url,

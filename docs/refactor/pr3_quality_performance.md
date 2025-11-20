@@ -42,7 +42,7 @@ CREATE TABLE stripe_events (
 );
 ```
 - [ ] **Idempotent Processing**: Upsert then process; wrap in DB transaction
-- [ ] **Interface**: `StripeService.handle_event(event)` that's idempotent by design
+- [ ] **Interface**: `BillingService.handle_webhook_event(event)` that's idempotent by design
 - [ ] **Error Recovery**: Failed event retry with exponential backoff
 - [ ] **Webhook Security**: Signature verification → idempotency check → process → mark processed (fail closed)
 

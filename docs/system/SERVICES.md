@@ -162,7 +162,19 @@ alerts = DashboardAlertService.get_dashboard_alerts(max_alerts=3)
 
 ### 8. Billing Service (`app/services/billing_service.py`)
 
-**Authority:** Stripe integration and subscription management
+**Authority:** Stripe integration, subscription management, and tier enforcement
+
+**Key Functions:**
+- `get_live_pricing_for_tier(tier)` – retrieves and caches live Stripe pricing
+- `create_checkout_session_for_tier(tier, ...)` – canonical checkout/session creation
+- `handle_webhook_event(provider, event)` – idempotent webhook dispatcher
+- `finalize_checkout_session(session_id)` – provisions organizations after checkout
+- `create_customer_portal_session(organization, return_url)` – Stripe customer portal
+
+**Notes:**
+- Maintains the pending-signup lifecycle used by `/auth/signup`
+- Consolidates all former `StripeService` logic into a single authority
+- Exposes tier helpers (`get_tier_for_organization`, `validate_tier_access`, etc.) for middleware
 
 ### 9. Timer Service (`app/services/timer_service.py`)
 
