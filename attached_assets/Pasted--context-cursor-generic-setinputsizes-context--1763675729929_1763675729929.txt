@@ -1,0 +1,1430 @@
+                        context.cursor, generic_setinputsizes, context
+                    )
+                except BaseException as e:
+                    self._handle_dbapi_exception(
+                        e, str(statement), parameters, None, context
+                    )
+    
+        cursor, str_statement, parameters = (
+            context.cursor,
+            context.statement,
+            context.parameters,
+        )
+    
+        effective_parameters: Optional[_AnyExecuteParams]
+    
+        if not context.executemany:
+            effective_parameters = parameters[0]
+        else:
+            effective_parameters = parameters
+    
+        if self._has_events or self.engine._has_events:
+            for fn in self.dispatch.before_cursor_execute:
+                str_statement, effective_parameters = fn(
+                    self,
+                    cursor,
+                    str_statement,
+                    effective_parameters,
+                    context,
+                    context.executemany,
+                )
+    
+        if self._echo:
+            self._log_info(str_statement)
+    
+            stats = context._get_cache_stats()
+    
+            if not self.engine.hide_parameters:
+                self._log_info(
+                    "[%s] %r",
+                    stats,
+                    sql_util._repr_params(
+                        effective_parameters,
+                        batches=10,
+                        ismulti=context.executemany,
+                    ),
+                )
+            else:
+                self._log_info(
+                    "[%s] [SQL parameters hidden due to hide_parameters=True]",
+                    stats,
+                )
+    
+        evt_handled: bool = False
+        try:
+            if context.execute_style is ExecuteStyle.EXECUTEMANY:
+                effective_parameters = cast(
+                    "_CoreMultiExecuteParams", effective_parameters
+                )
+                if self.dialect._has_events:
+                    for fn in self.dialect.dispatch.do_executemany:
+                        if fn(
+                            cursor,
+                            str_statement,
+                            effective_parameters,
+                            context,
+                        ):
+                            evt_handled = True
+                            break
+                if not evt_handled:
+                    self.dialect.do_executemany(
+                        cursor,
+                        str_statement,
+                        effective_parameters,
+                        context,
+                    )
+            elif not effective_parameters and context.no_parameters:
+                if self.dialect._has_events:
+                    for fn in self.dialect.dispatch.do_execute_no_params:
+                        if fn(cursor, str_statement, context):
+                            evt_handled = True
+                            break
+                if not evt_handled:
+                    self.dialect.do_execute_no_params(
+                        cursor, str_statement, context
+                    )
+            else:
+                effective_parameters = cast(
+                    "_CoreSingleExecuteParams", effective_parameters
+                )
+                if self.dialect._has_events:
+                    for fn in self.dialect.dispatch.do_execute:
+                        if fn(
+                            cursor,
+                            str_statement,
+                            effective_parameters,
+                            context,
+                        ):
+                            evt_handled = True
+                            break
+                if not evt_handled:
+>                   self.dialect.do_execute(
+                        cursor, str_statement, effective_parameters, context
+                    )
+
+.pythonlibs/lib/python3.11/site-packages/sqlalchemy/engine/base.py:1964: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <sqlalchemy.dialects.sqlite.pysqlite.SQLiteDialect_pysqlite object at 0x7f518fc80a50>
+cursor = <sqlite3.Cursor object at 0x7f518fd383c0>
+statement = '\nCREATE TABLE batch (\n\tid INTEGER NOT NULL, \n\trecipe_id INTEGER NOT NULL, \n\tlabel_code VARCHAR(32), \n\tbatch_...OREIGN KEY(organization_id) REFERENCES organization (id), \n\tFOREIGN KEY(portion_unit_id) REFERENCES unit (id)\n)\n\n'
+parameters = ()
+context = <sqlalchemy.dialects.sqlite.base.SQLiteExecutionContext object at 0x7f518f569810>
+
+    def do_execute(self, cursor, statement, parameters, context=None):
+>       cursor.execute(statement, parameters)
+E       sqlite3.OperationalError: unrecognized token: ":"
+
+.pythonlibs/lib/python3.11/site-packages/sqlalchemy/engine/default.py:945: OperationalError
+
+The above exception was the direct cause of the following exception:
+
+    @pytest.fixture(scope='function')  # Changed to function scope for isolation
+    def app():
+        """Create and configure a new app instance for each test."""
+        # Create a temporary file to use as the database
+        db_fd, db_path = tempfile.mkstemp()
+    
+        app = create_app({
+            'TESTING': True,
+            'DATABASE_URL': f'sqlite:///{db_path}',
+            'WTF_CSRF_ENABLED': False,
+            'SECRET_KEY': 'test-secret-key',
+            'STRIPE_SECRET_KEY': 'sk_test_fake',
+            'STRIPE_WEBHOOK_SECRET': 'whsec_test_fake',
+            'LOGIN_DISABLED': False,  # Ensure authentication is active in tests
+            'TESTING_DISABLE_AUTH': False  # Disable any test-specific auth bypass
+            # Don't disable login - we need to test permissions properly
+        })
+    
+        try:
+            with app.app_context():
+                db.drop_all()
+>               db.create_all()
+
+tests/conftest.py:34: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+.pythonlibs/lib/python3.11/site-packages/flask_sqlalchemy/extension.py:900: in create_all
+    self._call_for_binds(bind_key, "create_all")
+.pythonlibs/lib/python3.11/site-packages/flask_sqlalchemy/extension.py:881: in _call_for_binds
+    getattr(metadata, op_name)(bind=engine)
+.pythonlibs/lib/python3.11/site-packages/sqlalchemy/sql/schema.py:5925: in create_all
+    bind._run_ddl_visitor(
+.pythonlibs/lib/python3.11/site-packages/sqlalchemy/engine/base.py:3249: in _run_ddl_visitor
+    conn._run_ddl_visitor(visitorcallable, element, **kwargs)
+.pythonlibs/lib/python3.11/site-packages/sqlalchemy/engine/base.py:2456: in _run_ddl_visitor
+    visitorcallable(self.dialect, self, **kwargs).traverse_single(element)
+.pythonlibs/lib/python3.11/site-packages/sqlalchemy/sql/visitors.py:664: in traverse_single
+    return meth(obj, **kw)
+.pythonlibs/lib/python3.11/site-packages/sqlalchemy/sql/ddl.py:981: in visit_metadata
+    self.traverse_single(
+.pythonlibs/lib/python3.11/site-packages/sqlalchemy/sql/visitors.py:664: in traverse_single
+    return meth(obj, **kw)
+.pythonlibs/lib/python3.11/site-packages/sqlalchemy/sql/ddl.py:1019: in visit_table
+    )._invoke_with(self.connection)
+.pythonlibs/lib/python3.11/site-packages/sqlalchemy/sql/ddl.py:321: in _invoke_with
+    return bind.execute(self)
+.pythonlibs/lib/python3.11/site-packages/sqlalchemy/engine/base.py:1416: in execute
+    return meth(
+.pythonlibs/lib/python3.11/site-packages/sqlalchemy/sql/ddl.py:187: in _execute_on_connection
+    return connection._execute_ddl(
+.pythonlibs/lib/python3.11/site-packages/sqlalchemy/engine/base.py:1527: in _execute_ddl
+    ret = self._execute_context(
+.pythonlibs/lib/python3.11/site-packages/sqlalchemy/engine/base.py:1843: in _execute_context
+    return self._exec_single_context(
+.pythonlibs/lib/python3.11/site-packages/sqlalchemy/engine/base.py:1983: in _exec_single_context
+    self._handle_dbapi_exception(
+.pythonlibs/lib/python3.11/site-packages/sqlalchemy/engine/base.py:2352: in _handle_dbapi_exception
+    raise sqlalchemy_exception.with_traceback(exc_info[2]) from e
+.pythonlibs/lib/python3.11/site-packages/sqlalchemy/engine/base.py:1964: in _exec_single_context
+    self.dialect.do_execute(
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <sqlalchemy.dialects.sqlite.pysqlite.SQLiteDialect_pysqlite object at 0x7f518fc80a50>
+cursor = <sqlite3.Cursor object at 0x7f518fd383c0>
+statement = '\nCREATE TABLE batch (\n\tid INTEGER NOT NULL, \n\trecipe_id INTEGER NOT NULL, \n\tlabel_code VARCHAR(32), \n\tbatch_...OREIGN KEY(organization_id) REFERENCES organization (id), \n\tFOREIGN KEY(portion_unit_id) REFERENCES unit (id)\n)\n\n'
+parameters = ()
+context = <sqlalchemy.dialects.sqlite.base.SQLiteExecutionContext object at 0x7f518f569810>
+
+    def do_execute(self, cursor, statement, parameters, context=None):
+>       cursor.execute(statement, parameters)
+E       sqlalchemy.exc.OperationalError: (sqlite3.OperationalError) unrecognized token: ":"
+E       [SQL: 
+E       CREATE TABLE batch (
+E           id INTEGER NOT NULL, 
+E           recipe_id INTEGER NOT NULL, 
+E           label_code VARCHAR(32), 
+E           batch_type VARCHAR(32) NOT NULL, 
+E           projected_yield FLOAT, 
+E           projected_yield_unit VARCHAR(50), 
+E           sku_id INTEGER, 
+E           final_quantity FLOAT, 
+E           output_unit VARCHAR(50), 
+E           scale FLOAT, 
+E           status VARCHAR(50), 
+E           status_reason TEXT, 
+E           notes TEXT, 
+E           tags TEXT, 
+E           total_cost FLOAT, 
+E           created_by INTEGER, 
+E           organization_id INTEGER, 
+E           started_at DATETIME, 
+E           completed_at DATETIME, 
+E           failed_at DATETIME, 
+E           cancelled_at DATETIME, 
+E           inventory_credited BOOLEAN, 
+E           is_perishable BOOLEAN, 
+E           shelf_life_days INTEGER, 
+E           expiration_date DATETIME, 
+E           remaining_quantity FLOAT, 
+E           portioning_data JSON, 
+E           is_portioned BOOLEAN, 
+E           portion_name VARCHAR(64), 
+E           projected_portions INTEGER, 
+E           final_portions INTEGER, 
+E           plan_snapshot JSON, 
+E           portion_unit_id INTEGER, 
+E           cost_method VARCHAR(16), 
+E           cost_method_locked_at DATETIME, 
+E           vessel_fill_pct NUMERIC GENERATED ALWAYS AS ((((plan_snapshot -> 'category_extension') ->> 'vessel_fill_pct'))::numeric) STORED, 
+E           candle_fragrance_pct NUMERIC GENERATED ALWAYS AS ((((plan_snapshot -> 'category_extension') ->> 'candle_fragrance_pct'))::numeric) STORED, 
+E           candle_vessel_ml NUMERIC GENERATED ALWAYS AS ((((plan_snapshot -> 'category_extension') ->> 'candle_vessel_ml'))::numeric) STORED, 
+E           soap_superfat NUMERIC GENERATED ALWAYS AS ((((plan_snapshot -> 'category_extension') ->> 'soap_superfat'))::numeric) STORED, 
+E           soap_water_pct NUMERIC GENERATED ALWAYS AS ((((plan_snapshot -> 'category_extension') ->> 'soap_water_pct'))::numeric) STORED, 
+E           soap_lye_type TEXT GENERATED ALWAYS AS (((plan_snapshot -> 'category_extension') ->> 'soap_lye_type')) STORED, 
+E           baker_base_flour_g NUMERIC GENERATED ALWAYS AS ((((plan_snapshot -> 'category_extension') ->> 'baker_base_flour_g'))::numeric) STORED, 
+E           baker_water_pct NUMERIC GENERATED ALWAYS AS ((((plan_snapshot -> 'category_extension') ->> 'baker_water_pct'))::numeric) STORED, 
+E           baker_salt_pct NUMERIC GENERATED ALWAYS AS ((((plan_snapshot -> 'category_extension') ->> 'baker_salt_pct'))::numeric) STORED, 
+E           baker_yeast_pct NUMERIC GENERATED ALWAYS AS ((((plan_snapshot -> 'category_extension') ->> 'baker_yeast_pct'))::numeric) STORED, 
+E           cosm_emulsifier_pct NUMERIC GENERATED ALWAYS AS ((((plan_snapshot -> 'category_extension') ->> 'cosm_emulsifier_pct'))::numeric) STORED, 
+E           cosm_preservative_pct NUMERIC GENERATED ALWAYS AS ((((plan_snapshot -> 'category_extension') ->> 'cosm_preservative_pct'))::numeric) STORED, 
+E           PRIMARY KEY (id), 
+E           FOREIGN KEY(recipe_id) REFERENCES recipe (id), 
+E           UNIQUE (label_code), 
+E           FOREIGN KEY(sku_id) REFERENCES product_sku (id), 
+E           FOREIGN KEY(created_by) REFERENCES user (id), 
+E           FOREIGN KEY(organization_id) REFERENCES organization (id), 
+E           FOREIGN KEY(portion_unit_id) REFERENCES unit (id)
+E       )
+E       
+E       ]
+E       (Background on this error at: https://sqlalche.me/e/20/e3q8)
+
+.pythonlibs/lib/python3.11/site-packages/sqlalchemy/engine/default.py:945: OperationalError
+_____ ERROR at setup of test_start_batch_uses_generator_and_persists_label _____
+
+self = <sqlalchemy.engine.base.Connection object at 0x7f519572e390>
+dialect = <sqlalchemy.dialects.sqlite.pysqlite.SQLiteDialect_pysqlite object at 0x7f519413f2d0>
+context = <sqlalchemy.dialects.sqlite.base.SQLiteExecutionContext object at 0x7f518f6449d0>
+statement = <sqlalchemy.dialects.sqlite.base.SQLiteDDLCompiler object at 0x7f518f647690>
+parameters = [()]
+
+    def _exec_single_context(
+        self,
+        dialect: Dialect,
+        context: ExecutionContext,
+        statement: Union[str, Compiled],
+        parameters: Optional[_AnyMultiExecuteParams],
+    ) -> CursorResult[Any]:
+        """continue the _execute_context() method for a single DBAPI
+        cursor.execute() or cursor.executemany() call.
+    
+        """
+        if dialect.bind_typing is BindTyping.SETINPUTSIZES:
+            generic_setinputsizes = context._prepare_set_input_sizes()
+    
+            if generic_setinputsizes:
+                try:
+                    dialect.do_set_input_sizes(
+                        context.cursor, generic_setinputsizes, context
+                    )
+                except BaseException as e:
+                    self._handle_dbapi_exception(
+                        e, str(statement), parameters, None, context
+                    )
+    
+        cursor, str_statement, parameters = (
+            context.cursor,
+            context.statement,
+            context.parameters,
+        )
+    
+        effective_parameters: Optional[_AnyExecuteParams]
+    
+        if not context.executemany:
+            effective_parameters = parameters[0]
+        else:
+            effective_parameters = parameters
+    
+        if self._has_events or self.engine._has_events:
+            for fn in self.dispatch.before_cursor_execute:
+                str_statement, effective_parameters = fn(
+                    self,
+                    cursor,
+                    str_statement,
+                    effective_parameters,
+                    context,
+                    context.executemany,
+                )
+    
+        if self._echo:
+            self._log_info(str_statement)
+    
+            stats = context._get_cache_stats()
+    
+            if not self.engine.hide_parameters:
+                self._log_info(
+                    "[%s] %r",
+                    stats,
+                    sql_util._repr_params(
+                        effective_parameters,
+                        batches=10,
+                        ismulti=context.executemany,
+                    ),
+                )
+            else:
+                self._log_info(
+                    "[%s] [SQL parameters hidden due to hide_parameters=True]",
+                    stats,
+                )
+    
+        evt_handled: bool = False
+        try:
+            if context.execute_style is ExecuteStyle.EXECUTEMANY:
+                effective_parameters = cast(
+                    "_CoreMultiExecuteParams", effective_parameters
+                )
+                if self.dialect._has_events:
+                    for fn in self.dialect.dispatch.do_executemany:
+                        if fn(
+                            cursor,
+                            str_statement,
+                            effective_parameters,
+                            context,
+                        ):
+                            evt_handled = True
+                            break
+                if not evt_handled:
+                    self.dialect.do_executemany(
+                        cursor,
+                        str_statement,
+                        effective_parameters,
+                        context,
+                    )
+            elif not effective_parameters and context.no_parameters:
+                if self.dialect._has_events:
+                    for fn in self.dialect.dispatch.do_execute_no_params:
+                        if fn(cursor, str_statement, context):
+                            evt_handled = True
+                            break
+                if not evt_handled:
+                    self.dialect.do_execute_no_params(
+                        cursor, str_statement, context
+                    )
+            else:
+                effective_parameters = cast(
+                    "_CoreSingleExecuteParams", effective_parameters
+                )
+                if self.dialect._has_events:
+                    for fn in self.dialect.dispatch.do_execute:
+                        if fn(
+                            cursor,
+                            str_statement,
+                            effective_parameters,
+                            context,
+                        ):
+                            evt_handled = True
+                            break
+                if not evt_handled:
+>                   self.dialect.do_execute(
+                        cursor, str_statement, effective_parameters, context
+                    )
+
+.pythonlibs/lib/python3.11/site-packages/sqlalchemy/engine/base.py:1964: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <sqlalchemy.dialects.sqlite.pysqlite.SQLiteDialect_pysqlite object at 0x7f519413f2d0>
+cursor = <sqlite3.Cursor object at 0x7f518fc4a540>
+statement = '\nCREATE TABLE batch (\n\tid INTEGER NOT NULL, \n\trecipe_id INTEGER NOT NULL, \n\tlabel_code VARCHAR(32), \n\tbatch_...OREIGN KEY(organization_id) REFERENCES organization (id), \n\tFOREIGN KEY(portion_unit_id) REFERENCES unit (id)\n)\n\n'
+parameters = ()
+context = <sqlalchemy.dialects.sqlite.base.SQLiteExecutionContext object at 0x7f518f6449d0>
+
+    def do_execute(self, cursor, statement, parameters, context=None):
+>       cursor.execute(statement, parameters)
+E       sqlite3.OperationalError: unrecognized token: ":"
+
+.pythonlibs/lib/python3.11/site-packages/sqlalchemy/engine/default.py:945: OperationalError
+
+The above exception was the direct cause of the following exception:
+
+    @pytest.fixture(scope='function')  # Changed to function scope for isolation
+    def app():
+        """Create and configure a new app instance for each test."""
+        # Create a temporary file to use as the database
+        db_fd, db_path = tempfile.mkstemp()
+    
+        app = create_app({
+            'TESTING': True,
+            'DATABASE_URL': f'sqlite:///{db_path}',
+            'WTF_CSRF_ENABLED': False,
+            'SECRET_KEY': 'test-secret-key',
+            'STRIPE_SECRET_KEY': 'sk_test_fake',
+            'STRIPE_WEBHOOK_SECRET': 'whsec_test_fake',
+            'LOGIN_DISABLED': False,  # Ensure authentication is active in tests
+            'TESTING_DISABLE_AUTH': False  # Disable any test-specific auth bypass
+            # Don't disable login - we need to test permissions properly
+        })
+    
+        try:
+            with app.app_context():
+                db.drop_all()
+>               db.create_all()
+
+tests/conftest.py:34: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+.pythonlibs/lib/python3.11/site-packages/flask_sqlalchemy/extension.py:900: in create_all
+    self._call_for_binds(bind_key, "create_all")
+.pythonlibs/lib/python3.11/site-packages/flask_sqlalchemy/extension.py:881: in _call_for_binds
+    getattr(metadata, op_name)(bind=engine)
+.pythonlibs/lib/python3.11/site-packages/sqlalchemy/sql/schema.py:5925: in create_all
+    bind._run_ddl_visitor(
+.pythonlibs/lib/python3.11/site-packages/sqlalchemy/engine/base.py:3249: in _run_ddl_visitor
+    conn._run_ddl_visitor(visitorcallable, element, **kwargs)
+.pythonlibs/lib/python3.11/site-packages/sqlalchemy/engine/base.py:2456: in _run_ddl_visitor
+    visitorcallable(self.dialect, self, **kwargs).traverse_single(element)
+.pythonlibs/lib/python3.11/site-packages/sqlalchemy/sql/visitors.py:664: in traverse_single
+    return meth(obj, **kw)
+.pythonlibs/lib/python3.11/site-packages/sqlalchemy/sql/ddl.py:981: in visit_metadata
+    self.traverse_single(
+.pythonlibs/lib/python3.11/site-packages/sqlalchemy/sql/visitors.py:664: in traverse_single
+    return meth(obj, **kw)
+.pythonlibs/lib/python3.11/site-packages/sqlalchemy/sql/ddl.py:1019: in visit_table
+    )._invoke_with(self.connection)
+.pythonlibs/lib/python3.11/site-packages/sqlalchemy/sql/ddl.py:321: in _invoke_with
+    return bind.execute(self)
+.pythonlibs/lib/python3.11/site-packages/sqlalchemy/engine/base.py:1416: in execute
+    return meth(
+.pythonlibs/lib/python3.11/site-packages/sqlalchemy/sql/ddl.py:187: in _execute_on_connection
+    return connection._execute_ddl(
+.pythonlibs/lib/python3.11/site-packages/sqlalchemy/engine/base.py:1527: in _execute_ddl
+    ret = self._execute_context(
+.pythonlibs/lib/python3.11/site-packages/sqlalchemy/engine/base.py:1843: in _execute_context
+    return self._exec_single_context(
+.pythonlibs/lib/python3.11/site-packages/sqlalchemy/engine/base.py:1983: in _exec_single_context
+    self._handle_dbapi_exception(
+.pythonlibs/lib/python3.11/site-packages/sqlalchemy/engine/base.py:2352: in _handle_dbapi_exception
+    raise sqlalchemy_exception.with_traceback(exc_info[2]) from e
+.pythonlibs/lib/python3.11/site-packages/sqlalchemy/engine/base.py:1964: in _exec_single_context
+    self.dialect.do_execute(
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <sqlalchemy.dialects.sqlite.pysqlite.SQLiteDialect_pysqlite object at 0x7f519413f2d0>
+cursor = <sqlite3.Cursor object at 0x7f518fc4a540>
+statement = '\nCREATE TABLE batch (\n\tid INTEGER NOT NULL, \n\trecipe_id INTEGER NOT NULL, \n\tlabel_code VARCHAR(32), \n\tbatch_...OREIGN KEY(organization_id) REFERENCES organization (id), \n\tFOREIGN KEY(portion_unit_id) REFERENCES unit (id)\n)\n\n'
+parameters = ()
+context = <sqlalchemy.dialects.sqlite.base.SQLiteExecutionContext object at 0x7f518f6449d0>
+
+    def do_execute(self, cursor, statement, parameters, context=None):
+>       cursor.execute(statement, parameters)
+E       sqlalchemy.exc.OperationalError: (sqlite3.OperationalError) unrecognized token: ":"
+E       [SQL: 
+E       CREATE TABLE batch (
+E           id INTEGER NOT NULL, 
+E           recipe_id INTEGER NOT NULL, 
+E           label_code VARCHAR(32), 
+E           batch_type VARCHAR(32) NOT NULL, 
+E           projected_yield FLOAT, 
+E           projected_yield_unit VARCHAR(50), 
+E           sku_id INTEGER, 
+E           final_quantity FLOAT, 
+E           output_unit VARCHAR(50), 
+E           scale FLOAT, 
+E           status VARCHAR(50), 
+E           status_reason TEXT, 
+E           notes TEXT, 
+E           tags TEXT, 
+E           total_cost FLOAT, 
+E           created_by INTEGER, 
+E           organization_id INTEGER, 
+E           started_at DATETIME, 
+E           completed_at DATETIME, 
+E           failed_at DATETIME, 
+E           cancelled_at DATETIME, 
+E           inventory_credited BOOLEAN, 
+E           is_perishable BOOLEAN, 
+E           shelf_life_days INTEGER, 
+E           expiration_date DATETIME, 
+E           remaining_quantity FLOAT, 
+E           portioning_data JSON, 
+E           is_portioned BOOLEAN, 
+E           portion_name VARCHAR(64), 
+E           projected_portions INTEGER, 
+E           final_portions INTEGER, 
+E           plan_snapshot JSON, 
+E           portion_unit_id INTEGER, 
+E           cost_method VARCHAR(16), 
+E           cost_method_locked_at DATETIME, 
+E           vessel_fill_pct NUMERIC GENERATED ALWAYS AS ((((plan_snapshot -> 'category_extension') ->> 'vessel_fill_pct'))::numeric) STORED, 
+E           candle_fragrance_pct NUMERIC GENERATED ALWAYS AS ((((plan_snapshot -> 'category_extension') ->> 'candle_fragrance_pct'))::numeric) STORED, 
+E           candle_vessel_ml NUMERIC GENERATED ALWAYS AS ((((plan_snapshot -> 'category_extension') ->> 'candle_vessel_ml'))::numeric) STORED, 
+E           soap_superfat NUMERIC GENERATED ALWAYS AS ((((plan_snapshot -> 'category_extension') ->> 'soap_superfat'))::numeric) STORED, 
+E           soap_water_pct NUMERIC GENERATED ALWAYS AS ((((plan_snapshot -> 'category_extension') ->> 'soap_water_pct'))::numeric) STORED, 
+E           soap_lye_type TEXT GENERATED ALWAYS AS (((plan_snapshot -> 'category_extension') ->> 'soap_lye_type')) STORED, 
+E           baker_base_flour_g NUMERIC GENERATED ALWAYS AS ((((plan_snapshot -> 'category_extension') ->> 'baker_base_flour_g'))::numeric) STORED, 
+E           baker_water_pct NUMERIC GENERATED ALWAYS AS ((((plan_snapshot -> 'category_extension') ->> 'baker_water_pct'))::numeric) STORED, 
+E           baker_salt_pct NUMERIC GENERATED ALWAYS AS ((((plan_snapshot -> 'category_extension') ->> 'baker_salt_pct'))::numeric) STORED, 
+E           baker_yeast_pct NUMERIC GENERATED ALWAYS AS ((((plan_snapshot -> 'category_extension') ->> 'baker_yeast_pct'))::numeric) STORED, 
+E           cosm_emulsifier_pct NUMERIC GENERATED ALWAYS AS ((((plan_snapshot -> 'category_extension') ->> 'cosm_emulsifier_pct'))::numeric) STORED, 
+E           cosm_preservative_pct NUMERIC GENERATED ALWAYS AS ((((plan_snapshot -> 'category_extension') ->> 'cosm_preservative_pct'))::numeric) STORED, 
+E           PRIMARY KEY (id), 
+E           FOREIGN KEY(recipe_id) REFERENCES recipe (id), 
+E           UNIQUE (label_code), 
+E           FOREIGN KEY(sku_id) REFERENCES product_sku (id), 
+E           FOREIGN KEY(created_by) REFERENCES user (id), 
+E           FOREIGN KEY(organization_id) REFERENCES organization (id), 
+E           FOREIGN KEY(portion_unit_id) REFERENCES unit (id)
+E       )
+E       
+E       ]
+E       (Background on this error at: https://sqlalche.me/e/20/e3q8)
+
+.pythonlibs/lib/python3.11/site-packages/sqlalchemy/engine/default.py:945: OperationalError
+_______ ERROR at setup of test_stripe_webhook_valid_signature_dispatches _______
+
+self = <sqlalchemy.engine.base.Connection object at 0x7f518f813dd0>
+dialect = <sqlalchemy.dialects.sqlite.pysqlite.SQLiteDialect_pysqlite object at 0x7f51945385d0>
+context = <sqlalchemy.dialects.sqlite.base.SQLiteExecutionContext object at 0x7f518f7457d0>
+statement = <sqlalchemy.dialects.sqlite.base.SQLiteDDLCompiler object at 0x7f518f746810>
+parameters = [()]
+
+    def _exec_single_context(
+        self,
+        dialect: Dialect,
+        context: ExecutionContext,
+        statement: Union[str, Compiled],
+        parameters: Optional[_AnyMultiExecuteParams],
+    ) -> CursorResult[Any]:
+        """continue the _execute_context() method for a single DBAPI
+        cursor.execute() or cursor.executemany() call.
+    
+        """
+        if dialect.bind_typing is BindTyping.SETINPUTSIZES:
+            generic_setinputsizes = context._prepare_set_input_sizes()
+    
+            if generic_setinputsizes:
+                try:
+                    dialect.do_set_input_sizes(
+                        context.cursor, generic_setinputsizes, context
+                    )
+                except BaseException as e:
+                    self._handle_dbapi_exception(
+                        e, str(statement), parameters, None, context
+                    )
+    
+        cursor, str_statement, parameters = (
+            context.cursor,
+            context.statement,
+            context.parameters,
+        )
+    
+        effective_parameters: Optional[_AnyExecuteParams]
+    
+        if not context.executemany:
+            effective_parameters = parameters[0]
+        else:
+            effective_parameters = parameters
+    
+        if self._has_events or self.engine._has_events:
+            for fn in self.dispatch.before_cursor_execute:
+                str_statement, effective_parameters = fn(
+                    self,
+                    cursor,
+                    str_statement,
+                    effective_parameters,
+                    context,
+                    context.executemany,
+                )
+    
+        if self._echo:
+            self._log_info(str_statement)
+    
+            stats = context._get_cache_stats()
+    
+            if not self.engine.hide_parameters:
+                self._log_info(
+                    "[%s] %r",
+                    stats,
+                    sql_util._repr_params(
+                        effective_parameters,
+                        batches=10,
+                        ismulti=context.executemany,
+                    ),
+                )
+            else:
+                self._log_info(
+                    "[%s] [SQL parameters hidden due to hide_parameters=True]",
+                    stats,
+                )
+    
+        evt_handled: bool = False
+        try:
+            if context.execute_style is ExecuteStyle.EXECUTEMANY:
+                effective_parameters = cast(
+                    "_CoreMultiExecuteParams", effective_parameters
+                )
+                if self.dialect._has_events:
+                    for fn in self.dialect.dispatch.do_executemany:
+                        if fn(
+                            cursor,
+                            str_statement,
+                            effective_parameters,
+                            context,
+                        ):
+                            evt_handled = True
+                            break
+                if not evt_handled:
+                    self.dialect.do_executemany(
+                        cursor,
+                        str_statement,
+                        effective_parameters,
+                        context,
+                    )
+            elif not effective_parameters and context.no_parameters:
+                if self.dialect._has_events:
+                    for fn in self.dialect.dispatch.do_execute_no_params:
+                        if fn(cursor, str_statement, context):
+                            evt_handled = True
+                            break
+                if not evt_handled:
+                    self.dialect.do_execute_no_params(
+                        cursor, str_statement, context
+                    )
+            else:
+                effective_parameters = cast(
+                    "_CoreSingleExecuteParams", effective_parameters
+                )
+                if self.dialect._has_events:
+                    for fn in self.dialect.dispatch.do_execute:
+                        if fn(
+                            cursor,
+                            str_statement,
+                            effective_parameters,
+                            context,
+                        ):
+                            evt_handled = True
+                            break
+                if not evt_handled:
+>                   self.dialect.do_execute(
+                        cursor, str_statement, effective_parameters, context
+                    )
+
+.pythonlibs/lib/python3.11/site-packages/sqlalchemy/engine/base.py:1964: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <sqlalchemy.dialects.sqlite.pysqlite.SQLiteDialect_pysqlite object at 0x7f51945385d0>
+cursor = <sqlite3.Cursor object at 0x7f518fa1fdc0>
+statement = '\nCREATE TABLE batch (\n\tid INTEGER NOT NULL, \n\trecipe_id INTEGER NOT NULL, \n\tlabel_code VARCHAR(32), \n\tbatch_...OREIGN KEY(organization_id) REFERENCES organization (id), \n\tFOREIGN KEY(portion_unit_id) REFERENCES unit (id)\n)\n\n'
+parameters = ()
+context = <sqlalchemy.dialects.sqlite.base.SQLiteExecutionContext object at 0x7f518f7457d0>
+
+    def do_execute(self, cursor, statement, parameters, context=None):
+>       cursor.execute(statement, parameters)
+E       sqlite3.OperationalError: unrecognized token: ":"
+
+.pythonlibs/lib/python3.11/site-packages/sqlalchemy/engine/default.py:945: OperationalError
+
+The above exception was the direct cause of the following exception:
+
+    @pytest.fixture(scope='function')  # Changed to function scope for isolation
+    def app():
+        """Create and configure a new app instance for each test."""
+        # Create a temporary file to use as the database
+        db_fd, db_path = tempfile.mkstemp()
+    
+        app = create_app({
+            'TESTING': True,
+            'DATABASE_URL': f'sqlite:///{db_path}',
+            'WTF_CSRF_ENABLED': False,
+            'SECRET_KEY': 'test-secret-key',
+            'STRIPE_SECRET_KEY': 'sk_test_fake',
+            'STRIPE_WEBHOOK_SECRET': 'whsec_test_fake',
+            'LOGIN_DISABLED': False,  # Ensure authentication is active in tests
+            'TESTING_DISABLE_AUTH': False  # Disable any test-specific auth bypass
+            # Don't disable login - we need to test permissions properly
+        })
+    
+        try:
+            with app.app_context():
+                db.drop_all()
+>               db.create_all()
+
+tests/conftest.py:34: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+.pythonlibs/lib/python3.11/site-packages/flask_sqlalchemy/extension.py:900: in create_all
+    self._call_for_binds(bind_key, "create_all")
+.pythonlibs/lib/python3.11/site-packages/flask_sqlalchemy/extension.py:881: in _call_for_binds
+    getattr(metadata, op_name)(bind=engine)
+.pythonlibs/lib/python3.11/site-packages/sqlalchemy/sql/schema.py:5925: in create_all
+    bind._run_ddl_visitor(
+.pythonlibs/lib/python3.11/site-packages/sqlalchemy/engine/base.py:3249: in _run_ddl_visitor
+    conn._run_ddl_visitor(visitorcallable, element, **kwargs)
+.pythonlibs/lib/python3.11/site-packages/sqlalchemy/engine/base.py:2456: in _run_ddl_visitor
+    visitorcallable(self.dialect, self, **kwargs).traverse_single(element)
+.pythonlibs/lib/python3.11/site-packages/sqlalchemy/sql/visitors.py:664: in traverse_single
+    return meth(obj, **kw)
+.pythonlibs/lib/python3.11/site-packages/sqlalchemy/sql/ddl.py:981: in visit_metadata
+    self.traverse_single(
+.pythonlibs/lib/python3.11/site-packages/sqlalchemy/sql/visitors.py:664: in traverse_single
+    return meth(obj, **kw)
+.pythonlibs/lib/python3.11/site-packages/sqlalchemy/sql/ddl.py:1019: in visit_table
+    )._invoke_with(self.connection)
+.pythonlibs/lib/python3.11/site-packages/sqlalchemy/sql/ddl.py:321: in _invoke_with
+    return bind.execute(self)
+.pythonlibs/lib/python3.11/site-packages/sqlalchemy/engine/base.py:1416: in execute
+    return meth(
+.pythonlibs/lib/python3.11/site-packages/sqlalchemy/sql/ddl.py:187: in _execute_on_connection
+    return connection._execute_ddl(
+.pythonlibs/lib/python3.11/site-packages/sqlalchemy/engine/base.py:1527: in _execute_ddl
+    ret = self._execute_context(
+.pythonlibs/lib/python3.11/site-packages/sqlalchemy/engine/base.py:1843: in _execute_context
+    return self._exec_single_context(
+.pythonlibs/lib/python3.11/site-packages/sqlalchemy/engine/base.py:1983: in _exec_single_context
+    self._handle_dbapi_exception(
+.pythonlibs/lib/python3.11/site-packages/sqlalchemy/engine/base.py:2352: in _handle_dbapi_exception
+    raise sqlalchemy_exception.with_traceback(exc_info[2]) from e
+.pythonlibs/lib/python3.11/site-packages/sqlalchemy/engine/base.py:1964: in _exec_single_context
+    self.dialect.do_execute(
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <sqlalchemy.dialects.sqlite.pysqlite.SQLiteDialect_pysqlite object at 0x7f51945385d0>
+cursor = <sqlite3.Cursor object at 0x7f518fa1fdc0>
+statement = '\nCREATE TABLE batch (\n\tid INTEGER NOT NULL, \n\trecipe_id INTEGER NOT NULL, \n\tlabel_code VARCHAR(32), \n\tbatch_...OREIGN KEY(organization_id) REFERENCES organization (id), \n\tFOREIGN KEY(portion_unit_id) REFERENCES unit (id)\n)\n\n'
+parameters = ()
+context = <sqlalchemy.dialects.sqlite.base.SQLiteExecutionContext object at 0x7f518f7457d0>
+
+    def do_execute(self, cursor, statement, parameters, context=None):
+>       cursor.execute(statement, parameters)
+E       sqlalchemy.exc.OperationalError: (sqlite3.OperationalError) unrecognized token: ":"
+E       [SQL: 
+E       CREATE TABLE batch (
+E           id INTEGER NOT NULL, 
+E           recipe_id INTEGER NOT NULL, 
+E           label_code VARCHAR(32), 
+E           batch_type VARCHAR(32) NOT NULL, 
+E           projected_yield FLOAT, 
+E           projected_yield_unit VARCHAR(50), 
+E           sku_id INTEGER, 
+E           final_quantity FLOAT, 
+E           output_unit VARCHAR(50), 
+E           scale FLOAT, 
+E           status VARCHAR(50), 
+E           status_reason TEXT, 
+E           notes TEXT, 
+E           tags TEXT, 
+E           total_cost FLOAT, 
+E           created_by INTEGER, 
+E           organization_id INTEGER, 
+E           started_at DATETIME, 
+E           completed_at DATETIME, 
+E           failed_at DATETIME, 
+E           cancelled_at DATETIME, 
+E           inventory_credited BOOLEAN, 
+E           is_perishable BOOLEAN, 
+E           shelf_life_days INTEGER, 
+E           expiration_date DATETIME, 
+E           remaining_quantity FLOAT, 
+E           portioning_data JSON, 
+E           is_portioned BOOLEAN, 
+E           portion_name VARCHAR(64), 
+E           projected_portions INTEGER, 
+E           final_portions INTEGER, 
+E           plan_snapshot JSON, 
+E           portion_unit_id INTEGER, 
+E           cost_method VARCHAR(16), 
+E           cost_method_locked_at DATETIME, 
+E           vessel_fill_pct NUMERIC GENERATED ALWAYS AS ((((plan_snapshot -> 'category_extension') ->> 'vessel_fill_pct'))::numeric) STORED, 
+E           candle_fragrance_pct NUMERIC GENERATED ALWAYS AS ((((plan_snapshot -> 'category_extension') ->> 'candle_fragrance_pct'))::numeric) STORED, 
+E           candle_vessel_ml NUMERIC GENERATED ALWAYS AS ((((plan_snapshot -> 'category_extension') ->> 'candle_vessel_ml'))::numeric) STORED, 
+E           soap_superfat NUMERIC GENERATED ALWAYS AS ((((plan_snapshot -> 'category_extension') ->> 'soap_superfat'))::numeric) STORED, 
+E           soap_water_pct NUMERIC GENERATED ALWAYS AS ((((plan_snapshot -> 'category_extension') ->> 'soap_water_pct'))::numeric) STORED, 
+E           soap_lye_type TEXT GENERATED ALWAYS AS (((plan_snapshot -> 'category_extension') ->> 'soap_lye_type')) STORED, 
+E           baker_base_flour_g NUMERIC GENERATED ALWAYS AS ((((plan_snapshot -> 'category_extension') ->> 'baker_base_flour_g'))::numeric) STORED, 
+E           baker_water_pct NUMERIC GENERATED ALWAYS AS ((((plan_snapshot -> 'category_extension') ->> 'baker_water_pct'))::numeric) STORED, 
+E           baker_salt_pct NUMERIC GENERATED ALWAYS AS ((((plan_snapshot -> 'category_extension') ->> 'baker_salt_pct'))::numeric) STORED, 
+E           baker_yeast_pct NUMERIC GENERATED ALWAYS AS ((((plan_snapshot -> 'category_extension') ->> 'baker_yeast_pct'))::numeric) STORED, 
+E           cosm_emulsifier_pct NUMERIC GENERATED ALWAYS AS ((((plan_snapshot -> 'category_extension') ->> 'cosm_emulsifier_pct'))::numeric) STORED, 
+E           cosm_preservative_pct NUMERIC GENERATED ALWAYS AS ((((plan_snapshot -> 'category_extension') ->> 'cosm_preservative_pct'))::numeric) STORED, 
+E           PRIMARY KEY (id), 
+E           FOREIGN KEY(recipe_id) REFERENCES recipe (id), 
+E           UNIQUE (label_code), 
+E           FOREIGN KEY(sku_id) REFERENCES product_sku (id), 
+E           FOREIGN KEY(created_by) REFERENCES user (id), 
+E           FOREIGN KEY(organization_id) REFERENCES organization (id), 
+E           FOREIGN KEY(portion_unit_id) REFERENCES unit (id)
+E       )
+E       
+E       ]
+E       (Background on this error at: https://sqlalche.me/e/20/e3q8)
+
+.pythonlibs/lib/python3.11/site-packages/sqlalchemy/engine/default.py:945: OperationalError
+___ ERROR at setup of test_stripe_webhook_returns_400_when_signature_invalid ___
+
+self = <sqlalchemy.engine.base.Connection object at 0x7f51944fff50>
+dialect = <sqlalchemy.dialects.sqlite.pysqlite.SQLiteDialect_pysqlite object at 0x7f519451c690>
+context = <sqlalchemy.dialects.sqlite.base.SQLiteExecutionContext object at 0x7f518f91e910>
+statement = <sqlalchemy.dialects.sqlite.base.SQLiteDDLCompiler object at 0x7f518f91fcd0>
+parameters = [()]
+
+    def _exec_single_context(
+        self,
+        dialect: Dialect,
+        context: ExecutionContext,
+        statement: Union[str, Compiled],
+        parameters: Optional[_AnyMultiExecuteParams],
+    ) -> CursorResult[Any]:
+        """continue the _execute_context() method for a single DBAPI
+        cursor.execute() or cursor.executemany() call.
+    
+        """
+        if dialect.bind_typing is BindTyping.SETINPUTSIZES:
+            generic_setinputsizes = context._prepare_set_input_sizes()
+    
+            if generic_setinputsizes:
+                try:
+                    dialect.do_set_input_sizes(
+                        context.cursor, generic_setinputsizes, context
+                    )
+                except BaseException as e:
+                    self._handle_dbapi_exception(
+                        e, str(statement), parameters, None, context
+                    )
+    
+        cursor, str_statement, parameters = (
+            context.cursor,
+            context.statement,
+            context.parameters,
+        )
+    
+        effective_parameters: Optional[_AnyExecuteParams]
+    
+        if not context.executemany:
+            effective_parameters = parameters[0]
+        else:
+            effective_parameters = parameters
+    
+        if self._has_events or self.engine._has_events:
+            for fn in self.dispatch.before_cursor_execute:
+                str_statement, effective_parameters = fn(
+                    self,
+                    cursor,
+                    str_statement,
+                    effective_parameters,
+                    context,
+                    context.executemany,
+                )
+    
+        if self._echo:
+            self._log_info(str_statement)
+    
+            stats = context._get_cache_stats()
+    
+            if not self.engine.hide_parameters:
+                self._log_info(
+                    "[%s] %r",
+                    stats,
+                    sql_util._repr_params(
+                        effective_parameters,
+                        batches=10,
+                        ismulti=context.executemany,
+                    ),
+                )
+            else:
+                self._log_info(
+                    "[%s] [SQL parameters hidden due to hide_parameters=True]",
+                    stats,
+                )
+    
+        evt_handled: bool = False
+        try:
+            if context.execute_style is ExecuteStyle.EXECUTEMANY:
+                effective_parameters = cast(
+                    "_CoreMultiExecuteParams", effective_parameters
+                )
+                if self.dialect._has_events:
+                    for fn in self.dialect.dispatch.do_executemany:
+                        if fn(
+                            cursor,
+                            str_statement,
+                            effective_parameters,
+                            context,
+                        ):
+                            evt_handled = True
+                            break
+                if not evt_handled:
+                    self.dialect.do_executemany(
+                        cursor,
+                        str_statement,
+                        effective_parameters,
+                        context,
+                    )
+            elif not effective_parameters and context.no_parameters:
+                if self.dialect._has_events:
+                    for fn in self.dialect.dispatch.do_execute_no_params:
+                        if fn(cursor, str_statement, context):
+                            evt_handled = True
+                            break
+                if not evt_handled:
+                    self.dialect.do_execute_no_params(
+                        cursor, str_statement, context
+                    )
+            else:
+                effective_parameters = cast(
+                    "_CoreSingleExecuteParams", effective_parameters
+                )
+                if self.dialect._has_events:
+                    for fn in self.dialect.dispatch.do_execute:
+                        if fn(
+                            cursor,
+                            str_statement,
+                            effective_parameters,
+                            context,
+                        ):
+                            evt_handled = True
+                            break
+                if not evt_handled:
+>                   self.dialect.do_execute(
+                        cursor, str_statement, effective_parameters, context
+                    )
+
+.pythonlibs/lib/python3.11/site-packages/sqlalchemy/engine/base.py:1964: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <sqlalchemy.dialects.sqlite.pysqlite.SQLiteDialect_pysqlite object at 0x7f519451c690>
+cursor = <sqlite3.Cursor object at 0x7f518f6a2840>
+statement = '\nCREATE TABLE batch (\n\tid INTEGER NOT NULL, \n\trecipe_id INTEGER NOT NULL, \n\tlabel_code VARCHAR(32), \n\tbatch_...OREIGN KEY(organization_id) REFERENCES organization (id), \n\tFOREIGN KEY(portion_unit_id) REFERENCES unit (id)\n)\n\n'
+parameters = ()
+context = <sqlalchemy.dialects.sqlite.base.SQLiteExecutionContext object at 0x7f518f91e910>
+
+    def do_execute(self, cursor, statement, parameters, context=None):
+>       cursor.execute(statement, parameters)
+E       sqlite3.OperationalError: unrecognized token: ":"
+
+.pythonlibs/lib/python3.11/site-packages/sqlalchemy/engine/default.py:945: OperationalError
+
+The above exception was the direct cause of the following exception:
+
+    @pytest.fixture(scope='function')  # Changed to function scope for isolation
+    def app():
+        """Create and configure a new app instance for each test."""
+        # Create a temporary file to use as the database
+        db_fd, db_path = tempfile.mkstemp()
+    
+        app = create_app({
+            'TESTING': True,
+            'DATABASE_URL': f'sqlite:///{db_path}',
+            'WTF_CSRF_ENABLED': False,
+            'SECRET_KEY': 'test-secret-key',
+            'STRIPE_SECRET_KEY': 'sk_test_fake',
+            'STRIPE_WEBHOOK_SECRET': 'whsec_test_fake',
+            'LOGIN_DISABLED': False,  # Ensure authentication is active in tests
+            'TESTING_DISABLE_AUTH': False  # Disable any test-specific auth bypass
+            # Don't disable login - we need to test permissions properly
+        })
+    
+        try:
+            with app.app_context():
+                db.drop_all()
+>               db.create_all()
+
+tests/conftest.py:34: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+.pythonlibs/lib/python3.11/site-packages/flask_sqlalchemy/extension.py:900: in create_all
+    self._call_for_binds(bind_key, "create_all")
+.pythonlibs/lib/python3.11/site-packages/flask_sqlalchemy/extension.py:881: in _call_for_binds
+    getattr(metadata, op_name)(bind=engine)
+.pythonlibs/lib/python3.11/site-packages/sqlalchemy/sql/schema.py:5925: in create_all
+    bind._run_ddl_visitor(
+.pythonlibs/lib/python3.11/site-packages/sqlalchemy/engine/base.py:3249: in _run_ddl_visitor
+    conn._run_ddl_visitor(visitorcallable, element, **kwargs)
+.pythonlibs/lib/python3.11/site-packages/sqlalchemy/engine/base.py:2456: in _run_ddl_visitor
+    visitorcallable(self.dialect, self, **kwargs).traverse_single(element)
+.pythonlibs/lib/python3.11/site-packages/sqlalchemy/sql/visitors.py:664: in traverse_single
+    return meth(obj, **kw)
+.pythonlibs/lib/python3.11/site-packages/sqlalchemy/sql/ddl.py:981: in visit_metadata
+    self.traverse_single(
+.pythonlibs/lib/python3.11/site-packages/sqlalchemy/sql/visitors.py:664: in traverse_single
+    return meth(obj, **kw)
+.pythonlibs/lib/python3.11/site-packages/sqlalchemy/sql/ddl.py:1019: in visit_table
+    )._invoke_with(self.connection)
+.pythonlibs/lib/python3.11/site-packages/sqlalchemy/sql/ddl.py:321: in _invoke_with
+    return bind.execute(self)
+.pythonlibs/lib/python3.11/site-packages/sqlalchemy/engine/base.py:1416: in execute
+    return meth(
+.pythonlibs/lib/python3.11/site-packages/sqlalchemy/sql/ddl.py:187: in _execute_on_connection
+    return connection._execute_ddl(
+.pythonlibs/lib/python3.11/site-packages/sqlalchemy/engine/base.py:1527: in _execute_ddl
+    ret = self._execute_context(
+.pythonlibs/lib/python3.11/site-packages/sqlalchemy/engine/base.py:1843: in _execute_context
+    return self._exec_single_context(
+.pythonlibs/lib/python3.11/site-packages/sqlalchemy/engine/base.py:1983: in _exec_single_context
+    self._handle_dbapi_exception(
+.pythonlibs/lib/python3.11/site-packages/sqlalchemy/engine/base.py:2352: in _handle_dbapi_exception
+    raise sqlalchemy_exception.with_traceback(exc_info[2]) from e
+.pythonlibs/lib/python3.11/site-packages/sqlalchemy/engine/base.py:1964: in _exec_single_context
+    self.dialect.do_execute(
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <sqlalchemy.dialects.sqlite.pysqlite.SQLiteDialect_pysqlite object at 0x7f519451c690>
+cursor = <sqlite3.Cursor object at 0x7f518f6a2840>
+statement = '\nCREATE TABLE batch (\n\tid INTEGER NOT NULL, \n\trecipe_id INTEGER NOT NULL, \n\tlabel_code VARCHAR(32), \n\tbatch_...OREIGN KEY(organization_id) REFERENCES organization (id), \n\tFOREIGN KEY(portion_unit_id) REFERENCES unit (id)\n)\n\n'
+parameters = ()
+context = <sqlalchemy.dialects.sqlite.base.SQLiteExecutionContext object at 0x7f518f91e910>
+
+    def do_execute(self, cursor, statement, parameters, context=None):
+>       cursor.execute(statement, parameters)
+E       sqlalchemy.exc.OperationalError: (sqlite3.OperationalError) unrecognized token: ":"
+E       [SQL: 
+E       CREATE TABLE batch (
+E           id INTEGER NOT NULL, 
+E           recipe_id INTEGER NOT NULL, 
+E           label_code VARCHAR(32), 
+E           batch_type VARCHAR(32) NOT NULL, 
+E           projected_yield FLOAT, 
+E           projected_yield_unit VARCHAR(50), 
+E           sku_id INTEGER, 
+E           final_quantity FLOAT, 
+E           output_unit VARCHAR(50), 
+E           scale FLOAT, 
+E           status VARCHAR(50), 
+E           status_reason TEXT, 
+E           notes TEXT, 
+E           tags TEXT, 
+E           total_cost FLOAT, 
+E           created_by INTEGER, 
+E           organization_id INTEGER, 
+E           started_at DATETIME, 
+E           completed_at DATETIME, 
+E           failed_at DATETIME, 
+E           cancelled_at DATETIME, 
+E           inventory_credited BOOLEAN, 
+E           is_perishable BOOLEAN, 
+E           shelf_life_days INTEGER, 
+E           expiration_date DATETIME, 
+E           remaining_quantity FLOAT, 
+E           portioning_data JSON, 
+E           is_portioned BOOLEAN, 
+E           portion_name VARCHAR(64), 
+E           projected_portions INTEGER, 
+E           final_portions INTEGER, 
+E           plan_snapshot JSON, 
+E           portion_unit_id INTEGER, 
+E           cost_method VARCHAR(16), 
+E           cost_method_locked_at DATETIME, 
+E           vessel_fill_pct NUMERIC GENERATED ALWAYS AS ((((plan_snapshot -> 'category_extension') ->> 'vessel_fill_pct'))::numeric) STORED, 
+E           candle_fragrance_pct NUMERIC GENERATED ALWAYS AS ((((plan_snapshot -> 'category_extension') ->> 'candle_fragrance_pct'))::numeric) STORED, 
+E           candle_vessel_ml NUMERIC GENERATED ALWAYS AS ((((plan_snapshot -> 'category_extension') ->> 'candle_vessel_ml'))::numeric) STORED, 
+E           soap_superfat NUMERIC GENERATED ALWAYS AS ((((plan_snapshot -> 'category_extension') ->> 'soap_superfat'))::numeric) STORED, 
+E           soap_water_pct NUMERIC GENERATED ALWAYS AS ((((plan_snapshot -> 'category_extension') ->> 'soap_water_pct'))::numeric) STORED, 
+E           soap_lye_type TEXT GENERATED ALWAYS AS (((plan_snapshot -> 'category_extension') ->> 'soap_lye_type')) STORED, 
+E           baker_base_flour_g NUMERIC GENERATED ALWAYS AS ((((plan_snapshot -> 'category_extension') ->> 'baker_base_flour_g'))::numeric) STORED, 
+E           baker_water_pct NUMERIC GENERATED ALWAYS AS ((((plan_snapshot -> 'category_extension') ->> 'baker_water_pct'))::numeric) STORED, 
+E           baker_salt_pct NUMERIC GENERATED ALWAYS AS ((((plan_snapshot -> 'category_extension') ->> 'baker_salt_pct'))::numeric) STORED, 
+E           baker_yeast_pct NUMERIC GENERATED ALWAYS AS ((((plan_snapshot -> 'category_extension') ->> 'baker_yeast_pct'))::numeric) STORED, 
+E           cosm_emulsifier_pct NUMERIC GENERATED ALWAYS AS ((((plan_snapshot -> 'category_extension') ->> 'cosm_emulsifier_pct'))::numeric) STORED, 
+E           cosm_preservative_pct NUMERIC GENERATED ALWAYS AS ((((plan_snapshot -> 'category_extension') ->> 'cosm_preservative_pct'))::numeric) STORED, 
+E           PRIMARY KEY (id), 
+E           FOREIGN KEY(recipe_id) REFERENCES recipe (id), 
+E           UNIQUE (label_code), 
+E           FOREIGN KEY(sku_id) REFERENCES product_sku (id), 
+E           FOREIGN KEY(created_by) REFERENCES user (id), 
+E           FOREIGN KEY(organization_id) REFERENCES organization (id), 
+E           FOREIGN KEY(portion_unit_id) REFERENCES unit (id)
+E       )
+E       
+E       ]
+E       (Background on this error at: https://sqlalche.me/e/20/e3q8)
+
+.pythonlibs/lib/python3.11/site-packages/sqlalchemy/engine/default.py:945: OperationalError
+____ ERROR at setup of test_stripe_webhook_returns_500_when_secret_missing _____
+
+self = <sqlalchemy.engine.base.Connection object at 0x7f519468ec10>
+dialect = <sqlalchemy.dialects.sqlite.pysqlite.SQLiteDialect_pysqlite object at 0x7f51944f4c50>
+context = <sqlalchemy.dialects.sqlite.base.SQLiteExecutionContext object at 0x7f51940a87d0>
+statement = <sqlalchemy.dialects.sqlite.base.SQLiteDDLCompiler object at 0x7f518f884b10>
+parameters = [()]
+
+    def _exec_single_context(
+        self,
+        dialect: Dialect,
+        context: ExecutionContext,
+        statement: Union[str, Compiled],
+        parameters: Optional[_AnyMultiExecuteParams],
+    ) -> CursorResult[Any]:
+        """continue the _execute_context() method for a single DBAPI
+        cursor.execute() or cursor.executemany() call.
+    
+        """
+        if dialect.bind_typing is BindTyping.SETINPUTSIZES:
+            generic_setinputsizes = context._prepare_set_input_sizes()
+    
+            if generic_setinputsizes:
+                try:
+                    dialect.do_set_input_sizes(
+                        context.cursor, generic_setinputsizes, context
+                    )
+                except BaseException as e:
+                    self._handle_dbapi_exception(
+                        e, str(statement), parameters, None, context
+                    )
+    
+        cursor, str_statement, parameters = (
+            context.cursor,
+            context.statement,
+            context.parameters,
+        )
+    
+        effective_parameters: Optional[_AnyExecuteParams]
+    
+        if not context.executemany:
+            effective_parameters = parameters[0]
+        else:
+            effective_parameters = parameters
+    
+        if self._has_events or self.engine._has_events:
+            for fn in self.dispatch.before_cursor_execute:
+                str_statement, effective_parameters = fn(
+                    self,
+                    cursor,
+                    str_statement,
+                    effective_parameters,
+                    context,
+                    context.executemany,
+                )
+    
+        if self._echo:
+            self._log_info(str_statement)
+    
+            stats = context._get_cache_stats()
+    
+            if not self.engine.hide_parameters:
+                self._log_info(
+                    "[%s] %r",
+                    stats,
+                    sql_util._repr_params(
+                        effective_parameters,
+                        batches=10,
+                        ismulti=context.executemany,
+                    ),
+                )
+            else:
+                self._log_info(
+                    "[%s] [SQL parameters hidden due to hide_parameters=True]",
+                    stats,
+                )
+    
+        evt_handled: bool = False
+        try:
+            if context.execute_style is ExecuteStyle.EXECUTEMANY:
+                effective_parameters = cast(
+                    "_CoreMultiExecuteParams", effective_parameters
+                )
+                if self.dialect._has_events:
+                    for fn in self.dialect.dispatch.do_executemany:
+                        if fn(
+                            cursor,
+                            str_statement,
+                            effective_parameters,
+                            context,
+                        ):
+                            evt_handled = True
+                            break
+                if not evt_handled:
+                    self.dialect.do_executemany(
+                        cursor,
+                        str_statement,
+                        effective_parameters,
+                        context,
+                    )
+            elif not effective_parameters and context.no_parameters:
+                if self.dialect._has_events:
+                    for fn in self.dialect.dispatch.do_execute_no_params:
+                        if fn(cursor, str_statement, context):
+                            evt_handled = True
+                            break
+                if not evt_handled:
+                    self.dialect.do_execute_no_params(
+                        cursor, str_statement, context
+                    )
+            else:
+                effective_parameters = cast(
+                    "_CoreSingleExecuteParams", effective_parameters
+                )
+                if self.dialect._has_events:
+                    for fn in self.dialect.dispatch.do_execute:
+                        if fn(
+                            cursor,
+                            str_statement,
+                            effective_parameters,
+                            context,
+                        ):
+                            evt_handled = True
+                            break
+                if not evt_handled:
+>                   self.dialect.do_execute(
+                        cursor, str_statement, effective_parameters, context
+                    )
+
+.pythonlibs/lib/python3.11/site-packages/sqlalchemy/engine/base.py:1964: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <sqlalchemy.dialects.sqlite.pysqlite.SQLiteDialect_pysqlite object at 0x7f51944f4c50>
+cursor = <sqlite3.Cursor object at 0x7f5194258fc0>
+statement = '\nCREATE TABLE batch (\n\tid INTEGER NOT NULL, \n\trecipe_id INTEGER NOT NULL, \n\tlabel_code VARCHAR(32), \n\tbatch_...OREIGN KEY(organization_id) REFERENCES organization (id), \n\tFOREIGN KEY(portion_unit_id) REFERENCES unit (id)\n)\n\n'
+parameters = ()
+context = <sqlalchemy.dialects.sqlite.base.SQLiteExecutionContext object at 0x7f51940a87d0>
+
+    def do_execute(self, cursor, statement, parameters, context=None):
+>       cursor.execute(statement, parameters)
+E       sqlite3.OperationalError: unrecognized token: ":"
+
+.pythonlibs/lib/python3.11/site-packages/sqlalchemy/engine/default.py:945: OperationalError
+
+The above exception was the direct cause of the following exception:
+
+    @pytest.fixture(scope='function')  # Changed to function scope for isolation
+    def app():
+        """Create and configure a new app instance for each test."""
+        # Create a temporary file to use as the database
+        db_fd, db_path = tempfile.mkstemp()
+    
+        app = create_app({
+            'TESTING': True,
+            'DATABASE_URL': f'sqlite:///{db_path}',
+            'WTF_CSRF_ENABLED': False,
+            'SECRET_KEY': 'test-secret-key',
+            'STRIPE_SECRET_KEY': 'sk_test_fake',
+            'STRIPE_WEBHOOK_SECRET': 'whsec_test_fake',
+            'LOGIN_DISABLED': False,  # Ensure authentication is active in tests
+            'TESTING_DISABLE_AUTH': False  # Disable any test-specific auth bypass
+            # Don't disable login - we need to test permissions properly
+        })
+    
+        try:
+            with app.app_context():
+                db.drop_all()
+>               db.create_all()
+
+tests/conftest.py:34: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+.pythonlibs/lib/python3.11/site-packages/flask_sqlalchemy/extension.py:900: in create_all
+    self._call_for_binds(bind_key, "create_all")
+.pythonlibs/lib/python3.11/site-packages/flask_sqlalchemy/extension.py:881: in _call_for_binds
+    getattr(metadata, op_name)(bind=engine)
+.pythonlibs/lib/python3.11/site-packages/sqlalchemy/sql/schema.py:5925: in create_all
+    bind._run_ddl_visitor(
+.pythonlibs/lib/python3.11/site-packages/sqlalchemy/engine/base.py:3249: in _run_ddl_visitor
+    conn._run_ddl_visitor(visitorcallable, element, **kwargs)
+.pythonlibs/lib/python3.11/site-packages/sqlalchemy/engine/base.py:2456: in _run_ddl_visitor
+    visitorcallable(self.dialect, self, **kwargs).traverse_single(element)
+.pythonlibs/lib/python3.11/site-packages/sqlalchemy/sql/visitors.py:664: in traverse_single
+    return meth(obj, **kw)
+.pythonlibs/lib/python3.11/site-packages/sqlalchemy/sql/ddl.py:981: in visit_metadata
+    self.traverse_single(
+.pythonlibs/lib/python3.11/site-packages/sqlalchemy/sql/visitors.py:664: in traverse_single
+    return meth(obj, **kw)
+.pythonlibs/lib/python3.11/site-packages/sqlalchemy/sql/ddl.py:1019: in visit_table
+    )._invoke_with(self.connection)
+.pythonlibs/lib/python3.11/site-packages/sqlalchemy/sql/ddl.py:321: in _invoke_with
+    return bind.execute(self)
+.pythonlibs/lib/python3.11/site-packages/sqlalchemy/engine/base.py:1416: in execute
+    return meth(
+.pythonlibs/lib/python3.11/site-packages/sqlalchemy/sql/ddl.py:187: in _execute_on_connection
+    return connection._execute_ddl(
+.pythonlibs/lib/python3.11/site-packages/sqlalchemy/engine/base.py:1527: in _execute_ddl
+    ret = self._execute_context(
+.pythonlibs/lib/python3.11/site-packages/sqlalchemy/engine/base.py:1843: in _execute_context
+    return self._exec_single_context(
+.pythonlibs/lib/python3.11/site-packages/sqlalchemy/engine/base.py:1983: in _exec_single_context
+    self._handle_dbapi_exception(
+.pythonlibs/lib/python3.11/site-packages/sqlalchemy/engine/base.py:2352: in _handle_dbapi_exception
+    raise sqlalchemy_exception.with_traceback(exc_info[2]) from e
+.pythonlibs/lib/python3.11/site-packages/sqlalchemy/engine/base.py:1964: in _exec_single_context
+    self.dialect.do_execute(
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <sqlalchemy.dialects.sqlite.pysqlite.SQLiteDialect_pysqlite object at 0x7f51944f4c50>
+cursor = <sqlite3.Cursor object at 0x7f5194258fc0>
+statement = '\nCREATE TABLE batch (\n\tid INTEGER NOT NULL, \n\trecipe_id INTEGER NOT NULL, \n\tlabel_code VARCHAR(32), \n\tbatch_...OREIGN KEY(organization_id) REFERENCES organization (id), \n\tFOREIGN KEY(portion_unit_id) REFERENCES unit (id)\n)\n\n'
+parameters = ()
+context = <sqlalchemy.dialects.sqlite.base.SQLiteExecutionContext object at 0x7f51940a87d0>
+
+    def do_execute(self, cursor, statement, parameters, context=None):
+>       cursor.execute(statement, parameters)
+E       sqlalchemy.exc.OperationalError: (sqlite3.OperationalError) unrecognized token: ":"
+E       [SQL: 
+E       CREATE TABLE batch (
+E           id INTEGER NOT NULL, 
+E           recipe_id INTEGER NOT NULL, 
+E           label_code VARCHAR(32), 
+E           batch_type VARCHAR(32) NOT NULL, 
+E           projected_yield FLOAT, 
+E           projected_yield_unit VARCHAR(50), 
+E           sku_id INTEGER, 
+E           final_quantity FLOAT, 
+E           output_unit VARCHAR(50), 
+E           scale FLOAT, 
+E           status VARCHAR(50), 
+E           status_reason TEXT, 
+E           notes TEXT, 
+E           tags TEXT, 
+E           total_cost FLOAT, 
+E           created_by INTEGER, 
+E           organization_id INTEGER, 
+E           started_at DATETIME, 
+E           completed_at DATETIME, 
+E           failed_at DATETIME, 
+E           cancelled_at DATETIME, 
+E           inventory_credited BOOLEAN, 
+E           is_perishable BOOLEAN, 
+E           shelf_life_days INTEGER, 
+E           expiration_date DATETIME, 
+E           remaining_quantity FLOAT, 
+E           portioning_data JSON, 
+E           is_portioned BOOLEAN, 
+E           portion_name VARCHAR(64), 
+E           projected_portions INTEGER, 
+E           final_portions INTEGER, 
+E           plan_snapshot JSON, 
+E           portion_unit_id INTEGER, 
+E           cost_method VARCHAR(16), 
+E           cost_method_locked_at DATETIME, 
+E           vessel_fill_pct NUMERIC GENERATED ALWAYS AS ((((plan_snapshot -> 'category_extension') ->> 'vessel_fill_pct'))::numeric) STORED, 
+E           candle_fragrance_pct NUMERIC GENERATED ALWAYS AS ((((plan_snapshot -> 'category_extension') ->> 'candle_fragrance_pct'))::numeric) STORED, 
+E           candle_vessel_ml NUMERIC GENERATED ALWAYS AS ((((plan_snapshot -> 'category_extension') ->> 'candle_vessel_ml'))::numeric) STORED, 
+E           soap_superfat NUMERIC GENERATED ALWAYS AS ((((plan_snapshot -> 'category_extension') ->> 'soap_superfat'))::numeric) STORED, 
+E           soap_water_pct NUMERIC GENERATED ALWAYS AS ((((plan_snapshot -> 'category_extension') ->> 'soap_water_pct'))::numeric) STORED, 
+E           soap_lye_type TEXT GENERATED ALWAYS AS (((plan_snapshot -> 'category_extension') ->> 'soap_lye_type')) STORED, 
+E           baker_base_flour_g NUMERIC GENERATED ALWAYS AS ((((plan_snapshot -> 'category_extension') ->> 'baker_base_flour_g'))::numeric) STORED, 
+E           baker_water_pct NUMERIC GENERATED ALWAYS AS ((((plan_snapshot -> 'category_extension') ->> 'baker_water_pct'))::numeric) STORED, 
+E           baker_salt_pct NUMERIC GENERATED ALWAYS AS ((((plan_snapshot -> 'category_extension') ->> 'baker_salt_pct'))::numeric) STORED, 
+E           baker_yeast_pct NUMERIC GENERATED ALWAYS AS ((((plan_snapshot -> 'category_extension') ->> 'baker_yeast_pct'))::numeric) STORED, 
+E           cosm_emulsifier_pct NUMERIC GENERATED ALWAYS AS ((((plan_snapshot -> 'category_extension') ->> 'cosm_emulsifier_pct'))::numeric) STORED, 
+E           cosm_preservative_pct NUMERIC GENERATED ALWAYS AS ((((plan_snapshot -> 'category_extension') ->> 'cosm_preservative_pct'))::numeric) STORED, 
+E           PRIMARY KEY (id), 
+E           FOREIGN KEY(recipe_id) REFERENCES recipe (id), 
+E           UNIQUE (label_code), 
+E           FOREIGN KEY(sku_id) REFERENCES product_sku (id), 
+E           FOREIGN KEY(created_by) REFERENCES user (id), 
+E           FOREIGN KEY(organization_id) REFERENCES organization (id), 
+E           FOREIGN KEY(portion_unit_id) REFERENCES unit (id)
+E       )
+E       
+E       ]
+E       (Background on this error at: https://sqlalche.me/e/20/e3q8)
+
+.pythonlibs/lib/python3.11/site-packages/sqlalchemy/engine/default.py:945: OperationalError
+=========================== short test summary info ============================
+ERROR tests/developer/test_analytics_catalog.py::test_developer_catalog_view_renders - sqlalchemy.exc.OperationalError: (sqlite3.OperationalError) unrecognized to...
+ERROR tests/test_auth_permissions.py::test_permission_required_allows_authorized_user - sqlalchemy.exc.OperationalError: (sqlite3.OperationalError) unrecognized to...
+ERROR tests/test_auth_permissions.py::test_permission_required_denies_user_without_permission - sqlalchemy.exc.OperationalError: (sqlite3.OperationalError) unrecognized to...
+ERROR tests/test_auth_permissions.py::test_permission_required_requires_authentication - sqlalchemy.exc.OperationalError: (sqlite3.OperationalError) unrecognized to...
+ERROR tests/test_batch_label_generator.py::test_generate_batch_label_code_defaults - sqlalchemy.exc.OperationalError: (sqlite3.OperationalError) unrecognized to...
+ERROR tests/test_batch_label_generator.py::test_generate_batch_label_code_with_prefix_and_sequence - sqlalchemy.exc.OperationalError: (sqlite3.OperationalError) unrecognized to...
+ERROR tests/test_billing_and_tier_enforcement.py::TestBillingAndTierEnforcement::test_tier_permission_is_the_hard_ceiling - sqlalchemy.exc.OperationalError: (sqlite3.OperationalError) unrecognized to...
+ERROR tests/test_billing_and_tier_enforcement.py::TestBillingAndTierEnforcement::test_billing_status_enforcement[active-200] - sqlalchemy.exc.OperationalError: (sqlite3.OperationalError) unrecognized to...
+ERROR tests/test_billing_and_tier_enforcement.py::TestBillingAndTierEnforcement::test_billing_status_enforcement[past_due-302] - sqlalchemy.exc.OperationalError: (sqlite3.OperationalError) unrecognized to...
+ERROR tests/test_billing_and_tier_enforcement.py::TestBillingAndTierEnforcement::test_billing_status_enforcement[suspended-302] - sqlalchemy.exc.OperationalError: (sqlite3.OperationalError) unrecognized to...
+ERROR tests/test_billing_and_tier_enforcement.py::TestBillingAndTierEnforcement::test_billing_status_enforcement[canceled-302] - sqlalchemy.exc.OperationalError: (sqlite3.OperationalError) unrecognized to...
+ERROR tests/test_billing_and_tier_enforcement.py::TestBillingAndTierEnforcement::test_developer_can_masquerade_regardless_of_billing - sqlalchemy.exc.OperationalError: (sqlite3.OperationalError) unrecognized to...
+ERROR tests/test_billing_and_tier_enforcement.py::TestBillingAndTierEnforcement::test_complete_security_cascade - sqlalchemy.exc.OperationalError: (sqlite3.OperationalError) unrecognized to...
+ERROR tests/test_billing_and_tier_enforcement.py::TestBillingAndTierEnforcement::test_create_checkout_session_preserves_urls - sqlalchemy.exc.OperationalError: (sqlite3.OperationalError) unrecognized to...
+ERROR tests/test_expiration_canonicalization.py::test_expiration_service_uses_canonical_adjustment - sqlalchemy.exc.OperationalError: (sqlite3.OperationalError) unrecognized to...
+ERROR tests/test_extras_expiration.py::test_extras_cannot_use_expired_lot - sqlalchemy.exc.OperationalError: (sqlite3.OperationalError) unrecognized to...
+ERROR tests/test_global_link_drawer.py::test_global_link_suggestions_and_link_flow - sqlalchemy.exc.OperationalError: (sqlite3.OperationalError) unrecognized to...
+ERROR tests/test_google_oauth.py::TestGoogleOAuthCharacterization::test_oauth_service_exists - sqlalchemy.exc.OperationalError: (sqlite3.OperationalError) unrecognized to...
+ERROR tests/test_google_oauth.py::TestGoogleOAuthCharacterization::test_auth_login_endpoint_exists - sqlalchemy.exc.OperationalError: (sqlite3.OperationalError) unrecognized to...
+ERROR tests/test_google_oauth.py::TestGoogleOAuthCharacterization::test_auth_callback_endpoint_exists - sqlalchemy.exc.OperationalError: (sqlite3.OperationalError) unrecognized to...
+ERROR tests/test_google_oauth.py::TestGoogleOAuthCharacterization::test_oauth_state_validation_path - sqlalchemy.exc.OperationalError: (sqlite3.OperationalError) unrecognized to...
+ERROR tests/test_google_oauth.py::TestGoogleOAuthCharacterization::test_oauth_service_methods_exist - sqlalchemy.exc.OperationalError: (sqlite3.OperationalError) unrecognized to...
+ERROR tests/test_google_oauth.py::TestGoogleOAuthCharacterization::test_oauth_configuration_status - sqlalchemy.exc.OperationalError: (sqlite3.OperationalError) unrecognized to...
+ERROR tests/test_google_oauth.py::TestGoogleOAuthCharacterization::test_oauth_callback_invalid_state - sqlalchemy.exc.OperationalError: (sqlite3.OperationalError) unrecognized to...
+ERROR tests/test_help_routes_access.py::test_help_pages_are_public - sqlalchemy.exc.OperationalError: (sqlite3.OperationalError) unrecognized to...
+ERROR tests/test_inventory_adjustment_initial_stock.py::test_batch_deduction_does_not_create_initial_stock - sqlalchemy.exc.OperationalError: (sqlite3.OperationalError) unrecognized to...
+ERROR tests/test_inventory_costing_toggle.py::TestInventoryCostingToggleAndWAC::test_wac_updates_after_restock_and_deduct_fifo_mode - sqlalchemy.exc.OperationalError: (sqlite3.OperationalError) unrecognized to...
+ERROR tests/test_inventory_costing_toggle.py::TestInventoryCostingToggleAndWAC::test_wac_updates_after_restock_average_mode - sqlalchemy.exc.OperationalError: (sqlite3.OperationalError) unrecognized to...
+ERROR tests/test_inventory_costing_toggle.py::TestInventoryCostingToggleAndWAC::test_resolve_cost_per_unit_divides_total_entries - sqlalchemy.exc.OperationalError: (sqlite3.OperationalError) unrecognized to...
+ERROR tests/test_inventory_costing_toggle.py::TestInventoryCostingToggleAndWAC::test_resolve_cost_per_unit_requires_positive_quantity_for_total - sqlalchemy.exc.OperationalError: (sqlite3.OperationalError) unrecognized to...
+ERROR tests/test_inventory_fifo.py::TestInventoryFIFOCharacterization::test_single_entry_point_exists - sqlalchemy.exc.OperationalError: (sqlite3.OperationalError) unrecognized to...
+ERROR tests/test_inventory_fifo.py::TestInventoryFIFOCharacterization::test_fifo_deduction_order - sqlalchemy.exc.OperationalError: (sqlite3.OperationalError) unrecognized to...
+ERROR tests/test_inventory_fifo.py::TestInventoryFIFOCharacterization::test_inventory_adjustment_delegates_properly - sqlalchemy.exc.OperationalError: (sqlite3.OperationalError) unrecognized to...
+ERROR tests/test_inventory_routes_canonicalization.py::test_batch_start_routes_all_deductions_through_canonical_service - sqlalchemy.exc.OperationalError: (sqlite3.OperationalError) unrecognized to...
+ERROR tests/test_inventory_routes_canonicalization.py::test_expiration_service_uses_canonical_adjustment - sqlalchemy.exc.OperationalError: (sqlite3.OperationalError) unrecognized to...
+ERROR tests/test_plan_production_gating.py::test_api_start_batch_requires_override_before_force - sqlalchemy.exc.OperationalError: (sqlite3.OperationalError) unrecognized to...
+ERROR tests/test_plan_production_integration.py::test_plan_start_finish_non_portioned - sqlalchemy.exc.OperationalError: (sqlite3.OperationalError) unrecognized to...
+ERROR tests/test_plan_production_integration.py::test_plan_start_finish_portioned - sqlalchemy.exc.OperationalError: (sqlite3.OperationalError) unrecognized to...
+ERROR tests/test_portioning_sku_derivation.py::test_portioning_sku_labels_differ - sqlalchemy.exc.OperationalError: (sqlite3.OperationalError) unrecognized to...
+ERROR tests/test_pos_integration_canonicalization.py::test_reserve_inventory_calls_canonical_service - sqlalchemy.exc.OperationalError: (sqlite3.OperationalError) unrecognized to...
+ERROR tests/test_pos_integration_canonicalization.py::test_confirm_sale_uses_canonical_service - sqlalchemy.exc.OperationalError: (sqlite3.OperationalError) unrecognized to...
+ERROR tests/test_pos_integration_canonicalization.py::test_confirm_return_uses_canonical_service - sqlalchemy.exc.OperationalError: (sqlite3.OperationalError) unrecognized to...
+ERROR tests/test_public_tools_access.py::test_public_tools_pages_are_accessible - sqlalchemy.exc.OperationalError: (sqlite3.OperationalError) unrecognized to...
+ERROR tests/test_public_tools_and_exports_smoke.py::test_public_tools_draft_and_prefill - sqlalchemy.exc.OperationalError: (sqlite3.OperationalError) unrecognized to...
+ERROR tests/test_public_tools_and_exports_smoke.py::test_exports_tool_and_recipe_csv_pdf - sqlalchemy.exc.OperationalError: (sqlite3.OperationalError) unrecognized to...
+ERROR tests/test_reservation_canonicalization.py::TestReservationCanonicalService::test_reservation_service_structure - sqlalchemy.exc.OperationalError: (sqlite3.OperationalError) unrecognized to...
+ERROR tests/test_reservation_canonicalization.py::TestReservationCanonicalService::test_create_reservation_uses_canonical_service - sqlalchemy.exc.OperationalError: (sqlite3.OperationalError) unrecognized to...
+ERROR tests/test_reservation_canonicalization.py::TestReservationCanonicalService::test_release_reservation_uses_canonical_service - sqlalchemy.exc.OperationalError: (sqlite3.OperationalError) unrecognized to...
+ERROR tests/test_reservation_canonicalization.py::TestReservationCanonicalService::test_reservation_model_integration - sqlalchemy.exc.OperationalError: (sqlite3.OperationalError) unrecognized to...
+ERROR tests/test_reservation_canonicalization.py::TestReservationCanonicalService::test_reservation_status_management - sqlalchemy.exc.OperationalError: (sqlite3.OperationalError) unrecognized to...
+ERROR tests/test_reservation_canonicalization.py::TestReservationServiceErrorHandling::test_invalid_reservation_handling - sqlalchemy.exc.OperationalError: (sqlite3.OperationalError) unrecognized to...
+ERROR tests/test_retention_drawer.py::test_retention_flow_ack_to_delete - sqlalchemy.exc.OperationalError: (sqlite3.OperationalError) unrecognized to...
+ERROR tests/test_signup_stripe_flow.py::test_signup_flow_end_to_end - sqlalchemy.exc.OperationalError: (sqlite3.OperationalError) unrecognized to...
+ERROR tests/test_signup_tiers.py::TestSignupTierCharacterization::test_signup_endpoint_exists - sqlalchemy.exc.OperationalError: (sqlite3.OperationalError) unrecognized to...
+ERROR tests/test_signup_tiers.py::TestSignupTierCharacterization::test_tier_bypass_behavior - sqlalchemy.exc.OperationalError: (sqlite3.OperationalError) unrecognized to...
+ERROR tests/test_signup_tiers.py::TestSignupTierCharacterization::test_organization_tier_assignment - sqlalchemy.exc.OperationalError: (sqlite3.OperationalError) unrecognized to...
+ERROR tests/test_signup_tiers.py::TestSignupTierCharacterization::test_permission_gating_exists - sqlalchemy.exc.OperationalError: (sqlite3.OperationalError) unrecognized to...
+ERROR tests/test_signup_tiers.py::TestSignupTierCharacterization::test_signup_service_delegation - sqlalchemy.exc.OperationalError: (sqlite3.OperationalError) unrecognized to...
+ERROR tests/test_single_session_enforcement.py::test_subsequent_login_invalidates_existing_session - sqlalchemy.exc.OperationalError: (sqlite3.OperationalError) unrecognized to...
+ERROR tests/test_start_batch_integration.py::test_start_batch_uses_generator_and_persists_label - sqlalchemy.exc.OperationalError: (sqlite3.OperationalError) unrecognized to...
+ERROR tests/test_stripe_webhooks.py::test_stripe_webhook_valid_signature_dispatches - sqlalchemy.exc.OperationalError: (sqlite3.OperationalError) unrecognized to...
+ERROR tests/test_stripe_webhooks.py::test_stripe_webhook_returns_400_when_signature_invalid - sqlalchemy.exc.OperationalError: (sqlite3.OperationalError) unrecognized to...
+ERROR tests/test_stripe_webhooks.py::test_stripe_webhook_returns_500_when_secret_missing - sqlalchemy.exc.OperationalError: (sqlite3.OperationalError) unrecognized to...
+=================== 11 passed, 63 errors in 67.40s (0:01:07)
