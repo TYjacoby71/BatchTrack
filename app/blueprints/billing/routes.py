@@ -5,7 +5,6 @@ from datetime import datetime, timedelta
 from flask import Blueprint, request, render_template, flash, redirect, url_for, session, jsonify, current_app
 from flask_login import login_required, current_user, login_user
 from ...services.billing_service import BillingService
-from ...services.stripe_service import StripeService
 from ...services.whop_service import WhopService
 from ...services.signup_service import SignupService
 from ...services.session_service import SessionService
@@ -95,12 +94,7 @@ def storage_addon():
     lookup_key = storage_addon.stripe_lookup_key
 
     try:
-        if not StripeService.initialize_stripe():
-            flash('Billing temporarily unavailable', 'error')
-            return redirect(url_for('billing.upgrade'))
-
-        # Create a subscription checkout session for the storage add-on price lookup key
-        session = StripeService.create_subscription_checkout_by_lookup_key(
+        session = BillingService.create_subscription_checkout_by_lookup_key(
             lookup_key,
             current_user.email,
             success_url=url_for('billing.upgrade', _external=True),
@@ -110,11 +104,10 @@ def storage_addon():
         if session and getattr(session, 'url', None):
             return redirect(session.url)
         flash('Unable to start storage checkout', 'error')
-        return redirect(url_for('billing.upgrade'))
     except Exception as e:
         logger.error(f"Storage add-on checkout error: {e}")
         flash('Checkout failed. Please try again later.', 'error')
-        return redirect(url_for('billing.upgrade'))
+    return redirect(url_for('billing.upgrade'))
 
 @billing_bp.route('/addons/start/<addon_key>', methods=['POST'])
 @login_required
@@ -123,7 +116,6 @@ def start_addon_checkout(addon_key):
     Enforces that the add-on is allowed for the organization's current tier.
     """
     from ...models.addon import Addon
-    from ...services.stripe_service import StripeService
     addon = Addon.query.filter_by(key=addon_key, is_active=True).first()
     if not addon or not addon.stripe_lookup_key:
         flash('Add-on not available.', 'warning')
@@ -145,10 +137,7 @@ def start_addon_checkout(addon_key):
         return redirect(url_for('billing.upgrade'))
 
     try:
-        if not StripeService.initialize_stripe():
-            flash('Billing temporarily unavailable', 'error')
-            return redirect(url_for('settings.index') + '#billing')
-        session = StripeService.create_subscription_checkout_by_lookup_key(
+        session = BillingService.create_subscription_checkout_by_lookup_key(
             addon.stripe_lookup_key,
             current_user.email,
             success_url=url_for('settings.index', _external=True) + '#billing',
@@ -181,7 +170,8 @@ def checkout(tier, billing_cycle='month'):
             f"{current_user.first_name} {current_user.last_name}",
             url_for('billing.complete_signup_from_stripe', _external=True),
             url_for('billing.upgrade', _external=True),
-            metadata={'tier': tier, 'billing_cycle': billing_cycle}
+            metadata={'tier': tier, 'billing_cycle': billing_cycle},
+            existing_customer_id=getattr(organization, 'stripe_customer_id', None),
         )
         
         if checkout_session:
@@ -232,7 +222,7 @@ def complete_signup_from_stripe():
     logger.info("Completing signup for checkout session %s", session_id)
 
     try:
-        result = StripeService.finalize_checkout_session(session_id)
+        result = BillingService.finalize_checkout_session(session_id)
     except Exception as exc:
         logger.error("Stripe finalize failed for session %s: %s", session_id, exc)
         flash('Account setup failed. Please contact support.', 'error')
@@ -292,20 +282,17 @@ def customer_portal():
         return redirect(url_for('app_routes.dashboard'))
 
     try:
-        portal_session = StripeService.create_customer_portal_session(
-            organization, 
+        portal_session = BillingService.create_customer_portal_session(
+            organization,
             url_for('app_routes.dashboard', _external=True)
         )
         if portal_session:
             return redirect(portal_session.url)
-        else:
-            flash('Unable to access billing portal', 'error')
-            return redirect(url_for('app_routes.dashboard'))
-
+        flash('Unable to access billing portal', 'error')
     except Exception as e:
         logger.error(f"Customer portal error: {e}")
         flash('Billing portal unavailable', 'error')
-        return redirect(url_for('app_routes.dashboard'))
+    return redirect(url_for('app_routes.dashboard'))
 
 @billing_bp.route('/cancel-subscription', methods=['POST'])
 @login_required
@@ -318,7 +305,7 @@ def cancel_subscription():
 
     try:
         if organization.stripe_customer_id:
-            success = StripeService.cancel_subscription(organization.stripe_customer_id)
+            success = BillingService.cancel_subscription(organization.stripe_customer_id)
         elif organization.whop_license_key:
             success = WhopService.cancel_subscription(organization.whop_license_key)
         else:
@@ -350,7 +337,7 @@ def stripe_webhook():
         return '', 500
 
     try:
-        event = StripeService.construct_event(payload, sig_header, webhook_secret)
+        event = BillingService.construct_event(payload, sig_header, webhook_secret)
         logger.info(f"Received Stripe webhook: {event['type']}")
 
         status = BillingService.handle_webhook_event('stripe', event)

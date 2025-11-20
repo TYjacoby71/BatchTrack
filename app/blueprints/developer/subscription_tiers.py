@@ -31,8 +31,8 @@ def manage_tiers():
 
         if tier.stripe_lookup_key:
             try:
-                from ...services.stripe_service import StripeService
-                live_pricing = StripeService.get_live_pricing_for_tier(tier)
+                from ...services.billing_service import BillingService
+                live_pricing = BillingService.get_live_pricing_for_tier(tier)
                 if live_pricing:
                     price_display = live_pricing['formatted_price']
             except Exception as e:
@@ -379,10 +379,10 @@ def sync_tier_with_stripe(tier_id):
         return jsonify({'success': False, 'error': 'No Stripe lookup key configured'}), 400
 
     try:
-        from ...services.stripe_service import StripeService
+        from ...services.billing_service import BillingService
 
         # Get live pricing from Stripe
-        live_pricing = StripeService.get_live_pricing_for_tier(tier)
+        live_pricing = BillingService.get_live_pricing_for_tier(tier)
         if live_pricing:
             logger.info(f'Successfully synced tier {tier.name} with Stripe - Price: {live_pricing["formatted_price"]}')
             return jsonify({

@@ -79,7 +79,7 @@ This document tracks the comprehensive refactor of BatchTrack's codebase to elim
 - [ ] **Idempotent Processing**: Upsert → process → mark complete with DB transactions
 - [ ] **Webhook Security**: Signature verification → idempotency check → process → mark processed
 - [ ] **Error Recovery**: Failed event retry with exponential backoff
-- [ ] **Interface Standardization**: `StripeService.handle_event(event)` that's idempotent by design
+- [ ] **Interface Standardization**: `BillingService.handle_webhook_event(event)` that's idempotent by design
 
 #### 2. **Whop Integration Completion** 🔄 IN PROGRESS
 - [ ] **License Verification**: Complete Whop license key validation system
@@ -152,7 +152,7 @@ class BillingServiceInterface(ABC):
 - `docs/refactor/pr2_inventory_call_sites.md` - Call site analysis (COMPLETED)
 - `docs/refactor/pr3_quality_performance.md` - Phase 3 implementation details
 - `app/services/inventory_adjustment.py` - Canonical service (STABLE)
-- `app/services/stripe_service.py` - Stripe integration (NEEDS HARDENING)
+- `app/services/billing_service.py` - Billing integration (NEEDS HARDENING)
 - `app/services/whop_service.py` - Whop integration (IN PROGRESS)
 - `app/models/models.py::Organization` - Organization billing model (NEEDS CLEANUP)
 - `tests/` - Complete test suite (24 tests, ALL PASSING)

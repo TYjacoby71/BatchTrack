@@ -32,8 +32,7 @@ docs/                # Comprehensive documentation
 ### (a) Billing/Stripe Webhooks and API Usage
 **Entry Points:**
 - `app/blueprints/billing/routes.py` - Webhook handlers
-- `app/services/stripe_service.py` - Stripe API wrapper
-- `app/services/billing_service.py` - Business billing logic
+- `app/services/billing_service.py` - Stripe API wrapper + billing logic
 
 **Risk Assessment:**
 - Webhook signature verification present but needs verification

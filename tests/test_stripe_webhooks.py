@@ -7,7 +7,7 @@ def test_stripe_webhook_valid_signature_dispatches(app, client):
     with app.app_context():
         app.config['STRIPE_WEBHOOK_SECRET'] = 'whsec_test'
 
-    with patch('app.services.stripe_service.StripeService.construct_event') as mock_construct, \
+    with patch('app.services.billing_service.BillingService.construct_event') as mock_construct, \
             patch('app.services.billing_service.BillingService.handle_webhook_event') as mock_handle:
 
         mock_event = {'id': 'evt_123', 'type': 'test.event'}
@@ -32,7 +32,7 @@ def test_stripe_webhook_returns_400_when_signature_invalid(app, client):
     with app.app_context():
         app.config['STRIPE_WEBHOOK_SECRET'] = 'whsec_test'
 
-    with patch('app.services.stripe_service.StripeService.construct_event', side_effect=Exception('bad signature')) as mock_construct, \
+    with patch('app.services.billing_service.BillingService.construct_event', side_effect=Exception('bad signature')) as mock_construct, \
             patch('app.services.billing_service.BillingService.handle_webhook_event') as mock_handle:
 
         response = client.post(
