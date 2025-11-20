@@ -1,10 +1,22 @@
+import os
 from types import SimpleNamespace
+
+import pytest
 
 from app.extensions import db
 from app.models.pending_signup import PendingSignup
 from app.models.subscription_tier import SubscriptionTier
 from app.models.models import Organization, User
 from app.services.billing_service import BillingService
+
+
+def pytest_addoption(parser):
+    parser.addoption(
+        "--stripe-live",
+        action="store_true",
+        default=False,
+        help="Run signup tests against live Stripe (requires env keys)",
+    )
 
 
 class _DummySession:
@@ -32,7 +44,23 @@ def _make_fake_checkout_session(pending_id: int, customer):
     )
 
 
-def test_signup_flow_creates_org_and_user(app, client, monkeypatch):
+def _use_live_stripe(request):
+    marker = request.node.get_closest_marker("stripe_live")
+    cli_flag = request.config.getoption("--stripe-live", default=False)
+    return bool(marker) or bool(cli_flag)
+
+
+def _require_env_keys():
+    missing = [key for key in ("STRIPE_SECRET_KEY", "STRIPE_WEBHOOK_SECRET") if not os.environ.get(key)]
+    if missing:
+        raise RuntimeError(f"--stripe-live requested, but missing env vars: {', '.join(missing)}")
+
+
+def test_signup_flow_creates_org_and_user(app, client, monkeypatch, request):
+    live_mode = _use_live_stripe(request)
+    if live_mode:
+        _require_env_keys()
+
     with app.app_context():
         solo = SubscriptionTier(
             name='Solo Plan',
@@ -44,16 +72,17 @@ def test_signup_flow_creates_org_and_user(app, client, monkeypatch):
         db.session.add(solo)
         db.session.commit()
 
-        def fake_checkout(tier_obj, *, customer_email, success_url, cancel_url, metadata,
-                          client_reference_id=None, phone_required=True,
-                          allow_promo=True, existing_customer_id=None):
-            assert tier_obj.id == solo.id
-            assert customer_email == 'solo@applicant.com'
-            assert success_url.endswith('{CHECKOUT_SESSION_ID}')
-            assert metadata['tier_id'] == str(solo.id)
-            return _DummySession(f'cs_test_{tier_obj.id}')
+        if not live_mode:
+            def fake_checkout(tier_obj, *, customer_email, success_url, cancel_url, metadata,
+                              client_reference_id=None, phone_required=True,
+                              allow_promo=True, existing_customer_id=None):
+                assert tier_obj.id == solo.id
+                assert customer_email == 'solo@applicant.com'
+                assert success_url.endswith('{CHECKOUT_SESSION_ID}')
+                assert metadata['tier_id'] == str(solo.id)
+                return _DummySession(f'cs_test_{tier_obj.id}')
 
-        monkeypatch.setattr(BillingService, 'create_checkout_session_for_tier', fake_checkout)
+            monkeypatch.setattr(BillingService, 'create_checkout_session_for_tier', fake_checkout)
 
         response = client.post(
             '/auth/signup',
@@ -66,13 +95,16 @@ def test_signup_flow_creates_org_and_user(app, client, monkeypatch):
         )
 
         assert response.status_code == 302
-        assert response.headers['Location'] == 'https://stripe.test/checkout'
-
+        if not live_mode:
+            assert response.headers['Location'] == 'https://stripe.test/checkout'
         pending = PendingSignup.query.filter_by(email='solo@applicant.com').first()
         assert pending is not None
         assert pending.tier_id == solo.id
 
-        # Simulate Stripe sending back a completed checkout session payload
+        if live_mode:
+            # Let the real Stripe checkout happen; provisioning will be handled by the webhook.
+            return
+
         fake_customer = SimpleNamespace(
             id='cus_test_123',
             email='solo@applicant.com',
@@ -98,7 +130,12 @@ def test_signup_flow_creates_org_and_user(app, client, monkeypatch):
         assert pending.status == 'account_created'
 
 
-def test_complete_signup_route_logs_in_user(app, client, monkeypatch):
+@pytest.mark.usefixtures("client")
+def test_complete_signup_route_logs_in_user(app, client, monkeypatch, request):
+    live_mode = _use_live_stripe(request)
+    if live_mode:
+        _require_env_keys()
+
     with app.app_context():
         solo = SubscriptionTier(
             name='Solo Live',
@@ -126,20 +163,25 @@ def test_complete_signup_route_logs_in_user(app, client, monkeypatch):
         db.session.add(user)
         db.session.commit()
 
-        def fake_finalize(session_id):
-            assert session_id == 'cs_live'
-            return org, user
-
-        monkeypatch.setattr(BillingService, 'finalize_checkout_session', fake_finalize)
+        if live_mode:
+            # Call the real finalizer (will reach Stripe); assume session exists.
+            finalize_target = BillingService.finalize_checkout_session
+        else:
+            def fake_finalize(session_id):
+                assert session_id == 'cs_live'
+                return org, user
+            finalize_target = fake_finalize
+            monkeypatch.setattr(BillingService, 'finalize_checkout_session', fake_finalize)
 
         response = client.get(
             '/billing/complete-signup-from-stripe',
-            query_string={'session_id': 'cs_live'},
+            query_string={'session_id': 'cs_live' if not live_mode else os.environ.get('TEST_STRIPE_SESSION_ID', 'cs_live')},
             follow_redirects=False,
         )
 
         assert response.status_code == 302
         assert response.headers['Location'].endswith('/onboarding/welcome')
 
-        with client.session_transaction() as sess:
-            assert sess.get('_user_id') == str(user.id)
+        if not live_mode:
+            with client.session_transaction() as sess:
+                assert sess.get('_user_id') == str(user.id)
