@@ -121,7 +121,7 @@ Changed all `datetime.utcnow()` to `datetime.now(timezone.utc)`:
 
 **Files Updated**:
 - `app/services/retention_service.py` - 3 changes
-- `app/services/stripe_service.py` - 6 changes
+- `app/services/billing_service.py` - 6 changes
 - `app/services/pos_integration.py` - 3 changes (reservation expiration)
 - `app/services/event_emitter.py` - 2 changes
 - `app/blueprints/batches/finish_batch.py` - 2 changes

@@ -1,0 +1,85 @@
+/142.0.0.0 Safari/537.36" 17613
+10.24.154.1 "GET /auth/login?next=https://batchtrack.onrender.com/favicon.ico HTTP/1.1" 200 41706 "https://batchtrack.onrender.com/auth/signup?source=homepage_trial" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36" 13562
+Stripe lookup by lookup_key failed for batchtrack_team_monthly; attempting to treat it as a price ID
+No active Stripe price found for lookup key batchtrack_team_monthly; ensure the price exists and is active
+Stripe lookup by lookup_key failed for batchtrack_enterprise_monthly; attempting to treat it as a price ID
+No active Stripe price found for lookup key batchtrack_enterprise_monthly; ensure the price exists and is active
+[2025-11-20 17:16:18 +0000] [60] [ERROR] Error handling request /auth/signup
+Traceback (most recent call last):
+  File "/opt/render/project/src/.venv/lib/python3.13/site-packages/gunicorn/workers/base_async.py", line 54, in handle
+    self.handle_request(listener_name, req, client, addr)
+    ~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/render/project/src/.venv/lib/python3.13/site-packages/gunicorn/workers/ggevent.py", line 127, in handle_request
+    super().handle_request(listener_name, req, sock, addr)
+    ~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/render/project/src/.venv/lib/python3.13/site-packages/gunicorn/workers/base_async.py", line 107, in handle_request
+    respiter = self.wsgi(environ, resp.start_response)
+  File "/opt/render/project/src/.venv/lib/python3.13/site-packages/flask/app.py", line 1536, in __call__
+    return self.wsgi_app(environ, start_response)
+           ~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/render/project/src/.venv/lib/python3.13/site-packages/flask/app.py", line 1514, in wsgi_app
+    response = self.handle_exception(e)
+  File "/opt/render/project/src/.venv/lib/python3.13/site-packages/flask/app.py", line 1511, in wsgi_app
+    response = self.full_dispatch_request()
+  File "/opt/render/project/src/.venv/lib/python3.13/site-packages/flask/app.py", line 919, in full_dispatch_request
+    rv = self.handle_user_exception(e)
+  File "/opt/render/project/src/.venv/lib/python3.13/site-packages/flask/app.py", line 917, in full_dispatch_request
+    rv = self.dispatch_request()
+  File "/opt/render/project/src/.venv/lib/python3.13/site-packages/flask/app.py", line 902, in dispatch_request
+    return self.ensure_sync(self.view_functions[rule.endpoint])(**view_args)  # type: ignore[no-any-return]
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^
+  File "/opt/render/project/src/.venv/lib/python3.13/site-packages/flask_limiter/extension.py", line 1303, in __inner
+    return cast(R, flask.current_app.ensure_sync(obj)(*a, **k))
+                   ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^
+  File "/opt/render/project/src/app/blueprints/auth/routes.py", line 553, in signup
+    stripe_session = StripeService.create_checkout_session_for_tier(
+        tier_obj,
+    ...<4 lines>...
+        client_reference_id=str(pending_signup.id),
+    )
+  File "/opt/render/project/src/app/services/stripe_service.py", line 550, in create_checkout_session_for_tier
+    session = stripe.checkout.Session.create(**session_params)
+  File "/opt/render/project/src/.venv/lib/python3.13/site-packages/stripe/checkout/_session.py", line 2394, in create
+    cls._static_request(
+    ~~~~~~~~~~~~~~~~~~~^
+        "post",
+        ^^^^^^^
+        cls.class_url(),
+        ^^^^^^^^^^^^^^^^
+        params=params,
+        ^^^^^^^^^^^^^^
+    ),
+    ^
+  File "/opt/render/project/src/.venv/lib/python3.13/site-packages/stripe/_api_resource.py", line 172, in _static_request
+    return _APIRequestor._global_instance().request(
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^
+        method_,
+        ^^^^^^^^
+    ...<3 lines>...
+        base_address=base_address,
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "/opt/render/project/src/.venv/lib/python3.13/site-packages/stripe/_api_requestor.py", line 210, in request
+    resp = requestor._interpret_response(rbody, rcode, rheaders, api_mode)
+  File "/opt/render/project/src/.venv/lib/python3.13/site-packages/stripe/_api_requestor.py", line 868, in _interpret_response
+    self.handle_error_response(
+10.25.209.19 "POST /auth/signup HTTP/1.1" 500 0 "-" "-" 4070
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~^
+        rbody, rcode, resp.data, rheaders, api_mode
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "/opt/render/project/src/.venv/lib/python3.13/site-packages/stripe/_api_requestor.py", line 351, in handle_error_response
+    raise err
+stripe._error.InvalidRequestError: Request req_KnJvc7GpZgS93S: `customer_update` can only be used with `customer`.
+Unauthenticated request to UNKNOWN endpoint: endpoint=None, path=/favicon.ico, method=GET, user_agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Sa
+10.24.154.1 "GET /favicon.ico HTTP/1.1" 302 307 "https://batchtrack.onrender.com/auth/signup" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36" 3405
+Unauthenticated request to UNKNOWN endpoint: endpoint=None, path=/favicon.ico, method=GET, user_agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Sa
+10.24.109.14 "GET /favicon.ico HTTP/1.1" 302 307 "https://batchtrack.onrender.com/auth/signup" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36" 3148
+10.24.237.78 "GET /auth/login?next=https://batchtrack.onrender.com/favicon.ico HTTP/1.1" 200 41706 "https://batchtrack.onrender.com/auth/signup" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36" 13563
+10.24.237.78 "GET /auth/login?next=https://batchtrack.onrender.com/favicon.ico HTTP/1.1" 200 41706 "https://batchtrack.onrender.com/auth/signup" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36" 15586
+10.24.154.1 "GET /auth/login?next=https://batchtrack.onrender.com/favicon.ico HTTP/1.1" 200 41706 "https://batchtrack.onrender.com/auth/signup" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36" 21485
+Unauthenticated request to UNKNOWN endpoint: endpoint=None, path=/favicon.ico, method=GET, user_agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Sa
+10.24.154.1 "GET /favicon.ico HTTP/1.1" 302 307 "https://batchtrack.onrender.com/auth/signup?source=homepage_trial" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36" 3589
+10.24.148.39 "GET /auth/login?next=https://batchtrack.onrender.com/favicon.ico HTTP/1.1" 200 41706 "https://batchtrack.onrender.com/auth/signup?source=homepage_trial" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36" 17198

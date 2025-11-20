@@ -42,6 +42,8 @@ class RouteAccessConfig:
         
         # Billing webhooks (Stripe callbacks)
         'billing.stripe_webhook',
+        'billing.complete_signup_from_stripe',
+        'billing.complete_signup_from_whop',
         
         # Public tools - category-specific calculators
         'tools_bp.tools_index',
@@ -62,8 +64,8 @@ class RouteAccessConfig:
         'public_api_bp.public_global_item_search',
         'global_library_bp.global_library',
         'global_library_bp.global_item_detail',
-          'help_routes.help_overview',
-          'help_routes.help_faq',
+        'help_routes.help_overview',
+        'help_routes.help_faq',
         
         # Waitlist signup (for unauthenticated users)
         'waitlist.join_waitlist',
@@ -77,9 +79,10 @@ class RouteAccessConfig:
         '/auth/signup',
         '/auth/logout',
         '/tools',              # Public calculator tools
+        '/tools/',             # Explicit trailing-slash variant for public tools
         '/exports/tool',       # Public export previews
         '/api/public',         # Public API namespace
-          '/help',
+        '/help',               # Public help center
     ]
     
     # ============================================================================

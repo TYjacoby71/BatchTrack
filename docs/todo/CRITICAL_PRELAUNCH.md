@@ -9,7 +9,7 @@
 - [ ] **API Keys**: Live keys in production secrets _(Status: Pending – config expects environment variables, none committed)_
 - [x] **Webhook Endpoint**: Configured and tested _(Status: Complete – `/billing/webhooks/stripe` implemented with Stripe signature validation)_
 - [x] **Payment Flow**: End-to-end signup to payment tested _(Status: Code Complete – checkout session + webhook handling implemented; live payment verification still required)_
-- [ ] **Failed Payment Handling**: Graceful error recovery _(Status: Pending – `StripeService._handle_payment_failed` stubbed)_
+- [ ] **Failed Payment Handling**: Graceful error recovery _(Status: Pending – `BillingService._handle_payment_failed` stubbed)_
 
 ## 📧 **EMAIL SYSTEM** (CRITICAL)
 - [ ] **Email Service**: SendGrid/AWS SES configured _(Status: Pending – provider abstraction exists; production API keys needed)_

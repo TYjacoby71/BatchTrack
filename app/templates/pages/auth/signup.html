@@ -87,9 +87,9 @@
                         <i class="fas fa-shopping-cart me-2"></i>
                                             Ready to get started?
                                         </h5>
-                                        <p class="text-muted mb-4" id="selectedTierText">
-                                            You've selected the <strong>Team Plan</strong>. Click continue to proceed with payment.
-                                        </p>
+                                          <p class="text-muted mb-4" id="selectedTierText">
+                                              You've selected the <strong>Team Plan</strong>. Click continue to enter your contact and workspace details directly on Stripe's secure checkout.
+                                          </p>
                                         
                                         <div class="d-flex gap-3 justify-content-center">
                         <a href="{{ url_for('auth.login') }}" class="btn btn-outline-secondary">
@@ -155,17 +155,17 @@ function selectTier(tierKey) {
     // Update confirmation text
     const tierData = availableTiers[tierKey];
     const selectedText = document.getElementById('selectedTierText');
-    if (selectedText && tierData) {
-        selectedText.innerHTML = `You've selected the <strong>${tierData.name}</strong>. Click continue to proceed with payment.`;
+      if (selectedText && tierData) {
+          selectedText.innerHTML = `You've selected the <strong>${tierData.name}</strong>. Click continue to enter your details on Stripe's secure checkout.`;
     }
 }
 
-function proceedToPayment() {
-    if (!selectedTier) {
-        alert('Please select a plan first.');
-        return;
-    }
-    
+  function proceedToPayment() {
+      if (!selectedTier) {
+          alert('Please select a plan first.');
+          return;
+      }
+  
     // Create a form to submit the tier selection
     const form = document.createElement('form');
     form.method = 'POST';
@@ -184,7 +184,7 @@ function proceedToPayment() {
     tierInput.name = 'selected_tier';
     tierInput.value = selectedTier;
     form.appendChild(tierInput);
-    
+
     // Auto-detect and add user's timezone
     try {
         const detectedTimezone = Intl.DateTimeFormat().resolvedOptions().timeZone;

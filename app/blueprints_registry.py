@@ -37,6 +37,7 @@ def register_blueprints(app):
     safe_register_blueprint('app.blueprints.batches.batches_bp', 'batches_bp', '/batches', 'Batches')
     safe_register_blueprint('app.blueprints.organization.routes.organization_bp', 'organization_bp', '/organization', 'Organization')
     safe_register_blueprint('app.blueprints.billing.billing_bp', 'billing_bp', '/billing', 'Billing')
+    safe_register_blueprint('app.blueprints.onboarding.routes.onboarding_bp', 'onboarding_bp', '/onboarding', 'Onboarding')
     safe_register_blueprint('app.blueprints.settings.settings_bp', 'settings_bp', '/settings', 'Settings')
     safe_register_blueprint('app.blueprints.timers.timers_bp', 'timers_bp', '/timers', 'Timers')
     safe_register_blueprint('app.blueprints.expiration.expiration_bp', 'expiration_bp', '/expiration', 'Expiration')

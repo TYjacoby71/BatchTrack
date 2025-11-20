@@ -21,7 +21,6 @@ from app.models.unified_inventory_history import UnifiedInventoryHistory
 from app.models.inventory_lot import InventoryLot
 from app.models.user_role_assignment import UserRoleAssignment
 from app.models.statistics import UserStats, OrganizationStats
-from app.models.billing_snapshot import BillingSnapshot
 from app.models.user_preferences import UserPreferences
 from app.models.reservation import Reservation
 

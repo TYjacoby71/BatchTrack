@@ -274,20 +274,18 @@ class EmailService:
             print(f"Email not configured - would send password setup to {email}")
             return False
 
-        subject = "Set up your BatchTrack password"
+        subject = "Finish setting your BatchTrack password"
         reset_url = url_for('auth.reset_password', token=token, _external=True)
 
         body = f"""
         Hi {first_name},
 
-        Welcome to BatchTrack! Your account has been created successfully.
-
-        To complete your setup, please create a password by clicking the link below:
+        Thanks for joining BatchTrack! If you haven’t finished creating a password on the welcome screen yet, you can do it now by clicking the link below:
         {reset_url}
 
-        This link will expire in 24 hours.
+        This link will expire in 24 hours. If you’ve already set your password in the app, feel free to ignore this message.
 
-        Best regards,
+        We’re excited to have you onboard!
         The BatchTrack Team
         """
 

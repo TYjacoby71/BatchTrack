@@ -3,9 +3,8 @@ import os
 import json
 from datetime import datetime, timedelta
 from flask import Blueprint, request, render_template, flash, redirect, url_for, session, jsonify, current_app
-from flask_login import login_required, current_user
+from flask_login import login_required, current_user, login_user
 from ...services.billing_service import BillingService
-from ...services.stripe_service import StripeService
 from ...services.whop_service import WhopService
 from ...services.signup_service import SignupService
 from ...services.session_service import SessionService
@@ -95,12 +94,7 @@ def storage_addon():
     lookup_key = storage_addon.stripe_lookup_key
 
     try:
-        if not StripeService.initialize_stripe():
-            flash('Billing temporarily unavailable', 'error')
-            return redirect(url_for('billing.upgrade'))
-
-        # Create a subscription checkout session for the storage add-on price lookup key
-        session = StripeService.create_subscription_checkout_by_lookup_key(
+        session = BillingService.create_subscription_checkout_by_lookup_key(
             lookup_key,
             current_user.email,
             success_url=url_for('billing.upgrade', _external=True),
@@ -110,11 +104,10 @@ def storage_addon():
         if session and getattr(session, 'url', None):
             return redirect(session.url)
         flash('Unable to start storage checkout', 'error')
-        return redirect(url_for('billing.upgrade'))
     except Exception as e:
         logger.error(f"Storage add-on checkout error: {e}")
         flash('Checkout failed. Please try again later.', 'error')
-        return redirect(url_for('billing.upgrade'))
+    return redirect(url_for('billing.upgrade'))
 
 @billing_bp.route('/addons/start/<addon_key>', methods=['POST'])
 @login_required
@@ -123,7 +116,6 @@ def start_addon_checkout(addon_key):
     Enforces that the add-on is allowed for the organization's current tier.
     """
     from ...models.addon import Addon
-    from ...services.stripe_service import StripeService
     addon = Addon.query.filter_by(key=addon_key, is_active=True).first()
     if not addon or not addon.stripe_lookup_key:
         flash('Add-on not available.', 'warning')
@@ -145,10 +137,7 @@ def start_addon_checkout(addon_key):
         return redirect(url_for('billing.upgrade'))
 
     try:
-        if not StripeService.initialize_stripe():
-            flash('Billing temporarily unavailable', 'error')
-            return redirect(url_for('settings.index') + '#billing')
-        session = StripeService.create_subscription_checkout_by_lookup_key(
+        session = BillingService.create_subscription_checkout_by_lookup_key(
             addon.stripe_lookup_key,
             current_user.email,
             success_url=url_for('settings.index', _external=True) + '#billing',
@@ -181,7 +170,8 @@ def checkout(tier, billing_cycle='month'):
             f"{current_user.first_name} {current_user.last_name}",
             url_for('billing.complete_signup_from_stripe', _external=True),
             url_for('billing.upgrade', _external=True),
-            metadata={'tier': tier, 'billing_cycle': billing_cycle}
+            metadata={'tier': tier, 'billing_cycle': billing_cycle},
+            existing_customer_id=getattr(organization, 'stripe_customer_id', None),
         )
         
         if checkout_session:
@@ -224,203 +214,38 @@ def whop_checkout(product_id):
 @billing_bp.route('/complete-signup-from-stripe')
 def complete_signup_from_stripe():
     """Complete signup process after Stripe payment"""
+    session_id = request.args.get('session_id')
+    if not session_id:
+        flash('Invalid checkout session', 'error')
+        return redirect(url_for('auth.signup'))
+
+    logger.info("Completing signup for checkout session %s", session_id)
+
     try:
-        session_id = request.args.get('session_id')
-        if not session_id:
-            logger.error("No session_id provided")
-            flash('Invalid checkout session', 'error')
-            return redirect(url_for('auth.signup'))
-
-        logger.info(f"Processing Stripe signup completion for session: {session_id}")
-
-        # Initialize Stripe
-        if not StripeService.initialize():
-            logger.error("Failed to initialize Stripe")
-            flash('Payment system error', 'error')
-            return redirect(url_for('auth.signup'))
-
-        # Retrieve checkout session
-        checkout_session = StripeService.get_checkout_session(session_id)
-        if not checkout_session:
-            logger.error("Failed to retrieve checkout session")
-            flash('Checkout session not found', 'error')
-            return redirect(url_for('auth.signup'))
-
-        logger.info(f"Retrieved checkout session: {checkout_session.id}")
-
-        # Get customer details
-        customer = StripeService.get_customer(checkout_session.customer)
-        if not customer:
-            logger.error("Failed to retrieve customer")
-            flash('Customer information not found', 'error')
-            return redirect(url_for('auth.signup'))
-
-        logger.info(f"Retrieved customer: {customer.id}")
-
-        # Extract user info from checkout session
-        customer_details = checkout_session.customer_details
-        if not customer_details:
-            logger.error("No customer details in checkout session")
-            flash('Customer information not found', 'error')
-            return redirect(url_for('auth.signup'))
-
-        # Get tier from checkout metadata or session metadata
-        tier_identifier = (
-            checkout_session.metadata.get('tier_id')
-            or checkout_session.metadata.get('tier')
-            or customer.metadata.get('tier_id')
-            or customer.metadata.get('tier')
-            or checkout_session.metadata.get('lookup_key')
-            or customer.metadata.get('lookup_key')
-        )
-        if not tier_identifier:
-            logger.error("No tier found in checkout session or customer metadata")
-            flash('Subscription tier not found', 'error')
-            return redirect(url_for('auth.signup'))
-
-        logger.info(f"Processing signup for tier identifier: {tier_identifier}")
-
-        # Get pending signup data from session (if available)
-        pending_signup = session.get('pending_signup', {})
-        oauth_user_info = pending_signup.get('oauth_user_info', {})
-
-        # Build signup data from Stripe customer details and session data
-        signup_data = {
-            'email': customer_details.email or customer.email,
-            'first_name': customer_details.name.split(' ')[0] if customer_details.name else oauth_user_info.get('first_name', ''),
-            'last_name': ' '.join(customer_details.name.split(' ')[1:]) if customer_details.name and len(customer_details.name.split(' ')) > 1 else oauth_user_info.get('last_name', ''),
-            'org_name': customer.metadata.get('org_name') or f"{customer_details.name}'s Company" if customer_details.name else "My Company",
-            'username': customer.metadata.get('username') or customer_details.email.split('@')[0] if customer.email else oauth_user_info.get('email', '').split('@')[0],
-            'signup_source': checkout_session.metadata.get('signup_source', 'stripe'),
-            'promo_code': checkout_session.metadata.get('promo_code'),
-            'referral_code': checkout_session.metadata.get('referral_code'),
-            'oauth_provider': oauth_user_info.get('oauth_provider'),
-            'oauth_provider_id': oauth_user_info.get('oauth_provider_id'),
-            'email_verified': bool(oauth_user_info.get('email_verified', False)),
-            'detected_timezone': checkout_session.metadata.get('detected_timezone', 'UTC')  # Auto-detected timezone
-        }
-
-        logger.info(f"Built signup data: {signup_data}")
-
-        # Create the organization and user
-        from ...models.subscription_tier import SubscriptionTier
-        from ...models.models import Organization, User
-        from ...models.role import Role
-        from flask_login import login_user
-
-        # Get the subscription tier
-        subscription_tier = SubscriptionTier.find_by_identifier(tier_identifier)
-        if not subscription_tier:
-            logger.error(f"Subscription tier '{tier_identifier}' not found in database")
-            flash('Invalid subscription plan', 'error')
-            return redirect(url_for('auth.signup'))
-
-        # Create organization
-        org = Organization(
-            name=signup_data['org_name'],
-            contact_email=signup_data['email'],
-            is_active=True,
-            signup_source=signup_data['signup_source'],
-            promo_code=signup_data.get('promo_code'),
-            referral_code=signup_data.get('referral_code'),
-            subscription_tier_id=subscription_tier.id,
-            stripe_customer_id=customer.id
-        )
-        db.session.add(org)
-        db.session.flush()  # Get the ID
-        logger.info(f"Created organization with ID: {org.id}")
-
-        # Create organization owner user
-        owner_user = User(
-            username=signup_data['username'],
-            email=signup_data['email'],
-            first_name=signup_data['first_name'],
-            last_name=signup_data['last_name'],
-            organization_id=org.id,
-            user_type='customer',
-            is_organization_owner=True,
-            is_active=True,
-            email_verified=signup_data.get('email_verified', True),  # Stripe emails are verified
-            oauth_provider=signup_data.get('oauth_provider'),
-            oauth_provider_id=signup_data.get('oauth_provider_id')
-        )
-
-        # Set a temporary password for non-OAuth users (they can reset it later)
-        if not signup_data.get('oauth_provider'):
-            import secrets
-            temp_password = secrets.token_urlsafe(16)
-            owner_user.set_password(temp_password)
-
-            # Send password setup email
-            from ...services.email_service import EmailService
-            owner_user.password_reset_token = EmailService.generate_verification_token(owner_user.email)
-            owner_user.password_reset_sent_at = TimezoneUtils.utc_now()
-
-        db.session.add(owner_user)
-        db.session.flush()
-        logger.info(f"Created user with ID: {owner_user.id}")
-
-        # Assign organization owner role
-        org_owner_role = Role.query.filter_by(name='organization_owner', is_system_role=True).first()
-        if org_owner_role:
-            owner_user.assign_role(org_owner_role)
-            logger.info("Assigned organization_owner role")
-
-        # Commit all changes
-        db.session.commit()
-        logger.info("Database changes committed successfully")
-
-        # Update Stripe customer metadata with organization_id and tier_key
-        try:
-            from ...services.stripe_service import StripeService
-            StripeService.update_customer_metadata(customer.id, {
-                'organization_id': str(org.id),
-                'tier_id': str(subscription_tier.id)
-            })
-        except Exception as meta_error:
-            logger.warning(f"Failed to update Stripe customer metadata: {meta_error}")
-
-        # Send welcome email
-        try:
-            from ...services.email_service import EmailService
-            EmailService.send_welcome_email(
-                owner_user.email,
-                owner_user.first_name,
-                org.name,
-                subscription_tier.name
-            )
-
-            if not signup_data.get('oauth_provider'):
-                # Send password setup email for non-OAuth users
-                EmailService.send_password_setup_email(
-                    owner_user.email,
-                    owner_user.password_reset_token,
-                    owner_user.first_name
-                )
-        except Exception as email_error:
-            logger.warning(f"Failed to send welcome email: {email_error}")
-
-        # Log in the user
-        login_user(owner_user)
-        SessionService.rotate_user_session(owner_user)
-        owner_user.last_login = TimezoneUtils.utc_now()
-        db.session.commit()
-        logger.info(f"User {owner_user.username} logged in successfully")
-
-        # Clear pending signup data
-        session.pop('pending_signup', None)
-        logger.info("Cleared pending signup data from session")
-
-        flash(f'Welcome to BatchTrack! Your {subscription_tier.name} account is ready to use.', 'success')
-        return redirect(url_for('app_routes.dashboard'))
-
-    except Exception as e:
-        db.session.rollback()
-        logger.error(f"Stripe signup completion error: {str(e)}")
-        import traceback
-        logger.error(f"Traceback: {traceback.format_exc()}")
+        result = BillingService.finalize_checkout_session(session_id)
+    except Exception as exc:
+        logger.error("Stripe finalize failed for session %s: %s", session_id, exc)
         flash('Account setup failed. Please contact support.', 'error')
         return redirect(url_for('auth.signup'))
+
+    organization = None
+    owner_user = None
+    if isinstance(result, tuple):
+        organization, owner_user = result
+
+    if not owner_user:
+        flash('Payment confirmed! Please check your inbox for setup instructions.', 'info')
+        return redirect(url_for('auth.login'))
+
+    login_user(owner_user)
+    SessionService.rotate_user_session(owner_user)
+    owner_user.last_login = TimezoneUtils.utc_now()
+    db.session.commit()
+
+    session['onboarding_welcome'] = True
+    tier_name = organization.subscription_tier.name if organization and organization.subscription_tier else 'BatchTrack'
+    flash(f'Welcome to BatchTrack! Your {tier_name} account is ready to use.', 'success')
+    return redirect(url_for('onboarding.welcome'))
 
 @billing_bp.route('/complete-signup-from-whop')
 @login_required
@@ -457,20 +282,17 @@ def customer_portal():
         return redirect(url_for('app_routes.dashboard'))
 
     try:
-        portal_session = StripeService.create_customer_portal_session(
-            organization, 
+        portal_session = BillingService.create_customer_portal_session(
+            organization,
             url_for('app_routes.dashboard', _external=True)
         )
         if portal_session:
             return redirect(portal_session.url)
-        else:
-            flash('Unable to access billing portal', 'error')
-            return redirect(url_for('app_routes.dashboard'))
-
+        flash('Unable to access billing portal', 'error')
     except Exception as e:
         logger.error(f"Customer portal error: {e}")
         flash('Billing portal unavailable', 'error')
-        return redirect(url_for('app_routes.dashboard'))
+    return redirect(url_for('app_routes.dashboard'))
 
 @billing_bp.route('/cancel-subscription', methods=['POST'])
 @login_required
@@ -483,7 +305,7 @@ def cancel_subscription():
 
     try:
         if organization.stripe_customer_id:
-            success = StripeService.cancel_subscription(organization.stripe_customer_id)
+            success = BillingService.cancel_subscription(organization.stripe_customer_id)
         elif organization.whop_license_key:
             success = WhopService.cancel_subscription(organization.whop_license_key)
         else:
@@ -515,7 +337,7 @@ def stripe_webhook():
         return '', 500
 
     try:
-        event = StripeService.construct_event(payload, sig_header, webhook_secret)
+        event = BillingService.construct_event(payload, sig_header, webhook_secret)
         logger.info(f"Received Stripe webhook: {event['type']}")
 
         status = BillingService.handle_webhook_event('stripe', event)

@@ -1,0 +1,36 @@
+19 00:06:08,840] INFO in blueprints_registry:    - Fault Log
+[2025-11-19 00:06:08,840] INFO in blueprints_registry:    - Tag Manager
+[2025-11-19 00:06:08,840] INFO in blueprints_registry:    - Global Library Public
+[2025-11-19 00:06:08,840] INFO in blueprints_registry:    - Waitlist
+[2025-11-19 00:06:08,840] INFO in blueprints_registry:    - Help & Instructions
+[2025-11-19 00:06:08,840] INFO in blueprints_registry:    - Public Tools
+[2025-11-19 00:06:08,840] INFO in blueprints_registry:    - Production Planning
+[2025-11-19 00:06:08,840] INFO in blueprints_registry:    - Exports
+[2025-11-19 00:06:08,840] ERROR in blueprints_registry: Failed: 1
+[2025-11-19 00:06:08,841] ERROR in blueprints_registry:    - Billing: cannot import name 'error' from 'stripe' (/opt/render/project/src/.venv/lib/python3.13/site-packages/stripe/__init__.py)
+[2025-11-19 00:06:08,841] INFO in __init__: 🔒 db.create_all() not enabled; Alembic migrations are the source of truth
+[2025-11-19 00:06:08 +0000] [58] [INFO] Starting gunicorn 23.0.0
+[2025-11-19 00:06:08 +0000] [58] [INFO] Listening at: http://0.0.0.0:10000 (58)
+[2025-11-19 00:06:08 +0000] [58] [INFO] Using worker: gevent
+[2025-11-19 00:06:08 +0000] [60] [INFO] Booting worker with pid: 60
+[2025-11-19 00:06:08 +0000] [61] [INFO] Booting worker with pid: 61
+[2025-11-19 00:06:09 +0000] [62] [INFO] Booting worker with pid: 62
+[2025-11-19 00:06:09 +0000] [63] [INFO] Booting worker with pid: 63
+/opt/render/project/src/.venv/lib/python3.13/site-packages/gunicorn/workers/ggevent.py:38: MonkeyPatchWarning: Patching more than once will result in the union of all True parameters being patched
+  monkey.patch_all()
+/opt/render/project/src/.venv/lib/python3.13/site-packages/gunicorn/workers/ggevent.py:38: MonkeyPatchWarning: Patching more than once will result in the union of all True parameters being patched
+  monkey.patch_all()
+     ==> Your service is live 🎉
+     ==> 
+/opt/render/project/src/.venv/lib/python3.13/site-packages/gunicorn/workers/ggevent.py:38: MonkeyPatchWarning: Patching more than once will result in the union of all True parameters being patched
+  monkey.patch_all()
+/opt/render/project/src/.venv/lib/python3.13/site-packages/gunicorn/workers/ggevent.py:38: MonkeyPatchWarning: Patching more than once will result in the union of all True parameters being patched
+  monkey.patch_all()
+     ==> ///////////////////////////////////////////////////////////
+     ==> 
+Gunicorn config: 4 gevent workers, 1000 connections each
+127.0.0.1 "HEAD / HTTP/1.1" 200 0 "-" "Go-http-client/1.1" 1096025
+     ==> Available at your primary URL https://batchtrack.onrender.com
+     ==> 
+     ==> ///////////////////////////////////////////////////////////
+10.24.154.63 "GET / HTTP/1.1" 200 36748 "-" "Go-http-client/2.0" 11036
