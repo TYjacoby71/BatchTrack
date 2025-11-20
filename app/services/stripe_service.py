@@ -4,6 +4,7 @@ import os
 from flask import current_app
 from datetime import datetime, timedelta, timezone
 from decimal import Decimal
+from typing import Optional
 from app.extensions import db
 from app.models.stripe_event import StripeEvent
 from app.models.subscription_tier import SubscriptionTier
@@ -333,6 +334,34 @@ class StripeService:
         return True
 
     @staticmethod
+    def _fetch_price_for_lookup_key(lookup_key: Optional[str]):
+        """Return the Stripe Price object for a lookup key or price id."""
+        if not lookup_key:
+            return None
+
+        try:
+            prices = stripe.Price.list(
+                lookup_keys=[lookup_key],
+                active=True,
+                limit=1
+            )
+            if prices.data:
+                return prices.data[0]
+
+            logger.warning(
+                "Stripe lookup by lookup_key failed for %s; attempting to treat it as a price ID",
+                lookup_key,
+            )
+            try:
+                return stripe.Price.retrieve(lookup_key)
+            except stripe.error.StripeError:
+                # Fall through to outer handler so we log a single coherent error message.
+                raise
+        except stripe.error.StripeError as exc:
+            logger.error(f"Stripe error fetching price for {lookup_key}: {exc}")
+            return None
+
+    @staticmethod
     def get_live_pricing_for_tier(tier_obj):
         """Get live pricing from Stripe for a subscription tier"""
         # Serve from cache if fresh
@@ -348,63 +377,48 @@ class StripeService:
         if not StripeService.initialize_stripe():
             return None
 
-        if not tier_obj.stripe_lookup_key:
+        price = StripeService._fetch_price_for_lookup_key(getattr(tier_obj, 'stripe_lookup_key', None))
+        if not price:
+            logger.warning(f"No active Stripe price found for lookup key {getattr(tier_obj, 'stripe_lookup_key', None)}")
             return None
+
+        amount = price.unit_amount / 100
+        currency = price.currency.upper()
+
+        billing_cycle = 'one-time'
+        recurring = getattr(price, 'recurring', None)
+        if recurring:
+            billing_cycle = 'yearly' if recurring.interval == 'year' else 'monthly'
+
+        data = {
+            'price_id': price.id,
+            'amount': amount,
+            'formatted_price': f'${amount:.0f}',
+            'currency': currency,
+            'billing_cycle': billing_cycle,
+            'lookup_key': getattr(tier_obj, 'stripe_lookup_key', None),
+            'last_synced': datetime.now(timezone.utc).isoformat()
+        }
 
         try:
-            # Use lookup_key to find the price - this is the industry standard
-            prices = stripe.Price.list(
-                lookup_keys=[tier_obj.stripe_lookup_key],
-                active=True,
-                limit=1
-            )
+            cache_key = f"price::{tier_obj.stripe_lookup_key}"
+            StripeService._pricing_cache[cache_key] = {'ts': datetime.now(timezone.utc), 'data': data}
+        except Exception:
+            pass
 
-            if not prices.data:
-                logger.warning(f"No active Stripe price found for lookup key: {tier_obj.stripe_lookup_key}")
-                return None
-
-            price = prices.data[0]
-
-            # Format pricing data
-            amount = price.unit_amount / 100
-            currency = price.currency.upper()
-
-            billing_cycle = 'one-time'
-            if price.recurring:
-                billing_cycle = 'yearly' if price.recurring.interval == 'year' else 'monthly'
-
-            return {
-                'price_id': price.id,
-                'amount': amount,
-                'formatted_price': f'${amount:.0f}',
-                'currency': currency,
-                'billing_cycle': billing_cycle,
-                'lookup_key': tier_obj.stripe_lookup_key,
-                'last_synced': datetime.now(timezone.utc).isoformat()
-            }
-
-        except stripe.error.StripeError as e:
-            logger.error(f"Stripe error fetching price for {tier_obj.stripe_lookup_key}: {e}")
-            return None
-        finally:
-            # Cache successful lookups
-            try:
-                if 'price' in locals():
-                    data = {
-                        'price_id': price.id,
-                        'amount': price.unit_amount / 100,
-                        'formatted_price': f"${price.unit_amount / 100:.0f}",
-                        'currency': price.currency.upper(),
-                        'billing_cycle': 'yearly' if getattr(price, 'recurring', None) and price.recurring.interval == 'year' else ('monthly' if getattr(price, 'recurring', None) and price.recurring.interval == 'month' else 'one-time'),
-                        'lookup_key': tier_obj.stripe_lookup_key,
-                        'last_synced': datetime.now(timezone.utc).isoformat()
-                    }
-                    StripeService._pricing_cache[cache_key] = {'ts': datetime.now(timezone.utc), 'data': data}
-            except Exception:
-                pass
+        return data
 
     @staticmethod
-    def create_checkout_session_for_tier(tier_obj, customer_email, customer_name, success_url, cancel_url, metadata=None):
+    def create_checkout_session_for_tier(
+        tier_obj,
+        customer_email,
+        customer_name,
+        success_url,
+        cancel_url,
+        metadata=None,
+        client_reference_id: Optional[str] = None,
+        session_overrides: Optional[dict] = None,
+    ):
         """Create checkout session using tier's lookup key - industry standard"""
         if not StripeService.initialize_stripe():
             return None
@@ -415,34 +429,49 @@ class StripeService:
             logger.error(f"No pricing found for tier {tier_obj.name} (ID: {tier_obj.id})")
             return None
 
+        metadata = {
+            'tier_id': str(tier_obj.id),
+            'tier_name': tier_obj.name,
+            'lookup_key': tier_obj.stripe_lookup_key,
+            **(metadata or {})
+        }
+
+        session_params = {
+            'payment_method_types': ['card'],
+            'line_items': [{
+                'price': pricing['price_id'],
+                'quantity': 1,
+            }],
+            'mode': 'subscription',
+            'success_url': success_url,
+            'cancel_url': cancel_url,
+            'metadata': metadata,
+        }
+
+        if client_reference_id:
+            session_params['client_reference_id'] = client_reference_id
+
+        if customer_email:
+            session_params['customer_email'] = customer_email
+        if not customer_email:
+            # Without a known email we need Stripe to create the customer record
+            session_params['customer_creation'] = 'always'
+
+        if session_overrides:
+            session_params.update(session_overrides)
+
+        if session_params.get('customer_update') and 'customer' not in session_params:
+            logger.warning("Removing customer_update from Stripe checkout payload because no customer was provided.")
+            session_params.pop('customer_update', None)
+
         try:
-            # Create customer first (industry standard)
-            customer = stripe.Customer.create(
-                email=customer_email,
-                name=customer_name,
-                metadata=metadata or {}
+            session = stripe.checkout.Session.create(**session_params)
+            logger.info(
+                "Created checkout session for tier %s (ID: %s) with price %s",
+                tier_obj.name,
+                tier_obj.id,
+                pricing['price_id']
             )
-
-            # Create checkout session with live price ID
-            session = stripe.checkout.Session.create(
-                customer=customer.id,
-                payment_method_types=['card'],
-                line_items=[{
-                    'price': pricing['price_id'],
-                    'quantity': 1,
-                }],
-                mode='subscription',
-                success_url=success_url,
-                cancel_url=cancel_url,
-                metadata={
-                    'tier_id': str(tier_obj.id),
-                    'tier_name': tier_obj.name,
-                    'lookup_key': tier_obj.stripe_lookup_key,
-                    **(metadata or {})
-                }
-            )
-
-            logger.info(f"Created checkout session for tier {tier_obj.name} (ID: {tier_obj.id}) with price {pricing['price_id']}")
             return session
 
         except stripe.error.StripeError as e:
