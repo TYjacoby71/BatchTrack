@@ -162,9 +162,9 @@ class SignupService:
                 oauth_provider_id=pending_signup.oauth_provider_id,
             )
             owner_user.set_password(secrets.token_urlsafe(16))
-            owner_user.timezone = pending_signup.detected_timezone or 'UTC'
             db.session.add(owner_user)
             db.session.flush()
+            owner_user.timezone = pending_signup.detected_timezone or 'UTC'
 
             org_owner_role = Role.query.filter_by(name='organization_owner', is_system_role=True).first()
             if org_owner_role:
