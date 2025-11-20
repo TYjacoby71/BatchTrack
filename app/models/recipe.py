@@ -1,23 +1,12 @@
 
-import os
 from flask_login import current_user
 from ..extensions import db
 import sqlalchemy as sa
 from .mixins import ScopedModelMixin
 from ..utils.timezone_utils import TimezoneUtils
+from .db_dialect import is_postgres
 
-# Dialect-aware helpers: enable Postgres-only computed columns and indexes
-def _is_postgres_url(url: str) -> bool:
-    if not url:
-        return False
-    url = url.lower()
-    return (
-        url.startswith("postgres://")
-        or url.startswith("postgresql://")
-        or url.startswith("postgresql+psycopg2://")
-    )
-
-_IS_PG = _is_postgres_url(os.environ.get("DATABASE_URL", ""))
+_IS_PG = is_postgres()
 
 def _pg_computed(expr: str):
     return sa.Computed(expr, persisted=True) if _IS_PG else None

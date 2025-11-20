@@ -1,19 +1,8 @@
-import os
 from ..extensions import db
 from .mixins import TimestampMixin
+from .db_dialect import is_postgres
 
-
-def _is_postgres_url(url: str) -> bool:
-    if not url:
-        return False
-    url = url.lower()
-    return (
-        url.startswith("postgres://")
-        or url.startswith("postgresql://")
-        or url.startswith("postgresql+psycopg2://")
-    )
-
-_IS_PG = _is_postgres_url(os.environ.get("DATABASE_URL", ""))
+_IS_PG = is_postgres()
 
 
 class ProductCategory(TimestampMixin, db.Model):
