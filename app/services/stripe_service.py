@@ -37,16 +37,6 @@ class StripeService:
     _pricing_cache_ttl_seconds = 600  # 10 minutes
 
     @staticmethod
-    def initialize():
-        """Initialize Stripe with API key"""
-        api_key = current_app.config.get('STRIPE_SECRET_KEY')
-        if not api_key:
-            raise ValueError("STRIPE_SECRET_KEY not configured")
-
-        stripe.api_key = api_key
-        logger.info("Stripe service initialized")
-
-    @staticmethod
     def construct_event(payload: bytes, sig_header: str, webhook_secret: str):
         """Construct Stripe event from webhook payload"""
         return stripe.Webhook.construct_event(payload, sig_header, webhook_secret)
@@ -351,6 +341,11 @@ class StripeService:
         """Initialize Stripe with API key"""
         stripe_secret = os.environ.get('STRIPE_SECRET_KEY')
         if not stripe_secret:
+            try:
+                stripe_secret = current_app.config.get('STRIPE_SECRET_KEY')
+            except RuntimeError:
+                stripe_secret = None
+        if not stripe_secret:
             logger.warning("Stripe secret key not configured")
             return False
         stripe.api_key = stripe_secret
@@ -609,67 +604,6 @@ class StripeService:
 
         except StripeError as e:
             logger.error(f"Error syncing product from Stripe: {e}")
-            return False
-
-    @staticmethod
-    def handle_subscription_webhook(event):
-        """Handle subscription webhooks - industry standard"""
-        event_type = event['type']
-        subscription = event['data']['object']
-
-        try:
-            # Find organization by customer
-            customer_id = subscription['customer']
-            customer = stripe.Customer.retrieve(customer_id)
-
-            organization_id = customer.metadata.get('organization_id')
-            if not organization_id:
-                logger.error(f"No organization_id in customer metadata for {customer_id}")
-                return False
-
-            organization = Organization.query.get(organization_id)
-            if not organization:
-                logger.error(f"Organization {organization_id} not found")
-                return False
-
-            # Get tier from subscription metadata
-            tier_id = subscription.get('metadata', {}).get('tier_id')
-            if tier_id:
-                try:
-                    tier = SubscriptionTier.query.get(int(tier_id))
-                    if tier:
-                        organization.subscription_tier_id = tier.id
-                except (ValueError, TypeError):
-                    # Fallback: try by name if tier_id fails
-                    tier_name = subscription.get('metadata', {}).get('tier_name')
-                    if tier_name:
-                        tier = SubscriptionTier.query.filter_by(name=tier_name).first()
-                        if tier:
-                            organization.subscription_tier_id = tier.id
-
-            # Handle subscription status
-            status = subscription['status']
-            if status == 'active':
-                organization.is_active = True
-                organization.billing_status = 'active'
-            elif status in ['past_due', 'unpaid']:
-                organization.billing_status = 'payment_failed'
-                organization.is_active = False
-            elif status == 'canceled':
-                organization.billing_status = 'canceled'
-                organization.is_active = False
-
-            # Store Stripe customer ID if not present
-            if not organization.stripe_customer_id:
-                organization.stripe_customer_id = customer_id
-
-            db.session.commit()
-            logger.info(f"Updated organization {organization.id} from {event_type}")
-            return True
-
-        except Exception as e:
-            logger.error(f"Webhook handling failed: {e}")
-            db.session.rollback()
             return False
 
     @staticmethod
