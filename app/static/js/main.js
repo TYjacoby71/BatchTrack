@@ -71,6 +71,21 @@ function showAlert(type, message) {
 }
 
 document.addEventListener('DOMContentLoaded', function() {
+  // Apply stored theme only if user is authenticated and has set a preference
+  const isAuthenticatedPage = document.body.classList.contains('authenticated') || 
+                              document.querySelector('meta[name="user-authenticated"]') || 
+                              document.querySelector('[data-user-authenticated="true"]');
+  
+  if (isAuthenticatedPage && localStorage.getItem('bt_theme_user_set')) {
+    const storedTheme = localStorage.getItem('bt_theme');
+    if (storedTheme && storedTheme !== 'system') {
+      document.documentElement.setAttribute('data-theme', storedTheme);
+    }
+  } else if (!isAuthenticatedPage) {
+    // Clear any theme for public pages
+    document.documentElement.removeAttribute('data-theme');
+  }
+
   // Debug navigation clicks
   console.log('Page loaded:', window.location.pathname);
 

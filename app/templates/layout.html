@@ -4,6 +4,9 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="csrf-token" content="{{ csrf_token() }}">
+    {% if current_user.is_authenticated %}
+    <meta name="user-authenticated" content="true">
+    {% endif %}
       {% set resolved_title = page_title or "BatchTrack — Production & Inventory" %}
       {% set resolved_description = page_description or "BatchTrack unifies batching, inventory, and the global item library for makers." %}
       {% set resolved_canonical = canonical_url or request.base_url %}
@@ -36,7 +39,13 @@
         try {
           var t = localStorage.getItem('bt_theme');
           if (t && t !== 'system') {
-            document.documentElement.setAttribute('data-theme', t);
+            // Only apply theme if the user is authenticated.
+            // Otherwise, theme is applied via main.js based on user-authenticated meta tag.
+            if (document.querySelector('meta[name="user-authenticated"]')) {
+              document.documentElement.setAttribute('data-theme', t);
+            } else {
+              document.documentElement.removeAttribute('data-theme');
+            }
           } else {
             document.documentElement.removeAttribute('data-theme');
           }
@@ -424,5 +433,21 @@
         setInterval(updateClock, 1000);
         updateClock();
     </script>
-    </body>
+
+    <!-- Theme cleanup on logout -->
+    <script>
+    // Clear theme preferences when navigating to public pages from authenticated sessions
+    if (!document.querySelector('meta[name="user-authenticated"]') && localStorage.getItem('bt_theme_user_set')) {
+        // Only clear if we're on a public page but have user theme preferences
+        const isPublicPage = window.location.pathname.startsWith('/auth/') || 
+                            window.location.pathname === '/' ||
+                            window.location.pathname.startsWith('/tools/') ||
+                            window.location.pathname.startsWith('/help/');
+
+        if (isPublicPage) {
+            document.documentElement.removeAttribute('data-theme');
+        }
+    }
+    </script>
+</body>
 </html>

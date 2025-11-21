@@ -12,9 +12,12 @@
             if (newTheme && newTheme !== 'system') {
               document.documentElement.setAttribute('data-theme', newTheme);
               localStorage.setItem('bt_theme', newTheme);
+              // Mark that user has an active theme preference
+              localStorage.setItem('bt_theme_user_set', 'true');
             } else {
               document.documentElement.removeAttribute('data-theme');
               localStorage.removeItem('bt_theme');
+              localStorage.removeItem('bt_theme_user_set');
             }
             // Persist for users that have preferences
             const res = await fetch('/settings/api/user-preferences', {
