@@ -16,7 +16,7 @@ cache = Cache()
 # Configure rate limiter with much higher limits for load testing
 limiter = Limiter(
     key_func=get_remote_address,
-    default_limits=["10000 per day", "5000 per hour", "500 per minute"],
+    default_limits=["50000 per day", "25000 per hour", "5000 per minute"],
 )
 server_session = Session()
 

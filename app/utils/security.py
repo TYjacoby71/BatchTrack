@@ -6,7 +6,7 @@ from functools import wraps
 
 class SecurityUtils:
     @staticmethod
-    def rate_limit_check(key: str, limit: int = 100, window: int = 3600):
+    def rate_limit_check(key: str, limit: int = 5000, window: int = 3600):
         """Simple in-memory rate limiting"""
         # In production, use Redis
         import time
