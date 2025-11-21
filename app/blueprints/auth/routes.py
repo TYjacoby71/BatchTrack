@@ -32,7 +32,7 @@ class LoginForm(FlaskForm):
     submit = SubmitField('Login')
 
 @auth_bp.route('/login', methods=['GET', 'POST'])
-@limiter.limit("30/minute")
+@limiter.limit("100 per 1 minute")
 def login():
     if current_user.is_authenticated:
         return redirect(url_for('app_routes.dashboard'))
@@ -493,7 +493,7 @@ def signup():
             'signup_source': signup_source,
             'oauth_signup': str(oauth_signup)
         }
-        
+
         # Add detected timezone from browser
         detected_timezone = request.form.get('detected_timezone')
         if detected_timezone:

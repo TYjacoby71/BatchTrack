@@ -1,4 +1,3 @@
-
 """
 Locust Load Testing Configuration
 
@@ -24,27 +23,27 @@ from locust import HttpUser, task, between
 
 class AnonymousUser(HttpUser):
     """Anonymous user browsing public content."""
-    
+
     wait_time = between(2, 8)
     weight = 3  # 75% of traffic
-    
+
     @task(5)
     def view_homepage(self):
         """Load homepage and public content."""
         self.client.get("/", name="homepage")
-    
+
     @task(3) 
     def view_tools(self):
         """Browse public tools."""
         tools = ["/tools", "/tools/soap", "/tools/candles", "/tools/lotions"]
         tool = random.choice(tools)
         self.client.get(tool, name="public_tools")
-    
+
     @task(2)
     def view_global_library(self):
         """Browse global item library."""
         self.client.get("/library/global_items", name="global_library")
-    
+
     @task(1)
     def attempt_signup(self):
         """Simulate signup page visits."""
@@ -77,7 +76,7 @@ class AuthenticatedMixin:
         }
         if token:
             payload["csrf_token"] = token
-        
+
         with self.client.post("/auth/login", data=payload, name=name, catch_response=True) as response:
             if response.status_code >= 400:
                 response.failure(f"Login failed ({response.status_code})")
@@ -90,26 +89,26 @@ class AuthenticatedMixin:
 
 class AuthenticatedUser(AuthenticatedMixin, HttpUser):
     """Authenticated user performing typical app operations."""
-    
+
     wait_time = between(3, 12)
     weight = 1  # 25% of traffic
     login_username = "test@example.com"
     login_password = "testpassword123"
-    
+
     def on_start(self):
         """Login before starting tasks."""
         self._perform_login(self.login_username, self.login_password, "login")
-    
+
     @task(8)
     def view_dashboard(self):
         """Load user dashboard."""
         self.client.get("/user_dashboard", name="dashboard")
-    
+
     @task(5)
     def view_inventory(self):
         """Browse inventory sections."""
         self.client.get("/inventory/view", name="inventory_main")
-        
+
         # Simulate browsing different inventory types
         inventory_sections = [
             "/inventory/view?type=ingredients",
@@ -118,33 +117,33 @@ class AuthenticatedUser(AuthenticatedMixin, HttpUser):
         ]
         section = random.choice(inventory_sections)
         self.client.get(section, name="inventory_browse")
-    
+
     @task(4)
     def view_products(self):
         """Browse and view products."""
         self.client.get("/products/list", name="products_list")
-        
+
         # Simulate viewing individual products (if any exist)
         product_id = random.randint(1, 10)
         self.client.get(f"/products/{product_id}", 
                        name="product_detail", catch_response=True)
-    
+
     @task(3)
     def view_recipes(self):
         """Browse recipes."""
         self.client.get("/recipes/list", name="recipes_list")
-    
+
     @task(2)
     def view_batches(self):
         """Check batch status."""
         self.client.get("/batches/list", name="batches_list")
-    
+
     @task(2)
     def production_planning(self):
         """Access production planning."""
-        self.client.get("/production_planning/plan_production", 
+        self.client.get("/production-planning/plan_production", 
                        name="production_planning")
-    
+
     @task(1)
     def view_settings(self):
         """Access settings."""
@@ -152,26 +151,26 @@ class AuthenticatedUser(AuthenticatedMixin, HttpUser):
 
 class AdminUser(AuthenticatedMixin, HttpUser):
     """Admin user performing administrative tasks."""
-    
+
     wait_time = between(5, 20)
     weight = 0.1  # 2.5% of traffic
     login_username = "dev"
     login_password = "devpassword123"
-    
+
     def on_start(self):
         """Login as admin."""
         self._perform_login(self.login_username, self.login_password, "admin_login")
-    
+
     @task(3)
     def organization_dashboard(self):
         """View organization dashboard."""
         self.client.get("/organization/dashboard", name="org_dashboard")
-    
+
     @task(2)
     def user_management(self):
         """Access user management."""
         self.client.get("/organization/dashboard#users", name="user_mgmt")
-    
+
     @task(1)
     def billing_status(self):
         """Check billing status."""
@@ -179,37 +178,37 @@ class AdminUser(AuthenticatedMixin, HttpUser):
 
 class HighFrequencyUser(AuthenticatedMixin, HttpUser):
     """Simulates rapid API usage patterns."""
-    
+
     wait_time = between(0.5, 2)
     weight = 0.5  # 12.5% of traffic
     login_username = "test@example.com"
     login_password = "testpassword123"
-    
+
     def on_start(self):
         """Quick login for API-like usage."""
         self._perform_login(self.login_username, self.login_password, "api_login")
-    
+
     @task(10)
     def rapid_dashboard_checks(self):
         """Frequent dashboard polling."""
         self.client.get("/user_dashboard", name="rapid_dashboard")
-    
+
     @task(5) 
     def inventory_api_calls(self):
         """Simulate frequent inventory checks."""
-        self.client.get("/api/inventory/summary", name="api_inventory")
-    
+        self.client.get("/api/dashboard/inventory", name="api_inventory")
+
     @task(3)
     def batch_status_checks(self):
         """Check batch status frequently."""
-        self.client.get("/api/batches/active", name="api_batches")
+        self.client.get("/api/dashboard/batches", name="api_batches")
 
 # Load testing scenarios for different purposes
 class StressTest(HttpUser):
     """High-intensity stress testing."""
-    
+
     wait_time = between(0.1, 1)
-    
+
     tasks = [
         AnonymousUser.view_homepage,
         AuthenticatedUser.view_dashboard,
