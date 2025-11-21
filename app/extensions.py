@@ -17,7 +17,6 @@ cache = Cache()
 limiter = Limiter(
     key_func=get_remote_address,
     default_limits=["10000 per day", "5000 per hour", "500 per minute"],
-    storage_uri="memory://"
 )
 server_session = Session()
 
