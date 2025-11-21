@@ -102,11 +102,11 @@ class BaseConfig:
     # These are default values; specific environments may override them.
     # For 10k users, ProductionConfig should be the primary beneficiary.
     SQLALCHEMY_ENGINE_OPTIONS = {
-        'pool_size': _env_int('SQLALCHEMY_POOL_SIZE', 20), # Default for base
-        'max_overflow': _env_int('SQLALCHEMY_MAX_OVERFLOW', 30), # Default for base
+        'pool_size': _env_int('SQLALCHEMY_POOL_SIZE', 100), # Increased for load testing
+        'max_overflow': _env_int('SQLALCHEMY_MAX_OVERFLOW', 200), # Increased for load testing
         'pool_pre_ping': True,
         'pool_recycle': _env_int('SQLALCHEMY_POOL_RECYCLE', 1800),
-        'pool_timeout': _env_int('SQLALCHEMY_POOL_TIMEOUT', 30),
+        'pool_timeout': _env_int('SQLALCHEMY_POOL_TIMEOUT', 60), # Increased timeout
         'pool_use_lifo': True,
     }
 
@@ -134,10 +134,13 @@ class DevelopmentConfig(BaseConfig):
         os.chmod(instance_path, 0o777)
         SQLALCHEMY_DATABASE_URI = 'sqlite:///' + os.path.join(instance_path, 'batchtrack.db')
 
-    # Development specific engine options, less aggressive than production
+    # Development specific engine options, increased for load testing
     SQLALCHEMY_ENGINE_OPTIONS = {
+        'pool_size': 50,
+        'max_overflow': 100,
         'pool_pre_ping': True,
         'pool_recycle': 3600,
+        'pool_timeout': 60,
         'echo': False,
     }
     RATELIMIT_STORAGE_URI = (
