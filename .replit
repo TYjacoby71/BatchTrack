@@ -28,6 +28,14 @@ externalPort = 80
 localPort = 8089
 externalPort = 3000
 
+[[ports]]
+localPort = 8090
+externalPort = 3001
+
+[[ports]]
+localPort = 8091
+externalPort = 3002
+
 [workflows]
 runButton = "Run Flask Debug"
 
