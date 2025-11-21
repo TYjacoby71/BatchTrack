@@ -1,28 +1,46 @@
+from __future__ import annotations
 
+import logging
 import multiprocessing
 import os
+import sys
+from typing import Final
 
-# Gunicorn configuration for high-concurrency production deployment
-# Optimized for 10k+ concurrent users
+LOGGER: Final = logging.getLogger("gunicorn.config")
 
 
-def _env_int(key, default):
-    """Helper to parse environment integers with fallback."""
+def _env_int(key: str, default: int) -> int:
+    """Parse integer environment values with sane fallbacks."""
     try:
         return int(os.environ.get(key, default))
-    except (ValueError, TypeError):
+    except (TypeError, ValueError):
         return default
 
 
-def _configured_workers():
+def _configured_workers() -> int:
+    """Respect explicit worker counts while preventing overcommit."""
     cpu_count = max(multiprocessing.cpu_count(), 1)
-    # Keep defaults conservative so small instances don't overcommit memory.
     default_workers = max(1, min(4, cpu_count))
+
     if "GUNICORN_WORKERS" in os.environ:
         return _env_int("GUNICORN_WORKERS", default_workers)
     if "WEB_CONCURRENCY" in os.environ:
         return _env_int("WEB_CONCURRENCY", default_workers)
     return default_workers
+
+
+def _log_runtime_configuration() -> None:
+    summary = (
+        f"Gunicorn bind={bind} class={worker_class} workers={workers} "
+        f"connections={worker_connections} timeout={timeout}s backlog={backlog}"
+    )
+    try:
+        if LOGGER.handlers:
+            LOGGER.info(summary)
+        else:
+            raise RuntimeError("no handlers")
+    except Exception:
+        sys.stderr.write(summary + "\n")
 
 
 # Server socket
@@ -59,7 +77,4 @@ limit_request_line = 8192
 limit_request_fields = 100
 limit_request_field_size = 8192
 
-print(
-    f"Gunicorn config: {workers} {worker_class} workers, "
-    f"{worker_connections} connections each"
-)
+_log_runtime_configuration()
