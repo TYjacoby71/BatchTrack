@@ -12,7 +12,7 @@ def get_tier_permissions(tier_key):
         tier_id = int(tier_key)
     except (TypeError, ValueError):
         tier_id = None
-    tier = SubscriptionTier.query.get(tier_id) if tier_id is not None else None
+    tier = db.session.get(SubscriptionTier, tier_id) if tier_id is not None else None
     if not tier:
         return []
     return Permission.query.filter(

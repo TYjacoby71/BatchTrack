@@ -44,7 +44,7 @@ class InventoryStatisticsService:
     def _update_efficiency_stats(inventory_item_id: int, change_type: str, quantity_change: float, cost_impact: float):
         """Update efficiency statistics based on inventory change"""
         try:
-            inventory_item = InventoryItem.query.get(inventory_item_id)
+            inventory_item = db.session.get(InventoryItem, inventory_item_id)
             if not inventory_item:
                 return
             

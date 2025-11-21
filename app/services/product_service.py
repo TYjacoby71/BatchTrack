@@ -125,7 +125,7 @@ class ProductService:
                 from ..models.product_category import ProductCategory
                 category = None
                 try:
-                    category = ProductCategory.query.get(product.category_id) if getattr(product, 'category_id', None) else None
+                    category = db.session.get(ProductCategory, product.category_id) if getattr(product, 'category_id', None) else None
                 except Exception:
                     category = None
                 template = (category.sku_name_template if category and category.sku_name_template else None) or '{variant} {product} ({size_label})'
@@ -183,7 +183,7 @@ class ProductService:
                 from ..models.product_category import ProductCategory
                 category = None
                 try:
-                    category = ProductCategory.query.get(sku.product.category_id) if getattr(sku.product, 'category_id', None) else None
+                    category = db.session.get(ProductCategory, sku.product.category_id) if getattr(sku.product, 'category_id', None) else None
                 except Exception:
                     category = None
                 template = (category.sku_name_template if category and category.sku_name_template else None)
@@ -299,7 +299,7 @@ class ProductService:
     @staticmethod
     def get_product_inventory_summary(product_id):
         """Get inventory summary for a product - all data derived from SKU level"""
-        product = Product.query.get(product_id)
+        product = db.session.get(Product, product_id)
         if not product:
             return None
 

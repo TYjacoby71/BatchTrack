@@ -198,7 +198,7 @@ class ContainerHandler(BaseInventoryHandler):
         """Check container stock availability"""
         try:
             # Get the container item
-            container = InventoryItem.query.get(request.item_id)
+            container = db.session.get(InventoryItem, request.item_id)
             if not container or container.type != 'container':
                 return self._create_not_found_result(request)
 

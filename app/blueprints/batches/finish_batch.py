@@ -345,7 +345,7 @@ def _create_product_output(batch, product_id, variant_id, final_quantity, output
                     try:
                         from ...services.sku_name_builder import SKUNameBuilder
                         from ...models.product_category import ProductCategory
-                        category = ProductCategory.query.get(product.category_id) if getattr(product, 'category_id', None) else None
+                        category = db.session.get(ProductCategory, product.category_id) if getattr(product, 'category_id', None) else None
                         template = (category.sku_name_template if category and category.sku_name_template else None) or '{variant} {product} ({size_label})'
                         naming_context = {
                             'yield_value': final_quantity,
@@ -565,7 +565,7 @@ def _create_container_sku(product, variant, container_item, quantity, batch, exp
         try:
             from ...services.sku_name_builder import SKUNameBuilder
             from ...models.product_category import ProductCategory
-            category = ProductCategory.query.get(product.category_id) if getattr(product, 'category_id', None) else None
+            category = db.session.get(ProductCategory, product.category_id) if getattr(product, 'category_id', None) else None
             template = (category.sku_name_template if category and category.sku_name_template else None) or '{variant} {product} ({container})'
             base_context = {
                 'product': product.name,

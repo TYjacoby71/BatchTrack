@@ -98,7 +98,7 @@ def new_recipe():
                     created_names = []
                     for ing in ingredients:
                         from app.models import InventoryItem as _Inv
-                        item = _Inv.query.get(ing['item_id'])
+                        item = db.session.get(_Inv, ing['item_id'])
                         if item and not getattr(item, 'global_item_id', None) and float(getattr(item, 'quantity', 0) or 0) == 0.0:
                             created_names.append(item.name)
                     if created_names:
@@ -448,7 +448,7 @@ def delete_recipe_route(recipe_id):
 def make_parent_recipe(recipe_id):
     """Convert a variation recipe into a standalone parent recipe"""
     try:
-        recipe = Recipe.query.get(recipe_id)
+        recipe = db.session.get(Recipe, recipe_id)
         if not recipe:
             flash('Recipe not found.', 'error')
             return redirect(url_for('recipes.list_recipes'))

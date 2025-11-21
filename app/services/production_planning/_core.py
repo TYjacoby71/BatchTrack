@@ -10,14 +10,16 @@ Main orchestration logic that coordinates:
 
 import logging
 from typing import Dict, Any, Optional
+
 from flask_login import current_user
 
+from ...extensions import db
 from ...models import Recipe
-from ..stock_check import UniversalStockCheckService
 from ..statistics import StatisticsService as ModularStatisticsService
-from .types import ProductionRequest, ProductionPlan, IngredientRequirement, CostBreakdown
+from ..stock_check import UniversalStockCheckService
 from ._container_management import analyze_container_options
 from ._cost_calculation import calculate_comprehensive_costs
+from .types import ProductionRequest, ProductionPlan, IngredientRequirement, CostBreakdown
 
 logger = logging.getLogger(__name__)
 
@@ -64,7 +66,7 @@ def execute_production_planning(request: ProductionRequest, include_containers: 
     from ._stock_validation import validate_ingredients_with_uscs
 
     # 1. Load recipe
-    recipe = Recipe.query.get(request.recipe_id)
+    recipe = db.session.get(Recipe, request.recipe_id)
     if not recipe:
         raise ValueError(f"Recipe {request.recipe_id} not found")
 

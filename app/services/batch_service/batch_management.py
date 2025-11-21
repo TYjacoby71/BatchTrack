@@ -72,7 +72,7 @@ class BatchManagementService(BaseService):
     def get_available_ingredients_for_batch(cls, recipe_id, scale=1.0):
         """Get available ingredients for a recipe using USCS"""
         try:
-            recipe = Recipe.query.get(recipe_id)
+            recipe = db.session.get(Recipe, recipe_id)
             if not recipe:
                 return None, "Recipe not found"
 

@@ -117,7 +117,7 @@ def debug_recipe_containers(recipe_id):
     try:
         from app.models import Recipe, InventoryItem, IngredientCategory
 
-        recipe = Recipe.query.get(recipe_id)
+        recipe = db.session.get(Recipe, recipe_id)
         if not recipe:
             return jsonify({'error': 'Recipe not found'}), 404
 

@@ -85,13 +85,13 @@ class BatchStatisticsService:
             batch_stats.batch_status = 'completed'
             
             # Calculate duration if available
-            batch = Batch.query.get(batch_id)
+            batch = db.session.get(Batch, batch_id)
             if batch and batch.started_at and batch.completed_at:
                 duration = batch.completed_at - batch.started_at
                 batch_stats.actual_duration_minutes = int(duration.total_seconds() / 60)
             
             # Compute and emit freshness metrics for analytics/warehouse
-            batch = Batch.query.get(batch_id)
+            batch = db.session.get(Batch, batch_id)
             freshness_summary = FreshnessService.compute_batch_freshness(batch) if batch else None
 
             # Attach lightweight metrics to stats for downstream reporting (not persisted fields)

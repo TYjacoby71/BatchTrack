@@ -223,7 +223,7 @@ def update_subscription_tier():
             _tier_id = int(tier_key)
         except (TypeError, ValueError):
             _tier_id = None
-        if not _tier_id or not SubscriptionTier.query.get(_tier_id):
+        if not _tier_id or not db.session.get(SubscriptionTier, _tier_id):
             return jsonify({'success': False, 'error': 'Invalid subscription tier'})
 
         # Update or create subscription

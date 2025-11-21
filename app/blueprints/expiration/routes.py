@@ -108,7 +108,7 @@ def api_debug_expiration():
 
     debug_info = []
     for lot in sku_lots:
-        inventory_item = lot.inventory_item or InventoryItem.query.get(lot.inventory_item_id)
+        inventory_item = lot.inventory_item or db.session.get(InventoryItem, lot.inventory_item_id)
         expiration = ExpirationService.get_effective_sku_expiration_date(lot)
         debug_info.append({
             'lot_id': lot.id,

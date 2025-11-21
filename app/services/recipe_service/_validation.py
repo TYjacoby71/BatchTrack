@@ -7,7 +7,8 @@ Handles validation of recipe data, ingredients, and business rules.
 import logging
 from typing import Dict, Any, List, Tuple
 
-from ...models import Recipe, InventoryItem
+from ...extensions import db
+from ...models import InventoryItem, Recipe
 
 logger = logging.getLogger(__name__)
 
@@ -53,7 +54,7 @@ def validate_recipe_data(name: str, ingredients: List[Dict] = None,
             # For recipe edits, check if the existing recipe has a valid yield
             # This allows editing existing recipes without requiring yield changes
             try:
-                existing_recipe = Recipe.query.get(recipe_id)
+                existing_recipe = db.session.get(Recipe, recipe_id)
                 logger.info(f"Existing recipe found: {existing_recipe is not None}")
                 if existing_recipe:
                     logger.info(f"Existing recipe yield: {existing_recipe.predicted_yield}")
@@ -212,7 +213,7 @@ def validate_ingredient_quantities(ingredients: List[Dict]) -> Tuple[bool, str]:
                 return False, f"Ingredient {i+1}: invalid quantity"
 
             # Check if ingredient exists
-            item = InventoryItem.query.get(item_id)
+            item = db.session.get(InventoryItem, item_id)
             if not item:
                 return False, f"Ingredient {item_id} not found"
 

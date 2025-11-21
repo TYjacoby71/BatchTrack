@@ -51,7 +51,7 @@ def api_create_timer():
             return jsonify({'error': 'Invalid batch ID or duration'}), 400
 
         # Verify batch exists and user has access
-        batch = Batch.query.get(batch_id)
+        batch = db.session.get(Batch, batch_id)
         if not batch:
             return jsonify({'error': 'Batch not found'}), 404
 

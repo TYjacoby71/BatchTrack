@@ -12,9 +12,10 @@ import logging
 from decimal import Decimal
 from typing import List, Optional
 
+from ...extensions import db
 from ...models import Recipe
-from .types import IngredientRequirement, ContainerStrategy, CostBreakdown
 from ..unit_conversion.unit_conversion import ConversionEngine
+from .types import IngredientRequirement, ContainerStrategy, CostBreakdown
 
 logger = logging.getLogger(__name__)
 
@@ -95,7 +96,7 @@ def calculate_comprehensive_costs(
 def calculate_production_costs(recipe_id: int, scale: float = 1.0) -> dict:
     """Legacy compatibility function for cost calculation"""
     try:
-        recipe = Recipe.query.get(recipe_id)
+        recipe = db.session.get(Recipe, recipe_id)
         if not recipe:
             return {'error': 'Recipe not found'}
 

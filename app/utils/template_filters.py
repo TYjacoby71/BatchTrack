@@ -3,6 +3,7 @@ from typing import Any
 
 from flask_login import current_user
 
+from ..extensions import db
 from ..models import Organization
 from ..services.unit_conversion import ConversionEngine
 from ..utils.timezone_utils import TimezoneUtils
@@ -178,7 +179,7 @@ def register_template_filters(app):
     def get_organization_by_id(org_id: int):
         if org_id is None:
             return None
-        return Organization.query.get(org_id)
+        return db.session.get(Organization, org_id)
 
     @app.template_global("is_organization_owner")
     def is_organization_owner_global():
@@ -241,7 +242,7 @@ def register_template_filters(app):
             except (TypeError, ValueError):
                 tier_id = None
 
-            tier = SubscriptionTier.query.get(tier_id) if tier_id is not None else None
+            tier = db.session.get(SubscriptionTier, tier_id) if tier_id is not None else None
             if not tier:
                 return []
             return [p.name for p in getattr(tier, "permissions", [])]
