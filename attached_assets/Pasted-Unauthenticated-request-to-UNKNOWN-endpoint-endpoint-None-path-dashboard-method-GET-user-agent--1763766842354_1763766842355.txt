@@ -1,0 +1,867 @@
+Unauthenticated request to UNKNOWN endpoint: endpoint=None, path=/dashboard, method=GET, user_agent=python-requests/2.32.4
+Unauthenticated request to UNKNOWN endpoint: endpoint=None, path=/dashboard, method=GET, user_agent=python-requests/2.32.4
+Unauthenticated request to UNKNOWN endpoint: endpoint=None, path=/inventory, method=GET, user_agent=python-requests/2.32.4
+Unauthenticated request to UNKNOWN endpoint: endpoint=None, path=/inventory, method=GET, user_agent=python-requests/2.32.4
+Unauthenticated request to UNKNOWN endpoint: endpoint=None, path=/inventory, method=GET, user_agent=python-requests/2.32.4
+Unauthenticated request to UNKNOWN endpoint: endpoint=None, path=/dashboard, method=GET, user_agent=python-requests/2.32.4
+Unauthenticated request to UNKNOWN endpoint: endpoint=None, path=/dashboard, method=GET, user_agent=python-requests/2.32.4
+Unit query took 0.068s for 62 units
+Unit query took 0.342s for 62 units
+Unit query took 0.086s for 62 units
+Unit query took 0.115s for 62 units
+Unit query took 0.463s for 62 units
+Unit query took 0.097s for 62 units
+Unit query took 0.074s for 62 units
+Unit query took 0.077s for 62 units
+Unit query took 0.076s for 62 units
+Unit query took 0.520s for 62 units
+Unit query took 0.072s for 62 units
+Unit query took 0.065s for 62 units
+Unit query took 0.530s for 62 units
+Unit query took 0.060s for 62 units
+Unauthenticated request to UNKNOWN endpoint: endpoint=None, path=/dashboard, method=GET, user_agent=python-requests/2.32.4
+Unauthenticated request to UNKNOWN endpoint: endpoint=None, path=/dashboard, method=GET, user_agent=python-requests/2.32.4
+2025-11-21 23:12:56,204 INFO: message='Request to Stripe api' method=get url=https://api.stripe.com/v1/prices?lookup_keys[0]=batchtrack_solo_monthly&active=true&limit=1
+2025-11-21 23:12:56,204 DEBUG: api_version=2025-06-30.basil message='Post details' post_data=lookup_keys[0]=batchtrack_solo_monthly&active=true&limit=1
+Unauthenticated request to UNKNOWN endpoint: endpoint=None, path=/dashboard, method=GET, user_agent=python-requests/2.32.4
+Unauthenticated request to UNKNOWN endpoint: endpoint=None, path=/dashboard, method=GET, user_agent=python-requests/2.32.4
+2025-11-21 23:12:56,301 DEBUG: Starting new HTTPS connection (1): api.stripe.com:443
+Unauthenticated request to UNKNOWN endpoint: endpoint=None, path=/batches, method=GET, user_agent=python-requests/2.32.4
+Unauthenticated request to UNKNOWN endpoint: endpoint=None, path=/dashboard, method=GET, user_agent=python-requests/2.32.4
+2025-11-21 23:12:56,472 INFO: message='Request to Stripe api' method=get url=https://api.stripe.com/v1/prices?lookup_keys[0]=batchtrack_solo_monthly&active=true&limit=1
+Unauthenticated request to UNKNOWN endpoint: endpoint=None, path=/inventory, method=GET, user_agent=python-requests/2.32.4
+2025-11-21 23:12:56,478 DEBUG: api_version=2025-06-30.basil message='Post details' post_data=lookup_keys[0]=batchtrack_solo_monthly&active=true&limit=1
+2025-11-21 23:12:56,496 DEBUG: Starting new HTTPS connection (1): api.stripe.com:443
+2025-11-21 23:12:56,659 DEBUG: https://api.stripe.com:443 "GET /v1/prices?lookup_keys%5B0%5D=batchtrack_solo_monthly&active=true&limit=1 HTTP/1.1" 200 841
+2025-11-21 23:12:56,659 INFO: message='Stripe API response' path=https://api.stripe.com/v1/prices?lookup_keys[0]=batchtrack_solo_monthly&active=true&limit=1 response_code=200
+2025-11-21 23:12:56,665 DEBUG: body='{\n  "object": "list",\n  "data": [\n    {\n      "id": "price_1SIzqyF4Y9XQgiJBfkmN0Unx",\n      "object": "price",\n      "active": true,\n      "billing_scheme": "per_unit",\n      "created": 1760654460,\n      "currency": "usd",\n      "custom_unit_amount": null,\n      "livemode": true,\n      "lookup_key": "batchtrack_solo_monthly",\n      "metadata": {},\n      "nickname": "Solo Monthly",\n      "product": "prod_SitYi7JOtdlJ7b",\n      "recurring": {\n        "interval": "month",\n        "interval_count": 1,\n        "meter": null,\n        "trial_period_days": null,\n        "usage_type": "licensed"\n      },\n      "tax_behavior": "exclusive",\n      "tiers_mode": null,\n      "transform_quantity": null,\n      "type": "recurring",\n      "unit_amount": 999,\n      "unit_amount_decimal": "999"\n    }\n  ],\n  "has_more": false,\n  "url": "/v1/prices"\n}' message='API response body'
+2025-11-21 23:12:56,665 DEBUG: link=https://dashboard.stripe.com/live/logs/req_qLjUqHnJJhJGcp message='Dashboard link for request'
+2025-11-21 23:12:56,686 INFO: message='Request to Stripe api' method=get url=https://api.stripe.com/v1/prices?lookup_keys[0]=batchtrack_team_monthly&active=true&limit=1
+2025-11-21 23:12:56,711 DEBUG: api_version=2025-06-30.basil message='Post details' post_data=lookup_keys[0]=batchtrack_team_monthly&active=true&limit=1
+2025-11-21 23:12:56,772 DEBUG: https://api.stripe.com:443 "GET /v1/prices?lookup_keys%5B0%5D=batchtrack_solo_monthly&active=true&limit=1 HTTP/1.1" 200 841
+2025-11-21 23:12:56,773 INFO: message='Stripe API response' path=https://api.stripe.com/v1/prices?lookup_keys[0]=batchtrack_solo_monthly&active=true&limit=1 response_code=200
+2025-11-21 23:12:56,778 DEBUG: body='{\n  "object": "list",\n  "data": [\n    {\n      "id": "price_1SIzqyF4Y9XQgiJBfkmN0Unx",\n      "object": "price",\n      "active": true,\n      "billing_scheme": "per_unit",\n      "created": 1760654460,\n      "currency": "usd",\n      "custom_unit_amount": null,\n      "livemode": true,\n      "lookup_key": "batchtrack_solo_monthly",\n      "metadata": {},\n      "nickname": "Solo Monthly",\n      "product": "prod_SitYi7JOtdlJ7b",\n      "recurring": {\n        "interval": "month",\n        "interval_count": 1,\n        "meter": null,\n        "trial_period_days": null,\n        "usage_type": "licensed"\n      },\n      "tax_behavior": "exclusive",\n      "tiers_mode": null,\n      "transform_quantity": null,\n      "type": "recurring",\n      "unit_amount": 999,\n      "unit_amount_decimal": "999"\n    }\n  ],\n  "has_more": false,\n  "url": "/v1/prices"\n}' message='API response body'
+2025-11-21 23:12:56,778 DEBUG: link=https://dashboard.stripe.com/live/logs/req_TTLyYlSDJZkyAW message='Dashboard link for request'
+2025-11-21 23:12:56,784 INFO: message='Request to Stripe api' method=get url=https://api.stripe.com/v1/prices?lookup_keys[0]=batchtrack_team_monthly&active=true&limit=1
+2025-11-21 23:12:56,789 DEBUG: api_version=2025-06-30.basil message='Post details' post_data=lookup_keys[0]=batchtrack_team_monthly&active=true&limit=1
+2025-11-21 23:12:56,817 INFO: The CSRF token is missing.
+2025-11-21 23:12:56,826 DEBUG: https://api.stripe.com:443 "GET /v1/prices?lookup_keys%5B0%5D=batchtrack_team_monthly&active=true&limit=1 HTTP/1.1" 200 835
+2025-11-21 23:12:56,829 INFO: message='Stripe API response' path=https://api.stripe.com/v1/prices?lookup_keys[0]=batchtrack_team_monthly&active=true&limit=1 response_code=200
+2025-11-21 23:12:56,829 DEBUG: body='{\n  "object": "list",\n  "data": [\n    {\n      "id": "price_1RnRzOF4Y9XQgiJB7cuiGZf4",\n      "object": "price",\n      "active": true,\n      "billing_scheme": "per_unit",\n      "created": 1753136118,\n      "currency": "usd",\n      "custom_unit_amount": null,\n      "livemode": true,\n      "lookup_key": "batchtrack_team_monthly",\n      "metadata": {},\n      "nickname": null,\n      "product": "prod_SitmVnokhyMVZ8",\n      "recurring": {\n        "interval": "month",\n        "interval_count": 1,\n        "meter": null,\n        "trial_period_days": null,\n        "usage_type": "licensed"\n      },\n      "tax_behavior": "unspecified",\n      "tiers_mode": null,\n      "transform_quantity": null,\n      "type": "recurring",\n      "unit_amount": 1499,\n      "unit_amount_decimal": "1499"\n    }\n  ],\n  "has_more": false,\n  "url": "/v1/prices"\n}' message='API response body'
+2025-11-21 23:12:56,829 DEBUG: link=https://dashboard.stripe.com/live/logs/req_oR6MpNOtyze9Su message='Dashboard link for request'
+2025-11-21 23:12:56,834 INFO: message='Request to Stripe api' method=get url=https://api.stripe.com/v1/prices?lookup_keys[0]=batchtrack_enterprise_monthly&active=true&limit=1
+2025-11-21 23:12:56,834 DEBUG: api_version=2025-06-30.basil message='Post details' post_data=lookup_keys[0]=batchtrack_enterprise_monthly&active=true&limit=1
+Unauthenticated request to UNKNOWN endpoint: endpoint=None, path=/batches, method=GET, user_agent=python-requests/2.32.4
+2025-11-21 23:12:56,913 INFO: message='Request to Stripe api' method=get url=https://api.stripe.com/v1/prices?lookup_keys[0]=batchtrack_enterprise_monthly&active=true&limit=1
+2025-11-21 23:12:56,913 DEBUG: api_version=2025-06-30.basil message='Post details' post_data=lookup_keys[0]=batchtrack_enterprise_monthly&active=true&limit=1
+2025-11-21 23:12:56,934 DEBUG: Starting new HTTPS connection (1): api.stripe.com:443
+2025-11-21 23:12:56,938 DEBUG: https://api.stripe.com:443 "GET /v1/prices?lookup_keys%5B0%5D=batchtrack_team_monthly&active=true&limit=1 HTTP/1.1" 200 835
+2025-11-21 23:12:56,941 INFO: message='Stripe API response' path=https://api.stripe.com/v1/prices?lookup_keys[0]=batchtrack_team_monthly&active=true&limit=1 response_code=200
+2025-11-21 23:12:56,941 DEBUG: body='{\n  "object": "list",\n  "data": [\n    {\n      "id": "price_1RnRzOF4Y9XQgiJB7cuiGZf4",\n      "object": "price",\n      "active": true,\n      "billing_scheme": "per_unit",\n      "created": 1753136118,\n      "currency": "usd",\n      "custom_unit_amount": null,\n      "livemode": true,\n      "lookup_key": "batchtrack_team_monthly",\n      "metadata": {},\n      "nickname": null,\n      "product": "prod_SitmVnokhyMVZ8",\n      "recurring": {\n        "interval": "month",\n        "interval_count": 1,\n        "meter": null,\n        "trial_period_days": null,\n        "usage_type": "licensed"\n      },\n      "tax_behavior": "unspecified",\n      "tiers_mode": null,\n      "transform_quantity": null,\n      "type": "recurring",\n      "unit_amount": 1499,\n      "unit_amount_decimal": "1499"\n    }\n  ],\n  "has_more": false,\n  "url": "/v1/prices"\n}' message='API response body'
+2025-11-21 23:12:56,941 DEBUG: link=https://dashboard.stripe.com/live/logs/req_3s0ujyrYeDggcX message='Dashboard link for request'
+2025-11-21 23:12:56,951 INFO: message='Request to Stripe api' method=get url=https://api.stripe.com/v1/prices?lookup_keys[0]=batchtrack_enterprise_monthly&active=true&limit=1
+2025-11-21 23:12:56,970 DEBUG: api_version=2025-06-30.basil message='Post details' post_data=lookup_keys[0]=batchtrack_enterprise_monthly&active=true&limit=1
+2025-11-21 23:12:56,966 DEBUG: https://api.stripe.com:443 "GET /v1/prices?lookup_keys%5B0%5D=batchtrack_enterprise_monthly&active=true&limit=1 HTTP/1.1" 200 841
+2025-11-21 23:12:56,983 INFO: message='Stripe API response' path=https://api.stripe.com/v1/prices?lookup_keys[0]=batchtrack_enterprise_monthly&active=true&limit=1 response_code=200
+2025-11-21 23:12:56,986 DEBUG: body='{\n  "object": "list",\n  "data": [\n    {\n      "id": "price_1RnS8pF4Y9XQgiJBr3Wq1LIH",\n      "object": "price",\n      "active": true,\n      "billing_scheme": "per_unit",\n      "created": 1753136703,\n      "currency": "usd",\n      "custom_unit_amount": null,\n      "livemode": true,\n      "lookup_key": "batchtrack_enterprise_monthly",\n      "metadata": {},\n      "nickname": null,\n      "product": "prod_SitwN8yYtFrNcM",\n      "recurring": {\n        "interval": "month",\n        "interval_count": 1,\n        "meter": null,\n        "trial_period_days": null,\n        "usage_type": "licensed"\n      },\n      "tax_behavior": "unspecified",\n      "tiers_mode": null,\n      "transform_quantity": null,\n      "type": "recurring",\n      "unit_amount": 1999,\n      "unit_amount_decimal": "1999"\n    }\n  ],\n  "has_more": false,\n  "url": "/v1/prices"\n}' message='API response body'
+2025-11-21 23:12:56,986 DEBUG: link=https://dashboard.stripe.com/live/logs/req_kPH0qdLOuGhU63 message='Dashboard link for request'
+Unauthenticated request to UNKNOWN endpoint: endpoint=None, path=/dashboard, method=GET, user_agent=python-requests/2.32.4
+Unauthenticated request to UNKNOWN endpoint: endpoint=None, path=/inventory, method=GET, user_agent=python-requests/2.32.4
+Unauthenticated request to UNKNOWN endpoint: endpoint=None, path=/inventory, method=GET, user_agent=python-requests/2.32.4
+Unauthenticated request to UNKNOWN endpoint: endpoint=None, path=/inventory, method=GET, user_agent=python-requests/2.32.4
+Unauthenticated request to UNKNOWN endpoint: endpoint=None, path=/inventory, method=GET, user_agent=python-requests/2.32.4
+Unauthenticated request to UNKNOWN endpoint: endpoint=None, path=/inventory, method=GET, user_agent=python-requests/2.32.4
+2025-11-21 23:12:57,129 DEBUG: https://api.stripe.com:443 "GET /v1/prices?lookup_keys%5B0%5D=batchtrack_enterprise_monthly&active=true&limit=1 HTTP/1.1" 200 841
+2025-11-21 23:12:57,134 INFO: message='Stripe API response' path=https://api.stripe.com/v1/prices?lookup_keys[0]=batchtrack_enterprise_monthly&active=true&limit=1 response_code=200
+2025-11-21 23:12:57,139 DEBUG: body='{\n  "object": "list",\n  "data": [\n    {\n      "id": "price_1RnS8pF4Y9XQgiJBr3Wq1LIH",\n      "object": "price",\n      "active": true,\n      "billing_scheme": "per_unit",\n      "created": 1753136703,\n      "currency": "usd",\n      "custom_unit_amount": null,\n      "livemode": true,\n      "lookup_key": "batchtrack_enterprise_monthly",\n      "metadata": {},\n      "nickname": null,\n      "product": "prod_SitwN8yYtFrNcM",\n      "recurring": {\n        "interval": "month",\n        "interval_count": 1,\n        "meter": null,\n        "trial_period_days": null,\n        "usage_type": "licensed"\n      },\n      "tax_behavior": "unspecified",\n      "tiers_mode": null,\n      "transform_quantity": null,\n      "type": "recurring",\n      "unit_amount": 1999,\n      "unit_amount_decimal": "1999"\n    }\n  ],\n  "has_more": false,\n  "url": "/v1/prices"\n}' message='API response body'
+2025-11-21 23:12:57,140 DEBUG: link=https://dashboard.stripe.com/live/logs/req_rkEl43Rzx6574f message='Dashboard link for request'
+Unauthenticated request to UNKNOWN endpoint: endpoint=None, path=/api/timer-summary, method=GET, user_agent=python-requests/2.32.4
+Unauthenticated request to UNKNOWN endpoint: endpoint=None, path=/inventory, method=GET, user_agent=python-requests/2.32.4
+2025-11-21 23:12:57,190 DEBUG: https://api.stripe.com:443 "GET /v1/prices?lookup_keys%5B0%5D=batchtrack_enterprise_monthly&active=true&limit=1 HTTP/1.1" 200 841
+2025-11-21 23:12:57,190 INFO: message='Stripe API response' path=https://api.stripe.com/v1/prices?lookup_keys[0]=batchtrack_enterprise_monthly&active=true&limit=1 response_code=200
+2025-11-21 23:12:57,190 DEBUG: body='{\n  "object": "list",\n  "data": [\n    {\n      "id": "price_1RnS8pF4Y9XQgiJBr3Wq1LIH",\n      "object": "price",\n      "active": true,\n      "billing_scheme": "per_unit",\n      "created": 1753136703,\n      "currency": "usd",\n      "custom_unit_amount": null,\n      "livemode": true,\n      "lookup_key": "batchtrack_enterprise_monthly",\n      "metadata": {},\n      "nickname": null,\n      "product": "prod_SitwN8yYtFrNcM",\n      "recurring": {\n        "interval": "month",\n        "interval_count": 1,\n        "meter": null,\n        "trial_period_days": null,\n        "usage_type": "licensed"\n      },\n      "tax_behavior": "unspecified",\n      "tiers_mode": null,\n      "transform_quantity": null,\n      "type": "recurring",\n      "unit_amount": 1999,\n      "unit_amount_decimal": "1999"\n    }\n  ],\n  "has_more": false,\n  "url": "/v1/prices"\n}' message='API response body'
+2025-11-21 23:12:57,194 DEBUG: link=https://dashboard.stripe.com/live/logs/req_XXy88OgIDSwQOv message='Dashboard link for request'
+Unauthenticated request to UNKNOWN endpoint: endpoint=None, path=/inventory, method=GET, user_agent=python-requests/2.32.4
+Unauthenticated request to UNKNOWN endpoint: endpoint=None, path=/inventory, method=GET, user_agent=python-requests/2.32.4
+Unauthenticated request to UNKNOWN endpoint: endpoint=None, path=/dashboard, method=GET, user_agent=python-requests/2.32.4
+Unauthenticated request to UNKNOWN endpoint: endpoint=None, path=/inventory, method=GET, user_agent=python-requests/2.32.4
+Unauthenticated request to UNKNOWN endpoint: endpoint=None, path=/dashboard, method=GET, user_agent=python-requests/2.32.4
+Unauthenticated request to UNKNOWN endpoint: endpoint=None, path=/products, method=GET, user_agent=python-requests/2.32.4
+Unauthenticated request to UNKNOWN endpoint: endpoint=None, path=/dashboard, method=GET, user_agent=python-requests/2.32.4
+Unauthenticated request to UNKNOWN endpoint: endpoint=None, path=/inventory, method=GET, user_agent=python-requests/2.32.4
+Unauthenticated request to UNKNOWN endpoint: endpoint=None, path=/inventory, method=GET, user_agent=python-requests/2.32.4
+Unauthenticated request to UNKNOWN endpoint: endpoint=None, path=/dashboard, method=GET, user_agent=python-requests/2.32.4
+Unauthenticated request to UNKNOWN endpoint: endpoint=None, path=/dashboard, method=GET, user_agent=python-requests/2.32.4
+Unauthenticated request to UNKNOWN endpoint: endpoint=None, path=/inventory, method=GET, user_agent=python-requests/2.32.4
+Unauthenticated request to UNKNOWN endpoint: endpoint=None, path=/inventory, method=GET, user_agent=python-requests/2.32.4
+Unauthenticated request to UNKNOWN endpoint: endpoint=None, path=/api/dashboard/alerts, method=GET, user_agent=python-requests/2.32.4
+Unauthenticated request to UNKNOWN endpoint: endpoint=None, path=/dashboard, method=GET, user_agent=python-requests/2.32.4
+Unauthenticated request to UNKNOWN endpoint: endpoint=None, path=/inventory, method=GET, user_agent=python-requests/2.32.4
+Unauthenticated request to UNKNOWN endpoint: endpoint=None, path=/inventory, method=GET, user_agent=python-requests/2.32.4
+Unauthenticated request to UNKNOWN endpoint: endpoint=None, path=/inventory, method=GET, user_agent=python-requests/2.32.4
+Unauthenticated request to UNKNOWN endpoint: endpoint=None, path=/dashboard, method=GET, user_agent=python-requests/2.32.4
+Unauthenticated request to UNKNOWN endpoint: endpoint=None, path=/inventory, method=GET, user_agent=python-requests/2.32.4
+Unauthenticated request to UNKNOWN endpoint: endpoint=None, path=/inventory, method=GET, user_agent=python-requests/2.32.4
+Unauthenticated request to UNKNOWN endpoint: endpoint=None, path=/inventory, method=GET, user_agent=python-requests/2.32.4
+Unauthenticated request to UNKNOWN endpoint: endpoint=None, path=/dashboard, method=GET, user_agent=python-requests/2.32.4
+Unauthenticated request to UNKNOWN endpoint: endpoint=None, path=/dashboard, method=GET, user_agent=python-requests/2.32.4
+Unauthenticated request to UNKNOWN endpoint: endpoint=None, path=/dashboard, method=GET, user_agent=python-requests/2.32.4
+Unauthenticated request to UNKNOWN endpoint: endpoint=None, path=/dashboard, method=GET, user_agent=python-requests/2.32.4
+Unauthenticated request to UNKNOWN endpoint: endpoint=None, path=/inventory, method=GET, user_agent=python-requests/2.32.4
+Unauthenticated request to UNKNOWN endpoint: endpoint=None, path=/inventory, method=GET, user_agent=python-requests/2.32.4
+Unauthenticated request to UNKNOWN endpoint: endpoint=None, path=/inventory, method=GET, user_agent=python-requests/2.32.4
+Unauthenticated request to UNKNOWN endpoint: endpoint=None, path=/inventory, method=GET, user_agent=python-requests/2.32.4
+Unauthenticated request to UNKNOWN endpoint: endpoint=None, path=/inventory, method=GET, user_agent=python-requests/2.32.4
+Unauthenticated request to UNKNOWN endpoint: endpoint=None, path=/inventory, method=GET, user_agent=python-requests/2.32.4
+Unauthenticated request to UNKNOWN endpoint: endpoint=None, path=/dashboard, method=GET, user_agent=python-requests/2.32.4
+Unauthenticated request to UNKNOWN endpoint: endpoint=None, path=/dashboard, method=GET, user_agent=python-requests/2.32.4
+Unauthenticated request to UNKNOWN endpoint: endpoint=None, path=/inventory, method=GET, user_agent=python-requests/2.32.4
+Unauthenticated request to UNKNOWN endpoint: endpoint=None, path=/inventory, method=GET, user_agent=python-requests/2.32.4
+Unauthenticated request to UNKNOWN endpoint: endpoint=None, path=/inventory, method=GET, user_agent=python-requests/2.32.4
+Unauthenticated request to UNKNOWN endpoint: endpoint=None, path=/inventory, method=GET, user_agent=python-requests/2.32.4
+Unauthenticated request to UNKNOWN endpoint: endpoint=None, path=/inventory, method=GET, user_agent=python-requests/2.32.4
+Unauthenticated request to UNKNOWN endpoint: endpoint=None, path=/inventory, method=GET, user_agent=python-requests/2.32.4
+Unauthenticated request to UNKNOWN endpoint: endpoint=None, path=/dashboard, method=GET, user_agent=python-requests/2.32.4
+Traceback (most recent call last):
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py", line 1536, in __call__
+    return self.wsgi_app(environ, start_response)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py", line 1514, in wsgi_app
+    response = self.handle_exception(e)
+               ^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py", line 1511, in wsgi_app
+    response = self.full_dispatch_request()
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py", line 919, in full_dispatch_request
+    rv = self.handle_user_exception(e)
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py", line 917, in full_dispatch_request
+    rv = self.dispatch_request()
+         ^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py", line 902, in dispatch_request
+    return self.ensure_sync(self.view_functions[rule.endpoint])(**view_args)  # type: ignore[no-any-return]
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask_limiter/extension.py", line 1303, in __inner
+    return cast(R, flask.current_app.ensure_sync(obj)(*a, **k))
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/app/blueprints/auth/routes.py", line 87, in login
+    return redirect(url_for('app_routes.dashboard'))
+                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/helpers.py", line 232, in url_for
+    return current_app.url_for(
+           ^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py", line 1121, in url_for
+    return self.handle_url_build_error(error, endpoint, values)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py", line 1110, in url_for
+    rv = url_adapter.build(  # type: ignore[union-attr]
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/werkzeug/routing/map.py", line 924, in build
+    raise BuildError(endpoint, values, method, self)
+werkzeug.routing.exceptions.BuildError: Could not build url for endpoint 'app_routes.dashboard'. Did you mean 'organization.dashboard' instead?
+Traceback (most recent call last):
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py", line 1536, in __call__
+    return self.wsgi_app(environ, start_response)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py", line 1514, in wsgi_app
+    response = self.handle_exception(e)
+               ^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py", line 1511, in wsgi_app
+    response = self.full_dispatch_request()
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py", line 919, in full_dispatch_request
+    rv = self.handle_user_exception(e)
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py", line 917, in full_dispatch_request
+    rv = self.dispatch_request()
+         ^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py", line 902, in dispatch_request
+    return self.ensure_sync(self.view_functions[rule.endpoint])(**view_args)  # type: ignore[no-any-return]
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask_limiter/extension.py", line 1303, in __inner
+    return cast(R, flask.current_app.ensure_sync(obj)(*a, **k))
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/app/blueprints/auth/routes.py", line 87, in login
+    return redirect(url_for('app_routes.dashboard'))
+                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/helpers.py", line 232, in url_for
+    return current_app.url_for(
+           ^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py", line 1121, in url_for
+    return self.handle_url_build_error(error, endpoint, values)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py", line 1110, in url_for
+    rv = url_adapter.build(  # type: ignore[union-attr]
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/werkzeug/routing/map.py", line 924, in build
+    raise BuildError(endpoint, values, method, self)
+werkzeug.routing.exceptions.BuildError: Could not build url for endpoint 'app_routes.dashboard'. Did you mean 'organization.dashboard' instead?
+Unauthenticated request to UNKNOWN endpoint: endpoint=None, path=/recipes, method=GET, user_agent=python-requests/2.32.4
+Unauthenticated request to UNKNOWN endpoint: endpoint=None, path=/batches, method=GET, user_agent=python-requests/2.32.4
+Traceback (most recent call last):
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py", line 1536, in __call__
+    return self.wsgi_app(environ, start_response)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py", line 1514, in wsgi_app
+    response = self.handle_exception(e)
+               ^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py", line 1511, in wsgi_app
+    response = self.full_dispatch_request()
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py", line 919, in full_dispatch_request
+    rv = self.handle_user_exception(e)
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py", line 917, in full_dispatch_request
+    rv = self.dispatch_request()
+         ^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py", line 902, in dispatch_request
+    return self.ensure_sync(self.view_functions[rule.endpoint])(**view_args)  # type: ignore[no-any-return]
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask_limiter/extension.py", line 1303, in __inner
+    return cast(R, flask.current_app.ensure_sync(obj)(*a, **k))
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/app/blueprints/auth/routes.py", line 87, in login
+    return redirect(url_for('app_routes.dashboard'))
+                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/helpers.py", line 232, in url_for
+    return current_app.url_for(
+           ^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py", line 1121, in url_for
+    return self.handle_url_build_error(error, endpoint, values)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py", line 1110, in url_for
+    rv = url_adapter.build(  # type: ignore[union-attr]
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/werkzeug/routing/map.py", line 924, in build
+    raise BuildError(endpoint, values, method, self)
+werkzeug.routing.exceptions.BuildError: Could not build url for endpoint 'app_routes.dashboard'. Did you mean 'organization.dashboard' instead?
+Unauthenticated request to UNKNOWN endpoint: endpoint=None, path=/dashboard, method=GET, user_agent=python-requests/2.32.4
+Unauthenticated request to UNKNOWN endpoint: endpoint=None, path=/dashboard, method=GET, user_agent=python-requests/2.32.4
+Unauthenticated request to UNKNOWN endpoint: endpoint=None, path=/dashboard, method=GET, user_agent=python-requests/2.32.4
+Unauthenticated request to UNKNOWN endpoint: endpoint=None, path=/inventory, method=GET, user_agent=python-requests/2.32.4
+Unauthenticated request to UNKNOWN endpoint: endpoint=None, path=/inventory, method=GET, user_agent=python-requests/2.32.4
+Traceback (most recent call last):
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py", line 1536, in __call__
+    return self.wsgi_app(environ, start_response)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py", line 1514, in wsgi_app
+    response = self.handle_exception(e)
+               ^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py", line 1511, in wsgi_app
+    response = self.full_dispatch_request()
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py", line 919, in full_dispatch_request
+    rv = self.handle_user_exception(e)
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py", line 917, in full_dispatch_request
+    rv = self.dispatch_request()
+         ^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py", line 902, in dispatch_request
+    return self.ensure_sync(self.view_functions[rule.endpoint])(**view_args)  # type: ignore[no-any-return]
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask_limiter/extension.py", line 1303, in __inner
+    return cast(R, flask.current_app.ensure_sync(obj)(*a, **k))
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/app/blueprints/auth/routes.py", line 87, in login
+    return redirect(url_for('app_routes.dashboard'))
+                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/helpers.py", line 232, in url_for
+    return current_app.url_for(
+           ^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py", line 1121, in url_for
+    return self.handle_url_build_error(error, endpoint, values)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py", line 1110, in url_for
+    rv = url_adapter.build(  # type: ignore[union-attr]
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/werkzeug/routing/map.py", line 924, in build
+    raise BuildError(endpoint, values, method, self)
+werkzeug.routing.exceptions.BuildError: Could not build url for endpoint 'app_routes.dashboard'. Did you mean 'organization.dashboard' instead?
+Traceback (most recent call last):
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py", line 1536, in __call__
+    return self.wsgi_app(environ, start_response)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py", line 1514, in wsgi_app
+    response = self.handle_exception(e)
+               ^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py", line 1511, in wsgi_app
+    response = self.full_dispatch_request()
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py", line 919, in full_dispatch_request
+    rv = self.handle_user_exception(e)
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py", line 917, in full_dispatch_request
+    rv = self.dispatch_request()
+         ^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py", line 902, in dispatch_request
+    return self.ensure_sync(self.view_functions[rule.endpoint])(**view_args)  # type: ignore[no-any-return]
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask_limiter/extension.py", line 1303, in __inner
+    return cast(R, flask.current_app.ensure_sync(obj)(*a, **k))
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/app/blueprints/auth/routes.py", line 87, in login
+    return redirect(url_for('app_routes.dashboard'))
+                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/helpers.py", line 232, in url_for
+    return current_app.url_for(
+           ^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py", line 1121, in url_for
+    return self.handle_url_build_error(error, endpoint, values)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py", line 1110, in url_for
+    rv = url_adapter.build(  # type: ignore[union-attr]
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/werkzeug/routing/map.py", line 924, in build
+    raise BuildError(endpoint, values, method, self)
+werkzeug.routing.exceptions.BuildError: Could not build url for endpoint 'app_routes.dashboard'. Did you mean 'organization.dashboard' instead?
+Traceback (most recent call last):
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py", line 1536, in __call__
+    return self.wsgi_app(environ, start_response)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py", line 1514, in wsgi_app
+    response = self.handle_exception(e)
+               ^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py", line 1511, in wsgi_app
+    response = self.full_dispatch_request()
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py", line 919, in full_dispatch_request
+    rv = self.handle_user_exception(e)
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py", line 917, in full_dispatch_request
+    rv = self.dispatch_request()
+         ^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py", line 902, in dispatch_request
+    return self.ensure_sync(self.view_functions[rule.endpoint])(**view_args)  # type: ignore[no-any-return]
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask_limiter/extension.py", line 1303, in __inner
+    return cast(R, flask.current_app.ensure_sync(obj)(*a, **k))
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/app/blueprints/auth/routes.py", line 87, in login
+    return redirect(url_for('app_routes.dashboard'))
+                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/helpers.py", line 232, in url_for
+    return current_app.url_for(
+           ^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py", line 1121, in url_for
+    return self.handle_url_build_error(error, endpoint, values)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py", line 1110, in url_for
+    rv = url_adapter.build(  # type: ignore[union-attr]
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/werkzeug/routing/map.py", line 924, in build
+    raise BuildError(endpoint, values, method, self)
+werkzeug.routing.exceptions.BuildError: Could not build url for endpoint 'app_routes.dashboard'. Did you mean 'organization.dashboard' instead?
+Unauthenticated request to UNKNOWN endpoint: endpoint=None, path=/dashboard, method=GET, user_agent=python-requests/2.32.4
+Unauthenticated request to UNKNOWN endpoint: endpoint=None, path=/recipes, method=GET, user_agent=python-requests/2.32.4
+Unauthenticated request to UNKNOWN endpoint: endpoint=None, path=/dashboard, method=GET, user_agent=python-requests/2.32.4
+Unauthenticated request to UNKNOWN endpoint: endpoint=None, path=/dashboard, method=GET, user_agent=python-requests/2.32.4
+Unauthenticated request to UNKNOWN endpoint: endpoint=None, path=/inventory, method=GET, user_agent=python-requests/2.32.4
+Unauthenticated request to UNKNOWN endpoint: endpoint=None, path=/inventory, method=GET, user_agent=python-requests/2.32.4
+Unauthenticated request to UNKNOWN endpoint: endpoint=None, path=/inventory, method=GET, user_agent=python-requests/2.32.4
+Unauthenticated request to UNKNOWN endpoint: endpoint=None, path=/inventory, method=GET, user_agent=python-requests/2.32.4
+Unauthenticated request to UNKNOWN endpoint: endpoint=None, path=/inventory, method=GET, user_agent=python-requests/2.32.4
+Unauthenticated request to UNKNOWN endpoint: endpoint=None, path=/inventory, method=GET, user_agent=python-requests/2.32.4
+Unauthenticated request to UNKNOWN endpoint: endpoint=None, path=/inventory, method=GET, user_agent=python-requests/2.32.4
+Unauthenticated request to UNKNOWN endpoint: endpoint=None, path=/inventory, method=GET, user_agent=python-requests/2.32.4
+Traceback (most recent call last):
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py", line 1536, in __call__
+    return self.wsgi_app(environ, start_response)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py", line 1514, in wsgi_app
+    response = self.handle_exception(e)
+               ^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py", line 1511, in wsgi_app
+    response = self.full_dispatch_request()
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py", line 919, in full_dispatch_request
+    rv = self.handle_user_exception(e)
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py", line 917, in full_dispatch_request
+    rv = self.dispatch_request()
+         ^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py", line 902, in dispatch_request
+    return self.ensure_sync(self.view_functions[rule.endpoint])(**view_args)  # type: ignore[no-any-return]
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask_limiter/extension.py", line 1303, in __inner
+    return cast(R, flask.current_app.ensure_sync(obj)(*a, **k))
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/app/blueprints/auth/routes.py", line 87, in login
+    return redirect(url_for('app_routes.dashboard'))
+                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/helpers.py", line 232, in url_for
+    return current_app.url_for(
+           ^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py", line 1121, in url_for
+    return self.handle_url_build_error(error, endpoint, values)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py", line 1110, in url_for
+    rv = url_adapter.build(  # type: ignore[union-attr]
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/werkzeug/routing/map.py", line 924, in build
+    raise BuildError(endpoint, values, method, self)
+werkzeug.routing.exceptions.BuildError: Could not build url for endpoint 'app_routes.dashboard'. Did you mean 'organization.dashboard' instead?
+Traceback (most recent call last):
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py", line 1536, in __call__
+    return self.wsgi_app(environ, start_response)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py", line 1514, in wsgi_app
+    response = self.handle_exception(e)
+               ^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py", line 1511, in wsgi_app
+    response = self.full_dispatch_request()
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py", line 919, in full_dispatch_request
+    rv = self.handle_user_exception(e)
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py", line 917, in full_dispatch_request
+    rv = self.dispatch_request()
+         ^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py", line 902, in dispatch_request
+    return self.ensure_sync(self.view_functions[rule.endpoint])(**view_args)  # type: ignore[no-any-return]
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask_limiter/extension.py", line 1303, in __inner
+    return cast(R, flask.current_app.ensure_sync(obj)(*a, **k))
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/app/blueprints/auth/routes.py", line 87, in login
+    return redirect(url_for('app_routes.dashboard'))
+                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/helpers.py", line 232, in url_for
+    return current_app.url_for(
+           ^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py", line 1121, in url_for
+    return self.handle_url_build_error(error, endpoint, values)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py", line 1110, in url_for
+    rv = url_adapter.build(  # type: ignore[union-attr]
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/werkzeug/routing/map.py", line 924, in build
+    raise BuildError(endpoint, values, method, self)
+werkzeug.routing.exceptions.BuildError: Could not build url for endpoint 'app_routes.dashboard'. Did you mean 'organization.dashboard' instead?
+Traceback (most recent call last):
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py", line 1536, in __call__
+    return self.wsgi_app(environ, start_response)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py", line 1514, in wsgi_app
+    response = self.handle_exception(e)
+               ^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py", line 1511, in wsgi_app
+    response = self.full_dispatch_request()
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py", line 919, in full_dispatch_request
+    rv = self.handle_user_exception(e)
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py", line 917, in full_dispatch_request
+    rv = self.dispatch_request()
+         ^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py", line 902, in dispatch_request
+    return self.ensure_sync(self.view_functions[rule.endpoint])(**view_args)  # type: ignore[no-any-return]
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask_limiter/extension.py", line 1303, in __inner
+    return cast(R, flask.current_app.ensure_sync(obj)(*a, **k))
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/app/blueprints/auth/routes.py", line 87, in login
+    return redirect(url_for('app_routes.dashboard'))
+                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/helpers.py", line 232, in url_for
+    return current_app.url_for(
+           ^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py", line 1121, in url_for
+    return self.handle_url_build_error(error, endpoint, values)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py", line 1110, in url_for
+    rv = url_adapter.build(  # type: ignore[union-attr]
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/werkzeug/routing/map.py", line 924, in build
+    raise BuildError(endpoint, values, method, self)
+werkzeug.routing.exceptions.BuildError: Could not build url for endpoint 'app_routes.dashboard'. Did you mean 'organization.dashboard' instead?
+Unauthenticated request to UNKNOWN endpoint: endpoint=None, path=/inventory, method=GET, user_agent=python-requests/2.32.4
+Unauthenticated request to UNKNOWN endpoint: endpoint=None, path=/inventory, method=GET, user_agent=python-requests/2.32.4
+Unauthenticated request to UNKNOWN endpoint: endpoint=None, path=/dashboard, method=GET, user_agent=python-requests/2.32.4
+Unauthenticated request to UNKNOWN endpoint: endpoint=None, path=/dashboard, method=GET, user_agent=python-requests/2.32.4
+Unauthenticated request to UNKNOWN endpoint: endpoint=None, path=/dashboard, method=GET, user_agent=python-requests/2.32.4
+2025-11-21 23:13:09,416 INFO: The CSRF token is missing.
+Unauthenticated request to UNKNOWN endpoint: endpoint=None, path=/dashboard, method=GET, user_agent=python-requests/2.32.4
+Unauthenticated request to UNKNOWN endpoint: endpoint=None, path=/inventory, method=GET, user_agent=python-requests/2.32.4
+Unauthenticated request to UNKNOWN endpoint: endpoint=None, path=/inventory, method=GET, user_agent=python-requests/2.32.4
+Unauthenticated request to UNKNOWN endpoint: endpoint=None, path=/inventory, method=GET, user_agent=python-requests/2.32.4
+Unauthenticated request to UNKNOWN endpoint: endpoint=None, path=/inventory, method=GET, user_agent=python-requests/2.32.4
+Unauthenticated request to UNKNOWN endpoint: endpoint=None, path=/inventory, method=GET, user_agent=python-requests/2.32.4
+Unauthenticated request to UNKNOWN endpoint: endpoint=None, path=/inventory, method=GET, user_agent=python-requests/2.32.4
+Traceback (most recent call last):
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py", line 1536, in __call__
+    return self.wsgi_app(environ, start_response)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py", line 1514, in wsgi_app
+    response = self.handle_exception(e)
+               ^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py", line 1511, in wsgi_app
+    response = self.full_dispatch_request()
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py", line 919, in full_dispatch_request
+    rv = self.handle_user_exception(e)
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py", line 917, in full_dispatch_request
+    rv = self.dispatch_request()
+         ^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py", line 902, in dispatch_request
+    return self.ensure_sync(self.view_functions[rule.endpoint])(**view_args)  # type: ignore[no-any-return]
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask_limiter/extension.py", line 1303, in __inner
+    return cast(R, flask.current_app.ensure_sync(obj)(*a, **k))
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/app/blueprints/auth/routes.py", line 87, in login
+    return redirect(url_for('app_routes.dashboard'))
+                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/helpers.py", line 232, in url_for
+    return current_app.url_for(
+           ^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py", line 1121, in url_for
+    return self.handle_url_build_error(error, endpoint, values)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py", line 1110, in url_for
+    rv = url_adapter.build(  # type: ignore[union-attr]
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/werkzeug/routing/map.py", line 924, in build
+    raise BuildError(endpoint, values, method, self)
+werkzeug.routing.exceptions.BuildError: Could not build url for endpoint 'app_routes.dashboard'. Did you mean 'organization.dashboard' instead?
+Unauthenticated request to UNKNOWN endpoint: endpoint=None, path=/batches, method=GET, user_agent=python-requests/2.32.4
+Traceback (most recent call last):
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py", line 1536, in __call__
+    return self.wsgi_app(environ, start_response)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py", line 1514, in wsgi_app
+    response = self.handle_exception(e)
+               ^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py", line 1511, in wsgi_app
+    response = self.full_dispatch_request()
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py", line 919, in full_dispatch_request
+    rv = self.handle_user_exception(e)
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py", line 917, in full_dispatch_request
+    rv = self.dispatch_request()
+         ^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py", line 902, in dispatch_request
+    return self.ensure_sync(self.view_functions[rule.endpoint])(**view_args)  # type: ignore[no-any-return]
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask_limiter/extension.py", line 1303, in __inner
+    return cast(R, flask.current_app.ensure_sync(obj)(*a, **k))
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/app/blueprints/auth/routes.py", line 87, in login
+    return redirect(url_for('app_routes.dashboard'))
+                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/helpers.py", line 232, in url_for
+    return current_app.url_for(
+           ^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py", line 1121, in url_for
+    return self.handle_url_build_error(error, endpoint, values)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py", line 1110, in url_for
+    rv = url_adapter.build(  # type: ignore[union-attr]
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/werkzeug/routing/map.py", line 924, in build
+    raise BuildError(endpoint, values, method, self)
+werkzeug.routing.exceptions.BuildError: Could not build url for endpoint 'app_routes.dashboard'. Did you mean 'organization.dashboard' instead?
+Unauthenticated request to UNKNOWN endpoint: endpoint=None, path=/inventory, method=GET, user_agent=python-requests/2.32.4
+Unauthenticated request to UNKNOWN endpoint: endpoint=None, path=/inventory, method=GET, user_agent=python-requests/2.32.4
+Unauthenticated request to UNKNOWN endpoint: endpoint=None, path=/dashboard, method=GET, user_agent=python-requests/2.32.4
+Unauthenticated request to UNKNOWN endpoint: endpoint=None, path=/inventory, method=GET, user_agent=python-requests/2.32.4
+Unauthenticated request to UNKNOWN endpoint: endpoint=None, path=/inventory, method=GET, user_agent=python-requests/2.32.4
+Unauthenticated request to UNKNOWN endpoint: endpoint=None, path=/inventory, method=GET, user_agent=python-requests/2.32.4
+Unauthenticated request to UNKNOWN endpoint: endpoint=None, path=/inventory, method=GET, user_agent=python-requests/2.32.4
+Unauthenticated request to UNKNOWN endpoint: endpoint=None, path=/inventory, method=GET, user_agent=python-requests/2.32.4
+Unauthenticated request to UNKNOWN endpoint: endpoint=None, path=/inventory, method=GET, user_agent=python-requests/2.32.4
+Unauthenticated request to UNKNOWN endpoint: endpoint=None, path=/dashboard, method=GET, user_agent=python-requests/2.32.4
+Unauthenticated request to UNKNOWN endpoint: endpoint=None, path=/inventory, method=GET, user_agent=python-requests/2.32.4
+Unauthenticated request to UNKNOWN endpoint: endpoint=None, path=/inventory, method=GET, user_agent=python-requests/2.32.4
+Unauthenticated request to UNKNOWN endpoint: endpoint=None, path=/inventory, method=GET, user_agent=python-requests/2.32.4
+Unauthenticated request to UNKNOWN endpoint: endpoint=None, path=/inventory, method=GET, user_agent=python-requests/2.32.4
+Unauthenticated request to UNKNOWN endpoint: endpoint=None, path=/inventory, method=GET, user_agent=python-requests/2.32.4
+Unauthenticated request to UNKNOWN endpoint: endpoint=None, path=/inventory, method=GET, user_agent=python-requests/2.32.4
+Traceback (most recent call last):
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py", line 1536, in __call__
+    return self.wsgi_app(environ, start_response)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py", line 1514, in wsgi_app
+    response = self.handle_exception(e)
+               ^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py", line 1511, in wsgi_app
+    response = self.full_dispatch_request()
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py", line 919, in full_dispatch_request
+    rv = self.handle_user_exception(e)
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py", line 917, in full_dispatch_request
+    rv = self.dispatch_request()
+         ^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py", line 902, in dispatch_request
+    return self.ensure_sync(self.view_functions[rule.endpoint])(**view_args)  # type: ignore[no-any-return]
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask_limiter/extension.py", line 1303, in __inner
+    return cast(R, flask.current_app.ensure_sync(obj)(*a, **k))
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/app/blueprints/auth/routes.py", line 87, in login
+    return redirect(url_for('app_routes.dashboard'))
+                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/helpers.py", line 232, in url_for
+    return current_app.url_for(
+           ^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py", line 1121, in url_for
+    return self.handle_url_build_error(error, endpoint, values)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py", line 1110, in url_for
+    rv = url_adapter.build(  # type: ignore[union-attr]
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/werkzeug/routing/map.py", line 924, in build
+    raise BuildError(endpoint, values, method, self)
+werkzeug.routing.exceptions.BuildError: Could not build url for endpoint 'app_routes.dashboard'. Did you mean 'organization.dashboard' instead?
+Traceback (most recent call last):
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py", line 1536, in __call__
+    return self.wsgi_app(environ, start_response)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py", line 1514, in wsgi_app
+    response = self.handle_exception(e)
+               ^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py", line 1511, in wsgi_app
+    response = self.full_dispatch_request()
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py", line 919, in full_dispatch_request
+    rv = self.handle_user_exception(e)
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py", line 917, in full_dispatch_request
+    rv = self.dispatch_request()
+         ^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py", line 902, in dispatch_request
+    return self.ensure_sync(self.view_functions[rule.endpoint])(**view_args)  # type: ignore[no-any-return]
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask_limiter/extension.py", line 1303, in __inner
+    return cast(R, flask.current_app.ensure_sync(obj)(*a, **k))
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/app/blueprints/auth/routes.py", line 87, in login
+    return redirect(url_for('app_routes.dashboard'))
+                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/helpers.py", line 232, in url_for
+    return current_app.url_for(
+           ^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py", line 1121, in url_for
+    return self.handle_url_build_error(error, endpoint, values)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py", line 1110, in url_for
+    rv = url_adapter.build(  # type: ignore[union-attr]
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/werkzeug/routing/map.py", line 924, in build
+    raise BuildError(endpoint, values, method, self)
+werkzeug.routing.exceptions.BuildError: Could not build url for endpoint 'app_routes.dashboard'. Did you mean 'organization.dashboard' instead?
+Traceback (most recent call last):
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py", line 1536, in __call__
+    return self.wsgi_app(environ, start_response)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py", line 1514, in wsgi_app
+    response = self.handle_exception(e)
+               ^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py", line 1511, in wsgi_app
+    response = self.full_dispatch_request()
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py", line 919, in full_dispatch_request
+    rv = self.handle_user_exception(e)
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py", line 917, in full_dispatch_request
+    rv = self.dispatch_request()
+         ^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py", line 902, in dispatch_request
+    return self.ensure_sync(self.view_functions[rule.endpoint])(**view_args)  # type: ignore[no-any-return]
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask_limiter/extension.py", line 1303, in __inner
+    return cast(R, flask.current_app.ensure_sync(obj)(*a, **k))
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/app/blueprints/auth/routes.py", line 87, in login
+    return redirect(url_for('app_routes.dashboard'))
+                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/helpers.py", line 232, in url_for
+    return current_app.url_for(
+           ^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py", line 1121, in url_for
+    return self.handle_url_build_error(error, endpoint, values)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py", line 1110, in url_for
+    rv = url_adapter.build(  # type: ignore[union-attr]
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/werkzeug/routing/map.py", line 924, in build
+    raise BuildError(endpoint, values, method, self)
+werkzeug.routing.exceptions.BuildError: Could not build url for endpoint 'app_routes.dashboard'. Did you mean 'organization.dashboard' instead?
+Traceback (most recent call last):
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py", line 1536, in __call__
+    return self.wsgi_app(environ, start_response)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py", line 1514, in wsgi_app
+    response = self.handle_exception(e)
+               ^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py", line 1511, in wsgi_app
+    response = self.full_dispatch_request()
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py", line 919, in full_dispatch_request
+    rv = self.handle_user_exception(e)
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py", line 917, in full_dispatch_request
+    rv = self.dispatch_request()
+         ^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py", line 902, in dispatch_request
+    return self.ensure_sync(self.view_functions[rule.endpoint])(**view_args)  # type: ignore[no-any-return]
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask_limiter/extension.py", line 1303, in __inner
+    return cast(R, flask.current_app.ensure_sync(obj)(*a, **k))
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/app/blueprints/auth/routes.py", line 87, in login
+    return redirect(url_for('app_routes.dashboard'))
+                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/helpers.py", line 232, in url_for
+    return current_app.url_for(
+           ^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py", line 1121, in url_for
+    return self.handle_url_build_error(error, endpoint, values)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py", line 1110, in url_for
+    rv = url_adapter.build(  # type: ignore[union-attr]
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/werkzeug/routing/map.py", line 924, in build
+    raise BuildError(endpoint, values, method, self)
+werkzeug.routing.exceptions.BuildError: Could not build url for endpoint 'app_routes.dashboard'. Did you mean 'organization.dashboard' instead?
+Unauthenticated request to UNKNOWN endpoint: endpoint=None, path=/dashboard, method=GET, user_agent=python-requests/2.32.4
+Unauthenticated request to UNKNOWN endpoint: endpoint=None, path=/dashboard, method=GET, user_agent=python-requests/2.32.4
+Unauthenticated request to UNKNOWN endpoint: endpoint=None, path=/inventory, method=GET, user_agent=python-requests/2.32.4
+Unauthenticated request to UNKNOWN endpoint: endpoint=None, path=/inventory, method=GET, user_agent=python-requests/2.32.4
+Unauthenticated request to UNKNOWN endpoint: endpoint=None, path=/dashboard, method=GET, user_agent=python-requests/2.32.4
+Unauthenticated request to UNKNOWN endpoint: endpoint=None, path=/inventory, method=GET, user_agent=python-requests/2.32.4
+Unauthenticated request to UNKNOWN endpoint: endpoint=None, path=/inventory, method=GET, user_agent=python-requests/2.32.4
+Unauthenticated request to UNKNOWN endpoint: endpoint=None, path=/inventory, method=GET, user_agent=python-requests/2.32.4
+Unauthenticated request to UNKNOWN endpoint: endpoint=None, path=/inventory, method=GET, user_agent=python-requests/2.32.4
+Unauthenticated request to UNKNOWN endpoint: endpoint=None, path=/dashboard, method=GET, user_agent=python-requests/2.32.4
+Unauthenticated request to UNKNOWN endpoint: endpoint=None, path=/inventory, method=GET, user_agent=python-requests/2.32.4
+Unauthenticated request to UNKNOWN endpoint: endpoint=None, path=/dashboard, method=GET, user_agent=python-requests/2.32.4
+Unauthenticated request to UNKNOWN endpoint: endpoint=None, path=/dashboard, method=GET, user_agent=python-requests/2.32.4
+Unauthenticated request to UNKNOWN endpoint: endpoint=None, path=/inventory, method=GET, user_agent=python-requests/2.32.4
+Unauthenticated request to UNKNOWN endpoint: endpoint=None, path=/dashboard, method=GET, user_agent=python-requests/2.32.4
+Unauthenticated request to UNKNOWN endpoint: endpoint=None, path=/dashboard, method=GET, user_agent=python-requests/2.32.4
+Unauthenticated request to UNKNOWN endpoint: endpoint=None, path=/dashboard, method=GET, user_agent=python-requests/2.32.4
+Unauthenticated request to UNKNOWN endpoint: endpoint=None, path=/inventory, method=GET, user_agent=python-requests/2.32.4
+Unauthenticated request to UNKNOWN endpoint: endpoint=None, path=/inventory, method=GET, user_agent=python-requests/2.32.4
+Unauthenticated request to UNKNOWN endpoint: endpoint=None, path=/inventory, method=GET, user_agent=python-requests/2.32.4
+Unauthenticated request to UNKNOWN endpoint: endpoint=None, path=/inventory, method=GET, user_agent=python-requests/2.32.4
+Unauthenticated request to UNKNOWN endpoint: endpoint=None, path=/inventory, method=GET, user_agent=python-requests/2.32.4
+Traceback (most recent call last):
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py", line 1536, in __call__
+    return self.wsgi_app(environ, start_response)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py", line 1514, in wsgi_app
+    response = self.handle_exception(e)
+               ^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py", line 1511, in wsgi_app
+    response = self.full_dispatch_request()
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py", line 919, in full_dispatch_request
+    rv = self.handle_user_exception(e)
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py", line 917, in full_dispatch_request
+    rv = self.dispatch_request()
+         ^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py", line 902, in dispatch_request
+    return self.ensure_sync(self.view_functions[rule.endpoint])(**view_args)  # type: ignore[no-any-return]
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask_limiter/extension.py", line 1303, in __inner
+    return cast(R, flask.current_app.ensure_sync(obj)(*a, **k))
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/app/blueprints/auth/routes.py", line 87, in login
+    return redirect(url_for('app_routes.dashboard'))
+                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/helpers.py", line 232, in url_for
+    return current_app.url_for(
+           ^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py", line 1121, in url_for
+    return self.handle_url_build_error(error, endpoint, values)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py", line 1110, in url_for
+    rv = url_adapter.build(  # type: ignore[union-attr]
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/werkzeug/routing/map.py", line 924, in build
+    raise BuildError(endpoint, values, method, self)
+werkzeug.routing.exceptions.BuildError: Could not build url for endpoint 'app_routes.dashboard'. Did you mean 'organization.dashboard' instead?
+Unauthenticated request to UNKNOWN endpoint: endpoint=None, path=/inventory, method=GET, user_agent=python-requests/2.32.4
+Traceback (most recent call last):
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py", line 1536, in __call__
+    return self.wsgi_app(environ, start_response)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py", line 1514, in wsgi_app
+    response = self.handle_exception(e)
+               ^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py", line 1511, in wsgi_app
+    response = self.full_dispatch_request()
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py", line 919, in full_dispatch_request
+    rv = self.handle_user_exception(e)
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py", line 917, in full_dispatch_request
+    rv = self.dispatch_request()
+         ^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py", line 902, in dispatch_request
+    return self.ensure_sync(self.view_functions[rule.endpoint])(**view_args)  # type: ignore[no-any-return]
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask_limiter/extension.py", line 1303, in __inner
+    return cast(R, flask.current_app.ensure_sync(obj)(*a, **k))
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/app/blueprints/auth/routes.py", line 87, in login
+    return redirect(url_for('app_routes.dashboard'))
+                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/helpers.py", line 232, in url_for
+    return current_app.url_for(
+           ^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py", line 1121, in url_for
+    return self.handle_url_build_error(error, endpoint, values)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py", line 1110, in url_for
+    rv = url_adapter.build(  # type: ignore[union-attr]
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/werkzeug/routing/map.py", line 924, in build
+    raise BuildError(endpoint, values, method, self)
+werkzeug.routing.exceptions.BuildError: Could not build url for endpoint 'app_routes.dashboard'. Did you mean 'organization.dashboard' instead?
+Traceback (most recent call last):
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py", line 1536, in __call__
+    return self.wsgi_app(environ, start_response)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py", line 1514, in wsgi_app
+    response = self.handle_exception(e)
+               ^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py", line 1511, in wsgi_app
+    response = self.full_dispatch_request()
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py", line 919, in full_dispatch_request
+    rv = self.handle_user_exception(e)
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py", line 917, in full_dispatch_request
+    rv = self.dispatch_request()
+         ^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py", line 902, in dispatch_request
+    return self.ensure_sync(self.view_functions[rule.endpoint])(**view_args)  # type: ignore[no-any-return]
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask_limiter/extension.py", line 1303, in __inner
+    return cast(R, flask.current_app.ensure_sync(obj)(*a, **k))
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/app/blueprints/auth/routes.py", line 87, in login
+    return redirect(url_for('app_routes.dashboard'))
+                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/helpers.py", line 232, in url_for
+    return current_app.url_for(
+           ^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py", line 1121, in url_for
+    return self.handle_url_build_error(error, endpoint, values)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py", line 1110, in url_for
+    rv = url_adapter.build(  # type: ignore[union-attr]
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/werkzeug/routing/map.py", line 924, in build
+    raise BuildError(endpoint, values, method, self)
+werkzeug.routing.exceptions.BuildError: Could not build url for endpoint 'app_routes.dashboard'. Did you mean 'organization.dashboard' instead?
+Unauthenticated request to UNKNOWN endpoint: endpoint=None, path=/inventory, method=GET, user_agent=python-requests/2.32.4
+Unauthenticated request to UNKNOWN endpoint: endpoint=None, path=/inventory, method=GET, user_agent=python-requests/2.32.4
+Unauthenticated request to UNKNOWN endpoint: endpoint=None, path=/dashboard, method=GET, user_agent=python-requests/2.32.4
+Unauthenticated request to UNKNOWN endpoint: endpoint=None, path=/inventory, method=GET, user_agent=python-requests/2.32.4
+Unauthenticated request to UNKNOWN endpoint: endpoint=None, path=/ap
