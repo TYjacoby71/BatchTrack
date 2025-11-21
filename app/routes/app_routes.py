@@ -221,6 +221,7 @@ def view_fault_log():
         return render_template('fault_log.html', faults=[])
 
 @app_routes_bp.route('/api/server-time')
+@app_routes_bp.route('/api/timer-summary')
 def get_server_time():
     """Get current server time in UTC and user's timezone, also auto-complete expired timers"""
     from flask_login import current_user
@@ -258,3 +259,25 @@ def get_server_time():
         'user_time': user_iso,
         'timestamp': server_utc.timestamp()
     })
+
+@app_routes_bp.route('/api/timer-summary')
+@login_required
+def get_timer_summary():
+    """Get active timers summary"""
+    try:
+        from app.services.timer_service import TimerService
+        active_timers = TimerService.get_active_timers_for_user(current_user.id)
+        
+        return jsonify({
+            'active_timers': len(active_timers),
+            'timers': [
+                {
+                    'id': timer.id,
+                    'name': timer.name or 'Timer',
+                    'remaining_time': max(0, int((timer.end_time - TimezoneUtils.utc_now()).total_seconds())) if timer.end_time else 0
+                }
+                for timer in active_timers[:5]  # Limit to 5 most recent
+            ]
+        })
+    except Exception as e:
+        return jsonify({'active_timers': 0, 'timers': [], 'error': str(e)})

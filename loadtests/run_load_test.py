@@ -74,6 +74,10 @@ with app.app_context():
             organization_id=test_org.id
         )
         db.session.add(test_user)
+    else:
+        # Update existing user to ensure proper setup
+        test_user.organization_id = test_org.id
+        test_user.is_active = True
     
     # Create developer user
     dev_user = User.query.filter_by(username='dev').first()

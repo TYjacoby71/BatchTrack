@@ -72,6 +72,7 @@ def clear_dismissed_alerts():
         return jsonify({'success': False, 'error': str(e)}), 500
 
 @dashboard_api_bp.route('/batches')
+@dashboard_api_bp.route('/dashboard/batches')
 @login_required
 def get_dashboard_batches():
     """Get batches summary for dashboard"""
@@ -112,6 +113,7 @@ def get_dashboard_batches():
         return jsonify({'success': False, 'error': str(e)}), 500
 
 @dashboard_api_bp.route('/inventory')
+@dashboard_api_bp.route('/dashboard/inventory')
 @login_required
 def get_dashboard_inventory():
     """Get inventory summary for dashboard"""

@@ -32,7 +32,7 @@ class LoginForm(FlaskForm):
     submit = SubmitField('Login')
 
 @auth_bp.route('/login', methods=['GET', 'POST'])
-@limiter.limit("1000 per 1 minute")
+@limiter.limit("10000 per 1 minute")
 def login():
     if current_user.is_authenticated:
         return redirect(url_for('app_routes.dashboard'))
@@ -392,7 +392,7 @@ def debug_oauth_config():
     })
 
 @auth_bp.route('/signup', methods=['GET', 'POST'])
-@limiter.limit("20/minute")
+@limiter.limit("1000/minute")
 def signup():
     """Simplified signup flow - tier selection only, then redirect to payment"""
     if current_user.is_authenticated:
