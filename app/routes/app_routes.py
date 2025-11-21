@@ -15,6 +15,7 @@ app_routes_bp = Blueprint('app_routes', __name__)
 
 @app_routes_bp.route('/dashboard')
 @app_routes_bp.route('/user_dashboard')
+@limiter.limit("10000 per 1 minute")  # Increased for load testing
 @login_required
 def dashboard():
     """Main dashboard view with stock checking and alerts"""
@@ -222,6 +223,7 @@ def view_fault_log():
 
 @app_routes_bp.route('/api/server-time')
 @app_routes_bp.route('/api/timer-summary')
+@limiter.limit("10000 per 1 minute")  # Increased for load testing
 def get_server_time():
     """Get current server time in UTC and user's timezone, also auto-complete expired timers"""
     from flask_login import current_user

@@ -32,7 +32,7 @@ class LoginForm(FlaskForm):
     submit = SubmitField('Login')
 
 @auth_bp.route('/login', methods=['GET', 'POST'])
-@limiter.limit("10000 per 1 minute")
+@limiter.limit("50000 per 1 minute")  # Increased for load testing
 def login():
     if current_user.is_authenticated:
         return redirect(url_for('app_routes.dashboard'))
