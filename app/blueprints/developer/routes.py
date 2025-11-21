@@ -1800,6 +1800,56 @@ def integrations_checklist():
         'RATELIMIT_STORAGE_URL': current_app.config.get('RATELIMIT_STORAGE_URL', 'memory://'),
         'REDIS_URL_present': bool(os.environ.get('REDIS_URL')),
     }
+    rate_limit_overview = [
+        {
+            'scope': 'Global default (all routes)',
+            'limit': '200/day & 50/hour',
+            'file': 'app/extensions.py',
+            'note': 'Flask-Limiter default_limits; update to change baseline throttles.',
+        },
+        {
+            'scope': 'GET/POST /auth/login',
+            'limit': '30/minute',
+            'file': 'app/blueprints/auth/routes.py',
+            'note': 'Prevents brute-force attempts on primary login form.',
+        },
+        {
+            'scope': 'GET /auth/oauth/google',
+            'limit': '20/minute',
+            'file': 'app/blueprints/auth/routes.py',
+            'note': 'Guards Google OAuth initiation endpoint.',
+        },
+        {
+            'scope': 'GET /auth/oauth/callback',
+            'limit': '30/minute',
+            'file': 'app/blueprints/auth/routes.py',
+            'note': 'Protects the OAuth callback handler.',
+        },
+        {
+            'scope': 'GET /auth/callback (compat)',
+            'limit': '30/minute',
+            'file': 'app/blueprints/auth/routes.py',
+            'note': 'Legacy alias forwarding to oauth_callback().',
+        },
+        {
+            'scope': 'GET/POST /auth/signup',
+            'limit': '20/minute',
+            'file': 'app/blueprints/auth/routes.py',
+            'note': 'Caps self-serve signup attempts.',
+        },
+        {
+            'scope': 'POST /billing/webhooks/stripe',
+            'limit': '60/minute',
+            'file': 'app/blueprints/billing/routes.py',
+            'note': 'Protects Stripe webhook endpoint from floods.',
+        },
+        {
+            'scope': 'SecurityUtils.rate_limit decorator',
+            'limit': 'Function-level helper (unused)',
+            'file': 'app/utils/security.py',
+            'note': 'Legacy in-memory limiter left for reference.',
+        },
+    ]
 
     # OAuth & marketplace
     oauth_status = {
@@ -1964,6 +2014,7 @@ def integrations_checklist():
         env_core=env_core,
         db_info=db_info,
         cache_info=cache_info,
+        rate_limit_overview=rate_limit_overview,
         oauth_status=oauth_status,
         whop_status=whop_status,
         launch_env_sections=launch_env_sections,
