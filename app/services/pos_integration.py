@@ -41,7 +41,7 @@ class POSIntegrationService:
         """
         try:
             # Get the original inventory item
-            original_item = InventoryItem.query.get(item_id)
+            original_item = db.session.get(InventoryItem, item_id)
             if not original_item or original_item.type != 'product':
                 return False, "Product item not found"
 
@@ -204,7 +204,7 @@ class POSIntegrationService:
                 reservation.mark_converted_to_sale()
 
                 # Get the original item to pass unit to the adjustment service
-                item = InventoryItem.query.get(reservation.product_item_id)
+                item = db.session.get(InventoryItem, reservation.product_item_id)
                 if not item:
                     logger.error(f"Inventory item not found for reservation {reservation.id}")
                     continue
@@ -262,7 +262,7 @@ class POSIntegrationService:
                 reservation.mark_returned()
 
                 # Get the original item to pass unit to the adjustment service
-                item = InventoryItem.query.get(reservation.product_item_id)
+                item = db.session.get(InventoryItem, reservation.product_item_id)
                 if not item:
                     logger.error(f"Inventory item not found for return reservation {reservation.id}")
                     continue
@@ -331,7 +331,7 @@ class POSIntegrationService:
         """
         Get available quantity for POS systems (excludes expired lots only)
         """
-        item = InventoryItem.query.get(item_id)
+        item = db.session.get(InventoryItem, item_id)
         if not item:
             return 0.0
         return item.available_quantity  # This should exclude expired, not reserved

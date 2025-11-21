@@ -1,10 +1,9 @@
 
-import os
-
 from sqlalchemy import event
 
 from ..extensions import db
 from ..utils.timezone_utils import TimezoneUtils
+from .db_dialect import is_postgres
 
 class GlobalItem(db.Model):
     __tablename__ = 'global_item'
@@ -73,17 +72,7 @@ class GlobalItem(db.Model):
     ingredient_category = db.relationship('IngredientCategory', backref='global_items')
     archived_by_user = db.relationship('User', foreign_keys=[archived_by])
 
-    def _is_postgres_url(url: str) -> bool:
-        if not url:
-            return False
-        url = url.lower()
-        return (
-            url.startswith("postgres://")
-            or url.startswith("postgresql://")
-            or url.startswith("postgresql+psycopg2://")
-        )
-
-    _IS_PG = _is_postgres_url(os.environ.get("DATABASE_URL", ""))
+    _IS_PG = is_postgres()
 
     __table_args__ = tuple([
         db.UniqueConstraint('name', 'item_type', name='_global_item_name_type_uc'),

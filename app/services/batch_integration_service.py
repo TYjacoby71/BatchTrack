@@ -275,7 +275,7 @@ class BatchIntegrationService:
             return {'success': False, 'error': f"Failed to deduct new containers: {result2.get('error')}"}
 
         # Update container record
-        new_container = InventoryItem.query.get(new_container_id)
+        new_container = db.session.get(InventoryItem, new_container_id)
         container_record.container_id = new_container_id
         container_record.quantity_used = new_quantity
         container_record.cost_each = new_container.cost_per_unit or 0.0

@@ -344,7 +344,7 @@ def create_inventory_item(form_data, organization_id, created_by):
         db.session.commit()
 
         # Double-check the item was created
-        created_item = InventoryItem.query.get(new_item.id)
+        created_item = db.session.get(InventoryItem, new_item.id)
         if not created_item:
             logger.error(f"Item {new_item.id} not found after creation")
             return False, "Item creation failed - not found after commit", None

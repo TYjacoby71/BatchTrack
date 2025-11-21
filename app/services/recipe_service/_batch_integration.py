@@ -28,7 +28,7 @@ def prepare_batch_from_recipe(recipe_id: int, scale: float = 1.0,
         Dict with batch preparation data
     """
     try:
-        recipe = Recipe.query.get(recipe_id)
+        recipe = db.session.get(Recipe, recipe_id)
         if not recipe:
             return {'success': False, 'error': 'Recipe not found'}
 
@@ -78,8 +78,8 @@ def update_recipe_from_batch(recipe_id: int, batch_id: int,
         Dict with update results
     """
     try:
-        recipe = Recipe.query.get(recipe_id)
-        batch = Batch.query.get(batch_id)
+        recipe = db.session.get(Recipe, recipe_id)
+        batch = db.session.get(Batch, batch_id)
         
         if not recipe:
             return {'success': False, 'error': 'Recipe not found'}
@@ -123,7 +123,7 @@ def sync_recipe_batch_data(recipe_id: int) -> Dict[str, Any]:
         Dict with sync results
     """
     try:
-        recipe = Recipe.query.get(recipe_id)
+        recipe = db.session.get(Recipe, recipe_id)
         if not recipe:
             return {'success': False, 'error': 'Recipe not found'}
 

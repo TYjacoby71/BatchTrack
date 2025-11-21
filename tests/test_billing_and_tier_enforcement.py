@@ -69,6 +69,7 @@ class TestBillingAndTierEnforcement:
 
     @pytest.mark.parametrize("billing_status, expected_status_code", [
         ('active', 200),
+        ('payment_failed', 302),
         ('past_due', 302),
         ('suspended', 302),
         ('canceled', 302),

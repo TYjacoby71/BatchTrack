@@ -358,7 +358,7 @@ def bulk_update_ingredients():
 
         updated_count = 0
         for ingredient_data in ingredients:
-            ingredient = InventoryItem.query.get(ingredient_data['id'])
+            ingredient = db.session.get(InventoryItem, ingredient_data['id'])
             if ingredient:
                 ingredient.name = ingredient_data['name']
                 ingredient.unit = ingredient_data['unit']
@@ -383,7 +383,7 @@ def bulk_update_containers():
 
         updated_count = 0
         for container_data in containers:
-            container = InventoryItem.query.get(container_data['id'])
+            container = db.session.get(InventoryItem, container_data['id'])
             if container and container.type == 'container':
                 container.name = container_data['name']
                 # Canonical keys only

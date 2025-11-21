@@ -286,7 +286,7 @@ def validate_mapping():
     # Handle volume ↔ weight conversions
     if {'volume', 'weight'} <= {from_unit.unit_type, to_unit.unit_type}:
         if data.get('ingredient_id'):
-            ingredient = InventoryItem.query.get(data['ingredient_id'])
+            ingredient = db.session.get(InventoryItem, data['ingredient_id'])
             if not ingredient.density and not ingredient.category:
                 return jsonify({
                     "valid": False,

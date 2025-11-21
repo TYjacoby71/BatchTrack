@@ -31,7 +31,7 @@ def dashboard():
         from ..extensions import db
 
         try:
-            selected_org = Organization.query.get(selected_org_id)
+            selected_org = db.session.get(Organization, selected_org_id)
             if not selected_org:
                 session.pop('dev_selected_org_id', None)
                 session.pop('dev_masquerade_context', None)

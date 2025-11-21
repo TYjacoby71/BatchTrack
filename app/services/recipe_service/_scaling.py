@@ -6,9 +6,10 @@ Handles scaling recipes up or down and calculating scaled ingredient amounts.
 """
 
 import logging
-from typing import Dict, Any, List
 from decimal import Decimal
+from typing import Dict, Any, List
 
+from ...extensions import db
 from ...models import Recipe
 
 logger = logging.getLogger(__name__)
@@ -28,7 +29,7 @@ def scale_recipe(recipe_id: int, target_yield: float,
         Dict with scaling results
     """
     try:
-        recipe = Recipe.query.get(recipe_id)
+        recipe = db.session.get(Recipe, recipe_id)
         if not recipe:
             return {'success': False, 'error': 'Recipe not found'}
 
@@ -79,7 +80,7 @@ def calculate_scaled_ingredients(recipe_id: int, scale_factor: float) -> Dict[st
         Dict with scaled ingredient amounts
     """
     try:
-        recipe = Recipe.query.get(recipe_id)
+        recipe = db.session.get(Recipe, recipe_id)
         if not recipe:
             return {'success': False, 'error': 'Recipe not found'}
 

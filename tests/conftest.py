@@ -5,6 +5,10 @@ import os
 import tempfile
 import pytest
 from sqlalchemy import inspect, text
+
+# Ensure model modules know we're running against SQLite during pytest runs
+os.environ.setdefault("SQLALCHEMY_TEST_DATABASE_URI", "sqlite:///:memory:")
+
 from app import create_app
 from app.extensions import db
 from app.models.models import User, Organization, SubscriptionTier, Permission, Role
@@ -15,6 +19,8 @@ def app():
     """Create and configure a new app instance for each test."""
     # Create a temporary file to use as the database
     db_fd, db_path = tempfile.mkstemp()
+    previous_test_db_uri = os.environ.get("SQLALCHEMY_TEST_DATABASE_URI")
+    os.environ["SQLALCHEMY_TEST_DATABASE_URI"] = f'sqlite:///{db_path}'
 
     app = create_app({
         'TESTING': True,
@@ -40,6 +46,10 @@ def app():
             db.drop_all()
         os.close(db_fd)
         os.unlink(db_path)
+        if previous_test_db_uri is None:
+            os.environ.pop("SQLALCHEMY_TEST_DATABASE_URI", None)
+        else:
+            os.environ["SQLALCHEMY_TEST_DATABASE_URI"] = previous_test_db_uri
 
 
 @pytest.fixture
