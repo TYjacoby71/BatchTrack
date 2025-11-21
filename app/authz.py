@@ -1,4 +1,5 @@
 
+import os
 from flask import jsonify, redirect, url_for, request
 from .extensions import login_manager
 # Import moved inline to avoid circular imports
