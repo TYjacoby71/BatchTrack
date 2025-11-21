@@ -77,9 +77,14 @@ class AuthenticatedMixin:
         }
         if token:
             payload["csrf_token"] = token
-        response = self.client.post("/auth/login", data=payload, name=name)
-        if response.status_code >= 400:
-            response.failure(f"Login failed ({response.status_code})")
+        
+        with self.client.post("/auth/login", data=payload, name=name, catch_response=True) as response:
+            if response.status_code >= 400:
+                response.failure(f"Login failed ({response.status_code})")
+            elif "Invalid username or password" in response.text:
+                response.failure("Invalid credentials")
+            else:
+                response.success()
         return response
 
 
@@ -88,8 +93,8 @@ class AuthenticatedUser(AuthenticatedMixin, HttpUser):
     
     wait_time = between(3, 12)
     weight = 1  # 25% of traffic
-    login_username = "loadtest@example.com"
-    login_password = "replace-me"
+    login_username = "test@example.com"
+    login_password = "testpassword123"
     
     def on_start(self):
         """Login before starting tasks."""
@@ -150,8 +155,8 @@ class AdminUser(AuthenticatedMixin, HttpUser):
     
     wait_time = between(5, 20)
     weight = 0.1  # 2.5% of traffic
-    login_username = "admin@example.com"
-    login_password = "replace-me"
+    login_username = "dev"
+    login_password = "devpassword123"
     
     def on_start(self):
         """Login as admin."""
@@ -177,8 +182,8 @@ class HighFrequencyUser(AuthenticatedMixin, HttpUser):
     
     wait_time = between(0.5, 2)
     weight = 0.5  # 12.5% of traffic
-    login_username = "api@example.com"
-    login_password = "replace-me"
+    login_username = "test@example.com"
+    login_password = "testpassword123"
     
     def on_start(self):
         """Quick login for API-like usage."""
@@ -217,8 +222,8 @@ class TimerHeavyUser(AuthenticatedMixin, HttpUser):
 
     wait_time = between(1, 4)
     weight = 0.2  # optional addition to traffic mix
-    login_username = "loadtest@example.com"
-    login_password = "replace-me"
+    login_username = "test@example.com"
+    login_password = "testpassword123"
 
     def on_start(self):
         self._perform_login(self.login_username, self.login_password, "timer_login")
