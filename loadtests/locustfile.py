@@ -92,8 +92,8 @@ class AuthenticatedUser(AuthenticatedMixin, HttpUser):
 
     wait_time = between(1, 6)  # More aggressive to find bottlenecks
     weight = 1  # 25% of traffic
-    login_username = "test@example.com"
-    login_password = "testpassword123"
+    login_username = "admin"
+    login_password = "admin"
 
     def on_start(self):
         """Login before starting tasks."""
@@ -156,8 +156,8 @@ class AdminUser(AuthenticatedMixin, HttpUser):
 
     wait_time = between(5, 20)
     weight = 0.1  # 2.5% of traffic
-    login_username = "dev"
-    login_password = "devpassword123"
+    login_username = "admin"
+    login_password = "admin"
 
     def on_start(self):
         """Login as admin."""
@@ -183,8 +183,8 @@ class HighFrequencyUser(AuthenticatedMixin, HttpUser):
 
     wait_time = between(0.5, 2)
     weight = 0.5  # 12.5% of traffic
-    login_username = "test@example.com"
-    login_password = "testpassword123"
+    login_username = "admin"
+    login_password = "admin"
 
     def on_start(self):
         """Quick login for API-like usage."""
@@ -230,8 +230,8 @@ class TimerHeavyUser(AuthenticatedMixin, HttpUser):
 
     wait_time = between(1, 4)
     weight = 0.2  # optional addition to traffic mix
-    login_username = "test@example.com"
-    login_password = "testpassword123"
+    login_username = "admin"
+    login_password = "admin"
 
     def on_start(self):
         self._perform_login(self.login_username, self.login_password, "timer_login")
