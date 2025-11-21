@@ -32,19 +32,19 @@ def register_blueprints(app):
             return False
 
     # Core blueprints - these should always work
-    safe_register_blueprint('app.blueprints.auth.auth_bp', 'auth_bp', '/auth', 'Authentication')
-    safe_register_blueprint('app.blueprints.admin.admin_bp', 'admin_bp', '/admin', 'Admin')
-    safe_register_blueprint('app.blueprints.developer.developer_bp', 'developer_bp', '/developer', 'Developer')
-    safe_register_blueprint('app.blueprints.inventory.inventory_bp', 'inventory_bp', '/inventory', 'Inventory')
-    safe_register_blueprint('app.blueprints.recipes.recipes_bp', 'recipes_bp', '/recipes', 'Recipes')
-    safe_register_blueprint('app.blueprints.batches.batches_bp', 'batches_bp', '/batches', 'Batches')
+    safe_register_blueprint('app.blueprints.auth.routes.auth_bp', 'auth_bp', '/auth', 'Authentication')
+    safe_register_blueprint('app.blueprints.admin.admin_routes.admin_bp', 'admin_bp', '/admin', 'Admin')
+    safe_register_blueprint('app.blueprints.developer.routes.developer_bp', 'developer_bp', '/developer', 'Developer')
+    safe_register_blueprint('app.blueprints.inventory.routes.inventory_bp', 'inventory_bp', '/inventory', 'Inventory')
+    safe_register_blueprint('app.blueprints.recipes.routes.recipes_bp', 'recipes_bp', '/recipes', 'Recipes')
+    safe_register_blueprint('app.blueprints.batches.routes.batches_bp', 'batches_bp', '/batches', 'Batches')
     safe_register_blueprint('app.blueprints.organization.routes.organization_bp', 'organization_bp', '/organization', 'Organization')
-    safe_register_blueprint('app.blueprints.billing.billing_bp', 'billing_bp', '/billing', 'Billing')
+    safe_register_blueprint('app.blueprints.billing.routes.billing_bp', 'billing_bp', '/billing', 'Billing')
     safe_register_blueprint('app.blueprints.onboarding.routes.onboarding_bp', 'onboarding_bp', '/onboarding', 'Onboarding')
-    safe_register_blueprint('app.blueprints.settings.settings_bp', 'settings_bp', '/settings', 'Settings')
-    safe_register_blueprint('app.blueprints.timers.timers_bp', 'timers_bp', '/timers', 'Timers')
-    safe_register_blueprint('app.blueprints.expiration.expiration_bp', 'expiration_bp', '/expiration', 'Expiration')
-    safe_register_blueprint('app.blueprints.conversion.conversion_bp', 'conversion_bp', '/conversion', 'Conversion')
+    safe_register_blueprint('app.blueprints.settings.routes.settings_bp', 'settings_bp', '/settings', 'Settings')
+    safe_register_blueprint('app.blueprints.timers.routes.timers_bp', 'timers_bp', '/timers', 'Timers')
+    safe_register_blueprint('app.blueprints.expiration.routes.expiration_bp', 'expiration_bp', '/expiration', 'Expiration')
+    safe_register_blueprint('app.blueprints.conversion.routes.conversion_bp', 'conversion_bp', '/conversion', 'Conversion')
 
     # Product blueprints - use the register function
     try:
