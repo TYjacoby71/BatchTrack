@@ -64,6 +64,12 @@ with app.app_context():
         test_org.tier_id = exempt_tier.id
         test_org.billing_status = 'active'
     
+    # Also fix org ID 5 (the one causing billing errors)
+    org_5 = Organization.query.get(5)
+    if org_5:
+        org_5.tier_id = exempt_tier.id
+        org_5.billing_status = 'active'
+    
     # Create test user
     test_user = User.query.filter_by(username='test@example.com').first()
     if not test_user:

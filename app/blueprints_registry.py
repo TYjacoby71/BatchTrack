@@ -75,7 +75,7 @@ def register_blueprints(app):
 
     # Register standalone route modules
     route_modules = [
-        ('app.routes.app_routes.app_routes_bp', 'app_routes_bp', None, 'App Routes'),
+        ('app.routes.app_routes', 'app_routes_bp', None, 'App Routes'),
         ('app.routes.legal_routes.legal_bp', 'legal_bp', '/legal', 'Legal Routes'),
         ('app.routes.bulk_stock_routes.bulk_stock_bp', 'bulk_stock_bp', '/bulk-stock', 'Bulk Stock'),
         ('app.routes.fault_log_routes.faults_bp', 'faults_bp', '/faults', 'Fault Log'),

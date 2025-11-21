@@ -268,6 +268,7 @@ def get_timer_summary():
     """Get active timers summary"""
     try:
         from app.services.timer_service import TimerService
+        from app.utils.timezone_utils import TimezoneUtils # Added missing import
         active_timers = TimerService.get_active_timers_for_user(current_user.id)
 
         return jsonify({
