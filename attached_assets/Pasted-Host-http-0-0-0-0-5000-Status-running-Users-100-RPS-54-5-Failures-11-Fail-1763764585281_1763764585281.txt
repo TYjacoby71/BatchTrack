@@ -1,0 +1,85 @@
+Host
+
+http://0.0.0.0:5000
+
+Status
+
+running
+Users
+
+100
+RPS
+
+54.5
+Failures
+
+11%
+# Failures	Method	Name	Message
+2	POST	admin_login	
+CatchResponseError('Login failed (503)')
+
+373	GET	api_calls	
+HTTPError('401 Client Error: UNAUTHORIZED for url: api_calls')
+
+7	POST	api_login	
+CatchResponseError('Login failed (500)')
+
+2	POST	api_login	
+CatchResponseError('Login failed (503)')
+
+19	POST	auto_expire_timers	
+HTTPError('400 Client Error: BAD REQUEST for url: auto_expire_timers')
+
+2	GET	batches_list	
+RemoteDisconnected('Remote end closed connection without response')
+
+1	GET	dashboard	
+RemoteDisconnected('Remote end closed connection without response')
+
+82	GET	dashboard_alerts	
+HTTPError('401 Client Error: UNAUTHORIZED for url: dashboard_alerts')
+
+33	GET	global_library	
+HTTPError('503 Server Error: SERVICE UNAVAILABLE for url: global_library')
+
+1	GET	global_library	
+RemoteDisconnected('Remote end closed connection without response')
+
+4	GET	homepage	
+RemoteDisconnected('Remote end closed connection without response')
+
+1	GET	homepage	
+ConnectionResetError(104, 'Connection reset by peer')
+
+1018	GET	homepage	
+HTTPError('429 Client Error: TOO MANY REQUESTS for url: homepage')
+
+2	GET	inventory_browse	
+RemoteDisconnected('Remote end closed connection without response')
+
+2	GET	inventory_main	
+RemoteDisconnected('Remote end closed connection without response')
+
+2	POST	login	
+CatchResponseError('Login failed (503)')
+
+15	POST	login	
+CatchResponseError('Login failed (500)')
+
+141	GET	server_time	
+HTTPError('401 Client Error: UNAUTHORIZED for url: server_time')
+
+18	GET	signup_page	
+HTTPError('503 Server Error: SERVICE UNAVAILABLE for url: signup_page')
+
+1	GET	signup_page	
+RemoteDisconnected('Remote end closed connection without response')
+
+1	POST	timer_login	
+CatchResponseError('Login failed (503)')
+
+2	POST	timer_login	
+CatchResponseError('Login failed (500)')
+
+65	GET	timer_summary	
+HTTPError('401 Client Error: UNAUTHORIZED for url: timer_summary')
