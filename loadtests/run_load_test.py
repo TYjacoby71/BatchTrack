@@ -24,17 +24,41 @@ def run_load_test():
         'python', '-c', '''
 from app import create_app
 from app.extensions import db
-from app.models import User, Organization
+from app.models import User, Organization, SubscriptionTier
 from werkzeug.security import generate_password_hash
 
 app = create_app()
 with app.app_context():
-    # Create test organization
+    # Create exempt tier for testing
+    exempt_tier = SubscriptionTier.query.filter_by(name='Exempt Plan').first()
+    if not exempt_tier:
+        exempt_tier = SubscriptionTier(
+            name='Exempt Plan',
+            stripe_tier_id=None,
+            whop_tier_id=None,
+            user_limit=-1,
+            is_active=True,
+            requires_stripe_billing=False,
+            requires_whop_billing=False,
+            has_valid_integration=True
+        )
+        db.session.add(exempt_tier)
+        db.session.flush()
+    
+    # Create test organization with exempt tier
     test_org = Organization.query.filter_by(name='Test Organization').first()
     if not test_org:
-        test_org = Organization(name='Test Organization')
+        test_org = Organization(
+            name='Test Organization',
+            tier_id=exempt_tier.id,
+            billing_status='active'
+        )
         db.session.add(test_org)
         db.session.flush()
+    else:
+        # Update existing org to use exempt tier
+        test_org.tier_id = exempt_tier.id
+        test_org.billing_status = 'active'
     
     # Create test user
     test_user = User.query.filter_by(username='test@example.com').first()
@@ -51,8 +75,23 @@ with app.app_context():
         )
         db.session.add(test_user)
     
+    # Create developer user
+    dev_user = User.query.filter_by(username='dev').first()
+    if not dev_user:
+        dev_user = User(
+            username='dev',
+            email='dev@batchtrack.com',
+            first_name='Developer',
+            last_name='User',
+            password_hash=generate_password_hash('devpassword123'),
+            is_active=True,
+            user_type='developer',
+            organization_id=None
+        )
+        db.session.add(dev_user)
+    
     db.session.commit()
-    print('Test users ready')
+    print('Test users ready with proper organization and billing setup')
 '''
     ]
     

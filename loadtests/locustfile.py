@@ -1,3 +1,4 @@
+
 """
 Locust Load Testing Configuration
 
@@ -42,7 +43,7 @@ class AnonymousUser(HttpUser):
     @task(2)
     def view_global_library(self):
         """Browse global item library."""
-        self.client.get("/library/global_items", name="global_library")
+        self.client.get("/global-items", name="global_library")
 
     @task(1)
     def attempt_signup(self):
@@ -102,18 +103,18 @@ class AuthenticatedUser(AuthenticatedMixin, HttpUser):
     @task(8)
     def view_dashboard(self):
         """Load user dashboard."""
-        self.client.get("/user_dashboard", name="dashboard")
+        self.client.get("/dashboard", name="dashboard")
 
     @task(5)
     def view_inventory(self):
         """Browse inventory sections."""
-        self.client.get("/inventory/view", name="inventory_main")
+        self.client.get("/inventory", name="inventory_main")
 
         # Simulate browsing different inventory types
         inventory_sections = [
-            "/inventory/view?type=ingredients",
-            "/inventory/view?type=containers", 
-            "/inventory/view?type=products"
+            "/inventory?type=ingredient",
+            "/inventory?type=container", 
+            "/inventory?type=consumable"
         ]
         section = random.choice(inventory_sections)
         self.client.get(section, name="inventory_browse")
@@ -121,7 +122,7 @@ class AuthenticatedUser(AuthenticatedMixin, HttpUser):
     @task(4)
     def view_products(self):
         """Browse and view products."""
-        self.client.get("/products/list", name="products_list")
+        self.client.get("/products", name="products_list")
 
         # Simulate viewing individual products (if any exist)
         product_id = random.randint(1, 10)
@@ -131,18 +132,20 @@ class AuthenticatedUser(AuthenticatedMixin, HttpUser):
     @task(3)
     def view_recipes(self):
         """Browse recipes."""
-        self.client.get("/recipes/list", name="recipes_list")
+        self.client.get("/recipes", name="recipes_list")
 
     @task(2)
     def view_batches(self):
         """Check batch status."""
-        self.client.get("/batches/list", name="batches_list")
+        self.client.get("/batches", name="batches_list")
 
     @task(2)
     def production_planning(self):
         """Access production planning."""
-        self.client.get("/production-planning/plan_production", 
-                       name="production_planning")
+        # Try to access a recipe for planning
+        recipe_id = random.randint(1, 5)
+        self.client.get(f"/production-planning/recipe/{recipe_id}/plan", 
+                       name="production_planning", catch_response=True)
 
     @task(1)
     def view_settings(self):
@@ -167,14 +170,14 @@ class AdminUser(AuthenticatedMixin, HttpUser):
         self.client.get("/organization/dashboard", name="org_dashboard")
 
     @task(2)
-    def user_management(self):
-        """Access user management."""
-        self.client.get("/organization/dashboard#users", name="user_mgmt")
+    def developer_dashboard(self):
+        """Access developer dashboard."""
+        self.client.get("/developer/dashboard", name="dev_dashboard")
 
     @task(1)
-    def billing_status(self):
-        """Check billing status."""
-        self.client.get("/organization/dashboard#billing", name="billing_status")
+    def view_users(self):
+        """Check user management."""
+        self.client.get("/developer/users", name="user_mgmt")
 
 class HighFrequencyUser(AuthenticatedMixin, HttpUser):
     """Simulates rapid API usage patterns."""
@@ -191,17 +194,22 @@ class HighFrequencyUser(AuthenticatedMixin, HttpUser):
     @task(10)
     def rapid_dashboard_checks(self):
         """Frequent dashboard polling."""
-        self.client.get("/user_dashboard", name="rapid_dashboard")
+        self.client.get("/dashboard", name="rapid_dashboard")
 
     @task(5) 
-    def inventory_api_calls(self):
-        """Simulate frequent inventory checks."""
-        self.client.get("/api/dashboard/inventory", name="api_inventory")
+    def api_calls(self):
+        """Simulate API calls."""
+        api_endpoints = [
+            "/api/server-time",
+            "/api/dashboard-alerts",
+        ]
+        endpoint = random.choice(api_endpoints)
+        self.client.get(endpoint, name="api_calls")
 
     @task(3)
-    def batch_status_checks(self):
-        """Check batch status frequently."""
-        self.client.get("/api/dashboard/batches", name="api_batches")
+    def inventory_checks(self):
+        """Check inventory frequently."""
+        self.client.get("/inventory", name="inventory_check")
 
 # Load testing scenarios for different purposes
 class StressTest(HttpUser):
