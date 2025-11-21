@@ -5,7 +5,7 @@ from app.utils.permissions import require_permission
 from app.extensions import db
 from app.models.batch import Batch
 from app.models.models import User
-from app.models.inventory import Inventory
+from app.models.inventory import InventoryItem
 from app.utils.timezone_utils import TimezoneUtils
 from datetime import datetime, timedelta
 import logging
@@ -121,7 +121,7 @@ def get_dashboard_inventory():
         if hasattr(current_user, 'organization_id') and current_user.organization_id:
             org_filter['organization_id'] = current_user.organization_id
 
-        inventory_items = Inventory.query.filter_by(**org_filter).limit(50).all()
+        inventory_items = InventoryItem.query.filter_by(**org_filter).limit(50).all()
 
         items = []
         for item in inventory_items:
