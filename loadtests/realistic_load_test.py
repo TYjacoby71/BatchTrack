@@ -1,24 +1,30 @@
+
 #!/usr/bin/env python3
 """
-Load test runner that temporarily adjusts rate limiting
+Realistic Load Test Runner
+
+This tests the application as-is to find actual bottlenecks and weak spots.
+No modifications to the app - pure stress testing.
 """
 import os
 import sys
 import subprocess
 import time
 
-def run_load_test():
-    """Run load test with optimized settings"""
-
-    # Set environment variables for load testing
+def run_realistic_load_test():
+    """Run realistic load test that reveals actual app weaknesses"""
+    
+    # No environment changes - test the app as it is
     env = os.environ.copy()
-    env['FLASK_ENV'] = 'development'
-    env['RATELIMIT_STORAGE_URI'] = 'memory://'  # Use memory storage for faster rate limiting
-
-    print("🚀 Starting realistic load test...")
-
+    
+    print("🎯 Starting REALISTIC load test...")
+    print("📊 This will reveal your app's actual bottlenecks")
+    print("⚡ Rate limiting will cause failures - that's the point!")
+    print("💡 Dashboard: http://0.0.0.0:8091 (switch webview to port 3002)")
+    print()
+    
     # Create test users first
-    print("📝 Creating test users...")
+    print("👥 Creating test users...")
     create_users_cmd = [
         'python', '-c', '''
 from app import create_app
@@ -43,7 +49,7 @@ with app.app_context():
         )
         db.session.add(exempt_tier)
         db.session.flush()
-
+    
     # Create test organization with exempt tier
     test_org = Organization.query.filter_by(name='Test Organization').first()
     if not test_org:
@@ -55,10 +61,9 @@ with app.app_context():
         db.session.add(test_org)
         db.session.flush()
     else:
-        # Update existing org to use exempt tier
         test_org.tier_id = exempt_tier.id
         test_org.billing_status = 'active'
-
+    
     # Create test user
     test_user = User.query.filter_by(username='test@example.com').first()
     if not test_user:
@@ -74,10 +79,9 @@ with app.app_context():
         )
         db.session.add(test_user)
     else:
-        # Update existing user to ensure proper setup
         test_user.organization_id = test_org.id
         test_user.is_active = True
-
+    
     # Create developer user
     dev_user = User.query.filter_by(username='dev').first()
     if not dev_user:
@@ -92,23 +96,30 @@ with app.app_context():
             organization_id=None
         )
         db.session.add(dev_user)
-
+    
     db.session.commit()
-    print('Test users ready with proper organization and billing setup')
+    print('✅ Test users ready for realistic load testing')
 '''
     ]
-
+    
     result = subprocess.run(create_users_cmd, env=env, capture_output=True, text=True)
     if result.returncode != 0:
         print(f"❌ User creation failed: {result.stderr}")
         return False
-
+    
     print(result.stdout)
-
-    # Run the load test
-    print("🔥 Starting load test web interface...")
-    print("💡 Access the dashboard at: http://0.0.0.0:8091")
-    print("   In the webview, switch to port 3002 to see the dashboard")
+    
+    # Run the realistic load test
+    print("🔥 Starting realistic load test...")
+    print("💭 Expect failures - they show where your app breaks!")
+    print()
+    print("📈 Recommended test phases:")
+    print("   1. Start with 10 users, 2/sec spawn rate")
+    print("   2. Gradually increase to find breaking point")
+    print("   3. Watch for rate limit errors (429) vs real errors (500)")
+    print("   4. Monitor response times and failure patterns")
+    print()
+    
     load_test_cmd = [
         'locust', 
         '-f', 'loadtests/locustfile.py',
@@ -116,10 +127,10 @@ with app.app_context():
         '--web-host=0.0.0.0',
         '--web-port=8091'
     ]
-
+    
     result = subprocess.run(load_test_cmd, env=env)
     return result.returncode == 0
 
 if __name__ == '__main__':
-    success = run_load_test()
+    success = run_realistic_load_test()
     sys.exit(0 if success else 1)

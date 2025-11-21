@@ -24,7 +24,7 @@ from locust import HttpUser, task, between
 class AnonymousUser(HttpUser):
     """Anonymous user browsing public content."""
 
-    wait_time = between(2, 8)
+    wait_time = between(1, 5)  # More aggressive timing to stress test
     weight = 3  # 75% of traffic
 
     @task(5)
@@ -90,7 +90,7 @@ class AuthenticatedMixin:
 class AuthenticatedUser(AuthenticatedMixin, HttpUser):
     """Authenticated user performing typical app operations."""
 
-    wait_time = between(3, 12)
+    wait_time = between(1, 6)  # More aggressive to find bottlenecks
     weight = 1  # 25% of traffic
     login_username = "test@example.com"
     login_password = "testpassword123"
