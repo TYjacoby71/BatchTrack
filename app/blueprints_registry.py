@@ -32,19 +32,19 @@ def register_blueprints(app):
             return False
 
     # Core blueprints - these should always work
-    safe_register_blueprint('app.blueprints.auth.routes.auth_bp', 'auth_bp', '/auth', 'Authentication')
-    safe_register_blueprint('app.blueprints.admin.admin_routes.admin_bp', 'admin_bp', '/admin', 'Admin')
-    safe_register_blueprint('app.blueprints.developer.routes.developer_bp', 'developer_bp', '/developer', 'Developer')
-    safe_register_blueprint('app.blueprints.inventory.routes.inventory_bp', 'inventory_bp', '/inventory', 'Inventory')
-    safe_register_blueprint('app.blueprints.recipes.routes.recipes_bp', 'recipes_bp', '/recipes', 'Recipes')
-    safe_register_blueprint('app.blueprints.batches.routes.batches_bp', 'batches_bp', '/batches', 'Batches')
+    safe_register_blueprint('app.blueprints.auth.auth_bp', 'auth_bp', '/auth', 'Authentication')
+    safe_register_blueprint('app.blueprints.admin.admin_bp', 'admin_bp', '/admin', 'Admin')
+    safe_register_blueprint('app.blueprints.developer.developer_bp', 'developer_bp', '/developer', 'Developer')
+    safe_register_blueprint('app.blueprints.inventory.inventory_bp', 'inventory_bp', '/inventory', 'Inventory')
+    safe_register_blueprint('app.blueprints.recipes.recipes_bp', 'recipes_bp', '/recipes', 'Recipes')
+    safe_register_blueprint('app.blueprints.batches.batches_bp', 'batches_bp', '/batches', 'Batches')
     safe_register_blueprint('app.blueprints.organization.routes.organization_bp', 'organization_bp', '/organization', 'Organization')
-    safe_register_blueprint('app.blueprints.billing.routes.billing_bp', 'billing_bp', '/billing', 'Billing')
+    safe_register_blueprint('app.blueprints.billing.billing_bp', 'billing_bp', '/billing', 'Billing')
     safe_register_blueprint('app.blueprints.onboarding.routes.onboarding_bp', 'onboarding_bp', '/onboarding', 'Onboarding')
-    safe_register_blueprint('app.blueprints.settings.routes.settings_bp', 'settings_bp', '/settings', 'Settings')
-    safe_register_blueprint('app.blueprints.timers.routes.timers_bp', 'timers_bp', '/timers', 'Timers')
-    safe_register_blueprint('app.blueprints.expiration.routes.expiration_bp', 'expiration_bp', '/expiration', 'Expiration')
-    safe_register_blueprint('app.blueprints.conversion.routes.conversion_bp', 'conversion_bp', '/conversion', 'Conversion')
+    safe_register_blueprint('app.blueprints.settings.settings_bp', 'settings_bp', '/settings', 'Settings')
+    safe_register_blueprint('app.blueprints.timers.timers_bp', 'timers_bp', '/timers', 'Timers')
+    safe_register_blueprint('app.blueprints.expiration.expiration_bp', 'expiration_bp', '/expiration', 'Expiration')
+    safe_register_blueprint('app.blueprints.conversion.conversion_bp', 'conversion_bp', '/conversion', 'Conversion')
 
     # Product blueprints - use the register function
     try:
@@ -68,14 +68,12 @@ def register_blueprints(app):
     safe_register_blueprint('app.blueprints.api.public.public_api_bp', 'public_api_bp', '/api/public', 'Public API')
     safe_register_blueprint('app.blueprints.api.routes.api_bp', 'api_bp', '/api', 'Main API')
     safe_register_blueprint('app.blueprints.api.drawers.drawers_bp', 'drawers_bp', None, 'Drawer API')
-    from app.blueprints.api.dashboard_routes import dashboard_api_bp
-    app.register_blueprint(dashboard_api_bp)
 
     # Note: FIFO blueprint removed - functionality moved to inventory_adjustment service
 
     # Register standalone route modules
     route_modules = [
-        ('app.routes.app_routes', 'app_routes_bp', None, 'App Routes'),
+        ('app.routes.app_routes.app_routes_bp', 'app_routes_bp', None, 'App Routes'),
         ('app.routes.legal_routes.legal_bp', 'legal_bp', '/legal', 'Legal Routes'),
         ('app.routes.bulk_stock_routes.bulk_stock_bp', 'bulk_stock_bp', '/bulk-stock', 'Bulk Stock'),
         ('app.routes.fault_log_routes.faults_bp', 'faults_bp', '/faults', 'Fault Log'),
@@ -351,7 +349,7 @@ def register_blueprints(app):
 
     # Log summary (avoid noisy stdout in production)
     app_logger = getattr(app, 'logger', logger)
-
+    
     # Only log in debug mode or if there are failures
     if app.debug or failed_registrations:
         app_logger.info("=== Blueprint Registration Summary ===")

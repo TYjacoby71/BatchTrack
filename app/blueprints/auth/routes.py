@@ -32,10 +32,10 @@ class LoginForm(FlaskForm):
     submit = SubmitField('Login')
 
 @auth_bp.route('/login', methods=['GET', 'POST'])
-@limiter.limit("5000 per 1 minute")
+@limiter.limit("30/minute")
 def login():
     if current_user.is_authenticated:
-        return redirect(url_for('organization.dashboard'))
+        return redirect(url_for('app_routes.dashboard'))
 
     form = LoginForm()
     # Persist "next" param for OAuth/alternate login flows
@@ -84,7 +84,7 @@ def login():
                     next_url = None
                 if isinstance(next_url, str) and next_url.startswith('/') and not next_url.startswith('//'):
                     return redirect(next_url)
-                return redirect(url_for('organization.dashboard'))
+                return redirect(url_for('app_routes.dashboard'))
         else:
             flash('Invalid username or password')
             return render_template('pages/auth/login.html', form=form)
@@ -202,7 +202,7 @@ def oauth_callback():
                     next_url = None
                 if isinstance(next_url, str) and next_url.startswith('/') and not next_url.startswith('//'):
                     return redirect(next_url)
-                return redirect(url_for('organization.dashboard'))
+                return redirect(url_for('app_routes.dashboard'))
 
         else:
             # New user - store info for signup flow
@@ -392,11 +392,11 @@ def debug_oauth_config():
     })
 
 @auth_bp.route('/signup', methods=['GET', 'POST'])
-@limiter.limit("5000/minute")
+@limiter.limit("20/minute")
 def signup():
     """Simplified signup flow - tier selection only, then redirect to payment"""
     if current_user.is_authenticated:
-        return redirect(url_for('organization.dashboard'))
+        return redirect(url_for('app_routes.dashboard'))
 
     # Get available tiers from database only
     from ...models.subscription_tier import SubscriptionTier
@@ -493,7 +493,7 @@ def signup():
             'signup_source': signup_source,
             'oauth_signup': str(oauth_signup)
         }
-
+        
         # Add detected timezone from browser
         detected_timezone = request.form.get('detected_timezone')
         if detected_timezone:
@@ -627,7 +627,7 @@ def whop_login():
         user.last_login = TimezoneUtils.utc_now()
         db.session.commit()
         flash('Successfully logged in with Whop license.', 'success')
-        return redirect(url_for('organization.dashboard'))
+        return redirect(url_for('app_routes.dashboard'))
     else:
         flash('Invalid license key or access denied.', 'error')
         return redirect(url_for('auth.login'))

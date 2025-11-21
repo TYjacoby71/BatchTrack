@@ -55,7 +55,6 @@ def dismiss_alert():
     return jsonify({'success': True})
 
 @api_bp.route('/dashboard-alerts')
-@api_bp.route('/dashboard/alerts')  # Add alternative route
 @login_required
 def get_dashboard_alerts():
     """Get dashboard alerts for current user's organization"""

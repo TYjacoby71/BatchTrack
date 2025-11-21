@@ -1,3 +1,4 @@
+
 """
 Locust Load Testing Configuration
 
@@ -23,27 +24,27 @@ from locust import HttpUser, task, between
 
 class AnonymousUser(HttpUser):
     """Anonymous user browsing public content."""
-
-    wait_time = between(1, 5)  # More aggressive timing to stress test
+    
+    wait_time = between(2, 8)
     weight = 3  # 75% of traffic
-
+    
     @task(5)
     def view_homepage(self):
         """Load homepage and public content."""
         self.client.get("/", name="homepage")
-
+    
     @task(3) 
     def view_tools(self):
         """Browse public tools."""
         tools = ["/tools", "/tools/soap", "/tools/candles", "/tools/lotions"]
         tool = random.choice(tools)
         self.client.get(tool, name="public_tools")
-
+    
     @task(2)
     def view_global_library(self):
         """Browse global item library."""
-        self.client.get("/global-items", name="global_library")
-
+        self.client.get("/library/global_items", name="global_library")
+    
     @task(1)
     def attempt_signup(self):
         """Simulate signup page visits."""
@@ -76,76 +77,69 @@ class AuthenticatedMixin:
         }
         if token:
             payload["csrf_token"] = token
-
-        with self.client.post("/auth/login", data=payload, name=name, catch_response=True) as response:
-            if response.status_code >= 400:
-                response.failure(f"Login failed ({response.status_code})")
-            elif "Invalid username or password" in response.text:
-                response.failure("Invalid credentials")
-            else:
-                response.success()
+        response = self.client.post("/auth/login", data=payload, name=name)
+        if response.status_code >= 400:
+            response.failure(f"Login failed ({response.status_code})")
         return response
 
 
 class AuthenticatedUser(AuthenticatedMixin, HttpUser):
     """Authenticated user performing typical app operations."""
-
-    wait_time = between(1, 6)  # More aggressive to find bottlenecks
+    
+    wait_time = between(3, 12)
     weight = 1  # 25% of traffic
-    login_username = "admin"
-    login_password = "admin"
-
+    login_username = "loadtest@example.com"
+    login_password = "replace-me"
+    
     def on_start(self):
         """Login before starting tasks."""
         self._perform_login(self.login_username, self.login_password, "login")
-
+    
     @task(8)
     def view_dashboard(self):
         """Load user dashboard."""
-        self.client.get("/dashboard", name="dashboard")
-
+        self.client.get("/user_dashboard", name="dashboard")
+    
     @task(5)
     def view_inventory(self):
         """Browse inventory sections."""
-        self.client.get("/inventory", name="inventory_main")
-
+        self.client.get("/inventory/view", name="inventory_main")
+        
         # Simulate browsing different inventory types
         inventory_sections = [
-            "/inventory?type=ingredient",
-            "/inventory?type=container", 
-            "/inventory?type=consumable"
+            "/inventory/view?type=ingredients",
+            "/inventory/view?type=containers", 
+            "/inventory/view?type=products"
         ]
         section = random.choice(inventory_sections)
         self.client.get(section, name="inventory_browse")
-
+    
     @task(4)
     def view_products(self):
         """Browse and view products."""
-        self.client.get("/products", name="products_list")
-
+        self.client.get("/products/list", name="products_list")
+        
         # Simulate viewing individual products (if any exist)
         product_id = random.randint(1, 10)
         self.client.get(f"/products/{product_id}", 
                        name="product_detail", catch_response=True)
-
+    
     @task(3)
     def view_recipes(self):
         """Browse recipes."""
-        self.client.get("/recipes", name="recipes_list")
-
+        self.client.get("/recipes/list", name="recipes_list")
+    
     @task(2)
     def view_batches(self):
         """Check batch status."""
-        self.client.get("/batches", name="batches_list")
-
+        self.client.get("/batches/list", name="batches_list")
+    
     @task(2)
     def production_planning(self):
         """Access production planning."""
-        # Try to access a recipe for planning
-        recipe_id = random.randint(1, 5)
-        self.client.get(f"/production-planning/recipe/{recipe_id}/plan", 
-                       name="production_planning", catch_response=True)
-
+        self.client.get("/production_planning/plan_production", 
+                       name="production_planning")
+    
     @task(1)
     def view_settings(self):
         """Access settings."""
@@ -153,71 +147,64 @@ class AuthenticatedUser(AuthenticatedMixin, HttpUser):
 
 class AdminUser(AuthenticatedMixin, HttpUser):
     """Admin user performing administrative tasks."""
-
+    
     wait_time = between(5, 20)
     weight = 0.1  # 2.5% of traffic
-    login_username = "admin"
-    login_password = "admin"
-
+    login_username = "admin@example.com"
+    login_password = "replace-me"
+    
     def on_start(self):
         """Login as admin."""
         self._perform_login(self.login_username, self.login_password, "admin_login")
-
+    
     @task(3)
     def organization_dashboard(self):
         """View organization dashboard."""
         self.client.get("/organization/dashboard", name="org_dashboard")
-
+    
     @task(2)
-    def developer_dashboard(self):
-        """Access developer dashboard."""
-        self.client.get("/developer/dashboard", name="dev_dashboard")
-
+    def user_management(self):
+        """Access user management."""
+        self.client.get("/organization/dashboard#users", name="user_mgmt")
+    
     @task(1)
-    def view_users(self):
-        """Check user management."""
-        self.client.get("/developer/users", name="user_mgmt")
+    def billing_status(self):
+        """Check billing status."""
+        self.client.get("/organization/dashboard#billing", name="billing_status")
 
 class HighFrequencyUser(AuthenticatedMixin, HttpUser):
     """Simulates rapid API usage patterns."""
-
+    
     wait_time = between(0.5, 2)
     weight = 0.5  # 12.5% of traffic
-    login_username = "admin"
-    login_password = "admin"
-
+    login_username = "api@example.com"
+    login_password = "replace-me"
+    
     def on_start(self):
         """Quick login for API-like usage."""
         self._perform_login(self.login_username, self.login_password, "api_login")
-
+    
     @task(10)
     def rapid_dashboard_checks(self):
         """Frequent dashboard polling."""
-        self.client.get("/dashboard", name="rapid_dashboard")
-
+        self.client.get("/user_dashboard", name="rapid_dashboard")
+    
+    @task(5) 
+    def inventory_api_calls(self):
+        """Simulate frequent inventory checks."""
+        self.client.get("/api/inventory/summary", name="api_inventory")
+    
     @task(3)
-    def api_calls(self):
-        """Simulate API calls."""
-        api_endpoints = [
-            "/api/server-time",
-            "/api/dashboard/alerts",
-            "/api/batches",
-            "/api/inventory"
-        ]
-        endpoint = random.choice(api_endpoints)
-        self.client.get(endpoint, name="api_calls")
-
-    @task(3)
-    def inventory_checks(self):
-        """Check inventory frequently."""
-        self.client.get("/inventory", name="inventory_check")
+    def batch_status_checks(self):
+        """Check batch status frequently."""
+        self.client.get("/api/batches/active", name="api_batches")
 
 # Load testing scenarios for different purposes
 class StressTest(HttpUser):
     """High-intensity stress testing."""
-
+    
     wait_time = between(0.1, 1)
-
+    
     tasks = [
         AnonymousUser.view_homepage,
         AuthenticatedUser.view_dashboard,
@@ -230,8 +217,8 @@ class TimerHeavyUser(AuthenticatedMixin, HttpUser):
 
     wait_time = between(1, 4)
     weight = 0.2  # optional addition to traffic mix
-    login_username = "admin"
-    login_password = "admin"
+    login_username = "loadtest@example.com"
+    login_password = "replace-me"
 
     def on_start(self):
         self._perform_login(self.login_username, self.login_password, "timer_login")
