@@ -64,16 +64,15 @@ with app.app_context():
     print(result.stdout)
     
     # Run the load test
-    print("🔥 Running load test...")
+    print("🔥 Starting load test web interface...")
+    print("💡 Access the dashboard at: http://0.0.0.0:8091")
+    print("   In the webview, switch to port 3002 to see the dashboard")
     load_test_cmd = [
         'locust', 
         '-f', 'loadtests/locustfile.py',
         '--host=http://0.0.0.0:5000',
-        '--web-port=8091',
-        '--headless',
-        '-u', '10',  # 10 concurrent users
-        '-r', '2',   # spawn 2 users per second
-        '-t', '30s'  # run for 30 seconds
+        '--web-host=0.0.0.0',
+        '--web-port=8091'
     ]
     
     result = subprocess.run(load_test_cmd, env=env)
