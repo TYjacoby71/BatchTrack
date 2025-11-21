@@ -80,7 +80,6 @@ function adjustSkuInventory(skuId, adjustmentData = {}, options = {}) {
 
         if (!response.ok || payload.success === false) {
             const errorMessage = payload.message || payload.error || `Inventory adjustment failed (status ${response.status})`;
-            showNotification(errorMessage, 'error');
             throw new Error(errorMessage);
         }
 
