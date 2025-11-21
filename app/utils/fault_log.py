@@ -18,7 +18,7 @@ def log_fault(
     details: Optional[Dict[str, Any]] = None,
     source: str = "system",
 ) -> bool:
-    """Persist a structured fault entry for later review."""
+    """Persist a structured fault entry for later triage."""
     fault_record = {
         "timestamp": TimezoneUtils.utc_now().isoformat(),
         "message": message,
@@ -30,7 +30,7 @@ def log_fault(
 
     try:
         existing = read_json_file(str(FAULT_LOG_PATH), default=[]) or []
-    except Exception as err:  # pragma: no cover - defensive serialization path
+    except Exception as err:  # pragma: no cover - defensive path
         LOG.warning("Failed to read fault log; starting new file: %s", err)
         existing = []
 
