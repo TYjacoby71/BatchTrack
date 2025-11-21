@@ -407,8 +407,7 @@ def edit_recipe(recipe_id):
             else:
                 error_message, missing_fields = _parse_service_error(result)
                 draft_prompt = _build_draft_prompt(missing_fields, target_status, error_message)
-                if draft_prompt:
-                    form_override = request.form
+                form_override = request.form
                 flash(f'Error updating recipe: {error_message}', 'error')
 
         except Exception as e:
