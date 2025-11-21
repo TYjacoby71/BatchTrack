@@ -152,7 +152,7 @@ class SubscriptionTier(db.Model):
 
         # Try numeric ID first
         if ident.isdigit():
-            tier = cls.query.get(int(ident))
+            tier = db.session.get(cls, int(ident))
             if tier:
                 return tier
 

@@ -89,7 +89,7 @@ def clear_specific_item(item_id):
     
     with app.app_context():
         try:
-            item = InventoryItem.query.get(item_id)
+            item = db.session.get(InventoryItem, item_id)
             if not item:
                 print(f"❌ Item with ID {item_id} not found")
                 return False

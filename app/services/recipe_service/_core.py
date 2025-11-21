@@ -62,9 +62,9 @@ def create_recipe(name: str, description: str = "", instructions: str = "",
         clone_source = None
         try:
             if parent_recipe_id:
-                parent_recipe = Recipe.query.get(parent_recipe_id)
+                parent_recipe = db.session.get(Recipe, parent_recipe_id)
             if cloned_from_id:
-                clone_source = Recipe.query.get(cloned_from_id)
+                clone_source = db.session.get(Recipe, cloned_from_id)
         except Exception:
             parent_recipe = parent_recipe or None
             clone_source = clone_source or None
@@ -102,7 +102,7 @@ def create_recipe(name: str, description: str = "", instructions: str = "",
                     buid = portioning_data.get('bulk_yield_unit_id')
                     if buid:
                         from ...models.unit import Unit
-                        u = Unit.query.get(buid)
+                        u = db.session.get(Unit, buid)
                         if u and getattr(u, 'name', None):
                             derived_unit = u.name
         except Exception:
@@ -287,7 +287,7 @@ def update_recipe(recipe_id: int, name: str = None, description: str = None,
         logger.info(f"yield_amount: {yield_amount} (type: {type(yield_amount)})")
         logger.info(f"yield_unit: {yield_unit}")
         logger.info(f"portioning_data: {portioning_data}")
-        recipe = Recipe.query.get(recipe_id)
+        recipe = db.session.get(Recipe, recipe_id)
         if not recipe:
             return False, "Recipe not found"
 
@@ -449,7 +449,7 @@ def delete_recipe(recipe_id: int) -> Tuple[bool, str]:
         Tuple of (success: bool, message: str)
     """
     try:
-        recipe = Recipe.query.get(recipe_id)
+        recipe = db.session.get(Recipe, recipe_id)
         if not recipe:
             return False, "Recipe not found"
 

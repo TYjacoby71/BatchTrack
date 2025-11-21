@@ -55,7 +55,7 @@ def fix_recipe_prefixes():
             # Generate base prefix from recipe name
             if recipe.parent_recipe_id:
                 # This is a variation - handle specially
-                parent_recipe = Recipe.query.get(recipe.parent_recipe_id)
+                parent_recipe = db.session.get(Recipe, recipe.parent_recipe_id)
                 if parent_recipe and parent_recipe.label_prefix and parent_recipe.label_prefix not in ['NONE', 'None', '']:
                     # Use parent prefix with variation suffix
                     base_prefix = parent_recipe.label_prefix

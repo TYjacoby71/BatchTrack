@@ -333,7 +333,7 @@ def api_start_batch():
         containers_data = data.get('containers', []) or []
         force_start = bool(data.get('force_start'))
 
-        recipe = Recipe.query.get(recipe_id)
+        recipe = db.session.get(Recipe, recipe_id)
         if not recipe:
             return jsonify({'success': False, 'message': 'Recipe not found.'}), 404
 

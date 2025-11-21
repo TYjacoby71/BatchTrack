@@ -38,7 +38,7 @@ class BatchOperationsService(BaseService):
             snap_portioning = plan_snapshot.get('portioning') or {}
             containers_data = plan_snapshot.get('containers') or []
 
-            recipe = Recipe.query.get(snap_recipe_id)
+            recipe = db.session.get(Recipe, snap_recipe_id)
             if not recipe:
                 return None, "Recipe not found"
 
@@ -166,7 +166,7 @@ class BatchOperationsService(BaseService):
                 print(f"🔍 BATCH_SERVICE DEBUG: Final batch ID: {batch.id}")
                 print(f"🔍 BATCH_SERVICE DEBUG: Final batch label: {batch.label_code}")
                 # Verify batch was persisted
-                fresh_batch = Batch.query.get(batch.id)
+                fresh_batch = db.session.get(Batch, batch.id)
                 if not fresh_batch:
                     print(f"🔍 BATCH_SERVICE DEBUG: ERROR - Could not fetch fresh batch from DB!")
 
@@ -210,7 +210,7 @@ class BatchOperationsService(BaseService):
                 quantity = container.get('quantity', 0)
 
                 if container_id and quantity:
-                    container_item = InventoryItem.query.get(container_id)
+                    container_item = db.session.get(InventoryItem, container_id)
                     if container_item:
                         try:
                             # Handle container unit
@@ -574,7 +574,7 @@ class BatchOperationsService(BaseService):
 
             if success:
                 try:
-                    refreshed = Batch.query.get(batch_id)
+                    refreshed = db.session.get(Batch, batch_id)
                     # Mirror final_portions into batch for reporting if provided
                     try:
                         if refreshed and form_data.get('final_portions'):
@@ -681,7 +681,7 @@ class BatchOperationsService(BaseService):
     def add_extra_items_to_batch(cls, batch_id, extra_ingredients=None, extra_containers=None, extra_consumables=None):
         """Add extra ingredients, containers, and consumables to an in-progress batch"""
         try:
-            batch = Batch.query.get(batch_id)
+            batch = db.session.get(Batch, batch_id)
             if not batch:
                 return False, "Batch not found", []
 
@@ -703,7 +703,7 @@ class BatchOperationsService(BaseService):
 
             # Process extra containers
             for container in extra_containers:
-                container_item = InventoryItem.query.get(container["item_id"])
+                container_item = db.session.get(InventoryItem, container["item_id"])
                 if not container_item:
                     errors.append({"item": "Unknown", "message": "Container not found"})
                     continue
@@ -778,7 +778,7 @@ class BatchOperationsService(BaseService):
 
             # Process extra ingredients
             for item in extra_ingredients:
-                inventory_item = InventoryItem.query.get(item["item_id"])
+                inventory_item = db.session.get(InventoryItem, item["item_id"])
                 if not inventory_item:
                     continue
 
@@ -854,7 +854,7 @@ class BatchOperationsService(BaseService):
 
             # Process extra consumables
             for cons in extra_consumables:
-                consumable_item = InventoryItem.query.get(cons["item_id"])
+                consumable_item = db.session.get(InventoryItem, cons["item_id"])
                 if not consumable_item:
                     errors.append({"item": "Unknown", "message": "Consumable not found"})
                     continue

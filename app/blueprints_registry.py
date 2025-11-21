@@ -1,5 +1,8 @@
 import logging
+
 from flask import current_app
+
+from app.extensions import db
 
 logger = logging.getLogger(__name__)
 
@@ -100,7 +103,7 @@ def register_blueprints(app):
         @login_required
         def soap_inci_recipe(recipe_id: int):
             from flask import render_template, abort
-            rec = Recipe.query.get(recipe_id)
+            rec = db.session.get(Recipe, recipe_id)
             if not rec:
                 abort(404)
             # Organization scoping
@@ -112,7 +115,7 @@ def register_blueprints(app):
         @login_required
         def candle_label_recipe(recipe_id: int):
             from flask import render_template, abort
-            rec = Recipe.query.get(recipe_id)
+            rec = db.session.get(Recipe, recipe_id)
             if not rec:
                 abort(404)
             if getattr(current_user, 'organization_id', None) and rec.organization_id != current_user.organization_id:
@@ -123,7 +126,7 @@ def register_blueprints(app):
         @login_required
         def baker_sheet_recipe(recipe_id: int):
             from flask import render_template, abort
-            rec = Recipe.query.get(recipe_id)
+            rec = db.session.get(Recipe, recipe_id)
             if not rec:
                 abort(404)
             if getattr(current_user, 'organization_id', None) and rec.organization_id != current_user.organization_id:
@@ -134,7 +137,7 @@ def register_blueprints(app):
         @login_required
         def lotion_inci_recipe(recipe_id: int):
             from flask import render_template, abort
-            rec = Recipe.query.get(recipe_id)
+            rec = db.session.get(Recipe, recipe_id)
             if not rec:
                 abort(404)
             if getattr(current_user, 'organization_id', None) and rec.organization_id != current_user.organization_id:
@@ -170,7 +173,7 @@ def register_blueprints(app):
         @login_required
         def soap_inci_recipe_csv(recipe_id: int):
             from flask import abort, Response
-            rec = Recipe.query.get(recipe_id)
+            rec = db.session.get(Recipe, recipe_id)
             if not rec:
                 abort(404)
             if getattr(current_user, 'organization_id', None) and rec.organization_id != current_user.organization_id:
@@ -184,7 +187,7 @@ def register_blueprints(app):
         @login_required
         def soap_inci_recipe_pdf(recipe_id: int):
             from flask import abort, Response
-            rec = Recipe.query.get(recipe_id)
+            rec = db.session.get(Recipe, recipe_id)
             if not rec:
                 abort(404)
             if getattr(current_user, 'organization_id', None) and rec.organization_id != current_user.organization_id:
@@ -197,7 +200,7 @@ def register_blueprints(app):
         @login_required
         def candle_label_recipe_csv(recipe_id: int):
             from flask import abort, Response
-            rec = Recipe.query.get(recipe_id)
+            rec = db.session.get(Recipe, recipe_id)
             if not rec:
                 abort(404)
             if getattr(current_user, 'organization_id', None) and rec.organization_id != current_user.organization_id:
@@ -210,7 +213,7 @@ def register_blueprints(app):
         @login_required
         def candle_label_recipe_pdf(recipe_id: int):
             from flask import abort, Response
-            rec = Recipe.query.get(recipe_id)
+            rec = db.session.get(Recipe, recipe_id)
             if not rec:
                 abort(404)
             if getattr(current_user, 'organization_id', None) and rec.organization_id != current_user.organization_id:
@@ -223,7 +226,7 @@ def register_blueprints(app):
         @login_required
         def baker_sheet_recipe_csv(recipe_id: int):
             from flask import abort, Response
-            rec = Recipe.query.get(recipe_id)
+            rec = db.session.get(Recipe, recipe_id)
             if not rec:
                 abort(404)
             if getattr(current_user, 'organization_id', None) and rec.organization_id != current_user.organization_id:
@@ -236,7 +239,7 @@ def register_blueprints(app):
         @login_required
         def baker_sheet_recipe_pdf(recipe_id: int):
             from flask import abort, Response
-            rec = Recipe.query.get(recipe_id)
+            rec = db.session.get(Recipe, recipe_id)
             if not rec:
                 abort(404)
             if getattr(current_user, 'organization_id', None) and rec.organization_id != current_user.organization_id:
@@ -249,7 +252,7 @@ def register_blueprints(app):
         @login_required
         def lotion_inci_recipe_csv(recipe_id: int):
             from flask import abort, Response
-            rec = Recipe.query.get(recipe_id)
+            rec = db.session.get(Recipe, recipe_id)
             if not rec:
                 abort(404)
             if getattr(current_user, 'organization_id', None) and rec.organization_id != current_user.organization_id:
@@ -262,7 +265,7 @@ def register_blueprints(app):
         @login_required
         def lotion_inci_recipe_pdf(recipe_id: int):
             from flask import abort, Response
-            rec = Recipe.query.get(recipe_id)
+            rec = db.session.get(Recipe, recipe_id)
             if not rec:
                 abort(404)
             if getattr(current_user, 'organization_id', None) and rec.organization_id != current_user.organization_id:

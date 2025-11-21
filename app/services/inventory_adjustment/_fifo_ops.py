@@ -387,7 +387,7 @@ def credit_specific_lot(lot_id, quantity, notes=None, created_by=None):
         lot.remaining_quantity = float(lot.remaining_quantity) + float(quantity)
 
         # Update item quantity
-        item = InventoryItem.query.get(lot.inventory_item_id)
+        item = db.session.get(InventoryItem, lot.inventory_item_id)
         if item:
             item.quantity = float(item.quantity) + float(quantity)
 

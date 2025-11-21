@@ -474,7 +474,7 @@ def signup():
         from ...services.signup_service import SignupService
         try:
             tier_id = int(selected_tier)
-            tier_obj = SubscriptionTier.query.get(tier_id)
+            tier_obj = db.session.get(SubscriptionTier, tier_id)
         except (ValueError, TypeError):
             tier_obj = None
         if not tier_obj:

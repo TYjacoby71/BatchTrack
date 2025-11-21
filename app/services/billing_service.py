@@ -47,7 +47,7 @@ class BillingService:
         if not organization or not organization.subscription_tier_id:
             return 'exempt'
 
-        tier = SubscriptionTier.query.get(organization.subscription_tier_id)
+        tier = db.session.get(SubscriptionTier, organization.subscription_tier_id)
         return str(tier.id) if tier else 'exempt'
 
     @staticmethod
@@ -57,7 +57,7 @@ class BillingService:
             tier_id = int(tier_key)
         except (TypeError, ValueError):
             tier_id = None
-        tier = SubscriptionTier.query.get(tier_id) if tier_id is not None else None
+        tier = db.session.get(SubscriptionTier, tier_id) if tier_id is not None else None
         if not tier:
             tier = SubscriptionTier.query.filter_by(billing_provider='exempt').first()
 
@@ -171,7 +171,7 @@ class BillingService:
             tier_id = int(tier_key)
         except (TypeError, ValueError):
             tier_id = None
-        tier = SubscriptionTier.query.get(tier_id) if tier_id is not None else None
+        tier = db.session.get(SubscriptionTier, tier_id) if tier_id is not None else None
         if not tier:
             logger.error("Tier %s not found", tier_key)
             return None
@@ -388,7 +388,7 @@ class BillingService:
                         cust = stripe.Customer.retrieve(customer_id)
                         org_id_meta = (cust.metadata or {}).get('organization_id')
                         if org_id_meta:
-                            org = Organization.query.get(int(org_id_meta))
+                            org = db.session.get(Organization, int(org_id_meta))
                     except Exception as _e:
                         logger.warning(f"Could not resolve org from customer metadata: {_e}")
             if not org:
@@ -462,7 +462,7 @@ class BillingService:
                         cust = stripe.Customer.retrieve(customer_id)
                         org_id_meta = (cust.metadata or {}).get('organization_id')
                         if org_id_meta:
-                            org = Organization.query.get(int(org_id_meta))
+                            org = db.session.get(Organization, int(org_id_meta))
                     except Exception as _e:
                         logger.warning(f"Could not resolve org from customer metadata: {_e}")
 
@@ -503,7 +503,7 @@ class BillingService:
                         cust = stripe.Customer.retrieve(customer_id)
                         org_id_meta = (cust.metadata or {}).get('organization_id')
                         if org_id_meta:
-                            org = Organization.query.get(int(org_id_meta))
+                            org = db.session.get(Organization, int(org_id_meta))
                     except Exception as _e:
                         logger.warning(f"Could not resolve org from customer metadata: {_e}")
 
@@ -840,7 +840,7 @@ class BillingService:
                 logger.error(f"No organization_id in customer metadata for {customer_id}")
                 return False
 
-            organization = Organization.query.get(organization_id)
+            organization = db.session.get(Organization, organization_id)
             if not organization:
                 logger.error(f"Organization {organization_id} not found")
                 return False
@@ -849,7 +849,7 @@ class BillingService:
             tier_id = subscription.get('metadata', {}).get('tier_id')
             if tier_id:
                 try:
-                    tier = SubscriptionTier.query.get(int(tier_id))
+                    tier = db.session.get(SubscriptionTier, int(tier_id))
                     if tier:
                         organization.subscription_tier_id = tier.id
                 except (ValueError, TypeError):

@@ -91,7 +91,7 @@ def release_reservation(reservation_id):
         if success:
             db.session.commit()
             # Use the helper function to write the audit entry
-            reservation = Reservation.query.get(reservation_id)
+            reservation = db.session.get(Reservation, reservation_id)
             if reservation:
                 # Calling the test-specific wrapper function here as per original code structure
                 _write_unreserved_audit(reservation)
@@ -112,7 +112,7 @@ def release_reservation(reservation_id):
 @login_required
 def convert_reservation_to_sale(reservation_id):
     """Convert a reservation to a sale"""
-    reservation = Reservation.query.get(reservation_id)
+    reservation = db.session.get(Reservation, reservation_id)
     if not reservation or reservation.status != 'active':
         return jsonify({'error': 'Reservation not found or not active'}), 404
 

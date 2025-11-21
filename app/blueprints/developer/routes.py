@@ -215,7 +215,7 @@ def organizations():
     """Customer support dashboard for organization triage"""
     organizations = Organization.query.order_by(Organization.name.asc()).all()
     selected_org_id = session.get('dev_selected_org_id')
-    selected_org = Organization.query.get(selected_org_id) if selected_org_id else None
+    selected_org = db.session.get(Organization, selected_org_id) if selected_org_id else None
 
     from app.services.statistics import AnalyticsDataService
     dashboard_snapshot = AnalyticsDataService.get_developer_dashboard()
@@ -1492,7 +1492,7 @@ def create_global_item():
                 category_name = None
                 if ingredient_category_id:
                     from app.models.category import IngredientCategory
-                    cat_obj = IngredientCategory.query.get(ingredient_category_id)
+                    cat_obj = db.session.get(IngredientCategory, ingredient_category_id)
                     category_name = cat_obj.name if cat_obj else None
                 EventEmitter.emit(
                     event_name='global_item_created',
@@ -2238,7 +2238,7 @@ def clear_organization_filter():
     org_name = None
     if 'dev_selected_org_id' in session:
         org_id = session['dev_selected_org_id']
-        org = Organization.query.get(org_id)
+        org = db.session.get(Organization, org_id)
         org_name = org.name if org else 'Unknown'
 
     # Clear all masquerade-related session data

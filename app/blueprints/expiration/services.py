@@ -102,7 +102,7 @@ class ExpirationService:
             return None
 
         # Get the inventory item for master shelf life
-        inventory_item = InventoryItem.query.get(fifo_entry.inventory_item_id)
+        inventory_item = db.session.get(InventoryItem, fifo_entry.inventory_item_id)
         if not inventory_item:
             return None
 
@@ -110,7 +110,7 @@ class ExpirationService:
 
         # If this entry is from a batch
         if fifo_entry.batch_id:
-            batch = Batch.query.get(fifo_entry.batch_id)
+            batch = db.session.get(Batch, fifo_entry.batch_id)
             if batch and batch.is_perishable and batch.shelf_life_days:
                 # Use batch completion date (completed_at) as the start date
                 start_date = batch.completed_at
@@ -139,7 +139,7 @@ class ExpirationService:
             return None
 
         # Only process perishable items
-        inventory_item = lot.inventory_item or InventoryItem.query.get(lot.inventory_item_id)
+        inventory_item = lot.inventory_item or db.session.get(InventoryItem, lot.inventory_item_id)
         if not inventory_item or not inventory_item.is_perishable:
             return None
 
@@ -151,7 +151,7 @@ class ExpirationService:
 
         # If this entry is from a batch
         if lot.batch_id:
-            batch = Batch.query.get(lot.batch_id)
+            batch = db.session.get(Batch, lot.batch_id)
             if batch and batch.is_perishable and batch.shelf_life_days:
                 # Use batch completion date (completed_at) as the start date
                 start_date = batch.completed_at
@@ -302,8 +302,8 @@ class ExpirationService:
                 logger.warning(f"No SKU found for inventory_item_id {lot.inventory_item_id}")
                 return None
 
-            product = Product.query.get(sku.product_id)
-            variant = ProductVariant.query.get(sku.variant_id)
+            product = db.session.get(Product, sku.product_id)
+            variant = db.session.get(ProductVariant, sku.variant_id)
 
             return {
                 'inventory_item_id': lot.inventory_item_id,
@@ -360,7 +360,7 @@ class ExpirationService:
     def update_fifo_expiration_data(inventory_item_id: int, shelf_life_days: int):
         """Update expiration data for inventory item - updates master item and existing lots metadata"""
         # Update the master inventory item
-        item = InventoryItem.query.get(inventory_item_id)
+        item = db.session.get(InventoryItem, inventory_item_id)
         if item:
             item.is_perishable = True
             item.shelf_life_days = shelf_life_days
@@ -383,7 +383,7 @@ class ExpirationService:
     @staticmethod
     def get_expiration_date_for_new_entry(inventory_item_id: int, batch_id: Optional[int] = None) -> Optional[datetime]:
         """Calculate expiration date for a new lot being created (for InventoryLot creation)"""
-        inventory_item = InventoryItem.query.get(inventory_item_id)
+        inventory_item = db.session.get(InventoryItem, inventory_item_id)
         if not inventory_item or not inventory_item.is_perishable:
             return None
 
@@ -395,7 +395,7 @@ class ExpirationService:
 
         # If this entry is from a batch
         if batch_id:
-            batch = Batch.query.get(batch_id)
+            batch = db.session.get(Batch, batch_id)
             if batch and batch.is_perishable and batch.shelf_life_days:
                 # Use batch completion date (completed_at) as the start date
                 start_date = batch.completed_at or now_utc
@@ -509,7 +509,7 @@ class ExpirationService:
             if kind in ("fifo", "raw"):
                 # Use InventoryLot for lot-based tracking
                 try:
-                    lot = InventoryLot.query.get(entry_id)
+                    lot = db.session.get(InventoryLot, entry_id)
                 except OperationalError:
                     lot = None
                 # Fallback to UnifiedInventoryHistory for canonical FIFO entries
@@ -517,12 +517,12 @@ class ExpirationService:
                     entry = None
                 else:
                     try:
-                        entry = UnifiedInventoryHistory.query.get(entry_id)
+                        entry = db.session.get(UnifiedInventoryHistory, entry_id)
                     except OperationalError:
                         entry = None
                 # Legacy compatibility - some tests/bootstrap data still use InventoryHistory
                 if not entry and not lot:
-                    entry = InventoryHistory.query.get(entry_id)
+                    entry = db.session.get(InventoryHistory, entry_id)
 
                 if not entry and not lot:
                     return False, "Lot or FIFO entry not found"
@@ -545,7 +545,7 @@ class ExpirationService:
                 return result, ("Successfully marked FIFO entry as expired" if entry else "Successfully marked lot as expired")
 
             elif kind == "product":
-                lot = InventoryLot.query.get(entry_id)
+                lot = db.session.get(InventoryLot, entry_id)
                 if not lot:
                     return False, "Product lot not found"
 

@@ -1,11 +1,14 @@
 from flask import current_app, session, g
 from flask_login import current_user
 from flask_wtf.csrf import generate_csrf
+
+from app.extensions import db
+from app.utils.cache_manager import app_cache
+from app.utils.unit_utils import get_global_unit_list
+
+from .utils.json_store import read_json_file
 from .utils.permissions import has_permission
 from .utils.timezone_utils import TimezoneUtils
-from app.utils.unit_utils import get_global_unit_list
-from app.utils.cache_manager import app_cache
-from .utils.json_store import read_json_file
 
 
 def register_template_context(app):
@@ -126,7 +129,7 @@ def register_template_context(app):
             try:
                 return app.extensions["sqlalchemy"].session.get(Organization, org_id)
             except Exception:
-                return Organization.query.get(org_id)
+                return db.session.get(Organization, org_id)
 
         def get_current_organization():
             if not current_user.is_authenticated:

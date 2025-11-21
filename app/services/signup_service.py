@@ -78,7 +78,7 @@ class SignupService:
             user = db.session.get(User, pending_signup.user_id)
             return org, user
 
-        subscription_tier = pending_signup.tier or SubscriptionTier.query.get(pending_signup.tier_id)
+        subscription_tier = pending_signup.tier or db.session.get(SubscriptionTier, pending_signup.tier_id)
         if not subscription_tier:
             raise ValueError(f"Subscription tier {pending_signup.tier_id} not found for pending signup {pending_signup.id}")
 

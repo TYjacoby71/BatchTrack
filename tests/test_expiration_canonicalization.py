@@ -40,36 +40,41 @@ class TestExpirationCanonicalService:
     """Verify expiration operations use canonical inventory adjustment service"""
 
     @patch('app.blueprints.expiration.services.process_inventory_adjustment')
-    @patch('app.blueprints.expiration.services.InventoryLot')
-    @patch('app.blueprints.expiration.services.UnifiedInventoryHistory')
-    @patch('app.blueprints.expiration.services.InventoryHistory')
+    @patch('app.blueprints.expiration.services.db')
     @patch('app.blueprints.expiration.services.current_user')
-    def test_mark_fifo_expired_calls_canonical_service(self, mock_user, mock_history, mock_unified, mock_lot, mock_process):
+    def test_mark_fifo_expired_calls_canonical_service(self, mock_user, mock_db, mock_process):
         """Test that marking FIFO entry as expired calls process_inventory_adjustment"""
         from app import create_app
+        from app.blueprints.expiration import services as expiration_services
 
         app = create_app({'TESTING': True})
         with app.app_context():
-            # Mock the FIFO entry
             mock_fifo_entry = MagicMock()
             mock_fifo_entry.id = 123
             mock_fifo_entry.inventory_item_id = 456
             mock_fifo_entry.remaining_quantity = 10.0
             mock_fifo_entry.unit = 'g'
 
-            # Mock all fallback paths - return None for first two, then the entry for the last one
-            mock_lot.query.get.return_value = None
-            mock_unified.query.get.return_value = None
-            mock_history.query.get.return_value = mock_fifo_entry
-            
+            InventoryLot = expiration_services.InventoryLot
+            UnifiedInventoryHistory = expiration_services.UnifiedInventoryHistory
+            InventoryHistory = expiration_services.InventoryHistory
+
+            def fake_get(model, entry_id):
+                if model is InventoryLot:
+                    return None
+                if model is UnifiedInventoryHistory:
+                    return None
+                if model is InventoryHistory:
+                    return mock_fifo_entry
+                return None
+
+            mock_db.session.get.side_effect = fake_get
             mock_user.id = 1
             mock_user.is_authenticated = True
             mock_process.return_value = True
 
-            # Call the service
             success, message = ExpirationService.mark_as_expired('fifo', 123, quantity=5.0, notes="Test expiration")
 
-            # Verify canonical service was called
             mock_process.assert_called_once_with(
                 item_id=456,
                 quantity=-5.0,
@@ -83,30 +88,35 @@ class TestExpirationCanonicalService:
             assert "Successfully marked FIFO entry" in message
 
     @patch('app.blueprints.expiration.services.process_inventory_adjustment')
-    @patch('app.blueprints.expiration.services.InventoryLot')
+    @patch('app.blueprints.expiration.services.db')
     @patch('app.blueprints.expiration.services.current_user')
-    def test_mark_product_expired_calls_canonical_service(self, mock_user, mock_lot_model, mock_process):
+    def test_mark_product_expired_calls_canonical_service(self, mock_user, mock_db, mock_process):
         """Test that marking product SKU as expired calls process_inventory_adjustment"""
         from app import create_app
+        from app.blueprints.expiration import services as expiration_services
 
         app = create_app({'TESTING': True})
         with app.app_context():
-            # Mock the product lot entry
             mock_lot_entry = MagicMock()
             mock_lot_entry.id = 789
             mock_lot_entry.inventory_item_id = 101
             mock_lot_entry.remaining_quantity = 20.0
             mock_lot_entry.unit = 'ml'
 
-            mock_lot_model.query.get.return_value = mock_lot_entry
+            InventoryLot = expiration_services.InventoryLot
+
+            def fake_get(model, entry_id):
+                if model is InventoryLot and entry_id == mock_lot_entry.id:
+                    return mock_lot_entry
+                return None
+
+            mock_db.session.get.side_effect = fake_get
             mock_user.id = 2
             mock_user.is_authenticated = True
             mock_process.return_value = True
 
-            # Call the service
             success, message = ExpirationService.mark_as_expired('product', 789, quantity=15.0, notes="Product expired")
 
-            # Verify canonical service was called with product type
             mock_process.assert_called_once_with(
                 item_id=101,
                 quantity=-15.0,
