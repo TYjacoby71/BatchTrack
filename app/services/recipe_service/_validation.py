@@ -39,6 +39,13 @@ def validate_recipe_data(name: str, ingredients: List[Dict] = None,
             return {'valid': False, 'error': error, 'missing_fields': []}
 
         missing_fields: List[str] = []
+        existing_recipe = None
+        if recipe_id is not None:
+            try:
+                existing_recipe = db.session.get(Recipe, recipe_id)
+            except Exception as e:
+                logger.error(f"Exception loading recipe {recipe_id} for validation: {e}")
+                existing_recipe = None
 
         logger.info("=== YIELD VALIDATION DEBUG ===")
         logger.info(f"yield_amount: {yield_amount} (type: {type(yield_amount)})")
@@ -61,27 +68,28 @@ def validate_recipe_data(name: str, ingredients: List[Dict] = None,
 
         if not allow_partial and not has_valid_yield:
             logger.info("Yield missing from payload, checking existing recipe fallback")
-            if recipe_id is not None:
-                try:
-                    existing_recipe = db.session.get(Recipe, recipe_id)
-                    if existing_recipe and (existing_recipe.predicted_yield or 0) > 0:
-                        has_valid_yield = True
-                        logger.info("Existing recipe has a valid yield; accepting")
-                except Exception as e:
-                    logger.error(f"Exception checking existing recipe: {e}")
+            if existing_recipe and (existing_recipe.predicted_yield or 0) > 0:
+                has_valid_yield = True
+                logger.info("Existing recipe has a valid yield; accepting")
 
             if not has_valid_yield:
                 logger.error("Yield still invalid after fallbacks")
                 missing_fields.append('yield amount')
 
-        portion_requires_count = bool(portioning_data and portioning_data.get('is_portioned'))
-        if portion_requires_count:
+        portion_requires_count = False
+        portion_count_candidate = 0
+        if portioning_data and portioning_data.get('is_portioned'):
+            portion_requires_count = True
             try:
-                pc_val = int(portioning_data.get('portion_count') or 0)
+                portion_count_candidate = int(portioning_data.get('portion_count') or 0)
             except Exception:
-                pc_val = 0
-            if not allow_partial and pc_val <= 0:
-                missing_fields.append('portion count')
+                portion_count_candidate = 0
+        elif existing_recipe and existing_recipe.is_portioned:
+            portion_requires_count = True
+            portion_count_candidate = existing_recipe.portion_count or 0
+
+        if portion_requires_count and not allow_partial and portion_count_candidate <= 0:
+            missing_fields.append('portion count')
 
         if ingredients:
             is_valid, error = validate_ingredient_quantities(ingredients)
