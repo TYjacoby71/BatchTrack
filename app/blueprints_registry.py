@@ -68,6 +68,9 @@ def register_blueprints(app):
     safe_register_blueprint('app.blueprints.api.public.public_api_bp', 'public_api_bp', '/api/public', 'Public API')
     safe_register_blueprint('app.blueprints.api.routes.api_bp', 'api_bp', '/api', 'Main API')
     safe_register_blueprint('app.blueprints.api.drawers.drawers_bp', 'drawers_bp', None, 'Drawer API')
+    from app.blueprints.api.dashboard_routes import dashboard_api_bp, api_bp
+    app.register_blueprint(dashboard_api_bp)
+    app.register_blueprint(api_bp)
 
     # Note: FIFO blueprint removed - functionality moved to inventory_adjustment service
 
@@ -349,7 +352,7 @@ def register_blueprints(app):
 
     # Log summary (avoid noisy stdout in production)
     app_logger = getattr(app, 'logger', logger)
-    
+
     # Only log in debug mode or if there are failures
     if app.debug or failed_registrations:
         app_logger.info("=== Blueprint Registration Summary ===")

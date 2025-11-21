@@ -19,7 +19,7 @@ def list_timers():
         query = query.filter(Batch.organization_id == current_user.organization_id)
     active_batches = query.all()
 
-    return render_template('timer_list.html', 
+    return render_template('timer_list.html',
                          timer_summary=timer_summary,
                          active_timers=active_timers,
                          timers=active_timers,  # For template compatibility
@@ -98,7 +98,7 @@ def api_stop_timer(timer_id):
             # Get the updated timer for response
             timer_status = TimerService.get_timer_status(timer_id)
             return jsonify({
-                'success': True, 
+                'success': True,
                 'message': 'Timer completed',
                 'end_time': timer_status.get('end_time')
             })

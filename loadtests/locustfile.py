@@ -1,4 +1,3 @@
-
 """
 Locust Load Testing Configuration
 
@@ -196,12 +195,14 @@ class HighFrequencyUser(AuthenticatedMixin, HttpUser):
         """Frequent dashboard polling."""
         self.client.get("/dashboard", name="rapid_dashboard")
 
-    @task(5) 
+    @task(3)
     def api_calls(self):
         """Simulate API calls."""
         api_endpoints = [
             "/api/server-time",
-            "/api/dashboard-alerts",
+            "/api/dashboard/alerts",
+            "/api/batches",
+            "/api/inventory"
         ]
         endpoint = random.choice(api_endpoints)
         self.client.get(endpoint, name="api_calls")

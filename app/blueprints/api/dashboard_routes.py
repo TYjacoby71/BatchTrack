@@ -12,6 +12,9 @@ import logging
 
 dashboard_api_bp = Blueprint('dashboard_api', __name__, url_prefix='/api')
 
+# Create a separate API blueprint for top-level routes
+api_bp = Blueprint('api', __name__, url_prefix='/api')
+
 @dashboard_api_bp.route('/dashboard-alerts')
 @login_required
 def get_dashboard_alerts():
@@ -83,7 +86,7 @@ def get_dashboard_batches():
             org_filter['organization_id'] = current_user.organization_id
 
         batches = Batch.query.filter_by(**org_filter).limit(50).all()
-        
+
         # Convert batches to dictionaries for JSON serialization
         batch_list = []
         for batch in batches:
@@ -148,3 +151,51 @@ def get_dashboard_inventory():
     except Exception as e:
         logging.error(f"Error getting dashboard inventory: {str(e)}")
         return jsonify({'success': False, 'error': str(e)}), 500
+
+# Add missing API routes that load tests expect
+@api_bp.route('/batches')
+@login_required
+def api_batches():
+    """Get batches for API access"""
+    try:
+        batches = Batch.query.filter_by(
+            organization_id=current_user.organization_id
+        ).order_by(Batch.created_at.desc()).limit(10).all()
+
+        return jsonify({
+            'batches': [
+                {
+                    'id': batch.id,
+                    'name': batch.name or f'Batch {batch.id}',
+                    'status': batch.status,
+                    'created_at': batch.created_at.isoformat() if batch.created_at else None
+                }
+                for batch in batches
+            ]
+        })
+    except Exception as e:
+        return jsonify({'batches': [], 'error': str(e)}), 500
+
+@api_bp.route('/inventory')
+@login_required
+def api_inventory():
+    """Get inventory for API access"""
+    try:
+        items = InventoryItem.query.filter_by(
+            organization_id=current_user.organization_id
+        ).filter(InventoryItem.quantity > 0).limit(20).all()
+
+        return jsonify({
+            'inventory': [
+                {
+                    'id': item.id,
+                    'name': item.name,
+                    'quantity': float(item.quantity),
+                    'unit': item.unit,
+                    'type': item.type
+                }
+                for item in items
+            ]
+        })
+    except Exception as e:
+        return jsonify({'inventory': [], 'error': str(e)}), 500
