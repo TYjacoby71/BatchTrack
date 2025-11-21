@@ -13,9 +13,9 @@ from ...models import InventoryItem, Recipe
 logger = logging.getLogger(__name__)
 
 
-def validate_recipe_data(name: str, ingredients: List[Dict] = None, 
-                        yield_amount: float = None, recipe_id: int = None, notes: str = None, category: str = None, tags: str = None, batch_size: float = None,
-                        portioning_data: Dict | None = None) -> Dict[str, Any]:
+def validate_recipe_data(name: str, ingredients: List[Dict] = None,
+                         yield_amount: float = None, recipe_id: int = None, notes: str = None, category: str = None, tags: str = None, batch_size: float = None,
+                         portioning_data: Dict | None = None, allow_partial: bool = False) -> Dict[str, Any]:
     """
     Validate recipe data before creation or update.
 
@@ -36,87 +36,80 @@ def validate_recipe_data(name: str, ingredients: List[Dict] = None,
         # Validate name - pass recipe_id for edit validation
         is_valid, error = validate_recipe_name(name, recipe_id)
         if not is_valid:
-            return {'valid': False, 'error': error}
+            return {'valid': False, 'error': error, 'missing_fields': []}
 
-        # DEBUG: Add comprehensive yield validation debugging
-        logger.info(f"=== YIELD VALIDATION DEBUG ===")
+        missing_fields: List[str] = []
+
+        logger.info("=== YIELD VALIDATION DEBUG ===")
         logger.info(f"yield_amount: {yield_amount} (type: {type(yield_amount)})")
         logger.info(f"recipe_id: {recipe_id}")
         logger.info(f"portioning_data: {portioning_data}")
+        logger.info(f"allow_partial: {allow_partial}")
 
-        # Validate yield amount: must be > 0 for regular recipes, or bulk yield > 0 for portioned recipes
-        # For existing recipes (recipe_id is provided), be more lenient with yield validation
-        if yield_amount is not None and yield_amount > 0:
-            logger.info("✅ Valid yield amount provided directly")
-            pass
-        elif recipe_id is not None:
-            logger.info("🔍 Checking existing recipe for yield validation")
-            # For recipe edits, check if the existing recipe has a valid yield
-            # This allows editing existing recipes without requiring yield changes
+        has_direct_yield = bool(yield_amount is not None and yield_amount > 0)
+        bulk_yield_ok = False
+        try:
+            if portioning_data and portioning_data.get('is_portioned'):
+                byq = float(portioning_data.get('bulk_yield_quantity') or 0)
+                bulk_yield_ok = byq > 0
+                logger.info(f"Bulk yield quantity: {byq}")
+        except Exception as e:
+            logger.info(f"Exception checking bulk yield: {e}")
+            bulk_yield_ok = False
+
+        has_valid_yield = has_direct_yield or bulk_yield_ok
+
+        if not allow_partial and not has_valid_yield:
+            logger.info("Yield missing from payload, checking existing recipe fallback")
+            if recipe_id is not None:
+                try:
+                    existing_recipe = db.session.get(Recipe, recipe_id)
+                    if existing_recipe and (existing_recipe.predicted_yield or 0) > 0:
+                        has_valid_yield = True
+                        logger.info("Existing recipe has a valid yield; accepting")
+                except Exception as e:
+                    logger.error(f"Exception checking existing recipe: {e}")
+
+            if not has_valid_yield:
+                logger.error("Yield still invalid after fallbacks")
+                missing_fields.append('yield amount')
+
+        portion_requires_count = bool(portioning_data and portioning_data.get('is_portioned'))
+        if portion_requires_count:
             try:
-                existing_recipe = db.session.get(Recipe, recipe_id)
-                logger.info(f"Existing recipe found: {existing_recipe is not None}")
-                if existing_recipe:
-                    logger.info(f"Existing recipe yield: {existing_recipe.predicted_yield}")
+                pc_val = int(portioning_data.get('portion_count') or 0)
+            except Exception:
+                pc_val = 0
+            if not allow_partial and pc_val <= 0:
+                missing_fields.append('portion count')
 
-                if existing_recipe and (existing_recipe.predicted_yield or 0) > 0:
-                    logger.info("✅ Existing recipe has valid yield, allowing edit")
-                    pass
-                else:
-                    logger.info("⚠️ Existing recipe has no valid yield, checking bulk yield")
-                    # Check bulk yield for portioned recipes
-                    bulk_ok = False
-                    try:
-                        if portioning_data and portioning_data.get('is_portioned'):
-                            byq = float(portioning_data.get('bulk_yield_quantity') or 0)
-                            logger.info(f"Bulk yield quantity: {byq}")
-                            bulk_ok = byq > 0
-                        logger.info(f"Bulk yield OK: {bulk_ok}")
-                    except Exception as e:
-                        logger.info(f"Exception checking bulk yield: {e}")
-                        bulk_ok = False
-
-                    if not bulk_ok:
-                        logger.error("❌ No valid yield found - failing validation")
-                        return {'valid': False, 'error': "Yield amount must be positive"}
-                    else:
-                        logger.info("✅ Bulk yield is valid")
-            except Exception as e:
-                logger.error(f"Exception checking existing recipe: {e}")
-                # If we can't check existing recipe, apply normal validation
-                return {'valid': False, 'error': "Yield amount must be positive"}
-        else:
-            logger.info("🆕 New recipe creation - strict validation required")
-            # New recipe creation - strict validation required
-            # Check if this is a portioned recipe with bulk yield
-            bulk_ok = False
-            try:
-                if portioning_data and portioning_data.get('is_portioned'):
-                    byq = float(portioning_data.get('bulk_yield_quantity') or 0)
-                    logger.info(f"Bulk yield quantity: {byq}")
-                    bulk_ok = byq > 0
-                logger.info(f"Bulk yield OK: {bulk_ok}")
-            except Exception as e:
-                logger.info(f"Exception checking bulk yield: {e}")
-                bulk_ok = False
-
-            if not bulk_ok:
-                logger.error("❌ No valid yield found - failing validation")
-                return {'valid': False, 'error': "Yield amount must be positive"}
-            else:
-                logger.info("✅ Bulk yield is valid")
-
-        # Validate ingredients if provided
         if ingredients:
             is_valid, error = validate_ingredient_quantities(ingredients)
             if not is_valid:
-                return {'valid': False, 'error': error}
+                return {'valid': False, 'error': error, 'missing_fields': []}
+        elif not allow_partial:
+            missing_fields.append('ingredients')
 
-        return {'valid': True, 'error': ''}
+        if missing_fields:
+            def _humanize(fields: List[str]) -> str:
+                if not fields:
+                    return ''
+                if len(fields) == 1:
+                    return fields[0].capitalize()
+                return ', '.join(field.capitalize() for field in fields[:-1]) + f" and {fields[-1].capitalize()}"
+
+            pretty = _humanize(missing_fields)
+            return {
+                'valid': False,
+                'error': f"Missing required fields: {pretty}",
+                'missing_fields': missing_fields
+            }
+
+        return {'valid': True, 'error': '', 'missing_fields': []}
 
     except Exception as e:
         logger.error(f"Error validating recipe data: {e}")
-        return {'valid': False, 'error': "Validation error occurred"}
+        return {'valid': False, 'error': "Validation error occurred", 'missing_fields': []}
 
 
 def validate_recipe_name(name: str, recipe_id: int = None) -> Tuple[bool, str]:
