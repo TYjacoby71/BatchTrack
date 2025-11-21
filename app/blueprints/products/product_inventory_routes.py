@@ -149,7 +149,7 @@ def adjust_sku_inventory(inventory_item_id):
             logger.info(f"  - custom_expiration_date: {custom_expiration_date}")
             logger.info(f"  - custom_shelf_life_days: {custom_shelf_life_days}")
 
-            success = process_inventory_adjustment(
+            result = process_inventory_adjustment(
                 item_id=inventory_item_id,
                 quantity=quantity,
                 change_type=change_type,
@@ -164,13 +164,28 @@ def adjust_sku_inventory(inventory_item_id):
                 custom_shelf_life_days=custom_shelf_life_days
             )
 
-            if success:
-                flash('Product inventory adjusted successfully', 'success')
+            if isinstance(result, tuple):
+                success = bool(result[0])
+                service_message = result[1] if len(result) > 1 else ''
             else:
-                flash('Error adjusting product inventory', 'error')
+                success = bool(result)
+                service_message = ''
+
+            response_message = service_message or ('Product inventory adjusted successfully' if success else 'Error adjusting product inventory')
+
+            if request.is_json:
+                status_code = 200 if success else 400
+                return jsonify({'success': success, 'message': response_message}), status_code
+
+            if success:
+                flash(response_message, 'success')
+            else:
+                flash(response_message, 'error')
 
         except ValueError as e:
             logger.error(f"ValueError in SKU inventory adjustment: {str(e)}")
+            if request.is_json:
+                return jsonify({'error': str(e)}), 400
             flash(f'Error: {str(e)}', 'error')
     except Exception as e:
         db.session.rollback()
@@ -299,7 +314,7 @@ def dispose_expired_sku(sku_id):
             quantity=total_expired,
             change_type=disposal_type,
             unit=sku.unit,
-            notes=f"{notes} - {len(expired_entries)} expired lots",
+            notes=f"{notes} - {len(expired_lots)} expired lots",
             created_by=current_user.id
         )
 
@@ -486,7 +501,7 @@ def create_manual_reservation():
     if not request.is_json:
         return redirect(url_for('sku.view_sku', inventory_item_id=inventory_item_id))
 
-@product_inventory_bp.route('/inventory/add-from-batch', methods=['POST'])
+@product_inventory_bp.route('/add-from-batch', methods=['POST'])
 @login_required
 def add_inventory_from_batch():
     """Add product inventory from finished batch"""
