@@ -5,6 +5,7 @@ Utility helpers for issuing and validating server-side session tokens.
 from __future__ import annotations
 
 import secrets
+import os
 from typing import Optional
 
 from flask import session
@@ -20,8 +21,21 @@ class SessionService:
         """
         Generate a new session token for the given user and persist it to both
         the user record and the Flask session.
+        
+        In non-production environments, skip single session enforcement
+        to allow multiple concurrent sessions for load testing.
         """
         token = secrets.token_urlsafe(32)
+        
+        # Skip single session enforcement in non-production environments
+        flask_env = os.environ.get('FLASK_ENV', 'development')
+        if flask_env != 'production':
+            # Generate unique token but don't store it in user record
+            # This allows multiple concurrent sessions for the same user
+            SessionService._set_session_token(token)
+            return token
+        
+        # Production behavior: enforce single session
         user.active_session_token = token
         SessionService._set_session_token(token)
         return token

@@ -29,10 +29,13 @@ def configure_login_manager(app):
         try:
             user = app.extensions['sqlalchemy'].session.get(User, int(user_id))
             if user and user.is_active:
-                session_token = SessionService.get_session_token()
-                if user.active_session_token and session_token != user.active_session_token:
-                    SessionService.clear_session_state()
-                    return None
+                # Skip session token validation in non-production for load testing
+                flask_env = os.environ.get('FLASK_ENV', 'development')
+                if flask_env == 'production':
+                    session_token = SessionService.get_session_token()
+                    if user.active_session_token and session_token != user.active_session_token:
+                        SessionService.clear_session_state()
+                        return None
                 if user.user_type == 'developer':
                     return user
                 elif user.organization and user.organization.is_active:
