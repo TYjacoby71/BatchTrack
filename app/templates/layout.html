@@ -37,21 +37,18 @@
       // Minimal theme bootstrap: set data-theme before paint if user preference saved
       (function() {
         try {
-          // Check if user has a stored theme preference
-          var t = localStorage.getItem('bt_theme');
-          var hasUserThemePreference = localStorage.getItem('bt_theme_user_set');
+          var authMeta = document.querySelector('meta[name="user-authenticated"]');
           
-          if (t && t !== 'system' && hasUserThemePreference) {
-            // Only apply stored theme if user has authentication meta tag OR if they're on a public page but no theme preference should apply
-            var authMeta = document.querySelector('meta[name="user-authenticated"]');
-            if (authMeta) {
-              // User is authenticated, apply their theme
+          // Only apply themes if user is authenticated
+          if (authMeta) {
+            var t = localStorage.getItem('bt_theme');
+            if (t && t !== 'system') {
               document.documentElement.setAttribute('data-theme', t);
             } else {
-              // On public page - don't apply user theme preferences
               document.documentElement.removeAttribute('data-theme');
             }
           } else {
+            // Public page - always ensure no theme attribute is set
             document.documentElement.removeAttribute('data-theme');
           }
         } catch (e) {}
