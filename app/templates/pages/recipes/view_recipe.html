@@ -18,6 +18,9 @@
           {% if recipe.is_locked %}
             <span class="badge bg-secondary"><i class="fas fa-lock"></i> Locked</span>
           {% endif %}
+            {% if recipe.status == 'draft' %}
+              <span class="badge bg-warning text-dark"><i class="fas fa-file-alt"></i> Draft</span>
+            {% endif %}
           {% if recipe.parent_recipe_id %}
             <span class="badge bg-info"><i class="fas fa-code-branch"></i> Variation</span>
           {% endif %}
@@ -71,6 +74,12 @@
     </div>
   </div>
 </div>
+
+{% if recipe.status == 'draft' %}
+<div class="alert alert-warning mb-4">
+  <i class="fas fa-info-circle"></i> This recipe is saved as a draft. Complete the required fields and publish it before planning production or starting batches.
+</div>
+{% endif %}
 
 <!-- Unlock Modal -->
 <div class="modal fade" id="unlockModal" tabindex="-1">
@@ -235,11 +244,14 @@
         <h5 class="card-title mb-0"><i class="fas fa-cog"></i> Actions</h5>
       </div>
       <div class="card-body">
+        {% set plan_disabled = (recipe.status == 'draft') %}
         <div class="d-grid gap-2">
           <a href="{{ url_for('recipes.list_recipes') }}" class="btn btn-outline-secondary">
             <i class="fas fa-arrow-left"></i> Back to List
           </a>
-          <a href="{{ url_for('production_planning.plan_production_route', recipe_id=recipe.id) }}" class="btn btn-success">
+          <a href="{{ url_for('production_planning.plan_production_route', recipe_id=recipe.id) }}"
+             class="btn btn-success{% if plan_disabled %} disabled{% endif %}"
+             {% if plan_disabled %}tabindex="-1" aria-disabled="true" onclick="return false;" title="Publish this recipe before planning production"{% endif %}>
             <i class="fas fa-play"></i> Plan Production
           </a>
           <a href="{{ url_for('recipes.edit_recipe', recipe_id=recipe.id) }}" class="btn btn-primary">
