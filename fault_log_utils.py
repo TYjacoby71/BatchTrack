@@ -1,29 +1,44 @@
+from __future__ import annotations
 
+import logging
 import os
-from typing import Optional, Dict, Any
+from pathlib import Path
+from typing import Any, Dict, Optional
 
-from app.utils.timezone_utils import TimezoneUtils
 from app.utils.json_store import read_json_file, write_json_file
+from app.utils.timezone_utils import TimezoneUtils
 
-FAULT_LOG_PATH = 'faults.json'
+LOG = logging.getLogger(__name__)
+FAULT_LOG_FILENAME = os.environ.get("FAULT_LOG_PATH", "faults.json")
+FAULT_LOG_PATH = Path(FAULT_LOG_FILENAME)
 
-def log_fault(message: str, details: Optional[Dict[str, Any]] = None, source: str = 'system') -> bool:
+
+def log_fault(
+    message: str,
+    details: Optional[Dict[str, Any]] = None,
+    source: str = "system",
+) -> bool:
+    """Persist a structured fault entry for later review."""
+    fault_record = {
+        "timestamp": TimezoneUtils.utc_now().isoformat(),
+        "message": message,
+        "source": source,
+        "details": details or {},
+        "batch_id": (details or {}).get("batch_id"),
+        "status": "NEW",
+    }
+
     try:
-        fault = {
-            'timestamp': TimezoneUtils.utc_now().isoformat(),
-            'message': message,
-            'source': source,
-            'details': details or {},
-            'batch_id': details.get('batch_id') if details else None,
-            'status': 'NEW'
-        }
+        existing = read_json_file(str(FAULT_LOG_PATH), default=[]) or []
+    except Exception as err:  # pragma: no cover - defensive serialization path
+        LOG.warning("Failed to read fault log; starting new file: %s", err)
+        existing = []
 
-        faults = read_json_file(FAULT_LOG_PATH, default=[]) or []
+    existing.append(fault_record)
 
-        faults.append(fault)
-
-        write_json_file(FAULT_LOG_PATH, faults)
+    try:
+        write_json_file(str(FAULT_LOG_PATH), existing)
         return True
-    except Exception as e:
-        print(f"Error logging fault: {str(e)}")
+    except Exception as err:
+        LOG.error("Failed to write fault log %s: %s", FAULT_LOG_PATH, err)
         return False
