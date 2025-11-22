@@ -7,9 +7,8 @@ from ...models.batch import Batch
 from ...utils.unit_utils import get_global_unit_list
 
 try:
-    from ...utils.authorization import require_permission
+    from ...utils.permissions import require_permission
 except ImportError:
-    # test-safe no-op decorator
     def require_permission(permission_name):
         def _wrap(f): return f
         return _wrap
