@@ -22,6 +22,12 @@ from typing import Optional
 from bs4 import BeautifulSoup
 from locust import HttpUser, task, between
 
+# Pool of test users to avoid session conflicts
+TEST_USER_POOL = [
+    {'username': f'loadtest_user{i}', 'password': 'loadtest123'} 
+    for i in range(1, 101)  # 100 different users
+]
+
 class AnonymousUser(HttpUser):
     """Anonymous user browsing public content."""
 
@@ -60,6 +66,16 @@ class AuthenticatedMixin:
     login_username: str = ""
     login_password: str = ""
     login_name: str = "login"
+    
+    def on_start(self):
+        """Select a random test user and perform login to avoid session conflicts."""
+        # Pick a random user from the pool
+        user_creds = random.choice(TEST_USER_POOL)
+        self.login_username = user_creds['username']
+        self.login_password = user_creds['password']
+        
+        # Perform login
+        self._perform_login(self.login_username, self.login_password, self.login_name)
 
     def _extract_csrf(self, response) -> Optional[str]:
         try:
@@ -133,14 +149,6 @@ class AuthenticatedUser(AuthenticatedMixin, HttpUser):
 
     wait_time = between(3, 12)
     weight = 1  # 25% of traffic
-    
-    # Use test credentials that should exist in your app
-    login_username = "loadtest@example.com"
-    login_password = "loadtest123"
-
-    def on_start(self):
-        """Login before starting tasks."""
-        self._perform_login(self.login_username, self.login_password, "login")
 
     @task(8)
     def view_dashboard(self):
@@ -195,12 +203,6 @@ class AdminUser(AuthenticatedMixin, HttpUser):
 
     wait_time = between(5, 20)
     weight = 0.1  # 2.5% of traffic
-    login_username = "loadtest@example.com"
-    login_password = "loadtest123"
-
-    def on_start(self):
-        """Login as admin."""
-        self._perform_login(self.login_username, self.login_password, "admin_login")
 
     @task(3)
     def organization_dashboard(self):
@@ -221,12 +223,6 @@ class HighFrequencyUser(AuthenticatedMixin, HttpUser):
 
     wait_time = between(0.5, 2)
     weight = 0.5  # 12.5% of traffic
-    login_username = "loadtest@example.com"
-    login_password = "loadtest123"
-
-    def on_start(self):
-        """Quick login for API-like usage."""
-        self._perform_login(self.login_username, self.login_password, "api_login")
 
     @task(10)
     def rapid_dashboard_checks(self):
@@ -280,4 +276,9 @@ if __name__ == "__main__":
     print("- StressTest: High-intensity testing")
     print("")
     print("Note: All tests now handle rate limiting (429 errors) as expected behavior")
-    print("Make sure you have a test user: loadtest@example.com / loadtest123")
+    print("")
+    print("🚀 SETUP: Generate test users first to avoid session conflicts:")
+    print("   cd loadtests && python test_user_generator.py create --count 100")
+    print("")
+    print("📋 Test users: loadtest_user1 through loadtest_user100 (password: loadtest123)")
+    print("   Each authenticated test will randomly select a user from the pool")
