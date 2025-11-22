@@ -1,33 +1,41 @@
 
-def validate_density(density_value):
-    """
-    Validate density value - must be positive and realistic
-    Returns validated density or None if invalid
-    """
+from __future__ import annotations
+
+from typing import Optional, Union
+
+__all__ = ["validate_density", "get_density_description"]
+
+_MIN_DENSITY = 0.01  # g/ml
+_MAX_DENSITY = 10.0  # g/ml
+_DENSITY_SEGMENTS = (
+    (0.5, "very light"),
+    (0.9, "light"),
+    (1.1, "medium"),
+    (1.5, "heavy"),
+)
+
+
+def validate_density(density_value: Union[float, int, str, None]) -> Optional[float]:
+    """Return a normalized density (g/ml) when the value falls within sane bounds."""
     if density_value is None:
         return None
-    
+
     try:
         density = float(density_value)
-        # Density must be positive and realistic (between 0.01 and 10.0 g/ml)
-        if 0.01 <= density <= 10.0:
-            return density
-        else:
-            return None
-    except (ValueError, TypeError):
+    except (TypeError, ValueError):
         return None
 
-def get_density_description(density):
-    """Get human-readable description of density"""
-    if density is None:
-        return "No density set"
-    elif density < 0.5:
-        return f"{density} g/ml (Very light - oils/alcohols)"
-    elif density < 0.9:
-        return f"{density} g/ml (Light - most oils)"
-    elif density < 1.1:
-        return f"{density} g/ml (Water-like)"
-    elif density < 1.5:
-        return f"{density} g/ml (Heavy liquids - syrups)"
-    else:
-        return f"{density} g/ml (Very heavy - clay/minerals)"
+    return density if _MIN_DENSITY <= density <= _MAX_DENSITY else None
+
+
+def get_density_description(density: Optional[float]) -> str:
+    """Provide a short descriptor for a validated density value."""
+    normalized = validate_density(density)
+    if normalized is None:
+        return "Density not set"
+
+    for threshold, label in _DENSITY_SEGMENTS:
+        if normalized < threshold:
+            return f"{normalized:.2f} g/ml ({label})"
+
+    return f"{normalized:.2f} g/ml (very heavy)"
