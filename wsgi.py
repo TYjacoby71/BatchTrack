@@ -1,48 +1,38 @@
+import logging
 import os
 import sys
 
+from app import create_app
 
-def _gevent_patch_kwargs():
-    """
-    [PATCH-001] Avoid patching Python's threading subsystem on Python 3.13+
-    because gevent 24.x triggers KeyError/AssertionError callbacks when
-    wrapping threading.Timer. Allow opt-in overrides via GEVENT_PATCH_THREADS.
-    See docs/operations/PATCHES.md for details.
-    """
+LOG = logging.getLogger(__name__)
+_TRUTHY = {"1", "true", "on", "yes"}
+_FALSY = {"0", "false", "off", "no"}
+
+
+def _gevent_patch_kwargs() -> dict[str, bool]:
+    """Skip gevent's thread patching on Python 3.13+ unless explicitly enabled."""
     env_value = os.environ.get("GEVENT_PATCH_THREADS")
-    should_patch_threads: bool
 
     if env_value is not None:
         normalized = env_value.strip().lower()
-        if normalized in {"1", "true", "on", "yes"}:
-            should_patch_threads = True
-        elif normalized in {"0", "false", "off", "no"}:
-            should_patch_threads = False
-        else:
-            # Fall back to default if value is malformed
-            should_patch_threads = sys.version_info < (3, 13)
-    else:
-        should_patch_threads = sys.version_info < (3, 13)
+        if normalized in _TRUTHY:
+            return {}
+        if normalized in _FALSY:
+            return {"thread": False, "threading": False}
 
-    if should_patch_threads:
-        return {}
-
-    # Don't let gevent wrap threading/_thread; native timers stay stable.
-    return {"thread": False, "threading": False}
+    should_patch_threads = sys.version_info < (3, 13)
+    return {} if should_patch_threads else {"thread": False, "threading": False}
 
 
 try:
     from gevent import monkey  # type: ignore
 
     monkey.patch_all(**_gevent_patch_kwargs())
-except Exception:
-    # gevent may not be installed in local/dev environments
-    pass
-
-from app import create_app
+except Exception as err:  # pragma: no cover - best effort import
+    LOG.debug("gevent monkey patching skipped: %s", err)
 
 app = create_app()
 
 
 if __name__ == "__main__":
-    app.run(host='0.0.0.0', port=5000, debug=bool(app.config.get('DEBUG')))
+    app.run(host="0.0.0.0", port=5000, debug=bool(app.config.get("DEBUG")))

@@ -1,4 +1,11 @@
 from .settings import get_setting
+from .logging_helpers import setup_logging
+from .fault_log import log_fault
 from .fifo_generator import generate_fifo_code
 
-# Add other imports and exports as needed
+__all__ = [
+    "get_setting",
+    "setup_logging",
+    "log_fault",
+    "generate_fifo_code",
+]

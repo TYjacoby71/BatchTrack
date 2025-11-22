@@ -1,11 +1,14 @@
+from __future__ import annotations
 
-from flask import jsonify, redirect, url_for, request
-from .extensions import login_manager
-# Import moved inline to avoid circular imports
+from flask import jsonify, redirect, request, url_for
+from sqlalchemy.exc import SQLAlchemyError
+
+from .extensions import db, login_manager
 from .services.session_service import SessionService
 
+
 def configure_login_manager(app):
-    """Configure Flask-Login with JSON-aware unauthorized handler"""
+    """Attach Flask-Login handlers with API-aware responses and session validation."""
     login_manager.init_app(app)
     login_manager.login_view = "auth.login"
     login_manager.login_message = "Please log in to access this page."
@@ -13,37 +16,53 @@ def configure_login_manager(app):
 
     @login_manager.unauthorized_handler
     def _unauthorized():
-        # Check if this is an API request (inline to avoid circular imports)
-        if (request.is_json or 
-            request.path.startswith('/api/') or 
-            'application/json' in request.headers.get('Accept', '') or
-            'application/json' in request.headers.get('Content-Type', '')):
+        if _expects_json():
             return jsonify({"error": "Authentication required"}), 401
-        return redirect(url_for("auth.login"))
+        return redirect(url_for("auth.login", next=request.url))
 
     @login_manager.user_loader
-    def load_user(user_id):
+    def load_user(user_id: str):
         from .models import User
-        from sqlalchemy.exc import SQLAlchemyError
-        from .extensions import db
+
         try:
-            user = app.extensions['sqlalchemy'].session.get(User, int(user_id))
-            if user and user.is_active:
-                session_token = SessionService.get_session_token()
-                if user.active_session_token and session_token != user.active_session_token:
-                    SessionService.clear_session_state()
-                    return None
-                if user.user_type == 'developer':
-                    return user
-                elif user.organization and user.organization.is_active:
-                    return user
-            return None
+            user = db.session.get(User, int(user_id))
         except (ValueError, TypeError):
             return None
         except SQLAlchemyError:
-            # On DB errors, fail open to anonymous instead of crashing the request
-            try:
-                db.session.rollback()
-            except Exception:
-                pass
+            _rollback_safely()
             return None
+
+        if not user or not user.is_active:
+            return None
+
+        if user.active_session_token:
+            session_token = SessionService.get_session_token()
+            if session_token != user.active_session_token:
+                SessionService.clear_session_state()
+                return None
+
+        if user.user_type == "developer":
+            return user
+
+        if getattr(user, "organization", None) and user.organization.is_active:
+            return user
+
+        return None
+
+
+def _expects_json() -> bool:
+    accepts = request.headers.get("Accept", "")
+    content_type = request.headers.get("Content-Type", "")
+    return (
+        request.is_json
+        or request.path.startswith("/api/")
+        or "application/json" in accepts
+        or "application/json" in content_type
+    )
+
+
+def _rollback_safely() -> None:
+    try:
+        db.session.rollback()
+    except Exception:
+        pass

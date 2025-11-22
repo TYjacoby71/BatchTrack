@@ -39,7 +39,7 @@ New dependencies added for scaling:
 Copy and populate the production environment template:
 
 ```bash
-cp .env.production.example .env.production
+cp docs/operations/env.production.example .env.production
 ```
 
 **Critical settings to configure:**
