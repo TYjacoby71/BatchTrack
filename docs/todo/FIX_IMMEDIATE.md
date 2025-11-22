@@ -5,12 +5,6 @@
 
 ## 🔥 **CRITICAL BUGS** (Fix Today)
 
-### **Dashboard Alerts JavaScript Error**
-- **Status:** ✅ Complete – `dashboard_alerts.html` now implements `refreshDashboardAlerts()` with error handling
-- **Issue**: Infinite "Error refreshing alerts" console spam
-- **Cause**: Incomplete `refreshDashboardAlerts()` function in template
-- **Fix**: Complete the function implementation with proper error handling
-
 ### **API Response Inconsistency**
 - **Status:** 🔄 In Progress – numerous API routes still return HTML or redirect responses (e.g., `app/blueprints/recipes/routes.py` quick actions)
 - **Issue**: Mixed HTML redirects and JSON responses across endpoints

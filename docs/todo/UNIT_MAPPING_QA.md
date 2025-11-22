@@ -86,13 +86,9 @@ This document outlines the logic, guardrails, validation flow, and UX feedback r
 
 ## 🔁 5. Launch Checklist
 
-- [x] `Unit` table has `is_custom` and `is_mapped` flags _(Status: Complete – columns live in schema & seeders)_
 - [ ] `CustomUnitMapping` fully functional with user_id support _(Status: Partial – model supports `created_by`; UI/workflows still limited)_
 - [ ] Density assignment via mapping prompt (optional) _(Status: Pending – drawer skeleton exists, prompt not wired)_
 - [ ] Recipe editor blocks unmapped units _(Status: Pending – recipes still allow unmapped custom units)_
-- [ ] Stock check blocks:
-    - [x] Unmapped units _(Status: Complete – conversion engine raises `MISSING_CUSTOM_MAPPING` drawer)_
-    - [x] Cross-type units without density _(Status: Complete – conversion engine triggers density drawer for missing data)_
 - [ ] Mapping form includes training and validation _(Status: Pending – helper text/videos not added)_
 - [ ] Messaging clean and non-technical _(Status: Pending – error copy still technical)_
 - [ ] Custom units clearly labeled in UI _(Status: Pending – unit manager lacks status badges)_

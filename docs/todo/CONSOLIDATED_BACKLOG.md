@@ -29,7 +29,7 @@
 - Implement the full retention/cancellation flow: multi-step objection handling, account pause offers, exit survey, analytics tracking, compliant UX, supporting services (RetentionFlow/Offer/AccountPause/ChurnAnalytics), frontend components, and corresponding email automation plus A/B rollout.
 - Finish custom unit mapping experience: fully functional `CustomUnitMapping` flows with user attribution, density prompts for cross-type conversions, recipe editor blocks on unmapped units, improved messaging/tooling, training content, and unit manager status badges.
 - Complete Day 4–5 Launch Runbook deliverables: QA core flows (FIFO, recipes, batches, permissions), ship onboarding checklist/help center links, and schedule lifecycle email sequences (day 0/3/7).
-- Day 6 polish tasks: finalize rate limits/lockouts/security headers, wire analytics + cookie notices, publish legal links in-app, and run performance tuning on slow queries.
+- Day 6 polish tasks: implement login lockouts, wire analytics + cookie notices, publish legal links in-app, and run performance tuning on slow queries.
 - Day 7 soft-launch rehearsal: run full production dry run, cross-browser/device sanity checks, backup/restore drill, and formal go/no-go review.
 
 ## Long-Term / Strategic Initiatives
