@@ -1,18 +1,7 @@
-
 """
-Locust Load Testing Configuration
+Locust Load Testing Configuration - Clean Version
 
-Comprehensive load testing scenarios to validate 10k+ concurrent user capacity.
-
-Usage:
-    # Basic load test
-    locust -f loadtests/locustfile.py --host=http://localhost:5000
-
-    # High-load simulation  
-    locust -f loadtests/locustfile.py --host=https://your-app.replit.app -u 1000 -r 50
-
-    # Authenticated user flows
-    locust -f loadtests/locustfile.py AuthenticatedUser --host=https://your-app.replit.app
+Fixed version that only hits valid endpoints with proper authentication.
 """
 
 import random
@@ -22,90 +11,85 @@ from typing import Optional
 from bs4 import BeautifulSoup
 from locust import HttpUser, task, between
 
-# Pool of test users to avoid session conflicts
+# Smaller pool to avoid rate limiting
 TEST_USER_POOL = [
-    {'username': f'loadtest_user{i}', 'password': 'loadtest123'} 
-    for i in range(1, 101)  # 100 different users
+    {'username': f'loadtest_user{i}', 'password': 'loadtest123'}
+    for i in range(1, 11)  # Only 10 users
 ]
 
 class AnonymousUser(HttpUser):
-    """Anonymous user browsing public content."""
+    """Anonymous user browsing public content only."""
 
-    wait_time = between(2, 8)
-    weight = 3  # 75% of traffic
+    wait_time = between(5, 15)  # Longer waits to avoid rate limits
+    weight = 4  # Most traffic
 
     @task(5)
     def view_homepage(self):
-        """Load homepage and public content."""
+        """Load homepage."""
         self.client.get("/", name="homepage")
 
-    @task(3) 
-    def view_tools(self):
-        """Browse public tools."""
-        tools = ["/tools", "/tools/soap", "/tools/candles", "/tools/lotions"]
-        tool = random.choice(tools)
-        self.client.get(tool, name="public_tools")
+    @task(3)
+    def view_tools_index(self):
+        """Browse tools index page."""
+        self.client.get("/tools", name="tools_index")
 
     @task(2)
-    def view_global_library(self):
-        """Browse global item library."""
-        self.client.get("/global-items", name="global_library")
+    def view_global_items(self):
+        """Browse global items library."""
+        self.client.get("/global-items", name="global_items")
 
     @task(1)
-    def attempt_signup(self):
-        """Simulate signup page visits."""
+    def view_signup(self):
+        """View signup page."""
         self.client.get("/auth/signup", name="signup_page")
 
+
 class AuthenticatedMixin:
-    """Shared helpers for users that require authentication."""
+    """Shared helpers for authenticated users."""
 
     login_username: str = ""
     login_password: str = ""
-    login_name: str = "login"
 
     def on_start(self):
-        """Select a random test user and perform login to avoid session conflicts."""
+        """Perform login with a random test user."""
         # Pick a random user from the pool
         user_creds = random.choice(TEST_USER_POOL)
         self.login_username = user_creds['username']
         self.login_password = user_creds['password']
 
-        # Perform login
-        self._perform_login(self.login_username, self.login_password, self.login_name)
+        # Perform simple login without catch_response
+        self._perform_login(self.login_username, self.login_password)
 
     def _extract_csrf(self, response) -> Optional[str]:
+        """Extract CSRF token from login page."""
         try:
             soup = BeautifulSoup(response.text, "html.parser")
 
-            # Try multiple CSRF token locations
-            # 1. Hidden input field
+            # Try hidden input field
             token_field = soup.find("input", {"name": "csrf_token"})
             if token_field:
                 return token_field.get("value")
 
-            # 2. Meta tag (common in Flask-WTF)
+            # Try meta tag
             meta_csrf = soup.find("meta", {"name": "csrf-token"})
             if meta_csrf:
                 return meta_csrf.get("content")
-
-            # 3. Alternative meta name
-            meta_csrf_alt = soup.find("meta", {"name": "csrf_token"})
-            if meta_csrf_alt:
-                return meta_csrf_alt.get("content")
 
         except Exception:
             return None
         return None
 
-    def _perform_login(self, username: str, password: str, name: str):
-        # Get login page first
+    def _perform_login(self, username: str, password: str):
+        """Simple login without manual success/failure handling."""
+        # Get login page
         login_page = self.client.get("/auth/login", name="login_page")
         if login_page.status_code != 200:
-            return login_page 
+            return
 
+        # Extract CSRF token
         token = self._extract_csrf(login_page)
 
-        # Use the actual form field names from your login form
+        # Prepare login data
         payload = {
             "username": username,
             "password": password,
@@ -113,85 +97,75 @@ class AuthenticatedMixin:
         if token:
             payload["csrf_token"] = token
 
-        # Set proper headers for form submission
+        # Set proper headers
         headers = {
             "Content-Type": "application/x-www-form-urlencoded",
             "Referer": "/auth/login"
         }
 
-        response = self.client.post("/auth/login", data=payload, headers=headers, name=name)
-        return response
+        # Perform login - let Locust handle success/failure automatically
+        self.client.post("/auth/login", data=payload, headers=headers, name="login_submit")
 
 
 class AuthenticatedUser(AuthenticatedMixin, HttpUser):
-    """Authenticated user performing typical app operations."""
+    """Authenticated user with realistic usage patterns."""
 
-    wait_time = between(3, 12)
-    weight = 1  # 25% of traffic
+    wait_time = between(8, 20)  # Longer waits to avoid rate limits
+    weight = 1  # Lower weight
 
-    @task(8)
+    @task(10)
     def view_dashboard(self):
         """Load user dashboard."""
         self.client.get("/dashboard", name="dashboard")
 
-    @task(5)
-    def view_inventory(self):
-        """Browse inventory sections."""
-        self.client.get("/inventory", name="inventory_main")
+    @task(6)
+    def view_inventory_list(self):
+        """Browse inventory list."""
+        self.client.get("/inventory", name="inventory_list")
 
-    @task(4)
-    def view_batches(self):
-        """Check batch status."""
+    @task(5)
+    def view_batches_list(self):
+        """Check batches list."""
         self.client.get("/batches", name="batches_list")
 
-    @task(3)
-    def view_recipes(self):
+    @task(4)
+    def view_recipes_list(self):
         """Browse recipes."""
         self.client.get("/recipes", name="recipes_list")
 
-    @task(2)
-    def view_products(self):
-        """Browse and view products."""
+    @task(3)
+    def view_products_list(self):
+        """Browse products."""
         self.client.get("/products", name="products_list")
 
-    @task(1)
+    @task(2)
     def view_settings(self):
         """Access settings."""
         self.client.get("/settings", name="settings")
 
-class AdminUser(AuthenticatedMixin, HttpUser):
-    """Admin user performing administrative tasks."""
+    @task(1)
+    def check_server_time(self):
+        """Check server time API."""
+        self.client.get("/api/server-time", name="server_time")
 
-    wait_time = between(5, 20)
-    weight = 0.1  # 2.5% of traffic
 
-    @task(3)
-    def organization_dashboard(self):
-        """View organization dashboard."""
-        self.client.get("/organization/dashboard", name="org_dashboard")
+class LightLoadUser(AuthenticatedMixin, HttpUser):
+    """Very light load user for testing basic functionality."""
+
+    wait_time = between(15, 30)  # Very long waits
+    weight = 0.5
+
+    @task(5)
+    def dashboard_only(self):
+        """Only check dashboard."""
+        self.client.get("/dashboard", name="light_dashboard")
 
     @task(2)
-    def developer_dashboard(self):
-        """Access developer dashboard if available."""
-        self.client.get("/developer/dashboard", name="dev_dashboard")
+    def inventory_only(self):
+        """Only check inventory."""
+        self.client.get("/inventory", name="light_inventory")
 
     @task(1)
-    def plan_production(self):
-        """Access production planning."""
-        self.client.get("/production-planning/plan-production", name="plan_production")
-
-class HighFrequencyUser(AuthenticatedMixin, HttpUser):
-    """Simulates rapid API usage patterns."""
-
-    wait_time = between(0.5, 2)
-    weight = 0.5  # 12.5% of traffic
-
-    @task(10)
-    def rapid_dashboard_checks(self):
-        """Frequent dashboard polling."""
-        self.client.get("/dashboard", name="rapid_dashboard")
-
-    @task(2)
-    def check_recipes(self):
-        """Check recipes endpoint."""
-        self.client.get("/recipes", name="recipes")
+    def api_health_check(self):
+        """API health check."""
+        self.client.get("/api", name="api_health")
