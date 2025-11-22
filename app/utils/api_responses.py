@@ -5,7 +5,7 @@ from typing import Any, Dict, List, Optional
 
 from flask import Response, current_app, jsonify, request
 
-__all__ = ["APIResponse", "api_route"]
+__all__ = ["APIResponse", "api_route", "api_error", "api_success"]
 
 
 class APIResponse:
@@ -40,6 +40,16 @@ class APIResponse:
         if request.form:
             return request.form.to_dict()
         return {}
+
+
+def api_error(message: str, status_code: int = 400, errors: Optional[Dict] = None) -> Response:
+    """Legacy helper function for API error responses."""
+    return APIResponse.error(message, errors=errors, status_code=status_code)
+
+
+def api_success(data: Any = None, message: str = "Success", status_code: int = 200) -> Response:
+    """Legacy helper function for API success responses."""
+    return APIResponse.success(data=data, message=message, status_code=status_code)
 
 
 def api_route(methods: Optional[List[str]] = None):
