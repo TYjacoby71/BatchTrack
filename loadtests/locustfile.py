@@ -121,13 +121,16 @@ class AuthenticatedMixin:
             "Referer": "/auth/login"
         }
 
-        response = self.client.post("/auth/login", data=payload, headers=headers, name=name)
-
-        # Basic check for successful login. Locust will automatically track success/failure based on status codes.
-        # If the response is not a success code (e.g., 200, 302), Locust will mark it as a failure.
-        # If specific non-success codes should be treated as success (e.g., rate limiting),
-        # you would need to re-introduce catch_response=True for those specific cases.
-        # For now, we rely on Locust's default behavior.
+        with self.client.post("/auth/login", data=payload, headers=headers, catch_response=True, name=name) as response:
+            # Basic check for successful login. Locust will automatically track success/failure based on status codes.
+            # If the response is not a success code (e.g., 200, 302), Locust will mark it as a failure.
+            # If specific non-success codes should be treated as success (e.g., rate limiting),
+            # you would need to re-introduce catch_response=True for those specific cases.
+            # For now, we rely on Locust's default behavior.
+            if response.status_code in [302, 200] and "dashboard" in response.headers.get('location', ''):
+                response.success()
+            else:
+                response.failure(f"Login failed with status {response.status_code}")
 
         return response
 
@@ -183,7 +186,7 @@ class AdminUser(AuthenticatedMixin, HttpUser):
     def developer_dashboard(self):
         """Access developer dashboard if available."""
         self.client.get("/developer/dashboard", name="dev_dashboard")
-        
+
     @task(1)
     def plan_production(self):
         """Access production planning, fixing bad request."""
