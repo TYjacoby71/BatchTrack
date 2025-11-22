@@ -6,12 +6,8 @@ from typing import Dict, Literal, TypedDict
 
 __all__ = [
     "generate_inventory_event_code",
-    "generate_fifo_code",
     "parse_inventory_code",
-    "parse_fifo_code",
     "validate_inventory_code",
-    "validate_fifo_code",
-    "generate_fifo_id",
 ]
 
 BASE36_CHARS = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ"
@@ -81,14 +77,6 @@ def generate_inventory_event_code(
     return f"{prefix}-{_generate_suffix(item_id)}"
 
 
-def generate_fifo_code(change_type, item_id=None, is_lot_creation=False):
-    """
-    Backwards-compatible wrapper that delegates to the new inventory code generator.
-    """
-    code_type: Literal["event", "lot"] = "lot" if is_lot_creation else "event"
-    return generate_inventory_event_code(change_type, item_id=item_id, code_type=code_type)
-
-
 def parse_inventory_code(code: str) -> ParsedCode:
     if not code or "-" not in code:
         return {"prefix": None, "suffix": None, "is_lot": False, "code_type": None}
@@ -103,11 +91,6 @@ def parse_inventory_code(code: str) -> ParsedCode:
     }
 
 
-def parse_fifo_code(fifo_code):
-    """Legacy wrapper for parse_inventory_code."""
-    return parse_inventory_code(fifo_code)
-
-
 def validate_inventory_code(code: str) -> bool:
     parsed = parse_inventory_code(code)
     if not parsed["prefix"]:
@@ -115,12 +98,3 @@ def validate_inventory_code(code: str) -> bool:
     valid_prefixes = {LOT_PREFIX, DEFAULT_EVENT_PREFIX, *EVENT_PREFIXES.values()}
     return parsed["prefix"] in valid_prefixes
 
-
-def validate_fifo_code(fifo_code):
-    """Legacy wrapper for validate_inventory_code."""
-    return validate_inventory_code(fifo_code)
-
-
-def generate_fifo_id(change_type):
-    """Legacy function - use generate_fifo_code instead"""
-    return generate_fifo_code(change_type)
