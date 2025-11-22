@@ -1,6 +1,10 @@
 
 # Phase 4: Developer Routes Refactor - Eliminating the "Rogue Security Guard"
 
+## Status Update (2025-11-22)
+- ✅ **Phase 4.1 shipped** – the `@developer_bp.before_request` hook has been removed from `app/blueprints/developer/routes.py`, and access control now flows exclusively through `app/middleware.py::single_security_checkpoint()`.
+- 🔄 **Phase 4.2 pending** – developer/service extraction, CRUD helpers, and tier configuration cleanup still need to be implemented.
+
 ## Critical Issue Identified
 
 The `app/blueprints/developer/routes.py` file contains conflicting middleware that creates unpredictable behavior and test failures. This is the root cause of our routing instability.
@@ -42,41 +46,10 @@ def check_developer_access():
 
 ## Refactor Plan
 
-### Phase 4.1: Critical Middleware Fix (IMMEDIATE)
-
-#### Step 1: Remove Conflicting Middleware
-**File**: `app/blueprints/developer/routes.py`
-**Action**: Delete entire `@developer_bp.before_request` function
-
-```python
-# DELETE THIS ENTIRE BLOCK
-@developer_bp.before_request
-def check_developer_access():
-    # ... all logic here must be removed
-```
-
-#### Step 2: Ensure Canonical Middleware Handles Developer Logic
-**File**: `app/middleware.py`
-**Action**: Verify `single_security_checkpoint()` contains proper developer handling:
-
-```python
-# In single_security_checkpoint()
-if getattr(current_user, 'user_type', None) == 'developer':
-    selected_org_id = session.get("dev_selected_org_id")
-    
-    # Allow access to developer pages OR master permissions list
-    if not selected_org_id and not (request.path.startswith("/developer/") or request.path.startswith("/auth/permissions")):
-        flash("Please select an organization to view customer features.", "warning")
-        return redirect(url_for("developer.organizations"))
-
-    if selected_org_id:
-        from .models import Organization
-        from .extensions import db
-        g.effective_org = db.session.get(Organization, selected_org_id)
-        g.is_developer_masquerade = True
-    
-    return  # Developers bypass billing checks
-```
+### Phase 4.1: Critical Middleware Fix (✅ COMPLETED)
+- Conflicting `@developer_bp.before_request` logic was removed (see current `app/blueprints/developer/routes.py` lines 48-50 for the comment referencing centralized handling).
+- `single_security_checkpoint()` in `app/middleware.py` now owns all developer gating, including masquerade context, rate limiting, and billing bypass.
+- Next step is simply to monitor for regressions; no additional code changes are required for this phase.
 
 ### Phase 4.2: Service Layer Refactor (AFTER TESTS PASS)
 
@@ -277,10 +250,9 @@ available_tiers = SubscriptionTier.query.filter_by(is_customer_facing=True).all(
 ## Expected Outcomes
 
 ### Phase 4.1 Results
-- ✅ Eliminate middleware conflicts
-- ✅ Fix test failures
-- ✅ Predictable routing behavior
-- ✅ Single source of truth for security
+- ✅ Middleware conflicts eliminated (single checkpoint in `app/middleware.py`)
+- ✅ Predictable routing behavior and easier debugging
+- ✅ Single source of truth for developer security rules
 
 ### Phase 4.2 Results
 - ✅ Thin controllers, fat services

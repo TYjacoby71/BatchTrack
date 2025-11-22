@@ -138,7 +138,7 @@ docs/                # Comprehensive documentation
 1. **Webhook Idempotency** - Stripe webhooks may process duplicate events
 2. **CSRF Protection** - Form submissions may lack CSRF validation
 3. **OAuth State/Nonce** - State parameter validation needs verification
-4. **Rate Limiting** - Auth endpoints and webhooks lack rate protection
+4. **Password Requirements** - Strong password enforcement/lockouts still absent
 
 ### 🟡 Medium Priority Data Risks
 5. **Migration Drift** - Multiple migration files suggest potential conflicts
@@ -152,15 +152,15 @@ docs/                # Comprehensive documentation
 
 ## Refactor Strategy Recommendations
 
-### Phase 1: Safety First ✅ COMPLETED
-1. ✅ Implement comprehensive characterization tests (24/24 passing)
-2. ✅ Add CI/CD pipeline with quality gates (pytest integration)
-3. ✅ Audit and fix security vulnerabilities (guardrails in place)
+### Phase 1: Safety First ✅
+1. ✅ Implement characterization tests across auth, inventory, billing, retention, and developer flows
+2. ⏳ Wire CI/CD pipeline with automated quality gates (GitHub Actions still pending)
+3. ✅ Audit and install baseline security guardrails (middleware + limiter + CSRF wiring)
 
-### Phase 2: Structural Cleanup
-1. **Mandate single inventory entry point** through `inventory_adjustment.py`
-2. Move business logic out of route handlers
-3. Centralize external service calls
+### Phase 2: Structural Cleanup ✅
+1. ✅ Mandate single inventory entry point through `inventory_adjustment.py`
+2. ✅ Move business logic out of route handlers (developer routes still tracked in Phase 4 plan)
+3. ✅ Centralize external service calls for inventory/FIFO adjustments
 
 ### Phase 3: Consistency & Performance
 1. Eliminate code duplication
@@ -177,15 +177,16 @@ docs/                # Comprehensive documentation
 
 ---
 
-**✅ PHASE 1 COMPLETE:** Guardrails & CI implementation successful
-- 24/24 characterization tests passing
-- pytest framework integrated and stable
-- Security audit baseline established
+**✅ PHASE 2 COMPLETE:** Inventory canonicalization + guardrails in place
+- Characterization tests keep core flows locked
+- Canonical inventory service enforced across batch + adjustment routes
+- Security middleware + rate limiting active
 - Migration system stabilized
 
-**Next Steps:** Ready to proceed with Phase 2 - Structural Cleanup
-- Mandate single inventory entry point through `inventory_adjustment.py`
-- Move business logic out of route handlers
-- Centralize external service calls
+**Next Steps (Current):** Focus on Phase 3 (Quality & Performance) while continuing Phase 4 service extraction
+- Harden Stripe/Whop services with idempotency + interfaces
+- Stand up CI/lint/type gates (pytest, ruff, mypy, bandit)
+- Add typing + performance instrumentation
+- Extract developer/business logic into dedicated services
 
-**Estimated Remaining Timeline:** 2-3 weeks for Phases 2-3 with established testing foundation.
+**Estimated Remaining Timeline:** ~3-4 weeks for Phase 3 deliverables with established testing foundation.

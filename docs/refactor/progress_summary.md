@@ -2,48 +2,31 @@
 
 This document tracks the comprehensive refactor of BatchTrack's codebase to eliminate technical debt and establish clean architectural patterns.
 
-## Completed Phases ✅
+## Completed Phases
 
-### Phase 1: Safety First ✅ COMPLETED
-- ✅ Comprehensive characterization tests (24/24 passing)
-- ✅ CI/CD pipeline with quality gates
-- ✅ Security audit and guardrails implementation
+### Phase 1: Safety Foundations ✅
+- ✅ Characterization tests cover auth, inventory, billing, retention, and core routing flows (see `tests/`).
+- ✅ Security guardrails (single security checkpoint, CSRF, baseline rate limiting, and security headers) are wired.
+- ⚠️ CI/CD automation is still pending—no `.github/workflows/` pipeline exists yet.
 
-### Phase 2: Inventory Canonicalization ✅ COMPLETED  
+### Phase 2: Inventory Canonicalization ✅
 - ✅ Single entry point through `inventory_adjustment.py`
 - ✅ Eliminated direct model manipulation
 - ✅ Consistent FIFO lot management
 - ✅ Audit trail for all inventory changes
 
-### Phase 3: Quality & Performance ✅ COMPLETED
-- ✅ Code duplication elimination
-- ✅ Database query optimization
-- ✅ Error handling standardization
-- ✅ API response consistency
+## Active Phases
 
-## Current Phase
+### Phase 3: Quality & Performance 🔄
+- Harden billing/identity integrations (Stripe events table + idempotency, Whop license sync, provider abstractions).
+- Thin routes with a validation layer, uniform error envelopes, and consistent JSON responses.
+- Add strict typing plus performance instrumentation (indexes, query counters, slow-query logging).
+- Close remaining security items (password strength, account lockouts, CSRF coverage) and wire CI gates (pytest, ruff, mypy, bandit).
 
-### Phase 4: Developer Routes Refactor 🔥 CRITICAL
-**Status**: Identified root cause of middleware conflicts
-**Priority**: IMMEDIATE - blocking test suite
-
-#### Phase 4.1: Critical Middleware Fix (IN PROGRESS)
-- 🔍 **Root Cause Found**: Conflicting `@developer_bp.before_request` middleware
-- ⏳ Remove rogue security checkpoint in `developer/routes.py`
-- ⏳ Ensure canonical middleware handles developer logic
-- **Expected Result**: Fix test failures and unpredictable routing
-
-#### Phase 4.2: Service Layer Refactor (PLANNED)
-- 📋 Create `DeveloperService` for dashboard logic
-- 📋 Create `OrganizationService` for CRUD operations  
-- 📋 Convert fat controllers to thin controllers
-- 📋 Eliminate deprecated configuration dependencies
-
-**Files Affected**:
-- `app/blueprints/developer/routes.py` (primary target)
-- `app/middleware.py` (canonical security)
-- `app/services/developer_service.py` (new)
-- `app/services/organization_service.py` (new)
+### Phase 4: Developer Routes Refactor 🔧
+- ✅ Phase 4.1 shipped: the rogue `before_request` middleware is gone; all gating now lives in `app/middleware.py`.
+- ⏳ Phase 4.2 still outstanding: introduce `DeveloperService`/`OrganizationService`, move fat-controller logic into services, and remove the last config-in-code dependencies (e.g., legacy `subscription_tiers` helpers).
+- 📁 Primary files: `app/blueprints/developer/routes.py`, `app/middleware.py`, `app/services/developer_service.py`, `app/services/organization_service.py`.
 
 ## ✅ Phase 2 Complete: Structural Cleanup & Inventory Canonicalization
 
