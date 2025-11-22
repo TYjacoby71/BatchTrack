@@ -76,9 +76,12 @@ class AuthenticatedMixin:
         }
         if token:
             payload["csrf_token"] = token
-        response = self.client.post("/auth/login", data=payload, name=name)
-        if response.status_code >= 400:
-            response.failure(f"Login failed ({response.status_code})")
+        
+        with self.client.post("/auth/login", data=payload, name=name, catch_response=True) as response:
+            if response.status_code >= 400:
+                response.failure(f"Login failed ({response.status_code})")
+            else:
+                response.success()
         return response
 
 
