@@ -1929,6 +1929,22 @@ def integrations_checklist():
         }
     ]
 
+    config_matrix = []
+    for section in launch_env_sections:
+        for item in section['section_items']:
+            config_matrix.append(
+                {
+                    'category': section['title'],
+                    'key': item['key'],
+                    'present': item['present'],
+                    'required': item['required'],
+                    'recommended': item.get('recommended'),
+                    'description': item['description'],
+                    'note': item.get('note'),
+                    'is_secret': item.get('is_secret', False),
+                }
+            )
+
     rate_limiters = [
         {
             'endpoint': 'GET/POST /auth/login',
@@ -2013,6 +2029,7 @@ def integrations_checklist():
         whop_status=whop_status,
         launch_env_sections=launch_env_sections,
         rate_limiters=rate_limiters,
+        config_matrix=config_matrix,
     )
 
 
