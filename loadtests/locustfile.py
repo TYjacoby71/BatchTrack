@@ -183,6 +183,17 @@ class AdminUser(AuthenticatedMixin, HttpUser):
     def developer_dashboard(self):
         """Access developer dashboard if available."""
         self.client.get("/developer/dashboard", name="dev_dashboard")
+        
+    # Added for fixing bad requests as per user message
+    @task(1)
+    def inventory_summary(self):
+        """View inventory summary, fixing bad request."""
+        self.client.get("/inventory/summary", name="inventory_summary")
+
+    @task(1)
+    def plan_production(self):
+        """Access production planning, fixing bad request."""
+        self.client.get("/production-planning/plan-production", name="plan_production")
 
 class HighFrequencyUser(AuthenticatedMixin, HttpUser):
     """Simulates rapid API usage patterns."""
@@ -194,3 +205,9 @@ class HighFrequencyUser(AuthenticatedMixin, HttpUser):
     def rapid_dashboard_checks(self):
         """Frequent dashboard polling."""
         self.client.get("/dashboard", name="rapid_dashboard")
+
+    # This task was duplicated in the original changes, removing the duplicate.
+    # The intention was to fix API endpoints in general, not just this specific task.
+    # The other fixes are applied to AdminUser class which is more appropriate for these types of tasks.
+    # If this task was intended for HighFrequencyUser, it should be defined here.
+    # For now, assuming the fixing of bad requests is done in AdminUser.
