@@ -414,20 +414,50 @@ class ConversionEngine:
     @staticmethod
     def can_convert_units(amount, from_unit, to_unit, ingredient_id=None, density=None, organization_id=None):
         """
-        Check if conversion is possible without actually performing it.
-        Returns True if conversion is possible, False otherwise.
+        Lightweight capability check used by planners that don't have density context.
+        Returns True when units are considered compatible (same unit or unit_type, or a custom mapping exists).
         """
+        if not from_unit or not to_unit:
+            return False
+
         try:
-            # Use a small test amount to avoid potential overflow issues
-            test_amount = 1.0
-            result = ConversionEngine.convert_units(
-                amount=test_amount,
-                from_unit=from_unit,
-                to_unit=to_unit,
-                ingredient_id=ingredient_id,
-                density=density,
-                organization_id=organization_id
+            from_u = Unit.query.filter_by(name=from_unit).first()
+            to_u = Unit.query.filter_by(name=to_unit).first()
+            if not from_u or not to_u:
+                return False
+
+            if from_u.name == to_u.name:
+                return True
+
+            from_type = (from_u.unit_type or "").lower()
+            to_type = (to_u.unit_type or "").lower()
+            if from_type and to_type and from_type == to_type:
+                return True
+
+            if from_u.base_unit and to_u.base_unit and from_u.base_unit == to_u.base_unit:
+                return True
+
+            # Check for a custom mapping that links the units (org-scoped when possible)
+            effective_org_id = organization_id
+            try:
+                if effective_org_id is None and current_user and current_user.is_authenticated:
+                    if getattr(current_user, 'user_type', None) == 'developer':
+                        effective_org_id = session.get('dev_selected_org_id')
+                    else:
+                        effective_org_id = current_user.organization_id
+            except Exception:
+                effective_org_id = organization_id
+
+            mapping_query = CustomUnitMapping.query.filter(
+                ((CustomUnitMapping.from_unit == from_unit) & (CustomUnitMapping.to_unit == to_unit)) |
+                ((CustomUnitMapping.from_unit == to_unit) & (CustomUnitMapping.to_unit == from_unit))
             )
-            return isinstance(result, dict) and result.get('success', False)
+            if effective_org_id:
+                mapping_query = mapping_query.filter(
+                    (CustomUnitMapping.organization_id == effective_org_id) |
+                    (CustomUnitMapping.organization_id.is_(None))
+                )
+
+            return mapping_query.first() is not None
         except Exception:
             return False

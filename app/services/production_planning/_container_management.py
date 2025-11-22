@@ -233,8 +233,16 @@ def _load_suitable_containers(
         product_density = getattr(recipe, 'product_density', None)
         if not product_density:
             logger.info(f"🔍 DENSITY CHECK: Missing product density for recipe {recipe.id}")
-            # Raise explicit error so upstream handler can trigger the product-density drawer protocol
-            raise MissingProductDensityError(from_unit=yield_unit, to_unit='container units')
+            # Instead of raising, return a failure list with the error code
+            # This allows the analyze_container_options to handle it and potentially open a drawer
+            return [], [{
+                'container_id': None,
+                'container_name': 'Missing Density',
+                'from_unit': yield_unit,
+                'to_unit': 'container units',
+                'error_code': 'MISSING_PRODUCT_DENSITY',
+                'error_message': f'Missing product density for conversion {yield_unit} -> container units'
+            }]
 
     # Load and filter containers (now that checks are done)
     containers = list(inventory_items.values()) # Use filtered items
