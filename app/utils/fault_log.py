@@ -5,18 +5,19 @@ import os
 from pathlib import Path
 from typing import Any, Dict, Optional
 
-from app.utils.json_store import read_json_file, write_json_file
-from app.utils.timezone_utils import TimezoneUtils
+from .json_store import read_json_file, write_json_file
+from .timezone_utils import TimezoneUtils
 
 LOG = logging.getLogger(__name__)
-FAULT_LOG_FILENAME = os.environ.get("FAULT_LOG_PATH", "faults.json")
-FAULT_LOG_PATH = Path(FAULT_LOG_FILENAME)
+DEFAULT_FAULT_LOG = Path(os.environ.get("FAULT_LOG_PATH", "faults.json"))
 
 
 def log_fault(
     message: str,
     details: Optional[Dict[str, Any]] = None,
     source: str = "system",
+    *,
+    log_path: Path = DEFAULT_FAULT_LOG,
 ) -> bool:
     """Persist a structured fault entry for later triage."""
     fault_record = {
@@ -29,7 +30,7 @@ def log_fault(
     }
 
     try:
-        existing = read_json_file(str(FAULT_LOG_PATH), default=[]) or []
+        existing = read_json_file(log_path, default=[]) or []
     except Exception as err:  # pragma: no cover - defensive path
         LOG.warning("Failed to read fault log; starting new file: %s", err)
         existing = []
@@ -37,8 +38,8 @@ def log_fault(
     existing.append(fault_record)
 
     try:
-        write_json_file(str(FAULT_LOG_PATH), existing)
+        write_json_file(log_path, existing)
         return True
     except Exception as err:
-        LOG.error("Failed to write fault log %s: %s", FAULT_LOG_PATH, err)
+        LOG.error("Failed to write fault log %s: %s", log_path, err)
         return False

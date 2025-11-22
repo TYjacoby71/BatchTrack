@@ -8,7 +8,7 @@ Handles special inventory operations that don't follow standard FIFO patterns:
 
 import logging
 from app.models import db
-from app.utils.fifo_generator import generate_fifo_code # Moved to module level import
+from app.utils.inventory_event_code_generator import generate_inventory_event_code
 from ._fifo_ops import create_new_fifo_lot, deduct_fifo_inventory # Kept for local use within this file and added deduct_fifo_inventory
 from sqlalchemy import and_
 
@@ -109,7 +109,6 @@ def handle_recount(item, quantity, change_type, notes=None, created_by=None, tar
     try:
         from ._fifo_ops import get_item_lots, create_new_fifo_lot
         from app.models import UnifiedInventoryHistory
-        from app.utils.fifo_generator import generate_fifo_code
         from app.models.inventory_lot import InventoryLot
 
         # For recounts, the target_quantity is the desired final quantity
@@ -168,7 +167,7 @@ def handle_recount(item, quantity, change_type, notes=None, created_by=None, tar
                 db.session.add(lot)
 
                 # Create RECOUNT-SPECIFIC event history with RCN-xxx code
-                event_code = generate_fifo_code(change_type, item.id, is_lot_creation=False)
+                event_code = generate_inventory_event_code(change_type, item_id=item.id, code_type="event")
                 
                 deduction_history = UnifiedInventoryHistory(
                     inventory_item_id=item.id,
@@ -217,7 +216,7 @@ def handle_recount(item, quantity, change_type, notes=None, created_by=None, tar
                     db.session.add(lot)
 
                     # Create recount event history for this refill with RCN-xxx code
-                    event_code = generate_fifo_code(change_type, item.id, is_lot_creation=False)
+                    event_code = generate_inventory_event_code(change_type, item_id=item.id, code_type="event")
                     
                     refill_history = UnifiedInventoryHistory(
                         inventory_item_id=item.id,

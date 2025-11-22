@@ -191,6 +191,52 @@
     </div>
   </div>
 
+  <div class="card shadow-sm mt-4">
+    <div class="card-header bg-white border-0">
+      <h4 class="mb-1">Configuration ID Map</h4>
+      <p class="text-muted small mb-0">Snapshot of every critical environment/configuration key, its status, and the scale-ready target value.</p>
+    </div>
+    <div class="card-body">
+      <div class="table-responsive">
+        <table class="table table-sm align-middle mb-0">
+          <thead>
+            <tr>
+              <th scope="col">Configuration Key</th>
+              <th scope="col">Status</th>
+              <th scope="col">Scale Target</th>
+              <th scope="col">Category</th>
+              <th scope="col">Instructions</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for config in config_matrix %}
+            <tr>
+              <td class="fw-semibold">
+                <code>{{ config.key }}</code>
+                {% if config.is_secret %}<span class="badge bg-warning text-dark ms-1">Secret</span>{% endif %}
+                {% if not config.required %}<span class="badge bg-secondary ms-1">Optional</span>{% endif %}
+              </td>
+              <td>
+                {% if config.present %}
+                <span class="badge bg-success">Detected</span>
+                {% else %}
+                <span class="badge bg-danger">Missing</span>
+                {% endif %}
+              </td>
+              <td class="small">{{ config.recommended or "—" }}</td>
+              <td class="small text-muted">{{ config.category }}</td>
+              <td class="small">
+                <div>{{ config.description }}</div>
+                {% if config.note %}<div class="text-info">{{ config.note }}</div>{% endif %}
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
     <div class="card shadow-sm mt-4">
       <div class="card-header bg-white border-0">
         <h4 class="mb-1">Rate Limiter Map</h4>

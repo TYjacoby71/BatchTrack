@@ -7,9 +7,8 @@ from ...models.batch import Batch
 from ...utils.unit_utils import get_global_unit_list
 
 try:
-    from ...utils.authorization import require_permission
+    from ...utils.permissions import require_permission
 except ImportError:
-    # test-safe no-op decorator
     def require_permission(permission_name):
         def _wrap(f): return f
         return _wrap
@@ -28,7 +27,6 @@ def _write_product_created_audit(variant):
 
 
 from ...services.product_service import ProductService
-from ...utils.fifo_generator import generate_fifo_code
 from ...services.inventory_adjustment import process_inventory_adjustment
 
 # Wrapper for audit entry - used by tests
