@@ -410,3 +410,24 @@ class ConversionEngine:
         # Cache successful result (1 hour TTL by default via conversion_cache)
         conversion_cache.set(cache_key, result)
         return result
+
+    @staticmethod
+    def can_convert_units(amount, from_unit, to_unit, ingredient_id=None, density=None, organization_id=None):
+        """
+        Check if conversion is possible without actually performing it.
+        Returns True if conversion is possible, False otherwise.
+        """
+        try:
+            # Use a small test amount to avoid potential overflow issues
+            test_amount = 1.0
+            result = ConversionEngine.convert_units(
+                amount=test_amount,
+                from_unit=from_unit,
+                to_unit=to_unit,
+                ingredient_id=ingredient_id,
+                density=density,
+                organization_id=organization_id
+            )
+            return isinstance(result, dict) and result.get('success', False)
+        except Exception:
+            return False
