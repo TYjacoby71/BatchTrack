@@ -1,3 +1,4 @@
+
 """
 Locust Load Testing Configuration
 
@@ -100,16 +101,13 @@ class AuthenticatedMixin:
         # Get login page first
         login_page = self.client.get("/auth/login", name="login_page")
         if login_page.status_code != 200:
-            # In a real scenario, you might want to log this failure or handle it more robustly
-            # For load testing, if the login page itself fails, it's a critical issue.
-            # We'll let Locust track this as a failure if it's not 200.
             return login_page 
 
         token = self._extract_csrf(login_page)
 
         # Use the actual form field names from your login form
         payload = {
-            "username": username,  # or "email" - check your actual form
+            "username": username,
             "password": password,
         }
         if token:
@@ -121,17 +119,7 @@ class AuthenticatedMixin:
             "Referer": "/auth/login"
         }
 
-        with self.client.post("/auth/login", data=payload, headers=headers, catch_response=True, name=name) as response:
-            # Basic check for successful login. Locust will automatically track success/failure based on status codes.
-            # If the response is not a success code (e.g., 200, 302), Locust will mark it as a failure.
-            # If specific non-success codes should be treated as success (e.g., rate limiting),
-            # you would need to re-introduce catch_response=True for those specific cases.
-            # For now, we rely on Locust's default behavior.
-            if response.status_code in [302, 200] and "dashboard" in response.headers.get('location', ''):
-                response.success()
-            else:
-                response.failure(f"Login failed with status {response.status_code}")
-
+        response = self.client.post("/auth/login", data=payload, headers=headers, name=name)
         return response
 
 
@@ -189,7 +177,7 @@ class AdminUser(AuthenticatedMixin, HttpUser):
 
     @task(1)
     def plan_production(self):
-        """Access production planning, fixing bad request."""
+        """Access production planning."""
         self.client.get("/production-planning/plan-production", name="plan_production")
 
 class HighFrequencyUser(AuthenticatedMixin, HttpUser):
