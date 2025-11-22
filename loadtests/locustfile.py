@@ -48,7 +48,7 @@ class AnonymousUser(HttpUser):
     @task(2)
     def view_global_library(self):
         """Browse global item library."""
-        self.client.get("/library/global_items", name="global_library")
+        self.client.get("/global-items", name="global_library")
 
     @task(1)
     def attempt_signup(self):
@@ -128,7 +128,7 @@ class AuthenticatedMixin:
         # If specific non-success codes should be treated as success (e.g., rate limiting),
         # you would need to re-introduce catch_response=True for those specific cases.
         # For now, we rely on Locust's default behavior.
-        
+
         return response
 
 
@@ -141,10 +141,7 @@ class AuthenticatedUser(AuthenticatedMixin, HttpUser):
     @task(8)
     def view_dashboard(self):
         """Load user dashboard."""
-        response = self.client.get("/user_dashboard", name="dashboard")
-        # Alternative dashboard route if main one doesn't exist
-        if response.status_code == 404:
-            self.client.get("/dashboard", name="dashboard_alt")
+        self.client.get("/dashboard", name="dashboard")
 
     @task(5)
     def view_inventory(self):
@@ -154,17 +151,17 @@ class AuthenticatedUser(AuthenticatedMixin, HttpUser):
     @task(4)
     def view_batches(self):
         """Check batch status."""
-        self.client.get("/batches/list", name="batches_list")
+        self.client.get("/batches", name="batches_list")
 
     @task(3)
     def view_recipes(self):
         """Browse recipes."""
-        self.client.get("/recipes/list", name="recipes_list")
+        self.client.get("/recipes", name="recipes_list")
 
     @task(2)
     def view_products(self):
         """Browse and view products."""
-        self.client.get("/products/list", name="products_list")
+        self.client.get("/products", name="products_list")
 
     @task(1)
     def view_settings(self):
@@ -196,48 +193,4 @@ class HighFrequencyUser(AuthenticatedMixin, HttpUser):
     @task(10)
     def rapid_dashboard_checks(self):
         """Frequent dashboard polling."""
-        self.client.get("/user_dashboard", name="rapid_dashboard")
-
-    @task(5) 
-    def api_calls(self):
-        """Simulate API calls."""
-        endpoints = [
-            "/api/server-time",
-            "/api/dashboard-alerts", 
-            "/api/timer-summary"
-        ]
-        endpoint = random.choice(endpoints)
-        self.client.get(endpoint, name="api_calls")
-
-class StressTest(HttpUser):
-    """High-intensity stress testing focused on existing endpoints."""
-
-    wait_time = between(0.1, 1)
-
-    @task(5)
-    def homepage_stress(self):
-        self.client.get("/", name="homepage_stress")
-
-    @task(3)
-    def login_page_stress(self):
-        self.client.get("/auth/login", name="login_stress")
-
-    @task(2)
-    def tools_stress(self):
-        self.client.get("/tools", name="tools_stress")
-
-if __name__ == "__main__":
-    print("Load test scenarios available:")
-    print("- AnonymousUser: Public browsing (75% weight)")
-    print("- AuthenticatedUser: Logged-in usage (25% weight)")  
-    print("- AdminUser: Administrative tasks (2.5% weight)")
-    print("- HighFrequencyUser: Rapid API usage (12.5% weight)")
-    print("- StressTest: High-intensity testing")
-    print("")
-    print("Note: Rate limiting (429 errors) and auth failures are expected during load testing")
-    print("")
-    print("🚀 SETUP: Generate test users first to avoid session conflicts:")
-    print("   cd loadtests && python test_user_generator.py create --count 100")
-    print("")
-    print("📋 Test users: loadtest_user1 through loadtest_user100 (password: loadtest123)")
-    print("   Each authenticated test will randomly select a user from the pool")
+        self.client.get("/dashboard", name="rapid_dashboard")
