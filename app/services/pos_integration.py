@@ -5,7 +5,6 @@ from flask import current_app
 from flask_login import current_user
 from ..models import db, InventoryItem, Reservation
 from sqlalchemy import and_, func
-from ..utils import generate_fifo_code
 from app.services.inventory_adjustment import process_inventory_adjustment
 from app.services.reservation_service import ReservationService
 

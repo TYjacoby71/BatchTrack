@@ -2,7 +2,6 @@ from flask import current_app
 from flask_login import current_user
 from ..models import db, InventoryItem, Reservation
 from sqlalchemy import and_, func
-from ..utils import generate_fifo_code
 import logging
 
 # Import necessary canonical functions

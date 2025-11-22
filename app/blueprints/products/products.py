@@ -28,7 +28,6 @@ def _write_product_created_audit(variant):
 
 
 from ...services.product_service import ProductService
-from ...utils.fifo_generator import generate_fifo_code
 from ...services.inventory_adjustment import process_inventory_adjustment
 
 # Wrapper for audit entry - used by tests

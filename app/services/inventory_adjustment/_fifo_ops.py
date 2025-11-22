@@ -3,6 +3,7 @@ from datetime import datetime, timedelta
 from decimal import Decimal
 from app.models import db, InventoryItem, UnifiedInventoryHistory
 from app.utils.timezone_utils import TimezoneUtils
+from app.utils.fifo_generator import generate_inventory_event_code
 from sqlalchemy import and_
 
 logger = logging.getLogger(__name__)
@@ -60,7 +61,6 @@ def create_new_fifo_lot(item_id, quantity, change_type, unit=None, notes=None, c
     try:
         from app.models import InventoryItem
         from app.models.inventory_lot import InventoryLot
-        from app.utils.fifo_generator import generate_fifo_code
         from flask_login import current_user # Import current_user
 
         # Get the inventory item
@@ -96,10 +96,6 @@ def create_new_fifo_lot(item_id, quantity, change_type, unit=None, notes=None, c
         # Get batch_id from kwargs if provided
         batch_id = kwargs.get('batch_id')
 
-        # Generate a single FIFO code that will be shared by both lot and history
-        # Import the proper FIFO generator
-        from app.utils.fifo_generator import generate_fifo_code
-
         # For finished_batch operations, use batch-specific label if batch_id exists
         if change_type == 'finished_batch' and batch_id:
             from app.models import Batch
@@ -107,10 +103,10 @@ def create_new_fifo_lot(item_id, quantity, change_type, unit=None, notes=None, c
             if batch and batch.label_code:
                 fifo_code = batch.label_code
             else:
-                fifo_code = generate_fifo_code(change_type, item_id, is_lot_creation=True)
+                fifo_code = generate_inventory_event_code(change_type, item_id=item_id, code_type="lot")
         else:
             # For lot creation, this always creates an actual lot
-            fifo_code = generate_fifo_code(change_type, item_id, is_lot_creation=True)
+            fifo_code = generate_inventory_event_code(change_type, item_id=item_id, code_type="lot")
 
         # Create new lot - ALWAYS inherit perishable status from item
         lot = InventoryLot(
@@ -242,19 +238,20 @@ def deduct_fifo_inventory(item_id, quantity_to_deduct, change_type, notes=None, 
             # Update the lot's remaining quantity
             lot.remaining_quantity = float(lot.remaining_quantity) - deduct_from_lot
 
-            # Create audit record linking to the specific lot
-            from app.utils.fifo_generator import generate_fifo_code
-
             # Generate appropriate event code for this deduction event; prefer batch label when available
             if change_type == 'batch' and batch_id:
                 try:
                     from app.models import Batch
                     batch = db.session.get(Batch, batch_id)
-                    deduction_event_code = batch.label_code if batch and batch.label_code else generate_fifo_code(change_type, item_id, is_lot_creation=False)
+                    deduction_event_code = (
+                        batch.label_code
+                        if batch and batch.label_code
+                        else generate_inventory_event_code(change_type, item_id=item_id, code_type="event")
+                    )
                 except Exception:
-                    deduction_event_code = generate_fifo_code(change_type, item_id, is_lot_creation=False)
+                    deduction_event_code = generate_inventory_event_code(change_type, item_id=item_id, code_type="event")
             else:
-                deduction_event_code = generate_fifo_code(change_type, item_id, is_lot_creation=False)
+                deduction_event_code = generate_inventory_event_code(change_type, item_id=item_id, code_type="event")
 
             # Choose unit cost according to valuation method
             event_unit_cost = float(item.cost_per_unit or 0.0) if valuation_method == 'average' else float(lot.unit_cost or 0.0)
