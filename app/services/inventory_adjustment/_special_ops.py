@@ -8,7 +8,7 @@ Handles special inventory operations that don't follow standard FIFO patterns:
 
 import logging
 from app.models import db
-from app.utils.fifo_generator import generate_inventory_event_code
+from app.utils.inventory_event_code_generator import generate_inventory_event_code
 from ._fifo_ops import create_new_fifo_lot, deduct_fifo_inventory # Kept for local use within this file and added deduct_fifo_inventory
 from sqlalchemy import and_
 

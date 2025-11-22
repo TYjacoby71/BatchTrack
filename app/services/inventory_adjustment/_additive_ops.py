@@ -151,7 +151,7 @@ def _handle_lot_creation_operation(item, quantity, change_type, notes, created_b
 def _handle_lot_crediting_operation(item, quantity, change_type, unit, notes, final_cost, created_by, batch_id=None, customer=None, order_id=None, **kwargs):
     """Handle operations that credit back to existing FIFO lots"""
     from app.models.inventory_lot import InventoryLot
-    from app.utils.fifo_generator import generate_inventory_event_code
+    from app.utils.inventory_event_code_generator import generate_inventory_event_code
     from sqlalchemy import and_
 
     logger.info(f"LOT_CREDITING: Processing {change_type} credit operation for {quantity} {unit}")

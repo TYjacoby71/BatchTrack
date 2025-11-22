@@ -8,6 +8,7 @@ __all__ = [
     "generate_inventory_event_code",
     "parse_inventory_code",
     "validate_inventory_code",
+    "int_to_base36",
 ]
 
 BASE36_CHARS = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ"
@@ -40,7 +41,7 @@ class ParsedCode(TypedDict):
     code_type: Literal["lot", "event"] | None
 
 
-def _int_to_base36(num: int) -> str:
+def int_to_base36(num: int) -> str:
     if num == 0:
         return "0"
 
@@ -53,9 +54,9 @@ def _int_to_base36(num: int) -> str:
 
 
 def _generate_suffix(item_id: int | None = None) -> str:
-    timestamp_component = _int_to_base36(int(time.time() * 1000)).rjust(6, "0")[-4:]
-    item_component = _int_to_base36(abs(item_id or 0)).rjust(3, "0")[-2:]
-    random_component = _int_to_base36(secrets.randbelow(36**3)).rjust(3, "0")[-2:]
+    timestamp_component = int_to_base36(int(time.time() * 1000)).rjust(6, "0")[-4:]
+    item_component = int_to_base36(abs(item_id or 0)).rjust(3, "0")[-2:]
+    random_component = int_to_base36(secrets.randbelow(36**3)).rjust(3, "0")[-2:]
     return f"{timestamp_component}{item_component}{random_component}".upper()
 
 
@@ -97,4 +98,3 @@ def validate_inventory_code(code: str) -> bool:
         return False
     valid_prefixes = {LOT_PREFIX, DEFAULT_EVENT_PREFIX, *EVENT_PREFIXES.values()}
     return parsed["prefix"] in valid_prefixes
-

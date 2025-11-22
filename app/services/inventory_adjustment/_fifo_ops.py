@@ -3,7 +3,7 @@ from datetime import datetime, timedelta
 from decimal import Decimal
 from app.models import db, InventoryItem, UnifiedInventoryHistory
 from app.utils.timezone_utils import TimezoneUtils
-from app.utils.fifo_generator import generate_inventory_event_code
+from app.utils.inventory_event_code_generator import generate_inventory_event_code
 from sqlalchemy import and_
 
 logger = logging.getLogger(__name__)
