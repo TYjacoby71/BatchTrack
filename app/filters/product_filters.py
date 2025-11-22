@@ -1,72 +1,83 @@
+from __future__ import annotations
 
 import re
-from flask import current_app
+from typing import Any, Dict, Mapping, MutableMapping
 
-def register_product_filters(app):
-    """Register product-related template filters"""
-    
-    @app.template_filter('parse_sale_data')
-    def parse_sale_data(note):
-        """Parse structured data from sale notes"""
+from flask import Flask
+
+ParsedSaleData = Dict[str, str | None]
+
+SALE_DATA_FIELDS = ("quantity", "sale_price", "customer", "notes")
+SALE_FIELD_TEMPLATE: Mapping[str, None] = dict.fromkeys(SALE_DATA_FIELDS)  # type: ignore[arg-type]
+
+
+def register_product_filters(app: Flask) -> None:
+    """Attach product-related template filters to the given Flask application."""
+
+    @app.template_filter("parse_sale_data")
+    def parse_sale_data(note: str | None) -> ParsedSaleData:
+        """Extract structured metadata from serialized sale notes."""
+        data: MutableMapping[str, str | None] = dict(SALE_FIELD_TEMPLATE)
         if not note:
-            return {'quantity': None, 'sale_price': None, 'customer': None, 'notes': None}
+            return data  # type: ignore[return-value]
 
-        data = {'quantity': None, 'sale_price': None, 'customer': None, 'notes': None}
-
-        # Parse FIFO deduction format: "FIFO deduction: 2.0 count of Base. Items used: 1. Reason: sale"
-        fifo_match = re.search(r'FIFO deduction:\s*([\d.]+)\s*\w+', note)
+        fifo_match = re.search(r"FIFO deduction:\s*([\d.]+)\s*\w+", note)
         if fifo_match:
-            data['quantity'] = fifo_match.group(1)
+            data["quantity"] = fifo_match.group(1)
 
-        # Parse sale format: "Sale: 1 × 4 oz Jar for $15.00 ($15.00/unit) to Customer Name"
-        sale_match = re.search(r'Sale:\s*([\d.]+)\s*×.*?for\s*\$?([\d.]+)', note)
+        sale_match = re.search(r"Sale:\s*([\d.]+)\s*×.*?for\s*\$?([\d.]+)", note)
         if sale_match:
-            data['quantity'] = sale_match.group(1)
-            data['sale_price'] = f"${sale_match.group(2)}"
+            data["quantity"] = sale_match.group(1)
+            data["sale_price"] = f"${sale_match.group(2)}"
 
-        # Parse customer
-        customer_match = re.search(r'to\s+(.+?)(?:\.|$)', note)
+        customer_match = re.search(r"to\s+(.+?)(?:\.|$)", note)
         if customer_match:
-            data['customer'] = customer_match.group(1).strip()
+            data["customer"] = customer_match.group(1).strip()
 
-        # If no structured data found, put everything in notes
-        if not any([data['quantity'], data['sale_price'], data['customer']]):
-            data['notes'] = note
+        if not any(data[field] for field in ("quantity", "sale_price", "customer")):
+            data["notes"] = note
+        return data  # type: ignore[return-value]
 
-        return data
 
-def product_variant_name(sku):
-    """Get display name for product variant"""
+def product_variant_name(sku: Any) -> str:
+    """Return a display-friendly name for a product SKU/variant reference."""
     if not sku:
         return ""
-    
-    if hasattr(sku, 'variant') and sku.variant:
-        return f"{sku.product.name} - {sku.variant.name}"
-    elif hasattr(sku, 'variant_name') and sku.variant_name:
-        return f"{sku.product_name} - {sku.variant_name}"
-    else:
-        return sku.product_name if hasattr(sku, 'product_name') else str(sku)
 
-def ingredient_cost_currency(cost):
-    """Format ingredient cost as currency"""
-    if cost is None or cost == 0:
-        return "$0.00"
-    return f"${float(cost):.2f}"
+    if getattr(sku, "variant", None):
+        product_name = getattr(getattr(sku, "product", None), "name", "")
+        variant_name = getattr(getattr(sku, "variant", None), "name", "")
+        return f"{product_name} - {variant_name}".strip(" -")
 
-def safe_float(value, default=0.0):
-    """Safely convert value to float"""
-    if value is None:
-        return default
+    if getattr(sku, "variant_name", None):
+        product_name = getattr(sku, "product_name", "") or getattr(getattr(sku, "product", None), "name", "")
+        return f"{product_name} - {sku.variant_name}".strip(" -")
+
+    return getattr(sku, "product_name", None) or str(sku)
+
+
+def ingredient_cost_currency(cost: Any) -> str:
+    """Format ingredient cost as currency."""
+    try:
+        value = float(cost)
+    except (TypeError, ValueError):
+        value = 0.0
+    return f"${value:.2f}"
+
+
+def safe_float(value: Any, default: float = 0.0) -> float:
+    """Safely convert a value to float with fallback."""
     try:
         return float(value)
-    except (ValueError, TypeError):
+    except (TypeError, ValueError):
         return default
 
-def register_filters(app):
-    """Register all template filters"""
+
+def register_filters(app: Flask) -> None:
+    """Register every template filter for product-facing templates."""
     register_product_filters(app)
-    
-    @app.template_filter('get_fifo_summary')
-    def get_fifo_summary_filter(inventory_id):
-        """Template filter to get FIFO summary - removed as method no longer exists"""
+
+    @app.template_filter("get_fifo_summary")
+    def get_fifo_summary_filter(_inventory_id: Any) -> None:
+        """Historical filter placeholder; FIFO summaries now deprecated."""
         return None
