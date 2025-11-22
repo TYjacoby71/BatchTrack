@@ -127,7 +127,7 @@ def _configure_rate_limiter(app: Flask) -> None:
         or "memory://"
     )
     app.config["RATELIMIT_STORAGE_URI"] = storage_uri
-    limiter.init_app(app, storage_uri=storage_uri)
+    limiter.init_app(app)
 
     if app.config.get("ENV") == "production" and storage_uri.startswith("memory://"):
         raise RuntimeError("Rate limiter storage must be Redis-backed in production.")
