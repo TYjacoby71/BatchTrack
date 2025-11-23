@@ -220,39 +220,6 @@ def _load_suitable_containers(
     # Now filter for only containers with stock for actual selection
     inventory_items = {k: v for k, v in inventory_items.items() if v.quantity > 0}
 
-    # === PRODUCT DENSITY CHECK ===
-    # Check if any container capacity unit requires density to convert from recipe yield unit
-    needs_density_conversion = False
-    if yield_unit != 'count':
-        for container in inventory_items.values():
-            target_unit = container.capacity_unit or 'count'
-            requires_density, _ = ConversionEngine.validate_density_requirements(
-                yield_unit,
-                target_unit,
-                None
-            )
-            if requires_density:
-                needs_density_conversion = True
-                break
-
-    if needs_density_conversion:
-        logger.info(f"🔍 DENSITY CHECK: Product density required to convert between units")
-
-        # Check if we have product density set for this recipe
-        product_density = getattr(recipe, 'product_density', None)
-        if not product_density:
-            logger.info(f"🔍 DENSITY CHECK: Missing product density for recipe {recipe.id}")
-            # Instead of raising, return a failure list with the error code
-            # This allows the analyze_container_options to handle it and potentially open a drawer
-            return [], [{
-                'container_id': None,
-                'container_name': 'Missing Density',
-                'from_unit': yield_unit,
-                'to_unit': 'container units',
-                'error_code': 'MISSING_PRODUCT_DENSITY',
-                'error_message': f'Missing product density for conversion {yield_unit} -> container units'
-            }]
-
     # Load and filter containers (now that checks are done)
     containers = list(inventory_items.values()) # Use filtered items
 
