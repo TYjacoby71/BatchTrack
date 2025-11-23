@@ -11,6 +11,7 @@ from flask_login import current_user
 from ..models import Unit
 from .cache_manager import app_cache
 from .validation_helpers import validate_density
+from ..services.unit_conversion import ConversionEngine
 
 logger = logging.getLogger(__name__)
 
@@ -199,29 +200,5 @@ def _ingredient_has_density(ingredient: Any | None) -> bool:
 def validate_density_requirements(
     from_unit: Any, to_unit: Any, ingredient: Any | None = None
 ) -> tuple[bool, str | None]:
-    """
-    Determine whether a density value is required for the requested conversion.
-
-    Returns:
-        tuple[bool, Optional[str]]: (needs_density, message)
-    """
-    from_type = getattr(from_unit, "unit_type", None)
-    to_type = getattr(to_unit, "unit_type", None)
-
-    if from_type is None or to_type is None or from_type == to_type:
-        return False, None
-
-    unit_types = {from_type, to_type}
-    if {"volume", "weight"}.issubset(unit_types):
-        if not ingredient:
-            return True, "Ingredient context is required for volume ↔ weight conversion."
-        if _ingredient_has_density(ingredient):
-            return False, None
-
-        ingredient_name = getattr(ingredient, "name", "this ingredient")
-        return (
-            True,
-            f"Density is required to convert between weight and volume for {ingredient_name}.",
-        )
-
-    return False, None
+    """Backward-compatible shim that delegates to ConversionEngine."""
+    return ConversionEngine.validate_density_requirements(from_unit, to_unit, ingredient)
