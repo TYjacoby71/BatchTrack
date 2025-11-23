@@ -221,12 +221,21 @@ def _load_suitable_containers(
     inventory_items = {k: v for k, v in inventory_items.items() if v.quantity > 0}
 
     # === PRODUCT DENSITY CHECK ===
-    # Check if we need product density for unit conversion
-    if yield_unit != 'count' and any(
-        (container.capacity_unit or 'count') != 'count' and
-        not ConversionEngine.can_convert_units(1.0, yield_unit, container.capacity_unit or 'count')
-        for container in inventory_items.values()
-    ):
+    # Check if any container capacity unit requires density to convert from recipe yield unit
+    needs_density_conversion = False
+    if yield_unit != 'count':
+        for container in inventory_items.values():
+            target_unit = container.capacity_unit or 'count'
+            requires_density, _ = ConversionEngine.validate_density_requirements(
+                yield_unit,
+                target_unit,
+                None
+            )
+            if requires_density:
+                needs_density_conversion = True
+                break
+
+    if needs_density_conversion:
         logger.info(f"🔍 DENSITY CHECK: Product density required to convert between units")
 
         # Check if we have product density set for this recipe
