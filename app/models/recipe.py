@@ -28,6 +28,7 @@ class Recipe(ScopedModelMixin, db.Model):
     status = db.Column(db.String(16), default='published', nullable=False)
     category_id = db.Column(db.Integer, db.ForeignKey('product_category.id'), nullable=False)
     product_category = db.relationship('ProductCategory')
+    product_group = db.relationship('RecipeProductGroup', backref='recipes')
     created_by = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True)
     # Timestamps for retention calculations
     created_at = db.Column(db.DateTime, default=TimezoneUtils.utc_now)
@@ -56,6 +57,7 @@ class Recipe(ScopedModelMixin, db.Model):
     recipe_ingredients = db.relationship('RecipeIngredient', backref='recipe', cascade="all, delete-orphan")
     # Consumables used during production (e.g., gloves, filters). Snapshot at batch start.
     recipe_consumables = db.relationship('RecipeConsumable', backref='recipe', cascade="all, delete-orphan")
+    moderation_events = db.relationship('RecipeModerationEvent', backref='recipe', cascade="all, delete-orphan")
     portioning_data = db.Column(db.JSON, nullable=True)
     # Absolute additive columns for clarity
     is_portioned = db.Column(db.Boolean, nullable=True)
@@ -64,6 +66,22 @@ class Recipe(ScopedModelMixin, db.Model):
     portion_unit_id = db.Column(db.Integer, db.ForeignKey('unit.id'), nullable=True)
     # Category-specific structured fields (per-category aids, e.g., lye settings, fragrance load, phases)
     category_data = db.Column(db.JSON, nullable=True)
+
+    # Marketplace / Library metadata
+    sharing_scope = db.Column(db.String(16), nullable=False, default='private', server_default='private')
+    is_public = db.Column(db.Boolean, nullable=False, default=False, server_default=sa.text("false"))
+    is_for_sale = db.Column(db.Boolean, nullable=False, default=False, server_default=sa.text("false"))
+    sale_price = db.Column(sa.Numeric(12, 4), nullable=True)
+    marketplace_status = db.Column(db.String(32), nullable=False, default='draft', server_default='draft')
+    marketplace_notes = db.Column(db.Text, nullable=True)
+    marketplace_blocked = db.Column(db.Boolean, nullable=False, default=False, server_default=sa.text("false"))
+    marketplace_block_reason = db.Column(db.Text, nullable=True)
+    marketplace_violation_count = db.Column(db.Integer, nullable=False, default=0, server_default='0')
+    shopify_product_url = db.Column(db.String(512), nullable=True)
+    product_group_id = db.Column(db.Integer, db.ForeignKey('recipe_product_group.id'), nullable=True)
+    cover_image_path = db.Column(db.String(255), nullable=True)
+    cover_image_url = db.Column(db.String(512), nullable=True)
+    skin_opt_in = db.Column(db.Boolean, nullable=False, default=True, server_default=sa.text("true"))
 
     # Computed projection columns (persisted) for hot fields (Postgres only)
     soap_superfat = db.Column(sa.Numeric(), _pg_computed("((category_data ->> 'soap_superfat'))::numeric"), nullable=True)
@@ -103,6 +121,10 @@ class Recipe(ScopedModelMixin, db.Model):
         db.Index('ix_recipe_baker_yeast_pct', 'baker_yeast_pct'),
         db.Index('ix_recipe_cosm_emulsifier_pct', 'cosm_emulsifier_pct'),
         db.Index('ix_recipe_cosm_preservative_pct', 'cosm_preservative_pct'),
+        db.Index('ix_recipe_sharing_scope', 'sharing_scope'),
+        db.Index('ix_recipe_is_public', 'is_public'),
+        db.Index('ix_recipe_product_group_id', 'product_group_id'),
+        db.Index('ix_recipe_marketplace_status', 'marketplace_status'),
     ])
 
 class RecipeIngredient(ScopedModelMixin, db.Model):

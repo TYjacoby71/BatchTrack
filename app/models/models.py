@@ -57,6 +57,8 @@ _export([
     ("category", "Tag", None),
     ("product_category", "ProductCategory", None),
     ("global_item", "GlobalItem", None),
+    ("recipe_marketplace", "RecipeProductGroup", None),
+    ("recipe_marketplace", "RecipeModerationEvent", None),
 ])
 
 # Build __all__ from whatever successfully imported
@@ -108,6 +110,12 @@ class Organization(db.Model):
     # Inventory costing policy
     inventory_cost_method = db.Column(db.String(16), nullable=True)  # 'fifo' | 'average' (default handled in logic)
     inventory_cost_method_changed_at = db.Column(db.DateTime, nullable=True)
+
+    # Recipe marketplace governance
+    recipe_sales_blocked = db.Column(db.Boolean, default=False)
+    recipe_library_blocked = db.Column(db.Boolean, default=False)
+    recipe_violation_count = db.Column(db.Integer, default=0)
+    recipe_policy_notes = db.Column(db.Text, nullable=True)
 
     # Relationships
     users = db.relationship('User', backref='organization')

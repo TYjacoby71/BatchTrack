@@ -9,6 +9,7 @@ from .models import (
     Recipe, RecipeIngredient
 )
 from .recipe import RecipeConsumable, RecipeLineage
+from .recipe_marketplace import RecipeProductGroup, RecipeModerationEvent
 from .batch import (
     Batch,
     BatchIngredient,

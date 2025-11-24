@@ -1,9 +1,16 @@
-from flask import render_template, request, redirect, url_for, flash, jsonify
+import os
+from uuid import uuid4
+
+from flask import render_template, request, redirect, url_for, flash, jsonify, current_app
 from flask_login import login_required, current_user
+from werkzeug.utils import secure_filename
+
 from . import recipes_bp
 from app.extensions import db
 from app.models import Recipe, InventoryItem, GlobalItem, RecipeLineage
+from app.models.recipe_marketplace import RecipeProductGroup
 from app.utils.permissions import require_permission
+from app.utils.settings import is_feature_enabled
 
 from app.services.recipe_service import (
     create_recipe, update_recipe, delete_recipe, get_recipe_details,
@@ -19,6 +26,7 @@ from sqlalchemy import func
 from itertools import zip_longest
 
 logger = logging.getLogger(__name__)
+_ALLOWED_COVER_EXTENSIONS = {"png", "jpg", "jpeg", "gif", "webp"}
 
 @recipes_bp.route('/new', methods=['GET', 'POST'])
 @login_required
@@ -29,6 +37,25 @@ def new_recipe():
         target_status = _get_submission_status(request.form)
         try:
             ingredients = _extract_ingredients_from_form(request.form)
+            marketplace_payload = _parse_marketplace_payload(request.form)
+            cover_image_path = None
+            cover_image_url = None
+            cover_file = request.files.get('cover_image')
+            if cover_file and cover_file.filename:
+                try:
+                    cover_image_path, cover_image_url = _process_cover_image_upload(cover_file)
+                except ValueError as upload_err:
+                    flash(str(upload_err), 'error')
+                    ingredient_prefill, consumable_prefill = _build_prefill_from_form(request.form)
+                    form_recipe = _recipe_from_form(request.form)
+                    return _render_recipe_form(
+                        recipe=form_recipe,
+                        ingredient_prefill=ingredient_prefill,
+                        consumable_prefill=consumable_prefill,
+                        is_clone=is_clone,
+                        cloned_from_id=cloned_from_id,
+                        form_values=request.form
+                    )
 
             portioning_payload = None
             try:
@@ -92,7 +119,17 @@ def new_recipe():
                 is_portioned=(portioning_payload.get('is_portioned') if portioning_payload else False),
                 portion_name=(portioning_payload.get('portion_name') if portioning_payload else None),
                 portion_count=(portioning_payload.get('portion_count') if portioning_payload else None),
-                status=target_status
+                status=target_status,
+                product_group_id=marketplace_payload['product_group_id'],
+                sharing_scope=marketplace_payload['sharing_scope'],
+                is_public=marketplace_payload['is_public'],
+                is_for_sale=marketplace_payload['is_for_sale'],
+                sale_price=marketplace_payload['sale_price'],
+                shopify_product_url=marketplace_payload['shopify_product_url'],
+                marketplace_notes=marketplace_payload['marketplace_notes'],
+                cover_image_path=cover_image_path,
+                cover_image_url=cover_image_url,
+                skin_opt_in=marketplace_payload['skin_opt_in']
             )
 
             if success:
@@ -254,7 +291,8 @@ def create_variation(recipe_id):
                 parent_recipe_id=parent.id,
                 allowed_containers=[int(id) for id in request.form.getlist('allowed_containers[]') if id] or [],
                 label_prefix=label_prefix,
-                status=target_status
+                status=target_status,
+                product_group_id=parent.product_group_id
             )
 
             if success:
@@ -328,6 +366,31 @@ def edit_recipe(recipe_id):
                 yield_val = 0.0
             
             ingredients = _extract_ingredients_from_form(request.form)
+            marketplace_payload = _parse_marketplace_payload(request.form)
+            cover_image_path = None
+            cover_image_url = None
+            cover_file = request.files.get('cover_image')
+            if cover_file and cover_file.filename:
+                try:
+                    cover_image_path, cover_image_url = _process_cover_image_upload(cover_file)
+                except ValueError as upload_err:
+                    flash(str(upload_err), 'error')
+                    form_override = request.form
+                    ingredient_prefill, consumable_prefill = _build_prefill_from_form(request.form)
+                    return _render_recipe_form(
+                        recipe=recipe,
+                        edit_mode=True,
+                        ingredient_prefill=ingredient_prefill,
+                        consumable_prefill=consumable_prefill,
+                        form_values=form_override
+                    )
+            remove_cover = request.form.get('remove_cover_image') == 'true'
+            cover_kwargs = {}
+            if cover_image_path and cover_image_url:
+                cover_kwargs['cover_image_path'] = cover_image_path
+                cover_kwargs['cover_image_url'] = cover_image_url
+            if remove_cover:
+                cover_kwargs['remove_cover_image'] = True
 
             portioning_payload = None
             try:
@@ -395,7 +458,16 @@ def edit_recipe(recipe_id):
                 is_portioned=(portioning_payload.get('is_portioned') if portioning_payload else False),
                 portion_name=(portioning_payload.get('portion_name') if portioning_payload else None),
                 portion_count=(portioning_payload.get('portion_count') if portioning_payload else None),
-                status=target_status
+                status=target_status,
+                product_group_id=marketplace_payload['product_group_id'],
+                sharing_scope=marketplace_payload['sharing_scope'],
+                is_public=marketplace_payload['is_public'],
+                is_for_sale=marketplace_payload['is_for_sale'],
+                sale_price=marketplace_payload['sale_price'],
+                shopify_product_url=marketplace_payload['shopify_product_url'],
+                marketplace_notes=marketplace_payload['marketplace_notes'],
+                skin_opt_in=marketplace_payload['skin_opt_in'],
+                **cover_kwargs
             )
 
             if success:
@@ -942,12 +1014,86 @@ def _get_recipe_form_data():
     # Categories for dropdown
     categories = ProductCategory.query.order_by(ProductCategory.name.asc()).all()
 
+    product_groups = RecipeProductGroup.query.filter_by(is_active=True).order_by(
+        RecipeProductGroup.display_order.asc(), RecipeProductGroup.name.asc()
+    ).all()
+
     return {
         'all_ingredients': all_ingredients,
         'units': units,
         'inventory_units': inventory_units,
-        'product_categories': categories
+        'product_categories': categories,
+        'product_groups': product_groups,
+        'recipe_sharing_enabled': _is_recipe_sharing_enabled()
     }
+
+
+def _parse_marketplace_payload(form):
+    has_scope = 'sharing_scope' in form
+    raw_scope = (form.get('sharing_scope') or '').strip().lower() if has_scope else None
+    scope = raw_scope if raw_scope in {'public', 'private'} else None
+    if scope is None:
+        is_public = None
+    else:
+        is_public = scope == 'public'
+    has_sale_mode = 'sale_mode' in form
+    raw_sale = (form.get('sale_mode') or '').strip().lower() if has_sale_mode else None
+    is_for_sale = None
+    if is_public is True:
+        is_for_sale = (raw_sale == 'sale') if raw_sale else False
+    elif is_public is False:
+        is_for_sale = False
+    sale_price = None
+    if is_for_sale:
+        sale_price = form.get('sale_price')
+        if isinstance(sale_price, str):
+            sale_price = sale_price.strip()
+        if sale_price in (None, '', []):
+            sale_price = None
+    product_group_id = None
+    if 'product_group_id' in form:
+        product_group_id = _safe_int(form.get('product_group_id'))
+    payload = {
+        'sharing_scope': scope,
+        'is_public': is_public,
+        'is_for_sale': is_for_sale,
+        'sale_price': sale_price,
+        'product_group_id': product_group_id,
+        'shopify_product_url': (form.get('shopify_product_url') or '').strip() or None,
+        'skin_opt_in': (form.get('skin_opt_in') or '').lower() == 'true',
+        'marketplace_notes': (form.get('marketplace_notes') or '').strip() or None,
+    }
+    return payload
+
+
+def _process_cover_image_upload(file_storage):
+    filename = secure_filename(file_storage.filename or '')
+    if not filename:
+        raise ValueError("Please select an image file to upload.")
+    ext = filename.rsplit('.', 1)[-1].lower()
+    if ext not in _ALLOWED_COVER_EXTENSIONS:
+        raise ValueError("Unsupported image type. Use PNG, JPG, GIF, or WEBP.")
+    upload_root = current_app.config.get('UPLOAD_FOLDER') or os.path.join(
+        current_app.root_path, 'static', 'product_images'
+    )
+    target_dir = os.path.join(upload_root, 'recipes')
+    os.makedirs(target_dir, exist_ok=True)
+    generated = f"{uuid4().hex}.{ext}"
+    full_path = os.path.join(target_dir, generated)
+    file_storage.save(full_path)
+    relative_path = os.path.relpath(full_path, current_app.static_folder).replace('\\', '/')
+    cover_url = url_for('static', filename=relative_path)
+    return relative_path, cover_url
+
+
+def _is_recipe_sharing_enabled():
+    try:
+        enabled = is_feature_enabled('FEATURE_RECIPE_SHARING_CONTROLS')
+    except Exception:
+        enabled = False
+    if current_user.is_authenticated and getattr(current_user, 'user_type', '') == 'developer':
+        return True
+    return enabled
 
 def _format_stock_results(ingredients):
     """Format ingredient availability for frontend"""
@@ -995,5 +1141,10 @@ def _create_variation_template(parent):
 
     if parent.category_data:
         template.category_data = parent.category_data.copy() if isinstance(parent.category_data, dict) else parent.category_data
+    template.product_group_id = parent.product_group_id
+    template.skin_opt_in = parent.skin_opt_in
+    template.sharing_scope = 'private'
+    template.is_public = False
+    template.is_for_sale = False
 
     return template

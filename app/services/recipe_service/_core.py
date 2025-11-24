@@ -5,6 +5,7 @@ Handles CRUD operations for recipes with proper service integration.
 """
 
 import logging
+from decimal import Decimal, InvalidOperation
 from typing import Dict, List, Any, Optional, Tuple
 from flask_login import current_user
 
@@ -18,6 +19,34 @@ from ...services.event_emitter import EventEmitter
 logger = logging.getLogger(__name__)
 
 _ALLOWED_RECIPE_STATUSES = {'draft', 'published'}
+_UNSET = object()
+_CENTS = Decimal("0.01")
+
+
+def _normalize_sharing_scope(value: str | None) -> str:
+    """Clamp sharing scope to supported values."""
+    if not value:
+        return 'private'
+    normalized = str(value).strip().lower()
+    if normalized in {'public', 'pub', 'shared'}:
+        return 'public'
+    return 'private'
+
+
+def _default_marketplace_status(is_public: bool) -> str:
+    return 'listed' if is_public else 'draft'
+
+
+def _normalize_sale_price(value: Any) -> Optional[Decimal]:
+    if value in (None, '', _UNSET):
+        return None
+    try:
+        price = Decimal(str(value))
+    except (InvalidOperation, ValueError, TypeError):
+        return None
+    if price < 0:
+        return None
+    return price.quantize(_CENTS)
 
 
 def _normalize_status(value: str | None) -> str:
@@ -34,10 +63,21 @@ def create_recipe(name: str, description: str = "", instructions: str = "",
                  root_recipe_id: int | None = None,
                  allowed_containers: List[int] = None, label_prefix: str = "",
                  consumables: List[Dict] = None, category_id: int | None = None,
-                  portioning_data: Dict | None = None,
-                  is_portioned: bool = None, portion_name: str = None,
-                  portion_count: int = None, portion_unit_id: int = None,
-                  status: str = 'published') -> Tuple[bool, Any]:
+                 portioning_data: Dict | None = None,
+                 is_portioned: bool = None, portion_name: str = None,
+                 portion_count: int = None, portion_unit_id: int = None,
+                 status: str = 'published',
+                 sharing_scope: str = 'private',
+                 is_public: bool | None = None,
+                 is_for_sale: bool = False,
+                 sale_price: Any = None,
+                 marketplace_status: str | None = None,
+                 marketplace_notes: str | None = None,
+                 product_group_id: Any = _UNSET,
+                 shopify_product_url: str | None = None,
+                 cover_image_path: str | None = None,
+                 cover_image_url: str | None = None,
+                 skin_opt_in: bool | None = None) -> Tuple[bool, Any]:
     """
     Create a new recipe with ingredients and UI fields.
 
@@ -139,6 +179,27 @@ def create_recipe(name: str, description: str = "", instructions: str = "",
         if allowed_containers:
             recipe.allowed_containers = allowed_containers
 
+        normalized_scope = _normalize_sharing_scope(sharing_scope)
+        inferred_public = normalized_scope == 'public'
+        if is_public is not None:
+            inferred_public = bool(is_public)
+            normalized_scope = 'public' if inferred_public else 'private'
+        recipe.sharing_scope = normalized_scope
+        recipe.is_public = inferred_public
+        recipe.is_for_sale = bool(is_for_sale) if inferred_public else False
+        recipe.sale_price = _normalize_sale_price(sale_price if recipe.is_for_sale else None)
+        recipe.marketplace_status = marketplace_status or _default_marketplace_status(recipe.is_public)
+        recipe.marketplace_notes = marketplace_notes
+        if product_group_id is not _UNSET:
+            recipe.product_group_id = product_group_id
+        recipe.shopify_product_url = (shopify_product_url or '').strip() or None
+        if skin_opt_in is None:
+            recipe.skin_opt_in = True
+        else:
+            recipe.skin_opt_in = bool(skin_opt_in)
+        recipe.cover_image_path = cover_image_path
+        recipe.cover_image_url = cover_image_url
+
         # Portioning data validation and assignment
         if portioning_data and isinstance(portioning_data, dict):
             try:
@@ -174,6 +235,53 @@ def create_recipe(name: str, description: str = "", instructions: str = "",
             recipe.portion_count = portion_count
         if portion_unit_id is not None:
             recipe.portion_unit_id = portion_unit_id
+
+        scope_changed = False
+        if sharing_scope is not None:
+            normalized_scope = _normalize_sharing_scope(sharing_scope)
+            if recipe.sharing_scope != normalized_scope:
+                scope_changed = True
+            recipe.sharing_scope = normalized_scope
+            recipe.is_public = normalized_scope == 'public'
+        if is_public is not None:
+            normalized_scope = 'public' if is_public else 'private'
+            if recipe.sharing_scope != normalized_scope:
+                scope_changed = True
+                recipe.sharing_scope = normalized_scope
+            recipe.is_public = bool(is_public)
+
+        if product_group_id is not _UNSET:
+            recipe.product_group_id = product_group_id
+        if shopify_product_url is not None:
+            recipe.shopify_product_url = shopify_product_url.strip() or None
+        if skin_opt_in is not None:
+            recipe.skin_opt_in = bool(skin_opt_in)
+
+        if is_for_sale is not None:
+            recipe.is_for_sale = bool(is_for_sale) if recipe.is_public else False
+        else:
+            if not recipe.is_public:
+                recipe.is_for_sale = False
+
+        if sale_price is not None or not recipe.is_for_sale:
+            recipe.sale_price = _normalize_sale_price(sale_price) if recipe.is_for_sale else None
+
+        if marketplace_notes is not None:
+            recipe.marketplace_notes = marketplace_notes
+
+        status_candidate = marketplace_status
+        if status_candidate is None and scope_changed:
+            status_candidate = _default_marketplace_status(recipe.is_public)
+        if status_candidate is not None:
+            recipe.marketplace_status = status_candidate
+
+        if cover_image_path is not _UNSET:
+            recipe.cover_image_path = cover_image_path
+        if cover_image_url is not _UNSET:
+            recipe.cover_image_url = cover_image_url
+        if remove_cover_image:
+            recipe.cover_image_path = None
+            recipe.cover_image_url = None
 
         # Capture category-specific structured fields if present in portioning_data surrogate
         try:
@@ -287,7 +395,19 @@ def update_recipe(recipe_id: int, name: str = None, description: str = None,
                  portioning_data: Dict | None = None,
                  is_portioned: bool = None, portion_name: str = None,
                  portion_count: int = None, portion_unit_id: int = None,
-                 status: str | None = None) -> Tuple[bool, Any]:
+                 status: str | None = None,
+                 sharing_scope: str | None = None,
+                 is_public: bool | None = None,
+                 is_for_sale: bool | None = None,
+                 sale_price: Any = None,
+                 marketplace_status: str | None = None,
+                 marketplace_notes: str | None = None,
+                 product_group_id: int | None = None,
+                 shopify_product_url: str | None = None,
+                 cover_image_path: Any = _UNSET,
+                 cover_image_url: Any = _UNSET,
+                 skin_opt_in: bool | None = None,
+                 remove_cover_image: bool = False) -> Tuple[bool, Any]:
     """
     Update an existing recipe.
 
@@ -629,6 +749,16 @@ def duplicate_recipe(recipe_id: int) -> Tuple[bool, Any]:
         template.portion_name = original.portion_name
         template.portion_count = original.portion_count
         template.portion_unit_id = original.portion_unit_id
+        template.product_group_id = original.product_group_id
+        template.shopify_product_url = original.shopify_product_url
+        template.skin_opt_in = original.skin_opt_in
+        template.cover_image_path = original.cover_image_path
+        template.cover_image_url = original.cover_image_url
+        template.sharing_scope = 'private'
+        template.is_public = False
+        template.is_for_sale = False
+        template.sale_price = None
+        template.marketplace_status = 'draft'
 
         return True, {
             'template': template,
