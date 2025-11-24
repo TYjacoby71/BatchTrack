@@ -101,16 +101,23 @@
                         {% endif %}
                     </div>
                     <h5 class="card-title">{{ recipe.name }}</h5>
-                    {% if recipe.marketplace_notes %}
+                    {% if recipe.public_description %}
+                    <p class="card-text text-muted">{{ recipe.public_description }}</p>
+                    {% elif recipe.marketplace_notes %}
                     <p class="card-text text-muted">{{ recipe.marketplace_notes }}</p>
                     {% endif %}
                     <ul class="list-unstyled small text-muted flex-grow-1">
                         <li><i class="fas fa-balance-scale"></i> Yield: {{ recipe.predicted_yield or 'N/A' }} {{ recipe.predicted_yield_unit }}</li>
                         <li><i class="fas fa-percentage"></i> Yield per $: {% if recipe.yield_per_dollar %}{{ "%.2f"|format(recipe.yield_per_dollar) }} {% else %}N/A{% endif %}</li>
+                        <li><i class="fas fa-leaf"></i> Avg ingredient cost: {% if recipe.avg_ingredient_cost %}${{ "%.2f"|format(recipe.avg_ingredient_cost) }}{% else %}N/A{% endif %}</li>
+                        <li><i class="fas fa-box"></i> Avg total cost (incl. packaging): {% if recipe.avg_total_cost %}${{ "%.2f"|format(recipe.avg_total_cost) }}{% else %}N/A{% endif %}</li>
                         {% if recipe.stats %}
                         <li><i class="fas fa-flask"></i> Avg Cost / Batch: {{ recipe.stats.avg_cost_per_batch or '—' }}</li>
                         {% endif %}
                     </ul>
+                    <div class="alert alert-warning py-2 small">
+                        Instructions, ingredient/consumable details, and packaging notes are blurred until you purchase or clone this recipe.
+                    </div>
                     <div class="d-flex flex-column flex-lg-row gap-2">
                         <a href="{{ url_for('recipe_library_bp.recipe_library_detail', recipe_id=recipe.id, slug=recipe.slug) }}" class="btn btn-outline-primary w-100">
                             <i class="fas fa-eye"></i> View Details

@@ -4,7 +4,10 @@ from flask import Blueprint, render_template, request, redirect, url_for
 from sqlalchemy import func, or_
 from sqlalchemy.orm import joinedload
 
+from app.extensions import db
 from app.models import Recipe, ProductCategory, Organization
+from app.models.statistics import RecipeStats
+from app.models.batch import BatchStats
 from app.models.recipe_marketplace import RecipeProductGroup
 from app.services.statistics import AnalyticsDataService
 from app.utils.seo import slugify_value
@@ -56,9 +59,11 @@ def recipe_library():
     recipes = (
         query.order_by(Recipe.updated_at.desc(), Recipe.name.asc()).limit(60).all()
     )
+    cost_map = _fetch_cost_rollups([r.id for r in recipes])
 
     recipe_cards = [
-        _serialize_recipe_for_public(recipe) for recipe in recipes
+        _serialize_recipe_for_public(recipe, cost_map.get(recipe.id))
+        for recipe in recipes
     ]
 
     product_groups = (
@@ -115,7 +120,8 @@ def recipe_library_detail(recipe_id: int, slug: str):
             code=301,
         )
 
-    stats = _serialize_recipe_for_public(recipe)
+    cost_map = _fetch_cost_rollups([recipe.id])
+    stats = _serialize_recipe_for_public(recipe, cost_map.get(recipe.id))
     purchase_enabled = is_feature_enabled("FEATURE_RECIPE_PURCHASE_OPTIONS")
     return render_template(
         "library/recipe_detail.html",
@@ -124,7 +130,7 @@ def recipe_library_detail(recipe_id: int, slug: str):
     )
 
 
-def _serialize_recipe_for_public(recipe: Recipe) -> dict:
+def _serialize_recipe_for_public(recipe: Recipe, cost_rollup: dict | None = None) -> dict:
     stats = recipe.stats[0] if getattr(recipe, "stats", None) else None
     cover_url = None
     if recipe.cover_image_path:
@@ -135,6 +141,12 @@ def _serialize_recipe_for_public(recipe: Recipe) -> dict:
     yield_per_dollar = None
     if stats and stats.avg_cost_per_batch and stats.avg_cost_per_batch > 0 and recipe.predicted_yield:
         yield_per_dollar = float(recipe.predicted_yield or 0) / float(stats.avg_cost_per_batch)
+
+    ingredient_cost = None
+    total_cost = None
+    if cost_rollup:
+        ingredient_cost = cost_rollup.get("ingredient_cost")
+        total_cost = cost_rollup.get("total_cost")
 
     return {
         "id": recipe.id,
@@ -150,10 +162,13 @@ def _serialize_recipe_for_public(recipe: Recipe) -> dict:
         "predicted_yield": recipe.predicted_yield,
         "predicted_yield_unit": recipe.predicted_yield_unit,
         "marketplace_notes": recipe.marketplace_notes,
+        "public_description": recipe.public_description,
         "stats": stats,
         "yield_per_dollar": yield_per_dollar,
         "skin_opt_in": recipe.skin_opt_in,
         "updated_at": recipe.updated_at,
+        "avg_ingredient_cost": ingredient_cost,
+        "avg_total_cost": total_cost,
     }
 
 
@@ -162,3 +177,25 @@ def _safe_int(value):
         return int(value) if value not in (None, "", "null") else None
     except (TypeError, ValueError):
         return None
+
+
+def _fetch_cost_rollups(recipe_ids):
+    if not recipe_ids:
+        return {}
+    rows = (
+        db.session.query(
+            BatchStats.recipe_id,
+            func.avg(BatchStats.actual_ingredient_cost).label("ingredient_cost"),
+            func.avg(BatchStats.total_actual_cost).label("total_cost"),
+        )
+        .filter(BatchStats.recipe_id.in_(recipe_ids))
+        .group_by(BatchStats.recipe_id)
+        .all()
+    )
+    return {
+        row.recipe_id: {
+            "ingredient_cost": float(row.ingredient_cost or 0),
+            "total_cost": float(row.total_cost or 0),
+        }
+        for row in rows
+    }

@@ -15,7 +15,7 @@ The public recipe library allows organizations to publish curated formulations t
 ## Submission Flow
 
 1. Recipe editors toggle visibility (private vs. public) and sale mode (free vs. sale).
-2. Marketplace metadata (product group, notes, Shopify URL, cover image) flows through `RecipeMarketplaceService`.
+2. Marketplace metadata (product group, notes, public description, Shopify URL, cover image) flows through `RecipeMarketplaceService`.
 3. `create_recipe` / `update_recipe` persist marketplace columns on the `Recipe` model.
 4. Public pages only surface recipes meeting all gating rules (`is_public`, `marketplace_status == 'listed'`, and org not blocked).
 

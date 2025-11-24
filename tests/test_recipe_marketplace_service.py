@@ -23,6 +23,7 @@ def test_public_sale_payload():
         "shopify_product_url": "https://example.com/product/soap",
         "skin_opt_in": "true",
         "marketplace_notes": "Includes premium SKIN data",
+        "public_description": "This is a high-level teaser",
     }
     ok, payload = RecipeMarketplaceService.extract_submission(form, {})
     assert ok
@@ -33,6 +34,7 @@ def test_public_sale_payload():
     assert marketplace["product_group_id"] == 3
     assert marketplace["shopify_product_url"] == "https://example.com/product/soap"
     assert marketplace["skin_opt_in"] is True
+    assert marketplace["public_description"] == "This is a high-level teaser"
 
 
 def test_existing_recipe_defaults_when_fields_missing():
@@ -44,6 +46,7 @@ def test_existing_recipe_defaults_when_fields_missing():
         product_group_id=7,
         shopify_product_url="https://existing/link",
         marketplace_notes="Legacy note",
+        public_description="Legacy description",
         skin_opt_in=False,
     )
     form = {}
@@ -57,3 +60,4 @@ def test_existing_recipe_defaults_when_fields_missing():
     assert marketplace["shopify_product_url"] == "https://existing/link"
     assert marketplace["marketplace_notes"] == "Legacy note"
     assert marketplace["skin_opt_in"] is False
+    assert marketplace["public_description"] == "Legacy description"

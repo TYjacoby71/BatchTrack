@@ -74,6 +74,7 @@ class Recipe(ScopedModelMixin, db.Model):
     sale_price = db.Column(sa.Numeric(12, 4), nullable=True)
     marketplace_status = db.Column(db.String(32), nullable=False, default='draft', server_default='draft')
     marketplace_notes = db.Column(db.Text, nullable=True)
+    public_description = db.Column(db.Text, nullable=True)
     marketplace_blocked = db.Column(db.Boolean, nullable=False, default=False, server_default=sa.text("false"))
     marketplace_block_reason = db.Column(db.Text, nullable=True)
     marketplace_violation_count = db.Column(db.Integer, nullable=False, default=0, server_default='0')

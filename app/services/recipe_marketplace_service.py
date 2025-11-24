@@ -80,6 +80,10 @@ class RecipeMarketplaceService:
         if marketplace_notes is None and existing is not None and "marketplace_notes" not in form:
             marketplace_notes = getattr(existing, "marketplace_notes", None)
 
+        public_description = _get("public_description")
+        if public_description is None and existing is not None and "public_description" not in form:
+            public_description = getattr(existing, "public_description", None)
+
         skin_opt_value = _get("skin_opt_in", strip=False)
         if skin_opt_value is None and existing is not None and "skin_opt_in" not in form:
             skin_opt = getattr(existing, "skin_opt_in", True)
@@ -94,6 +98,7 @@ class RecipeMarketplaceService:
             "sale_price": sale_price,
             "shopify_product_url": shopify_url,
             "marketplace_notes": marketplace_notes,
+            "public_description": public_description,
             "skin_opt_in": skin_opt,
         }
         return payload
