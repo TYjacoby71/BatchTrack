@@ -1,0 +1,70 @@
+{% extends 'layout.html' %}
+
+{% block title %}{{ recipe.name }} - Recipe Library{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <nav aria-label="breadcrumb">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="{{ url_for('recipe_library_bp.recipe_library') }}">Recipe Library</a></li>
+            <li class="breadcrumb-item active" aria-current="page">{{ recipe.name }}</li>
+        </ol>
+    </nav>
+
+    <div class="card shadow-sm mb-4">
+        <div class="card-body">
+            <div class="row g-4">
+                <div class="col-md-4">
+                    {% if recipe.cover_url %}
+                    <img src="{{ recipe.cover_url }}" alt="{{ recipe.name }}" class="img-fluid rounded border">
+                    {% else %}
+                    <div class="border rounded d-flex align-items-center justify-content-center p-5 text-muted">
+                        <i class="fas fa-image fa-2x"></i>
+                    </div>
+                    {% endif %}
+                </div>
+                <div class="col-md-8">
+                    <div class="d-flex flex-wrap gap-2 mb-2">
+                        <span class="badge bg-secondary">{{ recipe.category or 'Uncategorized' }}</span>
+                        {% if recipe.product_group %}
+                        <span class="badge bg-light text-dark border">{{ recipe.product_group }}</span>
+                        {% endif %}
+                        {% if recipe.is_for_sale %}
+                        <span class="badge bg-success">${{ "%.2f"|format(recipe.sale_price) }} sale</span>
+                        {% else %}
+                        <span class="badge bg-info text-dark">Free download</span>
+                        {% endif %}
+                        {% if recipe.skin_opt_in %}
+                        <span class="badge bg-primary">Category skin</span>
+                        {% endif %}
+                    </div>
+                    <h1 class="h3">{{ recipe.name }}</h1>
+                    {% if recipe.marketplace_notes %}
+                    <p class="text-muted">{{ recipe.marketplace_notes }}</p>
+                    {% endif %}
+                    <ul class="list-unstyled small mb-3">
+                        <li><strong>Yield:</strong> {{ recipe.predicted_yield or 'N/A' }} {{ recipe.predicted_yield_unit }}</li>
+                        <li><strong>Avg cost / batch:</strong> {{ recipe.stats.avg_cost_per_batch if recipe.stats else 'N/A' }}</li>
+                        <li><strong>Yield per $:</strong> {% if recipe.yield_per_dollar %}{{ "%.2f"|format(recipe.yield_per_dollar) }}{% else %}N/A{% endif %}</li>
+                        <li><strong>Updated:</strong> {{ recipe.updated_at.strftime('%b %d, %Y') if recipe.updated_at else '—' }}</li>
+                    </ul>
+                    {% if purchase_enabled and recipe.is_for_sale and recipe.shopify_product_url %}
+                    <a href="{{ recipe.shopify_product_url }}" class="btn btn-success" target="_blank" rel="noopener">
+                        <i class="fas fa-shopping-cart"></i> Purchase this recipe
+                    </a>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card shadow-sm mb-4">
+        <div class="card-header">
+            <h5 class="mb-0"><i class="fas fa-align-left"></i> Instructions</h5>
+        </div>
+        <div class="card-body">
+            <pre class="mb-0" style="white-space: pre-wrap;">{{ recipe.instructions }}</pre>
+        </div>
+    </div>
+</div>
+{% endblock %}

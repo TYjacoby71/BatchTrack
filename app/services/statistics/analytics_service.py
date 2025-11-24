@@ -23,12 +23,15 @@ from ...models import (
     InventoryItem,
     Organization,
     Permission,
+    Recipe,
     Role,
     UnifiedInventoryHistory,
     User,
 )
+from ...models.recipe_marketplace import RecipeProductGroup
 from ...models.inventory_lot import InventoryLot
 from ...models.subscription_tier import SubscriptionTier
+from ...models.statistics import RecipeStats
 from ...utils.timezone_utils import TimezoneUtils
 from ...utils.json_store import read_json_file
 from ..dashboard_alerts import DashboardAlertService
@@ -58,6 +61,7 @@ class AnalyticsDataService:
         "faults": 60,
         "developer": 60,
         "marketing": 300,
+        "recipe_library": 120,
     }
 
     # --------------------------------------------------------------------- #
@@ -430,6 +434,7 @@ class AnalyticsDataService:
             total_global_items = GlobalItem.query.filter_by(is_archived=False).count()
             total_permissions = Permission.query.count()
             total_roles = Role.query.count()
+            recipe_metrics = cls.get_recipe_library_metrics(force_refresh=force_refresh)
             tier_counts = cls._get_subscription_tier_counts()
 
             payload = {
@@ -441,6 +446,11 @@ class AnalyticsDataService:
                 "total_permissions": total_permissions,
                 "total_roles": total_roles,
                 "tiers": tier_counts,
+                "public_recipes": recipe_metrics["total_public"],
+                "recipes_for_sale": recipe_metrics["total_for_sale"],
+                "blocked_recipes": recipe_metrics["blocked_listings"],
+                "average_recipe_price": recipe_metrics["average_sale_price"],
+                "average_yield_per_dollar": recipe_metrics["average_yield_per_dollar"],
             }
             cls._store_cache(cache_key, payload)
             return payload
@@ -455,6 +465,11 @@ class AnalyticsDataService:
                 "total_permissions": 0,
                 "total_roles": 0,
                 "tiers": {},
+                "public_recipes": 0,
+                "recipes_for_sale": 0,
+                "blocked_recipes": 0,
+                "average_recipe_price": 0.0,
+                "average_yield_per_dollar": 0.0,
             }
 
     @classmethod
@@ -518,6 +533,84 @@ class AnalyticsDataService:
             }
             cls._store_cache(cache_key, payload)
             return payload
+    @classmethod
+    def get_recipe_library_metrics(cls, *, force_refresh: bool = False) -> Dict[str, Any]:
+        cache_key = cls._cache_key("recipe_library")
+        cached = cls._get_cached(cache_key, force_refresh)
+        if cached is not None:
+            return cached
+
+        try:
+            base_filter = (
+                (Recipe.is_public.is_(True)) &
+                (Recipe.marketplace_status == "listed") &
+                (Recipe.marketplace_blocked.is_(False))
+            )
+            total_public = Recipe.query.filter(base_filter).count()
+            total_for_sale = Recipe.query.filter(base_filter, Recipe.is_for_sale.is_(True)).count()
+            blocked_listings = Recipe.query.filter(Recipe.marketplace_blocked.is_(True)).count()
+            avg_price = (
+                db.session.query(func.avg(Recipe.sale_price))
+                .filter(base_filter, Recipe.is_for_sale.is_(True), Recipe.sale_price.isnot(None))
+                .scalar()
+            ) or 0.0
+
+            top_group_row = (
+                db.session.query(RecipeProductGroup.name, func.count(Recipe.id))
+                .join(Recipe, Recipe.product_group_id == RecipeProductGroup.id)
+                .filter(base_filter)
+                .group_by(RecipeProductGroup.name)
+                .order_by(func.count(Recipe.id).desc())
+                .first()
+            )
+            top_group_name = top_group_row[0] if top_group_row else None
+            top_group_count = top_group_row[1] if top_group_row else None
+
+            avg_yield_per_dollar = (
+                db.session.query(
+                    func.avg(
+                        func.nullif(Recipe.predicted_yield, 0) / func.nullif(RecipeStats.avg_cost_per_batch, 0)
+                    )
+                )
+                .join(RecipeStats, RecipeStats.recipe_id == Recipe.id)
+                .filter(
+                    base_filter,
+                    RecipeStats.avg_cost_per_batch.isnot(None),
+                    RecipeStats.avg_cost_per_batch > 0,
+                    Recipe.predicted_yield.isnot(None),
+                    Recipe.predicted_yield > 0,
+                )
+                .scalar()
+            ) or 0.0
+
+            sale_percentage = 0
+            if total_public:
+                sale_percentage = round((total_for_sale / total_public) * 100, 1)
+
+            payload = {
+                "total_public": total_public,
+                "total_for_sale": total_for_sale,
+                "blocked_listings": blocked_listings,
+                "average_sale_price": float(avg_price),
+                "average_yield_per_dollar": float(avg_yield_per_dollar),
+                "top_group_name": top_group_name,
+                "top_group_count": top_group_count,
+                "sale_percentage": sale_percentage,
+            }
+            cls._store_cache(cache_key, payload)
+            return payload
+        except SQLAlchemyError as exc:
+            logger.error("Failed to compute recipe library metrics: %s", exc, exc_info=True)
+            return {
+                "total_public": 0,
+                "total_for_sale": 0,
+                "blocked_listings": 0,
+                "average_sale_price": 0.0,
+                "average_yield_per_dollar": 0.0,
+                "top_group_name": None,
+                "top_group_count": 0,
+                "sale_percentage": 0,
+            }
         except Exception as exc:  # pragma: no cover - defensive
             logger.error("Failed to build developer dashboard analytics: %s", exc, exc_info=True)
             return {
