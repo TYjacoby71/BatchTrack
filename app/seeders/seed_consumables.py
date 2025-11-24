@@ -1,13 +1,66 @@
 
 import json
 import os
+import re
 import sys
 
 # Add the parent directory to the Python path so we can import app
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 
 from app import create_app
-from app.models import db, GlobalItem
+from app.models import db, GlobalItem, IngredientProfile, PhysicalForm
+
+
+def _slugify(value: str) -> str:
+    value = value or ''
+    value = value.lower()
+    value = re.sub(r'[^a-z0-9]+', '-', value)
+    value = value.strip('-')
+    return value or 'item'
+
+
+def _unique_slug(model, base_slug: str) -> str:
+    slug = base_slug
+    counter = 1
+    while db.session.query(model.id).filter_by(slug=slug).first():
+        counter += 1
+        slug = f"{base_slug}-{counter}"
+    return slug
+
+
+def _get_or_create_ingredient(name: str):
+    base_name = (name or '').strip() or 'Consumable'
+    slug = _slugify(base_name)
+    ingredient = IngredientProfile.query.filter_by(slug=slug).first()
+    if ingredient:
+        return ingredient
+    unique_slug = _unique_slug(IngredientProfile, slug)
+    ingredient = IngredientProfile(
+        name=base_name,
+        slug=unique_slug,
+        is_active_ingredient=False,
+    )
+    db.session.add(ingredient)
+    db.session.flush()
+    return ingredient
+
+
+def _get_or_create_physical_form(name: str):
+    base_name = (name or '').strip()
+    if not base_name:
+        base_name = 'Consumable'
+    slug = _slugify(base_name)
+    physical_form = PhysicalForm.query.filter_by(slug=slug).first()
+    if physical_form:
+        return physical_form
+    unique_slug = _unique_slug(PhysicalForm, slug)
+    physical_form = PhysicalForm(
+        name=base_name,
+        slug=unique_slug,
+    )
+    db.session.add(physical_form)
+    db.session.flush()
+    return physical_form
 
 
 def seed_consumables_from_files(selected_files):
@@ -38,6 +91,10 @@ def seed_consumables_from_files(selected_files):
             name = item_data.get('name', '').strip()
             if not name:
                 continue
+
+            ingredient = _get_or_create_ingredient(item_data.get('ingredient_name') or name)
+            physical_form_name = item_data.get('physical_form') or item_data.get('container_type') or 'Consumable'
+            physical_form = _get_or_create_physical_form(physical_form_name)
                 
             # Check if item already exists
             existing_item = GlobalItem.query.filter_by(
@@ -47,12 +104,16 @@ def seed_consumables_from_files(selected_files):
             
             if existing_item:
                 print(f"      ↻ Item exists: {name}")
+                existing_item.ingredient = ingredient
+                existing_item.physical_form = physical_form
                 continue
                 
             # Create new item
             new_item = GlobalItem(
                 name=name,
                 item_type='consumable',
+                ingredient=ingredient,
+                physical_form=physical_form,
                 capacity=item_data.get('capacity'),
                 capacity_unit=item_data.get('capacity_unit'),
                 container_material=item_data.get('container_material'),
@@ -67,6 +128,7 @@ def seed_consumables_from_files(selected_files):
             )
             
             db.session.add(new_item)
+            db.session.flush()
             created_items += 1
             items_in_category += 1
             print(f"      ✅ Created item: {name}")

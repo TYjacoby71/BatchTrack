@@ -57,6 +57,12 @@ _export([
     ("category", "Tag", None),
     ("product_category", "ProductCategory", None),
     ("global_item", "GlobalItem", None),
+    ("ingredient_reference", "IngredientProfile", None),
+    ("ingredient_reference", "PhysicalForm", None),
+    ("ingredient_reference", "FunctionTag", None),
+    ("ingredient_reference", "ApplicationTag", None),
+    ("ingredient_reference", "GlobalItemFunctionTag", None),
+    ("ingredient_reference", "GlobalItemApplicationTag", None),
 ])
 
 # Build __all__ from whatever successfully imported
