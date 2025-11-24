@@ -69,11 +69,19 @@ def create_app(config=None):
     # Configure server-side sessions
     session_backend = None
     session_redis = None
+    session_pool = None
     session_redis_url = app.config.get('REDIS_URL')
     if session_redis_url:
         try:
             import redis  # type: ignore
-            session_redis = redis.Redis.from_url(session_redis_url)
+
+            pool_kwargs: dict[str, int] = {}
+            max_connections = app.config.get('SESSION_REDIS_MAX_CONNECTIONS')
+            if isinstance(max_connections, int) and max_connections > 0:
+                pool_kwargs['max_connections'] = max_connections
+
+            session_pool = redis.ConnectionPool.from_url(session_redis_url, **pool_kwargs)
+            session_redis = redis.Redis(connection_pool=session_pool)
             session_backend = 'redis'
         except Exception as exc:
             logger.warning("Failed to initialize Redis-backed session store (%s); falling back to filesystem.", exc)
@@ -88,6 +96,11 @@ def create_app(config=None):
         app.config.setdefault('SESSION_PERMANENT', True)
         app.config.setdefault('SESSION_USE_SIGNER', True)
         app.config['SESSION_REDIS'] = session_redis
+        if session_pool is not None and app.config.get('SESSION_REDIS_MAX_CONNECTIONS'):
+            logger.info(
+                "Redis session backend initialised with max_connections=%s",
+                app.config.get('SESSION_REDIS_MAX_CONNECTIONS'),
+            )
     else:
         app.config.setdefault('SESSION_TYPE', 'filesystem')
         app.config.setdefault('SESSION_PERMANENT', True)

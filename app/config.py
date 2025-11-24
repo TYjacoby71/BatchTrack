@@ -50,6 +50,7 @@ class BaseConfig:
     WTF_CSRF_ENABLED = True
     SESSION_USE_SIGNER = True
     SESSION_PERMANENT = True
+    SESSION_REDIS_MAX_CONNECTIONS = _env_int('SESSION_REDIS_MAX_CONNECTIONS', 10)
 
     # Uploads
     UPLOAD_FOLDER = 'static/product_images'
