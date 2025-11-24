@@ -6,7 +6,19 @@ Handles CRUD operations for recipes with proper service integration.
 
 import logging
 from typing import Dict, List, Any, Optional, Tuple
+from flask import session
 from flask_login import current_user
+def _resolve_current_org_id() -> Optional[int]:
+    """Best-effort helper to determine the organization for the active user."""
+    try:
+        if getattr(current_user, 'is_authenticated', False):
+            if getattr(current_user, 'user_type', None) == 'developer':
+                return session.get('dev_selected_org_id')
+            return getattr(current_user, 'organization_id', None)
+    except Exception:
+        return None
+    return None
+
 
 from ...models import Recipe, RecipeIngredient, InventoryItem
 from ...models.recipe import RecipeConsumable, RecipeLineage
@@ -60,12 +72,15 @@ def create_recipe(name: str, description: str = "", instructions: str = "",
         normalized_status = _normalize_status(status)
         allow_partial = normalized_status == 'draft'
 
+        current_org_id = _resolve_current_org_id()
+
         validation_result = validate_recipe_data(
             name=name,
             ingredients=ingredients or [],
             yield_amount=yield_amount,
             portioning_data=portioning_data,
-            allow_partial=allow_partial
+            allow_partial=allow_partial,
+            organization_id=current_org_id
         )
 
         if not validation_result['valid']:
@@ -122,12 +137,14 @@ def create_recipe(name: str, description: str = "", instructions: str = "",
         except Exception:
             pass
 
+        recipe_org_id = current_org_id if current_org_id else (1)
+
         recipe = Recipe(
             name=name,
             instructions=instructions,
             predicted_yield=derived_yield,
             predicted_yield_unit=derived_unit,
-            organization_id=(current_user.organization_id if getattr(current_user, 'is_authenticated', False) and getattr(current_user, 'organization_id', None) else (1)),
+            organization_id=recipe_org_id,
             parent_recipe_id=parent_recipe_id,
             cloned_from_id=cloned_from_id,
             label_prefix=final_label_prefix,
@@ -330,7 +347,8 @@ def update_recipe(recipe_id: int, name: str = None, description: str = None,
             validation_result = validate_recipe_data(
                 name=name,
                 recipe_id=recipe_id,
-                allow_partial=True
+                allow_partial=True,
+                organization_id=recipe.organization_id
             )
             if not validation_result['valid']:
                 return False, validation_result
@@ -405,7 +423,8 @@ def update_recipe(recipe_id: int, name: str = None, description: str = None,
                 yield_amount=yield_amount if yield_amount is not None else recipe.predicted_yield,
                 recipe_id=recipe_id,
                 portioning_data=portioning_data,
-                allow_partial=allow_partial
+                allow_partial=allow_partial,
+                organization_id=recipe.organization_id
             )
 
             if not validation_result['valid']:
