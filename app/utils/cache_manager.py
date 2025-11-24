@@ -1,16 +1,27 @@
+from __future__ import annotations
+
 import logging
-import time
 import os
 import pickle
+import time
 from threading import Lock
+from typing import Any, Dict
 
-try:
+try:  # optional dependency
     import redis  # type: ignore
     from redis.exceptions import RedisError  # type: ignore
-except Exception:  # optional dependency
+except Exception:  # pragma: no cover - optional dependency missing
     redis = None
     RedisError = Exception  # type: ignore[misc,assignment]
 
+
+__all__ = [
+    "SimpleCache",
+    "RedisCache",
+    "conversion_cache",
+    "drawer_request_cache",
+    "app_cache",
+]
 
 logger = logging.getLogger(__name__)
 
@@ -19,25 +30,23 @@ class SimpleCache:
     """Thread-safe in-memory cache with TTL and simple capacity eviction."""
 
     def __init__(self, max_size: int = 100, default_ttl: int = 300) -> None:
-        self._cache = {}
+        self._cache: Dict[Any, Dict[str, Any]] = {}
         self._max_size = max_size
         self._default_ttl = default_ttl
         self._lock = Lock()
 
-    def get(self, key):
+    def get(self, key: Any) -> Any:
         with self._lock:
             entry = self._cache.get(key)
             if not entry:
                 return None
             if time.time() < entry["expires_at"]:
                 return entry["value"]
-            # expired; delete and miss
             del self._cache[key]
             return None
 
-    def set(self, key, value, ttl: int | None = None):
+    def set(self, key: Any, value: Any, ttl: int | None = None) -> None:
         with self._lock:
-            # Simple eviction: drop oldest item when at capacity
             if len(self._cache) >= self._max_size:
                 oldest_key = next(iter(self._cache)) if self._cache else None
                 if oldest_key is not None:
@@ -46,16 +55,16 @@ class SimpleCache:
             expires_at = time.time() + (ttl if ttl is not None else self._default_ttl)
             self._cache[key] = {"value": value, "expires_at": expires_at}
 
-    def clear(self):
+    def clear(self) -> None:
         with self._lock:
             self._cache.clear()
 
-    def delete(self, key):
+    def delete(self, key: Any) -> None:
         with self._lock:
             if key in self._cache:
                 del self._cache[key]
 
-    def clear_prefix(self, prefix: str):
+    def clear_prefix(self, prefix: str) -> None:
         with self._lock:
             keys = [k for k in self._cache.keys() if str(k).startswith(prefix)]
             for k in keys:
@@ -70,7 +79,9 @@ class RedisCache:
             raise RuntimeError("redis package not available")
         self._namespace = namespace.strip(":")
         self._default_ttl = default_ttl
-        self._client = redis.Redis.from_url(url or os.environ.get("REDIS_URL", "redis://localhost:6379/0"), decode_responses=False)
+        self._client = redis.Redis.from_url(
+            url or os.environ.get("REDIS_URL", "redis://localhost:6379/0"), decode_responses=False
+        )
         self._fallback = SimpleCache(max_size=1000, default_ttl=default_ttl)
         self._redis_disabled_until = 0.0
         self._redis_backoff_seconds = 60
@@ -92,7 +103,7 @@ class RedisCache:
             )
         self._redis_disabled_until = now + self._redis_backoff_seconds
 
-    def get(self, key):
+    def get(self, key: str) -> Any:
         if self._can_use_redis():
             try:
                 raw = self._client.get(self._k(key))
@@ -108,7 +119,7 @@ class RedisCache:
                 pass
         return self._fallback.get(key)
 
-    def set(self, key, value, ttl: int | None = None):
+    def set(self, key: str, value: Any, ttl: int | None = None) -> None:
         expires = ttl if ttl is not None else self._default_ttl
         if self._can_use_redis():
             try:
@@ -118,7 +129,7 @@ class RedisCache:
                 self._handle_redis_failure("set", exc)
         self._fallback.set(key, value, ttl=expires)
 
-    def delete(self, key):
+    def delete(self, key: str) -> None:
         if self._can_use_redis():
             try:
                 self._client.delete(self._k(key))
@@ -126,10 +137,10 @@ class RedisCache:
                 self._handle_redis_failure("delete", exc)
         self._fallback.delete(key)
 
-    def clear(self):
+    def clear(self) -> None:
         self.clear_prefix("")
 
-    def clear_prefix(self, prefix: str):
+    def clear_prefix(self, prefix: str) -> None:
         if self._can_use_redis():
             try:
                 match = f"bt:{self._namespace}:{prefix}*"
@@ -147,7 +158,6 @@ class RedisCache:
         self._fallback.clear_prefix(prefix)
 
 
-# Global cache instances for the app
 USE_REDIS = bool(os.environ.get("REDIS_URL")) and redis is not None
 
 if USE_REDIS:
@@ -158,4 +168,3 @@ else:
     conversion_cache = SimpleCache(max_size=200, default_ttl=3600)
     drawer_request_cache = SimpleCache(max_size=100, default_ttl=30)
     app_cache = SimpleCache(max_size=1000, default_ttl=600)
-

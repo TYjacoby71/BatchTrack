@@ -48,7 +48,8 @@ def test_portioning_sku_labels_differ(client):
             'portion_name': 'Bar',
             'bulk_yield_quantity': 5.0,
             'bulk_yield_unit_id': Unit.query.filter_by(name='lb').first().id
-        }
+        },
+        status='draft'
     )
     assert ok, f"Failed to create recipe: {recipe}"
 

@@ -11,8 +11,7 @@ from app.services.reservation_service import ReservationService
 from app.utils.timezone_utils import TimezoneUtils
 import logging
 from ...utils.unit_utils import get_global_unit_list
-# Removed deprecated get_change_type_prefix import - functionality moved to generate_fifo_code
-from ...utils.fifo_generator import int_to_base36
+from ...utils.inventory_event_code_generator import int_to_base36
 from sqlalchemy import and_, or_, func
 from sqlalchemy.orm import joinedload
 from app.models.inventory_lot import InventoryLot

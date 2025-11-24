@@ -23,8 +23,8 @@ PROJECT_ROOT = Path(__file__).resolve().parents[1]
 SCAN_TARGETS = [
     PROJECT_ROOT / "app",
     PROJECT_ROOT / "scripts",
-    PROJECT_ROOT / "fault_log_utils.py",
-    PROJECT_ROOT / "utils.py",
+    PROJECT_ROOT / "app" / "utils" / "fault_log.py",
+    PROJECT_ROOT / "app" / "utils" / "logging_helpers.py",
     PROJECT_ROOT / "reset_database.py",
 ]
 

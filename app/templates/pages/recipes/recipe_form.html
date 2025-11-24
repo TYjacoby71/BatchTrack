@@ -6,11 +6,14 @@
 {% set field_values = form_values if form_values is defined else None %}
 
 <div class="d-flex justify-content-between align-items-center mb-4">
-    <h2>
+    <h2 class="d-flex align-items-center gap-2">
         {% if recipe %}
             {% if recipe.parent_recipe_id %}Edit Variation{% else %}Edit Recipe{% endif %}
         {% else %}
             {% if is_variation %}New Variation{% else %}New Recipe{% endif %}
+        {% endif %}
+        {% if recipe and recipe.status == 'draft' %}
+            <span class="badge bg-warning text-dark">Draft</span>
         {% endif %}
     </h2>
     <a href="{{ url_for('recipes.list_recipes') }}" class="btn btn-outline-secondary d-flex align-items-center gap-2" data-nav-warning="true">
@@ -34,10 +37,33 @@
 </div>
 {% endif %}
 
+{% if draft_prompt is defined and draft_prompt %}
+<div class="alert alert-warning d-flex flex-column flex-md-row gap-3 align-items-md-center mb-4" id="draftMissingFieldsAlert">
+    <div class="flex-grow-1">
+        <strong><i class="fas fa-exclamation-triangle me-1"></i> Missing information</strong>
+        <ul class="mb-2">
+            {% for field in draft_prompt.missing_fields %}
+            <li>{{ field.capitalize() }}</li>
+            {% endfor %}
+        </ul>
+        <p class="mb-2 mb-md-0">Fix the fields above or save what you have as a draft.</p>
+    </div>
+    <div class="d-flex gap-2">
+        <button type="button" class="btn btn-warning" data-role="dismiss-draft-prompt">
+            <i class="fas fa-edit"></i> I'll fix it
+        </button>
+        <button type="button" class="btn btn-outline-primary" id="promptSaveDraftButton">
+            <i class="fas fa-file-alt"></i> Save Draft
+        </button>
+    </div>
+</div>
+{% endif %}
+
 <form method="post" action="{% if is_clone %}{{ url_for('recipes.new_recipe') }}{% elif is_variation %}{{ url_for('recipes.create_variation', recipe_id=recipe.parent_recipe_id) }}{% elif recipe and edit_mode %}{{ url_for('recipes.edit_recipe', recipe_id=recipe.id) }}{% else %}{{ url_for('recipes.new_recipe') }}{% endif %}" id="recipeForm" data-preselect-ingredient-id="{{ preselect_ingredient_id if preselect_ingredient_id else '' }}" data-should-add-line="{{ 'true' if add_ingredient_line else 'false' }}" data-original-yield-unit="{{ recipe.predicted_yield_unit if recipe else '' }}">
     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
     {% if is_clone %}<input type="hidden" name="is_clone" value="true">{% endif %}
     {% if cloned_from_id %}<input type="hidden" name="cloned_from_id" value="{{ cloned_from_id }}">{% endif %}
+    <input type="hidden" name="save_mode" id="saveModeInput" value="publish">
 
     <!-- Basic Information Card -->
     <div class="card mb-4">
@@ -460,24 +486,42 @@
     <!-- Form Actions -->
     <div class="card">
         <div class="card-body">
-            <div class="d-flex justify-content-between align-items-center">
-                  <div>
+            {% set publish_label = 'Save Recipe' %}
+            {% if recipe and (recipe.parent_recipe_id or is_variation) %}
+                {% set publish_label = 'Save Variation' %}
+            {% endif %}
+            {% if not recipe and is_variation %}
+                {% set publish_label = 'Create Variation' %}
+            {% elif not recipe and not is_variation %}
+                {% set publish_label = 'Create Recipe' %}
+            {% endif %}
+            {% if recipe and recipe.status == 'draft' %}
+                {% set publish_label = 'Publish Recipe' %}
+            {% endif %}
+            {% set draft_label = 'Save Draft' %}
+            <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3">
+                  <div class="d-flex flex-wrap gap-2">
                       <a href="{{ url_for('recipes.list_recipes') }}" class="btn btn-secondary" data-nav-warning="true">
-                        <i class="fas fa-arrow-left"></i> Cancel
-                    </a>
-                    {% if recipe and not is_clone and not is_variation and not parent_recipe %}
-                    <button type="button" class="btn btn-danger ms-2" onclick="confirmDelete({{ recipe.id }}, {{ 'true' if recipe.parent_recipe_id else 'false' }}, {{ recipe.variations|length }})">
-                        <i class="fas fa-trash"></i> 
-                        {% if recipe.parent_recipe_id %}Delete Variation{% elif recipe.variations %}Delete Recipe & Variations{% else %}Delete Recipe{% endif %}
-                    </button>
-                    {% endif %}
-                </div>
-                  <button type="submit" class="btn btn-success">
-                      <i class="fas fa-save"></i> {% if recipe and recipe.parent_recipe_id or is_variation %}Save Variation{% else %}Save Recipe{% endif %}
-                </button>
-                {% if current_user.is_authenticated and current_user.organization and (not current_user.organization.tier or current_user.organization.tier.is_billing_exempt) %}
-                <span class="ms-3 text-muted small">Inventory is read-only on the Exempt tier. <a href="{{ url_for('billing.upgrade') }}">Upgrade</a> to adjust inventory or start batches.</span>
-                {% endif %}
+                          <i class="fas fa-arrow-left"></i> Cancel
+                      </a>
+                      {% if recipe and not is_clone and not is_variation and not parent_recipe %}
+                      <button type="button" class="btn btn-danger" onclick="confirmDelete({{ recipe.id }}, {{ 'true' if recipe.parent_recipe_id else 'false' }}, {{ recipe.variations|length }})">
+                          <i class="fas fa-trash"></i> 
+                          {% if recipe.parent_recipe_id %}Delete Variation{% elif recipe.variations %}Delete Recipe & Variations{% else %}Delete Recipe{% endif %}
+                      </button>
+                      {% endif %}
+                  </div>
+                  <div class="d-flex flex-wrap gap-2">
+                      <button type="submit" class="btn btn-success" onclick="setSaveMode('publish')">
+                          <i class="fas fa-save"></i> {{ publish_label }}
+                      </button>
+                      <button type="submit" class="btn btn-outline-secondary" onclick="setSaveMode('draft')">
+                          <i class="fas fa-file-alt"></i> {{ draft_label }}
+                      </button>
+                  </div>
+                  {% if current_user.is_authenticated and current_user.organization and (not current_user.organization.tier or current_user.organization.tier.is_billing_exempt) %}
+                  <span class="text-muted small">Inventory is read-only on the Exempt tier. <a href="{{ url_for('billing.upgrade') }}">Upgrade</a> to adjust inventory or start batches.</span>
+                  {% endif %}
             </div>
         </div>
     </div>
@@ -492,6 +536,7 @@
 <script src="{{ url_for('static', filename='js/recipes/skins/cosmetics_skin.js') }}"></script>
 <script>
 const formEl = document.getElementById('recipeForm');
+const saveModeInput = document.getElementById('saveModeInput');
 let PRESELECT_INGREDIENT_ID = (formEl.getAttribute('data-preselect-ingredient-id') || '').trim();
 PRESELECT_INGREDIENT_ID = PRESELECT_INGREDIENT_ID ? (parseInt(PRESELECT_INGREDIENT_ID, 10) || null) : null;
 let SHOULD_ADD_LINE = (formEl.getAttribute('data-should-add-line') || 'false') === 'true';
@@ -549,6 +594,22 @@ function syncIngredientActionAnchors() {
 syncIngredientActionAnchors();
 
 document.addEventListener('DOMContentLoaded', function() {
+      const draftAlert = document.getElementById('draftMissingFieldsAlert');
+      const draftDismissBtn = document.querySelector('[data-role="dismiss-draft-prompt"]');
+      const promptDraftBtn = document.getElementById('promptSaveDraftButton');
+      if (draftDismissBtn && draftAlert) {
+          draftDismissBtn.addEventListener('click', function() {
+              draftAlert.classList.add('d-none');
+          });
+      }
+      if (promptDraftBtn) {
+          promptDraftBtn.addEventListener('click', function() {
+              setSaveMode('draft');
+              if (formEl) {
+                  formEl.requestSubmit();
+              }
+          });
+      }
     // Initialize Bootstrap popovers
     var popoverTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="popover"]'));
     var popoverList = popoverTriggerList.map(function (popoverTriggerEl) {
@@ -948,6 +1009,11 @@ document.getElementById('recipeForm').addEventListener('submit', function(e) {
         return entry;
     };
 })();
+
+function setSaveMode(mode) {
+    if (!saveModeInput) return;
+    saveModeInput.value = mode === 'draft' ? 'draft' : 'publish';
+}
 
 // Category aids JS moved into shared include
 </script>

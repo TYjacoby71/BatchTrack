@@ -8,12 +8,8 @@ def humanize_duration_days(days: Optional[int], include_days: bool = True) -> st
     if days is None:
         return "–"
 
-    try:
-        value = int(days)
-    except (TypeError, ValueError):
-        return "–"
-
-    if value <= 0:
+    value = _to_positive_int(days)
+    if value is None:
         return "–"
 
     if value < 60:
@@ -43,3 +39,11 @@ def _trim_trailing_zero(number: float) -> str:
     if text.endswith(".0"):
         return text[:-2]
     return text
+
+
+def _to_positive_int(value: Optional[int]) -> Optional[int]:
+    try:
+        parsed = int(value)
+    except (TypeError, ValueError):
+        return None
+    return parsed if parsed > 0 else None

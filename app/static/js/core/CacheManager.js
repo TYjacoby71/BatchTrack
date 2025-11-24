@@ -1,5 +1,7 @@
+const DEFAULT_FETCH_TTL = 30_000;
+
 class SimpleCache {
-    constructor(defaultTtl = 30000) {
+    constructor(defaultTtl = 30_000) {
         this.cache = new Map();
         this.defaultTtl = defaultTtl;
     }
@@ -38,4 +40,16 @@ class SimpleCache {
 }
 
 export const appCache = new SimpleCache();
+const fetchCache = new SimpleCache(DEFAULT_FETCH_TTL);
 
+export async function cachedFetch(url, options = {}) {
+    const cacheKey = `${url}_${JSON.stringify(options ?? {})}`;
+    const cachedResponse = fetchCache.get(cacheKey);
+    if (cachedResponse) {
+        return cachedResponse.clone();
+    }
+
+    const response = await fetch(url, options);
+    fetchCache.set(cacheKey, response.clone());
+    return response;
+}

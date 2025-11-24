@@ -1,49 +1,79 @@
+from __future__ import annotations
 
-import time
-import functools
-from flask import g, current_app
 import logging
+import time
+from functools import wraps
+from typing import Any, Callable, TypeVar
+
+from flask import current_app, g
+
+__all__ = ["PerformanceMonitor", "profile_route"]
+
+logger = logging.getLogger(__name__)
+TFunc = TypeVar("TFunc", bound=Callable[..., Any])
+
 
 class PerformanceMonitor:
+    """Lightweight helpers for timing queries and request handlers."""
+
+    DEFAULT_QUERY_THRESHOLD = 0.1
+    DEFAULT_ROUTE_THRESHOLD = 1.0
+
     @staticmethod
-    def monitor_db_queries():
-        """Track database query performance"""
-        if not hasattr(g, 'query_count'):
-            g.query_count = 0
-            g.query_time = 0
-    
+    def init_request_metrics() -> None:
+        """Ensure request-scoped counters exist on `g`."""
+        if not hasattr(g, "perf_metrics"):
+            g.perf_metrics = {"query_count": 0, "query_time": 0.0}
+
     @staticmethod
-    def log_slow_queries(duration_threshold=0.1):
-        """Log queries that exceed threshold"""
-        def decorator(func):
-            @functools.wraps(func)
-            def wrapper(*args, **named_args):
-                start_time = time.time()
-                result = func(*args, **named_args)
-                duration = time.time() - start_time
-                
-                if duration > duration_threshold:
-                    current_app.logger.warning(
-                        f"Slow query in {func.__name__}: {duration:.3f}s"
-                    )
-                
-                return result
-            return wrapper
+    def record_query(duration: float) -> None:
+        """Increment counters for an observed database query."""
+        PerformanceMonitor.init_request_metrics()
+        g.perf_metrics["query_count"] += 1
+        g.perf_metrics["query_time"] += max(duration, 0.0)
+
+    @staticmethod
+    def log_slow_calls(threshold: float = DEFAULT_QUERY_THRESHOLD) -> Callable[[TFunc], TFunc]:
+        """
+        Decorator that logs whenever the wrapped callable exceeds *threshold* seconds.
+        Intended for instrumenting ORM or service-layer methods without external tooling.
+        """
+
+        def decorator(func: TFunc) -> TFunc:
+            @wraps(func)
+            def wrapper(*args, **kwargs):
+                start = time.perf_counter()
+                try:
+                    return func(*args, **kwargs)
+                finally:
+                    duration = time.perf_counter() - start
+                    if duration >= threshold:
+                        PerformanceMonitor._emit_warning(
+                            f"Slow call: {func.__qualname__}", duration
+                        )
+
+            return wrapper  # type: ignore[return-value]
+
         return decorator
 
-def profile_route(func):
-    """Profile route performance"""
-    @functools.wraps(func)
-    def wrapper(*args, **named_args):
-        start_time = time.time()
-        
-        result = func(*args, **named_args)
-        
-        duration = time.time() - start_time
-        if duration > 1.0:  # Log routes taking > 1 second
-            current_app.logger.warning(
-                f"Slow route {func.__name__}: {duration:.3f}s"
+    @staticmethod
+    def _emit_warning(message: str, duration: float) -> None:
+        log_target = current_app.logger if current_app else logger
+        log_target.warning("%s (%.3fs)", message, duration)
+
+
+def profile_route(func: TFunc, *, threshold: float = PerformanceMonitor.DEFAULT_ROUTE_THRESHOLD) -> TFunc:
+    """Decorator for view functions to log requests exceeding *threshold* seconds."""
+
+    @wraps(func)
+    def wrapper(*args, **kwargs):
+        start = time.perf_counter()
+        response = func(*args, **kwargs)
+        duration = time.perf_counter() - start
+        if duration >= threshold:
+            PerformanceMonitor._emit_warning(
+                f"Slow route: {func.__name__}", duration
             )
-        
-        return result
-    return wrapper
+        return response
+
+    return wrapper  # type: ignore[return-value]
