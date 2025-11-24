@@ -1821,10 +1821,22 @@ def integrations_checklist():
                 return True, 'config'
         return False, 'missing'
 
-    def _make_item(key, description, *, required=True, recommended=None, allow_config=False, config_key=None, is_secret=False, note=None):
+    def _make_item(
+        key,
+        description,
+        *,
+        required=True,
+        recommended=None,
+        allow_config=False,
+        config_key=None,
+        is_secret=False,
+        note=None,
+        display_key=None,
+    ):
         present, source = _env_status(key, allow_config=allow_config, config_key=config_key)
         return {
             'key': key,
+            'display_key': display_key or key,
             'description': description,
             'present': present,
             'source': source,
@@ -1861,8 +1873,15 @@ def integrations_checklist():
             'title': 'Caching & Rate Limits',
             'note': 'Provision a managed Redis instance (Render Redis, Upstash, ElastiCache). Use the same connection URI for caching, Flask sessions, and rate limiting.',
             'section_items': [
-                _make_item('REDIS_URL', 'Redis connection string for caching, sessions, and rate limit storage.', required=True, recommended='redis://', note='Create the service, copy the full tls-enabled URI, and paste it in Render → Environment.', allow_config=True),
-                _make_item('RATELIMIT_STORAGE_URL', 'Flask-Limiter backend. Should mirror REDIS_URL in production.', required=True, recommended='redis://', allow_config=True),
+                _make_item(
+                    'REDIS_URL',
+                    'Redis connection string for caching, sessions, and rate limit storage.',
+                    required=True,
+                    recommended='redis://',
+                    note='Create the service once; the app mirrors this into RATELIMIT_STORAGE_URL automatically. Set the rate-limit variable only if your platform requires an explicit entry.',
+                    allow_config=True,
+                    display_key='REDIS_URL (mirrors RATELIMIT_STORAGE_URL)',
+                ),
                 _make_item('SESSION_TYPE', 'Server-side session backend. Must be "redis" in production.', required=True, recommended='redis', allow_config=True, note='Set to redis so user sessions live in Redis instead of cookies.'),
             ],
         },
