@@ -4,10 +4,12 @@ This handler should work with the centralized quantity update system.
 """
 
 import logging
+from datetime import timezone  # Import timezone for timezone-aware datetime objects
+
 from app.models import db, InventoryItem, IngredientCategory, Unit, UnifiedInventoryHistory, GlobalItem
+from app.services.container_name_builder import build_container_name
 from app.services.density_assignment_service import DensityAssignmentService
 from ._fifo_ops import create_new_fifo_lot
-from datetime import timezone # Import timezone for timezone-aware datetime objects
 
 logger = logging.getLogger(__name__)
 
@@ -51,9 +53,7 @@ def create_inventory_item(form_data, organization_id, created_by):
         logger.info(f"Form data: {dict(form_data)}")
 
         # Extract and validate required fields
-        name = form_data.get('name', '').strip()
-        if not name:
-            return False, "Item name is required", None
+        name = (form_data.get('name') or '').strip()
 
         # If provided, load global item for defaults
         global_item_id = form_data.get('global_item_id')
@@ -69,6 +69,29 @@ def create_inventory_item(form_data, organization_id, created_by):
         # Validate type against global item
         if global_item and item_type != global_item.item_type:
             return False, f"Selected global item type '{global_item.item_type}' does not match item type '{item_type}'.", None
+
+        def _container_attr(key: str):
+            value = form_data.get(key)
+            if isinstance(value, str):
+                value = value.strip()
+            if value not in (None, '', 'null'):
+                return value
+            if global_item:
+                return getattr(global_item, key, None)
+            return None
+
+        if item_type == 'container' and not name:
+            name = build_container_name(
+                style=_container_attr('container_style'),
+                material=_container_attr('container_material'),
+                container_type=_container_attr('container_type'),
+                color=_container_attr('container_color'),
+                capacity=_container_attr('capacity'),
+                capacity_unit=_container_attr('capacity_unit'),
+            )
+
+        if not name:
+            return False, "Item name is required", None
 
         # Handle unit - prefer user's form selection over global item defaults
         unit_input = None
