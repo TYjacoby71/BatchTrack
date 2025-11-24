@@ -91,22 +91,33 @@ def _configure_cache(app: Flask) -> None:
 def _configure_sessions(app: Flask) -> None:
     session_backend = None
     session_redis = None
-    session_redis_url = app.config.get("REDIS_URL")
-
+    session_pool = None
+    session_redis_url = app.config.get('REDIS_URL')
     if session_redis_url:
         try:
-            import redis
+            import redis  # type: ignore
 
-            session_redis = redis.Redis.from_url(session_redis_url)
-            session_backend = "redis"
+            pool_kwargs: dict[str, int] = {}
+            max_connections = app.config.get('SESSION_REDIS_MAX_CONNECTIONS')
+            if isinstance(max_connections, int) and max_connections > 0:
+                pool_kwargs['max_connections'] = max_connections
+
+            session_pool = redis.ConnectionPool.from_url(session_redis_url, **pool_kwargs)
+            session_redis = redis.Redis(connection_pool=session_pool)
+            session_backend = 'redis'
         except Exception as exc:
             logger.warning("Failed to initialize Redis-backed session store (%s); falling back to filesystem.", exc)
 
-    if session_backend == "redis" and session_redis is not None:
-        app.config.setdefault("SESSION_TYPE", "redis")
-        app.config.setdefault("SESSION_PERMANENT", True)
-        app.config.setdefault("SESSION_USE_SIGNER", True)
-        app.config["SESSION_REDIS"] = session_redis
+    if session_backend == 'redis' and session_redis is not None:
+        app.config.setdefault('SESSION_TYPE', 'redis')
+        app.config.setdefault('SESSION_PERMANENT', True)
+        app.config.setdefault('SESSION_USE_SIGNER', True)
+        app.config['SESSION_REDIS'] = session_redis
+        if session_pool is not None and app.config.get('SESSION_REDIS_MAX_CONNECTIONS'):
+            logger.info(
+                "Redis session backend initialised with max_connections=%s",
+                app.config.get('SESSION_REDIS_MAX_CONNECTIONS'),
+            )
     else:
         session_dir = os.path.join(app.instance_path, "session_files")
         os.makedirs(session_dir, exist_ok=True)
