@@ -6,6 +6,8 @@ This handler should work with the centralized quantity update system.
 import logging
 from datetime import timezone  # Import timezone for timezone-aware datetime objects
 
+from sqlalchemy import func
+
 from app.models import db, InventoryItem, IngredientCategory, Unit, UnifiedInventoryHistory, GlobalItem
 from app.services.container_name_builder import build_container_name
 from app.services.density_assignment_service import DensityAssignmentService
@@ -42,6 +44,44 @@ def _resolve_cost_per_unit(form_data, initial_quantity):
         return raw_cost_value / quantity_value, None
 
     return raw_cost_value, None
+
+
+def _normalize_container_field(value):
+    if value is None:
+        return None
+    text = str(value).strip()
+    return text.lower() if text else None
+
+
+def _apply_string_match(query, column, value):
+    normalized = _normalize_container_field(value)
+    if normalized is None:
+        return query.filter(column.is_(None))
+    return query.filter(func.lower(column) == normalized)
+
+
+def _find_matching_container(candidate: InventoryItem | None):
+    """Return an existing container with matching attributes (same org)."""
+    if not candidate or candidate.type != 'container':
+        return None
+
+    query = InventoryItem.query.filter(
+        InventoryItem.organization_id == candidate.organization_id,
+        InventoryItem.type == 'container'
+    )
+
+    query = _apply_string_match(query, InventoryItem.container_material, candidate.container_material)
+    query = _apply_string_match(query, InventoryItem.container_type, candidate.container_type)
+    query = _apply_string_match(query, InventoryItem.container_style, candidate.container_style)
+    query = _apply_string_match(query, InventoryItem.container_color, candidate.container_color)
+    query = _apply_string_match(query, InventoryItem.capacity_unit, candidate.capacity_unit)
+
+    if candidate.capacity is None:
+        query = query.filter(InventoryItem.capacity.is_(None))
+    else:
+        query = query.filter(InventoryItem.capacity == candidate.capacity)
+
+    return query.first()
 
 def create_inventory_item(form_data, organization_id, created_by):
     """
@@ -80,7 +120,7 @@ def create_inventory_item(form_data, organization_id, created_by):
                 return getattr(global_item, key, None)
             return None
 
-        if item_type == 'container' and not name:
+        if item_type == 'container':
             name = build_container_name(
                 style=_container_attr('container_style'),
                 material=_container_attr('container_material'),
@@ -320,6 +360,18 @@ def create_inventory_item(form_data, organization_id, created_by):
                     new_item.density_source = 'manual'
             except Exception:
                 pass
+
+        # Before saving containers, reuse an existing match if attributes align
+        if item_type == 'container':
+            existing_container = _find_matching_container(new_item)
+            if existing_container:
+                existing_id = existing_container.id
+                existing_name = existing_container.name
+                if existing_container.is_archived:
+                    existing_container.is_archived = False
+                db.session.commit()
+                logger.info(f"Matched existing container {existing_name} (ID: {existing_id}). Reusing record.")
+                return True, f"Matched existing container {existing_name}", existing_id
 
         # Save the new item
         db.session.add(new_item)
