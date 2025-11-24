@@ -153,7 +153,14 @@
   </div>
 
   <div class="alert alert-warning mt-4">
-    <strong>Redis provisioning:</strong> Before launch, create a managed Redis instance (Render Redis, Upstash, AWS ElastiCache). Copy the connection URL into <code>REDIS_URL</code> and mirror it into <code>RATELIMIT_STORAGE_URL</code>. The app now refuses to start in production without Redis-backed sessions, caching, and rate limiting.
+    <strong>Redis provisioning & presets:</strong>
+    <ul class="mb-2">
+      <li>Before launch, create a managed Redis instance (Render Redis, Upstash, AWS ElastiCache) and set both <code>REDIS_URL</code> and <code>RATELIMIT_STORAGE_URL</code> to the same value.</li>
+      <li>Use <code>SESSION_REDIS_MAX_CONNECTIONS</code> to cap each worker’s connection pool (default 10). Match this to your Redis plan’s <code>maxclients</code>.</li>
+      <li>Set <code>WEB_CONCURRENCY</code> only as high as the Redis/Postgres plans can handle. During testing, keep it at <code>1</code>–<code>2</code>; raise both concurrency and Redis limits together when upgrading.</li>
+      <li>For high-usage tiers (10k+ active users), a single beefy Redis node normally suffices—scale memory and <code>maxclients</code> before considering sharding.</li>
+    </ul>
+    The app refuses to start in production without Redis-backed sessions, caching, and rate limiting.
   </div>
 
   <div class="card shadow-sm mt-4">
