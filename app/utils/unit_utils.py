@@ -1,160 +1,204 @@
-from ..models import Unit
+from __future__ import annotations
+
 import logging
-from logging.handlers import RotatingFileHandler
-import os
-from typing import Iterable, List, Optional, Any
-from dataclasses import dataclass
-from flask import g, current_app
 import time
+from dataclasses import dataclass
+from typing import Any, Iterable, List
+
+from flask import g, has_request_context, session
 from flask_login import current_user
+
+from ..models import Unit
+from .cache_manager import app_cache
+from .validation_helpers import validate_density
+from ..services.unit_conversion import ConversionEngine
+
+logger = logging.getLogger(__name__)
+
+_REQUEST_CACHE_ATTR = "_global_unit_list"
+_CACHE_TTL_SECONDS = 300
+_SLOW_QUERY_THRESHOLD = 0.05
 
 
 @dataclass(frozen=True)
 class UnitOption:
     """Session-safe representation of a unit for caching/rendering."""
-    id: Optional[int]
+
+    id: int | None
     name: str
-    unit_type: str = 'count'
-    base_unit: Optional[str] = None
-    conversion_factor: Optional[float] = None
-    symbol: Optional[str] = None
+    unit_type: str = "count"
+    base_unit: str | None = None
+    conversion_factor: float | None = None
+    symbol: str | None = None
     is_custom: bool = False
     is_mapped: bool = False
-    organization_id: Optional[int] = None
-    created_by: Optional[int] = None
+    organization_id: int | None = None
+    created_by: int | None = None
 
     @property
     def is_base_unit(self) -> bool:
         return self.base_unit is None or self.base_unit == self.name
 
 
+def _active_user():
+    if not has_request_context():
+        return None
+    try:
+        return current_user
+    except Exception:
+        return None
+
+
 def _to_unit_option(unit: Any) -> UnitOption:
-    """Convert ORM instances or dicts into Units safe for caching."""
+    """Convert ORM instances or dicts into a cache-safe representation."""
     if isinstance(unit, UnitOption):
         return unit
     return UnitOption(
-        id=getattr(unit, 'id', None),
-        name=getattr(unit, 'name', '') or '',
-        unit_type=getattr(unit, 'unit_type', 'count') or 'count',
-        base_unit=getattr(unit, 'base_unit', None),
-        conversion_factor=getattr(unit, 'conversion_factor', None),
-        symbol=getattr(unit, 'symbol', None),
-        is_custom=bool(getattr(unit, 'is_custom', False)),
-        is_mapped=bool(getattr(unit, 'is_mapped', False)),
-        organization_id=getattr(unit, 'organization_id', None),
-        created_by=getattr(unit, 'created_by', getattr(unit, 'user_id', None)),
+        id=getattr(unit, "id", None),
+        name=(getattr(unit, "name", "") or "").strip(),
+        unit_type=getattr(unit, "unit_type", "count") or "count",
+        base_unit=getattr(unit, "base_unit", None),
+        conversion_factor=getattr(unit, "conversion_factor", None),
+        symbol=getattr(unit, "symbol", None),
+        is_custom=bool(getattr(unit, "is_custom", False)),
+        is_mapped=bool(getattr(unit, "is_mapped", False)),
+        organization_id=getattr(unit, "organization_id", None),
+        created_by=getattr(unit, "created_by", getattr(unit, "user_id", None)),
     )
 
 
 def _normalize_unit_collection(units: Iterable[Any]) -> List[UnitOption]:
-    return [_to_unit_option(unit) for unit in units]
+    return [_to_unit_option(unit) for unit in units if unit is not None]
 
-# Set up logger for this module
-logger = logging.getLogger(__name__)
-def setup_logging(app):
-    """Deprecated: logging is configured via app.logging_config.configure_logging."""
-    logger.debug('setup_logging called (deprecated). Using centralized logging_config instead.')
-def get_global_unit_list():
-    """Get list of all active units, including both standard and organization-specific custom units"""
-    # Check for request-level cache first
-    cache_key = 'global_unit_list'
-    if hasattr(g, cache_key):
-        return getattr(g, cache_key)
-    # Check application-level cache
-    from ..utils.cache_manager import app_cache
-    cache_key_full = f"units:{getattr(current_user, 'organization_id', 'public') if hasattr(current_user, 'organization_id') else 'public'}"
-    cached_units = app_cache.get(cache_key_full)
+
+def _cache_scope_token() -> str:
+    user = _active_user()
+    if not user or not getattr(user, "is_authenticated", False):
+        return "public"
+
+    org_id = getattr(user, "organization_id", None)
+    if org_id:
+        return f"org:{org_id}"
+
+    if getattr(user, "user_type", None) == "developer" and has_request_context():
+        selected_org = session.get("dev_selected_org_id")
+        return f"dev:{selected_org}" if selected_org else "dev:all"
+
+    return "public"
+
+
+def _cache_key() -> str:
+    return f"units:{_cache_scope_token()}"
+
+
+def _get_request_cache() -> List[UnitOption] | None:
+    return getattr(g, _REQUEST_CACHE_ATTR, None) if has_request_context() else None
+
+
+def _set_request_cache(units: List[UnitOption]) -> None:
+    if has_request_context():
+        setattr(g, _REQUEST_CACHE_ATTR, units)
+
+
+def _fallback_units() -> List[UnitOption]:
+    return [
+        UnitOption(id=None, name="oz", unit_type="weight", base_unit="oz"),
+        UnitOption(id=None, name="g", unit_type="weight", base_unit="g"),
+        UnitOption(id=None, name="lb", unit_type="weight", base_unit="lb"),
+        UnitOption(id=None, name="ml", unit_type="volume", base_unit="ml"),
+        UnitOption(id=None, name="fl oz", unit_type="volume", base_unit="fl oz"),
+        UnitOption(id=None, name="count", unit_type="count", base_unit="count"),
+    ]
+
+
+def _build_unit_query():
+    query = Unit.query.filter_by(is_active=True)
+    user = _active_user()
+
+    if not user or not getattr(user, "is_authenticated", False):
+        return query.filter(Unit.is_custom.is_(False))
+
+    org_id = getattr(user, "organization_id", None)
+    if org_id:
+        return query.filter(
+            (Unit.is_custom.is_(False)) | (Unit.organization_id == org_id)
+        )
+
+    if getattr(user, "user_type", None) == "developer" and has_request_context():
+        selected_org = session.get("dev_selected_org_id")
+        if selected_org:
+            return query.filter(
+                (Unit.is_custom.is_(False)) | (Unit.organization_id == selected_org)
+            )
+        return query
+
+    return query.filter(Unit.is_custom.is_(False))
+
+
+def _fetch_units() -> List[Unit]:
+    start = time.perf_counter()
+    units = _build_unit_query().order_by(Unit.unit_type, Unit.name).all()
+    duration = time.perf_counter() - start
+    if duration > _SLOW_QUERY_THRESHOLD:
+        logger.warning("Unit query took %.3fs for %d units", duration, len(units))
+    return units
+
+
+def get_global_unit_list() -> List[UnitOption]:
+    """Return active units, including organization-specific custom units."""
+    request_cached = _get_request_cache()
+    if request_cached:
+        return request_cached
+
+    cache_key = _cache_key()
+    cached_units = app_cache.get(cache_key)
     if cached_units:
         safe_units = _normalize_unit_collection(cached_units)
-        setattr(g, cache_key, safe_units)
-        # Upgrade cache if it was storing ORM instances
+        _set_request_cache(safe_units)
         if cached_units and not isinstance(cached_units[0], UnitOption):
-            app_cache.set(cache_key_full, safe_units, 300)
+            app_cache.set(cache_key, safe_units, _CACHE_TTL_SECONDS)
         return safe_units
 
     try:
-        from ..models import Unit
-        start_time = time.time()
-        # Base query for active units
-        query = Unit.query.filter_by(is_active=True)
-        # If user is authenticated, include their organization's custom units
-        if current_user and current_user.is_authenticated:
-            if current_user.organization_id:
-                # Regular user: show standard units + their org's custom units
-                query = query.filter(
-                    (Unit.is_custom == False) |
-                    (Unit.organization_id == current_user.organization_id)
-                )
-            elif current_user.user_type == 'developer':
-                # Developer: check for selected organization
-                from flask import session
-                selected_org_id = session.get('dev_selected_org_id')
-                if selected_org_id:
-                    query = query.filter(
-                        (Unit.is_custom == False) |
-                        (Unit.organization_id == selected_org_id)
-                    )
-                # Otherwise show all units for system-wide developer access
-            else:
-                # User without organization: only show standard units
-                query = query.filter(Unit.is_custom == False)
-        else:
-            # Unauthenticated: only show standard units
-            query = query.filter(Unit.is_custom == False)
+        safe_units = _normalize_unit_collection(_fetch_units())
+    except Exception as exc:
+        logger.exception("Error getting global unit list: %s", exc)
+        fallback = _fallback_units()
+        _set_request_cache(fallback)
+        app_cache.set(cache_key, fallback, _CACHE_TTL_SECONDS)
+        return fallback
 
-        # Order by type and name for consistent display
-        units = query.order_by(Unit.unit_type, Unit.name).all()
-        safe_units = _normalize_unit_collection(units)
+    if not safe_units:
+        logger.warning("No units found for scope %s; using fallback set", cache_key)
+        fallback = _fallback_units()
+        _set_request_cache(fallback)
+        app_cache.set(cache_key, fallback, _CACHE_TTL_SECONDS)
+        return fallback
 
-        # Monitor query performance
-        query_time = time.time() - start_time
-        if query_time > 0.05:  # Log queries taking > 50ms
-            logger.warning(f"Unit query took {query_time:.3f}s for {len(units)} units")
+    _set_request_cache(safe_units)
+    app_cache.set(cache_key, safe_units, _CACHE_TTL_SECONDS)
+    return safe_units
 
-        # Cache the result for this request and in app cache
-        setattr(g, cache_key, safe_units)
-        app_cache.set(cache_key_full, safe_units, 300)  # 5 minute cache
 
-        if not safe_units:
-            logger.warning("No units found, creating fallback units")
-            # Create fallback units if none exist
-            fallback_units = [
-                UnitOption(id=None, name='oz', unit_type='weight', base_unit='oz'),
-                UnitOption(id=None, name='g', unit_type='weight', base_unit='g'),
-                UnitOption(id=None, name='lb', unit_type='weight', base_unit='lb'),
-                UnitOption(id=None, name='ml', unit_type='volume', base_unit='ml'),
-                UnitOption(id=None, name='fl oz', unit_type='volume', base_unit='fl oz'),
-                UnitOption(id=None, name='count', unit_type='count', base_unit='count')
-            ]
-            # Cache fallback units too
-            setattr(g, cache_key, fallback_units)
-            return fallback_units
+def _ingredient_has_density(ingredient: Any | None) -> bool:
+    if not ingredient:
+        return False
 
-        return safe_units
+    density = validate_density(getattr(ingredient, "density", None))
+    if density is not None:
+        return True
 
-    except Exception as e:
-        logger.error(f"Error getting global unit list: {e}")
-        error_fallback = [
-            UnitOption(id=None, name='gram', symbol='g', unit_type='weight'),
-            UnitOption(id=None, name='milliliter', symbol='ml', unit_type='volume'),
-            UnitOption(id=None, name='count', symbol='count', unit_type='count')
-        ]
-        setattr(g, cache_key, error_fallback)
-        return error_fallback
+    category = getattr(ingredient, "category", None)
+    if category:
+        category_density = validate_density(getattr(category, "default_density", None))
+        if category_density is not None:
+            return True
 
-def validate_density_requirements(from_unit, to_unit, ingredient=None):
-    """
-    Validates density requirements for unit conversions
-    Returns (needs_density: bool, message: str)
-    """
-    if from_unit.unit_type == to_unit.unit_type:
-        return False, None
-    if {'volume', 'weight'} <= {from_unit.unit_type, to_unit.unit_type}:
-        if not ingredient:
-            return True, "Ingredient context required for volume ↔ weight conversion"
-        if ingredient.density:
-            return False, None
-        if ingredient.category and ingredient.category.default_density:
-            return False, None
-        return True, f"Density required for {ingredient.name}. Set ingredient density or category."
-    return False, None
+    return False
+
+
+def validate_density_requirements(
+    from_unit: Any, to_unit: Any, ingredient: Any | None = None
+) -> tuple[bool, str | None]:
+    """Backward-compatible shim that delegates to ConversionEngine."""
+    return ConversionEngine.validate_density_requirements(from_unit, to_unit, ingredient)

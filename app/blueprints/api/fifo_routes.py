@@ -14,7 +14,7 @@ from ...models.unified_inventory_history import UnifiedInventoryHistory
 from ...models.inventory_lot import InventoryLot
 from ...services.freshness_service import FreshnessService
 from datetime import datetime, date
-from ...utils.fifo_generator import int_to_base36
+from ...utils.inventory_event_code_generator import int_to_base36
 
 fifo_api_bp = Blueprint('fifo_api', __name__)
 

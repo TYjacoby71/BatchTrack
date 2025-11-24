@@ -24,6 +24,10 @@ build = ["sh", "-c", "pip install -r requirements.txt"]
 localPort = 5000
 externalPort = 80
 
+[[ports]]
+localPort = 8089
+externalPort = 3000
+
 [workflows]
 runButton = "Run Flask Debug"
 

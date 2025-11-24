@@ -1,367 +1,351 @@
+from __future__ import annotations
+
+from datetime import datetime, timezone as dt_timezone
+from typing import Dict, List, Set, Tuple
+
 import pytz
-from typing import Dict, List, Tuple, Optional, Any
-from datetime import datetime, timezone
+from flask import has_request_context
+from flask_login import current_user
+
+DEFAULT_TIMEZONE = "UTC"
+SUGGESTED_SECTION_LABEL = "Suggested"
+_PRIORITY_TIMEZONES = (
+    "US/Eastern",
+    "US/Central",
+    "US/Mountain",
+    "US/Pacific",
+    "Europe/London",
+    "Europe/Paris",
+    "Europe/Berlin",
+    "Asia/Tokyo",
+    "Asia/Shanghai",
+    "Australia/Sydney",
+)
+
+_REGION_SEQUENCE = (
+    "North America",
+    "Europe",
+    "Asia",
+    "Australia/Pacific",
+    "Africa",
+    "South America",
+    "Other",
+)
+
+_SOUTH_AMERICA_PREFIXES = (
+    "America/Argentina",
+    "America/Asuncion",
+    "America/Bogota",
+    "America/Caracas",
+    "America/La_Paz",
+    "America/Lima",
+    "America/Montevideo",
+    "America/Santiago",
+    "America/Sao_Paulo",
+)
+
+_TIMEZONE_ALIASES: Dict[str, str] = {
+    "US/Eastern": "Eastern Time (US)",
+    "US/Central": "Central Time (US)",
+    "US/Mountain": "Mountain Time (US)",
+    "US/Pacific": "Pacific Time (US)",
+    "US/Alaska": "Alaska Time (US)",
+    "US/Hawaii": "Hawaii Time (US)",
+    "Europe/London": "Greenwich Mean Time",
+    "Europe/Paris": "Central European Time",
+    "Europe/Berlin": "Central European Time",
+    "Europe/Rome": "Central European Time",
+    "Europe/Madrid": "Central European Time",
+    "Europe/Amsterdam": "Central European Time",
+    "Asia/Tokyo": "Japan Standard Time",
+    "Asia/Shanghai": "China Standard Time",
+    "Asia/Kolkata": "India Standard Time",
+    "Asia/Dubai": "Gulf Standard Time",
+    "Australia/Sydney": "Australian Eastern Time",
+    "Australia/Melbourne": "Australian Eastern Time",
+    "Australia/Perth": "Australian Western Time",
+    "Canada/Eastern": "Eastern Time (Canada)",
+    "Canada/Central": "Central Time (Canada)",
+    "Canada/Mountain": "Mountain Time (Canada)",
+    "Canada/Pacific": "Pacific Time (Canada)",
+}
+
 
 class TimezoneUtils:
-    """Industry-standard timezone utilities using pytz"""
+    """Utilities for consistent timezone handling across the application."""
 
-    # Common timezone aliases for user-friendly display
-    TIMEZONE_ALIASES = {
-        'US/Eastern': 'Eastern Time (US)',
-        'US/Central': 'Central Time (US)', 
-        'US/Mountain': 'Mountain Time (US)',
-        'US/Pacific': 'Pacific Time (US)',
-        'US/Alaska': 'Alaska Time (US)',
-        'US/Hawaii': 'Hawaii Time (US)',
-        'Europe/London': 'Greenwich Mean Time',
-        'Europe/Paris': 'Central European Time',
-        'Europe/Berlin': 'Central European Time',
-        'Europe/Rome': 'Central European Time',
-        'Europe/Madrid': 'Central European Time',
-        'Europe/Amsterdam': 'Central European Time',
-        'Asia/Tokyo': 'Japan Standard Time',
-        'Asia/Shanghai': 'China Standard Time',
-        'Asia/Kolkata': 'India Standard Time',
-        'Asia/Dubai': 'Gulf Standard Time',
-        'Australia/Sydney': 'Australian Eastern Time',
-        'Australia/Melbourne': 'Australian Eastern Time',
-        'Australia/Perth': 'Australian Western Time',
-        'Canada/Eastern': 'Eastern Time (Canada)',
-        'Canada/Central': 'Central Time (Canada)',
-        'Canada/Mountain': 'Mountain Time (Canada)',
-        'Canada/Pacific': 'Pacific Time (Canada)'
-    }
+    TIMEZONE_ALIASES = _TIMEZONE_ALIASES
+    PRIORITY_TIMEZONES = _PRIORITY_TIMEZONES
 
     @staticmethod
     def get_available_timezones() -> List[str]:
-        """Get all available pytz timezones"""
+        """Return every timezone identifier known to pytz."""
         return list(pytz.all_timezones)
 
     @staticmethod
     def get_common_timezones() -> List[str]:
-        """Get commonly used timezones"""
+        """Return the common subset of pytz timezones."""
         return list(pytz.common_timezones)
 
     @staticmethod
-    def get_grouped_timezones(detected_timezone: str = None) -> Dict[str, List[Tuple[str, str]]]:
-        """Get timezones grouped by region with display names
-        
-        Args:
-            detected_timezone: Auto-detected timezone to show at top with related zones
+    def get_grouped_timezones(
+        detected_timezone: str | None = None,
+    ) -> Dict[str, List[Tuple[str, str]]]:
         """
-        grouped = {
-            'North America': [],
-            'Europe': [],
-            'Asia': [],
-            'Australia/Pacific': [],
-            'Africa': [],
-            'South America': [],
-            'Other': []
-        }
+        Return timezones grouped by region, optionally highlighting a detected zone.
+        """
+        grouped: Dict[str, List[Tuple[str, str]]] = {}
+        seen: Set[str] = set()
 
-        # Priority timezones (most commonly used)
-        priority_timezones = [
-            'US/Eastern', 'US/Central', 'US/Mountain', 'US/Pacific',
-            'Europe/London', 'Europe/Paris', 'Europe/Berlin',
-            'Asia/Tokyo', 'Asia/Shanghai', 'Australia/Sydney'
-        ]
-        
-        # If we have a detected timezone, add it and related zones to top
-        if detected_timezone and detected_timezone in pytz.all_timezones:
-            grouped['🌍 Suggested (Based on Your Location)'] = []
-            
-            # Add detected timezone first
-            display_name = TimezoneUtils._format_timezone_display(detected_timezone)
-            grouped['🌍 Suggested (Based on Your Location)'].append((detected_timezone, f"✓ {display_name} (Detected)"))
-            
-            # Add 4 related timezones from same region
-            detected_region = TimezoneUtils._get_timezone_region(detected_timezone)
-            related_count = 0
-            for tz_name in sorted(pytz.all_timezones):
-                if related_count >= 4:
-                    break
-                if tz_name != detected_timezone and TimezoneUtils._get_timezone_region(tz_name) == detected_region:
-                    display_name = TimezoneUtils._format_timezone_display(tz_name)
-                    grouped['🌍 Suggested (Based on Your Location)'].append((tz_name, display_name))
-                    related_count += 1
+        suggestions = TimezoneUtils._build_suggestions(detected_timezone, seen)
+        if suggestions:
+            grouped[SUGGESTED_SECTION_LABEL] = suggestions
 
-        for tz_name in priority_timezones:
-            if tz_name in pytz.all_timezones:
-                display_name = TimezoneUtils.TIMEZONE_ALIASES.get(tz_name, tz_name)
-                region = TimezoneUtils._get_timezone_region(tz_name)
-                grouped[region].append((tz_name, display_name))
+        for region in _REGION_SEQUENCE:
+            grouped.setdefault(region, [])
 
-        # Add ALL other timezones (not just common ones)
+        for tz_name in TimezoneUtils.PRIORITY_TIMEZONES:
+            TimezoneUtils._append_timezone(grouped, tz_name, seen)
+
         for tz_name in sorted(pytz.all_timezones):
-            if tz_name not in priority_timezones and (not detected_timezone or tz_name != detected_timezone):
-                display_name = TimezoneUtils._format_timezone_display(tz_name)
-                region = TimezoneUtils._get_timezone_region(tz_name)
-                # Skip if already in suggested section
-                if detected_timezone and tz_name in [tz[0] for tz in grouped.get('🌍 Suggested (Based on Your Location)', [])]:
-                    continue
-                grouped[region].append((tz_name, display_name))
+            TimezoneUtils._append_timezone(grouped, tz_name, seen)
 
-        # Remove empty regions and return
-        return {region: timezones for region, timezones in grouped.items() if timezones}
+        return {region: items for region, items in grouped.items() if items}
+
+    @staticmethod
+    def _append_timezone(
+        grouped: Dict[str, List[Tuple[str, str]]],
+        tz_name: str,
+        seen: Set[str],
+    ) -> None:
+        if tz_name in seen or not TimezoneUtils.validate_timezone(tz_name):
+            return
+
+        region = TimezoneUtils._get_timezone_region(tz_name)
+        grouped.setdefault(region, [])
+        grouped[region].append((tz_name, TimezoneUtils._format_timezone_display(tz_name)))
+        seen.add(tz_name)
+
+    @staticmethod
+    def _build_suggestions(
+        detected_timezone: str | None, seen: Set[str]
+    ) -> List[Tuple[str, str]]:
+        if not detected_timezone or not TimezoneUtils.validate_timezone(detected_timezone):
+            return []
+
+        suggestions: List[Tuple[str, str]] = [
+            (
+                detected_timezone,
+                f"{TimezoneUtils._format_timezone_display(detected_timezone)} (detected)",
+            )
+        ]
+        seen.add(detected_timezone)
+
+        region = TimezoneUtils._get_timezone_region(detected_timezone)
+        for tz_name in sorted(pytz.all_timezones):
+            if tz_name in seen:
+                continue
+            if TimezoneUtils._get_timezone_region(tz_name) != region:
+                continue
+            suggestions.append((tz_name, TimezoneUtils._format_timezone_display(tz_name)))
+            seen.add(tz_name)
+            if len(suggestions) >= 5:  # detected + 4 related entries
+                break
+
+        return suggestions
 
     @staticmethod
     def _get_timezone_region(tz_name: str) -> str:
-        """Determine the region for a timezone"""
-        if tz_name.startswith(('US/', 'Canada/', 'America/')):
-            return 'North America'
-        elif tz_name.startswith('Europe/'):
-            return 'Europe'
-        elif tz_name.startswith('Asia/'):
-            return 'Asia'
-        elif tz_name.startswith(('Australia/', 'Pacific/')):
-            return 'Australia/Pacific'
-        elif tz_name.startswith('Africa/'):
-            return 'Africa'
-        elif tz_name.startswith('South_America/'):
-            return 'South America'
-        else:
-            return 'Other'
+        prefix = tz_name.split("/", 1)[0]
+        if prefix in {"US", "Canada"}:
+            return "North America"
+        if prefix == "America":
+            return "South America" if tz_name.startswith(_SOUTH_AMERICA_PREFIXES) else "North America"
+        if prefix == "Europe":
+            return "Europe"
+        if prefix == "Asia":
+            return "Asia"
+        if prefix in {"Australia", "Pacific"}:
+            return "Australia/Pacific"
+        if prefix == "Africa":
+            return "Africa"
+        return "Other"
 
     @staticmethod
     def _format_timezone_display(tz_name: str) -> str:
-        """Format timezone name for display"""
-        if tz_name in TimezoneUtils.TIMEZONE_ALIASES:
-            return TimezoneUtils.TIMEZONE_ALIASES[tz_name]
+        alias = TimezoneUtils.TIMEZONE_ALIASES.get(tz_name)
+        if alias:
+            return alias
 
-        # Format city names nicely
-        parts = tz_name.split('/')
+        parts = tz_name.split("/")
         if len(parts) >= 2:
-            city = parts[-1].replace('_', ' ')
-            region = parts[0].replace('_', ' ')
+            city = parts[-1].replace("_", " ")
+            region = parts[0].replace("_", " ")
             return f"{city} ({region})"
 
-        return tz_name.replace('_', ' ')
+        return tz_name.replace("_", " ")
 
     @staticmethod
     def format_timezone_display(tz_name: str) -> str:
-        """Public method to format timezone name for display - for template use"""
+        """Expose display formatting for templates."""
         return TimezoneUtils._format_timezone_display(tz_name)
 
     @staticmethod
-    def validate_timezone(tz_name: str) -> bool:
-        """Validate if timezone exists in pytz"""
-        return tz_name in pytz.all_timezones
+    def validate_timezone(tz_name: str | None) -> bool:
+        """Return True when the timezone string exists in pytz."""
+        return bool(tz_name) and tz_name in pytz.all_timezones_set
+
+    @staticmethod
+    def _get_timezone(tz_name: str):
+        if not TimezoneUtils.validate_timezone(tz_name):
+            raise ValueError(f"Invalid timezone: {tz_name}")
+        return pytz.timezone(tz_name)
 
     @staticmethod
     def convert_time(dt: datetime, from_tz: str, to_tz: str) -> datetime:
-        """Convert datetime from one timezone to another"""
-        if not TimezoneUtils.validate_timezone(from_tz) or not TimezoneUtils.validate_timezone(to_tz):
-            raise ValueError("Invalid timezone")
-
-        from_timezone = pytz.timezone(from_tz)
-        to_timezone = pytz.timezone(to_tz)
-
-        # Localize the datetime to the source timezone
-        localized_dt = from_timezone.localize(dt) if dt.tzinfo is None else dt.astimezone(from_timezone)
-
-        # Convert to target timezone
-        return localized_dt.astimezone(to_timezone)
+        """Convert a datetime from one explicit timezone to another."""
+        source = TimezoneUtils._get_timezone(from_tz)
+        target = TimezoneUtils._get_timezone(to_tz)
+        localized = source.localize(dt) if dt.tzinfo is None else dt.astimezone(source)
+        return localized.astimezone(target)
 
     @staticmethod
-    def convert_to_timezone(dt: datetime, to_timezone: str, assume_utc: bool = True) -> datetime:
-        """Backward-compatible helper that converts *dt* to *to_timezone*."""
+    def convert_to_timezone(
+        dt: datetime | None, to_timezone: str, assume_utc: bool = True
+    ) -> datetime | None:
+        """Convert a datetime into the target timezone, assuming UTC for naive values."""
         if dt is None:
             return None
-
-        if not to_timezone or not TimezoneUtils.validate_timezone(to_timezone):
-            to_timezone = 'UTC'
-
-        if dt.tzinfo is None:
-            if not assume_utc:
-                raise ValueError("Naive datetime provided without timezone; set assume_utc=True to treat as UTC")
-            dt = dt.replace(tzinfo=timezone.utc)
-
-        target_tz = pytz.timezone(to_timezone)
-        return dt.astimezone(target_tz)
+        target = TimezoneUtils._get_timezone(to_timezone if TimezoneUtils.validate_timezone(to_timezone) else DEFAULT_TIMEZONE)
+        aware = TimezoneUtils.ensure_timezone_aware(dt, assume_utc=assume_utc)
+        return aware.astimezone(target)
 
     @staticmethod
-    def get_user_timezone_display(user_timezone: str) -> str:
-        """Get display-friendly timezone name for user"""
-        if not user_timezone:
-            return 'UTC (Default)'
-
+    def get_user_timezone_display(user_timezone: str | None) -> str:
+        """Return a human-friendly timezone label, falling back to the default."""
+        if not user_timezone or not TimezoneUtils.validate_timezone(user_timezone):
+            return f"{DEFAULT_TIMEZONE} (Default)"
         return TimezoneUtils._format_timezone_display(user_timezone)
 
     @staticmethod
     def get_utc_offset(tz_name: str) -> str:
-        """Get UTC offset string for timezone (e.g., '+05:30')"""
+        """Return the UTC offset string for the provided timezone."""
         if not TimezoneUtils.validate_timezone(tz_name):
-            return '+00:00'
-
-        tz = pytz.timezone(tz_name)
-        now = datetime.now(tz)
-        offset = now.strftime('%z')
-
-        # Format as +HH:MM
-        if len(offset) == 5:
-            return f"{offset[:3]}:{offset[3:]}"
-
-        return '+00:00'
+            return "+00:00"
+        tz = TimezoneUtils._get_timezone(tz_name)
+        offset = datetime.now(tz).strftime("%z")
+        return f"{offset[:3]}:{offset[3:]}" if len(offset) == 5 else "+00:00"
 
     @staticmethod
     def utc_now() -> datetime:
-        """Get current UTC datetime - ALWAYS use this for database storage
-        
-        Returns timezone-aware UTC datetime for proper timezone handling.
-        """
-        return datetime.now(timezone.utc)
+        """Return the current UTC timestamp (timezone aware)."""
+        return datetime.now(dt_timezone.utc)
 
     @staticmethod
     def now() -> datetime:
-        """Get current datetime in user's timezone - for display only"""
-        from flask_login import current_user
-        
-        utc_now = TimezoneUtils.utc_now()
-        
-        # Get user's timezone
-        user_timezone = 'UTC'
-        if current_user and current_user.is_authenticated:
-            user_timezone = getattr(current_user, 'timezone', 'UTC')
-        
-        return TimezoneUtils.to_user_timezone(utc_now, user_timezone)
+        """Return the current time localized for the active user."""
+        localized = TimezoneUtils.to_user_timezone(TimezoneUtils.utc_now())
+        return localized if localized is not None else TimezoneUtils.utc_now()
 
     @staticmethod
     def get_user_timezone() -> str:
-        """Get current user's timezone"""
-        from flask_login import current_user
-        
-        if current_user and current_user.is_authenticated:
-            return getattr(current_user, 'timezone', 'UTC')
-        return 'UTC'
+        """Return the timezone configured for the authenticated user."""
+        return TimezoneUtils._current_user_timezone()
 
     @staticmethod
-    def to_user_timezone(dt: datetime, user_timezone: str = None) -> datetime:
-        """Convert UTC datetime to user's timezone - for display only"""
-        from flask_login import current_user
-        
-        if not dt:
-            return dt
-            
-        # Get user's timezone
-        if not user_timezone and current_user and current_user.is_authenticated:
-            user_timezone = getattr(current_user, 'timezone', 'UTC')
-        
-        if not user_timezone or not TimezoneUtils.validate_timezone(user_timezone):
-            user_timezone = 'UTC'
-        
-        # Convert UTC to user timezone
-        utc_dt = pytz.UTC.localize(dt) if dt.tzinfo is None else dt
-        user_tz = pytz.timezone(user_timezone)
-        return utc_dt.astimezone(user_tz)
+    def _current_user_timezone() -> str:
+        if not has_request_context():
+            return DEFAULT_TIMEZONE
+        try:
+            user = current_user
+        except Exception:
+            return DEFAULT_TIMEZONE
+        if user and getattr(user, "is_authenticated", False):
+            candidate = getattr(user, "timezone", DEFAULT_TIMEZONE) or DEFAULT_TIMEZONE
+            if TimezoneUtils.validate_timezone(candidate):
+                return candidate
+        return DEFAULT_TIMEZONE
 
     @staticmethod
-    def from_user_timezone(dt: datetime, user_timezone: str = None) -> datetime:
-        """Convert user timezone datetime to UTC - for storage"""
-        from flask_login import current_user
-        
-        if not dt:
-            return dt
-            
-        # Get user's timezone
-        if not user_timezone and current_user and current_user.is_authenticated:
-            user_timezone = getattr(current_user, 'timezone', 'UTC')
-        
-        if not user_timezone or not TimezoneUtils.validate_timezone(user_timezone):
-            user_timezone = 'UTC'
-        
-        # Convert to UTC (keep timezone-aware)
-        user_tz = pytz.timezone(user_timezone)
-        user_dt = user_tz.localize(dt) if dt.tzinfo is None else dt
-        return user_dt.astimezone(timezone.utc)
+    def _resolve_user_timezone(user_timezone: str | None = None) -> str:
+        if user_timezone and TimezoneUtils.validate_timezone(user_timezone):
+            return user_timezone
+        return TimezoneUtils._current_user_timezone()
 
     @staticmethod
-    def format_for_user(dt: datetime, format_string: str = '%Y-%m-%d %H:%M:%S', user_timezone: str = None) -> str:
-        """Format datetime in user's timezone"""
-        if not dt:
-            return ''
-            
-        user_dt = TimezoneUtils.to_user_timezone(dt, user_timezone)
-        return user_dt.strftime(format_string)
-    
-    @staticmethod
-    def ensure_timezone_aware(dt: datetime, assume_utc: bool = True) -> datetime:
-        """
-        Ensure a datetime is timezone-aware.
-        Prevents TypeError when comparing datetimes from database.
-        
-        Args:
-            dt: The datetime to check
-            assume_utc: If True and datetime is naive, assume it's UTC (default: True)
-            
-        Returns:
-            Timezone-aware datetime
-        """
+    def to_user_timezone(
+        dt: datetime | None, user_timezone: str | None = None
+    ) -> datetime | None:
+        """Convert a datetime into the user's timezone for display."""
         if dt is None:
             return None
-            
-        if dt.tzinfo is None:
-            # Naive datetime - add timezone
-            if assume_utc:
-                return dt.replace(tzinfo=timezone.utc)
-            else:
-                raise ValueError("Naive datetime provided without explicit timezone handling")
-        
-        return dt
-    
+        target_name = TimezoneUtils._resolve_user_timezone(user_timezone)
+        target = TimezoneUtils._get_timezone(target_name)
+        aware = TimezoneUtils.ensure_timezone_aware(dt)
+        return aware.astimezone(target)
+
     @staticmethod
-    def safe_datetime_compare(dt1: datetime, dt2: datetime, assume_utc: bool = True) -> bool:
-        """
-        Safely compare two datetimes, handling timezone-aware and naive datetimes.
-        Prevents TypeError when comparing database datetimes with datetime.now(timezone.utc).
-        
-        Args:
-            dt1: First datetime
-            dt2: Second datetime
-            assume_utc: If True, treat naive datetimes as UTC (default: True)
-            
-        Returns:
-            True if dt1 > dt2
-        """
+    def from_user_timezone(
+        dt: datetime | None, user_timezone: str | None = None
+    ) -> datetime | None:
+        """Convert a user-supplied datetime into UTC for storage."""
+        if dt is None:
+            return None
+        source_name = TimezoneUtils._resolve_user_timezone(user_timezone)
+        source = TimezoneUtils._get_timezone(source_name)
+        localized = source.localize(dt) if dt.tzinfo is None else dt.astimezone(source)
+        return localized.astimezone(dt_timezone.utc)
+
+    @staticmethod
+    def format_for_user(
+        dt: datetime | None, format_string: str = "%Y-%m-%d %H:%M:%S", user_timezone: str | None = None
+    ) -> str:
+        """Format a datetime for presentation in the user's timezone."""
+        localized = TimezoneUtils.to_user_timezone(dt, user_timezone)
+        return localized.strftime(format_string) if localized else ""
+
+    @staticmethod
+    def ensure_timezone_aware(
+        dt: datetime | None, assume_utc: bool = True
+    ) -> datetime | None:
+        """Guarantee that a datetime carries timezone information."""
+        if dt is None:
+            return None
+        if dt.tzinfo is None:
+            if not assume_utc:
+                raise ValueError("Naive datetime provided without explicit timezone handling.")
+            return dt.replace(tzinfo=dt_timezone.utc)
+        return dt
+
+    @staticmethod
+    def safe_datetime_compare(
+        dt1: datetime | None, dt2: datetime | None, assume_utc: bool = True
+    ) -> bool:
+        """Return True when dt1 is later than dt2, handling naive inputs safely."""
         if dt1 is None or dt2 is None:
             return False
-            
-        # Ensure both are timezone-aware
-        dt1 = TimezoneUtils.ensure_timezone_aware(dt1, assume_utc)
-        dt2 = TimezoneUtils.ensure_timezone_aware(dt2, assume_utc)
-        
-        return dt1 > dt2
-    
+        first = TimezoneUtils.ensure_timezone_aware(dt1, assume_utc)
+        second = TimezoneUtils.ensure_timezone_aware(dt2, assume_utc)
+        return bool(first and second and first > second)
+
     @staticmethod
-    def format_datetime_for_api(dt: datetime, user_timezone: str = None) -> Dict[str, str]:
-        """
-        Format datetime for API response with BOTH UTC and user timezone.
-        Ensures APIs clearly distinguish between storage and display formats.
-        
-        Args:
-            dt: Datetime to format (should be timezone-aware UTC)
-            user_timezone: Optional user timezone (defaults to current_user.timezone)
-            
-        Returns:
-            Dictionary with 'utc', 'local', 'display', and 'timezone' keys
-        """
+    def format_datetime_for_api(
+        dt: datetime | None, user_timezone: str | None = None
+    ) -> Dict[str, str | None]:
+        """Produce a structured payload containing UTC and localized timestamps."""
         if dt is None:
-            return {'utc': None, 'local': None, 'display': None, 'timezone': None}
-        
-        from flask_login import current_user
-        
-        # Ensure datetime is timezone-aware
-        dt = TimezoneUtils.ensure_timezone_aware(dt)
-        
-        # Get user timezone
-        if not user_timezone:
-            user_timezone = TimezoneUtils.get_user_timezone() if current_user and current_user.is_authenticated else 'UTC'
-        
-        # Convert to user timezone
-        user_dt = TimezoneUtils.to_user_timezone(dt, user_timezone)
-        
+            return {"utc": None, "local": None, "display": None, "timezone": None}
+
+        aware = TimezoneUtils.ensure_timezone_aware(dt)
+        if aware is None:
+            return {"utc": None, "local": None, "display": None, "timezone": None}
+
+        target_name = TimezoneUtils._resolve_user_timezone(user_timezone)
+        localized = TimezoneUtils.to_user_timezone(aware, target_name)
+
         return {
-            'utc': dt.isoformat(),  # Always include UTC with explicit timezone
-            'local': user_dt.isoformat(),  # User's timezone with explicit offset
-            'display': user_dt.strftime('%b %d, %Y %I:%M %p %Z'),  # Human-readable
-            'timezone': user_timezone  # Make timezone explicit
+            "utc": aware.isoformat(),
+            "local": localized.isoformat() if localized else None,
+            "display": localized.strftime("%b %d, %Y %I:%M %p %Z") if localized else None,
+            "timezone": target_name,
         }

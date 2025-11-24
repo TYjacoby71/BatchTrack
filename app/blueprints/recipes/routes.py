@@ -26,6 +26,7 @@ def new_recipe():
     if request.method == 'POST':
         is_clone = request.form.get('is_clone') == 'true'
         cloned_from_id = _safe_int(request.form.get('cloned_from_id'))
+        target_status = _get_submission_status(request.form)
         try:
             ingredients = _extract_ingredients_from_form(request.form)
 
@@ -90,7 +91,8 @@ def new_recipe():
                 # Absolute columns mirror JSON for clarity
                 is_portioned=(portioning_payload.get('is_portioned') if portioning_payload else False),
                 portion_name=(portioning_payload.get('portion_name') if portioning_payload else None),
-                portion_count=(portioning_payload.get('portion_count') if portioning_payload else None)
+                portion_count=(portioning_payload.get('portion_count') if portioning_payload else None),
+                status=target_status
             )
 
             if success:
@@ -105,7 +107,10 @@ def new_recipe():
                         flash(f"Added {len(created_names)} new inventory item(s) from this recipe: " + ", ".join(created_names))
                 except Exception:
                     pass
-                flash('Recipe created successfully with ingredients.')
+                if target_status == 'draft':
+                    flash('Recipe saved as a draft. You can finish it later from the recipes list.', 'info')
+                else:
+                    flash('Recipe published successfully.', 'success')
                 try:
                     from flask import session as _session
                     _session.pop('tool_draft', None)
@@ -114,7 +119,9 @@ def new_recipe():
                     pass
                 return redirect(url_for('recipes.view_recipe', recipe_id=result.id))
 
-            flash(f'Error creating recipe: {result}', 'error')
+            error_message, missing_fields = _parse_service_error(result)
+            draft_prompt = _build_draft_prompt(missing_fields, target_status, error_message)
+            flash(f'Error creating recipe: {error_message}', 'error')
             ingredient_prefill, consumable_prefill = _build_prefill_from_form(request.form)
             form_recipe = _recipe_from_form(request.form)
             return _render_recipe_form(
@@ -123,7 +130,8 @@ def new_recipe():
                 consumable_prefill=consumable_prefill,
                 is_clone=is_clone,
                 cloned_from_id=cloned_from_id,
-                form_values=request.form
+                form_values=request.form,
+                draft_prompt=draft_prompt
             )
 
         except Exception as e:
@@ -224,6 +232,7 @@ def create_variation(recipe_id):
             return redirect(url_for('recipes.list_recipes'))
 
         if request.method == 'POST':
+            target_status = _get_submission_status(request.form)
             ingredients = _extract_ingredients_from_form(request.form)
             label_prefix = request.form.get('label_prefix')
             if not label_prefix and parent.label_prefix:
@@ -244,14 +253,20 @@ def create_variation(recipe_id):
                 consumables=_extract_consumables_from_form(request.form),
                 parent_recipe_id=parent.id,
                 allowed_containers=[int(id) for id in request.form.getlist('allowed_containers[]') if id] or [],
-                label_prefix=label_prefix
+                label_prefix=label_prefix,
+                status=target_status
             )
 
             if success:
-                flash('Recipe variation created successfully.')
+                if target_status == 'draft':
+                    flash('Variation saved as a draft.', 'info')
+                else:
+                    flash('Recipe variation created successfully.')
                 return redirect(url_for('recipes.view_recipe', recipe_id=result.id))
 
-            flash(f'Error creating variation: {result}', 'error')
+            error_message, missing_fields = _parse_service_error(result)
+            draft_prompt = _build_draft_prompt(missing_fields, target_status, error_message)
+            flash(f'Error creating variation: {error_message}', 'error')
             ingredient_prefill, consumable_prefill = _build_prefill_from_form(request.form)
             variation_draft = _recipe_from_form(request.form, base_recipe=parent)
             variation_draft.parent_recipe_id = parent.id
@@ -261,7 +276,8 @@ def create_variation(recipe_id):
                 parent_recipe=parent,
                 ingredient_prefill=ingredient_prefill,
                 consumable_prefill=consumable_prefill,
-                form_values=request.form
+                form_values=request.form,
+                draft_prompt=draft_prompt
             )
 
         new_variation = _create_variation_template(parent)
@@ -293,7 +309,10 @@ def edit_recipe(recipe_id):
         flash('This recipe is locked and cannot be edited.', 'error')
         return redirect(url_for('recipes.view_recipe', recipe_id=recipe_id))
 
+    draft_prompt = None
+    form_override = None
     if request.method == 'POST':
+        target_status = _get_submission_status(request.form)
         try:
             # DEBUG: Log form data for yield validation debugging
             logger.info(f"=== RECIPE EDIT FORM DEBUG ===")
@@ -375,14 +394,21 @@ def edit_recipe(recipe_id):
                 portioning_data=portioning_payload,
                 is_portioned=(portioning_payload.get('is_portioned') if portioning_payload else False),
                 portion_name=(portioning_payload.get('portion_name') if portioning_payload else None),
-                portion_count=(portioning_payload.get('portion_count') if portioning_payload else None)
+                portion_count=(portioning_payload.get('portion_count') if portioning_payload else None),
+                status=target_status
             )
 
             if success:
-                flash('Recipe updated successfully.')
+                if target_status == 'draft':
+                    flash('Recipe saved as a draft.', 'info')
+                else:
+                    flash('Recipe updated successfully.')
                 return redirect(url_for('recipes.view_recipe', recipe_id=recipe.id))
             else:
-                flash(f'Error updating recipe: {result}', 'error')
+                error_message, missing_fields = _parse_service_error(result)
+                draft_prompt = _build_draft_prompt(missing_fields, target_status, error_message)
+                form_override = request.form
+                flash(f'Error updating recipe: {error_message}', 'error')
 
         except Exception as e:
             logger.exception(f"Error updating recipe: {str(e)}")
@@ -397,6 +423,8 @@ def edit_recipe(recipe_id):
                          recipe=recipe,
                          edit_mode=True,
                          existing_batches=existing_batches,
+                         draft_prompt=draft_prompt,
+                         form_values=form_override,
                          **form_data)
 
 @recipes_bp.route('/<int:recipe_id>/clone')
@@ -874,6 +902,29 @@ def _extract_consumables_from_form(form):
                 logger.error(f"Invalid consumable data: {e}")
                 continue
     return consumables
+
+
+def _get_submission_status(form):
+    mode = (form.get('save_mode') or '').strip().lower()
+    return 'draft' if mode == 'draft' else 'published'
+
+
+def _parse_service_error(error):
+    if isinstance(error, dict):
+        message = error.get('error') or error.get('message') or 'An error occurred'
+        missing_fields = error.get('missing_fields') or []
+        return message, missing_fields
+    return str(error), []
+
+
+def _build_draft_prompt(missing_fields, attempted_status, message):
+    if missing_fields and attempted_status != 'draft':
+        return {
+            'missing_fields': missing_fields,
+            'message': message
+        }
+    return None
+
 
 def _get_recipe_form_data():
     """Get common data needed for recipe forms"""

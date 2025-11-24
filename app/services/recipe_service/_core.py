@@ -17,6 +17,15 @@ from ...services.event_emitter import EventEmitter
 
 logger = logging.getLogger(__name__)
 
+_ALLOWED_RECIPE_STATUSES = {'draft', 'published'}
+
+
+def _normalize_status(value: str | None) -> str:
+    if not value:
+        return 'published'
+    normalized = str(value).strip().lower()
+    return normalized if normalized in _ALLOWED_RECIPE_STATUSES else 'published'
+
 
 def create_recipe(name: str, description: str = "", instructions: str = "",
                  yield_amount: float = 0.0, yield_unit: str = "",
@@ -25,9 +34,10 @@ def create_recipe(name: str, description: str = "", instructions: str = "",
                  root_recipe_id: int | None = None,
                  allowed_containers: List[int] = None, label_prefix: str = "",
                  consumables: List[Dict] = None, category_id: int | None = None,
-                 portioning_data: Dict | None = None,
-                 is_portioned: bool = None, portion_name: str = None,
-                 portion_count: int = None, portion_unit_id: int = None) -> Tuple[bool, Any]:
+                  portioning_data: Dict | None = None,
+                  is_portioned: bool = None, portion_name: str = None,
+                  portion_count: int = None, portion_unit_id: int = None,
+                  status: str = 'published') -> Tuple[bool, Any]:
     """
     Create a new recipe with ingredients and UI fields.
 
@@ -47,15 +57,19 @@ def create_recipe(name: str, description: str = "", instructions: str = "",
     """
     try:
         # Validate input data
+        normalized_status = _normalize_status(status)
+        allow_partial = normalized_status == 'draft'
+
         validation_result = validate_recipe_data(
             name=name,
             ingredients=ingredients or [],
             yield_amount=yield_amount,
-            portioning_data=portioning_data
+            portioning_data=portioning_data,
+            allow_partial=allow_partial
         )
 
         if not validation_result['valid']:
-            return False, validation_result['error']
+            return False, validation_result
 
         parent_recipe_id = parent_recipe_id or parent_id
         parent_recipe = None
@@ -117,7 +131,8 @@ def create_recipe(name: str, description: str = "", instructions: str = "",
             parent_recipe_id=parent_recipe_id,
             cloned_from_id=cloned_from_id,
             label_prefix=final_label_prefix,
-            category_id=category_id
+            category_id=category_id,
+            status=normalized_status
         )
 
         # Set allowed containers
@@ -128,9 +143,19 @@ def create_recipe(name: str, description: str = "", instructions: str = "",
         if portioning_data and isinstance(portioning_data, dict):
             try:
                 if portioning_data.get('is_portioned'):
-                    pc = int(portioning_data.get('portion_count') or 0)
+                    try:
+                        pc = int(portioning_data.get('portion_count') or 0)
+                    except Exception:
+                        pc = 0
                     if pc <= 0:
-                        return False, 'For portioned recipes, portion count must be provided.'
+                        if allow_partial:
+                            pc = None
+                        else:
+                            return False, {
+                                'message': 'For portioned recipes, portion count must be provided.',
+                                'error': 'For portioned recipes, portion count must be provided.',
+                                'missing_fields': ['portion count']
+                            }
                     recipe.portioning_data = portioning_data
                     # Also set discrete columns
                     recipe.is_portioned = True
@@ -261,7 +286,8 @@ def update_recipe(recipe_id: int, name: str = None, description: str = None,
                  consumables: List[Dict] = None, category_id: int | None = None,
                  portioning_data: Dict | None = None,
                  is_portioned: bool = None, portion_name: str = None,
-                 portion_count: int = None, portion_unit_id: int = None) -> Tuple[bool, Any]:
+                 portion_count: int = None, portion_unit_id: int = None,
+                 status: str | None = None) -> Tuple[bool, Any]:
     """
     Update an existing recipe.
 
@@ -294,15 +320,20 @@ def update_recipe(recipe_id: int, name: str = None, description: str = None,
         if recipe.is_locked:
             return False, "Recipe is locked and cannot be modified"
 
+        target_status = _normalize_status(status if status is not None else recipe.status)
+        allow_partial = target_status == 'draft'
+        recipe.status = target_status
+
         # Update basic fields
         if name is not None:
             # Validate name uniqueness for updates
             validation_result = validate_recipe_data(
                 name=name,
-                recipe_id=recipe_id
+                recipe_id=recipe_id,
+                allow_partial=True
             )
             if not validation_result['valid']:
-                return False, validation_result['error']
+                return False, validation_result
             recipe.name = name
         if instructions is not None:
             recipe.instructions = instructions
@@ -329,16 +360,23 @@ def update_recipe(recipe_id: int, name: str = None, description: str = None,
             else:
                 try:
                     pc = int(portioning_data.get('portion_count') or 0)
-                    if pc <= 0:
-                        return False, 'For portioned recipes, portion count must be provided.'
-                    recipe.portioning_data = portioning_data
-                    # Also update discrete columns
-                    recipe.is_portioned = True
-                    recipe.portion_name = portioning_data.get('portion_name')
-                    recipe.portion_count = pc
-                    recipe.portion_unit_id = portioning_data.get('portion_unit_id')
                 except Exception:
-                    return False, 'Invalid portioning data.'
+                    pc = 0
+                if pc <= 0:
+                    if allow_partial:
+                        pc = None
+                    else:
+                        return False, {
+                            'message': 'For portioned recipes, portion count must be provided.',
+                            'error': 'For portioned recipes, portion count must be provided.',
+                            'missing_fields': ['portion count']
+                        }
+                recipe.portioning_data = portioning_data
+                # Also update discrete columns
+                recipe.is_portioned = True
+                recipe.portion_name = portioning_data.get('portion_name')
+                recipe.portion_count = pc
+                recipe.portion_unit_id = portioning_data.get('portion_unit_id')
 
         # Handle discrete portioning parameters (if passed separately)
         if is_portioned is not None:
@@ -364,12 +402,14 @@ def update_recipe(recipe_id: int, name: str = None, description: str = None,
             validation_result = validate_recipe_data(
                 name=recipe.name,
                 ingredients=ingredients,
-                yield_amount=recipe.predicted_yield,
-                recipe_id=recipe_id
+                yield_amount=yield_amount if yield_amount is not None else recipe.predicted_yield,
+                recipe_id=recipe_id,
+                portioning_data=portioning_data,
+                allow_partial=allow_partial
             )
 
             if not validation_result['valid']:
-                return False, validation_result['error']
+                return False, validation_result
 
             # Remove existing ingredients
             RecipeIngredient.query.filter_by(recipe_id=recipe_id).delete()

@@ -31,28 +31,6 @@ function loadVariants(productId, targetSelectId) {
         });
 }
 
-// Adjust SKU inventory
-function adjustSkuInventory(skuId, data) {
-    return fetch(`/products/inventory/adjust/${skuId}`, {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-            'X-CSRFToken': document.querySelector('[name=csrf-token]')?.getAttribute('content') || ''
-        },
-        body: JSON.stringify(data)
-    })
-    .then(response => {
-        if (!response.ok) {
-            throw new Error(`HTTP error! status: ${response.status}`);
-        }
-        return response.json();
-    })
-    .catch(error => {
-        console.error('Error adjusting SKU inventory:', error);
-        throw error;
-    });
-}
-
 // Load size labels for a variant
 function loadSizeLabels(variantId, targetSelectId) {
     if (!variantId) {
@@ -81,9 +59,12 @@ function loadSizeLabels(variantId, targetSelectId) {
             console.error('Error loading size labels:', error);
         });
 }
-function adjustSkuInventory(skuId, adjustmentData) {
-    const url = `/api/products/sku/${skuId}/adjust`;
-    
+
+// Adjust SKU inventory via canonical route
+function adjustSkuInventory(skuId, adjustmentData = {}, options = {}) {
+    const url = `/products/inventory/adjust/${skuId}`;
+    const { reloadOnSuccess = false } = options;
+
     return fetch(url, {
         method: 'POST',
         headers: {
@@ -92,27 +73,36 @@ function adjustSkuInventory(skuId, adjustmentData) {
         },
         body: JSON.stringify(adjustmentData)
     })
-    .then(response => response.json())
-    .then(data => {
-        if (data.success) {
-            showNotification('Inventory adjusted successfully', 'success');
-            // Reload the page or update the display
-            location.reload();
-        } else {
-            showNotification(data.error || 'Failed to adjust inventory', 'error');
+    .then(async response => {
+        const contentType = response.headers.get('content-type') || '';
+        const isJson = contentType.includes('application/json');
+        const payload = isJson ? await response.json() : {};
+
+        if (!response.ok || payload.success === false) {
+            const errorMessage = payload.message || payload.error || `Inventory adjustment failed (status ${response.status})`;
+            throw new Error(errorMessage);
         }
-        return data;
+
+        if (payload.message) {
+            showNotification(payload.message, 'success');
+        }
+
+        if (reloadOnSuccess) {
+            window.location.reload();
+        }
+
+        return payload;
     })
     .catch(error => {
         console.error('Error adjusting inventory:', error);
-        showNotification('Network error occurred', 'error');
+        showNotification(error.message || 'Network error occurred', 'error');
         throw error;
     });
 }
 
 // Add inventory from batch
 function addInventoryFromBatch(batchData) {
-    const url = '/api/products/inventory/add-from-batch';
+    const url = '/products/inventory/add-from-batch';
     
     return fetch(url, {
         method: 'POST',

@@ -1929,6 +1929,67 @@ def integrations_checklist():
         }
     ]
 
+    config_matrix = []
+    for section in launch_env_sections:
+        for item in section['section_items']:
+            config_matrix.append(
+                {
+                    'category': section['title'],
+                    'key': item['key'],
+                    'present': item['present'],
+                    'required': item['required'],
+                    'recommended': item.get('recommended'),
+                    'description': item['description'],
+                    'note': item.get('note'),
+                    'is_secret': item.get('is_secret', False),
+                }
+            )
+
+    rate_limiters = [
+        {
+            'endpoint': 'GET/POST /auth/login',
+            'limit': '30/minute',
+            'source': 'app/blueprints/auth/routes.py::login',
+            'notes': 'Primary credential-based login form.',
+        },
+        {
+            'endpoint': 'GET /auth/oauth/google',
+            'limit': '20/minute',
+            'source': 'app/blueprints/auth/routes.py::oauth_google',
+            'notes': 'Google OAuth initiation endpoint.',
+        },
+        {
+            'endpoint': 'GET /auth/oauth/callback',
+            'limit': '30/minute',
+            'source': 'app/blueprints/auth/routes.py::oauth_callback',
+            'notes': 'OAuth callback handler (Google).',
+        },
+        {
+            'endpoint': 'GET /auth/callback',
+            'limit': '30/minute',
+            'source': 'app/blueprints/auth/routes.py::oauth_callback_compat',
+            'notes': 'Legacy alias for the OAuth callback.',
+        },
+        {
+            'endpoint': 'GET/POST /auth/signup',
+            'limit': '20/minute',
+            'source': 'app/blueprints/auth/routes.py::signup',
+            'notes': 'Self-serve signup + tier selection.',
+        },
+        {
+            'endpoint': 'POST /billing/webhooks/stripe',
+            'limit': '60/minute',
+            'source': 'app/blueprints/billing/routes.py::stripe_webhook',
+            'notes': 'Stripe webhook ingestion endpoint.',
+        },
+        {
+            'endpoint': 'GLOBAL DEFAULT',
+            'limit': '200/day + 50/hour',
+            'source': 'app/extensions.py::limiter',
+            'notes': 'Applies per remote IP when no route-level override exists.',
+        },
+    ]
+
     # Feature flags
     feature_flags = {
         'FEATURE_INVENTORY_ANALYTICS': bool(current_app.config.get('FEATURE_INVENTORY_ANALYTICS', False)),
@@ -1967,6 +2028,8 @@ def integrations_checklist():
         oauth_status=oauth_status,
         whop_status=whop_status,
         launch_env_sections=launch_env_sections,
+        rate_limiters=rate_limiters,
+        config_matrix=config_matrix,
     )
 
 
