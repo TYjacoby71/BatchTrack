@@ -7,7 +7,11 @@ from app.models import InventoryItem  # Added for get_ingredients endpoint
 from app import db  # Assuming db is imported from app
 from app.utils.permissions import require_permission
 from app.services.batchbot_service import BatchBotService, BatchBotServiceError
-from app.services.batchbot_usage_service import BatchBotUsageService, BatchBotLimitError
+from app.services.batchbot_usage_service import (
+    BatchBotUsageService,
+    BatchBotLimitError,
+    BatchBotChatLimitError,
+)
 from app.services.batchbot_credit_service import BatchBotCreditService
 from app.services.ai import GoogleAIClientError
 
@@ -352,6 +356,16 @@ def batchbot_chat():
                 'window_end': exc.window_end.isoformat(),
             },
         }), 429
+    except BatchBotChatLimitError as exc:
+        return jsonify({
+            'success': False,
+            'error': str(exc),
+            'chat_limit': {
+                'allowed': exc.limit,
+                'used': exc.used,
+                'window_end': exc.window_end.isoformat(),
+            },
+        }), 429
     except BatchBotServiceError as exc:
         return jsonify({'success': False, 'error': str(exc)}), 400
     except GoogleAIClientError as exc:
@@ -381,6 +395,9 @@ def _serialize_quota(snapshot, credits=None):
         'remaining': snapshot.remaining,
         'window_start': snapshot.window_start.isoformat(),
         'window_end': snapshot.window_end.isoformat(),
+        'chat_limit': snapshot.chat_limit,
+        'chat_used': snapshot.chat_used,
+        'chat_remaining': snapshot.chat_remaining,
         'credits': {
             'total': getattr(credits, "total", None),
             'remaining': getattr(credits, "remaining", None),

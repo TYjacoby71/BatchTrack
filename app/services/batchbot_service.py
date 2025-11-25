@@ -59,9 +59,6 @@ class BatchBotService:
         if not prompt:
             raise BatchBotServiceError("Prompt is required.")
 
-        # Ensure quota is available before we attempt any work.
-        BatchBotUsageService.ensure_within_limit(self.organization)
-
         contents = self._normalize_history(history)
         composed_prompt = self._compose_prompt(prompt, metadata)
         contents.append({"role": "user", "parts": [{"text": composed_prompt}]})
@@ -84,18 +81,21 @@ class BatchBotService:
                 tool_results.append(self._execute_tool_call(call))
 
         usage_metadata = result.usage_metadata or {}
-        quota = BatchBotUsageService.record_request(
-            org=self.organization,
-            user=self.user,
-            metadata={
-                "model": self.model_name,
-                "finish_reason": result.finish_reason,
-                "prompt_tokens": usage_metadata.get("prompt_token_count"),
-                "candidate_tokens": usage_metadata.get("candidates_token_count"),
-                "total_tokens": usage_metadata.get("total_token_count"),
-                "tool_calls": len(tool_results),
-            },
-        )
+        if tool_results:
+            quota = BatchBotUsageService.record_request(
+                org=self.organization,
+                user=self.user,
+                metadata={
+                    "model": self.model_name,
+                    "finish_reason": result.finish_reason,
+                    "prompt_tokens": usage_metadata.get("prompt_token_count"),
+                    "candidate_tokens": usage_metadata.get("candidates_token_count"),
+                    "total_tokens": usage_metadata.get("total_token_count"),
+                    "tool_calls": len(tool_results),
+                },
+            )
+        else:
+            quota = BatchBotUsageService.record_chat(org=self.organization, user=self.user, delta=1)
         credit_snapshot = BatchBotCreditService.snapshot(self.organization)
 
         return BatchBotResponse(

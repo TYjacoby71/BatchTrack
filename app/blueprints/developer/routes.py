@@ -1924,6 +1924,7 @@ def integrations_checklist():
                 _make_item('BATCHBOT_REQUEST_TIMEOUT_SECONDS', 'Gemini request timeout. Increase for long-running jobs.', required=False, recommended='45'),
                 _make_item('BATCHBOT_DEFAULT_MAX_REQUESTS', 'Base allowance per org per window. Use -1 for unlimited tiers.', required=True, note='Tier-specific overrides live on Subscription Tiers → Max BatchBot Requests.'),
                 _make_item('BATCHBOT_REQUEST_WINDOW_DAYS', 'Length of the usage window (credits reset after this).', required=True, recommended='30'),
+                _make_item('BATCHBOT_CHAT_MAX_MESSAGES', 'Max chat-only prompts per window (guides informal Q&A usage).', required=False, recommended='60', note='60 prompts ≈ 15 conversations (4 prompts each). Raise for higher tiers or set -1 for unlimited.'),
                 _make_item('BATCHBOT_COST_PER_MILLION_INPUT', 'Reference compute cost for inbound tokens (USD).', required=False, recommended='0.35'),
                 _make_item('BATCHBOT_COST_PER_MILLION_OUTPUT', 'Reference compute cost for outbound tokens (USD).', required=False, recommended='0.53'),
                 _make_item('BATCHBOT_SIGNUP_BONUS_REQUESTS', 'Promo credits granted to new orgs (stack with tier limit).', required=False, recommended='20'),
