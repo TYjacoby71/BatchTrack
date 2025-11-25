@@ -45,13 +45,25 @@ These metrics feed the developer system statistics page and the public library h
 
 ## Templates, Components & How-To
 
-- **`library/recipe_library.html`** – customer-facing grid with filters and aggregated stats (public count, average batch cost, top creators). Cards surface the public description, cost breakdown, and optional Shopify CTA.
-- **`library/recipe_detail.html`** – detail page for each public recipe. Standard visitors can see the hero, description, and cost stats while instructions/ingredients/consumables/packaging stay blurred. Developers impersonating an org (or future entitled buyers) see full details.
-- **`components/shared/stat_card.html`** – shared macro used both by the library hero and the developer System Statistics dashboard to keep KPI blocks consistent.
+- **`library/recipe_library.html`** – filterable grid that reuses `components/shared/stat_card.html` to highlight public totals, average batch costs, and top groups; each card shows the creator’s public description, blurred content notice, and optional Shopify CTA.
+- **`library/recipe_detail.html`** – public detail surface that keeps instructions, ingredients, consumables, and packaging blurred for general visitors while exposing them for developers or impersonated orgs.
+- **`components/shared/stat_card.html`** – shared macro so the library hero and developer System Statistics dashboard render KPIs consistently.
 
-### Publishing a public or paid recipe
+### How-to: publish a public or paid recipe
 
-1. Open the recipe (or create a new one) and scroll to the **“Recipe Library & Marketplace”** card (available whenever `FEATURE_RECIPE_SHARING_CONTROLS` is enabled).
-2. Toggle **Public** sharing, select a **Collection Group**, and pick a **Listing Type** (Free or For Sale). Provide a sale price/Shopify link if you’re charging.
-3. Write a customer-facing **Public Description** and upload a square cover image (PNG/JPG/GIF/WEBP). Use the “Remove” button to clear an existing cover.
-4. Click **Save** or **Publish**, then verify the public experience via the **Recipe Library** navigation entry (requires `FEATURE_RECIPE_LIBRARY_NAV`) and ensure purchase toggles behave as expected (`FEATURE_RECIPE_PURCHASE_OPTIONS`).
+1. Open any recipe (or create a new one) and scroll to the **“Recipe Library & Marketplace”** section (available whenever `FEATURE_RECIPE_SHARING_CONTROLS` is enabled).
+2. Toggle **Public** sharing, choose a **Recipe Collection Group**, and pick a **Listing Type** (Free vs For Sale). Provide a sale price and optional Shopify URL if charging to enable the CTA (`FEATURE_RECIPE_PURCHASE_OPTIONS`).
+3. Write a customer-facing **Public Description** and upload a square cover image (PNG/JPG/GIF/WEBP). Use the “Remove existing image” button to clear an existing asset when needed.
+4. Save or publish the recipe, then click the **Recipe Library** nav link (requires `FEATURE_RECIPE_LIBRARY_NAV`) to confirm the public card and detail view.
+
+### Customer experience (current behavior)
+
+1. Public visitors (or logged-in users without developer/impersonation rights) can browse library cards, read the public description, and see cost/yield stats.
+2. Clicking a card opens the detail page. Because entitlement is not yet enforced, instructions/ingredients/consumables/packaging remain blurred with a call-to-action explaining the need to purchase or work with a developer.
+3. Developers impersonating an org owner (or future entitled buyers) see full content unblurred.
+
+## Future Enhancements
+
+- Entitlement-aware detail view so purchased recipes display unblurred instructions/ingredients once billing hooks confirm access.
+- Paid-content delivery (PDFs, SKU bundles, or asset downloads) triggered after Shopify checkout or future embedded purchase flows.
+- Creator analytics and moderation tooling (sales/violation dashboards, status toggles, automated freeze/unfreeze actions) for support staff.
