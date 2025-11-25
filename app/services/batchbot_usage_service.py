@@ -8,16 +8,18 @@ from flask import current_app
 
 from ..extensions import db
 from ..models import BatchBotUsage, Organization, User
+from .batchbot_credit_service import BatchBotCreditService
 
 
 class BatchBotLimitError(RuntimeError):
     """Raised when an organization exceeds its BatchBot quota."""
 
-    def __init__(self, *, allowed: int | None, used: int, window_end: date):
+    def __init__(self, *, allowed: int | None, used: int, window_end: date, credits_remaining: int = 0):
         super().__init__("BatchBot request limit reached for the current window.")
         self.allowed = allowed
         self.used = used
         self.window_end = window_end
+        self.credits_remaining = credits_remaining
 
 
 @dataclass(slots=True)
@@ -59,12 +61,17 @@ class BatchBotUsageService:
         limits = BatchBotUsageService.get_usage_snapshot(org)
         if limits.allowed is None or limits.allowed < 0:
             return
-        if limits.used >= limits.allowed:
-            raise BatchBotLimitError(
-                allowed=limits.allowed,
-                used=limits.used,
-                window_end=limits.window_end,
-            )
+        if limits.used < limits.allowed:
+            return
+        credits_available = BatchBotCreditService.available_credits(org)
+        if credits_available > 0:
+            return
+        raise BatchBotLimitError(
+            allowed=limits.allowed,
+            used=limits.used,
+            window_end=limits.window_end,
+            credits_remaining=credits_available,
+        )
 
     @staticmethod
     def record_request(
@@ -91,11 +98,24 @@ class BatchBotUsageService:
                 window_start=window_start,
                 window_end=window_end,
                 request_count=0,
-                metadata={"limit": allowed},
+                metadata={"limit": allowed, "credits_consumed": 0},
             )
             db.session.add(record)
 
         record.increment(delta=delta, metadata=metadata)
+
+        credits_consumed = 0
+        if isinstance(record.metadata, dict):
+            credits_consumed = int(record.metadata.get("credits_consumed", 0) or 0)
+
+        if allowed is not None and allowed >= 0:
+            overage = max(record.request_count - allowed, 0)
+            new_credit_need = max(overage - credits_consumed, 0)
+            if new_credit_need > 0:
+                BatchBotCreditService.consume(org, new_credit_need)
+                credits_consumed += new_credit_need
+                record.metadata = {**(record.metadata or {}), "limit": allowed, "credits_consumed": credits_consumed}
+
         db.session.commit()
 
         remaining = None if allowed is None or allowed < 0 else max(allowed - record.request_count, 0)

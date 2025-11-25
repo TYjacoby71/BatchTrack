@@ -58,6 +58,7 @@ _export([
     ("product_category", "ProductCategory", None),
     ("global_item", "GlobalItem", None),
     ("batchbot_usage", "BatchBotUsage", None),
+    ("batchbot_credit", "BatchBotCreditBundle", None),
 ])
 
 # Build __all__ from whatever successfully imported

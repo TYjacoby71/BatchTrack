@@ -8,6 +8,7 @@ from app import db  # Assuming db is imported from app
 from app.utils.permissions import require_permission
 from app.services.batchbot_service import BatchBotService, BatchBotServiceError
 from app.services.batchbot_usage_service import BatchBotUsageService, BatchBotLimitError
+from app.services.batchbot_credit_service import BatchBotCreditService
 from app.services.ai import GoogleAIClientError
 
 # Configure logging
@@ -339,7 +340,7 @@ def batchbot_chat():
             'message': response.text,
             'tool_results': response.tool_results,
             'usage': response.usage,
-            'quota': _serialize_quota(response.quota),
+            'quota': _serialize_quota(response.quota, response.credits),
         })
     except BatchBotLimitError as exc:
         return jsonify({
@@ -369,14 +370,20 @@ def batchbot_usage():
         return jsonify({'success': False, 'error': 'Organization is required.'}), 400
 
     snapshot = BatchBotUsageService.get_usage_snapshot(org)
-    return jsonify({'success': True, 'quota': _serialize_quota(snapshot)})
+    credit_snapshot = BatchBotCreditService.snapshot(org)
+    return jsonify({'success': True, 'quota': _serialize_quota(snapshot, credit_snapshot)})
 
 
-def _serialize_quota(snapshot):
+def _serialize_quota(snapshot, credits=None):
     return {
         'allowed': snapshot.allowed,
         'used': snapshot.used,
         'remaining': snapshot.remaining,
         'window_start': snapshot.window_start.isoformat(),
         'window_end': snapshot.window_end.isoformat(),
+        'credits': {
+            'total': getattr(credits, "total", None),
+            'remaining': getattr(credits, "remaining", None),
+            'next_expiration': getattr(credits, "expires_next", None).isoformat() if getattr(credits, "expires_next", None) else None,
+        } if credits else None,
     }

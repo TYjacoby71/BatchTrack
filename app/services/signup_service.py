@@ -11,6 +11,7 @@ from ..utils.timezone_utils import TimezoneUtils
 from .session_service import SessionService
 from .email_service import EmailService
 from .event_emitter import EventEmitter
+from .batchbot_credit_service import BatchBotCreditService
 # Import moved to avoid circular dependency
 # from ..blueprints.developer.subscription_tiers import load_tiers_config
 
@@ -180,6 +181,11 @@ class SignupService:
             owner_user.password_reset_sent_at = TimezoneUtils.utc_now()
 
             db.session.commit()
+
+            try:
+                BatchBotCreditService.grant_signup_bonus(org)
+            except Exception as bonus_error:
+                logger.warning("Failed to grant BatchBot signup bonus: %s", bonus_error)
 
             try:
                 EmailService.send_welcome_email(owner_user.email, owner_user.first_name or owner_user.username, org.name, subscription_tier.name)

@@ -140,6 +140,7 @@
                     <li><a class="dropdown-item" href="{{ url_for('timers.list_timers') }}">Timers</a></li>
                     <li><a class="dropdown-item" href="{{ url_for('reservation.list_reservations') }}">Reservations</a></li>
                     <li><a class="dropdown-item" href="{{ url_for('bulk_stock.bulk_stock_check') }}">Bulk Stock Check</a></li>
+                    <li><a class="dropdown-item" href="{{ url_for('inventory.bulk_inventory_updates') }}">Bulk Inventory Updates</a></li>
                     <li><hr class="dropdown-divider"></li>
                     <!-- Resources -->
                     <li><h6 class="dropdown-header">Resources</h6></li>
@@ -324,6 +325,9 @@
                     {% endif %}
                     {% if current_user.is_authenticated and has_permission(current_user, 'products.view') %}
                     <li><a class="dropdown-item" href="{{ url_for('bulk_stock.bulk_stock_check') }}">Bulk Stock Check</a></li>
+                    {% endif %}
+                    {% if current_user.is_authenticated and has_permission(current_user, 'inventory.edit') %}
+                    <li><a class="dropdown-item" href="{{ url_for('inventory.bulk_inventory_updates') }}">Bulk Inventory Updates</a></li>
                     {% endif %}
                     <li><hr class="dropdown-divider"></li>
                     <!-- Resources -->

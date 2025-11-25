@@ -1,6 +1,6 @@
 from datetime import datetime, timezone
 
-from flask import Blueprint, url_for, request, jsonify, render_template, redirect, flash, session, url_for
+from flask import Blueprint, url_for, request, jsonify, render_template, redirect, flash, session, url_for, current_app
 from flask_login import login_required, current_user
 from app.models import db, InventoryItem, UnifiedInventoryHistory, Unit, IngredientCategory, User
 from app.utils.permissions import permission_required, role_required
@@ -16,6 +16,7 @@ from sqlalchemy import and_, or_, func
 from sqlalchemy.orm import joinedload
 from app.models.inventory_lot import InventoryLot
 from app.services.density_assignment_service import DensityAssignmentService # Added for density assignment
+from app.services.batchbot_service import BatchBotService, BatchBotServiceError
 from datetime import datetime, timezone # Fix missing timezone import
 
 # Import the blueprint from __init__.py instead of creating a new one
@@ -648,3 +649,30 @@ def debug_inventory(id):
             'error': str(e),
             'traceback': traceback.format_exc()
         }), 500
+
+
+@inventory_bp.route('/bulk-updates')
+@login_required
+@permission_required('inventory.edit')
+def bulk_inventory_updates():
+    return render_template('inventory/bulk_updates.html')
+
+
+@inventory_bp.route('/api/bulk-adjustments', methods=['POST'])
+@login_required
+@permission_required('inventory.edit')
+def api_bulk_inventory_adjustments():
+    payload = request.get_json() or {}
+    service = BatchBotService(current_user)
+    try:
+        result = service._tool_submit_bulk_inventory_update({
+            'lines': payload.get('lines') or [],
+            'submit_now': True,
+        })
+        status = 200 if result.get('success') else 400
+        return jsonify(result), status
+    except BatchBotServiceError as exc:
+        return jsonify({'success': False, 'error': str(exc)}), 400
+    except Exception as exc:
+        current_app.logger.exception("Bulk adjustment API failure")
+        return jsonify({'success': False, 'error': str(exc)}), 500
