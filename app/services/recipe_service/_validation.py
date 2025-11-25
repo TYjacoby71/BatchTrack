@@ -47,33 +47,22 @@ def validate_recipe_data(name: str, ingredients: List[Dict] = None,
                 logger.error(f"Exception loading recipe {recipe_id} for validation: {e}")
                 existing_recipe = None
 
-        logger.info("=== YIELD VALIDATION DEBUG ===")
-        logger.info(f"yield_amount: {yield_amount} (type: {type(yield_amount)})")
-        logger.info(f"recipe_id: {recipe_id}")
-        logger.info(f"portioning_data: {portioning_data}")
-        logger.info(f"allow_partial: {allow_partial}")
-
         has_direct_yield = bool(yield_amount is not None and yield_amount > 0)
         bulk_yield_ok = False
         try:
             if portioning_data and portioning_data.get('is_portioned'):
                 byq = float(portioning_data.get('bulk_yield_quantity') or 0)
                 bulk_yield_ok = byq > 0
-                logger.info(f"Bulk yield quantity: {byq}")
-        except Exception as e:
-            logger.info(f"Exception checking bulk yield: {e}")
+        except Exception:
             bulk_yield_ok = False
 
         has_valid_yield = has_direct_yield or bulk_yield_ok
 
         if not allow_partial and not has_valid_yield:
-            logger.info("Yield missing from payload, checking existing recipe fallback")
             if existing_recipe and (existing_recipe.predicted_yield or 0) > 0:
                 has_valid_yield = True
-                logger.info("Existing recipe has a valid yield; accepting")
 
             if not has_valid_yield:
-                logger.error("Yield still invalid after fallbacks")
                 missing_fields.append('yield amount')
 
         portion_requires_count = False

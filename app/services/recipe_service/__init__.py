@@ -1,12 +1,8 @@
 """
-Recipe Service Package
+Recipe service public API.
 
-This package is the canonical, single-source-of-truth for all recipe-related
-operations in the application.
-
-All external modules (routes, other services, etc.) MUST import from this
-__init__.py file. They are forbidden from importing from the internal
-helper modules (those starting with an underscore).
+Import from this module rather than the private helpers so validation,
+marketplace handling, and lineage tracking stay centralized.
 """
 
 # Import the public functions from our internal helper modules
