@@ -70,11 +70,11 @@ class RecipeMarketplaceService:
         elif existing is not None:
             product_group_id = getattr(existing, "product_group_id", None)
 
-        product_store_url = _get("product_store_url")
-        if product_store_url is None and existing is not None and "product_store_url" not in form:
-            product_store_url = getattr(existing, "product_store_url", None)
-        if isinstance(product_store_url, str):
-            product_store_url = product_store_url or None
+        shopify_product_url = _get("product_store_url")
+        if shopify_product_url is None and existing is not None and "product_store_url" not in form:
+            shopify_product_url = getattr(existing, "product_store_url", None)
+        if isinstance(shopify_product_url, str):
+            shopify_product_url = shopify_product_url or None
 
         marketplace_notes = _get("marketplace_notes")
         if marketplace_notes is None and existing is not None and "marketplace_notes" not in form:
@@ -96,7 +96,7 @@ class RecipeMarketplaceService:
             "is_public": is_public,
             "is_for_sale": is_for_sale,
             "sale_price": sale_price,
-            "product_store_url": product_store_url,
+            "shopify_product_url": shopify_product_url,
             "marketplace_notes": marketplace_notes,
             "public_description": public_description,
             "skin_opt_in": skin_opt,
