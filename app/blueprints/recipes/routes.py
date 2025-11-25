@@ -1,9 +1,13 @@
 from flask import render_template, request, redirect, url_for, flash, jsonify
 from flask_login import login_required, current_user
+
 from . import recipes_bp
 from app.extensions import db
 from app.models import Recipe, InventoryItem, GlobalItem, RecipeLineage
+from app.models.recipe_marketplace import RecipeProductGroup
 from app.utils.permissions import require_permission
+from app.utils.settings import is_feature_enabled
+from app.services.recipe_marketplace_service import RecipeMarketplaceService
 
 from app.services.recipe_service import (
     create_recipe, update_recipe, delete_recipe, get_recipe_details,
@@ -15,10 +19,12 @@ from app.services.inventory_adjustment import create_inventory_item
 from app.models.unit import Unit
 from app.models.product_category import ProductCategory
 import logging
-from sqlalchemy import func
+from sqlalchemy import func, or_
+from sqlalchemy.orm import joinedload
 from itertools import zip_longest
 
 logger = logging.getLogger(__name__)
+_ALLOWED_COVER_EXTENSIONS = {"png", "jpg", "jpeg", "gif", "webp"}
 
 @recipes_bp.route('/new', methods=['GET', 'POST'])
 @login_required
@@ -29,6 +35,23 @@ def new_recipe():
         target_status = _get_submission_status(request.form)
         try:
             ingredients = _extract_ingredients_from_form(request.form)
+            marketplace_ok, marketplace_result = RecipeMarketplaceService.extract_submission(
+                request.form, request.files
+            )
+            if not marketplace_ok:
+                flash(marketplace_result, 'error')
+                ingredient_prefill, consumable_prefill = _build_prefill_from_form(request.form)
+                form_recipe = _recipe_from_form(request.form)
+                return _render_recipe_form(
+                    recipe=form_recipe,
+                    ingredient_prefill=ingredient_prefill,
+                    consumable_prefill=consumable_prefill,
+                    is_clone=is_clone,
+                    cloned_from_id=cloned_from_id,
+                    form_values=request.form
+                )
+            marketplace_payload = marketplace_result['marketplace']
+            cover_payload = marketplace_result['cover']
 
             portioning_payload = None
             try:
@@ -92,7 +115,9 @@ def new_recipe():
                 is_portioned=(portioning_payload.get('is_portioned') if portioning_payload else False),
                 portion_name=(portioning_payload.get('portion_name') if portioning_payload else None),
                 portion_count=(portioning_payload.get('portion_count') if portioning_payload else None),
-                status=target_status
+                status=target_status,
+                **marketplace_payload,
+                **cover_payload
             )
 
             if success:
@@ -207,12 +232,85 @@ def view_recipe(recipe_id):
             return redirect(url_for('recipes.list_recipes'))
 
         inventory_units = get_global_unit_list()
-        return render_template('pages/recipes/view_recipe.html', recipe=recipe, inventory_units=inventory_units)
+        lineage_enabled = True
+        return render_template(
+            'pages/recipes/view_recipe.html',
+            recipe=recipe,
+            inventory_units=inventory_units,
+            lineage_enabled=lineage_enabled,
+        )
 
     except Exception as e:
         flash(f"Error loading recipe: {str(e)}", "error")
         logger.exception(f"Error viewing recipe: {str(e)}")
         return redirect(url_for('recipes.list_recipes'))
+
+
+@recipes_bp.route('/<int:recipe_id>/lineage')
+@login_required
+def recipe_lineage(recipe_id):
+    try:
+        recipe = get_recipe_details(recipe_id)
+    except PermissionError:
+        flash("You do not have access to this recipe.", "error")
+        return redirect(url_for('recipes.list_recipes'))
+    except Exception as exc:
+        flash(f"Unable to load recipe lineage: {exc}", "error")
+        return redirect(url_for('recipes.list_recipes'))
+
+    if not recipe:
+        flash('Recipe not found.', 'error')
+        return redirect(url_for('recipes.list_recipes'))
+
+    root_id = recipe.root_recipe_id or recipe.id
+    relatives = (
+        Recipe.query.options(joinedload(Recipe.organization))
+        .filter(or_(Recipe.id == root_id, Recipe.root_recipe_id == root_id))
+        .order_by(Recipe.created_at.asc())
+        .all()
+    )
+
+    nodes = {rel.id: {'recipe': rel, 'children': []} for rel in relatives}
+    for rel in relatives:
+        parent_id = None
+        edge_type = None
+        if rel.parent_recipe_id and rel.parent_recipe_id in nodes:
+            parent_id = rel.parent_recipe_id
+            edge_type = 'variation'
+        elif rel.cloned_from_id and rel.cloned_from_id in nodes:
+            parent_id = rel.cloned_from_id
+            edge_type = 'clone'
+        elif rel.id != root_id and rel.root_recipe_id and rel.root_recipe_id in nodes:
+            parent_id = rel.root_recipe_id
+            edge_type = 'root'
+
+        if parent_id and edge_type:
+            nodes[parent_id]['children'].append({'id': rel.id, 'edge': edge_type})
+
+    root_recipe = nodes.get(root_id, {'recipe': recipe})
+    lineage_tree = _serialize_lineage_tree(root_recipe['recipe'], nodes, recipe.id)
+    lineage_path = _build_lineage_path(recipe.id, nodes, root_id)
+    events = (
+        RecipeLineage.query.filter_by(recipe_id=recipe.id)
+        .order_by(RecipeLineage.created_at.asc())
+        .all()
+    )
+
+    origin_source_org = None
+    if recipe.org_origin_purchased and recipe.origin_source_org:
+        origin_source_org = recipe.origin_source_org
+
+    org_marketplace_enabled = is_feature_enabled('FEATURE_ORG_MARKETPLACE_DASHBOARD')
+
+    return render_template(
+        'pages/recipes/recipe_lineage.html',
+        recipe=recipe,
+        origin_source_org=origin_source_org,
+        lineage_tree=lineage_tree,
+        lineage_path=lineage_path,
+        lineage_events=events,
+        org_marketplace_enabled=org_marketplace_enabled,
+    )
 
 
 
@@ -254,7 +352,8 @@ def create_variation(recipe_id):
                 parent_recipe_id=parent.id,
                 allowed_containers=[int(id) for id in request.form.getlist('allowed_containers[]') if id] or [],
                 label_prefix=label_prefix,
-                status=target_status
+                status=target_status,
+                product_group_id=parent.product_group_id
             )
 
             if success:
@@ -328,6 +427,22 @@ def edit_recipe(recipe_id):
                 yield_val = 0.0
             
             ingredients = _extract_ingredients_from_form(request.form)
+            marketplace_ok, marketplace_result = RecipeMarketplaceService.extract_submission(
+                request.form, request.files, existing=recipe
+            )
+            if not marketplace_ok:
+                flash(marketplace_result, 'error')
+                form_override = request.form
+                ingredient_prefill, consumable_prefill = _build_prefill_from_form(request.form)
+                return _render_recipe_form(
+                    recipe=recipe,
+                    edit_mode=True,
+                    ingredient_prefill=ingredient_prefill,
+                    consumable_prefill=consumable_prefill,
+                    form_values=form_override
+                )
+            marketplace_payload = marketplace_result['marketplace']
+            cover_kwargs = marketplace_result['cover']
 
             portioning_payload = None
             try:
@@ -395,7 +510,9 @@ def edit_recipe(recipe_id):
                 is_portioned=(portioning_payload.get('is_portioned') if portioning_payload else False),
                 portion_name=(portioning_payload.get('portion_name') if portioning_payload else None),
                 portion_count=(portioning_payload.get('portion_count') if portioning_payload else None),
-                status=target_status
+                status=target_status,
+                **marketplace_payload,
+                **cover_kwargs
             )
 
             if success:
@@ -758,6 +875,59 @@ def _serialize_assoc_rows(associations):
     return serialized
 
 
+def _serialize_lineage_tree(node_recipe: Recipe, nodes: dict, current_id: int) -> dict:
+    node_payload = {
+        'id': node_recipe.id,
+        'name': node_recipe.name,
+        'organization_name': node_recipe.organization.name if node_recipe.organization else None,
+        'organization_id': node_recipe.organization_id,
+        'origin_type': node_recipe.org_origin_type,
+        'origin_purchased': node_recipe.org_origin_purchased,
+        'is_current': node_recipe.id == current_id,
+        'status': node_recipe.status,
+        'children': [],
+    }
+
+    for child in nodes.get(node_recipe.id, {}).get('children', []):
+        child_recipe = nodes[child['id']]['recipe']
+        node_payload['children'].append({
+            'edge_type': child['edge'],
+            'node': _serialize_lineage_tree(child_recipe, nodes, current_id)
+        })
+
+    return node_payload
+
+
+def _build_lineage_path(target_id: int, nodes: dict, root_id: int | None) -> list[int]:
+    path: list[int] = []
+    seen: set[int] = set()
+    current_id = target_id
+
+    while current_id and current_id not in seen:
+        path.append(current_id)
+        seen.add(current_id)
+        recipe = nodes.get(current_id, {}).get('recipe')
+        if not recipe:
+            break
+        if recipe.parent_recipe_id and recipe.parent_recipe_id in nodes:
+            current_id = recipe.parent_recipe_id
+        elif recipe.cloned_from_id and recipe.cloned_from_id in nodes:
+            current_id = recipe.cloned_from_id
+        elif (
+            recipe.root_recipe_id
+            and recipe.root_recipe_id in nodes
+            and recipe.id != recipe.root_recipe_id
+        ):
+            current_id = recipe.root_recipe_id
+        else:
+            current_id = None
+
+    if root_id and root_id not in path:
+        path.append(root_id)
+
+    return list(reversed(path))
+
+
 def _lookup_inventory_names(item_ids):
     if not item_ids:
         return {}
@@ -942,12 +1112,28 @@ def _get_recipe_form_data():
     # Categories for dropdown
     categories = ProductCategory.query.order_by(ProductCategory.name.asc()).all()
 
+    product_groups = RecipeProductGroup.query.filter_by(is_active=True).order_by(
+        RecipeProductGroup.display_order.asc(), RecipeProductGroup.name.asc()
+    ).all()
+
     return {
         'all_ingredients': all_ingredients,
         'units': units,
         'inventory_units': inventory_units,
-        'product_categories': categories
+        'product_categories': categories,
+        'product_groups': product_groups,
+        'recipe_sharing_enabled': _is_recipe_sharing_enabled()
     }
+
+
+def _is_recipe_sharing_enabled():
+    try:
+        enabled = is_feature_enabled('FEATURE_RECIPE_SHARING_CONTROLS')
+    except Exception:
+        enabled = False
+    if current_user.is_authenticated and getattr(current_user, 'user_type', '') == 'developer':
+        return True
+    return enabled
 
 def _format_stock_results(ingredients):
     """Format ingredient availability for frontend"""
@@ -995,5 +1181,10 @@ def _create_variation_template(parent):
 
     if parent.category_data:
         template.category_data = parent.category_data.copy() if isinstance(parent.category_data, dict) else parent.category_data
+    template.product_group_id = parent.product_group_id
+    template.skin_opt_in = parent.skin_opt_in
+    template.sharing_scope = 'private'
+    template.is_public = False
+    template.is_for_sale = False
 
     return template

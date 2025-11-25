@@ -5,8 +5,9 @@ Handles CRUD operations for recipes with proper service integration.
 """
 
 import logging
+from decimal import Decimal, InvalidOperation
 from typing import Dict, List, Any, Optional, Tuple
-from flask import session
+from flask import current_app
 from flask_login import current_user
 def _resolve_current_org_id() -> Optional[int]:
     """Best-effort helper to determine the organization for the active user."""
@@ -30,6 +31,34 @@ from ...services.event_emitter import EventEmitter
 logger = logging.getLogger(__name__)
 
 _ALLOWED_RECIPE_STATUSES = {'draft', 'published'}
+_UNSET = object()
+_CENTS = Decimal("0.01")
+
+
+def _normalize_sharing_scope(value: str | None) -> str:
+    """Clamp sharing scope to supported values."""
+    if not value:
+        return 'private'
+    normalized = str(value).strip().lower()
+    if normalized in {'public', 'pub', 'shared'}:
+        return 'public'
+    return 'private'
+
+
+def _default_marketplace_status(is_public: bool) -> str:
+    return 'listed' if is_public else 'draft'
+
+
+def _normalize_sale_price(value: Any) -> Optional[Decimal]:
+    if value in (None, '', _UNSET):
+        return None
+    try:
+        price = Decimal(str(value))
+    except (InvalidOperation, ValueError, TypeError):
+        return None
+    if price < 0:
+        return None
+    return price.quantize(_CENTS)
 
 
 def _normalize_status(value: str | None) -> str:
@@ -39,6 +68,58 @@ def _normalize_status(value: str | None) -> str:
     return normalized if normalized in _ALLOWED_RECIPE_STATUSES else 'published'
 
 
+def _get_batchtrack_org_id() -> int:
+    try:
+        return int(current_app.config.get('BATCHTRACK_ORG_ID', 1))
+    except Exception:
+        return 1
+
+
+def _default_org_origin_type(org_id: Optional[int]) -> str:
+    if org_id and org_id == _get_batchtrack_org_id():
+        return 'batchtrack_native'
+    return 'authored'
+
+
+def _build_org_origin_context(
+    target_org_id: Optional[int],
+    parent_recipe: Optional[Recipe],
+    clone_source: Optional[Recipe],
+) -> Dict[str, Any]:
+    context = {
+        'org_origin_type': _default_org_origin_type(target_org_id),
+        'org_origin_source_org_id': None,
+        'org_origin_source_recipe_id': None,
+        'org_origin_purchased': False,
+        'org_origin_recipe_id': None,
+    }
+
+    if parent_recipe and parent_recipe.organization_id == target_org_id:
+        context['org_origin_recipe_id'] = parent_recipe.org_origin_recipe_id or parent_recipe.id
+        context['org_origin_type'] = parent_recipe.org_origin_type or context['org_origin_type']
+        context['org_origin_source_org_id'] = parent_recipe.org_origin_source_org_id
+        context['org_origin_source_recipe_id'] = parent_recipe.org_origin_source_recipe_id
+        context['org_origin_purchased'] = parent_recipe.org_origin_purchased or False
+        return context
+
+    if clone_source and clone_source.organization_id == target_org_id:
+        context['org_origin_recipe_id'] = clone_source.org_origin_recipe_id or clone_source.id
+        context['org_origin_type'] = clone_source.org_origin_type or context['org_origin_type']
+        context['org_origin_source_org_id'] = clone_source.org_origin_source_org_id
+        context['org_origin_source_recipe_id'] = clone_source.org_origin_source_recipe_id
+        context['org_origin_purchased'] = clone_source.org_origin_purchased or False
+        return context
+
+    source = parent_recipe or clone_source
+    if source and source.organization_id and source.organization_id != target_org_id:
+        context['org_origin_type'] = 'purchased'
+        context['org_origin_purchased'] = True
+        context['org_origin_source_org_id'] = source.organization_id
+        context['org_origin_source_recipe_id'] = source.root_recipe_id or source.id
+
+    return context
+
+
 def create_recipe(name: str, description: str = "", instructions: str = "",
                  yield_amount: float = 0.0, yield_unit: str = "",
                  ingredients: List[Dict] = None, parent_id: int = None,
@@ -46,10 +127,23 @@ def create_recipe(name: str, description: str = "", instructions: str = "",
                  root_recipe_id: int | None = None,
                  allowed_containers: List[int] = None, label_prefix: str = "",
                  consumables: List[Dict] = None, category_id: int | None = None,
-                  portioning_data: Dict | None = None,
-                  is_portioned: bool = None, portion_name: str = None,
-                  portion_count: int = None, portion_unit_id: int = None,
-                  status: str = 'published') -> Tuple[bool, Any]:
+                 portioning_data: Dict | None = None,
+                 is_portioned: bool = None, portion_name: str = None,
+                 portion_count: int = None, portion_unit_id: int = None,
+                 status: str = 'published',
+                 sharing_scope: str = 'private',
+                 is_public: bool | None = None,
+                 is_for_sale: bool = False,
+                 sale_price: Any = None,
+                 marketplace_status: str | None = None,
+                 marketplace_notes: str | None = None,
+                 public_description: str | None = None,
+                 product_group_id: Any = _UNSET,
+                 shopify_product_url: str | None = None,
+                 cover_image_path: str | None = None,
+                 cover_image_url: str | None = None,
+                 skin_opt_in: bool | None = None,
+                 remove_cover_image: bool = False) -> Tuple[bool, Any]:
     """
     Create a new recipe with ingredients and UI fields.
 
@@ -152,9 +246,45 @@ def create_recipe(name: str, description: str = "", instructions: str = "",
             status=normalized_status
         )
 
+        origin_context = _build_org_origin_context(
+            target_org_id=recipe.organization_id,
+            parent_recipe=parent_recipe,
+            clone_source=clone_source,
+        )
+        pending_org_origin_recipe_id = origin_context.get('org_origin_recipe_id')
+        recipe.org_origin_type = origin_context['org_origin_type']
+        recipe.org_origin_source_org_id = origin_context['org_origin_source_org_id']
+        recipe.org_origin_source_recipe_id = origin_context['org_origin_source_recipe_id']
+        recipe.org_origin_purchased = origin_context['org_origin_purchased']
+
         # Set allowed containers
         if allowed_containers:
             recipe.allowed_containers = allowed_containers
+
+        normalized_scope = _normalize_sharing_scope(sharing_scope)
+        inferred_public = normalized_scope == 'public'
+        if is_public is not None:
+            inferred_public = bool(is_public)
+            normalized_scope = 'public' if inferred_public else 'private'
+        recipe.sharing_scope = normalized_scope
+        recipe.is_public = inferred_public
+        recipe.is_for_sale = bool(is_for_sale) if inferred_public else False
+        recipe.sale_price = _normalize_sale_price(sale_price if recipe.is_for_sale else None)
+        recipe.marketplace_status = marketplace_status or _default_marketplace_status(recipe.is_public)
+        recipe.marketplace_notes = marketplace_notes
+        recipe.public_description = public_description
+        if product_group_id is not _UNSET:
+            recipe.product_group_id = product_group_id
+        recipe.shopify_product_url = (shopify_product_url or '').strip() or None
+        if skin_opt_in is None:
+            recipe.skin_opt_in = True
+        else:
+            recipe.skin_opt_in = bool(skin_opt_in)
+        recipe.cover_image_path = cover_image_path
+        recipe.cover_image_url = cover_image_url
+        if remove_cover_image:
+            recipe.cover_image_path = None
+            recipe.cover_image_url = None
 
         # Portioning data validation and assignment
         if portioning_data and isinstance(portioning_data, dict):
@@ -191,6 +321,55 @@ def create_recipe(name: str, description: str = "", instructions: str = "",
             recipe.portion_count = portion_count
         if portion_unit_id is not None:
             recipe.portion_unit_id = portion_unit_id
+
+        scope_changed = False
+        if sharing_scope is not None:
+            normalized_scope = _normalize_sharing_scope(sharing_scope)
+            if recipe.sharing_scope != normalized_scope:
+                scope_changed = True
+            recipe.sharing_scope = normalized_scope
+            recipe.is_public = normalized_scope == 'public'
+        if is_public is not None:
+            normalized_scope = 'public' if is_public else 'private'
+            if recipe.sharing_scope != normalized_scope:
+                scope_changed = True
+                recipe.sharing_scope = normalized_scope
+            recipe.is_public = bool(is_public)
+
+        if product_group_id is not _UNSET:
+            recipe.product_group_id = product_group_id
+        if shopify_product_url is not None:
+            recipe.shopify_product_url = shopify_product_url.strip() or None
+        if skin_opt_in is not None:
+            recipe.skin_opt_in = bool(skin_opt_in)
+
+        if is_for_sale is not None:
+            recipe.is_for_sale = bool(is_for_sale) if recipe.is_public else False
+        else:
+            if not recipe.is_public:
+                recipe.is_for_sale = False
+
+        if sale_price is not None or not recipe.is_for_sale:
+            recipe.sale_price = _normalize_sale_price(sale_price) if recipe.is_for_sale else None
+
+        if marketplace_notes is not None:
+            recipe.marketplace_notes = marketplace_notes
+        if public_description is not None:
+            recipe.public_description = public_description
+
+        status_candidate = marketplace_status
+        if status_candidate is None and scope_changed:
+            status_candidate = _default_marketplace_status(recipe.is_public)
+        if status_candidate is not None:
+            recipe.marketplace_status = status_candidate
+
+        if cover_image_path is not _UNSET:
+            recipe.cover_image_path = cover_image_path
+        if cover_image_url is not _UNSET:
+            recipe.cover_image_url = cover_image_url
+        if remove_cover_image:
+            recipe.cover_image_path = None
+            recipe.cover_image_url = None
 
         # Capture category-specific structured fields if present in portioning_data surrogate
         try:
@@ -239,6 +418,9 @@ def create_recipe(name: str, description: str = "", instructions: str = "",
         if not recipe.root_recipe_id:
             recipe.root_recipe_id = recipe.id
             db.session.flush()
+
+        recipe.org_origin_recipe_id = pending_org_origin_recipe_id or recipe.id
+        db.session.flush()
 
         # Add ingredients
         for ingredient_data in ingredients or []:
@@ -304,7 +486,20 @@ def update_recipe(recipe_id: int, name: str = None, description: str = None,
                  portioning_data: Dict | None = None,
                  is_portioned: bool = None, portion_name: str = None,
                  portion_count: int = None, portion_unit_id: int = None,
-                 status: str | None = None) -> Tuple[bool, Any]:
+                 status: str | None = None,
+                 sharing_scope: str | None = None,
+                 is_public: bool | None = None,
+                 is_for_sale: bool | None = None,
+                 sale_price: Any = None,
+                 marketplace_status: str | None = None,
+                 marketplace_notes: str | None = None,
+                 public_description: str | None = None,
+                 product_group_id: int | None = None,
+                 shopify_product_url: str | None = None,
+                 cover_image_path: Any = _UNSET,
+                 cover_image_url: Any = _UNSET,
+                 skin_opt_in: bool | None = None,
+                 remove_cover_image: bool = False) -> Tuple[bool, Any]:
     """
     Update an existing recipe.
 
@@ -648,6 +843,16 @@ def duplicate_recipe(recipe_id: int) -> Tuple[bool, Any]:
         template.portion_name = original.portion_name
         template.portion_count = original.portion_count
         template.portion_unit_id = original.portion_unit_id
+        template.product_group_id = original.product_group_id
+        template.shopify_product_url = original.shopify_product_url
+        template.skin_opt_in = original.skin_opt_in
+        template.cover_image_path = original.cover_image_path
+        template.cover_image_url = original.cover_image_url
+        template.sharing_scope = 'private'
+        template.is_public = False
+        template.is_for_sale = False
+        template.sale_price = None
+        template.marketplace_status = 'draft'
 
         return True, {
             'template': template,

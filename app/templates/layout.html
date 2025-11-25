@@ -79,6 +79,8 @@
             <a class="navbar-brand" href="{% if current_user.is_authenticated %}{% if current_user.user_type == 'developer' %}{{ url_for('developer.dashboard') }}{% else %}{{ url_for('app_routes.dashboard') }}{% endif %}{% else %}{{ url_for('index') }}{% endif %}">
                 BatchTrack 1.0
             </a>
+            {% set recipe_library_nav_enabled = is_feature_enabled('FEATURE_RECIPE_LIBRARY_NAV') %}
+            {% set show_recipe_library_link = recipe_library_nav_enabled or (current_user.is_authenticated and current_user.user_type == 'developer') %}
             {% if current_user.is_authenticated %}
             {% if current_user.user_type == 'developer' %}
             <!-- Developer Navigation -->
@@ -113,6 +115,13 @@
                           ❓ Help
                       </a>
                   </li>
+                {% if recipe_library_nav_enabled %}
+                <li class="nav-item">
+                    <a class="nav-link" href="{{ url_for('recipe_library_bp.recipe_library') }}">
+                        📚 Recipe Library
+                    </a>
+                </li>
+                {% endif %}
             </ul>
             <div class="dropdown me-2">
                 <button class="btn btn-light dropdown-toggle" type="button" id="customerDropdown" data-bs-toggle="dropdown" aria-expanded="false">
@@ -144,6 +153,9 @@
                     <!-- Resources -->
                     <li><h6 class="dropdown-header">Resources</h6></li>
                     <li><a class="dropdown-item" href="{{ url_for('global_library_bp.global_library') }}">Global Inventory Library</a></li>
+                    {% if show_recipe_library_link %}
+                    <li><a class="dropdown-item" href="{{ url_for('recipe_library_bp.recipe_library') }}">Recipe Library</a></li>
+                    {% endif %}
                     <li><hr class="dropdown-divider"></li>
                     <!-- Admin -->
                     <li><h6 class="dropdown-header">Admin</h6></li>
@@ -187,6 +199,9 @@
                     <li><h6 class="dropdown-header">Global Library</h6></li>
                     <li><a class="dropdown-item" href="{{ url_for('developer.global_items_admin') }}">
                         <i class="fas fa-boxes"></i> Global Items
+                    </a></li>
+                    <li><a class="dropdown-item" href="{{ url_for('recipe_library_bp.recipe_library') }}">
+                        <i class="fas fa-book-open"></i> Recipe Library
                     </a></li>
                     <li><a class="dropdown-item" href="{{ url_for('developer.product_categories') }}">
                         <i class="fas fa-tags"></i> Product Categories
@@ -279,6 +294,13 @@
                           ❓ Help
                       </a>
                   </li>
+                {% if recipe_library_nav_enabled %}
+                <li class="nav-item">
+                    <a class="nav-link" href="{{ url_for('recipe_library_bp.recipe_library') }}">
+                        📚 Recipe Library
+                    </a>
+                </li>
+                {% endif %}
                 <li class="nav-item">
                     <div class="navbar-text">
                         <span id="header-clock" class="text-muted">🕐 Loading...</span>
@@ -329,6 +351,9 @@
                     <!-- Resources -->
                     <li><h6 class="dropdown-header">Resources</h6></li>
                     <li><a class="dropdown-item" href="{{ url_for('global_library_bp.global_library') }}">Global Inventory Library</a></li>
+                    {% if show_recipe_library_link %}
+                    <li><a class="dropdown-item" href="{{ url_for('recipe_library_bp.recipe_library') }}">Recipe Library</a></li>
+                    {% endif %}
                     <li><hr class="dropdown-divider"></li>
                     <!-- Admin -->
                     <li><h6 class="dropdown-header">Admin</h6></li>

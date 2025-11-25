@@ -12,6 +12,7 @@ from app.utils.cache_manager import app_cache
 from app.utils.unit_utils import get_global_unit_list
 
 from .utils.json_store import read_json_file
+from .utils.settings import is_feature_enabled
 from .utils.permissions import (
     has_permission,
     has_role,
@@ -104,6 +105,7 @@ def register_template_context(app: Flask) -> None:
             "is_developer": is_developer,
             "get_reservation_summary": get_reservation_summary,
             "user_tier": user_tier,
+            "is_feature_enabled": is_feature_enabled,
         }
 
     @app.context_processor

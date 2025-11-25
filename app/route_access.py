@@ -34,6 +34,9 @@ class RouteAccessConfig:
         "public_api_bp.public_global_item_search",
         "global_library_bp.global_library",
         "global_library_bp.global_item_detail",
+        "recipe_library_bp.recipe_library",
+        "recipe_library_bp.recipe_library_detail",
+        "recipe_library_bp.organization_marketplace",
         "help_routes.help_overview",
         "help_routes.help_faq",
         "waitlist.join_waitlist",
@@ -51,6 +54,7 @@ class RouteAccessConfig:
         "/exports/tool",
         "/api/public",
         "/help",
+        "/recipes/library",
     )
 
     DEVELOPER_ONLY_PATH_PREFIXES: Tuple[str, ...] = ("/developer/",)

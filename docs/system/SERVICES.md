@@ -245,6 +245,48 @@ reservation = create_reservation(
 )
 ```
 
+### 8. Recipe Marketplace Service (`app/services/recipe_marketplace_service.py`)
+
+**Authority:** Recipe sharing metadata (private/public/sale), Shopify links, cover images, and marketplace payload normalization.
+
+**Key Responsibilities:**
+- Normalize marketplace form fields before `create_recipe`/`update_recipe`.
+- Persist product group selection, sharing scope, sale price, and notes.
+- Validate and store cover images under `static/product_images/recipes`.
+- Preserve existing marketplace attributes when the feature flag is disabled.
+
+**Usage Example:**
+```python
+from app.services.recipe_marketplace_service import RecipeMarketplaceService
+
+ok, payload = RecipeMarketplaceService.extract_submission(request.form, request.files, existing=recipe)
+if not ok:
+    flash(payload, "error")
+marketplace_kwargs = payload["marketplace"]
+cover_kwargs = payload["cover"]
+```
+
+**Rules:**
+- Only accepts PNG/JPG/GIF/WEBP covers; everything else raises `ValueError`.
+- Does not mutate existing marketplace state when fields are omitted (e.g., feature disabled).
+- Always returns both marketplace kwargs and cover kwargs so routes stay thin.
+- Provides the canonical path for toggling public vs private, free vs sale, seeding product groups, saving Shopify URLs, and uploading cover imagery.
+
+### 9. Recipe Origin & Lineage Helpers (`app/services/recipe_service/_core.py`)
+
+**Authority:** Authoritative creation/update pipeline for recipes, including origin tracking and lineage logging.
+
+**Key Responsibilities:**
+- `_build_org_origin_context(...)` determines whether a recipe is `batchtrack_native`, `authored`, or `purchased` and sets:
+  - `org_origin_recipe_id` (per-org root),
+  - `org_origin_type`,
+  - `org_origin_purchased`,
+  - backlink metadata (`org_origin_source_org_id` / `_recipe_id`).
+- `create_recipe(...)` now assigns the correct origin before commit and logs lineage events (`CREATE`, `CLONE`, `VARIATION`, `PROMOTE_TO_PARENT`).
+- `RecipeLineage` rows are appended via `_log_lineage_event` so the new lineage page can display event history without blocking the main transaction.
+
+**Usage Tip:** Always call `create_recipe` / `update_recipe` via the service—never mutate `Recipe` records directly. Doing so bypasses origin bookkeeping and lineage logging.
+
 ## Service Integration Patterns
 
 ### 1. Batch Production Flow (PlanSnapshot → Start → Finish)

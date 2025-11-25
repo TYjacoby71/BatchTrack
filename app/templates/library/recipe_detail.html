@@ -1,0 +1,141 @@
+{% extends 'layout.html' %}
+
+{% block title %}{{ recipe.name }} - Recipe Library{% endblock %}
+
+{% block head %}
+<style>
+.recipe-blur {
+    position: relative;
+}
+.recipe-blur pre {
+    filter: blur(6px);
+    user-select: none;
+    pointer-events: none;
+    min-height: 160px;
+}
+.recipe-blur .recipe-blur-overlay {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(255,255,255,0.7);
+    text-align: center;
+    font-weight: 600;
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <nav aria-label="breadcrumb">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="{{ url_for('recipe_library_bp.recipe_library') }}">Recipe Library</a></li>
+            <li class="breadcrumb-item active" aria-current="page">{{ recipe.name }}</li>
+        </ol>
+    </nav>
+
+    <div class="card shadow-sm mb-4">
+        <div class="card-body">
+            <div class="row g-4">
+                <div class="col-md-4">
+                    {% if recipe.cover_url %}
+                    <img src="{{ recipe.cover_url }}" alt="{{ recipe.name }}" class="img-fluid rounded border">
+                    {% else %}
+                    <div class="border rounded d-flex align-items-center justify-content-center p-5 text-muted">
+                        <i class="fas fa-image fa-2x"></i>
+                    </div>
+                    {% endif %}
+                </div>
+                <div class="col-md-8">
+                    <div class="d-flex flex-wrap gap-2 mb-2">
+                        <span class="badge bg-secondary">{{ recipe.category or 'Uncategorized' }}</span>
+                        {% if recipe.product_group %}
+                        <span class="badge bg-light text-dark border">{{ recipe.product_group }}</span>
+                        {% endif %}
+                        {% if recipe.is_for_sale %}
+                        <span class="badge bg-success">${{ "%.2f"|format(recipe.sale_price) }} sale</span>
+                        {% else %}
+                        <span class="badge bg-info text-dark">Free download</span>
+                        {% endif %}
+                        {% if recipe.skin_opt_in %}
+                        <span class="badge bg-primary">Category skin</span>
+                        {% endif %}
+                    </div>
+                    <h1 class="h3">{{ recipe.name }}</h1>
+                    {% if recipe.public_description %}
+                    <p class="text-muted">{{ recipe.public_description }}</p>
+                    {% elif recipe.marketplace_notes %}
+                    <p class="text-muted">{{ recipe.marketplace_notes }}</p>
+                    {% endif %}
+                    <ul class="list-unstyled small mb-3">
+                        {% if recipe.organization and recipe.organization.name %}
+                        <li>
+                            <strong>Creator:</strong>
+                            {{ recipe.organization.name }}
+                            {% if org_marketplace_enabled %}
+                                · <a href="{{ url_for('recipe_library_bp.organization_marketplace', organization_id=recipe.organization.id) }}">Marketplace view</a>
+                            {% endif %}
+                        </li>
+                        {% endif %}
+                        {% if recipe.origin %}
+                        <li><strong>Origin:</strong>
+                            {% if recipe.origin.type == 'batchtrack_native' %}
+                                BatchTrack Native
+                            {% elif recipe.origin.purchased %}
+                                Purchased (from {{ recipe.origin.source_org_name or 'another organization' }})
+                            {% else %}
+                                Org Authored
+                            {% endif %}
+                        </li>
+                        {% endif %}
+                        <li><strong>Yield:</strong> {{ recipe.predicted_yield or 'N/A' }} {{ recipe.predicted_yield_unit }}</li>
+                        <li><strong>Avg cost / batch:</strong> {{ recipe.stats.avg_cost_per_batch if recipe.stats else 'N/A' }}</li>
+                        <li><strong>Yield per $:</strong> {% if recipe.yield_per_dollar %}{{ "%.2f"|format(recipe.yield_per_dollar) }}{% else %}N/A{% endif %}</li>
+                        <li><strong>Avg ingredient cost:</strong> {% if recipe.avg_ingredient_cost %}${{ "%.2f"|format(recipe.avg_ingredient_cost) }}{% else %}N/A{% endif %}</li>
+                        <li><strong>Avg total cost:</strong> {% if recipe.avg_total_cost %}${{ "%.2f"|format(recipe.avg_total_cost) }}{% else %}N/A{% endif %}</li>
+                        <li><strong>Estimated downloads:</strong> {{ recipe.download_count }}</li>
+                        <li><strong>Estimated purchases:</strong> {{ recipe.purchase_count }}</li>
+                        <li><strong>Updated:</strong> {{ recipe.updated_at.strftime('%b %d, %Y') if recipe.updated_at else '—' }}</li>
+                    </ul>
+                    {% if purchase_enabled and recipe.is_for_sale and recipe.shopify_product_url %}
+                    <a href="{{ recipe.shopify_product_url }}" class="btn btn-success" target="_blank" rel="noopener">
+                        <i class="fas fa-shopping-cart"></i> Purchase this recipe
+                    </a>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card shadow-sm mb-4">
+        <div class="card-header">
+            <h5 class="mb-0"><i class="fas fa-align-left"></i> Instructions</h5>
+        </div>
+        <div class="card-body">
+            {% if reveal_details %}
+            <pre class="mb-0" style="white-space: pre-wrap;">{{ recipe.instructions }}</pre>
+            {% else %}
+            <div class="recipe-blur">
+                <pre class="mb-0" style="white-space: pre-wrap;">{{ recipe.instructions }}</pre>
+                <div class="recipe-blur-overlay">
+                    <span>Purchase or clone this recipe to unlock full instructions, ingredients, consumables, and packaging notes.</span>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+    <div class="card shadow-sm">
+        <div class="card-header">
+            <h5 class="mb-0"><i class="fas fa-info-circle"></i> Ingredients & Packaging</h5>
+        </div>
+        <div class="card-body text-muted">
+            {% if reveal_details %}
+            <small class="text-muted">Full ingredients, consumables, and packaging details are available to developers viewing on behalf of an organization. (Customer view pending UI build-out.)</small>
+            {% else %}
+            This listing hides the ingredient list, consumables, and packaging configuration to protect the creator's work. Unlock the full formulation by purchasing (if offered for sale) or cloning the recipe inside your workspace.
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}

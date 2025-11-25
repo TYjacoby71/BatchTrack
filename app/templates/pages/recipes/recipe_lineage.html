@@ -1,0 +1,169 @@
+{% extends 'layout.html' %}
+{% set breadcrumb_items = [
+    {'label': 'Recipes', 'url': url_for('recipes.list_recipes')},
+    {'label': recipe.name, 'url': url_for('recipes.view_recipe', recipe_id=recipe.id)},
+    {'label': 'Lineage', 'url': None}
+] %}
+
+{% macro draw_node(node, lineage_path) -%}
+<div class="d-flex flex-wrap align-items-center gap-2">
+    <span class="fw-semibold {% if node.id in lineage_path %}text-primary{% endif %}">
+        {{ node.name }}
+        {% if node.is_current %}
+            <span class="badge bg-primary">Current</span>
+        {% endif %}
+    </span>
+    {% if node.organization_name %}
+        <span class="badge bg-light text-dark border">
+            <i class="fas fa-building me-1"></i>{{ node.organization_name }}
+        </span>
+    {% endif %}
+    <span class="badge bg-secondary text-uppercase">{{ node.status }}</span>
+    {% if node.origin_type == 'batchtrack_native' %}
+        <span class="badge bg-dark">BatchTrack Origin</span>
+    {% elif node.origin_purchased %}
+        <span class="badge bg-warning text-dark">Purchased Origin</span>
+    {% endif %}
+</div>
+{% if node.children %}
+    <ul class="list-unstyled ms-4 border-start ps-3 mt-2 mb-0">
+        {% for child in node.children %}
+        <li class="mb-2">
+            <span class="badge bg-light text-dark border text-uppercase">{{ child.edge_type }}</span>
+            {{ draw_node(child.node, lineage_path) }}
+        </li>
+        {% endfor %}
+    </ul>
+{% endif %}
+{%- endmacro %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-body d-flex flex-column flex-lg-row justify-content-between gap-3">
+                    <div>
+                        <h1 class="h3 mb-1"><i class="fas fa-family-tree text-primary me-2"></i>Recipe Lineage</h1>
+                        <p class="text-muted mb-0">Trace how <strong>{{ recipe.name }}</strong> relates to its origin, clones, and variations.</p>
+                    </div>
+                    <div class="d-flex gap-2">
+                        <a href="{{ url_for('recipes.view_recipe', recipe_id=recipe.id) }}" class="btn btn-outline-secondary">
+                            <i class="fas fa-arrow-left"></i> Back to recipe
+                        </a>
+                        <a href="{{ url_for('recipes.create_variation', recipe_id=recipe.id) }}" class="btn btn-outline-success">
+                            <i class="fas fa-code-branch"></i> New variation
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row g-4">
+        <div class="col-lg-7">
+            <div class="card h-100">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="fas fa-stream me-2 text-primary"></i>Lineage Tree</h5>
+                </div>
+                <div class="card-body">
+                    {{ draw_node(lineage_tree, lineage_path) }}
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-5">
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="fas fa-certificate me-2 text-success"></i>Origin Summary</h5>
+                </div>
+                <div class="card-body">
+                    <dl class="row mb-0">
+                        <dt class="col-5">Organization</dt>
+                        <dd class="col-7">{{ recipe.organization.name if recipe.organization else 'Unassigned' }}</dd>
+                        <dt class="col-5">Origin Type</dt>
+                        <dd class="col-7 text-capitalize">{{ recipe.org_origin_type.replace('_', ' ') }}</dd>
+                        <dt class="col-5">Purchased Origin</dt>
+                        <dd class="col-7">
+                            {% if recipe.org_origin_purchased %}
+                                <span class="badge bg-warning text-dark">Yes</span>
+                                {% if origin_source_org %}
+                                    <div class="mt-2">
+                                        <small class="text-muted d-block">Source Organization</small>
+                                        <span class="fw-semibold">{{ origin_source_org.name }}</span>
+                                        <div class="mt-1">
+                                            <a href="{{ url_for('recipe_library_bp.recipe_library', organization=origin_source_org.id) }}" class="btn btn-link btn-sm px-0">
+                                                Browse this creator
+                                            </a>
+                                            {% if org_marketplace_enabled %}
+                                                <a href="{{ url_for('recipe_library_bp.organization_marketplace', organization_id=origin_source_org.id) }}" class="btn btn-link btn-sm px-0 ms-3">
+                                                    Marketplace dashboard
+                                                </a>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                {% endif %}
+                            {% else %}
+                                <span class="badge bg-success">No</span>
+                            {% endif %}
+                        </dd>
+                        <dt class="col-5">Org Origin Recipe</dt>
+                        <dd class="col-7">
+                            {% if recipe.org_origin_recipe %}
+                                <a href="{{ url_for('recipes.view_recipe', recipe_id=recipe.org_origin_recipe.id) }}">
+                                    {{ recipe.org_origin_recipe.name }}
+                                </a>
+                            {% else %}
+                                {{ recipe.name }}
+                            {% endif %}
+                        </dd>
+                        <dt class="col-5">Root Recipe</dt>
+                        <dd class="col-7">
+                            {% if recipe.root_recipe %}
+                                <a href="{{ url_for('recipes.view_recipe', recipe_id=recipe.root_recipe.id) }}">
+                                    {{ recipe.root_recipe.name }}
+                                </a>
+                            {% else %}
+                                {{ recipe.name }}
+                            {% endif %}
+                        </dd>
+                    </dl>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0"><i class="fas fa-history me-2 text-secondary"></i>Lineage Events</h5>
+                    <span class="badge bg-light text-dark border">{{ lineage_events|length }} events</span>
+                </div>
+                <div class="card-body">
+                    {% if lineage_events %}
+                        <ul class="list-group list-group-flush">
+                            {% for event in lineage_events %}
+                            <li class="list-group-item">
+                                <div class="d-flex justify-content-between">
+                                    <span class="fw-semibold text-uppercase text-muted">{{ event.event_type }}</span>
+                                    <small class="text-muted">{{ event.created_at.strftime('%b %d, %Y %H:%M') if event.created_at else '—' }}</small>
+                                </div>
+                                {% if event.source_recipe %}
+                                    <div class="text-muted small mt-1">
+                                        Source: <a href="{{ url_for('recipes.view_recipe', recipe_id=event.source_recipe.id) }}">{{ event.source_recipe.name }}</a>
+                                    </div>
+                                {% endif %}
+                                {% if event.notes %}
+                                    <div class="small mt-1">{{ event.notes }}</div>
+                                {% endif %}
+                            </li>
+                            {% endfor %}
+                        </ul>
+                    {% else %}
+                        <div class="text-center py-4 text-muted">
+                            <i class="fas fa-info-circle mb-2"></i>
+                            <p class="mb-0">No lineage events have been recorded for this recipe yet.</p>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
