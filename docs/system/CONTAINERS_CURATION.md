@@ -24,6 +24,11 @@ Notes
 - Avoid repeating material in both `container_type` and `container_material`.
   - Example: Use container_type="Glass" and container_style="Drinking" for a drinking glass. The display logic will render "Drinking Glass" without duplicating "Glass".
 
+### Runtime container naming
+- The application never trusts free-form input for container names. All creation and edit flows call `app/services/container_name_builder.py`.
+- `build_container_name()` accepts the structured attributes (style, material, base type, color, capacity, unit) and returns a canonical descriptor such as `Amber Boston Round Glass Bottle - 8 fl oz`.
+- Any new workflow that needs a container label must import and call that helper instead of rolling its own formatting logic. This prevents "competing services" that might drift out of sync.
+
 ### JSON schema (informal)
 ```json
 {
@@ -74,6 +79,7 @@ aka_names (semicolon-separated),default_unit
 
 ### Deduplication guidance
 - Treat (name, capacity, capacity_unit, container_material, container_type, container_style, container_color) as the uniqueness signature for a curated record. If only color differs, separate records are acceptable.
+- Inventory creation reuses this exact signature through `_find_matching_container()` inside `app/services/inventory_adjustment/_creation_logic.py`, so repeated submissions with identical attributes re-link to the same `InventoryItem` even if the user re-enters it later.
 
 ### Loading curated data
 - Use `scripts/seed_containers.py` to upsert curated JSON/CSV into `GlobalItem`.

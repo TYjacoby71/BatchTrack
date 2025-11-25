@@ -4,10 +4,14 @@ This handler should work with the centralized quantity update system.
 """
 
 import logging
+from datetime import timezone  # Import timezone for timezone-aware datetime objects
+
+from sqlalchemy import func
+
 from app.models import db, InventoryItem, IngredientCategory, Unit, UnifiedInventoryHistory, GlobalItem
+from app.services.container_name_builder import build_container_name
 from app.services.density_assignment_service import DensityAssignmentService
 from ._fifo_ops import create_new_fifo_lot
-from datetime import timezone # Import timezone for timezone-aware datetime objects
 
 logger = logging.getLogger(__name__)
 
@@ -41,6 +45,44 @@ def _resolve_cost_per_unit(form_data, initial_quantity):
 
     return raw_cost_value, None
 
+
+def _normalize_container_field(value):
+    if value is None:
+        return None
+    text = str(value).strip()
+    return text.lower() if text else None
+
+
+def _apply_string_match(query, column, value):
+    normalized = _normalize_container_field(value)
+    if normalized is None:
+        return query.filter(column.is_(None))
+    return query.filter(func.lower(column) == normalized)
+
+
+def _find_matching_container(candidate: InventoryItem | None):
+    """Return an existing container with matching attributes (same org)."""
+    if not candidate or candidate.type != 'container':
+        return None
+
+    query = InventoryItem.query.filter(
+        InventoryItem.organization_id == candidate.organization_id,
+        InventoryItem.type == 'container'
+    )
+
+    query = _apply_string_match(query, InventoryItem.container_material, candidate.container_material)
+    query = _apply_string_match(query, InventoryItem.container_type, candidate.container_type)
+    query = _apply_string_match(query, InventoryItem.container_style, candidate.container_style)
+    query = _apply_string_match(query, InventoryItem.container_color, candidate.container_color)
+    query = _apply_string_match(query, InventoryItem.capacity_unit, candidate.capacity_unit)
+
+    if candidate.capacity is None:
+        query = query.filter(InventoryItem.capacity.is_(None))
+    else:
+        query = query.filter(InventoryItem.capacity == candidate.capacity)
+
+    return query.first()
+
 def create_inventory_item(form_data, organization_id, created_by):
     """
     Create a new inventory item from form data.
@@ -51,9 +93,7 @@ def create_inventory_item(form_data, organization_id, created_by):
         logger.info(f"Form data: {dict(form_data)}")
 
         # Extract and validate required fields
-        name = form_data.get('name', '').strip()
-        if not name:
-            return False, "Item name is required", None
+        name = (form_data.get('name') or '').strip()
 
         # If provided, load global item for defaults
         global_item_id = form_data.get('global_item_id')
@@ -69,6 +109,29 @@ def create_inventory_item(form_data, organization_id, created_by):
         # Validate type against global item
         if global_item and item_type != global_item.item_type:
             return False, f"Selected global item type '{global_item.item_type}' does not match item type '{item_type}'.", None
+
+        def _container_attr(key: str):
+            value = form_data.get(key)
+            if isinstance(value, str):
+                value = value.strip()
+            if value not in (None, '', 'null'):
+                return value
+            if global_item:
+                return getattr(global_item, key, None)
+            return None
+
+        if item_type == 'container':
+            name = build_container_name(
+                style=_container_attr('container_style'),
+                material=_container_attr('container_material'),
+                container_type=_container_attr('container_type'),
+                color=_container_attr('container_color'),
+                capacity=_container_attr('capacity'),
+                capacity_unit=_container_attr('capacity_unit'),
+            )
+
+        if not name:
+            return False, "Item name is required", None
 
         # Handle unit - prefer user's form selection over global item defaults
         unit_input = None
@@ -297,6 +360,18 @@ def create_inventory_item(form_data, organization_id, created_by):
                     new_item.density_source = 'manual'
             except Exception:
                 pass
+
+        # Before saving containers, reuse an existing match if attributes align
+        if item_type == 'container':
+            existing_container = _find_matching_container(new_item)
+            if existing_container:
+                existing_id = existing_container.id
+                existing_name = existing_container.name
+                if existing_container.is_archived:
+                    existing_container.is_archived = False
+                db.session.commit()
+                logger.info(f"Matched existing container {existing_name} (ID: {existing_id}). Reusing record.")
+                return True, f"Matched existing container {existing_name}", existing_id
 
         # Save the new item
         db.session.add(new_item)

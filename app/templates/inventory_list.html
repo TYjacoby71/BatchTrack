@@ -363,6 +363,73 @@ function updateAddContainerCostHelp() {
     }
 }
 
+function titleCaseContainerPart(value) {
+  return value.split(/(\s|-|\/)/).map(segment => {
+    if (!segment || segment.trim() === '' || /(\s|-|\/)/.test(segment)) {
+      return segment;
+    }
+    return segment.charAt(0).toUpperCase() + segment.slice(1).toLowerCase();
+  }).join('');
+}
+
+function formatContainerCapacityValue(value) {
+  if (value === undefined || value === null || value === '') return '';
+  const numeric = Number(value);
+  if (!isFinite(numeric) || numeric <= 0) return '';
+  if (Number.isInteger(numeric)) return numeric.toString();
+  return parseFloat(numeric.toFixed(3)).toString().replace(/\.?0+$/, '');
+}
+
+function updateGeneratedContainerName() {
+  const form = document.getElementById('addContainerForm');
+  if (!form) return '';
+  const getField = (name) => (form.querySelector(`[name="${name}"]`)?.value || '').trim();
+
+  const descriptorParts = [];
+  const color = getField('container_color');
+  const style = getField('container_style');
+  const material = getField('container_material');
+  const type = getField('container_type') || 'Container';
+
+  if (color) descriptorParts.push(color);
+  if (style && !descriptorParts.join(' ').toLowerCase().includes(style.toLowerCase())) descriptorParts.push(style);
+  if (material && !descriptorParts.join(' ').toLowerCase().includes(material.toLowerCase())) descriptorParts.push(material);
+  if (type && !descriptorParts.join(' ').toLowerCase().includes(type.toLowerCase())) descriptorParts.push(type);
+
+  const descriptor = descriptorParts.map(titleCaseContainerPart).join(' ').trim();
+
+  const capacityValue = formatContainerCapacityValue(getField('capacity'));
+  const capacityUnit = getField('capacity_unit');
+  let computedName = descriptor;
+
+  if (capacityValue) {
+    const capacitySegment = `${capacityValue} ${capacityUnit}`.trim();
+    computedName = descriptor ? `${descriptor} - ${capacitySegment}` : capacitySegment;
+  }
+
+  const finalName = computedName || descriptor || 'Custom Container';
+  const previewInput = document.getElementById('containerNamePreview');
+  const hiddenInput = document.getElementById('generatedContainerName');
+  if (previewInput) previewInput.value = finalName;
+  if (hiddenInput) hiddenInput.value = finalName;
+
+  return finalName;
+}
+window.updateGeneratedContainerName = updateGeneratedContainerName;
+
+function bindGeneratedContainerNamePreview() {
+  const form = document.getElementById('addContainerForm');
+  if (!form) return;
+  const fields = ['capacity', 'capacity_unit', 'container_material', 'container_type', 'container_style', 'container_color', 'quantity'];
+  fields.forEach(name => {
+    const el = form.querySelector(`[name="${name}"]`);
+    if (el) {
+      ['input', 'change'].forEach(evt => el.addEventListener(evt, updateGeneratedContainerName));
+    }
+  });
+  updateGeneratedContainerName();
+}
+
 // Add event listeners for quantity changes to update help text
 document.addEventListener('DOMContentLoaded', function() {
     const ingredientQtyInput = document.querySelector('#addIngredientForm input[name="quantity"]');
@@ -375,6 +442,7 @@ document.addEventListener('DOMContentLoaded', function() {
     if (containerQtyInput) {
         containerQtyInput.addEventListener('input', updateAddContainerCostHelp);
     }
+    bindGeneratedContainerNamePreview();
 });
 
 // Ingredient name search functionality
@@ -666,6 +734,10 @@ document.addEventListener('DOMContentLoaded', function() {
                 if (typeEl) typeEl.value = this.dataset.ctype || '';
                 if (styleEl) styleEl.value = this.dataset.style || '';
                 if (colorEl) colorEl.value = this.dataset.color || '';
+
+                if (typeof window.updateGeneratedContainerName === 'function') {
+                    window.updateGeneratedContainerName();
+                }
 
                 suggestionsEl.style.display = 'none';
             });
