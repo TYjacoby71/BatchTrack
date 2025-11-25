@@ -468,7 +468,7 @@ def make_parent_recipe(recipe_id):
 
         # Convert variation to parent by removing parent relationship
         recipe.parent_recipe_id = None
-        
+
         # Update the name to remove "Variation" suffix if present
         if recipe.name.endswith(" Variation"):
             recipe.name = recipe.name.replace(" Variation", "")
@@ -481,9 +481,9 @@ def make_parent_recipe(recipe_id):
             user_id=getattr(current_user, 'id', None)
         )
         db.session.add(lineage_entry)
-        
+
         db.session.commit()
-        
+
         flash(f'Recipe "{recipe.name}" has been converted to a parent recipe and is no longer a variation of "{original_parent.name}".', 'success')
         logger.info(f"Converted recipe {recipe_id} from variation to parent recipe")
 
@@ -777,6 +777,14 @@ def _recipe_from_form(form, base_recipe=None):
     recipe.label_prefix = form.get('label_prefix') or (base_recipe.label_prefix if base_recipe else '')
     recipe.category_id = _safe_int(form.get('category_id')) or (base_recipe.category_id if base_recipe else None)
     recipe.parent_recipe_id = base_recipe.parent_recipe_id if base_recipe and getattr(base_recipe, 'parent_recipe_id', None) else None
+
+    # Product store URL
+    product_store_url = form.get('product_store_url')
+    if product_store_url is not None:
+        recipe.product_store_url = product_store_url.strip() or None
+
+    # Product group ID
+    recipe.product_group_id = _safe_int(form.get('product_group_id')) or (base_recipe.product_group_id if base_recipe else None)
 
     try:
         recipe.predicted_yield = float(form.get('predicted_yield')) if form.get('predicted_yield') not in (None, '') else (base_recipe.predicted_yield if base_recipe else None)
@@ -1151,7 +1159,7 @@ def _create_variation_template(parent):
         # Count existing variations to suggest next number
         existing_variations = Recipe.query.filter_by(parent_recipe_id=parent.id).count()
         variation_prefix = f"{parent.label_prefix}V{existing_variations + 1}"
-    
+
     template = Recipe(
         name=f"{parent.name} Variation",
         instructions=parent.instructions,
@@ -1179,5 +1187,9 @@ def _create_variation_template(parent):
     template.sharing_scope = 'private'
     template.is_public = False
     template.is_for_sale = False
+
+    # Marketplace fields
+    template.product_store_url = parent.product_store_url
+    template.recipe_collection_group_id = parent.recipe_collection_group_id
 
     return template

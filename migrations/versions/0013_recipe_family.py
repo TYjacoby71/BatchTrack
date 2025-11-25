@@ -1,6 +1,6 @@
 """0013 recipe origin and org marketplace
 
-Revision ID: 0013_recipe_origin_and_org_marketplace
+Revision ID: 0013_recipe_family
 Revises: 0012_recipe_public_description
 Create Date: 2025-11-24 18:00:00.000000
 """
@@ -18,7 +18,7 @@ from migrations.postgres_helpers import (
 )
 
 # revision identifiers, used by Alembic.
-revision = "0013_recipe_origin_and_org_marketplace"
+revision = "0013_recipe_family"
 down_revision = "0012_recipe_public_description"
 branch_labels = None
 depends_on = None
@@ -73,6 +73,10 @@ def upgrade():
             server_default="0",
         ),
     )
+    safe_add_column(
+        "recipe",
+        sa.Column("product_store_url", sa.String(length=500), nullable=True),
+    )
 
     safe_create_index(
         "ix_recipe_org_origin_recipe_id",
@@ -103,6 +107,11 @@ def upgrade():
         "ix_recipe_purchase_count",
         "recipe",
         ["purchase_count"],
+    )
+    safe_create_index(
+        "ix_recipe_product_store_url",
+        "recipe",
+        ["product_store_url"],
     )
 
     safe_create_foreign_key(
@@ -172,6 +181,9 @@ def downgrade():
     safe_drop_index("ix_recipe_org_origin_type", "recipe")
     safe_drop_index("ix_recipe_org_origin_recipe_id", "recipe")
 
+    safe_drop_index("ix_recipe_product_store_url", "recipe")
+
+    safe_drop_column("recipe", "product_store_url")
     safe_drop_column("recipe", "purchase_count")
     safe_drop_column("recipe", "download_count")
     safe_drop_column("recipe", "org_origin_purchased")

@@ -78,7 +78,7 @@ class Recipe(ScopedModelMixin, db.Model):
     marketplace_blocked = db.Column(db.Boolean, nullable=False, default=False, server_default=sa.text("false"))
     marketplace_block_reason = db.Column(db.Text, nullable=True)
     marketplace_violation_count = db.Column(db.Integer, nullable=False, default=0, server_default='0')
-    shopify_product_url = db.Column(db.String(512), nullable=True)
+    product_store_url = db.Column(db.String(512), nullable=True)
     product_group_id = db.Column(db.Integer, db.ForeignKey('recipe_product_group.id'), nullable=True)
     cover_image_path = db.Column(db.String(255), nullable=True)
     cover_image_url = db.Column(db.String(512), nullable=True)

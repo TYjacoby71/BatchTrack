@@ -312,7 +312,7 @@ def create_recipe(name: str, description: str = "", instructions: str = "",
                  marketplace_notes: str | None = None,
                  public_description: str | None = None,
                  product_group_id: Any = _UNSET,
-                 shopify_product_url: str | None = None,
+                 product_store_url: str | None = None,
                  cover_image_path: str | None = None,
                  cover_image_url: str | None = None,
                  skin_opt_in: bool | None = None,
@@ -322,7 +322,7 @@ def create_recipe(name: str, description: str = "", instructions: str = "",
 
     Args:
         name: Recipe name
-        description: Recipe description  
+        description: Recipe description
         instructions: Cooking instructions
         yield_amount: Expected yield quantity
         yield_unit: Unit for yield
@@ -780,7 +780,7 @@ def get_recipe_details(recipe_id: int) -> Optional[Recipe]:
         from sqlalchemy.orm import joinedload
 
         from ...models import RecipeIngredient, RecipeConsumable, InventoryItem
-        
+
         recipe = db.session.query(Recipe).options(
             joinedload(Recipe.recipe_ingredients).joinedload(RecipeIngredient.inventory_item),
             joinedload(Recipe.recipe_consumables).joinedload(RecipeConsumable.inventory_item)
