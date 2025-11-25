@@ -533,6 +533,17 @@ class AnalyticsDataService:
             }
             cls._store_cache(cache_key, payload)
             return payload
+        except Exception as exc:
+            logger.error("Failed to build developer dashboard: %s", exc, exc_info=True)
+            return {
+                "overview": {},
+                "recent_organizations": [],
+                "recent_count": 0,
+                "attention_organizations": [],
+                "attention_count": 0,
+                "waitlist_count": 0,
+                "generated_at": None,
+            }
     @classmethod
     def get_recipe_library_metrics(cls, *, force_refresh: bool = False) -> Dict[str, Any]:
         cache_key = cls._cache_key("recipe_library")

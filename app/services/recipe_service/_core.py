@@ -73,11 +73,13 @@ def create_recipe(name: str, description: str = "", instructions: str = "",
                  sale_price: Any = None,
                  marketplace_status: str | None = None,
                  marketplace_notes: str | None = None,
+                 public_description: str | None = None,
                  product_group_id: Any = _UNSET,
                  shopify_product_url: str | None = None,
                  cover_image_path: str | None = None,
                  cover_image_url: str | None = None,
-                 skin_opt_in: bool | None = None) -> Tuple[bool, Any]:
+                 skin_opt_in: bool | None = None,
+                 remove_cover_image: bool = False) -> Tuple[bool, Any]:
     """
     Create a new recipe with ingredients and UI fields.
 
@@ -190,6 +192,7 @@ def create_recipe(name: str, description: str = "", instructions: str = "",
         recipe.sale_price = _normalize_sale_price(sale_price if recipe.is_for_sale else None)
         recipe.marketplace_status = marketplace_status or _default_marketplace_status(recipe.is_public)
         recipe.marketplace_notes = marketplace_notes
+        recipe.public_description = public_description
         if product_group_id is not _UNSET:
             recipe.product_group_id = product_group_id
         recipe.shopify_product_url = (shopify_product_url or '').strip() or None
@@ -199,6 +202,9 @@ def create_recipe(name: str, description: str = "", instructions: str = "",
             recipe.skin_opt_in = bool(skin_opt_in)
         recipe.cover_image_path = cover_image_path
         recipe.cover_image_url = cover_image_url
+        if remove_cover_image:
+            recipe.cover_image_path = None
+            recipe.cover_image_url = None
 
         # Portioning data validation and assignment
         if portioning_data and isinstance(portioning_data, dict):
@@ -268,6 +274,8 @@ def create_recipe(name: str, description: str = "", instructions: str = "",
 
         if marketplace_notes is not None:
             recipe.marketplace_notes = marketplace_notes
+        if public_description is not None:
+            recipe.public_description = public_description
 
         status_candidate = marketplace_status
         if status_candidate is None and scope_changed:
@@ -402,6 +410,7 @@ def update_recipe(recipe_id: int, name: str = None, description: str = None,
                  sale_price: Any = None,
                  marketplace_status: str | None = None,
                  marketplace_notes: str | None = None,
+                 public_description: str | None = None,
                  product_group_id: int | None = None,
                  shopify_product_url: str | None = None,
                  cover_image_path: Any = _UNSET,

@@ -6,8 +6,7 @@ from sqlalchemy.orm import joinedload
 
 from app.extensions import db
 from app.models import Recipe, ProductCategory, Organization
-from app.models.statistics import RecipeStats
-from app.models.batch import BatchStats
+from app.models.statistics import RecipeStats, BatchStats
 from app.models.recipe_marketplace import RecipeProductGroup
 from app.services.statistics import AnalyticsDataService
 from app.utils.seo import slugify_value
