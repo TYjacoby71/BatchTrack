@@ -134,8 +134,7 @@
     {% set sale_mode_value = field_values.get('sale_mode') if field_values and field_values.get('sale_mode') else ('sale' if recipe and recipe.is_for_sale else 'free') %}
     {% set sale_price_value = field_values.get('sale_price') if field_values and field_values.get('sale_price') not in (None, '') else (recipe.sale_price if recipe and recipe.sale_price else '') %}
     {% set notes_value = field_values.get('marketplace_notes') if field_values and field_values.get('marketplace_notes') is not none else (recipe.marketplace_notes if recipe else '') %}
-    {% set selected_group_value = field_values.get('product_group_id') if field_values and field_values.get('product_group_id') not in (None, '') else (recipe.product_group_id if recipe else None) %}
-    {% set store_url_value = field_values.get('product_store_url') if field_values and field_values.get('product_store_url') is not none else (recipe.product_store_url if recipe else '') %}
+    {% set desc_value = field_values.get('public_description') if field_values and field_values.get('public_description') is not none else (recipe.public_description if recipe else '') %}
     {% set existing_cover_src = None %}
     {% if recipe and recipe.cover_image_path %}
         {% set existing_cover_src = url_for('static', filename=recipe.cover_image_path) %}

@@ -120,6 +120,179 @@ def _build_org_origin_context(
     return context
 
 
+def _derive_label_prefix(
+    name: str,
+    requested_prefix: Optional[str],
+    parent_recipe_id: Optional[int],
+    parent_recipe: Optional[Recipe],
+) -> str:
+    if requested_prefix not in (None, ''):
+        return requested_prefix
+
+    final_prefix = generate_recipe_prefix(name)
+    if parent_recipe_id and parent_recipe and parent_recipe.label_prefix:
+        base_prefix = parent_recipe.label_prefix
+        existing_variations = Recipe.query.filter(
+            Recipe.parent_recipe_id == parent_recipe_id,
+            Recipe.label_prefix.like(f"{base_prefix}%")
+        ).count()
+        suffix = existing_variations + 1
+        return f"{base_prefix}V{suffix}"
+    return final_prefix
+
+
+def _clear_portioning(recipe: Recipe) -> None:
+    recipe.portioning_data = None
+    recipe.is_portioned = False
+    recipe.portion_name = None
+    recipe.portion_count = None
+    recipe.portion_unit_id = None
+
+
+def _apply_portioning_settings(
+    recipe: Recipe,
+    *,
+    portioning_data: Optional[Dict[str, Any]],
+    is_portioned: Optional[bool],
+    portion_name: Optional[str],
+    portion_count: Optional[int],
+    portion_unit_id: Optional[int],
+    allow_partial: bool,
+) -> Tuple[bool, Optional[Dict[str, Any]]]:
+    def _missing_count_error() -> Dict[str, Any]:
+        return {
+            'message': 'For portioned recipes, portion count must be provided.',
+            'error': 'For portioned recipes, portion count must be provided.',
+            'missing_fields': ['portion count']
+        }
+
+    if portioning_data is not None:
+        wants_portioning = bool(portioning_data and portioning_data.get('is_portioned'))
+        if wants_portioning:
+            candidate = portioning_data.get('portion_count')
+            try:
+                resolved_count = int(candidate) if candidate is not None else 0
+            except (TypeError, ValueError):
+                resolved_count = 0
+
+            if resolved_count <= 0:
+                if allow_partial:
+                    resolved_count = None
+                else:
+                    return False, _missing_count_error()
+
+            recipe.portioning_data = dict(portioning_data)
+            recipe.is_portioned = True
+            recipe.portion_name = portioning_data.get('portion_name')
+            recipe.portion_count = resolved_count
+            recipe.portion_unit_id = portioning_data.get('portion_unit_id')
+        else:
+            _clear_portioning(recipe)
+
+    if is_portioned is not None:
+        recipe.is_portioned = bool(is_portioned)
+        if not recipe.is_portioned:
+            _clear_portioning(recipe)
+
+    if portion_name is not None:
+        recipe.portion_name = portion_name
+    if portion_count is not None:
+        recipe.portion_count = portion_count
+    if portion_unit_id is not None:
+        recipe.portion_unit_id = portion_unit_id
+
+    if not recipe.is_portioned:
+        _clear_portioning(recipe)
+
+    return True, None
+
+
+def _apply_marketplace_settings(
+    recipe: Recipe,
+    *,
+    sharing_scope: Optional[str] = None,
+    is_public: Optional[bool] = None,
+    is_for_sale: Optional[bool] = None,
+    sale_price: Any = None,
+    marketplace_status: Optional[str] = None,
+    marketplace_notes: Optional[str] = None,
+    public_description: Optional[str] = None,
+    product_group_id: Any = _UNSET,
+    shopify_product_url: Optional[str] = None,
+    skin_opt_in: Optional[bool] = None,
+    cover_image_path: Any = _UNSET,
+    cover_image_url: Any = _UNSET,
+    remove_cover_image: bool = False,
+) -> None:
+    original_scope = recipe.sharing_scope or 'private'
+    resolved_scope = original_scope
+    if sharing_scope is not None:
+        resolved_scope = _normalize_sharing_scope(sharing_scope)
+    if is_public is not None:
+        resolved_scope = 'public' if is_public else 'private'
+    scope_changed = resolved_scope != (recipe.sharing_scope or 'private')
+    recipe.sharing_scope = resolved_scope
+    recipe.is_public = resolved_scope == 'public'
+
+    if is_for_sale is not None:
+        recipe.is_for_sale = bool(is_for_sale) and recipe.is_public
+    elif not recipe.is_public:
+        recipe.is_for_sale = False
+
+    if sale_price is not None or not recipe.is_for_sale:
+        recipe.sale_price = _normalize_sale_price(sale_price) if recipe.is_for_sale else None
+
+    if marketplace_status:
+        recipe.marketplace_status = marketplace_status
+    elif scope_changed or not recipe.marketplace_status:
+        recipe.marketplace_status = _default_marketplace_status(recipe.is_public)
+
+    if marketplace_notes is not None:
+        recipe.marketplace_notes = marketplace_notes
+    if public_description is not None:
+        recipe.public_description = public_description
+
+    if product_group_id is not _UNSET:
+        recipe.product_group_id = product_group_id
+    if shopify_product_url is not None:
+        recipe.shopify_product_url = (shopify_product_url or '').strip() or None
+    if skin_opt_in is not None:
+        recipe.skin_opt_in = bool(skin_opt_in)
+
+    if cover_image_path is not _UNSET:
+        recipe.cover_image_path = cover_image_path
+    if cover_image_url is not _UNSET:
+        recipe.cover_image_url = cover_image_url
+    if remove_cover_image:
+        recipe.cover_image_path = None
+        recipe.cover_image_url = None
+
+
+def _extract_category_data_from_request() -> Optional[Dict[str, Any]]:
+    try:
+        from flask import request
+
+        payload = request.form if request.form else None
+        if not payload or not isinstance(payload, dict):
+            return None
+        keys = [
+            'superfat_pct', 'lye_concentration_pct', 'lye_type', 'soap_superfat', 'soap_water_pct', 'soap_lye_type',
+            'fragrance_load_pct', 'candle_fragrance_pct', 'candle_vessel_ml', 'vessel_fill_pct', 'candle_fill_pct',
+            'cosm_preservative_pct', 'cosm_emulsifier_pct', 'oil_phase_pct', 'water_phase_pct', 'cool_down_phase_pct',
+            'base_ingredient_id', 'moisture_loss_pct', 'derived_pre_dry_yield_g', 'derived_final_yield_g', 'baker_base_flour_g',
+            'herbal_ratio'
+        ]
+        cat_data = {}
+        for key in keys:
+            value = payload.get(key)
+            if value not in (None, ''):
+                cat_data[key] = value
+        if 'candle_fill_pct' in cat_data and 'vessel_fill_pct' not in cat_data:
+            cat_data['vessel_fill_pct'] = cat_data['candle_fill_pct']
+        return cat_data or None
+    except Exception:
+        return None
+
 def create_recipe(name: str, description: str = "", instructions: str = "",
                  yield_amount: float = 0.0, yield_unit: str = "",
                  ingredients: List[Dict] = None, parent_id: int = None,
@@ -193,25 +366,7 @@ def create_recipe(name: str, description: str = "", instructions: str = "",
             clone_source = clone_source or None
 
         # Create recipe with proper label prefix
-        final_label_prefix = label_prefix
-        if not final_label_prefix:
-            # Generate prefix from recipe name if not provided
-            final_label_prefix = generate_recipe_prefix(name)
-
-            # For variations, ensure unique prefix
-            if parent_recipe_id:
-                if parent_recipe and parent_recipe.label_prefix:
-                    # Use parent prefix with variation suffix
-                    base_prefix = parent_recipe.label_prefix
-                    # Check for existing variations with same base prefix
-                    existing_variations = Recipe.query.filter(
-                        Recipe.parent_recipe_id == parent_recipe_id,
-                        Recipe.label_prefix.like(f"{base_prefix}%")
-                    ).count()
-                    if existing_variations > 0:
-                        final_label_prefix = f"{base_prefix}V{existing_variations + 1}"
-                    else:
-                        final_label_prefix = f"{base_prefix}V1"
+        final_label_prefix = _derive_label_prefix(name, label_prefix, parent_recipe_id, parent_recipe)
 
         # Derive predicted yield from portioning bulk if provided and > 0
         derived_yield = yield_amount
@@ -261,145 +416,42 @@ def create_recipe(name: str, description: str = "", instructions: str = "",
         if allowed_containers:
             recipe.allowed_containers = allowed_containers
 
-        normalized_scope = _normalize_sharing_scope(sharing_scope)
-        inferred_public = normalized_scope == 'public'
-        if is_public is not None:
-            inferred_public = bool(is_public)
-            normalized_scope = 'public' if inferred_public else 'private'
-        recipe.sharing_scope = normalized_scope
-        recipe.is_public = inferred_public
-        recipe.is_for_sale = bool(is_for_sale) if inferred_public else False
-        recipe.sale_price = _normalize_sale_price(sale_price if recipe.is_for_sale else None)
-        recipe.marketplace_status = marketplace_status or _default_marketplace_status(recipe.is_public)
-        recipe.marketplace_notes = marketplace_notes
-        recipe.public_description = public_description
-        if product_group_id is not _UNSET:
-            recipe.product_group_id = product_group_id
-        recipe.product_store_url = (product_store_url or '').strip() or None
         if skin_opt_in is None:
             recipe.skin_opt_in = True
-        else:
-            recipe.skin_opt_in = bool(skin_opt_in)
-        recipe.cover_image_path = cover_image_path
-        recipe.cover_image_url = cover_image_url
-        if remove_cover_image:
-            recipe.cover_image_path = None
-            recipe.cover_image_url = None
 
-        # Portioning data validation and assignment
-        if portioning_data and isinstance(portioning_data, dict):
-            try:
-                if portioning_data.get('is_portioned'):
-                    try:
-                        pc = int(portioning_data.get('portion_count') or 0)
-                    except Exception:
-                        pc = 0
-                    if pc <= 0:
-                        if allow_partial:
-                            pc = None
-                        else:
-                            return False, {
-                                'message': 'For portioned recipes, portion count must be provided.',
-                                'error': 'For portioned recipes, portion count must be provided.',
-                                'missing_fields': ['portion count']
-                            }
-                    recipe.portioning_data = portioning_data
-                    # Also set discrete columns
-                    recipe.is_portioned = True
-                    recipe.portion_name = portioning_data.get('portion_name')
-                    recipe.portion_count = pc
-                    recipe.portion_unit_id = portioning_data.get('portion_unit_id')
-            except Exception:
-                pass
+        _apply_marketplace_settings(
+            recipe,
+            sharing_scope=sharing_scope,
+            is_public=is_public,
+            is_for_sale=is_for_sale,
+            sale_price=sale_price,
+            marketplace_status=marketplace_status,
+            marketplace_notes=marketplace_notes,
+            public_description=public_description,
+            product_group_id=product_group_id,
+            shopify_product_url=shopify_product_url,
+            skin_opt_in=skin_opt_in,
+            cover_image_path=cover_image_path,
+            cover_image_url=cover_image_url,
+            remove_cover_image=remove_cover_image,
+        )
 
-        # Handle discrete portioning parameters (if passed separately)
-        if is_portioned is not None:
-            recipe.is_portioned = is_portioned
-        if portion_name is not None:
-            recipe.portion_name = portion_name
-        if portion_count is not None:
-            recipe.portion_count = portion_count
-        if portion_unit_id is not None:
-            recipe.portion_unit_id = portion_unit_id
+        portion_ok, portion_error = _apply_portioning_settings(
+            recipe,
+            portioning_data=portioning_data,
+            is_portioned=is_portioned,
+            portion_name=portion_name,
+            portion_count=portion_count,
+            portion_unit_id=portion_unit_id,
+            allow_partial=allow_partial,
+        )
+        if not portion_ok:
+            db.session.rollback()
+            return False, portion_error
 
-        scope_changed = False
-        if sharing_scope is not None:
-            normalized_scope = _normalize_sharing_scope(sharing_scope)
-            if recipe.sharing_scope != normalized_scope:
-                scope_changed = True
-            recipe.sharing_scope = normalized_scope
-            recipe.is_public = normalized_scope == 'public'
-        if is_public is not None:
-            normalized_scope = 'public' if is_public else 'private'
-            if recipe.sharing_scope != normalized_scope:
-                scope_changed = True
-                recipe.sharing_scope = normalized_scope
-            recipe.is_public = bool(is_public)
-
-        if product_group_id is not _UNSET:
-            recipe.product_group_id = product_group_id
-        if product_store_url is not None:
-            recipe.product_store_url = product_store_url.strip() or None
-        if skin_opt_in is not None:
-            recipe.skin_opt_in = bool(skin_opt_in)
-
-        if is_for_sale is not None:
-            recipe.is_for_sale = bool(is_for_sale) if recipe.is_public else False
-        else:
-            if not recipe.is_public:
-                recipe.is_for_sale = False
-
-        if sale_price is not None or not recipe.is_for_sale:
-            recipe.sale_price = _normalize_sale_price(sale_price) if recipe.is_for_sale else None
-
-        if marketplace_notes is not None:
-            recipe.marketplace_notes = marketplace_notes
-        if public_description is not None:
-            recipe.public_description = public_description
-
-        status_candidate = marketplace_status
-        if status_candidate is None and scope_changed:
-            status_candidate = _default_marketplace_status(recipe.is_public)
-        if status_candidate is not None:
-            recipe.marketplace_status = status_candidate
-
-        if cover_image_path is not _UNSET:
-            recipe.cover_image_path = cover_image_path
-        if cover_image_url is not _UNSET:
-            recipe.cover_image_url = cover_image_url
-        if remove_cover_image:
-            recipe.cover_image_path = None
-            recipe.cover_image_url = None
-
-        # Capture category-specific structured fields if present in portioning_data surrogate
-        try:
-            # Collect known category fields from request context if available
-            from flask import request
-            payload = request.form if request.form else None
-            if payload and isinstance(payload, dict):
-                cat_data = {}
-                keys = [
-                    # Soaps
-                    'superfat_pct','lye_concentration_pct','lye_type','soap_superfat','soap_water_pct','soap_lye_type',
-                    # Candles
-                    'fragrance_load_pct','candle_fragrance_pct','candle_vessel_ml','vessel_fill_pct','candle_fill_pct',
-                    # Cosmetics/Lotions
-                    'cosm_preservative_pct','cosm_emulsifier_pct','oil_phase_pct','water_phase_pct','cool_down_phase_pct',
-                    # Baking
-                    'base_ingredient_id','moisture_loss_pct','derived_pre_dry_yield_g','derived_final_yield_g','baker_base_flour_g',
-                    # Herbal
-                    'herbal_ratio'
-                ]
-                for key in keys:
-                    if key in payload and payload.get(key) not in (None, ''):
-                        cat_data[key] = payload.get(key)
-                # Normalize alias: candle_fill_pct -> vessel_fill_pct
-                if 'candle_fill_pct' in cat_data and 'vessel_fill_pct' not in cat_data:
-                    cat_data['vessel_fill_pct'] = cat_data['candle_fill_pct']
-                if cat_data:
-                    recipe.category_data = cat_data
-        except Exception:
-            pass
+        category_data_payload = _extract_category_data_from_request()
+        if category_data_payload:
+            recipe.category_data = category_data_payload
 
         # Determine lineage root
         inferred_root_id = root_recipe_id
@@ -494,8 +546,8 @@ def update_recipe(recipe_id: int, name: str = None, description: str = None,
                  marketplace_status: str | None = None,
                  marketplace_notes: str | None = None,
                  public_description: str | None = None,
-                 product_group_id: int | None = None,
-                 product_store_url: str | None = None,
+                 product_group_id: Any = _UNSET,
+                 shopify_product_url: str | None = None,
                  cover_image_path: Any = _UNSET,
                  cover_image_url: Any = _UNSET,
                  skin_opt_in: bool | None = None,
@@ -518,13 +570,6 @@ def update_recipe(recipe_id: int, name: str = None, description: str = None,
         Tuple of (success: bool, recipe_or_error: Recipe|str)
     """
     try:
-        # DEBUG: Log update_recipe parameters
-        logger.info(f"=== UPDATE_RECIPE DEBUG ===")
-        logger.info(f"recipe_id: {recipe_id}")
-        logger.info(f"name: {name}")
-        logger.info(f"yield_amount: {yield_amount} (type: {type(yield_amount)})")
-        logger.info(f"yield_unit: {yield_unit}")
-        logger.info(f"portioning_data: {portioning_data}")
         recipe = db.session.get(Recipe, recipe_id)
         if not recipe:
             return False, "Recipe not found"
@@ -561,57 +606,38 @@ def update_recipe(recipe_id: int, name: str = None, description: str = None,
         if category_id is not None:
             recipe.category_id = category_id
 
-        # Apply portioning data updates (both JSON and discrete columns)
-        if portioning_data is not None:
-            # Clear if toggle OFF
-            if not portioning_data or not portioning_data.get('is_portioned'):
-                recipe.portioning_data = None
-                recipe.is_portioned = False
-                recipe.portion_name = None
-                recipe.portion_count = None
-                recipe.portion_unit_id = None
-            else:
-                try:
-                    pc = int(portioning_data.get('portion_count') or 0)
-                except Exception:
-                    pc = 0
-                if pc <= 0:
-                    if allow_partial:
-                        pc = None
-                    else:
-                        return False, {
-                            'message': 'For portioned recipes, portion count must be provided.',
-                            'error': 'For portioned recipes, portion count must be provided.',
-                            'missing_fields': ['portion count']
-                        }
-                recipe.portioning_data = portioning_data
-                # Also update discrete columns
-                recipe.is_portioned = True
-                recipe.portion_name = portioning_data.get('portion_name')
-                recipe.portion_count = pc
-                recipe.portion_unit_id = portioning_data.get('portion_unit_id')
+        portion_ok, portion_error = _apply_portioning_settings(
+            recipe,
+            portioning_data=portioning_data,
+            is_portioned=is_portioned,
+            portion_name=portion_name,
+            portion_count=portion_count,
+            portion_unit_id=portion_unit_id,
+            allow_partial=allow_partial,
+        )
+        if not portion_ok:
+            db.session.rollback()
+            return False, portion_error
 
-        # Handle discrete portioning parameters (if passed separately)
-        if is_portioned is not None:
-            recipe.is_portioned = is_portioned
-        if portion_name is not None:
-            recipe.portion_name = portion_name
-        if portion_count is not None:
-            recipe.portion_count = portion_count
-        if portion_unit_id is not None:
-            recipe.portion_unit_id = portion_unit_id
+        _apply_marketplace_settings(
+            recipe,
+            sharing_scope=sharing_scope,
+            is_public=is_public,
+            is_for_sale=is_for_sale,
+            sale_price=sale_price,
+            marketplace_status=marketplace_status,
+            marketplace_notes=marketplace_notes,
+            public_description=public_description,
+            product_group_id=product_group_id,
+            shopify_product_url=shopify_product_url,
+            skin_opt_in=skin_opt_in,
+            cover_image_path=cover_image_path,
+            cover_image_url=cover_image_url,
+            remove_cover_image=remove_cover_image,
+        )
 
         # Update ingredients if provided
         if ingredients is not None:
-            # DEBUG: Log validation parameters
-            logger.info(f"=== VALIDATION CALL DEBUG ===")
-            logger.info(f"Calling validate_recipe_data with:")
-            logger.info(f"  name: {recipe.name}")
-            logger.info(f"  ingredients count: {len(ingredients) if ingredients else 0}")
-            logger.info(f"  yield_amount: {recipe.predicted_yield} (from existing recipe)")
-            logger.info(f"  recipe_id: {recipe_id}")
-
-            # Validate new ingredients
             validation_result = validate_recipe_data(
                 name=recipe.name,
                 ingredients=ingredients,
@@ -650,23 +676,9 @@ def update_recipe(recipe_id: int, name: str = None, description: str = None,
                     unit=item['unit']
                 ))
 
-        # Update category-specific structured fields if posted
-        try:
-            from flask import request
-            payload = request.form if request.form else None
-            if payload and isinstance(payload, dict):
-                cat_data = {}
-                for key in ['soap_superfat', 'soap_water_pct', 'soap_lye_type',
-                            'candle_fragrance_pct', 'candle_vessel_ml',
-                            'cosm_preservative_pct', 'cosm_emulsifier_pct',
-                            'baker_base_flour_g', 'herbal_ratio']:
-                    if key in payload and payload.get(key) not in (None, ''):
-                        cat_data[key] = payload.get(key)
-                # If any category data provided, set it; if none provided, preserve existing
-                if cat_data:
-                    recipe.category_data = cat_data
-        except Exception:
-            pass
+        category_data_payload = _extract_category_data_from_request()
+        if category_data_payload:
+            recipe.category_data = category_data_payload
 
         db.session.commit()
         logger.info(f"Updated recipe {recipe_id}: {recipe.name}")

@@ -31,6 +31,8 @@ def prepare_batch_from_recipe(recipe_id: int, scale: float = 1.0,
         recipe = db.session.get(Recipe, recipe_id)
         if not recipe:
             return {'success': False, 'error': 'Recipe not found'}
+        if not recipe.predicted_yield or recipe.predicted_yield <= 0:
+            return {'success': False, 'error': 'Recipe has no predicted yield'}
 
         # Generate batch name if not provided
         if not batch_name:
@@ -38,7 +40,7 @@ def prepare_batch_from_recipe(recipe_id: int, scale: float = 1.0,
 
         # Prepare ingredient list for batch
         batch_ingredients = []
-        for recipe_ingredient in recipe.ingredients:
+        for recipe_ingredient in recipe.recipe_ingredients:
             scaled_quantity = recipe_ingredient.quantity * scale
             
             batch_ingredients.append({
@@ -53,8 +55,8 @@ def prepare_batch_from_recipe(recipe_id: int, scale: float = 1.0,
             'recipe_id': recipe_id,
             'batch_name': batch_name,
             'scale': scale,
-            'expected_yield': recipe.yield_amount * scale,
-            'yield_unit': recipe.yield_unit,
+            'expected_yield': recipe.predicted_yield * scale,
+            'yield_unit': recipe.predicted_yield_unit,
             'ingredients': batch_ingredients,
             'instructions': recipe.instructions
         }
