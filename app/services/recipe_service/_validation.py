@@ -148,14 +148,13 @@ def validate_recipe_name(name: str, recipe_id: int = None, organization_id: int 
         from flask import session
 
         scoped_org_id = organization_id
-        if scoped_org_id is None:
-            if recipe_id:
-                try:
-                    existing_recipe = db.session.get(Recipe, recipe_id)
-                    if existing_recipe:
-                        scoped_org_id = existing_recipe.organization_id
-                except Exception:
-                    scoped_org_id = None
+        if scoped_org_id is None and recipe_id:
+            try:
+                existing_recipe = db.session.get(Recipe, recipe_id)
+                if existing_recipe:
+                    scoped_org_id = existing_recipe.organization_id
+            except Exception:
+                scoped_org_id = scoped_org_id or None
 
         if scoped_org_id is None:
             try:
@@ -165,7 +164,7 @@ def validate_recipe_name(name: str, recipe_id: int = None, organization_id: int 
                     else:
                         scoped_org_id = getattr(current_user, 'organization_id', None)
             except Exception:
-                scoped_org_id = None
+                scoped_org_id = scoped_org_id or None
 
         query = Recipe.query.filter_by(name=name)
         if scoped_org_id:
