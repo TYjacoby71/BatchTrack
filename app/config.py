@@ -117,6 +117,18 @@ class BaseConfig:
     # Feature flags
     FEATURE_INVENTORY_ANALYTICS = os.environ.get('FEATURE_INVENTORY_ANALYTICS', 'true').lower() == 'true'
 
+    # Google AI / BatchBot integration
+    GOOGLE_AI_API_KEY = os.environ.get('GOOGLE_AI_API_KEY') or os.environ.get('GOOGLE_GENERATIVE_AI_API_KEY')
+    GOOGLE_AI_DEFAULT_MODEL = os.environ.get('GOOGLE_AI_DEFAULT_MODEL', 'gemini-1.5-flash')
+    GOOGLE_AI_BATCHBOT_MODEL = os.environ.get('GOOGLE_AI_BATCHBOT_MODEL', GOOGLE_AI_DEFAULT_MODEL or 'gemini-1.5-pro')
+    GOOGLE_AI_PUBLICBOT_MODEL = os.environ.get('GOOGLE_AI_PUBLICBOT_MODEL', 'gemini-1.5-flash')
+    GOOGLE_AI_ENABLE_SEARCH = os.environ.get('GOOGLE_AI_ENABLE_SEARCH', 'true').lower() == 'true'
+    GOOGLE_AI_ENABLE_FILE_SEARCH = os.environ.get('GOOGLE_AI_ENABLE_FILE_SEARCH', 'true').lower() == 'true'
+    GOOGLE_AI_SEARCH_TOOL = os.environ.get('GOOGLE_AI_SEARCH_TOOL', 'google_search')
+    BATCHBOT_REQUEST_TIMEOUT_SECONDS = _env_int('BATCHBOT_REQUEST_TIMEOUT_SECONDS', 45)
+    BATCHBOT_DEFAULT_MAX_REQUESTS = _env_int('BATCHBOT_DEFAULT_MAX_REQUESTS', 0)
+    BATCHBOT_REQUEST_WINDOW_DAYS = _env_int('BATCHBOT_REQUEST_WINDOW_DAYS', 30)
+
 
 class DevelopmentConfig(BaseConfig):
     ENV = 'development'
