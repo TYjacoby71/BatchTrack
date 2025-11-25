@@ -64,4 +64,18 @@ with app.app_context():
     db.session.add(admin)
     db.session.commit()
 "
+
+## Read Replica (Community Scout)
+
+Community Scout’s nightly job should read from a replica instead of the primary writer to avoid long-running analytical queries on production. The recommended approach:
+
+1. Provision a read-only Postgres replica named `batchtrack_replica` (name it consistently across environments).  
+2. Create an application user with read-only privileges (no DDL/DML).  
+3. Add the replica DSN to your environment:
+   ```bash
+   export COMMUNITY_SCOUT_READ_DSN="postgresql+psycopg2://readonly_user:strong_password@replica-host/batchtrack_replica"
+   ```
+4. Verify the connection with `python scripts/run_community_scout.py --max-batches 1`. If the replica is unreachable, the job will fall back to the primary; for production, pause the job or fix the replica to avoid heavy reads on the writer.
+
+**Important**: keep replication lag within a tolerable window (≤ a few minutes). If lag grows, Community Scout may not see the most recent inventory additions, so monitor replica health alongside the primary database.
 ```

@@ -45,7 +45,7 @@ Developer UI (flask template + ES module) ◄── REST API (`/api/dev/communit
 ## Options & Configuration
 - **Batch cadence**: run via Celery beat (preferred) or cron hitting `flask community-scout-generate`. Recommended nightly window when user load is low.
 - **Batch sizing**: `CommunityScoutService.DEFAULT_BATCH_SIZE` (100) and `DEFAULT_PAGE_SIZE` (500) can be overridden via CLI flags or future env config.
-- **Read replica**: set `COMMUNITY_SCOUT_READ_DSN` to offload heavy reads. When unset, the service uses the primary SQLAlchemy session (still paged + limited).
+- **Read replica**: provision a dedicated read-only database named `batchtrack_replica` (or your preferred replica naming convention) and expose it via `COMMUNITY_SCOUT_READ_DSN` (example: `postgresql+psycopg2://readonly:password@replica-host/batchtrack_replica`). Heavy discovery queries are routed to that DSN; when unset, the service falls back to the primary SQLAlchemy engine (still paged + limited, but with higher risk of lock contention).
 - **Threshold tuning**: adjust `REVIEW_SCORE_THRESHOLD`, `MIN_FUZZY_THRESHOLD`, or translation dictionaries to change classification balance.
 - **Moderation**: `SENSITIVE_ALIAS_TERMS` list flags alias hits (e.g., racist historic nicknames). UI forces manual review/flagging before promotion.
 
@@ -86,6 +86,7 @@ Developer UI (flask template + ES module) ◄── REST API (`/api/dev/communit
 - **Extensibility**: translation map and sensitive alias list live directly inside `CommunityScoutService`; future work could move them to configuration tables.  
 - **Failure Recovery**: job state lock (30 min TTL) prevents concurrent scans. If the job crashes, a subsequent run reuses `last_inventory_id_processed`.  
 - **Feature toggles**: none yet; add a developer feature flag if you need to hide UI/API without removing code.
+- **Replica upkeep**: ensure `batchtrack_replica` stays in sync with the primary database (logical replication, cloud read replica, etc.). If the replica goes offline, either clear `COMMUNITY_SCOUT_READ_DSN` temporarily or pause the job to avoid timeouts.
 
 ## Related Documents
 - `docs/system/GLOBAL_ITEM_LIBRARY.md` – canonical reference for GIL management.
