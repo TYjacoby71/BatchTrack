@@ -91,12 +91,16 @@
             <h5 class="mb-0"><i class="fas fa-align-left"></i> Instructions</h5>
         </div>
         <div class="card-body">
+            {% if reveal_details %}
+            <pre class="mb-0" style="white-space: pre-wrap;">{{ recipe.instructions }}</pre>
+            {% else %}
             <div class="recipe-blur">
                 <pre class="mb-0" style="white-space: pre-wrap;">{{ recipe.instructions }}</pre>
                 <div class="recipe-blur-overlay">
                     <span>Purchase or clone this recipe to unlock full instructions, ingredients, consumables, and packaging notes.</span>
                 </div>
             </div>
+            {% endif %}
         </div>
     </div>
     <div class="card shadow-sm">
@@ -104,7 +108,11 @@
             <h5 class="mb-0"><i class="fas fa-info-circle"></i> Ingredients & Packaging</h5>
         </div>
         <div class="card-body text-muted">
+            {% if reveal_details %}
+            <small class="text-muted">Full ingredients, consumables, and packaging details are available to developers viewing on behalf of an organization. (Customer view pending UI build-out.)</small>
+            {% else %}
             This listing hides the ingredient list, consumables, and packaging configuration to protect the creator's work. Unlock the full formulation by purchasing (if offered for sale) or cloning the recipe inside your workspace.
+            {% endif %}
         </div>
     </div>
 </div>

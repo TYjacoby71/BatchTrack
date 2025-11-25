@@ -122,10 +122,16 @@ def recipe_library_detail(recipe_id: int, slug: str):
     cost_map = _fetch_cost_rollups([recipe.id])
     stats = _serialize_recipe_for_public(recipe, cost_map.get(recipe.id))
     purchase_enabled = is_feature_enabled("FEATURE_RECIPE_PURCHASE_OPTIONS")
+    reveal_details = False
+    if getattr(current_user, "is_authenticated", False):
+        if current_user.user_type == "developer" or session.get("dev_selected_org_id"):
+            reveal_details = True
+
     return render_template(
         "library/recipe_detail.html",
         recipe=stats,
         purchase_enabled=purchase_enabled,
+        reveal_details=reveal_details,
     )
 
 

@@ -43,8 +43,15 @@ These metrics feed the developer system statistics page and the public library h
 - Customers/public visitors see the link when `FEATURE_RECIPE_LIBRARY_NAV` is enabled.
 - Routes are whitelisted via `recipe_library_bp.recipe_library` and `recipe_library_bp.recipe_library_detail`.
 
-## Templates & Components
+## Templates, Components & How-To
 
-- `library/recipe_library.html`: filterable grid that reuses the shared `stat_card` component.
-- `library/recipe_detail.html`: read-only detail surface with optional purchase CTA.
-- `components/shared/stat_card.html`: reusable card macro shared with developer analytics.
+- **`library/recipe_library.html`** – customer-facing grid with filters and aggregated stats (public count, average batch cost, top creators). Cards surface the public description, cost breakdown, and optional Shopify CTA.
+- **`library/recipe_detail.html`** – detail page for each public recipe. Standard visitors can see the hero, description, and cost stats while instructions/ingredients/consumables/packaging stay blurred. Developers impersonating an org (or future entitled buyers) see full details.
+- **`components/shared/stat_card.html`** – shared macro used both by the library hero and the developer System Statistics dashboard to keep KPI blocks consistent.
+
+### Publishing a public or paid recipe
+
+1. Open the recipe (or create a new one) and scroll to the **“Recipe Library & Marketplace”** card (available whenever `FEATURE_RECIPE_SHARING_CONTROLS` is enabled).
+2. Toggle **Public** sharing, select a **Collection Group**, and pick a **Listing Type** (Free or For Sale). Provide a sale price/Shopify link if you’re charging.
+3. Write a customer-facing **Public Description** and upload a square cover image (PNG/JPG/GIF/WEBP). Use the “Remove” button to clear an existing cover.
+4. Click **Save** or **Publish**, then verify the public experience via the **Recipe Library** navigation entry (requires `FEATURE_RECIPE_LIBRARY_NAV`) and ensure purchase toggles behave as expected (`FEATURE_RECIPE_PURCHASE_OPTIONS`).

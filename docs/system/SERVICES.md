@@ -268,6 +268,7 @@ cover_kwargs = payload["cover"]
 - Only accepts PNG/JPG/GIF/WEBP covers; everything else raises `ValueError`.
 - Does not mutate existing marketplace state when fields are omitted (e.g., feature disabled).
 - Always returns both marketplace kwargs and cover kwargs so routes stay thin.
+- Provides the canonical path for toggling public vs private, free vs sale, seeding product groups, saving Shopify URLs, and uploading cover imagery.
 
 ## Service Integration Patterns
 
