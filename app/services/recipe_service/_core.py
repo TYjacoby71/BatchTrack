@@ -275,7 +275,7 @@ def create_recipe(name: str, description: str = "", instructions: str = "",
         recipe.public_description = public_description
         if product_group_id is not _UNSET:
             recipe.product_group_id = product_group_id
-        recipe.shopify_product_url = (shopify_product_url or '').strip() or None
+        recipe.product_store_url = (product_store_url or '').strip() or None
         if skin_opt_in is None:
             recipe.skin_opt_in = True
         else:
@@ -338,8 +338,8 @@ def create_recipe(name: str, description: str = "", instructions: str = "",
 
         if product_group_id is not _UNSET:
             recipe.product_group_id = product_group_id
-        if shopify_product_url is not None:
-            recipe.shopify_product_url = shopify_product_url.strip() or None
+        if product_store_url is not None:
+            recipe.product_store_url = product_store_url.strip() or None
         if skin_opt_in is not None:
             recipe.skin_opt_in = bool(skin_opt_in)
 

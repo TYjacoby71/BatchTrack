@@ -159,6 +159,8 @@
     {% set sale_mode_value = field_values.get('sale_mode') if field_values and field_values.get('sale_mode') else ('sale' if recipe and recipe.is_for_sale else 'free') %}
     {% set sale_price_value = field_values.get('sale_price') if field_values and field_values.get('sale_price') not in (None, '') else (recipe.sale_price if recipe and recipe.sale_price else '') %}
     {% set notes_value = field_values.get('marketplace_notes') if field_values and field_values.get('marketplace_notes') is not none else (recipe.marketplace_notes if recipe else '') %}
+    {% set selected_group_value = field_values.get('product_group_id') if field_values and field_values.get('product_group_id') not in (None, '') else (recipe.product_group_id if recipe else None) %}
+    {% set store_url_value = field_values.get('product_store_url') if field_values and field_values.get('product_store_url') is not none else (recipe.product_store_url if recipe else '') %}
     {% set existing_cover_src = None %}
     {% if recipe and recipe.cover_image_path %}
         {% set existing_cover_src = url_for('static', filename=recipe.cover_image_path) %}
@@ -210,6 +212,25 @@
                 <div class="mt-3">
                     <label class="form-label">Marketplace notes</label>
                     <textarea name="marketplace_notes" class="form-control" rows="2" placeholder="Short blurb shown on public cards">{{ notes_value }}</textarea>
+                </div>
+                <div class="row mt-3">
+                    <div class="col-md-6">
+                        <label for="product_group_id" class="form-label">Recipe Collection Group</label>
+                        <select id="product_group_id" name="product_group_id" class="form-select">
+                            <option value="">Select group</option>
+                            {% for group in product_groups %}
+                            <option value="{{ group.id }}" {% if selected_group_value is not none and (selected_group_value|string) == (group.id|string) %}selected{% endif %}>
+                                {{ group.name }}
+                            </option>
+                            {% endfor %}
+                        </select>
+                        <div class="form-text">Groups help customers browse the public recipe library by product type.</div>
+                    </div>
+                    <div class="col-md-6">
+                        <label for="product_store_url" class="form-label">Product Store Link</label>
+                        <input type="url" id="product_store_url" name="product_store_url" class="form-control" placeholder="https://yourstore.com/products/..." value="{{ store_url_value }}">
+                        <div class="form-text">Optional link displayed only when the recipe is listed as public.</div>
+                    </div>
                 </div>
                 <div class="mt-3" id="publicDescriptionRow" style="display: {% if sharing_scope_value == 'public' %}block{% else %}none{% endif %};">
                     <label class="form-label">Public description</label>

@@ -166,8 +166,8 @@
                         <a href="{{ url_for('recipe_library_bp.recipe_library_detail', recipe_id=recipe.id, slug=recipe.slug) }}" class="btn btn-outline-primary w-100">
                             <i class="fas fa-eye"></i> View Details
                         </a>
-                        {% if purchase_enabled and recipe.is_for_sale and recipe.shopify_product_url %}
-                        <a href="{{ recipe.shopify_product_url }}" class="btn btn-success w-100" target="_blank" rel="noopener">
+                        {% if purchase_enabled and recipe.is_for_sale and recipe.product_store_url %}
+                        <a href="{{ recipe.product_store_url }}" class="btn btn-success w-100" target="_blank" rel="noopener">
                             <i class="fas fa-shopping-cart"></i> Purchase
                         </a>
                         {% endif %}
