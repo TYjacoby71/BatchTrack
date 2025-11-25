@@ -155,17 +155,17 @@ def validate_recipe_name(name: str, recipe_id: int = None, organization_id: int 
                     if existing_recipe:
                         scoped_org_id = existing_recipe.organization_id
                 except Exception:
-                    scoped_org_id = None</old_str>
+                    scoped_org_id = None
 
         if scoped_org_id is None:
-                try:
-                    if getattr(current_user, 'is_authenticated', False):
-                        if getattr(current_user, 'user_type', None) == 'developer':
-                            scoped_org_id = session.get('dev_selected_org_id')
-                        else:
-                            scoped_org_id = getattr(current_user, 'organization_id', None)
-                except Exception:
-                    scoped_org_id = None
+            try:
+                if getattr(current_user, 'is_authenticated', False):
+                    if getattr(current_user, 'user_type', None) == 'developer':
+                        scoped_org_id = session.get('dev_selected_org_id')
+                    else:
+                        scoped_org_id = getattr(current_user, 'organization_id', None)
+            except Exception:
+                scoped_org_id = None
 
         query = Recipe.query.filter_by(name=name)
         if scoped_org_id:
@@ -179,7 +179,7 @@ def validate_recipe_name(name: str, recipe_id: int = None, organization_id: int 
         if existing:
             return False, "Recipe name already exists"
 
-        return True, ""</old_str>
+        return True, ""
 
     except Exception as e:
         logger.error(f"Error validating recipe name: {e}")
