@@ -57,6 +57,17 @@
             {{ stat_card('fas fa-percentage text-info', stats.average_yield_per_dollar, 'Avg Yield / $', theme='info', subtext='Based on RecipeStats') }}
         </div>
     </div>
+    <div class="row mb-4 gy-3">
+        <div class="col-md-4">
+            {{ stat_card('fas fa-award text-dark', stats.batchtrack_native_recipes, 'BatchTrack Originals', theme='dark', subtext='Native recipes live now') }}
+        </div>
+        <div class="col-md-4">
+            {{ stat_card('fas fa-download text-info', stats.total_recipe_downloads, 'Estimated Downloads', theme='info', subtext='Lifetime counter') }}
+        </div>
+        <div class="col-md-4">
+            {{ stat_card('fas fa-shopping-cart text-success', stats.total_recipe_purchases, 'Estimated Purchases', theme='success', subtext='Lifetime counter') }}
+        </div>
+    </div>
 
     <!-- Detailed Statistics -->
     <div class="row">

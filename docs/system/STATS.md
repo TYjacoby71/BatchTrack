@@ -13,6 +13,8 @@
 | `average_yield_per_dollar` | Average `(predicted_yield / avg_cost_per_batch)` derived from `RecipeStats`. |
 | `top_group_name` / `top_group_count` | Product group with the most live listings. |
 | `sale_percentage` | Percentage of public recipes that are currently for sale. |
+| `batchtrack_native_count` | Number of listings authored by BatchTrack (“native” recipes). |
+| `total_downloads` / `total_purchases` | Rollups of the per-recipe counters tracking estimated downloads/purchases. |
 
 These values appear in:
 
@@ -29,7 +31,10 @@ These values appear in:
   "recipes_for_sale": 18,
   "blocked_recipes": 2,
   "average_recipe_price": 19.25,
-  "average_yield_per_dollar": 2.4
+  "average_yield_per_dollar": 2.4,
+  "batchtrack_native_recipes": 6,
+  "total_recipe_downloads": 880,
+  "total_recipe_purchases": 210
 }
 ```
 

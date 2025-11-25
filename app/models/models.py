@@ -39,8 +39,6 @@ _export([
     ("role", "Role", None),
 
     # Recipes and Batches
-    ("recipe", "Recipe", None),
-    ("recipe", "RecipeIngredient", None),
     ("batch", "Batch", None),
     ("batch", "BatchIngredient", None),
     ("batch", "BatchContainer", None),

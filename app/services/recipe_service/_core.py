@@ -7,6 +7,7 @@ Handles CRUD operations for recipes with proper service integration.
 import logging
 from decimal import Decimal, InvalidOperation
 from typing import Dict, List, Any, Optional, Tuple
+from flask import current_app
 from flask_login import current_user
 
 from ...models import Recipe, RecipeIngredient, InventoryItem
@@ -54,6 +55,58 @@ def _normalize_status(value: str | None) -> str:
         return 'published'
     normalized = str(value).strip().lower()
     return normalized if normalized in _ALLOWED_RECIPE_STATUSES else 'published'
+
+
+def _get_batchtrack_org_id() -> int:
+    try:
+        return int(current_app.config.get('BATCHTRACK_ORG_ID', 1))
+    except Exception:
+        return 1
+
+
+def _default_org_origin_type(org_id: Optional[int]) -> str:
+    if org_id and org_id == _get_batchtrack_org_id():
+        return 'batchtrack_native'
+    return 'authored'
+
+
+def _build_org_origin_context(
+    target_org_id: Optional[int],
+    parent_recipe: Optional[Recipe],
+    clone_source: Optional[Recipe],
+) -> Dict[str, Any]:
+    context = {
+        'org_origin_type': _default_org_origin_type(target_org_id),
+        'org_origin_source_org_id': None,
+        'org_origin_source_recipe_id': None,
+        'org_origin_purchased': False,
+        'org_origin_recipe_id': None,
+    }
+
+    if parent_recipe and parent_recipe.organization_id == target_org_id:
+        context['org_origin_recipe_id'] = parent_recipe.org_origin_recipe_id or parent_recipe.id
+        context['org_origin_type'] = parent_recipe.org_origin_type or context['org_origin_type']
+        context['org_origin_source_org_id'] = parent_recipe.org_origin_source_org_id
+        context['org_origin_source_recipe_id'] = parent_recipe.org_origin_source_recipe_id
+        context['org_origin_purchased'] = parent_recipe.org_origin_purchased or False
+        return context
+
+    if clone_source and clone_source.organization_id == target_org_id:
+        context['org_origin_recipe_id'] = clone_source.org_origin_recipe_id or clone_source.id
+        context['org_origin_type'] = clone_source.org_origin_type or context['org_origin_type']
+        context['org_origin_source_org_id'] = clone_source.org_origin_source_org_id
+        context['org_origin_source_recipe_id'] = clone_source.org_origin_source_recipe_id
+        context['org_origin_purchased'] = clone_source.org_origin_purchased or False
+        return context
+
+    source = parent_recipe or clone_source
+    if source and source.organization_id and source.organization_id != target_org_id:
+        context['org_origin_type'] = 'purchased'
+        context['org_origin_purchased'] = True
+        context['org_origin_source_org_id'] = source.organization_id
+        context['org_origin_source_recipe_id'] = source.root_recipe_id or source.id
+
+    return context
 
 
 def create_recipe(name: str, description: str = "", instructions: str = "",
@@ -176,6 +229,17 @@ def create_recipe(name: str, description: str = "", instructions: str = "",
             category_id=category_id,
             status=normalized_status
         )
+
+        origin_context = _build_org_origin_context(
+            target_org_id=recipe.organization_id,
+            parent_recipe=parent_recipe,
+            clone_source=clone_source,
+        )
+        pending_org_origin_recipe_id = origin_context.get('org_origin_recipe_id')
+        recipe.org_origin_type = origin_context['org_origin_type']
+        recipe.org_origin_source_org_id = origin_context['org_origin_source_org_id']
+        recipe.org_origin_source_recipe_id = origin_context['org_origin_source_recipe_id']
+        recipe.org_origin_purchased = origin_context['org_origin_purchased']
 
         # Set allowed containers
         if allowed_containers:
@@ -338,6 +402,9 @@ def create_recipe(name: str, description: str = "", instructions: str = "",
         if not recipe.root_recipe_id:
             recipe.root_recipe_id = recipe.id
             db.session.flush()
+
+        recipe.org_origin_recipe_id = pending_org_origin_recipe_id or recipe.id
+        db.session.flush()
 
         # Add ingredients
         for ingredient_data in ingredients or []:

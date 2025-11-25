@@ -22,21 +22,24 @@
     </div>
 
     <div class="row mb-4 gy-3">
-        <div class="col-md-4">
+        <div class="col-md-3">
             {{ stat_card('fas fa-globe text-secondary', stats.total_public, 'Public Recipes', theme='secondary', subtext=stats.sale_percentage ~ '% for sale') }}
         </div>
-        <div class="col-md-4">
+        <div class="col-md-3">
             {{ stat_card('fas fa-dollar-sign text-success', stats.total_for_sale, 'For Sale', theme='success', subtext='Avg $' ~ ("{:.2f}".format(stats.average_sale_price))) }}
         </div>
-        <div class="col-md-4">
+        <div class="col-md-3">
             {{ stat_card('fas fa-chart-line text-info', stats.top_group_name or '—', 'Top Product Group', theme='info', subtext=(stats.top_group_count or 0) ~ ' listings') }}
+        </div>
+        <div class="col-md-3">
+            {{ stat_card('fas fa-award text-dark', stats.batchtrack_native_count, 'BatchTrack Originals', theme='dark', subtext='Platform-authored') }}
         </div>
     </div>
 
     <div class="card mb-4">
         <div class="card-body">
             <form class="row g-3" method="get" action="{{ url_for('recipe_library_bp.recipe_library') }}">
-                <div class="col-md-3">
+                <div class="col-md-3 col-xl-2">
                     <label class="form-label small text-muted">Product Group</label>
                     <select class="form-select" name="group">
                         <option value="">All groups</option>
@@ -45,7 +48,7 @@
                         {% endfor %}
                     </select>
                 </div>
-                <div class="col-md-3">
+                <div class="col-md-3 col-xl-2">
                     <label class="form-label small text-muted">Product Category</label>
                     <select class="form-select" name="category">
                         <option value="">All categories</option>
@@ -54,20 +57,44 @@
                         {% endfor %}
                     </select>
                 </div>
-                <div class="col-md-2">
-                    <label class="form-label small text-muted">Listing Type</label>
+                <div class="col-md-2 col-xl-2">
+                    <label class="form-label small text-muted">Listing</label>
                     <select class="form-select" name="sale">
                         <option value="any" {% if sale_filter == 'any' %}selected{% endif %}>All</option>
                         <option value="free" {% if sale_filter == 'free' %}selected{% endif %}>Free</option>
                         <option value="sale" {% if sale_filter == 'sale' %}selected{% endif %}>For sale</option>
                     </select>
                 </div>
-                <div class="col-md-4">
+                <div class="col-md-2 col-xl-2">
+                    <label class="form-label small text-muted">Origin</label>
+                    <select class="form-select" name="origin">
+                        <option value="any" {% if origin_filter == 'any' %}selected{% endif %}>Any</option>
+                        <option value="batchtrack" {% if origin_filter == 'batchtrack' %}selected{% endif %}>BatchTrack Native</option>
+                        <option value="authored" {% if origin_filter == 'authored' %}selected{% endif %}>Org Authored</option>
+                        <option value="purchased" {% if origin_filter == 'purchased' %}selected{% endif %}>Purchased</option>
+                    </select>
+                </div>
+                <div class="col-md-3 col-xl-2">
+                    <label class="form-label small text-muted">Organization</label>
+                    <select class="form-select" name="organization">
+                        <option value="">All orgs</option>
+                        {% for org in organizations %}
+                        <option value="{{ org.id }}" {% if org_filter and org_filter == org.id %}selected{% endif %}>{{ org.name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-2 col-xl-2">
+                    <label class="form-label small text-muted">Sort</label>
+                    <select class="form-select" name="sort">
+                        <option value="newest" {% if sort_mode == 'newest' %}selected{% endif %}>Newest</option>
+                        <option value="oldest" {% if sort_mode == 'oldest' %}selected{% endif %}>Oldest</option>
+                        <option value="downloads" {% if sort_mode == 'downloads' %}selected{% endif %}>Most downloads</option>
+                        <option value="price_high" {% if sort_mode == 'price_high' %}selected{% endif %}>Price high → low</option>
+                    </select>
+                </div>
+                <div class="col-md-4 col-xl-4">
                     <label class="form-label small text-muted">Search</label>
-                    <div class="input-group">
-                        <span class="input-group-text"><i class="fas fa-search"></i></span>
-                        <input type="text" class="form-control" name="search" value="{{ search_query }}" placeholder="Search recipe name or notes">
-                    </div>
+                    <input type="text" class="form-control" name="search" value="{{ search_query }}" placeholder="Type to filter (multi-word narrows results)">
                 </div>
                 <div class="col-12 d-flex justify-content-end">
                     <button class="btn btn-primary">
@@ -101,6 +128,21 @@
                         {% endif %}
                     </div>
                     <h5 class="card-title">{{ recipe.name }}</h5>
+                    <div class="mb-2">
+                        {% if recipe.organization and recipe.organization.name %}
+                        <small class="text-muted">
+                            <i class="fas fa-building me-1"></i>{{ recipe.organization.name }}
+                            {% if org_marketplace_enabled %}
+                                · <a href="{{ url_for('recipe_library_bp.organization_marketplace', organization_id=recipe.organization.id) }}" class="text-decoration-none">Marketplace</a>
+                            {% endif %}
+                        </small>
+                        {% endif %}
+                        {% if recipe.origin.purchased %}
+                        <span class="badge bg-warning text-dark ms-2">Purchased Origin</span>
+                        {% elif recipe.origin.type == 'batchtrack_native' %}
+                        <span class="badge bg-dark ms-2">BatchTrack Native</span>
+                        {% endif %}
+                    </div>
                     {% if recipe.public_description %}
                     <p class="card-text text-muted">{{ recipe.public_description }}</p>
                     {% elif recipe.marketplace_notes %}
@@ -111,6 +153,8 @@
                         <li><i class="fas fa-percentage"></i> Yield per $: {% if recipe.yield_per_dollar %}{{ "%.2f"|format(recipe.yield_per_dollar) }} {% else %}N/A{% endif %}</li>
                         <li><i class="fas fa-leaf"></i> Avg ingredient cost: {% if recipe.avg_ingredient_cost %}${{ "%.2f"|format(recipe.avg_ingredient_cost) }}{% else %}N/A{% endif %}</li>
                         <li><i class="fas fa-box"></i> Avg total cost (incl. packaging): {% if recipe.avg_total_cost %}${{ "%.2f"|format(recipe.avg_total_cost) }}{% else %}N/A{% endif %}</li>
+                        <li><i class="fas fa-download"></i> Downloads: {{ recipe.download_count }}</li>
+                        <li><i class="fas fa-shopping-bag"></i> Purchases: {{ recipe.purchase_count }}</li>
                         {% if recipe.stats %}
                         <li><i class="fas fa-flask"></i> Avg Cost / Batch: {{ recipe.stats.avg_cost_per_batch or '—' }}</li>
                         {% endif %}

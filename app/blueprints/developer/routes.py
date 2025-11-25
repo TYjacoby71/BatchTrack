@@ -678,6 +678,7 @@ def feature_flags():
                 {'key': 'FEATURE_RECIPE_SHARING_CONTROLS', 'label': 'Recipe Sharing Controls', 'status': 'wired', 'description': 'Enable private/public/free/sale selectors on recipe forms.'},
                 {'key': 'FEATURE_RECIPE_LIBRARY_NAV', 'label': 'Recipe Library Navigation', 'status': 'wired', 'description': 'Expose the public recipe library link in customer menus.'},
                 {'key': 'FEATURE_RECIPE_PURCHASE_OPTIONS', 'label': 'Public Purchase Buttons', 'status': 'wired', 'description': 'Show Shopify purchase links inside the public recipe library.'},
+                {'key': 'FEATURE_ORG_MARKETPLACE_DASHBOARD', 'label': 'Organization Marketplace', 'status': 'wired', 'description': 'Enable the organization-specific public marketplace dashboard and related links.'},
             ],
         },
         {

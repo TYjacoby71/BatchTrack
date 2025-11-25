@@ -69,11 +69,33 @@
                     <p class="text-muted">{{ recipe.marketplace_notes }}</p>
                     {% endif %}
                     <ul class="list-unstyled small mb-3">
+                        {% if recipe.organization and recipe.organization.name %}
+                        <li>
+                            <strong>Creator:</strong>
+                            {{ recipe.organization.name }}
+                            {% if org_marketplace_enabled %}
+                                · <a href="{{ url_for('recipe_library_bp.organization_marketplace', organization_id=recipe.organization.id) }}">Marketplace view</a>
+                            {% endif %}
+                        </li>
+                        {% endif %}
+                        {% if recipe.origin %}
+                        <li><strong>Origin:</strong>
+                            {% if recipe.origin.type == 'batchtrack_native' %}
+                                BatchTrack Native
+                            {% elif recipe.origin.purchased %}
+                                Purchased (from {{ recipe.origin.source_org_name or 'another organization' }})
+                            {% else %}
+                                Org Authored
+                            {% endif %}
+                        </li>
+                        {% endif %}
                         <li><strong>Yield:</strong> {{ recipe.predicted_yield or 'N/A' }} {{ recipe.predicted_yield_unit }}</li>
                         <li><strong>Avg cost / batch:</strong> {{ recipe.stats.avg_cost_per_batch if recipe.stats else 'N/A' }}</li>
                         <li><strong>Yield per $:</strong> {% if recipe.yield_per_dollar %}{{ "%.2f"|format(recipe.yield_per_dollar) }}{% else %}N/A{% endif %}</li>
                         <li><strong>Avg ingredient cost:</strong> {% if recipe.avg_ingredient_cost %}${{ "%.2f"|format(recipe.avg_ingredient_cost) }}{% else %}N/A{% endif %}</li>
                         <li><strong>Avg total cost:</strong> {% if recipe.avg_total_cost %}${{ "%.2f"|format(recipe.avg_total_cost) }}{% else %}N/A{% endif %}</li>
+                        <li><strong>Estimated downloads:</strong> {{ recipe.download_count }}</li>
+                        <li><strong>Estimated purchases:</strong> {{ recipe.purchase_count }}</li>
                         <li><strong>Updated:</strong> {{ recipe.updated_at.strftime('%b %d, %Y') if recipe.updated_at else '—' }}</li>
                     </ul>
                     {% if purchase_enabled and recipe.is_for_sale and recipe.shopify_product_url %}

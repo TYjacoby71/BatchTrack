@@ -1,7 +1,8 @@
 from __future__ import annotations
 
-from flask import Blueprint, render_template, request, redirect, url_for
-from sqlalchemy import func, or_
+from flask import Blueprint, render_template, request, redirect, url_for, abort, session
+from flask_login import current_user
+from sqlalchemy import func, or_, nullslast
 from sqlalchemy.orm import joinedload
 
 from app.extensions import db
@@ -21,12 +22,16 @@ def recipe_library():
     group_filter = _safe_int(request.args.get("group"))
     category_filter = _safe_int(request.args.get("category"))
     sale_filter = (request.args.get("sale") or "any").lower()
+    org_filter = _safe_int(request.args.get("organization"))
+    origin_filter = (request.args.get("origin") or "any").lower()
+    sort_mode = (request.args.get("sort") or "newest").lower()
 
     query = (
         Recipe.query.options(
             joinedload(Recipe.product_category),
             joinedload(Recipe.product_group),
             joinedload(Recipe.stats),
+            joinedload(Recipe.organization),
         )
         .outerjoin(Organization, Recipe.organization_id == Organization.id)
         .filter(
@@ -46,18 +51,43 @@ def recipe_library():
         query = query.filter(Recipe.is_for_sale.is_(True))
     elif sale_filter == "free":
         query = query.filter(Recipe.is_for_sale.is_(False))
-    if search_query:
-        like_expr = f"%{search_query}%"
+    if org_filter:
+        query = query.filter(Recipe.organization_id == org_filter)
+    if origin_filter == "batchtrack":
+        query = query.filter(Recipe.org_origin_type == "batchtrack_native")
+    elif origin_filter == "purchased":
+        query = query.filter(Recipe.org_origin_purchased.is_(True))
+    elif origin_filter == "authored":
         query = query.filter(
-            or_(
-                Recipe.name.ilike(like_expr),
-                Recipe.instructions.ilike(like_expr),
-            )
+            (Recipe.org_origin_type == "authored") | (Recipe.org_origin_type.is_(None))
         )
 
-    recipes = (
-        query.order_by(Recipe.updated_at.desc(), Recipe.name.asc()).limit(60).all()
-    )
+    if search_query:
+        tokens = [token.strip() for token in search_query.split() if token.strip()]
+        for token in tokens:
+            like_expr = f"%{token}%"
+            query = query.filter(
+                or_(
+                    Recipe.name.ilike(like_expr),
+                    Recipe.public_description.ilike(like_expr),
+                    Recipe.marketplace_notes.ilike(like_expr),
+                )
+            )
+
+    if sort_mode == "oldest":
+        query = query.order_by(Recipe.updated_at.asc())
+    elif sort_mode == "downloads":
+        query = query.order_by(
+            Recipe.download_count.desc(), Recipe.updated_at.desc(), Recipe.name.asc()
+        )
+    elif sort_mode == "price_high":
+        query = query.order_by(
+            nullslast(Recipe.sale_price.desc()), Recipe.updated_at.desc()
+        )
+    else:
+        query = query.order_by(Recipe.updated_at.desc(), Recipe.name.asc())
+
+    recipes = query.limit(60).all()
     cost_map = _fetch_cost_rollups([r.id for r in recipes])
 
     recipe_cards = [
@@ -71,9 +101,26 @@ def recipe_library():
         .all()
     )
     categories = ProductCategory.query.order_by(ProductCategory.name.asc()).all()
+    organizations = (
+        db.session.query(Organization.id, Organization.name)
+        .join(Recipe, Recipe.organization_id == Organization.id)
+        .filter(
+            Recipe.is_public.is_(True),
+            Recipe.status == "published",
+            Recipe.marketplace_status == "listed",
+            Recipe.marketplace_blocked.is_(False),
+            (Organization.recipe_library_blocked.is_(False))
+            | (Organization.recipe_library_blocked.is_(None)),
+        )
+        .distinct()
+        .order_by(Organization.name.asc())
+        .all()
+    )
+    org_options = [{"id": org.id, "name": org.name} for org in organizations]
 
     stats = AnalyticsDataService.get_recipe_library_metrics()
     purchase_enabled = is_feature_enabled("FEATURE_RECIPE_PURCHASE_OPTIONS")
+    org_marketplace_enabled = is_feature_enabled("FEATURE_ORG_MARKETPLACE_DASHBOARD")
 
     return render_template(
         "library/recipe_library.html",
@@ -82,10 +129,15 @@ def recipe_library():
         categories=categories,
         stats=stats,
         purchase_enabled=purchase_enabled,
+        organizations=org_options,
+        org_marketplace_enabled=org_marketplace_enabled,
         search_query=search_query,
         group_filter=group_filter,
         category_filter=category_filter,
         sale_filter=sale_filter,
+        org_filter=org_filter,
+        origin_filter=origin_filter,
+        sort_mode=sort_mode,
     )
 
 
@@ -132,6 +184,91 @@ def recipe_library_detail(recipe_id: int, slug: str):
         recipe=stats,
         purchase_enabled=purchase_enabled,
         reveal_details=reveal_details,
+        org_marketplace_enabled=is_feature_enabled("FEATURE_ORG_MARKETPLACE_DASHBOARD"),
+    )
+
+
+@recipe_library_bp.route("/recipes/library/organizations/<int:organization_id>")
+def organization_marketplace(organization_id: int):
+    if not is_feature_enabled("FEATURE_ORG_MARKETPLACE_DASHBOARD"):
+        abort(404)
+
+    org = Organization.query.get_or_404(organization_id)
+    if org.recipe_library_blocked:
+        abort(404)
+
+    search_query = (request.args.get("search") or "").strip()
+    sale_filter = (request.args.get("sale") or "any").lower()
+    sort_mode = (request.args.get("sort") or "newest").lower()
+
+    query = (
+        Recipe.query.options(
+            joinedload(Recipe.product_category),
+            joinedload(Recipe.product_group),
+            joinedload(Recipe.stats),
+        )
+        .filter(
+            Recipe.organization_id == org.id,
+            Recipe.is_public.is_(True),
+            Recipe.status == "published",
+            Recipe.marketplace_status == "listed",
+            Recipe.marketplace_blocked.is_(False),
+        )
+    )
+
+    if sale_filter == "sale":
+        query = query.filter(Recipe.is_for_sale.is_(True))
+    elif sale_filter == "free":
+        query = query.filter(Recipe.is_for_sale.is_(False))
+
+    if search_query:
+        tokens = [token.strip() for token in search_query.split() if token.strip()]
+        for token in tokens:
+            like_expr = f"%{token}%"
+            query = query.filter(
+                or_(
+                    Recipe.name.ilike(like_expr),
+                    Recipe.public_description.ilike(like_expr),
+                    Recipe.marketplace_notes.ilike(like_expr),
+                )
+            )
+
+    if sort_mode == "downloads":
+        query = query.order_by(
+            Recipe.download_count.desc(), Recipe.updated_at.desc(), Recipe.name.asc()
+        )
+    elif sort_mode == "price_high":
+        query = query.order_by(
+            nullslast(Recipe.sale_price.desc()), Recipe.updated_at.desc()
+        )
+    elif sort_mode == "oldest":
+        query = query.order_by(Recipe.updated_at.asc())
+    else:
+        query = query.order_by(Recipe.updated_at.desc(), Recipe.name.asc())
+
+    recipes = query.all()
+    cost_map = _fetch_cost_rollups([r.id for r in recipes])
+    recipe_cards = [
+        _serialize_recipe_for_public(recipe, cost_map.get(recipe.id))
+        for recipe in recipes
+    ]
+
+    totals = {
+        "listings": len(recipe_cards),
+        "for_sale": len([r for r in recipe_cards if r["is_for_sale"]]),
+        "downloads": sum(r["download_count"] for r in recipe_cards),
+        "purchases": sum(r["purchase_count"] for r in recipe_cards),
+    }
+
+    return render_template(
+        "library/organization_marketplace.html",
+        organization=org,
+        recipes=recipe_cards,
+        totals=totals,
+        purchase_enabled=is_feature_enabled("FEATURE_RECIPE_PURCHASE_OPTIONS"),
+        search_query=search_query,
+        sale_filter=sale_filter,
+        sort_mode=sort_mode,
     )
 
 
@@ -174,6 +311,20 @@ def _serialize_recipe_for_public(recipe: Recipe, cost_rollup: dict | None = None
         "updated_at": recipe.updated_at,
         "avg_ingredient_cost": ingredient_cost,
         "avg_total_cost": total_cost,
+        "organization": {
+            "id": recipe.organization_id,
+            "name": recipe.organization.name if recipe.organization else None,
+        },
+        "origin": {
+            "type": recipe.org_origin_type,
+            "purchased": recipe.org_origin_purchased,
+            "source_org_id": recipe.org_origin_source_org_id,
+            "source_org_name": recipe.origin_source_org.name
+            if recipe.origin_source_org
+            else None,
+        },
+        "download_count": recipe.download_count,
+        "purchase_count": recipe.purchase_count,
     }
 
 

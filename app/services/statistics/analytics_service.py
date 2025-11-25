@@ -451,6 +451,9 @@ class AnalyticsDataService:
                 "blocked_recipes": recipe_metrics["blocked_listings"],
                 "average_recipe_price": recipe_metrics["average_sale_price"],
                 "average_yield_per_dollar": recipe_metrics["average_yield_per_dollar"],
+                "batchtrack_native_recipes": recipe_metrics["batchtrack_native_count"],
+                "total_recipe_downloads": recipe_metrics["total_downloads"],
+                "total_recipe_purchases": recipe_metrics["total_purchases"],
             }
             cls._store_cache(cache_key, payload)
             return payload
@@ -470,6 +473,9 @@ class AnalyticsDataService:
                 "blocked_recipes": 0,
                 "average_recipe_price": 0.0,
                 "average_yield_per_dollar": 0.0,
+                "batchtrack_native_recipes": 0,
+                "total_recipe_downloads": 0,
+                "total_recipe_purchases": 0,
             }
 
     @classmethod
@@ -577,6 +583,23 @@ class AnalyticsDataService:
             top_group_name = top_group_row[0] if top_group_row else None
             top_group_count = top_group_row[1] if top_group_row else None
 
+            batchtrack_native_count = Recipe.query.filter(
+                base_filter,
+                Recipe.org_origin_type == "batchtrack_native",
+            ).count()
+            total_downloads = (
+                db.session.query(func.sum(Recipe.download_count))
+                .filter(base_filter)
+                .scalar()
+                or 0
+            )
+            total_purchases = (
+                db.session.query(func.sum(Recipe.purchase_count))
+                .filter(base_filter)
+                .scalar()
+                or 0
+            )
+
             avg_yield_per_dollar = (
                 db.session.query(
                     func.avg(
@@ -607,6 +630,9 @@ class AnalyticsDataService:
                 "top_group_name": top_group_name,
                 "top_group_count": top_group_count,
                 "sale_percentage": sale_percentage,
+                "batchtrack_native_count": batchtrack_native_count,
+                "total_downloads": int(total_downloads),
+                "total_purchases": int(total_purchases),
             }
             cls._store_cache(cache_key, payload)
             return payload

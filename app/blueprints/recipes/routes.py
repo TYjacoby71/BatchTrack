@@ -19,7 +19,8 @@ from app.services.inventory_adjustment import create_inventory_item
 from app.models.unit import Unit
 from app.models.product_category import ProductCategory
 import logging
-from sqlalchemy import func
+from sqlalchemy import func, or_
+from sqlalchemy.orm import joinedload
 from itertools import zip_longest
 
 logger = logging.getLogger(__name__)
@@ -231,12 +232,85 @@ def view_recipe(recipe_id):
             return redirect(url_for('recipes.list_recipes'))
 
         inventory_units = get_global_unit_list()
-        return render_template('pages/recipes/view_recipe.html', recipe=recipe, inventory_units=inventory_units)
+        lineage_enabled = True
+        return render_template(
+            'pages/recipes/view_recipe.html',
+            recipe=recipe,
+            inventory_units=inventory_units,
+            lineage_enabled=lineage_enabled,
+        )
 
     except Exception as e:
         flash(f"Error loading recipe: {str(e)}", "error")
         logger.exception(f"Error viewing recipe: {str(e)}")
         return redirect(url_for('recipes.list_recipes'))
+
+
+@recipes_bp.route('/<int:recipe_id>/lineage')
+@login_required
+def recipe_lineage(recipe_id):
+    try:
+        recipe = get_recipe_details(recipe_id)
+    except PermissionError:
+        flash("You do not have access to this recipe.", "error")
+        return redirect(url_for('recipes.list_recipes'))
+    except Exception as exc:
+        flash(f"Unable to load recipe lineage: {exc}", "error")
+        return redirect(url_for('recipes.list_recipes'))
+
+    if not recipe:
+        flash('Recipe not found.', 'error')
+        return redirect(url_for('recipes.list_recipes'))
+
+    root_id = recipe.root_recipe_id or recipe.id
+    relatives = (
+        Recipe.query.options(joinedload(Recipe.organization))
+        .filter(or_(Recipe.id == root_id, Recipe.root_recipe_id == root_id))
+        .order_by(Recipe.created_at.asc())
+        .all()
+    )
+
+    nodes = {rel.id: {'recipe': rel, 'children': []} for rel in relatives}
+    for rel in relatives:
+        parent_id = None
+        edge_type = None
+        if rel.parent_recipe_id and rel.parent_recipe_id in nodes:
+            parent_id = rel.parent_recipe_id
+            edge_type = 'variation'
+        elif rel.cloned_from_id and rel.cloned_from_id in nodes:
+            parent_id = rel.cloned_from_id
+            edge_type = 'clone'
+        elif rel.id != root_id and rel.root_recipe_id and rel.root_recipe_id in nodes:
+            parent_id = rel.root_recipe_id
+            edge_type = 'root'
+
+        if parent_id and edge_type:
+            nodes[parent_id]['children'].append({'id': rel.id, 'edge': edge_type})
+
+    root_recipe = nodes.get(root_id, {'recipe': recipe})
+    lineage_tree = _serialize_lineage_tree(root_recipe['recipe'], nodes, recipe.id)
+    lineage_path = _build_lineage_path(recipe.id, nodes, root_id)
+    events = (
+        RecipeLineage.query.filter_by(recipe_id=recipe.id)
+        .order_by(RecipeLineage.created_at.asc())
+        .all()
+    )
+
+    origin_source_org = None
+    if recipe.org_origin_purchased and recipe.origin_source_org:
+        origin_source_org = recipe.origin_source_org
+
+    org_marketplace_enabled = is_feature_enabled('FEATURE_ORG_MARKETPLACE_DASHBOARD')
+
+    return render_template(
+        'pages/recipes/recipe_lineage.html',
+        recipe=recipe,
+        origin_source_org=origin_source_org,
+        lineage_tree=lineage_tree,
+        lineage_path=lineage_path,
+        lineage_events=events,
+        org_marketplace_enabled=org_marketplace_enabled,
+    )
 
 
 
@@ -799,6 +873,59 @@ def _serialize_assoc_rows(associations):
             'name': assoc.inventory_item.name if assoc.inventory_item else ''
         })
     return serialized
+
+
+def _serialize_lineage_tree(node_recipe: Recipe, nodes: dict, current_id: int) -> dict:
+    node_payload = {
+        'id': node_recipe.id,
+        'name': node_recipe.name,
+        'organization_name': node_recipe.organization.name if node_recipe.organization else None,
+        'organization_id': node_recipe.organization_id,
+        'origin_type': node_recipe.org_origin_type,
+        'origin_purchased': node_recipe.org_origin_purchased,
+        'is_current': node_recipe.id == current_id,
+        'status': node_recipe.status,
+        'children': [],
+    }
+
+    for child in nodes.get(node_recipe.id, {}).get('children', []):
+        child_recipe = nodes[child['id']]['recipe']
+        node_payload['children'].append({
+            'edge_type': child['edge'],
+            'node': _serialize_lineage_tree(child_recipe, nodes, current_id)
+        })
+
+    return node_payload
+
+
+def _build_lineage_path(target_id: int, nodes: dict, root_id: int | None) -> list[int]:
+    path: list[int] = []
+    seen: set[int] = set()
+    current_id = target_id
+
+    while current_id and current_id not in seen:
+        path.append(current_id)
+        seen.add(current_id)
+        recipe = nodes.get(current_id, {}).get('recipe')
+        if not recipe:
+            break
+        if recipe.parent_recipe_id and recipe.parent_recipe_id in nodes:
+            current_id = recipe.parent_recipe_id
+        elif recipe.cloned_from_id and recipe.cloned_from_id in nodes:
+            current_id = recipe.cloned_from_id
+        elif (
+            recipe.root_recipe_id
+            and recipe.root_recipe_id in nodes
+            and recipe.id != recipe.root_recipe_id
+        ):
+            current_id = recipe.root_recipe_id
+        else:
+            current_id = None
+
+    if root_id and root_id not in path:
+        path.append(root_id)
+
+    return list(reversed(path))
 
 
 def _lookup_inventory_names(item_ids):
