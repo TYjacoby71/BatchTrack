@@ -9,7 +9,7 @@ from flask import current_app
 from sqlalchemy import asc, desc
 
 from app.extensions import db
-from app.models import Batch, InventoryItem, Recipe, FreshnessSnapshot
+from app.models import Batch, InventoryItem, Recipe, FreshnessSnapshot, Product
 from app.services.ai import GoogleAIClient
 from app.services.batchbot_credit_service import BatchBotCreditService, CreditSnapshot
 from app.services.batchbot_usage_service import BatchBotUsageService, BatchBotUsageSnapshot
@@ -158,6 +158,21 @@ class BatchBotService:
             .all()
         )
 
+        marketplace_enabled = False
+        tier = getattr(self.organization, "tier", None)
+        if tier and getattr(tier, "permissions", None):
+            marketplace_enabled = any(
+                getattr(permission, "name", "") == "integrations.marketplace"
+                for permission in tier.permissions
+            )
+
+        marketplace_products = (
+            Product.query.filter_by(organization_id=self.organization.id)
+            .order_by(desc(Product.updated_at))
+            .limit(5)
+            .all()
+        )
+
         return {
             "organization": {
                 "id": self.organization.id,
@@ -169,6 +184,18 @@ class BatchBotService:
             },
             "credits": {
                 "remaining": BatchBotCreditService.available_credits(self.organization),
+            },
+            "marketplace": {
+                "enabled": marketplace_enabled,
+                "products": [
+                    {
+                        "id": product.id,
+                        "name": product.name,
+                        "sync_status": getattr(product, "marketplace_sync_status", None),
+                        "last_sync": _iso_dt(getattr(product, "marketplace_last_sync", None)),
+                    }
+                    for product in marketplace_products
+                ],
             },
             "inventory_sample": [
                 {
@@ -363,6 +390,17 @@ class BatchBotService:
                     "required": [],
                 },
             },
+            {
+                "name": "fetch_marketplace_status",
+                "description": "Summarize recipe marketplace readiness and recent sync results.",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "limit": {"type": "integer", "minimum": 1, "maximum": 20}
+                    },
+                    "required": [],
+                },
+            },
         ]
 
     # ------------------------------------------------------------------
@@ -388,6 +426,7 @@ class BatchBotService:
             "create_recipe_draft": self._tool_create_recipe_draft,
             "submit_bulk_inventory_update": self._tool_submit_bulk_inventory_update,
             "fetch_insight_snapshot": self._tool_fetch_insight_snapshot,
+            "fetch_marketplace_status": self._tool_fetch_marketplace_status,
         }.get(name)
 
         if handler is None:
@@ -692,6 +731,43 @@ class BatchBotService:
             payload = {"freshness_risks": freshness_risks}
 
         return {"success": True, "data": payload}
+
+    def _tool_fetch_marketplace_status(self, args: Mapping[str, Any]) -> Mapping[str, Any]:
+        limit = max(1, min(int(args.get("limit", 5)), 20))
+        products = (
+            Product.query.filter_by(organization_id=self.organization.id)
+            .order_by(desc(Product.updated_at))
+            .limit(limit)
+            .all()
+        )
+
+        total_products = Product.query.filter_by(organization_id=self.organization.id).count()
+        pending = Product.query.filter_by(
+            organization_id=self.organization.id,
+            marketplace_sync_status='pending',
+        ).count()
+        failed = Product.query.filter_by(
+            organization_id=self.organization.id,
+            marketplace_sync_status='failed',
+        ).count()
+
+        return {
+            "success": True,
+            "summary": {
+                "total_products": total_products,
+                "pending_sync": pending,
+                "sync_failures": failed,
+            },
+            "products": [
+                {
+                    "id": product.id,
+                    "name": product.name,
+                    "sync_status": getattr(product, "marketplace_sync_status", None),
+                    "last_sync": _iso_dt(getattr(product, "marketplace_last_sync", None)),
+                }
+                for product in products
+            ],
+        }
 
     # ------------------------------------------------------------------
     # Lookup helpers
