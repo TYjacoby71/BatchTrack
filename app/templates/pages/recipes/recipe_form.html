@@ -110,31 +110,6 @@
                   <label for="instructions" class="form-label">Instructions</label>
                   <textarea name="instructions" class="form-control" rows="4" placeholder="Enter detailed instructions for this recipe...">{{ field_values.get('instructions') if field_values else (recipe.instructions if recipe else '') }}</textarea>
             </div>
-            {% set selected_group_value = field_values.get('product_group_id') if field_values and field_values.get('product_group_id') not in (None, '') else (recipe.product_group_id if recipe else None) %}
-            {% set shopify_value = field_values.get('shopify_product_url') if field_values and field_values.get('shopify_product_url') is not none else (recipe.shopify_product_url if recipe else '') %}
-            <div class="row">
-                <div class="col-md-6">
-                    <div class="form-group mb-3">
-                        <label for="product_group_id" class="form-label">Recipe Collection Group</label>
-                        <select id="product_group_id" name="product_group_id" class="form-select">
-                            <option value="">Select group</option>
-                            {% for group in product_groups %}
-                            <option value="{{ group.id }}" {% if selected_group_value is not none and (selected_group_value|string) == (group.id|string) %}selected{% endif %}>
-                                {{ group.name }}
-                            </option>
-                            {% endfor %}
-                        </select>
-                        <div class="form-text">Groups help customers browse the public recipe library by product type.</div>
-                    </div>
-                </div>
-                <div class="col-md-6">
-                    <div class="form-group mb-3">
-                        <label for="shopify_product_url" class="form-label">Shopify Product URL</label>
-                        <input type="url" id="shopify_product_url" name="shopify_product_url" class="form-control" placeholder="https://yourstore.myshopify.com/products/..." value="{{ shopify_value }}">
-                        <div class="form-text">Optional link displayed only when the recipe is listed as public.</div>
-                    </div>
-                </div>
-            </div>
             <div class="row">
                 <div class="col-md-6">
                     <div class="form-group mb-3">
