@@ -66,6 +66,8 @@ adjust_inventory(
 - Applies unit conversions automatically
 - Integrates with FIFO service for deductions
 - Maintains cost tracking and audit trails
+- Container identity is centralized: `_creation_logic.py` and `_edit_logic.py` both call `app/services/container_name_builder.py` so no other service should attempt to build container names.
+- `_find_matching_container()` enforces deduplication using structured attributes (material, style, type, color, capacity/unit). If a user recreates a container with the same signature, the service reuses the original `InventoryItem` rather than inserting a duplicate.
 
 ### 3. Unit Conversion Service
 

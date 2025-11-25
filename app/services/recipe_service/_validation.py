@@ -15,7 +15,7 @@ logger = logging.getLogger(__name__)
 
 def validate_recipe_data(name: str, ingredients: List[Dict] = None,
                          yield_amount: float = None, recipe_id: int = None, notes: str = None, category: str = None, tags: str = None, batch_size: float = None,
-                         portioning_data: Dict | None = None, allow_partial: bool = False) -> Dict[str, Any]:
+                         portioning_data: Dict | None = None, allow_partial: bool = False, organization_id: int | None = None) -> Dict[str, Any]:
     """
     Validate recipe data before creation or update.
 
@@ -34,7 +34,7 @@ def validate_recipe_data(name: str, ingredients: List[Dict] = None,
     """
     try:
         # Validate name - pass recipe_id for edit validation
-        is_valid, error = validate_recipe_name(name, recipe_id)
+        is_valid, error = validate_recipe_name(name, recipe_id, organization_id=organization_id)
         if not is_valid:
             return {'valid': False, 'error': error, 'missing_fields': []}
 
@@ -120,7 +120,7 @@ def validate_recipe_data(name: str, ingredients: List[Dict] = None,
         return {'valid': False, 'error': "Validation error occurred", 'missing_fields': []}
 
 
-def validate_recipe_name(name: str, recipe_id: int = None) -> Tuple[bool, str]:
+def validate_recipe_name(name: str, recipe_id: int = None, organization_id: int | None = None) -> Tuple[bool, str]:
     """
     Validate recipe name for uniqueness and format.
 
@@ -145,15 +145,30 @@ def validate_recipe_name(name: str, recipe_id: int = None) -> Tuple[bool, str]:
 
         # Check for uniqueness - exclude current recipe if editing
         from flask_login import current_user
-        query = Recipe.query.filter_by(name=name)
+        from flask import session
 
-        # Filter by organization when available
-        try:
-            if getattr(current_user, 'is_authenticated', False) and getattr(current_user, 'organization_id', None):
-                query = query.filter_by(organization_id=current_user.organization_id)
-        except Exception:
-            # If current_user is unavailable in context, skip org scoping for validation
-            pass
+        scoped_org_id = organization_id
+        if scoped_org_id is None and recipe_id:
+            try:
+                existing_recipe = db.session.get(Recipe, recipe_id)
+                if existing_recipe:
+                    scoped_org_id = existing_recipe.organization_id
+            except Exception:
+                scoped_org_id = scoped_org_id or None
+
+        if scoped_org_id is None:
+            try:
+                if getattr(current_user, 'is_authenticated', False):
+                    if getattr(current_user, 'user_type', None) == 'developer':
+                        scoped_org_id = session.get('dev_selected_org_id')
+                    else:
+                        scoped_org_id = getattr(current_user, 'organization_id', None)
+            except Exception:
+                scoped_org_id = scoped_org_id or None
+
+        query = Recipe.query.filter_by(name=name)
+        if scoped_org_id:
+            query = query.filter(Recipe.organization_id == scoped_org_id)
 
         # Exclude current recipe when editing
         if recipe_id:
