@@ -831,6 +831,14 @@ def global_items_admin():
         ],
     )
 
+@developer_bp.route('/community-scout')
+@login_required
+def community_scout_dashboard():
+    if current_user.user_type != 'developer':
+        flash("Community Scout is limited to developer users.", "error")
+        return redirect(url_for('developer.dashboard'))
+    return render_template('developer/community_scout.html')
+
 @developer_bp.route('/global-items/<int:item_id>')
 @login_required
 def global_item_detail(item_id):

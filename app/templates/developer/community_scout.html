@@ -1,0 +1,57 @@
+{% extends "layout.html" %}
+{% block title %}Community Scout{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <nav aria-label="breadcrumb">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="{{ url_for('developer.dashboard') }}">Developer Dashboard</a></li>
+            <li class="breadcrumb-item"><a href="{{ url_for('developer.global_items_admin') }}">Global Inventory Library</a></li>
+            <li class="breadcrumb-item active" aria-current="page">Community Scout</li>
+        </ol>
+    </nav>
+
+    <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center mb-4">
+        <div class="me-3">
+            <h1 class="h3 mb-2">Community Scout</h1>
+            <p class="text-muted mb-0">
+                Review unlinked community inventory items, promote truly new ingredients, and connect near matches to the Global Inventory Library.
+            </p>
+        </div>
+        <div class="mt-3 mt-md-0">
+            <button id="community-scout-refresh" class="btn btn-outline-primary me-2">
+                <i class="fas fa-sync-alt me-1"></i> Fetch Next Batch
+            </button>
+            <button id="community-scout-clear" class="btn btn-outline-secondary">
+                <i class="fas fa-times me-1"></i> Clear Results
+            </button>
+        </div>
+    </div>
+
+    <div id="community-scout-status" class="alert alert-info" role="status">
+        Initializing Community Scout…
+    </div>
+
+    <div id="community-scout-meta" class="small text-muted mb-3"></div>
+
+    <div id="community-scout-root"
+         data-next-url="{{ url_for('community_scout_api_bp.community_scout_next_batch') }}"
+         data-base-url="{{ url_for('community_scout_api_bp.community_scout_next_batch') | replace('/batches/next', '') }}">
+        <div class="row g-4" id="community-scout-columns">
+            <div class="col-lg-6">
+                <h2 class="h6 text-uppercase text-muted">Needs Review</h2>
+                <div class="vstack gap-3" id="needs-review-list"></div>
+            </div>
+            <div class="col-lg-6">
+                <h2 class="h6 text-uppercase text-muted">Truly Unique</h2>
+                <div class="vstack gap-3" id="unique-list"></div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+{{ super() }}
+<script type="module" src="{{ url_for('static', filename='js/community_scout.js') }}"></script>
+{% endblock %}

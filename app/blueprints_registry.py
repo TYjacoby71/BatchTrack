@@ -37,6 +37,7 @@ API_BLUEPRINTS: tuple[BlueprintSpec, ...] = (
     BlueprintSpec("app.blueprints.api.public", "public_api_bp", "/api/public", "Public API"),
     BlueprintSpec("app.blueprints.api.routes", "api_bp", "/api", "Main API"),
     BlueprintSpec("app.blueprints.api.drawers", "drawers_bp", None, "Drawer API"),
+    BlueprintSpec("app.blueprints.api.community_scout", "community_scout_api_bp", "/api/dev/community-scout", "Community Scout API"),
 )
 
 ROUTE_BLUEPRINTS: tuple[BlueprintSpec, ...] = (
