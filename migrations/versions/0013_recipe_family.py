@@ -1,6 +1,6 @@
 """0013 recipe origin and org marketplace
 
-Revision ID: 0013_recipe_origin_and_org_marketplace
+Revision ID: 0013_recipe_family
 Revises: 0012_recipe_public_description
 Create Date: 2025-11-24 18:00:00.000000
 """
@@ -18,7 +18,7 @@ from migrations.postgres_helpers import (
 )
 
 # revision identifiers, used by Alembic.
-revision = "0013_recipe_origin_and_org_marketplace"
+revision = "0013_recipe_family"
 down_revision = "0012_recipe_public_description"
 branch_labels = None
 depends_on = None
