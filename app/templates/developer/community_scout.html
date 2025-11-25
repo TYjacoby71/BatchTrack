@@ -36,7 +36,8 @@
 
     <div id="community-scout-root"
          data-next-url="{{ url_for('community_scout_api_bp.community_scout_next_batch') }}"
-         data-base-url="{{ url_for('community_scout_api_bp.community_scout_next_batch') | replace('/batches/next', '') }}">
+         data-base-url="{{ url_for('community_scout_api_bp.community_scout_next_batch') | replace('/batches/next', '') }}"
+         data-full-form-url="{{ url_for('developer.create_global_item') }}">
         <div class="row g-4" id="community-scout-columns">
             <div class="col-lg-6">
                 <h2 class="h6 text-uppercase text-muted">Needs Review</h2>

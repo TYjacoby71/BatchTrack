@@ -1,6 +1,6 @@
 from flask import Blueprint, render_template, request, session, redirect, flash, jsonify, url_for, current_app
 from flask_login import login_required, current_user
-from app.models import Organization, User, Permission, Role, GlobalItem
+from app.models import Organization, User, Permission, Role, GlobalItem, CommunityScoutCandidate
 from app.models import ProductCategory
 from app.extensions import db
 from app.utils.json_store import read_json_file, write_json_file
@@ -8,6 +8,7 @@ from datetime import datetime, timedelta, timezone
 from sqlalchemy import func
 from .system_roles import system_roles_bp
 from .subscription_tiers import subscription_tiers_bp
+from app.services.community_scout_service import CommunityScoutService
 
 # Assuming require_developer_permission is defined elsewhere, e.g., in system_roles.py or utils.py
 # If not, you'll need to define or import it. For now, let's assume it's available.
@@ -1334,7 +1335,7 @@ def calculate_category_density():
 def create_global_item():
     """Create a new global item"""
 
-    def render_form(form_data=None):
+    def render_form(form_data=None, candidate=None, return_to=None):
         from app.models.category import IngredientCategory
         global_ingredient_categories = IngredientCategory.query.filter_by(
             organization_id=None,
@@ -1345,12 +1346,37 @@ def create_global_item():
         return render_template(
             'developer/create_global_item.html',
             global_ingredient_categories=global_ingredient_categories,
-            form_data=form_data or {}
+            form_data=form_data or {},
+            community_scout_candidate=candidate,
+            return_to=return_to
         )
+
+    if request.method == 'GET':
+        candidate_id = request.args.get('community_scout_candidate_id', type=int)
+        if candidate_id:
+            candidate = db.session.get(CommunityScoutCandidate, candidate_id)
+            if candidate:
+                snapshot = candidate.item_snapshot_json or {}
+                form_defaults = {
+                    'name': snapshot.get('name', ''),
+                    'item_type': snapshot.get('type', 'ingredient'),
+                    'default_unit': snapshot.get('unit', ''),
+                    'density': snapshot.get('density', ''),
+                    'inci_name': snapshot.get('inci_name', ''),
+                    'aliases': snapshot.get('name', ''),
+                }
+                return_to = request.args.get('return_to') or url_for('developer.community_scout_dashboard')
+                return render_form(form_defaults, candidate=candidate, return_to=return_to)
+
+        return render_form()
 
     if request.method == 'POST':
         form_data = request.form
         try:
+            candidate_id_raw = (form_data.get('community_scout_candidate_id') or '').strip()
+            candidate_id = int(candidate_id_raw) if candidate_id_raw.isdigit() else None
+            return_to = (form_data.get('return_to') or '').strip()
+
             # Extract form data
             name = form_data.get('name', '').strip()
             item_type = form_data.get('item_type', 'ingredient')
@@ -1516,7 +1542,24 @@ def create_global_item():
             except Exception:
                 pass
 
-            flash(f'Global item "{name}" created successfully', 'success')
+            flash_message = f'Global item "{name}" created successfully'
+
+            if candidate_id:
+                try:
+                    CommunityScoutService.link_candidate(candidate_id, new_item.id, current_user.id)
+                    db.session.commit()
+                    flash_message += " and linked back to Community Scout."
+                except Exception as linking_error:
+                    db.session.rollback()
+                    flash(flash_message, 'success')
+                    flash(f'Unable to auto-link Community Scout candidate: {linking_error}', 'warning')
+                    if return_to:
+                        return redirect(return_to)
+                    return redirect(url_for('developer.global_item_detail', item_id=new_item.id))
+
+            flash(flash_message, 'success')
+            if return_to:
+                return redirect(return_to)
             return redirect(url_for('developer.global_item_detail', item_id=new_item.id))
 
         except Exception as e:

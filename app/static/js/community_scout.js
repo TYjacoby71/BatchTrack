@@ -3,6 +3,7 @@ class CommunityScoutUI {
     this.root = root;
     this.nextUrl = root.dataset.nextUrl || '/api/dev/community-scout/batches/next';
     this.apiBase = root.dataset.baseUrl || '/api/dev/community-scout';
+    this.fullFormUrl = root.dataset.fullFormUrl || '/developer/global-items/create';
     this.statusEl = document.getElementById('community-scout-status');
     this.metaEl = document.getElementById('community-scout-meta');
     this.needsReviewList = document.getElementById('needs-review-list');
@@ -157,6 +158,8 @@ class CommunityScoutUI {
     const typeOptions = ['ingredient', 'container', 'consumable', 'packaging']
       .map((opt) => `<option value="${opt}" ${normalizedType === opt ? 'selected' : ''}>${opt}</option>`)
       .join('');
+    const returnTo = encodeURIComponent(window.location.pathname + window.location.search);
+    const fullFormHref = `${this.fullFormUrl}?community_scout_candidate_id=${candidate.id}&return_to=${returnTo}`;
 
     return `
       <form class="scout-promote-form" data-candidate-id="${candidate.id}">
@@ -219,6 +222,10 @@ class CommunityScoutUI {
       <button class="btn btn-sm btn-warning mt-3 scout-flag-btn" data-candidate-id="${candidate.id}">
         <i class="fas fa-flag"></i> Flag alias usage
       </button>
+
+      <a href="${fullFormHref}" class="btn btn-sm btn-outline-primary mt-3">
+        <i class="fas fa-external-link-alt"></i> Open full global item form
+      </a>
     `;
   }
 

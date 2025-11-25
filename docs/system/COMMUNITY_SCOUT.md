@@ -57,6 +57,7 @@ Developer UI (flask template + ES module) ◄── REST API (`/api/dev/communit
 2. **Review**  
    - Dev UI hits `GET /api/dev/community-scout/batches/next`, which marks the batch `in_review`, records `claimed_by_user_id`, and returns all candidates grouped by classification.  
    - The UI renders two columns (“Needs Review”, “Truly Unique”), showing organization name, scores, alias flags, and quick actions (promote, link, reject, flag).  
+   - Each card now also provides an **“Open full global item form”** link that opens the standard global item creation page, prefilled with the candidate data and auto-linking back to Community Scout after save—ideal for items with extensive attributes.  
    - Each action posts to `/candidates/<id>/(promote|link|reject|flag)`. On success the card refreshes; when all candidates resolve, the batch auto-closes (`status=completed`).
 3. **Global Link Trigger**  
    - Promote/link flows call `GlobalLinkSuggestionService.is_pair_compatible`, update the inventory row, and emit a `UnifiedInventoryHistory` entry.  
