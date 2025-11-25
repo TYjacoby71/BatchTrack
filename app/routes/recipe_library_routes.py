@@ -298,7 +298,7 @@ def _serialize_recipe_for_public(recipe: Recipe, cost_rollup: dict | None = None
         "category": recipe.product_category.name if recipe.product_category else None,
         "is_for_sale": recipe.is_for_sale,
         "sale_price": float(recipe.sale_price) if recipe.sale_price is not None else None,
-        "shopify_product_url": recipe.shopify_product_url,
+        "shopify_product_url": recipe.product_store_url,
         "cover_url": cover_url,
         "instructions": recipe.instructions,
         "predicted_yield": recipe.predicted_yield,
