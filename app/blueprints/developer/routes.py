@@ -1911,6 +1911,25 @@ def integrations_checklist():
             ]
         },
         {
+            'title': 'AI Studio & BatchBot',
+            'note': 'These keys and knobs control Batchley (paid bot), the public help bot, and refill economics. Set limits here so support knows how refills/unlimited tiers behave.',
+            'section_items': [
+                _make_item('GOOGLE_AI_API_KEY', 'Gemini API key used by Batchley + public bot.', required=True, is_secret=True, note='Create in Google AI Studio → API Key. Rotate if compromised.'),
+                _make_item('GOOGLE_AI_DEFAULT_MODEL', 'Fallback Gemini model when per-bot overrides are unset.', required=False, recommended='gemini-1.5-flash'),
+                _make_item('GOOGLE_AI_BATCHBOT_MODEL', 'Model used by the paid Batchley bot.', required=False, recommended='gemini-1.5-pro'),
+                _make_item('GOOGLE_AI_PUBLICBOT_MODEL', 'Model used by the public help bot.', required=False, recommended='gemini-1.5-flash'),
+                _make_item('GOOGLE_AI_ENABLE_SEARCH', 'Enable Google Search grounding for Batchley.', required=False, recommended='true'),
+                _make_item('GOOGLE_AI_ENABLE_FILE_SEARCH', 'Enable File Search (uploaded docs) for prompts.', required=False, recommended='true'),
+                _make_item('GOOGLE_AI_SEARCH_TOOL', 'Search tool identifier sent to Gemini.', required=False, recommended='google_search'),
+                _make_item('BATCHBOT_REQUEST_TIMEOUT_SECONDS', 'Gemini request timeout. Increase for long-running jobs.', required=False, recommended='45'),
+                _make_item('BATCHBOT_DEFAULT_MAX_REQUESTS', 'Base allowance per org per window. Use -1 for unlimited tiers.', required=True, note='Tier-specific overrides live on Subscription Tiers → Max BatchBot Requests.'),
+                _make_item('BATCHBOT_REQUEST_WINDOW_DAYS', 'Length of the usage window (credits reset after this).', required=True, recommended='30'),
+                _make_item('BATCHBOT_COST_PER_MILLION_INPUT', 'Reference compute cost for inbound tokens (USD).', required=False, recommended='0.35'),
+                _make_item('BATCHBOT_COST_PER_MILLION_OUTPUT', 'Reference compute cost for outbound tokens (USD).', required=False, recommended='0.53'),
+                _make_item('BATCHBOT_SIGNUP_BONUS_REQUESTS', 'Promo credits granted to new orgs (stack with tier limit).', required=False, recommended='20'),
+            ]
+        },
+        {
             'title': 'OAuth & Marketplace',
             'note': 'Optional integrations for single sign-on and marketplace licensing.',
             'section_items': [
