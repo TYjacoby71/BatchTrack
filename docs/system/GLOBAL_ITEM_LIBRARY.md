@@ -78,6 +78,7 @@ flask seed-global-items
 - Inventory Adjustment Creation: Applies `GlobalItem` defaults; enforces type alignment and global-locked edits.
 - Density Assignment Service: Prefers library data for reference and UI suggestions.
 - Developer Tools: `app/blueprints/developer/routes.py` exposes library filters and admin utilities.
+- Community Scout: See [COMMUNITY_SCOUT.md](COMMUNITY_SCOUT.md) for the automated pipeline that discovers org-owned items missing from the library and feeds developers promote/link workflows.
 
 ## Future Extensions
 
