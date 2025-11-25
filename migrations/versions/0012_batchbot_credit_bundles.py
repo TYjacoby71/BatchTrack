@@ -26,7 +26,7 @@ def upgrade():
         sa.Column('reference', sa.String(length=128), nullable=True),
         sa.Column('purchased_requests', sa.Integer(), nullable=False, server_default='0'),
         sa.Column('remaining_requests', sa.Integer(), nullable=False, server_default='0'),
-        sa.Column('metadata', sa.JSON(), nullable=True),
+        sa.Column('details', sa.JSON(), nullable=True),
         sa.Column('expires_at', sa.DateTime(), nullable=True),
         sa.Column('created_at', sa.DateTime(), nullable=False, server_default=sa.func.now()),
         sa.Column('updated_at', sa.DateTime(), nullable=False, server_default=sa.func.now()),

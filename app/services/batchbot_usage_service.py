@@ -8,6 +8,7 @@ from flask import current_app
 
 from ..extensions import db
 from ..models import BatchBotUsage, Organization, User
+from ..utils.timezone_utils import TimezoneUtils
 from .batchbot_credit_service import BatchBotCreditService
 
 
@@ -58,7 +59,7 @@ class BatchBotUsageService:
             window_start=window_start,
         ).first()
 
-        metadata = record.metadata if isinstance(record, BatchBotUsage) and isinstance(record.metadata, dict) else {}
+        metadata = record.details if isinstance(record, BatchBotUsage) and isinstance(record.details, dict) else {}
         used = record.request_count if record else 0
         remaining = None if allowed is None or allowed < 0 else max(allowed - used, 0)
 
@@ -119,13 +120,13 @@ class BatchBotUsageService:
                 window_start=window_start,
                 window_end=window_end,
                 request_count=0,
-                metadata={"limit": allowed, "credits_consumed": 0, "chat_messages": 0},
+                details={"limit": allowed, "credits_consumed": 0, "chat_messages": 0},
             )
             db.session.add(record)
 
         record.increment(delta=delta, metadata=metadata)
 
-        metadata_dict = record.metadata if isinstance(record.metadata, dict) else {}
+        metadata_dict = record.details if isinstance(record.details, dict) else {}
         credits_consumed = int(metadata_dict.get("credits_consumed", 0) or 0)
         chat_messages = int(metadata_dict.get("chat_messages", 0) or 0)
 
@@ -140,7 +141,7 @@ class BatchBotUsageService:
                     "credits_consumed": credits_consumed,
                     "chat_messages": chat_messages,
                 })
-                record.metadata = metadata_dict
+                record.details = metadata_dict
 
         db.session.commit()
 
@@ -178,23 +179,23 @@ class BatchBotUsageService:
                 window_start=window_start,
                 window_end=window_end,
                 request_count=0,
-                metadata={"limit": allowed, "credits_consumed": 0, "chat_messages": 0},
+                details={"limit": allowed, "credits_consumed": 0, "chat_messages": 0},
             )
             db.session.add(record)
 
-        metadata_dict = record.metadata if isinstance(record.metadata, dict) else {}
+        metadata_dict = record.details if isinstance(record.details, dict) else {}
         chat_messages = int(metadata_dict.get("chat_messages", 0) or 0)
         metadata_dict["chat_messages"] = chat_messages + max(delta, 0)
         metadata_dict.setdefault("limit", allowed)
         metadata_dict.setdefault("credits_consumed", 0)
-        record.metadata = metadata_dict
+        record.details = metadata_dict
 
         db.session.commit()
         return BatchBotUsageService.get_usage_snapshot(org)
 
     @staticmethod
     def _window_bounds(now: Optional[datetime] = None) -> tuple[date, date]:
-        now = now or datetime.utcnow()
+        now = now or TimezoneUtils.utc_now()
         window_days = max(1, int(current_app.config.get("BATCHBOT_REQUEST_WINDOW_DAYS", 30)))
 
         epoch = date(2024, 1, 1)

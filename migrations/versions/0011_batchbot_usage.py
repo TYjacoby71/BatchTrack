@@ -26,7 +26,7 @@ def upgrade():
         sa.Column('window_end', sa.Date(), nullable=False),
         sa.Column('request_count', sa.Integer(), nullable=False, server_default='0'),
         sa.Column('last_request_at', sa.DateTime(), nullable=True),
-        sa.Column('metadata', sa.JSON(), nullable=True),
+        sa.Column('details', sa.JSON(), nullable=True),
         sa.Column('created_at', sa.DateTime(), nullable=False, server_default=sa.func.now()),
         sa.Column('updated_at', sa.DateTime(), nullable=False, server_default=sa.func.now()),
         sa.UniqueConstraint('organization_id', 'window_start', name='uq_batchbot_usage_org_window'),

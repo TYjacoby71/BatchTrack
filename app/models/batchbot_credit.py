@@ -1,6 +1,7 @@
 from datetime import datetime
 
 from ..extensions import db
+from ..utils.timezone_utils import TimezoneUtils
 
 
 class BatchBotCreditBundle(db.Model):
@@ -13,9 +14,9 @@ class BatchBotCreditBundle(db.Model):
     reference = db.Column(db.String(128), nullable=True)
     purchased_requests = db.Column(db.Integer, nullable=False, default=0)
     remaining_requests = db.Column(db.Integer, nullable=False, default=0)
-    metadata = db.Column(db.JSON, nullable=True)
+    details = db.Column(db.JSON, nullable=True)
     expires_at = db.Column(db.DateTime, nullable=True)
-    created_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
-    updated_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow, onupdate=datetime.utcnow)
+    created_at = db.Column(db.DateTime, nullable=False, default=TimezoneUtils.utc_now)
+    updated_at = db.Column(db.DateTime, nullable=False, default=TimezoneUtils.utc_now, onupdate=TimezoneUtils.utc_now)
 
     addon = db.relationship("Addon", lazy="joined")

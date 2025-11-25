@@ -8,6 +8,7 @@ from flask import current_app
 
 from ..extensions import db
 from ..models import Addon, BatchBotCreditBundle, Organization
+from ..utils.timezone_utils import TimezoneUtils
 
 
 class BatchBotCreditError(RuntimeError):
@@ -45,7 +46,7 @@ class BatchBotCreditService:
             reference=reference,
             purchased_requests=amount,
             remaining_requests=amount,
-            metadata=metadata or {},
+            details=metadata or {},
             expires_at=expires_at,
         )
         db.session.add(bundle)
@@ -90,7 +91,7 @@ class BatchBotCreditService:
 
     @staticmethod
     def available_credits(org: Organization) -> int:
-        now = datetime.utcnow()
+        now = TimezoneUtils.utc_now()
         total = (
             db.session.query(db.func.coalesce(db.func.sum(BatchBotCreditBundle.remaining_requests), 0))
             .filter(
@@ -107,7 +108,7 @@ class BatchBotCreditService:
 
     @staticmethod
     def snapshot(org: Organization) -> CreditSnapshot:
-        now = datetime.utcnow()
+        now = TimezoneUtils.utc_now()
         bundles = (
             BatchBotCreditBundle.query.filter(
                 BatchBotCreditBundle.organization_id == org.id,
@@ -130,7 +131,7 @@ class BatchBotCreditService:
             return
 
         remaining = amount
-        now = datetime.utcnow()
+        now = TimezoneUtils.utc_now()
         bundles = (
             BatchBotCreditBundle.query.filter(
                 BatchBotCreditBundle.organization_id == org.id,

@@ -74,6 +74,7 @@ except ImportError:
 from .unified_inventory_history import UnifiedInventoryHistory
 from .domain_event import DomainEvent
 from .freshness_snapshot import FreshnessSnapshot
+from .batchbot_credit import BatchBotCreditBundle
 
 # Import inventory lot model 
 from .inventory_lot import InventoryLot
