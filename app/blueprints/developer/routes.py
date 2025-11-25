@@ -1928,6 +1928,7 @@ def integrations_checklist():
                 _make_item('BATCHBOT_COST_PER_MILLION_INPUT', 'Reference compute cost for inbound tokens (USD).', required=False, recommended='0.35'),
                 _make_item('BATCHBOT_COST_PER_MILLION_OUTPUT', 'Reference compute cost for outbound tokens (USD).', required=False, recommended='0.53'),
                 _make_item('BATCHBOT_SIGNUP_BONUS_REQUESTS', 'Promo credits granted to new orgs (stack with tier limit).', required=False, recommended='20'),
+                _make_item('BATCHBOT_REFILL_LOOKUP_KEY', 'Stripe price lookup key for the default Batchley refill add-on.', required=False, recommended='batchbot_refill_100', note='Must match the Stripe price ID tied to the refill add-on. Used when generating one-time checkout links.'),
             ]
         },
         {

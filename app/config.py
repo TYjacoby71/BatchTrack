@@ -132,6 +132,7 @@ class BaseConfig:
     BATCHBOT_COST_PER_MILLION_INPUT = float(os.environ.get('BATCHBOT_COST_PER_MILLION_INPUT', 0.35))
     BATCHBOT_COST_PER_MILLION_OUTPUT = float(os.environ.get('BATCHBOT_COST_PER_MILLION_OUTPUT', 0.53))
     BATCHBOT_SIGNUP_BONUS_REQUESTS = _env_int('BATCHBOT_SIGNUP_BONUS_REQUESTS', 20)
+    BATCHBOT_REFILL_LOOKUP_KEY = os.environ.get('BATCHBOT_REFILL_LOOKUP_KEY', 'batchbot_refill_100')
 
 
 class DevelopmentConfig(BaseConfig):

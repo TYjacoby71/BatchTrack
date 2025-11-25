@@ -355,6 +355,7 @@ def batchbot_chat():
                 'used': exc.used,
                 'window_end': exc.window_end.isoformat(),
             },
+            'refill_checkout_url': _generate_refill_checkout_url(),
         }), 429
     except BatchBotChatLimitError as exc:
         return jsonify({
@@ -365,6 +366,7 @@ def batchbot_chat():
                 'used': exc.used,
                 'window_end': exc.window_end.isoformat(),
             },
+            'refill_checkout_url': _generate_refill_checkout_url(),
         }), 429
     except BatchBotServiceError as exc:
         return jsonify({'success': False, 'error': str(exc)}), 400
@@ -404,3 +406,31 @@ def _serialize_quota(snapshot, credits=None):
             'next_expiration': getattr(credits, "expires_next", None).isoformat() if getattr(credits, "expires_next", None) else None,
         } if credits else None,
     }
+
+
+def _generate_refill_checkout_url():
+    try:
+        lookup_key = current_app.config.get('BATCHBOT_REFILL_LOOKUP_KEY')
+        if not lookup_key:
+            return None
+        if not current_user or not getattr(current_user, 'email', None):
+            return None
+        from app.services.billing_service import BillingService
+        success_url = url_for('app_routes.dashboard', _external=True) + "?refill=success"
+        cancel_url = url_for('app_routes.dashboard', _external=True) + "?refill=cancel"
+        metadata = {
+            'organization_id': str(current_user.organization_id or ''),
+            'user_id': str(current_user.id),
+            'batchbot_refill_lookup_key': lookup_key,
+        }
+        session = BillingService.create_one_time_checkout_by_lookup_key(
+            lookup_key=lookup_key,
+            customer_email=current_user.email,
+            success_url=success_url,
+            cancel_url=cancel_url,
+            metadata=metadata,
+        )
+        return getattr(session, 'url', None)
+    except Exception as exc:
+        current_app.logger.warning("Unable to generate BatchBot refill checkout: %s", exc)
+        return None
