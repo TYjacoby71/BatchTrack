@@ -148,23 +148,24 @@ def validate_recipe_name(name: str, recipe_id: int = None, organization_id: int 
         from flask import session
 
         scoped_org_id = organization_id
-        if scoped_org_id is None and recipe_id:
-            try:
-                existing_recipe = db.session.get(Recipe, recipe_id)
-                if existing_recipe:
-                    scoped_org_id = existing_recipe.organization_id
-            except Exception:
-                scoped_org_id = scoped_org_id or None
+        if scoped_org_id is None:
+            if recipe_id:
+                try:
+                    existing_recipe = db.session.get(Recipe, recipe_id)
+                    if existing_recipe:
+                        scoped_org_id = existing_recipe.organization_id
+                except Exception:
+                    scoped_org_id = None</old_str>
 
         if scoped_org_id is None:
-            try:
-                if getattr(current_user, 'is_authenticated', False):
-                    if getattr(current_user, 'user_type', None) == 'developer':
-                        scoped_org_id = session.get('dev_selected_org_id')
-                    else:
-                        scoped_org_id = getattr(current_user, 'organization_id', None)
-            except Exception:
-                scoped_org_id = scoped_org_id or None
+                try:
+                    if getattr(current_user, 'is_authenticated', False):
+                        if getattr(current_user, 'user_type', None) == 'developer':
+                            scoped_org_id = session.get('dev_selected_org_id')
+                        else:
+                            scoped_org_id = getattr(current_user, 'organization_id', None)
+                except Exception:
+                    scoped_org_id = None
 
         query = Recipe.query.filter_by(name=name)
         if scoped_org_id:
@@ -178,7 +179,7 @@ def validate_recipe_name(name: str, recipe_id: int = None, organization_id: int 
         if existing:
             return False, "Recipe name already exists"
 
-        return True, ""
+        return True, ""</old_str>
 
     except Exception as e:
         logger.error(f"Error validating recipe name: {e}")
