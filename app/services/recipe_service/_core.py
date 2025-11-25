@@ -149,7 +149,7 @@ def create_recipe(name: str, description: str = "", instructions: str = "",
 
     Args:
         name: Recipe name
-        description: Recipe description  
+        description: Recipe description
         instructions: Cooking instructions
         yield_amount: Expected yield quantity
         yield_unit: Unit for yield
@@ -197,7 +197,7 @@ def create_recipe(name: str, description: str = "", instructions: str = "",
         if not final_label_prefix:
             # Generate prefix from recipe name if not provided
             final_label_prefix = generate_recipe_prefix(name)
-            
+
             # For variations, ensure unique prefix
             if parent_recipe_id:
                 if parent_recipe and parent_recipe.label_prefix:
@@ -610,7 +610,7 @@ def update_recipe(recipe_id: int, name: str = None, description: str = None,
             logger.info(f"  ingredients count: {len(ingredients) if ingredients else 0}")
             logger.info(f"  yield_amount: {recipe.predicted_yield} (from existing recipe)")
             logger.info(f"  recipe_id: {recipe_id}")
-            
+
             # Validate new ingredients
             validation_result = validate_recipe_data(
                 name=recipe.name,
@@ -768,7 +768,7 @@ def get_recipe_details(recipe_id: int) -> Optional[Recipe]:
         from sqlalchemy.orm import joinedload
 
         from ...models import RecipeIngredient, RecipeConsumable, InventoryItem
-        
+
         recipe = db.session.query(Recipe).options(
             joinedload(Recipe.recipe_ingredients).joinedload(RecipeIngredient.inventory_item),
             joinedload(Recipe.recipe_consumables).joinedload(RecipeConsumable.inventory_item)
