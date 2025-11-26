@@ -69,6 +69,15 @@ This document pairs **plain-language instructions** for every major system actio
     - **Source Docs:** [`docs/system/deploy_migration_guide.md`](deploy_migration_guide.md), [`docs/system/DEVELOPMENT_GUIDE.md`](DEVELOPMENT_GUIDE.md#database-changes), [`docs/system/ARCHITECTURE.md`](ARCHITECTURE.md#monitoring--observability).
     - **Checklist:** Create Alembic migration per schema change, run migrations with org-safe order, monitor logs (`app/middleware.py` adds security headers/logging), keep `docs/changelog` updated post-release.
 
+15. ### [Community Scout Ingestion & Automation](#instruction-community-scout)
+    - **Source Docs:** [`docs/system/COMMUNITY_SCOUT.md`](COMMUNITY_SCOUT.md), [`docs/system/deploy_migration_guide.md`](deploy_migration_guide.md#read-replica-community-scout), [`app/management.py`](../../app/management.py).
+    - **Operational Commands:**
+        - **Manual run:** `flask community-scout-generate --batch-size 100 --page-size 500 --max-batches 5 --no-primary`.
+        - **Automated scheduler:** `flask community-scout-scheduler --interval-minutes 1440 --window-start 02:00 --window-end 04:00 --no-primary` (keeps a rolling timer, only runs inside the low-traffic window, and skips when the read replica is offline).
+        - **Scriptable wrapper:** `python scripts/run_community_scout.py --no-primary`.
+    - **Infrastructure requirements:** provision a read-only database (recommended name `batchtrack_replica`) and expose it via `COMMUNITY_SCOUT_READ_DSN`. The service logs whether it used the replica or primary, and the developer dashboard surfaces alerts when the replica is missing, slow, or unreachable.
+    - **Developer workflow:** Community Scout UI lets devs open the full global-item form one candidate at a time or hand off to BatchBot via the “Send to BatchBot” button (fires a global event so the dev-side agent can prefill the form).
+
 > **Wireframe Note:** Each subsection is intentionally concise. Future agents can extend them with screenshots, drawer IDs, or SOP checklists without changing anchors.
 
 ---
@@ -105,5 +114,6 @@ Each CAQ links back to the instruction that resolves it.
 - **What limits the number of active users per org?** → [Billing, Tiers, and Feature Flags](#instruction-billing)
 - **How do I roll out schema changes safely?** → [Deployments, Migrations, and Monitoring](#instruction-devops)
 - **Where should I log launch changes or regressions?** → [Deployments, Migrations, and Monitoring](#instruction-devops) (see `docs/changelog`)
+- **How do I keep Community Scout from hammering the primary DB?** → [Community Scout Ingestion & Automation](#instruction-community-scout) (configure `COMMUNITY_SCOUT_READ_DSN`, use the scheduler with `--no-primary`, watch the developer dashboard alerts)
 
 > Need another answer? Add the question here, reference the closest instruction anchor, and (if necessary) expand the instruction subsection with more detail.
