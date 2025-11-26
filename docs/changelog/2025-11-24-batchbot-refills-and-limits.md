@@ -5,6 +5,7 @@
 - Added a Stripe-powered **Batchley refill** add-on plus checkout flow.
 - Public (unauthenticated) Batchley now stays free/unlimited; authenticated users see quota and refill messaging.
 - BatchBot gains marketplace awareness to answer recipe marketplace questions.
+- Developer menu now has a dedicated **Batchley** page that lists every workflow plus the knobs that govern them.
 
 ## Problems Solved
 - Customers could exhaust automation requests with no clear upgrade path.
@@ -34,6 +35,9 @@
 - `app/services/batchbot_usage_service.py`
 - `app/services/billing_service.py`
 - `app/blueprints/api/routes.py`
+- `app/blueprints/developer/routes.py`
+- `app/templates/developer/batchley.html`
+- `app/templates/layout.html`
 - `docs/changelog/CHANGELOG_INDEX.md`
 - `docs/changelog/2025-11-24-batchbot-refills-and-limits.md` (this file)
 

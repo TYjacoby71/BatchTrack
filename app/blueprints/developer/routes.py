@@ -110,6 +110,167 @@ FEATURE_FLAG_SECTIONS = [
 
 FEATURE_FLAG_KEYS = [flag['key'] for section in FEATURE_FLAG_SECTIONS for flag in section['flags']]
 
+BATCHLEY_JOB_CATALOG = [
+    {
+        'slug': 'recipe-intake',
+        'name': 'Recipe Draft Intake',
+        'tool': 'create_recipe_draft',
+        'status': 'wired',
+        'description': 'Uploads text (and OCR’d images) to create missing inventory items first, then saves the recipe as a draft with granular success messaging.',
+        'inputs': [
+            'Text instructions, ingredient lists, or OCR payloads',
+            'Optional yield amount/unit for scaling',
+            'Ingredient rows with allow_create toggles',
+        ],
+        'outputs': [
+            'New inventory items seeded before the recipe',
+            'Recipe draft saved for manual review/publish',
+            'Partial failure report when a single ingredient needs correction',
+        ],
+        'handoff': 'Draft stays unpublished until a human reviews and publishes the recipe.',
+    },
+    {
+        'slug': 'bulk-inventory',
+        'name': 'Bulk Inventory Receipt Builder',
+        'tool': 'submit_bulk_inventory_update',
+        'status': 'wired',
+        'description': 'Parses messy receipts or free-form shopping lists, asks for clarifications, and stages create/restock/spoil/trash rows in the bulk modal.',
+        'inputs': [
+            'Receipt text or photo transcription (quantities + units)',
+            'Desired change_type per row (create/restock/spoil/trash)',
+            'Optional cost overrides and notes',
+        ],
+        'outputs': [
+            'Draft bulk adjustment queued for user confirmation',
+            'Ability to auto-submit when customer explicitly asks',
+            'Row-level audit trail posted back to the chat transcript',
+        ],
+        'handoff': 'Customer can edit/save drafts in the modal before the final submit call.',
+    },
+    {
+        'slug': 'single-restock',
+        'name': 'Single Item Restock',
+        'tool': 'log_inventory_purchase',
+        'status': 'wired',
+        'description': 'Fast path for topping up one inventory item when the user already knows the SKU.',
+        'inputs': [
+            'Inventory item ID or fuzzy name match',
+            'Quantity + unit, optional cost per unit',
+            'Free-form note for receipt/source',
+        ],
+        'outputs': [
+            'Inventory adjustment entry with costing metadata',
+            'Follow-up prompt offering FIFO/expiration guidance',
+        ],
+        'handoff': 'Ideal for “I just restocked olive oil” requests—no modal required.',
+    },
+    {
+        'slug': 'insights',
+        'name': 'Insight Snapshot / KPI Q&A',
+        'tool': 'fetch_insight_snapshot',
+        'status': 'wired',
+        'description': 'Returns costing, freshness, throughput, and global benchmark snippets that Batchley can narrate back to the user.',
+        'inputs': [
+            'Optional focus flag: cost, freshness, throughput, overview',
+        ],
+        'outputs': [
+            'Structured JSON (org dashboard, hotspots, freshness risks)',
+            'Comparative guidance vs global averages',
+        ],
+        'handoff': 'Often paired with coaching copy or follow-up prompts to gather more context.',
+    },
+    {
+        'slug': 'marketplace',
+        'name': 'Marketplace Sync Check',
+        'tool': 'fetch_marketplace_status',
+        'status': 'beta',
+        'description': 'Surfaces recipe marketplace readiness, pending syncs, and recent failures so support can respond inside the chat.',
+        'inputs': [
+            'Optional “limit” to cap how many listings to summarize (default 5)',
+        ],
+        'outputs': [
+            'Counts for total/pending/failed listings',
+            'Top product cards with last sync timestamp + status',
+        ],
+        'handoff': 'Hidden unless the org tier has marketplace permissions.',
+    },
+]
+
+BATCHLEY_ENV_KEYS = [
+    {
+        'key': 'GOOGLE_AI_API_KEY',
+        'label': 'Google AI API Key',
+        'description': 'Gemini credential for both Batchley and the public help bot.',
+        'secret': True,
+    },
+    {
+        'key': 'GOOGLE_AI_BATCHBOT_MODEL',
+        'label': 'Batchley Model',
+        'description': 'Model override for authenticated Batchley traffic.',
+    },
+    {
+        'key': 'GOOGLE_AI_PUBLICBOT_MODEL',
+        'label': 'Public Bot Model',
+        'description': 'Model used on the marketing site/public help modal.',
+    },
+    {
+        'key': 'BATCHBOT_DEFAULT_MAX_REQUESTS',
+        'label': 'Default Action Cap',
+        'description': 'Base automation quota per org per window (tiers override).',
+    },
+    {
+        'key': 'BATCHBOT_CHAT_MAX_MESSAGES',
+        'label': 'Default Chat Cap',
+        'description': 'Baseline chat-only prompts per window.',
+    },
+    {
+        'key': 'BATCHBOT_REQUEST_WINDOW_DAYS',
+        'label': 'Usage Window (days)',
+        'description': 'Length of the rolling window for action/chat quotas.',
+    },
+    {
+        'key': 'BATCHBOT_SIGNUP_BONUS_REQUESTS',
+        'label': 'Signup Bonus Credits',
+        'description': 'Promo requests granted to new organizations.',
+    },
+    {
+        'key': 'BATCHBOT_REFILL_LOOKUP_KEY',
+        'label': 'Stripe Refill Lookup Key',
+        'description': 'Price lookup key referenced when issuing refill checkout sessions.',
+    },
+    {
+        'key': 'BATCHBOT_COST_PER_MILLION_INPUT',
+        'label': 'Cost Per Million Input Tokens',
+        'description': 'Reference compute cost for per-token pricing.',
+        'format': 'currency',
+    },
+    {
+        'key': 'BATCHBOT_COST_PER_MILLION_OUTPUT',
+        'label': 'Cost Per Million Output Tokens',
+        'description': 'Reference compute cost for responses.',
+        'format': 'currency',
+    },
+]
+
+BATCHLEY_WORKFLOW_NOTES = [
+    {
+        'title': 'Session-bound execution',
+        'body': 'Batchley refuses to run without an authenticated organization user, so every automation inherits the same RBAC + tier limits as the UI.',
+    },
+    {
+        'title': 'Chat vs action metering',
+        'body': 'Pure Q&A consumes the chat bucket; tool calls consume the action bucket and will automatically recommend the refill checkout URL when exhausted.',
+    },
+    {
+        'title': 'Draft-first UX',
+        'body': 'Recipe creation and bulk inventory flows always build drafts so humans can confirm edits before publishing. Partial failures are spelled out in the response payload.',
+    },
+    {
+        'title': 'Marketplace awareness',
+        'body': 'Marketplace tooling only activates for tiers that include `integrations.marketplace`, preventing leakage for customers without licensing.',
+    },
+]
+
 @developer_bp.route('/dashboard')
 @login_required
 def dashboard():
@@ -207,6 +368,106 @@ def marketing_admin_save():
         return jsonify({'success': True})
     except Exception as e:
         return jsonify({'success': False, 'error': str(e)}), 500
+
+@developer_bp.route('/batchley')
+@login_required
+def batchley_overview():
+    """Developer view of Batchley's capabilities, limits, and configuration."""
+
+    def _format_env_value(entry, raw_value):
+        if raw_value in (None, ''):
+            return None
+        if entry.get('format') == 'currency':
+            try:
+                return f"${float(raw_value):,.2f}"
+            except (TypeError, ValueError):
+                return raw_value
+        return raw_value
+
+    def _format_limit(raw_value, *, suffix=''):
+        if raw_value in (None, ''):
+            return 'Not set'
+        try:
+            numeric = float(raw_value)
+            if numeric < 0:
+                return 'Unlimited'
+            if numeric.is_integer():
+                numeric = int(numeric)
+            return f"{numeric}{suffix}"
+        except (TypeError, ValueError):
+            return f"{raw_value}{suffix}"
+
+    env_status = []
+    for entry in BATCHLEY_ENV_KEYS:
+        raw_value = current_app.config.get(entry['key'])
+        formatted = _format_env_value(entry, raw_value)
+        is_set = raw_value not in (None, '')
+        env_status.append(
+            {
+                'key': entry['key'],
+                'label': entry['label'],
+                'description': entry['description'],
+                'is_secret': entry.get('secret', False),
+                'is_set': is_set,
+                'value': 'Configured' if entry.get('secret') and is_set else formatted,
+            }
+        )
+
+    limit_cards = [
+        {
+            'label': 'Default action cap / window',
+            'value': _format_limit(current_app.config.get('BATCHBOT_DEFAULT_MAX_REQUESTS'), suffix=' requests'),
+            'description': 'Used when a subscription tier does not override `max_batchbot_requests` (set -1 for unlimited).',
+        },
+        {
+            'label': 'Default chat cap / window',
+            'value': _format_limit(current_app.config.get('BATCHBOT_CHAT_MAX_MESSAGES'), suffix=' messages'),
+            'description': 'Pure Q&A prompts before Batchley demands either a refill or tier bump (set -1 for unlimited).',
+        },
+        {
+            'label': 'Usage window',
+            'value': _format_limit(current_app.config.get('BATCHBOT_REQUEST_WINDOW_DAYS'), suffix=' days'),
+            'description': 'Defines when counters reset for both chat and action buckets.',
+        },
+        {
+            'label': 'Signup bonus credits',
+            'value': _format_limit(current_app.config.get('BATCHBOT_SIGNUP_BONUS_REQUESTS'), suffix=' requests'),
+            'description': 'Granted per organization immediately after the signup service creates the org.',
+        },
+        {
+            'label': 'Stripe refill lookup key',
+            'value': current_app.config.get('BATCHBOT_REFILL_LOOKUP_KEY') or 'Not set',
+            'description': 'Must match the price lookup key used by the `batchbot_refill_100` add-on.',
+        },
+        {
+            'label': 'Request timeout',
+            'value': _format_limit(current_app.config.get('BATCHBOT_REQUEST_TIMEOUT_SECONDS'), suffix=' seconds'),
+            'description': 'Raise when Gemini calls might take longer—defaults to 45 seconds.',
+        },
+        {
+            'label': 'Cost reference (input tokens)',
+            'value': _format_env_value({'format': 'currency'}, current_app.config.get('BATCHBOT_COST_PER_MILLION_INPUT')) or 'Not set',
+            'description': 'Used for pricing conversations; update when Google adjusts rates.',
+        },
+        {
+            'label': 'Cost reference (output tokens)',
+            'value': _format_env_value({'format': 'currency'}, current_app.config.get('BATCHBOT_COST_PER_MILLION_OUTPUT')) or 'Not set',
+            'description': 'Pairs with the input rate when modeling gross margin.',
+        },
+    ]
+
+    return render_template(
+        'developer/batchley.html',
+        job_catalog=BATCHLEY_JOB_CATALOG,
+        env_status=env_status,
+        limit_cards=limit_cards,
+        workflow_notes=BATCHLEY_WORKFLOW_NOTES,
+        breadcrumb_items=[
+            {'label': 'Developer Dashboard', 'url': url_for('developer.dashboard')},
+            {'label': 'Batchley'},
+        ],
+    )
+
 
 @developer_bp.route('/organizations')
 @developer_bp.route('/customer-support')
