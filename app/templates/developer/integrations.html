@@ -106,7 +106,7 @@
   </div>
 
   <div class="alert alert-warning mt-4">
-    <strong>Redis provisioning:</strong> Before launch, create a managed Redis instance (Render Redis, Upstash, AWS ElastiCache). Copy the connection URL into <code>REDIS_URL</code> and mirror it into <code>RATELIMIT_STORAGE_URL</code>. The app now refuses to start in production without Redis-backed sessions, caching, and rate limiting.
+    <strong>Redis provisioning:</strong> Before launch, create a managed Redis instance (Render Redis, Upstash, AWS ElastiCache) and set <code>REDIS_URL</code>. That single connection powers caching, sessions, and rate limiting—the app now refuses to start in production without it.
   </div>
 
   <div class="card shadow-sm mt-4">

@@ -1867,10 +1867,16 @@ def integrations_checklist():
         },
         {
             'title': 'Caching & Rate Limits',
-            'note': 'Provision a managed Redis instance (Render Redis, Upstash, ElastiCache). Use the same connection URI for caching, Flask sessions, and rate limiting.',
+            'note': 'Provision a managed Redis instance (Render Redis, Upstash, ElastiCache). Use a single connection URI for caching, Flask sessions, and rate limiting.',
             'section_items': [
-                _make_item('REDIS_URL', 'Redis connection string for caching, sessions, and rate limit storage.', required=True, recommended='redis://', note='Create the service, copy the full tls-enabled URI, and paste it in Render → Environment.', allow_config=True),
-                _make_item('RATELIMIT_STORAGE_URL', 'Flask-Limiter backend. Should mirror REDIS_URL in production.', required=True, recommended='redis://', allow_config=True),
+                _make_item(
+                    'REDIS_URL',
+                    'Redis connection string for caching, sessions, and rate limit storage.',
+                    required=True,
+                    recommended='redis://',
+                    note='Create the service, copy the full tls-enabled URI, and paste it into your environment. The rate limiter automatically reuses this value—no separate variable needed.',
+                    allow_config=True,
+                ),
                 _make_item('SESSION_TYPE', 'Server-side session backend. Must be "redis" in production.', required=True, recommended='redis', allow_config=True, note='Set to redis so user sessions live in Redis instead of cookies.'),
             ],
         },
