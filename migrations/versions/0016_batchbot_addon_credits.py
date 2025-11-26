@@ -1,6 +1,6 @@
-"""0016 add batchbot credit amount to addons
+"""0016 batchbot addon credits
 
-Revision ID: 0016_add_batchbot_credit_amount_to_addons
+Revision ID: 0016_batchbot_addon_credits
 Revises: 0015_batchbot_credit_bundles
 Create Date: 2025-11-24 00:45:00.000000
 """
@@ -10,7 +10,7 @@ import sqlalchemy as sa
 
 
 # revision identifiers, used by Alembic.
-revision = '0016_add_batchbot_credit_amount_to_addons'
+revision = '0016_batchbot_addon_credits'
 down_revision = '0015_batchbot_credit_bundles'
 branch_labels = None
 depends_on = None
