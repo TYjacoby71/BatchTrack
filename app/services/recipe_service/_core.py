@@ -7,8 +7,10 @@ Handles CRUD operations for recipes with proper service integration.
 import logging
 from decimal import Decimal, InvalidOperation
 from typing import Dict, List, Any, Optional, Tuple
-from flask import current_app
+from flask import current_app, session
 from flask_login import current_user
+
+
 def _resolve_current_org_id() -> Optional[int]:
     """Best-effort helper to determine the organization for the active user."""
     try:
@@ -759,7 +761,7 @@ def delete_recipe(recipe_id: int) -> Tuple[bool, str]:
         return False, f"Error deleting recipe: {str(e)}"
 
 
-def get_recipe_details(recipe_id: int) -> Optional[Recipe]:
+def get_recipe_details(recipe_id: int, *, allow_cross_org: bool = False) -> Optional[Recipe]:
     """
     Get detailed recipe information with all relationships loaded.
 
@@ -781,17 +783,30 @@ def get_recipe_details(recipe_id: int) -> Optional[Recipe]:
 
         from ...models import RecipeIngredient, RecipeConsumable, InventoryItem
 
-        recipe = db.session.query(Recipe).options(
-            joinedload(Recipe.recipe_ingredients).joinedload(RecipeIngredient.inventory_item),
-            joinedload(Recipe.recipe_consumables).joinedload(RecipeConsumable.inventory_item)
-        ).filter(Recipe.id == recipe_id).first()
+        recipe = (
+            db.session.query(Recipe)
+            .options(
+                joinedload(Recipe.recipe_ingredients).joinedload(RecipeIngredient.inventory_item),
+                joinedload(Recipe.recipe_consumables).joinedload(RecipeConsumable.inventory_item),
+            )
+            .filter(Recipe.id == recipe_id)
+            .first()
+        )
 
         if not recipe:
             return None
 
-        # Check organization access
-        if current_user.organization_id and recipe.organization_id != current_user.organization_id:
+        effective_org_id = _resolve_current_org_id()
+        if not allow_cross_org and effective_org_id and recipe.organization_id != effective_org_id:
             raise PermissionError("Access denied to recipe")
+
+        if allow_cross_org:
+            if (
+                not recipe.is_public
+                or recipe.marketplace_status != "listed"
+                or recipe.marketplace_blocked
+            ):
+                raise PermissionError("Recipe is not available for import")
 
         return recipe
 
@@ -800,7 +815,12 @@ def get_recipe_details(recipe_id: int) -> Optional[Recipe]:
         raise
 
 
-def duplicate_recipe(recipe_id: int) -> Tuple[bool, Any]:
+def duplicate_recipe(
+    recipe_id: int,
+    *,
+    allow_cross_org: bool = False,
+    target_org_id: Optional[int] = None,
+) -> Tuple[bool, Any]:
     """
     Create a copy of an existing recipe.
 
@@ -811,16 +831,56 @@ def duplicate_recipe(recipe_id: int) -> Tuple[bool, Any]:
         Tuple of (success: bool, recipe_or_error: Recipe|str)
     """
     try:
-        original = get_recipe_details(recipe_id)
+        original = get_recipe_details(recipe_id, allow_cross_org=allow_cross_org)
         if not original:
             return False, "Original recipe not found"
+
+        ingredient_globals: set[int] = set()
+        consumable_globals: set[int] = set()
+        for ri in original.recipe_ingredients:
+            try:
+                gi = getattr(getattr(ri, "inventory_item", None), "global_item_id", None)
+                if gi:
+                    ingredient_globals.add(int(gi))
+            except Exception:
+                continue
+        for rc in original.recipe_consumables:
+            try:
+                gi = getattr(getattr(rc, "inventory_item", None), "global_item_id", None)
+                if gi:
+                    consumable_globals.add(int(gi))
+            except Exception:
+                continue
+
+        target_org_for_mapping = target_org_id if allow_cross_org and target_org_id else original.organization_id
+        global_match_map: dict[int, int] = {}
+        if allow_cross_org and target_org_for_mapping and (ingredient_globals or consumable_globals):
+            candidate_ids = list(ingredient_globals.union(consumable_globals))
+            try:
+                matches = (
+                    InventoryItem.query.filter(
+                        InventoryItem.organization_id == target_org_for_mapping,
+                        InventoryItem.global_item_id.in_(candidate_ids),
+                    ).all()
+                )
+                for item in matches:
+                    if item.global_item_id and item.global_item_id not in global_match_map:
+                        global_match_map[item.global_item_id] = item.id
+            except Exception:
+                logger.debug("Unable to pre-map inventory items for import; proceeding without matches.")
 
         # Extract ingredient data
         ingredients = [
             {
-                'item_id': ri.inventory_item_id,
+                'item_id': (
+                    global_match_map.get(getattr(ri.inventory_item, "global_item_id", None))
+                    if allow_cross_org and getattr(ri.inventory_item, "global_item_id", None)
+                    else ri.inventory_item_id
+                ),
+                'global_item_id': getattr(ri.inventory_item, "global_item_id", None),
                 'quantity': ri.quantity,
-                'unit': ri.unit
+                'unit': ri.unit,
+                'name': getattr(getattr(ri, "inventory_item", None), "name", None),
             }
             for ri in original.recipe_ingredients
         ]
@@ -828,9 +888,15 @@ def duplicate_recipe(recipe_id: int) -> Tuple[bool, Any]:
         # Extract consumable data
         consumables = [
             {
-                'item_id': rc.inventory_item_id,
+                'item_id': (
+                    global_match_map.get(getattr(rc.inventory_item, "global_item_id", None))
+                    if allow_cross_org and getattr(rc.inventory_item, "global_item_id", None)
+                    else rc.inventory_item_id
+                ),
+                'global_item_id': getattr(rc.inventory_item, "global_item_id", None),
                 'quantity': rc.quantity,
-                'unit': rc.unit
+                'unit': rc.unit,
+                'name': getattr(getattr(rc, "inventory_item", None), "name", None),
             }
             for rc in original.recipe_consumables
         ]

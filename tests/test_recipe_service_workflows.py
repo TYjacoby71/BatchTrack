@@ -10,6 +10,7 @@ from app.models import Recipe
 from app.models.inventory import InventoryItem
 from app.models.models import Organization, User
 from app.models.product_category import ProductCategory
+from app.models.global_item import GlobalItem
 from app.services.recipe_service import (
     create_recipe,
     duplicate_recipe,
@@ -110,6 +111,84 @@ def test_duplicate_recipe_returns_private_template():
     assert template.is_for_sale is False
     assert template.sale_price is None
     assert template.cloned_from_id == recipe.id
+
+
+@pytest.mark.usefixtures('app_context')
+def test_duplicate_recipe_maps_global_items_for_import():
+    category = _create_category("ImportMap")
+
+    # Seller org/user from fixtures
+    seller_org = Organization.query.first()
+    seller_user = User.query.filter_by(organization_id=seller_org.id).first()
+
+    # Buyer org/user setup
+    tier = seller_org.subscription_tier
+    buyer_org = Organization(name=_unique_name("Buyer Org"), subscription_tier=tier)
+    db.session.add(buyer_org)
+    db.session.commit()
+
+    buyer_user = User(
+        email=f'{_unique_name("buyer")}@example.com',
+        username=_unique_name("buyer"),
+        password_hash='test_hash',
+        is_verified=True,
+        organization_id=buyer_org.id,
+    )
+    db.session.add(buyer_user)
+    db.session.commit()
+
+    # Shared global item plus org-specific inventory
+    global_item = GlobalItem(name=_unique_name("Global Oil"), item_type='ingredient', default_unit='oz')
+    db.session.add(global_item)
+    db.session.commit()
+
+    seller_item = InventoryItem(
+        name="Seller Oil",
+        unit='oz',
+        type='ingredient',
+        quantity=25.0,
+        organization_id=seller_org.id,
+        global_item_id=global_item.id,
+    )
+    buyer_item = InventoryItem(
+        name="Buyer Oil",
+        unit='oz',
+        type='ingredient',
+        quantity=10.0,
+        organization_id=buyer_org.id,
+        global_item_id=global_item.id,
+    )
+    db.session.add_all([seller_item, buyer_item])
+    db.session.commit()
+
+    with current_app.test_request_context():
+        login_user(seller_user)
+        ok, recipe_or_err = create_recipe(
+            name=_unique_name("Import Ready"),
+            instructions='Mix thoroughly.',
+            yield_amount=10,
+            yield_unit='oz',
+            ingredients=[{'item_id': seller_item.id, 'quantity': 10, 'unit': 'oz'}],
+            allowed_containers=[],
+            label_prefix='IMP',
+            category_id=category.id,
+            sharing_scope='public',
+            is_public=True,
+            status='published',
+        )
+        assert ok, recipe_or_err
+        recipe: Recipe = recipe_or_err
+
+        login_user(buyer_user)
+        dup_ok, payload_or_err = duplicate_recipe(
+            recipe.id,
+            allow_cross_org=True,
+            target_org_id=buyer_org.id,
+        )
+        assert dup_ok, payload_or_err
+        ingredient_payload = payload_or_err['ingredients'][0]
+        assert ingredient_payload['global_item_id'] == global_item.id
+        assert ingredient_payload['item_id'] == buyer_item.id
 
 
 @pytest.mark.usefixtures('app_context')

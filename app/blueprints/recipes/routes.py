@@ -8,9 +8,10 @@ from . import recipes_bp
 from app.extensions import db
 from app.models import Recipe, InventoryItem, GlobalItem, RecipeLineage
 from app.models.recipe_marketplace import RecipeProductGroup
-from app.utils.permissions import require_permission
+from app.utils.permissions import require_permission, get_effective_organization_id
 from app.utils.settings import is_feature_enabled
 from app.services.recipe_marketplace_service import RecipeMarketplaceService
+from app.utils.seo import slugify_value
 
 from app.services.recipe_service import (
     create_recipe, update_recipe, delete_recipe, get_recipe_details,
@@ -433,6 +434,65 @@ def clone_recipe(recipe_id):
         logger.exception(f"Error cloning recipe: {str(e)}")
 
     return redirect(url_for('recipes.view_recipe', recipe_id=recipe_id))
+
+
+@recipes_bp.route('/<int:recipe_id>/import', methods=['GET'])
+@login_required
+def import_recipe(recipe_id: int):
+    """Launch the recipe import flow for public marketplace listings."""
+    effective_org_id = get_effective_organization_id()
+    recipe = db.session.get(Recipe, recipe_id)
+    if not recipe:
+        flash("Recipe not found.", "error")
+        return redirect(url_for('recipe_library_bp.recipe_library'))
+
+    detail_url = url_for(
+        'recipe_library_bp.recipe_library_detail',
+        recipe_id=recipe.id,
+        slug=slugify_value(recipe.name),
+    )
+
+    if not effective_org_id:
+        flash("Select an organization before importing a recipe.", "error")
+        return redirect(detail_url)
+
+    if not recipe.is_public or recipe.marketplace_status != 'listed' or recipe.marketplace_blocked:
+        flash("This recipe is not available for import right now.", "error")
+        return redirect(detail_url)
+
+    try:
+        success, payload = duplicate_recipe(
+            recipe_id,
+            allow_cross_org=True,
+            target_org_id=effective_org_id,
+        )
+    except PermissionError as exc:
+        logger.warning("Import blocked for recipe %s: %s", recipe_id, exc)
+        flash("You do not have permission to import this recipe.", "error")
+        return redirect(detail_url)
+
+    if not success:
+        flash(f"Error importing recipe: {payload}", "error")
+        return redirect(detail_url)
+
+    template_recipe = payload['template']
+    ingredient_prefill = _serialize_prefill_rows(payload['ingredients'])
+    consumable_prefill = _serialize_prefill_rows(payload['consumables'])
+
+    if recipe.is_for_sale:
+        flash("Confirm your purchase before importing paid recipes.", "warning")
+    else:
+        flash("Review the imported recipe and click Save to add it to your workspace.", "info")
+
+    return _render_recipe_form(
+        recipe=template_recipe,
+        is_clone=True,
+        ingredient_prefill=ingredient_prefill,
+        consumable_prefill=consumable_prefill,
+        cloned_from_id=payload.get('cloned_from_id'),
+        form_values=None,
+        is_import=True,
+    )
 
 @recipes_bp.route('/<int:recipe_id>/delete', methods=['POST'])
 @login_required
@@ -857,9 +917,10 @@ def _serialize_prefill_rows(rows):
         item_id = row.get('item_id')
         serialized.append({
             'inventory_item_id': item_id,
+            'global_item_id': row.get('global_item_id'),
             'quantity': row.get('quantity'),
             'unit': row.get('unit'),
-            'name': name_lookup.get(item_id, '')
+            'name': row.get('name') or name_lookup.get(item_id, '')
         })
     return serialized
 
