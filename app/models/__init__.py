@@ -57,6 +57,7 @@ except ImportError:
 
 # Safe re-export layer - defer to models.py
 from .models import *
+from .community_scout import CommunityScoutBatch, CommunityScoutCandidate, CommunityScoutJobState
 
 # Add missing exports for tests
 try:

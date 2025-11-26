@@ -976,6 +976,25 @@ def dispatch_domain_events_command(poll_interval: float, batch_size: int, once: 
         dispatcher.run_forever(poll_interval=poll_interval)
 
 
+@click.command('community-scout-generate')
+@click.option('--batch-size', default=100, show_default=True, type=int, help='Candidates per batch.')
+@click.option('--page-size', default=500, show_default=True, type=int, help='Inventory rows pulled per scan page.')
+@click.option('--max-batches', default=None, type=int, help='Optional cap on number of batches per run.')
+@with_appcontext
+def community_scout_generate_command(batch_size: int, page_size: int, max_batches: int | None):
+    """Run Community Scout discovery to enqueue dev review batches."""
+    from app.services.community_scout_service import CommunityScoutService
+
+    stats = CommunityScoutService.generate_batches(
+        batch_size=batch_size,
+        page_size=page_size,
+        max_batches=max_batches,
+    )
+    click.echo(
+        f"Community Scout complete — batches: {stats['batches_created']}, candidates: {stats['candidates_created']}, scanned: {stats['scanned']}, skipped_existing: {stats['skipped_existing']}"
+    )
+
+
 def register_commands(app):
     """Register CLI commands"""
     # Database initialization
@@ -1008,3 +1027,4 @@ def register_commands(app):
     app.cli.add_command(update_subscription_tiers_command)
     app.cli.add_command(activate_users)
     app.cli.add_command(dispatch_domain_events_command)
+    app.cli.add_command(community_scout_generate_command)

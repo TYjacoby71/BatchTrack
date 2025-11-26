@@ -32,6 +32,7 @@ This directory is the curated reference library for every master document that e
 ## Inventory & Manufacturing Systems
 
 - **[GLOBAL_ITEM_LIBRARY.md](GLOBAL_ITEM_LIBRARY.md)** – Global item curation system
+- **[COMMUNITY_SCOUT.md](COMMUNITY_SCOUT.md)** – Community-sourced inventory discovery, batching, and review workflows
 - **[GLOBAL_ITEM_JSON_STRUCTURE.md](GLOBAL_ITEM_JSON_STRUCTURE.md)** – JSON structure specifications
 - **[CONTAINERS_CURATION.md](CONTAINERS_CURATION.md)** – Container management system
 - **[CONTAINER_NAMING.md](CONTAINER_NAMING.md)** – Container naming conventions

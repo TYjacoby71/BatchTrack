@@ -17,12 +17,31 @@
   </a>
 </div>
 
+{% set return_to = return_to or '' %}
+
+{% if community_scout_candidate %}
+<div class="alert alert-info d-flex align-items-center justify-content-between">
+  <div>
+    <strong>Community Scout:</strong> Prefilled from candidate #{{ community_scout_candidate.id }} ({{ community_scout_candidate.item_snapshot_json.name }})
+  </div>
+  {% if return_to %}
+  <a href="{{ return_to }}" class="btn btn-sm btn-outline-light">
+    <i class="fas fa-arrow-left"></i> Back to Community Scout
+  </a>
+  {% endif %}
+</div>
+{% endif %}
+
 <div class="row">
   <div class="col-lg-10">
       <div class="card">
         <div class="card-body">
           <form method="post" id="createGlobalItemForm">
           <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          {% if community_scout_candidate %}
+          <input type="hidden" name="community_scout_candidate_id" value="{{ community_scout_candidate.id }}">
+          {% endif %}
+          <input type="hidden" name="return_to" value="{{ return_to }}">
             {% set selected_item_type = form_data.get('item_type', 'ingredient') %}
           
           <div class="row g-3">

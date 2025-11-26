@@ -205,6 +205,27 @@ expiring = get_expiring_inventory(days_ahead=14)
 - Handles batch-level shelf-life inheritance
 - Supports custom expiration overrides
 
+### 11. Community Scout Service (`app/services/community_scout_service.py`)
+
+**Authority:** Discovery, batching, and review workflow for community-sourced inventory items that are missing from the Global Inventory Library.
+
+**Key Modules:**
+- Batch generation + scoring: `CommunityScoutService.generate_batches`
+- Models/storage: `app/models/community_scout.py`, migration `0011_community_scout`
+- API: `app/blueprints/api/community_scout.py`
+- Dev UI: `app/templates/developer/community_scout.html`, `app/static/js/community_scout.js`
+
+**Common Operations:**
+- `flask community-scout-generate --batch-size 100 --page-size 500`
+- `POST /api/dev/community-scout/candidates/<id>/promote` (add new global item)
+- `POST /api/dev/community-scout/candidates/<id>/link` (link to existing global item)
+
+**Rules:**
+- Heavy reads should use the replica DSN (`COMMUNITY_SCOUT_READ_DSN`) when available.
+- Only developer users can fetch or act on batches.
+- Promote/link actions must flow through Global Link checks to guarantee unit compatibility and drawer notifications.
+- See [COMMUNITY_SCOUT.md](COMMUNITY_SCOUT.md) for architecture and operational guidance.
+
 ## Supporting Services
 
 ### 6. Statistics Service (modular)
