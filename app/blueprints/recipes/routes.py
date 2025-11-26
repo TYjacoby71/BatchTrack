@@ -1,9 +1,16 @@
+from dataclasses import dataclass
+from typing import Any, Dict, Optional
+
 from flask import render_template, request, redirect, url_for, flash, jsonify
 from flask_login import login_required, current_user
+
 from . import recipes_bp
 from app.extensions import db
 from app.models import Recipe, InventoryItem, GlobalItem, RecipeLineage
+from app.models.recipe_marketplace import RecipeProductGroup
 from app.utils.permissions import require_permission
+from app.utils.settings import is_feature_enabled
+from app.services.recipe_marketplace_service import RecipeMarketplaceService
 
 from app.services.recipe_service import (
     create_recipe, update_recipe, delete_recipe, get_recipe_details,
@@ -15,10 +22,12 @@ from app.services.inventory_adjustment import create_inventory_item
 from app.models.unit import Unit
 from app.models.product_category import ProductCategory
 import logging
-from sqlalchemy import func
+from sqlalchemy import func, or_
+from sqlalchemy.orm import joinedload
 from itertools import zip_longest
 
 logger = logging.getLogger(__name__)
+_ALLOWED_COVER_EXTENSIONS = {"png", "jpg", "jpeg", "gif", "webp"}
 
 @recipes_bp.route('/new', methods=['GET', 'POST'])
 @login_required
@@ -28,77 +37,33 @@ def new_recipe():
         cloned_from_id = _safe_int(request.form.get('cloned_from_id'))
         target_status = _get_submission_status(request.form)
         try:
-            ingredients = _extract_ingredients_from_form(request.form)
+            submission = _build_recipe_submission(request.form, request.files)
+            if not submission.ok:
+                flash(submission.error, 'error')
+                ingredient_prefill, consumable_prefill = _build_prefill_from_form(request.form)
+                form_recipe = _recipe_from_form(request.form)
+                return _render_recipe_form(
+                    recipe=form_recipe,
+                    ingredient_prefill=ingredient_prefill,
+                    consumable_prefill=consumable_prefill,
+                    is_clone=is_clone,
+                    cloned_from_id=cloned_from_id,
+                    form_values=request.form
+                )
 
-            portioning_payload = None
-            try:
-                is_portioned = request.form.get('is_portioned', '') == 'true'
-                if is_portioned:
-                    portion_name = (request.form.get('portion_name') or '').strip() or None
-                    unit_id = None
-                    if portion_name:
-                        try:
-                            existing = Unit.query.filter(Unit.name == portion_name).order_by((Unit.organization_id == current_user.organization_id).desc()).first()
-                        except Exception:
-                            existing = None
-                        if not existing:
-                            try:
-                                u = Unit(
-                                    name=portion_name,
-                                    unit_type='count',
-                                    base_unit='count',
-                                    conversion_factor=1.0,
-                                    is_active=True,
-                                    is_custom=True,
-                                    is_mapped=False,
-                                    organization_id=current_user.organization_id,
-                                    created_by=current_user.id
-                                )
-                                db.session.add(u)
-                                db.session.flush()
-                                unit_id = u.id
-                            except Exception:
-                                db.session.rollback()
-                        else:
-                            unit_id = existing.id
-                    portioning_payload = {
-                        'is_portioned': True,
-                        'portion_count': int(request.form.get('portion_count') or 0),
-                        'portion_name': portion_name,
-                        'portion_unit_id': unit_id
-                    }
-            except Exception:
-                portioning_payload = None
+            payload = dict(submission.kwargs)
+            payload.update({
+                'status': target_status,
+                'cloned_from_id': cloned_from_id,
+            })
 
-            try:
-                yield_amount = float(request.form.get('predicted_yield') or 0.0)
-            except ValueError:
-                yield_amount = 0.0
-
-            success, result = create_recipe(
-                name=request.form.get('name'),
-                description=request.form.get('instructions'),
-                instructions=request.form.get('instructions'),
-                yield_amount=yield_amount,
-                yield_unit=request.form.get('predicted_yield_unit') or "",
-                ingredients=ingredients,
-                consumables=_extract_consumables_from_form(request.form),
-                allowed_containers=[int(id) for id in request.form.getlist('allowed_containers[]') if id] or [],
-                label_prefix=request.form.get('label_prefix'),
-                category_id=int(request.form.get('category_id')) if request.form.get('category_id') else None,
-                portioning_data=portioning_payload,
-                cloned_from_id=cloned_from_id,
-                # Absolute columns mirror JSON for clarity
-                is_portioned=(portioning_payload.get('is_portioned') if portioning_payload else False),
-                portion_name=(portioning_payload.get('portion_name') if portioning_payload else None),
-                portion_count=(portioning_payload.get('portion_count') if portioning_payload else None),
-                status=target_status
-            )
+            submitted_ingredients = payload.get('ingredients') or []
+            success, result = create_recipe(**payload)
 
             if success:
                 try:
                     created_names = []
-                    for ing in ingredients:
+                    for ing in submitted_ingredients:
                         from app.models import InventoryItem as _Inv
                         item = db.session.get(_Inv, ing['item_id'])
                         if item and not getattr(item, 'global_item_id', None) and float(getattr(item, 'quantity', 0) or 0) == 0.0:
@@ -207,12 +172,85 @@ def view_recipe(recipe_id):
             return redirect(url_for('recipes.list_recipes'))
 
         inventory_units = get_global_unit_list()
-        return render_template('pages/recipes/view_recipe.html', recipe=recipe, inventory_units=inventory_units)
+        lineage_enabled = True
+        return render_template(
+            'pages/recipes/view_recipe.html',
+            recipe=recipe,
+            inventory_units=inventory_units,
+            lineage_enabled=lineage_enabled,
+        )
 
     except Exception as e:
         flash(f"Error loading recipe: {str(e)}", "error")
         logger.exception(f"Error viewing recipe: {str(e)}")
         return redirect(url_for('recipes.list_recipes'))
+
+
+@recipes_bp.route('/<int:recipe_id>/lineage')
+@login_required
+def recipe_lineage(recipe_id):
+    try:
+        recipe = get_recipe_details(recipe_id)
+    except PermissionError:
+        flash("You do not have access to this recipe.", "error")
+        return redirect(url_for('recipes.list_recipes'))
+    except Exception as exc:
+        flash(f"Unable to load recipe lineage: {exc}", "error")
+        return redirect(url_for('recipes.list_recipes'))
+
+    if not recipe:
+        flash('Recipe not found.', 'error')
+        return redirect(url_for('recipes.list_recipes'))
+
+    root_id = recipe.root_recipe_id or recipe.id
+    relatives = (
+        Recipe.query.options(joinedload(Recipe.organization))
+        .filter(or_(Recipe.id == root_id, Recipe.root_recipe_id == root_id))
+        .order_by(Recipe.created_at.asc())
+        .all()
+    )
+
+    nodes = {rel.id: {'recipe': rel, 'children': []} for rel in relatives}
+    for rel in relatives:
+        parent_id = None
+        edge_type = None
+        if rel.parent_recipe_id and rel.parent_recipe_id in nodes:
+            parent_id = rel.parent_recipe_id
+            edge_type = 'variation'
+        elif rel.cloned_from_id and rel.cloned_from_id in nodes:
+            parent_id = rel.cloned_from_id
+            edge_type = 'clone'
+        elif rel.id != root_id and rel.root_recipe_id and rel.root_recipe_id in nodes:
+            parent_id = rel.root_recipe_id
+            edge_type = 'root'
+
+        if parent_id and edge_type:
+            nodes[parent_id]['children'].append({'id': rel.id, 'edge': edge_type})
+
+    root_recipe = nodes.get(root_id, {'recipe': recipe})
+    lineage_tree = _serialize_lineage_tree(root_recipe['recipe'], nodes, recipe.id)
+    lineage_path = _build_lineage_path(recipe.id, nodes, root_id)
+    events = (
+        RecipeLineage.query.filter_by(recipe_id=recipe.id)
+        .order_by(RecipeLineage.created_at.asc())
+        .all()
+    )
+
+    origin_source_org = None
+    if recipe.org_origin_purchased and recipe.origin_source_org:
+        origin_source_org = recipe.origin_source_org
+
+    org_marketplace_enabled = is_feature_enabled('FEATURE_ORG_MARKETPLACE_DASHBOARD')
+
+    return render_template(
+        'pages/recipes/recipe_lineage.html',
+        recipe=recipe,
+        origin_source_org=origin_source_org,
+        lineage_tree=lineage_tree,
+        lineage_path=lineage_path,
+        lineage_events=events,
+        org_marketplace_enabled=org_marketplace_enabled,
+    )
 
 
 
@@ -233,29 +271,32 @@ def create_variation(recipe_id):
 
         if request.method == 'POST':
             target_status = _get_submission_status(request.form)
-            ingredients = _extract_ingredients_from_form(request.form)
-            label_prefix = request.form.get('label_prefix')
-            if not label_prefix and parent.label_prefix:
-                label_prefix = ""
+            submission = _build_recipe_submission(request.form, request.files, defaults=parent)
+            if not submission.ok:
+                flash(submission.error, 'error')
+                ingredient_prefill, consumable_prefill = _build_prefill_from_form(request.form)
+                variation_draft = _recipe_from_form(request.form, base_recipe=parent)
+                variation_draft.parent_recipe_id = parent.id
+                return _render_recipe_form(
+                    recipe=variation_draft,
+                    is_variation=True,
+                    parent_recipe=parent,
+                    ingredient_prefill=ingredient_prefill,
+                    consumable_prefill=consumable_prefill,
+                    form_values=request.form
+                )
 
-            try:
-                yield_amount = float(request.form.get('predicted_yield') or parent.predicted_yield or 0.0)
-            except ValueError:
-                yield_amount = parent.predicted_yield or 0.0
+            payload = dict(submission.kwargs)
+            payload.update({
+                'parent_recipe_id': parent.id,
+                'status': target_status,
+            })
+            if payload.get('product_group_id') is None and parent.product_group_id:
+                payload['product_group_id'] = parent.product_group_id
+            if not payload.get('label_prefix') and parent.label_prefix:
+                payload['label_prefix'] = ""
 
-            success, result = create_recipe(
-                name=request.form.get('name'),
-                description=request.form.get('instructions'),
-                instructions=request.form.get('instructions'),
-                yield_amount=yield_amount,
-                yield_unit=request.form.get('predicted_yield_unit') or parent.predicted_yield_unit or "",
-                ingredients=ingredients,
-                consumables=_extract_consumables_from_form(request.form),
-                parent_recipe_id=parent.id,
-                allowed_containers=[int(id) for id in request.form.getlist('allowed_containers[]') if id] or [],
-                label_prefix=label_prefix,
-                status=target_status
-            )
+            success, result = create_recipe(**payload)
 
             if success:
                 if target_status == 'draft':
@@ -314,88 +355,25 @@ def edit_recipe(recipe_id):
     if request.method == 'POST':
         target_status = _get_submission_status(request.form)
         try:
-            # DEBUG: Log form data for yield validation debugging
-            logger.info(f"=== RECIPE EDIT FORM DEBUG ===")
-            logger.info(f"Recipe ID: {recipe_id}")
-            logger.info(f"Form predicted_yield: {request.form.get('predicted_yield')} (raw)")
-            logger.info(f"Form predicted_yield_unit: {request.form.get('predicted_yield_unit')}")
-            
-            try:
-                yield_val = float(request.form.get('predicted_yield') or 0.0)
-                logger.info(f"Converted yield value: {yield_val}")
-            except Exception as e:
-                logger.error(f"Error converting yield: {e}")
-                yield_val = 0.0
-            
-            ingredients = _extract_ingredients_from_form(request.form)
+            submission = _build_recipe_submission(request.form, request.files, defaults=recipe, existing=recipe)
+            if not submission.ok:
+                flash(submission.error, 'error')
+                form_override = request.form
+                ingredient_prefill, consumable_prefill = _build_prefill_from_form(request.form)
+                return _render_recipe_form(
+                    recipe=recipe,
+                    edit_mode=True,
+                    ingredient_prefill=ingredient_prefill,
+                    consumable_prefill=consumable_prefill,
+                    form_values=form_override
+                )
 
-            portioning_payload = None
-            try:
-                is_portioned = request.form.get('is_portioned', '') == 'true'
-                if is_portioned:
-                    portion_name = (request.form.get('portion_name') or '').strip() or None
-                    unit_id = None
-                    if portion_name:
-                        try:
-                            existing = Unit.query.filter(Unit.name == portion_name).order_by((Unit.organization_id == current_user.organization_id).desc()).first()
-                        except Exception:
-                            existing = None
-                        if not existing:
-                            try:
-                                u = Unit(
-                                    name=portion_name,
-                                    unit_type='count',
-                                    base_unit='count',
-                                    conversion_factor=1.0,
-                                    is_active=True,
-                                    is_custom=True,
-                                    is_mapped=False,
-                                    organization_id=current_user.organization_id,
-                                    created_by=current_user.id
-                                )
-                                db.session.add(u)
-                                db.session.flush()
-                                unit_id = u.id
-                            except Exception:
-                                db.session.rollback()
-                        else:
-                            unit_id = existing.id
-                    portioning_payload = {
-                        'is_portioned': True,
-                        'portion_count': int(request.form.get('portion_count') or 0),
-                        'portion_name': portion_name,
-                        'portion_unit_id': unit_id
-                    }
-            except Exception:
-                portioning_payload = None
+            payload = dict(submission.kwargs)
+            payload['status'] = target_status
 
-            # DEBUG: Log the exact parameters being passed to update_recipe
-            update_params = {
-                'recipe_id': recipe_id,
-                'name': request.form.get('name'),
-                'yield_amount': yield_val,
-                'yield_unit': request.form.get('predicted_yield_unit') or "",
-                'portioning_data': portioning_payload
-            }
-            logger.info(f"Update recipe params: {update_params}")
-            
             success, result = update_recipe(
                 recipe_id=recipe_id,
-                name=request.form.get('name'),
-                description=request.form.get('instructions'),
-                instructions=request.form.get('instructions'),
-                yield_amount=yield_val,
-                yield_unit=request.form.get('predicted_yield_unit') or "",
-                ingredients=ingredients,
-                consumables=_extract_consumables_from_form(request.form),
-                allowed_containers=[int(id) for id in request.form.getlist('allowed_containers[]') if id] or [],
-                label_prefix=request.form.get('label_prefix'),
-                category_id=int(request.form.get('category_id')) if request.form.get('category_id') else None,
-                portioning_data=portioning_payload,
-                is_portioned=(portioning_payload.get('is_portioned') if portioning_payload else False),
-                portion_name=(portioning_payload.get('portion_name') if portioning_payload else None),
-                portion_count=(portioning_payload.get('portion_count') if portioning_payload else None),
-                status=target_status
+                **payload,
             )
 
             if success:
@@ -490,7 +468,7 @@ def make_parent_recipe(recipe_id):
 
         # Convert variation to parent by removing parent relationship
         recipe.parent_recipe_id = None
-        
+
         # Update the name to remove "Variation" suffix if present
         if recipe.name.endswith(" Variation"):
             recipe.name = recipe.name.replace(" Variation", "")
@@ -503,9 +481,9 @@ def make_parent_recipe(recipe_id):
             user_id=getattr(current_user, 'id', None)
         )
         db.session.add(lineage_entry)
-        
+
         db.session.commit()
-        
+
         flash(f'Recipe "{recipe.name}" has been converted to a parent recipe and is no longer a variation of "{original_parent.name}".', 'success')
         logger.info(f"Converted recipe {recipe_id} from variation to parent recipe")
 
@@ -653,6 +631,138 @@ def quick_add_ingredient():
         logger.error(f"Error quick-adding ingredient: {e}")
         return jsonify({'error': str(e)}), 500
 
+
+@dataclass
+class RecipeFormSubmission:
+    kwargs: Dict[str, Any]
+    error: Optional[str] = None
+
+    @property
+    def ok(self) -> bool:
+        return self.error is None
+
+
+def _build_recipe_submission(form, files, *, defaults: Optional[Recipe] = None, existing: Optional[Recipe] = None) -> RecipeFormSubmission:
+    ingredients = _extract_ingredients_from_form(form)
+    consumables = _extract_consumables_from_form(form)
+    allowed_containers = _collect_allowed_containers(form)
+
+    portion_payload, portion_fields = _parse_portioning_from_form(form)
+    category_id = _safe_int(form.get('category_id'))
+
+    fallback_yield = getattr(defaults, 'predicted_yield', None)
+    if fallback_yield is None:
+        fallback_yield = 0.0
+    yield_amount = _coerce_float(form.get('predicted_yield'), fallback=fallback_yield)
+    fallback_unit = getattr(defaults, 'predicted_yield_unit', '') if defaults else ''
+    yield_unit = form.get('predicted_yield_unit') or fallback_unit or ""
+
+    marketplace_ok, marketplace_result = RecipeMarketplaceService.extract_submission(form, files, existing=existing)
+    if not marketplace_ok:
+        return RecipeFormSubmission({}, marketplace_result)
+
+    kwargs: Dict[str, Any] = {
+        'name': form.get('name'),
+        'description': form.get('instructions'),
+        'instructions': form.get('instructions'),
+        'yield_amount': yield_amount,
+        'yield_unit': yield_unit,
+        'ingredients': ingredients,
+        'consumables': consumables,
+        'allowed_containers': allowed_containers,
+        'label_prefix': form.get('label_prefix'),
+        'category_id': category_id,
+        'portioning_data': portion_payload,
+        'is_portioned': portion_fields['is_portioned'],
+        'portion_name': portion_fields['portion_name'],
+        'portion_count': portion_fields['portion_count'],
+        'portion_unit_id': portion_fields['portion_unit_id'],
+    }
+    kwargs.update(marketplace_result['marketplace'])
+    kwargs.update(marketplace_result['cover'])
+
+    return RecipeFormSubmission(kwargs)
+
+
+def _collect_allowed_containers(form) -> list[int]:
+    containers: list[int] = []
+    for raw in form.getlist('allowed_containers[]'):
+        value = _safe_int(raw)
+        if value:
+            containers.append(value)
+    return containers
+
+
+def _parse_portioning_from_form(form) -> tuple[Optional[Dict[str, Any]], Dict[str, Any]]:
+    truthy = {'true', '1', 'yes', 'on'}
+    flag = str(form.get('is_portioned') or '').strip().lower() in truthy
+    default_fields = {
+        'is_portioned': False,
+        'portion_name': None,
+        'portion_count': None,
+        'portion_unit_id': None,
+    }
+    if not flag:
+        return None, default_fields
+
+    portion_name = (form.get('portion_name') or '').strip() or None
+    portion_count = _safe_int(form.get('portion_count'))
+    portion_unit_id = _ensure_portion_unit(portion_name)
+
+    payload = {
+        'is_portioned': True,
+        'portion_name': portion_name,
+        'portion_count': portion_count,
+        'portion_unit_id': portion_unit_id,
+    }
+    return payload, payload.copy()
+
+
+def _ensure_portion_unit(portion_name: Optional[str]) -> Optional[int]:
+    if not portion_name:
+        return None
+
+    try:
+        existing = Unit.query.filter(Unit.name == portion_name).order_by(
+            (Unit.organization_id == current_user.organization_id).desc()
+        ).first()
+    except Exception:
+        existing = None
+
+    if existing:
+        return existing.id
+
+    if not getattr(current_user, 'is_authenticated', False):
+        return None
+
+    try:
+        unit = Unit(
+            name=portion_name,
+            unit_type='count',
+            base_unit='count',
+            conversion_factor=1.0,
+            is_active=True,
+            is_custom=True,
+            is_mapped=False,
+            organization_id=current_user.organization_id,
+            created_by=current_user.id
+        )
+        db.session.add(unit)
+        db.session.flush()
+        return unit.id
+    except Exception:
+        db.session.rollback()
+        return None
+
+
+def _coerce_float(value: Any, *, fallback: float = 0.0) -> float:
+    if value in (None, ''):
+        return fallback
+    try:
+        return float(value)
+    except (TypeError, ValueError):
+        return fallback
+
 # Helper functions to keep controllers clean
 def _render_recipe_form(recipe=None, **context):
     form_data = _get_recipe_form_data()
@@ -667,6 +777,14 @@ def _recipe_from_form(form, base_recipe=None):
     recipe.label_prefix = form.get('label_prefix') or (base_recipe.label_prefix if base_recipe else '')
     recipe.category_id = _safe_int(form.get('category_id')) or (base_recipe.category_id if base_recipe else None)
     recipe.parent_recipe_id = base_recipe.parent_recipe_id if base_recipe and getattr(base_recipe, 'parent_recipe_id', None) else None
+
+    # Product store URL
+    product_store_url = form.get('product_store_url')
+    if product_store_url is not None:
+        recipe.product_store_url = product_store_url.strip() or None
+
+    # Product group ID
+    recipe.product_group_id = _safe_int(form.get('product_group_id')) or (base_recipe.product_group_id if base_recipe else None)
 
     try:
         recipe.predicted_yield = float(form.get('predicted_yield')) if form.get('predicted_yield') not in (None, '') else (base_recipe.predicted_yield if base_recipe else None)
@@ -756,6 +874,59 @@ def _serialize_assoc_rows(associations):
             'name': assoc.inventory_item.name if assoc.inventory_item else ''
         })
     return serialized
+
+
+def _serialize_lineage_tree(node_recipe: Recipe, nodes: dict, current_id: int) -> dict:
+    node_payload = {
+        'id': node_recipe.id,
+        'name': node_recipe.name,
+        'organization_name': node_recipe.organization.name if node_recipe.organization else None,
+        'organization_id': node_recipe.organization_id,
+        'origin_type': node_recipe.org_origin_type,
+        'origin_purchased': node_recipe.org_origin_purchased,
+        'is_current': node_recipe.id == current_id,
+        'status': node_recipe.status,
+        'children': [],
+    }
+
+    for child in nodes.get(node_recipe.id, {}).get('children', []):
+        child_recipe = nodes[child['id']]['recipe']
+        node_payload['children'].append({
+            'edge_type': child['edge'],
+            'node': _serialize_lineage_tree(child_recipe, nodes, current_id)
+        })
+
+    return node_payload
+
+
+def _build_lineage_path(target_id: int, nodes: dict, root_id: int | None) -> list[int]:
+    path: list[int] = []
+    seen: set[int] = set()
+    current_id = target_id
+
+    while current_id and current_id not in seen:
+        path.append(current_id)
+        seen.add(current_id)
+        recipe = nodes.get(current_id, {}).get('recipe')
+        if not recipe:
+            break
+        if recipe.parent_recipe_id and recipe.parent_recipe_id in nodes:
+            current_id = recipe.parent_recipe_id
+        elif recipe.cloned_from_id and recipe.cloned_from_id in nodes:
+            current_id = recipe.cloned_from_id
+        elif (
+            recipe.root_recipe_id
+            and recipe.root_recipe_id in nodes
+            and recipe.id != recipe.root_recipe_id
+        ):
+            current_id = recipe.root_recipe_id
+        else:
+            current_id = None
+
+    if root_id and root_id not in path:
+        path.append(root_id)
+
+    return list(reversed(path))
 
 
 def _lookup_inventory_names(item_ids):
@@ -942,12 +1113,28 @@ def _get_recipe_form_data():
     # Categories for dropdown
     categories = ProductCategory.query.order_by(ProductCategory.name.asc()).all()
 
+    product_groups = RecipeProductGroup.query.filter_by(is_active=True).order_by(
+        RecipeProductGroup.display_order.asc(), RecipeProductGroup.name.asc()
+    ).all()
+
     return {
         'all_ingredients': all_ingredients,
         'units': units,
         'inventory_units': inventory_units,
-        'product_categories': categories
+        'product_categories': categories,
+        'product_groups': product_groups,
+        'recipe_sharing_enabled': _is_recipe_sharing_enabled()
     }
+
+
+def _is_recipe_sharing_enabled():
+    try:
+        enabled = is_feature_enabled('FEATURE_RECIPE_SHARING_CONTROLS')
+    except Exception:
+        enabled = False
+    if current_user.is_authenticated and getattr(current_user, 'user_type', '') == 'developer':
+        return True
+    return enabled
 
 def _format_stock_results(ingredients):
     """Format ingredient availability for frontend"""
@@ -972,7 +1159,7 @@ def _create_variation_template(parent):
         # Count existing variations to suggest next number
         existing_variations = Recipe.query.filter_by(parent_recipe_id=parent.id).count()
         variation_prefix = f"{parent.label_prefix}V{existing_variations + 1}"
-    
+
     template = Recipe(
         name=f"{parent.name} Variation",
         instructions=parent.instructions,
@@ -995,5 +1182,14 @@ def _create_variation_template(parent):
 
     if parent.category_data:
         template.category_data = parent.category_data.copy() if isinstance(parent.category_data, dict) else parent.category_data
+    template.product_group_id = parent.product_group_id
+    template.skin_opt_in = parent.skin_opt_in
+    template.sharing_scope = 'private'
+    template.is_public = False
+    template.is_for_sale = False
+
+    # Marketplace fields
+    template.product_store_url = parent.product_store_url
+    template.recipe_collection_group_id = parent.recipe_collection_group_id
 
     return template

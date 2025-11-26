@@ -1,0 +1,131 @@
+{% extends 'layout.html' %}
+{% from 'components/shared/stat_card.html' import stat_card %}
+
+{% block title %}{{ organization.name }} Marketplace{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-body d-flex flex-column flex-lg-row align-items-start align-items-lg-center justify-content-between">
+                    <div>
+                        <h1 class="h3 mb-1"><i class="fas fa-store text-primary me-2"></i>{{ organization.name }} Marketplace</h1>
+                        <p class="text-muted mb-0">Public listings published by {{ organization.name }}. Filters and stats update as you search.</p>
+                    </div>
+                    <a href="{{ url_for('recipe_library_bp.recipe_library') }}" class="btn btn-outline-secondary mt-3 mt-lg-0">
+                        <i class="fas fa-arrow-left"></i> Back to Global Library
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row mb-4 gy-3">
+        <div class="col-md-3">
+            {{ stat_card('fas fa-book-open text-secondary', totals.listings, 'Public Listings', theme='secondary', subtext=totals.for_sale ~ ' for sale') }}
+        </div>
+        <div class="col-md-3">
+            {{ stat_card('fas fa-download text-info', totals.downloads, 'Estimated Downloads', theme='info') }}
+        </div>
+        <div class="col-md-3">
+            {{ stat_card('fas fa-shopping-cart text-success', totals.purchases, 'Estimated Purchases', theme='success') }}
+        </div>
+        <div class="col-md-3">
+            {{ stat_card('fas fa-dollar-sign text-primary', totals.for_sale, 'Active Paid Listings', theme='primary') }}
+        </div>
+    </div>
+
+    <div class="card mb-4">
+        <div class="card-body">
+            <form class="row g-3" method="get" action="{{ url_for('recipe_library_bp.organization_marketplace', organization_id=organization.id) }}">
+                <div class="col-md-4">
+                    <label class="form-label small text-muted">Search</label>
+                    <div class="input-group">
+                        <span class="input-group-text"><i class="fas fa-search"></i></span>
+                        <input type="text" class="form-control" name="search" value="{{ search_query }}" placeholder="Search name or description">
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label small text-muted">Listing Type</label>
+                    <select class="form-select" name="sale">
+                        <option value="any" {% if sale_filter == 'any' %}selected{% endif %}>All listings</option>
+                        <option value="free" {% if sale_filter == 'free' %}selected{% endif %}>Free</option>
+                        <option value="sale" {% if sale_filter == 'sale' %}selected{% endif %}>For sale</option>
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label small text-muted">Sort</label>
+                    <select class="form-select" name="sort">
+                        <option value="newest" {% if sort_mode == 'newest' %}selected{% endif %}>Newest to oldest</option>
+                        <option value="oldest" {% if sort_mode == 'oldest' %}selected{% endif %}>Oldest to newest</option>
+                        <option value="downloads" {% if sort_mode == 'downloads' %}selected{% endif %}>Most downloads</option>
+                        <option value="price_high" {% if sort_mode == 'price_high' %}selected{% endif %}>Price high → low</option>
+                    </select>
+                </div>
+                <div class="col-md-2 d-flex align-items-end justify-content-end">
+                    <button class="btn btn-primary w-100">
+                        <i class="fas fa-filter"></i> Apply
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    {% if recipes %}
+    <div class="row row-cols-1 row-cols-md-2 row-cols-xl-3 g-4">
+        {% for recipe in recipes %}
+        <div class="col">
+            <div class="card h-100 shadow-sm">
+                {% if recipe.cover_url %}
+                <img src="{{ recipe.cover_url }}" class="card-img-top" alt="{{ recipe.name }}">
+                {% endif %}
+                <div class="card-body d-flex flex-column">
+                    <div class="d-flex justify-content-between align-items-start mb-2">
+                        <div>
+                            <span class="badge bg-secondary">{{ recipe.category or 'Uncategorized' }}</span>
+                            {% if recipe.product_group %}
+                            <span class="badge bg-light text-dark border">{{ recipe.product_group }}</span>
+                            {% endif %}
+                        </div>
+                        {% if recipe.is_for_sale %}
+                        <span class="badge bg-success">${{ "%.2f"|format(recipe.sale_price) }}</span>
+                        {% else %}
+                        <span class="badge bg-info text-dark">Free</span>
+                        {% endif %}
+                    </div>
+                    <h5 class="card-title">{{ recipe.name }}</h5>
+                    {% if recipe.public_description %}
+                    <p class="card-text text-muted">{{ recipe.public_description }}</p>
+                    {% endif %}
+                    <ul class="list-unstyled small text-muted flex-grow-1">
+                        <li><i class="fas fa-balance-scale"></i> Yield: {{ recipe.predicted_yield or 'N/A' }} {{ recipe.predicted_yield_unit }}</li>
+                        <li><i class="fas fa-chart-bar"></i> Downloads: {{ recipe.download_count }}</li>
+                        <li><i class="fas fa-shopping-bag"></i> Purchases: {{ recipe.purchase_count }}</li>
+                        <li><i class="fas fa-dollar-sign"></i> Avg batch cost: {% if recipe.stats and recipe.stats.avg_cost_per_batch %}${{ "%.2f"|format(recipe.stats.avg_cost_per_batch) }}{% else %}N/A{% endif %}</li>
+                    </ul>
+                    <div class="alert alert-warning py-2 small">
+                        Instructions and ingredient details remain blurred until purchased or cloned.
+                    </div>
+                    <div class="d-flex flex-column flex-lg-row gap-2">
+                        <a href="{{ url_for('recipe_library_bp.recipe_library_detail', recipe_id=recipe.id, slug=recipe.slug) }}" class="btn btn-outline-primary w-100">
+                            <i class="fas fa-eye"></i> View Details
+                        </a>
+                        {% if purchase_enabled and recipe.is_for_sale and recipe.product_store_url %}
+                        <a href="{{ recipe.product_store_url }}" class="btn btn-success w-100" target="_blank" rel="noopener">
+                            <i class="fas fa-shopping-cart"></i> Purchase
+                        </a>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    <div class="alert alert-info">
+        <i class="fas fa-info-circle me-2"></i>This organization has no public recipes that match your filters yet.
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

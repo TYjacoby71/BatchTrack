@@ -272,7 +272,72 @@
           <a href="{{ url_for('recipes.clone_recipe', recipe_id=recipe.id) }}" class="btn btn-outline-info">
             <i class="fas fa-copy"></i> Clone Recipe
           </a>
+          {% if lineage_enabled %}
+          <a href="{{ url_for('recipes.recipe_lineage', recipe_id=recipe.id) }}" class="btn btn-outline-dark">
+            <i class="fas fa-project-diagram"></i> View Lineage
+          </a>
+          {% endif %}
         </div>
+      </div>
+    </div>
+
+    <!-- Origin Details -->
+    <div class="card mb-4">
+      <div class="card-header">
+        <h5 class="card-title mb-0"><i class="fas fa-certificate"></i> Origin & Ownership</h5>
+      </div>
+      <div class="card-body">
+        <dl class="row mb-0">
+          <dt class="col-5">Organization</dt>
+          <dd class="col-7">{{ recipe.organization.name if recipe.organization else 'Unassigned' }}</dd>
+          <dt class="col-5">Origin Type</dt>
+          <dd class="col-7 text-capitalize">
+            {% if recipe.org_origin_type == 'batchtrack_native' %}
+              <span class="badge bg-dark">BatchTrack Native</span>
+            {% else %}
+              {{ recipe.org_origin_type.replace('_', ' ') }}
+            {% endif %}
+          </dd>
+          <dt class="col-5">Org Origin Recipe</dt>
+          <dd class="col-7">
+            {% if recipe.org_origin_recipe %}
+              <a href="{{ url_for('recipes.view_recipe', recipe_id=recipe.org_origin_recipe.id) }}">{{ recipe.org_origin_recipe.name }}</a>
+            {% else %}
+              {{ recipe.name }}
+            {% endif %}
+          </dd>
+          <dt class="col-5">Global Origin</dt>
+          <dd class="col-7">
+            {% if recipe.root_recipe %}
+              <a href="{{ url_for('recipes.view_recipe', recipe_id=recipe.root_recipe.id) }}">{{ recipe.root_recipe.name }}</a>
+            {% else %}
+              {{ recipe.name }}
+            {% endif %}
+          </dd>
+          <dt class="col-5">Purchased Origin</dt>
+          <dd class="col-7">
+            {% if recipe.org_origin_purchased %}
+              <span class="badge bg-warning text-dark">Yes</span>
+              {% if recipe.origin_source_org %}
+                <div class="small mt-2">
+                  Source: <strong>{{ recipe.origin_source_org.name }}</strong>
+                  <div class="mt-1">
+                    <a href="{{ url_for('recipe_library_bp.recipe_library', organization=recipe.origin_source_org.id) }}" class="btn btn-link btn-sm px-0">
+                      View public listings
+                    </a>
+                    {% if is_feature_enabled('FEATURE_ORG_MARKETPLACE_DASHBOARD') %}
+                      <a href="{{ url_for('recipe_library_bp.organization_marketplace', organization_id=recipe.origin_source_org.id) }}" class="btn btn-link btn-sm px-2">
+                        Marketplace dashboard
+                      </a>
+                    {% endif %}
+                  </div>
+                </div>
+              {% endif %}
+            {% else %}
+              <span class="badge bg-success">No</span>
+            {% endif %}
+          </dd>
+        </dl>
       </div>
     </div>
 

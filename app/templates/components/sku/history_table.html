@@ -14,7 +14,7 @@
               <th style="white-space: nowrap;">Date</th>
               <th style="white-space: nowrap;">Change Type</th>
               <th style="white-space: nowrap;">Quantity Δ</th>
-              <th style="white-space: nowrap;">Lot Remaining</th>
+              <th style="white-space: nowrap;">Quantity Remaining</th>
               <th style="white-space: nowrap;">Unit Cost</th>
               <th style="white-space: nowrap;">Total Value</th>
               <th style="white-space: nowrap;">Source</th>
@@ -67,6 +67,8 @@
               {% if not fifo_filter or entry.remaining_quantity > 0 %}
                 {% set lot = entry.affected_lot %}
                 {% set lot_remaining = lot.remaining_quantity if lot else entry.remaining_quantity %}
+                {% set hide_remaining = entry.change_type in ['sale', 'sold'] %}
+                {% set display_remaining = lot_remaining if (lot_remaining is not none and not hide_remaining) else None %}
                 {% set lot_expiration = lot.expiration_date if lot else entry.expiration_date %}
                 {% set is_expired = lot_expiration and lot_remaining and lot_expiration < now %}
                 {% set expiring_soon = lot_expiration and lot_remaining and not is_expired and (lot_expiration.date() - now.date()).days <= 7 %}
@@ -92,8 +94,8 @@
                     </span>
                   </td>
                   <td>
-                    {% if lot_remaining is not none %}
-                      {{ "%.2f"|format(lot_remaining) }} {{ entry.unit or sku.unit }}
+                    {% if display_remaining is not none %}
+                      {{ "%.2f"|format(display_remaining) }} {{ entry.unit or sku.unit }}
                     {% else %}
                       <span class="text-muted">-</span>
                     {% endif %}
@@ -190,7 +192,7 @@
                     {% endif %}
                   </td>
                   <td style="white-space: nowrap;">
-                    {% if lot_remaining and lot_remaining > 0 %}
+                    {% if display_remaining and display_remaining > 0 %}
                       {% if lot_expiration and lot_expiration < now %}
                         <button class="btn btn-sm btn-outline-danger"
                                 onclick="markAsExpired('product', '{{ entry.id }}')"

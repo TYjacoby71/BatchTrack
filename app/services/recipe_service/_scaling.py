@@ -32,16 +32,19 @@ def scale_recipe(recipe_id: int, target_yield: float,
         recipe = db.session.get(Recipe, recipe_id)
         if not recipe:
             return {'success': False, 'error': 'Recipe not found'}
+        if not recipe.predicted_yield or recipe.predicted_yield <= 0:
+            return {'success': False, 'error': 'Recipe has no predicted yield to scale from'}
 
+        recipe_unit = recipe.predicted_yield_unit
         # Validate yield unit matches
-        if yield_unit and yield_unit != recipe.yield_unit:
+        if yield_unit and recipe_unit and yield_unit != recipe_unit:
             return {
                 'success': False, 
-                'error': f'Yield unit mismatch. Recipe yields in {recipe.yield_unit}, not {yield_unit}'
+                'error': f'Yield unit mismatch. Recipe yields in {recipe_unit}, not {yield_unit}'
             }
 
         # Calculate scaling factor
-        scale_factor = target_yield / recipe.yield_amount
+        scale_factor = target_yield / recipe.predicted_yield
         
         # Validate scaling factor
         is_valid, error = validate_scaling_factor(scale_factor)
@@ -56,9 +59,9 @@ def scale_recipe(recipe_id: int, target_yield: float,
         return {
             'success': True,
             'recipe_id': recipe_id,
-            'original_yield': recipe.yield_amount,
+            'original_yield': recipe.predicted_yield,
             'target_yield': target_yield,
-            'yield_unit': recipe.yield_unit,
+            'yield_unit': recipe_unit,
             'scale_factor': scale_factor,
             'scaled_ingredients': scaled_ingredients['ingredients']
         }
@@ -83,10 +86,12 @@ def calculate_scaled_ingredients(recipe_id: int, scale_factor: float) -> Dict[st
         recipe = db.session.get(Recipe, recipe_id)
         if not recipe:
             return {'success': False, 'error': 'Recipe not found'}
+        if not recipe.predicted_yield or recipe.predicted_yield <= 0:
+            return {'success': False, 'error': 'Recipe has no predicted yield to scale from'}
 
         scaled_ingredients = []
         
-        for recipe_ingredient in recipe.ingredients:
+        for recipe_ingredient in recipe.recipe_ingredients:
             original_quantity = recipe_ingredient.quantity
             scaled_quantity = original_quantity * scale_factor
             

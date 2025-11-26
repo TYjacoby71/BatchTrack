@@ -6,9 +6,9 @@ from .mixins import ScopedModelMixin
 # 1. Base models with no dependencies
 from .models import (
     db, Organization, User, InventoryItem, InventoryHistory, BatchInventoryLog,
-    Recipe, RecipeIngredient
 )
-from .recipe import RecipeConsumable, RecipeLineage
+from .recipe import Recipe, RecipeIngredient, RecipeConsumable, RecipeLineage
+from .recipe_marketplace import RecipeProductGroup, RecipeModerationEvent
 from .batch import (
     Batch,
     BatchIngredient,

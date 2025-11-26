@@ -11,8 +11,6 @@ from .blueprints_registry import register_blueprints
 from .extensions import cache, csrf, db, limiter, migrate, server_session
 from .logging_config import configure_logging
 from .middleware import register_middleware
-from .template_context import register_template_context
-from .utils.template_filters import register_template_filters
 
 logger = logging.getLogger(__name__)
 
@@ -37,6 +35,9 @@ def create_app(config: dict[str, Any] | None = None) -> Flask:
     register_middleware(app)
     register_blueprints(app)
     from . import models  # noqa: F401  # ensure models registered for Alembic
+
+    from .template_context import register_template_context
+    from .utils.template_filters import register_template_filters
 
     register_template_context(app)
     register_template_filters(app)
@@ -66,6 +67,7 @@ def _load_base_config(app: Flask, config: dict[str, Any] | None) -> None:
     upload_dir = os.path.join(app.root_path, "static", "product_images")
     os.makedirs(upload_dir, exist_ok=True)
     app.config.setdefault("UPLOAD_FOLDER", upload_dir)
+    app.config.setdefault("BATCHTRACK_ORG_ID", 1)
 
 
 def _sync_env_overrides(app: Flask) -> None:
