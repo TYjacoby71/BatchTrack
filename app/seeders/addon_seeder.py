@@ -29,7 +29,7 @@ def seed_addons():
         },
         {
             'key': 'batchbot_refill_100',
-            'name': 'Batchley Refill · 100 Actions',
+            'name': 'Batchley Refill - 100 Actions',
             'description': 'Adds 100 Batchley automation requests to the organization quota.',
             'permission_name': None,
             'function_key': 'batchbot_credits',
