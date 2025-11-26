@@ -20,6 +20,10 @@ logger = logging.getLogger(__name__)
 
 api_bp = Blueprint('api', __name__, url_prefix='/api')
 
+
+def _is_batchbot_enabled() -> bool:
+    return bool(current_app.config.get('FEATURE_BATCHBOT', False))
+
 @api_bp.route('/', methods=['GET', 'HEAD'])
 def health_check():
     """Health check endpoint for monitoring services"""
@@ -328,6 +332,8 @@ def unit_converter():
 @api_bp.route('/batchbot/chat', methods=['POST'])
 @login_required
 def batchbot_chat():
+    if not _is_batchbot_enabled():
+        return jsonify({'success': False, 'error': 'BatchBot is disabled for this deployment.'}), 404
     data = request.get_json() or {}
     prompt = (data.get('prompt') or '').strip()
     history = data.get('history') or []
@@ -381,6 +387,8 @@ def batchbot_chat():
 @api_bp.route('/batchbot/usage', methods=['GET'])
 @login_required
 def batchbot_usage():
+    if not _is_batchbot_enabled():
+        return jsonify({'success': False, 'error': 'BatchBot is disabled for this deployment.'}), 404
     org = getattr(current_user, 'organization', None)
     if not org:
         return jsonify({'success': False, 'error': 'Organization is required.'}), 400

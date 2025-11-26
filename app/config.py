@@ -116,6 +116,7 @@ class BaseConfig:
 
     # Feature flags
     FEATURE_INVENTORY_ANALYTICS = os.environ.get('FEATURE_INVENTORY_ANALYTICS', 'true').lower() == 'true'
+    FEATURE_BATCHBOT = os.environ.get('FEATURE_BATCHBOT', 'true').lower() != 'false'
 
     # Google AI / BatchBot integration
     GOOGLE_AI_API_KEY = os.environ.get('GOOGLE_AI_API_KEY') or os.environ.get('GOOGLE_GENERATIVE_AI_API_KEY')
@@ -207,11 +208,11 @@ class ProductionConfig(BaseConfig):
     TESTING = False
     SQLALCHEMY_DATABASE_URI = _normalize_db_url(os.environ.get('DATABASE_INTERNAL_URL')) or _normalize_db_url(os.environ.get('DATABASE_URL'))
     SQLALCHEMY_ENGINE_OPTIONS = {
-        'pool_size': int(os.environ.get('SQLALCHEMY_POOL_SIZE', 80)),
-        'max_overflow': int(os.environ.get('SQLALCHEMY_MAX_OVERFLOW', 40)),
+        'pool_size': int(os.environ.get('SQLALCHEMY_POOL_SIZE', 5)),
+        'max_overflow': int(os.environ.get('SQLALCHEMY_MAX_OVERFLOW', 5)),
         'pool_pre_ping': True,
         'pool_recycle': 1800,
-        'pool_timeout': int(os.environ.get('SQLALCHEMY_POOL_TIMEOUT', 30)),
+        'pool_timeout': int(os.environ.get('SQLALCHEMY_POOL_TIMEOUT', 5)),
     }
     _prod_ratelimit_uri = os.environ.get('RATELIMIT_STORAGE_URI') or os.environ.get('REDIS_URL') or os.environ.get('RATELIMIT_STORAGE_URL') or _resolve_ratelimit_uri()
     RATELIMIT_STORAGE_URI = _prod_ratelimit_uri

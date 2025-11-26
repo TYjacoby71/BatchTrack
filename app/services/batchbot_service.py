@@ -36,6 +36,8 @@ class BatchBotService:
     """Coordinates Gemini calls, contextual data, and automation hooks."""
 
     def __init__(self, user):
+        if not current_app.config.get("FEATURE_BATCHBOT", False):
+            raise BatchBotServiceError("BatchBot feature is disabled.")
         if not user or not getattr(user, "organization", None):
             raise BatchBotServiceError("BatchBot requires an authenticated organization user.")
 
