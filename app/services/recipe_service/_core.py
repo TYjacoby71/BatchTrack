@@ -9,6 +9,7 @@ from decimal import Decimal, InvalidOperation
 from typing import Dict, List, Any, Optional, Tuple
 from flask import current_app, session
 from flask_login import current_user
+from sqlalchemy import func
 
 
 def _resolve_current_org_id() -> Optional[int]:
@@ -25,10 +26,12 @@ def _resolve_current_org_id() -> Optional[int]:
 
 from ...models import Recipe, RecipeIngredient, InventoryItem
 from ...models.recipe import RecipeConsumable, RecipeLineage
+from ...models.global_item import GlobalItem
 from ...extensions import db
 from ._validation import validate_recipe_data
 from ...utils.code_generator import generate_recipe_prefix
 from ...services.event_emitter import EventEmitter
+from ..inventory_adjustment._creation_logic import create_inventory_item
 
 logger = logging.getLogger(__name__)
 
@@ -120,6 +123,99 @@ def _build_org_origin_context(
         context['org_origin_source_recipe_id'] = source.root_recipe_id or source.id
 
     return context
+
+
+def _resolve_import_name(fallback_name: Optional[str], global_item_id: Optional[int]) -> str:
+    name = (fallback_name or "").strip()
+    if name:
+        return name
+    if global_item_id:
+        try:
+            global_item = db.session.get(GlobalItem, int(global_item_id))
+            if global_item and getattr(global_item, "name", None):
+                return global_item.name
+        except Exception:
+            pass
+    return "Imported Item"
+
+
+def _resolve_import_unit(
+    fallback_unit: Optional[str],
+    fallback_type: Optional[str],
+    global_item: Optional[GlobalItem],
+) -> str:
+    if fallback_unit:
+        return fallback_unit
+    if global_item and getattr(global_item, "default_unit", None):
+        return global_item.default_unit
+    if (fallback_type or "").lower() == "container":
+        return "count"
+    return "gram"
+
+
+def _ensure_inventory_item_for_import(
+    *,
+    organization_id: Optional[int],
+    global_item_id: Optional[int],
+    fallback_name: Optional[str],
+    fallback_unit: Optional[str],
+    fallback_type: Optional[str],
+) -> Optional[int]:
+    if not organization_id:
+        return None
+
+    if global_item_id:
+        existing = (
+            InventoryItem.query.filter(
+                InventoryItem.organization_id == organization_id,
+                InventoryItem.global_item_id == global_item_id,
+            )
+            .order_by(InventoryItem.id.asc())
+            .first()
+        )
+        if existing:
+            return existing.id
+
+    global_item = None
+    if global_item_id:
+        try:
+            global_item = db.session.get(GlobalItem, int(global_item_id))
+        except Exception:
+            global_item = None
+
+    normalized_name = _resolve_import_name(fallback_name, global_item_id if global_item_id else None)
+    normalized_type = fallback_type or (global_item.item_type if global_item else "ingredient")
+    normalized_unit = _resolve_import_unit(fallback_unit, normalized_type, global_item)
+
+    if not global_item_id and normalized_name:
+        name_match = (
+            InventoryItem.query.filter(
+                InventoryItem.organization_id == organization_id,
+                func.lower(InventoryItem.name) == func.lower(db.literal(normalized_name)),
+            )
+            .order_by(InventoryItem.id.asc())
+            .first()
+        )
+        if name_match:
+            return name_match.id
+
+    form_payload = {
+        "name": normalized_name,
+        "unit": normalized_unit,
+        "type": normalized_type,
+    }
+    if global_item_id:
+        form_payload["global_item_id"] = global_item_id
+
+    success, message, item_id = create_inventory_item(
+        form_payload,
+        organization_id=organization_id,
+        created_by=getattr(current_user, "id", None),
+    )
+    if not success:
+        logger.warning("Unable to auto-create inventory item during import: %s", message)
+        return None
+    return item_id
 
 
 def _derive_label_prefix(
@@ -869,37 +965,75 @@ def duplicate_recipe(
             except Exception:
                 logger.debug("Unable to pre-map inventory items for import; proceeding without matches.")
 
-        # Extract ingredient data
-        ingredients = [
-            {
-                'item_id': (
-                    global_match_map.get(getattr(ri.inventory_item, "global_item_id", None))
-                    if allow_cross_org and getattr(ri.inventory_item, "global_item_id", None)
-                    else ri.inventory_item_id
-                ),
-                'global_item_id': getattr(ri.inventory_item, "global_item_id", None),
-                'quantity': ri.quantity,
-                'unit': ri.unit,
-                'name': getattr(getattr(ri, "inventory_item", None), "name", None),
-            }
-            for ri in original.recipe_ingredients
-        ]
+        ingredients: List[Dict[str, Any]] = []
+        for ri in original.recipe_ingredients:
+            inventory_item = getattr(ri, "inventory_item", None)
+            global_id = getattr(inventory_item, "global_item_id", None)
+            fallback_name = getattr(inventory_item, "name", None)
+            fallback_unit = ri.unit or getattr(inventory_item, "unit", None)
+            fallback_type = getattr(inventory_item, "type", None)
 
-        # Extract consumable data
-        consumables = [
-            {
-                'item_id': (
-                    global_match_map.get(getattr(rc.inventory_item, "global_item_id", None))
-                    if allow_cross_org and getattr(rc.inventory_item, "global_item_id", None)
-                    else rc.inventory_item_id
-                ),
-                'global_item_id': getattr(rc.inventory_item, "global_item_id", None),
-                'quantity': rc.quantity,
-                'unit': rc.unit,
-                'name': getattr(getattr(rc, "inventory_item", None), "name", None),
-            }
-            for rc in original.recipe_consumables
-        ]
+            target_item_id = ri.inventory_item_id
+            if allow_cross_org:
+                target_item_id = None
+                if global_id and global_id in global_match_map:
+                    target_item_id = global_match_map[global_id]
+                else:
+                    created_id = _ensure_inventory_item_for_import(
+                        organization_id=target_org_for_mapping,
+                        global_item_id=global_id,
+                        fallback_name=fallback_name,
+                        fallback_unit=fallback_unit,
+                        fallback_type=fallback_type,
+                    )
+                    if created_id and global_id:
+                        global_match_map[global_id] = created_id
+                    target_item_id = created_id
+
+            ingredients.append(
+                {
+                    "item_id": target_item_id,
+                    "global_item_id": global_id,
+                    "quantity": ri.quantity,
+                    "unit": ri.unit,
+                    "name": fallback_name,
+                }
+            )
+
+        consumables: List[Dict[str, Any]] = []
+        for rc in original.recipe_consumables:
+            inventory_item = getattr(rc, "inventory_item", None)
+            global_id = getattr(inventory_item, "global_item_id", None)
+            fallback_name = getattr(inventory_item, "name", None)
+            fallback_unit = rc.unit or getattr(inventory_item, "unit", None)
+            fallback_type = getattr(inventory_item, "type", None)
+
+            target_item_id = rc.inventory_item_id
+            if allow_cross_org:
+                target_item_id = None
+                if global_id and global_id in global_match_map:
+                    target_item_id = global_match_map[global_id]
+                else:
+                    created_id = _ensure_inventory_item_for_import(
+                        organization_id=target_org_for_mapping,
+                        global_item_id=global_id,
+                        fallback_name=fallback_name,
+                        fallback_unit=fallback_unit,
+                        fallback_type=fallback_type or "consumable",
+                    )
+                    if created_id and global_id:
+                        global_match_map[global_id] = created_id
+                    target_item_id = created_id
+
+            consumables.append(
+                {
+                    "item_id": target_item_id,
+                    "global_item_id": global_id,
+                    "quantity": rc.quantity,
+                    "unit": rc.unit,
+                    "name": fallback_name,
+                }
+            )
 
         clone_name = f"{original.name} (Copy)"
         clone_prefix = generate_recipe_prefix(clone_name)
