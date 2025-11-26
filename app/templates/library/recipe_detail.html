@@ -119,7 +119,13 @@
             <div class="recipe-blur">
                 <pre class="mb-0" style="white-space: pre-wrap;">{{ recipe.instructions }}</pre>
                 <div class="recipe-blur-overlay">
-                    <span>Purchase or clone this recipe to unlock full instructions, ingredients, consumables, and packaging notes.</span>
+                    <span>
+                        {% if recipe.is_for_sale %}
+                        Purchase this recipe to unlock full instructions, ingredients, consumables, and packaging notes, then import it into your workspace.
+                        {% else %}
+                        Import this recipe into your workspace to unlock full instructions, ingredients, consumables, and packaging notes.
+                        {% endif %}
+                    </span>
                 </div>
             </div>
             {% endif %}
@@ -133,7 +139,12 @@
             {% if reveal_details %}
             <small class="text-muted">Full ingredients, consumables, and packaging details are available to developers viewing on behalf of an organization. (Customer view pending UI build-out.)</small>
             {% else %}
-            This listing hides the ingredient list, consumables, and packaging configuration to protect the creator's work. Unlock the full formulation by purchasing (if offered for sale) or cloning the recipe inside your workspace.
+            This listing hides the ingredient list, consumables, and packaging configuration to protect the creator's work.
+            {% if recipe.is_for_sale %}
+            Unlock the full formulation by purchasing this recipe and importing it into your workspace.
+            {% else %}
+            Unlock the full formulation by importing this recipe into your workspace.
+            {% endif %}
             {% endif %}
         </div>
     </div>

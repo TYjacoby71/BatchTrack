@@ -105,7 +105,11 @@
                         <li><i class="fas fa-dollar-sign"></i> Avg batch cost: {% if recipe.stats and recipe.stats.avg_cost_per_batch %}${{ "%.2f"|format(recipe.stats.avg_cost_per_batch) }}{% else %}N/A{% endif %}</li>
                     </ul>
                     <div class="alert alert-warning py-2 small">
-                        Instructions and ingredient details remain blurred until purchased or cloned.
+                        {% if recipe.is_for_sale %}
+                        Instructions and ingredient details remain blurred until you purchase this recipe and import it into your workspace.
+                        {% else %}
+                        Instructions and ingredient details remain blurred until you import this recipe into your workspace.
+                        {% endif %}
                     </div>
                     <div class="d-flex flex-column flex-lg-row gap-2">
                         <a href="{{ url_for('recipe_library_bp.recipe_library_detail', recipe_id=recipe.id, slug=recipe.slug) }}" class="btn btn-outline-primary w-100">
