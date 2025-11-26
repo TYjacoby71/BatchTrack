@@ -19,7 +19,7 @@ def _require_developer():
 @login_required
 def community_scout_next_batch():
     _require_developer()
-    batch = CommunityScoutService.get_next_batch(claimed_by_user_id=current_user.id)
+    batch = CommunityScoutService.get_next_batch()
     payload = CommunityScoutService.serialize_batch(batch)
     db.session.commit()
     return jsonify({'success': True, 'batch': payload})

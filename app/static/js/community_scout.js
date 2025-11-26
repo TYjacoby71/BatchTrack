@@ -131,7 +131,7 @@ class CommunityScoutUI {
     actions.innerHTML = this.buildActionsMarkup(candidate, snapshot);
     body.appendChild(actions);
 
-    this.attachActionHandlers(actions, candidate);
+    this.attachActionHandlers(actions, candidate, snapshot);
     return card;
   }
 
@@ -152,52 +152,18 @@ class CommunityScoutUI {
 
   buildActionsMarkup(candidate, snapshot) {
     const itemName = CommunityScoutUI.escapeHtml(snapshot.name || '');
-    const defaultUnit = CommunityScoutUI.escapeHtml(snapshot.unit || '');
-    const inci = CommunityScoutUI.escapeHtml(snapshot.inci_name || '');
-    const normalizedType = (snapshot.type || 'ingredient').toLowerCase();
-    const typeOptions = ['ingredient', 'container', 'consumable', 'packaging']
-      .map((opt) => `<option value="${opt}" ${normalizedType === opt ? 'selected' : ''}>${opt}</option>`)
-      .join('');
     const returnTo = encodeURIComponent(window.location.pathname + window.location.search);
     const fullFormHref = `${this.fullFormUrl}?community_scout_candidate_id=${candidate.id}&return_to=${returnTo}`;
 
     return `
-      <form class="scout-promote-form" data-candidate-id="${candidate.id}">
-        <div class="row g-2">
-          <div class="col-md-5">
-            <label class="form-label small mb-1">Global Name</label>
-            <input type="text" name="name" class="form-control form-control-sm" value="${itemName}" required>
-          </div>
-          <div class="col-md-3">
-            <label class="form-label small mb-1">Type</label>
-            <select name="item_type" class="form-select form-select-sm">
-              ${typeOptions}
-            </select>
-          </div>
-          <div class="col-md-4">
-            <label class="form-label small mb-1">Default Unit</label>
-            <input type="text" name="default_unit" class="form-control form-control-sm" value="${defaultUnit}">
-          </div>
-        </div>
-        <div class="row g-2 mt-2">
-          <div class="col-md-4">
-            <label class="form-label small mb-1">INCI</label>
-            <input type="text" name="inci_name" class="form-control form-control-sm" value="${inci}">
-          </div>
-          <div class="col-md-4">
-            <label class="form-label small mb-1">Density (g/ml)</label>
-            <input type="number" step="0.0001" name="density" class="form-control form-control-sm">
-          </div>
-          <div class="col-md-4">
-            <label class="form-label small mb-1">Aliases (comma separated)</label>
-            <input type="text" name="aliases" class="form-control form-control-sm" placeholder="Brazil nut, ...">
-          </div>
-        </div>
-        <button type="submit" class="btn btn-sm btn-primary mt-3">
-          <i class="fas fa-plus me-1"></i> Add to Global Library
+      <div class="d-flex flex-wrap gap-2">
+        <a href="${fullFormHref}" class="btn btn-sm btn-primary mt-2" title="Open the complete form for ${itemName}">
+          <i class="fas fa-clipboard-list"></i> Open full global item form
+        </a>
+        <button type="button" class="btn btn-sm btn-outline-info mt-2 scout-batchbot-btn" data-candidate-id="${candidate.id}" title="Send ${itemName} to BatchBot">
+          <i class="fas fa-robot"></i> Send to BatchBot
         </button>
-      </form>
-
+      </div>
       <form class="scout-link-form mt-3" data-candidate-id="${candidate.id}">
         <label class="form-label small mb-1">Match Existing Global Item</label>
         <div class="input-group input-group-sm">
@@ -222,20 +188,10 @@ class CommunityScoutUI {
       <button class="btn btn-sm btn-warning mt-3 scout-flag-btn" data-candidate-id="${candidate.id}">
         <i class="fas fa-flag"></i> Flag alias usage
       </button>
-
-      <a href="${fullFormHref}" class="btn btn-sm btn-outline-primary mt-3">
-        <i class="fas fa-external-link-alt"></i> Open full global item form
-      </a>
     `;
   }
 
-  attachActionHandlers(container, candidate) {
-    const promoteForm = container.querySelector('.scout-promote-form');
-    promoteForm?.addEventListener('submit', (event) => {
-      event.preventDefault();
-      this.handlePromote(candidate.id, promoteForm);
-    });
-
+  attachActionHandlers(container, candidate, snapshot) {
     const linkForm = container.querySelector('.scout-link-form');
     linkForm?.addEventListener('submit', (event) => {
       event.preventDefault();
@@ -253,34 +209,23 @@ class CommunityScoutUI {
       event.preventDefault();
       this.handleFlag(candidate.id);
     });
-  }
 
-  async handlePromote(candidateId, form) {
-    const formData = new FormData(form);
-    const payload = {
-      global_item_payload: {
-        name: formData.get('name')?.toString().trim(),
-        item_type: formData.get('item_type')?.toString().trim(),
-        default_unit: formData.get('default_unit')?.toString().trim() || null,
-        inci_name: formData.get('inci_name')?.toString().trim() || null,
-      },
-    };
-
-    const densityValue = formData.get('density');
-    const parsedDensity = densityValue ? parseFloat(densityValue) : NaN;
-    if (!Number.isNaN(parsedDensity)) {
-      payload.global_item_payload.density = parsedDensity;
-    }
-
-    const aliasesValue = formData.get('aliases')?.toString();
-    if (aliasesValue) {
-      payload.global_item_payload.aliases = aliasesValue
-        .split(',')
-        .map((alias) => alias.trim())
-        .filter(Boolean);
-    }
-
-    await this.submitAction(`${this.apiBase}/candidates/${candidateId}/promote`, payload);
+    const batchBotBtn = container.querySelector('.scout-batchbot-btn');
+    batchBotBtn?.addEventListener('click', (event) => {
+      event.preventDefault();
+      const payload = {
+        candidateId: candidate.id,
+        snapshot,
+        matchScores: candidate.match_scores || {},
+      };
+      if (window.BatchBot && typeof window.BatchBot.prefillGlobalItem === 'function') {
+        window.BatchBot.prefillGlobalItem(payload);
+        this.setStatus('BatchBot received the candidate payload.', 'info');
+      } else {
+        window.dispatchEvent(new CustomEvent('batchbot:candidateSelected', { detail: payload }));
+        this.setStatus('Dispatched candidate payload (waiting for BatchBot listener).', 'secondary');
+      }
+    });
   }
 
   async handleLink(candidateId, form) {

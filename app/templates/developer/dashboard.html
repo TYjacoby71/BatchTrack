@@ -31,6 +31,30 @@
         </div>
     </div>
 
+    {% if community_scout_alerts %}
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card border-warning shadow-sm">
+                <div class="card-header bg-warning bg-opacity-10">
+                    <strong><i class="fas fa-exclamation-triangle me-1"></i> System alerts</strong>
+                </div>
+                <div class="card-body">
+                    <ul class="list-unstyled mb-0">
+                        {% for alert in community_scout_alerts %}
+                        <li class="mb-2 d-flex align-items-center gap-2">
+                            <span class="badge {% if alert.severity == 'danger' %}bg-danger{% else %}bg-warning text-dark{% endif %} text-uppercase">
+                                {{ alert.severity or 'warning' }}
+                            </span>
+                            <span>{{ alert.message }}</span>
+                        </li>
+                        {% endfor %}
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
     <!-- System stats -->
     <div class="row g-3 mb-4">
         <div class="col-sm-6 col-xl-3">

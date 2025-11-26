@@ -111,6 +111,37 @@ FEATURE_FLAG_SECTIONS = [
 
 FEATURE_FLAG_KEYS = [flag['key'] for section in FEATURE_FLAG_SECTIONS for flag in section['flags']]
 
+def _build_community_scout_alerts() -> list[dict[str, str]]:
+    alerts: list[dict[str, str]] = []
+    try:
+        health = CommunityScoutService.check_replica_health()
+    except Exception as exc:
+        alerts.append({
+            'severity': 'danger',
+            'message': f'Community Scout health check failed: {exc}',
+        })
+        return alerts
+
+    status = health.get('status')
+    if status == 'missing':
+        alerts.append({
+            'severity': 'warning',
+            'message': health.get('message') or 'Community Scout replica is not configured; job will read from the primary database.',
+        })
+    elif status == 'error':
+        alerts.append({
+            'severity': health.get('severity', 'danger'),
+            'message': health.get('message') or 'Replica connectivity error.',
+        })
+    elif status == 'ok':
+        latency = health.get('latency_ms')
+        if latency and latency > 250:
+            alerts.append({
+                'severity': 'warning',
+                'message': f'Community Scout replica latency is elevated ({latency} ms).',
+            })
+    return alerts
+
 @developer_bp.route('/dashboard')
 @login_required
 def dashboard():
@@ -139,6 +170,8 @@ def dashboard():
         except ValueError:
             generated_display = generated_iso
 
+    community_scout_alerts = _build_community_scout_alerts()
+
     return render_template(
         'developer/dashboard.html',
         total_orgs=overview.get('total_organizations', 0),
@@ -156,6 +189,7 @@ def dashboard():
         dashboard_generated_at=generated_display,
         force_refresh=force_refresh,
         breadcrumb_items=[{'label': 'Developer Dashboard'}],
+        community_scout_alerts=community_scout_alerts,
     )
 
 @developer_bp.route('/marketing-admin')

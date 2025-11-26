@@ -1,11 +1,13 @@
 from __future__ import annotations
 
 import logging
+import os
 import re
 import unicodedata
 from collections import defaultdict
 from dataclasses import dataclass
 from difflib import SequenceMatcher
+from time import perf_counter
 from typing import Any, Dict, Iterable, List, Optional
 
 from flask import current_app
@@ -108,6 +110,7 @@ class CommunityScoutService:
     )
 
     _read_engine: Engine | None = None
+    _last_data_source: str = 'unknown'
 
     @classmethod
     def generate_batches(
@@ -116,6 +119,7 @@ class CommunityScoutService:
         page_size: int | None = None,
         max_batches: int | None = None,
         job_name: str = 'community_scout_generate',
+        allow_primary_fallback: bool = True,
     ) -> Dict[str, Any]:
         """Nightly/off-hours batch builder."""
         size = max(1, batch_size or cls.DEFAULT_BATCH_SIZE)
@@ -126,7 +130,11 @@ class CommunityScoutService:
             'batches_created': 0,
             'skipped_existing': 0,
             'locked': False,
+            'read_source': 'unknown',
+            'skipped': False,
+            'skipped_reason': None,
         }
+        start_clock = perf_counter()
 
         job_state = cls._get_or_create_job_state(job_name)
         job_id = f"{job_name}-{TimezoneUtils.utc_now().isoformat()}"
@@ -136,9 +144,23 @@ class CommunityScoutService:
             logger.info("Community Scout job already running; skipping new invocation.")
             return stats
 
+        if not allow_primary_fallback:
+            # Force replica availability before doing any work
+            if cls._get_read_engine() is None:
+                stats['skipped'] = True
+                stats['skipped_reason'] = 'replica_unavailable'
+                job_state.last_error = "Replica required but unavailable"
+                job_state.lock_owner = None
+                job_state.lock_expires_at = None
+                db.session.commit()
+                cls._log_job_stats(stats, 0.0)
+                return stats
+
         catalog = cls._build_global_catalog()
         if not catalog.entries:
             logger.warning("Community Scout: no global catalog entries available.")
+
+        cls._last_data_source = 'replica' if cls._has_replica_config() else 'primary'
 
         current_batch: CommunityScoutBatch | None = None
         current_batch_count = 0
@@ -213,7 +235,10 @@ class CommunityScoutService:
             job_state.lock_owner = None
             job_state.lock_expires_at = None
             job_state.last_error = None
+            stats['read_source'] = cls._last_data_source
             db.session.commit()
+            duration = perf_counter() - start_clock
+            cls._log_job_stats(stats, duration)
             return stats
         except Exception as exc:
             db.session.rollback()
@@ -222,6 +247,10 @@ class CommunityScoutService:
             job_state.lock_expires_at = None
             job_state.last_run_at = TimezoneUtils.utc_now()
             db.session.commit()
+            stats['read_source'] = cls._last_data_source
+            stats['error'] = str(exc)
+            duration = perf_counter() - start_clock
+            cls._log_job_stats(stats, duration)
             logger.exception("Community Scout batch generation failed: %s", exc)
             raise
 
@@ -264,9 +293,11 @@ class CommunityScoutService:
         params = {'after_id': after_id, 'limit': limit}
         engine = cls._get_read_engine()
         if engine:
+            cls._last_data_source = 'replica'
             with engine.connect() as conn:
                 result = conn.execute(cls.INVENTORY_QUERY, params)
                 return [dict(row) for row in result.mappings()]
+        cls._last_data_source = 'primary'
         result = db.session.execute(cls.INVENTORY_QUERY, params)
         return [dict(row) for row in result.mappings()]
 
@@ -274,7 +305,7 @@ class CommunityScoutService:
     def _get_read_engine(cls) -> Engine | None:
         if cls._read_engine is not None:
             return cls._read_engine
-        dsn = current_app.config.get('COMMUNITY_SCOUT_READ_DSN')
+        dsn = cls._replica_dsn()
         if not dsn:
             return None
         try:
@@ -494,6 +525,8 @@ class CommunityScoutService:
         if candidate.state != 'open':
             raise ValueError("Candidate already resolved.")
 
+        cls._mark_batch_in_review(candidate.batch_id)
+
         name = (payload.get('name') or candidate.item_snapshot_json.get('name') or '').strip()
         item_type = (payload.get('item_type') or candidate.item_snapshot_json.get('type') or 'ingredient').strip()
         default_unit = payload.get('default_unit') or candidate.item_snapshot_json.get('unit')
@@ -540,6 +573,8 @@ class CommunityScoutService:
         if candidate.state != 'open':
             raise ValueError("Candidate already resolved.")
 
+        cls._mark_batch_in_review(candidate.batch_id)
+
         global_item = db.session.get(GlobalItem, int(global_item_id))
         if not global_item:
             raise ValueError("Global item not found.")
@@ -564,6 +599,8 @@ class CommunityScoutService:
         if candidate.state != 'open':
             raise ValueError("Candidate already resolved.")
 
+        cls._mark_batch_in_review(candidate.batch_id)
+
         candidate.mark_resolved(
             resolution_payload={
                 'action': 'reject',
@@ -578,6 +615,7 @@ class CommunityScoutService:
     @classmethod
     def flag_candidate(cls, candidate_id: int, flag_payload: Dict[str, Any], acting_user_id: int) -> Dict[str, Any]:
         candidate = cls._get_candidate(candidate_id)
+        cls._mark_batch_in_review(candidate.batch_id)
         flags = candidate.sensitivity_flags or []
         flags.append({
             'flagged_by': acting_user_id,
@@ -591,20 +629,14 @@ class CommunityScoutService:
     # ----- Batch retrieval for UI -----
 
     @classmethod
-    def get_next_batch(cls, claimed_by_user_id: int | None = None) -> Optional[CommunityScoutBatch]:
-        batch = (
+    def get_next_batch(cls) -> Optional[CommunityScoutBatch]:
+        return (
             CommunityScoutBatch.query.filter(
                 CommunityScoutBatch.status == 'pending',
             )
             .order_by(CommunityScoutBatch.generated_at.asc())
             .first()
         )
-        if batch:
-            batch.status = 'in_review'
-            batch.claimed_at = TimezoneUtils.utc_now()
-            if claimed_by_user_id:
-                batch.claimed_by_user_id = claimed_by_user_id
-        return batch
 
     @classmethod
     def serialize_batch(cls, batch: CommunityScoutBatch | None) -> Optional[Dict[str, Any]]:
@@ -657,6 +689,17 @@ class CommunityScoutService:
         return candidate
 
     @classmethod
+    def _mark_batch_in_review(cls, batch_id: int | None) -> None:
+        if not batch_id:
+            return
+        batch = db.session.get(CommunityScoutBatch, batch_id)
+        if not batch:
+            return
+        if batch.status == 'pending':
+            batch.status = 'in_review'
+            batch.claimed_at = TimezoneUtils.utc_now()
+
+    @classmethod
     def _maybe_close_batch(cls, batch_id: int | None) -> None:
         if not batch_id:
             return
@@ -697,6 +740,58 @@ class CommunityScoutService:
             organization_id=inventory_item.organization_id,
         )
         db.session.add(history_event)
+
+    @classmethod
+    def check_replica_health(cls) -> Dict[str, Any]:
+        dsn = cls._replica_dsn()
+        if not dsn:
+            return {
+                'status': 'missing',
+                'message': 'COMMUNITY_SCOUT_READ_DSN is not configured; job will read from the primary database.',
+                'severity': 'warning',
+            }
+        try:
+            engine = cls._get_read_engine()
+            if not engine:
+                return {
+                    'status': 'error',
+                    'message': 'Replica DSN configured but engine could not be initialized.',
+                    'severity': 'danger',
+                }
+            start = perf_counter()
+            with engine.connect() as conn:
+                conn.execute(text('SELECT 1'))
+            latency = (perf_counter() - start) * 1000
+            return {
+                'status': 'ok',
+                'latency_ms': round(latency, 2),
+            }
+        except Exception as exc:
+            logger.warning("Community Scout replica health check failed: %s", exc)
+            return {
+                'status': 'error',
+                'message': str(exc),
+                'severity': 'danger',
+            }
+
+    @classmethod
+    def _log_job_stats(cls, stats: Dict[str, Any], duration: float) -> None:
+        payload = dict(stats)
+        payload['duration_seconds'] = round(duration, 3)
+        log_target = current_app.logger if current_app else logger
+        log_target.info("Community Scout job completed: %s", payload)
+
+    @classmethod
+    def _has_replica_config(cls) -> bool:
+        return bool(cls._replica_dsn())
+
+    @staticmethod
+    def _replica_dsn() -> str | None:
+        config = getattr(current_app, 'config', {}) if current_app else {}
+        dsn = config.get('COMMUNITY_SCOUT_READ_DSN')
+        if not dsn:
+            dsn = os.environ.get('COMMUNITY_SCOUT_READ_DSN')
+        return dsn
 
 
 @dataclass(slots=True)

@@ -2,6 +2,9 @@
 """
 Management commands for deployment and maintenance
 """
+import time
+from datetime import datetime, timedelta, timezone, time as dt_time
+
 import click
 from flask import current_app
 from flask.cli import with_appcontext
@@ -980,8 +983,9 @@ def dispatch_domain_events_command(poll_interval: float, batch_size: int, once: 
 @click.option('--batch-size', default=100, show_default=True, type=int, help='Candidates per batch.')
 @click.option('--page-size', default=500, show_default=True, type=int, help='Inventory rows pulled per scan page.')
 @click.option('--max-batches', default=None, type=int, help='Optional cap on number of batches per run.')
+@click.option('--no-primary', is_flag=True, help='Require replica availability; skip run if replica is offline.')
 @with_appcontext
-def community_scout_generate_command(batch_size: int, page_size: int, max_batches: int | None):
+def community_scout_generate_command(batch_size: int, page_size: int, max_batches: int | None, no_primary: bool):
     """Run Community Scout discovery to enqueue dev review batches."""
     from app.services.community_scout_service import CommunityScoutService
 
@@ -989,12 +993,106 @@ def community_scout_generate_command(batch_size: int, page_size: int, max_batche
         batch_size=batch_size,
         page_size=page_size,
         max_batches=max_batches,
+        allow_primary_fallback=not no_primary,
     )
     click.echo(
         f"Community Scout complete — batches: {stats['batches_created']}, candidates: {stats['candidates_created']}, scanned: {stats['scanned']}, skipped_existing: {stats['skipped_existing']}"
     )
 
 
+def _parse_time_label(label: str) -> dt_time:
+    try:
+        hour_str, minute_str = label.split(":", 1)
+        hour = int(hour_str)
+        minute = int(minute_str)
+    except ValueError as exc:
+        raise click.BadParameter("Format must be HH:MM (24-hour clock).") from exc
+    if not (0 <= hour <= 23 and 0 <= minute <= 59):
+        raise click.BadParameter("Hours must be 0-23 and minutes 0-59.")
+    return dt_time(hour=hour, minute=minute, tzinfo=timezone.utc)
+
+
+def _within_window(now: datetime, start: dt_time, end: dt_time) -> bool:
+    current_minutes = now.hour * 60 + now.minute
+    start_minutes = start.hour * 60 + start.minute
+    end_minutes = end.hour * 60 + end.minute
+    if start_minutes <= end_minutes:
+        return start_minutes <= current_minutes <= end_minutes
+    # Window wraps past midnight
+    return current_minutes >= start_minutes or current_minutes <= end_minutes
+
+
+def _seconds_until_window_start(now: datetime, start: dt_time) -> float:
+    candidate = now.replace(hour=start.hour, minute=start.minute, second=0, microsecond=0)
+    if candidate <= now:
+        candidate += timedelta(days=1)
+    return (candidate - now).total_seconds()
+
+
+@click.command('community-scout-scheduler')
+@click.option('--interval-minutes', default=1440, show_default=True, type=int, help='Minutes between automatic runs.')
+@click.option('--window-start', default='02:00', show_default=True, help='UTC window start (HH:MM).')
+@click.option('--window-end', default='04:00', show_default=True, help='UTC window end (HH:MM).')
+@click.option('--batch-size', default=100, show_default=True, type=int, help='Candidates per batch.')
+@click.option('--page-size', default=500, show_default=True, type=int, help='Inventory rows pulled per scan page.')
+@click.option('--max-batches', default=5, show_default=True, type=int, help='Optional cap on batches per run.')
+@click.option('--no-primary', is_flag=True, help='Require replica availability before each run.')
+@click.option('--once', is_flag=True, help='Execute a single eligible run and exit.')
+@with_appcontext
+def community_scout_scheduler_command(
+    interval_minutes: int,
+    window_start: str,
+    window_end: str,
+    batch_size: int,
+    page_size: int,
+    max_batches: int,
+    no_primary: bool,
+    once: bool,
+):
+    """Long-running scheduler that executes Community Scout during low-traffic windows."""
+    from app.services.community_scout_service import CommunityScoutService
+
+    start_time = _parse_time_label(window_start)
+    end_time = _parse_time_label(window_end)
+    run_interval = timedelta(minutes=max(1, interval_minutes))
+    next_run_at: datetime | None = None
+
+    click.echo(
+        f"Community Scout scheduler started — window {window_start}-{window_end} UTC, every {interval_minutes} minutes."
+    )
+
+    while True:
+        now = datetime.now(timezone.utc)
+
+        if next_run_at and now < next_run_at:
+            sleep_for = max(5, min(60, (next_run_at - now).total_seconds()))
+            time.sleep(sleep_for)
+            continue
+
+        if not _within_window(now, start_time, end_time):
+            sleep_for = max(30, min(900, _seconds_until_window_start(now, start_time)))
+            time.sleep(sleep_for)
+            continue
+
+        try:
+            stats = CommunityScoutService.generate_batches(
+                batch_size=batch_size,
+                page_size=page_size,
+                max_batches=max_batches,
+                allow_primary_fallback=not no_primary,
+            )
+            click.echo(
+                f"[{now.isoformat()}] Community Scout run complete — batches={stats['batches_created']} candidates={stats['candidates_created']} source={stats['read_source']}"
+            )
+        except Exception as exc:
+            click.echo(f"[{now.isoformat()}] Community Scout scheduler error: {exc}", err=True)
+            time.sleep(60)
+        else:
+            next_run_at = now + run_interval
+            if once:
+                break
+            # prevent tight loops when interval is very small
+            time.sleep(5)
 def register_commands(app):
     """Register CLI commands"""
     # Database initialization
@@ -1028,3 +1126,4 @@ def register_commands(app):
     app.cli.add_command(activate_users)
     app.cli.add_command(dispatch_domain_events_command)
     app.cli.add_command(community_scout_generate_command)
+    app.cli.add_command(community_scout_scheduler_command)
