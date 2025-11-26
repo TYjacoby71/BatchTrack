@@ -1,7 +1,7 @@
-"""0012 batchbot credit bundles
+"""0015 batchbot credit bundles
 
-Revision ID: 0012_batchbot_credit_bundles
-Revises: 0011_batchbot_usage
+Revision ID: 0015_batchbot_credit_bundles
+Revises: 0014_batchbot_usage
 Create Date: 2025-11-24 00:30:00.000000
 """
 
@@ -10,8 +10,8 @@ import sqlalchemy as sa
 
 
 # revision identifiers, used by Alembic.
-revision = '0012_batchbot_credit_bundles'
-down_revision = '0011_batchbot_usage'
+revision = '0015_batchbot_credit_bundles'
+down_revision = '0014_batchbot_usage'
 branch_labels = None
 depends_on = None
 

@@ -1,7 +1,7 @@
-"""0011 batchbot usage metering
+"""0014 batchbot usage metering
 
-Revision ID: 0011_batchbot_usage
-Revises: 0010_recipe_status_drafts
+Revision ID: 0014_batchbot_usage
+Revises: 0013_recipe_family
 Create Date: 2025-11-24 00:00:00.000000
 """
 
@@ -10,8 +10,8 @@ import sqlalchemy as sa
 
 
 # revision identifiers, used by Alembic.
-revision = '0011_batchbot_usage'
-down_revision = '0010_recipe_status_drafts'
+revision = '0014_batchbot_usage'
+down_revision = '0013_recipe_family'
 branch_labels = None
 depends_on = None
 
