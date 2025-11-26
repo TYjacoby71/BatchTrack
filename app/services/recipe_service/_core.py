@@ -5,6 +5,7 @@ Handles CRUD operations for recipes with proper service integration.
 """
 
 import logging
+import re
 from decimal import Decimal, InvalidOperation
 from typing import Dict, List, Any, Optional, Tuple
 from flask import current_app, session
@@ -139,6 +140,30 @@ def _resolve_import_name(fallback_name: Optional[str], global_item_id: Optional[
     return "Imported Item"
 
 
+_WORD_SANITIZE_RE = re.compile(r"[^a-z0-9\s]+")
+
+
+def _singularize_token(token: str) -> str:
+    if token.endswith("ies") and len(token) > 3:
+        return token[:-3] + "y"
+    if token.endswith(("ses", "xes", "zes", "ches", "shes")):
+        return token[:-2]
+    if token.endswith("s") and not token.endswith("ss"):
+        return token[:-1]
+    return token
+
+
+def _normalize_item_name_for_match(name: Optional[str]) -> str:
+    if not name:
+        return ""
+    cleaned = _WORD_SANITIZE_RE.sub(" ", name.lower()).strip()
+    if not cleaned:
+        return ""
+    tokens = [token for token in cleaned.split() if token]
+    normalized_tokens = [_singularize_token(token) for token in tokens]
+    return " ".join(normalized_tokens)
+
+
 def _resolve_import_unit(
     fallback_unit: Optional[str],
     fallback_type: Optional[str],
@@ -183,24 +208,25 @@ def _ensure_inventory_item_for_import(
         except Exception:
             global_item = None
 
-    normalized_name = _resolve_import_name(fallback_name, global_item_id if global_item_id else None)
+    display_name = _resolve_import_name(
+        fallback_name,
+        global_item_id if global_item_id else None,
+    )
+    normalized_match_key = _normalize_item_name_for_match(display_name)
     normalized_type = fallback_type or (global_item.item_type if global_item else "ingredient")
     normalized_unit = _resolve_import_unit(fallback_unit, normalized_type, global_item)
 
-    if not global_item_id and normalized_name:
-        name_match = (
-            InventoryItem.query.filter(
-                InventoryItem.organization_id == organization_id,
-                func.lower(InventoryItem.name) == func.lower(db.literal(normalized_name)),
-            )
-            .order_by(InventoryItem.id.asc())
-            .first()
+    if not global_item_id and normalized_match_key:
+        name_match = _match_inventory_item_by_normalized_name(
+            organization_id,
+            normalized_match_key,
+            normalized_type,
         )
         if name_match:
             return name_match.id
 
     form_payload = {
-        "name": normalized_name,
+        "name": display_name,
         "unit": normalized_unit,
         "type": normalized_type,
     }
@@ -216,6 +242,22 @@ def _ensure_inventory_item_for_import(
         logger.warning("Unable to auto-create inventory item during import: %s", message)
         return None
     return item_id
+
+
+def _match_inventory_item_by_normalized_name(
+    organization_id: int,
+    normalized_name: str,
+    item_type: Optional[str],
+) -> Optional[InventoryItem]:
+    query = InventoryItem.query.filter(InventoryItem.organization_id == organization_id)
+    if item_type:
+        query = query.filter(InventoryItem.type == item_type)
+
+    candidates = query.with_entities(InventoryItem.id, InventoryItem.name).all()
+    for candidate_id, candidate_name in candidates:
+        if _normalize_item_name_for_match(candidate_name) == normalized_name:
+            return db.session.get(InventoryItem, candidate_id)
+    return None
 
 
 def _derive_label_prefix(

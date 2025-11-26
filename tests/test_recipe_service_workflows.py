@@ -332,6 +332,77 @@ def test_duplicate_recipe_creates_inventory_without_global_link():
 
 
 @pytest.mark.usefixtures('app_context')
+def test_duplicate_recipe_matches_plural_names_without_global_link():
+    category = _create_category("PluralMatch")
+
+    seller_org = Organization.query.first()
+    seller_user = User.query.filter_by(organization_id=seller_org.id).first()
+
+    tier = seller_org.subscription_tier
+    buyer_org = Organization(name=_unique_name("Buyer Plural"), subscription_tier=tier)
+    db.session.add(buyer_org)
+    db.session.commit()
+
+    buyer_user = User(
+        email=f'{_unique_name("plural")}@example.com',
+        username=_unique_name("plural"),
+        password_hash='test_hash',
+        is_verified=True,
+        organization_id=buyer_org.id,
+    )
+    db.session.add(buyer_user)
+    db.session.commit()
+
+    buyer_inventory = InventoryItem(
+        name="Apples",
+        unit='oz',
+        type='ingredient',
+        quantity=3.0,
+        organization_id=buyer_org.id,
+    )
+    db.session.add(buyer_inventory)
+    db.session.commit()
+
+    seller_item = InventoryItem(
+        name="Apple",
+        unit='oz',
+        type='ingredient',
+        quantity=5.0,
+        organization_id=seller_org.id,
+    )
+    db.session.add(seller_item)
+    db.session.commit()
+
+    with current_app.test_request_context():
+        login_user(seller_user)
+        ok, recipe_or_err = create_recipe(
+            name=_unique_name("Plural Apples"),
+            instructions='Mix apples.',
+            yield_amount=5,
+            yield_unit='oz',
+            ingredients=[{'item_id': seller_item.id, 'quantity': 5, 'unit': 'oz'}],
+            allowed_containers=[],
+            label_prefix='APL',
+            category_id=category.id,
+            sharing_scope='public',
+            is_public=True,
+            status='published',
+        )
+        assert ok, recipe_or_err
+        recipe: Recipe = recipe_or_err
+
+        login_user(buyer_user)
+        dup_ok, payload_or_err = duplicate_recipe(
+            recipe.id,
+            allow_cross_org=True,
+            target_org_id=buyer_org.id,
+        )
+        assert dup_ok, payload_or_err
+        ingredient_payload = payload_or_err['ingredients'][0]
+        assert ingredient_payload['item_id'] == buyer_inventory.id
+
+
+@pytest.mark.usefixtures('app_context')
 def test_variation_generation_derives_prefix_and_scope():
     category = _create_category("Variation")
     ingredient = _create_ingredient()
