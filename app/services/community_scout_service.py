@@ -594,6 +594,37 @@ class CommunityScoutService:
         return {'linked': True}
 
     @classmethod
+    def mark_candidate_promoted(
+        cls,
+        candidate_id: int,
+        global_item_id: int,
+        acting_user_id: int,
+        payload: Dict[str, Any] | None = None,
+    ) -> Dict[str, Any]:
+        candidate = cls._get_candidate(candidate_id)
+        if candidate.state != 'open':
+            raise ValueError("Candidate already resolved.")
+
+        cls._mark_batch_in_review(candidate.batch_id)
+        global_item = db.session.get(GlobalItem, int(global_item_id))
+        if not global_item:
+            raise ValueError("Global item not found.")
+
+        cls._link_inventory_item(candidate.inventory_item_id, global_item, acting_user_id)
+
+        candidate.mark_resolved(
+            resolution_payload={
+                'action': 'promote',
+                'global_item_id': global_item_id,
+                'payload': payload or {},
+            },
+            resolved_by_user_id=acting_user_id,
+        )
+        cls._maybe_close_batch(candidate.batch_id)
+        db.session.commit()
+        return {'global_item_id': global_item_id}
+
+    @classmethod
     def reject_candidate(cls, candidate_id: int, reason: str, acting_user_id: int) -> Dict[str, Any]:
         candidate = cls._get_candidate(candidate_id)
         if candidate.state != 'open':

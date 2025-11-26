@@ -1580,8 +1580,12 @@ def create_global_item():
 
             if candidate_id:
                 try:
-                    CommunityScoutService.link_candidate(candidate_id, new_item.id, current_user.id)
-                    db.session.commit()
+                    CommunityScoutService.mark_candidate_promoted(
+                        candidate_id,
+                        new_item.id,
+                        current_user.id,
+                        payload={'source': 'developer_form'},
+                    )
                     flash_message += " and linked back to Community Scout."
                 except Exception as linking_error:
                     db.session.rollback()
