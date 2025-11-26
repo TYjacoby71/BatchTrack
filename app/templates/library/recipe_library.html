@@ -160,12 +160,22 @@
                         {% endif %}
                     </ul>
                     <div class="alert alert-warning py-2 small">
-                        Instructions, ingredient/consumable details, and packaging notes are blurred until you purchase or clone this recipe.
+                        {% if recipe.is_for_sale %}
+                        Instructions, ingredient/consumable details, and packaging notes remain blurred until you purchase this recipe and import it into your workspace.
+                        {% else %}
+                        Instructions, ingredient/consumable details, and packaging notes remain blurred until you import this recipe into your workspace.
+                        {% endif %}
                     </div>
                     <div class="d-flex flex-column flex-lg-row gap-2">
                         <a href="{{ url_for('recipe_library_bp.recipe_library_detail', recipe_id=recipe.id, slug=recipe.slug) }}" class="btn btn-outline-primary w-100">
                             <i class="fas fa-eye"></i> View Details
                         </a>
+                        {% if current_user.is_authenticated %}
+                        <a href="{{ url_for('recipes.import_recipe', recipe_id=recipe.id) }}" class="btn btn-primary w-100">
+                            <i class="fas fa-cloud-download-alt"></i>
+                            {% if recipe.is_for_sale %}Import after purchase{% else %}Import to workspace{% endif %}
+                        </a>
+                        {% endif %}
                         {% if purchase_enabled and recipe.is_for_sale and recipe.product_store_url %}
                         <a href="{{ recipe.product_store_url }}" class="btn btn-success w-100" target="_blank" rel="noopener">
                             <i class="fas fa-shopping-cart"></i> Purchase
