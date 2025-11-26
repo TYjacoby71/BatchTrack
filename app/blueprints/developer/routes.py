@@ -2037,7 +2037,6 @@ def integrations_checklist():
         cache_info=cache_info,
         oauth_status=oauth_status,
         whop_status=whop_status,
-        launch_env_sections=launch_env_sections,
         rate_limiters=rate_limiters,
         config_matrix=config_matrix,
     )

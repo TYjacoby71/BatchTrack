@@ -105,53 +105,6 @@
     </div>
   </div>
 
-  <div class="card shadow-sm mt-4">
-    <div class="card-header bg-white border-0">
-      <h4 class="mb-1">5) Core Environment & Secrets</h4>
-      <p class="text-muted small mb-0">Auto-detected from the current process. Complete every row before launch.</p>
-    </div>
-    <div class="card-body">
-      {% for section in launch_env_sections %}
-      <div class="mb-4">
-        <div class="d-flex justify-content-between align-items-center mb-2">
-          <h5 class="mb-0">{{ section.title }}</h5>
-          <span class="badge bg-light text-muted border">Auto check</span>
-        </div>
-        {% if section.note %}
-        <p class="text-muted small">{{ section.note }}</p>
-        {% endif %}
-        <div class="list-group">
-          {% for item in section.section_items %}
-          <div class="list-group-item d-flex flex-column flex-md-row gap-3 justify-content-between align-items-start">
-            <div>
-              <div class="fw-semibold">
-                {{ item.key }}
-                {% if not item.required %}<span class="badge bg-secondary ms-2">Optional</span>{% endif %}
-                {% if item.is_secret %}<span class="badge bg-warning text-dark ms-2">Secret</span>{% endif %}
-              </div>
-              <div class="text-muted small">{{ item.description }}</div>
-              {% if item.note %}<div class="small text-info">{{ item.note }}</div>{% endif %}
-              {% if item.recommended %}<div class="small text-muted">Recommended: {{ item.recommended }}</div>{% endif %}
-            </div>
-            <div class="text-md-end">
-              {% if item.present %}
-              <span class="badge bg-success">Detected</span>
-              <div class="small text-muted">Source: {{ 'Environment' if item.source == 'env' else 'Config' }}</div>
-              {% else %}
-              <span class="badge bg-danger">Missing</span>
-              <div class="small text-muted">
-                Add via {{ 'environment or settings.json' if item.allow_config else 'environment variables' }}
-              </div>
-              {% endif %}
-            </div>
-          </div>
-          {% endfor %}
-        </div>
-      </div>
-      {% endfor %}
-    </div>
-  </div>
-
   <div class="alert alert-warning mt-4">
     <strong>Redis provisioning:</strong> Before launch, create a managed Redis instance (Render Redis, Upstash, AWS ElastiCache). Copy the connection URL into <code>REDIS_URL</code> and mirror it into <code>RATELIMIT_STORAGE_URL</code>. The app now refuses to start in production without Redis-backed sessions, caching, and rate limiting.
   </div>
