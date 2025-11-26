@@ -6,6 +6,14 @@ import logging
 from app.models import InventoryItem  # Added for get_ingredients endpoint
 from app import db  # Assuming db is imported from app
 from app.utils.permissions import require_permission
+from app.services.batchbot_service import BatchBotService, BatchBotServiceError
+from app.services.batchbot_usage_service import (
+    BatchBotUsageService,
+    BatchBotLimitError,
+    BatchBotChatLimitError,
+)
+from app.services.batchbot_credit_service import BatchBotCreditService
+from app.services.ai import GoogleAIClientError
 
 # Configure logging
 logger = logging.getLogger(__name__)
@@ -315,3 +323,114 @@ def unit_converter():
     except Exception as e:
         current_app.logger.error(f"Unit converter API error: {str(e)}")
         return jsonify({'success': False, 'error': str(e)})
+
+
+@api_bp.route('/batchbot/chat', methods=['POST'])
+@login_required
+def batchbot_chat():
+    data = request.get_json() or {}
+    prompt = (data.get('prompt') or '').strip()
+    history = data.get('history') or []
+    metadata = data.get('metadata') or {}
+
+    if not prompt:
+        return jsonify({'success': False, 'error': 'Prompt is required.'}), 400
+
+    try:
+        service = BatchBotService(current_user)
+        response = service.chat(prompt=prompt, history=history, metadata=metadata)
+        return jsonify({
+            'success': True,
+            'message': response.text,
+            'tool_results': response.tool_results,
+            'usage': response.usage,
+            'quota': _serialize_quota(response.quota, response.credits),
+        })
+    except BatchBotLimitError as exc:
+        return jsonify({
+            'success': False,
+            'error': str(exc),
+            'limit': {
+                'allowed': exc.allowed,
+                'used': exc.used,
+                'window_end': exc.window_end.isoformat(),
+            },
+            'refill_checkout_url': _generate_refill_checkout_url(),
+        }), 429
+    except BatchBotChatLimitError as exc:
+        return jsonify({
+            'success': False,
+            'error': str(exc),
+            'chat_limit': {
+                'allowed': exc.limit,
+                'used': exc.used,
+                'window_end': exc.window_end.isoformat(),
+            },
+            'refill_checkout_url': _generate_refill_checkout_url(),
+        }), 429
+    except BatchBotServiceError as exc:
+        return jsonify({'success': False, 'error': str(exc)}), 400
+    except GoogleAIClientError as exc:
+        current_app.logger.exception("BatchBot AI failure")
+        return jsonify({'success': False, 'error': str(exc)}), 502
+    except Exception:
+        current_app.logger.exception("Unexpected BatchBot failure")
+        return jsonify({'success': False, 'error': 'Unexpected BatchBot failure.'}), 500
+
+
+@api_bp.route('/batchbot/usage', methods=['GET'])
+@login_required
+def batchbot_usage():
+    org = getattr(current_user, 'organization', None)
+    if not org:
+        return jsonify({'success': False, 'error': 'Organization is required.'}), 400
+
+    snapshot = BatchBotUsageService.get_usage_snapshot(org)
+    credit_snapshot = BatchBotCreditService.snapshot(org)
+    return jsonify({'success': True, 'quota': _serialize_quota(snapshot, credit_snapshot)})
+
+
+def _serialize_quota(snapshot, credits=None):
+    return {
+        'allowed': snapshot.allowed,
+        'used': snapshot.used,
+        'remaining': snapshot.remaining,
+        'window_start': snapshot.window_start.isoformat(),
+        'window_end': snapshot.window_end.isoformat(),
+        'chat_limit': snapshot.chat_limit,
+        'chat_used': snapshot.chat_used,
+        'chat_remaining': snapshot.chat_remaining,
+        'credits': {
+            'total': getattr(credits, "total", None),
+            'remaining': getattr(credits, "remaining", None),
+            'next_expiration': getattr(credits, "expires_next", None).isoformat() if getattr(credits, "expires_next", None) else None,
+        } if credits else None,
+    }
+
+
+def _generate_refill_checkout_url():
+    try:
+        lookup_key = current_app.config.get('BATCHBOT_REFILL_LOOKUP_KEY')
+        if not lookup_key:
+            return None
+        if not current_user or not getattr(current_user, 'email', None):
+            return None
+        from app.services.billing_service import BillingService
+        success_url = url_for('app_routes.dashboard', _external=True) + "?refill=success"
+        cancel_url = url_for('app_routes.dashboard', _external=True) + "?refill=cancel"
+        metadata = {
+            'organization_id': str(current_user.organization_id or ''),
+            'user_id': str(current_user.id),
+            'batchbot_refill_lookup_key': lookup_key,
+        }
+        session = BillingService.create_one_time_checkout_by_lookup_key(
+            lookup_key=lookup_key,
+            customer_email=current_user.email,
+            success_url=success_url,
+            cancel_url=cancel_url,
+            metadata=metadata,
+        )
+        return getattr(session, 'url', None)
+    except Exception as exc:
+        current_app.logger.warning("Unable to generate BatchBot refill checkout: %s", exc)
+        return None

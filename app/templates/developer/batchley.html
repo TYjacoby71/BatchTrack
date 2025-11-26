@@ -1,0 +1,162 @@
+{% extends 'layout.html' %}
+{% block title %}Batchley{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <div class="d-flex flex-column flex-md-row align-items-md-center justify-content-between mb-4">
+        <div class="me-3">
+            <h1 class="h3 mb-2">Batchley Automation Deck</h1>
+            <p class="text-muted mb-0">
+                Track the jobs Batchley knows how to do, confirm quota knobs, and jump to the systems that manage credits, tiers, and integrations.
+            </p>
+        </div>
+        <div class="mt-3 mt-md-0">
+            <div class="btn-group">
+                <a class="btn btn-outline-primary btn-sm" href="{{ url_for('developer.subscription_tiers.manage_tiers') }}">
+                    <i class="fas fa-layer-group me-1"></i> Tier Controls
+                </a>
+                <a class="btn btn-outline-secondary btn-sm" href="{{ url_for('developer.integrations_checklist') }}">
+                    <i class="fas fa-plug me-1"></i> Integrations Checklist
+                </a>
+                <a class="btn btn-outline-secondary btn-sm" href="{{ url_for('developer.addons.list_addons') }}">
+                    <i class="fas fa-puzzle-piece me-1"></i> Refill Add-ons
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <section class="mb-5">
+        <div class="d-flex align-items-center mb-3">
+            <h2 class="h5 mb-0 me-3">Workflows & Tools</h2>
+            <span class="badge bg-dark">{{ job_catalog|length }} active jobs</span>
+        </div>
+        <div class="row g-3">
+            {% for job in job_catalog %}
+            <div class="col-md-6">
+                <div class="card h-100 shadow-sm border-0">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between align-items-start mb-2">
+                            <div>
+                                <h3 class="h5 mb-1">{{ job.name }}</h3>
+                                <p class="text-muted small mb-0">Tool: <code>{{ job.tool }}</code></p>
+                            </div>
+                            {% set badge_class = 'bg-secondary' %}
+                            {% if job.status == 'wired' %}
+                                {% set badge_class = 'bg-success' %}
+                            {% elif job.status == 'beta' %}
+                                {% set badge_class = 'bg-warning text-dark' %}
+                            {% endif %}
+                            <span class="badge {{ badge_class }} text-uppercase">{{ job.status }}</span>
+                        </div>
+                        <p class="mb-3">{{ job.description }}</p>
+                        {% if job.inputs %}
+                        <div class="mb-2">
+                            <p class="fw-semibold small text-uppercase text-muted mb-1">Inputs</p>
+                            <ul class="mb-0 small">
+                                {% for item in job.inputs %}
+                                <li>{{ item }}</li>
+                                {% endfor %}
+                            </ul>
+                        </div>
+                        {% endif %}
+                        {% if job.outputs %}
+                        <div class="mb-2">
+                            <p class="fw-semibold small text-uppercase text-muted mb-1">Outputs</p>
+                            <ul class="mb-0 small">
+                                {% for item in job.outputs %}
+                                <li>{{ item }}</li>
+                                {% endfor %}
+                            </ul>
+                        </div>
+                        {% endif %}
+                        {% if job.handoff %}
+                        <p class="small text-muted mb-0"><strong>Handoff:</strong> {{ job.handoff }}</p>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </section>
+
+    <section class="mb-5">
+        <div class="d-flex align-items-center mb-3">
+            <h2 class="h5 mb-0 me-3">Usage Limits & Billing Knobs</h2>
+        </div>
+        <div class="row g-3">
+            {% for card in limit_cards %}
+            <div class="col-md-3">
+                <div class="card h-100 border-0 shadow-sm">
+                    <div class="card-body">
+                        <p class="text-muted text-uppercase small mb-1">{{ card.label }}</p>
+                        <p class="h5 mb-2">{{ card.value }}</p>
+                        <p class="small text-muted mb-0">{{ card.description }}</p>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </section>
+
+    <section class="mb-5">
+        <div class="d-flex align-items-center mb-3">
+            <h2 class="h5 mb-0 me-3">Environment & Config Surface Area</h2>
+        </div>
+        <div class="table-responsive">
+            <table class="table table-striped align-middle">
+                <thead>
+                    <tr>
+                        <th scope="col">Key</th>
+                        <th scope="col" style="width: 25%;">Purpose</th>
+                        <th scope="col">Status</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for item in env_status %}
+                    <tr>
+                        <td>
+                            <div class="fw-semibold">{{ item.label }}</div>
+                            <div class="text-muted small"><code>{{ item.key }}</code></div>
+                        </td>
+                        <td class="small">{{ item.description }}</td>
+                        <td>
+                            {% if item.is_secret %}
+                                {% if item.is_set %}
+                                    <span class="badge bg-success">Configured</span>
+                                {% else %}
+                                    <span class="badge bg-danger">Missing</span>
+                                {% endif %}
+                            {% else %}
+                                {% if item.value %}
+                                    <span class="badge bg-success">{{ item.value }}</span>
+                                {% else %}
+                                    <span class="badge bg-warning text-dark">Not set</span>
+                                {% endif %}
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </section>
+
+    <section class="mb-4">
+        <div class="d-flex align-items-center mb-3">
+            <h2 class="h5 mb-0 me-3">Operational Notes</h2>
+        </div>
+        <div class="row g-3">
+            {% for note in workflow_notes %}
+            <div class="col-md-6">
+                <div class="card h-100 border-0 shadow-sm">
+                    <div class="card-body">
+                        <h3 class="h6">{{ note.title }}</h3>
+                        <p class="mb-0 text-muted">{{ note.body }}</p>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </section>
+</div>
+{% endblock %}

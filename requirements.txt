@@ -34,6 +34,7 @@ flask-mail
 Flask-Session==0.6.0
 google-auth
 google-auth-oauthlib
+google-generativeai==0.8.3
 Flask-Mail
 flask-mail
 Flask-Limiter

@@ -359,7 +359,9 @@ class BillingService:
                 session_id,
                 expand=['customer', 'customer_details', 'line_items.data.price']
             )
-            BillingService._provision_checkout_session(checkout)
+            provisioned = BillingService._provision_checkout_session(checkout)
+            if not provisioned:
+                BillingService._apply_batchbot_refill_checkout(checkout)
         except Exception as e:
             logger.error(f"Error handling checkout.session.completed: {e}")
             return
@@ -1015,6 +1017,74 @@ class BillingService:
         except Exception as exc:
             logger.error("Failed provisioning checkout session %s: %s", getattr(checkout_session, 'id', 'unknown'), exc)
             raise
+
+    @staticmethod
+    def _apply_batchbot_refill_checkout(checkout_session) -> bool:
+        """Grant BatchBot credits when a standalone refill checkout completes."""
+        try:
+            metadata = getattr(checkout_session, 'metadata', {}) or {}
+            lookup_key = metadata.get('batchbot_refill_lookup_key')
+            if not lookup_key:
+                line_items = getattr(checkout_session, 'line_items', {}) or {}
+                data = line_items.get('data') or []
+                if data:
+                    price = data[0].get('price') or {}
+                    lookup_key = price.get('id')
+            if not lookup_key:
+                return False
+
+            from ..models import Organization
+            from ..models.addon import Addon
+            from ..models.batchbot_credit import BatchBotCreditBundle
+            from .batchbot_credit_service import BatchBotCreditService
+
+            org = None
+            org_id = metadata.get('organization_id')
+            if org_id:
+                try:
+                    org = db.session.get(Organization, int(org_id))
+                except (TypeError, ValueError):
+                    org = None
+
+            customer_id = getattr(checkout_session, 'customer', None)
+            if not org and customer_id:
+                org = Organization.query.filter_by(stripe_customer_id=customer_id).first()
+                if not org and BillingService.ensure_stripe():
+                    import stripe
+                    try:
+                        cust = stripe.Customer.retrieve(customer_id)
+                        org_meta = (cust.metadata or {}).get('organization_id')
+                        if org_meta:
+                            org = db.session.get(Organization, int(org_meta))
+                    except Exception as exc:
+                        logger.warning("Unable to resolve organization from Stripe customer %s: %s", customer_id, exc)
+            if not org:
+                logger.warning("BatchBot refill checkout %s missing organization context", getattr(checkout_session, 'id', 'unknown'))
+                return False
+
+            addon = Addon.query.filter_by(stripe_lookup_key=lookup_key).first()
+            if not addon or not getattr(addon, 'batchbot_credit_amount', 0):
+                logger.warning("BatchBot refill checkout %s referenced unknown addon %s", getattr(checkout_session, 'id', 'unknown'), lookup_key)
+                return False
+
+            reference = f"checkout:{getattr(checkout_session, 'id', 'unknown')}"
+            existing = BatchBotCreditBundle.query.filter_by(reference=reference).first()
+            if existing:
+                return True
+
+            bundle = BatchBotCreditService.grant_from_addon(org, addon, reference=reference)
+            if bundle:
+                logger.info(
+                    "Granted %s BatchBot requests to org %s via checkout %s",
+                    bundle.purchased_requests,
+                    org.id,
+                    reference,
+                )
+                return True
+            return False
+        except Exception as exc:
+            logger.error("Failed to apply BatchBot refill for checkout %s: %s", getattr(checkout_session, 'id', 'unknown'), exc)
+            return False
 
     @staticmethod
     def _get_pending_signup_id_from_session(checkout_session):

@@ -55,6 +55,8 @@ _export([
     ("category", "Tag", None),
     ("product_category", "ProductCategory", None),
     ("global_item", "GlobalItem", None),
+    ("batchbot_usage", "BatchBotUsage", None),
+    ("batchbot_credit", "BatchBotCreditBundle", None),
     ("recipe_marketplace", "RecipeProductGroup", None),
     ("recipe_marketplace", "RecipeModerationEvent", None),
 ])
