@@ -1776,7 +1776,6 @@ def integrations_checklist():
     # Core environment & secrets
     env_core = {
         'FLASK_ENV': os.environ.get('FLASK_ENV', 'development'),
-        'REPLIT_DEPLOYMENT': os.environ.get('REPLIT_DEPLOYMENT', 'false'),
         'SECRET_KEY_present': bool(os.environ.get('FLASK_SECRET_KEY') or current_app.config.get('SECRET_KEY')),
         'LOG_LEVEL': current_app.config.get('LOG_LEVEL', 'WARNING'),
     }
@@ -1853,7 +1852,6 @@ def integrations_checklist():
                 _make_item('FLASK_ENV', 'Runtime environment. Use "production" for live deployments.', required=True, recommended='production', allow_config=True, config_key='ENV'),
                 _make_item('FLASK_SECRET_KEY', 'Flask session signing secret. Use a random 32+ character string.', required=True, allow_config=True, config_key='SECRET_KEY', is_secret=True),
                 _make_item('FLASK_DEBUG', 'Flask debug flag. Must stay false/unset in production.', required=False, recommended='false / unset'),
-                _make_item('REPLIT_DEPLOYMENT', 'Platform toggle used to force production settings on Replit. Leave false unless deploying there.', required=False, recommended='false'),
                 _make_item('LOG_LEVEL', 'Application logging level. Use INFO or WARN in production.', required=True, recommended='INFO', allow_config=True),
             ]
         },
@@ -1869,10 +1867,16 @@ def integrations_checklist():
         },
         {
             'title': 'Caching & Rate Limits',
-            'note': 'Provision a managed Redis instance (Render Redis, Upstash, ElastiCache). Use the same connection URI for caching, Flask sessions, and rate limiting.',
+            'note': 'Provision a managed Redis instance (Render Redis, Upstash, ElastiCache). Use a single connection URI for caching, Flask sessions, and rate limiting.',
             'section_items': [
-                _make_item('REDIS_URL', 'Redis connection string for caching, sessions, and rate limit storage.', required=True, recommended='redis://', note='Create the service, copy the full tls-enabled URI, and paste it in Render → Environment.', allow_config=True),
-                _make_item('RATELIMIT_STORAGE_URL', 'Flask-Limiter backend. Should mirror REDIS_URL in production.', required=True, recommended='redis://', allow_config=True),
+                _make_item(
+                    'REDIS_URL',
+                    'Redis connection string for caching, sessions, and rate limit storage.',
+                    required=True,
+                    recommended='redis://',
+                    note='Create the service, copy the full tls-enabled URI, and paste it into your environment. The rate limiter automatically reuses this value—no separate variable needed.',
+                    allow_config=True,
+                ),
                 _make_item('SESSION_TYPE', 'Server-side session backend. Must be "redis" in production.', required=True, recommended='redis', allow_config=True, note='Set to redis so user sessions live in Redis instead of cookies.'),
             ],
         },
@@ -2037,7 +2041,6 @@ def integrations_checklist():
         cache_info=cache_info,
         oauth_status=oauth_status,
         whop_status=whop_status,
-        launch_env_sections=launch_env_sections,
         rate_limiters=rate_limiters,
         config_matrix=config_matrix,
     )
