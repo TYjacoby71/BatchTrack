@@ -151,6 +151,8 @@ BATCHLEY_JOB_CATALOG = [
         'slug': 'single-restock',
         'name': 'Single Item Restock',
         'tool': 'log_inventory_purchase',
+        'status': 'wired',
+        'description': 'Fast path for topping up one inventory item when the user already knows the SKU.',
         'inputs': [
             'Inventory item ID or fuzzy name match',
             'Quantity + unit, optional cost per unit',
@@ -779,8 +781,8 @@ def delete_organization(org_id):
 
         # Import all models needed for deletion
         from app.models import (
-            User, Batch, BatchIngredient, BatchContainer, ExtraBatchContainer,
-            ExtraBatchIngredient, BatchTimer, Recipe, RecipeIngredient,
+            User, Batch, BatchIngredient, BatchContainer, ExtraBatchContainer, 
+            ExtraBatchIngredient, BatchTimer, Recipe, RecipeIngredient, 
             InventoryItem, Category, Role, Permission, ProductSKU, Product,
             Organization
         )
@@ -845,7 +847,7 @@ def delete_organization(org_id):
         logging.warning(f"ORGANIZATION DELETED: '{org_name}' (ID: {org_id}) successfully deleted by developer {current_user.username}. {users_count} users removed.")
 
         return jsonify({
-            'success': True,
+            'success': True, 
             'message': f'Organization "{org_name}" and all associated data permanently deleted. {users_count} users removed.'
         })
 
@@ -1276,7 +1278,7 @@ def reference_categories():
         if category_obj.default_density:
             category_densities[category_obj.name] = category_obj.default_density
 
-    return render_template('developer/reference_categories.html',
+    return render_template('developer/reference_categories.html', 
                          categories=categories,
                          global_items_by_category=global_items_by_category,
                          category_densities=category_densities)
@@ -1337,7 +1339,7 @@ def load_curated_container_lists():
     # First time setup: merge database values with defaults
     defaults = {
         'materials': [
-            'Glass', 'PET Plastic', 'HDPE Plastic', 'PP Plastic', 'Aluminum',
+            'Glass', 'PET Plastic', 'HDPE Plastic', 'PP Plastic', 'Aluminum', 
             'Tin', 'Steel', 'Paperboard', 'Cardboard', 'Silicone'
         ],
         'types': [
@@ -1487,7 +1489,7 @@ def delete_reference_category():
 
         if items_count > 0:
             return jsonify({
-                'success': False,
+                'success': False, 
                 'error': f'Cannot delete category. {items_count} active items are using this category.'
             })
 
@@ -1541,7 +1543,7 @@ def update_category_density():
         db.session.commit()
 
         return jsonify({
-            'success': True,
+            'success': True, 
             'message': f'Density updated for category "{category_name}"',
             'density': category.default_density
         })
@@ -1574,14 +1576,14 @@ def calculate_category_density():
 
         if not densities:
             return jsonify({
-                'success': False,
+                'success': False, 
                 'error': 'No items with valid density values found in this category'
             })
 
         calculated_density = sum(densities) / len(densities)
 
         return jsonify({
-            'success': True,
+            'success': True, 
             'calculated_density': calculated_density,
             'items_count': len(densities),
             'message': f'Calculated density: {calculated_density:.3f} g/ml from {len(densities)} items'
@@ -1801,7 +1803,7 @@ def delete_global_item(item_id):
         # Validate confirmation
         if confirm_name != item.name:
             return jsonify({
-                'success': False,
+                'success': False, 
                 'error': f'Confirmation text must match exactly: "{item.name}"'
             })
 
@@ -1876,7 +1878,7 @@ def delete_global_item(item_id):
         import logging
         logging.error(f"GLOBAL_ITEM_DELETE_FAILED: Error deleting global item {item_id}: {str(e)}")
         return jsonify({
-            'success': False,
+            'success': False, 
             'error': f'Failed to delete global item: {str(e)}'
         })
 
@@ -2122,6 +2124,10 @@ def integrations_checklist():
                 _make_item('DATABASE_URL', 'Fallback database connection string (used if internal URL not set).', required=False, is_secret=True, note='Render automatically injects DATABASE_URL. Mirror DATABASE_INTERNAL_URL when both exist.'),
                 _make_item('SQLALCHEMY_DISABLE_CREATE_ALL', 'Disable db.create_all() safety switch. Set to 1 in production.', required=False, recommended='1 (enabled)', note='Prevents accidental schema drift on boot.'),
                 _make_item('SQLALCHEMY_ENABLE_CREATE_ALL', 'Local dev-only override to run db.create_all(). Leave unset in production.', required=False, recommended='unset'),
+                _make_item('SQLALCHEMY_POOL_SIZE', 'SQLAlchemy connection pool size.', required=False, recommended='5', allow_config=True, note='Keep small on starter instances; raise only when CPU/memory allows more concurrency.'),
+                _make_item('SQLALCHEMY_MAX_OVERFLOW', 'Burst connections beyond the base pool.', required=False, recommended='5', allow_config=True, note='Match this to pool size for predictable ceilings.'),
+                _make_item('SQLALCHEMY_POOL_TIMEOUT', 'Seconds to wait for a pooled connection before erroring.', required=False, recommended='5', allow_config=True, note='Lower values surface saturation symptoms quickly.'),
+                _make_item('SQLALCHEMY_POOL_RECYCLE', 'Seconds before idle connections recycle.', required=False, recommended='1800', allow_config=True),
             ]
         },
         {
@@ -2187,6 +2193,7 @@ def integrations_checklist():
             'title': 'AI Studio & BatchBot',
             'note': 'These keys and knobs control Batchley (paid bot), the public help bot, and refill economics. Set limits here so support knows how refills/unlimited tiers behave.',
             'section_items': [
+                _make_item('FEATURE_BATCHBOT', 'Master toggle for exposing Batchley endpoints.', required=False, recommended='true', allow_config=True, note='Set to false to completely disable the AI copilot and its routes.'),
                 _make_item('GOOGLE_AI_API_KEY', 'Gemini API key used by Batchley + public bot.', required=True, is_secret=True, note='Create in Google AI Studio → API Key. Rotate if compromised.'),
                 _make_item('GOOGLE_AI_DEFAULT_MODEL', 'Fallback Gemini model when per-bot overrides are unset.', required=False, recommended='gemini-1.5-flash'),
                 _make_item('GOOGLE_AI_BATCHBOT_MODEL', 'Model used by the paid Batchley bot.', required=False, recommended='gemini-1.5-pro'),
@@ -2223,10 +2230,11 @@ def integrations_checklist():
         }
     ]
 
-    config_matrix = []
+    config_sections = []
     for section in launch_env_sections:
+        rows = []
         for item in section['section_items']:
-            config_matrix.append(
+            rows.append(
                 {
                     'category': section['title'],
                     'key': item['key'],
@@ -2236,8 +2244,10 @@ def integrations_checklist():
                     'description': item['description'],
                     'note': item.get('note'),
                     'is_secret': item.get('is_secret', False),
+                    'source': item.get('source', 'missing'),
                 }
             )
+        config_sections.append({'title': section['title'], 'note': section.get('note'), 'rows': rows})
 
     rate_limiters = [
         {
@@ -2322,7 +2332,7 @@ def integrations_checklist():
         oauth_status=oauth_status,
         whop_status=whop_status,
         rate_limiters=rate_limiters,
-        config_matrix=config_matrix,
+        config_sections=config_sections,
     )
 
 
@@ -2537,9 +2547,9 @@ def delete_product_category(cat_id):
     return redirect(url_for('developer.product_categories'))
 
 @developer_bp.route('/waitlist-statistics')
-@permission_required('developer_access')
+@require_developer_permission('system_admin')
 def waitlist_statistics():
-    """View waitlist statistics and entries from all sources"""
+    """View waitlist statistics and data"""
     from app.services.statistics import AnalyticsDataService
 
     force_refresh = (request.args.get('refresh') or '').lower() in ('1', 'true', 'yes')
@@ -2548,7 +2558,6 @@ def waitlist_statistics():
         'developer/waitlist_statistics.html',
         waitlist_data=stats.get('entries', []),
         total_signups=stats.get('total', 0),
-        source_breakdown=stats.get('source_breakdown', {}),
         generated_at=stats.get('generated_at'),
     )
 
@@ -2947,7 +2956,7 @@ def get_user_api(user_id):
         return jsonify({'success': False, 'error': str(e)})
 
 @developer_bp.route('/api/container-options')
-@login_required
+@login_required  
 def api_container_options():
     """Get curated container options for dropdowns"""
     try:

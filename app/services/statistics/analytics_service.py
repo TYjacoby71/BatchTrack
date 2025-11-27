@@ -660,75 +660,54 @@ class AnalyticsDataService:
 
     @classmethod
     def get_waitlist_statistics(cls, *, force_refresh: bool = False) -> Dict[str, Any]:
-        """Return processed waitlist entries from all sources for developer views."""
+        """Return processed waitlist entries for developer views."""
 
         cache_key = cls._cache_key("waitlist:entries")
         cached = cls._get_cached(cache_key, force_refresh)
         if cached is not None:
             return cached
 
-        # Define all waitlist sources
-        waitlist_sources = {
-            'homepage': 'data/waitlist.json',
-            'tools_soap': 'data/waitlist_soap.json',
-            'tools_candles': 'data/waitlist_candles.json', 
-            'tools_lotions': 'data/waitlist_lotions.json',
-            'tools_herbal': 'data/waitlist_herbal.json',
-            'tools_baker': 'data/waitlist_baker.json',
-            'tools_general': 'data/waitlist_tools.json'
-        }
+        waitlist_data = read_json_file("data/waitlist.json", default=[]) or []
+        processed: List[Dict[str, Any]] = []
+        for entry in waitlist_data:
+            timestamp = entry.get("timestamp")
+            formatted = "Unknown"
+            iso_value = None
+            if timestamp:
+                try:
+                    dt = datetime.fromisoformat(timestamp.replace("Z", "+00:00"))
+                    formatted = dt.strftime("%Y-%m-%d %H:%M UTC")
+                    iso_value = dt.isoformat()
+                except Exception:
+                    formatted = timestamp
+                    iso_value = timestamp
 
-        all_entries = []
-        source_stats = {}
-        
-        # Process each waitlist source
-        for source_name, file_path in waitlist_sources.items():
-            waitlist_data = read_json_file(file_path, default=[]) or []
-            source_stats[source_name] = len(waitlist_data)
-            
-            for entry in waitlist_data:
-                timestamp = entry.get("timestamp")
-                formatted = "Unknown"
-                iso_value = None
-                if timestamp:
-                    try:
-                        dt = datetime.fromisoformat(timestamp.replace("Z", "+00:00"))
-                        formatted = dt.strftime("%Y-%m-%d %H:%M UTC")
-                        iso_value = dt.isoformat()
-                    except Exception:
-                        formatted = timestamp
-                        iso_value = timestamp
+            first_name = entry.get("first_name", "")
+            last_name = entry.get("last_name", "")
+            legacy_name = entry.get("name", "")
+            if first_name or last_name:
+                full_name = f"{first_name} {last_name}".strip()
+            elif legacy_name:
+                full_name = legacy_name
+            else:
+                full_name = "Not provided"
 
-                first_name = entry.get("first_name", "")
-                last_name = entry.get("last_name", "")
-                legacy_name = entry.get("name", "")
-                if first_name or last_name:
-                    full_name = f"{first_name} {last_name}".strip()
-                elif legacy_name:
-                    full_name = legacy_name
-                else:
-                    full_name = "Not provided"
+            processed.append(
+                {
+                    "email": entry.get("email", ""),
+                    "full_name": full_name,
+                    "business_type": entry.get("business_type", "Not specified"),
+                    "formatted_date": formatted,
+                    "timestamp": iso_value,
+                    "source": entry.get("source", "Unknown"),
+                }
+            )
 
-                all_entries.append(
-                    {
-                        "email": entry.get("email", ""),
-                        "full_name": full_name,
-                        "business_type": entry.get("business_type", "Not specified"),
-                        "tool_interest": entry.get("tool_interest", ""),
-                        "formatted_date": formatted,
-                        "timestamp": iso_value,
-                        "source": entry.get("source", source_name),
-                        "source_display": source_name.replace('_', ' ').title(),
-                    }
-                )
-
-        # Sort all entries by timestamp
-        all_entries.sort(key=lambda item: item.get("timestamp") or "", reverse=True)
+        processed.sort(key=lambda item: item.get("timestamp") or "", reverse=True)
 
         payload = {
-            "entries": all_entries,
-            "total": len(all_entries),
-            "source_breakdown": source_stats,
+            "entries": processed,
+            "total": len(waitlist_data),
             "generated_at": TimezoneUtils.utc_now().isoformat(),
         }
         cls._store_cache(cache_key, payload)
