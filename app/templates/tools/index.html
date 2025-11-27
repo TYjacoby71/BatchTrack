@@ -1,4 +1,16 @@
 {% extends 'layout.html' %}
+
+{% block title %}Tools{% endblock %}
+
+{% block extra_css %}
+<style>
+.tool-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+}
+</style>
+{% endblock %}
+
 {% block content %}
 <div class="py-1">
   <h1 class="mb-4">Maker Tools</h1>
@@ -7,109 +19,177 @@
     <div class="row g-3">
     <div class="col-md-6 col-lg-4">
         {% if tool_flags.soap %}
-      <a class="card h-100 text-decoration-none" href="/tools/soap">
+      <a class="card h-100 text-decoration-none tool-card" href="/tools/soap">
         <div class="card-body">
           <h5 class="card-title">Soap Tools</h5>
           <p class="card-text small">Lye calculator, superfat, water %, oil profiles.</p>
         </div>
       </a>
         {% else %}
-        <div class="card h-100 border-dashed">
+        <div class="card h-100 border-dashed tool-card">
           <div class="card-body">
             <h5 class="card-title d-flex justify-content-between align-items-center">
               Soap Tools
               <span class="badge bg-secondary">Coming Soon</span>
             </h5>
             <p class="card-text small">Preview the calculator layout and join the waitlist for early access.</p>
-            <a class="btn btn-sm btn-outline-secondary mt-2" href="{{ url_for('waitlist.join_waitlist') }}">Join Waitlist</a>
+            <a class="btn btn-sm btn-outline-secondary mt-2" data-bs-toggle="modal" data-bs-target="#waitlistModal" data-tool="Soap Tools">Join Waitlist</a>
           </div>
         </div>
         {% endif %}
     </div>
     <div class="col-md-6 col-lg-4">
         {% if tool_flags.candles %}
-      <a class="card h-100 text-decoration-none" href="/tools/candles">
+      <a class="card h-100 text-decoration-none tool-card" href="/tools/candles">
         <div class="card-body">
           <h5 class="card-title">Candle Tools</h5>
           <p class="card-text small">Fragrance load, wax blend %, vessel sizing.</p>
         </div>
       </a>
         {% else %}
-        <div class="card h-100 border-dashed">
+        <div class="card h-100 border-dashed tool-card">
           <div class="card-body">
             <h5 class="card-title d-flex justify-content-between align-items-center">
               Candle Tools
               <span class="badge bg-secondary">Coming Soon</span>
             </h5>
             <p class="card-text small">See what’s shipping next—calculate fragrance load and wax ratios soon.</p>
-            <a class="btn btn-sm btn-outline-secondary mt-2" href="{{ url_for('waitlist.join_waitlist') }}">Join Waitlist</a>
+            <a class="btn btn-sm btn-outline-secondary mt-2" data-bs-toggle="modal" data-bs-target="#waitlistModal" data-tool="Candle Tools">Join Waitlist</a>
           </div>
         </div>
         {% endif %}
     </div>
     <div class="col-md-6 col-lg-4">
         {% if tool_flags.lotions %}
-      <a class="card h-100 text-decoration-none" href="/tools/lotions">
+      <a class="card h-100 text-decoration-none tool-card" href="/tools/lotions">
         <div class="card-body">
           <h5 class="card-title">Lotion & Cosmetic Tools</h5>
           <p class="card-text small">Phase % calculator, preservative %, temps.</p>
         </div>
       </a>
         {% else %}
-        <div class="card h-100 border-dashed">
+        <div class="card h-100 border-dashed tool-card">
           <div class="card-body">
             <h5 class="card-title d-flex justify-content-between align-items-center">
               Lotion & Cosmetic Tools
               <span class="badge bg-secondary">Coming Soon</span>
             </h5>
             <p class="card-text small">Phase calculators and preservative planners arrive shortly.</p>
-            <a class="btn btn-sm btn-outline-secondary mt-2" href="{{ url_for('waitlist.join_waitlist') }}">Join Waitlist</a>
+            <a class="btn btn-sm btn-outline-secondary mt-2" data-bs-toggle="modal" data-bs-target="#waitlistModal" data-tool="Lotion & Cosmetic Tools">Join Waitlist</a>
           </div>
         </div>
         {% endif %}
     </div>
     <div class="col-md-6 col-lg-4">
         {% if tool_flags.herbal %}
-      <a class="card h-100 text-decoration-none" href="/tools/herbal">
+      <a class="card h-100 text-decoration-none tool-card" href="/tools/herbal">
         <div class="card-body">
           <h5 class="card-title">Herbalist Tools</h5>
           <p class="card-text small">Tincture ratios, oil infusions, dilutions.</p>
         </div>
       </a>
         {% else %}
-        <div class="card h-100 border-dashed">
+        <div class="card h-100 border-dashed tool-card">
           <div class="card-body">
             <h5 class="card-title d-flex justify-content-between align-items-center">
               Herbalist Tools
               <span class="badge bg-secondary">Coming Soon</span>
             </h5>
             <p class="card-text small">Tincture ratios and infusion helpers are in preview.</p>
-            <a class="btn btn-sm btn-outline-secondary mt-2" href="{{ url_for('waitlist.join_waitlist') }}">Join Waitlist</a>
+            <a class="btn btn-sm btn-outline-secondary mt-2" data-bs-toggle="modal" data-bs-target="#waitlistModal" data-tool="Herbalist Tools">Join Waitlist</a>
           </div>
         </div>
         {% endif %}
     </div>
     <div class="col-md-6 col-lg-4">
         {% if tool_flags.baker %}
-      <a class="card h-100 text-decoration-none" href="/tools/baker">
+      <a class="card h-100 text-decoration-none tool-card" href="/tools/baker">
         <div class="card-body">
           <h5 class="card-title">Baker Tools</h5>
           <p class="card-text small">Baker’s %, hydration, preferments, scaling.</p>
         </div>
       </a>
         {% else %}
-        <div class="card h-100 border-dashed">
+        <div class="card h-100 border-dashed tool-card">
           <div class="card-body">
             <h5 class="card-title d-flex justify-content-between align-items-center">
               Baker Tools
               <span class="badge bg-secondary">Coming Soon</span>
             </h5>
             <p class="card-text small">Formula scaling and hydration helpers launch soon.</p>
-            <a class="btn btn-sm btn-outline-secondary mt-2" href="{{ url_for('waitlist.join_waitlist') }}">Join Waitlist</a>
+            <a class="btn btn-sm btn-outline-secondary mt-2" data-bs-toggle="modal" data-bs-target="#waitlistModal" data-tool="Baker Tools">Join Waitlist</a>
           </div>
         </div>
         {% endif %}
     </div>
   </div>
 </div>
+
+<div class="modal fade" id="waitlistModal" tabindex="-1" aria-labelledby="waitlistModalLabel" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="waitlistModalLabel">Join Waitlist</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <p>You are joining the waitlist for: <strong id="waitlistToolName"></strong></p>
+        <form id="waitlistForm">
+          <div class="mb-3">
+            <label for="email" class="form-label">Email address</label>
+            <input type="email" class="form-control" id="email" name="email" required>
+          </div>
+          <input type="hidden" id="tool" name="tool">
+          <button type="submit" class="btn btn-primary">Join Waitlist</button>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', (event) => {
+    var waitlistModal = document.getElementById('waitlistModal');
+    waitlistModal.addEventListener('show.bs.modal', function (e) {
+        var button = e.relatedTarget;
+        var tool = button.getAttribute('data-tool');
+        var modalTitle = waitlistModal.querySelector('.modal-title');
+        var waitlistToolName = waitlistModal.querySelector('#waitlistToolName');
+        var toolInput = waitlistModal.querySelector('#tool');
+
+        waitlistToolName.textContent = tool;
+        toolInput.value = tool;
+    });
+
+    var waitlistForm = document.getElementById('waitlistForm');
+    waitlistForm.addEventListener('submit', function(e) {
+        e.preventDefault();
+        var formData = new FormData(waitlistForm);
+        var tool = document.getElementById('tool').value;
+
+        fetch('{{ url_for("waitlist.join_waitlist") }}', {
+            method: 'POST',
+            body: formData
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                alert('Successfully joined waitlist!');
+                var modal = bootstrap.Modal.getInstance(waitlistModal);
+                modal.hide();
+                waitlistForm.reset();
+            } else {
+                alert('Error joining waitlist. Please try again.');
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('An unexpected error occurred. Please try again.');
+        });
+    });
+});
+</script>
 {% endblock %}

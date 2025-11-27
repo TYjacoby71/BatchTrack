@@ -74,6 +74,49 @@
         </div>
     </div>
 
+    <!-- Source Breakdown -->
+    {% if source_breakdown %}
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card border-info">
+                <div class="card-header bg-info text-white">
+                    <h5 class="mb-0">
+                        <i class="fas fa-chart-pie"></i> Waitlist Sources
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        {% for source, count in source_breakdown.items() %}
+                        <div class="col-md-4 mb-3">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <span class="fw-medium">
+                                    {% if source == 'homepage' %}
+                                        <i class="fas fa-home text-success"></i> Homepage
+                                    {% elif source == 'tools_soap' %}
+                                        <i class="fas fa-soap text-info"></i> Soap Tools
+                                    {% elif source == 'tools_candles' %}
+                                        <i class="fas fa-fire text-warning"></i> Candle Tools
+                                    {% elif source == 'tools_lotions' %}
+                                        <i class="fas fa-pump-soap text-primary"></i> Lotion Tools
+                                    {% elif source == 'tools_herbal' %}
+                                        <i class="fas fa-leaf text-success"></i> Herbal Tools
+                                    {% elif source == 'tools_baker' %}
+                                        <i class="fas fa-bread-slice text-warning"></i> Baker Tools
+                                    {% else %}
+                                        <i class="fas fa-tools text-secondary"></i> {{ source.replace('_', ' ').title() }}
+                                    {% endif %}
+                                </span>
+                                <span class="badge bg-secondary">{{ count }}</span>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
     <!-- Waitlist Data Table -->
     <div class="row">
         <div class="col-12">
@@ -92,6 +135,7 @@
                                     <th>Name</th>
                                     <th>Email</th>
                                     <th>Business Type</th>
+                                    <th>Tool Interest</th>
                                     <th>Signup Date</th>
                                     <th>Source</th>
                                 </tr>
@@ -113,10 +157,23 @@
                                         </span>
                                     </td>
                                     <td>
+                                        {% if entry.tool_interest %}
+                                            <span class="badge bg-info">{{ entry.tool_interest }}</span>
+                                        {% else %}
+                                            <span class="text-muted">-</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
                                         <small class="text-muted">{{ entry.formatted_date }}</small>
                                     </td>
                                     <td>
-                                        <span class="badge bg-primary">{{ entry.source.title() }}</span>
+                                        {% if entry.source == 'homepage' %}
+                                            <span class="badge bg-success">Homepage</span>
+                                        {% elif 'tools_' in entry.source %}
+                                            <span class="badge bg-warning">{{ entry.source_display }}</span>
+                                        {% else %}
+                                            <span class="badge bg-primary">{{ entry.source_display }}</span>
+                                        {% endif %}
                                     </td>
                                 </tr>
                                 {% endfor %}
