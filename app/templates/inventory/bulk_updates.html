@@ -59,8 +59,8 @@
                                 <th style="width: 140px;">Change Type</th>
                                 <th>Inventory Item</th>
                                 <th style="width: 140px;">Quantity</th>
-                                <th style="width: 120px;">Unit</th>
-                                <th style="width: 140px;">Cost/Unit</th>
+                                <th style="width: 140px;">Unit</th>
+                                <th style="width: 220px;">Cost Entry</th>
                                 <th>Notes</th>
                                 <th style="width: 50px;"></th>
                             </tr>
@@ -86,7 +86,7 @@
 
                 <div class="mt-3">
                     <label class="form-label fw-semibold">Status</label>
-                    <div id="bulkStatus" class="alert alert-secondary mb-0">No lines queued yet.</div>
+                    <div id="bulkStatus" class="alert alert-secondary mb-0">No lines queued yet. Submissions use the standard adjustment flow.</div>
                     <div class="small text-muted mt-2">
                         <span class="me-3">
                             <i class="fas fa-boxes-stacked me-1"></i>{{ inventory_items|length if inventory_items else 0 }} inventory items connected
@@ -101,11 +101,6 @@
         </div>
     </div>
 </div>
-<datalist id="inventorySuggestions">
-    {% for item in inventory_items or [] %}
-        <option value="{{ item.name }}"></option>
-    {% endfor %}
-</datalist>
 {% endblock %}
 
 {% block scripts %}
@@ -118,14 +113,10 @@
     const inventoryOptions = Array.isArray(rawInventoryOptions) ? rawInventoryOptions : [];
     const unitOptions = Array.isArray(rawUnitOptions) ? rawUnitOptions : [];
     const inventoryById = new Map(inventoryOptions.map(item => [Number(item.id), item]));
-    const inventoryByName = new Map(inventoryOptions.map(item => [String(item.name || '').toLowerCase(), item]));
     const safeUnitOptions = unitOptions.length ? unitOptions : [{ name: 'count', symbol: null, unit_type: 'count' }];
-    const unitOptionsMarkup = safeUnitOptions.map(unit => {
-        const label = escapeHtml(unit.name || '');
-        const suffix = unit.symbol ? ` (${escapeHtml(unit.symbol)})` : '';
-        return `<option value="${label}">${label}${suffix}</option>`;
-    }).join('');
     const defaultUnit = safeUnitOptions[0]?.name || '';
+    const csrfToken = {{ csrf_token()|tojson }};
+    const adjustUrlTemplate = {{ url_for('inventory.adjust_inventory', item_id=0)|tojson }};
     const tableBody = document.querySelector('#bulkTable tbody');
     const draftCountEl = document.getElementById('draftCount');
     const draftListEl = document.getElementById('draftList');
@@ -133,6 +124,7 @@
     const resultsEl = document.getElementById('resultDetails');
     const loadBtn = document.getElementById('loadDraftBtn');
     const deleteBtn = document.getElementById('deleteDraftBtn');
+    const submitBtn = document.getElementById('submitDraftBtn');
     const modalEl = document.getElementById('bulkUpdateModal');
     let selectedDraftId = null;
 
@@ -147,74 +139,34 @@
             .replace(/>/g, '&gt;');
     }
 
+    const unitOptionsMarkup = safeUnitOptions.map(unit => {
+        const label = escapeHtml(unit.name || '');
+        const suffix = unit.symbol ? ` (${escapeHtml(unit.symbol)})` : '';
+        return `<option value="${label}">${label}${suffix}</option>`;
+    }).join('');
+    const inventoryOptionsMarkup = inventoryOptions.map(item => {
+        const label = escapeHtml(item.name || `Item #${item.id}`);
+        const defaultUnitAttr = escapeHtml(item.unit || '');
+        return `<option value="${item.id}" data-default-unit="${defaultUnitAttr}">${label}</option>`;
+    }).join('');
+    const costHelpText = {
+        no_change: 'Cost stays the same',
+        per_unit: 'Override cost per unit',
+        total: 'Enter total cost; converted per unit',
+    };
+
     function helperCopy(match) {
         if (match) {
-            const unitLabel = match.unit || 'unit';
-            return `Linked to #${match.id} · ${unitLabel}`;
+            return `Linked to ${match.name} (${match.unit || 'unit'})`;
         }
         if (!inventoryOptions.length) {
-            return 'Enter details to create inventory lines on submit.';
+            return 'Inventory list is empty for this organization.';
         }
-        return 'Type an exact inventory name to link an existing item.';
+        return 'Select an inventory item to enable submission.';
     }
 
-    function resolveInventoryMatch(descriptor = {}) {
-        if (!inventoryOptions.length) {
-            return null;
-        }
-        const idCandidate = descriptor.inventory_item_id ?? descriptor.id;
-        const numericId = Number(idCandidate);
-        if (!Number.isNaN(numericId) && numericId > 0 && inventoryById.has(numericId)) {
-            return inventoryById.get(numericId);
-        }
-        const rawName = (descriptor.inventory_item_name || descriptor.name || '').trim().toLowerCase();
-        if (rawName && inventoryByName.has(rawName)) {
-            return inventoryByName.get(rawName);
-        }
-        return null;
-    }
-
-    function clearResults() {
-        if (!resultsEl) return;
-        resultsEl.style.display = 'none';
-        resultsEl.innerHTML = '';
-    }
-
-    function renderResults(results) {
-        if (!resultsEl) return;
-        if (!Array.isArray(results) || !results.length) {
-            clearResults();
-            return;
-        }
-        const rows = results.map(entry => {
-            const resolvedName = entry.item_name
-                || (entry.item_id && inventoryById.get(Number(entry.item_id))?.name)
-                || '—';
-            return `
-                <tr class="${entry.success ? 'table-success' : 'table-danger'}">
-                    <td>${entry.line ?? '—'}</td>
-                    <td>${escapeHtml(resolvedName)}</td>
-                    <td class="text-capitalize">${escapeHtml(entry.change_type || '—')}</td>
-                    <td>${escapeHtml(entry.message || '')}</td>
-                </tr>
-            `;
-        }).join('');
-        resultsEl.innerHTML = `
-            <div class="table-responsive">
-                <table class="table table-sm mb-0">
-                    <thead>
-                        <tr>
-                            <th>Line</th>
-                            <th>Item</th>
-                            <th>Change</th>
-                            <th>Result</th>
-                        </tr>
-                    </thead>
-                    <tbody>${rows}</tbody>
-                </table>
-            </div>
-        `;
-        resultsEl.style.display = 'block';
+    function buildAdjustUrl(itemId) {
+        return adjustUrlTemplate.replace(/\d+$/, String(itemId));
     }
 
     function getDrafts() {
@@ -241,12 +193,12 @@
             selectedDraftId = null;
             return;
         }
-        const buttons = drafts.map((draft, idx) => `
+        const chips = drafts.map((draft, idx) => `
             <button class="btn btn-sm btn-outline-secondary me-1 mb-1 draft-chip" data-draft="${idx}">
                 ${escapeHtml(draft.name)}
             </button>
         `).join('');
-        draftListEl.innerHTML = buttons;
+        draftListEl.innerHTML = chips;
         document.querySelectorAll('.draft-chip').forEach(btn => {
             btn.addEventListener('click', () => {
                 document.querySelectorAll('.draft-chip').forEach(el => el.classList.remove('active'));
@@ -258,61 +210,63 @@
         });
     }
 
+    function resolveInventoryMatch(descriptor = {}) {
+        const idCandidate = descriptor.inventory_item_id ?? descriptor.id;
+        if (idCandidate && inventoryById.has(Number(idCandidate))) {
+            return inventoryById.get(Number(idCandidate));
+        }
+        const rawName = (descriptor.inventory_item_name || descriptor.name || '').trim().toLowerCase();
+        if (!rawName) {
+            return null;
+        }
+        return inventoryOptions.find(item => (item.name || '').toLowerCase() === rawName) || null;
+    }
+
+    function syncCostInputs(row) {
+        const costTypeSelect = row.querySelector('.cost-entry-type');
+        const costInput = row.querySelector('.cost');
+        const helpEl = row.querySelector('.cost-help');
+        const type = (costTypeSelect.value || 'no_change').toLowerCase();
+        costInput.disabled = type === 'no_change';
+        if (type === 'no_change') {
+            costInput.value = '';
+        }
+        helpEl.textContent = costHelpText[type] || costHelpText.no_change;
+    }
+
     function attachRowEvents(row) {
-        const nameInput = row.querySelector('.item-name');
-        const idInput = row.querySelector('.item-id');
-        const helperEl = row.querySelector('.item-helper');
+        const inventorySelect = row.querySelector('.inventory-select');
         const unitSelect = row.querySelector('.unit');
+        const helperEl = row.querySelector('.item-helper');
+        const costTypeSelect = row.querySelector('.cost-entry-type');
 
-        function applyMatch(match) {
-            if (match) {
-                idInput.value = match.id;
-                helperEl.textContent = helperCopy(match);
-                if (!row.dataset.unitTouched && match.unit) {
-                    unitSelect.value = match.unit;
-                }
-            } else {
-                idInput.value = '';
-                helperEl.textContent = helperCopy(null);
+        const syncSelection = () => {
+            const itemId = Number(inventorySelect.value) || null;
+            const match = itemId ? inventoryById.get(itemId) : null;
+            helperEl.textContent = helperCopy(match);
+            if (match && !row.dataset.unitTouched && match.unit) {
+                unitSelect.value = match.unit;
             }
-        }
+        };
 
-        function lookupInventory() {
-            const value = (nameInput.value || '').trim();
-            if (!value) {
-                applyMatch(null);
-                return;
-            }
-            const cleanedNumeric = value.startsWith('#') ? value.slice(1) : value;
-            if (/^\d+$/.test(cleanedNumeric)) {
-                const numericId = Number(cleanedNumeric);
-                if (inventoryById.has(numericId)) {
-                    applyMatch(inventoryById.get(numericId));
-                    return;
-                }
-            }
-            const byName = inventoryByName.get(value.toLowerCase());
-            applyMatch(byName || null);
-        }
+        inventorySelect.addEventListener('change', syncSelection);
+        unitSelect.addEventListener('change', () => {
+            row.dataset.unitTouched = 'true';
+        });
+        costTypeSelect.addEventListener('change', () => syncCostInputs(row));
 
-        if (nameInput) {
-            nameInput.addEventListener('change', lookupInventory);
-            nameInput.addEventListener('blur', lookupInventory);
-            lookupInventory();
-        }
-        if (unitSelect) {
-            unitSelect.addEventListener('change', () => {
-                row.dataset.unitTouched = 'true';
-            });
-        }
+        syncSelection();
+        syncCostInputs(row);
     }
 
     function addRow(data = {}) {
         const match = resolveInventoryMatch(data);
-        const displayName = data.inventory_item_name || match?.name || '';
-        const helperText = helperCopy(match);
         const selectedUnit = data.unit || match?.unit || defaultUnit;
+        const helperText = helperCopy(match);
+        const costType = (data.cost_entry_type || 'no_change').toLowerCase();
+        const costValue = data.cost_per_unit ?? '';
         const row = document.createElement('tr');
+        row.dataset.unitTouched = data.unit ? 'true' : '';
         row.innerHTML = `
             <td>
                 <select class="form-select form-select-sm change-type">
@@ -323,12 +277,11 @@
                 </select>
             </td>
             <td>
-                <div class="position-relative">
-                    <input type="hidden" class="item-id" value="${data.inventory_item_id || ''}">
-                    <input type="text" class="form-control form-control-sm item-name" list="inventorySuggestions"
-                           placeholder="Item name or ID" value="${escapeHtml(displayName)}">
-                    <div class="form-text item-helper">${escapeHtml(helperText)}</div>
-                </div>
+                <select class="form-select form-select-sm inventory-select">
+                    <option value="">Select Item</option>
+                    ${inventoryOptionsMarkup}
+                </select>
+                <div class="form-text item-helper">${escapeHtml(helperText)}</div>
             </td>
             <td>
                 <input type="number" step="0.01" class="form-control form-control-sm quantity" value="${data.quantity ?? ''}">
@@ -340,22 +293,42 @@
                 </select>
             </td>
             <td>
-                <input type="number" step="0.01" class="form-control form-control-sm cost" value="${data.cost_per_unit ?? ''}">
+                <select class="form-select form-select-sm cost-entry-type">
+                    <option value="no_change"${costType === 'no_change' ? ' selected' : ''}>Keep Cost</option>
+                    <option value="per_unit"${costType === 'per_unit' ? ' selected' : ''}>Per Unit Cost</option>
+                    <option value="total"${costType === 'total' ? ' selected' : ''}>Total Cost</option>
+                </select>
+                <input type="number" step="0.01" class="form-control form-control-sm mt-1 cost" value="${costValue === null ? '' : costValue}">
+                <div class="form-text cost-help">${escapeHtml(costHelpText[costType] || costHelpText.no_change)}</div>
             </td>
             <td>
                 <input type="text" class="form-control form-control-sm notes" value="${escapeHtml(data.notes || '')}">
             </td>
             <td>
-                <button class="btn btn-link text-danger p-0 remove-row" aria-label="Remove">
+                <button class="btn btn-link text-danger p-0 remove-row" aria-label="Remove line">
                     <i class="fas fa-times"></i>
                 </button>
             </td>
         `;
-        row.querySelector('.unit').value = selectedUnit || '';
+
+        const inventorySelect = row.querySelector('.inventory-select');
+        if (match) {
+            inventorySelect.value = match.id;
+        } else if (data.inventory_item_id) {
+            inventorySelect.value = data.inventory_item_id;
+        }
+        const unitSelect = row.querySelector('.unit');
+        unitSelect.value = selectedUnit || '';
+
         row.querySelector('.remove-row').addEventListener('click', () => {
             row.remove();
-            updateStatus(undefined, { resetResults: true });
+            if (!tableBody.querySelectorAll('tr').length) {
+                updateStatus('No lines remaining.', { resetResults: true });
+            } else {
+                updateStatus();
+            }
         });
+
         tableBody.appendChild(row);
         attachRowEvents(row);
         updateStatus();
@@ -364,22 +337,171 @@
     function collectRows() {
         const rows = [];
         tableBody.querySelectorAll('tr').forEach(row => {
-            const itemId = row.querySelector('.item-id').value;
-            const nameValue = row.querySelector('.item-name').value.trim();
-            const quantityInput = row.querySelector('.quantity').value;
-            const costInput = row.querySelector('.cost').value;
+            const inventorySelect = row.querySelector('.inventory-select');
+            const selectedOption = inventorySelect.options[inventorySelect.selectedIndex];
+            const costType = row.querySelector('.cost-entry-type').value || 'no_change';
+            const costValueRaw = row.querySelector('.cost').value;
             rows.push({
                 change_type: row.querySelector('.change-type').value,
-                inventory_item_id: itemId ? Number(itemId) : null,
-                inventory_item_name: nameValue,
-                quantity: quantityInput ? Number(quantityInput) : null,
+                inventory_item_id: inventorySelect.value ? Number(inventorySelect.value) : null,
+                inventory_item_name: selectedOption ? selectedOption.textContent.trim() : '',
+                quantity: row.querySelector('.quantity').value ? Number(row.querySelector('.quantity').value) : null,
                 unit: row.querySelector('.unit').value.trim(),
-                cost_per_unit: costInput ? Number(costInput) : null,
+                cost_entry_type: costType,
+                cost_per_unit: costValueRaw ? Number(costValueRaw) : null,
                 notes: row.querySelector('.notes').value.trim(),
-                allow_create: !itemId,
             });
         });
         return rows;
+    }
+
+    function validateRows(rows) {
+        const errors = [];
+        rows.forEach((row, idx) => {
+            const label = `Line ${idx + 1}:`;
+            if (!row.inventory_item_id) {
+                errors.push(`${label} select an inventory item.`);
+            }
+            if (!row.quantity || row.quantity <= 0) {
+                errors.push(`${label} enter a quantity greater than zero.`);
+            }
+            if (!row.unit) {
+                errors.push(`${label} choose a unit.`);
+            }
+        });
+        return errors;
+    }
+
+    function clearResults() {
+        if (!resultsEl) return;
+        resultsEl.style.display = 'none';
+        resultsEl.innerHTML = '';
+    }
+
+    function renderResults(results) {
+        if (!resultsEl) return;
+        if (!Array.isArray(results) || !results.length) {
+            clearResults();
+            return;
+        }
+        const rows = results.map(entry => {
+            const resolvedName = entry.item_name
+                || (entry.item_id && inventoryById.get(Number(entry.item_id))?.name)
+                || '—';
+            const statusBadge = entry.success
+                ? '<span class="badge bg-success">Success</span>'
+                : '<span class="badge bg-danger">Failed</span>';
+            return `
+                <tr>
+                    <td>${entry.line ?? '—'}</td>
+                    <td>${escapeHtml(resolvedName)}</td>
+                    <td class="text-capitalize">${escapeHtml(entry.change_type || '—')}</td>
+                    <td>${statusBadge}</td>
+                    <td>${escapeHtml(entry.message || '')}</td>
+                </tr>
+            `;
+        }).join('');
+        resultsEl.innerHTML = `
+            <div class="table-responsive">
+                <table class="table table-sm align-middle mb-0">
+                    <thead>
+                        <tr>
+                            <th>#</th>
+                            <th>Item</th>
+                            <th>Change</th>
+                            <th>Status</th>
+                            <th>Message</th>
+                        </tr>
+                    </thead>
+                    <tbody>${rows}</tbody>
+                </table>
+            </div>
+        `;
+        resultsEl.style.display = 'block';
+    }
+
+    function updateStatus(message, options = {}) {
+        const { resetResults = false } = options;
+        if (resetResults) {
+            clearResults();
+        }
+        if (message) {
+            statusEl.className = 'alert alert-info';
+            statusEl.textContent = message;
+            return;
+        }
+        const rows = tableBody.querySelectorAll('tr').length;
+        if (!rows) {
+            statusEl.className = 'alert alert-secondary';
+            statusEl.textContent = 'No lines queued yet. Submissions use the standard adjustment flow.';
+            return;
+        }
+        const linkedCount = Array.from(tableBody.querySelectorAll('.inventory-select')).filter(select => select.value).length;
+        statusEl.className = 'alert alert-primary';
+        const linkedLabel = linkedCount ? ` · ${linkedCount} linked item(s)` : '';
+        statusEl.textContent = `${rows} line(s) ready${linkedLabel}.`;
+    }
+
+    async function submitSingleAdjustment(line, lineNumber) {
+        const targetUrl = buildAdjustUrl(line.inventory_item_id);
+        const formData = new FormData();
+        formData.append('csrf_token', csrfToken);
+        formData.append('quantity', String(line.quantity));
+        formData.append('input_unit', line.unit);
+        formData.append('change_type', line.change_type);
+        formData.append('cost_entry_type', line.cost_entry_type || 'no_change');
+        if (line.cost_entry_type !== 'no_change' && line.cost_per_unit !== null && line.cost_per_unit !== undefined) {
+            formData.append('cost_per_unit', String(line.cost_per_unit));
+        }
+        if (line.notes) {
+            formData.append('notes', line.notes);
+        }
+
+        const response = await fetch(targetUrl, {
+            method: 'POST',
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest',
+                'Accept': 'application/json',
+            },
+            body: formData,
+        });
+
+        const contentType = response.headers.get('content-type') || '';
+        let payload = {};
+        if (contentType.includes('application/json')) {
+            payload = await response.json();
+        }
+        const success = response.ok && payload.success !== false;
+        const message = payload.message || payload.error || (success ? 'Adjustment completed.' : `Request failed (${response.status})`);
+        return {
+            line: lineNumber,
+            item_id: line.inventory_item_id,
+            item_name: line.inventory_item_name,
+            change_type: line.change_type,
+            success,
+            message,
+        };
+    }
+
+    async function submitAdjustments(rows) {
+        const results = [];
+        for (let idx = 0; idx < rows.length; idx += 1) {
+            updateStatus(`Processing line ${idx + 1} of ${rows.length}…`);
+            try {
+                const result = await submitSingleAdjustment(rows[idx], idx + 1);
+                results.push(result);
+            } catch (err) {
+                results.push({
+                    line: idx + 1,
+                    item_id: rows[idx].inventory_item_id,
+                    item_name: rows[idx].inventory_item_name,
+                    change_type: rows[idx].change_type,
+                    success: false,
+                    message: err?.message || 'Unexpected error running adjustment.',
+                });
+            }
+        }
+        return results;
     }
 
     function loadDraft(index) {
@@ -401,34 +523,11 @@
         updateStatus('Draft deleted.', { resetResults: true });
     }
 
-    function updateStatus(message, options = {}) {
-        const { resetResults = false } = options;
-        if (resetResults) {
-            clearResults();
-        }
-        const rows = tableBody.querySelectorAll('tr').length;
-        if (message) {
-            statusEl.className = 'alert alert-info';
-            statusEl.textContent = message;
-            return;
-        }
-        if (!rows) {
-            statusEl.className = 'alert alert-secondary';
-            statusEl.textContent = 'No lines queued yet.';
-        } else {
-            const linkedCount = Array.from(tableBody.querySelectorAll('.item-id')).filter(input => input.value).length;
-            statusEl.className = 'alert alert-primary';
-            const linkedLabel = linkedCount ? ` · ${linkedCount} linked to inventory` : '';
-            statusEl.textContent = `${rows} line(s) ready${linkedLabel}.`;
-        }
-    }
-
-    document.getElementById('addRowBtn').addEventListener('click', () => {
-        addRow();
-    });
+    document.getElementById('addRowBtn').addEventListener('click', () => addRow());
 
     document.getElementById('clearRowsBtn').addEventListener('click', () => {
         tableBody.innerHTML = '';
+        addRow();
         updateStatus('All lines cleared.', { resetResults: true });
     });
 
@@ -446,38 +545,37 @@
         updateStatus(`Saved draft “${name}”.`);
     });
 
-    document.getElementById('submitDraftBtn').addEventListener('click', () => {
+    submitBtn.addEventListener('click', async () => {
         const rows = collectRows();
         if (!rows.length) {
             updateStatus('Add at least one row before submitting.', { resetResults: true });
             return;
         }
+        const validationErrors = validateRows(rows);
+        if (validationErrors.length) {
+            updateStatus(validationErrors.join(' '), { resetResults: true });
+            return;
+        }
         clearResults();
-        updateStatus('Submitting…');
-        fetch('{{ url_for("inventory.api_bulk_inventory_adjustments") }}', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'X-Requested-With': 'XMLHttpRequest',
-            },
-            body: JSON.stringify({ lines: rows })
-        })
-        .then(resp => resp.json().then(data => ({ status: resp.status, body: data })))
-        .then(({ status, body }) => {
-            const results = body.results || [];
-            if (status >= 200 && status < 300 && body.success) {
-                updateStatus('Bulk update submitted successfully.', { resetResults: false });
-                renderResults(results);
-                tableBody.innerHTML = '';
+        submitBtn.disabled = true;
+        updateStatus('Starting bulk adjustments…');
+        try {
+            const results = await submitAdjustments(rows);
+            renderResults(results);
+            const hasFailures = results.some(entry => !entry.success);
+            if (hasFailures) {
+                updateStatus('Some lines failed. Review the table below.', { resetResults: false });
             } else {
-                updateStatus(body.error || 'Bulk update failed.');
-                renderResults(results);
+                updateStatus('All adjustments completed successfully.', { resetResults: false });
+                tableBody.innerHTML = '';
+                addRow();
             }
-        })
-        .catch(err => {
+        } catch (err) {
             console.error(err);
             updateStatus('Unexpected error submitting bulk update.', { resetResults: false });
-        });
+        } finally {
+            submitBtn.disabled = false;
+        }
     });
 
     loadBtn.addEventListener('click', () => {
@@ -507,6 +605,7 @@
         } else {
             tableBody.innerHTML = '';
             clearResults();
+            addRow();
             updateStatus('Draft discarded.');
         }
     });
@@ -515,4 +614,5 @@
     addRow();
 })();
 </script>
+
 {% endblock %}

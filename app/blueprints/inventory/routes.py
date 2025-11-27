@@ -367,15 +367,43 @@ def add_inventory():
 def adjust_inventory(item_id):
     """Handle inventory adjustments"""
     try:
+        wants_json = (
+            request.headers.get('X-Requested-With') == 'XMLHttpRequest'
+            or request.accept_mimetypes['application/json']
+            >= request.accept_mimetypes['text/html']
+        )
+
+        def respond(success, message, *, status_code=200, flash_category=None, redirect_url=None):
+            if wants_json:
+                payload = {'success': success, 'item_id': item_id}
+                if success:
+                    payload['message'] = message
+                else:
+                    payload['error'] = message
+                return jsonify(payload), status_code
+            if flash_category and message:
+                flash(message, flash_category)
+            return redirect(redirect_url or url_for('.view_inventory', id=item_id))
+
         item = db.session.get(InventoryItem, int(item_id))
         if not item:
-            flash("Inventory item not found.", "error")
-            return redirect(url_for('.list_inventory'))
+            return respond(
+                False,
+                "Inventory item not found.",
+                status_code=404,
+                flash_category="error",
+                redirect_url=url_for('.list_inventory'),
+            )
 
         # Authority check
         if not can_edit_inventory_item(item):
-            flash('Permission denied.', 'error')
-            return redirect(url_for('.list_inventory'))
+            return respond(
+                False,
+                "Permission denied.",
+                status_code=403,
+                flash_category="error",
+                redirect_url=url_for('.list_inventory'),
+            )
 
         # Extract and validate form data
         form_data = request.form
@@ -384,17 +412,14 @@ def adjust_inventory(item_id):
         # Validate required fields
         change_type = form_data.get('change_type', '').strip().lower()
         if not change_type:
-            flash("Adjustment type is required.", "error")
-            return redirect(url_for('.view_inventory', id=item_id))
+            return respond(False, "Adjustment type is required.", status_code=400, flash_category="error")
 
         try:
             quantity = float(form_data.get('quantity', 0.0))
             if quantity <= 0:
-                flash("Quantity must be greater than 0.", "error")
-                return redirect(url_for('.view_inventory', id=item_id))
+                return respond(False, "Quantity must be greater than 0.", status_code=400, flash_category="error")
         except (ValueError, TypeError):
-            flash("Invalid quantity provided.", "error")
-            return redirect(url_for('.view_inventory', id=item_id))
+            return respond(False, "Invalid quantity provided.", status_code=400, flash_category="error")
 
         # Extract optional parameters
         cost_override = None
@@ -407,14 +432,17 @@ def adjust_inventory(item_id):
                 if cost_entry_type == 'total':
                     qty_val = float(form_data.get('quantity', 0.0) or 0.0)
                     if qty_val <= 0:
-                        flash("Total cost requires a positive quantity.", "error")
-                        return redirect(url_for('.view_inventory', id=item_id))
+                        return respond(
+                            False,
+                            "Total cost requires a positive quantity.",
+                            status_code=400,
+                            flash_category="error",
+                        )
                     cost_override = parsed_cost / qty_val
                 else:
                     cost_override = parsed_cost
             except (ValueError, TypeError):
-                flash("Invalid cost provided.", "error")
-                return redirect(url_for('.view_inventory', id=item_id))
+                return respond(False, "Invalid cost provided.", status_code=400, flash_category="error")
 
         custom_expiration_date = form_data.get('custom_expiration_date')
         notes = form_data.get('notes', '')
@@ -434,18 +462,15 @@ def adjust_inventory(item_id):
 
         # Flash result and redirect
         if success:
-            flash(f'{change_type.title()} completed: {message}', 'success')
             logger.info(f"Adjustment successful: {message}")
+            return respond(True, f'{change_type.title()} completed: {message}', flash_category='success')
         else:
-            flash(f'Adjustment failed: {message}', 'error')
             logger.error(f"Adjustment failed: {message}")
-
-        return redirect(url_for('.view_inventory', id=item_id))
+            return respond(False, f'Adjustment failed: {message}', status_code=400, flash_category='error')
 
     except Exception as e:
         logger.error(f"Error in adjust_inventory route: {str(e)}")
-        flash(f'System error during adjustment: {str(e)}', 'error')
-        return redirect(url_for('.view_inventory', id=item_id))
+        return respond(False, f'System error during adjustment: {str(e)}', status_code=500, flash_category='error')
 
 @inventory_bp.route('/edit/<int:id>', methods=['POST'])
 @login_required
@@ -658,6 +683,7 @@ def bulk_inventory_updates():
     query = InventoryItem.query
     if current_user.organization_id:
         query = query.filter_by(organization_id=current_user.organization_id)
+    query = query.filter(~InventoryItem.type.in_(('product', 'product-reserved')))
     inventory_records = (
         query.filter(InventoryItem.is_archived != True)
         .order_by(InventoryItem.name.asc())
@@ -674,6 +700,7 @@ def bulk_inventory_updates():
             'quantity': float(item.quantity or 0),
         }
         for item in inventory_records
+        if item.type != 'container'
     ]
     unit_options = [
         {
