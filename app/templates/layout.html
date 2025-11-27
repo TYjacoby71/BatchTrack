@@ -72,7 +72,10 @@
         }
     </style>
 </head>
-<body>
+<body data-authenticated="{{ 'true' if current_user.is_authenticated else 'false' }}">
+    <script>
+        window.__IS_AUTHENTICATED__ = {{ 'true' if current_user.is_authenticated else 'false' }};
+    </script>
     <div class="app-container">
     <nav class="navbar navbar-expand-lg navbar-light bg-light">
         <div class="container-fluid">
