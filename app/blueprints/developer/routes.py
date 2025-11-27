@@ -2124,6 +2124,10 @@ def integrations_checklist():
                 _make_item('DATABASE_URL', 'Fallback database connection string (used if internal URL not set).', required=False, is_secret=True, note='Render automatically injects DATABASE_URL. Mirror DATABASE_INTERNAL_URL when both exist.'),
                 _make_item('SQLALCHEMY_DISABLE_CREATE_ALL', 'Disable db.create_all() safety switch. Set to 1 in production.', required=False, recommended='1 (enabled)', note='Prevents accidental schema drift on boot.'),
                 _make_item('SQLALCHEMY_ENABLE_CREATE_ALL', 'Local dev-only override to run db.create_all(). Leave unset in production.', required=False, recommended='unset'),
+                _make_item('SQLALCHEMY_POOL_SIZE', 'SQLAlchemy connection pool size.', required=False, recommended='5', allow_config=True, note='Keep small on starter instances; raise only when CPU/memory allows more concurrency.'),
+                _make_item('SQLALCHEMY_MAX_OVERFLOW', 'Burst connections beyond the base pool.', required=False, recommended='5', allow_config=True, note='Match this to pool size for predictable ceilings.'),
+                _make_item('SQLALCHEMY_POOL_TIMEOUT', 'Seconds to wait for a pooled connection before erroring.', required=False, recommended='5', allow_config=True, note='Lower values surface saturation symptoms quickly.'),
+                _make_item('SQLALCHEMY_POOL_RECYCLE', 'Seconds before idle connections recycle.', required=False, recommended='1800', allow_config=True),
             ]
         },
         {
@@ -2189,6 +2193,7 @@ def integrations_checklist():
             'title': 'AI Studio & BatchBot',
             'note': 'These keys and knobs control Batchley (paid bot), the public help bot, and refill economics. Set limits here so support knows how refills/unlimited tiers behave.',
             'section_items': [
+                _make_item('FEATURE_BATCHBOT', 'Master toggle for exposing Batchley endpoints.', required=False, recommended='true', allow_config=True, note='Set to false to completely disable the AI copilot and its routes.'),
                 _make_item('GOOGLE_AI_API_KEY', 'Gemini API key used by Batchley + public bot.', required=True, is_secret=True, note='Create in Google AI Studio → API Key. Rotate if compromised.'),
                 _make_item('GOOGLE_AI_DEFAULT_MODEL', 'Fallback Gemini model when per-bot overrides are unset.', required=False, recommended='gemini-1.5-flash'),
                 _make_item('GOOGLE_AI_BATCHBOT_MODEL', 'Model used by the paid Batchley bot.', required=False, recommended='gemini-1.5-pro'),
@@ -2225,10 +2230,11 @@ def integrations_checklist():
         }
     ]
 
-    config_matrix = []
+    config_sections = []
     for section in launch_env_sections:
+        rows = []
         for item in section['section_items']:
-            config_matrix.append(
+            rows.append(
                 {
                     'category': section['title'],
                     'key': item['key'],
@@ -2238,8 +2244,10 @@ def integrations_checklist():
                     'description': item['description'],
                     'note': item.get('note'),
                     'is_secret': item.get('is_secret', False),
+                    'source': item.get('source', 'missing'),
                 }
             )
+        config_sections.append({'title': section['title'], 'note': section.get('note'), 'rows': rows})
 
     rate_limiters = [
         {
@@ -2324,7 +2332,7 @@ def integrations_checklist():
         oauth_status=oauth_status,
         whop_status=whop_status,
         rate_limiters=rate_limiters,
-        config_matrix=config_matrix,
+        config_sections=config_sections,
     )
 
 
