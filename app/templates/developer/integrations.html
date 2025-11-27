@@ -150,9 +150,9 @@
     </div>
     <div class="card-body">
       <div class="accordion" id="configSectionsAccordion">
-        {% for section in config_sections %}
+        {% for section in launch_env_sections %}
         {% set section_id = 'configSection-' ~ loop.index %}
-        {% set env_keys = section.rows | map(attribute='key') | list | join(',') %}
+        {% set env_keys = section.section_items | map(attribute='key') | list | join(',') %}
         <div class="accordion-item mb-3 border-0 shadow-sm">
           <h2 class="accordion-header" id="{{ section_id }}-header">
             <div class="d-flex align-items-center justify-content-between gap-2 flex-wrap">
@@ -188,7 +188,7 @@
                     </tr>
                   </thead>
                   <tbody class="config-table-body">
-                    {% for config in section.rows %}
+                    {% for config in section.section_items %}
                     {% set collapse_id = section_id ~ '-row-' ~ loop.index %}
                     {% set source_label = {'env':'Environment', 'config':'App Config', 'missing':'Unset'} %}
                     <tr>
