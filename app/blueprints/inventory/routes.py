@@ -1,6 +1,6 @@
 from datetime import datetime, timezone
 
-from flask import Blueprint, url_for, request, jsonify, render_template, redirect, flash, session, url_for, current_app
+from flask import Blueprint, url_for, request, jsonify, render_template, redirect, flash, session, current_app
 from flask_login import login_required, current_user
 from app.models import db, InventoryItem, UnifiedInventoryHistory, Unit, IngredientCategory, User
 from app.utils.permissions import permission_required, role_required
