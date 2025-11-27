@@ -210,7 +210,18 @@ def _handle_developer_context(path: str) -> Response | None:
         masquerade_org_id = session.get("masquerade_org_id")
         allowed_without_org = RouteAccessConfig.is_developer_no_org_required(path)
 
+        wants_json = _wants_json_response()
         if not (selected_org_id or masquerade_org_id or allowed_without_org):
+            if wants_json:
+                return (
+                    jsonify(
+                        {
+                            "error": "developer_org_required",
+                            "message": "Select an organization before accessing customer endpoints.",
+                        }
+                    ),
+                    428,
+                )
             try:
                 flash("Please select an organization to view customer features.", "warning")
             except Exception:
