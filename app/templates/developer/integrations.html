@@ -146,25 +146,29 @@
   <div class="card shadow-sm mt-4">
     <div class="card-header bg-white border-0">
       <h4 class="mb-1">5) Core Environment & Secrets</h4>
-      <p class="text-muted small mb-0">Auto-detected snapshot of every critical environment/config key, its status, and the scale-ready target value. Complete every row before launch.</p>
+      <p class="text-muted small mb-0">Auto-detected snapshot of every critical environment/config key. Click a row to view the setup instructions.</p>
     </div>
     <div class="card-body">
       <div class="mb-3">
-        <h6 class="text-uppercase small text-muted mb-0">Configuration ID Map</h6>
+        <h6 class="text-uppercase small text-muted mb-1">Configuration Map</h6>
+        <p class="text-muted small mb-0">Columns stay readable; instructions expand inline beneath the selected setting.</p>
       </div>
       <div class="table-responsive">
-        <table class="table table-sm align-middle mb-0">
+        <table class="table table-sm table-hover align-middle mb-0" id="configMatrixTable">
           <thead>
             <tr>
-              <th scope="col">Configuration Key</th>
+              <th scope="col">Setting</th>
               <th scope="col">Status</th>
-              <th scope="col">Scale Target</th>
+              <th scope="col">Target</th>
               <th scope="col">Category</th>
-              <th scope="col">Instructions</th>
+              <th scope="col">Source</th>
+              <th scope="col" class="text-end">Details</th>
             </tr>
           </thead>
-          <tbody>
+          <tbody class="config-table-body">
             {% for config in config_matrix %}
+            {% set collapse_id = 'configDetails-' ~ loop.index %}
+            {% set source_label = {'env':'Environment', 'config':'App Config', 'missing':'Unset'} %}
             <tr>
               <td class="fw-semibold">
                 <code>{{ config.key }}</code>
@@ -180,9 +184,29 @@
               </td>
               <td class="small">{{ config.recommended or "—" }}</td>
               <td class="small text-muted">{{ config.category }}</td>
-              <td class="small">
-                <div>{{ config.description }}</div>
-                {% if config.note %}<div class="text-info">{{ config.note }}</div>{% endif %}
+              <td class="small text-muted">{{ source_label.get(config.source, config.source|capitalize) }}</td>
+              <td class="text-end">
+                <button
+                  class="btn btn-sm btn-outline-primary config-toggle"
+                  type="button"
+                  data-bs-toggle="collapse"
+                  data-bs-target="#{{ collapse_id }}"
+                  data-config-target="{{ collapse_id }}"
+                  aria-expanded="false"
+                  aria-controls="{{ collapse_id }}"
+                >
+                  <span class="config-toggle-icon me-1" aria-hidden="true">+</span>
+                  Details
+                </button>
+              </td>
+            </tr>
+            <tr class="collapse config-details-row" id="{{ collapse_id }}">
+              <td colspan="6" class="bg-light">
+                <div class="p-3">
+                  <div class="fw-semibold mb-1">Instructions</div>
+                  <p class="mb-1">{{ config.description }}</p>
+                  {% if config.note %}<p class="text-muted small mb-0">{{ config.note }}</p>{% endif %}
+                </div>
               </td>
             </tr>
             {% endfor %}
@@ -250,5 +274,32 @@ async function checkWebhook() {
     document.getElementById('webhookCheck').textContent = 'Error checking webhook';
   }
 }
+
+document.addEventListener('DOMContentLoaded', () => {
+  document.querySelectorAll('.config-toggle').forEach((button) => {
+    const targetId = button.getAttribute('data-config-target');
+    if (!targetId) {
+      return;
+    }
+    const collapseEl = document.getElementById(targetId);
+    if (!collapseEl) {
+      return;
+    }
+    collapseEl.addEventListener('show.bs.collapse', () => {
+      button.classList.add('active');
+      const icon = button.querySelector('.config-toggle-icon');
+      if (icon) {
+        icon.textContent = '-';
+      }
+    });
+    collapseEl.addEventListener('hide.bs.collapse', () => {
+      button.classList.remove('active');
+      const icon = button.querySelector('.config-toggle-icon');
+      if (icon) {
+        icon.textContent = '+';
+      }
+    });
+  });
+});
 </script>
 {% endblock %}

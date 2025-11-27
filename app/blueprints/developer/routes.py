@@ -2243,6 +2243,7 @@ def integrations_checklist():
                     'description': item['description'],
                     'note': item.get('note'),
                     'is_secret': item.get('is_secret', False),
+                    'source': item.get('source', 'missing'),
                 }
             )
 
