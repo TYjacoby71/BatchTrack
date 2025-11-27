@@ -2230,10 +2230,11 @@ def integrations_checklist():
         }
     ]
 
-    config_matrix = []
+    config_sections = []
     for section in launch_env_sections:
+        rows = []
         for item in section['section_items']:
-            config_matrix.append(
+            rows.append(
                 {
                     'category': section['title'],
                     'key': item['key'],
@@ -2246,6 +2247,7 @@ def integrations_checklist():
                     'source': item.get('source', 'missing'),
                 }
             )
+        config_sections.append({'title': section['title'], 'note': section.get('note'), 'rows': rows})
 
     rate_limiters = [
         {
@@ -2330,7 +2332,7 @@ def integrations_checklist():
         oauth_status=oauth_status,
         whop_status=whop_status,
         rate_limiters=rate_limiters,
-        config_matrix=config_matrix,
+        config_sections=config_sections,
     )
 
 

@@ -146,72 +146,85 @@
   <div class="card shadow-sm mt-4">
     <div class="card-header bg-white border-0">
       <h4 class="mb-1">5) Core Environment & Secrets</h4>
-      <p class="text-muted small mb-0">Auto-detected snapshot of every critical environment/config key. Click a row to view the setup instructions.</p>
+      <p class="text-muted small mb-0">Expand each category to review the keys it requires. Click an individual setting for detailed setup instructions.</p>
     </div>
     <div class="card-body">
-      <div class="mb-3">
-        <h6 class="text-uppercase small text-muted mb-1">Configuration Map</h6>
-        <p class="text-muted small mb-0">Columns stay readable; instructions expand inline beneath the selected setting.</p>
-      </div>
-      <div class="table-responsive">
-        <table class="table table-sm table-hover align-middle mb-0" id="configMatrixTable">
-          <thead>
-            <tr>
-              <th scope="col">Setting</th>
-              <th scope="col">Status</th>
-              <th scope="col">Target</th>
-              <th scope="col">Category</th>
-              <th scope="col">Source</th>
-              <th scope="col" class="text-end">Details</th>
-            </tr>
-          </thead>
-          <tbody class="config-table-body">
-            {% for config in config_matrix %}
-            {% set collapse_id = 'configDetails-' ~ loop.index %}
-            {% set source_label = {'env':'Environment', 'config':'App Config', 'missing':'Unset'} %}
-            <tr>
-              <td class="fw-semibold">
-                <code>{{ config.key }}</code>
-                {% if config.is_secret %}<span class="badge bg-warning text-dark ms-1">Secret</span>{% endif %}
-                {% if not config.required %}<span class="badge bg-secondary ms-1">Optional</span>{% endif %}
-              </td>
-              <td>
-                {% if config.present %}
-                <span class="badge bg-success">Detected</span>
-                {% else %}
-                <span class="badge bg-danger">Missing</span>
-                {% endif %}
-              </td>
-              <td class="small">{{ config.recommended or "—" }}</td>
-              <td class="small text-muted">{{ config.category }}</td>
-              <td class="small text-muted">{{ source_label.get(config.source, config.source|capitalize) }}</td>
-              <td class="text-end">
-                <button
-                  class="btn btn-sm btn-outline-primary config-toggle"
-                  type="button"
-                  data-bs-toggle="collapse"
-                  data-bs-target="#{{ collapse_id }}"
-                  data-config-target="{{ collapse_id }}"
-                  aria-expanded="false"
-                  aria-controls="{{ collapse_id }}"
-                >
-                  <span class="config-toggle-icon me-1" aria-hidden="true">+</span>
-                  Details
-                </button>
-              </td>
-            </tr>
-            <tr class="collapse config-details-row" id="{{ collapse_id }}">
-              <td colspan="6" class="bg-light">
-                <div class="p-3">
-                  <div class="fw-semibold mb-1">Instructions</div>
-                  <p class="mb-1">{{ config.description }}</p>
-                  {% if config.note %}<p class="text-muted small mb-0">{{ config.note }}</p>{% endif %}
-                </div>
-              </td>
-            </tr>
-            {% endfor %}
-          </tbody>
-        </table>
+      <div class="accordion" id="configSectionsAccordion">
+        {% for section in config_sections %}
+        {% set section_id = 'configSection-' ~ loop.index %}
+        <div class="accordion-item mb-3 border-0 shadow-sm">
+          <h2 class="accordion-header" id="{{ section_id }}-header">
+            <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#{{ section_id }}-collapse" aria-expanded="false" aria-controls="{{ section_id }}-collapse">
+              <div>
+                <div class="fw-semibold">{{ section.title }}</div>
+                {% if section.note %}<div class="text-muted small">{{ section.note }}</div>{% endif %}
+              </div>
+            </button>
+          </h2>
+          <div id="{{ section_id }}-collapse" class="accordion-collapse collapse" aria-labelledby="{{ section_id }}-header" data-bs-parent="#configSectionsAccordion">
+            <div class="accordion-body">
+              <div class="table-responsive">
+                <table class="table table-sm table-hover align-middle mb-0">
+                  <thead>
+                    <tr>
+                      <th scope="col">Setting</th>
+                      <th scope="col">Status</th>
+                      <th scope="col">Target</th>
+                      <th scope="col">Source</th>
+                      <th scope="col" class="text-end">Instructions</th>
+                    </tr>
+                  </thead>
+                  <tbody class="config-table-body">
+                    {% for config in section.rows %}
+                    {% set collapse_id = section_id ~ '-row-' ~ loop.index %}
+                    {% set source_label = {'env':'Environment', 'config':'App Config', 'missing':'Unset'} %}
+                    <tr>
+                      <td class="fw-semibold">
+                        <code>{{ config.key }}</code>
+                        {% if config.is_secret %}<span class="badge bg-warning text-dark ms-1">Secret</span>{% endif %}
+                        {% if not config.required %}<span class="badge bg-secondary ms-1">Optional</span>{% endif %}
+                      </td>
+                      <td>
+                        {% if config.present %}
+                        <span class="badge bg-success">Detected</span>
+                        {% else %}
+                        <span class="badge bg-danger">Missing</span>
+                        {% endif %}
+                      </td>
+                      <td class="small">{{ config.recommended or "—" }}</td>
+                      <td class="small text-muted">{{ source_label.get(config.source, config.source|capitalize) }}</td>
+                      <td class="text-end">
+                        <button
+                          class="btn btn-sm btn-outline-primary config-toggle"
+                          type="button"
+                          data-bs-toggle="collapse"
+                          data-bs-target="#{{ collapse_id }}"
+                          data-config-target="{{ collapse_id }}"
+                          aria-expanded="false"
+                          aria-controls="{{ collapse_id }}"
+                        >
+                          <span class="config-toggle-icon me-1" aria-hidden="true">+</span>
+                          Details
+                        </button>
+                      </td>
+                    </tr>
+                    <tr class="collapse config-details-row" id="{{ collapse_id }}">
+                      <td colspan="5" class="bg-light">
+                        <div class="p-3">
+                          <div class="fw-semibold mb-1">Instructions</div>
+                          <p class="mb-1">{{ config.description }}</p>
+                          {% if config.note %}<p class="text-muted small mb-0">{{ config.note }}</p>{% endif %}
+                        </div>
+                      </td>
+                    </tr>
+                    {% endfor %}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </div>
+        {% endfor %}
       </div>
     </div>
   </div>
