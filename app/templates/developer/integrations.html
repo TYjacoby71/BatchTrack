@@ -152,14 +152,27 @@
       <div class="accordion" id="configSectionsAccordion">
         {% for section in config_sections %}
         {% set section_id = 'configSection-' ~ loop.index %}
+        {% set env_keys = section.rows | map(attribute='key') | list | join(',') %}
         <div class="accordion-item mb-3 border-0 shadow-sm">
           <h2 class="accordion-header" id="{{ section_id }}-header">
-            <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#{{ section_id }}-collapse" aria-expanded="false" aria-controls="{{ section_id }}-collapse">
-              <div>
-                <div class="fw-semibold">{{ section.title }}</div>
-                {% if section.note %}<div class="text-muted small">{{ section.note }}</div>{% endif %}
-              </div>
-            </button>
+            <div class="d-flex align-items-center justify-content-between gap-2 flex-wrap">
+              <button class="accordion-button collapsed flex-grow-1" type="button" data-bs-toggle="collapse" data-bs-target="#{{ section_id }}-collapse" aria-expanded="false" aria-controls="{{ section_id }}-collapse">
+                <div>
+                  <div class="fw-semibold">{{ section.title }}</div>
+                  {% if section.note %}<div class="text-muted small">{{ section.note }}</div>{% endif %}
+                </div>
+              </button>
+              <button
+                class="btn btn-sm btn-outline-secondary copy-env-btn"
+                type="button"
+                data-env-keys="{{ env_keys }}"
+                data-section-name="{{ section.title }}"
+                aria-label="Copy environment variables for {{ section.title }}"
+              >
+                <i class="fas fa-clipboard me-1" aria-hidden="true"></i>
+                <span class="copy-label">Copy env vars</span>
+              </button>
+            </div>
           </h2>
           <div id="{{ section_id }}-collapse" class="accordion-collapse collapse" aria-labelledby="{{ section_id }}-header" data-bs-parent="#configSectionsAccordion">
             <div class="accordion-body">
@@ -288,6 +301,48 @@ async function checkWebhook() {
   }
 }
 
+function formatEnvKeysForRender(keysCsv) {
+  if (!keysCsv) {
+    return '';
+  }
+  return keysCsv
+    .split(',')
+    .map((key) => key.trim())
+    .filter(Boolean)
+    .map((key) => `${key}=`)
+    .join('\n');
+}
+
+function fallbackClipboardCopy(text) {
+  return new Promise((resolve, reject) => {
+    try {
+      const textarea = document.createElement('textarea');
+      textarea.value = text;
+      textarea.setAttribute('readonly', '');
+      textarea.style.position = 'absolute';
+      textarea.style.left = '-9999px';
+      document.body.appendChild(textarea);
+      textarea.select();
+      const success = document.execCommand('copy');
+      document.body.removeChild(textarea);
+      if (success) {
+        resolve();
+      } else {
+        reject(new Error('Copy command was rejected'));
+      }
+    } catch (err) {
+      reject(err);
+    }
+  });
+}
+
+function copyTextToClipboard(text) {
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    return navigator.clipboard.writeText(text);
+  }
+  return fallbackClipboardCopy(text);
+}
+
 document.addEventListener('DOMContentLoaded', () => {
   document.querySelectorAll('.config-toggle').forEach((button) => {
     const targetId = button.getAttribute('data-config-target');
@@ -310,6 +365,37 @@ document.addEventListener('DOMContentLoaded', () => {
       const icon = button.querySelector('.config-toggle-icon');
       if (icon) {
         icon.textContent = '+';
+      }
+    });
+  });
+
+  document.querySelectorAll('.copy-env-btn').forEach((button) => {
+    const label = button.querySelector('.copy-label');
+    if (label && !label.dataset.defaultText) {
+      label.dataset.defaultText = label.textContent.trim();
+    }
+    button.addEventListener('click', async () => {
+      const keysCsv = button.getAttribute('data-env-keys') || '';
+      const payload = formatEnvKeysForRender(keysCsv);
+      if (!payload) {
+        return;
+      }
+      try {
+        await copyTextToClipboard(payload);
+        if (label) {
+          label.textContent = 'Copied!';
+          setTimeout(() => {
+            label.textContent = label.dataset.defaultText || 'Copy env vars';
+          }, 2000);
+        }
+      } catch (error) {
+        if (label) {
+          label.textContent = 'Copy failed';
+          setTimeout(() => {
+            label.textContent = label.dataset.defaultText || 'Copy env vars';
+          }, 2000);
+        }
+        console.error('Failed to copy env vars', error);
       }
     });
   });
