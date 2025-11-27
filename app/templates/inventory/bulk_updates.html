@@ -12,9 +12,14 @@
                         Drafts stay local to your browser until you submit or close the modal.
                     </p>
                 </div>
-                <button class="btn btn-primary btn-lg" data-bs-toggle="modal" data-bs-target="#bulkUpdateModal">
-                    <i class="fas fa-layer-group me-2"></i>Open Bulk Modal
-                </button>
+                <div class="d-flex flex-wrap gap-2">
+                    <a class="btn btn-outline-secondary btn-lg" href="{{ url_for('inventory.list_inventory') }}">
+                        <i class="fas fa-warehouse me-2"></i>Inventory List
+                    </a>
+                    <button class="btn btn-primary btn-lg" data-bs-toggle="modal" data-bs-target="#bulkUpdateModal">
+                        <i class="fas fa-layer-group me-2"></i>Open Bulk Modal
+                    </button>
+                </div>
             </div>
         </div>
         <div class="alert alert-info">
@@ -82,11 +87,25 @@
                 <div class="mt-3">
                     <label class="form-label fw-semibold">Status</label>
                     <div id="bulkStatus" class="alert alert-secondary mb-0">No lines queued yet.</div>
+                    <div class="small text-muted mt-2">
+                        <span class="me-3">
+                            <i class="fas fa-boxes-stacked me-1"></i>{{ inventory_items|length if inventory_items else 0 }} inventory items connected
+                        </span>
+                        <span>
+                            <i class="fas fa-ruler-combined me-1"></i>{{ unit_options|length if unit_options else 0 }} unit options loaded
+                        </span>
+                    </div>
+                    <div id="resultDetails" class="mt-3" style="display: none;"></div>
                 </div>
             </div>
         </div>
     </div>
 </div>
+<datalist id="inventorySuggestions">
+    {% for item in inventory_items or [] %}
+        <option value="{{ item.name }}"></option>
+    {% endfor %}
+</datalist>
 {% endblock %}
 
 {% block scripts %}
@@ -94,14 +113,109 @@
 <script>
 (function () {
     const storageKey = 'bt_bulk_inventory_drafts';
+    const rawInventoryOptions = {{ (inventory_items or [])|tojson }};
+    const rawUnitOptions = {{ (unit_options or [])|tojson }};
+    const inventoryOptions = Array.isArray(rawInventoryOptions) ? rawInventoryOptions : [];
+    const unitOptions = Array.isArray(rawUnitOptions) ? rawUnitOptions : [];
+    const inventoryById = new Map(inventoryOptions.map(item => [Number(item.id), item]));
+    const inventoryByName = new Map(inventoryOptions.map(item => [String(item.name || '').toLowerCase(), item]));
+    const safeUnitOptions = unitOptions.length ? unitOptions : [{ name: 'count', symbol: null, unit_type: 'count' }];
+    const unitOptionsMarkup = safeUnitOptions.map(unit => {
+        const label = escapeHtml(unit.name || '');
+        const suffix = unit.symbol ? ` (${escapeHtml(unit.symbol)})` : '';
+        return `<option value="${label}">${label}${suffix}</option>`;
+    }).join('');
+    const defaultUnit = safeUnitOptions[0]?.name || '';
     const tableBody = document.querySelector('#bulkTable tbody');
     const draftCountEl = document.getElementById('draftCount');
     const draftListEl = document.getElementById('draftList');
     const statusEl = document.getElementById('bulkStatus');
+    const resultsEl = document.getElementById('resultDetails');
     const loadBtn = document.getElementById('loadDraftBtn');
     const deleteBtn = document.getElementById('deleteDraftBtn');
     const modalEl = document.getElementById('bulkUpdateModal');
     let selectedDraftId = null;
+
+    function escapeHtml(value) {
+        if (value === undefined || value === null) {
+            return '';
+        }
+        return String(value)
+            .replace(/&/g, '&amp;')
+            .replace(/"/g, '&quot;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;');
+    }
+
+    function helperCopy(match) {
+        if (match) {
+            const unitLabel = match.unit || 'unit';
+            return `Linked to #${match.id} · ${unitLabel}`;
+        }
+        if (!inventoryOptions.length) {
+            return 'Enter details to create inventory lines on submit.';
+        }
+        return 'Type an exact inventory name to link an existing item.';
+    }
+
+    function resolveInventoryMatch(descriptor = {}) {
+        if (!inventoryOptions.length) {
+            return null;
+        }
+        const idCandidate = descriptor.inventory_item_id ?? descriptor.id;
+        const numericId = Number(idCandidate);
+        if (!Number.isNaN(numericId) && numericId > 0 && inventoryById.has(numericId)) {
+            return inventoryById.get(numericId);
+        }
+        const rawName = (descriptor.inventory_item_name || descriptor.name || '').trim().toLowerCase();
+        if (rawName && inventoryByName.has(rawName)) {
+            return inventoryByName.get(rawName);
+        }
+        return null;
+    }
+
+    function clearResults() {
+        if (!resultsEl) return;
+        resultsEl.style.display = 'none';
+        resultsEl.innerHTML = '';
+    }
+
+    function renderResults(results) {
+        if (!resultsEl) return;
+        if (!Array.isArray(results) || !results.length) {
+            clearResults();
+            return;
+        }
+        const rows = results.map(entry => {
+            const resolvedName = entry.item_name
+                || (entry.item_id && inventoryById.get(Number(entry.item_id))?.name)
+                || '—';
+            return `
+                <tr class="${entry.success ? 'table-success' : 'table-danger'}">
+                    <td>${entry.line ?? '—'}</td>
+                    <td>${escapeHtml(resolvedName)}</td>
+                    <td class="text-capitalize">${escapeHtml(entry.change_type || '—')}</td>
+                    <td>${escapeHtml(entry.message || '')}</td>
+                </tr>
+            `;
+        }).join('');
+        resultsEl.innerHTML = `
+            <div class="table-responsive">
+                <table class="table table-sm mb-0">
+                    <thead>
+                        <tr>
+                            <th>Line</th>
+                            <th>Item</th>
+                            <th>Change</th>
+                            <th>Result</th>
+                        </tr>
+                    </thead>
+                    <tbody>${rows}</tbody>
+                </table>
+            </div>
+        `;
+        resultsEl.style.display = 'block';
+    }
 
     function getDrafts() {
         try {
@@ -129,7 +243,7 @@
         }
         const buttons = drafts.map((draft, idx) => `
             <button class="btn btn-sm btn-outline-secondary me-1 mb-1 draft-chip" data-draft="${idx}">
-                ${draft.name}
+                ${escapeHtml(draft.name)}
             </button>
         `).join('');
         draftListEl.innerHTML = buttons;
@@ -144,7 +258,60 @@
         });
     }
 
+    function attachRowEvents(row) {
+        const nameInput = row.querySelector('.item-name');
+        const idInput = row.querySelector('.item-id');
+        const helperEl = row.querySelector('.item-helper');
+        const unitSelect = row.querySelector('.unit');
+
+        function applyMatch(match) {
+            if (match) {
+                idInput.value = match.id;
+                helperEl.textContent = helperCopy(match);
+                if (!row.dataset.unitTouched && match.unit) {
+                    unitSelect.value = match.unit;
+                }
+            } else {
+                idInput.value = '';
+                helperEl.textContent = helperCopy(null);
+            }
+        }
+
+        function lookupInventory() {
+            const value = (nameInput.value || '').trim();
+            if (!value) {
+                applyMatch(null);
+                return;
+            }
+            const cleanedNumeric = value.startsWith('#') ? value.slice(1) : value;
+            if (/^\d+$/.test(cleanedNumeric)) {
+                const numericId = Number(cleanedNumeric);
+                if (inventoryById.has(numericId)) {
+                    applyMatch(inventoryById.get(numericId));
+                    return;
+                }
+            }
+            const byName = inventoryByName.get(value.toLowerCase());
+            applyMatch(byName || null);
+        }
+
+        if (nameInput) {
+            nameInput.addEventListener('change', lookupInventory);
+            nameInput.addEventListener('blur', lookupInventory);
+            lookupInventory();
+        }
+        if (unitSelect) {
+            unitSelect.addEventListener('change', () => {
+                row.dataset.unitTouched = 'true';
+            });
+        }
+    }
+
     function addRow(data = {}) {
+        const match = resolveInventoryMatch(data);
+        const displayName = data.inventory_item_name || match?.name || '';
+        const helperText = helperCopy(match);
+        const selectedUnit = data.unit || match?.unit || defaultUnit;
         const row = document.createElement('tr');
         row.innerHTML = `
             <td>
@@ -156,46 +323,60 @@
                 </select>
             </td>
             <td>
-                <input type="text" class="form-control form-control-sm item-name" placeholder="Item name or ID"
-                       value="${data.inventory_item_name || data.inventory_item_id || ''}">
+                <div class="position-relative">
+                    <input type="hidden" class="item-id" value="${data.inventory_item_id || ''}">
+                    <input type="text" class="form-control form-control-sm item-name" list="inventorySuggestions"
+                           placeholder="Item name or ID" value="${escapeHtml(displayName)}">
+                    <div class="form-text item-helper">${escapeHtml(helperText)}</div>
+                </div>
             </td>
             <td>
-                <input type="number" step="0.01" class="form-control form-control-sm quantity" value="${data.quantity || ''}">
+                <input type="number" step="0.01" class="form-control form-control-sm quantity" value="${data.quantity ?? ''}">
             </td>
             <td>
-                <input type="text" class="form-control form-control-sm unit" value="${data.unit || ''}" placeholder="e.g. g, ml">
+                <select class="form-select form-select-sm unit">
+                    <option value="">Select unit</option>
+                    ${unitOptionsMarkup}
+                </select>
             </td>
             <td>
-                <input type="number" step="0.01" class="form-control form-control-sm cost" value="${data.cost_per_unit || ''}">
+                <input type="number" step="0.01" class="form-control form-control-sm cost" value="${data.cost_per_unit ?? ''}">
             </td>
             <td>
-                <input type="text" class="form-control form-control-sm notes" value="${data.notes || ''}">
+                <input type="text" class="form-control form-control-sm notes" value="${escapeHtml(data.notes || '')}">
             </td>
             <td>
-                <button class="btn btn-link text-danger p-0 remove-row">
+                <button class="btn btn-link text-danger p-0 remove-row" aria-label="Remove">
                     <i class="fas fa-times"></i>
                 </button>
             </td>
         `;
+        row.querySelector('.unit').value = selectedUnit || '';
         row.querySelector('.remove-row').addEventListener('click', () => {
             row.remove();
-            updateStatus();
+            updateStatus(undefined, { resetResults: true });
         });
         tableBody.appendChild(row);
+        attachRowEvents(row);
         updateStatus();
     }
 
     function collectRows() {
         const rows = [];
         tableBody.querySelectorAll('tr').forEach(row => {
+            const itemId = row.querySelector('.item-id').value;
+            const nameValue = row.querySelector('.item-name').value.trim();
+            const quantityInput = row.querySelector('.quantity').value;
+            const costInput = row.querySelector('.cost').value;
             rows.push({
                 change_type: row.querySelector('.change-type').value,
-                inventory_item_name: row.querySelector('.item-name').value.trim(),
-                quantity: Number(row.querySelector('.quantity').value),
+                inventory_item_id: itemId ? Number(itemId) : null,
+                inventory_item_name: nameValue,
+                quantity: quantityInput ? Number(quantityInput) : null,
                 unit: row.querySelector('.unit').value.trim(),
-                cost_per_unit: row.querySelector('.cost').value ? Number(row.querySelector('.cost').value) : null,
+                cost_per_unit: costInput ? Number(costInput) : null,
                 notes: row.querySelector('.notes').value.trim(),
-                allow_create: true,
+                allow_create: !itemId,
             });
         });
         return rows;
@@ -207,7 +388,7 @@
         if (!draft) return;
         tableBody.innerHTML = '';
         (draft.lines || []).forEach(line => addRow(line));
-        updateStatus(`Loaded draft “${draft.name}”.`);
+        updateStatus(`Loaded draft “${draft.name}”.`, { resetResults: true });
     }
 
     function deleteDraft(index) {
@@ -217,10 +398,14 @@
         loadBtn.disabled = true;
         deleteBtn.disabled = true;
         selectedDraftId = null;
-        updateStatus('Draft deleted.');
+        updateStatus('Draft deleted.', { resetResults: true });
     }
 
-    function updateStatus(message) {
+    function updateStatus(message, options = {}) {
+        const { resetResults = false } = options;
+        if (resetResults) {
+            clearResults();
+        }
         const rows = tableBody.querySelectorAll('tr').length;
         if (message) {
             statusEl.className = 'alert alert-info';
@@ -231,22 +416,26 @@
             statusEl.className = 'alert alert-secondary';
             statusEl.textContent = 'No lines queued yet.';
         } else {
+            const linkedCount = Array.from(tableBody.querySelectorAll('.item-id')).filter(input => input.value).length;
             statusEl.className = 'alert alert-primary';
-            statusEl.textContent = `${rows} line(s) ready.`;
+            const linkedLabel = linkedCount ? ` · ${linkedCount} linked to inventory` : '';
+            statusEl.textContent = `${rows} line(s) ready${linkedLabel}.`;
         }
     }
 
-    document.getElementById('addRowBtn').addEventListener('click', () => addRow());
+    document.getElementById('addRowBtn').addEventListener('click', () => {
+        addRow();
+    });
 
     document.getElementById('clearRowsBtn').addEventListener('click', () => {
         tableBody.innerHTML = '';
-        updateStatus('All lines cleared.');
+        updateStatus('All lines cleared.', { resetResults: true });
     });
 
     document.getElementById('saveDraftBtn').addEventListener('click', () => {
         const rows = collectRows();
         if (!rows.length) {
-            updateStatus('Nothing to save.');
+            updateStatus('Nothing to save.', { resetResults: false });
             return;
         }
         const name = prompt('Name this draft:', `Draft ${new Date().toLocaleString()}`);
@@ -260,9 +449,10 @@
     document.getElementById('submitDraftBtn').addEventListener('click', () => {
         const rows = collectRows();
         if (!rows.length) {
-            updateStatus('Add at least one row before submitting.');
+            updateStatus('Add at least one row before submitting.', { resetResults: true });
             return;
         }
+        clearResults();
         updateStatus('Submitting…');
         fetch('{{ url_for("inventory.api_bulk_inventory_adjustments") }}', {
             method: 'POST',
@@ -274,19 +464,19 @@
         })
         .then(resp => resp.json().then(data => ({ status: resp.status, body: data })))
         .then(({ status, body }) => {
+            const results = body.results || [];
             if (status >= 200 && status < 300 && body.success) {
-                updateStatus('Bulk update submitted successfully.');
+                updateStatus('Bulk update submitted successfully.', { resetResults: false });
+                renderResults(results);
                 tableBody.innerHTML = '';
             } else {
                 updateStatus(body.error || 'Bulk update failed.');
-                if (body.results) {
-                    console.table(body.results);
-                }
+                renderResults(results);
             }
         })
         .catch(err => {
             console.error(err);
-            updateStatus('Unexpected error submitting bulk update.');
+            updateStatus('Unexpected error submitting bulk update.', { resetResults: false });
         });
     });
 
@@ -301,9 +491,10 @@
         }
     });
 
-    modalEl.addEventListener('hide.bs.modal', (event) => {
+    modalEl.addEventListener('hide.bs.modal', () => {
         const rows = collectRows();
         if (!rows.length) {
+            clearResults();
             return;
         }
         const save = confirm('Save this draft before closing?');
@@ -315,6 +506,7 @@
             updateStatus(`Draft “${name}” saved.`);
         } else {
             tableBody.innerHTML = '';
+            clearResults();
             updateStatus('Draft discarded.');
         }
     });

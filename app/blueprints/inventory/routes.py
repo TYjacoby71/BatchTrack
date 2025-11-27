@@ -655,7 +655,40 @@ def debug_inventory(id):
 @login_required
 @permission_required('inventory.edit')
 def bulk_inventory_updates():
-    return render_template('inventory/bulk_updates.html')
+    query = InventoryItem.query
+    if current_user.organization_id:
+        query = query.filter_by(organization_id=current_user.organization_id)
+    inventory_records = (
+        query.filter(InventoryItem.is_archived != True)
+        .order_by(InventoryItem.name.asc())
+        .limit(750)
+        .all()
+    )
+
+    inventory_payload = [
+        {
+            'id': item.id,
+            'name': item.name,
+            'unit': item.unit,
+            'type': item.type,
+            'quantity': float(item.quantity or 0),
+        }
+        for item in inventory_records
+    ]
+    unit_options = [
+        {
+            'name': unit.name,
+            'symbol': unit.symbol,
+            'unit_type': unit.unit_type,
+        }
+        for unit in (get_global_unit_list() or [])
+    ]
+
+    return render_template(
+        'inventory/bulk_updates.html',
+        inventory_items=inventory_payload,
+        unit_options=unit_options,
+    )
 
 
 @inventory_bp.route('/api/bulk-adjustments', methods=['POST'])
