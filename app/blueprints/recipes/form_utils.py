@@ -490,16 +490,23 @@ def build_draft_prompt(missing_fields, attempted_status, message):
 
 
 def get_recipe_form_data():
+    ingredient_types = ('ingredient', 'consumable')
     ingredients_query = InventoryItem.query.filter(
-        ~InventoryItem.type.in_(['product', 'product-reserved'])
-    ).order_by(InventoryItem.name)
-
+        InventoryItem.type.in_(ingredient_types)
+    )
     if current_user.organization_id:
         ingredients_query = ingredients_query.filter_by(
             organization_id=current_user.organization_id
         )
+    all_ingredients = ingredients_query.order_by(InventoryItem.name).all()
 
-    all_ingredients = ingredients_query.all()
+    containers_query = InventoryItem.query.filter(InventoryItem.type == 'container')
+    if current_user.organization_id:
+        containers_query = containers_query.filter_by(
+            organization_id=current_user.organization_id
+        )
+    all_containers = containers_query.order_by(InventoryItem.name).all()
+
     units = Unit.query.filter_by(is_active=True).order_by(Unit.unit_type, Unit.name).all()
     inventory_units = get_global_unit_list()
 
@@ -516,6 +523,7 @@ def get_recipe_form_data():
 
     return {
         'all_ingredients': all_ingredients,
+        'all_containers': all_containers,
         'units': units,
         'inventory_units': inventory_units,
         'product_categories': categories,

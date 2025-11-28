@@ -338,7 +338,7 @@
                       {% set selected_containers = recipe.allowed_containers if recipe and recipe.allowed_containers else [] %}
                   {% endif %}
                   <select id="allowed_containers" name="allowed_containers[]" class="form-select container-select" multiple>
-                    {% for container in all_ingredients if container.type == 'container' %}
+                    {% for container in all_containers %}
                       <option value="{{ container.id }}" {% if (container.id|string) in selected_containers or container.id in selected_containers %}selected{% endif %}>
                         {{ container.container_display_name }} ({{ container.capacity }} {{ container.capacity_unit }})
                     </option>
