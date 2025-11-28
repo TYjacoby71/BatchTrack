@@ -499,7 +499,7 @@
                         <label class="form-label">Consumable</label>
                         <select name="consumable_ids[]" class="form-select consumable-select" required>
                             <option value="">Select consumable...</option>
-                            {% for item in all_ingredients if item.type == 'consumable' %}
+                            {% for item in all_consumables %}
                             <option value="{{ item.id }}" data-unit="{{ item.unit }}" {% if item.id == assoc.inventory_item_id %}selected{% endif %}>{{ item.name }}</option>
                             {% endfor %}
                         </select>
@@ -530,7 +530,7 @@
                           <label class="form-label">Consumable</label>
                           <select name="consumable_ids[]" class="form-select consumable-select" required>
                               <option value="">Select consumable...</option>
-                              {% for item in all_ingredients if item.type == 'consumable' %}
+                              {% for item in all_consumables %}
                               <option value="{{ item.id }}" data-unit="{{ item.unit }}" {% if item.id == entry.inventory_item_id %}selected{% endif %}>{{ item.name }}</option>
                               {% endfor %}
                           </select>
@@ -1070,7 +1070,7 @@ function addConsumable(preselectId = null) {
             <label class="form-label small">Consumable</label>
             <select name="consumable_ids[]" class="form-select" required>
                 <option value="">Select a consumable</option>
-                {% for item in all_ingredients if item.type == 'consumable' %}
+                {% for item in all_consumables %}
                 <option value="{{ item.id }}">{{ item.name }}</option>
                 {% endfor %}
             </select>
