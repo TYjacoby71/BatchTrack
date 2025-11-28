@@ -1,0 +1,80 @@
+from __future__ import annotations
+
+from flask import flash, redirect, render_template, url_for
+from flask_login import login_required
+from sqlalchemy import or_
+from sqlalchemy.orm import joinedload
+
+from app.models import Recipe, RecipeLineage
+from app.services.recipe_service import get_recipe_details
+from app.utils.settings import is_feature_enabled
+
+from .. import recipes_bp
+from ..lineage_utils import build_lineage_path, serialize_lineage_tree
+
+
+@recipes_bp.route('/<int:recipe_id>/lineage')
+@login_required
+def recipe_lineage(recipe_id):
+    try:
+        recipe = get_recipe_details(recipe_id)
+    except PermissionError:
+        flash("You do not have access to this recipe.", "error")
+        return redirect(url_for('recipes.list_recipes'))
+    except Exception as exc:
+        flash(f"Unable to load recipe lineage: {exc}", "error")
+        return redirect(url_for('recipes.list_recipes'))
+
+    if not recipe:
+        flash('Recipe not found.', 'error')
+        return redirect(url_for('recipes.list_recipes'))
+
+    root_id = recipe.root_recipe_id or recipe.id
+    relatives = (
+        Recipe.query.options(joinedload(Recipe.organization))
+        .filter(or_(Recipe.id == root_id, Recipe.root_recipe_id == root_id))
+        .order_by(Recipe.created_at.asc())
+        .all()
+    )
+
+    nodes = {rel.id: {'recipe': rel, 'children': []} for rel in relatives}
+    for rel in relatives:
+        parent_id = None
+        edge_type = None
+        if rel.parent_recipe_id and rel.parent_recipe_id in nodes:
+            parent_id = rel.parent_recipe_id
+            edge_type = 'variation'
+        elif rel.cloned_from_id and rel.cloned_from_id in nodes:
+            parent_id = rel.cloned_from_id
+            edge_type = 'clone'
+        elif rel.id != root_id and rel.root_recipe_id and rel.root_recipe_id in nodes:
+            parent_id = rel.root_recipe_id
+            edge_type = 'root'
+
+        if parent_id and edge_type:
+            nodes[parent_id]['children'].append({'id': rel.id, 'edge': edge_type})
+
+    root_recipe = nodes.get(root_id, {'recipe': recipe})
+    lineage_tree = serialize_lineage_tree(root_recipe['recipe'], nodes, recipe.id)
+    lineage_path = build_lineage_path(recipe.id, nodes, root_id)
+    events = (
+        RecipeLineage.query.filter_by(recipe_id=recipe.id)
+        .order_by(RecipeLineage.created_at.asc())
+        .all()
+    )
+
+    origin_source_org = None
+    if recipe.org_origin_purchased and recipe.origin_source_org:
+        origin_source_org = recipe.origin_source_org
+
+    org_marketplace_enabled = is_feature_enabled('FEATURE_ORG_MARKETPLACE_DASHBOARD')
+
+    return render_template(
+        'pages/recipes/recipe_lineage.html',
+        recipe=recipe,
+        origin_source_org=origin_source_org,
+        lineage_tree=lineage_tree,
+        lineage_path=lineage_path,
+        lineage_events=events,
+        org_marketplace_enabled=org_marketplace_enabled,
+    )
