@@ -134,9 +134,16 @@ class BatchOperationsService(BaseService):
                     pass
 
             # Handle containers if required
-            container_errors = cls._process_batch_containers(batch, containers_data, defer_commit=True)
-
             skip_ingredient_ids = set(plan_snapshot.get('skip_ingredient_ids', [])) if isinstance(plan_snapshot, dict) else set()
+            skip_container_ids = set(plan_snapshot.get('skip_container_ids', [])) if isinstance(plan_snapshot, dict) else set()
+            skip_consumable_ids = set(plan_snapshot.get('skip_consumable_ids', [])) if isinstance(plan_snapshot, dict) else set()
+
+            container_errors = cls._process_batch_containers(
+                batch,
+                containers_data,
+                skip_container_ids=skip_container_ids,
+                defer_commit=True
+            )
 
             # Process ingredient deductions
             ingredient_errors = cls._process_batch_ingredients(
@@ -148,7 +155,13 @@ class BatchOperationsService(BaseService):
             )
 
             # Process consumable deductions
-            consumable_errors = cls._process_batch_consumables(batch, recipe, snap_scale, defer_commit=True)
+            consumable_errors = cls._process_batch_consumables(
+                batch,
+                recipe,
+                snap_scale,
+                skip_consumable_ids=skip_consumable_ids,
+                defer_commit=True
+            )
 
             # Combine all errors
             all_errors = container_errors + ingredient_errors + consumable_errors
@@ -201,15 +214,19 @@ class BatchOperationsService(BaseService):
 
 
     @classmethod
-    def _process_batch_containers(cls, batch, containers_data, defer_commit=False):
+    def _process_batch_containers(cls, batch, containers_data, skip_container_ids=None, defer_commit=False):
         """Process container deductions for batch start"""
         errors = []
+        skip_ids = set(skip_container_ids or [])
         try:
             for container in containers_data:
                 container_id = container.get('id')
                 quantity = container.get('quantity', 0)
 
                 if container_id and quantity:
+                    if container_id in skip_ids:
+                        logger.info(f"Skipping container deduction for item {container_id} (forced start).")
+                        continue
                     container_item = db.session.get(InventoryItem, container_id)
                     if container_item:
                         try:
@@ -325,15 +342,20 @@ class BatchOperationsService(BaseService):
         return errors
 
     @classmethod
-    def _process_batch_consumables(cls, batch, recipe, scale, defer_commit=False):
+    def _process_batch_consumables(cls, batch, recipe, scale, skip_consumable_ids=None, defer_commit=False):
         """Process consumable deductions and snapshot for batch start"""
         errors = []
         try:
             # If recipe has no consumables relationship, skip gracefully
             consumables = getattr(recipe, 'recipe_consumables', []) or []
+            skip_ids = set(skip_consumable_ids or [])
             for assoc in consumables:
                 item = assoc.inventory_item
                 if not item:
+                    continue
+
+                if item.id in skip_ids:
+                    logger.info(f"Skipping consumable deduction for {item.name} (forced start).")
                     continue
 
                 required_amount = assoc.quantity * scale
