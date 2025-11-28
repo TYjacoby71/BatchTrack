@@ -63,8 +63,8 @@ def search_ingredients():
     if current_user.organization_id:
         query = query.filter(InventoryItem.organization_id == current_user.organization_id)
 
-    # Only show inventory-manageable types (exclude products)
-    query = query.filter(~InventoryItem.type.in_(['product', 'product-reserved']))
+    # Only show true ingredients (exclude containers, products, etc.)
+    query = query.filter(InventoryItem.type == 'ingredient')
 
     ilike_term = f"%{q}%"
     results = query.filter(

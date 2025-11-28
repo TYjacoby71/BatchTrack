@@ -9,7 +9,11 @@ recipes_bp = Blueprint('recipes', __name__,
 
 # Import routes after blueprint creation to avoid circular imports
 def register_routes():
-    from . import routes
+    from .views import ajax_routes  # noqa: F401
+    from .views import create_routes  # noqa: F401
+    from .views import lineage_routes  # noqa: F401
+    from .views import manage_routes  # noqa: F401
+
 
 # Register routes when blueprint is created
 register_routes()
