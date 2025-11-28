@@ -72,6 +72,25 @@ def _build_forced_start_note(stock_issues):
         return None
     return "Started batch without: " + "; ".join(parts)
 
+
+def _partition_stock_issues(stock_issues, consumable_ids):
+    """Partition stock issues into ingredient vs consumable skip lists."""
+    ingredient_skips = []
+    consumable_skips = []
+    if not stock_issues:
+        return ingredient_skips, consumable_skips
+
+    consumable_set = set(consumable_ids or [])
+    for issue in stock_issues:
+        item_id = issue.get('item_id')
+        if not item_id:
+            continue
+        if item_id in consumable_set:
+            consumable_skips.append(item_id)
+        else:
+            ingredient_skips.append(item_id)
+    return ingredient_skips, consumable_skips
+
 @batches_bp.route('/api/batch-remaining-details/<int:batch_id>')
 @login_required
 def get_batch_remaining_details(batch_id):
@@ -337,6 +356,12 @@ def api_start_batch():
         if not recipe:
             return jsonify({'success': False, 'message': 'Recipe not found.'}), 404
 
+        consumable_item_ids = {
+            assoc.inventory_item_id
+            for assoc in (getattr(recipe, 'recipe_consumables', []) or [])
+            if getattr(assoc, 'inventory_item_id', None)
+        }
+
         # Server-side stock validation to prevent bypassing the UI gate
         stock_issues = []
         try:
@@ -350,11 +375,7 @@ def api_start_batch():
             logger.error(f"Error during stock validation: {e}")
             return jsonify({'success': False, 'message': 'Inventory validation failed. Please try again.'}), 500
 
-        skip_ingredient_ids = [
-            issue['item_id']
-            for issue in stock_issues
-            if issue.get('item_id') and (issue.get('category') or '').lower() == 'ingredient'
-        ]
+        skip_ingredient_ids, skip_consumable_ids = _partition_stock_issues(stock_issues, consumable_item_ids)
         forced_note = _build_forced_start_note(stock_issues) if force_start and stock_issues else None
 
         if stock_issues and not force_start:
@@ -375,8 +396,11 @@ def api_start_batch():
         plan_dict = snapshot_obj.to_dict()
         if stock_issues:
             plan_dict['stock_issues'] = stock_issues
-            if force_start and skip_ingredient_ids:
-                plan_dict['skip_ingredient_ids'] = skip_ingredient_ids
+            if force_start:
+                if skip_ingredient_ids:
+                    plan_dict['skip_ingredient_ids'] = skip_ingredient_ids
+                if skip_consumable_ids:
+                    plan_dict['skip_consumable_ids'] = skip_consumable_ids
         if forced_note:
             plan_dict['forced_start_summary'] = forced_note
         plan_dict['forced_start'] = force_start
