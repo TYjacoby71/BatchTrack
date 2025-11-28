@@ -15,7 +15,7 @@ class Batch(ScopedModelMixin, db.Model):
     __tablename__ = 'batch'
     id = db.Column(db.Integer, primary_key=True)
     recipe_id = db.Column(db.Integer, db.ForeignKey('recipe.id'), nullable=False)
-    label_code = db.Column(db.String(32), unique=True)
+    label_code = db.Column(db.String(32))
     batch_type = db.Column(db.String(32), nullable=False)  # 'ingredient' or 'product'
     projected_yield = db.Column(db.Float)
     projected_yield_unit = db.Column(db.String(50))
@@ -57,6 +57,7 @@ class Batch(ScopedModelMixin, db.Model):
     sku = db.relationship('ProductSKU', foreign_keys=[sku_id], backref='batches')
 
     __table_args__ = (
+        db.UniqueConstraint('organization_id', 'label_code', name='uq_batch_org_label'),
         db.Index('ix_batch_org', 'organization_id'),
         db.Index('ix_batch_vessel_fill_pct', 'vessel_fill_pct'),
         db.Index('ix_batch_candle_fragrance_pct', 'candle_fragrance_pct'),
