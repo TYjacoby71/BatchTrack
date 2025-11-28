@@ -1251,6 +1251,6 @@ def _create_variation_template(parent):
 
     # Marketplace fields
     template.product_store_url = parent.product_store_url
-    # Removed recipe_collection_group_id as per user request
+    template.recipe_collection_group_id = parent.recipe_collection_group_id
 
     return template
