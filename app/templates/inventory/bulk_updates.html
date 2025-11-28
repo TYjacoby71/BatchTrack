@@ -12,9 +12,14 @@
                         Drafts stay local to your browser until you submit or close the modal.
                     </p>
                 </div>
-                <button class="btn btn-primary btn-lg" data-bs-toggle="modal" data-bs-target="#bulkUpdateModal">
-                    <i class="fas fa-layer-group me-2"></i>Open Bulk Modal
-                </button>
+                <div class="d-flex flex-wrap gap-2">
+                    <a class="btn btn-outline-secondary btn-lg" href="{{ url_for('inventory.list_inventory') }}">
+                        <i class="fas fa-warehouse me-2"></i>Inventory List
+                    </a>
+                    <button class="btn btn-primary btn-lg" data-bs-toggle="modal" data-bs-target="#bulkUpdateModal">
+                        <i class="fas fa-layer-group me-2"></i>Open Bulk Modal
+                    </button>
+                </div>
             </div>
         </div>
         <div class="alert alert-info">
@@ -52,10 +57,11 @@
                         <thead class="table-light">
                             <tr>
                                 <th style="width: 140px;">Change Type</th>
+                                <th style="width: 160px;">Inventory Type</th>
                                 <th>Inventory Item</th>
                                 <th style="width: 140px;">Quantity</th>
-                                <th style="width: 120px;">Unit</th>
-                                <th style="width: 140px;">Cost/Unit</th>
+                                <th style="width: 140px;">Unit</th>
+                                <th style="width: 220px;">Cost Entry</th>
                                 <th>Notes</th>
                                 <th style="width: 50px;"></th>
                             </tr>
@@ -81,7 +87,16 @@
 
                 <div class="mt-3">
                     <label class="form-label fw-semibold">Status</label>
-                    <div id="bulkStatus" class="alert alert-secondary mb-0">No lines queued yet.</div>
+                    <div id="bulkStatus" class="alert alert-secondary mb-0">No lines queued yet. Submissions use the standard adjustment flow.</div>
+                    <div class="small text-muted mt-2">
+                        <span class="me-3">
+                            <i class="fas fa-boxes-stacked me-1"></i>{{ inventory_items|length if inventory_items else 0 }} inventory items connected
+                        </span>
+                        <span>
+                            <i class="fas fa-ruler-combined me-1"></i>{{ unit_options|length if unit_options else 0 }} unit options loaded
+                        </span>
+                    </div>
+                    <div id="resultDetails" class="mt-3" style="display: none;"></div>
                 </div>
             </div>
         </div>
@@ -94,14 +109,135 @@
 <script>
 (function () {
     const storageKey = 'bt_bulk_inventory_drafts';
+    const rawInventoryOptions = {{ (inventory_items or [])|tojson }};
+    const rawUnitOptions = {{ (unit_options or [])|tojson }};
+    const inventoryOptions = Array.isArray(rawInventoryOptions) ? rawInventoryOptions : [];
+    const unitOptions = Array.isArray(rawUnitOptions) ? rawUnitOptions : [];
+    const inventoryById = new Map(inventoryOptions.map(item => [Number(item.id), item]));
+    const safeUnitOptions = unitOptions.length ? unitOptions : [{ name: 'count', symbol: null, unit_type: 'count' }];
+    const defaultUnit = safeUnitOptions[0]?.name || '';
+    const csrfToken = {{ csrf_token()|tojson }};
+    const adjustUrlTemplate = {{ url_for('inventory.adjust_inventory', item_id=0)|tojson }};
     const tableBody = document.querySelector('#bulkTable tbody');
     const draftCountEl = document.getElementById('draftCount');
     const draftListEl = document.getElementById('draftList');
     const statusEl = document.getElementById('bulkStatus');
+    const resultsEl = document.getElementById('resultDetails');
     const loadBtn = document.getElementById('loadDraftBtn');
     const deleteBtn = document.getElementById('deleteDraftBtn');
+    const submitBtn = document.getElementById('submitDraftBtn');
     const modalEl = document.getElementById('bulkUpdateModal');
     let selectedDraftId = null;
+
+    function escapeHtml(value) {
+        if (value === undefined || value === null) {
+            return '';
+        }
+        return String(value)
+            .replace(/&/g, '&amp;')
+            .replace(/"/g, '&quot;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;');
+    }
+
+    const typeLabels = {
+        ingredient: 'Ingredients',
+        container: 'Containers',
+        consumable: 'Consumables',
+        packaging: 'Packaging',
+    };
+    const defaultTypes = ['ingredient', 'container', 'consumable', 'packaging'];
+    const typeOptions = [];
+    const inventoryByType = new Map();
+
+    function normalizeType(value) {
+        return (value || 'ingredient').toString().trim().toLowerCase() || 'ingredient';
+    }
+
+    function registerType(value) {
+        const normalized = normalizeType(value);
+        if (!typeOptions.includes(normalized)) {
+            typeOptions.push(normalized);
+        }
+        if (!inventoryByType.has(normalized)) {
+            inventoryByType.set(normalized, []);
+        }
+        return normalized;
+    }
+
+    defaultTypes.forEach(registerType);
+    inventoryOptions.forEach(item => {
+        const normalized = registerType(item.type);
+        inventoryByType.get(normalized).push(item);
+    });
+    inventoryByType.forEach(list => list.sort((a, b) => (a.name || '').localeCompare(b.name || '')));
+
+    function typeLabel(value) {
+        const label = typeLabels[value];
+        if (label) {
+            return label;
+        }
+        if (!value) {
+            return 'Items';
+        }
+        return value.charAt(0).toUpperCase() + value.slice(1);
+    }
+
+    function buildTypeOptionsMarkup(selectedValue) {
+        return typeOptions
+            .map(type => {
+                const selectedAttr = type === selectedValue ? ' selected' : '';
+                return `<option value="${type}"${selectedAttr}>${escapeHtml(typeLabel(type))}</option>`;
+            })
+            .join('');
+    }
+
+    function renderInventoryOptions(selectEl, typeValue, selectedId) {
+        const normalized = normalizeType(typeValue);
+        const items = inventoryByType.get(normalized) || [];
+        let optionsHtml = '<option value="">Select Item</option>';
+        optionsHtml += items
+            .map(item => `<option value="${item.id}">${escapeHtml(item.name || `Item #${item.id}`)}</option>`)
+            .join('');
+        selectEl.innerHTML = optionsHtml;
+        if (selectedId) {
+            selectEl.value = String(selectedId);
+            if (selectEl.value !== String(selectedId)) {
+                selectEl.value = '';
+            }
+        } else {
+            selectEl.value = '';
+        }
+    }
+
+    const unitOptionsMarkup = safeUnitOptions
+        .map(unit => {
+            const label = escapeHtml(unit.name || '');
+            const suffix = unit.symbol ? ` (${escapeHtml(unit.symbol)})` : '';
+            return `<option value="${label}">${label}${suffix}</option>`;
+        })
+        .join('');
+
+    const costHelpText = {
+        no_change: 'Cost stays the same',
+        per_unit: 'Override cost per unit',
+        total: 'Enter total cost; converted per unit',
+    };
+
+    function helperCopy(match, typeValue) {
+        if (match) {
+            return `Linked to ${match.name} (${match.unit || 'unit'})`;
+        }
+        if (!inventoryOptions.length) {
+            return 'Inventory list is empty for this organization.';
+        }
+        const label = typeLabel(typeValue);
+        return `Select a ${label.toLowerCase()} item to enable submission.`;
+    }
+
+    function buildAdjustUrl(itemId) {
+        return adjustUrlTemplate.replace(/\d+$/, String(itemId));
+    }
 
     function getDrafts() {
         try {
@@ -127,12 +263,14 @@
             selectedDraftId = null;
             return;
         }
-        const buttons = drafts.map((draft, idx) => `
-            <button class="btn btn-sm btn-outline-secondary me-1 mb-1 draft-chip" data-draft="${idx}">
-                ${draft.name}
-            </button>
-        `).join('');
-        draftListEl.innerHTML = buttons;
+        const chips = drafts
+            .map((draft, idx) => `
+                <button class="btn btn-sm btn-outline-secondary me-1 mb-1 draft-chip" data-draft="${idx}">
+                    ${escapeHtml(draft.name)}
+                </button>
+            `)
+            .join('');
+        draftListEl.innerHTML = chips;
         document.querySelectorAll('.draft-chip').forEach(btn => {
             btn.addEventListener('click', () => {
                 document.querySelectorAll('.draft-chip').forEach(el => el.classList.remove('active'));
@@ -145,7 +283,13 @@
     }
 
     function addRow(data = {}) {
+        const match = data.inventory_item_id ? inventoryById.get(Number(data.inventory_item_id)) : null;
+        const normalizedType = registerType(data.inventory_type || match?.type || typeOptions[0] || 'ingredient');
+        const helperText = helperCopy(match || null, normalizedType);
+        const costType = (data.cost_entry_type || 'no_change').toLowerCase();
+        const costValue = data.cost_per_unit ?? '';
         const row = document.createElement('tr');
+        row.dataset.unitTouched = data.unit ? 'true' : '';
         row.innerHTML = `
             <td>
                 <select class="form-select form-select-sm change-type">
@@ -156,49 +300,273 @@
                 </select>
             </td>
             <td>
-                <input type="text" class="form-control form-control-sm item-name" placeholder="Item name or ID"
-                       value="${data.inventory_item_name || data.inventory_item_id || ''}">
+                <select class="form-select form-select-sm inventory-type">
+                    ${buildTypeOptionsMarkup(normalizedType)}
+                </select>
             </td>
             <td>
-                <input type="number" step="0.01" class="form-control form-control-sm quantity" value="${data.quantity || ''}">
+                <select class="form-select form-select-sm inventory-select">
+                    <option value="">Select Item</option>
+                </select>
+                <div class="form-text item-helper">${escapeHtml(helperText)}</div>
             </td>
             <td>
-                <input type="text" class="form-control form-control-sm unit" value="${data.unit || ''}" placeholder="e.g. g, ml">
+                <input type="number" step="0.01" class="form-control form-control-sm quantity" value="${data.quantity ?? ''}">
             </td>
             <td>
-                <input type="number" step="0.01" class="form-control form-control-sm cost" value="${data.cost_per_unit || ''}">
+                <select class="form-select form-select-sm unit">
+                    <option value="">Select unit</option>
+                    ${unitOptionsMarkup}
+                </select>
             </td>
             <td>
-                <input type="text" class="form-control form-control-sm notes" value="${data.notes || ''}">
+                <select class="form-select form-select-sm cost-entry-type">
+                    <option value="no_change"${costType === 'no_change' ? ' selected' : ''}>Keep Cost</option>
+                    <option value="per_unit"${costType === 'per_unit' ? ' selected' : ''}>Per Unit Cost</option>
+                    <option value="total"${costType === 'total' ? ' selected' : ''}>Total Cost</option>
+                </select>
+                <input type="number" step="0.01" class="form-control form-control-sm mt-1 cost" value="${costValue === null ? '' : costValue}">
+                <div class="form-text cost-help">${escapeHtml(costHelpText[costType] || costHelpText.no_change)}</div>
             </td>
             <td>
-                <button class="btn btn-link text-danger p-0 remove-row">
+                <input type="text" class="form-control form-control-sm notes" value="${escapeHtml(data.notes || '')}">
+            </td>
+            <td>
+                <button class="btn btn-link text-danger p-0 remove-row" aria-label="Remove line">
                     <i class="fas fa-times"></i>
                 </button>
             </td>
         `;
+
+        const typeSelect = row.querySelector('.inventory-type');
+        const inventorySelect = row.querySelector('.inventory-select');
+        const unitSelect = row.querySelector('.unit');
+        const helperEl = row.querySelector('.item-helper');
+        const costTypeSelect = row.querySelector('.cost-entry-type');
+
+        typeSelect.value = normalizedType;
+        renderInventoryOptions(inventorySelect, typeSelect.value, match?.id || data.inventory_item_id);
+
+        function handleInventoryUpdate() {
+            const selectedId = Number(inventorySelect.value);
+            const selectedMatch = inventoryById.get(selectedId) || null;
+            if (selectedMatch && !row.dataset.unitTouched && selectedMatch.unit) {
+                unitSelect.value = selectedMatch.unit;
+            }
+            helperEl.textContent = helperCopy(selectedMatch, typeSelect.value);
+        }
+
+        inventorySelect.addEventListener('change', handleInventoryUpdate);
+        typeSelect.addEventListener('change', () => {
+            renderInventoryOptions(inventorySelect, typeSelect.value, null);
+            handleInventoryUpdate();
+        });
+        costTypeSelect.addEventListener('change', () => {
+            const type = (costTypeSelect.value || 'no_change').toLowerCase();
+            const costInput = row.querySelector('.cost');
+            const help = row.querySelector('.cost-help');
+            costInput.disabled = type === 'no_change';
+            if (type === 'no_change') {
+                costInput.value = '';
+            }
+            help.textContent = costHelpText[type] || costHelpText.no_change;
+        });
+        unitSelect.addEventListener('change', () => {
+            row.dataset.unitTouched = 'true';
+        });
+
+        row.querySelector('.unit').value = data.unit || match?.unit || defaultUnit || '';
+
         row.querySelector('.remove-row').addEventListener('click', () => {
             row.remove();
-            updateStatus();
+            if (!tableBody.querySelectorAll('tr').length) {
+                addRow();
+                updateStatus('No lines remaining.', { resetResults: true });
+            } else {
+                updateStatus();
+            }
         });
+
         tableBody.appendChild(row);
+        handleInventoryUpdate();
         updateStatus();
     }
 
     function collectRows() {
         const rows = [];
         tableBody.querySelectorAll('tr').forEach(row => {
+            const inventorySelect = row.querySelector('.inventory-select');
+            const typeSelect = row.querySelector('.inventory-type');
+            const selectedOption = inventorySelect.options[inventorySelect.selectedIndex];
+            const costType = row.querySelector('.cost-entry-type').value || 'no_change';
+            const costValueRaw = row.querySelector('.cost').value;
             rows.push({
                 change_type: row.querySelector('.change-type').value,
-                inventory_item_name: row.querySelector('.item-name').value.trim(),
-                quantity: Number(row.querySelector('.quantity').value),
+                inventory_type: typeSelect.value,
+                inventory_item_id: inventorySelect.value ? Number(inventorySelect.value) : null,
+                inventory_item_name: selectedOption ? selectedOption.textContent.trim() : '',
+                quantity: row.querySelector('.quantity').value ? Number(row.querySelector('.quantity').value) : null,
                 unit: row.querySelector('.unit').value.trim(),
-                cost_per_unit: row.querySelector('.cost').value ? Number(row.querySelector('.cost').value) : null,
+                cost_entry_type: costType,
+                cost_per_unit: costValueRaw ? Number(costValueRaw) : null,
                 notes: row.querySelector('.notes').value.trim(),
-                allow_create: true,
             });
         });
         return rows;
+    }
+
+    function validateRows(rows) {
+        const errors = [];
+        rows.forEach((row, idx) => {
+            const label = `Line ${idx + 1}:`;
+            if (!row.inventory_type) {
+                errors.push(`${label} select an inventory type.`);
+            }
+            if (!row.inventory_item_id) {
+                errors.push(`${label} select an inventory item.`);
+            }
+            if (!row.quantity || row.quantity <= 0) {
+                errors.push(`${label} enter a quantity greater than zero.`);
+            }
+            if (!row.unit) {
+                errors.push(`${label} choose a unit.`);
+            }
+        });
+        return errors;
+    }
+
+    function clearResults() {
+        if (!resultsEl) return;
+        resultsEl.style.display = 'none';
+        resultsEl.innerHTML = '';
+    }
+
+    function renderResults(results) {
+        if (!resultsEl) return;
+        if (!Array.isArray(results) || !results.length) {
+            clearResults();
+            return;
+        }
+        const rows = results
+            .map(entry => {
+                const resolvedName = entry.item_name
+                    || (entry.item_id && inventoryById.get(Number(entry.item_id))?.name)
+                    || '—';
+                const statusBadge = entry.success
+                    ? '<span class="badge bg-success">Success</span>'
+                    : '<span class="badge bg-danger">Failed</span>';
+                return `
+                    <tr>
+                        <td>${entry.line ?? '—'}</td>
+                        <td>${escapeHtml(resolvedName)}</td>
+                        <td class="text-capitalize">${escapeHtml(entry.change_type || '—')}</td>
+                        <td>${statusBadge}</td>
+                        <td>${escapeHtml(entry.message || '')}</td>
+                    </tr>
+                `;
+            })
+            .join('');
+        resultsEl.innerHTML = `
+            <div class="table-responsive">
+                <table class="table table-sm align-middle mb-0">
+                    <thead>
+                        <tr>
+                            <th>#</th>
+                            <th>Item</th>
+                            <th>Change</th>
+                            <th>Status</th>
+                            <th>Message</th>
+                        </tr>
+                    </thead>
+                    <tbody>${rows}</tbody>
+                </table>
+            </div>
+        `;
+        resultsEl.style.display = 'block';
+    }
+
+    function updateStatus(message, options = {}) {
+        const { resetResults = false } = options;
+        if (resetResults) {
+            clearResults();
+        }
+        if (message) {
+            statusEl.className = 'alert alert-info';
+            statusEl.textContent = message;
+            return;
+        }
+        const rows = tableBody.querySelectorAll('tr').length;
+        if (!rows) {
+            statusEl.className = 'alert alert-secondary';
+            statusEl.textContent = 'No lines queued yet. Submissions use the standard adjustment flow.';
+            return;
+        }
+        const linkedCount = Array.from(tableBody.querySelectorAll('.inventory-select')).filter(select => select.value).length;
+        statusEl.className = 'alert alert-primary';
+        const linkedLabel = linkedCount ? ` · ${linkedCount} linked item(s)` : '';
+        statusEl.textContent = `${rows} line(s) ready${linkedLabel}.`;
+    }
+
+    async function submitSingleAdjustment(line, lineNumber) {
+        const targetUrl = buildAdjustUrl(line.inventory_item_id);
+        const formData = new FormData();
+        formData.append('csrf_token', csrfToken);
+        formData.append('quantity', String(line.quantity));
+        formData.append('input_unit', line.unit);
+        formData.append('change_type', line.change_type);
+        formData.append('cost_entry_type', line.cost_entry_type || 'no_change');
+        if (line.cost_entry_type !== 'no_change' && line.cost_per_unit !== null && line.cost_per_unit !== undefined) {
+            formData.append('cost_per_unit', String(line.cost_per_unit));
+        }
+        if (line.notes) {
+            formData.append('notes', line.notes);
+        }
+
+        const response = await fetch(targetUrl, {
+            method: 'POST',
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest',
+                'Accept': 'application/json',
+            },
+            body: formData,
+        });
+
+        const contentType = response.headers.get('content-type') || '';
+        let payload = {};
+        if (contentType.includes('application/json')) {
+            payload = await response.json();
+        }
+        const success = response.ok && payload.success !== false;
+        const message = payload.message || payload.error || (success ? 'Adjustment completed.' : `Request failed (${response.status})`);
+        return {
+            line: lineNumber,
+            item_id: line.inventory_item_id,
+            item_name: line.inventory_item_name,
+            change_type: line.change_type,
+            success,
+            message,
+        };
+    }
+
+    async function submitAdjustments(rows) {
+        const results = [];
+        for (let idx = 0; idx < rows.length; idx += 1) {
+            updateStatus(`Processing line ${idx + 1} of ${rows.length}…`);
+            try {
+                const result = await submitSingleAdjustment(rows[idx], idx + 1);
+                results.push(result);
+            } catch (err) {
+                results.push({
+                    line: idx + 1,
+                    item_id: rows[idx].inventory_item_id,
+                    item_name: rows[idx].inventory_item_name,
+                    change_type: rows[idx].change_type,
+                    success: false,
+                    message: err?.message || 'Unexpected error running adjustment.',
+                });
+            }
+        }
+        return results;
     }
 
     function loadDraft(index) {
@@ -207,7 +575,7 @@
         if (!draft) return;
         tableBody.innerHTML = '';
         (draft.lines || []).forEach(line => addRow(line));
-        updateStatus(`Loaded draft “${draft.name}”.`);
+        updateStatus(`Loaded draft “${draft.name}”.`, { resetResults: true });
     }
 
     function deleteDraft(index) {
@@ -217,36 +585,21 @@
         loadBtn.disabled = true;
         deleteBtn.disabled = true;
         selectedDraftId = null;
-        updateStatus('Draft deleted.');
-    }
-
-    function updateStatus(message) {
-        const rows = tableBody.querySelectorAll('tr').length;
-        if (message) {
-            statusEl.className = 'alert alert-info';
-            statusEl.textContent = message;
-            return;
-        }
-        if (!rows) {
-            statusEl.className = 'alert alert-secondary';
-            statusEl.textContent = 'No lines queued yet.';
-        } else {
-            statusEl.className = 'alert alert-primary';
-            statusEl.textContent = `${rows} line(s) ready.`;
-        }
+        updateStatus('Draft deleted.', { resetResults: true });
     }
 
     document.getElementById('addRowBtn').addEventListener('click', () => addRow());
 
     document.getElementById('clearRowsBtn').addEventListener('click', () => {
         tableBody.innerHTML = '';
-        updateStatus('All lines cleared.');
+        addRow();
+        updateStatus('All lines cleared.', { resetResults: true });
     });
 
     document.getElementById('saveDraftBtn').addEventListener('click', () => {
         const rows = collectRows();
         if (!rows.length) {
-            updateStatus('Nothing to save.');
+            updateStatus('Nothing to save.', { resetResults: false });
             return;
         }
         const name = prompt('Name this draft:', `Draft ${new Date().toLocaleString()}`);
@@ -257,37 +610,37 @@
         updateStatus(`Saved draft “${name}”.`);
     });
 
-    document.getElementById('submitDraftBtn').addEventListener('click', () => {
+    submitBtn.addEventListener('click', async () => {
         const rows = collectRows();
         if (!rows.length) {
-            updateStatus('Add at least one row before submitting.');
+            updateStatus('Add at least one row before submitting.', { resetResults: true });
             return;
         }
-        updateStatus('Submitting…');
-        fetch('{{ url_for("inventory.api_bulk_inventory_adjustments") }}', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'X-Requested-With': 'XMLHttpRequest',
-            },
-            body: JSON.stringify({ lines: rows })
-        })
-        .then(resp => resp.json().then(data => ({ status: resp.status, body: data })))
-        .then(({ status, body }) => {
-            if (status >= 200 && status < 300 && body.success) {
-                updateStatus('Bulk update submitted successfully.');
-                tableBody.innerHTML = '';
+        const validationErrors = validateRows(rows);
+        if (validationErrors.length) {
+            updateStatus(validationErrors.join(' '), { resetResults: true });
+            return;
+        }
+        clearResults();
+        submitBtn.disabled = true;
+        updateStatus('Starting bulk adjustments…');
+        try {
+            const results = await submitAdjustments(rows);
+            renderResults(results);
+            const hasFailures = results.some(entry => !entry.success);
+            if (hasFailures) {
+                updateStatus('Some lines failed. Review the table below.', { resetResults: false });
             } else {
-                updateStatus(body.error || 'Bulk update failed.');
-                if (body.results) {
-                    console.table(body.results);
-                }
+                updateStatus('All adjustments completed successfully.', { resetResults: false });
+                tableBody.innerHTML = '';
+                addRow();
             }
-        })
-        .catch(err => {
+        } catch (err) {
             console.error(err);
-            updateStatus('Unexpected error submitting bulk update.');
-        });
+            updateStatus('Unexpected error submitting bulk update.', { resetResults: false });
+        } finally {
+            submitBtn.disabled = false;
+        }
     });
 
     loadBtn.addEventListener('click', () => {
@@ -301,9 +654,10 @@
         }
     });
 
-    modalEl.addEventListener('hide.bs.modal', (event) => {
+    modalEl.addEventListener('hide.bs.modal', () => {
         const rows = collectRows();
         if (!rows.length) {
+            clearResults();
             return;
         }
         const save = confirm('Save this draft before closing?');
@@ -315,6 +669,8 @@
             updateStatus(`Draft “${name}” saved.`);
         } else {
             tableBody.innerHTML = '';
+            clearResults();
+            addRow();
             updateStatus('Draft discarded.');
         }
     });
@@ -323,4 +679,6 @@
     addRow();
 })();
 </script>
+
+
 {% endblock %}
