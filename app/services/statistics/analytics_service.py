@@ -11,7 +11,8 @@ tables, warehouse sync) trivial to swap in.
 from __future__ import annotations
 
 import logging
-from datetime import timedelta, datetime
+import re
+from datetime import datetime, timedelta
 from typing import Any, Dict, List, Optional
 
 from sqlalchemy import func
@@ -40,6 +41,51 @@ from ._core import StatisticsService
 
 logger = logging.getLogger(__name__)
 
+_WAITLIST_DEFAULT_CHANNELS: Dict[str, Dict[str, Any]] = {
+    "public_homepage": {
+        "label": "Homepage Waitlist",
+        "category": "Marketing Site",
+        "color": "warning",
+        "description": "Primary beta waitlist via homepage modal.",
+    },
+    "homepage": {
+        "label": "Legacy Homepage Waitlist",
+        "category": "Marketing Site",
+        "color": "warning",
+    },
+    "general": {
+        "label": "General Waitlist",
+        "category": "Marketing Site",
+        "color": "secondary",
+    },
+    "tools.soap": {
+        "label": "Soap Tools Waitlist",
+        "category": "Public Tools",
+        "color": "success",
+        "description": "Early access requests for soap calculators.",
+    },
+    "tools.candles": {
+        "label": "Candle Tools Waitlist",
+        "category": "Public Tools",
+        "color": "info",
+    },
+    "tools.lotions": {
+        "label": "Lotion & Cosmetic Tools Waitlist",
+        "category": "Public Tools",
+        "color": "primary",
+    },
+    "tools.herbal": {
+        "label": "Herbal Tools Waitlist",
+        "category": "Public Tools",
+        "color": "success",
+    },
+    "tools.baker": {
+        "label": "Baker Tools Waitlist",
+        "category": "Public Tools",
+        "color": "secondary",
+    },
+}
+
 
 class AnalyticsDataService:
     """Single source of truth for application-facing analytics data."""
@@ -63,6 +109,46 @@ class AnalyticsDataService:
         "marketing": 300,
         "recipe_library": 120,
     }
+    _DEFAULT_WAITLIST_KEY = "public_homepage"
+
+    # ------------------------------------------------------------------ #
+    # Internal helpers                                                   #
+    # ------------------------------------------------------------------ #
+
+    @classmethod
+    def _normalize_waitlist_key(cls, value: Optional[str]) -> str:
+        if not value or not isinstance(value, str):
+            return cls._DEFAULT_WAITLIST_KEY
+        normalized = re.sub(r"\s+", "_", value.strip().lower())
+        normalized = normalized.strip("_")
+        return normalized or cls._DEFAULT_WAITLIST_KEY
+
+    @staticmethod
+    def _humanize_waitlist_label(key: str) -> str:
+        return key.replace(".", " / ").replace("_", " ").title()
+
+    @classmethod
+    def _waitlist_registry(cls) -> Dict[str, Dict[str, Any]]:
+        settings = read_json_file("settings.json", default={}) or {}
+        configured = settings.get("waitlists") if isinstance(settings.get("waitlists"), dict) else {}
+
+        registry: Dict[str, Dict[str, Any]] = {}
+        for key, meta in _WAITLIST_DEFAULT_CHANNELS.items():
+            registry[cls._normalize_waitlist_key(key)] = dict(meta)
+
+        for raw_key, meta in configured.items():
+            if not isinstance(meta, dict):
+                meta = {"label": str(meta)}
+            normalized_key = cls._normalize_waitlist_key(raw_key)
+            registry[normalized_key] = {
+                **registry.get(normalized_key, {}),
+                **meta,
+            }
+            registry[normalized_key]["label"] = meta.get("label") or meta.get("name") or cls._humanize_waitlist_label(raw_key)
+            registry[normalized_key]["color"] = meta.get("color") or registry[normalized_key].get("color") or "secondary"
+            registry[normalized_key]["category"] = meta.get("category") or registry[normalized_key].get("category") or "Uncategorized"
+
+        return registry
 
     # --------------------------------------------------------------------- #
     # Public API                                                            #
@@ -667,24 +753,59 @@ class AnalyticsDataService:
         if cached is not None:
             return cached
 
-        waitlist_data = read_json_file("data/waitlist.json", default=[]) or []
+        raw_data = read_json_file("data/waitlist.json", default=[]) or []
+        if isinstance(raw_data, list):
+            waitlist_rows = raw_data
+        elif isinstance(raw_data, dict):
+            if isinstance(raw_data.get("entries"), list):
+                waitlist_rows = raw_data.get("entries", [])
+            else:
+                waitlist_rows = []
+                for _, maybe_list in raw_data.items():
+                    if isinstance(maybe_list, list):
+                        waitlist_rows.extend(maybe_list)
+        else:
+            waitlist_rows = []
+
+        registry = cls._waitlist_registry()
         processed: List[Dict[str, Any]] = []
-        for entry in waitlist_data:
+        summary_map: Dict[str, Dict[str, Any]] = {}
+
+        def _ensure_summary(key: str, channel_meta: Dict[str, Any]) -> Dict[str, Any]:
+            summary = summary_map.get(key)
+            if summary is None:
+                summary = {
+                    "key": key,
+                    "label": channel_meta.get("label") or cls._humanize_waitlist_label(key),
+                    "category": channel_meta.get("category") or "Uncategorized",
+                    "color": channel_meta.get("color", "secondary"),
+                    "description": channel_meta.get("description"),
+                    "count": 0,
+                    "latest_iso": None,
+                    "latest_display": None,
+                }
+                summary_map[key] = summary
+            return summary
+
+        for entry in waitlist_rows:
+            if not isinstance(entry, dict):
+                continue
+
             timestamp = entry.get("timestamp")
             formatted = "Unknown"
             iso_value = None
             if timestamp:
                 try:
-                    dt = datetime.fromisoformat(timestamp.replace("Z", "+00:00"))
+                    dt = datetime.fromisoformat(str(timestamp).replace("Z", "+00:00"))
                     formatted = dt.strftime("%Y-%m-%d %H:%M UTC")
                     iso_value = dt.isoformat()
                 except Exception:
-                    formatted = timestamp
-                    iso_value = timestamp
+                    formatted = str(timestamp)
+                    iso_value = str(timestamp)
 
-            first_name = entry.get("first_name", "")
-            last_name = entry.get("last_name", "")
-            legacy_name = entry.get("name", "")
+            first_name = (entry.get("first_name") or "").strip()
+            last_name = (entry.get("last_name") or "").strip()
+            legacy_name = (entry.get("name") or "").strip()
             if first_name or last_name:
                 full_name = f"{first_name} {last_name}".strip()
             elif legacy_name:
@@ -692,22 +813,65 @@ class AnalyticsDataService:
             else:
                 full_name = "Not provided"
 
+            business_type = (entry.get("business_type") or "").strip() or "Not specified"
+            if business_type.lower() in {"not_specified", "not specified"}:
+                business_type = "Not specified"
+
+            waitlist_key = cls._normalize_waitlist_key(entry.get("waitlist_key") or entry.get("source"))
+            channel_meta = registry.get(waitlist_key) or {
+                "label": cls._humanize_waitlist_label(waitlist_key),
+                "category": "Uncategorized",
+                "color": "secondary",
+                "description": None,
+            }
+
             processed.append(
                 {
                     "email": entry.get("email", ""),
                     "full_name": full_name,
-                    "business_type": entry.get("business_type", "Not specified"),
+                    "business_type": business_type,
                     "formatted_date": formatted,
                     "timestamp": iso_value,
-                    "source": entry.get("source", "Unknown"),
+                    "source": entry.get("source", waitlist_key),
+                    "waitlist_key": waitlist_key,
+                    "waitlist_label": channel_meta.get("label"),
+                    "waitlist_category": channel_meta.get("category"),
+                    "waitlist_color": channel_meta.get("color", "secondary"),
                 }
             )
 
+            channel_summary = _ensure_summary(waitlist_key, channel_meta)
+            channel_summary["count"] += 1
+            if iso_value and (channel_summary["latest_iso"] is None or iso_value > channel_summary["latest_iso"]):
+                channel_summary["latest_iso"] = iso_value
+                channel_summary["latest_display"] = formatted
+
+        for key, meta in registry.items():
+            _ensure_summary(key, meta)
+
         processed.sort(key=lambda item: item.get("timestamp") or "", reverse=True)
+
+        channel_summary_list = sorted(
+            (
+                {
+                    "key": item["key"],
+                    "label": item["label"],
+                    "category": item["category"],
+                    "color": item["color"],
+                    "description": item.get("description"),
+                    "count": item["count"],
+                    "latest_signup": item.get("latest_display"),
+                }
+                for item in summary_map.values()
+            ),
+            key=lambda row: (-row["count"], row["label"]),
+        )
 
         payload = {
             "entries": processed,
-            "total": len(waitlist_data),
+            "total": len(processed),
+            "unique_waitlists": len(channel_summary_list),
+            "channel_summary": channel_summary_list,
             "generated_at": TimezoneUtils.utc_now().isoformat(),
         }
         cls._store_cache(cache_key, payload)
