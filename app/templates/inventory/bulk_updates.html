@@ -52,6 +52,7 @@
                         <thead class="table-light">
                             <tr>
                                 <th style="width: 140px;">Change Type</th>
+                                <th style="width: 170px;">Inventory Type</th>
                                 <th>Inventory Item</th>
                                 <th style="width: 140px;">Quantity</th>
                                 <th style="width: 120px;">Unit</th>
@@ -102,7 +103,6 @@
     const deleteBtn = document.getElementById('deleteDraftBtn');
     const modalEl = document.getElementById('bulkUpdateModal');
     let selectedDraftId = null;
-
     function getDrafts() {
         try {
             return JSON.parse(localStorage.getItem(storageKey) || '[]');
@@ -115,6 +115,14 @@
     function saveDrafts(drafts) {
         localStorage.setItem(storageKey, JSON.stringify(drafts));
         renderDraftList();
+    }
+
+    function debounce(fn, wait) {
+        let timeout;
+        return function (...args) {
+            clearTimeout(timeout);
+            timeout = setTimeout(() => fn.apply(this, args), wait);
+        };
     }
 
     function renderDraftList() {
@@ -144,61 +152,308 @@
         });
     }
 
+    const INVENTORY_TYPES = [
+        { value: 'ingredient', label: 'Ingredient' },
+        { value: 'consumable', label: 'Consumable' },
+        { value: 'intermediate', label: 'Intermediate' },
+        { value: 'packaging', label: 'Packaging' },
+        { value: 'container', label: 'Container' },
+        { value: 'product', label: 'Product' },
+    ];
+
+    const CHANGE_TYPES = [
+        { value: 'create', label: 'Create' },
+        { value: 'restock', label: 'Restock' },
+        { value: 'spoil', label: 'Spoil' },
+        { value: 'trash', label: 'Trash' },
+    ];
+
+    function buildOptions(options, selected) {
+        return options.map(opt => `<option value="${opt.value}" ${opt.value === selected ? 'selected' : ''}>${opt.label}</option>`).join('');
+    }
+
+    function escapeHtml(str) {
+        return (str || '').replace(/[&<>"']/g, ch => ({
+            '&': '&amp;',
+            '<': '&lt;',
+            '>': '&gt;',
+            '"': '&quot;',
+            "'": '&#39;',
+        }[ch]));
+    }
+
+    function setStatus(level, message) {
+        statusEl.className = `alert alert-${level}`;
+        statusEl.textContent = message;
+    }
+
+    function updateStatus(message) {
+        if (message) {
+            setStatus('info', message);
+            return;
+        }
+        const rows = tableBody.querySelectorAll('tr').length;
+        if (!rows) {
+            setStatus('secondary', 'No lines queued yet.');
+        } else {
+            setStatus('primary', `${rows} line(s) ready.`);
+        }
+    }
+
     function addRow(data = {}) {
+        const changeType = data.change_type || 'restock';
+        const inventoryType = data.type || data.inventory_type || 'ingredient';
         const row = document.createElement('tr');
         row.innerHTML = `
             <td>
                 <select class="form-select form-select-sm change-type">
-                    <option value="create"${data.change_type === 'create' ? ' selected' : ''}>Create</option>
-                    <option value="restock"${data.change_type === 'restock' ? ' selected' : ''}>Restock</option>
-                    <option value="spoil"${data.change_type === 'spoil' ? ' selected' : ''}>Spoil</option>
-                    <option value="trash"${data.change_type === 'trash' ? ' selected' : ''}>Trash</option>
+                    ${buildOptions(CHANGE_TYPES, changeType)}
                 </select>
             </td>
             <td>
-                <input type="text" class="form-control form-control-sm item-name" placeholder="Item name or ID"
-                       value="${data.inventory_item_name || data.inventory_item_id || ''}">
+                <select class="form-select form-select-sm inventory-type">
+                    ${buildOptions(INVENTORY_TYPES, inventoryType)}
+                </select>
             </td>
             <td>
-                <input type="number" step="0.01" class="form-control form-control-sm quantity" value="${data.quantity || ''}">
+                <div class="position-relative suggestion-wrapper">
+                    <input type="hidden" class="item-id" value="${data.inventory_item_id || ''}">
+                    <input type="text"
+                        class="form-control form-control-sm item-name"
+                        placeholder="Search inventory..."
+                        value="${data.inventory_item_name || data.inventory_item_id || ''}">
+                    <div class="list-group position-absolute w-100 shadow suggestion-list d-none" style="z-index: 1060;"></div>
+                </div>
+                <small class="text-muted action-hint"></small>
+            </td>
+            <td>
+                <input type="number" step="0.01" class="form-control form-control-sm quantity" value="${data.quantity ?? ''}">
             </td>
             <td>
                 <input type="text" class="form-control form-control-sm unit" value="${data.unit || ''}" placeholder="e.g. g, ml">
             </td>
             <td>
-                <input type="number" step="0.01" class="form-control form-control-sm cost" value="${data.cost_per_unit || ''}">
+                <input type="number" step="0.01" class="form-control form-control-sm cost" value="${data.cost_per_unit ?? ''}">
             </td>
             <td>
                 <input type="text" class="form-control form-control-sm notes" value="${data.notes || ''}">
             </td>
             <td>
-                <button class="btn btn-link text-danger p-0 remove-row">
+                <button class="btn btn-link text-danger p-0 remove-row" type="button">
                     <i class="fas fa-times"></i>
                 </button>
             </td>
         `;
         row.querySelector('.remove-row').addEventListener('click', () => {
             row.remove();
-            updateStatus();
+            updateStatus('Line removed.');
         });
         tableBody.appendChild(row);
+        attachRowBehavior(row, data);
         updateStatus();
     }
 
+    function attachRowBehavior(row, data = {}) {
+        const changeSelect = row.querySelector('.change-type');
+        const typeSelect = row.querySelector('.inventory-type');
+        const nameInput = row.querySelector('.item-name');
+        const idInput = row.querySelector('.item-id');
+        const suggestionList = row.querySelector('.suggestion-list');
+        const actionHint = row.querySelector('.action-hint');
+
+        const searchInventory = debounce(() => fetchInventorySuggestions(row), 250);
+
+        changeSelect.addEventListener('change', () => {
+            syncActionHint(row);
+            if (changeSelect.value !== 'create' && !idInput.value) {
+                nameInput.focus();
+            }
+        });
+
+        typeSelect.addEventListener('change', () => {
+            idInput.value = '';
+            if (nameInput.value.trim().length >= 2) {
+                searchInventory();
+            } else {
+                hideSuggestions(suggestionList);
+            }
+            syncActionHint(row);
+        });
+
+        nameInput.addEventListener('input', () => {
+            idInput.value = '';
+            if (nameInput.value.trim().length >= 2) {
+                searchInventory();
+            } else {
+                hideSuggestions(suggestionList);
+            }
+        });
+
+        nameInput.addEventListener('focus', () => {
+            if (nameInput.value.trim().length >= 2) {
+                searchInventory();
+            }
+        });
+
+        suggestionList.addEventListener('click', (event) => {
+            if (event.target.matches('button[data-id]')) {
+                selectSuggestion(row, {
+                    id: event.target.dataset.id,
+                    name: event.target.dataset.name,
+                    type: event.target.dataset.type,
+                });
+            }
+        });
+
+        if (data.inventory_item_id) {
+            prefillInventoryItem(data.inventory_item_id, row);
+        }
+
+        syncActionHint(row);
+    }
+
+    function syncActionHint(row) {
+        const changeType = row.querySelector('.change-type').value;
+        const typeValue = row.querySelector('.inventory-type').value;
+        const hintEl = row.querySelector('.action-hint');
+        const typeLabel = INVENTORY_TYPES.find(t => t.value === typeValue)?.label || 'item';
+        if (changeType === 'create') {
+            hintEl.textContent = `Will create a new ${typeLabel.toLowerCase()} if it doesn't exist.`;
+        } else if (changeType === 'restock') {
+            hintEl.textContent = `Select an existing ${typeLabel.toLowerCase()} to restock.`;
+        } else if (changeType === 'spoil') {
+            hintEl.textContent = `Select an existing ${typeLabel.toLowerCase()} to mark as spoiled.`;
+        } else if (changeType === 'trash') {
+            hintEl.textContent = `Select an existing ${typeLabel.toLowerCase()} to trash.`;
+        }
+    }
+
+    function fetchInventorySuggestions(row) {
+        const input = row.querySelector('.item-name');
+        const typeSelect = row.querySelector('.inventory-type');
+        const list = row.querySelector('.suggestion-list');
+        const query = input.value.trim();
+        if (query.length < 2) {
+            hideSuggestions(list);
+            return;
+        }
+        const params = new URLSearchParams({ q: query });
+        if (typeSelect.value) {
+            params.append('type', typeSelect.value);
+        }
+        fetch(`/inventory/api/search?${params.toString()}`)
+            .then(resp => resp.json())
+            .then(data => {
+                const items = (data.results || []).map(item => ({
+                    id: item.id,
+                    name: item.text,
+                    type: item.type,
+                }));
+                renderSuggestions(list, items);
+            })
+            .catch(() => hideSuggestions(list));
+    }
+
+    function renderSuggestions(container, items) {
+        if (!items.length) {
+            hideSuggestions(container);
+            return;
+        }
+        container.innerHTML = items.map(item => `
+            <button type="button" class="list-group-item list-group-item-action"
+                data-id="${item.id}"
+                data-name="${escapeHtml(item.name)}"
+                data-type="${item.type || ''}">
+                ${escapeHtml(item.name)}
+            </button>
+        `).join('');
+        container.classList.remove('d-none');
+    }
+
+    function hideSuggestions(container) {
+        container.classList.add('d-none');
+        container.innerHTML = '';
+    }
+
+    function selectSuggestion(row, item) {
+        const nameInput = row.querySelector('.item-name');
+        const idInput = row.querySelector('.item-id');
+        const list = row.querySelector('.suggestion-list');
+        const typeSelect = row.querySelector('.inventory-type');
+        nameInput.value = item.name || '';
+        idInput.value = item.id || '';
+        if (item.type) {
+            typeSelect.value = item.type;
+        }
+        hideSuggestions(list);
+        prefillInventoryItem(item.id, row);
+        syncActionHint(row);
+    }
+
+    function prefillInventoryItem(itemId, row) {
+        if (!itemId) return;
+        fetch(`/inventory/api/get-item/${itemId}`)
+            .then(resp => resp.ok ? resp.json() : null)
+            .then(data => {
+                if (!data) return;
+                const unitInput = row.querySelector('.unit');
+                const costInput = row.querySelector('.cost');
+                if (!unitInput.value && data.unit) {
+                    unitInput.value = data.unit;
+                }
+                if (!costInput.value && typeof data.cost_per_unit === 'number') {
+                    costInput.value = data.cost_per_unit;
+                }
+            })
+            .catch(() => {});
+    }
+
     function collectRows() {
-        const rows = [];
+        const lines = [];
+        const elements = [];
         tableBody.querySelectorAll('tr').forEach(row => {
-            rows.push({
+            lines.push({
                 change_type: row.querySelector('.change-type').value,
+                type: row.querySelector('.inventory-type').value,
+                inventory_item_id: row.querySelector('.item-id').value ? Number(row.querySelector('.item-id').value) : null,
                 inventory_item_name: row.querySelector('.item-name').value.trim(),
-                quantity: Number(row.querySelector('.quantity').value),
+                quantity: Number(row.querySelector('.quantity').value) || 0,
                 unit: row.querySelector('.unit').value.trim(),
                 cost_per_unit: row.querySelector('.cost').value ? Number(row.querySelector('.cost').value) : null,
                 notes: row.querySelector('.notes').value.trim(),
-                allow_create: true,
+                allow_create: row.querySelector('.change-type').value === 'create',
             });
+            elements.push(row);
         });
-        return rows;
+        return { lines, elements };
+    }
+
+    function validateRows(lines, elements) {
+        const errors = [];
+        elements.forEach(row => row.classList.remove('table-danger'));
+        lines.forEach((line, idx) => {
+            const rowErrors = [];
+            if (!line.inventory_item_name) {
+                rowErrors.push('name is required');
+            }
+            if (!line.type) {
+                rowErrors.push('type is required');
+            }
+            if (!line.quantity || line.quantity <= 0) {
+                rowErrors.push('quantity must be greater than zero');
+            }
+            if (line.change_type !== 'create' && !line.inventory_item_id) {
+                rowErrors.push('select an existing inventory item');
+            }
+            if (!line.unit) {
+                rowErrors.push('unit is required');
+            }
+            if (rowErrors.length) {
+                errors.push(`Row ${idx + 1}: ${rowErrors.join(', ')}`);
+                elements[idx].classList.add('table-danger');
+            }
+        });
+        return errors;
     }
 
     function loadDraft(index) {
@@ -220,22 +475,6 @@
         updateStatus('Draft deleted.');
     }
 
-    function updateStatus(message) {
-        const rows = tableBody.querySelectorAll('tr').length;
-        if (message) {
-            statusEl.className = 'alert alert-info';
-            statusEl.textContent = message;
-            return;
-        }
-        if (!rows) {
-            statusEl.className = 'alert alert-secondary';
-            statusEl.textContent = 'No lines queued yet.';
-        } else {
-            statusEl.className = 'alert alert-primary';
-            statusEl.textContent = `${rows} line(s) ready.`;
-        }
-    }
-
     document.getElementById('addRowBtn').addEventListener('click', () => addRow());
 
     document.getElementById('clearRowsBtn').addEventListener('click', () => {
@@ -244,41 +483,46 @@
     });
 
     document.getElementById('saveDraftBtn').addEventListener('click', () => {
-        const rows = collectRows();
-        if (!rows.length) {
+        const { lines } = collectRows();
+        if (!lines.length) {
             updateStatus('Nothing to save.');
             return;
         }
         const name = prompt('Name this draft:', `Draft ${new Date().toLocaleString()}`);
         if (!name) return;
         const drafts = getDrafts();
-        drafts.unshift({ name, lines: rows });
+        drafts.unshift({ name, lines });
         saveDrafts(drafts);
         updateStatus(`Saved draft “${name}”.`);
     });
 
     document.getElementById('submitDraftBtn').addEventListener('click', () => {
-        const rows = collectRows();
-        if (!rows.length) {
+        const { lines, elements } = collectRows();
+        if (!lines.length) {
             updateStatus('Add at least one row before submitting.');
             return;
         }
-        updateStatus('Submitting…');
+        const validationErrors = validateRows(lines, elements);
+        if (validationErrors.length) {
+            setStatus('danger', `Please fix the highlighted rows:\n${validationErrors.join(' | ')}`);
+            return;
+        }
+        setStatus('info', 'Submitting…');
         fetch('{{ url_for("inventory.api_bulk_inventory_adjustments") }}', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
                 'X-Requested-With': 'XMLHttpRequest',
             },
-            body: JSON.stringify({ lines: rows })
+            body: JSON.stringify({ lines })
         })
         .then(resp => resp.json().then(data => ({ status: resp.status, body: data })))
         .then(({ status, body }) => {
             if (status >= 200 && status < 300 && body.success) {
-                updateStatus('Bulk update submitted successfully.');
                 tableBody.innerHTML = '';
+                setStatus('success', 'Bulk update submitted successfully.');
             } else {
-                updateStatus(body.error || 'Bulk update failed.');
+                setStatus('danger', body.error || 'Bulk update failed.');
                 if (body.results) {
                     console.table(body.results);
                 }
@@ -286,7 +530,7 @@
         })
         .catch(err => {
             console.error(err);
-            updateStatus('Unexpected error submitting bulk update.');
+            setStatus('danger', 'Unexpected error submitting bulk update.');
         });
     });
 
@@ -301,21 +545,27 @@
         }
     });
 
-    modalEl.addEventListener('hide.bs.modal', (event) => {
-        const rows = collectRows();
-        if (!rows.length) {
+    modalEl.addEventListener('hide.bs.modal', () => {
+        const { lines } = collectRows();
+        if (!lines.length) {
             return;
         }
         const save = confirm('Save this draft before closing?');
         if (save) {
             const name = prompt('Name this draft:', `Draft ${new Date().toLocaleString()}`) || `Draft ${new Date().toLocaleString()}`;
             const drafts = getDrafts();
-            drafts.unshift({ name, lines: rows });
+            drafts.unshift({ name, lines });
             saveDrafts(drafts);
             updateStatus(`Draft “${name}” saved.`);
         } else {
             tableBody.innerHTML = '';
             updateStatus('Draft discarded.');
+        }
+    });
+
+    document.addEventListener('click', (event) => {
+        if (!event.target.closest('.suggestion-wrapper')) {
+            document.querySelectorAll('.suggestion-list').forEach(list => hideSuggestions(list));
         }
     });
 
