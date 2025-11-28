@@ -20,7 +20,7 @@ def test_public_sale_payload():
         "sale_mode": "sale",
         "sale_price": "19.99",
         "product_group_id": "3",
-        "shopify_product_url": "https://example.com/product/soap",
+        "product_store_url": "https://example.com/product/soap",
         "skin_opt_in": "true",
         "marketplace_notes": "Includes premium SKIN data",
         "public_description": "This is a high-level teaser",
@@ -32,7 +32,7 @@ def test_public_sale_payload():
     assert marketplace["is_for_sale"] is True
     assert marketplace["sale_price"] == "19.99"
     assert marketplace["product_group_id"] == 3
-    assert marketplace["shopify_product_url"] == "https://example.com/product/soap"
+    assert marketplace["product_store_url"] == "https://example.com/product/soap"
     assert marketplace["skin_opt_in"] is True
     assert marketplace["public_description"] == "This is a high-level teaser"
 
@@ -44,7 +44,7 @@ def test_existing_recipe_defaults_when_fields_missing():
         is_for_sale=True,
         sale_price="12.00",
         product_group_id=7,
-        shopify_product_url="https://existing/link",
+        product_store_url="https://existing/link",
         marketplace_notes="Legacy note",
         public_description="Legacy description",
         skin_opt_in=False,
@@ -57,7 +57,7 @@ def test_existing_recipe_defaults_when_fields_missing():
     assert marketplace["is_for_sale"] is True
     assert marketplace["sale_price"] == "12.00"
     assert marketplace["product_group_id"] == 7
-    assert marketplace["shopify_product_url"] == "https://existing/link"
+    assert marketplace["product_store_url"] == "https://existing/link"
     assert marketplace["marketplace_notes"] == "Legacy note"
     assert marketplace["skin_opt_in"] is False
     assert marketplace["public_description"] == "Legacy description"
