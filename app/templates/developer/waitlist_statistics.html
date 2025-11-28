@@ -35,9 +35,9 @@
     </div>
 
     <!-- Stats Overview -->
-    <div class="row mb-4">
+    <div class="row mb-4 g-3">
         <div class="col-md-3">
-            <div class="card border-success">
+            <div class="card border-success h-100">
                 <div class="card-body text-center">
                     <i class="fas fa-users fa-2x text-success mb-2"></i>
                     <h3 class="mb-1">{{ total_signups }}</h3>
@@ -46,31 +46,85 @@
             </div>
         </div>
         <div class="col-md-3">
-            <div class="card border-info">
+            <div class="card border-info h-100">
                 <div class="card-body text-center">
-                    <i class="fas fa-soap fa-2x text-info mb-2"></i>
-                    <h3 class="mb-1">{{ waitlist_data | selectattr('business_type', 'equalto', 'soap_making') | list | length }}</h3>
-                    <p class="text-muted mb-0">Soap Makers</p>
+                    <i class="fas fa-network-wired fa-2x text-info mb-2"></i>
+                    <h3 class="mb-1">{{ unique_waitlists }}</h3>
+                    <p class="text-muted mb-0">Waitlists Tracked</p>
                 </div>
             </div>
         </div>
         <div class="col-md-3">
-            <div class="card border-warning">
+            {% set top_channel = (waitlist_channels | selectattr('count', 'gt', 0) | list | first) %}
+            <div class="card border-warning h-100">
                 <div class="card-body text-center">
-                    <i class="fas fa-fire fa-2x text-warning mb-2"></i>
-                    <h3 class="mb-1">{{ waitlist_data | selectattr('business_type', 'equalto', 'candle_making') | list | length }}</h3>
-                    <p class="text-muted mb-0">Candle Makers</p>
+                    <i class="fas fa-chart-line fa-2x text-warning mb-2"></i>
+                    <h3 class="mb-1">{{ top_channel.count if top_channel else 0 }}</h3>
+                    <p class="text-muted mb-0">
+                        {% if top_channel %}
+                            Top Waitlist · {{ top_channel.label }}
+                        {% else %}
+                            No active waitlists
+                        {% endif %}
+                    </p>
                 </div>
             </div>
         </div>
         <div class="col-md-3">
-            <div class="card border-primary">
+            {% set latest_entry = waitlist_data | first %}
+            <div class="card border-primary h-100">
                 <div class="card-body text-center">
-                    <i class="fas fa-industry fa-2x text-primary mb-2"></i>
-                    <h3 class="mb-1">{{ waitlist_data | selectattr('business_type', 'in', ['other', 'manufacturing', 'other_artisan']) | list | length }}</h3>
-                    <p class="text-muted mb-0">Other Industries</p>
+                    <i class="fas fa-clock fa-2x text-primary mb-2"></i>
+                    <h3 class="mb-1">{% if latest_entry %}Just now{% else %}--{% endif %}</h3>
+                    <p class="text-muted mb-0">
+                        {% if latest_entry %}
+                            {{ latest_entry.formatted_date }}
+                        {% else %}
+                            Awaiting first signup
+                        {% endif %}
+                    </p>
                 </div>
             </div>
+        </div>
+    </div>
+
+    <!-- Waitlist channel summary -->
+    <div class="card mb-4">
+        <div class="card-header d-flex justify-content-between align-items-center">
+            <h5 class="mb-0">
+                <i class="fas fa-stream me-2"></i>Waitlist Channels
+            </h5>
+            <small class="text-muted">{{ waitlist_channels | length }} configured</small>
+        </div>
+        <div class="card-body">
+            {% if waitlist_channels %}
+            <div class="row g-3">
+                {% for channel in waitlist_channels %}
+                <div class="col-md-6 col-lg-4">
+                    <div class="border rounded p-3 h-100">
+                        <div class="d-flex justify-content-between align-items-start mb-2">
+                            <div>
+                                <span class="badge bg-{{ channel.color or 'secondary' }} text-uppercase">
+                                    {{ channel.category or 'Channel' }}
+                                </span>
+                                <h5 class="mt-2 mb-1">{{ channel.label }}</h5>
+                            </div>
+                            <span class="display-6 fw-bold">{{ channel.count }}</span>
+                        </div>
+                        {% if channel.description %}
+                        <p class="text-muted small mb-2">{{ channel.description }}</p>
+                        {% endif %}
+                        <div class="d-flex justify-content-between text-muted small">
+                            <span>Latest signup</span>
+                            <span>{{ channel.latest_signup or '—' }}</span>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+            {% else %}
+            <p class="text-muted mb-0">No waitlists configured yet.</p>
+            {% endif %}
         </div>
     </div>
 
@@ -93,7 +147,7 @@
                                     <th>Email</th>
                                     <th>Business Type</th>
                                     <th>Signup Date</th>
-                                    <th>Source</th>
+                                    <th>Waitlist</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -116,7 +170,10 @@
                                         <small class="text-muted">{{ entry.formatted_date }}</small>
                                     </td>
                                     <td>
-                                        <span class="badge bg-primary">{{ entry.source.title() }}</span>
+                                        <div>
+                                            <span class="badge bg-{{ entry.waitlist_color or 'primary' }}">{{ entry.waitlist_label }}</span>
+                                        </div>
+                                        <small class="text-muted">{{ entry.source }}</small>
                                     </td>
                                 </tr>
                                 {% endfor %}

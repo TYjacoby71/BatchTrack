@@ -2558,6 +2558,8 @@ def waitlist_statistics():
         'developer/waitlist_statistics.html',
         waitlist_data=stats.get('entries', []),
         total_signups=stats.get('total', 0),
+        waitlist_channels=stats.get('channel_summary', []),
+        unique_waitlists=stats.get('unique_waitlists', 0),
         generated_at=stats.get('generated_at'),
     )
 

@@ -1,4 +1,21 @@
 {% extends 'layout.html' %}
+{% macro waitlist_cta(waitlist_key, label) %}
+<div class="mt-3 pt-3 border-top">
+  <form class="tool-waitlist-form" data-waitlist-key="{{ waitlist_key }}">
+    <label class="form-label small mb-1 text-muted">{{ label }}</label>
+    <div class="input-group input-group-sm">
+      <input type="email" class="form-control" name="email" placeholder="you@example.com" required>
+      <button class="btn btn-outline-secondary" type="submit">
+        <span class="label-default"><i class="fas fa-paper-plane me-1"></i>Notify me</span>
+        <span class="label-loading d-none"><i class="fas fa-spinner fa-spin me-1"></i>Sending</span>
+      </button>
+    </div>
+    <div class="small text-muted mt-1" data-role="helper">No spam. We'll email when this tool opens.</div>
+    <div class="small text-success mt-1 d-none" data-role="success">You're on the list!</div>
+    <div class="small text-danger mt-1 d-none" data-role="error">Something went wrong. Try again?</div>
+  </form>
+</div>
+{% endmacro %}
 {% block content %}
 <div class="py-1">
   <h1 class="mb-4">Maker Tools</h1>
@@ -21,7 +38,7 @@
               <span class="badge bg-secondary">Coming Soon</span>
             </h5>
             <p class="card-text small">Preview the calculator layout and join the waitlist for early access.</p>
-            <a class="btn btn-sm btn-outline-secondary mt-2" href="{{ url_for('waitlist.join_waitlist') }}">Join Waitlist</a>
+            {{ waitlist_cta('tools.soap', 'Soap tools waitlist') }}
           </div>
         </div>
         {% endif %}
@@ -42,7 +59,7 @@
               <span class="badge bg-secondary">Coming Soon</span>
             </h5>
             <p class="card-text small">See what’s shipping next—calculate fragrance load and wax ratios soon.</p>
-            <a class="btn btn-sm btn-outline-secondary mt-2" href="{{ url_for('waitlist.join_waitlist') }}">Join Waitlist</a>
+            {{ waitlist_cta('tools.candles', 'Candle tools waitlist') }}
           </div>
         </div>
         {% endif %}
@@ -63,7 +80,7 @@
               <span class="badge bg-secondary">Coming Soon</span>
             </h5>
             <p class="card-text small">Phase calculators and preservative planners arrive shortly.</p>
-            <a class="btn btn-sm btn-outline-secondary mt-2" href="{{ url_for('waitlist.join_waitlist') }}">Join Waitlist</a>
+            {{ waitlist_cta('tools.lotions', 'Lotion & cosmetics waitlist') }}
           </div>
         </div>
         {% endif %}
@@ -84,7 +101,7 @@
               <span class="badge bg-secondary">Coming Soon</span>
             </h5>
             <p class="card-text small">Tincture ratios and infusion helpers are in preview.</p>
-            <a class="btn btn-sm btn-outline-secondary mt-2" href="{{ url_for('waitlist.join_waitlist') }}">Join Waitlist</a>
+            {{ waitlist_cta('tools.herbal', 'Herbal tools waitlist') }}
           </div>
         </div>
         {% endif %}
@@ -105,11 +122,87 @@
               <span class="badge bg-secondary">Coming Soon</span>
             </h5>
             <p class="card-text small">Formula scaling and hydration helpers launch soon.</p>
-            <a class="btn btn-sm btn-outline-secondary mt-2" href="{{ url_for('waitlist.join_waitlist') }}">Join Waitlist</a>
+            {{ waitlist_cta('tools.baker', 'Baker tools waitlist') }}
           </div>
         </div>
         {% endif %}
     </div>
   </div>
 </div>
+<script>
+(function(){
+  function toggleState(form, state){
+    const btn = form.querySelector('button[type="submit"]');
+    const helper = form.querySelector('[data-role="helper"]');
+    const success = form.querySelector('[data-role="success"]');
+    const error = form.querySelector('[data-role="error"]');
+    const defaultLabel = form.querySelector('.label-default');
+    const loadingLabel = form.querySelector('.label-loading');
+
+    if (state === 'loading'){
+      btn.disabled = true;
+      defaultLabel.classList.add('d-none');
+      loadingLabel.classList.remove('d-none');
+      success.classList.add('d-none');
+      error.classList.add('d-none');
+      helper.classList.remove('d-none');
+    } else {
+      btn.disabled = false;
+      defaultLabel.classList.remove('d-none');
+      loadingLabel.classList.add('d-none');
+    }
+
+    if (state === 'success'){
+      helper.classList.add('d-none');
+      success.classList.remove('d-none');
+      error.classList.add('d-none');
+    } else if (state === 'error'){
+      helper.classList.add('d-none');
+      success.classList.add('d-none');
+      error.classList.remove('d-none');
+    } else if (state === 'idle'){
+      helper.classList.remove('d-none');
+      success.classList.add('d-none');
+      error.classList.add('d-none');
+    }
+  }
+
+  document.addEventListener('DOMContentLoaded', function(){
+    document.querySelectorAll('.tool-waitlist-form').forEach(function(form){
+      form.addEventListener('submit', async function(ev){
+        ev.preventDefault();
+        const emailInput = form.querySelector('input[name="email"]');
+        const waitlistKey = form.dataset.waitlistKey || 'public_tools';
+        if (!emailInput.value){
+          return;
+        }
+        toggleState(form, 'loading');
+        try{
+          const response = await fetch('/api/waitlist', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({
+              email: emailInput.value,
+              waitlist_key: waitlistKey,
+              source: waitlistKey,
+              context: 'tools_page',
+              notes: `tools_index:${waitlistKey}`
+            })
+          });
+          if (!response.ok){
+            throw new Error('Failed request');
+          }
+          toggleState(form, 'success');
+          emailInput.value = '';
+        }catch(err){
+          console.error('Waitlist error', err);
+          toggleState(form, 'error');
+        }finally{
+          setTimeout(() => toggleState(form, 'idle'), 1500);
+        }
+      });
+    });
+  });
+})();
+</script>
 {% endblock %}
