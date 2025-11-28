@@ -700,7 +700,6 @@ def bulk_inventory_updates():
             'quantity': float(item.quantity or 0),
         }
         for item in inventory_records
-        if item.type != 'container'
     ]
     unit_options = [
         {
