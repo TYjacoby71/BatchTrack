@@ -1,0 +1,123 @@
+{% extends "layout.html" %}
+
+{% block title %}Batchley Copilot{% endblock %}
+
+{% block content %}
+<div class="row g-4">
+    <div class="col-lg-8">
+        <div id="batchley-chat"
+             class="card shadow-sm batchley-chat-shell"
+             data-chat-endpoint="{{ url_for('api.batchbot_chat') }}"
+             data-usage-endpoint="{{ url_for('api.batchbot_usage') }}"
+             data-initial-quota='{{ quota|tojson }}'>
+            <div class="card-header d-flex flex-wrap justify-content-between align-items-center gap-2">
+                <div>
+                    <h1 class="h4 mb-1">Batchley Copilot</h1>
+                    <p class="text-muted mb-0">Automate batch work, inventory cleanups, and production insights.</p>
+                </div>
+                <div class="text-end">
+                    <div class="text-muted small">Window resets <span data-role="window-end"></span></div>
+                    <button type="button" class="btn btn-sm btn-outline-secondary" data-role="reset-history">
+                        Clear chat
+                    </button>
+                </div>
+            </div>
+            <div class="card-body">
+                <div class="alert alert-warning d-none" role="alert" data-role="error-banner"></div>
+                <div class="batchley-chat__messages" data-role="messages">
+                    <div class="text-muted text-center py-5" data-role="empty-state">
+                        Ask Batchley how to plan production, clean up inventory, or draft recipes.
+                    </div>
+                </div>
+            </div>
+            <div class="card-footer">
+                <form data-role="composer" class="batchley-chat__composer">
+                    <label for="batchley-input" class="form-label fw-semibold">What should Batchley do?</label>
+                    <textarea class="form-control" id="batchley-input" name="prompt" rows="3" data-role="input"
+                              placeholder="Example: 'Restock cocoa butter by 5kg and show me low-stock risks.'"></textarea>
+                    <div class="d-flex justify-content-between align-items-center mt-2 flex-wrap gap-2">
+                        <small class="text-muted" data-role="status-text">Shift+Enter for a new line.</small>
+                        <div>
+                            <button class="btn btn-light btn-sm me-2" type="button" data-role="insert-template">
+                                Insert template
+                            </button>
+                            <button class="btn btn-primary" type="submit" data-role="submit">
+                                <span class="spinner-border spinner-border-sm me-2 d-none" role="status" aria-hidden="true" data-role="spinner"></span>
+                                Send to Batchley
+                            </button>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+    <div class="col-lg-4">
+        <div class="card mb-4 shadow-sm">
+            <div class="card-header">
+                <strong>Usage & Credits</strong>
+            </div>
+            <div class="card-body">
+                {% set action_allowed_raw = quota.get('allowed') %}
+                {% set action_allowed = action_allowed_raw if action_allowed_raw is not none and action_allowed_raw not in [0] else None %}
+                {% set action_used = quota.get('used') or 0 %}
+                {% set chat_allowed_raw = quota.get('chat_limit') %}
+                {% set chat_allowed = chat_allowed_raw if chat_allowed_raw is not none and chat_allowed_raw not in [0] else None %}
+                {% set chat_used = quota.get('chat_used') or 0 %}
+                {% set action_pct = (action_used / action_allowed * 100)|round(1) if action_allowed else 0 %}
+                {% set chat_pct = (chat_used / chat_allowed * 100)|round(1) if chat_allowed else 0 %}
+
+                <div class="mb-3">
+                    <div class="d-flex justify-content-between small mb-1">
+                        <span>Automations</span>
+                        <span><span data-role="actions-used">{{ action_used }}</span> / <span data-role="actions-limit">{{ action_allowed if action_allowed else 'Unlimited' }}</span></span>
+                    </div>
+                    <div class="progress">
+                        <div class="progress-bar bg-primary" role="progressbar"
+                             style="width: {{ action_pct }}%" data-role="actions-progress"></div>
+                    </div>
+                </div>
+                <div class="mb-3">
+                    <div class="d-flex justify-content-between small mb-1">
+                        <span>Chat messages</span>
+                        <span><span data-role="chat-used">{{ chat_used }}</span> / <span data-role="chat-limit">{{ chat_allowed if chat_allowed else 'Unlimited' }}</span></span>
+                    </div>
+                    <div class="progress">
+                        <div class="progress-bar bg-info" role="progressbar"
+                             style="width: {{ chat_pct }}%" data-role="chat-progress"></div>
+                    </div>
+                </div>
+                <ul class="list-unstyled small mb-0">
+                    {% set credits = quota.get('credits') if quota else None %}
+                    <li><strong>Credits remaining:</strong> <span data-role="credits-remaining">{{ credits.remaining if credits else '—' }}</span></li>
+                    <li><strong>Next expiration:</strong> <span data-role="credits-expiration">{{ credits.next_expiration if credits and credits.next_expiration else 'None scheduled' }}</span></li>
+                </ul>
+                <hr>
+                <p class="mb-0 small text-muted">
+                    Batchley action quota covers tool calls (inventory updates, recipe drafts, etc.).
+                    Chat quota covers pure Q&A prompts. Refill credits when you hit the cap.
+                </p>
+            </div>
+        </div>
+        <div class="card shadow-sm">
+            <div class="card-header">
+                <strong>What Batchley can do</strong>
+            </div>
+            <div class="card-body small">
+                <ul class="mb-3">
+                    <li>Draft recipes and pre-fill missing ingredients.</li>
+                    <li>Plan batches with costing and throughput guidance.</li>
+                    <li>Create bulk inventory adjustments with guardrails.</li>
+                    <li>Summarize marketplace readiness and sync blockers.</li>
+                </ul>
+                <p class="text-muted mb-2">Batchley always summarizes the outcome of any automation it runs.</p>
+                <a class="btn btn-outline-primary w-100" href="{{ url_for('billing.upgrade') }}">Need more credits?</a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+{{ super() }}
+<script src="{{ url_for('static', filename='js/batchley_chat.js') }}"></script>
+{% endblock %}

@@ -267,6 +267,57 @@ def get_effective_organization():
             pass
         return None
 
+def has_batchley_access(user=None) -> bool:
+    """
+    Determine whether the current session should expose the Batchley UI.
+    Access is restricted to authenticated users on paid (or explicitly unlimited) tiers
+    whose billing status is active.
+    """
+    if user is None:
+        user = current_user
+
+    if not user or not getattr(user, "is_authenticated", False):
+        return False
+
+    org = None
+    try:
+        if getattr(user, "user_type", None) == "developer":
+            org_id = session.get("dev_selected_org_id")
+            if not org_id:
+                return False
+            from ..models import Organization  # Local import to avoid circulars
+            from ..extensions import db
+
+            org = db.session.get(Organization, org_id)
+        else:
+            org = getattr(user, "organization", None)
+    except Exception:
+        try:
+            from ..extensions import db
+            db.session.rollback()
+        except Exception:
+            pass
+        org = None
+
+    if not org or not getattr(org, "tier", None):
+        return False
+
+    blocked_statuses = {"past_due", "payment_failed", "suspended", "canceled", "cancelled"}
+    billing_status = (getattr(org, "billing_status", "") or "").lower()
+    if billing_status in blocked_statuses:
+        return False
+
+    tier = org.tier
+    max_requests = getattr(tier, "max_batchbot_requests", None)
+    if max_requests is not None and max_requests != 0:
+        return True
+
+    billing_provider = (getattr(tier, "billing_provider", "") or "").lower()
+    if billing_provider and billing_provider != "exempt":
+        return True
+
+    return False
+
 def is_organization_owner():
     """Check if current user is organization owner"""
     if not current_user.is_authenticated:

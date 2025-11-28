@@ -315,6 +315,62 @@ document.addEventListener('DOMContentLoaded', function() {
 
   // Note: Quick add components (unit, container, ingredient) now have their own 
   // embedded scripts and don't need initialization here
+
+  // Batchley onboarding bubble
+  (function initBatchleyBubble() {
+    const bubble = document.getElementById('batchley-promo-bubble');
+    if (!bubble) {
+      return;
+    }
+
+    const sessionKey = 'batchleyBubbleDismissed';
+    try {
+      if ((window.location.pathname || '').startsWith('/batchley')) {
+        sessionStorage.setItem(sessionKey, 'true');
+        bubble.remove();
+        return;
+      }
+      if (sessionStorage.getItem(sessionKey) === 'true') {
+        bubble.remove();
+        return;
+      }
+    } catch (err) {
+      console.warn('Batchley bubble: sessionStorage unavailable', err);
+    }
+
+    const targetUrl = bubble.getAttribute('data-target-url');
+    const closeBtn = bubble.querySelector('[data-role="bubble-close"]');
+    const launchBtn = bubble.querySelector('[data-role="bubble-launch"]');
+
+    const dismiss = () => {
+      try {
+        sessionStorage.setItem(sessionKey, 'true');
+      } catch (err) {
+        console.warn('Batchley bubble: unable to persist dismissal', err);
+      }
+      bubble.classList.remove('is-visible');
+      bubble.addEventListener('transitionend', () => bubble.remove(), { once: true });
+    };
+
+    if (closeBtn) {
+      closeBtn.addEventListener('click', dismiss);
+    }
+
+    if (launchBtn) {
+      launchBtn.addEventListener('click', () => {
+        try {
+          sessionStorage.setItem(sessionKey, 'true');
+        } catch (err) {}
+        if (targetUrl) {
+          window.location.href = targetUrl;
+        }
+      });
+    }
+
+    setTimeout(() => {
+      bubble.classList.add('is-visible');
+    }, 600);
+  })();
 });
 
 // Unit filtering function (kept separate as it's called from HTML)

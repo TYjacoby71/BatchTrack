@@ -84,6 +84,7 @@
             </a>
             {% set recipe_library_nav_enabled = is_feature_enabled('FEATURE_RECIPE_LIBRARY_NAV') %}
             {% set show_recipe_library_link = recipe_library_nav_enabled or (current_user.is_authenticated and current_user.user_type == 'developer') %}
+            {% set batchley_access_enabled = has_batchley_access(current_user) %}
             {% if current_user.is_authenticated %}
             {% if current_user.user_type == 'developer' %}
             <!-- Developer Navigation -->
@@ -113,6 +114,13 @@
                         🔧 Tools
                     </a>
                 </li>
+                {% if batchley_access_enabled %}
+                <li class="nav-item">
+                    <a class="nav-link text-primary fw-semibold" href="{{ url_for('app_routes.batchley') }}">
+                        🤖 Batchley
+                    </a>
+                </li>
+                {% endif %}
                   <li class="nav-item">
                       <a class="nav-link" href="{{ url_for('help_routes.help_overview') }}">
                           ❓ Help
@@ -149,6 +157,9 @@
                             <span id="expiration-badge" class="badge bg-danger" style="display: none;">0</span>
                         </a>
                     </li>
+                    {% if batchley_access_enabled %}
+                    <li><a class="dropdown-item" href="{{ url_for('app_routes.batchley') }}">Batchley Copilot</a></li>
+                    {% endif %}
                     <li><a class="dropdown-item" href="{{ url_for('timers.list_timers') }}">Timers</a></li>
                     <li><a class="dropdown-item" href="{{ url_for('reservation.list_reservations') }}">Reservations</a></li>
                     <li><a class="dropdown-item" href="{{ url_for('bulk_stock.bulk_stock_check') }}">Bulk Stock Check</a></li>
@@ -299,6 +310,13 @@
                         🔧 Tools
                     </a>
                 </li>
+                {% if batchley_access_enabled %}
+                <li class="nav-item">
+                    <a class="nav-link text-primary fw-semibold" href="{{ url_for('app_routes.batchley') }}">
+                        🤖 Batchley
+                    </a>
+                </li>
+                {% endif %}
                   <li class="nav-item">
                       <a class="nav-link" href="{{ url_for('help_routes.help_overview') }}">
                           ❓ Help
@@ -348,6 +366,9 @@
                             <span id="expiration-badge" class="badge bg-danger" style="display: none;">0</span>
                         </a>
                     </li>
+                    {% if batchley_access_enabled %}
+                    <li><a class="dropdown-item" href="{{ url_for('app_routes.batchley') }}">Batchley Copilot</a></li>
+                    {% endif %}
                     {% if current_user.is_authenticated and has_permission(current_user, 'batches.view') %}
                     <li><a class="dropdown-item" href="{{ url_for('timers.list_timers') }}">Timers</a></li>
                     {% endif %}
@@ -462,5 +483,17 @@
         setInterval(updateClock, 1000);
         updateClock();
     </script>
+    {% if batchley_access_enabled %}
+    <div id="batchley-promo-bubble" class="batchley-bubble" data-target-url="{{ url_for('app_routes.batchley') }}">
+        <div class="batchley-bubble__content">
+            <button type="button" class="batchley-bubble__close" aria-label="Dismiss Batchley intro" data-role="bubble-close">&times;</button>
+            <div class="batchley-bubble__body">
+                <div class="fw-semibold">Meet Batchley</div>
+                <p class="small mb-2">Launch the production copilot to plan batches and clean up inventory.</p>
+                <button type="button" class="btn btn-primary btn-sm" data-role="bubble-launch">Open Batchley</button>
+            </div>
+        </div>
+    </div>
+    {% endif %}
     </body>
 </html>

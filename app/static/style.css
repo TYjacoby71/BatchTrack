@@ -925,3 +925,112 @@ input:checked + .toggle-label:before {
 .position-relative {
     position: relative;
 }
+
+/* ---------------------------
+   Batchley workspace styling
+---------------------------- */
+.batchley-chat-shell {
+    min-height: 520px;
+}
+
+.batchley-chat__messages {
+    min-height: 320px;
+    max-height: 560px;
+    overflow-y: auto;
+    background-color: var(--color-muted-bg, #f8f9fa);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-2);
+    padding: 1rem;
+}
+
+.batchley-message {
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+    margin-bottom: 1rem;
+}
+
+.batchley-message__bubble {
+    border-radius: var(--radius-3);
+    padding: 0.75rem 1rem;
+    background-color: var(--color-surface);
+    border: 1px solid var(--color-border);
+    white-space: pre-wrap;
+}
+
+.batchley-message--user .batchley-message__bubble {
+    margin-left: auto;
+    background-color: var(--bs-primary, #0d6efd);
+    color: #fff;
+    border-color: var(--bs-primary, #0d6efd);
+}
+
+.batchley-message--assistant .batchley-message__bubble {
+    background-color: #fff;
+}
+
+.batchley-message__meta {
+    font-size: 0.8rem;
+    color: var(--color-text-subtle, #6c757d);
+}
+
+.batchley-chat__composer textarea {
+    resize: vertical;
+    font-size: 0.95rem;
+}
+
+.batchley-tool-result {
+    background-color: var(--color-muted-bg, #f1f3f5);
+    border: 1px dashed var(--color-border);
+    border-radius: var(--radius-2);
+    padding: 0.75rem;
+    font-size: 0.875rem;
+    margin-top: 0.25rem;
+}
+
+/* ---------------------------
+   Batchley onboarding bubble
+---------------------------- */
+.batchley-bubble {
+    position: fixed;
+    bottom: 1.5rem;
+    right: 1.5rem;
+    max-width: 320px;
+    z-index: 1080;
+    opacity: 0;
+    pointer-events: none;
+    transform: translateY(12px);
+    transition: opacity 0.2s ease, transform 0.2s ease;
+}
+
+.batchley-bubble.is-visible {
+    opacity: 1;
+    pointer-events: auto;
+    transform: translateY(0);
+}
+
+.batchley-bubble__content {
+    background-color: var(--color-surface);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-3);
+    box-shadow: var(--shadow-3, 0 1rem 2rem rgba(15, 23, 42, 0.2));
+    padding: 1rem 1.25rem;
+}
+
+.batchley-bubble__close {
+    border: none;
+    background: transparent;
+    color: var(--color-text-subtle, #6c757d);
+    font-size: 1.25rem;
+    line-height: 1;
+    margin-left: auto;
+    display: block;
+}
+
+.batchley-bubble__close:hover {
+    color: var(--color-text, #212529);
+}
+
+.batchley-bubble__body {
+    margin-top: 0.25rem;
+}

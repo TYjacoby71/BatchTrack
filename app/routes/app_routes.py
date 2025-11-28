@@ -1,10 +1,12 @@
 from flask import Blueprint, render_template, request, redirect, url_for, session, jsonify, flash
-from app.models import Recipe, InventoryItem, Batch
+from app.models import Recipe, InventoryItem, Batch, Organization
 from flask_login import login_required, current_user
-from app.utils.permissions import require_permission, get_effective_organization_id, permission_required, any_permission_required
+from app.utils.permissions import require_permission, get_effective_organization_id, permission_required, any_permission_required, has_batchley_access
 from app.services.combined_inventory_alerts import CombinedInventoryAlertService
 from app.blueprints.expiration.services import ExpirationService
 from app.services.statistics import AnalyticsDataService
+from app.services.batchbot_usage_service import BatchBotUsageService
+from app.services.batchbot_credit_service import BatchBotCreditService
 import logging
 
 logger = logging.getLogger(__name__)
@@ -133,6 +135,53 @@ def dashboard():
                          expiration_summary=expiration_summary)
 
 
+@app_routes_bp.route('/batchley')
+@login_required
+def batchley_workspace():
+    """Authenticated Batchley workspace for paid organizations."""
+    if not has_batchley_access(current_user):
+        flash('Batchley is available on paid plans. Upgrade to unlock it.', 'warning')
+        return redirect(url_for('billing.upgrade'))
+
+    org = None
+    if current_user.user_type == 'developer':
+        selected_org_id = session.get('dev_selected_org_id')
+        if not selected_org_id:
+            flash('Select an organization before launching Batchley.', 'warning')
+            return redirect(url_for('developer.dashboard'))
+        try:
+            from ..extensions import db
+            org = db.session.get(Organization, selected_org_id)
+        except Exception as exc:
+            logger.warning("Unable to load developer-selected organization %s: %s", selected_org_id, exc)
+            org = None
+        if not org:
+            flash('Selected organization could not be found. Please re-select it.', 'danger')
+            return redirect(url_for('developer.dashboard'))
+    else:
+        try:
+            org = current_user.organization
+        except Exception as exc:
+            logger.warning("Unable to load organization for user %s: %s", current_user.id, exc)
+            org = None
+
+    if not org:
+        flash('Batchley requires an active organization.', 'warning')
+        return redirect(url_for('app_routes.dashboard'))
+
+    snapshot = BatchBotUsageService.get_usage_snapshot(org)
+    credit_snapshot = BatchBotCreditService.snapshot(org)
+
+    return render_template(
+        'batchley/chat.html',
+        quota=_serialize_batchley_quota(snapshot, credit_snapshot),
+        breadcrumb_items=[
+            {'label': 'Dashboard', 'url': url_for('app_routes.dashboard')},
+            {'label': 'Batchley'},
+        ],
+    )
+
+
 @app_routes_bp.route('/unit-manager')
 @login_required
 @permission_required('manage_units')
@@ -258,3 +307,25 @@ def get_server_time():
         'user_time': user_iso,
         'timestamp': server_utc.timestamp()
     })
+
+
+def _serialize_batchley_quota(snapshot, credits=None):
+    if not snapshot:
+        return {}
+    return {
+        'allowed': snapshot.allowed,
+        'used': snapshot.used,
+        'remaining': snapshot.remaining,
+        'window_start': snapshot.window_start.isoformat(),
+        'window_end': snapshot.window_end.isoformat(),
+        'chat_limit': snapshot.chat_limit,
+        'chat_used': snapshot.chat_used,
+        'chat_remaining': snapshot.chat_remaining,
+        'credits': {
+            'total': getattr(credits, "total", None),
+            'remaining': getattr(credits, "remaining", None),
+            'next_expiration': getattr(credits, "expires_next", None).isoformat()
+            if getattr(credits, "expires_next", None)
+            else None,
+        } if credits else None,
+    }
