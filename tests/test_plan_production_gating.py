@@ -51,15 +51,6 @@ def _build_recipe_with_missing_inventory():
         type='consumable'
     )
     db.session.add(consumable_item)
-
-    container_item = InventoryItem(
-        name='Test Jar',
-        unit='count',
-        quantity=0,
-        organization_id=org.id,
-        type='container'
-    )
-    db.session.add(container_item)
     db.session.flush()
 
     recipe_ingredient = RecipeIngredient(
@@ -81,12 +72,12 @@ def _build_recipe_with_missing_inventory():
     db.session.add(recipe_consumable)
     db.session.commit()
 
-    return user, recipe, ingredient.id, consumable_item.id, container_item.id
+    return user, recipe, ingredient.id, consumable_item.id
 
 
 def test_api_start_batch_requires_override_before_force(app, monkeypatch):
     with app.app_context():
-        user, recipe, ingredient_id, consumable_id, container_id = _build_recipe_with_missing_inventory()
+        user, recipe, ingredient_id, consumable_id = _build_recipe_with_missing_inventory()
 
         captured_plan = {}
 
@@ -105,7 +96,7 @@ def test_api_start_batch_requires_override_before_force(app, monkeypatch):
             'scale': 1.0,
             'batch_type': 'ingredient',
             'notes': '',
-            'containers': [{'id': container_id, 'quantity': 1}]
+            'containers': []
         }
 
         with app.test_request_context('/batches/api/start-batch', method='POST', json=payload):
@@ -127,7 +118,6 @@ def test_api_start_batch_requires_override_before_force(app, monkeypatch):
         plan_snapshot = captured_plan['value']
         assert plan_snapshot.get('skip_ingredient_ids') == [ingredient_id]
         assert plan_snapshot.get('skip_consumable_ids') == [consumable_id]
-        assert plan_snapshot.get('skip_container_ids') == [container_id]
         summary = plan_snapshot.get('forced_start_summary')
         assert summary and 'Started batch without:' in summary
         assert 'Test Oil' in summary

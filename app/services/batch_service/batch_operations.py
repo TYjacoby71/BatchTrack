@@ -135,13 +135,11 @@ class BatchOperationsService(BaseService):
 
             # Handle containers if required
             skip_ingredient_ids = set(plan_snapshot.get('skip_ingredient_ids', [])) if isinstance(plan_snapshot, dict) else set()
-            skip_container_ids = set(plan_snapshot.get('skip_container_ids', [])) if isinstance(plan_snapshot, dict) else set()
             skip_consumable_ids = set(plan_snapshot.get('skip_consumable_ids', [])) if isinstance(plan_snapshot, dict) else set()
 
             container_errors = cls._process_batch_containers(
                 batch,
                 containers_data,
-                skip_container_ids=skip_container_ids,
                 defer_commit=True
             )
 
@@ -214,19 +212,15 @@ class BatchOperationsService(BaseService):
 
 
     @classmethod
-    def _process_batch_containers(cls, batch, containers_data, skip_container_ids=None, defer_commit=False):
+    def _process_batch_containers(cls, batch, containers_data, defer_commit=False):
         """Process container deductions for batch start"""
         errors = []
-        skip_ids = set(skip_container_ids or [])
         try:
             for container in containers_data:
                 container_id = container.get('id')
                 quantity = container.get('quantity', 0)
 
                 if container_id and quantity:
-                    if container_id in skip_ids:
-                        logger.info(f"Skipping container deduction for item {container_id} (forced start).")
-                        continue
                     container_item = db.session.get(InventoryItem, container_id)
                     if container_item:
                         try:

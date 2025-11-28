@@ -21,15 +21,6 @@ import logging
 logger = logging.getLogger(__name__)
 
 BLOCKING_STOCK_STATUSES = {'NEEDED', 'OUT_OF_STOCK', 'ERROR', 'DENSITY_MISSING'}
-CATEGORY_NORMALIZATION = {
-    'ingredients': 'ingredient',
-    'ingredient': 'ingredient',
-    'consumables': 'consumable',
-    'consumable': 'consumable',
-    'containers': 'container',
-    'container': 'container',
-    'packaging': 'container'
-}
 
 
 def _extract_stock_issues(stock_items):
@@ -80,51 +71,6 @@ def _build_forced_start_note(stock_issues):
     if not parts:
         return None
     return "Started batch without: " + "; ".join(parts)
-
-
-def _normalize_issue_category(raw_category):
-    normalized = (raw_category or '').strip().lower()
-    if not normalized:
-        return 'ingredient'
-    return CATEGORY_NORMALIZATION.get(normalized, normalized)
-
-
-def _evaluate_container_stock(containers_data):
-    """Evaluate selected containers and return stock issues for shortages."""
-    issues = []
-    seen = set()
-    for container in containers_data or []:
-        container_id = container.get('id')
-        if not container_id or container_id in seen:
-            continue
-        seen.add(container_id)
-        try:
-            required = float(container.get('quantity') or 0)
-        except (TypeError, ValueError):
-            required = 0.0
-        if required <= 0:
-            continue
-
-        container_item = db.session.get(InventoryItem, container_id)
-        available = float(getattr(container_item, 'quantity', 0) or 0)
-        unit = (getattr(container_item, 'unit', None) or 'count').strip()
-        name = getattr(container_item, 'name', None) or 'Container'
-
-        if available >= required:
-            continue
-
-        issues.append({
-            'item_id': container_id,
-            'name': name,
-            'needed_quantity': required,
-            'available_quantity': available,
-            'needed_unit': unit,
-            'available_unit': unit,
-            'status': 'NEEDED',
-            'category': 'container'
-        })
-
-    return issues
 
 @batches_bp.route('/api/batch-remaining-details/<int:batch_id>')
 @login_required
@@ -391,6 +337,12 @@ def api_start_batch():
         if not recipe:
             return jsonify({'success': False, 'message': 'Recipe not found.'}), 404
 
+        consumable_item_ids = {
+            assoc.inventory_item_id
+            for assoc in (getattr(recipe, 'recipe_consumables', []) or [])
+            if getattr(assoc, 'inventory_item_id', None)
+        }
+
         # Server-side stock validation to prevent bypassing the UI gate
         stock_issues = []
         try:
@@ -400,26 +352,20 @@ def api_start_batch():
                 error_msg = stock_result.get('error') or 'Unable to verify inventory for this recipe.'
                 return jsonify({'success': False, 'message': error_msg}), 400
             stock_issues = _extract_stock_issues(stock_result.get('stock_check'))
-            container_issues = _evaluate_container_stock(containers_data)
-            if container_issues:
-                stock_issues.extend(container_issues)
         except Exception as e:
             logger.error(f"Error during stock validation: {e}")
             return jsonify({'success': False, 'message': 'Inventory validation failed. Please try again.'}), 500
 
-        skip_map = {'ingredient': [], 'consumable': [], 'container': []}
+        skip_ingredient_ids = []
+        skip_consumable_ids = []
         for issue in stock_issues:
             item_id = issue.get('item_id')
             if not item_id:
                 continue
-            normalized_category = _normalize_issue_category(issue.get('category'))
-            if normalized_category not in skip_map:
-                skip_map[normalized_category] = []
-            skip_map[normalized_category].append(item_id)
-
-        skip_ingredient_ids = skip_map.get('ingredient', [])
-        skip_consumable_ids = skip_map.get('consumable', [])
-        skip_container_ids = skip_map.get('container', [])
+            if item_id in consumable_item_ids:
+                skip_consumable_ids.append(item_id)
+            else:
+                skip_ingredient_ids.append(item_id)
         forced_note = _build_forced_start_note(stock_issues) if force_start and stock_issues else None
 
         if stock_issues and not force_start:
@@ -445,8 +391,6 @@ def api_start_batch():
                     plan_dict['skip_ingredient_ids'] = skip_ingredient_ids
                 if skip_consumable_ids:
                     plan_dict['skip_consumable_ids'] = skip_consumable_ids
-                if skip_container_ids:
-                    plan_dict['skip_container_ids'] = skip_container_ids
         if forced_note:
             plan_dict['forced_start_summary'] = forced_note
         plan_dict['forced_start'] = force_start
