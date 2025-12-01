@@ -6,11 +6,13 @@ from app.models import db, GlobalItem
 from app.services.statistics import AnalyticsDataService
 from app.models.category import IngredientCategory
 from app.utils.seo import slugify_value
+from app.extensions import limiter
 
 global_library_bp = Blueprint('global_library_bp', __name__)
 
 
 @global_library_bp.route('/global-items')
+@limiter.limit("500 per hour")
 def global_library():
     """Public, read-only view of the Global Inventory Library.
     Supports filtering by item type and ingredient category, plus text search.

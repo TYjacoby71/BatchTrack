@@ -319,6 +319,7 @@ def get_available_ingredients_for_batch(recipe_id):
 
 @batches_bp.route('/api/start-batch', methods=['POST'])
 @login_required
+@limiter.limit("30 per minute")
 def api_start_batch():
     """Start a new batch from a unified PlanSnapshot built server-side."""
     try:

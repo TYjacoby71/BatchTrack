@@ -2250,47 +2250,118 @@ def integrations_checklist():
         config_sections.append({'title': section['title'], 'note': section.get('note'), 'rows': rows})
 
     rate_limiters = [
+        # Authentication & User Management
         {
             'endpoint': 'GET/POST /auth/login',
-            'limit': '30/minute',
+            'limit': '100/minute',
             'source': 'app/blueprints/auth/routes.py::login',
-            'notes': 'Primary credential-based login form.',
+            'notes': 'Primary credential-based login form. Increased for 1K users.',
         },
         {
             'endpoint': 'GET /auth/oauth/google',
-            'limit': '20/minute',
+            'limit': '50/minute',
             'source': 'app/blueprints/auth/routes.py::oauth_google',
-            'notes': 'Google OAuth initiation endpoint.',
+            'notes': 'Google OAuth initiation endpoint. Increased for 1K users.',
         },
         {
             'endpoint': 'GET /auth/oauth/callback',
-            'limit': '30/minute',
+            'limit': '75/minute',
             'source': 'app/blueprints/auth/routes.py::oauth_callback',
-            'notes': 'OAuth callback handler (Google).',
+            'notes': 'OAuth callback handler (Google). Increased for 1K users.',
         },
         {
             'endpoint': 'GET /auth/callback',
-            'limit': '30/minute',
+            'limit': '75/minute',
             'source': 'app/blueprints/auth/routes.py::oauth_callback_compat',
-            'notes': 'Legacy alias for the OAuth callback.',
+            'notes': 'Legacy alias for the OAuth callback. Increased for 1K users.',
         },
         {
             'endpoint': 'GET/POST /auth/signup',
-            'limit': '20/minute',
+            'limit': '60/minute',
             'source': 'app/blueprints/auth/routes.py::signup',
-            'notes': 'Self-serve signup + tier selection.',
+            'notes': 'Self-serve signup + tier selection. Increased for 1K users.',
         },
+        
+        # Public Endpoints (High Traffic Expected)
+        {
+            'endpoint': 'GET /',
+            'limit': '1000/hour',
+            'source': 'app/extensions.py::limiter (default override needed)',
+            'notes': 'Homepage - expect high traffic from marketing/SEO.',
+        },
+        {
+            'endpoint': 'GET /global-items',
+            'limit': '500/hour',
+            'source': 'app/routes/global_library_routes.py::global_library',
+            'notes': 'Public global item library browsing.',
+        },
+        {
+            'endpoint': 'GET /tools',
+            'limit': '800/hour', 
+            'source': 'app/routes/tools_routes.py::tools_index',
+            'notes': 'Public calculator tools - expect high anonymous usage.',
+        },
+        {
+            'endpoint': 'GET /recipes/library',
+            'limit': '400/hour',
+            'source': 'app/routes/recipe_library_routes.py::recipe_library', 
+            'notes': 'Public recipe browsing and marketplace.',
+        },
+        
+        # API Endpoints
+        {
+            'endpoint': 'GET/POST /api/public/*',
+            'limit': '200/minute',
+            'source': 'app/blueprints/api/public.py',
+            'notes': 'Public API endpoints for global items, unit conversion.',
+        },
+        {
+            'endpoint': 'POST /api/drawer-actions/*',
+            'limit': '100/minute',
+            'source': 'app/blueprints/api/drawers/*',
+            'notes': 'Drawer protocol endpoints for missing data fixes.',
+        },
+        {
+            'endpoint': 'GET/POST /inventory/api/*',
+            'limit': '200/minute',
+            'source': 'app/blueprints/inventory/routes.py',
+            'notes': 'Inventory management API calls.',
+        },
+        {
+            'endpoint': 'POST /batches/api/start-batch',
+            'limit': '30/minute',
+            'source': 'app/blueprints/batches/routes.py::api_start_batch',
+            'notes': 'Batch creation - resource intensive operation.',
+        },
+        
+        # Billing & Webhooks
         {
             'endpoint': 'POST /billing/webhooks/stripe',
-            'limit': '60/minute',
+            'limit': '300/minute',
             'source': 'app/blueprints/billing/routes.py::stripe_webhook',
-            'notes': 'Stripe webhook ingestion endpoint.',
+            'notes': 'Stripe webhook ingestion. Increased for high-volume billing.',
+        },
+        
+        # Search & Autocomplete
+        {
+            'endpoint': 'GET /api/ingredients/search',
+            'limit': '300/minute',
+            'source': 'app/blueprints/api/ingredient_routes.py::search_ingredients',
+            'notes': 'Ingredient search autocomplete - high frequency during recipe creation.',
         },
         {
+            'endpoint': 'GET /inventory/api/search',
+            'limit': '300/minute', 
+            'source': 'app/blueprints/inventory/routes.py::api_search_inventory',
+            'notes': 'Inventory search autocomplete - high frequency.',
+        },
+        
+        # Global Defaults
+        {
             'endpoint': 'GLOBAL DEFAULT',
-            'limit': '200/day + 50/hour',
+            'limit': '1000/hour + 200/minute',
             'source': 'app/extensions.py::limiter',
-            'notes': 'Applies per remote IP when no route-level override exists.',
+            'notes': '1K user baseline: 1 req/user/hour + bursts. Applies when no route override exists.',
         },
     ]
 

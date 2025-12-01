@@ -16,6 +16,7 @@ app_routes_bp = Blueprint('app_routes', __name__)
 @app_routes_bp.route('/dashboard')
 @app_routes_bp.route('/user_dashboard')
 @login_required
+@limiter.limit("200 per minute")
 def dashboard():
     """Main dashboard view with stock checking and alerts"""
     force_refresh = (request.args.get('refresh') or '').lower() in ('1', 'true', 'yes')
@@ -182,6 +183,7 @@ def api_dashboard_alerts():
 
 @app_routes_bp.route('/auth-check', methods=['GET'])
 @login_required
+@limiter.limit("500 per minute")
 def auth_check():
     """Lightweight endpoint to verify authentication status without heavy DB work."""
     return jsonify({'status': 'ok'})

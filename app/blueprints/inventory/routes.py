@@ -34,6 +34,7 @@ def can_edit_inventory_item(item):
 
 @inventory_bp.route('/api/search')
 @login_required
+@limiter.limit("300 per minute")
 def api_search_inventory():
     """Search inventory items by name (org-scoped), optionally filtered by type.
 

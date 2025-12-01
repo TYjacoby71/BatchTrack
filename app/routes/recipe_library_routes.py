@@ -5,7 +5,7 @@ from flask_login import current_user
 from sqlalchemy import func, or_, nullslast
 from sqlalchemy.orm import joinedload
 
-from app.extensions import db
+from app.extensions import db, limiter
 from app.models import Recipe, ProductCategory, Organization
 from app.models.statistics import RecipeStats, BatchStats
 from app.models.recipe_marketplace import RecipeProductGroup
@@ -17,6 +17,7 @@ recipe_library_bp = Blueprint("recipe_library_bp", __name__)
 
 
 @recipe_library_bp.route("/recipes/library")
+@limiter.limit("400 per hour")
 def recipe_library():
     search_query = (request.args.get("search") or "").strip()
     group_filter = _safe_int(request.args.get("group"))

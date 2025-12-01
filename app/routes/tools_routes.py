@@ -3,6 +3,7 @@ from app.services.unit_conversion.unit_conversion import ConversionEngine
 from app.models import GlobalItem
 from app.models import FeatureFlag
 from app.utils.json_store import read_json_file
+from app.extensions import limiter
 
 # Public Tools blueprint
 # Mounted at /tools via blueprints_registry
@@ -30,6 +31,7 @@ def _render_tool(template_name: str, flag_key: str):
 
 
 @tools_bp.route('/')
+@limiter.limit("800 per hour")
 def tools_index():
     """Public tools landing. Embeds calculators with progressive disclosure.
     Includes: Unit Converter, Fragrance Load Calculator, Lye Calculator (view-only),
