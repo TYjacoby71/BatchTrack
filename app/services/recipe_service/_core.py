@@ -358,7 +358,7 @@ def _apply_marketplace_settings(
     marketplace_notes: Optional[str] = None,
     public_description: Optional[str] = None,
     product_group_id: Any = _UNSET,
-    shopify_product_url: Optional[str] = None,
+    product_store_url: Optional[str] = None,
     skin_opt_in: Optional[bool] = None,
     cover_image_path: Any = _UNSET,
     cover_image_url: Any = _UNSET,
@@ -394,8 +394,8 @@ def _apply_marketplace_settings(
 
     if product_group_id is not _UNSET:
         recipe.product_group_id = product_group_id
-    if shopify_product_url is not None:
-        recipe.shopify_product_url = (shopify_product_url or '').strip() or None
+    if product_store_url is not None:
+        recipe.product_store_url = (product_store_url or '').strip() or None
     if skin_opt_in is not None:
         recipe.skin_opt_in = bool(skin_opt_in)
 
@@ -569,7 +569,7 @@ def create_recipe(name: str, description: str = "", instructions: str = "",
             marketplace_notes=marketplace_notes,
             public_description=public_description,
             product_group_id=product_group_id,
-            shopify_product_url=shopify_product_url,
+            product_store_url=product_store_url,
             skin_opt_in=skin_opt_in,
             cover_image_path=cover_image_path,
             cover_image_url=cover_image_url,
@@ -687,7 +687,7 @@ def update_recipe(recipe_id: int, name: str = None, description: str = None,
                  marketplace_notes: str | None = None,
                  public_description: str | None = None,
                  product_group_id: Any = _UNSET,
-                 shopify_product_url: str | None = None,
+                 product_store_url: str | None = None,
                  cover_image_path: Any = _UNSET,
                  cover_image_url: Any = _UNSET,
                  skin_opt_in: bool | None = None,
@@ -769,7 +769,7 @@ def update_recipe(recipe_id: int, name: str = None, description: str = None,
             marketplace_notes=marketplace_notes,
             public_description=public_description,
             product_group_id=product_group_id,
-            shopify_product_url=shopify_product_url,
+            product_store_url=product_store_url,
             skin_opt_in=skin_opt_in,
             cover_image_path=cover_image_path,
             cover_image_url=cover_image_url,
@@ -1098,7 +1098,7 @@ def duplicate_recipe(
         template.portion_count = original.portion_count
         template.portion_unit_id = original.portion_unit_id
         template.product_group_id = original.product_group_id
-        template.shopify_product_url = original.shopify_product_url
+        template.product_store_url = original.product_store_url
         template.skin_opt_in = original.skin_opt_in
         template.cover_image_path = original.cover_image_path
         template.cover_image_url = original.cover_image_url

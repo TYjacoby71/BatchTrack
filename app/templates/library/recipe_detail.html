@@ -98,8 +98,8 @@
                         <li><strong>Estimated purchases:</strong> {{ recipe.purchase_count }}</li>
                         <li><strong>Updated:</strong> {{ recipe.updated_at.strftime('%b %d, %Y') if recipe.updated_at else '—' }}</li>
                     </ul>
-                    {% if purchase_enabled and recipe.is_for_sale and recipe.shopify_product_url %}
-                    <a href="{{ recipe.shopify_product_url }}" class="btn btn-success" target="_blank" rel="noopener">
+                    {% if purchase_enabled and recipe.is_for_sale and recipe.product_store_url %}
+                    <a href="{{ recipe.product_store_url }}" class="btn btn-success" target="_blank" rel="noopener">
                         <i class="fas fa-shopping-cart"></i> Purchase this recipe
                     </a>
                     {% endif %}
