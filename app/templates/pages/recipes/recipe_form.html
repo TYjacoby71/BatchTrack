@@ -338,7 +338,7 @@
                       {% set selected_containers = recipe.allowed_containers if recipe and recipe.allowed_containers else [] %}
                   {% endif %}
                   <select id="allowed_containers" name="allowed_containers[]" class="form-select container-select" multiple>
-                    {% for container in all_ingredients if container.type == 'container' %}
+                    {% for container in all_containers %}
                       <option value="{{ container.id }}" {% if (container.id|string) in selected_containers or container.id in selected_containers %}selected{% endif %}>
                         {{ container.container_display_name }} ({{ container.capacity }} {{ container.capacity_unit }})
                     </option>
@@ -499,7 +499,7 @@
                         <label class="form-label">Consumable</label>
                         <select name="consumable_ids[]" class="form-select consumable-select" required>
                             <option value="">Select consumable...</option>
-                            {% for item in all_ingredients if item.type == 'consumable' %}
+                            {% for item in all_consumables %}
                             <option value="{{ item.id }}" data-unit="{{ item.unit }}" {% if item.id == assoc.inventory_item_id %}selected{% endif %}>{{ item.name }}</option>
                             {% endfor %}
                         </select>
@@ -530,7 +530,7 @@
                           <label class="form-label">Consumable</label>
                           <select name="consumable_ids[]" class="form-select consumable-select" required>
                               <option value="">Select consumable...</option>
-                              {% for item in all_ingredients if item.type == 'consumable' %}
+                              {% for item in all_consumables %}
                               <option value="{{ item.id }}" data-unit="{{ item.unit }}" {% if item.id == entry.inventory_item_id %}selected{% endif %}>{{ item.name }}</option>
                               {% endfor %}
                           </select>
@@ -1070,7 +1070,7 @@ function addConsumable(preselectId = null) {
             <label class="form-label small">Consumable</label>
             <select name="consumable_ids[]" class="form-select" required>
                 <option value="">Select a consumable</option>
-                {% for item in all_ingredients if item.type == 'consumable' %}
+                {% for item in all_consumables %}
                 <option value="{{ item.id }}">{{ item.name }}</option>
                 {% endfor %}
             </select>
