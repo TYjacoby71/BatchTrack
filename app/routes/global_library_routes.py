@@ -6,11 +6,13 @@ from app.models import db, GlobalItem
 from app.services.statistics import AnalyticsDataService
 from app.models.category import IngredientCategory
 from app.utils.seo import slugify_value
+from app.extensions import limiter
 
 global_library_bp = Blueprint('global_library_bp', __name__)
 
 
 @global_library_bp.route('/global-items')
+@limiter.limit("5000/hour")
 def global_library():
     """Public, read-only view of the Global Inventory Library.
     Supports filtering by item type and ingredient category, plus text search.
@@ -53,7 +55,7 @@ def global_library():
         except Exception:
             query = query.filter(GlobalItem.name.ilike(term))
 
-    items = query.order_by(GlobalItem.item_type.asc(), GlobalItem.name.asc()).limit(500).all()
+    items = query.order_by(GlobalItem.item_type.asc(), GlobalItem.name.asc()).limit(200).all()
 
     # Get global ingredient categories for the filter dropdown (only for ingredients)
     categories = []
@@ -187,7 +189,7 @@ def global_library_item_stats(item_id: int):
     import logging
     logger = logging.getLogger(__name__)
     logger.info(f"Stats request for global item {item_id}")
-    
+
     try:
         from app.models.global_item import GlobalItem
         gi = GlobalItem.query.get_or_404(item_id)

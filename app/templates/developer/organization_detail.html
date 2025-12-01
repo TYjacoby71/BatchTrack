@@ -109,7 +109,7 @@
                 <div class="card-body">
                     <div class="row text-center">
                         <div class="col-6">
-                            <h4>{{ users_objects|length }}</h4>
+                            <h4>{{ organization.users|length }}</h4>
                             <small class="text-muted">Total Users</small>
                         </div>
                         <div class="col-6">
@@ -193,12 +193,63 @@
                             </tbody>
                         </table>
                     </div>
-                    {% else %}
-                    <div class="text-center py-4">
-                        <i class="fas fa-users fa-3x text-muted mb-3"></i>
-                        <h6 class="text-muted">No users found</h6>
-                        <p class="text-muted">This organization has no users yet.</p>
+
+                    <!-- Pagination Controls -->
+                    {% if users_pagination and users_pagination.pages > 1 %}
+                    <div class="d-flex justify-content-between align-items-center mt-3">
+                        <div class="text-muted small">
+                            Showing {{ users_pagination.per_page * (users_pagination.page - 1) + 1 }} to 
+                            {{ users_pagination.per_page * (users_pagination.page - 1) + users_objects|length }} 
+                            of {{ users_pagination.total }} users
+                        </div>
+                        <nav>
+                            <ul class="pagination pagination-sm mb-0">
+                                {% if users_pagination.has_prev %}
+                                <li class="page-item">
+                                    <a class="page-link" href="{{ url_for('developer.organization_detail', org_id=organization.id, page=users_pagination.prev_num, search=search, per_page=per_page) }}">
+                                        <i class="fas fa-chevron-left"></i>
+                                    </a>
+                                </li>
+                                {% endif %}
+
+                                {% for page_num in users_pagination.iter_pages() %}
+                                    {% if page_num %}
+                                        {% if page_num != users_pagination.page %}
+                                        <li class="page-item">
+                                            <a class="page-link" href="{{ url_for('developer.organization_detail', org_id=organization.id, page=page_num, search=search, per_page=per_page) }}">{{ page_num }}</a>
+                                        </li>
+                                        {% else %}
+                                        <li class="page-item active">
+                                            <span class="page-link">{{ page_num }}</span>
+                                        </li>
+                                        {% endif %}
+                                    {% else %}
+                                    <li class="page-item disabled">
+                                        <span class="page-link">...</span>
+                                    </li>
+                                    {% endif %}
+                                {% endfor %}
+
+                                {% if users_pagination.has_next %}
+                                <li class="page-item">
+                                    <a class="page-link" href="{{ url_for('developer.organization_detail', org_id=organization.id, page=users_pagination.next_num, search=search, per_page=per_page) }}">
+                                        <i class="fas fa-chevron-right"></i>
+                                    </a>
+                                </li>
+                                {% endif %}
+                            </ul>
+                        </nav>
                     </div>
+                    {% endif %}
+
+                    {% else %}
+                        <p class="text-muted mb-0">
+                            {% if search %}
+                                No users found matching "{{ search }}".
+                            {% else %}
+                                No users found in this organization.
+                            {% endif %}
+                        </p>
                     {% endif %}
                 </div>
             </div>
