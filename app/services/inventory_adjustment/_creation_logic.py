@@ -83,7 +83,7 @@ def _find_matching_container(candidate: InventoryItem | None):
 
     return query.first()
 
-def create_inventory_item(form_data, organization_id, created_by):
+def create_inventory_item(form_data, organization_id, created_by, auto_commit: bool = True):
     """
     Create a new inventory item from form data.
     Returns (success, message, item_id)
@@ -415,8 +415,11 @@ def create_inventory_item(form_data, organization_id, created_by):
             # Apply the quantity delta to the item
             new_item.quantity = float(quantity_delta)
 
-        # Commit the transaction
-        db.session.commit()
+        # Commit or defer the transaction
+        if auto_commit:
+            db.session.commit()
+        else:
+            db.session.flush()
 
         # Double-check the item was created
         created_item = db.session.get(InventoryItem, new_item.id)

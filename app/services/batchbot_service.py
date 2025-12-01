@@ -13,6 +13,7 @@ from app.models import Batch, InventoryItem, Recipe, FreshnessSnapshot, Product
 from app.services.ai import GoogleAIClient
 from app.services.batchbot_credit_service import BatchBotCreditService, CreditSnapshot
 from app.services.batchbot_usage_service import BatchBotUsageService, BatchBotUsageSnapshot
+from app.services.bulk_inventory_service import BulkInventoryService, BulkInventoryServiceError
 from app.services.inventory_adjustment import create_inventory_item, process_inventory_adjustment
 from app.services.recipe_service import create_recipe
 from app.services.statistics.analytics_service import AnalyticsDataService
@@ -644,75 +645,19 @@ class BatchBotService:
     def _tool_submit_bulk_inventory_update(self, args: Mapping[str, Any]) -> Mapping[str, Any]:
         lines = args.get("lines") or []
         submit_now = args.get("submit_now", True)
-        if not lines:
-            return {"success": False, "error": "No lines supplied."}
+        service = BulkInventoryService(organization_id=self.organization.id, user=self.user)
 
-        normalized = []
-        for line in lines:
-            normalized.append(
-                {
-                    "inventory_item_id": line.get("inventory_item_id"),
-                    "inventory_item_name": line.get("inventory_item_name"),
-                    "change_type": line.get("change_type"),
-                    "quantity": _safe_float(line.get("quantity")),
-                    "unit": line.get("unit"),
-                    "cost_per_unit": _safe_float(line.get("cost_per_unit")),
-                    "notes": line.get("notes"),
-                }
+        def _note_builder(change_type: str, item: InventoryItem, line: Mapping[str, Any]) -> str:
+            return line.get("notes") or f"BatchBot bulk update ({change_type})"
+
+        try:
+            return service.submit_bulk_inventory_update(
+                lines=lines,
+                submit_now=submit_now,
+                note_builder=_note_builder,
             )
-
-        if not submit_now:
-            return {"success": True, "draft": normalized}
-
-        results = []
-        for idx, line in enumerate(normalized, start=1):
-            change_type = (line.get("change_type") or "").lower()
-            try:
-                item, _ = self._ensure_inventory_item(
-                    line,
-                    default_type="ingredient" if change_type == "create" else "ingredient",
-                )
-                target_type = self._map_bulk_change_type(change_type)
-                quantity = line.get("quantity")
-                if not quantity or quantity <= 0:
-                    raise BatchBotServiceError("Quantity must be greater than zero.")
-                unit = line.get("unit") or item.unit or "gram"
-                cost = line.get("cost_per_unit")
-                notes = line.get("notes") or f"BatchBot bulk update ({change_type})"
-
-                success, message = process_inventory_adjustment(
-                    item_id=item.id,
-                    change_type=target_type,
-                    quantity=quantity,
-                    notes=notes,
-                    created_by=self.user.id,
-                    cost_override=cost,
-                    unit=unit,
-                )
-                results.append(
-                    {
-                        "line": idx,
-                        "item_id": item.id,
-                        "item_name": item.name,
-                        "change_type": change_type,
-                        "success": bool(success),
-                        "message": message,
-                    }
-                )
-            except BatchBotServiceError as exc:
-                results.append(
-                    {
-                        "line": idx,
-                        "item_id": line.get("inventory_item_id"),
-                        "item_name": line.get("inventory_item_name"),
-                        "change_type": change_type,
-                        "success": False,
-                        "message": str(exc),
-                    }
-                )
-
-        has_failures = any(not entry["success"] for entry in results)
-        return {"success": not has_failures, "results": results}
+        except BulkInventoryServiceError as exc:
+            return {"success": False, "error": str(exc)}
 
     def _tool_fetch_insight_snapshot(self, args: Mapping[str, Any]) -> Mapping[str, Any]:
         focus = (args.get("focus") or "overview").lower()
@@ -809,18 +754,6 @@ class BatchBotService:
             "is_perishable": getattr(item, "is_perishable", False),
             "updated_at": _iso_dt(item.updated_at if hasattr(item, "updated_at") else None),
         }
-
-    def _map_bulk_change_type(self, change_type: str) -> str:
-        mapping = {
-            "create": "restock",
-            "restock": "restock",
-            "spoil": "spoil",
-            "trash": "trash",
-        }
-        target = mapping.get(change_type)
-        if not target:
-            raise BatchBotServiceError(f"Unsupported bulk change type '{change_type}'.")
-        return target
 
     def _organization_cost_hotspots(self, *, limit: int = 5) -> List[Dict[str, Any]]:
         items = (

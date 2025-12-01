@@ -1,6 +1,52 @@
 {% extends "layout.html" %}
 
 {% block content %}
+<style>
+#bulkTable {
+    min-width: 1200px;
+}
+#bulkTable th,
+#bulkTable td {
+    vertical-align: middle;
+}
+#bulkTable th.col-change-type,
+#bulkTable td.col-change-type {
+    width: 150px;
+    min-width: 150px;
+}
+#bulkTable th.col-inventory-type,
+#bulkTable td.col-inventory-type {
+    width: 170px;
+    min-width: 170px;
+}
+#bulkTable th.col-item,
+#bulkTable td.col-item {
+    min-width: 360px;
+}
+#bulkTable th.col-qty,
+#bulkTable td.col-qty,
+#bulkTable th.col-unit,
+#bulkTable td.col-unit {
+    width: 140px;
+    min-width: 140px;
+}
+#bulkTable th.col-cost,
+#bulkTable td.col-cost {
+    width: 220px;
+    min-width: 220px;
+}
+#bulkTable th.col-notes,
+#bulkTable td.col-notes {
+    min-width: 200px;
+}
+#bulkTable th.col-actions,
+#bulkTable td.col-actions {
+    width: 60px;
+}
+#bulkTable .item-name {
+    width: 100%;
+}
+</style>
 <div class="row">
     <div class="col-lg-10 mx-auto">
         <div class="card shadow-sm mb-4">
@@ -56,14 +102,14 @@
                     <table class="table table-sm align-middle" id="bulkTable">
                         <thead class="table-light">
                             <tr>
-                                <th style="width: 140px;">Change Type</th>
-                                <th style="width: 170px;">Inventory Type</th>
-                                <th>Inventory Item</th>
-                                <th style="width: 140px;">Quantity</th>
-                                <th style="width: 140px;">Unit</th>
-                                <th style="width: 220px;">Cost Entry</th>
-                                <th>Notes</th>
-                                <th style="width: 50px;"></th>
+                                <th class="col-change-type">Change Type</th>
+                                <th class="col-inventory-type">Inventory Type</th>
+                                <th class="col-item">Inventory Item</th>
+                                <th class="col-qty">Quantity</th>
+                                <th class="col-unit">Unit</th>
+                                <th class="col-cost">Cost Entry</th>
+                                <th class="col-notes">Notes</th>
+                                <th class="col-actions"></th>
                             </tr>
                         </thead>
                         <tbody></tbody>
@@ -330,19 +376,20 @@
         const row = document.createElement('tr');
         row.dataset.unitTouched = data.unit ? 'true' : '';
         row.innerHTML = `
-            <td>
+            <td class="col-change-type">
                 <select class="form-select form-select-sm change-type">
                     ${buildOptions(CHANGE_TYPES, changeTypeValue)}
                 </select>
             </td>
-            <td>
+            <td class="col-inventory-type">
                 <select class="form-select form-select-sm inventory-type">
                     ${buildTypeOptionsMarkup(normalizedType)}
                 </select>
             </td>
-            <td>
+            <td class="col-item">
                 <div class="position-relative suggestion-wrapper">
                     <input type="hidden" class="item-id" value="${data.inventory_item_id || ''}">
+                    <input type="hidden" class="global-item-id" value="${data.global_item_id || ''}">
                     <input type="text"
                         class="form-control form-control-sm item-name"
                         placeholder="Search inventory..."
@@ -352,16 +399,16 @@
                 <small class="text-muted item-helper">${escapeHtml(helperText)}</small>
                 <small class="text-muted action-hint"></small>
             </td>
-            <td>
+            <td class="col-qty">
                 <input type="number" step="0.01" class="form-control form-control-sm quantity" value="${data.quantity ?? ''}">
             </td>
-            <td>
+            <td class="col-unit">
                 <select class="form-select form-select-sm unit">
                     <option value="">Select unit</option>
                     ${unitOptionsMarkup}
                 </select>
             </td>
-            <td>
+            <td class="col-cost">
                 <select class="form-select form-select-sm cost-entry-type">
                     <option value="no_change"${costType === 'no_change' ? ' selected' : ''}>Keep Cost</option>
                     <option value="per_unit"${costType === 'per_unit' ? ' selected' : ''}>Per Unit Cost</option>
@@ -370,10 +417,10 @@
                 <input type="number" step="0.01" class="form-control form-control-sm mt-1 cost" value="${costValue === null ? '' : costValue}">
                 <div class="form-text cost-help">${escapeHtml(costHelpText[costType] || costHelpText.no_change)}</div>
             </td>
-            <td>
+            <td class="col-notes">
                 <input type="text" class="form-control form-control-sm notes" value="${escapeHtml(notesValue)}">
             </td>
-            <td>
+            <td class="col-actions">
                 <button class="btn btn-link text-danger p-0 remove-row" aria-label="Remove line">
                     <i class="fas fa-times"></i>
                 </button>
@@ -432,6 +479,7 @@
         const typeSelect = row.querySelector('.inventory-type');
         const nameInput = row.querySelector('.item-name');
         const idInput = row.querySelector('.item-id');
+        const globalIdInput = row.querySelector('.global-item-id');
         const suggestionList = row.querySelector('.suggestion-list');
         const actionHint = row.querySelector('.action-hint');
         const helperEl = row.querySelector('.item-helper');
@@ -450,10 +498,19 @@
             if (changeSelect.value !== 'create' && !idInput.value) {
                 nameInput.focus();
             }
+            if (changeSelect.value !== 'create' && globalIdInput) {
+                globalIdInput.value = '';
+            }
+            if (nameInput.value.trim().length >= 2) {
+                searchInventory();
+            }
         });
 
         typeSelect.addEventListener('change', () => {
             idInput.value = '';
+            if (globalIdInput) {
+                globalIdInput.value = '';
+            }
             if (nameInput.value.trim().length >= 2) {
                 searchInventory();
             } else {
@@ -465,6 +522,9 @@
 
         nameInput.addEventListener('input', () => {
             idInput.value = '';
+            if (globalIdInput) {
+                globalIdInput.value = '';
+            }
             if (nameInput.value.trim().length >= 2) {
                 searchInventory();
             } else {
@@ -480,11 +540,15 @@
         });
 
         suggestionList.addEventListener('click', (event) => {
-            if (event.target.matches('button[data-id]')) {
+            const target = event.target.closest('button[data-id]');
+            if (target) {
                 selectSuggestion(row, {
-                    id: event.target.dataset.id,
-                    name: event.target.dataset.name,
-                    type: event.target.dataset.type,
+                    id: target.dataset.id,
+                    name: target.dataset.name,
+                    type: target.dataset.type,
+                    source: target.dataset.source,
+                    global_item_id: target.dataset.globalId,
+                    unit: target.dataset.unit,
                 });
             }
         });
@@ -516,6 +580,7 @@
     function fetchInventorySuggestions(row) {
         const input = row.querySelector('.item-name');
         const typeSelect = row.querySelector('.inventory-type');
+        const changeSelect = row.querySelector('.change-type');
         const list = row.querySelector('.suggestion-list');
         const query = input.value.trim();
         if (query.length < 2) {
@@ -526,6 +591,9 @@
         if (typeSelect.value) {
             params.append('type', typeSelect.value);
         }
+        if (changeSelect && changeSelect.value) {
+            params.append('change_type', changeSelect.value);
+        }
         fetch(`/inventory/api/search?${params.toString()}`)
             .then(resp => resp.json())
             .then(data => {
@@ -533,6 +601,9 @@
                     id: item.id,
                     name: item.text,
                     type: item.type,
+                    source: item.source || 'inventory',
+                    unit: item.unit || '',
+                    global_item_id: item.global_item_id || '',
                 }));
                 renderSuggestions(list, items);
             })
@@ -548,8 +619,12 @@
             <button type="button" class="list-group-item list-group-item-action"
                 data-id="${item.id}"
                 data-name="${escapeHtml(item.name)}"
-                data-type="${item.type || ''}">
+                data-type="${item.type || ''}"
+                data-source="${item.source || 'inventory'}"
+                data-global-id="${item.global_item_id || ''}"
+                data-unit="${item.unit || ''}">
                 ${escapeHtml(item.name)}
+                ${item.source === 'global' ? '<span class="badge bg-info-subtle text-info-emphasis ms-2">Global</span>' : ''}
             </button>
         `).join('');
         container.classList.remove('d-none');
@@ -563,11 +638,34 @@
     function selectSuggestion(row, item) {
         const nameInput = row.querySelector('.item-name');
         const idInput = row.querySelector('.item-id');
+        const globalIdInput = row.querySelector('.global-item-id');
+        const unitSelect = row.querySelector('.unit');
         const list = row.querySelector('.suggestion-list');
         const typeSelect = row.querySelector('.inventory-type');
         const helperEl = row.querySelector('.item-helper');
+        const source = (item.source || 'inventory').toLowerCase();
+        const inventoryMatch = inventoryById.get(Number(item.id)) || null;
         nameInput.value = item.name || '';
-        idInput.value = item.id || '';
+        if (source === 'inventory') {
+            idInput.value = item.id || '';
+            if (globalIdInput) {
+                globalIdInput.value = '';
+            }
+            if (unitSelect && (row.dataset.unitTouched !== 'true' || !unitSelect.value)) {
+                const matchUnit = inventoryMatch?.unit || item.unit;
+                if (matchUnit) {
+                    unitSelect.value = matchUnit;
+                }
+            }
+        } else {
+            idInput.value = '';
+            if (globalIdInput) {
+                globalIdInput.value = item.global_item_id || item.id || '';
+            }
+            if (unitSelect && !row.dataset.unitTouched && item.unit) {
+                unitSelect.value = item.unit;
+            }
+        }
         if (item.type) {
             const normalized = registerType(item.type);
             if (!Array.from(typeSelect.options).some(opt => opt.value === normalized)) {
@@ -579,10 +677,16 @@
             typeSelect.value = normalized;
         }
         hideSuggestions(list);
-        prefillInventoryItem(item.id, row);
+        if (source === 'inventory') {
+            prefillInventoryItem(item.id, row);
+        }
         if (helperEl) {
-            const match = inventoryById.get(Number(item.id)) || { name: item.name, unit: item.unit };
-            helperEl.textContent = helperCopy(match, typeSelect.value);
+            if (source === 'global') {
+                helperEl.textContent = `Global catalog match. A new ${typeLabel(typeSelect.value).toLowerCase()} will be created.`;
+            } else {
+                const match = inventoryMatch || { name: item.name, unit: item.unit };
+                helperEl.textContent = helperCopy(match, typeSelect.value);
+            }
         }
         syncActionHint(row);
     }
@@ -612,6 +716,7 @@
             const typeSelect = row.querySelector('.inventory-type');
             const nameInput = row.querySelector('.item-name');
             const idInput = row.querySelector('.item-id');
+            const globalIdInput = row.querySelector('.global-item-id');
             const costTypeValue = (row.querySelector('.cost-entry-type').value || 'no_change').toLowerCase();
             const costValueRaw = row.querySelector('.cost').value;
             const quantityInput = row.querySelector('.quantity').value;
@@ -620,6 +725,7 @@
                 change_type: row.querySelector('.change-type').value,
                 inventory_type: normalizedType,
                 inventory_item_id: idInput.value ? Number(idInput.value) : null,
+                global_item_id: globalIdInput && globalIdInput.value ? Number(globalIdInput.value) : null,
                 inventory_item_name: nameInput.value.trim(),
                 quantity: quantityInput ? Number(quantityInput) : null,
                 unit: row.querySelector('.unit').value.trim(),
