@@ -219,8 +219,9 @@ def get_container_suggestions():
         limit = max(1, min(int(request.args.get('limit', 20)), 100))
 
         # Load master lists from settings - single source of truth
-        from app.blueprints.developer.routes import load_curated_container_lists
-        curated_lists = load_curated_container_lists()
+        from app.services.developer.reference_data_service import ReferenceDataService
+
+        curated_lists = ReferenceDataService.load_curated_container_lists()
 
         def filter_list(items):
             if q:
