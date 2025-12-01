@@ -121,10 +121,18 @@ class AuthenticatedMixin:
         """Claim a test account, log in, and seed caches."""
         try:
             self.credential = CREDENTIAL_POOL.acquire()
+            print(f"🔐 {self.__class__.__name__} acquired credential: {self.credential['username']}")
         except RuntimeError as exc:
+            print(f"❌ {self.__class__.__name__} failed to acquire credential: {exc}")
             raise RescheduleTask(str(exc)) from exc
 
-        self._login_with_credential()
+        try:
+            self._login_with_credential()
+            print(f"✅ {self.__class__.__name__} logged in successfully: {self.credential['username']}")
+        except Exception as exc:
+            print(f"❌ {self.__class__.__name__} login failed for {self.credential['username']}: {exc}")
+            raise
+            
         self.recipe_ids = []
         self.library_recipe_ids = []
         self.inventory_item_ids = []
@@ -143,6 +151,7 @@ class AuthenticatedMixin:
         """Execute the login form flow with CSRF handling."""
         login_page = self.client.get("/auth/login", name="auth.login.page")
         if login_page.status_code != 200:
+            print(f"❌ Login page unavailable: {login_page.status_code}")
             raise RescheduleTask("Login page unavailable")
 
         token = _extract_csrf_token(login_page.text)
@@ -160,9 +169,12 @@ class AuthenticatedMixin:
 
         response = self.client.post("/auth/login", data=payload, headers=headers, name="auth.login")
         if response.status_code not in (200, 302):
+            print(f"❌ Login failed for {payload['username']}: status={response.status_code}, response={response.text[:200]}...")
             CREDENTIAL_POOL.release(self.credential)
             self.credential = None
             raise RescheduleTask(f"Login failed for {payload['username']}: {response.status_code}")
+        else:
+            print(f"✅ Login successful for {payload['username']}: status={response.status_code}")
 
     # -----------------------
     # Cached ID lookups
