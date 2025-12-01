@@ -343,6 +343,7 @@
             <td>
                 <div class="position-relative suggestion-wrapper">
                     <input type="hidden" class="item-id" value="${data.inventory_item_id || ''}">
+                    <input type="hidden" class="global-item-id" value="${data.global_item_id || ''}">
                     <input type="text"
                         class="form-control form-control-sm item-name"
                         placeholder="Search inventory..."
@@ -432,6 +433,7 @@
         const typeSelect = row.querySelector('.inventory-type');
         const nameInput = row.querySelector('.item-name');
         const idInput = row.querySelector('.item-id');
+        const globalIdInput = row.querySelector('.global-item-id');
         const suggestionList = row.querySelector('.suggestion-list');
         const actionHint = row.querySelector('.action-hint');
         const helperEl = row.querySelector('.item-helper');
@@ -450,10 +452,19 @@
             if (changeSelect.value !== 'create' && !idInput.value) {
                 nameInput.focus();
             }
+            if (changeSelect.value !== 'create' && globalIdInput) {
+                globalIdInput.value = '';
+            }
+            if (nameInput.value.trim().length >= 2) {
+                searchInventory();
+            }
         });
 
         typeSelect.addEventListener('change', () => {
             idInput.value = '';
+            if (globalIdInput) {
+                globalIdInput.value = '';
+            }
             if (nameInput.value.trim().length >= 2) {
                 searchInventory();
             } else {
@@ -465,6 +476,9 @@
 
         nameInput.addEventListener('input', () => {
             idInput.value = '';
+            if (globalIdInput) {
+                globalIdInput.value = '';
+            }
             if (nameInput.value.trim().length >= 2) {
                 searchInventory();
             } else {
@@ -480,11 +494,15 @@
         });
 
         suggestionList.addEventListener('click', (event) => {
-            if (event.target.matches('button[data-id]')) {
+            const target = event.target.closest('button[data-id]');
+            if (target) {
                 selectSuggestion(row, {
-                    id: event.target.dataset.id,
-                    name: event.target.dataset.name,
-                    type: event.target.dataset.type,
+                    id: target.dataset.id,
+                    name: target.dataset.name,
+                    type: target.dataset.type,
+                    source: target.dataset.source,
+                    global_item_id: target.dataset.globalId,
+                    unit: target.dataset.unit,
                 });
             }
         });
@@ -516,6 +534,7 @@
     function fetchInventorySuggestions(row) {
         const input = row.querySelector('.item-name');
         const typeSelect = row.querySelector('.inventory-type');
+        const changeSelect = row.querySelector('.change-type');
         const list = row.querySelector('.suggestion-list');
         const query = input.value.trim();
         if (query.length < 2) {
@@ -526,6 +545,9 @@
         if (typeSelect.value) {
             params.append('type', typeSelect.value);
         }
+        if (changeSelect && changeSelect.value) {
+            params.append('change_type', changeSelect.value);
+        }
         fetch(`/inventory/api/search?${params.toString()}`)
             .then(resp => resp.json())
             .then(data => {
@@ -533,6 +555,9 @@
                     id: item.id,
                     name: item.text,
                     type: item.type,
+                    source: item.source || 'inventory',
+                    unit: item.unit || '',
+                    global_item_id: item.global_item_id || '',
                 }));
                 renderSuggestions(list, items);
             })
@@ -548,8 +573,12 @@
             <button type="button" class="list-group-item list-group-item-action"
                 data-id="${item.id}"
                 data-name="${escapeHtml(item.name)}"
-                data-type="${item.type || ''}">
+                data-type="${item.type || ''}"
+                data-source="${item.source || 'inventory'}"
+                data-global-id="${item.global_item_id || ''}"
+                data-unit="${item.unit || ''}">
                 ${escapeHtml(item.name)}
+                ${item.source === 'global' ? '<span class="badge bg-info-subtle text-info-emphasis ms-2">Global</span>' : ''}
             </button>
         `).join('');
         container.classList.remove('d-none');
@@ -563,11 +592,27 @@
     function selectSuggestion(row, item) {
         const nameInput = row.querySelector('.item-name');
         const idInput = row.querySelector('.item-id');
+        const globalIdInput = row.querySelector('.global-item-id');
+        const unitSelect = row.querySelector('.unit');
         const list = row.querySelector('.suggestion-list');
         const typeSelect = row.querySelector('.inventory-type');
         const helperEl = row.querySelector('.item-helper');
+        const source = (item.source || 'inventory').toLowerCase();
         nameInput.value = item.name || '';
-        idInput.value = item.id || '';
+        if (source === 'inventory') {
+            idInput.value = item.id || '';
+            if (globalIdInput) {
+                globalIdInput.value = '';
+            }
+        } else {
+            idInput.value = '';
+            if (globalIdInput) {
+                globalIdInput.value = item.global_item_id || item.id || '';
+            }
+            if (unitSelect && !row.dataset.unitTouched && item.unit) {
+                unitSelect.value = item.unit;
+            }
+        }
         if (item.type) {
             const normalized = registerType(item.type);
             if (!Array.from(typeSelect.options).some(opt => opt.value === normalized)) {
@@ -579,10 +624,16 @@
             typeSelect.value = normalized;
         }
         hideSuggestions(list);
-        prefillInventoryItem(item.id, row);
+        if (source === 'inventory') {
+            prefillInventoryItem(item.id, row);
+        }
         if (helperEl) {
-            const match = inventoryById.get(Number(item.id)) || { name: item.name, unit: item.unit };
-            helperEl.textContent = helperCopy(match, typeSelect.value);
+            if (source === 'global') {
+                helperEl.textContent = `Global catalog match. A new ${typeLabel(typeSelect.value).toLowerCase()} will be created.`;
+            } else {
+                const match = inventoryById.get(Number(item.id)) || { name: item.name, unit: item.unit };
+                helperEl.textContent = helperCopy(match, typeSelect.value);
+            }
         }
         syncActionHint(row);
     }
@@ -612,6 +663,7 @@
             const typeSelect = row.querySelector('.inventory-type');
             const nameInput = row.querySelector('.item-name');
             const idInput = row.querySelector('.item-id');
+            const globalIdInput = row.querySelector('.global-item-id');
             const costTypeValue = (row.querySelector('.cost-entry-type').value || 'no_change').toLowerCase();
             const costValueRaw = row.querySelector('.cost').value;
             const quantityInput = row.querySelector('.quantity').value;
@@ -620,6 +672,7 @@
                 change_type: row.querySelector('.change-type').value,
                 inventory_type: normalizedType,
                 inventory_item_id: idInput.value ? Number(idInput.value) : null,
+                global_item_id: globalIdInput && globalIdInput.value ? Number(globalIdInput.value) : null,
                 inventory_item_name: nameInput.value.trim(),
                 quantity: quantityInput ? Number(quantityInput) : null,
                 unit: row.querySelector('.unit').value.trim(),

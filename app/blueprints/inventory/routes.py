@@ -16,7 +16,7 @@ from sqlalchemy import and_, or_, func
 from sqlalchemy.orm import joinedload
 from app.models.inventory_lot import InventoryLot
 from app.services.density_assignment_service import DensityAssignmentService # Added for density assignment
-from app.services.batchbot_service import BatchBotService, BatchBotServiceError
+from app.services.bulk_inventory_service import BulkInventoryService, BulkInventoryServiceError
 from datetime import datetime, timezone # Fix missing timezone import
 
 # Import the blueprint from __init__.py instead of creating a new one
@@ -40,6 +40,7 @@ def api_search_inventory():
     Query params:
       - q: search text (min 2 chars)
       - type: optional inventory type (e.g., 'container', 'ingredient')
+      - change_type: optional change context ('create', 'restock', etc.)
 
     Returns JSON array of minimal objects for suggestions.
     """
@@ -47,10 +48,12 @@ def api_search_inventory():
         from app.services.inventory_search import InventorySearchService
         q = (request.args.get('q') or '').strip()
         inv_type = (request.args.get('type') or '').strip()
+        change_type = (request.args.get('change_type') or '').strip()
         results = InventorySearchService.search_inventory_items(
             query_text=q,
             inventory_type=inv_type if inv_type else None,
             organization_id=current_user.organization_id,
+            change_type=change_type,
             limit=20
         )
         return jsonify({'results': results})
@@ -722,15 +725,16 @@ def bulk_inventory_updates():
 @permission_required('inventory.edit')
 def api_bulk_inventory_adjustments():
     payload = request.get_json() or {}
-    service = BatchBotService(current_user)
+    org_id = getattr(current_user, 'organization_id', None)
+    if not org_id:
+        return jsonify({'success': False, 'error': 'Organization context required.'}), 400
+
+    service = BulkInventoryService(organization_id=org_id, user=current_user)
     try:
-        result = service._tool_submit_bulk_inventory_update({
-            'lines': payload.get('lines') or [],
-            'submit_now': True,
-        })
+        result = service.submit_bulk_inventory_update(payload.get('lines') or [])
         status = 200 if result.get('success') else 400
         return jsonify(result), status
-    except BatchBotServiceError as exc:
+    except BulkInventoryServiceError as exc:
         return jsonify({'success': False, 'error': str(exc)}), 400
     except Exception as exc:
         current_app.logger.exception("Bulk adjustment API failure")
