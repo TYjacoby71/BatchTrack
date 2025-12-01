@@ -16,7 +16,7 @@ app_routes_bp = Blueprint('app_routes', __name__)
 @app_routes_bp.route('/dashboard')
 @app_routes_bp.route('/user_dashboard')
 @login_required
-@limiter.limit("200 per minute")
+@limiter.limit("1000 per minute")
 def dashboard():
     """Main dashboard view with stock checking and alerts"""
     force_refresh = (request.args.get('refresh') or '').lower() in ('1', 'true', 'yes')

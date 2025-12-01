@@ -199,7 +199,7 @@ def view_batch_record(batch_identifier):
 
         # Get navigation data for completed, failed, or cancelled batches
         nav_data = BatchManagementService.get_batch_navigation_data(batch)
-        
+
         # Get comprehensive batch context data (includes freshness_summary)
         context_data = BatchManagementService.get_batch_context_data(batch)
 
@@ -319,7 +319,7 @@ def get_available_ingredients_for_batch(recipe_id):
 
 @batches_bp.route('/api/start-batch', methods=['POST'])
 @login_required
-@limiter.limit("30 per minute")
+@limiter.limit("100/minute")
 def api_start_batch():
     """Start a new batch from a unified PlanSnapshot built server-side."""
     try:

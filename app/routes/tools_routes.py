@@ -16,7 +16,7 @@ def _is_enabled(key: str, default: bool = True) -> bool:
         flag = FeatureFlag.query.filter_by(key=key).first()
         if flag is not None:
             return bool(flag.enabled)
-        
+
         # Fallback to settings.json
         settings = read_json_file('settings.json', default={}) or {}
         feature_flags = settings.get('feature_flags', {})
@@ -31,7 +31,7 @@ def _render_tool(template_name: str, flag_key: str):
 
 
 @tools_bp.route('/')
-@limiter.limit("800 per hour")
+@limiter.limit("3000/hour")
 def tools_index():
     """Public tools landing. Embeds calculators with progressive disclosure.
     Includes: Unit Converter, Fragrance Load Calculator, Lye Calculator (view-only),

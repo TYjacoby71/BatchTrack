@@ -12,7 +12,7 @@ global_library_bp = Blueprint('global_library_bp', __name__)
 
 
 @global_library_bp.route('/global-items')
-@limiter.limit("500 per hour")
+@limiter.limit("2000/hour")
 def global_library():
     """Public, read-only view of the Global Inventory Library.
     Supports filtering by item type and ingredient category, plus text search.
@@ -189,7 +189,7 @@ def global_library_item_stats(item_id: int):
     import logging
     logger = logging.getLogger(__name__)
     logger.info(f"Stats request for global item {item_id}")
-    
+
     try:
         from app.models.global_item import GlobalItem
         gi = GlobalItem.query.get_or_404(item_id)

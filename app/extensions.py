@@ -24,7 +24,7 @@ db = SQLAlchemy()
 migrate = Migrate(compare_type=True, render_as_batch=True)
 csrf = CSRFProtect()
 cache = Cache()
-limiter = Limiter(key_func=get_remote_address, default_limits=("1000 per hour", "200 per minute"))
+limiter = Limiter(key_func=get_remote_address, default_limits=["5000/hour", "1000/minute"])
 server_session = Session()
 
 try:

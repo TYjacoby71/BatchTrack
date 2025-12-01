@@ -32,7 +32,7 @@ class LoginForm(FlaskForm):
     submit = SubmitField('Login')
 
 @auth_bp.route('/login', methods=['GET', 'POST'])
-@limiter.limit("100/minute")
+@limiter.limit("500/minute")
 def login():
     if current_user.is_authenticated:
         return redirect(url_for('app_routes.dashboard'))
@@ -84,7 +84,7 @@ def login():
                     next_url = None
                 if isinstance(next_url, str) and next_url.startswith('/') and not next_url.startswith('//'):
                     return redirect(next_url)
-                return redirect(url_for('app_routes.dashboard'))
+                return redirect(url_for('organization.dashboard'))
         else:
             flash('Invalid username or password')
             return render_template('pages/auth/login.html', form=form)
@@ -92,7 +92,7 @@ def login():
     return render_template('pages/auth/login.html', form=form, oauth_available=OAuthService.is_oauth_configured())
 
 @auth_bp.route('/oauth/google')
-@limiter.limit("50/minute")
+@limiter.limit("200/minute")
 def oauth_google():
     """Initiate Google OAuth flow"""
     logger.info("OAuth Google route accessed")
@@ -119,7 +119,7 @@ def oauth_google():
     return redirect(authorization_url)
 
 @auth_bp.route('/oauth/callback')
-@limiter.limit("75/minute")
+@limiter.limit("300/minute")
 def oauth_callback():
     """Handle OAuth callback"""
     try:
@@ -202,7 +202,7 @@ def oauth_callback():
                     next_url = None
                 if isinstance(next_url, str) and next_url.startswith('/') and not next_url.startswith('//'):
                     return redirect(next_url)
-                return redirect(url_for('app_routes.dashboard'))
+                return redirect(url_for('organization.dashboard'))
 
         else:
             # New user - store info for signup flow
@@ -392,7 +392,7 @@ def debug_oauth_config():
     })
 
 @auth_bp.route('/signup', methods=['GET', 'POST'])
-@limiter.limit("60/minute")
+@limiter.limit("200/minute")
 def signup():
     """Simplified signup flow - tier selection only, then redirect to payment"""
     if current_user.is_authenticated:
