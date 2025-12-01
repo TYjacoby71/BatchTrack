@@ -867,7 +867,8 @@
                     console.table(body.results);
                 }
             }
-        } catch (err) {
+        })
+        .catch(err => {
             console.error(err);
             setStatus('danger', 'Unexpected error submitting bulk update.');
         });
