@@ -174,6 +174,9 @@ def process_inventory_adjustment(
                 if effective_change_type in group_cfg['operations']:
                     is_additive = True
                     break
+            # Preserve additive semantics for remapped "initial_stock" operations
+            if not is_additive and change_type in ADDITIVE_OPERATIONS:
+                is_additive = True
             if is_additive:
                 new_wac = weighted_average_cost_for_item(item.id)
                 try:

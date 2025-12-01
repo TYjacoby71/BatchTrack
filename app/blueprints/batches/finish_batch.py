@@ -267,7 +267,7 @@ def _create_product_output(batch, product_id, variant_id, final_quantity, output
         if not product or not variant:
             raise ValueError("Invalid product or variant selection")
 
-        # Calculate total ingredient cost for unit cost calculation
+        # Calculate total ingredient-only cost for allocation (consumables handled separately)
         total_ingredient_cost = 0
 
         # Add regular batch ingredients
@@ -278,7 +278,7 @@ def _create_product_output(batch, product_id, variant_id, final_quantity, output
         for extra in batch.extra_ingredients:
             total_ingredient_cost += (extra.quantity_used or 0) * (extra.cost_per_unit or 0)
 
-        # Calculate ingredient unit cost (cost per unit of final product)
+        # Calculate ingredient unit cost (cost per unit of final product volume)
         ingredient_unit_cost = total_ingredient_cost / final_quantity if final_quantity > 0 else 0
 
         logger.info(f"Batch {batch.label_code}: Total ingredient cost ${total_ingredient_cost:.2f}, Unit cost ${ingredient_unit_cost:.2f} per {output_unit}")
@@ -314,6 +314,12 @@ def _create_product_output(batch, product_id, variant_id, final_quantity, output
                 # Build portion-based size label
                 size_label = _derive_size_label_from_portions(batch, final_quantity, output_unit, final_portions)
                 size_label = ' '.join((size_label or 'Portion').split())
+
+                # Portion unit cost: divide total batch ingredient cost by actual portion yield
+                try:
+                    portion_unit_cost = total_ingredient_cost / float(final_portions)
+                except Exception:
+                    portion_unit_cost = ingredient_unit_cost
 
                 # Fetch or create SKU tied to provided product/variant within batch org context
                 from ...models.product import ProductSKU
@@ -388,7 +394,7 @@ def _create_product_output(batch, product_id, variant_id, final_quantity, output
                     notes=f'Batch {batch.label_code} completed - {final_portions} portions',
                     created_by=(getattr(current_user, 'id', None) or batch.created_by),
                     custom_expiration_date=expiration_date,
-                    cost_override=ingredient_unit_cost,
+                    cost_override=portion_unit_cost,
                     batch_id=batch.id
                 )
                 if not success:
