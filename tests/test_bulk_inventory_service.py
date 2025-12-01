@@ -123,3 +123,27 @@ def test_bulk_service_aborts_and_rolls_back_on_error(app, test_user):
         assert "Bulk inventory aborted" in result["error"]
         db.session.refresh(item)
         assert pytest.approx(float(item.quantity or 0)) == 0.0
+
+
+def test_bulk_service_creates_custom_item_without_global(app, test_user):
+    with app.app_context():
+        service = BulkInventoryService(organization_id=test_user.organization_id, user=test_user)
+
+        payload = [
+            {
+                "inventory_item_name": "Custom Cocoa Chips",
+                "inventory_type": "ingredient",
+                "change_type": "create",
+                "quantity": 4,
+                "unit": "scoops",
+                "allow_create": True,
+            }
+        ]
+
+        result = service.submit_bulk_inventory_update(payload)
+
+        assert result["success"] is True
+        created = InventoryItem.query.filter_by(name="Custom Cocoa Chips", organization_id=test_user.organization_id).first()
+        assert created is not None
+        assert created.unit == "scoops"
+        assert pytest.approx(float(created.quantity)) == 4.0
