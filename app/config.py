@@ -102,12 +102,13 @@ class BaseConfig:
     # These are default values; specific environments may override them.
     # For 10k users, ProductionConfig should be the primary beneficiary.
     SQLALCHEMY_ENGINE_OPTIONS = {
-        'pool_size': _env_int('SQLALCHEMY_POOL_SIZE', 20), # Default for base
-        'max_overflow': _env_int('SQLALCHEMY_MAX_OVERFLOW', 30), # Default for base
+        'pool_size': _env_int('SQLALCHEMY_POOL_SIZE', 30), # Increased default
+        'max_overflow': _env_int('SQLALCHEMY_MAX_OVERFLOW', 50), # Increased default
         'pool_pre_ping': True,
         'pool_recycle': _env_int('SQLALCHEMY_POOL_RECYCLE', 1800),
         'pool_timeout': _env_int('SQLALCHEMY_POOL_TIMEOUT', 30),
         'pool_use_lifo': True,
+        'pool_reset_on_return': 'commit',
     }
 
     # Billing cache configuration
@@ -208,11 +209,12 @@ class ProductionConfig(BaseConfig):
     TESTING = False
     SQLALCHEMY_DATABASE_URI = _normalize_db_url(os.environ.get('DATABASE_INTERNAL_URL')) or _normalize_db_url(os.environ.get('DATABASE_URL'))
     SQLALCHEMY_ENGINE_OPTIONS = {
-        'pool_size': int(os.environ.get('SQLALCHEMY_POOL_SIZE', 5)),
-        'max_overflow': int(os.environ.get('SQLALCHEMY_MAX_OVERFLOW', 5)),
+        'pool_size': int(os.environ.get('SQLALCHEMY_POOL_SIZE', 50)),
+        'max_overflow': int(os.environ.get('SQLALCHEMY_MAX_OVERFLOW', 100)),
         'pool_pre_ping': True,
         'pool_recycle': 1800,
-        'pool_timeout': int(os.environ.get('SQLALCHEMY_POOL_TIMEOUT', 5)),
+        'pool_timeout': int(os.environ.get('SQLALCHEMY_POOL_TIMEOUT', 30)),
+        'pool_use_lifo': True,
     }
     _prod_ratelimit_uri = os.environ.get('RATELIMIT_STORAGE_URI') or os.environ.get('REDIS_URL') or os.environ.get('RATELIMIT_STORAGE_URL') or _resolve_ratelimit_uri()
     RATELIMIT_STORAGE_URI = _prod_ratelimit_uri

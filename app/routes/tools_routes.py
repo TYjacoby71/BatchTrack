@@ -31,7 +31,7 @@ def _render_tool(template_name: str, flag_key: str):
 
 
 @tools_bp.route('/')
-@limiter.limit("3000/hour")
+@limiter.limit("6000/hour")
 def tools_index():
     """Public tools landing. Embeds calculators with progressive disclosure.
     Includes: Unit Converter, Fragrance Load Calculator, Lye Calculator (view-only),

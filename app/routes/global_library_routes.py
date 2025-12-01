@@ -12,7 +12,7 @@ global_library_bp = Blueprint('global_library_bp', __name__)
 
 
 @global_library_bp.route('/global-items')
-@limiter.limit("2000/hour")
+@limiter.limit("5000/hour")
 def global_library():
     """Public, read-only view of the Global Inventory Library.
     Supports filtering by item type and ingredient category, plus text search.
@@ -55,7 +55,7 @@ def global_library():
         except Exception:
             query = query.filter(GlobalItem.name.ilike(term))
 
-    items = query.order_by(GlobalItem.item_type.asc(), GlobalItem.name.asc()).limit(500).all()
+    items = query.order_by(GlobalItem.item_type.asc(), GlobalItem.name.asc()).limit(200).all()
 
     # Get global ingredient categories for the filter dropdown (only for ingredients)
     categories = []

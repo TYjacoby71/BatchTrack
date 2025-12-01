@@ -17,7 +17,7 @@ recipe_library_bp = Blueprint("recipe_library_bp", __name__)
 
 
 @recipe_library_bp.route("/recipes/library")
-@limiter.limit("1500/hour")
+@limiter.limit("4000/hour")
 def recipe_library():
     search_query = (request.args.get("search") or "").strip()
     group_filter = _safe_int(request.args.get("group"))
@@ -88,7 +88,7 @@ def recipe_library():
     else:
         query = query.order_by(Recipe.updated_at.desc(), Recipe.name.asc())
 
-    recipes = query.limit(60).all()
+    recipes = query.limit(30).all()
     cost_map = _fetch_cost_rollups([r.id for r in recipes])
 
     recipe_cards = [
