@@ -19,6 +19,7 @@ from .utils.permissions import (
     has_subscription_feature,
     is_developer,
     is_organization_owner,
+    has_batchley_access,
 )
 from .utils.timezone_utils import TimezoneUtils
 
@@ -103,6 +104,7 @@ def register_template_context(app: Flask) -> None:
             "has_subscription_feature": has_subscription_feature,
             "is_organization_owner": is_organization_owner,
             "is_developer": is_developer,
+            "has_batchley_access": has_batchley_access,
             "get_reservation_summary": get_reservation_summary,
             "user_tier": user_tier,
             "is_feature_enabled": is_feature_enabled,
