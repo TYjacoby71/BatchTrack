@@ -355,6 +355,11 @@ def api_start_batch():
             for issue in stock_issues
             if issue.get('item_id') and (issue.get('category') or '').lower() == 'ingredient'
         ]
+        skip_consumable_ids = [
+            issue['item_id']
+            for issue in stock_issues
+            if issue.get('item_id') and (issue.get('category') or '').lower() == 'consumable'
+        ]
         forced_note = _build_forced_start_note(stock_issues) if force_start and stock_issues else None
 
         if stock_issues and not force_start:
@@ -362,7 +367,7 @@ def api_start_batch():
                 'success': False,
                 'requires_override': True,
                 'stock_issues': stock_issues,
-                'message': 'Insufficient inventory for one or more ingredients.'
+                'message': 'Insufficient inventory for one or more items.'
             })
 
         snapshot_obj = PlanProductionService.build_plan(
@@ -377,6 +382,8 @@ def api_start_batch():
             plan_dict['stock_issues'] = stock_issues
             if force_start and skip_ingredient_ids:
                 plan_dict['skip_ingredient_ids'] = skip_ingredient_ids
+            if force_start and skip_consumable_ids:
+                plan_dict['skip_consumable_ids'] = skip_consumable_ids
         if forced_note:
             plan_dict['forced_start_summary'] = forced_note
         plan_dict['forced_start'] = force_start

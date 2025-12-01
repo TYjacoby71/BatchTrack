@@ -137,6 +137,7 @@ class BatchOperationsService(BaseService):
             container_errors = cls._process_batch_containers(batch, containers_data, defer_commit=True)
 
             skip_ingredient_ids = set(plan_snapshot.get('skip_ingredient_ids', [])) if isinstance(plan_snapshot, dict) else set()
+            skip_consumable_ids = set(plan_snapshot.get('skip_consumable_ids', [])) if isinstance(plan_snapshot, dict) else set()
 
             # Process ingredient deductions
             ingredient_errors = cls._process_batch_ingredients(
@@ -148,7 +149,13 @@ class BatchOperationsService(BaseService):
             )
 
             # Process consumable deductions
-            consumable_errors = cls._process_batch_consumables(batch, recipe, snap_scale, defer_commit=True)
+            consumable_errors = cls._process_batch_consumables(
+                batch,
+                recipe,
+                snap_scale,
+                skip_consumable_ids=skip_consumable_ids,
+                defer_commit=True
+            )
 
             # Combine all errors
             all_errors = container_errors + ingredient_errors + consumable_errors
@@ -325,15 +332,20 @@ class BatchOperationsService(BaseService):
         return errors
 
     @classmethod
-    def _process_batch_consumables(cls, batch, recipe, scale, defer_commit=False):
+    def _process_batch_consumables(cls, batch, recipe, scale, skip_consumable_ids=None, defer_commit=False):
         """Process consumable deductions and snapshot for batch start"""
         errors = []
         try:
             # If recipe has no consumables relationship, skip gracefully
             consumables = getattr(recipe, 'recipe_consumables', []) or []
+            skip_ids = set(skip_consumable_ids or [])
             for assoc in consumables:
                 item = assoc.inventory_item
                 if not item:
+                    continue
+
+                if item.id in skip_ids:
+                    logger.info(f"Skipping consumable deduction for {item.name} (forced start with insufficient stock).")
                     continue
 
                 required_amount = assoc.quantity * scale
