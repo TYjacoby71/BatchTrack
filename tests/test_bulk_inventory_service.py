@@ -91,3 +91,35 @@ def test_bulk_service_returns_draft_when_not_submitting(app, test_user):
         assert "draft" in result
         assert isinstance(result["draft"], list)
         assert result["draft"][0]["quantity"] == 2.0
+
+
+def test_bulk_service_aborts_and_rolls_back_on_error(app, test_user):
+    with app.app_context():
+        item = _make_inventory_item(test_user.organization_id)
+        service = BulkInventoryService(organization_id=test_user.organization_id, user=test_user)
+
+        payload = [
+            {
+                "inventory_item_id": item.id,
+                "inventory_item_name": item.name,
+                "inventory_type": item.type,
+                "change_type": "restock",
+                "quantity": 2,
+                "unit": "gram",
+            },
+            {
+                "inventory_item_id": item.id,
+                "inventory_item_name": item.name,
+                "inventory_type": item.type,
+                "change_type": "restock",
+                "quantity": 0,  # invalid to trigger abort
+                "unit": "gram",
+            },
+        ]
+
+        result = service.submit_bulk_inventory_update(payload)
+
+        assert result["success"] is False
+        assert "Bulk inventory aborted" in result["error"]
+        db.session.refresh(item)
+        assert pytest.approx(float(item.quantity or 0)) == 0.0
