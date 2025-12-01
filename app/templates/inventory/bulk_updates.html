@@ -116,7 +116,7 @@
     const inventoryById = new Map(inventoryOptions.map(item => [Number(item.id), item]));
     const safeUnitOptions = unitOptions.length ? unitOptions : [{ name: 'count', symbol: null, unit_type: 'count' }];
     const defaultUnit = safeUnitOptions[0]?.name || '';
-    const csrfToken = {{ csrf_token()|tojson }};
+    const csrfToken = {{ csrf_token()|tojson }} || document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
     const adjustUrlTemplate = {{ url_for('inventory.adjust_inventory', item_id=0)|tojson }};
     const tableBody = document.querySelector('#bulkTable tbody');
     const draftCountEl = document.getElementById('draftCount');
@@ -853,6 +853,7 @@
             headers: {
                 'Content-Type': 'application/json',
                 'X-Requested-With': 'XMLHttpRequest',
+                'X-CSRFToken': csrfToken,
             },
             body: JSON.stringify({ lines })
         })

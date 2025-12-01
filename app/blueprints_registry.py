@@ -60,6 +60,7 @@ BLUEPRINT_SPECS: tuple[BlueprintSpec, ...] = CORE_BLUEPRINTS + API_BLUEPRINTS + 
 
 CSRF_EXEMPT_VIEWS: tuple[str, ...] = (
     "inventory.adjust_inventory",
+    "inventory.api_bulk_inventory_adjustments",
     "waitlist.join_waitlist",
     "tools_bp.tools_draft",
 )
