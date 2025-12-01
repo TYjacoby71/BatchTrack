@@ -5,6 +5,7 @@ from app.utils.permissions import require_permission, get_effective_organization
 from app.services.combined_inventory_alerts import CombinedInventoryAlertService
 from app.blueprints.expiration.services import ExpirationService
 from app.services.statistics import AnalyticsDataService
+from app.extensions import limiter
 import logging
 
 logger = logging.getLogger(__name__)

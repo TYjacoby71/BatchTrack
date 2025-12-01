@@ -5,6 +5,7 @@ from flask_login import login_required, current_user
 from app.models import db, InventoryItem, UnifiedInventoryHistory, Unit, IngredientCategory, User
 from app.utils.permissions import permission_required, role_required
 from app.utils.api_responses import api_error, api_success
+from app.extensions import limiter
 from app.services.inventory_adjustment import process_inventory_adjustment, update_inventory_item, create_inventory_item
 from app.services.inventory_alerts import InventoryAlertService
 from app.services.reservation_service import ReservationService
