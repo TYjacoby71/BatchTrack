@@ -20,7 +20,8 @@ def _env_int(key: str, default: int) -> int:
 def _configured_workers() -> int:
     """Respect explicit worker counts while preventing overcommit."""
     cpu_count = max(multiprocessing.cpu_count(), 1)
-    default_workers = max(1, min(4, cpu_count))
+    # For 10k+ users, use more aggressive worker scaling
+    default_workers = max(4, min(16, cpu_count * 3))
 
     if "GUNICORN_WORKERS" in os.environ:
         return _env_int("GUNICORN_WORKERS", default_workers)
@@ -50,11 +51,11 @@ backlog = _env_int("GUNICORN_BACKLOG", 2048)
 # Worker processes - use gevent for async I/O
 worker_class = os.environ.get("GUNICORN_WORKER_CLASS", "gevent")
 workers = _configured_workers()
-worker_connections = _env_int("GUNICORN_WORKER_CONNECTIONS", 1000)
+worker_connections = _env_int("GUNICORN_WORKER_CONNECTIONS", 2000)
 
 # Timeouts and keepalive
-timeout = _env_int("GUNICORN_TIMEOUT", 30)
-keepalive = _env_int("GUNICORN_KEEPALIVE", 2)
+timeout = _env_int("GUNICORN_TIMEOUT", 60)
+keepalive = _env_int("GUNICORN_KEEPALIVE", 5)
 
 # Resource limits
 max_requests = _env_int("GUNICORN_MAX_REQUESTS", 2000)

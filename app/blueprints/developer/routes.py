@@ -627,26 +627,31 @@ def create_organization():
 def organization_detail(org_id):
     """Detailed organization management"""
     org = Organization.query.get_or_404(org_id)
-    users_query = User.query.filter_by(organization_id=org_id).all()
+    
+    # Get pagination parameters
+    page = request.args.get('page', 1, type=int)
+    per_page = request.args.get('per_page', 50, type=int)  # Default 50 users per page
+    search = request.args.get('search', '', type=str).strip()
 
-    # Convert User objects to dictionaries for JSON serialization
-    users = []
-    for user in users_query:
-        user_dict = {
-            'id': user.id,
-            'username': user.username,
-            'first_name': user.first_name,
-            'last_name': user.last_name,
-            'email': user.email,
-            'phone': user.phone,
-            'user_type': user.user_type,
-            'is_organization_owner': user.is_organization_owner,
-            'is_active': user.is_active,
-            'created_at': user.created_at.strftime('%Y-%m-%d') if user.created_at else None,
-            'last_login': user.last_login.strftime('%Y-%m-%d %H:%M') if user.last_login else None,
-            'full_name': user.full_name
-        }
-        users.append(user_dict)
+    # Build query with search filter
+    users_query = User.query.filter_by(organization_id=org_id)
+
+    if search:
+        users_query = users_query.filter(
+            db.or_(
+                User.username.ilike(f'%{search}%'),
+                User.first_name.ilike(f'%{search}%'),
+                User.last_name.ilike(f'%{search}%'),
+                User.email.ilike(f'%{search}%')
+            )
+        )
+
+    # Order by created_at desc and paginate
+    users_pagination = users_query.order_by(User.created_at.desc()).paginate(
+        page=page, per_page=per_page, error_out=False
+    )
+
+    users_objects = users_pagination.items
 
     # Build subscription tiers from DB for the dropdown
     from app.models.subscription_tier import SubscriptionTier as _ST
@@ -671,8 +676,10 @@ def organization_detail(org_id):
     return render_template(
         'developer/organization_detail.html',
         organization=org,
-        users=users,
-        users_objects=users_query,
+        users_objects=users_objects,
+        users_pagination=users_pagination,
+        search=search,
+        per_page=per_page,
         tiers_config=tiers_config,
         current_tier=current_tier,
         breadcrumb_items=[
@@ -2250,47 +2257,118 @@ def integrations_checklist():
         config_sections.append({'title': section['title'], 'note': section.get('note'), 'rows': rows})
 
     rate_limiters = [
+        # Authentication & User Management
         {
             'endpoint': 'GET/POST /auth/login',
-            'limit': '30/minute',
+            'limit': '100/minute',
             'source': 'app/blueprints/auth/routes.py::login',
-            'notes': 'Primary credential-based login form.',
+            'notes': 'Primary credential-based login form. Increased for 1K users.',
         },
         {
             'endpoint': 'GET /auth/oauth/google',
-            'limit': '20/minute',
+            'limit': '50/minute',
             'source': 'app/blueprints/auth/routes.py::oauth_google',
-            'notes': 'Google OAuth initiation endpoint.',
+            'notes': 'Google OAuth initiation endpoint. Increased for 1K users.',
         },
         {
             'endpoint': 'GET /auth/oauth/callback',
-            'limit': '30/minute',
+            'limit': '75/minute',
             'source': 'app/blueprints/auth/routes.py::oauth_callback',
-            'notes': 'OAuth callback handler (Google).',
+            'notes': 'OAuth callback handler (Google). Increased for 1K users.',
         },
         {
             'endpoint': 'GET /auth/callback',
-            'limit': '30/minute',
+            'limit': '75/minute',
             'source': 'app/blueprints/auth/routes.py::oauth_callback_compat',
-            'notes': 'Legacy alias for the OAuth callback.',
+            'notes': 'Legacy alias for the OAuth callback. Increased for 1K users.',
         },
         {
             'endpoint': 'GET/POST /auth/signup',
-            'limit': '20/minute',
+            'limit': '60/minute',
             'source': 'app/blueprints/auth/routes.py::signup',
-            'notes': 'Self-serve signup + tier selection.',
+            'notes': 'Self-serve signup + tier selection. Increased for 1K users.',
         },
+
+        # Public Endpoints (High Traffic Expected)
+        {
+            'endpoint': 'GET /',
+            'limit': '1000/hour',
+            'source': 'app/extensions.py::limiter (default override needed)',
+            'notes': 'Homepage - expect high traffic from marketing/SEO.',
+        },
+        {
+            'endpoint': 'GET /global-items',
+            'limit': '500/hour',
+            'source': 'app/routes/global_library_routes.py::global_library',
+            'notes': 'Public global item library browsing.',
+        },
+        {
+            'endpoint': 'GET /tools',
+            'limit': '800/hour', 
+            'source': 'app/routes/tools_routes.py::tools_index',
+            'notes': 'Public calculator tools - expect high anonymous usage.',
+        },
+        {
+            'endpoint': 'GET /recipes/library',
+            'limit': '400/hour',
+            'source': 'app/routes/recipe_library_routes.py::recipe_library', 
+            'notes': 'Public recipe browsing and marketplace.',
+        },
+
+        # API Endpoints
+        {
+            'endpoint': 'GET/POST /api/public/*',
+            'limit': '200/minute',
+            'source': 'app/blueprints/api/public.py',
+            'notes': 'Public API endpoints for global items, unit conversion.',
+        },
+        {
+            'endpoint': 'POST /api/drawer-actions/*',
+            'limit': '100/minute',
+            'source': 'app/blueprints/api/drawers/*',
+            'notes': 'Drawer protocol endpoints for missing data fixes.',
+        },
+        {
+            'endpoint': 'GET/POST /inventory/api/*',
+            'limit': '200/minute',
+            'source': 'app/blueprints/inventory/routes.py',
+            'notes': 'Inventory management API calls.',
+        },
+        {
+            'endpoint': 'POST /batches/api/start-batch',
+            'limit': '30/minute',
+            'source': 'app/blueprints/batches/routes.py::api_start_batch',
+            'notes': 'Batch creation - resource intensive operation.',
+        },
+
+        # Billing & Webhooks
         {
             'endpoint': 'POST /billing/webhooks/stripe',
-            'limit': '60/minute',
+            'limit': '300/minute',
             'source': 'app/blueprints/billing/routes.py::stripe_webhook',
-            'notes': 'Stripe webhook ingestion endpoint.',
+            'notes': 'Stripe webhook ingestion. Increased for high-volume billing.',
+        },
+
+        # Search & Autocomplete
+        {
+            'endpoint': 'GET /api/ingredients/search',
+            'limit': '300/minute',
+            'source': 'app/blueprints/api/ingredient_routes.py::search_ingredients',
+            'notes': 'Ingredient search autocomplete - high frequency during recipe creation.',
         },
         {
+            'endpoint': 'GET /inventory/api/search',
+            'limit': '300/minute', 
+            'source': 'app/blueprints/inventory/routes.py::api_search_inventory',
+            'notes': 'Inventory search autocomplete - high frequency.',
+        },
+
+        # Global Defaults
+        {
             'endpoint': 'GLOBAL DEFAULT',
-            'limit': '200/day + 50/hour',
+            'limit': '1000/hour + 200/minute',
             'source': 'app/extensions.py::limiter',
-            'notes': 'Applies per remote IP when no route-level override exists.',
+            'notes': '1K user baseline: 1 req/user/hour + bursts. Applies when no route override exists.',
         },
     ]
 
