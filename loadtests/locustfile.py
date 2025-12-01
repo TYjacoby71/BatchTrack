@@ -10,13 +10,7 @@ import queue
 import random
 import re
 import time
-import sys
 from typing import Dict, List, Optional, Tuple
-import threading
-import logging
-
-# Add parent directory to path for imports
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from bs4 import BeautifulSoup
 from locust import HttpUser, between, task
@@ -50,52 +44,12 @@ def _load_credential_source() -> List[Dict[str, str]]:
 
 
 class CredentialPool:
-    """Thread-safe pool of test user credentials"""
+    """Queue-backed pool to guarantee one active session per test user."""
+
     def __init__(self):
-        self._credentials = []
-        self._used_credentials = set()
-        self._lock = threading.Lock()
-        self._load_credentials()
-
-    def _load_credentials(self):
-        """Load test user credentials from environment or database"""
-        user_count = int(os.getenv('LOCUST_USER_COUNT', 100))
-        user_base = os.getenv('LOCUST_USER_BASE', 'loadtest_user')
-        user_password = os.getenv('LOCUST_USER_PASSWORD', 'loadtest123')
-
-        # Try to ensure test users exist
-        try:
-            self._ensure_test_users_exist(user_count, user_base, user_password)
-        except Exception as e:
-            logging.warning(f"Could not auto-create test users: {e}")
-
-        # Generate credential list based on expected pattern
-        for i in range(1, user_count + 1):
-            username = f"{user_base}{i}"
-            self._credentials.append({
-                'username': username,
-                'password': user_password
-            })
-
-        if not self._credentials:
-            raise RuntimeError("No test user credentials configured")
-
-    def _ensure_test_users_exist(self, user_count, user_base, user_password):
-        """Automatically create test users if they don't exist"""
-        try:
-            from test_user_generator import create_load_test_users
-            logging.info(f"Auto-creating {user_count} test users with base '{user_base}'...")
-            users = create_load_test_users(user_count, user_base, user_password)
-            if users:
-                new_users = len([u for u in users if u['status'] == 'created'])
-                existing_users = len([u for u in users if u['status'] == 'existing'])
-                logging.info(f"Test users ready: {new_users} created, {existing_users} existing")
-            else:
-                logging.warning("Failed to create test users")
-        except ImportError as e:
-            logging.warning(f"Cannot import test_user_generator: {e}")
-        except Exception as e:
-            logging.warning(f"Error creating test users: {e}")
+        self._pool = queue.Queue()
+        for creds in _load_credential_source():
+            self._pool.put(creds)
 
     def acquire(self) -> Dict[str, str]:
         try:
