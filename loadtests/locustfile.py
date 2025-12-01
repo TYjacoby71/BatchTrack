@@ -20,7 +20,7 @@ from locust.exception import RescheduleTask
 CACHE_TTL_SECONDS = int(os.getenv("LOCUST_CACHE_TTL", "120"))
 DEFAULT_PASSWORD = os.getenv("LOCUST_USER_PASSWORD", "loadtest123")
 DEFAULT_USERNAME_BASE = os.getenv("LOCUST_USER_BASE", "loadtest_user")
-DEFAULT_USER_COUNT = int(os.getenv("LOCUST_USER_COUNT", "200"))
+DEFAULT_USER_COUNT = int(os.getenv("LOCUST_USER_COUNT", "10000"))
 
 
 def _load_credential_source() -> List[Dict[str, str]]:
@@ -30,17 +30,22 @@ def _load_credential_source() -> List[Dict[str, str]]:
         try:
             loaded = json.loads(raw)
             if isinstance(loaded, list):
-                return [
+                credentials = [
                     creds for creds in loaded
                     if isinstance(creds, dict) and {"username", "password"} <= set(creds.keys())
                 ]
+                print(f"📋 Loaded {len(credentials)} credentials from LOCUST_USER_CREDENTIALS")
+                return credentials
         except json.JSONDecodeError:
-            pass
+            print("❌ Failed to parse LOCUST_USER_CREDENTIALS JSON")
 
-    return [
+    # Fall back to sequential pattern
+    credentials = [
         {"username": f"{DEFAULT_USERNAME_BASE}{i}", "password": DEFAULT_PASSWORD}
         for i in range(1, DEFAULT_USER_COUNT + 1)
     ]
+    print(f"📋 Generated {len(credentials)} sequential credentials ({DEFAULT_USERNAME_BASE}1-{DEFAULT_USER_COUNT})")
+    return credentials
 
 
 class CredentialPool:
@@ -48,14 +53,24 @@ class CredentialPool:
 
     def __init__(self):
         self._pool = queue.Queue()
-        for creds in _load_credential_source():
+        credentials = _load_credential_source()
+        
+        if not credentials:
+            raise RuntimeError("❌ No credentials available! Run: python loadtests/test_user_generator.py create --count=10000")
+            
+        for creds in credentials:
             self._pool.put(creds)
+        
+        print(f"✅ Credential pool initialized with {len(credentials)} users")
+        print(f"   Pattern: {credentials[0]['username']} ... {credentials[-1]['username']}")
+        print(f"   Password: {credentials[0]['password']}")
 
     def acquire(self) -> Dict[str, str]:
         try:
             return self._pool.get(timeout=5)
         except queue.Empty as exc:  # pragma: no cover - defensive
-            raise RuntimeError("No available load-test users") from exc
+            remaining_size = self._pool.qsize()
+            raise RuntimeError(f"No available load-test users (pool size: {remaining_size}). You may need more test users or fewer concurrent Locust users.") from exc
 
     def release(self, creds: Optional[Dict[str, str]]) -> None:
         if creds:
