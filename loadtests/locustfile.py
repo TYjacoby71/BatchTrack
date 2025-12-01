@@ -336,7 +336,8 @@ class RecipeOpsUser(AuthenticatedMixin, HttpUser):
         library_id = self.pick_library_recipe_id()
         if not library_id:
             return
-        self.client.get(f"/recipes/library/{library_id}", name="recipes.library.detail")
+        # Recipe library detail requires both ID and slug - use placeholder slug for load testing
+        self.client.get(f"/recipes/library/{library_id}-test-recipe", name="recipes.library.detail")
         with self.client.get(
             f"/recipes/{library_id}/import",
             name="recipes.import",
