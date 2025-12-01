@@ -145,8 +145,10 @@
         container: 'Containers',
         consumable: 'Consumables',
         packaging: 'Packaging',
+        product: 'Products',
+        intermediate: 'Intermediate Goods',
     };
-    const defaultTypes = ['ingredient', 'container', 'consumable', 'packaging'];
+    const defaultTypes = ['ingredient', 'container', 'consumable', 'packaging', 'product', 'intermediate'];
     const typeOptions = [];
     const inventoryByType = new Map();
 
@@ -310,32 +312,9 @@
         return options.map(opt => `<option value="${opt.value}" ${opt.value === selected ? 'selected' : ''}>${opt.label}</option>`).join('');
     }
 
-    function escapeHtml(str) {
-        return (str || '').replace(/[&<>"']/g, ch => ({
-            '&': '&amp;',
-            '<': '&lt;',
-            '>': '&gt;',
-            '"': '&quot;',
-            "'": '&#39;',
-        }[ch]));
-    }
-
     function setStatus(level, message) {
         statusEl.className = `alert alert-${level}`;
         statusEl.textContent = message;
-    }
-
-    function updateStatus(message) {
-        if (message) {
-            setStatus('info', message);
-            return;
-        }
-        const rows = tableBody.querySelectorAll('tr').length;
-        if (!rows) {
-            setStatus('secondary', 'No lines queued yet.');
-        } else {
-            setStatus('primary', `${rows} line(s) ready.`);
-        }
     }
 
     function addRow(data = {}) {
@@ -344,17 +323,21 @@
         const helperText = helperCopy(match || null, normalizedType);
         const costType = (data.cost_entry_type || 'no_change').toLowerCase();
         const costValue = data.cost_per_unit ?? '';
+        const requestedChange = (data.change_type || '').toLowerCase();
+        const changeTypeValue = CHANGE_TYPES.some(opt => opt.value === requestedChange) ? requestedChange : 'restock';
+        const nameValue = data.inventory_item_name || match?.name || '';
+        const notesValue = data.notes || '';
         const row = document.createElement('tr');
         row.dataset.unitTouched = data.unit ? 'true' : '';
         row.innerHTML = `
             <td>
                 <select class="form-select form-select-sm change-type">
-                    ${buildOptions(CHANGE_TYPES, changeType)}
+                    ${buildOptions(CHANGE_TYPES, changeTypeValue)}
                 </select>
             </td>
             <td>
                 <select class="form-select form-select-sm inventory-type">
-                    ${buildOptions(INVENTORY_TYPES, inventoryType)}
+                    ${buildTypeOptionsMarkup(normalizedType)}
                 </select>
             </td>
             <td>
@@ -363,13 +346,11 @@
                     <input type="text"
                         class="form-control form-control-sm item-name"
                         placeholder="Search inventory..."
-                        value="${data.inventory_item_name || data.inventory_item_id || ''}">
+                        value="${escapeHtml(nameValue)}">
                     <div class="list-group position-absolute w-100 shadow suggestion-list d-none" style="z-index: 1060;"></div>
                 </div>
+                <small class="text-muted item-helper">${escapeHtml(helperText)}</small>
                 <small class="text-muted action-hint"></small>
-            </td>
-            <td>
-                <input type="number" step="0.01" class="form-control form-control-sm quantity" value="${data.quantity ?? ''}">
             </td>
             <td>
                 <input type="number" step="0.01" class="form-control form-control-sm quantity" value="${data.quantity ?? ''}">
@@ -390,7 +371,7 @@
                 <div class="form-text cost-help">${escapeHtml(costHelpText[costType] || costHelpText.no_change)}</div>
             </td>
             <td>
-                <input type="text" class="form-control form-control-sm notes" value="${escapeHtml(data.notes || '')}">
+                <input type="text" class="form-control form-control-sm notes" value="${escapeHtml(notesValue)}">
             </td>
             <td>
                 <button class="btn btn-link text-danger p-0 remove-row" aria-label="Remove line">
@@ -400,28 +381,16 @@
         `;
 
         const typeSelect = row.querySelector('.inventory-type');
-        const inventorySelect = row.querySelector('.inventory-select');
         const unitSelect = row.querySelector('.unit');
-        const helperEl = row.querySelector('.item-helper');
         const costTypeSelect = row.querySelector('.cost-entry-type');
+        const helperEl = row.querySelector('.item-helper');
 
         typeSelect.value = normalizedType;
-        renderInventoryOptions(inventorySelect, typeSelect.value, match?.id || data.inventory_item_id);
 
-        function handleInventoryUpdate() {
-            const selectedId = Number(inventorySelect.value);
-            const selectedMatch = inventoryById.get(selectedId) || null;
-            if (selectedMatch && !row.dataset.unitTouched && selectedMatch.unit) {
-                unitSelect.value = selectedMatch.unit;
-            }
-            helperEl.textContent = helperCopy(selectedMatch, typeSelect.value);
+        if (helperEl) {
+            helperEl.textContent = helperText;
         }
 
-        inventorySelect.addEventListener('change', handleInventoryUpdate);
-        typeSelect.addEventListener('change', () => {
-            renderInventoryOptions(inventorySelect, typeSelect.value, null);
-            handleInventoryUpdate();
-        });
         costTypeSelect.addEventListener('change', () => {
             const type = (costTypeSelect.value || 'no_change').toLowerCase();
             const costInput = row.querySelector('.cost');
@@ -432,11 +401,16 @@
             }
             help.textContent = costHelpText[type] || costHelpText.no_change;
         });
+
+        const initialCostType = (costTypeSelect.value || 'no_change').toLowerCase();
+        if (initialCostType === 'no_change') {
+            row.querySelector('.cost').disabled = true;
+        }
+
         unitSelect.addEventListener('change', () => {
             row.dataset.unitTouched = 'true';
         });
-
-        row.querySelector('.unit').value = data.unit || match?.unit || defaultUnit || '';
+        unitSelect.value = data.unit || match?.unit || defaultUnit || '';
 
         row.querySelector('.remove-row').addEventListener('click', () => {
             row.remove();
@@ -460,8 +434,16 @@
         const idInput = row.querySelector('.item-id');
         const suggestionList = row.querySelector('.suggestion-list');
         const actionHint = row.querySelector('.action-hint');
+        const helperEl = row.querySelector('.item-helper');
 
         const searchInventory = debounce(() => fetchInventorySuggestions(row), 250);
+
+        function refreshHelper(matchOverride = null) {
+            if (!helperEl) return;
+            const activeMatch = matchOverride
+                || (idInput.value ? inventoryById.get(Number(idInput.value)) : null);
+            helperEl.textContent = helperCopy(activeMatch || null, typeSelect.value);
+        }
 
         changeSelect.addEventListener('change', () => {
             syncActionHint(row);
@@ -477,6 +459,7 @@
             } else {
                 hideSuggestions(suggestionList);
             }
+            refreshHelper();
             syncActionHint(row);
         });
 
@@ -487,6 +470,7 @@
             } else {
                 hideSuggestions(suggestionList);
             }
+            refreshHelper();
         });
 
         nameInput.addEventListener('focus', () => {
@@ -509,6 +493,7 @@
             prefillInventoryItem(data.inventory_item_id, row);
         }
 
+        refreshHelper();
         syncActionHint(row);
     }
 
@@ -516,15 +501,15 @@
         const changeType = row.querySelector('.change-type').value;
         const typeValue = row.querySelector('.inventory-type').value;
         const hintEl = row.querySelector('.action-hint');
-        const typeLabel = INVENTORY_TYPES.find(t => t.value === typeValue)?.label || 'item';
+        const friendlyType = typeLabel(typeValue).toLowerCase();
         if (changeType === 'create') {
-            hintEl.textContent = `Will create a new ${typeLabel.toLowerCase()} if it doesn't exist.`;
+            hintEl.textContent = `Will create a new ${friendlyType} if it doesn't exist.`;
         } else if (changeType === 'restock') {
-            hintEl.textContent = `Select an existing ${typeLabel.toLowerCase()} to restock.`;
+            hintEl.textContent = `Select an existing ${friendlyType} to restock.`;
         } else if (changeType === 'spoil') {
-            hintEl.textContent = `Select an existing ${typeLabel.toLowerCase()} to mark as spoiled.`;
+            hintEl.textContent = `Select an existing ${friendlyType} to mark as spoiled.`;
         } else if (changeType === 'trash') {
-            hintEl.textContent = `Select an existing ${typeLabel.toLowerCase()} to trash.`;
+            hintEl.textContent = `Select an existing ${friendlyType} to trash.`;
         }
     }
 
@@ -580,13 +565,25 @@
         const idInput = row.querySelector('.item-id');
         const list = row.querySelector('.suggestion-list');
         const typeSelect = row.querySelector('.inventory-type');
+        const helperEl = row.querySelector('.item-helper');
         nameInput.value = item.name || '';
         idInput.value = item.id || '';
         if (item.type) {
-            typeSelect.value = item.type;
+            const normalized = registerType(item.type);
+            if (!Array.from(typeSelect.options).some(opt => opt.value === normalized)) {
+                typeSelect.insertAdjacentHTML(
+                    'beforeend',
+                    `<option value="${normalized}">${escapeHtml(typeLabel(normalized))}</option>`
+                );
+            }
+            typeSelect.value = normalized;
         }
         hideSuggestions(list);
         prefillInventoryItem(item.id, row);
+        if (helperEl) {
+            const match = inventoryById.get(Number(item.id)) || { name: item.name, unit: item.unit };
+            helperEl.textContent = helperCopy(match, typeSelect.value);
+        }
         syncActionHint(row);
     }
 
@@ -612,19 +609,21 @@
         const lines = [];
         const elements = [];
         tableBody.querySelectorAll('tr').forEach(row => {
-            const inventorySelect = row.querySelector('.inventory-select');
             const typeSelect = row.querySelector('.inventory-type');
-            const selectedOption = inventorySelect.options[inventorySelect.selectedIndex];
-            const costType = row.querySelector('.cost-entry-type').value || 'no_change';
+            const nameInput = row.querySelector('.item-name');
+            const idInput = row.querySelector('.item-id');
+            const costTypeValue = (row.querySelector('.cost-entry-type').value || 'no_change').toLowerCase();
             const costValueRaw = row.querySelector('.cost').value;
-            rows.push({
+            const quantityInput = row.querySelector('.quantity').value;
+            const normalizedType = normalizeType(typeSelect.value);
+            lines.push({
                 change_type: row.querySelector('.change-type').value,
-                inventory_type: typeSelect.value,
-                inventory_item_id: inventorySelect.value ? Number(inventorySelect.value) : null,
-                inventory_item_name: selectedOption ? selectedOption.textContent.trim() : '',
-                quantity: row.querySelector('.quantity').value ? Number(row.querySelector('.quantity').value) : null,
+                inventory_type: normalizedType,
+                inventory_item_id: idInput.value ? Number(idInput.value) : null,
+                inventory_item_name: nameInput.value.trim(),
+                quantity: quantityInput ? Number(quantityInput) : null,
                 unit: row.querySelector('.unit').value.trim(),
-                cost_entry_type: costType,
+                cost_entry_type: costTypeValue,
                 cost_per_unit: costValueRaw ? Number(costValueRaw) : null,
                 notes: row.querySelector('.notes').value.trim(),
                 allow_create: row.querySelector('.change-type').value === 'create',
@@ -639,17 +638,17 @@
         elements.forEach(row => row.classList.remove('table-danger'));
         lines.forEach((line, idx) => {
             const rowErrors = [];
+            if (!line.inventory_type) {
+                rowErrors.push('inventory type is required');
+            }
             if (!line.inventory_item_name) {
                 rowErrors.push('name is required');
             }
-            if (!line.type) {
-                rowErrors.push('type is required');
-            }
-            if (!line.quantity || line.quantity <= 0) {
-                rowErrors.push('quantity must be greater than zero');
-            }
             if (line.change_type !== 'create' && !line.inventory_item_id) {
                 rowErrors.push('select an existing inventory item');
+            }
+            if (!line.quantity || Number.isNaN(line.quantity) || line.quantity <= 0) {
+                rowErrors.push('quantity must be greater than zero');
             }
             if (!line.unit) {
                 rowErrors.push('unit is required');
@@ -657,26 +656,6 @@
             if (rowErrors.length) {
                 errors.push(`Row ${idx + 1}: ${rowErrors.join(', ')}`);
                 elements[idx].classList.add('table-danger');
-            }
-        });
-        return errors;
-    }
-
-    function validateRows(rows) {
-        const errors = [];
-        rows.forEach((row, idx) => {
-            const label = `Line ${idx + 1}:`;
-            if (!row.inventory_type) {
-                errors.push(`${label} select an inventory type.`);
-            }
-            if (!row.inventory_item_id) {
-                errors.push(`${label} select an inventory item.`);
-            }
-            if (!row.quantity || row.quantity <= 0) {
-                errors.push(`${label} enter a quantity greater than zero.`);
-            }
-            if (!row.unit) {
-                errors.push(`${label} choose a unit.`);
             }
         });
         return errors;
@@ -748,7 +727,7 @@
             statusEl.textContent = 'No lines queued yet. Submissions use the standard adjustment flow.';
             return;
         }
-        const linkedCount = Array.from(tableBody.querySelectorAll('.inventory-select')).filter(select => select.value).length;
+        const linkedCount = Array.from(tableBody.querySelectorAll('.item-id')).filter(hidden => hidden.value).length;
         statusEl.className = 'alert alert-primary';
         const linkedLabel = linkedCount ? ` · ${linkedCount} linked item(s)` : '';
         statusEl.textContent = `${rows} line(s) ready${linkedLabel}.`;
