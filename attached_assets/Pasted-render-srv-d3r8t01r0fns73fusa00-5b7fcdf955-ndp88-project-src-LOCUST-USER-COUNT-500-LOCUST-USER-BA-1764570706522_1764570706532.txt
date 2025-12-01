@@ -1,0 +1,69 @@
+render@srv-d3r8t01r0fns73fusa00-5b7fcdf955-ndp88:~/project/src$ LOCUST_USER_COUNT=500 LOCUST_USER_BASE=loadtest_user LOCUST_USER_PASSWORD=loadtest123 locust -f loadtests/locustfile.py --host https://your-render-app.onrender.com --users 300 --spawn-rate 30 --run-time 20m
+[2025-12-01 06:31:16,371] srv-d3r8t01r0fns73fusa00-5b7fcdf955-ndp88/INFO/locust.main: Starting Locust 2.42.6
+[2025-12-01 06:31:16,371] srv-d3r8t01r0fns73fusa00-5b7fcdf955-ndp88/INFO/locust.main: Starting web interface at http://0.0.0.0:8089, press enter to open your default browser.
+Traceback (most recent call last):
+  File "src/gevent/greenlet.py", line 906, in gevent._gevent_cgreenlet.Greenlet.run
+  File "/opt/render/project/src/.venv/lib/python3.13/site-packages/locust/web.py", line 632, in start_server
+    self.server.serve_forever()
+    ~~~~~~~~~~~~~~~~~~~~~~~~~^^
+  File "/opt/render/project/src/.venv/lib/python3.13/site-packages/gevent/baseserver.py", line 398, in serve_forever
+    self.start()
+    ~~~~~~~~~~^^
+  File "/opt/render/project/src/.venv/lib/python3.13/site-packages/gevent/baseserver.py", line 336, in start
+    self.init_socket()
+    ~~~~~~~~~~~~~~~~^^
+  File "/opt/render/project/src/.venv/lib/python3.13/site-packages/gevent/pywsgi.py", line 1668, in init_socket
+    StreamServer.init_socket(self)
+    ~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^
+  File "/opt/render/project/src/.venv/lib/python3.13/site-packages/gevent/server.py", line 173, in init_socket
+    self.socket = self.get_listener(self.address, self.backlog, self.family)
+                  ~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/render/project/src/.venv/lib/python3.13/site-packages/gevent/server.py", line 185, in get_listener
+    return _tcp_listener(address, backlog=backlog, reuse_addr=cls.reuse_addr, family=family)
+  File "/opt/render/project/src/.venv/lib/python3.13/site-packages/gevent/server.py", line 264, in _tcp_listener
+    sock.bind(address)
+    ~~~~~~~~~^^^^^^^^^
+  File "/opt/render/project/src/.venv/lib/python3.13/site-packages/gevent/_socketcommon.py", line 543, in bind
+    return self._sock.bind(address)
+           ~~~~~~~~~~~~~~~^^^^^^^^^
+OSError: [Errno 98] Address already in use: ('', 8089)
+2025-12-01T06:31:16Z <Greenlet at 0x7d56d86d7ba0: <bound method WebUI.start_server of <locust.web.WebUI object at 0x7d56d887a660>>> failed with OSError
+
+[2025-12-01 06:31:16,439] srv-d3r8t01r0fns73fusa00-5b7fcdf955-ndp88/CRITICAL/locust.web: Unhandled exception in greenlet: <Greenlet at 0x7d56d86d7ba0: <bound method WebUI.start_server of <locust.web.WebUI object at 0x7d56d887a660>>>
+Traceback (most recent call last):
+  File "src/gevent/greenlet.py", line 906, in gevent._gevent_cgreenlet.Greenlet.run
+  File "/opt/render/project/src/.venv/lib/python3.13/site-packages/locust/web.py", line 632, in start_server
+    self.server.serve_forever()
+    ^^^^^^^^^^^^^^^
+  File "/opt/render/project/src/.venv/lib/python3.13/site-packages/gevent/baseserver.py", line 398, in serve_forever
+    self.start()
+    ^^^^^^^^^^^
+  File "/opt/render/project/src/.venv/lib/python3.13/site-packages/gevent/baseserver.py", line 336, in start
+    self.init_socket()
+    ^^^^^^^^^^^^^^^
+  File "/opt/render/project/src/.venv/lib/python3.13/site-packages/gevent/pywsgi.py", line 1668, in init_socket
+    StreamServer.init_socket(self)
+    ^^^^^^^^^^^^^^^
+  File "/opt/render/project/src/.venv/lib/python3.13/site-packages/gevent/server.py", line 173, in init_socket
+    self.socket = self.get_listener(self.address, self.backlog, self.family)
+    ^^^^^^^^^^^
+  File "/opt/render/project/src/.venv/lib/python3.13/site-packages/gevent/server.py", line 185, in get_listener
+    return _tcp_listener(address, backlog=backlog, reuse_addr=cls.reuse_addr, family=family)
+    ^^^^^^^^^^^^^^^
+  File "/opt/render/project/src/.venv/lib/python3.13/site-packages/gevent/server.py", line 264, in _tcp_listener
+    sock.bind(address)
+    ^^^^^^^^^^^^^^^
+  File "/opt/render/project/src/.venv/lib/python3.13/site-packages/gevent/_socketcommon.py", line 543, in bind
+    return self._sock.bind(address)
+    ^^^^^^^^^^^^^^^
+OSError: [Errno 98] Address already in use: ('', 8089)
+[2025-12-01 06:31:16,440] srv-d3r8t01r0fns73fusa00-5b7fcdf955-ndp88/INFO/locust.main: Shutting down (exit code 2)
+Type     Name                                                                          # reqs      # fails |    Avg     Min     Max    Med |   req/s  failures/s
+--------|----------------------------------------------------------------------------|-------|-------------|-------|-------|-------|-------|--------|-----------
+--------|----------------------------------------------------------------------------|-------|-------------|-------|-------|-------|-------|--------|-----------
+         Aggregated                                                                         0     0(0.00%) |      0       0       0      0 |    0.00        0.00
+
+Response time percentiles (approximated)
+Type     Name                                                                                  50%    66%    75%    80%    90%    95%    98%    99%  99.9% 99.99%   100% # reqs
+--------|--------------------------------------------------------------------------------|--------|------|------|------|------|------|------|------|------|------|------|------
+--------|--------------------------------------------------------------------------------|--------|------|------|------|------|------|------|------|------|------|------|------
