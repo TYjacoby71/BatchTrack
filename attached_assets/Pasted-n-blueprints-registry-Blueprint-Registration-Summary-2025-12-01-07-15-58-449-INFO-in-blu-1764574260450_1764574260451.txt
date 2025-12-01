@@ -1,0 +1,53 @@
+n blueprints_registry: === Blueprint Registration Summary ===
+[2025-12-01 07:15:58,449] INFO in blueprints_registry: Successful: 29
+[2025-12-01 07:15:58,449] INFO in blueprints_registry:   - Authentication
+[2025-12-01 07:15:58,449] INFO in blueprints_registry:   - Admin
+[2025-12-01 07:15:58,449] INFO in blueprints_registry:   - Developer
+[2025-12-01 07:15:58,449] INFO in blueprints_registry:   - Inventory
+[2025-12-01 07:15:58,449] INFO in blueprints_registry:   - Recipes
+[2025-12-01 07:15:58,449] INFO in blueprints_registry:   - Batches
+[2025-12-01 07:15:58,450] INFO in blueprints_registry:   - Organization
+[2025-12-01 07:15:58,450] INFO in blueprints_registry:   - Billing
+[2025-12-01 07:15:58,450] INFO in blueprints_registry:   - Onboarding
+[2025-12-01 07:15:58,450] INFO in blueprints_registry:   - Settings
+[2025-12-01 07:15:58,450] INFO in blueprints_registry:   - Timers
+[2025-12-01 07:15:58,450] INFO in blueprints_registry:   - Expiration
+[2025-12-01 07:15:58,450] INFO in blueprints_registry:   - Conversion
+[2025-12-01 07:15:58,450] INFO in blueprints_registry:   - Production Planning
+[2025-12-01 07:15:58,450] INFO in blueprints_registry:   - Public API
+[2025-12-01 07:15:58,450] INFO in blueprints_registry:   - Main API
+[2025-12-01 07:15:58,450] INFO in blueprints_registry:   - Drawer API
+[2025-12-01 07:15:58,450] INFO in blueprints_registry:   - App Routes
+[2025-12-01 07:15:58,450] INFO in blueprints_registry:   - Legal Routes
+[2025-12-01 07:15:58,450] INFO in blueprints_registry:   - Bulk Stock
+[2025-12-01 07:15:58,450] INFO in blueprints_registry:   - Fault Log
+[2025-12-01 07:15:58,450] INFO in blueprints_registry:   - Tag Manager
+[2025-12-01 07:15:58,450] INFO in blueprints_registry:   - Global Library
+[2025-12-01 07:15:58,450] INFO in blueprints_registry:   - Recipe Library
+[2025-12-01 07:15:58,450] INFO in blueprints_registry:   - Waitlist
+[2025-12-01 07:15:58,450] INFO in blueprints_registry:   - Help & Instructions
+[2025-12-01 07:15:58,450] INFO in blueprints_registry:   - Public Tools
+[2025-12-01 07:15:58,450] INFO in blueprints_registry:   - Exports
+[2025-12-01 07:15:58,450] INFO in blueprints_registry:   - Products
+[2025-12-01 07:15:58,450] INFO in blueprints_registry: All blueprints registered successfully.
+2025-12-01 07:15:58,478 WARNING:  * Debugger is active!
+Unit query took 0.219s for 62 units
+2025-12-01 07:29:49,925 INFO: message='Request to Stripe api' method=get url=https://api.stripe.com/v1/prices?lookup_keys[0]=batchtrack_solo_monthly&active=true&limit=1
+2025-12-01 07:29:49,925 DEBUG: api_version=2025-06-30.basil message='Post details' post_data=lookup_keys[0]=batchtrack_solo_monthly&active=true&limit=1
+2025-12-01 07:29:49,930 DEBUG: Starting new HTTPS connection (1): api.stripe.com:443
+2025-12-01 07:29:50,109 DEBUG: https://api.stripe.com:443 "GET /v1/prices?lookup_keys%5B0%5D=batchtrack_solo_monthly&active=true&limit=1 HTTP/1.1" 200 841
+2025-12-01 07:29:50,109 INFO: message='Stripe API response' path=https://api.stripe.com/v1/prices?lookup_keys[0]=batchtrack_solo_monthly&active=true&limit=1 response_code=200
+2025-12-01 07:29:50,110 DEBUG: body='{\n  "object": "list",\n  "data": [\n    {\n      "id": "price_1SIzqyF4Y9XQgiJBfkmN0Unx",\n      "object": "price",\n      "active": true,\n      "billing_scheme": "per_unit",\n      "created": 1760654460,\n      "currency": "usd",\n      "custom_unit_amount": null,\n      "livemode": true,\n      "lookup_key": "batchtrack_solo_monthly",\n      "metadata": {},\n      "nickname": "Solo Monthly",\n      "product": "prod_SitYi7JOtdlJ7b",\n      "recurring": {\n        "interval": "month",\n        "interval_count": 1,\n        "meter": null,\n        "trial_period_days": null,\n        "usage_type": "licensed"\n      },\n      "tax_behavior": "exclusive",\n      "tiers_mode": null,\n      "transform_quantity": null,\n      "type": "recurring",\n      "unit_amount": 999,\n      "unit_amount_decimal": "999"\n    }\n  ],\n  "has_more": false,\n  "url": "/v1/prices"\n}' message='API response body'
+2025-12-01 07:29:50,110 DEBUG: link=https://dashboard.stripe.com/live/logs/req_3uYmsDqzVYcTBt message='Dashboard link for request'
+2025-12-01 07:29:50,114 INFO: message='Request to Stripe api' method=get url=https://api.stripe.com/v1/prices?lookup_keys[0]=batchtrack_team_monthly&active=true&limit=1
+2025-12-01 07:29:50,114 DEBUG: api_version=2025-06-30.basil message='Post details' post_data=lookup_keys[0]=batchtrack_team_monthly&active=true&limit=1
+2025-12-01 07:29:50,230 DEBUG: https://api.stripe.com:443 "GET /v1/prices?lookup_keys%5B0%5D=batchtrack_team_monthly&active=true&limit=1 HTTP/1.1" 200 835
+2025-12-01 07:29:50,231 INFO: message='Stripe API response' path=https://api.stripe.com/v1/prices?lookup_keys[0]=batchtrack_team_monthly&active=true&limit=1 response_code=200
+2025-12-01 07:29:50,231 DEBUG: body='{\n  "object": "list",\n  "data": [\n    {\n      "id": "price_1RnRzOF4Y9XQgiJB7cuiGZf4",\n      "object": "price",\n      "active": true,\n      "billing_scheme": "per_unit",\n      "created": 1753136118,\n      "currency": "usd",\n      "custom_unit_amount": null,\n      "livemode": true,\n      "lookup_key": "batchtrack_team_monthly",\n      "metadata": {},\n      "nickname": null,\n      "product": "prod_SitmVnokhyMVZ8",\n      "recurring": {\n        "interval": "month",\n        "interval_count": 1,\n        "meter": null,\n        "trial_period_days": null,\n        "usage_type": "licensed"\n      },\n      "tax_behavior": "unspecified",\n      "tiers_mode": null,\n      "transform_quantity": null,\n      "type": "recurring",\n      "unit_amount": 1499,\n      "unit_amount_decimal": "1499"\n    }\n  ],\n  "has_more": false,\n  "url": "/v1/prices"\n}' message='API response body'
+2025-12-01 07:29:50,231 DEBUG: link=https://dashboard.stripe.com/live/logs/req_OhIYv2YV0Unzx6 message='Dashboard link for request'
+2025-12-01 07:29:50,233 INFO: message='Request to Stripe api' method=get url=https://api.stripe.com/v1/prices?lookup_keys[0]=batchtrack_enterprise_monthly&active=true&limit=1
+2025-12-01 07:29:50,234 DEBUG: api_version=2025-06-30.basil message='Post details' post_data=lookup_keys[0]=batchtrack_enterprise_monthly&active=true&limit=1
+2025-12-01 07:29:50,364 DEBUG: https://api.stripe.com:443 "GET /v1/prices?lookup_keys%5B0%5D=batchtrack_enterprise_monthly&active=true&limit=1 HTTP/1.1" 200 841
+2025-12-01 07:29:50,365 INFO: message='Stripe API response' path=https://api.stripe.com/v1/prices?lookup_keys[0]=batchtrack_enterprise_monthly&active=true&limit=1 response_code=200
+2025-12-01 07:29:50,365 DEBUG: body='{\n  "object": "list",\n  "data": [\n    {\n      "id": "price_1RnS8pF4Y9XQgiJBr3Wq1LIH",\n      "object": "price",\n      "active": true,\n      "billing_scheme": "per_unit",\n      "created": 1753136703,\n      "currency": "usd",\n      "custom_unit_amount": null,\n      "livemode": true,\n      "lookup_key": "batchtrack_enterprise_monthly",\n      "metadata": {},\n      "nickname": null,\n      "product": "prod_SitwN8yYtFrNcM",\n      "recurring": {\n        "interval": "month",\n        "interval_count": 1,\n        "meter": null,\n        "trial_period_days": null,\n        "usage_type": "licensed"\n      },\n      "tax_behavior": "unspecified",\n      "tiers_mode": null,\n      "transform_quantity": null,\n      "type": "recurring",\n      "unit_amount": 1999,\n      "unit_amount_decimal": "1999"\n    }\n  ],\n  "has_more": false,\n  "url": "/v1/prices"\n}' message='API response body'
+2025-12-01 07:29:50,365 DEBUG: link=https://dashboard.stripe.com/live/logs/req_po7Hx9WXRBVan4 message='Dashboard link for request'
