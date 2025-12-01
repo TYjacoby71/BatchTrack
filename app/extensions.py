@@ -8,6 +8,7 @@ from flask_migrate import Migrate
 from flask_session import Session
 from flask_sqlalchemy import SQLAlchemy
 from flask_wtf.csrf import CSRFProtect
+import os
 
 __all__ = [
     "db",
@@ -24,7 +25,14 @@ db = SQLAlchemy()
 migrate = Migrate(compare_type=True, render_as_batch=True)
 csrf = CSRFProtect()
 cache = Cache()
-limiter = Limiter(key_func=get_remote_address, default_limits=("200 per day", "50 per hour"))
+
+def _get_rate_limit_key():
+    """Get rate limiting key, or return None to disable rate limiting for load testing."""
+    if os.environ.get('DISABLE_RATE_LIMITING', 'false').lower() == 'true':
+        return None
+    return get_remote_address()
+
+limiter = Limiter(key_func=_get_rate_limit_key, default_limits=("200 per day", "50 per hour"))
 server_session = Session()
 
 try:
