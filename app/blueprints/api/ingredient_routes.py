@@ -4,6 +4,7 @@ from sqlalchemy import or_, func
 from ...models import IngredientCategory, InventoryItem, GlobalItem, db
 from ...services.statistics.global_item_stats import GlobalItemStatsService
 from ...services.density_assignment_service import DensityAssignmentService
+from ...extensions import limiter
 
 ingredient_api_bp = Blueprint('ingredient_api', __name__)
 
@@ -48,6 +49,7 @@ def get_ingredient_density(id):
 
 @ingredient_api_bp.route('/ingredients/search', methods=['GET'])
 @login_required
+@limiter.limit("3000/minute")
 def search_ingredients():
     """Search existing inventory items and return top matches for name field autocomplete.
     This preserves current add flow while enabling typeahead suggestions.

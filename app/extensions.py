@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from flask import current_app
 from flask_caching import Cache
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
