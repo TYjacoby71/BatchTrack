@@ -55,7 +55,7 @@ def _limiter_key_func():
 
 limiter = Limiter(
     key_func=_limiter_key_func,
-    default_limits=_default_rate_limits(),
+    default_limits=["5000 per hour", "1000 per minute"],
 )
 server_session = Session()
 
