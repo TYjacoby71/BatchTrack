@@ -2156,6 +2156,7 @@ def integrations_checklist():
                 _make_item('RATELIMIT_ENABLED', 'Global toggle for Flask-Limiter.', required=True, recommended='true', allow_config=True),
                 _make_item('RATELIMIT_DEFAULT', 'Default limit string used when an endpoint lacks an override.', required=True, recommended='"5000 per hour;1000 per minute"', allow_config=True, note='Now configurable via env + exposed in docs.'),
                 _make_item('SESSION_TYPE', 'Server-side session backend. Must be "redis" in production.', required=True, recommended='redis', allow_config=True, note='Set to redis so user sessions live in Redis instead of cookies.'),
+                _make_item('SESSION_LIFETIME_MINUTES', 'Session lifetime before re-login is required.', required=False, recommended='60 (staging) / 30 (prod default)', allow_config=True, note='Increase for long-running load tests or kiosk deployments.'),
                 _make_item('CACHE_TYPE', 'Flask-Caching backend.', required=True, recommended='RedisCache', allow_config=True),
                 _make_item('CACHE_REDIS_URL', 'Redis URI for Flask-Caching.', required=False, recommended='${REDIS_URL}', allow_config=True),
                 _make_item('CACHE_DEFAULT_TIMEOUT', 'Default cache TTL in seconds.', required=False, recommended='120', allow_config=True),

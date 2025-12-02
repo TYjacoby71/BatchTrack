@@ -107,6 +107,8 @@ SENTRY_DSN=https://your-sentry-dsn
 ```
 
 > ℹ️ `app/config.py` automatically normalizes `postgres://` URLs to `postgresql://`, so the higher pool sizes above work with Render’s managed PostgreSQL out of the box.
+> 
+> 🔐 Authenticated rate limits are keyed per user session (not per IP) starting with this release; anonymous/public routes still use client IP. When running Locust from a single host, make sure every simulated user logs in so the limiter buckets correctly.
 
 #### 5k Load-Test Environment Checklist
 

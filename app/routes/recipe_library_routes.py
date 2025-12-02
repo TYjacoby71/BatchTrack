@@ -17,7 +17,7 @@ recipe_library_bp = Blueprint("recipe_library_bp", __name__)
 
 
 @recipe_library_bp.route("/recipes/library")
-@limiter.limit("4000/hour")
+@limiter.limit("60000/hour;5000/minute")
 def recipe_library():
     search_query = (request.args.get("search") or "").strip()
     group_filter = _safe_int(request.args.get("group"))
