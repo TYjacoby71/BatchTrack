@@ -499,25 +499,45 @@ class AnonymousUser(HttpUser):
     wait_time = between(3, 8)
     weight = 1
 
+    def _public_get(self, path: str, *, name: str, params: Optional[Dict[str, str]] = None):
+        """
+        Hit a public endpoint and fail fast if it redirects to login or errors.
+        This keeps anonymous traffic from accidentally hammering authorize spots.
+        """
+        with self.client.get(
+            path,
+            name=name,
+            params=params,
+            catch_response=True,
+        ) as response:
+            final_path = response.request.path_url if response.request else ""
+            if "/auth/login" in final_path:
+                response.failure(f"{name} redirected to login ({final_path})")
+                return
+            if response.status_code >= 400:
+                response.failure(f"{name} returned {response.status_code}")
+                return
+            response.success()
+
     @task(4)
     def view_homepage(self):
-        self.client.get("/", name="public.homepage")
+        self._public_get("/", name="public.homepage")
 
     @task(3)
     def view_tools_index(self):
-        self.client.get("/tools", name="public.tools")
+        self._public_get("/tools", name="public.tools")
 
     @task(3)
     def browse_global_items(self):
-        params = {}
+        params = None
         if random.random() < 0.5:
-            params["type"] = random.choice(["ingredient", "container"])
-        self.client.get("/global-items", params=params, name="public.global_items")
+            params = {"type": random.choice(["ingredient", "container"])}
+        self._public_get("/global-items", name="public.global_items", params=params)
 
     @task(2)
     def recipe_library_public(self):
-        self.client.get("/recipes/library", name="public.recipe_library")
+        self._public_get("/recipes/library", name="public.recipe_library")
 
     @task(1)
     def signup_page(self):
-        self.client.get("/auth/signup", name="public.signup")
+        self._public_get("/auth/signup", name="public.signup")
