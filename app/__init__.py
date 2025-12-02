@@ -156,23 +156,14 @@ def _run_optional_create_all(app: Flask) -> None:
             except Exception as exc:  # pragma: no cover - dev helper
                 logger.warning("Database table creation skipped: %s", exc)
 
-    explicit_flag = _env_flag("SQLALCHEMY_CREATE_ALL")
-    if explicit_flag is False:
+    create_all_flag = _env_flag("SQLALCHEMY_CREATE_ALL")
+    if create_all_flag is None:
+        logger.info("db.create_all() not enabled; Alembic migrations are the source of truth")
+        return
+    if create_all_flag is False:
         logger.info("db.create_all() disabled via SQLALCHEMY_CREATE_ALL=0")
         return
-    if explicit_flag is True:
-        _execute_create_all("SQLALCHEMY_CREATE_ALL")
-        return
-
-    if _env_flag("SQLALCHEMY_DISABLE_CREATE_ALL"):
-        logger.info("db.create_all() disabled via SQLALCHEMY_DISABLE_CREATE_ALL (legacy)")
-        return
-
-    if _env_flag("SQLALCHEMY_ENABLE_CREATE_ALL"):
-        _execute_create_all("SQLALCHEMY_ENABLE_CREATE_ALL (legacy)")
-        return
-
-    logger.info("db.create_all() not enabled; Alembic migrations are the source of truth")
+    _execute_create_all("SQLALCHEMY_CREATE_ALL")
 
 def _configure_sqlite_engine_options(app):
     """Configure SQLite engine options for testing/memory databases"""

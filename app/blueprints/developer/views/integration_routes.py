@@ -165,7 +165,6 @@ def integrations_checklist():
                     "Run db.create_all() during startup (set 1 to enable, 0 to skip).",
                     required=False,
                     recommended="0 (prod) / 1 (local seeding)",
-                    note="Legacy SQLALCHEMY_DISABLE/ENABLE_CREATE_ALL env vars are still honored.",
                 ),
             ],
         ),
