@@ -136,23 +136,43 @@ def _configure_rate_limiter(app: Flask) -> None:
 
 
 def _run_optional_create_all(app: Flask) -> None:
-    create_all_disabled = os.environ.get("SQLALCHEMY_DISABLE_CREATE_ALL")
-    create_all_enabled = os.environ.get("SQLALCHEMY_ENABLE_CREATE_ALL") in {"1", "true", "True", "yes", "YES"}
+    def _env_flag(key: str):
+        value = os.environ.get(key)
+        if value is None:
+            return None
+        normalized = value.strip().lower()
+        if normalized in {"1", "true", "yes", "on"}:
+            return True
+        if normalized in {"0", "false", "no", "off"}:
+            return False
+        return None
 
-    if create_all_disabled:
-        logger.info("db.create_all() disabled via SQLALCHEMY_DISABLE_CREATE_ALL")
+    def _execute_create_all(reason: str):
+        logger.info("Local dev: creating tables via db.create_all() (%s)", reason)
+        with app.app_context():
+            try:
+                db.create_all()
+                logger.info("Database tables created/verified")
+            except Exception as exc:  # pragma: no cover - dev helper
+                logger.warning("Database table creation skipped: %s", exc)
+
+    explicit_flag = _env_flag("SQLALCHEMY_CREATE_ALL")
+    if explicit_flag is False:
+        logger.info("db.create_all() disabled via SQLALCHEMY_CREATE_ALL=0")
         return
-    if not create_all_enabled:
-        logger.info("db.create_all() not enabled; Alembic migrations are the source of truth")
+    if explicit_flag is True:
+        _execute_create_all("SQLALCHEMY_CREATE_ALL")
         return
 
-    logger.info("Local dev: creating tables via db.create_all()")
-    with app.app_context():
-        try:
-            db.create_all()
-            logger.info("Database tables created/verified")
-        except Exception as exc:  # pragma: no cover - dev helper
-            logger.warning("Database table creation skipped: %s", exc)
+    if _env_flag("SQLALCHEMY_DISABLE_CREATE_ALL"):
+        logger.info("db.create_all() disabled via SQLALCHEMY_DISABLE_CREATE_ALL (legacy)")
+        return
+
+    if _env_flag("SQLALCHEMY_ENABLE_CREATE_ALL"):
+        _execute_create_all("SQLALCHEMY_ENABLE_CREATE_ALL (legacy)")
+        return
+
+    logger.info("db.create_all() not enabled; Alembic migrations are the source of truth")
 
 def _configure_sqlite_engine_options(app):
     """Configure SQLite engine options for testing/memory databases"""

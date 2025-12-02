@@ -160,8 +160,13 @@ def integrations_checklist():
             [
                 _make_item("DATABASE_INTERNAL_URL", "Primary database connection string.", required=True, is_secret=True),
                 _make_item("DATABASE_URL", "Fallback database connection string.", required=False, is_secret=True),
-                _make_item("SQLALCHEMY_DISABLE_CREATE_ALL", "Disable db.create_all() safety switch.", required=False, recommended="1"),
-                _make_item("SQLALCHEMY_ENABLE_CREATE_ALL", "Local dev-only override.", required=False, recommended="unset"),
+                _make_item(
+                    "SQLALCHEMY_CREATE_ALL",
+                    "Run db.create_all() during startup (set 1 to enable, 0 to skip).",
+                    required=False,
+                    recommended="0 (prod) / 1 (local seeding)",
+                    note="Legacy SQLALCHEMY_DISABLE/ENABLE_CREATE_ALL env vars are still honored.",
+                ),
             ],
         ),
         _section(
