@@ -27,21 +27,6 @@ csrf = CSRFProtect()
 cache = Cache()
 
 
-def _default_rate_limits():
-    """Resolve default rate limits from config or fall back to safe defaults."""
-    config_value = current_app.config.get("RATELIMIT_DEFAULT")
-    if isinstance(config_value, str) and config_value.strip():
-        normalized = (
-            config_value.replace(",", ";")
-            .replace("|", ";")
-            .split(";")
-        )
-        limits = [entry.strip() for entry in normalized if entry.strip()]
-        if limits:
-            return limits
-    return ["5000 per hour", "1000 per minute"]
-
-
 def _limiter_key_func():
     """Use per-user keys for authenticated traffic; fall back to IP address."""
     try:
@@ -54,10 +39,7 @@ def _limiter_key_func():
     return get_remote_address()
 
 
-limiter = Limiter(
-    key_func=_limiter_key_func,
-    default_limits=_default_rate_limits,
-)
+limiter = Limiter(key_func=_limiter_key_func)
 server_session = Session()
 
 try:
