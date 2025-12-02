@@ -2131,14 +2131,16 @@ def integrations_checklist():
                 _make_item('DATABASE_URL', 'Fallback database connection string (used if internal URL not set).', required=False, is_secret=True, note='Render automatically injects DATABASE_URL. Mirror DATABASE_INTERNAL_URL when both exist.'),
                 _make_item('SQLALCHEMY_DISABLE_CREATE_ALL', 'Disable db.create_all() safety switch. Set to 1 in production.', required=False, recommended='1 (enabled)', note='Prevents accidental schema drift on boot.'),
                 _make_item('SQLALCHEMY_ENABLE_CREATE_ALL', 'Local dev-only override to run db.create_all(). Leave unset in production.', required=False, recommended='unset'),
-                _make_item('SQLALCHEMY_POOL_SIZE', 'SQLAlchemy connection pool size.', required=False, recommended='5', allow_config=True, note='Keep small on starter instances; raise only when CPU/memory allows more concurrency.'),
-                _make_item('SQLALCHEMY_MAX_OVERFLOW', 'Burst connections beyond the base pool.', required=False, recommended='5', allow_config=True, note='Match this to pool size for predictable ceilings.'),
-                _make_item('SQLALCHEMY_POOL_TIMEOUT', 'Seconds to wait for a pooled connection before erroring.', required=False, recommended='5', allow_config=True, note='Lower values surface saturation symptoms quickly.'),
+                _make_item('SQLALCHEMY_POOL_SIZE', 'SQLAlchemy connection pool size.', required=False, recommended='80 (5k users)', allow_config=True, note='Matches the current scaling plan (80 base + 40 overflow). Lower it only for very small instances.'),
+                _make_item('SQLALCHEMY_MAX_OVERFLOW', 'Burst connections beyond the base pool.', required=False, recommended='40 (5k users)', allow_config=True, note='Keeps total ceiling at 120 concurrent DB connections.'),
+                _make_item('SQLALCHEMY_POOL_TIMEOUT', 'Seconds to wait for a pooled connection before erroring.', required=False, recommended='45 (5k users)', allow_config=True, note='Higher timeout prevents flapping under transient spikes.'),
                 _make_item('SQLALCHEMY_POOL_RECYCLE', 'Seconds before idle connections recycle.', required=False, recommended='1800', allow_config=True),
+                _make_item('SQLALCHEMY_POOL_USE_LIFO', 'Reuse newest idle connections first (reduces thrash at scale).', required=False, recommended='true', allow_config=True),
+                _make_item('SQLALCHEMY_POOL_RESET_ON_RETURN', 'Reset strategy when returning connections.', required=False, recommended='commit', allow_config=True),
             ]
         },
         {
-            'title': 'Caching & Rate Limits',
+            'title': 'Caching, Rate Limits & Billing Cache',
             'note': 'Provision a managed Redis instance (Render Redis, Upstash, ElastiCache). Use a single connection URI for caching, Flask sessions, and rate limiting.',
             'section_items': [
                 _make_item(
@@ -2149,7 +2151,16 @@ def integrations_checklist():
                     note='Create the service, copy the full tls-enabled URI, and paste it into your environment. The rate limiter automatically reuses this value—no separate variable needed.',
                     allow_config=True,
                 ),
+                _make_item('RATELIMIT_STORAGE_URI', 'Primary rate-limit backend. Mirror REDIS_URL in production.', required=True, recommended='${REDIS_URL}', allow_config=True),
+                _make_item('RATELIMIT_STORAGE_URL', 'Backwards-compatible alias for the rate-limit backend.', required=False, recommended='${REDIS_URL}', allow_config=True),
+                _make_item('RATELIMIT_ENABLED', 'Global toggle for Flask-Limiter.', required=True, recommended='true', allow_config=True),
+                _make_item('RATELIMIT_DEFAULT', 'Default limit string used when an endpoint lacks an override.', required=True, recommended='"5000 per hour;1000 per minute"', allow_config=True, note='Now configurable via env + exposed in docs.'),
                 _make_item('SESSION_TYPE', 'Server-side session backend. Must be "redis" in production.', required=True, recommended='redis', allow_config=True, note='Set to redis so user sessions live in Redis instead of cookies.'),
+                _make_item('CACHE_TYPE', 'Flask-Caching backend.', required=True, recommended='RedisCache', allow_config=True),
+                _make_item('CACHE_REDIS_URL', 'Redis URI for Flask-Caching.', required=False, recommended='${REDIS_URL}', allow_config=True),
+                _make_item('CACHE_DEFAULT_TIMEOUT', 'Default cache TTL in seconds.', required=False, recommended='120', allow_config=True),
+                _make_item('BILLING_CACHE_ENABLED', 'Enable billing cache layer.', required=True, recommended='true', allow_config=True),
+                _make_item('BILLING_GATE_CACHE_TTL_SECONDS', 'TTL for billing cache entries.', required=False, recommended='60', allow_config=True),
             ],
         },
         {
@@ -2219,6 +2230,17 @@ def integrations_checklist():
             ]
         },
         {
+            'title': 'Load Testing & Locust',
+            'note': 'Locust pulls credentials and cache TTL from these variables. Keep them in sync with the scaling runbook.',
+            'section_items': [
+                _make_item('LOCUST_USER_BASE', 'Username prefix for generated test accounts.', required=True, recommended='loadtest_user', allow_config=True),
+                _make_item('LOCUST_USER_PASSWORD', 'Shared password for load-test accounts.', required=True, recommended='loadtest123', is_secret=True, allow_config=True),
+                _make_item('LOCUST_USER_COUNT', 'Total number of sequential test accounts to generate/use.', required=True, recommended='5000', allow_config=True),
+                _make_item('LOCUST_CACHE_TTL', 'Seconds before each simulated user refreshes cached domain data.', required=False, recommended='120', allow_config=True),
+                _make_item('LOCUST_USER_CREDENTIALS', 'Optional JSON payload for non-sequential credential sets.', required=False, note='Use when you need to test with multiple orgs/roles.'),
+            ]
+        },
+        {
             'title': 'OAuth & Marketplace',
             'note': 'Optional integrations for single sign-on and marketplace licensing.',
             'section_items': [
@@ -2256,119 +2278,100 @@ def integrations_checklist():
             )
         config_sections.append({'title': section['title'], 'note': section.get('note'), 'rows': rows})
 
+    global_default_limit = current_app.config.get('RATELIMIT_DEFAULT', '5000 per hour;1000 per minute')
     rate_limiters = [
         # Authentication & User Management
         {
             'endpoint': 'GET/POST /auth/login',
-            'limit': '100/minute',
+            'limit': '6000/minute',
             'source': 'app/blueprints/auth/routes.py::login',
-            'notes': 'Primary credential-based login form. Increased for 1K users.',
+            'notes': 'Allows 100 logins/sec for 5k-user Locust ramps.',
         },
         {
             'endpoint': 'GET /auth/oauth/google',
-            'limit': '50/minute',
+            'limit': '1200/minute',
             'source': 'app/blueprints/auth/routes.py::oauth_google',
-            'notes': 'Google OAuth initiation endpoint. Increased for 1K users.',
+            'notes': 'OAuth initiation burst-tuned for multiple SSO retries.',
         },
         {
             'endpoint': 'GET /auth/oauth/callback',
-            'limit': '75/minute',
+            'limit': '1200/minute',
             'source': 'app/blueprints/auth/routes.py::oauth_callback',
-            'notes': 'OAuth callback handler (Google). Increased for 1K users.',
+            'notes': 'Handles the callback spike when many users finish OAuth simultaneously.',
         },
         {
             'endpoint': 'GET /auth/callback',
-            'limit': '75/minute',
+            'limit': '1200/minute',
             'source': 'app/blueprints/auth/routes.py::oauth_callback_compat',
-            'notes': 'Legacy alias for the OAuth callback. Increased for 1K users.',
+            'notes': 'Legacy alias used by tests—shares the same ceiling.',
         },
         {
             'endpoint': 'GET/POST /auth/signup',
-            'limit': '60/minute',
+            'limit': '600/minute',
             'source': 'app/blueprints/auth/routes.py::signup',
-            'notes': 'Self-serve signup + tier selection. Increased for 1K users.',
+            'notes': 'Balanced to allow campaigns without letting bots hammer the signup flow.',
         },
 
         # Public Endpoints (High Traffic Expected)
         {
-            'endpoint': 'GET /',
-            'limit': '1000/hour',
-            'source': 'app/extensions.py::limiter (default override needed)',
-            'notes': 'Homepage - expect high traffic from marketing/SEO.',
-        },
-        {
             'endpoint': 'GET /global-items',
-            'limit': '500/hour',
+            'limit': '5000/hour',
             'source': 'app/routes/global_library_routes.py::global_library',
-            'notes': 'Public global item library browsing.',
-        },
-        {
-            'endpoint': 'GET /tools',
-            'limit': '800/hour', 
-            'source': 'app/routes/tools_routes.py::tools_index',
-            'notes': 'Public calculator tools - expect high anonymous usage.',
+            'notes': 'Matches 5k-user scenario; pairs with Redis caching.',
         },
         {
             'endpoint': 'GET /recipes/library',
-            'limit': '400/hour',
-            'source': 'app/routes/recipe_library_routes.py::recipe_library', 
-            'notes': 'Public recipe browsing and marketplace.',
+            'limit': '4000/hour',
+            'source': 'app/routes/recipe_library_routes.py::recipe_library',
+            'notes': 'Public recipe browsing, mirrored by Locust AnonymousUser class.',
+        },
+        {
+            'endpoint': 'GET /tools',
+            'limit': '6000/hour',
+            'source': 'app/routes/tools_routes.py::tools_index',
+            'notes': 'Covers calculator traffic (soap, candle, herbal tools).',
         },
 
         # API Endpoints
         {
-            'endpoint': 'GET/POST /api/public/*',
-            'limit': '200/minute',
-            'source': 'app/blueprints/api/public.py',
-            'notes': 'Public API endpoints for global items, unit conversion.',
+            'endpoint': 'GET /api/ingredients/search',
+            'limit': '3000/minute',
+            'source': 'app/blueprints/api/ingredient_routes.py::search_ingredients',
+            'notes': 'Bootstrap inventory autocomplete used by RecipeOps and InventoryOps users.',
         },
         {
-            'endpoint': 'POST /api/drawer-actions/*',
-            'limit': '100/minute',
-            'source': 'app/blueprints/api/drawers/*',
-            'notes': 'Drawer protocol endpoints for missing data fixes.',
-        },
-        {
-            'endpoint': 'GET/POST /inventory/api/*',
-            'limit': '200/minute',
-            'source': 'app/blueprints/inventory/routes.py',
-            'notes': 'Inventory management API calls.',
+            'endpoint': 'GET /inventory/api/search',
+            'limit': '2000/minute',
+            'source': 'app/blueprints/inventory/routes.py::api_search_inventory',
+            'notes': 'Scoped inventory search leveraged by adjustment drawers.',
         },
         {
             'endpoint': 'POST /batches/api/start-batch',
-            'limit': '30/minute',
+            'limit': '100/minute',
             'source': 'app/blueprints/batches/routes.py::api_start_batch',
-            'notes': 'Batch creation - resource intensive operation.',
+            'notes': 'Resource-intensive batch creation. Keep low to prevent runaway planners.',
+        },
+        {
+            'endpoint': 'POST /api/public/help-bot',
+            'limit': '30/minute',
+            'source': 'app/blueprints/api/public.py::public_help_bot',
+            'notes': 'Anonymous BatchBot helper guarded to prevent abuse.',
         },
 
         # Billing & Webhooks
         {
             'endpoint': 'POST /billing/webhooks/stripe',
-            'limit': '300/minute',
+            'limit': '60/minute',
             'source': 'app/blueprints/billing/routes.py::stripe_webhook',
-            'notes': 'Stripe webhook ingestion. Increased for high-volume billing.',
-        },
-
-        # Search & Autocomplete
-        {
-            'endpoint': 'GET /api/ingredients/search',
-            'limit': '300/minute',
-            'source': 'app/blueprints/api/ingredient_routes.py::search_ingredients',
-            'notes': 'Ingredient search autocomplete - high frequency during recipe creation.',
-        },
-        {
-            'endpoint': 'GET /inventory/api/search',
-            'limit': '300/minute', 
-            'source': 'app/blueprints/inventory/routes.py::api_search_inventory',
-            'notes': 'Inventory search autocomplete - high frequency.',
+            'notes': 'Stripe webhooks rarely exceed this; bump only if you process >3.6k events/hour.',
         },
 
         # Global Defaults
         {
             'endpoint': 'GLOBAL DEFAULT',
-            'limit': '1000/hour + 200/minute',
+            'limit': global_default_limit,
             'source': 'app/extensions.py::limiter',
-            'notes': '1K user baseline: 1 req/user/hour + bursts. Applies when no route override exists.',
+            'notes': 'Applies when no route override exists. Backed by RATELIMIT_DEFAULT env.',
         },
     ]
 

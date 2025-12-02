@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from flask import current_app
 from flask_caching import Cache
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
@@ -24,7 +25,27 @@ db = SQLAlchemy()
 migrate = Migrate(compare_type=True, render_as_batch=True)
 csrf = CSRFProtect()
 cache = Cache()
-limiter = Limiter(key_func=get_remote_address, default_limits=["5000/hour", "1000/minute"])
+
+
+def _default_rate_limits():
+    """Resolve default rate limits from config or fall back to safe defaults."""
+    config_value = current_app.config.get("RATELIMIT_DEFAULT")
+    if isinstance(config_value, str) and config_value.strip():
+        normalized = (
+            config_value.replace(",", ";")
+            .replace("|", ";")
+            .split(";")
+        )
+        limits = [entry.strip() for entry in normalized if entry.strip()]
+        if limits:
+            return limits
+    return ["5000 per hour", "1000 per minute"]
+
+
+limiter = Limiter(
+    key_func=get_remote_address,
+    default_limits=_default_rate_limits,
+)
 server_session = Session()
 
 try:

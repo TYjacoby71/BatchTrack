@@ -58,6 +58,8 @@ class BaseConfig:
    # Rate limiting & Cache
     RATELIMIT_STORAGE_URI = _resolve_ratelimit_uri()
     RATELIMIT_STORAGE_URL = RATELIMIT_STORAGE_URI  # Backwards compatibility
+    RATELIMIT_ENABLED = os.environ.get('RATELIMIT_ENABLED', 'true').lower() == 'true'
+    RATELIMIT_DEFAULT = os.environ.get('RATELIMIT_DEFAULT', '5000 per hour;1000 per minute')
 
     # Cache / shared state
     CACHE_TYPE = os.environ.get('CACHE_TYPE', 'SimpleCache') # Default to SimpleCache if Redis isn't set
