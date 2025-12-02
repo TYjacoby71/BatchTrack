@@ -55,7 +55,7 @@ def _limiter_key_func():
 
 limiter = Limiter(
     key_func=_limiter_key_func,
-    default_limits=_default_rate_limits,
+    default_limits=_default_rate_limits(),
 )
 server_session = Session()
 
