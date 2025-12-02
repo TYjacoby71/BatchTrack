@@ -12,7 +12,7 @@ global_library_bp = Blueprint('global_library_bp', __name__)
 
 
 @global_library_bp.route('/global-items')
-@limiter.limit("5000/hour")
+@limiter.limit("60000/hour;5000/minute")
 def global_library():
     """Public, read-only view of the Global Inventory Library.
     Supports filtering by item type and ingredient category, plus text search.

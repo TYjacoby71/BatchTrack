@@ -32,7 +32,7 @@ class LoginForm(FlaskForm):
     submit = SubmitField('Login')
 
 @auth_bp.route('/login', methods=['GET', 'POST'])
-@limiter.limit("500/minute")
+@limiter.limit("6000/minute")
 def login():
     if current_user.is_authenticated:
         return redirect(url_for('app_routes.dashboard'))
@@ -92,7 +92,7 @@ def login():
     return render_template('pages/auth/login.html', form=form, oauth_available=OAuthService.is_oauth_configured())
 
 @auth_bp.route('/oauth/google')
-@limiter.limit("200/minute")
+@limiter.limit("1200/minute")
 def oauth_google():
     """Initiate Google OAuth flow"""
     logger.info("OAuth Google route accessed")
@@ -119,7 +119,7 @@ def oauth_google():
     return redirect(authorization_url)
 
 @auth_bp.route('/oauth/callback')
-@limiter.limit("300/minute")
+@limiter.limit("1200/minute")
 def oauth_callback():
     """Handle OAuth callback"""
     try:
@@ -225,7 +225,7 @@ def oauth_callback():
         return redirect(url_for('auth.login'))
 
 @auth_bp.route('/callback')
-@limiter.limit("30/minute")
+@limiter.limit("1200/minute")
 def oauth_callback_compat():
     """Compatibility alias for tests expecting /auth/callback."""
     return oauth_callback()
@@ -392,7 +392,7 @@ def debug_oauth_config():
     })
 
 @auth_bp.route('/signup', methods=['GET', 'POST'])
-@limiter.limit("200/minute")
+@limiter.limit("600/minute")
 def signup():
     """Simplified signup flow - tier selection only, then redirect to payment"""
     if current_user.is_authenticated:

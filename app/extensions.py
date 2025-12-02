@@ -1,9 +1,10 @@
 from __future__ import annotations
 
+from flask import current_app
 from flask_caching import Cache
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
-from flask_login import LoginManager
+from flask_login import LoginManager, current_user
 from flask_migrate import Migrate
 from flask_session import Session
 from flask_sqlalchemy import SQLAlchemy
@@ -24,7 +25,39 @@ db = SQLAlchemy()
 migrate = Migrate(compare_type=True, render_as_batch=True)
 csrf = CSRFProtect()
 cache = Cache()
-limiter = Limiter(key_func=get_remote_address, default_limits=["5000/hour", "1000/minute"])
+
+
+def _default_rate_limits():
+    """Resolve default rate limits from config or fall back to safe defaults."""
+    config_value = current_app.config.get("RATELIMIT_DEFAULT")
+    if isinstance(config_value, str) and config_value.strip():
+        normalized = (
+            config_value.replace(",", ";")
+            .replace("|", ";")
+            .split(";")
+        )
+        limits = [entry.strip() for entry in normalized if entry.strip()]
+        if limits:
+            return limits
+    return ["5000 per hour", "1000 per minute"]
+
+
+def _limiter_key_func():
+    """Use per-user keys for authenticated traffic; fall back to IP address."""
+    try:
+        if current_user.is_authenticated:
+            user_id = current_user.get_id()
+            if user_id:
+                return f"user:{user_id}"
+    except Exception:
+        pass
+    return get_remote_address()
+
+
+limiter = Limiter(
+    key_func=_limiter_key_func,
+    default_limits=_default_rate_limits,
+)
 server_session = Session()
 
 try:
