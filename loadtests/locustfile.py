@@ -168,14 +168,32 @@ class AuthenticatedMixin:
             "Referer": "/auth/login",
         }
 
-        response = self.client.post("/auth/login", data=payload, headers=headers, name="auth.login")
-        if response.status_code not in (200, 302):
+        response = self.client.post(
+            "/auth/login",
+            data=payload,
+            headers=headers,
+            name="auth.login",
+            allow_redirects=False,
+        )
+        if response.status_code == 302:
+            redirect_url = response.headers.get("Location", "/dashboard")
+            if redirect_url:
+                try:
+                    name = "auth.login.redirect"
+                    if redirect_url.startswith("/"):
+                        self.client.get(redirect_url, name=name, allow_redirects=True)
+                    else:
+                        self.client.get(redirect_url, name=name, allow_redirects=True)
+                except Exception as exc:
+                    print(f"⚠️ Redirect follow failed for {payload['username']}: {exc}")
+            print(f"✅ Login successful for {payload['username']}: redirected to {redirect_url}")
+        elif response.status_code == 200:
+            print(f"✅ Login successful for {payload['username']}: status=200")
+        else:
             print(f"❌ Login failed for {payload['username']}: status={response.status_code}, response={response.text[:200]}...")
             CREDENTIAL_POOL.release(self.credential)
             self.credential = None
             raise RescheduleTask(f"Login failed for {payload['username']}: {response.status_code}")
-        else:
-            print(f"✅ Login successful for {payload['username']}: status={response.status_code}")
 
     # -----------------------
     # Cached ID lookups

@@ -49,7 +49,7 @@ def get_ingredient_density(id):
 
 @ingredient_api_bp.route('/ingredients/search', methods=['GET'])
 @login_required
-@limiter.limit("1000/minute")
+@limiter.limit("3000/minute")
 def search_ingredients():
     """Search existing inventory items and return top matches for name field autocomplete.
     This preserves current add flow while enabling typeahead suggestions.
