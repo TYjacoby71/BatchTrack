@@ -7,7 +7,10 @@ from typing import Any, Iterable, List
 
 from flask import g, has_request_context, session
 from flask_login import current_user
+from sqlalchemy import or_
+from sqlalchemy.orm import load_only
 
+from ..extensions import db
 from ..models import Unit
 from .cache_manager import app_cache
 from .validation_helpers import validate_density
@@ -16,8 +19,21 @@ from ..services.unit_conversion import ConversionEngine
 logger = logging.getLogger(__name__)
 
 _REQUEST_CACHE_ATTR = "_global_unit_list"
-_CACHE_TTL_SECONDS = 300
+_CACHE_TTL_SECONDS = 3600
 _SLOW_QUERY_THRESHOLD = 0.05
+
+_UNIT_LOAD_COLUMNS = (
+    Unit.id,
+    Unit.name,
+    Unit.unit_type,
+    Unit.base_unit,
+    Unit.conversion_factor,
+    Unit.symbol,
+    Unit.is_custom,
+    Unit.is_mapped,
+    Unit.organization_id,
+    Unit.created_by,
+)
 
 
 @dataclass(frozen=True)
@@ -112,32 +128,35 @@ def _fallback_units() -> List[UnitOption]:
 
 
 def _build_unit_query():
-    query = Unit.query.filter_by(is_active=True)
+    query = (
+        db.session.query(Unit)
+        .options(load_only(*_UNIT_LOAD_COLUMNS))
+        .filter(Unit.is_active.is_(True))
+    )
     user = _active_user()
+    base_scope = Unit.is_custom.is_(False)
 
     if not user or not getattr(user, "is_authenticated", False):
-        return query.filter(Unit.is_custom.is_(False))
+        return query.filter(base_scope).order_by(Unit.unit_type.asc(), Unit.name.asc())
 
     org_id = getattr(user, "organization_id", None)
     if org_id:
-        return query.filter(
-            (Unit.is_custom.is_(False)) | (Unit.organization_id == org_id)
-        )
-
-    if getattr(user, "user_type", None) == "developer" and has_request_context():
+        scope_filter = or_(base_scope, Unit.organization_id == org_id)
+    elif getattr(user, "user_type", None) == "developer" and has_request_context():
         selected_org = session.get("dev_selected_org_id")
         if selected_org:
-            return query.filter(
-                (Unit.is_custom.is_(False)) | (Unit.organization_id == selected_org)
-            )
-        return query
+            scope_filter = or_(base_scope, Unit.organization_id == selected_org)
+        else:
+            scope_filter = base_scope
+    else:
+        scope_filter = base_scope
 
-    return query.filter(Unit.is_custom.is_(False))
+    return query.filter(scope_filter).order_by(Unit.unit_type.asc(), Unit.name.asc())
 
 
 def _fetch_units() -> List[Unit]:
     start = time.perf_counter()
-    units = _build_unit_query().order_by(Unit.unit_type, Unit.name).all()
+    units = _build_unit_query().all()
     duration = time.perf_counter() - start
     if duration > _SLOW_QUERY_THRESHOLD:
         logger.warning("Unit query took %.3fs for %d units", duration, len(units))
