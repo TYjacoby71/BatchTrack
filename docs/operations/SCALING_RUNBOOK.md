@@ -162,28 +162,70 @@ save 300 10
 
 ### Load Testing
 
-Run the included load tests to validate performance:
+Run the bundled Locust scenarios before every major scale event.
 
 ```bash
-# Install Locust (if not already installed)
-pip install locust
-
-# Basic load test
-locust -f loadtests/locustfile.py --host=https://your-app.replit.app
-
-# High-concurrency test
-locust -f loadtests/locustfile.py -u 1000 -r 50 --host=https://your-app.replit.app
-
-# Run specific user types
-locust -f loadtests/locustfile.py AuthenticatedUser --host=https://your-app.replit.app
+# Install/upgrade Locust and browser parser dependency
+pip install -U "locust>=2.36.0" beautifulsoup4
 ```
 
-**Test Scenarios Included:**
+#### Prepare 5k test credentials
 
-- **AnonymousUser**: Public browsing (75% of traffic)
-- **AuthenticatedUser**: Logged-in operations (25% of traffic) 
-- **AdminUser**: Administrative tasks (2.5% of traffic)
-- **HighFrequencyUser**: API-like rapid requests (12.5% of traffic)
+Each simulated user needs a unique account to avoid session collisions. Create them (only once per environment) and keep the username/password pattern handy for future runs.
+
+```bash
+python loadtests/test_user_generator.py create \
+  --count=5000 \
+  --username=loadtest_user \
+  --password=loadtest123
+
+# Optionally export for non-default naming
+export LOCUST_USER_BASE=loadtest_user
+export LOCUST_USER_PASSWORD=loadtest123
+export LOCUST_USER_COUNT=5000
+```
+
+> ℹ️ `loadtests/locustfile.py` falls back to sequential usernames (`loadtest_user1` … `loadtest_user5000`) whenever the `LOCUST_USER_CREDENTIALS` env var is not supplied, so exporting the three variables above is enough for most cases.
+
+#### Scenario mix
+
+| Class              | Weight | Share | Focus areas |
+| ------------------ | ------ | ----- | ----------- |
+| `RecipeOpsUser`    | 4      | 40%   | Recipe planning, batch creation, library browsing |
+| `InventoryOpsUser` | 3      | 30%   | Ingredient lookup, adjustments, expirations |
+| `ProductOpsUser`   | 2      | 20%   | SKU audits, product adjustments |
+| `AnonymousUser`    | 1      | 10%   | Public pages, signup, catalog cache warming |
+
+Weights map directly to Locust’s user ratios, so any total user count keeps the same production-like blend.
+
+#### Launch the 5k-user run (headless)
+
+```bash
+HOST_URL="https://your-app.example.com"  # or http://127.0.0.1:5000 for local tests
+
+locust -f loadtests/locustfile.py \
+  --headless \
+  --host="${HOST_URL}" \
+  -u 5000 \            # total concurrent users
+  -r 100 \             # spawn rate (users/second)
+  --run-time 30m \
+  --logfile logs/locust-5k.log \
+  --csv logs/locust-5k
+```
+
+Adjust `-r` (spawn rate) based on infrastructure headroom; `100` spawns all users in ~50 seconds and has been stable in staging. Monitor errors such as `auth.login` (500s) or `bootstrap.inventory.api` (401s) closely—persistent failures here usually indicate missing fixtures or throttled services and must be resolved before another high-concurrency attempt.
+
+#### Optional: Web UI smoke test
+
+```bash
+locust -f loadtests/locustfile.py \
+  --host=http://127.0.0.1:5000 \
+  --web-host=0.0.0.0 \
+  --users 200 \
+  --spawn-rate 10
+```
+
+Use the UI to experiment with lower loads, then switch back to the headless command for reproducible 5k-user validation.
 
 ### Monitoring Key Metrics
 
