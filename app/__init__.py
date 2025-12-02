@@ -68,6 +68,7 @@ def create_app(config: dict[str, Any] | None = None) -> Flask:
     os.makedirs(app.instance_path, exist_ok=True)
 
     _load_base_config(app, config)
+    _apply_sqlalchemy_env_overrides(app)
     _configure_sqlite_engine_options(app)
     _sync_env_overrides(app)
 
@@ -116,6 +117,40 @@ def _load_base_config(app: Flask, config: dict[str, Any] | None) -> None:
     os.makedirs(upload_dir, exist_ok=True)
     app.config.setdefault("UPLOAD_FOLDER", upload_dir)
     app.config.setdefault("BATCHTRACK_ORG_ID", 1)
+
+
+def _apply_sqlalchemy_env_overrides(app: Flask) -> None:
+    engine_opts = dict(app.config.get("SQLALCHEMY_ENGINE_OPTIONS", {}) or {})
+    changed = False
+
+    def _apply_int(env_key: str, option_key: str):
+        nonlocal changed
+        value = os.environ.get(env_key)
+        if value in (None, ""):
+            return
+        try:
+            engine_opts[option_key] = int(value)
+            changed = True
+        except ValueError:
+            logger.warning("Invalid integer for %s: %s", env_key, value)
+
+    def _apply_float(env_key: str, option_key: str):
+        nonlocal changed
+        value = os.environ.get(env_key)
+        if value in (None, ""):
+            return
+        try:
+            engine_opts[option_key] = float(value)
+            changed = True
+        except ValueError:
+            logger.warning("Invalid float for %s: %s", env_key, value)
+
+    _apply_int("SQLALCHEMY_POOL_SIZE", "pool_size")
+    _apply_int("SQLALCHEMY_MAX_OVERFLOW", "max_overflow")
+    _apply_float("SQLALCHEMY_POOL_TIMEOUT", "pool_timeout")
+
+    if changed:
+        app.config["SQLALCHEMY_ENGINE_OPTIONS"] = engine_opts
 
 
 def _sync_env_overrides(app: Flask) -> None:
