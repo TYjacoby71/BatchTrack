@@ -20,7 +20,7 @@ from locust.exception import RescheduleTask
 CACHE_TTL_SECONDS = int(os.getenv("LOCUST_CACHE_TTL", "120"))
 DEFAULT_PASSWORD = os.getenv("LOCUST_USER_PASSWORD", "loadtest123")
 DEFAULT_USERNAME_BASE = os.getenv("LOCUST_USER_BASE", "loadtest_user")
-DEFAULT_USER_COUNT = int(os.getenv("LOCUST_USER_COUNT", "200"))
+DEFAULT_USER_COUNT = int(os.getenv("LOCUST_USER_COUNT", "10000"))
 
 
 def _load_credential_source() -> List[Dict[str, str]]:
@@ -30,17 +30,22 @@ def _load_credential_source() -> List[Dict[str, str]]:
         try:
             loaded = json.loads(raw)
             if isinstance(loaded, list):
-                return [
+                credentials = [
                     creds for creds in loaded
                     if isinstance(creds, dict) and {"username", "password"} <= set(creds.keys())
                 ]
+                print(f"📋 Loaded {len(credentials)} credentials from LOCUST_USER_CREDENTIALS")
+                return credentials
         except json.JSONDecodeError:
-            pass
+            print("❌ Failed to parse LOCUST_USER_CREDENTIALS JSON")
 
-    return [
+    # Fall back to sequential pattern
+    credentials = [
         {"username": f"{DEFAULT_USERNAME_BASE}{i}", "password": DEFAULT_PASSWORD}
         for i in range(1, DEFAULT_USER_COUNT + 1)
     ]
+    print(f"📋 Generated {len(credentials)} sequential credentials ({DEFAULT_USERNAME_BASE}1-{DEFAULT_USER_COUNT})")
+    return credentials
 
 
 class CredentialPool:
@@ -48,14 +53,24 @@ class CredentialPool:
 
     def __init__(self):
         self._pool = queue.Queue()
-        for creds in _load_credential_source():
+        credentials = _load_credential_source()
+        
+        if not credentials:
+            raise RuntimeError("❌ No credentials available! Run: python loadtests/test_user_generator.py create --count=10000")
+            
+        for creds in credentials:
             self._pool.put(creds)
+        
+        print(f"✅ Credential pool initialized with {len(credentials)} users")
+        print(f"   Pattern: {credentials[0]['username']} ... {credentials[-1]['username']}")
+        print(f"   Password: {credentials[0]['password']}")
 
     def acquire(self) -> Dict[str, str]:
         try:
             return self._pool.get(timeout=5)
         except queue.Empty as exc:  # pragma: no cover - defensive
-            raise RuntimeError("No available load-test users") from exc
+            remaining_size = self._pool.qsize()
+            raise RuntimeError(f"No available load-test users (pool size: {remaining_size}). You may need more test users or fewer concurrent Locust users.") from exc
 
     def release(self, creds: Optional[Dict[str, str]]) -> None:
         if creds:
@@ -95,8 +110,9 @@ class AuthenticatedMixin:
     """Reusable auth + caching helpers for stateful users."""
 
     credential: Optional[Dict[str, str]] = None
+    _active_username: Optional[str] = None
     recipe_ids: List[int]
-    library_recipe_ids: List[int]
+    library_recipe_ids: List[Tuple[int, str]]
     inventory_item_ids: List[int]
     product_ids: List[int]
     sku_inventory_ids: List[int]
@@ -106,10 +122,17 @@ class AuthenticatedMixin:
         """Claim a test account, log in, and seed caches."""
         try:
             self.credential = CREDENTIAL_POOL.acquire()
+            self._active_username = self.credential.get("username")
         except RuntimeError as exc:
+            print(f"❌ {self.__class__.__name__} failed to acquire credential: {exc}")
             raise RescheduleTask(str(exc)) from exc
 
-        self._login_with_credential()
+        try:
+            self._login_with_credential()
+        except RescheduleTask as exc:
+            username = self._active_username or "unknown"
+            print(f"❌ {self.__class__.__name__} login failed for {username}: {exc}")
+            raise
         self.recipe_ids = []
         self.library_recipe_ids = []
         self.inventory_item_ids = []
@@ -123,11 +146,13 @@ class AuthenticatedMixin:
         if self.credential:
             CREDENTIAL_POOL.release(self.credential)
             self.credential = None
+        self._active_username = None
 
     def _login_with_credential(self) -> None:
         """Execute the login form flow with CSRF handling."""
         login_page = self.client.get("/auth/login", name="auth.login.page")
         if login_page.status_code != 200:
+            print(f"❌ Login page unavailable: {login_page.status_code}")
             raise RescheduleTask("Login page unavailable")
 
         token = _extract_csrf_token(login_page.text)
@@ -143,8 +168,29 @@ class AuthenticatedMixin:
             "Referer": "/auth/login",
         }
 
-        response = self.client.post("/auth/login", data=payload, headers=headers, name="auth.login")
-        if response.status_code not in (200, 302):
+        response = self.client.post(
+            "/auth/login",
+            data=payload,
+            headers=headers,
+            name="auth.login",
+            allow_redirects=False,
+        )
+        if response.status_code == 302:
+            redirect_url = response.headers.get("Location", "/dashboard")
+            if redirect_url:
+                try:
+                    name = "auth.login.redirect"
+                    if redirect_url.startswith("/"):
+                        self.client.get(redirect_url, name=name, allow_redirects=True)
+                    else:
+                        self.client.get(redirect_url, name=name, allow_redirects=True)
+                except Exception as exc:
+                    print(f"⚠️ Redirect follow failed for {payload['username']}: {exc}")
+            print(f"✅ Login successful for {payload['username']}: redirected to {redirect_url}")
+        elif response.status_code == 200:
+            print(f"✅ Login successful for {payload['username']}: status=200")
+        else:
+            print(f"❌ Login failed for {payload['username']}: status={response.status_code}, response={response.text[:200]}...")
             CREDENTIAL_POOL.release(self.credential)
             self.credential = None
             raise RescheduleTask(f"Login failed for {payload['username']}: {response.status_code}")
@@ -167,9 +213,18 @@ class AuthenticatedMixin:
         resp = self.client.get("/recipes", name="bootstrap.recipes", allow_redirects=True)
         return _extract_ids(r"/recipes/(\d+)/view", resp.text) if resp.status_code == 200 else []
 
-    def _fetch_recipe_library_ids(self) -> List[int]:
+    def _fetch_recipe_library_ids(self) -> List[Tuple[int, str]]:
         resp = self.client.get("/recipes/library", name="bootstrap.recipe_library", allow_redirects=True)
-        return _extract_ids(r"/recipes/library/(\d+)", resp.text) if resp.status_code == 200 else []
+        if resp.status_code != 200:
+            return []
+        pairs = re.findall(r"/recipes/library/(\d+)-([a-z0-9-]+)", resp.text)
+        refs = []
+        for recipe_id, slug in pairs:
+            try:
+                refs.append((int(recipe_id), slug))
+            except ValueError:
+                continue
+        return refs
 
     def _fetch_inventory_item_ids(self) -> List[int]:
         resp = self.client.get("/api/ingredients", name="bootstrap.inventory.api")
@@ -197,7 +252,7 @@ class AuthenticatedMixin:
             self.ensure_domain_cache(force=True)
         return random.choice(self.recipe_ids) if self.recipe_ids else None
 
-    def pick_library_recipe_id(self) -> Optional[int]:
+    def pick_library_recipe_id(self) -> Optional[Tuple[int, str]]:
         if not self.library_recipe_ids:
             self.ensure_domain_cache(force=True)
         return random.choice(self.library_recipe_ids) if self.library_recipe_ids else None
@@ -306,10 +361,12 @@ class RecipeOpsUser(AuthenticatedMixin, HttpUser):
 
     @task(1)
     def preview_recipe_import(self):
-        library_id = self.pick_library_recipe_id()
-        if not library_id:
+        library_ref = self.pick_library_recipe_id()
+        if not library_ref:
             return
-        self.client.get(f"/recipes/library/{library_id}", name="recipes.library.detail")
+        library_id, slug = library_ref
+        detail_path = f"/recipes/library/{library_id}-{slug}"
+        self.client.get(detail_path, name="recipes.library.detail")
         with self.client.get(
             f"/recipes/{library_id}/import",
             name="recipes.import",

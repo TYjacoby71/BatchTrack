@@ -3,7 +3,7 @@ from __future__ import annotations
 from flask_caching import Cache
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
-from flask_login import LoginManager
+from flask_login import LoginManager, current_user
 from flask_migrate import Migrate
 from flask_session import Session
 from flask_sqlalchemy import SQLAlchemy
@@ -24,7 +24,21 @@ db = SQLAlchemy()
 migrate = Migrate(compare_type=True, render_as_batch=True)
 csrf = CSRFProtect()
 cache = Cache()
-limiter = Limiter(key_func=get_remote_address, default_limits=("200 per day", "50 per hour"))
+
+
+def _limiter_key_func():
+    """Use per-user keys for authenticated traffic; fall back to IP address."""
+    try:
+        if current_user.is_authenticated:
+            user_id = current_user.get_id()
+            if user_id:
+                return f"user:{user_id}"
+    except Exception:
+        pass
+    return get_remote_address()
+
+
+limiter = Limiter(key_func=_limiter_key_func)
 server_session = Session()
 
 try:
