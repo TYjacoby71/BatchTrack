@@ -15,6 +15,54 @@ from .middleware import register_middleware
 logger = logging.getLogger(__name__)
 
 
+def _initialize_redis_pool(app: Flask):
+    """Provision (or reuse) a shared Redis connection pool for this app instance."""
+    redis_url = app.config.get("REDIS_URL")
+    if not redis_url:
+        return None
+
+    pool = app.extensions.get("redis_pool")
+    if pool is not None:
+        return pool
+
+    try:
+        import redis
+    except ImportError:  # pragma: no cover - optional dependency
+        logger.warning("Redis library not installed; skipping shared connection pool setup.")
+        return None
+
+    def _float_env(key: str, default: float) -> float:
+        try:
+            return float(os.environ.get(key, default))
+        except (TypeError, ValueError):
+            return default
+
+    try:
+        max_conns = int(os.environ.get("REDIS_POOL_MAX_CONNECTIONS", "200"))
+    except (TypeError, ValueError):
+        max_conns = 200
+
+    pool_timeout = _float_env("REDIS_POOL_TIMEOUT", 5.0)
+    socket_timeout = _float_env("REDIS_SOCKET_TIMEOUT", 5.0)
+    connect_timeout = _float_env("REDIS_CONNECT_TIMEOUT", 5.0)
+
+    pool_class = getattr(redis, "BlockingConnectionPool", redis.ConnectionPool)
+    pool = pool_class.from_url(
+        redis_url,
+        max_connections=None if max_conns <= 0 else max_conns,
+        timeout=pool_timeout,
+        socket_timeout=socket_timeout,
+        socket_connect_timeout=connect_timeout,
+    )
+    app.extensions["redis_pool"] = pool
+    logger.info(
+        "Initialized Redis connection pool (max_connections=%s, timeout=%ss)",
+        max_conns if max_conns > 0 else "unbounded",
+        pool_timeout,
+    )
+    return pool
+
+
 def create_app(config: dict[str, Any] | None = None) -> Flask:
     app = Flask(__name__, static_folder="static", static_url_path="/static")
     os.makedirs(app.instance_path, exist_ok=True)
@@ -79,11 +127,23 @@ def _sync_env_overrides(app: Flask) -> None:
 def _configure_cache(app: Flask) -> None:
     redis_url = app.config.get("REDIS_URL")
     cache_config = {
-        "CACHE_TYPE": "RedisCache" if redis_url else "SimpleCache",
         "CACHE_DEFAULT_TIMEOUT": app.config.get("CACHE_DEFAULT_TIMEOUT", 300),
     }
+
     if redis_url:
-        cache_config["CACHE_REDIS_URL"] = redis_url
+        pool = _initialize_redis_pool(app)
+        if pool is not None:
+            cache_config["CACHE_TYPE"] = "RedisCache"
+            cache_config["CACHE_REDIS_URL"] = redis_url
+            cache_config.setdefault("CACHE_OPTIONS", {})
+            cache_config["CACHE_OPTIONS"]["connection_pool"] = pool
+            logger.info("Redis cache configured with shared connection pool")
+        else:
+            cache_config["CACHE_TYPE"] = "SimpleCache"
+            logger.warning("Unable to initialize Redis cache; falling back to SimpleCache.")
+    else:
+        cache_config["CACHE_TYPE"] = "SimpleCache"
+        logger.info("Using SimpleCache (no Redis URL configured)")
 
     cache.init_app(app, config=cache_config)
     if app.config.get("ENV") == "production" and cache_config["CACHE_TYPE"] != "RedisCache":
@@ -99,7 +159,11 @@ def _configure_sessions(app: Flask) -> None:
         try:
             import redis
 
-            session_redis = redis.Redis.from_url(session_redis_url)
+            pool = _initialize_redis_pool(app)
+            if pool is not None:
+                session_redis = redis.Redis(connection_pool=pool)
+            else:
+                session_redis = redis.Redis.from_url(session_redis_url)
             session_backend = "redis"
         except Exception as exc:
             logger.warning("Failed to initialize Redis-backed session store (%s); falling back to filesystem.", exc)
@@ -129,6 +193,12 @@ def _configure_rate_limiter(app: Flask) -> None:
         or "memory://"
     )
     app.config["RATELIMIT_STORAGE_URI"] = storage_uri
+    if storage_uri.startswith("redis"):
+        pool = _initialize_redis_pool(app)
+        if pool is not None:
+            storage_options = dict(app.config.get("RATELIMIT_STORAGE_OPTIONS") or {})
+            storage_options["connection_pool"] = pool
+            app.config["RATELIMIT_STORAGE_OPTIONS"] = storage_options
     limiter.init_app(app)
 
     if app.config.get("ENV") == "production" and storage_uri.startswith("memory://"):
