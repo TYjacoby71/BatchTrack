@@ -110,8 +110,9 @@ class AuthenticatedMixin:
     """Reusable auth + caching helpers for stateful users."""
 
     credential: Optional[Dict[str, str]] = None
+    _active_username: Optional[str] = None
     recipe_ids: List[int]
-    library_recipe_ids: List[int]
+    library_recipe_ids: List[Tuple[int, str]]
     inventory_item_ids: List[int]
     product_ids: List[int]
     sku_inventory_ids: List[int]
@@ -121,18 +122,17 @@ class AuthenticatedMixin:
         """Claim a test account, log in, and seed caches."""
         try:
             self.credential = CREDENTIAL_POOL.acquire()
-            print(f"🔐 {self.__class__.__name__} acquired credential: {self.credential['username']}")
+            self._active_username = self.credential.get("username")
         except RuntimeError as exc:
             print(f"❌ {self.__class__.__name__} failed to acquire credential: {exc}")
             raise RescheduleTask(str(exc)) from exc
 
         try:
             self._login_with_credential()
-            print(f"✅ {self.__class__.__name__} logged in successfully: {self.credential['username']}")
-        except Exception as exc:
-            print(f"❌ {self.__class__.__name__} login failed for {self.credential['username']}: {exc}")
+        except RescheduleTask as exc:
+            username = self._active_username or "unknown"
+            print(f"❌ {self.__class__.__name__} login failed for {username}: {exc}")
             raise
-            
         self.recipe_ids = []
         self.library_recipe_ids = []
         self.inventory_item_ids = []
@@ -146,6 +146,7 @@ class AuthenticatedMixin:
         if self.credential:
             CREDENTIAL_POOL.release(self.credential)
             self.credential = None
+        self._active_username = None
 
     def _login_with_credential(self) -> None:
         """Execute the login form flow with CSRF handling."""
@@ -194,9 +195,18 @@ class AuthenticatedMixin:
         resp = self.client.get("/recipes", name="bootstrap.recipes", allow_redirects=True)
         return _extract_ids(r"/recipes/(\d+)/view", resp.text) if resp.status_code == 200 else []
 
-    def _fetch_recipe_library_ids(self) -> List[int]:
+    def _fetch_recipe_library_ids(self) -> List[Tuple[int, str]]:
         resp = self.client.get("/recipes/library", name="bootstrap.recipe_library", allow_redirects=True)
-        return _extract_ids(r"/recipes/library/(\d+)", resp.text) if resp.status_code == 200 else []
+        if resp.status_code != 200:
+            return []
+        pairs = re.findall(r"/recipes/library/(\d+)-([a-z0-9-]+)", resp.text)
+        refs = []
+        for recipe_id, slug in pairs:
+            try:
+                refs.append((int(recipe_id), slug))
+            except ValueError:
+                continue
+        return refs
 
     def _fetch_inventory_item_ids(self) -> List[int]:
         resp = self.client.get("/api/ingredients", name="bootstrap.inventory.api")
@@ -224,7 +234,7 @@ class AuthenticatedMixin:
             self.ensure_domain_cache(force=True)
         return random.choice(self.recipe_ids) if self.recipe_ids else None
 
-    def pick_library_recipe_id(self) -> Optional[int]:
+    def pick_library_recipe_id(self) -> Optional[Tuple[int, str]]:
         if not self.library_recipe_ids:
             self.ensure_domain_cache(force=True)
         return random.choice(self.library_recipe_ids) if self.library_recipe_ids else None
@@ -333,11 +343,12 @@ class RecipeOpsUser(AuthenticatedMixin, HttpUser):
 
     @task(1)
     def preview_recipe_import(self):
-        library_id = self.pick_library_recipe_id()
-        if not library_id:
+        library_ref = self.pick_library_recipe_id()
+        if not library_ref:
             return
-        # Recipe library detail requires both ID and slug - use placeholder slug for load testing
-        self.client.get(f"/recipes/library/{library_id}-test-recipe", name="recipes.library.detail")
+        library_id, slug = library_ref
+        detail_path = f"/recipes/library/{library_id}-{slug}"
+        self.client.get(detail_path, name="recipes.library.detail")
         with self.client.get(
             f"/recipes/{library_id}/import",
             name="recipes.import",

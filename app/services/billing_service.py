@@ -1,7 +1,9 @@
 import logging
 import os
+from collections import defaultdict
 from collections.abc import Mapping
 from datetime import datetime, timedelta, timezone
+from threading import Lock
 
 import stripe
 from flask import current_app
@@ -13,6 +15,7 @@ from ..models.stripe_event import StripeEvent
 from ..models.subscription_tier import SubscriptionTier
 from ..utils.timezone_utils import TimezoneUtils
 from .signup_service import SignupService
+from ..utils.cache_manager import app_cache
 
 try:
     from stripe import exceptions as stripe_exceptions  # Stripe >= 11
@@ -34,8 +37,23 @@ logger = logging.getLogger(__name__)
 class BillingService:
     """Consolidated billing + Stripe orchestration service."""
 
-    _pricing_cache = {}
     _pricing_cache_ttl_seconds = 600  # 10 minutes
+    _pricing_error_cache_ttl_seconds = 60
+    _pricing_lock_registry: dict[str, Lock] = defaultdict(Lock)
+    _pricing_registry_lock = Lock()
+
+    @classmethod
+    def _pricing_cache_key(cls, lookup_key: str) -> str:
+        return f"billing:price:{lookup_key}"
+
+    @classmethod
+    def _get_pricing_lock(cls, lookup_key: str) -> Lock:
+        with cls._pricing_registry_lock:
+            lock = cls._pricing_lock_registry.get(lookup_key)
+            if not lock:
+                lock = Lock()
+                cls._pricing_lock_registry[lookup_key] = lock
+            return lock
 
     # ------------------------------------------------------------------ #
     # Tier + organization helpers (source of truth for billing access)   #
@@ -572,80 +590,68 @@ class BillingService:
     @staticmethod
     def get_live_pricing_for_tier(tier_obj):
         """Get live pricing from Stripe for a subscription tier"""
-        # Serve from cache if fresh
-        try:
-            cache_key = f"price::{tier_obj.stripe_lookup_key}"
-            now = datetime.now(timezone.utc)
-            cached = BillingService._pricing_cache.get(cache_key)
-            if cached and (now - cached['ts']).total_seconds() < BillingService._pricing_cache_ttl_seconds:
-                return cached['data']
-        except Exception:
-            pass
-
-        if not BillingService.ensure_stripe():
+        lookup_key = getattr(tier_obj, 'stripe_lookup_key', None)
+        if not lookup_key:
             return None
 
-        if not tier_obj.stripe_lookup_key:
-            return None
+        cache_key = BillingService._pricing_cache_key(lookup_key)
+        cached = app_cache.get(cache_key)
+        if cached:
+            return cached
 
-        price_obj = None
-        try:
-            price_obj, resolution_strategy = BillingService._resolve_price_for_lookup_key(
-                tier_obj.stripe_lookup_key
-            )
+        lock = BillingService._get_pricing_lock(lookup_key)
+        with lock:
+            # Another thread may have populated while we were waiting
+            cached = app_cache.get(cache_key)
+            if cached:
+                return cached
 
-            if not price_obj:
-                logger.warning(
-                    "No active Stripe price found for lookup key %s; ensure the price exists and is active",
-                    tier_obj.stripe_lookup_key,
-                )
+            if not BillingService.ensure_stripe():
                 return None
 
-            # Format pricing data
-            amount = price_obj.unit_amount / 100
-            currency = price_obj.currency.upper()
-
-            billing_cycle = 'one-time'
-            if price_obj.recurring:
-                billing_cycle = 'yearly' if price_obj.recurring.interval == 'year' else 'monthly'
-
-            if resolution_strategy != 'lookup_key':
-                logger.info(
-                    "Resolved Stripe price %s for lookup key %s using %s fallback",
-                    price_obj.id,
-                    tier_obj.stripe_lookup_key,
-                    resolution_strategy,
-                )
-
-            return {
-                'price_id': price_obj.id,
-                'amount': amount,
-                'formatted_price': f'${amount:.0f}',
-                'currency': currency,
-                'billing_cycle': billing_cycle,
-                'lookup_key': tier_obj.stripe_lookup_key,
-                'last_synced': datetime.now(timezone.utc).isoformat()
-            }
-
-        except StripeError as e:
-            logger.error(f"Stripe error fetching price for {tier_obj.stripe_lookup_key}: {e}")
-            return None
-        finally:
-            # Cache successful lookups
+            price_obj = None
             try:
-                if price_obj:
-                    data = {
-                        'price_id': price_obj.id,
-                        'amount': price_obj.unit_amount / 100,
-                        'formatted_price': f"${price_obj.unit_amount / 100:.0f}",
-                        'currency': price_obj.currency.upper(),
-                        'billing_cycle': 'yearly' if getattr(price_obj, 'recurring', None) and price_obj.recurring.interval == 'year' else ('monthly' if getattr(price_obj, 'recurring', None) and price_obj.recurring.interval == 'month' else 'one-time'),
-                        'lookup_key': tier_obj.stripe_lookup_key,
-                        'last_synced': datetime.now(timezone.utc).isoformat()
-                    }
-                    BillingService._pricing_cache[cache_key] = {'ts': datetime.now(timezone.utc), 'data': data}
-            except Exception:
-                pass
+                price_obj, resolution_strategy = BillingService._resolve_price_for_lookup_key(lookup_key)
+
+                if not price_obj:
+                    logger.warning(
+                        "No active Stripe price found for lookup key %s; ensure the price exists and is active",
+                        lookup_key,
+                    )
+                    app_cache.set(cache_key, None, ttl=BillingService._pricing_error_cache_ttl_seconds)
+                    return None
+
+                amount = price_obj.unit_amount / 100
+                currency = price_obj.currency.upper()
+
+                billing_cycle = 'one-time'
+                if price_obj.recurring:
+                    billing_cycle = 'yearly' if price_obj.recurring.interval == 'year' else 'monthly'
+
+                if resolution_strategy != 'lookup_key':
+                    logger.info(
+                        "Resolved Stripe price %s for lookup key %s using %s fallback",
+                        price_obj.id,
+                        lookup_key,
+                        resolution_strategy,
+                    )
+
+                data = {
+                    'price_id': price_obj.id,
+                    'amount': amount,
+                    'formatted_price': f'${amount:.0f}',
+                    'currency': currency,
+                    'billing_cycle': billing_cycle,
+                    'lookup_key': lookup_key,
+                    'last_synced': datetime.now(timezone.utc).isoformat()
+                }
+                app_cache.set(cache_key, data, ttl=BillingService._pricing_cache_ttl_seconds)
+                return data
+
+            except StripeError as e:
+                logger.error(f"Stripe error fetching price for {lookup_key}: {e}")
+                app_cache.set(cache_key, None, ttl=BillingService._pricing_error_cache_ttl_seconds)
+                return None
 
     @staticmethod
     def _resolve_price_for_lookup_key(lookup_key: str):
