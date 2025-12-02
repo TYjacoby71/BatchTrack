@@ -245,15 +245,15 @@
     <div class="card shadow-sm mt-4">
       <div class="card-header bg-white border-0">
         <h4 class="mb-1">Rate Limiter Map</h4>
-        <p class="text-muted small mb-0">Current limits configured for <strong>1,000 concurrent users</strong>. Adjust the limits below in the referenced files to scale for higher traffic.</p>
+        <p class="text-muted small mb-0">Current limits are tuned for <strong>5,000 concurrent users</strong> (Locust ramp: 100 users/sec). Authenticated requests now key off <code>current_user.id</code>, so per-user caps apply even when all traffic comes from a single load-test IP.</p>
       </div>
       <div class="alert alert-info mx-3 mt-3">
         <strong>Load Test Configuration History:</strong>
         <ul class="mb-0 mt-2">
-          <li><strong>1K Users:</strong> Current configuration - Global default: 1000/hour + 200/minute, Auth: 100/minute login, Public endpoints: 400-800/hour</li>
-          <li><strong>5K Users:</strong> <em>Not yet tested - limits TBD</em></li>
-          <li><strong>10K Users:</strong> <em>Not yet tested - limits TBD</em></li>
-          <li><strong>100K Users:</strong> <em>Not yet tested - limits TBD</em></li>
+          <li><strong>1K Users:</strong> Legacy config (global 1000/hour + 200/minute, login 100/min). Only for starter tiers.</li>
+          <li><strong>5K Users:</strong> <span class="text-success">Active</span> — Global default now <code>5000/hour;1000/minute</code> plus login 6000/min and bootstrap APIs 2-3k/min.</li>
+          <li><strong>10K Users:</strong> Target after current soak test. Plan to double DB pool + introduce PgBouncer.</li>
+          <li><strong>100K Users:</strong> Reserved for future multi-region design.</li>
         </ul>
       </div>
       <div class="card-body">
