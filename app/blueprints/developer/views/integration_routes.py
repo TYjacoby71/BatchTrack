@@ -160,8 +160,30 @@ def integrations_checklist():
             [
                 _make_item("DATABASE_INTERNAL_URL", "Primary database connection string.", required=True, is_secret=True),
                 _make_item("DATABASE_URL", "Fallback database connection string.", required=False, is_secret=True),
-                _make_item("SQLALCHEMY_DISABLE_CREATE_ALL", "Disable db.create_all() safety switch.", required=False, recommended="1"),
-                _make_item("SQLALCHEMY_ENABLE_CREATE_ALL", "Local dev-only override.", required=False, recommended="unset"),
+                _make_item(
+                    "SQLALCHEMY_CREATE_ALL",
+                    "Run db.create_all() during startup (set 1 to enable, 0 to skip).",
+                    required=False,
+                    recommended="0 (prod) / 1 (local seeding)",
+                ),
+                _make_item(
+                    "SQLALCHEMY_POOL_SIZE",
+                    "SQLAlchemy connection pool size (per instance).",
+                    required=False,
+                    recommended="60 (adjust to stay below DB max_connections)",
+                ),
+                _make_item(
+                    "SQLALCHEMY_MAX_OVERFLOW",
+                    "Additional connections allowed past pool_size.",
+                    required=False,
+                    recommended="40",
+                ),
+                _make_item(
+                    "SQLALCHEMY_POOL_TIMEOUT",
+                    "Seconds to wait for a database connection before failing.",
+                    required=False,
+                    recommended="5",
+                ),
             ],
         ),
         _section(
@@ -170,6 +192,30 @@ def integrations_checklist():
             [
                 _make_item("REDIS_URL", "Redis connection string.", required=True, recommended="redis://", allow_config=True),
                 _make_item("SESSION_TYPE", "Server-side session backend.", required=True, recommended="redis", allow_config=True),
+                _make_item(
+                    "REDIS_POOL_MAX_CONNECTIONS",
+                    "Shared Redis connection pool size (across cache/sessions/limiter).",
+                    required=False,
+                    recommended="~80% of Redis maxclients",
+                ),
+                _make_item(
+                    "REDIS_POOL_TIMEOUT",
+                    "Seconds to wait for a Redis connection before erroring.",
+                    required=False,
+                    recommended="5",
+                ),
+                _make_item(
+                    "REDIS_SOCKET_TIMEOUT",
+                    "Redis socket timeout in seconds.",
+                    required=False,
+                    recommended="5",
+                ),
+                _make_item(
+                    "REDIS_CONNECT_TIMEOUT",
+                    "Redis connect timeout in seconds.",
+                    required=False,
+                    recommended="5",
+                ),
             ],
         ),
         _section(
