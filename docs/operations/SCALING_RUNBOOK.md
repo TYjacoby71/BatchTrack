@@ -276,6 +276,21 @@ locust -f loadtests/locustfile.py \
 
 Adjust `-r` (spawn rate) based on infrastructure headroom; `100` spawns all users in ~50 seconds and has been stable in staging. Monitor errors such as `auth.login` (500s) or `bootstrap.inventory.api` (401s) closely—persistent failures here usually indicate missing fixtures or throttled services and must be resolved before another high-concurrency attempt.
 
+##### Quick reference for other sizes
+
+| Scenario | Command snippet (change `HOST_URL` to your environment) |
+| --- | --- |
+| 1k-user soak | `locust -f loadtests/locustfile.py --host "$HOST_URL" --headless -u 1000 -r 50 --run-time 30m --stop-timeout 120 --csv logs/locust-1k --logfile logs/locust-1k.log` |
+| 5k-user soak (baseline) | `locust -f loadtests/locustfile.py --host "$HOST_URL" --headless -u 5000 -r 100 --run-time 60m --stop-timeout 120 --csv logs/locust-5k --logfile logs/locust-5k.log` |
+| 10k-user stress | `locust -f loadtests/locustfile.py --host "$HOST_URL" --headless -u 10000 -r 200 --run-time 60m --stop-timeout 180 --csv logs/locust-10k --logfile logs/locust-10k.log` |
+
+Use the same base command and adjust only `-u` (target users) and `-r` (spawn rate). Add or remove optional flags as needed:
+
+- `--run-time <duration>`: auto-stop after N seconds/minutes/hours.
+- `--stop-timeout <seconds>`: graceful shutdown window for active users.
+- `--csv <path-prefix>` / `--logfile <path>`: persist stats and logs for later review.
+- Drop `--headless` if you want to drive the run from the Locust web UI instead of the CLI.
+
 #### Optional: Web UI smoke test
 
 ```bash
