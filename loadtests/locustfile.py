@@ -168,14 +168,22 @@ class AuthenticatedMixin:
             "Referer": "/auth/login",
         }
 
-        response = self.client.post("/auth/login", data=payload, headers=headers, name="auth.login")
-        if response.status_code not in (200, 302):
+        response = self.client.post("/auth/login", data=payload, headers=headers, name="auth.login", allow_redirects=False)
+        
+        # Check for successful login (should redirect or return 200)
+        if response.status_code == 302:
+            # Follow the redirect to complete login
+            redirect_url = response.headers.get('Location', '/dashboard')
+            if redirect_url.startswith('/'):
+                self.client.get(redirect_url, name="auth.login.redirect")
+            print(f"✅ Login successful for {payload['username']}: redirected to {redirect_url}")
+        elif response.status_code == 200:
+            print(f"✅ Login successful for {payload['username']}: status=200")
+        else:
             print(f"❌ Login failed for {payload['username']}: status={response.status_code}, response={response.text[:200]}...")
             CREDENTIAL_POOL.release(self.credential)
             self.credential = None
             raise RescheduleTask(f"Login failed for {payload['username']}: {response.status_code}")
-        else:
-            print(f"✅ Login successful for {payload['username']}: status={response.status_code}")
 
     # -----------------------
     # Cached ID lookups
@@ -491,10 +499,8 @@ class AnonymousUser(HttpUser):
 
     @task(3)
     def browse_global_items(self):
-        params = {}
-        if random.random() < 0.5:
-            params["type"] = random.choice(["ingredient", "container"])
-        self.client.get("/global-items", params=params, name="public.global_items")
+        # Only browse public global items, not protected inventory endpoints
+        self.client.get("/global-library", name="public.global_items")
 
     @task(2)
     def recipe_library_public(self):
