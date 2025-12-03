@@ -6,6 +6,7 @@ import re
 from flask import jsonify, render_template, request
 from flask_login import current_user, login_required
 
+from app.config import ENV_DIAGNOSTICS
 from app.services.email_service import EmailService
 
 from ..routes import developer_bp
@@ -47,7 +48,10 @@ def integrations_checklist():
     }
 
     env_core = {
-        "FLASK_ENV": os.environ.get("FLASK_ENV", "development"),
+        "app_env": ENV_DIAGNOSTICS.get("active"),
+        "source": ENV_DIAGNOSTICS.get("source"),
+        "env_variables": ENV_DIAGNOSTICS.get("variables", {}),
+        "warnings": ENV_DIAGNOSTICS.get("warnings", ()),
         "SECRET_KEY_present": bool(os.environ.get("FLASK_SECRET_KEY") or current_app.config.get("SECRET_KEY")),
         "LOG_LEVEL": current_app.config.get("LOG_LEVEL", "WARNING"),
     }
@@ -80,6 +84,12 @@ def integrations_checklist():
     cache_info = {
         "RATELIMIT_STORAGE_URL": current_app.config.get("RATELIMIT_STORAGE_URL", "memory://"),
         "REDIS_URL_present": bool(os.environ.get("REDIS_URL")),
+    }
+
+    host_info = {
+        "canonical_host": current_app.config.get("CANONICAL_HOST"),
+        "external_base_url": current_app.config.get("EXTERNAL_BASE_URL"),
+        "preferred_scheme": current_app.config.get("PREFERRED_URL_SCHEME", "https"),
     }
 
     oauth_status = {
@@ -148,10 +158,53 @@ def integrations_checklist():
             "Core Runtime & Platform",
             "Set these to lock the app into production mode before launch.",
             [
-                _make_item("FLASK_ENV", 'Runtime environment. Use "production" for live deployments.', required=True, recommended="production", allow_config=True, config_key="ENV"),
-                _make_item("FLASK_SECRET_KEY", "Flask session signing secret.", required=True, allow_config=True, config_key="SECRET_KEY", is_secret=True),
-                _make_item("FLASK_DEBUG", "Flask debug flag. Must stay false/unset in production.", required=False, recommended="false / unset"),
-                _make_item("LOG_LEVEL", "Application logging level.", required=True, recommended="INFO", allow_config=True),
+                _make_item(
+                    "FLASK_ENV",
+                    'Runtime environment selector.',
+                    required=True,
+                    recommended="production",
+                    note="Allowed values: development, testing, staging, production. Controls which config class loads.",
+                ),
+                _make_item(
+                    "FLASK_SECRET_KEY",
+                    "Flask session signing secret.",
+                    required=True,
+                    allow_config=True,
+                    config_key="SECRET_KEY",
+                    is_secret=True,
+                    note="32+ bytes of cryptographically secure random data. Shared across all workers for cookie signing.",
+                ),
+                _make_item(
+                    "FLASK_DEBUG",
+                    "Flask debug flag. Must stay false/unset in production.",
+                    required=False,
+                    recommended="false / unset",
+                    note="Set to 1/true only for local troubleshooting. Enabling this in staging/prod is a security risk.",
+                ),
+                _make_item(
+                    "LOG_LEVEL",
+                    "Application logging level.",
+                    required=True,
+                    recommended="INFO",
+                    allow_config=True,
+                    note="Common values: DEBUG, INFO, WARNING, ERROR. Influences both Flask logger and structured diagnostics.",
+                ),
+                _make_item(
+                    "APP_BASE_URL",
+                    "Canonical public base URL (https://app.example.com).",
+                    required=True,
+                    allow_config=True,
+                    config_key="EXTERNAL_BASE_URL",
+                    note="Must be a full absolute URL (scheme + host). Used for CSRF, absolute redirects, and template helpers.",
+                ),
+                _make_item(
+                    "APP_HOST",
+                    "Optional explicit host override for CSRF/proxy checks.",
+                    required=False,
+                    allow_config=True,
+                    config_key="CANONICAL_HOST",
+                    note="Defaults to the host portion of APP_BASE_URL. Override only when the ingress host differs from the public URL.",
+                ),
             ],
         ),
         _section(
@@ -222,16 +275,33 @@ def integrations_checklist():
             "Security & Networking",
             "Enable proxy awareness and security headers behind your load balancer.",
             [
-                _make_item("ENABLE_PROXY_FIX", "Wrap the app in Werkzeug ProxyFix.", required=True, recommended="true"),
-                _make_item("TRUST_PROXY_HEADERS", "Legacy proxy toggle.", required=False, recommended="true"),
-                _make_item("PROXY_FIX_X_FOR", "Number of X-Forwarded-For headers to trust.", required=False, recommended="1"),
-                _make_item("FORCE_SECURITY_HEADERS", "Force security headers.", required=False, recommended="true"),
                 _make_item(
-                    "LOADTEST_ALLOW_LOGIN_WITHOUT_CSRF",
-                    "Set to 1 only in dedicated load-test envs to bypass CSRF on auth.login.",
+                    "ENABLE_PROXY_FIX",
+                    "Wrap the app in Werkzeug ProxyFix.",
+                    required=True,
+                    recommended="true",
+                    note="Keeps remote_addr, scheme, and host accurate when behind a load balancer. Always true in hosted environments.",
+                ),
+                _make_item(
+                    "TRUST_PROXY_HEADERS",
+                    "Legacy proxy toggle.",
                     required=False,
-                    recommended="unset / 0",
-                    note="Never enable in production; keeps load generators working when they cannot store cookies.",
+                    recommended="true",
+                    note="Set to true when running behind Render/NGINX/Cloudflare so Flask trusts X-Forwarded-* headers.",
+                ),
+                _make_item(
+                    "PROXY_FIX_X_FOR",
+                    "Number of X-Forwarded-For headers to trust.",
+                    required=False,
+                    recommended="1",
+                    note="Set equal to the number of proxies in front of the app. 1 is typical for Render + CDN.",
+                ),
+                _make_item(
+                    "FORCE_SECURITY_HEADERS",
+                    "Force security headers.",
+                    required=False,
+                    recommended="true",
+                    note="When true, middleware adds HSTS, X-Frame-Options, and related headers on every response.",
                 ),
             ],
         ),
@@ -295,6 +365,54 @@ def integrations_checklist():
             "Rarely used toggles for seeding or one-off maintenance scripts.",
             [
                 _make_item("SEED_PRESETS", "Enable preset data seeding during migrations.", required=False, recommended="unset"),
+            ],
+        ),
+        _section(
+            "Load Testing Inputs",
+            "Environment-driven knobs consumed by loadtests/locustfile.py.",
+            [
+                _make_item(
+                    "LOCUST_USER_BASE",
+                    "Username prefix for generated test accounts.",
+                    required=False,
+                    note="Defaults to loadtest_user. The script appends sequential numbers (e.g., loadtest_user1..N).",
+                ),
+                _make_item(
+                    "LOCUST_USER_PASSWORD",
+                    "Password shared by generated load-test users.",
+                    required=False,
+                    note="Defaults to loadtest123. Must match credentials created via loadtests/test_user_generator.py.",
+                ),
+                _make_item(
+                    "LOCUST_USER_COUNT",
+                    "Number of sequential users to generate.",
+                    required=False,
+                    note="Defaults to 10000. Set to your planned Locust concurrency (e.g., 100) so the credential pool matches the run.",
+                ),
+                _make_item(
+                    "LOCUST_CACHE_TTL",
+                    "Seconds before Locust refreshes cached IDs.",
+                    required=False,
+                    note="Defaults to 120 seconds. Lower for high churn data; higher to reduce bootstrap calls.",
+                ),
+                _make_item(
+                    "LOCUST_REQUIRE_HTTPS",
+                    "Require Locust host to use HTTPS (1/0).",
+                    required=False,
+                    note="Defaults to 1 (true). Keeps Secure cookies from being discarded if someone points Locust at http://.",
+                ),
+                _make_item(
+                    "LOCUST_LOG_LOGIN_FAILURE_CONTEXT",
+                    "Emit structured diagnostics when login fails.",
+                    required=False,
+                    note="Defaults to 1. Set to 0 to silence verbose JSON logs once the load test is stable.",
+                ),
+                _make_item(
+                    "LOCUST_USER_CREDENTIALS",
+                    "Optional JSON list of explicit username/password pairs.",
+                    required=False,
+                    note='Example: [{"username":"user1","password":"pass"}]. Overrides sequential generation when provided.',
+                ),
             ],
         ),
     ]
@@ -436,6 +554,7 @@ def integrations_checklist():
         env_core=env_core,
         db_info=db_info,
         cache_info=cache_info,
+        host_info=host_info,
         oauth_status=oauth_status,
         whop_status=whop_status,
         rate_limiters=rate_limiters,

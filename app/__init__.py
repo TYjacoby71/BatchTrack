@@ -9,6 +9,7 @@ from sqlalchemy.pool import StaticPool
 
 from .authz import configure_login_manager
 from .blueprints_registry import register_blueprints
+from .config import ENV_DIAGNOSTICS
 from .extensions import cache, csrf, db, limiter, migrate, server_session
 from .logging_config import configure_logging
 from .middleware import register_middleware
@@ -103,7 +104,6 @@ def create_app(config: dict[str, Any] | None = None) -> Flask:
     configure_login_manager(app)
     register_middleware(app)
     register_blueprints(app)
-    _conditionally_relax_login_csrf(app)
     from . import models  # noqa: F401  # ensure models registered for Alembic
 
     from .template_context import register_template_context
@@ -127,6 +127,9 @@ def _load_base_config(app: Flask, config: dict[str, Any] | None) -> None:
     app.config.from_object("app.config.Config")
     if config:
         app.config.update(config)
+    app.config["ENV_DIAGNOSTICS"] = ENV_DIAGNOSTICS
+    for warning in ENV_DIAGNOSTICS.get("warnings", ()):
+        logger.warning("Environment configuration warning: %s", warning)
 
     if app.config.get("TESTING"):
         app.config.setdefault("WTF_CSRF_ENABLED", False)
@@ -348,7 +351,9 @@ def _install_global_resilience_handlers(app):
             rendered = render_template("errors/csrf.html", reason=err.description, details=details)
         except Exception:
             pass
-        return rendered or ("CSRF validation failed. Please refresh and try again.", 400), 400
+        if rendered is not None:
+            return rendered, 400
+        return "CSRF validation failed. Please refresh and try again.", 400
 
 def _add_core_routes(app):
     """Add core application routes"""
@@ -377,25 +382,3 @@ def _setup_logging(app):
     """Retained for backward compatibility; logging is configured via logging_config."""
     pass
 
-
-def _conditionally_relax_login_csrf(app: Flask) -> None:
-    """
-    Render load tests cannot post the secure session cookie when they misconfigure HTTPS.
-    When instructed via LOADTEST_ALLOW_LOGIN_WITHOUT_CSRF we exempt the login view to let
-    them gather end-to-end performance metrics (only use in dedicated staging).
-    """
-    env = app.config.get("ENV")
-    if env == "production":
-        return
-    if not app.config.get("LOADTEST_ALLOW_LOGIN_WITHOUT_CSRF"):
-        return
-
-    view = app.view_functions.get("auth.login")
-    if not view:
-        app.logger.warning("LOADTEST_ALLOW_LOGIN_WITHOUT_CSRF enabled but auth.login not registered yet")
-        return
-
-    csrf.exempt(view)
-    app.logger.warning(
-        "CSRF protection disabled for auth.login (env=%s) because LOADTEST_ALLOW_LOGIN_WITHOUT_CSRF=1", env
-    )
