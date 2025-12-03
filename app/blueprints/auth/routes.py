@@ -23,6 +23,31 @@ from datetime import datetime, timedelta
 
 logger = logging.getLogger(__name__)
 
+
+def _log_loadtest_login_context(reason: str, extra: dict | None = None) -> None:
+    """Emit structured diagnostics for load-test login failures."""
+    if not current_app.config.get("LOADTEST_LOG_LOGIN_FAILURE_CONTEXT"):
+        return
+
+    try:
+        details = {
+            "reason": reason,
+            "remote_addr": request.headers.get("X-Forwarded-For", request.remote_addr),
+            "host": request.host,
+            "scheme": request.scheme,
+            "is_secure": request.is_secure,
+            "x_forwarded_proto": request.headers.get("X-Forwarded-Proto"),
+            "cookies_present": bool(request.cookies),
+            "session_cookie_present": "session" in request.cookies,
+            "csrf_token_in_form": bool(request.form.get("csrf_token")),
+            "user_agent": (request.headers.get("User-Agent") or "")[:160],
+        }
+        if extra:
+            details.update(extra)
+        current_app.logger.warning("Load test login context: %s", details)
+    except Exception as exc:  # pragma: no cover - diagnostics should never fail login
+        current_app.logger.warning("Failed to log load test login context: %s", exc)
+
 def load_tiers_config():
     raise RuntimeError('load_tiers_config has been removed. Use DB via SubscriptionTier queries.')
 
@@ -78,6 +103,7 @@ def login():
             if not user.is_active:
                 if username and username.startswith("loadtest_user"):
                     logger.warning("Load test user %s is inactive", username)
+                _log_loadtest_login_context("inactive_user", {"username": username})
                 flash('Account is inactive. Please contact administrator.')
                 return render_template('pages/auth/login.html', form=form)
 
@@ -105,6 +131,7 @@ def login():
                     return redirect(next_url)
                 return redirect(url_for('organization.dashboard'))
         else:
+            _log_loadtest_login_context("invalid_credentials", {"username": username, "user_found": bool(user)})
             if username and username.startswith("loadtest_user"):
                 logger.warning("Load test login failed: invalid credentials for %s", username)
             flash('Invalid username or password')
