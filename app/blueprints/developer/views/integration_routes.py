@@ -226,6 +226,26 @@ def integrations_checklist():
                 _make_item("TRUST_PROXY_HEADERS", "Legacy proxy toggle.", required=False, recommended="true"),
                 _make_item("PROXY_FIX_X_FOR", "Number of X-Forwarded-For headers to trust.", required=False, recommended="1"),
                 _make_item("FORCE_SECURITY_HEADERS", "Force security headers.", required=False, recommended="true"),
+                _make_item(
+                    "LOADTEST_ALLOW_LOGIN_WITHOUT_CSRF",
+                    "Set to 1 only in dedicated load-test envs to bypass CSRF on auth.login.",
+                    required=False,
+                    recommended="unset / 0",
+                    note="Never enable in production; keeps load generators working when they cannot store cookies.",
+                ),
+            ],
+        ),
+        _section(
+            "Load Testing Diagnostics",
+            "Optional flags that emit extra context when synthetic traffic fails.",
+            [
+                _make_item(
+                    "LOADTEST_LOG_LOGIN_FAILURE_CONTEXT",
+                    "Set to 1 to log structured auth.login failures (username, headers, cookie state).",
+                    required=False,
+                    recommended="unset / 0 (enable only when debugging)",
+                    note="Use in staging load tests to capture why CSRF or session writes fail; disable elsewhere to reduce log noise.",
+                ),
             ],
         ),
         _section(

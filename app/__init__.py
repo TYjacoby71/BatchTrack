@@ -1,5 +1,6 @@
 import logging
 import os
+from threading import Lock
 from typing import Any
 
 from flask import Flask, redirect, render_template, request, url_for
@@ -13,17 +14,34 @@ from .logging_config import configure_logging
 from .middleware import register_middleware
 
 logger = logging.getLogger(__name__)
+_redis_pool_lock = Lock()
+_REDIS_POOL_INFO_KEY = "redis_pool_info"
 
 
 def _initialize_redis_pool(app: Flask):
-    """Provision (or reuse) a shared Redis connection pool for this app instance."""
+    """Provision a Redis connection pool and refresh it after each worker fork."""
     redis_url = app.config.get("REDIS_URL")
     if not redis_url:
         return None
 
-    pool = app.extensions.get("redis_pool")
-    if pool is not None:
-        return pool
+    current_pid = os.getpid()
+    cached = app.extensions.get(_REDIS_POOL_INFO_KEY)
+    if cached and cached.get("pid") == current_pid:
+        return cached.get("pool")
+
+    with _redis_pool_lock:
+        cached = app.extensions.get(_REDIS_POOL_INFO_KEY)
+        if cached:
+            cached_pid = cached.get("pid")
+            pool = cached.get("pool")
+            if cached_pid == current_pid and pool is not None:
+                return pool
+            if pool is not None:
+                try:
+                    pool.disconnect()
+                except Exception as exc:  # pragma: no cover - defensive logging
+                    logger.warning("Failed to disconnect inherited Redis pool (pid=%s): %s", cached_pid, exc)
+            app.extensions.pop(_REDIS_POOL_INFO_KEY, None)
 
     try:
         import redis
@@ -54,9 +72,11 @@ def _initialize_redis_pool(app: Flask):
         socket_timeout=socket_timeout,
         socket_connect_timeout=connect_timeout,
     )
-    app.extensions["redis_pool"] = pool
+    app.extensions[_REDIS_POOL_INFO_KEY] = {"pid": current_pid, "pool": pool}
+    app.extensions["redis_pool"] = pool  # backwards compatibility for any legacy access
     logger.info(
-        "Initialized Redis connection pool (max_connections=%s, timeout=%ss)",
+        "Initialized Redis connection pool (pid=%s, max_connections=%s, timeout=%ss)",
+        current_pid,
         max_conns if max_conns > 0 else "unbounded",
         pool_timeout,
     )
