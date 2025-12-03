@@ -367,6 +367,54 @@ def integrations_checklist():
                 _make_item("SEED_PRESETS", "Enable preset data seeding during migrations.", required=False, recommended="unset"),
             ],
         ),
+        _section(
+            "Load Testing Inputs",
+            "Environment-driven knobs consumed by loadtests/locustfile.py.",
+            [
+                _make_item(
+                    "LOCUST_USER_BASE",
+                    "Username prefix for generated test accounts.",
+                    required=False,
+                    note="Defaults to loadtest_user. The script appends sequential numbers (e.g., loadtest_user1..N).",
+                ),
+                _make_item(
+                    "LOCUST_USER_PASSWORD",
+                    "Password shared by generated load-test users.",
+                    required=False,
+                    note="Defaults to loadtest123. Must match credentials created via loadtests/test_user_generator.py.",
+                ),
+                _make_item(
+                    "LOCUST_USER_COUNT",
+                    "Number of sequential users to generate.",
+                    required=False,
+                    note="Defaults to 10000. Set to your planned Locust concurrency (e.g., 100) so the credential pool matches the run.",
+                ),
+                _make_item(
+                    "LOCUST_CACHE_TTL",
+                    "Seconds before Locust refreshes cached IDs.",
+                    required=False,
+                    note="Defaults to 120 seconds. Lower for high churn data; higher to reduce bootstrap calls.",
+                ),
+                _make_item(
+                    "LOCUST_REQUIRE_HTTPS",
+                    "Require Locust host to use HTTPS (1/0).",
+                    required=False,
+                    note="Defaults to 1 (true). Keeps Secure cookies from being discarded if someone points Locust at http://.",
+                ),
+                _make_item(
+                    "LOCUST_LOG_LOGIN_FAILURE_CONTEXT",
+                    "Emit structured diagnostics when login fails.",
+                    required=False,
+                    note="Defaults to 1. Set to 0 to silence verbose JSON logs once the load test is stable.",
+                ),
+                _make_item(
+                    "LOCUST_USER_CREDENTIALS",
+                    "Optional JSON list of explicit username/password pairs.",
+                    required=False,
+                    note='Example: [{"username":"user1","password":"pass"}]. Overrides sequential generation when provided.',
+                ),
+            ],
+        ),
     ]
 
     rate_limiters = [
