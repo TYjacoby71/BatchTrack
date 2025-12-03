@@ -13,6 +13,7 @@ from flask import (
     url_for,
 )
 from flask_login import current_user, login_required
+from sqlalchemy import or_
 
 from app.extensions import db
 from app.models import Organization, User
@@ -96,33 +97,42 @@ def create_organization():
 def organization_detail(org_id):
     """Detailed organization management."""
     org = Organization.query.get_or_404(org_id)
-    users_query = User.query.filter_by(organization_id=org_id).all()
-    tiers_config = OrganizationService.build_tier_config()
+    page = request.args.get("page", 1, type=int)
+    per_page = request.args.get("per_page", 50, type=int)
+    per_page = max(10, min(per_page, 200))
+    search = (request.args.get("search") or "").strip()
 
-    users = []
-    for user in users_query:
-        users.append(
-            {
-                "id": user.id,
-                "username": user.username,
-                "first_name": user.first_name,
-                "last_name": user.last_name,
-                "email": user.email,
-                "phone": user.phone,
-                "user_type": user.user_type,
-                "is_organization_owner": user.is_organization_owner,
-                "is_active": user.is_active,
-                "created_at": user.created_at.strftime("%Y-%m-%d") if user.created_at else None,
-                "last_login": user.last_login.strftime("%Y-%m-%d %H:%M") if user.last_login else None,
-                "full_name": user.full_name,
-            }
+    base_query = User.query.filter_by(organization_id=org_id)
+    users_query = base_query
+
+    if search:
+        term = f"%{search}%"
+        users_query = users_query.filter(
+            or_(
+                User.username.ilike(term),
+                User.email.ilike(term),
+                User.first_name.ilike(term),
+                User.last_name.ilike(term),
+            )
         )
+
+    users_query = users_query.order_by(User.created_at.desc())
+    users_pagination = users_query.paginate(page=page, per_page=per_page, error_out=False)
+
+    total_users = base_query.count()
+    active_users_count = base_query.filter_by(is_active=True).count()
+
+    tiers_config = OrganizationService.build_tier_config()
 
     return render_template(
         "developer/organization_detail.html",
         organization=org,
-        users=users,
-        users_objects=users_query,
+        users_objects=users_pagination.items,
+        users_pagination=users_pagination,
+        users_total=total_users,
+        users_active_count=active_users_count,
+        search=search,
+        per_page=per_page,
         tiers_config=tiers_config,
         current_tier=org.effective_subscription_tier,
         breadcrumb_items=[
