@@ -173,15 +173,15 @@ class AuthenticatedMixin:
         if token:
             payload["csrf_token"] = token
 
-        referer_url = login_page.url
-        if not referer_url.startswith("http"):
-            host = (getattr(getattr(self, "environment", None), "host", "") or "").rstrip("/")
-            referer_url = f"{host}/auth/login" if host else "/auth/login"
+        host = (getattr(self, "host", None) or getattr(getattr(self, "environment", None), "host", "") or "").rstrip("/")
+        if host and not host.startswith("http"):
+            host = ""
 
-        headers = {
-            "Content-Type": "application/x-www-form-urlencoded",
-            "Referer": referer_url,
-        }
+        referer_url = f"{host}/auth/login" if host else login_page.url
+        if not referer_url.startswith("http"):
+            referer_url = "/auth/login"
+
+        headers = {"Content-Type": "application/x-www-form-urlencoded", "Referer": referer_url}
 
         response = self.client.post(
             "/auth/login",
