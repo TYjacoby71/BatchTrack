@@ -226,6 +226,13 @@ def integrations_checklist():
                 _make_item("TRUST_PROXY_HEADERS", "Legacy proxy toggle.", required=False, recommended="true"),
                 _make_item("PROXY_FIX_X_FOR", "Number of X-Forwarded-For headers to trust.", required=False, recommended="1"),
                 _make_item("FORCE_SECURITY_HEADERS", "Force security headers.", required=False, recommended="true"),
+                _make_item(
+                    "LOADTEST_ALLOW_LOGIN_WITHOUT_CSRF",
+                    "Set to 1 only in dedicated load-test envs to bypass CSRF on auth.login.",
+                    required=False,
+                    recommended="unset / 0",
+                    note="Never enable in production; keeps load generators working when they cannot store cookies.",
+                ),
             ],
         ),
         _section(
