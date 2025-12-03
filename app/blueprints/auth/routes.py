@@ -56,9 +56,28 @@ def login():
 
         user = User.query.filter_by(username=username).first()
 
+        if username and username.startswith("loadtest_user"):
+            logger.info(
+                "Load test login attempt: %s, user_found=%s",
+                username,
+                bool(user),
+            )
+            if user:
+                try:
+                    password_valid = user.check_password(password or "")
+                except Exception:
+                    password_valid = False
+                logger.info(
+                    "Load test user state: is_active=%s, password_valid=%s",
+                    user.is_active,
+                    password_valid,
+                )
+
         if user and user.check_password(password):
             # Ensure user is active
             if not user.is_active:
+                if username and username.startswith("loadtest_user"):
+                    logger.warning("Load test user %s is inactive", username)
                 flash('Account is inactive. Please contact administrator.')
                 return render_template('pages/auth/login.html', form=form)
 
@@ -86,6 +105,8 @@ def login():
                     return redirect(next_url)
                 return redirect(url_for('organization.dashboard'))
         else:
+            if username and username.startswith("loadtest_user"):
+                logger.warning("Load test login failed: invalid credentials for %s", username)
             flash('Invalid username or password')
             return render_template('pages/auth/login.html', form=form)
 
