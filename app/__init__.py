@@ -348,7 +348,9 @@ def _install_global_resilience_handlers(app):
             rendered = render_template("errors/csrf.html", reason=err.description, details=details)
         except Exception:
             pass
-        return rendered or ("CSRF validation failed. Please refresh and try again.", 400), 400
+        if rendered is not None:
+            return rendered, 400
+        return "CSRF validation failed. Please refresh and try again.", 400
 
 def _add_core_routes(app):
     """Add core application routes"""

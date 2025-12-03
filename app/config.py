@@ -36,6 +36,19 @@ def _env_int(key, default):
         return default
 
 
+def _env_flag(key: str, default: bool = False) -> bool:
+    """Consistently parse boolean-like environment variables."""
+    value = os.environ.get(key)
+    if value is None:
+        return default
+    normalized = value.strip().lower()
+    if normalized in {'1', 'true', 'yes', 'on'}:
+        return True
+    if normalized in {'0', 'false', 'no', 'off'}:
+        return False
+    return default
+
+
 class BaseConfig:
     SECRET_KEY = os.environ.get('FLASK_SECRET_KEY', 'devkey-please-change-in-production')
 
@@ -59,7 +72,7 @@ class BaseConfig:
    # Rate limiting & Cache
     RATELIMIT_STORAGE_URI = _resolve_ratelimit_uri()
     RATELIMIT_STORAGE_URL = RATELIMIT_STORAGE_URI  # Backwards compatibility
-    RATELIMIT_ENABLED = os.environ.get('RATELIMIT_ENABLED', 'true').lower() == 'true'
+    RATELIMIT_ENABLED = _env_flag('RATELIMIT_ENABLED', True)
     RATELIMIT_DEFAULT = os.environ.get('RATELIMIT_DEFAULT', '5000 per hour;1000 per minute')
 
     # Cache / shared state
@@ -73,8 +86,8 @@ class BaseConfig:
     # Logging
     LOG_LEVEL = os.environ.get('LOG_LEVEL', 'WARNING')
     ANON_REQUEST_LOG_LEVEL = os.environ.get('ANON_REQUEST_LOG_LEVEL', 'DEBUG')
-    LOADTEST_LOG_LOGIN_FAILURE_CONTEXT = os.environ.get('LOADTEST_LOG_LOGIN_FAILURE_CONTEXT', 'false').lower() == 'true'
-    LOADTEST_ALLOW_LOGIN_WITHOUT_CSRF = os.environ.get('LOADTEST_ALLOW_LOGIN_WITHOUT_CSRF', 'false').lower() == 'true'
+    LOADTEST_LOG_LOGIN_FAILURE_CONTEXT = _env_flag('LOADTEST_LOG_LOGIN_FAILURE_CONTEXT', False)
+    LOADTEST_ALLOW_LOGIN_WITHOUT_CSRF = _env_flag('LOADTEST_ALLOW_LOGIN_WITHOUT_CSRF', False)
 
     # Email - Support multiple providers
     EMAIL_PROVIDER = os.environ.get('EMAIL_PROVIDER', 'smtp').lower()
@@ -82,8 +95,8 @@ class BaseConfig:
     # SMTP (default)
     MAIL_SERVER = os.environ.get('MAIL_SERVER', 'smtp.gmail.com')
     MAIL_PORT = int(os.environ.get('MAIL_PORT', 587))
-    MAIL_USE_TLS = os.environ.get('MAIL_USE_TLS', 'true').lower() == 'true'
-    MAIL_USE_SSL = os.environ.get('MAIL_USE_SSL', 'false').lower() == 'true'
+    MAIL_USE_TLS = _env_flag('MAIL_USE_TLS', True)
+    MAIL_USE_SSL = _env_flag('MAIL_USE_SSL', False)
     MAIL_USERNAME = os.environ.get('MAIL_USERNAME')
     MAIL_PASSWORD = os.environ.get('MAIL_PASSWORD')
     MAIL_DEFAULT_SENDER = os.environ.get('MAIL_DEFAULT_SENDER', 'noreply@batchtrack.app')
@@ -116,7 +129,7 @@ class BaseConfig:
     }
 
     # Billing cache configuration
-    BILLING_CACHE_ENABLED = os.environ.get('BILLING_CACHE_ENABLED', 'true').lower() == 'true'
+    BILLING_CACHE_ENABLED = _env_flag('BILLING_CACHE_ENABLED', True)
     BILLING_GATE_CACHE_TTL_SECONDS = _env_int('BILLING_GATE_CACHE_TTL_SECONDS', 60)
 
     # Feature flags
