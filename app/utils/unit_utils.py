@@ -9,6 +9,7 @@ from flask import g, has_request_context, session
 from flask_login import current_user
 from sqlalchemy.orm import load_only
 
+from ..extensions import db
 from ..models import Unit
 from .cache_manager import app_cache
 from .validation_helpers import validate_density
@@ -17,26 +18,20 @@ from ..services.unit_conversion import ConversionEngine
 logger = logging.getLogger(__name__)
 
 _REQUEST_CACHE_ATTR = "_global_unit_list"
-_CACHE_TTL_SECONDS = 300
+_CACHE_TTL_SECONDS = 3600
 _SLOW_QUERY_THRESHOLD = 0.05
-_UNIT_LOAD_FIELDS = (
-    "id",
-    "name",
-    "unit_type",
-    "base_unit",
-    "conversion_factor",
-    "symbol",
-    "is_custom",
-    "is_mapped",
-    "organization_id",
-    "created_by",
+_UNIT_LOAD_COLUMNS = (
+    Unit.id,
+    Unit.name,
+    Unit.unit_type,
+    Unit.base_unit,
+    Unit.conversion_factor,
+    Unit.symbol,
+    Unit.is_custom,
+    Unit.is_mapped,
+    Unit.organization_id,
+    Unit.created_by,
 )
-_UNIT_LOAD_ATTRS = tuple(
-    getattr(Unit, field) for field in _UNIT_LOAD_FIELDS if hasattr(Unit, field)
-)
-if len(_UNIT_LOAD_ATTRS) != len(_UNIT_LOAD_FIELDS):  # pragma: no cover - defensive
-    missing = [f for f in _UNIT_LOAD_FIELDS if not hasattr(Unit, f)]
-    logger.warning("Unknown Unit columns in _UNIT_LOAD_FIELDS: %s", ", ".join(missing))
 
 
 @dataclass(frozen=True)
@@ -131,35 +126,31 @@ def _fallback_units() -> List[UnitOption]:
 
 
 def _build_unit_query():
-    query = Unit.query
-    if _UNIT_LOAD_ATTRS:
-        query = query.options(load_only(*_UNIT_LOAD_ATTRS))
-    query = query.filter_by(is_active=True)
+    query = db.session.query(Unit)
+    if _UNIT_LOAD_COLUMNS:
+        query = query.options(load_only(*_UNIT_LOAD_COLUMNS))
+
+    query = query.filter(Unit.is_active.is_(True))
     user = _active_user()
+    scope_filter = Unit.is_custom.is_(False)
 
-    if not user or not getattr(user, "is_authenticated", False):
-        return query.filter(Unit.is_custom.is_(False))
+    if user and getattr(user, "is_authenticated", False):
+        org_id = getattr(user, "organization_id", None)
+        if org_id:
+            scope_filter = (Unit.is_custom.is_(False)) | (Unit.organization_id == org_id)
+        elif getattr(user, "user_type", None) == "developer" and has_request_context():
+            selected_org = session.get("dev_selected_org_id")
+            if selected_org:
+                scope_filter = (Unit.is_custom.is_(False)) | (
+                    Unit.organization_id == selected_org
+                )
 
-    org_id = getattr(user, "organization_id", None)
-    if org_id:
-        return query.filter(
-            (Unit.is_custom.is_(False)) | (Unit.organization_id == org_id)
-        )
-
-    if getattr(user, "user_type", None) == "developer" and has_request_context():
-        selected_org = session.get("dev_selected_org_id")
-        if selected_org:
-            return query.filter(
-                (Unit.is_custom.is_(False)) | (Unit.organization_id == selected_org)
-            )
-        return query
-
-    return query.filter(Unit.is_custom.is_(False))
+    return query.filter(scope_filter).order_by(Unit.unit_type.asc(), Unit.name.asc())
 
 
 def _fetch_units() -> List[Unit]:
     start = time.perf_counter()
-    units = _build_unit_query().order_by(Unit.unit_type, Unit.name).all()
+    units = _build_unit_query().all()
     duration = time.perf_counter() - start
     if duration > _SLOW_QUERY_THRESHOLD:
         logger.warning("Unit query took %.3fs for %d units", duration, len(units))
