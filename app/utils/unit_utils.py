@@ -31,6 +31,12 @@ _UNIT_LOAD_FIELDS = (
     "organization_id",
     "created_by",
 )
+_UNIT_LOAD_ATTRS = tuple(
+    getattr(Unit, field) for field in _UNIT_LOAD_FIELDS if hasattr(Unit, field)
+)
+if len(_UNIT_LOAD_ATTRS) != len(_UNIT_LOAD_FIELDS):  # pragma: no cover - defensive
+    missing = [f for f in _UNIT_LOAD_FIELDS if not hasattr(Unit, f)]
+    logger.warning("Unknown Unit columns in _UNIT_LOAD_FIELDS: %s", ", ".join(missing))
 
 
 @dataclass(frozen=True)
@@ -125,7 +131,10 @@ def _fallback_units() -> List[UnitOption]:
 
 
 def _build_unit_query():
-    query = Unit.query.options(load_only(*_UNIT_LOAD_FIELDS)).filter_by(is_active=True)
+    query = Unit.query
+    if _UNIT_LOAD_ATTRS:
+        query = query.options(load_only(*_UNIT_LOAD_ATTRS))
+    query = query.filter_by(is_active=True)
     user = _active_user()
 
     if not user or not getattr(user, "is_authenticated", False):
