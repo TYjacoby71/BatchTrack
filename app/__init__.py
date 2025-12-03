@@ -364,6 +364,8 @@ def _conditionally_relax_login_csrf(app: Flask) -> None:
     When instructed via LOADTEST_ALLOW_LOGIN_WITHOUT_CSRF we exempt the login view to let
     them gather end-to-end performance metrics (only use in dedicated staging).
     """
+    if app.config.get("ENV") != "development":
+        return
     if not app.config.get("LOADTEST_ALLOW_LOGIN_WITHOUT_CSRF"):
         return
 
@@ -373,4 +375,6 @@ def _conditionally_relax_login_csrf(app: Flask) -> None:
         return
 
     csrf.exempt(view)
-    app.logger.warning("CSRF protection disabled for auth.login because LOADTEST_ALLOW_LOGIN_WITHOUT_CSRF=1")
+    app.logger.warning(
+        "CSRF protection disabled for auth.login (development only) because LOADTEST_ALLOW_LOGIN_WITHOUT_CSRF=1"
+    )
