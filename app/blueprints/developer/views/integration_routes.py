@@ -158,7 +158,7 @@ def integrations_checklist():
             "Core Runtime & Platform",
             "Set these to lock the app into production mode before launch.",
             [
-                _make_item("APP_ENV", 'Runtime environment. Use "production" for live deployments.', required=True, recommended="production", allow_config=True, config_key="ENV"),
+                _make_item("FLASK_ENV", 'Runtime environment. Use "production" for live deployments.', required=True, recommended="production"),
                 _make_item("FLASK_SECRET_KEY", "Flask session signing secret.", required=True, allow_config=True, config_key="SECRET_KEY", is_secret=True),
                 _make_item("FLASK_DEBUG", "Flask debug flag. Must stay false/unset in production.", required=False, recommended="false / unset"),
                 _make_item("LOG_LEVEL", "Application logging level.", required=True, recommended="INFO", allow_config=True),
@@ -238,13 +238,6 @@ def integrations_checklist():
                 _make_item("TRUST_PROXY_HEADERS", "Legacy proxy toggle.", required=False, recommended="true"),
                 _make_item("PROXY_FIX_X_FOR", "Number of X-Forwarded-For headers to trust.", required=False, recommended="1"),
                 _make_item("FORCE_SECURITY_HEADERS", "Force security headers.", required=False, recommended="true"),
-                _make_item(
-                    "ALLOW_LOADTEST_LOGIN_BYPASS",
-                    "Set to 1 only in dedicated load-test envs to bypass CSRF on auth.login.",
-                    required=False,
-                    recommended="unset / 0",
-                    note="Never enable in production; keeps load generators working when they cannot store cookies.",
-                ),
             ],
         ),
         _section(

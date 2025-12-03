@@ -104,7 +104,6 @@ def create_app(config: dict[str, Any] | None = None) -> Flask:
     configure_login_manager(app)
     register_middleware(app)
     register_blueprints(app)
-    _conditionally_relax_login_csrf(app)
     from . import models  # noqa: F401  # ensure models registered for Alembic
 
     from .template_context import register_template_context
@@ -383,25 +382,3 @@ def _setup_logging(app):
     """Retained for backward compatibility; logging is configured via logging_config."""
     pass
 
-
-def _conditionally_relax_login_csrf(app: Flask) -> None:
-    """
-    Render load tests cannot post the secure session cookie when they misconfigure HTTPS.
-    When instructed via ALLOW_LOADTEST_LOGIN_BYPASS we exempt the login view to let
-    them gather end-to-end performance metrics (only use in dedicated staging).
-    """
-    env = app.config.get("ENV")
-    if env == "production":
-        return
-    if not app.config.get("ALLOW_LOADTEST_LOGIN_BYPASS"):
-        return
-
-    view = app.view_functions.get("auth.login")
-    if not view:
-        app.logger.warning("ALLOW_LOADTEST_LOGIN_BYPASS enabled but auth.login not registered yet")
-        return
-
-    csrf.exempt(view)
-    app.logger.warning(
-        "CSRF protection disabled for auth.login (env=%s) because ALLOW_LOADTEST_LOGIN_BYPASS=1", env
-    )

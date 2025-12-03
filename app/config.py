@@ -7,9 +7,10 @@ from typing import Mapping
 from urllib.parse import urlparse
 
 _DEFAULT_ENV = "development"
-_CANONICAL_ENV_VAR = "APP_ENV"
-_LEGACY_ENV_VARS = ("BATCHTRACK_ENV", "FLASK_ENV", "ENVIRONMENT")
+_ENV_KEY = "FLASK_ENV"
 _VALID_ENVS = {"development", "testing", "staging", "production"}
+_FORBIDDEN_ENV_KEYS = ("APP_ENV", "BATCHTRACK_ENV", "ENVIRONMENT")
+_FORBIDDEN_FLAGS = ("ALLOW_LOADTEST_LOGIN_BYPASS", "LOADTEST_ALLOW_LOGIN_WITHOUT_CSRF")
 _TRUE_VALUES = {"1", "true", "yes", "on"}
 _FALSE_VALUES = {"0", "false", "no", "off"}
 
@@ -18,7 +19,7 @@ _FALSE_VALUES = {"0", "false", "no", "off"}
 class EnvironmentInfo:
     name: str
     source: str
-    aliases: dict[str, str]
+    raw_value: str
 
 
 class EnvReader:
@@ -114,49 +115,57 @@ def _resolve_ratelimit_uri(reader: EnvReader) -> str:
 
 
 def _resolve_environment(reader: EnvReader) -> EnvironmentInfo:
-    aliases: dict[str, str] = {}
-    env_name: str | None = None
-    source = 'default'
+    for key in _FORBIDDEN_ENV_KEYS:
+        if reader.raw(key) not in (None, ""):
+            raise RuntimeError(
+                f"{key} is no longer supported. Set {_ENV_KEY} to one of {sorted(_VALID_ENVS)} instead."
+            )
 
-    for key in (_CANONICAL_ENV_VAR,) + _LEGACY_ENV_VARS:
-        raw_value = reader._value(key)
-        if raw_value is not None:
-            aliases[key] = raw_value
-            if env_name is None:
-                normalized = _normalized_env(raw_value)
-                env_name = normalized if normalized in _VALID_ENVS else None
-                source = key
-                if key != _CANONICAL_ENV_VAR:
-                    reader.warn(f"{key} is deprecated; set {_CANONICAL_ENV_VAR} instead.")
+    raw_value = reader.str(_ENV_KEY, _DEFAULT_ENV) or _DEFAULT_ENV
+    normalized = _normalized_env(raw_value)
+    if normalized not in _VALID_ENVS:
+        raise RuntimeError(
+            f"Invalid {_ENV_KEY}={raw_value!r}. Expected one of {sorted(_VALID_ENVS)}."
+        )
+    return EnvironmentInfo(name=normalized, source=_ENV_KEY, raw_value=raw_value)
 
-    if env_name is None:
-        reader.warn(f"No valid {_CANONICAL_ENV_VAR} provided; defaulting to {_DEFAULT_ENV}.")
-        env_name = _DEFAULT_ENV
-        source = 'default'
 
-    return EnvironmentInfo(name=env_name, source=source, aliases=aliases)
+def _resolve_base_url(reader: EnvReader, env_name: str) -> str:
+    value = reader.str('APP_BASE_URL')
+    if value:
+        return value
+    if env_name in {'development', 'testing'}:
+        fallback = 'http://localhost:5000'
+        reader.warn(
+            "APP_BASE_URL not set; defaulting to http://localhost:5000 for local/testing environments."
+        )
+        return fallback
+    raise RuntimeError('APP_BASE_URL must be set for staging and production environments.')
+
+
+def _preferred_scheme(base_url: str, env_name: str) -> str:
+    scheme = _derive_scheme(base_url)
+    if scheme:
+        return scheme
+    return 'http' if env_name == 'development' else 'https'
 
 
 env = EnvReader()
 ENV_INFO = _resolve_environment(env)
-ENVIRONMENT_VARIABLE_PRIORITY = (_CANONICAL_ENV_VAR,) + _LEGACY_ENV_VARS
 
-_BASE_URL = (
-    env.str('APP_BASE_URL')
-    or env.str('EXTERNAL_BASE_URL')
-    or env.str('PUBLIC_BASE_URL')
-    or env.str('BATCHTRACK_BASE_URL')
-)
-_CANONICAL_HOST = env.str('APP_HOST') or env.str('CANONICAL_HOST') or _extract_host(_BASE_URL)
-_PREFERRED_SCHEME = _derive_scheme(_BASE_URL)
-_ALLOW_LOADTEST_LOGIN_BYPASS = env.bool('ALLOW_LOADTEST_LOGIN_BYPASS', False)
-if not _ALLOW_LOADTEST_LOGIN_BYPASS and env.bool('LOADTEST_ALLOW_LOGIN_WITHOUT_CSRF', False):
-    _ALLOW_LOADTEST_LOGIN_BYPASS = True
-    env.warn('LOADTEST_ALLOW_LOGIN_WITHOUT_CSRF is deprecated; use ALLOW_LOADTEST_LOGIN_BYPASS.')
+for flag in _FORBIDDEN_FLAGS:
+    if env.raw(flag) not in (None, ""):
+        raise RuntimeError(
+            f"{flag} has been removed. Load tests must behave like real clients and supply CSRF tokens."
+        )
+
+_BASE_URL = _resolve_base_url(env, ENV_INFO.name)
+_CANONICAL_HOST = env.str('APP_HOST') or _extract_host(_BASE_URL)
+_PREFERRED_SCHEME = _preferred_scheme(_BASE_URL, ENV_INFO.name)
 
 
 class BaseConfig:
-    APP_ENV = ENV_INFO.name
+    FLASK_ENV = ENV_INFO.name
     SECRET_KEY = env.str('FLASK_SECRET_KEY', 'devkey-please-change-in-production')
 
     SQLALCHEMY_TRACK_MODIFICATIONS = False
@@ -173,6 +182,7 @@ class BaseConfig:
     UPLOAD_FOLDER = 'static/product_images'
     MAX_CONTENT_LENGTH = 16 * 1024 * 1024
 
+    APP_BASE_URL = _BASE_URL
     EXTERNAL_BASE_URL = _BASE_URL
     CANONICAL_HOST = _CANONICAL_HOST
     PREFERRED_URL_SCHEME = _PREFERRED_SCHEME
@@ -190,8 +200,6 @@ class BaseConfig:
 
     LOG_LEVEL = env.str('LOG_LEVEL', 'WARNING') or 'WARNING'
     ANON_REQUEST_LOG_LEVEL = env.str('ANON_REQUEST_LOG_LEVEL', 'DEBUG') or 'DEBUG'
-    LOADTEST_LOG_LOGIN_FAILURE_CONTEXT = env.bool('LOADTEST_LOG_LOGIN_FAILURE_CONTEXT', False)
-    ALLOW_LOADTEST_LOGIN_BYPASS = _ALLOW_LOADTEST_LOGIN_BYPASS
 
     EMAIL_PROVIDER = (env.str('EMAIL_PROVIDER', 'smtp') or 'smtp').lower()
     MAIL_SERVER = env.str('MAIL_SERVER', 'smtp.gmail.com')
@@ -328,7 +336,6 @@ class ProductionConfig(BaseConfig):
     RATELIMIT_STORAGE_URI = _prod_ratelimit_uri
     RATELIMIT_STORAGE_URL = _prod_ratelimit_uri
     LOG_LEVEL = env.str('LOG_LEVEL', 'INFO') or 'INFO'
-    ALLOW_LOADTEST_LOGIN_BYPASS = False
 
 
 config_map = {
@@ -351,7 +358,6 @@ Config = config_map[ENV_INFO.name]
 ENV_DIAGNOSTICS = {
     'active': ENV_INFO.name,
     'source': ENV_INFO.source,
-    'variables': ENV_INFO.aliases,
+    'variables': {ENV_INFO.source: ENV_INFO.raw_value},
     'warnings': tuple(env.warnings),
-    'priority': ENVIRONMENT_VARIABLE_PRIORITY,
 }
