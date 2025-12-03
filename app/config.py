@@ -169,7 +169,6 @@ class DevelopmentConfig(BaseConfig):
         or 'memory://'
     )
     RATELIMIT_STORAGE_URL = RATELIMIT_STORAGE_URI
-    LOADTEST_LOG_LOGIN_FAILURE_CONTEXT = True
 
 
 class TestingConfig(BaseConfig):

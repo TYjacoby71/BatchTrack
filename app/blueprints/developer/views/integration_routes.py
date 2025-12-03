@@ -236,6 +236,19 @@ def integrations_checklist():
             ],
         ),
         _section(
+            "Load Testing Diagnostics",
+            "Optional flags that emit extra context when synthetic traffic fails.",
+            [
+                _make_item(
+                    "LOADTEST_LOG_LOGIN_FAILURE_CONTEXT",
+                    "Set to 1 to log structured auth.login failures (username, headers, cookie state).",
+                    required=False,
+                    recommended="unset / 0 (enable only when debugging)",
+                    note="Use in staging load tests to capture why CSRF or session writes fail; disable elsewhere to reduce log noise.",
+                ),
+            ],
+        ),
+        _section(
             "Email & Notifications",
             "Configure exactly one provider for transactional email.",
             [
