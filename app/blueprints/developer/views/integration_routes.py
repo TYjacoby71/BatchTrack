@@ -6,7 +6,7 @@ import re
 from flask import jsonify, render_template, request
 from flask_login import current_user, login_required
 
-from app.config import ACTIVE_ENV_SOURCE, ENVIRONMENT_VARIABLE_PRIORITY
+from app.config import ENV_DIAGNOSTICS
 from app.services.email_service import EmailService
 
 from ..routes import developer_bp
@@ -47,15 +47,11 @@ def integrations_checklist():
         "tiers_configured": tiers_count > 0,
     }
 
-    env_raw = {}
-    for key in ENVIRONMENT_VARIABLE_PRIORITY:
-        raw = os.environ.get(key)
-        if raw not in (None, ""):
-            env_raw[key] = raw
     env_core = {
-        "config_env": current_app.config.get("ENV", "development"),
-        "env_source": ACTIVE_ENV_SOURCE,
-        "env_variables": env_raw,
+        "app_env": ENV_DIAGNOSTICS.get("active"),
+        "source": ENV_DIAGNOSTICS.get("source"),
+        "env_variables": ENV_DIAGNOSTICS.get("variables", {}),
+        "warnings": ENV_DIAGNOSTICS.get("warnings", ()),
         "SECRET_KEY_present": bool(os.environ.get("FLASK_SECRET_KEY") or current_app.config.get("SECRET_KEY")),
         "LOG_LEVEL": current_app.config.get("LOG_LEVEL", "WARNING"),
     }
@@ -162,10 +158,12 @@ def integrations_checklist():
             "Core Runtime & Platform",
             "Set these to lock the app into production mode before launch.",
             [
-                _make_item("FLASK_ENV", 'Runtime environment. Use "production" for live deployments.', required=True, recommended="production", allow_config=True, config_key="ENV"),
+                _make_item("APP_ENV", 'Runtime environment. Use "production" for live deployments.', required=True, recommended="production", allow_config=True, config_key="ENV"),
                 _make_item("FLASK_SECRET_KEY", "Flask session signing secret.", required=True, allow_config=True, config_key="SECRET_KEY", is_secret=True),
                 _make_item("FLASK_DEBUG", "Flask debug flag. Must stay false/unset in production.", required=False, recommended="false / unset"),
                 _make_item("LOG_LEVEL", "Application logging level.", required=True, recommended="INFO", allow_config=True),
+                _make_item("APP_BASE_URL", "Canonical public base URL (https://app.example.com).", required=True, allow_config=True, config_key="EXTERNAL_BASE_URL"),
+                _make_item("APP_HOST", "Optional explicit host override for CSRF/proxy checks.", required=False, allow_config=True, config_key="CANONICAL_HOST", note="Defaults to the host portion of APP_BASE_URL when unset."),
             ],
         ),
         _section(
@@ -241,20 +239,7 @@ def integrations_checklist():
                 _make_item("PROXY_FIX_X_FOR", "Number of X-Forwarded-For headers to trust.", required=False, recommended="1"),
                 _make_item("FORCE_SECURITY_HEADERS", "Force security headers.", required=False, recommended="true"),
                 _make_item(
-                    "EXTERNAL_BASE_URL",
-                    "Canonical public base URL (https://app.example.com).",
-                    required=True,
-                    allow_config=True,
-                ),
-                _make_item(
-                    "CANONICAL_HOST",
-                    "Expected host header for CSRF/proxy checks.",
-                    required=False,
-                    allow_config=True,
-                    note="Defaults to the host portion of EXTERNAL_BASE_URL when unset.",
-                ),
-                _make_item(
-                    "LOADTEST_ALLOW_LOGIN_WITHOUT_CSRF",
+                    "ALLOW_LOADTEST_LOGIN_BYPASS",
                     "Set to 1 only in dedicated load-test envs to bypass CSRF on auth.login.",
                     required=False,
                     recommended="unset / 0",

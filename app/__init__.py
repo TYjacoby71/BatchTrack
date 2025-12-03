@@ -9,6 +9,7 @@ from sqlalchemy.pool import StaticPool
 
 from .authz import configure_login_manager
 from .blueprints_registry import register_blueprints
+from .config import ENV_DIAGNOSTICS
 from .extensions import cache, csrf, db, limiter, migrate, server_session
 from .logging_config import configure_logging
 from .middleware import register_middleware
@@ -127,6 +128,9 @@ def _load_base_config(app: Flask, config: dict[str, Any] | None) -> None:
     app.config.from_object("app.config.Config")
     if config:
         app.config.update(config)
+    app.config["ENV_DIAGNOSTICS"] = ENV_DIAGNOSTICS
+    for warning in ENV_DIAGNOSTICS.get("warnings", ()):
+        logger.warning("Environment configuration warning: %s", warning)
 
     if app.config.get("TESTING"):
         app.config.setdefault("WTF_CSRF_ENABLED", False)
@@ -383,21 +387,21 @@ def _setup_logging(app):
 def _conditionally_relax_login_csrf(app: Flask) -> None:
     """
     Render load tests cannot post the secure session cookie when they misconfigure HTTPS.
-    When instructed via LOADTEST_ALLOW_LOGIN_WITHOUT_CSRF we exempt the login view to let
+    When instructed via ALLOW_LOADTEST_LOGIN_BYPASS we exempt the login view to let
     them gather end-to-end performance metrics (only use in dedicated staging).
     """
     env = app.config.get("ENV")
     if env == "production":
         return
-    if not app.config.get("LOADTEST_ALLOW_LOGIN_WITHOUT_CSRF"):
+    if not app.config.get("ALLOW_LOADTEST_LOGIN_BYPASS"):
         return
 
     view = app.view_functions.get("auth.login")
     if not view:
-        app.logger.warning("LOADTEST_ALLOW_LOGIN_WITHOUT_CSRF enabled but auth.login not registered yet")
+        app.logger.warning("ALLOW_LOADTEST_LOGIN_BYPASS enabled but auth.login not registered yet")
         return
 
     csrf.exempt(view)
     app.logger.warning(
-        "CSRF protection disabled for auth.login (env=%s) because LOADTEST_ALLOW_LOGIN_WITHOUT_CSRF=1", env
+        "CSRF protection disabled for auth.login (env=%s) because ALLOW_LOADTEST_LOGIN_BYPASS=1", env
     )
