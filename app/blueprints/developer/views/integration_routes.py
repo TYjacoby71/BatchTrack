@@ -6,6 +6,7 @@ import re
 from flask import jsonify, render_template, request
 from flask_login import current_user, login_required
 
+from app.config import ACTIVE_ENV_SOURCE, ENVIRONMENT_VARIABLE_PRIORITY
 from app.services.email_service import EmailService
 
 from ..routes import developer_bp
@@ -46,8 +47,15 @@ def integrations_checklist():
         "tiers_configured": tiers_count > 0,
     }
 
+    env_raw = {}
+    for key in ENVIRONMENT_VARIABLE_PRIORITY:
+        raw = os.environ.get(key)
+        if raw not in (None, ""):
+            env_raw[key] = raw
     env_core = {
-        "FLASK_ENV": os.environ.get("FLASK_ENV", "development"),
+        "config_env": current_app.config.get("ENV", "development"),
+        "env_source": ACTIVE_ENV_SOURCE,
+        "env_variables": env_raw,
         "SECRET_KEY_present": bool(os.environ.get("FLASK_SECRET_KEY") or current_app.config.get("SECRET_KEY")),
         "LOG_LEVEL": current_app.config.get("LOG_LEVEL", "WARNING"),
     }
@@ -80,6 +88,12 @@ def integrations_checklist():
     cache_info = {
         "RATELIMIT_STORAGE_URL": current_app.config.get("RATELIMIT_STORAGE_URL", "memory://"),
         "REDIS_URL_present": bool(os.environ.get("REDIS_URL")),
+    }
+
+    host_info = {
+        "canonical_host": current_app.config.get("CANONICAL_HOST"),
+        "external_base_url": current_app.config.get("EXTERNAL_BASE_URL"),
+        "preferred_scheme": current_app.config.get("PREFERRED_URL_SCHEME", "https"),
     }
 
     oauth_status = {
@@ -226,6 +240,19 @@ def integrations_checklist():
                 _make_item("TRUST_PROXY_HEADERS", "Legacy proxy toggle.", required=False, recommended="true"),
                 _make_item("PROXY_FIX_X_FOR", "Number of X-Forwarded-For headers to trust.", required=False, recommended="1"),
                 _make_item("FORCE_SECURITY_HEADERS", "Force security headers.", required=False, recommended="true"),
+                _make_item(
+                    "EXTERNAL_BASE_URL",
+                    "Canonical public base URL (https://app.example.com).",
+                    required=True,
+                    allow_config=True,
+                ),
+                _make_item(
+                    "CANONICAL_HOST",
+                    "Expected host header for CSRF/proxy checks.",
+                    required=False,
+                    allow_config=True,
+                    note="Defaults to the host portion of EXTERNAL_BASE_URL when unset.",
+                ),
                 _make_item(
                     "LOADTEST_ALLOW_LOGIN_WITHOUT_CSRF",
                     "Set to 1 only in dedicated load-test envs to bypass CSRF on auth.login.",
@@ -436,6 +463,7 @@ def integrations_checklist():
         env_core=env_core,
         db_info=db_info,
         cache_info=cache_info,
+        host_info=host_info,
         oauth_status=oauth_status,
         whop_status=whop_status,
         rate_limiters=rate_limiters,

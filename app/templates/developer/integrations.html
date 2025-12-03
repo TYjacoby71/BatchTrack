@@ -113,8 +113,21 @@
     <div class="card-body">
       <h6 class="mb-1">Runtime Summary</h6>
       <ul class="mb-0 small text-muted">
-        <li>Environment: <code>{{ env_core.FLASK_ENV }}</code></li>
+        <li>Active config: <code>{{ env_core.config_env }}</code> <span class="text-muted">(source: {{ env_core.env_source }})</span></li>
+        <li>Env vars set: {% if env_core.env_variables %}{% for key, value in env_core.env_variables.items() %}<code>{{ key }}={{ value }}</code>{% if not loop.last %}, {% endif %}{% endfor %}{% else %}<span class="text-danger">None</span>{% endif %}</li>
         <li>SECRET_KEY present: {% if env_core.SECRET_KEY_present %}<span class="text-success">Yes</span>{% else %}<span class="text-danger">No</span>{% endif %}</li>
+        <li>LOG_LEVEL: <code>{{ env_core.LOG_LEVEL }}</code></li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="card shadow-sm mt-4">
+    <div class="card-body">
+      <h6 class="mb-1">Host & URL Settings</h6>
+      <ul class="mb-0 small text-muted">
+        <li>External base URL: <code>{{ host_info.external_base_url or 'unset' }}</code></li>
+        <li>Canonical host: <code>{{ host_info.canonical_host or 'derived/unset' }}</code></li>
+        <li>Preferred scheme: <code>{{ host_info.preferred_scheme }}</code></li>
       </ul>
     </div>
   </div>

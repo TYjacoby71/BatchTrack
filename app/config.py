@@ -1,8 +1,11 @@
 import os
 from datetime import timedelta
+from urllib.parse import urlparse
 
 
 _DEFAULT_ENV = 'development'
+_ENV_PRIORITY = ('BATCHTRACK_ENV', 'APP_ENV', 'ENVIRONMENT', 'FLASK_ENV')
+_VALID_ENVS = {'development', 'testing', 'staging', 'production'}
 
 
 def _normalized_env(value: str | None, *, default: str = _DEFAULT_ENV) -> str:
@@ -49,6 +52,18 @@ def _env_flag(key: str, default: bool = False) -> bool:
     return default
 
 
+def _extract_host(value: str | None) -> str | None:
+    """Best-effort extraction of hostname from a URL or bare host."""
+    if not value:
+        return None
+    candidate = value.strip()
+    if not candidate:
+        return None
+    parsed = urlparse(candidate if "://" in candidate else f"https://{candidate}")
+    host = parsed.netloc or parsed.path
+    return host or None
+
+
 class BaseConfig:
     SECRET_KEY = os.environ.get('FLASK_SECRET_KEY', 'devkey-please-change-in-production')
 
@@ -68,6 +83,10 @@ class BaseConfig:
     # Uploads
     UPLOAD_FOLDER = 'static/product_images'
     MAX_CONTENT_LENGTH = 16 * 1024 * 1024
+
+    # Host & external URL metadata
+    EXTERNAL_BASE_URL = os.environ.get('EXTERNAL_BASE_URL') or os.environ.get('PUBLIC_BASE_URL') or os.environ.get('BATCHTRACK_BASE_URL')
+    CANONICAL_HOST = os.environ.get('CANONICAL_HOST') or _extract_host(EXTERNAL_BASE_URL)
 
    # Rate limiting & Cache
     RATELIMIT_STORAGE_URI = _resolve_ratelimit_uri()
@@ -247,17 +266,30 @@ config_map = {
 }
 
 
+def _resolve_active_env() -> tuple[str, str]:
+    """Determine the active configuration and which variable selected it."""
+    for key in _ENV_PRIORITY:
+        raw = os.environ.get(key)
+        if raw not in (None, ""):
+            normalized = _normalized_env(raw, default=_DEFAULT_ENV)
+            if normalized in _VALID_ENVS:
+                return normalized, key
+    return _DEFAULT_ENV, 'default'
+
+
 def get_active_config_name() -> str:
     """Return the canonical configuration key for the current environment."""
-    env_name = _normalized_env(os.environ.get('FLASK_ENV'), default=_DEFAULT_ENV)
-    return env_name if env_name in config_map else _DEFAULT_ENV
+    env_name, _ = _resolve_active_env()
+    return env_name
 
 
 def get_config():
     """Return the config class for the active environment."""
-    config_name = get_active_config_name()
-    return config_map[config_name]
+    env_name, _ = _resolve_active_env()
+    return config_map[env_name]
 
 
-# Backwards compatibility for existing imports
-Config = get_config()
+# Backwards compatibility + metadata for other modules
+ACTIVE_ENV_NAME, ACTIVE_ENV_SOURCE = _resolve_active_env()
+ENVIRONMENT_VARIABLE_PRIORITY = _ENV_PRIORITY
+Config = config_map[ACTIVE_ENV_NAME]
