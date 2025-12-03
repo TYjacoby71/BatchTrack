@@ -307,14 +307,14 @@ def integrations_checklist():
         ),
         _section(
             "Load Testing Diagnostics",
-            "Optional flags that emit extra context when synthetic traffic fails.",
+            "Optional flags for observing synthetic traffic. Legacy bypass envs (ALLOW_LOADTEST_LOGIN_BYPASS / LOADTEST_ALLOW_LOGIN_WITHOUT_CSRF) are now blocked entirely.",
             [
                 _make_item(
-                    "LOADTEST_LOG_LOGIN_FAILURE_CONTEXT",
+                    "LOCUST_LOG_LOGIN_FAILURE_CONTEXT",
                     "Set to 1 to log structured auth.login failures (username, headers, cookie state).",
                     required=False,
                     recommended="unset / 0 (enable only when debugging)",
-                    note="Use in staging load tests to capture why CSRF or session writes fail; disable elsewhere to reduce log noise.",
+                    note="Keep disabled once the load test is green to reduce noise. Logs remain available from Locust via LOCUST_LOG_LOGIN_FAILURE_CONTEXT.",
                 ),
             ],
         ),
@@ -368,8 +368,8 @@ def integrations_checklist():
             ],
         ),
         _section(
-            "Load Testing Inputs",
-            "Environment-driven knobs consumed by loadtests/locustfile.py.",
+            "Load Testing Features & Inputs",
+            "Environment-driven knobs consumed by loadtests/locustfile.py. All users must behave like real clients (no CSRF bypass).",
             [
                 _make_item(
                     "LOCUST_USER_BASE",
