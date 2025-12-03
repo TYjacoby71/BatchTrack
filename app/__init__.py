@@ -2,7 +2,7 @@ import logging
 import os
 from typing import Any
 
-from flask import Flask, redirect, render_template, url_for
+from flask import Flask, redirect, render_template, request, url_for
 from flask_login import current_user
 from sqlalchemy.pool import StaticPool
 
@@ -83,6 +83,7 @@ def create_app(config: dict[str, Any] | None = None) -> Flask:
     configure_login_manager(app)
     register_middleware(app)
     register_blueprints(app)
+    _conditionally_relax_login_csrf(app)
     from . import models  # noqa: F401  # ensure models registered for Alembic
 
     from .template_context import register_template_context
@@ -287,7 +288,8 @@ def _install_global_resilience_handlers(app):
     """Install global DB rollback and friendly maintenance handler."""
     from sqlalchemy.exc import OperationalError, DBAPIError, SQLAlchemyError
     from .extensions import db
-    from flask import render_template
+    from flask import render_template, request
+    from flask_wtf.csrf import CSRFError
 
     @app.teardown_request
     def _rollback_on_error(exc):
@@ -309,6 +311,24 @@ def _install_global_resilience_handlers(app):
             return render_template("errors/maintenance.html"), 503
         except Exception:
             return ("Service temporarily unavailable. Please try again shortly.", 503)
+
+    @app.errorhandler(CSRFError)
+    def _csrf_error_handler(err: CSRFError):
+        """Emit structured diagnostics so load tests can see *why* CSRF failed."""
+        details = {
+            "path": request.path,
+            "endpoint": request.endpoint,
+            "remote_addr": request.headers.get("X-Forwarded-For", request.remote_addr),
+            "user_agent": request.user_agent.string if request.user_agent else None,
+            "reason": err.description,
+        }
+        app.logger.warning("CSRF validation failed: %s", details)
+        rendered = None
+        try:
+            rendered = render_template("errors/csrf.html", reason=err.description, details=details)
+        except Exception:
+            pass
+        return rendered or ("CSRF validation failed. Please refresh and try again.", 400), 400
 
 def _add_core_routes(app):
     """Add core application routes"""
@@ -336,3 +356,21 @@ def _add_core_routes(app):
 def _setup_logging(app):
     """Retained for backward compatibility; logging is configured via logging_config."""
     pass
+
+
+def _conditionally_relax_login_csrf(app: Flask) -> None:
+    """
+    Render load tests cannot post the secure session cookie when they misconfigure HTTPS.
+    When instructed via LOADTEST_ALLOW_LOGIN_WITHOUT_CSRF we exempt the login view to let
+    them gather end-to-end performance metrics (only use in dedicated staging).
+    """
+    if not app.config.get("LOADTEST_ALLOW_LOGIN_WITHOUT_CSRF"):
+        return
+
+    view = app.view_functions.get("auth.login")
+    if not view:
+        app.logger.warning("LOADTEST_ALLOW_LOGIN_WITHOUT_CSRF enabled but auth.login not registered yet")
+        return
+
+    csrf.exempt(view)
+    app.logger.warning("CSRF protection disabled for auth.login because LOADTEST_ALLOW_LOGIN_WITHOUT_CSRF=1")

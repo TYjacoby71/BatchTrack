@@ -5,6 +5,7 @@ per-user session isolation to avoid session guard collisions.
 """
 
 import json
+import logging
 import os
 import queue
 import random
@@ -17,10 +18,14 @@ from locust import HttpUser, between, task
 from locust.exception import RescheduleTask
 
 
+logger = logging.getLogger("loadtests.locustfile")
+
 CACHE_TTL_SECONDS = int(os.getenv("LOCUST_CACHE_TTL", "120"))
 DEFAULT_PASSWORD = os.getenv("LOCUST_USER_PASSWORD", "loadtest123")
 DEFAULT_USERNAME_BASE = os.getenv("LOCUST_USER_BASE", "loadtest_user")
 DEFAULT_USER_COUNT = int(os.getenv("LOCUST_USER_COUNT", "10000"))
+REQUIRE_HTTPS_HOST = os.getenv("LOCUST_REQUIRE_HTTPS", "1").lower() in {"1", "true", "yes"}
+LOG_LOGIN_FAILURE_CONTEXT = os.getenv("LOCUST_LOG_LOGIN_FAILURE_CONTEXT", "1").lower() in {"1", "true", "yes"}
 
 
 def _load_credential_source() -> List[Dict[str, str]]:
@@ -148,8 +153,13 @@ class AuthenticatedMixin:
             self.credential = None
         self._active_username = None
 
+    _https_warning_emitted = False
+
     def _login_with_credential(self) -> None:
         """Execute the login form flow with CSRF handling."""
+
+        self._emit_https_warning_once()
+
         login_page = self.client.get("/auth/login", name="auth.login.page")
         if login_page.status_code != 200:
             print(f"❌ Login page unavailable: {login_page.status_code}")
@@ -190,10 +200,61 @@ class AuthenticatedMixin:
         elif response.status_code == 200:
             print(f"✅ Login successful for {payload['username']}: status=200")
         else:
+            self._log_login_failure(response, payload, token)
             print(f"❌ Login failed for {payload['username']}: status={response.status_code}, response={response.text[:200]}...")
             CREDENTIAL_POOL.release(self.credential)
             self.credential = None
             raise RescheduleTask(f"Login failed for {payload['username']}: {response.status_code}")
+
+    def _emit_https_warning_once(self) -> None:
+        """
+        Render deployments mark the session cookie as Secure, so running Locust
+        against http:// silently drops it. Emit a high-signal warning when we
+        detect an http-only host.
+        """
+        if AuthenticatedMixin._https_warning_emitted:
+            return
+        host = getattr(getattr(self, "environment", None), "host", "") or ""
+        if not host:
+            return
+        if host.startswith("http://") and REQUIRE_HTTPS_HOST:
+            AuthenticatedMixin._https_warning_emitted = True
+            logger.error(
+                "Locust host %s is not HTTPS. Secure session cookies will be dropped and login will always 400. "
+                "Re-run Locust with --host https://batchtrack.onrender.com (or set LOCUST_REQUIRE_HTTPS=0 to suppress).",
+                host,
+            )
+
+    def _log_login_failure(self, response, payload, csrf_token) -> None:
+        if not LOG_LOGIN_FAILURE_CONTEXT:
+            return
+
+        try:
+            request_headers = dict(response.request.headers) if response.request else {}
+        except Exception:
+            request_headers = {}
+
+        cookies = {}
+        try:
+            cookies = {
+                k: ("<redacted>" if "session" in k.lower() else v)
+                for k, v in self.client.cookies.get_dict().items()
+            }
+        except Exception:
+            pass
+
+        context = {
+            "username": payload.get("username"),
+            "status": response.status_code,
+            "has_csrf_token": bool(csrf_token),
+            "host": getattr(getattr(self, "environment", None), "host", ""),
+            "cookies": cookies,
+            "set_cookie": response.headers.get("Set-Cookie"),
+            "referer": request_headers.get("Referer"),
+            "content_type": request_headers.get("Content-Type"),
+            "response_snippet": (response.text or "")[:200],
+        }
+        logger.error("auth.login failed with context: %s", json.dumps(context, default=str))
 
     # -----------------------
     # Cached ID lookups
