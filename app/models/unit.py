@@ -21,6 +21,8 @@ class Unit(TimestampMixin, db.Model):
 
     __table_args__ = (
         db.UniqueConstraint('name', 'organization_id', name='_unit_name_org_uc'),
+        db.Index('ix_unit_scope', 'is_active', 'is_custom', 'organization_id'),
+        db.Index('ix_unit_sort', 'unit_type', 'name'),
     )
 
     @classmethod

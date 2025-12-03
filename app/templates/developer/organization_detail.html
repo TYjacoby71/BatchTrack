@@ -20,7 +20,7 @@
                         {{ 'Active' if organization.is_active else 'Inactive' }}
                     </span>
                     <span class="badge bg-light text-muted border">
-                        <i class="fas fa-users me-1"></i>{{ users_objects|length }} users
+                        <i class="fas fa-users me-1"></i>{{ users_total }} users
                     </span>
                 </div>
                 <div class="text-muted small">
@@ -109,11 +109,11 @@
                 <div class="card-body">
                     <div class="row text-center">
                         <div class="col-6">
-                            <h4>{{ organization.users|length }}</h4>
+                            <h4>{{ users_total }}</h4>
                             <small class="text-muted">Total Users</small>
                         </div>
                         <div class="col-6">
-                            <h4>{{ organization.active_users_count }}</h4>
+                            <h4>{{ users_active_count }}</h4>
                             <small class="text-muted">Active Users</small>
                         </div>
                     </div>
@@ -130,7 +130,7 @@
             <div class="card">
                 <div class="card-header">
                     <h5 class="mb-0">
-                        <i class="fas fa-users"></i> Users ({{ users_objects|length }})
+                        <i class="fas fa-users"></i> Users ({{ users_total }})
                     </h5>
                 </div>
                 <div class="card-body">
@@ -272,7 +272,7 @@
                     <h5 class="alert-heading">⚠️ CRITICAL WARNING</h5>
                     <p class="mb-2">This action will <strong>PERMANENTLY DELETE</strong> the organization "<strong>{{ organization.name }}</strong>" and ALL associated data:</p>
                     <ul class="mb-0">
-                        <li>All users ({{ users_objects|length }} users will lose access)</li>
+                        <li>All users ({{ users_total }} users will lose access)</li>
                         <li>All batches and production history</li>
                         <li>All inventory records and FIFO lots</li>
                         <li>All recipes and formulations</li>
@@ -311,7 +311,7 @@
                         <div class="form-check">
                             <input class="form-check-input" type="checkbox" id="confirmUsers" required>
                             <label class="form-check-label text-danger" for="confirmUsers">
-                                <strong>I understand {{ users_objects|length }} users will immediately lose access to their accounts</strong>
+                                <strong>I understand {{ users_total }} users will immediately lose access to their accounts</strong>
                             </label>
                         </div>
                     </div>

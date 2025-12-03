@@ -7,6 +7,7 @@ from typing import Any, Iterable, List
 
 from flask import g, has_request_context, session
 from flask_login import current_user
+from sqlalchemy.orm import load_only
 
 from ..models import Unit
 from .cache_manager import app_cache
@@ -18,6 +19,18 @@ logger = logging.getLogger(__name__)
 _REQUEST_CACHE_ATTR = "_global_unit_list"
 _CACHE_TTL_SECONDS = 300
 _SLOW_QUERY_THRESHOLD = 0.05
+_UNIT_LOAD_FIELDS = (
+    "id",
+    "name",
+    "unit_type",
+    "base_unit",
+    "conversion_factor",
+    "symbol",
+    "is_custom",
+    "is_mapped",
+    "organization_id",
+    "created_by",
+)
 
 
 @dataclass(frozen=True)
@@ -112,7 +125,7 @@ def _fallback_units() -> List[UnitOption]:
 
 
 def _build_unit_query():
-    query = Unit.query.filter_by(is_active=True)
+    query = Unit.query.options(load_only(*_UNIT_LOAD_FIELDS)).filter_by(is_active=True)
     user = _active_user()
 
     if not user or not getattr(user, "is_authenticated", False):

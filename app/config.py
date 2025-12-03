@@ -73,6 +73,8 @@ class BaseConfig:
     # Logging
     LOG_LEVEL = os.environ.get('LOG_LEVEL', 'WARNING')
     ANON_REQUEST_LOG_LEVEL = os.environ.get('ANON_REQUEST_LOG_LEVEL', 'DEBUG')
+    LOADTEST_LOG_LOGIN_FAILURE_CONTEXT = os.environ.get('LOADTEST_LOG_LOGIN_FAILURE_CONTEXT', 'false').lower() == 'true'
+    LOADTEST_ALLOW_LOGIN_WITHOUT_CSRF = os.environ.get('LOADTEST_ALLOW_LOGIN_WITHOUT_CSRF', 'false').lower() == 'true'
 
     # Email - Support multiple providers
     EMAIL_PROVIDER = os.environ.get('EMAIL_PROVIDER', 'smtp').lower()
@@ -167,6 +169,8 @@ class DevelopmentConfig(BaseConfig):
         or 'memory://'
     )
     RATELIMIT_STORAGE_URL = RATELIMIT_STORAGE_URI
+    LOADTEST_LOG_LOGIN_FAILURE_CONTEXT = True
+    LOADTEST_ALLOW_LOGIN_WITHOUT_CSRF = True
 
 
 class TestingConfig(BaseConfig):
