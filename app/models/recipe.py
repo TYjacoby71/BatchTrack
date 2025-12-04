@@ -78,6 +78,7 @@ class Recipe(ScopedModelMixin, db.Model):
     is_public = db.Column(db.Boolean, nullable=False, default=False, server_default=sa.text("false"))
     is_for_sale = db.Column(db.Boolean, nullable=False, default=False, server_default=sa.text("false"))
     sale_price = db.Column(sa.Numeric(12, 4), nullable=True)
+    is_resellable = db.Column(db.Boolean, nullable=False, default=True, server_default=sa.text("true"))
     marketplace_status = db.Column(db.String(32), nullable=False, default='draft', server_default='draft')
     marketplace_notes = db.Column(db.Text, nullable=True)
     public_description = db.Column(db.Text, nullable=True)

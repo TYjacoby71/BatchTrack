@@ -132,6 +132,10 @@
     {% if recipe_sharing_enabled %}
     {% set sharing_scope_value = field_values.get('sharing_scope') if field_values and field_values.get('sharing_scope') else ('public' if recipe and recipe.is_public else 'private') %}
     {% set sale_mode_value = field_values.get('sale_mode') if field_values and field_values.get('sale_mode') else ('sale' if recipe and recipe.is_for_sale else 'free') %}
+    {% set sale_lock = recipe and (recipe.is_resellable is false) %}
+    {% if sale_lock %}
+        {% set sale_mode_value = 'free' %}
+    {% endif %}
     {% set sale_price_value = field_values.get('sale_price') if field_values and field_values.get('sale_price') not in (None, '') else (recipe.sale_price if recipe and recipe.sale_price else '') %}
     {% set notes_value = field_values.get('marketplace_notes') if field_values and field_values.get('marketplace_notes') is not none else (recipe.marketplace_notes if recipe else '') %}
     {% set desc_value = field_values.get('public_description') if field_values and field_values.get('public_description') is not none else (recipe.public_description if recipe else '') %}
@@ -170,11 +174,17 @@
                         <label class="form-check-label" for="saleModeFree">Free download</label>
                     </div>
                     <div class="form-check form-check-inline">
-                        <input class="form-check-input" type="radio" name="sale_mode" id="saleModeSale" value="sale" {% if sale_mode_value == 'sale' %}checked{% endif %}>
+                        <input class="form-check-input" type="radio" name="sale_mode" id="saleModeSale" value="sale" {% if sale_mode_value == 'sale' %}checked{% endif %} {% if sale_lock %}disabled{% endif %}>
                         <label class="form-check-label" for="saleModeSale">For sale</label>
                     </div>
                 </div>
-                <div class="row g-3 align-items-end mt-2" id="salePriceRow" style="display: {% if sale_mode_value == 'sale' %}flex{% else %}none{% endif %};">
+                {% if sale_lock %}
+                <div class="alert alert-warning mt-3 mb-0">
+                    <i class="fas fa-lock"></i>
+                    This recipe can't be marked for sale until it qualifies as a unique, resellable work.
+                </div>
+                {% endif %}
+                <div class="row g-3 align-items-end mt-2" id="salePriceRow" style="display: {% if sale_mode_value == 'sale' and not sale_lock %}flex{% else %}none{% endif %};">
                     <div class="col-md-4">
                         <label class="form-label">Sale price</label>
                         <div class="input-group">
