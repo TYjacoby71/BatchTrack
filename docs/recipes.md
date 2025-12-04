@@ -2,7 +2,7 @@
 
 The recipe domain is split between a thin blueprint (`app/blueprints/recipes/routes.py`) and the `app/services/recipe_service` package.  All external callers, including the blueprint, must import from `app.services.recipe_service` so that `_core`, `_validation`, `_scaling`, and `_batch_integration` remain internal implementation details.
 
-- `_core.py` owns the public CRUD surface.  Helpers such as `_apply_marketplace_settings` and `_apply_portioning_settings` centralize behavior around sharing scope, marketplace metadata, and portion tracking so that both `create_recipe` and `update_recipe` stay DRY and only describe the high‑level flow.
+- `_core.py` owns the public CRUD surface and now delegates repeated logic into focused helpers: `_helpers.py` (status/org resolution + label prefixes), `_marketplace.py` (sharing + commerce metadata), `_portioning.py` (portion JSON + columns), `_origin.py` (org-origin + resale decisions), `_imports.py` (cross-org inventory mapping), and `_lineage.py` (post-commit audit logging).  This keeps `create_recipe`, `update_recipe`, and `duplicate_recipe` focused on orchestration rather than data massaging.
 - `_validation.py` is the single source of truth for payload validation.  It performs name, yield, ingredient, and portioning checks and returns a simple `{valid, error, missing_fields}` structure the routes can bubble back to the UI.
 - `_scaling.py` and `_batch_integration.py` provide read-only utilities that operate on stored recipes.  They now rely on `Recipe.predicted_yield`/`predicted_yield_unit`, which keeps them aligned with the persisted schema used by batches and DTOs.
 
