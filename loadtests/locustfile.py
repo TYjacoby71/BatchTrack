@@ -190,26 +190,27 @@ class AuthenticatedMixin:
             name="auth.login",
             allow_redirects=False,
         )
-        if response.status_code == 302:
+        if response.status_code in (301, 302, 303):
             redirect_url = response.headers.get("Location", "/dashboard")
             if redirect_url:
                 try:
                     name = "auth.login.redirect"
-                    if redirect_url.startswith("/"):
-                        self.client.get(redirect_url, name=name, allow_redirects=True)
-                    else:
-                        self.client.get(redirect_url, name=name, allow_redirects=True)
+                    target = redirect_url if redirect_url.startswith("/") else redirect_url
+                    self.client.get(target, name=name, allow_redirects=True)
                 except Exception as exc:
                     print(f"⚠️ Redirect follow failed for {payload['username']}: {exc}")
             print(f"✅ Login successful for {payload['username']}: redirected to {redirect_url}")
-        elif response.status_code == 200:
-            print(f"✅ Login successful for {payload['username']}: status=200")
         else:
             self._log_login_failure(response, payload, token)
-            print(f"❌ Login failed for {payload['username']}: status={response.status_code}, response={response.text[:200]}...")
+            print(
+                f"❌ Login failed for {payload['username']}: status={response.status_code}, "
+                f"response={response.text[:200]}..."
+            )
             CREDENTIAL_POOL.release(self.credential)
             self.credential = None
             raise RescheduleTask(f"Login failed for {payload['username']}: {response.status_code}")
+
+        self._verify_authenticated_session(context="post-login")
 
     def _emit_https_warning_once(self) -> None:
         """
@@ -261,6 +262,34 @@ class AuthenticatedMixin:
         }
         logger.error("auth.login failed with context: %s", json.dumps(context, default=str))
 
+    def _verify_authenticated_session(self, *, context: str) -> None:
+        """
+        Issue a lightweight API request to ensure the session cookie is usable.
+        Fail fast (RescheduleTask) so we do not run the rest of the scenario unauthenticated.
+        """
+        try:
+            resp = self.client.get(
+                "/api/ingredients",
+                name="auth.session_check",
+                allow_redirects=False,
+            )
+        except Exception as exc:  # pragma: no cover - network defensive
+            raise RescheduleTask(f"{context}: session check failed ({exc})") from exc
+
+        if resp.status_code == 200:
+            return
+
+        # Unauthorized or unexpected response – tear down and retry the user
+        logger.warning(
+            "Session verification failed (%s): status=%s, location=%s",
+            context,
+            resp.status_code,
+            resp.headers.get("Location"),
+        )
+        CREDENTIAL_POOL.release(self.credential)
+        self.credential = None
+        raise RescheduleTask(f"{context}: session verification failed ({resp.status_code})")
+
     # -----------------------
     # Cached ID lookups
     # -----------------------
@@ -293,8 +322,24 @@ class AuthenticatedMixin:
         return refs
 
     def _fetch_inventory_item_ids(self) -> List[int]:
-        resp = self.client.get("/api/ingredients", name="bootstrap.inventory.api")
+        resp = self.client.get("/api/ingredients", name="bootstrap.inventory.api", allow_redirects=False)
+        if resp.status_code in {401, 403} or (
+            resp.status_code in {301, 302, 303} and "/auth/login" in resp.headers.get("Location", "")
+        ):
+            logger.warning(
+                "bootstrap.inventory.api got %s for %s – forcing re-authentication",
+                resp.status_code,
+                self._active_username,
+            )
+            self._login_with_credential()
+            resp = self.client.get("/api/ingredients", name="bootstrap.inventory.api", allow_redirects=False)
+
         if resp.status_code != 200:
+            logger.error(
+                "bootstrap.inventory.api failed: status=%s body=%s",
+                resp.status_code,
+                (resp.text or "")[:200],
+            )
             return []
         try:
             data = resp.json()
