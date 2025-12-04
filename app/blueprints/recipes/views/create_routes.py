@@ -10,7 +10,7 @@ from sqlalchemy.orm import joinedload
 from wtforms.validators import ValidationError
 
 from app.extensions import db
-from app.models import InventoryItem, Recipe
+from app.models import Batch, InventoryItem, Recipe
 from app.models.product_category import ProductCategory
 from app.services.recipe_proportionality_service import RecipeProportionalityService
 from app.services.recipe_service import (
@@ -406,8 +406,6 @@ def edit_recipe(recipe_id):
             flash('An unexpected error occurred', 'error')
 
     form_data = get_recipe_form_data()
-    from ...models import Batch
-
     existing_batches = Batch.query.filter_by(recipe_id=recipe.id).count()
 
     return render_template(
