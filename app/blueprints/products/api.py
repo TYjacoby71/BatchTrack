@@ -26,26 +26,8 @@ def get_product_from_sku(sku_id):
 def get_products():
     """Get all products for dropdowns and autocomplete"""
     try:
-        # Use ProductService to get products safely with organization scoping
         products = ProductService.get_all_products()
-
-        product_list = []
-        for product in products:
-            unit = None
-            try:
-                primary_sku = product.skus.filter_by(is_active=True).first()
-                if primary_sku:
-                    unit = primary_sku.unit
-            except Exception:
-                unit = None
-
-            product_list.append({
-                'id': product.id,
-                'name': product.name,
-                'product_base_unit': unit
-            })
-
-        return jsonify(product_list)
+        return jsonify(products)
 
     except Exception as e:
         return jsonify({'error': str(e)}), 500

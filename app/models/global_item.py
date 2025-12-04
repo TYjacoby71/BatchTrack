@@ -76,6 +76,7 @@ class GlobalItem(db.Model):
 
     __table_args__ = tuple([
         db.UniqueConstraint('name', 'item_type', name='_global_item_name_type_uc'),
+        db.Index('ix_global_item_active_sort', 'is_archived', 'item_type', 'name'),
         *([db.Index('ix_global_item_aliases_gin', db.text('(aliases::jsonb)'), postgresql_using='gin')] if _IS_PG else []),
     ])
 

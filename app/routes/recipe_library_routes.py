@@ -1,5 +1,9 @@
 from __future__ import annotations
 
+import hashlib
+import json
+from types import SimpleNamespace
+
 from flask import Blueprint, render_template, request, redirect, url_for, abort, session
 from flask_login import current_user
 from sqlalchemy import func, or_, nullslast
@@ -12,8 +16,12 @@ from app.models.recipe_marketplace import RecipeProductGroup
 from app.services.statistics import AnalyticsDataService
 from app.utils.seo import slugify_value
 from app.utils.settings import is_feature_enabled
+from app.utils.cache_manager import app_cache
 
 recipe_library_bp = Blueprint("recipe_library_bp", __name__)
+
+_RECIPE_LIST_CACHE_TTL = 90
+_RECIPE_DETAIL_CACHE_TTL = 180
 
 
 @recipe_library_bp.route("/recipes/library")
@@ -88,13 +96,25 @@ def recipe_library():
     else:
         query = query.order_by(Recipe.updated_at.desc(), Recipe.name.asc())
 
-    recipes = query.limit(30).all()
-    cost_map = _fetch_cost_rollups([r.id for r in recipes])
-
-    recipe_cards = [
-        _serialize_recipe_for_public(recipe, cost_map.get(recipe.id))
-        for recipe in recipes
-    ]
+    cache_filters = {
+        "search": search_query,
+        "group": group_filter,
+        "category": category_filter,
+        "sale": sale_filter,
+        "org": org_filter,
+        "origin": origin_filter,
+        "sort": sort_mode,
+    }
+    cache_key = _recipe_library_cache_key("library:list", cache_filters)
+    recipe_cards = app_cache.get(cache_key)
+    if recipe_cards is None:
+        recipes = query.limit(30).all()
+        cost_map = _fetch_cost_rollups([r.id for r in recipes])
+        recipe_cards = [
+            _serialize_recipe_for_public(recipe, cost_map.get(recipe.id))
+            for recipe in recipes
+        ]
+        app_cache.set(cache_key, recipe_cards, ttl=_RECIPE_LIST_CACHE_TTL)
 
     product_groups = (
         RecipeProductGroup.query.filter_by(is_active=True)
@@ -172,8 +192,14 @@ def recipe_library_detail(recipe_id: int, slug: str):
             code=301,
         )
 
-    cost_map = _fetch_cost_rollups([recipe.id])
-    stats = _serialize_recipe_for_public(recipe, cost_map.get(recipe.id))
+    detail_cache_key = _recipe_library_cache_key(
+        "library:detail", {"id": recipe.id, "updated": recipe.updated_at.isoformat() if recipe.updated_at else None}
+    )
+    stats = app_cache.get(detail_cache_key)
+    if stats is None:
+        cost_map = _fetch_cost_rollups([recipe.id])
+        stats = _serialize_recipe_for_public(recipe, cost_map.get(recipe.id))
+        app_cache.set(detail_cache_key, stats, ttl=_RECIPE_DETAIL_CACHE_TTL)
     purchase_enabled = is_feature_enabled("FEATURE_RECIPE_PURCHASE_OPTIONS")
     reveal_details = False
     if getattr(current_user, "is_authenticated", False):
@@ -247,12 +273,22 @@ def organization_marketplace(organization_id: int):
     else:
         query = query.order_by(Recipe.updated_at.desc(), Recipe.name.asc())
 
-    recipes = query.all()
-    cost_map = _fetch_cost_rollups([r.id for r in recipes])
-    recipe_cards = [
-        _serialize_recipe_for_public(recipe, cost_map.get(recipe.id))
-        for recipe in recipes
-    ]
+    org_cache_filters = {
+        "org": org.id,
+        "search": search_query,
+        "sale": sale_filter,
+        "sort": sort_mode,
+    }
+    org_cache_key = _recipe_library_cache_key("library:org", org_cache_filters)
+    recipe_cards = app_cache.get(org_cache_key)
+    if recipe_cards is None:
+        recipes = query.all()
+        cost_map = _fetch_cost_rollups([r.id for r in recipes])
+        recipe_cards = [
+            _serialize_recipe_for_public(recipe, cost_map.get(recipe.id))
+            for recipe in recipes
+        ]
+        app_cache.set(org_cache_key, recipe_cards, ttl=_RECIPE_LIST_CACHE_TTL)
 
     totals = {
         "listings": len(recipe_cards),
@@ -274,7 +310,8 @@ def organization_marketplace(organization_id: int):
 
 
 def _serialize_recipe_for_public(recipe: Recipe, cost_rollup: dict | None = None) -> dict:
-    stats = recipe.stats[0] if getattr(recipe, "stats", None) else None
+    stats_row = recipe.stats[0] if getattr(recipe, "stats", None) else None
+    stats_snapshot = _serialize_recipe_stats(stats_row)
     cover_url = None
     if recipe.cover_image_path:
         cover_url = url_for("static", filename=recipe.cover_image_path)
@@ -282,8 +319,9 @@ def _serialize_recipe_for_public(recipe: Recipe, cost_rollup: dict | None = None
         cover_url = recipe.cover_image_url
 
     yield_per_dollar = None
-    if stats and stats.avg_cost_per_batch and stats.avg_cost_per_batch > 0 and recipe.predicted_yield:
-        yield_per_dollar = float(recipe.predicted_yield or 0) / float(stats.avg_cost_per_batch)
+    avg_cost_per_batch = getattr(stats_snapshot, "avg_cost_per_batch", None) if stats_snapshot else None
+    if avg_cost_per_batch and avg_cost_per_batch > 0 and recipe.predicted_yield:
+        yield_per_dollar = float(recipe.predicted_yield or 0) / float(avg_cost_per_batch)
 
     ingredient_cost = None
     total_cost = None
@@ -306,7 +344,7 @@ def _serialize_recipe_for_public(recipe: Recipe, cost_rollup: dict | None = None
         "predicted_yield_unit": recipe.predicted_yield_unit,
         "marketplace_notes": recipe.marketplace_notes,
         "public_description": recipe.public_description,
-        "stats": stats,
+        "stats": stats_snapshot,
         "yield_per_dollar": yield_per_dollar,
         "skin_opt_in": recipe.skin_opt_in,
         "updated_at": recipe.updated_at,
@@ -329,11 +367,46 @@ def _serialize_recipe_for_public(recipe: Recipe, cost_rollup: dict | None = None
     }
 
 
+def _serialize_recipe_stats(stats: RecipeStats | None) -> SimpleNamespace | None:
+    if not stats:
+        return None
+
+    def _to_float(value):
+        return float(value) if value is not None else None
+
+    payload = {
+        "total_batches_planned": stats.total_batches_planned,
+        "total_batches_completed": stats.total_batches_completed,
+        "total_batches_failed": stats.total_batches_failed,
+        "success_rate_percentage": _to_float(stats.success_rate_percentage),
+        "avg_fill_efficiency": _to_float(stats.avg_fill_efficiency),
+        "avg_yield_variance": _to_float(stats.avg_yield_variance),
+        "avg_cost_variance": _to_float(stats.avg_cost_variance),
+        "avg_cost_per_batch": _to_float(stats.avg_cost_per_batch),
+        "avg_cost_per_unit": _to_float(stats.avg_cost_per_unit),
+        "total_spoilage_cost": _to_float(stats.total_spoilage_cost),
+        "avg_containers_needed": _to_float(stats.avg_containers_needed),
+        "last_batch_date": stats.last_batch_date,
+        "last_updated": stats.last_updated,
+    }
+    return SimpleNamespace(**payload)
+
+
 def _safe_int(value):
     try:
         return int(value) if value not in (None, "", "null") else None
     except (TypeError, ValueError):
         return None
+
+
+def _recipe_library_cache_key(scope: str, filters: dict) -> str:
+    payload = {
+        "scope": scope,
+        **{k: filters.get(k) for k in sorted(filters.keys())},
+    }
+    encoded = json.dumps(payload, sort_keys=True, default=str)
+    digest = hashlib.sha1(encoded.encode("utf-8")).hexdigest()
+    return f"recipe-library:{digest}"
 
 
 def _fetch_cost_rollups(recipe_ids):

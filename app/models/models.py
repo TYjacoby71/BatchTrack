@@ -280,6 +280,9 @@ class User(UserMixin, db.Model):
     # Indexes
     __table_args__ = (
         db.Index('ix_user_org', 'organization_id'),
+        db.Index('ix_user_org_created_at', 'organization_id', 'created_at'),
+        db.Index('ix_user_org_active', 'organization_id', 'is_active'),
+        db.Index('ix_user_active_type', 'is_active', 'user_type'),
     )
 
     # Legacy compatibility: is_verified hybrid property

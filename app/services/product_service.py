@@ -6,8 +6,23 @@ from typing import Optional, Dict, List, Tuple
 from flask_login import current_user
 import uuid
 from .event_emitter import EventEmitter
+from ..utils.cache_manager import app_cache
 
 class ProductService:
+    _PRODUCT_CACHE_TTL_SECONDS = 120
+
+    @staticmethod
+    def _product_cache_key(organization_id: Optional[int]) -> str:
+        return f"products:list:{organization_id or 'public'}"
+
+    @classmethod
+    def invalidate_product_cache(cls, organization_id: Optional[int]) -> None:
+        """Remove cached dropdown payloads for the given organization."""
+        try:
+            app_cache.delete(cls._product_cache_key(organization_id))
+        except Exception:
+            # Cache errors should never bubble up to the caller
+            pass
     @staticmethod
     def generate_sku_code(product_name: str, variant_name: str, size_label: str):
         """Generate a unique SKU code"""
@@ -53,6 +68,7 @@ class ProductService:
             )
             db.session.add(product)
             db.session.flush()
+            ProductService.invalidate_product_cache(product.organization_id)
             # Emit product_created
             try:
                 EventEmitter.emit(
@@ -324,12 +340,49 @@ class ProductService:
         ).first()
 
     @staticmethod
-    def get_all_products():
-        """Get all active products for the current organization"""
-        return Product.query.filter_by(
-            is_active=True,
-            organization_id=current_user.organization_id
-        ).all()
+    def get_all_products(force_refresh: bool = False):
+        """Return cached dropdown payload of active products for the org."""
+        organization_id = getattr(current_user, 'organization_id', None)
+        if not organization_id:
+            return []
+
+        cache_key = ProductService._product_cache_key(organization_id)
+        if not force_refresh:
+            cached = app_cache.get(cache_key)
+            if cached is not None:
+                return cached
+
+        rows = (
+            db.session.query(
+                Product.id.label('id'),
+                Product.name.label('name'),
+                func.max(ProductSKU.unit).label('unit'),
+            )
+            .outerjoin(
+                ProductSKU,
+                (ProductSKU.product_id == Product.id)
+                & (ProductSKU.organization_id == organization_id)
+                & (ProductSKU.is_active.is_(True)),
+            )
+            .filter(
+                Product.is_active.is_(True),
+                Product.organization_id == organization_id,
+            )
+            .group_by(Product.id, Product.name)
+            .order_by(Product.name.asc())
+            .all()
+        )
+
+        payload = [
+            {
+                'id': row.id,
+                'name': row.name,
+                'product_base_unit': row.unit or None,
+            }
+            for row in rows
+        ]
+        app_cache.set(cache_key, payload, ttl=ProductService._PRODUCT_CACHE_TTL_SECONDS)
+        return payload
 
     @staticmethod
     def get_product_variants(product_id):
@@ -383,6 +436,7 @@ class ProductService:
             sku.organization_id = current_user.organization_id
 
         db.session.commit()
+        ProductService.invalidate_product_cache(sku.organization_id)
 
         # Use the product ID directly instead of finding base SKU
         return {

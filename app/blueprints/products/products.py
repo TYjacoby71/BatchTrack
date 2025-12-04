@@ -72,6 +72,7 @@ def create_product_from_data(data):
         # Product creation audit is now handled by FIFO operations automatically
         # No separate audit entry needed
         db.session.commit()
+        ProductService.invalidate_product_cache(product.organization_id)
 
         return {
             'success': True,
@@ -446,6 +447,7 @@ def edit_product(product_id):
         sku.low_stock_threshold = float(low_stock_threshold) if low_stock_threshold else 0
 
     db.session.commit()
+    ProductService.invalidate_product_cache(product.organization_id)
     flash('Product updated successfully', 'success')
     return redirect(url_for('products.view_product', product_id=product.id))
 
@@ -496,6 +498,7 @@ def delete_product(product_id):
         Product.query.filter_by(id=product.id).delete()
 
         db.session.commit()
+        ProductService.invalidate_product_cache(product.organization_id)
 
         flash(f'Product "{product.name}" deleted successfully', 'success')
         return redirect(url_for('products.product_list'))

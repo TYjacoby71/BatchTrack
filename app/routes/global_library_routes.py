@@ -1,12 +1,17 @@
+import hashlib
 import json
 from typing import Optional
+from types import SimpleNamespace
 
 from flask import Blueprint, render_template, request, redirect, url_for
+from sqlalchemy.orm import joinedload
+
 from app.models import db, GlobalItem
 from app.services.statistics import AnalyticsDataService
 from app.models.category import IngredientCategory
 from app.utils.seo import slugify_value
 from app.extensions import limiter
+from app.utils.cache_manager import app_cache
 
 global_library_bp = Blueprint('global_library_bp', __name__)
 
@@ -55,7 +60,20 @@ def global_library():
         except Exception:
             query = query.filter(GlobalItem.name.ilike(term))
 
-    items = query.order_by(GlobalItem.item_type.asc(), GlobalItem.name.asc()).limit(200).all()
+    cache_key = _global_library_cache_key(item_type, category_filter, search_query)
+    cached_items = app_cache.get(cache_key)
+
+    if cached_items is None:
+        db_items = (
+            query.options(joinedload(GlobalItem.ingredient_category))
+            .order_by(GlobalItem.item_type.asc(), GlobalItem.name.asc())
+            .limit(200)
+            .all()
+        )
+        cached_items = [_serialize_global_item_result(item) for item in db_items]
+        app_cache.set(cache_key, cached_items, ttl=120)
+
+    items = _rehydrate_global_items(cached_items)
 
     # Get global ingredient categories for the filter dropdown (only for ingredients)
     categories = []
@@ -252,3 +270,63 @@ def global_library_item_stats(item_id: int):
         logger.error(f"Error getting stats for global item {item_id}: {str(e)}", exc_info=True)
         from flask import jsonify
         return jsonify({'success': False, 'error': str(e)}), 500
+
+
+def _global_library_cache_key(item_type: str, category_filter: str, search_query: str) -> str:
+    payload = json.dumps(
+        {
+            'type': (item_type or '').lower(),
+            'category': (category_filter or '').lower(),
+            'search': (search_query or '').strip(),
+        },
+        sort_keys=True,
+    )
+    digest = hashlib.sha1(payload.encode('utf-8')).hexdigest()
+    return f"global-library:list:{digest}"
+
+
+def _serialize_global_item_result(item: GlobalItem) -> dict:
+    category = item.ingredient_category
+    category_payload = None
+    if category:
+        category_payload = {
+            'name': category.name,
+            'default_density': getattr(category, 'default_density', None),
+        }
+    return {
+        'id': item.id,
+        'name': item.name,
+        'item_type': item.item_type,
+        'density': item.density,
+        'capacity': item.capacity,
+        'capacity_unit': item.capacity_unit,
+        'default_is_perishable': item.default_is_perishable,
+        'ingredient_category': category_payload,
+    }
+
+
+def _rehydrate_global_items(serialized_items: list[dict]) -> list[SimpleNamespace]:
+    hydrated = []
+    for data in serialized_items:
+        category_payload = data.get('ingredient_category')
+        category_ns = (
+            SimpleNamespace(
+                name=category_payload.get('name'),
+                default_density=category_payload.get('default_density'),
+            )
+            if category_payload
+            else None
+        )
+        hydrated.append(
+            SimpleNamespace(
+                id=data['id'],
+                name=data['name'],
+                item_type=data['item_type'],
+                density=data.get('density'),
+                capacity=data.get('capacity'),
+                capacity_unit=data.get('capacity_unit'),
+                default_is_perishable=data.get('default_is_perishable'),
+                ingredient_category=category_ns,
+            )
+        )
+    return hydrated
