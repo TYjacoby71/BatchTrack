@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import logging
+import os
 from dataclasses import dataclass
 from itertools import zip_longest
 from typing import Any, Dict, Optional, Tuple
@@ -16,10 +17,58 @@ from app.models.recipe_marketplace import RecipeProductGroup
 from app.models.unit import Unit
 from app.services.inventory_adjustment import create_inventory_item
 from app.services.recipe_marketplace_service import RecipeMarketplaceService
+from app.utils.cache_manager import app_cache
 from app.utils.settings import is_feature_enabled
 from app.utils.unit_utils import get_global_unit_list
 
 logger = logging.getLogger(__name__)
+
+_FORM_DATA_CACHE_TTL = int(os.getenv("RECIPE_FORM_CACHE_TTL", "60"))
+
+
+def _recipe_form_cache_key(org_id: Optional[int]) -> str:
+    return f"recipes:form_data:{org_id or 'global'}"
+
+
+def _build_recipe_form_payload(org_id: Optional[int]) -> Dict[str, Any]:
+    ingredients_query = InventoryItem.query.filter(InventoryItem.type == 'ingredient')
+    if org_id:
+        ingredients_query = ingredients_query.filter_by(organization_id=org_id)
+    all_ingredients = ingredients_query.order_by(InventoryItem.name).all()
+
+    consumables_query = InventoryItem.query.filter(InventoryItem.type == 'consumable')
+    if org_id:
+        consumables_query = consumables_query.filter_by(organization_id=org_id)
+    all_consumables = consumables_query.order_by(InventoryItem.name).all()
+
+    containers_query = InventoryItem.query.filter(InventoryItem.type == 'container')
+    if org_id:
+        containers_query = containers_query.filter_by(organization_id=org_id)
+    all_containers = containers_query.order_by(InventoryItem.name).all()
+
+    units = Unit.query.filter_by(is_active=True).order_by(Unit.unit_type, Unit.name).all()
+    inventory_units = get_global_unit_list()
+
+    categories = ProductCategory.query.order_by(ProductCategory.name.asc()).all()
+
+    product_groups = (
+        RecipeProductGroup.query.filter_by(is_active=True)
+        .order_by(
+            RecipeProductGroup.display_order.asc(),
+            RecipeProductGroup.name.asc(),
+        )
+        .all()
+    )
+
+    return {
+        'all_ingredients': all_ingredients,
+        'all_consumables': all_consumables,
+        'all_containers': all_containers,
+        'units': units,
+        'inventory_units': inventory_units,
+        'product_categories': categories,
+        'product_groups': product_groups,
+    }
 
 
 @dataclass
@@ -490,51 +539,21 @@ def build_draft_prompt(missing_fields, attempted_status, message):
 
 
 def get_recipe_form_data():
-    ingredients_query = InventoryItem.query.filter(InventoryItem.type == 'ingredient')
-    if current_user.organization_id:
-        ingredients_query = ingredients_query.filter_by(
-            organization_id=current_user.organization_id
-        )
-    all_ingredients = ingredients_query.order_by(InventoryItem.name).all()
+    org_id = getattr(current_user, 'organization_id', None)
+    cache_key = _recipe_form_cache_key(org_id)
+    cached = app_cache.get(cache_key)
+    if cached is None:
+        payload = _build_recipe_form_payload(org_id)
+        try:
+            app_cache.set(cache_key, payload, ttl=_FORM_DATA_CACHE_TTL)
+        except Exception as exc:
+            logger.debug("Unable to cache recipe form payload: %s", exc)
+    else:
+        payload = cached
 
-    consumables_query = InventoryItem.query.filter(InventoryItem.type == 'consumable')
-    if current_user.organization_id:
-        consumables_query = consumables_query.filter_by(
-            organization_id=current_user.organization_id
-        )
-    all_consumables = consumables_query.order_by(InventoryItem.name).all()
-
-    containers_query = InventoryItem.query.filter(InventoryItem.type == 'container')
-    if current_user.organization_id:
-        containers_query = containers_query.filter_by(
-            organization_id=current_user.organization_id
-        )
-    all_containers = containers_query.order_by(InventoryItem.name).all()
-
-    units = Unit.query.filter_by(is_active=True).order_by(Unit.unit_type, Unit.name).all()
-    inventory_units = get_global_unit_list()
-
-    categories = ProductCategory.query.order_by(ProductCategory.name.asc()).all()
-
-    product_groups = (
-        RecipeProductGroup.query.filter_by(is_active=True)
-        .order_by(
-            RecipeProductGroup.display_order.asc(),
-            RecipeProductGroup.name.asc(),
-        )
-        .all()
-    )
-
-    return {
-        'all_ingredients': all_ingredients,
-        'all_consumables': all_consumables,
-        'all_containers': all_containers,
-        'units': units,
-        'inventory_units': inventory_units,
-        'product_categories': categories,
-        'product_groups': product_groups,
-        'recipe_sharing_enabled': is_recipe_sharing_enabled(),
-    }
+    data = dict(payload)
+    data['recipe_sharing_enabled'] = is_recipe_sharing_enabled()
+    return data
 
 
 def is_recipe_sharing_enabled():
