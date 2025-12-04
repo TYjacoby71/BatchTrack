@@ -20,14 +20,16 @@ def _env_int(key: str, default: int) -> int:
 def _configured_workers() -> int:
     """Respect explicit worker counts while preventing overcommit."""
     cpu_count = max(multiprocessing.cpu_count(), 1)
-    # For 10k+ users, use more aggressive worker scaling
-    default_workers = max(4, min(16, cpu_count * 3))
+    # Default to a conservative 2x CPU with sensible caps for shared cores
+    auto_workers = max(2, min(8, cpu_count * 2))
 
     if "GUNICORN_WORKERS" in os.environ:
-        return _env_int("GUNICORN_WORKERS", default_workers)
+        return _env_int("GUNICORN_WORKERS", auto_workers)
     if "WEB_CONCURRENCY" in os.environ:
-        return _env_int("WEB_CONCURRENCY", default_workers)
-    return default_workers
+        return _env_int("WEB_CONCURRENCY", auto_workers)
+
+    max_auto = _env_int("GUNICORN_MAX_WORKERS", auto_workers)
+    return min(auto_workers, max_auto)
 
 
 def _log_runtime_configuration() -> None:

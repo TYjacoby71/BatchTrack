@@ -229,11 +229,11 @@ class BaseConfig:
     GOOGLE_OAUTH_CLIENT_SECRET = env.str('GOOGLE_OAUTH_CLIENT_SECRET')
 
     SQLALCHEMY_ENGINE_OPTIONS = {
-        'pool_size': env.int('SQLALCHEMY_POOL_SIZE', 80),
-        'max_overflow': env.int('SQLALCHEMY_MAX_OVERFLOW', 40),
+        'pool_size': env.int('SQLALCHEMY_POOL_SIZE', 15),
+        'max_overflow': env.int('SQLALCHEMY_MAX_OVERFLOW', 5),
         'pool_pre_ping': True,
-        'pool_recycle': env.int('SQLALCHEMY_POOL_RECYCLE', 1800),
-        'pool_timeout': env.int('SQLALCHEMY_POOL_TIMEOUT', 30),
+        'pool_recycle': env.int('SQLALCHEMY_POOL_RECYCLE', 900),
+        'pool_timeout': env.int('SQLALCHEMY_POOL_TIMEOUT', 15),
         'pool_use_lifo': True,
         'pool_reset_on_return': 'commit',
     }

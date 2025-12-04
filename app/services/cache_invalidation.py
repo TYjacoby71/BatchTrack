@@ -1,8 +1,11 @@
 from __future__ import annotations
 
+from typing import Any, Mapping
+
 from flask import has_app_context
 
 from app.extensions import cache
+from app.utils.cache_utils import stable_cache_key
 
 __all__ = [
     "ingredient_list_cache_key",
@@ -15,6 +18,8 @@ __all__ = [
     "invalidate_global_library_cache",
     "recipe_library_cache_key",
     "invalidate_public_recipe_library_cache",
+    "inventory_list_cache_key",
+    "invalidate_inventory_list_cache",
 ]
 
 _INGREDIENT_LIST_KEY = "bootstrap:ingredients:v1:{org_id}"
@@ -23,6 +28,7 @@ _PRODUCT_LIST_KEY = "bootstrap:products:v1:{org_id}:{sort}"
 _PRODUCT_SORT_KEYS = ("name", "popular", "stock")
 _GLOBAL_LIBRARY_NAMESPACE = "global_library_cache"
 _RECIPE_LIBRARY_NAMESPACE = "recipe_library_public_cache"
+_INVENTORY_LIST_NAMESPACE = "inventory_list_cache"
 
 
 def _org_scope(org_id: int | None) -> str:
@@ -115,3 +121,23 @@ def recipe_library_cache_key(raw_key: str) -> str:
 
 def invalidate_public_recipe_library_cache() -> None:
     _bump_namespace(_RECIPE_LIBRARY_NAMESPACE)
+
+
+def _inventory_namespace(org_id: int | None) -> str:
+    return f"{_INVENTORY_LIST_NAMESPACE}:{_org_scope(org_id)}"
+
+
+def inventory_list_cache_key(org_id: int | None, params: Mapping[str, Any] | None = None) -> str:
+    """
+    Produce a namespaced cache key for inventory list payloads using request filters.
+    """
+    payload: dict[str, Any] = {"org": _org_scope(org_id)}
+    if params:
+        for key in sorted(params.keys()):
+            payload[key] = params[key]
+    digest = stable_cache_key("inventory:list", payload)
+    return _versioned_key(_inventory_namespace(org_id), digest)
+
+
+def invalidate_inventory_list_cache(org_id: int | None) -> None:
+    _bump_namespace(_inventory_namespace(org_id))

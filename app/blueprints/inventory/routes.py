@@ -1,11 +1,13 @@
 from datetime import datetime, timezone
 
+from types import SimpleNamespace
+
 from flask import Blueprint, url_for, request, jsonify, render_template, redirect, flash, session, current_app
 from flask_login import login_required, current_user
-from app.models import db, InventoryItem, UnifiedInventoryHistory, Unit, IngredientCategory, User
+from app.models import db, InventoryItem, UnifiedInventoryHistory, Unit, IngredientCategory, User, GlobalItem
 from app.utils.permissions import permission_required, role_required
 from app.utils.api_responses import api_error, api_success
-from app.extensions import limiter
+from app.extensions import cache, limiter
 from app.services.inventory_adjustment import process_inventory_adjustment, update_inventory_item, create_inventory_item
 from app.services.inventory_alerts import InventoryAlertService
 from app.services.reservation_service import ReservationService
@@ -14,7 +16,7 @@ import logging
 from ...utils.unit_utils import get_global_unit_list
 from ...utils.inventory_event_code_generator import int_to_base36
 from sqlalchemy import and_, or_, func
-from sqlalchemy.orm import joinedload
+from sqlalchemy.orm import joinedload, selectinload
 from app.models.inventory_lot import InventoryLot
 from app.services.density_assignment_service import DensityAssignmentService # Added for density assignment
 from app.services.bulk_inventory_service import BulkInventoryService, BulkInventoryServiceError
@@ -22,8 +24,112 @@ from datetime import datetime, timezone # Fix missing timezone import
 
 # Import the blueprint from __init__.py instead of creating a new one
 from . import inventory_bp
+from app.services.cache_invalidation import inventory_list_cache_key
+from app.utils.cache_utils import should_bypass_cache
 
 logger = logging.getLogger(__name__)
+
+
+def _expired_quantity_map(item_ids):
+    if not item_ids:
+        return {}
+    today = TimezoneUtils.utc_now().date()
+    rows = (
+        db.session.query(
+            InventoryLot.inventory_item_id,
+            func.sum(InventoryLot.remaining_quantity),
+        )
+        .filter(
+            InventoryLot.inventory_item_id.in_(item_ids),
+            InventoryLot.remaining_quantity > 0,
+            InventoryLot.expiration_date != None,
+            InventoryLot.expiration_date < today,
+        )
+        .group_by(InventoryLot.inventory_item_id)
+        .all()
+    )
+    return {row[0]: float(row[1] or 0) for row in rows}
+
+
+def _serialize_inventory_items(items):
+    from ...blueprints.expiration.services import ExpirationService
+
+    serialized = []
+    total_value = 0.0
+    perishable_ids = [item.id for item in items if item.is_perishable]
+    expired_map = _expired_quantity_map(perishable_ids)
+
+    for item in items:
+        quantity = float(item.quantity or 0.0)
+        total_value += quantity * float(item.cost_per_unit or 0.0)
+        expired_qty = expired_map.get(item.id, 0.0)
+        available_qty = max(0.0, quantity - expired_qty)
+        freshness = (
+            ExpirationService.get_weighted_average_freshness(item.id)
+            if item.is_perishable
+            else None
+        )
+
+        serialized.append(
+            {
+                "id": item.id,
+                "name": item.name,
+                "type": item.type,
+                "unit": item.unit,
+                "quantity": quantity,
+                "temp_available_quantity": available_qty,
+                "temp_expired_quantity": expired_qty,
+                "density": float(item.density) if item.density is not None else None,
+                "cost_per_unit": float(item.cost_per_unit or 0.0),
+                "freshness_percent": freshness,
+                "is_perishable": bool(item.is_perishable),
+                "is_archived": bool(item.is_archived),
+                "low_stock_threshold": float(item.low_stock_threshold or 0.0),
+                "global_item_id": item.global_item_id,
+                "global_item_name": getattr(item.global_item, "name", None),
+                "global_item_category": getattr(
+                    getattr(item.global_item, "ingredient_category", None), "name", None
+                ),
+                "category_name": getattr(getattr(item, "category", None), "name", None),
+                "capacity": item.capacity,
+                "capacity_unit": item.capacity_unit,
+                "container_material": item.container_material,
+                "container_type": item.container_type,
+                "container_style": item.container_style,
+                "container_color": item.container_color,
+            }
+        )
+    return serialized, total_value
+
+
+def _hydrate_inventory_items(serialized_items):
+    hydrated = []
+    for entry in serialized_items:
+        data = dict(entry)
+        category_name = data.pop("category_name", None)
+        global_item_name = data.pop("global_item_name", None)
+        global_item_category = data.pop("global_item_category", None)
+        global_item_id = data.get("global_item_id")
+
+        item = SimpleNamespace(**data)
+        item.category = SimpleNamespace(name=category_name) if category_name else None
+
+        if global_item_id:
+            ingredient_category = (
+                SimpleNamespace(name=global_item_category)
+                if global_item_category
+                else None
+            )
+            item.global_item = SimpleNamespace(
+                id=global_item_id,
+                name=global_item_name,
+                ingredient_category=ingredient_category,
+            )
+        else:
+            item.global_item = None
+
+        hydrated.append(item)
+    return hydrated
 
 def can_edit_inventory_item(item):
     """Helper function to check if current user can edit an inventory item"""
@@ -156,70 +262,108 @@ def api_quick_create_inventory():
 @permission_required('inventory.view')
 def list_inventory():
     inventory_type = request.args.get('type')
-    search = request.args.get('search', '').strip()
+    raw_search = (request.args.get('search') or '').strip()
     category_filter = request.args.get('category')
     show_archived = request.args.get('show_archived') == 'true'
     show_zero_qty = request.args.get('show_zero_qty', 'true') == 'true'  # Show zero quantity by default
+    normalized_search = raw_search.lower()
+    org_id = getattr(current_user, "organization_id", None)
+
+    filter_params = {
+        "type": (inventory_type or "").lower(),
+        "search": normalized_search,
+        "category": (category_filter or "").strip(),
+        "show_archived": show_archived,
+        "show_zero_qty": show_zero_qty,
+    }
+
+    cache_key = inventory_list_cache_key(org_id, filter_params)
+    bypass_cache = should_bypass_cache()
+    cache_ttl = current_app.config.get("INGREDIENT_LIST_CACHE_TTL", 120)
+
+    try:
+        if bypass_cache:
+            cache.delete(cache_key)
+    except Exception:
+        pass
+
+    units = Unit.scoped().filter(Unit.is_active == True).all()
+    categories = IngredientCategory.query.order_by(IngredientCategory.name.asc()).all()
+
+    if not bypass_cache:
+        cached_payload = None
+        try:
+            cached_payload = cache.get(cache_key)
+        except Exception:
+            cached_payload = None
+        if cached_payload:
+            cached_items = _hydrate_inventory_items(cached_payload.get("items", []))
+            total_value = cached_payload.get("total_value", 0.0)
+            return render_template(
+                'inventory_list.html',
+                inventory_items=cached_items,
+                items=cached_items,
+                categories=categories,
+                total_value=total_value,
+                units=units,
+                show_archived=show_archived,
+                show_zero_qty=show_zero_qty,
+                get_global_unit_list=get_global_unit_list,
+            )
+
     query = InventoryItem.query
+    if org_id:
+        query = query.filter_by(organization_id=org_id)
+    query = query.filter(~InventoryItem.type.in_(('product', 'product-reserved')))
 
-    # Add organization scoping - regular users only see their org's inventory
-    if current_user.organization_id:
-        query = query.filter_by(organization_id=current_user.organization_id)
-
-    # Exclude product and product-reserved items from inventory management
-    query = query.filter(~InventoryItem.type.in_(['product', 'product-reserved']))
-
-    # Filter by archived status unless show_archived is true
     if not show_archived:
-        query = query.filter(InventoryItem.is_archived != True)
-
+        query = query.filter(InventoryItem.is_archived.is_(False))
     if inventory_type:
         query = query.filter_by(type=inventory_type)
-
     if not show_zero_qty:
         query = query.filter(InventoryItem.quantity > 0)
+    if raw_search:
+        like_pattern = f"%{raw_search}%"
+        query = query.filter(InventoryItem.name.ilike(like_pattern))
+    if category_filter:
+        try:
+            query = query.filter(InventoryItem.category_id == int(category_filter))
+        except (TypeError, ValueError):
+            pass
 
-    ingredients = query.all()
-    # Get units within the session to avoid detached instance errors
-    units = Unit.scoped().filter(Unit.is_active == True).all()
-    categories = IngredientCategory.query.all()
-    total_value = sum(item.quantity * item.cost_per_unit for item in ingredients)
+    query = query.options(
+        selectinload(InventoryItem.category),
+        selectinload(InventoryItem.global_item).selectinload(GlobalItem.ingredient_category),
+    ).order_by(InventoryItem.name.asc())
 
-    # Calculate freshness and expired quantities for each item
-    from ...blueprints.expiration.services import ExpirationService
-    from sqlalchemy import and_
+    inventory_records = query.all()
+    serialized_items, total_value = _serialize_inventory_items(inventory_records)
 
-    for item in ingredients:
-        item.freshness_percent = ExpirationService.get_weighted_average_freshness(item.id)
+    try:
+        cache.set(
+            cache_key,
+            {
+                "items": serialized_items,
+                "total_value": total_value,
+            },
+            timeout=cache_ttl,
+        )
+    except Exception:
+        pass
 
-        # Calculate expired quantity using only InventoryLot (lots handle FIFO tracking now)
-        if item.is_perishable:
-            today = TimezoneUtils.utc_now().date()
-            # Only check InventoryLot for expired quantities
-            expired_lots = InventoryLot.query.filter(
-                and_(
-                    InventoryLot.inventory_item_id == item.id,
-                    InventoryLot.remaining_quantity > 0,
-                    InventoryLot.expiration_date != None,
-                    InventoryLot.expiration_date < today
-                )
-            ).all()
+    hydrated_items = _hydrate_inventory_items(serialized_items)
 
-            item.temp_expired_quantity = sum(float(lot.remaining_quantity) for lot in expired_lots)
-            item.temp_available_quantity = float(item.quantity) - item.temp_expired_quantity
-        else:
-            item.temp_expired_quantity = 0
-            item.temp_available_quantity = item.quantity
-
-    return render_template('inventory_list.html',
-                         inventory_items=ingredients,
-                         items=ingredients,  # Template expects 'items'
-                         categories=categories,
-                         total_value=total_value,
-                         units=units,
-                         show_archived=show_archived,
-                         show_zero_qty=show_zero_qty,
-                         get_global_unit_list=get_global_unit_list)
+    return render_template(
+        'inventory_list.html',
+        inventory_items=hydrated_items,
+        items=hydrated_items,
+        categories=categories,
+        total_value=total_value,
+        units=units,
+        show_archived=show_archived,
+        show_zero_qty=show_zero_qty,
+        get_global_unit_list=get_global_unit_list,
+    )
 
 @inventory_bp.route('/set-columns', methods=['POST'])
 @login_required
