@@ -25,13 +25,7 @@ def upgrade():
     op.create_index(
         "ix_global_item_archive_type_name", "global_item", ["is_archived", "item_type", "name"]
     )
-    op.create_index(
-        "ix_unit_active_scope_sort", "unit", ["is_active", "is_custom", "unit_type", "name"]
-    )
-
-
 def downgrade():
-    op.drop_index("ix_unit_active_scope_sort", table_name="unit")
     op.drop_index("ix_global_item_archive_type_name", table_name="global_item")
     op.drop_index("ix_batch_org_status_started_at", table_name="batch")
     op.drop_index("ix_user_active_type", table_name="user")
