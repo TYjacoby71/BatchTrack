@@ -1,10 +1,13 @@
 
 from flask_login import current_user
-from ..extensions import db
 import sqlalchemy as sa
-from .mixins import ScopedModelMixin
+from sqlalchemy import event
+
+from ..extensions import db
 from ..utils.timezone_utils import TimezoneUtils
 from .db_dialect import is_postgres
+from .mixins import ScopedModelMixin
+from app.services.cache_invalidation import invalidate_recipe_list_cache
 
 _IS_PG = is_postgres()
 
@@ -169,6 +172,32 @@ class RecipeIngredient(ScopedModelMixin, db.Model):
     inventory_item = db.relationship('InventoryItem', backref='recipe_usages')
 
 
+def _lookup_recipe_org(connection, recipe_id: int | None):
+    if not recipe_id:
+        return None
+    recipe_tbl = Recipe.__table__
+    row = connection.execute(
+        recipe_tbl.select()
+        .with_only_columns(recipe_tbl.c.organization_id)
+        .where(recipe_tbl.c.id == recipe_id)
+    ).first()
+    return row[0] if row else None
+
+
+@event.listens_for(RecipeIngredient, "after_insert")
+def _recipe_ingredient_after_insert(mapper, connection, target):
+    org_id = _lookup_recipe_org(connection, getattr(target, "recipe_id", None))
+    if org_id:
+        invalidate_recipe_list_cache(org_id)
+
+
+@event.listens_for(RecipeIngredient, "after_delete")
+def _recipe_ingredient_after_delete(mapper, connection, target):
+    org_id = _lookup_recipe_org(connection, getattr(target, "recipe_id", None))
+    if org_id:
+        invalidate_recipe_list_cache(org_id)
+
+
 class RecipeConsumable(ScopedModelMixin, db.Model):
     __tablename__ = 'recipe_consumable'
     id = db.Column(db.Integer, primary_key=True)
@@ -182,8 +211,6 @@ class RecipeConsumable(ScopedModelMixin, db.Model):
     inventory_item = db.relationship('InventoryItem', backref='recipe_consumable_usages')
 
 # Defensive defaulting: ensure a category is assigned if omitted in code paths
-from sqlalchemy import event
-
 @event.listens_for(Recipe, "before_insert")
 def _assign_default_category_before_insert(mapper, connection, target):
     """Assign a default ProductCategory if none was provided.
@@ -204,6 +231,27 @@ def _assign_default_category_before_insert(mapper, connection, target):
     except Exception:
         # As a last resort, do nothing and let DB raise if truly impossible
         pass
+
+
+@event.listens_for(Recipe, "after_insert")
+def _recipe_after_insert(mapper, connection, target):
+    org_id = getattr(target, "organization_id", None)
+    if org_id:
+        invalidate_recipe_list_cache(org_id)
+
+
+@event.listens_for(Recipe, "after_update")
+def _recipe_after_update(mapper, connection, target):
+    org_id = getattr(target, "organization_id", None)
+    if org_id:
+        invalidate_recipe_list_cache(org_id)
+
+
+@event.listens_for(Recipe, "after_delete")
+def _recipe_after_delete(mapper, connection, target):
+    org_id = getattr(target, "organization_id", None)
+    if org_id:
+        invalidate_recipe_list_cache(org_id)
 
 
 class RecipeLineage(ScopedModelMixin, db.Model):
