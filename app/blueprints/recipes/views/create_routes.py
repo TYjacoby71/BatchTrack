@@ -4,12 +4,15 @@ import logging
 from datetime import datetime, timedelta, timezone
 
 from flask import flash, redirect, render_template, request, url_for
-from flask_login import login_required
+from flask_login import current_user, login_required
 from sqlalchemy import func
+from sqlalchemy.orm import joinedload
+from wtforms.validators import ValidationError
 
 from app.extensions import db
 from app.models import InventoryItem, Recipe
 from app.models.product_category import ProductCategory
+from app.services.recipe_proportionality_service import RecipeProportionalityService
 from app.services.recipe_service import (
     create_recipe,
     duplicate_recipe,
@@ -37,6 +40,53 @@ from ..form_utils import (
 )
 
 logger = logging.getLogger(__name__)
+
+
+def _resolve_active_org_id():
+    org_id = get_effective_organization_id()
+    if org_id:
+        return org_id
+    try:
+        return getattr(current_user, 'organization_id', None)
+    except Exception:
+        return None
+
+
+def _ensure_variation_has_changes(parent_recipe, variation_ingredients):
+    if RecipeProportionalityService.are_recipes_proportionally_identical(
+        variation_ingredients,
+        parent_recipe.recipe_ingredients,
+    ):
+        raise ValidationError(
+            "A variation must have at least one change to an ingredient or proportion. No changes were detected."
+        )
+
+
+def _enforce_anti_plagiarism(ingredients, *, skip_check: bool):
+    if skip_check or not ingredients:
+        return
+
+    org_id = _resolve_active_org_id()
+    if not org_id:
+        return
+
+    purchased_recipes = (
+        Recipe.query.options(joinedload(Recipe.recipe_ingredients))
+        .filter(
+            Recipe.organization_id == org_id,
+            Recipe.org_origin_purchased.is_(True),
+        )
+        .all()
+    )
+
+    for purchased in purchased_recipes:
+        if RecipeProportionalityService.are_recipes_proportionally_identical(
+            ingredients,
+            purchased.recipe_ingredients,
+        ):
+            raise ValidationError(
+                "This recipe is identical to a recipe you have purchased. Please create a variation of your purchased recipe instead."
+            )
 
 
 @recipes_bp.route('/new', methods=['GET', 'POST'])
@@ -70,6 +120,25 @@ def new_recipe():
             )
 
             submitted_ingredients = payload.get('ingredients') or []
+
+            try:
+                _enforce_anti_plagiarism(
+                    submitted_ingredients,
+                    skip_check=bool(cloned_from_id),
+                )
+            except ValidationError as exc:
+                flash(str(exc), 'error')
+                ingredient_prefill, consumable_prefill = build_prefill_from_form(request.form)
+                form_recipe = recipe_from_form(request.form)
+                return render_recipe_form(
+                    recipe=form_recipe,
+                    ingredient_prefill=ingredient_prefill,
+                    consumable_prefill=consumable_prefill,
+                    is_clone=is_clone,
+                    cloned_from_id=cloned_from_id,
+                    form_values=request.form,
+                )
+
             success, result = create_recipe(**payload)
 
             if success:
@@ -215,6 +284,27 @@ def create_variation(recipe_id):
                 payload['product_group_id'] = parent.product_group_id
             if not payload.get('label_prefix') and parent.label_prefix:
                 payload['label_prefix'] = ""
+
+            try:
+                _ensure_variation_has_changes(parent, payload.get('ingredients') or [])
+            except ValidationError as exc:
+                flash(str(exc), 'error')
+                ingredient_prefill, consumable_prefill = build_prefill_from_form(request.form)
+                variation_draft = recipe_from_form(request.form, base_recipe=parent)
+                variation_draft.parent_recipe_id = parent.id
+                return render_recipe_form(
+                    recipe=variation_draft,
+                    is_variation=True,
+                    parent_recipe=parent,
+                    ingredient_prefill=ingredient_prefill,
+                    consumable_prefill=consumable_prefill,
+                    form_values=request.form,
+                )
+
+            if parent.org_origin_purchased:
+                payload['is_resellable'] = True
+            elif getattr(parent, 'is_resellable', True) is False:
+                payload['is_resellable'] = False
 
             success, result = create_recipe(**payload)
 

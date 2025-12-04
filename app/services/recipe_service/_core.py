@@ -126,6 +126,38 @@ def _build_org_origin_context(
     return context
 
 
+def _resolve_is_resellable(
+    *,
+    explicit_flag: bool | None,
+    recipe_org_id: Optional[int],
+    parent_recipe: Optional[Recipe],
+    clone_source: Optional[Recipe],
+    origin_context: Dict[str, Any],
+) -> bool:
+    """Determine whether a newly created recipe may be resold."""
+    if explicit_flag is not None:
+        return bool(explicit_flag)
+
+    if origin_context.get('org_origin_purchased'):
+        return False
+
+    if (
+        clone_source
+        and clone_source.organization_id
+        and recipe_org_id
+        and clone_source.organization_id != recipe_org_id
+    ):
+        return False
+
+    if clone_source and getattr(clone_source, 'is_resellable', True) is False:
+        return False
+
+    if parent_recipe and getattr(parent_recipe, 'is_resellable', True) is False:
+        return False
+
+    return True
+
+
 def _resolve_import_name(fallback_name: Optional[str], global_item_id: Optional[int]) -> str:
     name = (fallback_name or "").strip()
     if name:
@@ -382,6 +414,10 @@ def _apply_marketplace_settings(
     if sale_price is not None or not recipe.is_for_sale:
         recipe.sale_price = _normalize_sale_price(sale_price) if recipe.is_for_sale else None
 
+    if getattr(recipe, "is_resellable", True) is False:
+        recipe.is_for_sale = False
+        recipe.sale_price = None
+
     if marketplace_status:
         recipe.marketplace_status = marketplace_status
     elif scope_changed or not recipe.marketplace_status:
@@ -456,7 +492,8 @@ def create_recipe(name: str, description: str = "", instructions: str = "",
                  cover_image_path: str | None = None,
                  cover_image_url: str | None = None,
                  skin_opt_in: bool | None = None,
-                 remove_cover_image: bool = False) -> Tuple[bool, Any]:
+                 remove_cover_image: bool = False,
+                 is_resellable: bool | None = None) -> Tuple[bool, Any]:
     """
     Create a new recipe with ingredients and UI fields.
 
@@ -470,6 +507,7 @@ def create_recipe(name: str, description: str = "", instructions: str = "",
           parent_recipe_id: Parent recipe ID for variations (legacy parent_id supported)
         allowed_containers: List of container IDs
         label_prefix: Label prefix for batches
+        is_resellable: Optional override for marketplace resale eligibility
 
     Returns:
         Tuple of (success: bool, recipe_or_error: Recipe|str)
@@ -528,6 +566,13 @@ def create_recipe(name: str, description: str = "", instructions: str = "",
 
         recipe_org_id = current_org_id if current_org_id else (1)
 
+        origin_context = _build_org_origin_context(
+            target_org_id=recipe_org_id,
+            parent_recipe=parent_recipe,
+            clone_source=clone_source,
+        )
+        pending_org_origin_recipe_id = origin_context.get('org_origin_recipe_id')
+
         recipe = Recipe(
             name=name,
             instructions=instructions,
@@ -540,13 +585,13 @@ def create_recipe(name: str, description: str = "", instructions: str = "",
             category_id=category_id,
             status=normalized_status
         )
-
-        origin_context = _build_org_origin_context(
-            target_org_id=recipe.organization_id,
+        recipe.is_resellable = _resolve_is_resellable(
+            explicit_flag=is_resellable,
+            recipe_org_id=recipe.organization_id,
             parent_recipe=parent_recipe,
             clone_source=clone_source,
+            origin_context=origin_context,
         )
-        pending_org_origin_recipe_id = origin_context.get('org_origin_recipe_id')
         recipe.org_origin_type = origin_context['org_origin_type']
         recipe.org_origin_source_org_id = origin_context['org_origin_source_org_id']
         recipe.org_origin_source_recipe_id = origin_context['org_origin_source_recipe_id']
@@ -1102,6 +1147,9 @@ def duplicate_recipe(
         template.skin_opt_in = original.skin_opt_in
         template.cover_image_path = original.cover_image_path
         template.cover_image_url = original.cover_image_url
+        template.is_resellable = bool(getattr(original, "is_resellable", True))
+        if allow_cross_org or getattr(original, "org_origin_purchased", False):
+            template.is_resellable = False
         template.sharing_scope = 'private'
         template.is_public = False
         template.is_for_sale = False
