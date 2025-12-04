@@ -8,6 +8,7 @@ from ..utils.timezone_utils import TimezoneUtils
 from .mixins import ScopedModelMixin
 from app.services.cache_invalidation import (
     invalidate_ingredient_list_cache,
+    invalidate_inventory_list_cache,
     invalidate_product_list_cache,
 )
 
@@ -197,6 +198,7 @@ def _invalidate_inventory_item_caches(target: "InventoryItem") -> None:
     if not org_id:
         return
     item_type = (getattr(target, "type", "") or "").lower()
+    invalidate_inventory_list_cache(org_id)
     if item_type == "ingredient":
         invalidate_ingredient_list_cache(org_id)
     if item_type.startswith("product"):
