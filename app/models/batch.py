@@ -59,6 +59,7 @@ class Batch(ScopedModelMixin, db.Model):
     __table_args__ = (
         db.UniqueConstraint('organization_id', 'label_code', name='uq_batch_org_label'),
         db.Index('ix_batch_org', 'organization_id'),
+        db.Index('ix_batch_org_status_started_at', 'organization_id', 'status', 'started_at'),
         db.Index('ix_batch_vessel_fill_pct', 'vessel_fill_pct'),
         db.Index('ix_batch_candle_fragrance_pct', 'candle_fragrance_pct'),
         db.Index('ix_batch_candle_vessel_ml', 'candle_vessel_ml'),

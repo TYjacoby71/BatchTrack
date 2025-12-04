@@ -7,7 +7,10 @@ from ..extensions import db
 from ..utils.timezone_utils import TimezoneUtils
 from .db_dialect import is_postgres
 from .mixins import ScopedModelMixin
-from app.services.cache_invalidation import invalidate_recipe_list_cache
+from app.services.cache_invalidation import (
+    invalidate_recipe_list_cache,
+    invalidate_public_recipe_library_cache,
+)
 
 _IS_PG = is_postgres()
 
@@ -172,6 +175,12 @@ class RecipeIngredient(ScopedModelMixin, db.Model):
     inventory_item = db.relationship('InventoryItem', backref='recipe_usages')
 
 
+def _invalidate_recipe_caches(org_id: int | None) -> None:
+    if org_id:
+        invalidate_recipe_list_cache(org_id)
+    invalidate_public_recipe_library_cache()
+
+
 def _lookup_recipe_org(connection, recipe_id: int | None):
     if not recipe_id:
         return None
@@ -187,15 +196,13 @@ def _lookup_recipe_org(connection, recipe_id: int | None):
 @event.listens_for(RecipeIngredient, "after_insert")
 def _recipe_ingredient_after_insert(mapper, connection, target):
     org_id = _lookup_recipe_org(connection, getattr(target, "recipe_id", None))
-    if org_id:
-        invalidate_recipe_list_cache(org_id)
+    _invalidate_recipe_caches(org_id)
 
 
 @event.listens_for(RecipeIngredient, "after_delete")
 def _recipe_ingredient_after_delete(mapper, connection, target):
     org_id = _lookup_recipe_org(connection, getattr(target, "recipe_id", None))
-    if org_id:
-        invalidate_recipe_list_cache(org_id)
+    _invalidate_recipe_caches(org_id)
 
 
 class RecipeConsumable(ScopedModelMixin, db.Model):
@@ -236,22 +243,19 @@ def _assign_default_category_before_insert(mapper, connection, target):
 @event.listens_for(Recipe, "after_insert")
 def _recipe_after_insert(mapper, connection, target):
     org_id = getattr(target, "organization_id", None)
-    if org_id:
-        invalidate_recipe_list_cache(org_id)
+    _invalidate_recipe_caches(org_id)
 
 
 @event.listens_for(Recipe, "after_update")
 def _recipe_after_update(mapper, connection, target):
     org_id = getattr(target, "organization_id", None)
-    if org_id:
-        invalidate_recipe_list_cache(org_id)
+    _invalidate_recipe_caches(org_id)
 
 
 @event.listens_for(Recipe, "after_delete")
 def _recipe_after_delete(mapper, connection, target):
     org_id = getattr(target, "organization_id", None)
-    if org_id:
-        invalidate_recipe_list_cache(org_id)
+    _invalidate_recipe_caches(org_id)
 
 
 class RecipeLineage(ScopedModelMixin, db.Model):

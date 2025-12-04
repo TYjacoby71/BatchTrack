@@ -1,17 +1,19 @@
 from __future__ import annotations
 
-from flask import Blueprint, render_template, request, redirect, url_for, abort, session
+from flask import Blueprint, render_template, request, redirect, url_for, abort, session, current_app
 from flask_login import current_user
 from sqlalchemy import func, or_, nullslast
 from sqlalchemy.orm import joinedload
 
-from app.extensions import db, limiter
+from app.extensions import db, limiter, cache
 from app.models import Recipe, ProductCategory, Organization
 from app.models.statistics import RecipeStats, BatchStats
 from app.models.recipe_marketplace import RecipeProductGroup
 from app.services.statistics import AnalyticsDataService
 from app.utils.seo import slugify_value
 from app.utils.settings import is_feature_enabled
+from app.utils.cache_utils import should_bypass_cache, stable_cache_key
+from app.services.cache_invalidation import recipe_library_cache_key
 
 recipe_library_bp = Blueprint("recipe_library_bp", __name__)
 
@@ -26,6 +28,25 @@ def recipe_library():
     org_filter = _safe_int(request.args.get("organization"))
     origin_filter = (request.args.get("origin") or "any").lower()
     sort_mode = (request.args.get("sort") or "newest").lower()
+
+    cache_payload = {
+        "search": search_query or "",
+        "group": group_filter or 0,
+        "category": category_filter or 0,
+        "sale": sale_filter,
+        "org": org_filter or 0,
+        "origin": origin_filter,
+        "sort": sort_mode,
+    }
+    raw_cache_key = stable_cache_key("recipe_library_public", cache_payload)
+    cache_key = recipe_library_cache_key(raw_cache_key)
+
+    if should_bypass_cache():
+        cache.delete(cache_key)
+    else:
+        cached_page = cache.get(cache_key)
+        if cached_page is not None:
+            return cached_page
 
     query = (
         Recipe.query.options(
@@ -123,7 +144,7 @@ def recipe_library():
     purchase_enabled = is_feature_enabled("FEATURE_RECIPE_PURCHASE_OPTIONS")
     org_marketplace_enabled = is_feature_enabled("FEATURE_ORG_MARKETPLACE_DASHBOARD")
 
-    return render_template(
+    rendered = render_template(
         "library/recipe_library.html",
         recipes=recipe_cards,
         product_groups=product_groups,
@@ -140,6 +161,8 @@ def recipe_library():
         origin_filter=origin_filter,
         sort_mode=sort_mode,
     )
+    cache.set(cache_key, rendered, timeout=current_app.config.get("RECIPE_LIBRARY_CACHE_TTL", 180))
+    return rendered
 
 
 @recipe_library_bp.route("/recipes/library/<int:recipe_id>-<slug>")

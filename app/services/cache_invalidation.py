@@ -11,12 +11,18 @@ __all__ = [
     "invalidate_product_list_cache",
     "recipe_list_cache_key",
     "invalidate_recipe_list_cache",
+    "global_library_cache_key",
+    "invalidate_global_library_cache",
+    "recipe_library_cache_key",
+    "invalidate_public_recipe_library_cache",
 ]
 
 _INGREDIENT_LIST_KEY = "bootstrap:ingredients:v1:{org_id}"
 _RECIPE_LIST_KEY = "bootstrap:recipes:v1:{org_id}"
 _PRODUCT_LIST_KEY = "bootstrap:products:v1:{org_id}:{sort}"
 _PRODUCT_SORT_KEYS = ("name", "popular", "stock")
+_GLOBAL_LIBRARY_NAMESPACE = "global_library_cache"
+_RECIPE_LIBRARY_NAMESPACE = "recipe_library_public_cache"
 
 
 def _org_scope(org_id: int | None) -> str:
@@ -57,3 +63,55 @@ def product_list_cache_key(org_id: int | None, sort_key: str | None = None) -> s
 def invalidate_product_list_cache(org_id: int | None) -> None:
     for sort_key in _PRODUCT_SORT_KEYS:
         _safe_delete(product_list_cache_key(org_id, sort_key))
+
+
+def _namespace_version(namespace: str) -> int:
+    if not has_app_context():
+        return 1
+    version_key = f"{namespace}:__version__"
+    try:
+        version = cache.get(version_key)
+    except Exception:
+        version = None
+    if not version:
+        version = 1
+        try:
+            cache.set(version_key, version)
+        except Exception:
+            pass
+    return int(version or 1)
+
+
+def _versioned_key(namespace: str, raw_key: str) -> str:
+    version = _namespace_version(namespace)
+    return f"{namespace}:v{version}:{raw_key}"
+
+
+def _bump_namespace(namespace: str) -> None:
+    if not has_app_context():
+        return
+    version_key = f"{namespace}:__version__"
+    try:
+        version = int(cache.get(version_key) or 1) + 1
+    except Exception:
+        version = 2
+    try:
+        cache.set(version_key, version)
+    except Exception:
+        pass
+
+
+def global_library_cache_key(raw_key: str) -> str:
+    return _versioned_key(_GLOBAL_LIBRARY_NAMESPACE, raw_key)
+
+
+def invalidate_global_library_cache() -> None:
+    _bump_namespace(_GLOBAL_LIBRARY_NAMESPACE)
+
+
+def recipe_library_cache_key(raw_key: str) -> str:
+    return _versioned_key(_RECIPE_LIBRARY_NAMESPACE, raw_key)
+
+
+def invalidate_public_recipe_library_cache() -> None:
+    _bump_namespace(_RECIPE_LIBRARY_NAMESPACE)

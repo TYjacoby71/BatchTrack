@@ -1,8 +1,12 @@
 from __future__ import annotations
 
+import hashlib
+import json
+from typing import Any, Mapping
+
 from flask import has_request_context, request
 
-__all__ = ["should_bypass_cache"]
+__all__ = ["should_bypass_cache", "stable_cache_key"]
 
 _BYPASS_VALUES = {"1", "true", "yes", "force", "refresh"}
 
@@ -35,3 +39,16 @@ def should_bypass_cache() -> bool:
         return True
 
     return False
+
+
+def stable_cache_key(namespace: str, payload: Mapping[str, Any]) -> str:
+    """
+    Produce a deterministic hash for the given payload so cache keys remain short.
+    """
+    try:
+        normalized = json.dumps(payload, sort_keys=True, separators=(",", ":"), default=str)
+    except TypeError:
+        normalized = json.dumps(str(payload), sort_keys=True, separators=(",", ":"))
+    digest = hashlib.sha1(normalized.encode("utf-8")).hexdigest()
+    safe_namespace = namespace.strip().replace(" ", "_")
+    return f"{safe_namespace}:{digest}"
