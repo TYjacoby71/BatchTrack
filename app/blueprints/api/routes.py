@@ -14,6 +14,9 @@ from app.services.batchbot_usage_service import (
 )
 from app.services.batchbot_credit_service import BatchBotCreditService
 from app.services.ai import GoogleAIClientError
+from app.extensions import cache
+from app.services.cache_invalidation import ingredient_list_cache_key
+from app.utils.cache_utils import should_bypass_cache
 
 # Configure logging
 logger = logging.getLogger(__name__)
@@ -272,18 +275,36 @@ def get_timezone():
 def get_ingredients():
     """Get user's ingredients for unit converter"""
     try:
-        ingredients = InventoryItem.query.filter_by(
-            organization_id=current_user.organization_id,
-            type='ingredient'
-        ).order_by(InventoryItem.name).all()
+        org_id = getattr(current_user, "organization_id", None) or 0
+        cache_key = ingredient_list_cache_key(org_id)
+        bypass_cache = should_bypass_cache()
 
-        return jsonify([{
+        if bypass_cache:
+            cache.delete(cache_key)
+        else:
+            cached = cache.get(cache_key)
+            if cached is not None:
+                return jsonify(cached)
+
+        query = InventoryItem.query.filter_by(type='ingredient')
+        if current_user.organization_id:
+            query = query.filter_by(organization_id=current_user.organization_id)
+
+        ingredients = query.order_by(InventoryItem.name).all()
+        payload = [{
             'id': ing.id,
             'name': ing.name,
             'density': ing.density,
             'type': ing.type,
             'unit': ing.unit
-        } for ing in ingredients])
+        } for ing in ingredients]
+
+        cache.set(
+            cache_key,
+            payload,
+            timeout=current_app.config.get("INGREDIENT_LIST_CACHE_TTL", 120),
+        )
+        return jsonify(payload)
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 

@@ -1,12 +1,14 @@
 from datetime import datetime, date, timezone
+
 from flask_login import current_user, UserMixin
-from ..extensions import db
-from .mixins import ScopedModelMixin
-from ..utils.timezone_utils import TimezoneUtils
-from sqlalchemy.ext.hybrid import hybrid_property
 from sqlalchemy import func, event
-from sqlalchemy.orm import synonym
-from sqlalchemy.orm import object_session
+from sqlalchemy.ext.hybrid import hybrid_property
+from sqlalchemy.orm import object_session, synonym
+
+from ..extensions import db
+from ..utils.timezone_utils import TimezoneUtils
+from .mixins import ScopedModelMixin
+from app.services.cache_invalidation import invalidate_product_list_cache
 
 class Product(ScopedModelMixin, db.Model):
     """Main Product model - represents the parent product"""
@@ -44,6 +46,7 @@ class Product(ScopedModelMixin, db.Model):
     __table_args__ = (
         db.UniqueConstraint('name', 'organization_id', name='unique_product_name_per_org'),
         db.Index('ix_product_category_id', 'category_id'),
+        db.Index('ix_product_org_active', 'organization_id', 'is_active'),
     )
 
     @property
@@ -400,6 +403,58 @@ class ProductSKU(db.Model, ScopedModelMixin):
 
     def __repr__(self):
         return f'<ProductSKU {self.display_name}>'
+
+
+def _invalidate_product_caches(target) -> None:
+    org_id = getattr(target, "organization_id", None)
+    if org_id:
+        invalidate_product_list_cache(org_id)
+
+
+@event.listens_for(Product, "after_insert")
+def _product_after_insert(mapper, connection, target):
+    _invalidate_product_caches(target)
+
+
+@event.listens_for(Product, "after_update")
+def _product_after_update(mapper, connection, target):
+    _invalidate_product_caches(target)
+
+
+@event.listens_for(Product, "after_delete")
+def _product_after_delete(mapper, connection, target):
+    _invalidate_product_caches(target)
+
+
+@event.listens_for(ProductVariant, "after_insert")
+def _product_variant_after_insert(mapper, connection, target):
+    _invalidate_product_caches(target)
+
+
+@event.listens_for(ProductVariant, "after_update")
+def _product_variant_after_update(mapper, connection, target):
+    _invalidate_product_caches(target)
+
+
+@event.listens_for(ProductVariant, "after_delete")
+def _product_variant_after_delete(mapper, connection, target):
+    _invalidate_product_caches(target)
+
+
+@event.listens_for(ProductSKU, "after_insert")
+def _product_sku_after_insert(mapper, connection, target):
+    _invalidate_product_caches(target)
+
+
+@event.listens_for(ProductSKU, "after_update")
+def _product_sku_after_update(mapper, connection, target):
+    _invalidate_product_caches(target)
+
+
+@event.listens_for(ProductSKU, "after_delete")
+def _product_sku_after_delete(mapper, connection, target):
+    _invalidate_product_caches(target)
+
 
 # Auto-fill organization_id from the linked inventory item if missing
 @event.listens_for(ProductSKU, "before_insert")

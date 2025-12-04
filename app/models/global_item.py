@@ -4,6 +4,7 @@ from sqlalchemy import event
 from ..extensions import db
 from ..utils.timezone_utils import TimezoneUtils
 from .db_dialect import is_postgres
+from app.services.cache_invalidation import invalidate_global_library_cache
 
 class GlobalItem(db.Model):
     __tablename__ = 'global_item'
@@ -76,6 +77,7 @@ class GlobalItem(db.Model):
 
     __table_args__ = tuple([
         db.UniqueConstraint('name', 'item_type', name='_global_item_name_type_uc'),
+        db.Index('ix_global_item_archive_type_name', 'is_archived', 'item_type', 'name'),
         *([db.Index('ix_global_item_aliases_gin', db.text('(aliases::jsonb)'), postgresql_using='gin')] if _IS_PG else []),
     ])
 
@@ -98,3 +100,18 @@ def _global_item_metadata_before_insert(mapper, connection, target):
 @event.listens_for(GlobalItem, "before_update")
 def _global_item_metadata_before_update(mapper, connection, target):
     _apply_metadata_defaults(target)
+
+
+@event.listens_for(GlobalItem, "after_insert")
+def _global_item_after_insert(mapper, connection, target):
+    invalidate_global_library_cache()
+
+
+@event.listens_for(GlobalItem, "after_update")
+def _global_item_after_update(mapper, connection, target):
+    invalidate_global_library_cache()
+
+
+@event.listens_for(GlobalItem, "after_delete")
+def _global_item_after_delete(mapper, connection, target):
+    invalidate_global_library_cache()

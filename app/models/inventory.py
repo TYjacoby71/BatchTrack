@@ -1,9 +1,15 @@
 from datetime import datetime, date, timezone
+
 from flask_login import current_user
-from ..extensions import db
-from .mixins import ScopedModelMixin
-from ..utils.timezone_utils import TimezoneUtils
 from sqlalchemy import event
+
+from ..extensions import db
+from ..utils.timezone_utils import TimezoneUtils
+from .mixins import ScopedModelMixin
+from app.services.cache_invalidation import (
+    invalidate_ingredient_list_cache,
+    invalidate_product_list_cache,
+)
 
 class InventoryItem(ScopedModelMixin, db.Model):
     """Ingredients and raw materials"""
@@ -184,6 +190,32 @@ def _derive_ownership_before_update(mapper, connection, target):
     except Exception:
         # Best-effort; do not block update on ownership derivation
         pass
+
+
+def _invalidate_inventory_item_caches(target: "InventoryItem") -> None:
+    org_id = getattr(target, "organization_id", None)
+    if not org_id:
+        return
+    item_type = (getattr(target, "type", "") or "").lower()
+    if item_type == "ingredient":
+        invalidate_ingredient_list_cache(org_id)
+    if item_type.startswith("product"):
+        invalidate_product_list_cache(org_id)
+
+
+@event.listens_for(InventoryItem, "after_insert")
+def _inventory_item_after_insert(mapper, connection, target):
+    _invalidate_inventory_item_caches(target)
+
+
+@event.listens_for(InventoryItem, "after_update")
+def _inventory_item_after_update(mapper, connection, target):
+    _invalidate_inventory_item_caches(target)
+
+
+@event.listens_for(InventoryItem, "after_delete")
+def _inventory_item_after_delete(mapper, connection, target):
+    _invalidate_inventory_item_caches(target)
 
 class InventoryHistory(ScopedModelMixin, db.Model):
     __tablename__ = 'inventory_history'

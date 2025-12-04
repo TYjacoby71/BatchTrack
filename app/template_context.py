@@ -155,9 +155,15 @@ def register_template_context(app: Flask) -> None:
         lifetime_used = 0
         if all((Organization, User, SubscriptionTier)):
             try:
-                total_active_users = (
-                    User.query.filter(User.user_type != "developer", User.is_active.is_(True)).count()
-                )
+                active_user_cache_key = "marketing:active_users"
+                cached_total_users = app_cache.get(active_user_cache_key)
+                if cached_total_users is None:
+                    total_active_users = (
+                        User.query.filter(User.user_type != "developer", User.is_active.is_(True)).count()
+                    )
+                    app_cache.set(active_user_cache_key, total_active_users, ttl=600)
+                else:
+                    total_active_users = cached_total_users
                 lifetime_tiers = SubscriptionTier.query.filter(
                     SubscriptionTier.name.ilike("%lifetime%")
                 ).all()
