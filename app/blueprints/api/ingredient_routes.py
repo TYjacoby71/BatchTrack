@@ -60,13 +60,17 @@ def search_ingredients():
             'results': []
         })
 
+    requested_type = (request.args.get('type') or 'ingredient').strip().lower() or 'ingredient'
+    allowed_types = {'ingredient', 'consumable', 'packaging', 'container'}
+    if requested_type not in allowed_types:
+        requested_type = 'ingredient'
+
     query = InventoryItem.query
     # Scope to the user's organization for privacy
     if current_user.organization_id:
         query = query.filter(InventoryItem.organization_id == current_user.organization_id)
 
-    # Only show true ingredients (exclude containers, products, etc.)
-    query = query.filter(InventoryItem.type == 'ingredient')
+    query = query.filter(InventoryItem.type == requested_type)
 
     ilike_term = f"%{q}%"
     results = query.filter(

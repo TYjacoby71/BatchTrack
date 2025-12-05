@@ -61,6 +61,7 @@
     var listEl = ensureListContainer(options && options.listEl);
     var mode = (options && options.mode) || 'recipe'; // 'recipe' or 'inventory_create'
     var context = (options && options.context) || 'customer'; // 'customer' or 'public'
+    var itemType = (options && options.itemType) || 'ingredient';
 
     if (!inputEl || (!invHiddenEl && mode === 'recipe') || !giHiddenEl) return;
 
@@ -81,14 +82,14 @@
       if (context === 'public'){
         // Public context: no inventory; global-only public endpoint
         invPromise = Promise.resolve({ results: [] });
-        giPromise = fetch('/api/public/global-items/search?q=' + encodeURIComponent(q) + '&type=ingredient')
+        giPromise = fetch('/api/public/global-items/search?q=' + encodeURIComponent(q) + '&type=' + encodeURIComponent(itemType))
           .then(function(r){ return r.json(); })
           .catch(function(){ return { results: [] }; });
       } else {
-        invPromise = fetch('/api/ingredients/ingredients/search?q=' + encodeURIComponent(q))
+        invPromise = fetch('/api/ingredients/ingredients/search?q=' + encodeURIComponent(q) + '&type=' + encodeURIComponent(itemType))
           .then(function(r){ return r.json(); })
           .catch(function(){ return { results: [] }; });
-        giPromise = fetch('/api/ingredients/global-items/search?q=' + encodeURIComponent(q) + '&type=ingredient')
+        giPromise = fetch('/api/ingredients/global-items/search?q=' + encodeURIComponent(q) + '&type=' + encodeURIComponent(itemType))
           .then(function(r){ return r.json(); })
           .catch(function(){ return { results: [] }; });
       }

@@ -7,7 +7,7 @@ from flask_login import current_user, login_required
 from sqlalchemy import func
 
 from app.extensions import db
-from app.models import InventoryItem, Unit
+from app.models import GlobalItem, InventoryItem, Unit
 
 from .. import recipes_bp
 
@@ -126,3 +126,55 @@ def quick_add_ingredient():
         db.session.rollback()
         logger.error("Error quick-adding ingredient: %s", exc)
         return jsonify({'error': str(exc)}), 500
+
+
+@recipes_bp.route('/inventory/check-new-items', methods=['POST'])
+@login_required
+def check_new_inventory_items():
+    """Identify inventory names that do not exist in the org or global library."""
+    try:
+        data = request.get_json() or {}
+        items = data.get('items') or []
+        missing = []
+        seen = set()
+
+        for item in items:
+            name = (item.get('name') or '').strip()
+            item_type = (item.get('item_type') or 'ingredient').strip().lower() or 'ingredient'
+            if not name:
+                continue
+            key = (item_type, name.lower())
+            if key in seen:
+                continue
+            seen.add(key)
+
+            inv_query = InventoryItem.query.filter(
+                func.lower(InventoryItem.name) == func.lower(db.literal(name)),
+                InventoryItem.type == item_type,
+            )
+            if current_user.organization_id:
+                inv_query = inv_query.filter(
+                    InventoryItem.organization_id == current_user.organization_id
+                )
+            else:
+                inv_query = inv_query.filter(InventoryItem.organization_id.is_(None))
+
+            inv_exists = inv_query.first()
+
+            global_exists = (
+                GlobalItem.query.filter(
+                    func.lower(GlobalItem.name) == func.lower(db.literal(name)),
+                    GlobalItem.item_type == item_type,
+                    GlobalItem.is_archived != True,
+                )
+                .order_by(GlobalItem.id.asc())
+                .first()
+            )
+
+            if not inv_exists and not global_exists:
+                missing.append({'name': name, 'item_type': item_type})
+
+        return jsonify({'missing': missing})
+    except Exception as exc:
+        logger.exception("Error checking new inventory items: %s", exc)
+        return jsonify({'missing': [], 'error': 'Unable to validate inventory names'}), 500
