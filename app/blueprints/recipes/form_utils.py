@@ -51,14 +51,8 @@ def _build_recipe_form_payload(org_id: Optional[int]) -> Dict[str, Any]:
 
     categories = ProductCategory.query.order_by(ProductCategory.name.asc()).all()
 
-    product_groups = (
-        RecipeProductGroup.query.filter_by(is_active=True)
-        .order_by(
-            RecipeProductGroup.display_order.asc(),
-            RecipeProductGroup.name.asc(),
-        )
-        .all()
-    )
+    # product_groups have been removed from the system
+    product_groups = []
 
     return {
         'all_ingredients': all_ingredients,
@@ -239,9 +233,7 @@ def recipe_from_form(form, base_recipe=None):
     if product_store_url is not None:
         recipe.product_store_url = product_store_url.strip() or None
 
-    recipe.product_group_id = safe_int(form.get('product_group_id')) or (
-        base_recipe.product_group_id if base_recipe else None
-    )
+    # product_group_id has been removed from the system
 
     try:
         if form.get('predicted_yield') not in (None, ''):
@@ -605,7 +597,7 @@ def create_variation_template(parent: Recipe) -> Recipe:
             if isinstance(parent.category_data, dict)
             else parent.category_data
         )
-    template.product_group_id = parent.product_group_id
+    # product_group_id has been removed from the system
     template.skin_opt_in = parent.skin_opt_in
     template.sharing_scope = 'private'
     template.is_public = False

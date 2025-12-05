@@ -19,20 +19,35 @@ depends_on = None
 
 def upgrade():
     """Remove product_group_id column from recipe table"""
-    # Drop the index first
-    try:
-        op.drop_index('ix_recipe_product_group_id', table_name='recipe')
-    except Exception:
-        pass  # Index might not exist
+    # Check if column exists before dropping
+    from alembic import op
+    import sqlalchemy as sa
+    from sqlalchemy import inspect
     
-    # Drop the foreign key constraint
-    try:
-        op.drop_constraint('recipe_product_group_id_fkey', 'recipe', type_='foreignkey')
-    except Exception:
-        pass  # Constraint might not exist or have different name
+    connection = op.get_bind()
+    inspector = inspect(connection)
     
-    # Drop the column
-    op.drop_column('recipe', 'product_group_id')
+    # Get existing columns
+    columns = [col['name'] for col in inspector.get_columns('recipe')]
+    
+    if 'product_group_id' in columns:
+        # Drop the index first if it exists
+        try:
+            op.drop_index('ix_recipe_product_group_id', table_name='recipe')
+        except Exception:
+            pass
+        
+        # Drop foreign key constraints that might reference this column
+        try:
+            fks = inspector.get_foreign_keys('recipe')
+            for fk in fks:
+                if 'product_group_id' in fk['constrained_columns']:
+                    op.drop_constraint(fk['name'], 'recipe', type_='foreignkey')
+        except Exception:
+            pass
+        
+        # Drop the column
+        op.drop_column('recipe', 'product_group_id')
 
 
 def downgrade():
