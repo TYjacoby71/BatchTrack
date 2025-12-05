@@ -2,7 +2,7 @@
 """Remove product_group_id from recipes
 
 Revision ID: 0019
-Revises: 0018
+Revises: 0018_recipe_resellable
 Create Date: 2025-12-05
 
 """
@@ -12,7 +12,7 @@ import sqlalchemy as sa
 
 # revision identifiers, used by Alembic.
 revision = '0019'
-down_revision = '0018'
+down_revision = '0018_recipe_resellable'
 branch_labels = None
 depends_on = None
 
