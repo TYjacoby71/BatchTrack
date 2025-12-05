@@ -9,7 +9,10 @@ from sqlalchemy.orm import selectinload
 from app.extensions import db, cache
 from app.models import Recipe, RecipeLineage
 from app.services.recipe_service import delete_recipe, get_recipe_details
-from app.services.cache_invalidation import recipe_list_cache_key
+from app.services.cache_invalidation import (
+    recipe_list_cache_key,
+    recipe_list_page_cache_key,
+)
 from app.utils.cache_utils import should_bypass_cache
 from app.utils.unit_utils import get_global_unit_list
 
@@ -124,20 +127,31 @@ def _hydrate_recipe_from_cache(data: dict) -> _RecipeListViewModel:
 def list_recipes():
     org_id = getattr(current_user, "organization_id", None) or 0
     cache_key = recipe_list_cache_key(org_id)
+    page_cache_key = recipe_list_page_cache_key(org_id)
     bypass_cache = should_bypass_cache()
+    cache_ttl = current_app.config.get("RECIPE_LIST_CACHE_TTL", 180)
 
     if bypass_cache:
         cache.delete(cache_key)
+        cache.delete(page_cache_key)
     else:
+        cached_page = cache.get(page_cache_key)
+        if cached_page is not None:
+            return cached_page
         cached_payload = cache.get(cache_key)
         if cached_payload is not None:
             recipes = [_hydrate_recipe_from_cache(entry) for entry in cached_payload]
             inventory_units = get_global_unit_list()
-            return render_template(
+            rendered = render_template(
                 'pages/recipes/recipe_list.html',
                 recipes=recipes,
                 inventory_units=inventory_units,
             )
+            try:
+                cache.set(page_cache_key, rendered, timeout=cache_ttl)
+            except Exception:
+                pass
+            return rendered
 
     query = Recipe.query.filter_by(parent_recipe_id=None)
     if current_user.organization_id:
@@ -157,15 +171,20 @@ def list_recipes():
     cache.set(
         cache_key,
         serialized,
-        timeout=current_app.config.get("RECIPE_LIST_CACHE_TTL", 180),
+        timeout=cache_ttl,
     )
     recipes = [_hydrate_recipe_from_cache(entry) for entry in serialized]
     inventory_units = get_global_unit_list()
-    return render_template(
+    rendered = render_template(
         'pages/recipes/recipe_list.html',
         recipes=recipes,
         inventory_units=inventory_units,
     )
+    try:
+        cache.set(page_cache_key, rendered, timeout=cache_ttl)
+    except Exception:
+        pass
+    return rendered
 
 
 @recipes_bp.route('/<int:recipe_id>/view')

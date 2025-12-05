@@ -14,6 +14,7 @@ __all__ = [
     "product_bootstrap_cache_key",
     "invalidate_product_list_cache",
     "recipe_list_cache_key",
+    "recipe_list_page_cache_key",
     "recipe_bootstrap_cache_key",
     "invalidate_recipe_list_cache",
     "global_library_cache_key",
@@ -26,6 +27,7 @@ __all__ = [
 
 _INGREDIENT_LIST_KEY = "bootstrap:ingredients:v1:{org_id}"
 _RECIPE_LIST_KEY = "bootstrap:recipes:v1:{org_id}"
+_RECIPE_PAGE_KEY = "bootstrap:recipes:page:v1:{org_id}"
 _RECIPE_BOOTSTRAP_KEY = "bootstrap_api:recipes:v1:{org_id}"
 _PRODUCT_LIST_KEY = "bootstrap:products:v1:{org_id}:{sort}"
 _PRODUCT_BOOTSTRAP_KEY = "bootstrap_api:products:v1:{org_id}"
@@ -61,12 +63,17 @@ def recipe_list_cache_key(org_id: int | None) -> str:
     return _RECIPE_LIST_KEY.format(org_id=_org_scope(org_id))
 
 
+def recipe_list_page_cache_key(org_id: int | None) -> str:
+    return _RECIPE_PAGE_KEY.format(org_id=_org_scope(org_id))
+
+
 def recipe_bootstrap_cache_key(org_id: int | None) -> str:
     return _RECIPE_BOOTSTRAP_KEY.format(org_id=_org_scope(org_id))
 
 
 def invalidate_recipe_list_cache(org_id: int | None) -> None:
     _safe_delete(recipe_list_cache_key(org_id))
+    _safe_delete(recipe_list_page_cache_key(org_id))
     _safe_delete(recipe_bootstrap_cache_key(org_id))
 
 
