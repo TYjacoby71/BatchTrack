@@ -89,10 +89,9 @@ def _ensure_addon_fields() -> None:
 
 
 def _remove_sharing_scope_columns() -> None:
-    safe_drop_index('ix_recipe_sharing_scope', 'recipe')
+    # Keep sharing_scope and marketplace_notes columns - they're still used
+    # safe_drop_index('ix_recipe_sharing_scope', 'recipe')
     for column in (
-        'sharing_scope',
-        'marketplace_notes',
         'marketplace_blocked',
         'marketplace_block_reason',
     ):
@@ -108,19 +107,9 @@ def _replace_is_resellable() -> None:
 
 
 def _drop_legacy_origin_columns() -> None:
-    for index_name in (
-        'ix_recipe_org_origin_recipe_id',
-        'ix_recipe_org_origin_type',
-        'ix_recipe_org_origin_source_org_id',
-        'ix_recipe_org_origin_purchased',
-    ):
-        safe_drop_index(index_name, 'recipe')
-    for column in (
-        'org_origin_type',
-        'org_origin_source_recipe_id',
-        'org_origin_purchased',
-    ):
-        safe_drop_column('recipe', column, verbose=False)
+    # Keep the org origin columns and indexes - they're still used in the codebase
+    # Only drop the unused source recipe id column
+    safe_drop_column('recipe', 'org_origin_source_recipe_id', verbose=False)
 
 
 def _ensure_recipe_marketplace_columns() -> None:
@@ -270,24 +259,9 @@ def downgrade():
         safe_drop_index('ix_recipe_lineage_recipe_id', 'recipe_lineage')
         op.drop_table('recipe_lineage')
 
-    safe_add_column('recipe', sa.Column('sharing_scope', sa.String(16), nullable=False, server_default='private'))
-    safe_add_column('recipe', sa.Column('marketplace_notes', sa.Text(), nullable=True))
+    # Restore only the columns we actually dropped
     safe_add_column('recipe', sa.Column('marketplace_blocked', sa.Boolean(), nullable=False, server_default=sa.text('false')))
     safe_add_column('recipe', sa.Column('marketplace_block_reason', sa.Text(), nullable=True))
-    safe_create_index('ix_recipe_sharing_scope', 'recipe', ['sharing_scope'])
-
-    safe_add_column('recipe', sa.Column('org_origin_type', sa.String(32), nullable=False, server_default='authored'))
-    safe_add_column('recipe', sa.Column('org_origin_purchased', sa.Boolean(), nullable=False, server_default=sa.text('false')))
     safe_add_column('recipe', sa.Column('org_origin_source_recipe_id', sa.Integer(), nullable=True))
-    safe_add_column('recipe', sa.Column('org_origin_source_org_id', sa.Integer(), nullable=True))
-    safe_add_column('recipe', sa.Column('org_origin_recipe_id', sa.Integer(), nullable=True))
-    for index_name, column in (
-        ('ix_recipe_org_origin_recipe_id', 'org_origin_recipe_id'),
-        ('ix_recipe_org_origin_type', 'org_origin_type'),
-        ('ix_recipe_org_origin_source_org_id', 'org_origin_source_org_id'),
-        ('ix_recipe_org_origin_purchased', 'org_origin_purchased'),
-    ):
-        safe_create_index(index_name, 'recipe', [column])
 
-    safe_create_foreign_key('fk_recipe_origin_recipe_id', 'recipe', 'recipe', ['org_origin_recipe_id'], ['id'])
     safe_create_foreign_key('fk_recipe_origin_source_recipe_id', 'recipe', 'recipe', ['org_origin_source_recipe_id'], ['id'])
