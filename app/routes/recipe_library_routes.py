@@ -90,7 +90,6 @@ def recipe_library():
                 or_(
                     Recipe.name.ilike(like_expr),
                     Recipe.public_description.ilike(like_expr),
-                    Recipe.marketplace_notes.ilike(like_expr),
                 )
             )
 
@@ -246,7 +245,6 @@ def organization_marketplace(organization_id: int):
                 or_(
                     Recipe.name.ilike(like_expr),
                     Recipe.public_description.ilike(like_expr),
-                    Recipe.marketplace_notes.ilike(like_expr),
                 )
             )
 
