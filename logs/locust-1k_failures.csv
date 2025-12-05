@@ -1,8 +1,0 @@
-Method,Name,Error,Occurrences
-GET,auth.login.page,HTTPError('429 Client Error: Too Many Requests for url: auth.login.page'),28
-GET,public.signup,HTTPError('404 Client Error: Not Found for url: public.signup'),2522
-GET,public.recipe_library,HTTPError('404 Client Error: Not Found for url: public.recipe_library'),5041
-GET,public.homepage,HTTPError('404 Client Error: Not Found for url: public.homepage'),9922
-GET,public.tools,HTTPError('404 Client Error: Not Found for url: public.tools'),7480
-GET,public.global_items,HTTPError('404 Client Error: Not Found for url: public.global_items'),7525
-GET,auth.login.page,HTTPError('404 Client Error: Not Found for url: auth.login.page'),3447

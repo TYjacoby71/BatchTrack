@@ -1,2 +1,0 @@
-Method,Name,Error,Occurrences
-GET,bootstrap.inventory.api,HTTPError('401 Client Error: UNAUTHORIZED for url: bootstrap.inventory.api'),1
