@@ -49,7 +49,16 @@ def _build_recipe_form_payload(org_id: Optional[int]) -> Dict[str, Any]:
     units = Unit.query.filter_by(is_active=True).order_by(Unit.unit_type, Unit.name).all()
     inventory_units = get_global_unit_list()
 
-    categories = ProductCategory.query.order_by(ProductCategory.name.asc()).all()
+    raw_categories = ProductCategory.query.order_by(ProductCategory.name.asc()).all()
+    categories = [
+        {
+            'id': cat.id,
+            'name': cat.name,
+            'is_typically_portioned': cat.is_typically_portioned,
+            'skin_enabled': cat.skin_enabled,
+        }
+        for cat in raw_categories
+    ]
 
     # product_groups have been removed from the system
     product_groups = []
@@ -604,6 +613,5 @@ def create_variation_template(parent: Recipe) -> Recipe:
     template.is_for_sale = False
 
     template.product_store_url = parent.product_store_url
-    template.recipe_collection_group_id = parent.recipe_collection_group_id
 
     return template
