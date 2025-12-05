@@ -291,4 +291,3 @@ def downgrade():
 
     safe_create_foreign_key('fk_recipe_origin_recipe_id', 'recipe', 'recipe', ['org_origin_recipe_id'], ['id'])
     safe_create_foreign_key('fk_recipe_origin_source_recipe_id', 'recipe', 'recipe', ['org_origin_source_recipe_id'], ['id'])
-*** End of File***
