@@ -146,8 +146,14 @@ def _ensure_recipe_indexes_and_fks() -> None:
     ):
         safe_create_index(index_name, 'recipe', [column])
 
-    safe_create_foreign_key('fk_recipe_origin_recipe_id', 'recipe', 'recipe', ['origin_recipe_id'], ['id'])
-    safe_create_foreign_key('fk_recipe_origin_org_id', 'recipe', 'organization', ['origin_organization_id'], ['id'])
+    # Check for existing foreign keys from migration 0013 before creating
+    from migrations.postgres_helpers import constraint_exists
+    
+    if not constraint_exists('recipe', 'fk_recipe_origin_recipe_id'):
+        safe_create_foreign_key('fk_recipe_origin_recipe_id', 'recipe', 'recipe', ['origin_recipe_id'], ['id'])
+    
+    if not constraint_exists('recipe', 'fk_recipe_origin_org_id'):
+        safe_create_foreign_key('fk_recipe_origin_org_id', 'recipe', 'organization', ['origin_organization_id'], ['id'])
 
 
 def _ensure_recipe_lineage_table() -> None:
