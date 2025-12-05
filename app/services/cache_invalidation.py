@@ -11,6 +11,7 @@ __all__ = [
     "ingredient_list_cache_key",
     "invalidate_ingredient_list_cache",
     "product_list_cache_key",
+    "product_list_page_cache_key",
     "product_bootstrap_cache_key",
     "invalidate_product_list_cache",
     "recipe_list_cache_key",
@@ -30,6 +31,7 @@ _RECIPE_LIST_KEY = "bootstrap:recipes:v1:{org_id}"
 _RECIPE_PAGE_KEY = "bootstrap:recipes:page:v1:{org_id}"
 _RECIPE_BOOTSTRAP_KEY = "bootstrap_api:recipes:v1:{org_id}"
 _PRODUCT_LIST_KEY = "bootstrap:products:v1:{org_id}:{sort}"
+_PRODUCT_PAGE_KEY = "bootstrap:products:page:v1:{org_id}:{sort}"
 _PRODUCT_BOOTSTRAP_KEY = "bootstrap_api:products:v1:{org_id}"
 _PRODUCT_SORT_KEYS = ("name", "popular", "stock")
 _GLOBAL_LIBRARY_NAMESPACE = "global_library_cache"
@@ -82,6 +84,11 @@ def product_list_cache_key(org_id: int | None, sort_key: str | None = None) -> s
     return _PRODUCT_LIST_KEY.format(org_id=_org_scope(org_id), sort=normalized)
 
 
+def product_list_page_cache_key(org_id: int | None, sort_key: str | None = None) -> str:
+    normalized = (sort_key or "name").lower()
+    return _PRODUCT_PAGE_KEY.format(org_id=_org_scope(org_id), sort=normalized)
+
+
 def product_bootstrap_cache_key(org_id: int | None) -> str:
     return _PRODUCT_BOOTSTRAP_KEY.format(org_id=_org_scope(org_id))
 
@@ -89,6 +96,7 @@ def product_bootstrap_cache_key(org_id: int | None) -> str:
 def invalidate_product_list_cache(org_id: int | None) -> None:
     for sort_key in _PRODUCT_SORT_KEYS:
         _safe_delete(product_list_cache_key(org_id, sort_key))
+        _safe_delete(product_list_page_cache_key(org_id, sort_key))
     _safe_delete(product_bootstrap_cache_key(org_id))
 
 
