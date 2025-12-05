@@ -129,7 +129,7 @@ def login():
                     next_url = None
                 if isinstance(next_url, str) and next_url.startswith('/') and not next_url.startswith('//'):
                     return redirect(next_url)
-                return redirect(url_for('organization.dashboard'))
+                return redirect(url_for('app_routes.dashboard'))
         else:
             _log_loadtest_login_context("invalid_credentials", {"username": username, "user_found": bool(user)})
             if username and username.startswith("loadtest_user"):

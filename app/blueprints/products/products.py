@@ -29,7 +29,7 @@ def _write_product_created_audit(variant):
 
 
 from ...extensions import cache
-from ...services.cache_invalidation import product_list_cache_key
+from ...services.cache_invalidation import product_list_cache_key, product_list_page_cache_key
 from ...services.product_service import ProductService
 from ...services.inventory_adjustment import process_inventory_adjustment
 from ...utils.cache_utils import should_bypass_cache
@@ -213,20 +213,31 @@ def list_products():
     sort_type = (request.args.get('sort', 'name') or 'name').lower()
     org_id = getattr(current_user, "organization_id", None) or 0
     cache_key = product_list_cache_key(org_id, sort_type)
+    page_cache_key = product_list_page_cache_key(org_id, sort_type)
     bypass_cache = should_bypass_cache()
+    cache_ttl = current_app.config.get("PRODUCT_LIST_CACHE_TTL", 180)
 
     if bypass_cache:
         cache.delete(cache_key)
+        cache.delete(page_cache_key)
     else:
+        cached_page = cache.get(page_cache_key)
+        if cached_page is not None:
+            return cached_page
         cached_payload = cache.get(cache_key)
         if cached_payload is not None:
             products = [_hydrate_product_summary(entry) for entry in cached_payload]
-            return render_template(
+            rendered = render_template(
                 'pages/products/list_products.html',
                 products=products,
                 current_sort=sort_type,
                 breadcrumb_items=[{'label': 'Products'}],
             )
+            try:
+                cache.set(page_cache_key, rendered, timeout=cache_ttl)
+            except Exception:
+                pass
+            return rendered
 
     product_data = ProductService.get_product_summary_skus()
 
@@ -353,11 +364,16 @@ def list_products():
     cache.set(
         cache_key,
         serialized_products,
-        timeout=current_app.config.get("PRODUCT_LIST_CACHE_TTL", 180),
+        timeout=cache_ttl,
     )
 
-    return render_template('pages/products/list_products.html', products=products, current_sort=sort_type,
+    rendered = render_template('pages/products/list_products.html', products=products, current_sort=sort_type,
                            breadcrumb_items=[{'label': 'Products'}])
+    try:
+        cache.set(page_cache_key, rendered, timeout=cache_ttl)
+    except Exception:
+        pass
+    return rendered
 
 @products_bp.route('/new', methods=['GET', 'POST'])
 @login_required

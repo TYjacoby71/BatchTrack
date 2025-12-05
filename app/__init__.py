@@ -3,7 +3,7 @@ import os
 from threading import Lock
 from typing import Any
 
-from flask import Flask, redirect, render_template, request, url_for
+from flask import Flask, current_app, redirect, render_template, request, url_for
 from flask_login import current_user
 from sqlalchemy.pool import StaticPool
 
@@ -13,6 +13,7 @@ from .config import ENV_DIAGNOSTICS
 from .extensions import cache, csrf, db, limiter, migrate, server_session
 from .logging_config import configure_logging
 from .middleware import register_middleware
+from .utils.cache_utils import should_bypass_cache
 
 logger = logging.getLogger(__name__)
 _redis_pool_lock = Lock()
@@ -357,6 +358,32 @@ def _install_global_resilience_handlers(app):
 
 def _add_core_routes(app):
     """Add core application routes"""
+    def _render_public_homepage_response():
+        """
+        Serve the marketing homepage with Redis caching so anonymous traffic (and load tests)
+        avoid re-rendering the full template on every hit.
+        """
+        cache_key = current_app.config.get("PUBLIC_HOMEPAGE_CACHE_KEY", "public:homepage:v1")
+        try:
+            cache_ttl = int(current_app.config.get("PUBLIC_HOMEPAGE_CACHE_TTL", 600))
+        except (TypeError, ValueError):
+            cache_ttl = 600
+        cache_ttl = max(0, cache_ttl)
+
+        if cache_ttl and not should_bypass_cache():
+            cached_page = cache.get(cache_key)
+            if cached_page is not None:
+                return cached_page
+
+        rendered = render_template("homepage.html")
+        if cache_ttl:
+            try:
+                cache.set(cache_key, rendered, timeout=cache_ttl)
+            except Exception:
+                # Homepage rendering should never fail because cache is unavailable.
+                pass
+        return rendered
+
     @app.route("/")
     def index():
         """Main landing page with proper routing logic"""
@@ -366,17 +393,17 @@ def _add_core_routes(app):
             else:
                 return redirect(url_for('app_routes.dashboard'))  # Regular users go to user dashboard
         else:
-            return render_template("homepage.html")  # Serve public homepage for unauthenticated users
+            return _render_public_homepage_response()  # Serve cached public homepage for unauthenticated users
 
     @app.route("/homepage")
     def homepage():
         """Public homepage - accessible to all users"""
-        return render_template("homepage.html")
+        return _render_public_homepage_response()
 
     @app.route("/public")
     def public_page():
         """Alternative public page"""
-        return render_template("homepage.html")
+        return _render_public_homepage_response()
 
 def _setup_logging(app):
     """Retained for backward compatibility; logging is configured via logging_config."""
