@@ -30,7 +30,7 @@ class Recipe(ScopedModelMixin, db.Model):
     predicted_yield = db.Column(db.Float, default=0.0)
     predicted_yield_unit = db.Column(db.String(50), default="oz")
     allowed_containers = db.Column(db.PickleType, default=list)
-    status = db.Column(db.String(16), default='published', nullable=False)
+    status = db.Column(db.String(16), default='published', nullable=False, server_default='published')
     category_id = db.Column(db.Integer, db.ForeignKey('product_category.id'), nullable=False)
     product_category = db.relationship('ProductCategory')
     created_by = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True)
@@ -72,43 +72,31 @@ class Recipe(ScopedModelMixin, db.Model):
     category_data = db.Column(db.JSON, nullable=True)
 
     # Marketplace / Library metadata
-    sharing_scope = db.Column(db.String(16), nullable=False, default='private', server_default='private')
     is_public = db.Column(db.Boolean, nullable=False, default=False, server_default=sa.text("false"))
     is_for_sale = db.Column(db.Boolean, nullable=False, default=False, server_default=sa.text("false"))
     sale_price = db.Column(sa.Numeric(12, 4), nullable=True)
-    is_resellable = db.Column(db.Boolean, nullable=False, default=True, server_default=sa.text("true"))
+    is_sellable = db.Column(db.Boolean, nullable=False, default=True, server_default=sa.text("true"))
     marketplace_status = db.Column(db.String(32), nullable=False, default='draft', server_default='draft')
-    marketplace_notes = db.Column(db.Text, nullable=True)
-    public_description = db.Column(db.Text, nullable=True)
-    marketplace_blocked = db.Column(db.Boolean, nullable=False, default=False, server_default=sa.text("false"))
-    marketplace_block_reason = db.Column(db.Text, nullable=True)
     marketplace_violation_count = db.Column(db.Integer, nullable=False, default=0, server_default='0')
+    public_description = db.Column(db.Text, nullable=True)
     product_store_url = db.Column(db.String(512), nullable=True)
     cover_image_path = db.Column(db.String(255), nullable=True)
     cover_image_url = db.Column(db.String(512), nullable=True)
     skin_opt_in = db.Column(db.Boolean, nullable=False, default=True, server_default=sa.text("true"))
-    org_origin_recipe_id = db.Column(db.Integer, db.ForeignKey('recipe.id'), nullable=True)
-    org_origin_type = db.Column(db.String(32), nullable=False, default='authored', server_default='authored')
-    org_origin_source_org_id = db.Column(db.Integer, db.ForeignKey('organization.id'), nullable=True)
-    org_origin_source_recipe_id = db.Column(db.Integer, db.ForeignKey('recipe.id'), nullable=True)
-    org_origin_purchased = db.Column(db.Boolean, nullable=False, default=False, server_default=sa.text("false"))
+    origin_recipe_id = db.Column(db.Integer, db.ForeignKey('recipe.id'), nullable=True)
+    origin_organization_id = db.Column(db.Integer, db.ForeignKey('organization.id'), nullable=True)
     download_count = db.Column(db.Integer, nullable=False, default=0, server_default='0')
     purchase_count = db.Column(db.Integer, nullable=False, default=0, server_default='0')
 
     organization = db.relationship('Organization', foreign_keys='Recipe.organization_id')
-    org_origin_recipe = db.relationship(
+    origin_recipe = db.relationship(
         'Recipe',
         remote_side=[id],
-        foreign_keys=[org_origin_recipe_id],
+        foreign_keys=[origin_recipe_id],
         post_update=True,
+        backref='referenced_descendants',
     )
-    org_origin_source_recipe = db.relationship(
-        'Recipe',
-        remote_side=[id],
-        foreign_keys=[org_origin_source_recipe_id],
-        post_update=True,
-    )
-    origin_source_org = db.relationship('Organization', foreign_keys=[org_origin_source_org_id])
+    origin_organization = db.relationship('Organization', foreign_keys=[origin_organization_id])
 
     # Computed projection columns (persisted) for hot fields (Postgres only)
     soap_superfat = db.Column(sa.Numeric(), _pg_computed("((category_data ->> 'soap_superfat'))::numeric"), nullable=True)
@@ -148,13 +136,12 @@ class Recipe(ScopedModelMixin, db.Model):
         db.Index('ix_recipe_baker_yeast_pct', 'baker_yeast_pct'),
         db.Index('ix_recipe_cosm_emulsifier_pct', 'cosm_emulsifier_pct'),
         db.Index('ix_recipe_cosm_preservative_pct', 'cosm_preservative_pct'),
-        db.Index('ix_recipe_sharing_scope', 'sharing_scope'),
         db.Index('ix_recipe_is_public', 'is_public'),
+        db.Index('ix_recipe_is_for_sale', 'is_for_sale'),
+        db.Index('ix_recipe_is_sellable', 'is_sellable'),
         db.Index('ix_recipe_marketplace_status', 'marketplace_status'),
-        db.Index('ix_recipe_org_origin_recipe_id', 'org_origin_recipe_id'),
-        db.Index('ix_recipe_org_origin_type', 'org_origin_type'),
-        db.Index('ix_recipe_org_origin_source_org_id', 'org_origin_source_org_id'),
-        db.Index('ix_recipe_org_origin_purchased', 'org_origin_purchased'),
+        db.Index('ix_recipe_origin_recipe_id', 'origin_recipe_id'),
+        db.Index('ix_recipe_origin_organization_id', 'origin_organization_id'),
         db.Index('ix_recipe_download_count', 'download_count'),
         db.Index('ix_recipe_purchase_count', 'purchase_count'),
     ])

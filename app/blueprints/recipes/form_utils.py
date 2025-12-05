@@ -26,6 +26,44 @@ logger = logging.getLogger(__name__)
 _FORM_DATA_CACHE_TTL = int(os.getenv("RECIPE_FORM_CACHE_TTL", "60"))
 
 
+def _serialize_product_category(cat: ProductCategory) -> Dict[str, Any]:
+    return {
+        'id': cat.id,
+        'name': cat.name,
+        'is_typically_portioned': cat.is_typically_portioned,
+        'skin_enabled': cat.skin_enabled,
+    }
+
+
+def _serialize_inventory_item(item: InventoryItem, *, include_container_meta: bool = False) -> Dict[str, Any]:
+    payload = {
+        'id': item.id,
+        'name': item.name,
+        'unit': getattr(item, 'unit', None),
+        'type': getattr(item, 'type', None),
+    }
+    if include_container_meta:
+        payload.update(
+            {
+                'capacity': getattr(item, 'capacity', None),
+                'capacity_unit': getattr(item, 'capacity_unit', None),
+                'container_display_name': getattr(item, 'container_display_name', item.name),
+            }
+        )
+    return payload
+
+
+def _serialize_unit(unit: Unit) -> Dict[str, Any]:
+    return {
+        'id': unit.id,
+        'name': unit.name,
+        'unit_type': unit.unit_type,
+        'base_unit': unit.base_unit,
+        'conversion_factor': unit.conversion_factor,
+        'symbol': unit.symbol,
+    }
+
+
 def _recipe_form_cache_key(org_id: Optional[int]) -> str:
     return f"recipes:form_data:{org_id or 'global'}"
 
@@ -34,22 +72,37 @@ def _build_recipe_form_payload(org_id: Optional[int]) -> Dict[str, Any]:
     ingredients_query = InventoryItem.query.filter(InventoryItem.type == 'ingredient')
     if org_id:
         ingredients_query = ingredients_query.filter_by(organization_id=org_id)
-    all_ingredients = ingredients_query.order_by(InventoryItem.name).all()
+    all_ingredients = [
+        _serialize_inventory_item(item)
+        for item in ingredients_query.order_by(InventoryItem.name).all()
+    ]
 
     consumables_query = InventoryItem.query.filter(InventoryItem.type == 'consumable')
     if org_id:
         consumables_query = consumables_query.filter_by(organization_id=org_id)
-    all_consumables = consumables_query.order_by(InventoryItem.name).all()
+    all_consumables = [
+        _serialize_inventory_item(item)
+        for item in consumables_query.order_by(InventoryItem.name).all()
+    ]
 
     containers_query = InventoryItem.query.filter(InventoryItem.type == 'container')
     if org_id:
         containers_query = containers_query.filter_by(organization_id=org_id)
-    all_containers = containers_query.order_by(InventoryItem.name).all()
+    all_containers = [
+        _serialize_inventory_item(item, include_container_meta=True)
+        for item in containers_query.order_by(InventoryItem.name).all()
+    ]
 
-    units = Unit.query.filter_by(is_active=True).order_by(Unit.unit_type, Unit.name).all()
+    units = [
+        _serialize_unit(unit)
+        for unit in Unit.query.filter_by(is_active=True).order_by(Unit.unit_type, Unit.name).all()
+    ]
     inventory_units = get_global_unit_list()
 
-    categories = ProductCategory.query.order_by(ProductCategory.name.asc()).all()
+    categories = [
+        _serialize_product_category(cat)
+        for cat in ProductCategory.query.order_by(ProductCategory.name.asc()).all()
+    ]
 
     # product_groups have been removed from the system
     product_groups = []
@@ -604,6 +657,5 @@ def create_variation_template(parent: Recipe) -> Recipe:
     template.is_for_sale = False
 
     template.product_store_url = parent.product_store_url
-    template.recipe_collection_group_id = parent.recipe_collection_group_id
 
     return template
