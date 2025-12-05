@@ -51,7 +51,6 @@ def recipe_library():
     query = (
         Recipe.query.options(
             joinedload(Recipe.product_category),
-            joinedload(Recipe.product_group),
             joinedload(Recipe.stats),
             joinedload(Recipe.organization),
         )
@@ -170,7 +169,6 @@ def recipe_library_detail(recipe_id: int, slug: str):
     recipe = (
         Recipe.query.options(
             joinedload(Recipe.product_category),
-            joinedload(Recipe.product_group),
             joinedload(Recipe.stats),
         )
         .outerjoin(Organization, Recipe.organization_id == Organization.id)
@@ -228,7 +226,6 @@ def organization_marketplace(organization_id: int):
     query = (
         Recipe.query.options(
             joinedload(Recipe.product_category),
-            joinedload(Recipe.product_group),
             joinedload(Recipe.stats),
         )
         .filter(
@@ -318,7 +315,6 @@ def _serialize_recipe_for_public(recipe: Recipe, cost_rollup: dict | None = None
         "id": recipe.id,
         "slug": slugify_value(recipe.name),
         "name": recipe.name,
-        "product_group": recipe.product_group.name if recipe.product_group else None,
         "category": recipe.product_category.name if recipe.product_category else None,
         "is_for_sale": recipe.is_for_sale,
         "sale_price": float(recipe.sale_price) if recipe.sale_price is not None else None,
