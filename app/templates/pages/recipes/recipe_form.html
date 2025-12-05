@@ -199,18 +199,6 @@
                 </div>
                 <div class="row mt-3">
                     <div class="col-md-6">
-                        <label for="product_group_id" class="form-label">Recipe Collection Group</label>
-                        <select id="product_group_id" name="product_group_id" class="form-select">
-                            <option value="">Select group</option>
-                            {% for group in product_groups %}
-                            <option value="{{ group.id }}" {% if selected_group_value is not none and (selected_group_value|string) == (group.id|string) %}selected{% endif %}>
-                                {{ group.name }}
-                            </option>
-                            {% endfor %}
-                        </select>
-                        <div class="form-text">Groups help customers browse the public recipe library by product type.</div>
-                    </div>
-                    <div class="col-md-6">
                         <label for="product_store_url" class="form-label">Product Store Link</label>
                         <input type="text" id="product_store_url" name="product_store_url" class="form-control" placeholder="https://yourstore.com/products/..." value="{{ store_url_value }}">
                         <div class="form-text">Optional link displayed only when the recipe is listed as public.</div>

@@ -38,16 +38,15 @@ def _normalize_sale_price(value: Any) -> Optional[Decimal]:
 def _apply_marketplace_settings(
     recipe: Recipe,
     *,
-    sharing_scope: Optional[str] = None,
-    is_public: Optional[bool] = None,
-    is_for_sale: Optional[bool] = None,
+    sharing_scope: str | None = None,
+    is_public: bool | None = None,
+    is_for_sale: bool = False,
     sale_price: Any = None,
-    marketplace_status: Optional[str] = None,
-    marketplace_notes: Optional[str] = None,
-    public_description: Optional[str] = None,
-    product_group_id: Any = _UNSET,
-    product_store_url: Optional[str] = None,
-    skin_opt_in: Optional[bool] = None,
+    marketplace_status: str | None = None,
+    marketplace_notes: str | None = None,
+    public_description: str | None = None,
+    product_store_url: str | None = None,
+    skin_opt_in: bool | None = None,
     cover_image_path: Any = _UNSET,
     cover_image_url: Any = _UNSET,
     remove_cover_image: bool = False,
@@ -84,8 +83,6 @@ def _apply_marketplace_settings(
     if public_description is not None:
         recipe.public_description = public_description
 
-    if product_group_id is not _UNSET:
-        recipe.product_group_id = product_group_id
     if product_store_url is not None:
         recipe.product_store_url = (product_store_url or '').strip() or None
     if skin_opt_in is not None:

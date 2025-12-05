@@ -281,8 +281,7 @@ def create_variation(recipe_id):
                     'status': target_status,
                 }
             )
-            if payload.get('product_group_id') is None and parent.product_group_id:
-                payload['product_group_id'] = parent.product_group_id
+            
             if not payload.get('label_prefix') and parent.label_prefix:
                 payload['label_prefix'] = ""
 

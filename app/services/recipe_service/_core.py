@@ -49,7 +49,6 @@ def create_recipe(name: str, description: str = "", instructions: str = "",
                  marketplace_status: str | None = None,
                  marketplace_notes: str | None = None,
                  public_description: str | None = None,
-                 product_group_id: Any = _UNSET,
                  product_store_url: str | None = None,
                  cover_image_path: str | None = None,
                  cover_image_url: str | None = None,
@@ -66,7 +65,7 @@ def create_recipe(name: str, description: str = "", instructions: str = "",
         yield_amount: Expected yield quantity
         yield_unit: Unit for yield
         ingredients: List of ingredient dicts with item_id, quantity, unit
-          parent_recipe_id: Parent recipe ID for variations (legacy parent_id supported)
+          parent_recipe_id: Parent recipe id for variations (legacy parent_id supported)
         allowed_containers: List of container IDs
         label_prefix: Label prefix for batches
         is_resellable: Optional override for marketplace resale eligibility
@@ -175,7 +174,6 @@ def create_recipe(name: str, description: str = "", instructions: str = "",
             marketplace_status=marketplace_status,
             marketplace_notes=marketplace_notes,
             public_description=public_description,
-            product_group_id=product_group_id,
             product_store_url=product_store_url,
             skin_opt_in=skin_opt_in,
             cover_image_path=cover_image_path,
@@ -293,7 +291,6 @@ def update_recipe(recipe_id: int, name: str = None, description: str = None,
                  marketplace_status: str | None = None,
                  marketplace_notes: str | None = None,
                  public_description: str | None = None,
-                 product_group_id: Any = _UNSET,
                  product_store_url: str | None = None,
                  cover_image_path: Any = _UNSET,
                  cover_image_url: Any = _UNSET,
@@ -375,7 +372,6 @@ def update_recipe(recipe_id: int, name: str = None, description: str = None,
             marketplace_status=marketplace_status,
             marketplace_notes=marketplace_notes,
             public_description=public_description,
-            product_group_id=product_group_id,
             product_store_url=product_store_url,
             skin_opt_in=skin_opt_in,
             cover_image_path=cover_image_path,
@@ -706,7 +702,6 @@ def duplicate_recipe(
         template.portion_name = original.portion_name
         template.portion_count = original.portion_count
         template.portion_unit_id = original.portion_unit_id
-        template.product_group_id = original.product_group_id
         template.product_store_url = original.product_store_url
         template.skin_opt_in = original.skin_opt_in
         template.cover_image_path = original.cover_image_path

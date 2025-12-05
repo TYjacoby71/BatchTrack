@@ -1,4 +1,3 @@
-
 from flask_login import current_user
 import sqlalchemy as sa
 from sqlalchemy import event
@@ -34,7 +33,6 @@ class Recipe(ScopedModelMixin, db.Model):
     status = db.Column(db.String(16), default='published', nullable=False)
     category_id = db.Column(db.Integer, db.ForeignKey('product_category.id'), nullable=False)
     product_category = db.relationship('ProductCategory')
-    product_group = db.relationship('RecipeProductGroup', backref='recipes')
     created_by = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True)
     # Timestamps for retention calculations
     created_at = db.Column(db.DateTime, default=TimezoneUtils.utc_now)
@@ -86,7 +84,6 @@ class Recipe(ScopedModelMixin, db.Model):
     marketplace_block_reason = db.Column(db.Text, nullable=True)
     marketplace_violation_count = db.Column(db.Integer, nullable=False, default=0, server_default='0')
     product_store_url = db.Column(db.String(512), nullable=True)
-    product_group_id = db.Column(db.Integer, db.ForeignKey('recipe_product_group.id'), nullable=True)
     cover_image_path = db.Column(db.String(255), nullable=True)
     cover_image_url = db.Column(db.String(512), nullable=True)
     skin_opt_in = db.Column(db.Boolean, nullable=False, default=True, server_default=sa.text("true"))
@@ -153,7 +150,6 @@ class Recipe(ScopedModelMixin, db.Model):
         db.Index('ix_recipe_cosm_preservative_pct', 'cosm_preservative_pct'),
         db.Index('ix_recipe_sharing_scope', 'sharing_scope'),
         db.Index('ix_recipe_is_public', 'is_public'),
-        db.Index('ix_recipe_product_group_id', 'product_group_id'),
         db.Index('ix_recipe_marketplace_status', 'marketplace_status'),
         db.Index('ix_recipe_org_origin_recipe_id', 'org_origin_recipe_id'),
         db.Index('ix_recipe_org_origin_type', 'org_origin_type'),

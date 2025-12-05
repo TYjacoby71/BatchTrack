@@ -64,12 +64,6 @@ class RecipeMarketplaceService:
         elif sale_price in ("", None):
             sale_price = None
 
-        product_group_id = None
-        if "product_group_id" in form:
-            product_group_id = cls._safe_int(form.get("product_group_id"))
-        elif existing is not None:
-            product_group_id = getattr(existing, "product_group_id", None)
-
         product_store_url = _get("product_store_url")
         if product_store_url is None and existing is not None and "product_store_url" not in form:
             product_store_url = getattr(existing, "product_store_url", None)
@@ -91,7 +85,6 @@ class RecipeMarketplaceService:
             skin_opt = str(skin_opt_value).lower() == "true" if skin_opt_value is not None else True
 
         payload = {
-            "product_group_id": product_group_id,
             "sharing_scope": scope_value,
             "is_public": is_public,
             "is_for_sale": is_for_sale,
