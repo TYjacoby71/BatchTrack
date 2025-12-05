@@ -10,7 +10,7 @@
     {% if active_batch %}
       <a href="{{ url_for('batches.view_batch_in_progress', batch_identifier=active_batch.id) }}" class="btn btn-warning">Continue Batch</a>
     {% endif %}
-    <button onclick="document.getElementById('startFlowModal').style.display='block'" class="btn btn-primary">Start Batch</button>
+    <button id="openStartBatchButton" type="button" class="btn btn-primary">Start Batch</button>
   </div>
 </div>
 
@@ -29,9 +29,14 @@
       <h5 class="card-title mb-0 text-center">Start New Batch</h5>
     </div>
     <div class="card-body">
-      {% if not recipes %}
+      <div id="recipeLoadingState" class="alert alert-info d-flex align-items-center mb-3">
+        <i class="fas fa-spinner fa-spin me-2"></i>
+        <div>Loading your recipes…</div>
+      </div>
+      <div id="recipeErrorState" class="alert alert-danger d-none"></div>
+
       <!-- Empty State Message -->
-      <div class="text-center py-4">
+      <div class="text-center py-4 d-none" id="recipeEmptyState">
         <i class="fas fa-book fa-4x text-muted mb-4"></i>
         <h4 class="text-muted mb-3">No Recipes Yet</h4>
         <p class="text-muted mb-4">Create your first recipe to start tracking batches and managing production!</p>
@@ -45,17 +50,15 @@
         </div>
         <button type="button" class="btn btn-secondary" onclick="closeModal()">Close</button>
       </div>
-      {% else %}
-      <form id="recipeForm" method="get" action="#">
+
+      <form id="recipeForm" method="get" action="#" class="d-none">
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
         <div class="mb-3">
           <label for="recipe_id" class="form-label">Select Recipe:</label>
-          <select class="form-select" id="recipe_id" name="recipe_id" required>
+          <select class="form-select" id="recipe_id" name="recipe_id" required disabled>
             <option value="">Choose a recipe...</option>
-            {% for recipe in recipes %}
-            <option value="{{ recipe.id }}">{{ recipe.name }}</option>
-            {% endfor %}
           </select>
+          <div class="form-text" id="recipeCacheMeta" hidden></div>
         </div>
 
         <!-- Variant Selection (hidden by default) -->
@@ -71,46 +74,125 @@
           <button type="button" class="btn btn-primary" onclick="goToPlanProduction()">Start Planning</button>
         </div>
       </form>
-      {% endif %}
     </div>
   </div>
 </div>
 
 <!-- Modal backdrop -->
-<div id="modalBackdrop" class="position-fixed top-0 start-0 w-100 h-100 bg-dark" style="display:none; z-index: 1040; opacity: 0.5;" onclick="document.getElementById('startFlowModal').style.display='none'; this.style.display='none';"></div>
+<div id="modalBackdrop" class="position-fixed top-0 start-0 w-100 h-100 bg-dark" style="display:none; z-index: 1040; opacity: 0.5;"></div>
 
 <script>
-document.addEventListener('DOMContentLoaded', function() {
+(function() {
+  const modal = document.getElementById('startFlowModal');
+  const backdrop = document.getElementById('modalBackdrop');
   const recipeSelect = document.getElementById('recipe_id');
   const variantSection = document.getElementById('variantSection');
   const variantSelect = document.getElementById('variant_id');
   const recipeForm = document.getElementById('recipeForm');
-  const modal = document.getElementById('startFlowModal');
-  const backdrop = document.getElementById('modalBackdrop');
+  const loadingState = document.getElementById('recipeLoadingState');
+  const errorState = document.getElementById('recipeErrorState');
+  const emptyState = document.getElementById('recipeEmptyState');
+  const recipeCacheMeta = document.getElementById('recipeCacheMeta');
+  const startBatchBtn = document.getElementById('openStartBatchButton');
+  const bootstrapRecipesUrl = "{{ url_for('api.bootstrap_recipes') }}";
+  let recipesCache = null;
+  let recipeFetchPromise = null;
+  const recipeVariantMap = new Map();
 
-  // Recipe data with variants (this would be populated from your backend)
-  const recipeVariants = {
-    {% for recipe in recipes %}
-    {% if recipe.variations %}
-    "{{ recipe.id }}": [
-      {% for variant in recipe.variations %}
-      {"id": "{{ variant.id }}", "name": "{{ variant.name }}"}{% if not loop.last %},{% endif %}
-      {% endfor %}
-    ]{% if not loop.last %},{% endif %}
-    {% endif %}
-    {% endfor %}
-  };
-
-  // Update the Start Batch button to show backdrop
-  const startBatchBtn = document.querySelector('button[onclick*="startFlowModal"]');
-  if (startBatchBtn) {
-    startBatchBtn.onclick = function() {
-      modal.style.display = 'block';
-      backdrop.style.display = 'block';
-    };
+  function openModal() {
+    modal.style.display = 'block';
+    backdrop.style.display = 'block';
   }
 
-  // Update close functionality
+  function fetchRecipes() {
+    if (recipesCache) {
+      return Promise.resolve(recipesCache);
+    }
+    if (recipeFetchPromise) {
+      return recipeFetchPromise;
+    }
+    recipeFetchPromise = fetch(bootstrapRecipesUrl, {
+      headers: { 'Accept': 'application/json' }
+    })
+      .then(response => {
+        if (!response.ok) {
+          throw new Error(`Failed to load recipes (${response.status})`);
+        }
+        return response.json();
+      })
+      .then(data => {
+        recipesCache = data.recipes || [];
+        recipeVariantMap.clear();
+        recipesCache.forEach(recipe => {
+          recipeVariantMap.set(String(recipe.id), recipe.variations || []);
+        });
+        if (recipeCacheMeta) {
+          const fromCache = data.cache === 'hit' ? 'cache hit' : 'cache miss';
+          recipeCacheMeta.textContent = `Bootstrap source: ${fromCache}, ${recipesCache.length} recipes`;
+          recipeCacheMeta.hidden = false;
+        }
+        return recipesCache;
+      })
+      .catch(error => {
+        recipeFetchPromise = null;
+        throw error;
+      });
+    return recipeFetchPromise;
+  }
+
+  function populateRecipeSelect(recipes) {
+    recipeSelect.innerHTML = '<option value="">Choose a recipe...</option>';
+    recipes
+      .sort((a, b) => (a.name || '').localeCompare(b.name || ''))
+      .forEach(recipe => {
+        const option = document.createElement('option');
+        option.value = recipe.id;
+        option.textContent = recipe.name || `Recipe #${recipe.id}`;
+        recipeSelect.appendChild(option);
+      });
+    recipeSelect.disabled = recipes.length === 0;
+  }
+
+  function updateVariantSection(recipeId) {
+    const variants = recipeVariantMap.get(String(recipeId)) || [];
+    if (variants.length === 0) {
+      variantSection.style.display = 'none';
+      variantSelect.innerHTML = '<option value="">No variant</option>';
+      return;
+    }
+    variantSection.style.display = 'block';
+    variantSelect.innerHTML = '<option value="">No variant</option>';
+    variants.forEach(variant => {
+      const option = document.createElement('option');
+      option.value = variant.id;
+      option.textContent = variant.name || `Variation #${variant.id}`;
+      variantSelect.appendChild(option);
+    });
+  }
+
+  function ensureRecipesLoaded() {
+    loadingState.classList.remove('d-none');
+    errorState.classList.add('d-none');
+    emptyState.classList.add('d-none');
+    recipeForm.classList.add('d-none');
+
+    fetchRecipes()
+      .then(recipes => {
+        loadingState.classList.add('d-none');
+        if (recipes.length === 0) {
+          emptyState.classList.remove('d-none');
+        } else {
+          populateRecipeSelect(recipes);
+          recipeForm.classList.remove('d-none');
+        }
+      })
+      .catch(error => {
+        loadingState.classList.add('d-none');
+        errorState.textContent = error.message || 'Unable to load recipes. Please try again.';
+        errorState.classList.remove('d-none');
+      });
+  }
+
   window.closeModal = function() {
     modal.style.display = 'none';
     backdrop.style.display = 'none';
@@ -125,31 +207,29 @@ document.addEventListener('DOMContentLoaded', function() {
     }
   };
 
+  if (startBatchBtn) {
+    startBatchBtn.addEventListener('click', () => {
+      openModal();
+      ensureRecipesLoaded();
+    });
+  }
+
+  if (backdrop) {
+    backdrop.addEventListener('click', closeModal);
+  }
+
   if (recipeSelect) {
-    recipeSelect.addEventListener('change', function() {
-      const selectedRecipeId = this.value;
-
-      if (selectedRecipeId && recipeVariants[selectedRecipeId]) {
-        // Show variant section and populate variants
-        variantSection.style.display = 'block';
-        variantSelect.innerHTML = '<option value="">No variant</option>';
-
-        recipeVariants[selectedRecipeId].forEach(variant => {
-          const option = document.createElement('option');
-          option.value = variant.id;
-          option.textContent = variant.name;
-          variantSelect.appendChild(option);
-        });
+    recipeSelect.addEventListener('change', (event) => {
+      const recipeId = event.target.value;
+      if (recipeId) {
+        updateVariantSection(recipeId);
       } else {
-        // Hide variant section
         variantSection.style.display = 'none';
         variantSelect.innerHTML = '<option value="">No variant</option>';
       }
     });
   }
-
-
-});
+})();
 </script>
 
 <!-- Unified Dashboard Alerts -->
