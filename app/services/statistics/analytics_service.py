@@ -646,12 +646,11 @@ class AnalyticsDataService:
         try:
             base_filter = (
                 (Recipe.is_public.is_(True)) &
-                (Recipe.marketplace_status == "listed") &
-                (Recipe.marketplace_blocked.is_(False))
+                (Recipe.marketplace_status == "listed")
             )
             total_public = Recipe.query.filter(base_filter).count()
             total_for_sale = Recipe.query.filter(base_filter, Recipe.is_for_sale.is_(True)).count()
-            blocked_listings = Recipe.query.filter(Recipe.marketplace_blocked.is_(True)).count()
+            blocked_listings = Recipe.query.filter(Recipe.marketplace_status == "blocked").count()
             avg_price = (
                 db.session.query(func.avg(Recipe.sale_price))
                 .filter(base_filter, Recipe.is_for_sale.is_(True), Recipe.sale_price.isnot(None))

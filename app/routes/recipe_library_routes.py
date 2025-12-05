@@ -136,7 +136,16 @@ def recipe_library():
     )
     org_options = [{"id": org.id, "name": org.name} for org in organizations]
 
-    stats = AnalyticsDataService.get_recipe_library_metrics()
+    stats = AnalyticsDataService.get_recipe_library_metrics(force_refresh=False)
+    # Ensure all required stats have default values
+    stats.setdefault('total_public', 0)
+    stats.setdefault('total_for_sale', 0)
+    stats.setdefault('average_sale_price', 0.0)
+    stats.setdefault('sale_percentage', 0)
+    stats.setdefault('top_group_name', None)
+    stats.setdefault('top_group_count', 0)
+    stats.setdefault('batchtrack_native_count', 0)
+
     purchase_enabled = is_feature_enabled("FEATURE_RECIPE_PURCHASE_OPTIONS")
     org_marketplace_enabled = is_feature_enabled("FEATURE_ORG_MARKETPLACE_DASHBOARD")
 
