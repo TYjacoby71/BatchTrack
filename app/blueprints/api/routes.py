@@ -3,7 +3,9 @@ from flask_login import login_required, current_user
 from datetime import datetime, timezone
 from flask import session
 import logging
-from app.models import InventoryItem  # Added for get_ingredients endpoint
+from sqlalchemy.orm import selectinload, load_only
+from app.models import InventoryItem, Recipe, Product  # Added for get_ingredients endpoint
+from app.models.product import ProductSKU
 from app import db  # Assuming db is imported from app
 from app.utils.permissions import require_permission
 from app.services.batchbot_service import BatchBotService, BatchBotServiceError
@@ -15,7 +17,11 @@ from app.services.batchbot_usage_service import (
 from app.services.batchbot_credit_service import BatchBotCreditService
 from app.services.ai import GoogleAIClientError
 from app.extensions import cache
-from app.services.cache_invalidation import ingredient_list_cache_key
+from app.services.cache_invalidation import (
+    ingredient_list_cache_key,
+    product_bootstrap_cache_key,
+    recipe_bootstrap_cache_key,
+)
 from app.utils.cache_utils import should_bypass_cache
 
 # Configure logging
@@ -26,6 +32,18 @@ api_bp = Blueprint('api', __name__, url_prefix='/api')
 
 def _is_batchbot_enabled() -> bool:
     return bool(current_app.config.get('FEATURE_BATCHBOT', False))
+
+
+def _resolve_org_id():
+    """
+    Determine the organization scope for the current request, respecting developer masquerade.
+    """
+    org_id = getattr(current_user, "organization_id", None)
+    if getattr(current_user, "user_type", None) == "developer":
+        dev_selected = session.get("dev_selected_org_id")
+        if dev_selected:
+            org_id = dev_selected
+    return org_id
 
 @api_bp.route('/', methods=['GET', 'HEAD'])
 def health_check():
@@ -307,6 +325,113 @@ def get_ingredients():
         return jsonify(payload)
     except Exception as e:
         return jsonify({'error': str(e)}), 500
+
+
+@api_bp.route('/bootstrap/recipes', methods=['GET'])
+@login_required
+def bootstrap_recipes():
+    """Lightweight recipe bootstrap payload for clients that only need IDs + variants."""
+    org_id = _resolve_org_id()
+    if not org_id:
+        return jsonify({'recipes': [], 'count': 0})
+
+    cache_key = recipe_bootstrap_cache_key(org_id)
+    bypass_cache = should_bypass_cache()
+    cache_ttl = current_app.config.get("RECIPE_BOOTSTRAP_CACHE_TTL", 300)
+
+    if not bypass_cache:
+        cached = cache.get(cache_key)
+        if cached is not None:
+            return jsonify({'recipes': cached, 'count': len(cached), 'cache': 'hit', 'version': 1})
+
+    query = (
+        Recipe.query.options(
+            load_only(Recipe.id, Recipe.name, Recipe.label_prefix, Recipe.status),
+            selectinload(Recipe.variations).load_only(
+                Recipe.id,
+                Recipe.name,
+                Recipe.label_prefix,
+                Recipe.status,
+            ),
+        )
+        .filter(
+            Recipe.parent_recipe_id.is_(None),
+            Recipe.organization_id == org_id,
+        )
+        .order_by(Recipe.name.asc())
+    )
+
+    recipes = []
+    for recipe in query.all():
+        variations = [
+            {
+                'id': variation.id,
+                'name': variation.name,
+                'status': getattr(variation, 'status', None),
+                'label_prefix': getattr(variation, 'label_prefix', None),
+            }
+            for variation in getattr(recipe, 'variations', []) or []
+        ]
+        recipes.append(
+            {
+                'id': recipe.id,
+                'name': recipe.name,
+                'label_prefix': getattr(recipe, 'label_prefix', None),
+                'status': getattr(recipe, 'status', None),
+                'variations': variations,
+            }
+        )
+
+    cache.set(cache_key, recipes, timeout=cache_ttl)
+    return jsonify({'recipes': recipes, 'count': len(recipes), 'cache': 'miss', 'version': 1})
+
+
+@api_bp.route('/bootstrap/products', methods=['GET'])
+@login_required
+def bootstrap_products():
+    """Return product + SKU inventory identifiers for fast client bootstrapping."""
+    org_id = _resolve_org_id()
+    if not org_id:
+        return jsonify({'products': [], 'sku_inventory_ids': []})
+
+    cache_key = product_bootstrap_cache_key(org_id)
+    bypass_cache = should_bypass_cache()
+    cache_ttl = current_app.config.get("PRODUCT_BOOTSTRAP_CACHE_TTL", 300)
+
+    if not bypass_cache:
+        cached = cache.get(cache_key)
+        if cached is not None:
+            return jsonify({**cached, 'cache': 'hit', 'version': 1})
+
+    products = (
+        Product.query.options(load_only(Product.id, Product.name))
+        .filter(
+            Product.organization_id == org_id,
+            Product.is_active.is_(True),
+            Product.is_discontinued.is_(False),
+        )
+        .order_by(Product.name.asc())
+        .all()
+    )
+
+    sku_rows = (
+        ProductSKU.query.options(load_only(ProductSKU.inventory_item_id))
+        .filter(
+            ProductSKU.organization_id == org_id,
+            ProductSKU.is_active.is_(True),
+        )
+        .all()
+    )
+
+    payload = {
+        'products': [{'id': product.id, 'name': product.name} for product in products],
+        'sku_inventory_ids': [
+            row.inventory_item_id for row in sku_rows if getattr(row, 'inventory_item_id', None)
+        ],
+    }
+
+    cache.set(cache_key, payload, timeout=cache_ttl)
+    return jsonify({**payload, 'cache': 'miss', 'version': 1})
 
 @api_bp.route('/unit-converter', methods=['POST'])
 @login_required

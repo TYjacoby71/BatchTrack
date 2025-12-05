@@ -305,7 +305,24 @@ class AuthenticatedMixin:
         self._cache_refreshed_at = now
 
     def _fetch_recipe_ids(self) -> List[int]:
-        resp = self.client.get("/recipes", name="bootstrap.recipes", allow_redirects=True)
+        # Prefer lightweight API for org-scoped recipe IDs
+        response = self.client.get("/api/bootstrap/recipes", name="bootstrap.recipes", allow_redirects=False)
+        if response.status_code == 200:
+            try:
+                data = response.json()
+                recipe_ids: List[int] = []
+                for item in data.get("recipes", []):
+                    try:
+                        recipe_ids.append(int(item.get("id")))
+                    except (TypeError, ValueError):
+                        continue
+                if recipe_ids:
+                    return recipe_ids
+            except (ValueError, json.JSONDecodeError):
+                logger.warning("bootstrap.recipes API payload was invalid JSON")
+
+        # Fallback to legacy HTML scraping so we still populate IDs if API is unavailable
+        resp = self.client.get("/recipes", name="bootstrap.recipes.legacy", allow_redirects=True)
         return _extract_ids(r"/recipes/(\d+)/view", resp.text) if resp.status_code == 200 else []
 
     def _fetch_recipe_library_ids(self) -> List[Tuple[int, str]]:
@@ -348,7 +365,28 @@ class AuthenticatedMixin:
         return [item["id"] for item in data if isinstance(item, dict) and item.get("id")]
 
     def _fetch_product_and_sku_ids(self) -> Tuple[List[int], List[int]]:
-        resp = self.client.get("/products", name="bootstrap.products", allow_redirects=True)
+        response = self.client.get("/api/bootstrap/products", name="bootstrap.products", allow_redirects=False)
+        if response.status_code == 200:
+            try:
+                data = response.json()
+                product_ids: List[int] = []
+                for item in data.get("products", []):
+                    try:
+                        product_ids.append(int(item.get("id")))
+                    except (TypeError, ValueError):
+                        continue
+                sku_ids: List[int] = []
+                for raw in data.get("sku_inventory_ids", []):
+                    try:
+                        sku_ids.append(int(raw))
+                    except (TypeError, ValueError):
+                        continue
+                if product_ids or sku_ids:
+                    return product_ids, sku_ids
+            except (ValueError, json.JSONDecodeError):
+                logger.warning("bootstrap.products API payload was invalid JSON")
+
+        resp = self.client.get("/products", name="bootstrap.products.legacy", allow_redirects=True)
         if resp.status_code != 200:
             return [], []
         product_ids = _extract_ids(r"/products/(\d+)", resp.text)
