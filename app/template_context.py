@@ -27,6 +27,26 @@ _SPOTLIGHTS_PATH = Path("data/spotlights.json")
 _SETTINGS_PATH = Path("settings.json")
 
 
+def _serialize_ingredient_category(category) -> Dict[str, Any]:
+    """Return a cache-safe representation of IngredientCategory."""
+    if isinstance(category, dict):
+        return category
+    return {
+        "id": getattr(category, "id", None),
+        "name": getattr(category, "name", None),
+        "organization_id": getattr(category, "organization_id", None),
+        "is_active": getattr(category, "is_active", None),
+        "is_global_category": getattr(category, "is_global_category", None),
+        "description": getattr(category, "description", None),
+    }
+
+
+def _normalize_cached_categories(raw) -> list[Dict[str, Any]]:
+    if not raw:
+        return []
+    return [_serialize_ingredient_category(cat) for cat in raw]
+
+
 def register_template_context(app: Flask) -> None:
     """Register globally available template context helpers."""
 
@@ -50,9 +70,11 @@ def register_template_context(app: Flask) -> None:
                 units = []
             app_cache.set(units_cache_key, units, ttl=3600)
 
-        if categories is None:
+        # Older cache entries may still contain ORM rows; normalize aggressively.
+        categories = _normalize_cached_categories(categories)
+        if not categories:
             try:
-                categories = (
+                raw_categories = (
                     IngredientCategory.query.filter_by(
                         organization_id=None,
                         is_active=True,
@@ -62,7 +84,8 @@ def register_template_context(app: Flask) -> None:
                     .all()
                 )
             except Exception:
-                categories = []
+                raw_categories = []
+            categories = _normalize_cached_categories(raw_categories)
             app_cache.set("template:ingredient_categories", categories, ttl=3600)
 
         return {"units": units, "global_units": units, "categories": categories}
