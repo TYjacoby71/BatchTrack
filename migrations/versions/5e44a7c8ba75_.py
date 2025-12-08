@@ -1,8 +1,8 @@
 """empty message
 
-Revision ID: 474d268f14b4
+Revision ID: 5e44a7c8ba75
 Revises: 0010_recipe_status_drafts
-Create Date: 2025-12-08 23:15:28.138055
+Create Date: 2025-12-08 23:22:51.858821
 
 """
 from alembic import op
@@ -10,7 +10,7 @@ import sqlalchemy as sa
 
 
 # revision identifiers, used by Alembic.
-revision = '474d268f14b4'
+revision = '5e44a7c8ba75'
 down_revision = '0010_recipe_status_drafts'
 branch_labels = None
 depends_on = None
@@ -23,6 +23,7 @@ def upgrade():
 
     with op.batch_alter_table('global_item', schema=None) as batch_op:
         batch_op.drop_index('ix_global_item_active_type_name')
+        batch_op.drop_column('recommended_usage_rate')
 
     with op.batch_alter_table('inventory_item', schema=None) as batch_op:
         batch_op.drop_column('recommended_usage_rate')
@@ -78,6 +79,7 @@ def downgrade():
         batch_op.add_column(sa.Column('recommended_usage_rate', sa.VARCHAR(length=64), autoincrement=False, nullable=True))
 
     with op.batch_alter_table('global_item', schema=None) as batch_op:
+        batch_op.add_column(sa.Column('recommended_usage_rate', sa.VARCHAR(length=64), autoincrement=False, nullable=True))
         batch_op.create_index('ix_global_item_active_type_name', ['is_archived', 'item_type', 'name'], unique=False)
 
     with op.batch_alter_table('batchbot_credit_bundle', schema=None) as batch_op:
