@@ -370,8 +370,7 @@ def _ensure_hot_path_indexes():
     safe_create_index('ix_batch_org_status_started_at', 'batch', ['organization_id', 'status', 'started_at'])
     safe_create_index('ix_global_item_archive_type_name', 'global_item', ['is_archived', 'item_type', 'name'])
     safe_create_index('ix_inventory_item_archive_type_name', 'inventory_item', ['is_archived', 'item_type', 'name'])
-    safe_create_index('ix_recipe_org_id', 'recipe', ['organization_id'])
-    safe_create_index('ix_recipe_id', 'recipe', ['id'])
+    # Note: ix_recipe_org_id and ix_recipe_id removed - they duplicate existing indexes
 
 
 def _drop_hot_path_indexes():
@@ -381,8 +380,7 @@ def _drop_hot_path_indexes():
     safe_drop_index('ix_user_active_type', 'user')
     safe_drop_index('ix_user_org_created_at', 'user')
     safe_drop_index('ix_product_org_active', 'product')
-    safe_drop_index('ix_recipe_org_id', 'recipe')
-    safe_drop_index('ix_recipe_id', 'recipe')
+    # Note: ix_recipe_org_id and ix_recipe_id not dropped since they weren't created
 
 
 def _drop_recipe_marketplace_columns():
