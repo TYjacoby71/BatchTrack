@@ -59,7 +59,9 @@ def upgrade():
 
 
 def downgrade():
-    op.drop_column('addon', 'batchbot_credit_amount')
+    # Drop batchbot_credit_amount column from addon table
+    from migrations.postgres_helpers import safe_drop_column
+    safe_drop_column('addon', 'batchbot_credit_amount')
 
     op.drop_index('ix_batchbot_credit_bundle_addon_id', table_name='batchbot_credit_bundle')
     op.drop_index('ix_batchbot_credit_bundle_org_id', table_name='batchbot_credit_bundle')
