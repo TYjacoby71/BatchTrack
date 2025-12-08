@@ -110,22 +110,15 @@ def downgrade():
     safe_drop_column('organization', 'recipe_library_blocked')
     safe_drop_column('organization', 'recipe_sales_blocked')
 
-    # Recipe indexes and FK
-    if index_exists('recipe', 'ix_recipe_marketplace_status'):
-        op.drop_index('ix_recipe_marketplace_status', table_name='recipe')
-    if index_exists('recipe', 'ix_recipe_product_group_id'):
-        op.drop_index('ix_recipe_product_group_id', table_name='recipe')
-    if index_exists('recipe', 'ix_recipe_is_public'):
-        op.drop_index('ix_recipe_is_public', table_name='recipe')
-    if index_exists('recipe', 'ix_recipe_sharing_scope'):
-        op.drop_index('ix_recipe_sharing_scope', table_name='recipe')
+    # Recipe indexes and FK - use safe helpers
+    safe_drop_index('ix_recipe_marketplace_status', 'recipe')
+    safe_drop_index('ix_recipe_product_group_id', 'recipe')
+    safe_drop_index('ix_recipe_is_public', 'recipe')
+    safe_drop_index('ix_recipe_sharing_scope', 'recipe')
 
-    try:
-        op.drop_constraint('fk_recipe_product_group', 'recipe', type_='foreignkey')
-    except Exception:
-        pass
+    safe_drop_foreign_key('fk_recipe_product_group', 'recipe')
 
-    # Recipe columns
+    # Recipe columns - drop in reverse order of creation to avoid dependency issues
     safe_drop_column('recipe', 'skin_opt_in')
     safe_drop_column('recipe', 'cover_image_url')
     safe_drop_column('recipe', 'cover_image_path')
@@ -141,15 +134,9 @@ def downgrade():
     safe_drop_column('recipe', 'is_public')
     safe_drop_column('recipe', 'sharing_scope')
 
-    # Moderation table/index
-    try:
-        op.drop_index('ix_recipe_moderation_org_id', table_name='recipe_moderation_event')
-    except Exception:
-        pass
-    try:
-        op.drop_index('ix_recipe_moderation_recipe_id', table_name='recipe_moderation_event')
-    except Exception:
-        pass
+    # Moderation table/indexes - use safe helpers  
+    safe_drop_index('ix_recipe_moderation_org_id', 'recipe_moderation_event')
+    safe_drop_index('ix_recipe_moderation_recipe_id', 'recipe_moderation_event')
     if table_exists('recipe_moderation_event'):
         op.drop_table('recipe_moderation_event')
 
