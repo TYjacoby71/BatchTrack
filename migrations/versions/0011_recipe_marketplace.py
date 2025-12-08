@@ -11,8 +11,13 @@ import sqlalchemy as sa
 from migrations.postgres_helpers import (
     safe_add_column,
     safe_drop_column,
-    table_exists,
+    safe_create_index,
+    safe_drop_index,
+    safe_create_foreign_key,
+    safe_drop_foreign_key,
     index_exists,
+    table_exists,
+    column_exists,
 )
 
 # revision identifiers, used by Alembic.
