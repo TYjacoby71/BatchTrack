@@ -88,6 +88,14 @@ class Recipe(ScopedModelMixin, db.Model):
     download_count = db.Column(db.Integer, nullable=False, default=0, server_default='0')
     purchase_count = db.Column(db.Integer, nullable=False, default=0, server_default='0')
 
+    # Organization origin fields (from migration 0013)
+    org_origin_recipe_id = db.Column(db.Integer, db.ForeignKey('recipe.id'), nullable=True)
+    org_origin_type = db.Column(db.String(32), nullable=False, default='authored', server_default='authored')
+    org_origin_source_org_id = db.Column(db.Integer, db.ForeignKey('organization.id'), nullable=True)
+    org_origin_source_recipe_id = db.Column(db.Integer, db.ForeignKey('recipe.id'), nullable=True)
+    org_origin_purchased = db.Column(db.Boolean, nullable=False, default=False, server_default=sa.text("false"))
+    is_resellable = db.Column(db.Boolean, nullable=False, default=True, server_default=sa.text("true"))
+
     organization = db.relationship('Organization', foreign_keys='Recipe.organization_id')
     origin_recipe = db.relationship(
         'Recipe',
@@ -97,6 +105,19 @@ class Recipe(ScopedModelMixin, db.Model):
         backref='referenced_descendants',
     )
     origin_organization = db.relationship('Organization', foreign_keys=[origin_organization_id])
+    org_origin_recipe = db.relationship(
+        'Recipe',
+        remote_side=[id],
+        foreign_keys=[org_origin_recipe_id],
+        post_update=True,
+    )
+    org_origin_source_org = db.relationship('Organization', foreign_keys=[org_origin_source_org_id])
+    org_origin_source_recipe = db.relationship(
+        'Recipe',
+        remote_side=[id],
+        foreign_keys=[org_origin_source_recipe_id],
+        post_update=True,
+    )
 
     # Computed projection columns (persisted) for hot fields (Postgres only)
     soap_superfat = db.Column(sa.Numeric(), _pg_computed("((category_data ->> 'soap_superfat'))::numeric"), nullable=True)
@@ -144,6 +165,10 @@ class Recipe(ScopedModelMixin, db.Model):
         db.Index('ix_recipe_origin_organization_id', 'origin_organization_id'),
         db.Index('ix_recipe_download_count', 'download_count'),
         db.Index('ix_recipe_purchase_count', 'purchase_count'),
+        db.Index('ix_recipe_org_origin_recipe_id', 'org_origin_recipe_id'),
+        db.Index('ix_recipe_org_origin_type', 'org_origin_type'),
+        db.Index('ix_recipe_org_origin_source_org_id', 'org_origin_source_org_id'),
+        db.Index('ix_recipe_org_origin_purchased', 'org_origin_purchased'),
     ])
 
 class RecipeIngredient(ScopedModelMixin, db.Model):
