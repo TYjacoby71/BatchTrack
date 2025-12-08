@@ -182,9 +182,9 @@ def _drop_recipe_moderation_table():
 
 def _add_organization_recipe_controls():
     org_columns = [
-        sa.Column('recipe_sales_blocked', sa.Boolean(), nullable=False, server_default=sa.text('false')),
-        sa.Column('recipe_library_blocked', sa.Boolean(), nullable=False, server_default=sa.text('false')),
-        sa.Column('recipe_violation_count', sa.Integer(), nullable=False, server_default='0'),
+        sa.Column('recipe_sales_blocked', sa.Boolean(), nullable=True, server_default=sa.text('false')),
+        sa.Column('recipe_library_blocked', sa.Boolean(), nullable=True, server_default=sa.text('false')),
+        sa.Column('recipe_violation_count', sa.Integer(), nullable=True, server_default='0'),
         sa.Column('recipe_policy_notes', sa.Text(), nullable=True),
     ]
     for column in org_columns:
@@ -232,13 +232,11 @@ def _ensure_batchbot_tables():
             sa.Column('updated_at', sa.DateTime(), nullable=False, server_default=sa.func.now()),
         )
     safe_create_index('ix_batchbot_credit_bundle_organization_id', 'batchbot_credit_bundle', ['organization_id'])
-    safe_create_index('ix_batchbot_credit_bundle_addon_id', 'batchbot_credit_bundle', ['addon_id'])
 
     safe_add_column('addon', sa.Column('batchbot_credit_amount', sa.Integer(), nullable=False, server_default='0'))
 
 
 def _drop_batchbot_tables():
-    safe_drop_index('ix_batchbot_credit_bundle_addon_id', 'batchbot_credit_bundle')
     safe_drop_index('ix_batchbot_credit_bundle_organization_id', 'batchbot_credit_bundle')
     if table_exists('batchbot_credit_bundle'):
         op.drop_table('batchbot_credit_bundle')
@@ -347,17 +345,20 @@ def _dedupe_legacy_label_codes():
 
 
 def _ensure_unit_indexes():
-    if not index_exists('unit', 'ix_unit_active_scope_sort'):
-        op.create_index('ix_unit_active_scope_sort', 'unit', ['is_active', 'is_custom', 'unit_type', 'name'])
-    if not index_exists('unit', 'ix_unit_custom_org_scope'):
-        op.create_index(
-            'ix_unit_custom_org_scope',
-            'unit',
-            ['organization_id', 'is_active', 'is_custom', 'unit_type', 'name'],
-        )
+    index_specs = [
+        ('ix_unit_scope', ['is_active', 'is_custom', 'organization_id']),
+        ('ix_unit_sort', ['unit_type', 'name']),
+        ('ix_unit_active_scope_sort', ['is_active', 'is_custom', 'unit_type', 'name']),
+        ('ix_unit_custom_org_scope', ['organization_id', 'is_active', 'is_custom', 'unit_type', 'name']),
+    ]
+    for index_name, columns in index_specs:
+        if not index_exists('unit', index_name):
+            op.create_index(index_name, 'unit', columns)
 
 
 def _drop_unit_indexes():
+    safe_drop_index('ix_unit_scope', 'unit')
+    safe_drop_index('ix_unit_sort', 'unit')
     safe_drop_index('ix_unit_custom_org_scope', 'unit')
     safe_drop_index('ix_unit_active_scope_sort', 'unit')
 
@@ -366,7 +367,6 @@ def _ensure_hot_path_indexes():
     safe_create_index('ix_product_org_active', 'product', ['organization_id', 'is_active'])
     safe_create_index('ix_user_org_created_at', 'user', ['organization_id', 'created_at'])
     safe_create_index('ix_user_active_type', 'user', ['is_active', 'user_type'])
-    safe_create_index('ix_user_organization_id', 'user', ['organization_id'])
     safe_create_index('ix_batch_org_status_started_at', 'batch', ['organization_id', 'status', 'started_at'])
     safe_create_index('ix_global_item_archive_type_name', 'global_item', ['is_archived', 'item_type', 'name'])
 
@@ -376,7 +376,6 @@ def _drop_hot_path_indexes():
     safe_drop_index('ix_batch_org_status_started_at', 'batch')
     safe_drop_index('ix_user_active_type', 'user')
     safe_drop_index('ix_user_org_created_at', 'user')
-    safe_drop_index('ix_user_organization_id', 'user')
     safe_drop_index('ix_product_org_active', 'product')
 
 

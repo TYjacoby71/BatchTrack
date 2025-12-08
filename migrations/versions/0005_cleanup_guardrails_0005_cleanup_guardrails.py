@@ -87,14 +87,9 @@ def upgrade():
     safe_add_column('inventory_item', sa.Column('protein_content_pct', sa.Float()))
     safe_add_column('inventory_item', sa.Column('inci_name', sa.String(256)))
     safe_add_column('inventory_item', sa.Column('recommended_fragrance_load_pct', sa.Float()))
-    safe_add_column('inventory_item', sa.Column('recommended_usage_rate', sa.String(128)))
 
     # Now alter the column types for inventory_item
     with op.batch_alter_table('inventory_item') as batch_op:
-        batch_op.alter_column('recommended_usage_rate',
-               existing_type=sa.VARCHAR(length=128),
-               type_=sa.String(length=64),
-               existing_nullable=True)
         batch_op.alter_column('recommended_fragrance_load_pct',
                existing_type=sa.Float(),
                type_=sa.String(length=64),
@@ -123,7 +118,7 @@ def upgrade():
 
         try:
             bind.execute(sa.text(
-                "CREATE INDEX IF NOT EXISTS ix_global_item_active_type_name ON global_item (is_archived, item_type, name)"
+                "CREATE INDEX IF NOT EXISTS ix_global_item_archive_type_name ON global_item (is_archived, item_type, name)"
             ))
         except Exception:
             pass
@@ -160,7 +155,6 @@ def downgrade():
         'protein_content_pct',
         'inci_name',
         'recommended_fragrance_load_pct',
-        'recommended_usage_rate'
     ]
 
     for column_name in columns_to_drop:
@@ -212,13 +206,6 @@ def downgrade():
         # Revert inventory_item column types
         inv_columns = [col['name'] for col in inspector.get_columns('inventory_item')]
 
-        if 'recommended_usage_rate' in inv_columns:
-            with op.batch_alter_table('inventory_item') as batch_op:
-                batch_op.alter_column('recommended_usage_rate',
-                       existing_type=sa.String(length=64),
-                       type_=sa.VARCHAR(length=128),
-                       existing_nullable=True)
-
         if 'recommended_fragrance_load_pct' in inv_columns:
             # Clean non-numeric data before conversion
             bind.execute(sa.text(r"""
@@ -249,7 +236,6 @@ def downgrade():
         'certifications',
         'inci_name',
         'recommended_fragrance_load_pct',
-        'recommended_usage_rate',
         'is_active_ingredient'
     ]
 
