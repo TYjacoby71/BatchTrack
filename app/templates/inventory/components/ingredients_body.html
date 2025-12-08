@@ -108,7 +108,7 @@
         .catch(err => alert('Error updating inventory'));
     },
     resetRows() {
-      this.rows = [{id: '', quantity: '', unit: '{{ get_global_unit_list()[0].name if get_global_unit_list() else "gram" }}', change_type: 'restock', cost_entry_type: 'no_change', cost: 0, costHelp: 'Cost will remain unchanged'}];
+      this.rows = [{id: '', quantity: '', unit: '{{ units[0].name if units else "gram" }}', change_type: 'restock', cost_entry_type: 'no_change', cost: 0, costHelp: 'Cost will remain unchanged'}];
     },
     updateCostHelp(event, index) {
       const costType = event.target.value;
@@ -266,7 +266,9 @@
           {% for item in items if item.type != 'container' %}
           <tr data-name="{{ item.name.lower() }}" data-quantity="{{ item.quantity }}" data-cost="{{ item.cost_per_unit or 0 }}">
             <td class="col-name">
-            <span class="fw-semibold">{{ item.name }}</span>
+                <a href="{{ url_for('inventory.view_inventory', id=item.id) }}" class="text-decoration-none">
+                    {{ item.name }}
+                </a>
             </td>
             <td class="col-unit">{{ item.unit }}</td>
             <td class="col-quantity">
