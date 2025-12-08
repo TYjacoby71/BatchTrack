@@ -185,7 +185,7 @@ def downgrade():
                 AND recommended_fragrance_load_pct IS NOT NULL
                 AND recommended_fragrance_load_pct != ''
             """))
-            
+
             with op.batch_alter_table('global_item') as batch_op:
                 batch_op.alter_column('recommended_fragrance_load_pct',
                        existing_type=sa.String(length=64),
@@ -218,7 +218,7 @@ def downgrade():
                 AND recommended_fragrance_load_pct IS NOT NULL
                 AND recommended_fragrance_load_pct != ''
             """))
-            
+
             with op.batch_alter_table('inventory_item') as batch_op:
                 batch_op.alter_column('recommended_fragrance_load_pct',
                        existing_type=sa.String(length=64),
