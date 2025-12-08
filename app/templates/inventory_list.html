@@ -29,6 +29,9 @@ document.addEventListener('DOMContentLoaded', function() {
   initTablePagination('packaging');
   initTablePagination('consumables');
 
+  // Restore saved filter states
+  restoreFilterStates();
+
   // Add form submission handlers for better UX
   const ingredientForm = document.getElementById('addIngredientForm');
   const containerForm = document.getElementById('addContainerForm');
@@ -211,8 +214,7 @@ function initTablePagination(tableType) {
     updateTable();
   }
 
-  // Event listeners
-  document.getElementById(nameFilterId).addEventListener('input', filterAndSort);
+  // Event listeners - remove auto-trigger for name filter, keep for sort and per page
   document.getElementById(sortFilterId).addEventListener('change', filterAndSort);
   document.getElementById(perPageId).addEventListener('change', function() {
     itemsPerPage = parseInt(this.value);
@@ -335,6 +337,194 @@ function toggleArchivedFilter(tableType) {
             row.style.display = ''; // Show non-archived rows
         }
     });
+}
+
+// Apply filter functions
+function applyIngredientsFilters() {
+    const nameFilter = document.getElementById('ingredientsNameFilter');
+    const sortFilter = document.getElementById('ingredientsSortFilter');
+    const archivedFilter = document.getElementById('ingredientsShowArchived');
+    
+    // Store current filter values
+    localStorage.setItem('ingredients_name_filter', nameFilter.value);
+    localStorage.setItem('ingredients_sort_filter', sortFilter.value);
+    localStorage.setItem('ingredients_archived_filter', archivedFilter.checked);
+    
+    // Apply filters using existing function
+    const tableType = 'ingredients';
+    const filterAndSortFunc = window[`filterAndSort${tableType.charAt(0).toUpperCase() + tableType.slice(1)}`] || filterAndSort;
+    if (typeof filterAndSortFunc === 'function') {
+        filterAndSortFunc.call({ dataset: { type: tableType } });
+    } else {
+        // Fallback to manual filtering
+        const nameFilterValue = nameFilter.value.toLowerCase();
+        const tableBodyId = tableType + 'TableBody';
+        const allRows = Array.from(document.querySelectorAll(`#${tableBodyId} tr`));
+        
+        allRows.forEach(row => {
+            const name = row.dataset.name || '';
+            const isArchived = row.querySelector('.col-status .badge')?.textContent === 'Archived';
+            
+            let showRow = true;
+            
+            // Apply name filter
+            if (nameFilterValue && !name.includes(nameFilterValue)) {
+                showRow = false;
+            }
+            
+            // Apply archived filter
+            if (!archivedFilter.checked && isArchived) {
+                showRow = false;
+            }
+            
+            row.style.display = showRow ? '' : 'none';
+        });
+    }
+}
+
+function applyContainersFilters() {
+    const nameFilter = document.getElementById('containersNameFilter');
+    const sortFilter = document.getElementById('containersSortFilter');
+    const archivedFilter = document.getElementById('containersShowArchived');
+    
+    localStorage.setItem('containers_name_filter', nameFilter.value);
+    localStorage.setItem('containers_sort_filter', sortFilter.value);
+    localStorage.setItem('containers_archived_filter', archivedFilter.checked);
+    
+    const tableType = 'containers';
+    const nameFilterValue = nameFilter.value.toLowerCase();
+    const tableBodyId = tableType + 'TableBody';
+    const allRows = Array.from(document.querySelectorAll(`#${tableBodyId} tr`));
+    
+    allRows.forEach(row => {
+        const name = row.dataset.name || '';
+        const isArchived = row.querySelector('.col-status .badge')?.textContent === 'Archived';
+        
+        let showRow = true;
+        
+        if (nameFilterValue && !name.includes(nameFilterValue)) {
+            showRow = false;
+        }
+        
+        if (!archivedFilter.checked && isArchived) {
+            showRow = false;
+        }
+        
+        row.style.display = showRow ? '' : 'none';
+    });
+}
+
+function applyPackagingFilters() {
+    const nameFilter = document.getElementById('packagingNameFilter');
+    const sortFilter = document.getElementById('packagingSortFilter');
+    const archivedFilter = document.getElementById('packagingShowArchived');
+    
+    localStorage.setItem('packaging_name_filter', nameFilter.value);
+    localStorage.setItem('packaging_sort_filter', sortFilter.value);
+    localStorage.setItem('packaging_archived_filter', archivedFilter.checked);
+    
+    const tableType = 'packaging';
+    const nameFilterValue = nameFilter.value.toLowerCase();
+    const tableBodyId = tableType + 'TableBody';
+    const allRows = Array.from(document.querySelectorAll(`#${tableBodyId} tr`));
+    
+    allRows.forEach(row => {
+        const name = row.dataset.name || '';
+        const isArchived = row.querySelector('.col-status .badge')?.textContent === 'Archived';
+        
+        let showRow = true;
+        
+        if (nameFilterValue && !name.includes(nameFilterValue)) {
+            showRow = false;
+        }
+        
+        if (!archivedFilter.checked && isArchived) {
+            showRow = false;
+        }
+        
+        row.style.display = showRow ? '' : 'none';
+    });
+}
+
+function applyConsumablesFilters() {
+    const nameFilter = document.getElementById('consumablesNameFilter');
+    const sortFilter = document.getElementById('consumablesSortFilter');
+    const archivedFilter = document.getElementById('consumablesShowArchived');
+    
+    localStorage.setItem('consumables_name_filter', nameFilter.value);
+    localStorage.setItem('consumables_sort_filter', sortFilter.value);
+    localStorage.setItem('consumables_archived_filter', archivedFilter.checked);
+    
+    const tableType = 'consumables';
+    const nameFilterValue = nameFilter.value.toLowerCase();
+    const tableBodyId = tableType + 'TableBody';
+    const allRows = Array.from(document.querySelectorAll(`#${tableBodyId} tr`));
+    
+    allRows.forEach(row => {
+        const name = row.dataset.name || '';
+        const isArchived = row.querySelector('.col-status .badge')?.textContent === 'Archived';
+        
+        let showRow = true;
+        
+        if (nameFilterValue && !name.includes(nameFilterValue)) {
+            showRow = false;
+        }
+        
+        if (!archivedFilter.checked && isArchived) {
+            showRow = false;
+        }
+        
+        row.style.display = showRow ? '' : 'none';
+    });
+}
+
+// Reset filter functions
+function resetIngredientsFilters() {
+    document.getElementById('ingredientsNameFilter').value = '';
+    document.getElementById('ingredientsSortFilter').value = 'name_asc';
+    document.getElementById('ingredientsShowArchived').checked = false;
+    
+    localStorage.removeItem('ingredients_name_filter');
+    localStorage.removeItem('ingredients_sort_filter');
+    localStorage.removeItem('ingredients_archived_filter');
+    
+    applyIngredientsFilters();
+}
+
+function resetContainersFilters() {
+    document.getElementById('containersNameFilter').value = '';
+    document.getElementById('containersSortFilter').value = 'name_asc';
+    document.getElementById('containersShowArchived').checked = false;
+    
+    localStorage.removeItem('containers_name_filter');
+    localStorage.removeItem('containers_sort_filter');
+    localStorage.removeItem('containers_archived_filter');
+    
+    applyContainersFilters();
+}
+
+function resetPackagingFilters() {
+    document.getElementById('packagingNameFilter').value = '';
+    document.getElementById('packagingSortFilter').value = 'name_asc';
+    document.getElementById('packagingShowArchived').checked = false;
+    
+    localStorage.removeItem('packaging_name_filter');
+    localStorage.removeItem('packaging_sort_filter');
+    localStorage.removeItem('packaging_archived_filter');
+    
+    applyPackagingFilters();
+}
+
+function resetConsumablesFilters() {
+    document.getElementById('consumablesNameFilter').value = '';
+    document.getElementById('consumablesSortFilter').value = 'name_asc';
+    document.getElementById('consumablesShowArchived').checked = false;
+    
+    localStorage.removeItem('consumables_name_filter');
+    localStorage.removeItem('consumables_sort_filter');
+    localStorage.removeItem('consumables_archived_filter');
+    
+    applyConsumablesFilters();
 }
 
 function updateAddIngredientCostHelp() {
@@ -896,6 +1086,53 @@ document.addEventListener('DOMContentLoaded', function() {
     const consQty = document.querySelector('#addConsumableForm input[name="quantity"]');
     if (consQty) consQty.addEventListener('input', updateAddConsumableCostHelp);
 });
+
+// Restore filter states from localStorage
+function restoreFilterStates() {
+    // Ingredients
+    const ingredientsName = localStorage.getItem('ingredients_name_filter');
+    const ingredientsSort = localStorage.getItem('ingredients_sort_filter');
+    const ingredientsArchived = localStorage.getItem('ingredients_archived_filter');
+    
+    if (ingredientsName) document.getElementById('ingredientsNameFilter').value = ingredientsName;
+    if (ingredientsSort) document.getElementById('ingredientsSortFilter').value = ingredientsSort;
+    if (ingredientsArchived !== null) document.getElementById('ingredientsShowArchived').checked = ingredientsArchived === 'true';
+    
+    // Containers
+    const containersName = localStorage.getItem('containers_name_filter');
+    const containersSort = localStorage.getItem('containers_sort_filter');
+    const containersArchived = localStorage.getItem('containers_archived_filter');
+    
+    if (containersName) document.getElementById('containersNameFilter').value = containersName;
+    if (containersSort) document.getElementById('containersSortFilter').value = containersSort;
+    if (containersArchived !== null) document.getElementById('containersShowArchived').checked = containersArchived === 'true';
+    
+    // Packaging
+    const packagingName = localStorage.getItem('packaging_name_filter');
+    const packagingSort = localStorage.getItem('packaging_sort_filter');
+    const packagingArchived = localStorage.getItem('packaging_archived_filter');
+    
+    if (packagingName) document.getElementById('packagingNameFilter').value = packagingName;
+    if (packagingSort) document.getElementById('packagingSortFilter').value = packagingSort;
+    if (packagingArchived !== null) document.getElementById('packagingShowArchived').checked = packagingArchived === 'true';
+    
+    // Consumables
+    const consumablesName = localStorage.getItem('consumables_name_filter');
+    const consumablesSort = localStorage.getItem('consumables_sort_filter');
+    const consumablesArchived = localStorage.getItem('consumables_archived_filter');
+    
+    if (consumablesName) document.getElementById('consumablesNameFilter').value = consumablesName;
+    if (consumablesSort) document.getElementById('consumablesSortFilter').value = consumablesSort;
+    if (consumablesArchived !== null) document.getElementById('consumablesShowArchived').checked = consumablesArchived === 'true';
+    
+    // Apply the restored filters
+    setTimeout(() => {
+        if (ingredientsName || ingredientsSort || ingredientsArchived) applyIngredientsFilters();
+        if (containersName || containersSort || containersArchived) applyContainersFilters();
+        if (packagingName || packagingSort || packagingArchived) applyPackagingFilters();
+        if (consumablesName || consumablesSort || consumablesArchived) applyConsumablesFilters();
+    }, 100);
+}
 
 
 // Close the dropdown menu if the user clicks outside of it
