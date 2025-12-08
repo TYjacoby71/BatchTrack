@@ -29,7 +29,6 @@ from ...models import (
     UnifiedInventoryHistory,
     User,
 )
-from ...models.recipe_marketplace import RecipeProductGroup
 from ...models.inventory_lot import InventoryLot
 from ...models.subscription_tier import SubscriptionTier
 from ...models.statistics import RecipeStats

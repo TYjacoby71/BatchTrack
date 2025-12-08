@@ -50,9 +50,6 @@
                 <div class="col-md-8">
                     <div class="d-flex flex-wrap gap-2 mb-2">
                         <span class="badge bg-secondary">{{ recipe.category or 'Uncategorized' }}</span>
-                        {% if recipe.product_group %}
-                        <span class="badge bg-light text-dark border">{{ recipe.product_group }}</span>
-                        {% endif %}
                         {% if recipe.is_for_sale %}
                         <span class="badge bg-success">${{ "%.2f"|format(recipe.sale_price) }} sale</span>
                         {% else %}

@@ -84,9 +84,6 @@
                     <div class="d-flex justify-content-between align-items-start mb-2">
                         <div>
                             <span class="badge bg-secondary">{{ recipe.category or 'Uncategorized' }}</span>
-                            {% if recipe.product_group %}
-                            <span class="badge bg-light text-dark border">{{ recipe.product_group }}</span>
-                            {% endif %}
                         </div>
                         {% if recipe.is_for_sale %}
                         <span class="badge bg-success">${{ "%.2f"|format(recipe.sale_price) }}</span>

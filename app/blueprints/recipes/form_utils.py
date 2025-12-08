@@ -13,7 +13,6 @@ from sqlalchemy import func
 from app.extensions import db
 from app.models import GlobalItem, InventoryItem, Recipe
 from app.models.product_category import ProductCategory
-from app.models.recipe_marketplace import RecipeProductGroup
 from app.models.unit import Unit
 from app.services.inventory_adjustment import create_inventory_item
 from app.services.recipe_marketplace_service import RecipeMarketplaceService
