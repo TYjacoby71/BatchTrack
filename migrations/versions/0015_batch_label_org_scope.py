@@ -59,11 +59,37 @@ def upgrade():
 
 
 def downgrade():
+    from migrations.postgres_helpers import constraint_exists, is_postgresql
+
+    # Remove org scoping from batch labels - revert to global unique constraint
+    if constraint_exists('batch', 'uq_batch_label_code_org'):
+        op.drop_constraint('uq_batch_label_code_org', 'batch', type_='unique')
+
+    # Clean up duplicate label_code values before creating global unique constraint
+    # This handles cases where the same label_code exists across different orgs
     bind = op.get_bind()
-    if bind.dialect.name == 'sqlite':
-        with op.batch_alter_table('batch', recreate='always') as batch_op:
-            _drop_sqlite_unique(batch_op, 'uq_batch_org_label', ['organization_id', 'label_code'])
-            batch_op.create_unique_constraint('batch_label_code_key', ['label_code'])
+    if is_postgresql():
+        # For PostgreSQL, use row_number() to identify and remove duplicates
+        bind.execute(sa.text("""
+            DELETE FROM batch 
+            WHERE id NOT IN (
+                SELECT id FROM (
+                    SELECT id, ROW_NUMBER() OVER (PARTITION BY label_code ORDER BY id) as rn
+                    FROM batch
+                ) t WHERE rn = 1
+            )
+        """))
     else:
-        op.drop_constraint('uq_batch_org_label', 'batch', type_='unique')
+        # For SQLite, use a simpler approach
+        bind.execute(sa.text("""
+            DELETE FROM batch 
+            WHERE rowid NOT IN (
+                SELECT MIN(rowid) 
+                FROM batch 
+                GROUP BY label_code
+            )
+        """))
+
+    # Now safe to create the unique constraint
+    if not constraint_exists('batch', 'batch_label_code_key'):
         op.create_unique_constraint('batch_label_code_key', 'batch', ['label_code'])
