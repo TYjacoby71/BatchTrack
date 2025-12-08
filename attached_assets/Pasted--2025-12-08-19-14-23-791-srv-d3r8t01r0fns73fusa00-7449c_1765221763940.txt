@@ -1,0 +1,77 @@
+
+[2025-12-08 19:14:23,791] srv-d3r8t01r0fns73fusa00-7449c5b97b-ms9fr/INFO/locust.main: --run-time limit reached, shutting down
+[2025-12-08 19:14:23,943] srv-d3r8t01r0fns73fusa00-7449c5b97b-ms9fr/INFO/locust.main: writing html report to file: locust-report.html
+[2025-12-08 19:14:23,947] srv-d3r8t01r0fns73fusa00-7449c5b97b-ms9fr/INFO/locust.main: Shutting down (exit code 1)
+Type     Name                                                                          # reqs      # fails |    Avg     Min     Max    Med |   req/s  failures/s
+--------|----------------------------------------------------------------------------|-------|-------------|-------|-------|-------|-------|--------|-----------
+POST     auth.login                                                                        45     0(0.00%) |   2390     742    4991   2100 |    0.15        0.00
+GET      auth.login.page                                                                   45     0(0.00%) |   1388     304    4090   1000 |    0.15        0.00
+GET      auth.login.redirect                                                               45     0(0.00%) |   2727    1479    5293   2300 |    0.15        0.00
+GET      auth.session_check                                                                45     0(0.00%) |   1330     196    4601    900 |    0.15        0.00
+GET      batches.list                                                                     164     0(0.00%) |    631     188    3678    390 |    0.55        0.00
+GET      bootstrap.inventory.api                                                         1470     0(0.00%) |    144      29    3686     46 |    4.90        0.00
+GET      bootstrap.products                                                              1470     0(0.00%) |    145      29    3878     46 |    4.90        0.00
+GET      bootstrap.products.legacy                                                       1470     0(0.00%) |    259      60    5219     96 |    4.90        0.00
+GET      bootstrap.recipe_library                                                        1470 1470(100.00%) |    208      36    6008     67 |    4.90        4.90
+GET      bootstrap.recipes                                                               1471     0(0.00%) |    179      29    5174     46 |    4.90        0.00
+GET      bootstrap.recipes.legacy                                                        1470 1470(100.00%) |    310      65    5201    110 |    4.90        4.90
+GET      dashboard                                                                        326     0(0.00%) |    611     162    4498    360 |    1.09        0.00
+GET      expiration.summary                                                               119     0(0.00%) |    178      37    1702     69 |    0.40        0.00
+GET      global.items                                                                     140     0(0.00%) |    216      32    4597     65 |    0.47        0.00
+POST     inventory.adjust.restock                                                          90     0(0.00%) |    883     212    8802    430 |    0.30        0.00
+POST     inventory.adjust.spoil                                                            88     0(0.00%) |    798     210    2895    450 |    0.29        0.00
+POST     inventory.adjust.trash                                                            98     0(0.00%) |    874     227    4292    470 |    0.33        0.00
+GET      inventory.list                                                                   281     0(0.00%) |    841     239    5924    490 |    0.94        0.00
+GET      inventory.view                                                                   166     0(0.00%) |    709     166    5100    380 |    0.55        0.00
+GET      products.list                                                                    171     0(0.00%) |    315      63    3913    100 |    0.57        0.00
+GET      public.global_items                                                               61     0(0.00%) |    226      33    2902     96 |    0.20        0.00
+GET      public.homepage                                                                   78     0(0.00%) |    231      29    2113     41 |    0.26        0.00
+GET      public.recipe_library                                                             30  30(100.00%) |    147      38    1109     72 |    0.10        0.10
+GET      public.signup                                                                     23     0(0.00%) |    496      42    6233     80 |    0.08        0.00
+GET      public.tools                                                                      61     0(0.00%) |    496      66    3405    130 |    0.20        0.00
+GET      recipes.library.list                                                             149 149(100.00%) |    213      38    3764     71 |    0.50        0.50
+GET      recipes.list                                                                     309 309(100.00%) |    277      69    3203    110 |    1.03        1.03
+--------|----------------------------------------------------------------------------|-------|-------------|-------|-------|-------|-------|--------|-----------
+         Aggregated                                                                     11355 3428(30.19%) |    297      29    8802     93 |   37.84       11.42
+
+Response time percentiles (approximated)
+Type     Name                                                                                  50%    66%    75%    80%    90%    95%    98%    99%  99.9% 99.99%   100% # reqs
+--------|--------------------------------------------------------------------------------|--------|------|------|------|------|------|------|------|------|------|------|------
+POST     auth.login                                                                           2100   3000   3100   3200   3500   3700   5000   5000   5000   5000   5000     45
+GET      auth.login.page                                                                      1000   1600   1800   2100   3100   3500   4100   4100   4100   4100   4100     45
+GET      auth.login.redirect                                                                  2300   3200   3400   3600   4100   4600   5300   5300   5300   5300   5300     45
+GET      auth.session_check                                                                    900   1700   2000   2100   3200   3700   4600   4600   4600   4600   4600     45
+GET      batches.list                                                                          390    470    630    820   1500   2200   2400   2700   3700   3700   3700    164
+GET      bootstrap.inventory.api                                                                46     77    100    130    290    600   1300   1700   3200   3700   3700   1470
+GET      bootstrap.products                                                                     46     70    100    110    280    500   1300   2000   3700   3900   3900   1470
+GET      bootstrap.products.legacy                                                              96    140    210    300    500   1100   1800   2700   5100   5200   5200   1470
+GET      bootstrap.recipe_library                                                               67     99    170    200    390    910   1700   2400   6000   6000   6000   1470
+GET      bootstrap.recipes                                                                      46     74    110    140    310    910   1700   2400   5000   5200   5200   1471
+GET      bootstrap.recipes.legacy                                                              110    170    280    370    700   1300   2200   2800   5000   5200   5200   1470
+GET      dashboard                                                                             360    460    830   1000   1400   1600   2400   2600   4500   4500   4500    326
+GET      expiration.summary                                                                     69    120    200    210    390    920   1400   1400   1700   1700   1700    119
+GET      global.items                                                                           66    110    190    200    400   1100   1800   1900   4600   4600   4600    140
+POST     inventory.adjust.restock                                                              430    720   1100   1500   1800   2500   4100   8800   8800   8800   8800     90
+POST     inventory.adjust.spoil                                                                460    800   1100   1300   2100   2400   2800   2900   2900   2900   2900     88
+POST     inventory.adjust.trash                                                                470    580   1400   1600   2100   2800   3400   4300   4300   4300   4300     98
+GET      inventory.list                                                                        490    600    920   1400   1900   2600   3400   4100   5900   5900   5900    281
+GET      inventory.view                                                                        380    480    900   1100   1600   2400   2800   3500   5100   5100   5100    166
+GET      products.list                                                                         100    180    300    400    710   1500   2000   3700   3900   3900   3900    171
+GET      public.global_items                                                                    96    120    200    210    510    800   1200   2900   2900   2900   2900     61
+GET      public.homepage                                                                        43    100    190    200    900   1300   2000   2100   2100   2100   2100     78
+GET      public.recipe_library                                                                  74    110    120    210    330    510   1100   1100   1100   1100   1100     30
+GET      public.signup                                                                          80    110    170    310   1200   1500   6200   6200   6200   6200   6200     23
+GET      public.tools                                                                          130    350    610    800   1600   1700   2500   3400   3400   3400   3400     61
+GET      recipes.library.list                                                                   71    110    190    280    420   1000   1500   1700   3800   3800   3800    149
+GET      recipes.list                                                                          110    170    300    340    690   1200   1500   1700   3200   3200   3200    309
+--------|--------------------------------------------------------------------------------|--------|------|------|------|------|------|------|------|------|------|------|------
+         Aggregated                                                                             93    170    270    340    700   1400   2300   3100   5100   6200   8800  11355
+
+Error report
+# occurrences      Error                                                                                               
+------------------|---------------------------------------------------------------------------------------------------------------------------------------------
+1470               GET bootstrap.recipes.legacy: HTTPError('503 Server Error: Service Unavailable for url: bootstrap.recipes.legacy')
+1470               GET bootstrap.recipe_library: HTTPError('503 Server Error: Service Unavailable for url: bootstrap.recipe_library')
+309                GET recipes.list: HTTPError('503 Server Error: Service Unavailable for url: recipes.list')          
+149                GET recipes.library.list: HTTPError('503 Server Error: Service Unavailable for url: recipes.library.list')
+30                 GET public.recipe_library: public.recipe_library returned 503         
