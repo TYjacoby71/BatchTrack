@@ -7,6 +7,7 @@ Create Date: 2025-11-21 00:00:00.000000
 
 from alembic import op
 import sqlalchemy as sa
+from sqlalchemy import text
 
 from migrations.postgres_helpers import (
     column_exists,
@@ -272,10 +273,12 @@ def _revert_batch_label_scope_constraint():
     if is_sqlite():
         with op.batch_alter_table('batch', recreate='always') as batch_op:
             _drop_sqlite_unique(batch_op, SCOPED_BATCH_LABEL_CONSTRAINT, ['organization_id', 'label_code'])
+            _dedupe_legacy_label_codes()
             batch_op.create_unique_constraint(LEGACY_BATCH_LABEL_CONSTRAINT, ['label_code'])
     else:
         if constraint_exists('batch', SCOPED_BATCH_LABEL_CONSTRAINT):
             op.drop_constraint(SCOPED_BATCH_LABEL_CONSTRAINT, 'batch', type_='unique')
+        _dedupe_legacy_label_codes()
         if not constraint_exists('batch', LEGACY_BATCH_LABEL_CONSTRAINT):
             op.create_unique_constraint(LEGACY_BATCH_LABEL_CONSTRAINT, 'batch', ['label_code'])
 
@@ -310,6 +313,38 @@ def _drop_sqlite_unique(batch_op, constraint_name, columns):
     return removed
 
 
+def _dedupe_legacy_label_codes():
+    """Normalize duplicate label_code values before recreating the legacy unique constraint."""
+    if not table_exists('batch'):
+        return
+    bind = op.get_bind()
+    duplicates = list(
+        bind.execute(
+            text(
+                """
+                WITH ranked AS (
+                    SELECT
+                        id,
+                        label_code,
+                        row_number() OVER (PARTITION BY label_code ORDER BY id) AS rn
+                    FROM batch
+                    WHERE label_code IS NOT NULL
+                )
+                SELECT id, label_code
+                FROM ranked
+                WHERE rn > 1
+                """
+            )
+        )
+    )
+    for row in duplicates:
+        new_code = f"{row.label_code}-{row.id}"
+        bind.execute(
+            text("UPDATE batch SET label_code = :code WHERE id = :id"),
+            {"code": new_code[:255], "id": row.id},
+        )
+
+
 def _ensure_unit_indexes():
     if not index_exists('unit', 'ix_unit_active_scope_sort'):
         op.create_index('ix_unit_active_scope_sort', 'unit', ['is_active', 'is_custom', 'unit_type', 'name'])
@@ -331,7 +366,6 @@ def _ensure_hot_path_indexes():
     safe_create_index('ix_user_org_created_at', 'user', ['organization_id', 'created_at'])
     safe_create_index('ix_user_active_type', 'user', ['is_active', 'user_type'])
     safe_create_index('ix_user_organization_id', 'user', ['organization_id'])
-    safe_create_index('ix_user_active_type_only', 'user', ['is_active', 'user_type'])
     safe_create_index('ix_batch_org_status_started_at', 'batch', ['organization_id', 'status', 'started_at'])
     safe_create_index('ix_global_item_archive_type_name', 'global_item', ['is_archived', 'item_type', 'name'])
 
@@ -340,7 +374,6 @@ def _drop_hot_path_indexes():
     safe_drop_index('ix_global_item_archive_type_name', 'global_item')
     safe_drop_index('ix_batch_org_status_started_at', 'batch')
     safe_drop_index('ix_user_active_type', 'user')
-    safe_drop_index('ix_user_active_type_only', 'user')
     safe_drop_index('ix_user_org_created_at', 'user')
     safe_drop_index('ix_user_organization_id', 'user')
     safe_drop_index('ix_product_org_active', 'product')
