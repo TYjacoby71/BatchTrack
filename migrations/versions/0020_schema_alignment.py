@@ -98,14 +98,6 @@ def _remove_sharing_scope_columns() -> None:
         safe_drop_column('recipe', column, verbose=False)
 
 
-def _replace_is_resellable() -> None:
-    if not column_exists('recipe', 'is_sellable'):
-        safe_add_column('recipe', sa.Column('is_sellable', sa.Boolean(), nullable=False, server_default=sa.text('true')))
-    if column_exists('recipe', 'is_resellable'):
-        op.execute("UPDATE recipe SET is_sellable = COALESCE(is_resellable, true)")
-        safe_drop_column('recipe', 'is_resellable', verbose=False)
-
-
 def _drop_legacy_origin_columns() -> None:
     # Keep the org origin columns and indexes - they're still used in the codebase
     # Only drop the unused source recipe id column
@@ -197,7 +189,6 @@ def upgrade():
     _rename_column_if_needed('recipe', 'org_origin_recipe_id', 'origin_recipe_id', sa.Integer())
     _rename_column_if_needed('recipe', 'org_origin_source_org_id', 'origin_organization_id', sa.Integer())
 
-    _replace_is_resellable()
     _drop_legacy_origin_columns()
     _remove_sharing_scope_columns()
 
@@ -243,11 +234,6 @@ def downgrade():
         'is_public',
     ):
         safe_drop_column('recipe', column, verbose=False)
-
-    if column_exists('recipe', 'is_sellable') and not column_exists('recipe', 'is_resellable'):
-        safe_add_column('recipe', sa.Column('is_resellable', sa.Boolean(), nullable=False, server_default=sa.text('true')))
-        op.execute("UPDATE recipe SET is_resellable = COALESCE(is_sellable, true)")
-    safe_drop_column('recipe', 'is_sellable', verbose=False)
 
     for column in (
         'recipe_policy_notes',

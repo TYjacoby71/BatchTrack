@@ -60,7 +60,7 @@ def test_create_recipe_sets_authored_origin(app):
     assert recipe.org_origin_recipe_id == recipe.id
     assert recipe.org_origin_type == "authored"
     assert recipe.org_origin_purchased is False
-    assert recipe.is_resellable is True
+    assert recipe.is_sellable is True
 
 
 @pytest.mark.usefixtures("app_context")
@@ -110,7 +110,7 @@ def test_clone_from_other_org_marks_purchased_origin(app):
     assert purchased_recipe.org_origin_source_org_id == seller_org.id
     assert purchased_recipe.org_origin_source_recipe_id == seller_recipe.root_recipe_id or seller_recipe.id
     assert purchased_recipe.root_recipe_id == seller_recipe.root_recipe_id
-    assert purchased_recipe.is_resellable is False
+    assert purchased_recipe.is_sellable is False
 
 
 @pytest.mark.usefixtures("app_context")
@@ -153,4 +153,4 @@ def test_variation_inherits_org_origin(app):
     assert variation.org_origin_recipe_id == parent_recipe.org_origin_recipe_id
     assert variation.org_origin_type == parent_recipe.org_origin_type
     assert variation.org_origin_purchased == parent_recipe.org_origin_purchased
-    assert variation.is_resellable is True
+    assert variation.is_sellable is True

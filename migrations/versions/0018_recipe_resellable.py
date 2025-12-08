@@ -1,4 +1,4 @@
-"""add is_resellable flag to recipes
+"""add is_sellable flag to recipes
 
 Revision ID: 0018_recipe_resellable
 Revises: 0017_hot_query_indexes
@@ -20,16 +20,16 @@ def upgrade():
     op.add_column(
         "recipe",
         sa.Column(
-            "is_resellable",
+            "is_sellable",
             sa.Boolean(),
             nullable=False,
             server_default=sa.text("true"),
         ),
     )
     op.execute(
-        "UPDATE recipe SET is_resellable = false WHERE org_origin_purchased = true"
+        "UPDATE recipe SET is_sellable = false WHERE org_origin_purchased = true"
     )
 
 
 def downgrade():
-    op.drop_column("recipe", "is_resellable")
+    op.drop_column("recipe", "is_sellable")

@@ -61,7 +61,7 @@ def _build_org_origin_context(
     return context
 
 
-def _resolve_is_resellable(
+def _resolve_is_sellable(
     *,
     explicit_flag: bool | None,
     recipe_org_id: Optional[int],
@@ -69,7 +69,7 @@ def _resolve_is_resellable(
     clone_source: Optional[Recipe],
     origin_context: Dict[str, Any],
 ) -> bool:
-    """Determine whether a newly created recipe may be resold."""
+    """Determine whether a newly created recipe may be offered for sale."""
     if explicit_flag is not None:
         return bool(explicit_flag)
 
@@ -84,10 +84,10 @@ def _resolve_is_resellable(
     ):
         return False
 
-    if clone_source and getattr(clone_source, 'is_resellable', True) is False:
+    if clone_source and getattr(clone_source, 'is_sellable', True) is False:
         return False
 
-    if parent_recipe and getattr(parent_recipe, 'is_resellable', True) is False:
+    if parent_recipe and getattr(parent_recipe, 'is_sellable', True) is False:
         return False
 
     return True
@@ -95,5 +95,5 @@ def _resolve_is_resellable(
 
 __all__ = [
     "_build_org_origin_context",
-    "_resolve_is_resellable",
+    "_resolve_is_sellable",
 ]

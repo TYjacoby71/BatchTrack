@@ -51,10 +51,19 @@ def _apply_marketplace_settings(
     cover_image_url: Any = _UNSET,
     remove_cover_image: bool = False,
 ) -> None:
-    # sharing_scope was removed in migration 0020, use is_public directly
-    if is_public is not None:
-        recipe.is_public = bool(is_public)
-    scope_changed = False  # No longer tracking scope changes
+    target_scope = sharing_scope
+    if target_scope is None and is_public is not None:
+        target_scope = 'public' if bool(is_public) else 'private'
+    if target_scope is None:
+        target_scope = getattr(recipe, 'sharing_scope', None)
+    scope_value = _normalize_sharing_scope(target_scope)
+
+    current_scope = getattr(recipe, 'sharing_scope', None)
+    scope_changed = (current_scope or 'private') != scope_value
+    recipe.sharing_scope = scope_value
+
+    final_is_public = bool(is_public) if is_public is not None else scope_value == 'public'
+    recipe.is_public = final_is_public
 
     if is_for_sale is not None:
         recipe.is_for_sale = bool(is_for_sale) and recipe.is_public
@@ -64,7 +73,7 @@ def _apply_marketplace_settings(
     if sale_price is not None or not recipe.is_for_sale:
         recipe.sale_price = _normalize_sale_price(sale_price) if recipe.is_for_sale else None
 
-    if getattr(recipe, "is_resellable", True) is False:
+    if getattr(recipe, "is_sellable", True) is False:
         recipe.is_for_sale = False
         recipe.sale_price = None
 
@@ -73,7 +82,9 @@ def _apply_marketplace_settings(
     elif scope_changed or not recipe.marketplace_status:
         recipe.marketplace_status = _default_marketplace_status(recipe.is_public)
 
-    # marketplace_notes was removed in migration 0020
+    if marketplace_notes is not None:
+        recipe.marketplace_notes = marketplace_notes
+
     if public_description is not None:
         recipe.public_description = public_description
 

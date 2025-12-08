@@ -24,6 +24,7 @@ class Unit(TimestampMixin, db.Model):
         db.Index('ix_unit_scope', 'is_active', 'is_custom', 'organization_id'),
         db.Index('ix_unit_sort', 'unit_type', 'name'),
         db.Index('ix_unit_active_scope_sort', 'is_active', 'is_custom', 'unit_type', 'name'),
+        db.Index('ix_unit_custom_org_scope', 'organization_id', 'is_active', 'is_custom', 'unit_type', 'name'),
     )
 
     @classmethod

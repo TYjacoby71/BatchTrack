@@ -24,7 +24,7 @@ from ._helpers import (
 from ._imports import _ensure_inventory_item_for_import
 from ._lineage import _log_lineage_event
 from ._marketplace import _apply_marketplace_settings
-from ._origin import _build_org_origin_context, _resolve_is_resellable
+from ._origin import _build_org_origin_context, _resolve_is_sellable
 from ._portioning import _apply_portioning_settings
 from ._validation import validate_recipe_data
 
@@ -54,7 +54,7 @@ def create_recipe(name: str, description: str = "", instructions: str = "",
                  cover_image_url: str | None = None,
                  skin_opt_in: bool | None = None,
                  remove_cover_image: bool = False,
-                 is_resellable: bool | None = None) -> Tuple[bool, Any]:
+                 is_sellable: bool | None = None) -> Tuple[bool, Any]:
     """
     Create a new recipe with ingredients and UI fields.
 
@@ -68,7 +68,7 @@ def create_recipe(name: str, description: str = "", instructions: str = "",
           parent_recipe_id: Parent recipe id for variations (legacy parent_id supported)
         allowed_containers: List of container IDs
         label_prefix: Label prefix for batches
-        is_resellable: Optional override for marketplace resale eligibility
+        is_sellable: Optional override for marketplace resale eligibility
 
     Returns:
         Tuple of (success: bool, recipe_or_error: Recipe|str)
@@ -146,8 +146,8 @@ def create_recipe(name: str, description: str = "", instructions: str = "",
             category_id=category_id,
             status=normalized_status
         )
-        recipe.is_resellable = _resolve_is_resellable(
-            explicit_flag=is_resellable,
+        recipe.is_sellable = _resolve_is_sellable(
+            explicit_flag=is_sellable,
             recipe_org_id=recipe.organization_id,
             parent_recipe=parent_recipe,
             clone_source=clone_source,
@@ -706,9 +706,9 @@ def duplicate_recipe(
         template.skin_opt_in = original.skin_opt_in
         template.cover_image_path = original.cover_image_path
         template.cover_image_url = original.cover_image_url
-        template.is_resellable = bool(getattr(original, "is_resellable", True))
+        template.is_sellable = bool(getattr(original, "is_sellable", True))
         if allow_cross_org or getattr(original, "org_origin_purchased", False):
-            template.is_resellable = False
+            template.is_sellable = False
         template.sharing_scope = 'private'
         template.is_public = False
         template.is_for_sale = False

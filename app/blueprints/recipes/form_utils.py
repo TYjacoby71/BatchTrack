@@ -629,9 +629,9 @@ def create_variation_template(parent: Recipe) -> Recipe:
 
     template.allowed_containers = list(parent.allowed_containers or [])
     if getattr(parent, 'org_origin_purchased', False):
-        template.is_resellable = True
+        template.is_sellable = True
     else:
-        template.is_resellable = getattr(parent, 'is_resellable', True)
+        template.is_sellable = getattr(parent, 'is_sellable', True)
 
     if parent.portioning_data:
         template.portioning_data = (
