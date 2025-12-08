@@ -328,6 +328,7 @@ def upgrade():
     )
     with op.batch_alter_table('user', schema=None) as batch_op:
         batch_op.create_index('ix_user_org', ['organization_id'], unique=False)
+        batch_op.create_index('ix_user_organization_id', ['organization_id'], unique=False)
 
     # moved: batch_timer created after batch table
     op.create_table('conversion_log',

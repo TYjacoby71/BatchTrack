@@ -55,7 +55,7 @@ def upgrade():
 
     # Update existing NULL values to False before setting NOT NULL constraint
     op.execute("UPDATE global_item SET is_active_ingredient = FALSE WHERE is_active_ingredient IS NULL")
-    
+
     # Now set the column to NOT NULL
     with op.batch_alter_table('global_item') as batch_op:
         batch_op.alter_column('is_active_ingredient', server_default=None, nullable=False)
