@@ -437,5 +437,3 @@ def _drop_recipe_marketplace_columns():
     ]
     for column_name in recipe_columns:
         safe_drop_column('recipe', column_name, verbose=False)
-
-
