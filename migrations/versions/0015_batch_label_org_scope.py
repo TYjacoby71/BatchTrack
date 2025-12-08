@@ -62,33 +62,153 @@ def downgrade():
     from migrations.postgres_helpers import constraint_exists, is_postgresql
 
     # Remove org scoping from batch labels - revert to global unique constraint
-    if constraint_exists('batch', 'uq_batch_label_code_org'):
-        op.drop_constraint('uq_batch_label_code_org', 'batch', type_='unique')
+    if constraint_exists('batch', 'uq_batch_org_label'):
+        op.drop_constraint('uq_batch_org_label', 'batch', type_='unique')
 
     # Clean up duplicate label_code values before creating global unique constraint
     # This handles cases where the same label_code exists across different orgs
     bind = op.get_bind()
     if is_postgresql():
-        # For PostgreSQL, use row_number() to identify and remove duplicates
-        bind.execute(sa.text("""
-            DELETE FROM batch 
+        # First, identify batches to be deleted (duplicates)
+        duplicates_to_delete = bind.execute(sa.text("""
+            SELECT id FROM batch 
             WHERE id NOT IN (
                 SELECT id FROM (
                     SELECT id, ROW_NUMBER() OVER (PARTITION BY label_code ORDER BY id) as rn
                     FROM batch
                 ) t WHERE rn = 1
             )
-        """))
+        """)).fetchall()
+
+        if duplicates_to_delete:
+            batch_ids = [str(row[0]) for row in duplicates_to_delete]
+            batch_ids_str = ','.join(batch_ids)
+
+            # Delete ALL dependent records first to avoid foreign key violations
+            # Order matters - delete from most dependent to least dependent
+
+            # 1. Delete from tables that reference batch_consumable, batch_ingredient, batch_container
+            bind.execute(sa.text(f"""
+                DELETE FROM batch_inventory_log WHERE batch_id IN ({batch_ids_str})
+            """))
+
+            # 2. Delete extra batch records (they reference the main batch tables)
+            bind.execute(sa.text(f"""
+                DELETE FROM extra_batch_consumable WHERE batch_id IN ({batch_ids_str})
+            """))
+            bind.execute(sa.text(f"""
+                DELETE FROM extra_batch_ingredient WHERE batch_id IN ({batch_ids_str})
+            """))
+            bind.execute(sa.text(f"""
+                DELETE FROM extra_batch_container WHERE batch_id IN ({batch_ids_str})
+            """))
+
+            # 3. Delete batch timers
+            bind.execute(sa.text(f"""
+                DELETE FROM batch_timer WHERE batch_id IN ({batch_ids_str})
+            """))
+
+            # 4. Delete main batch component records
+            bind.execute(sa.text(f"""
+                DELETE FROM batch_consumable WHERE batch_id IN ({batch_ids_str})
+            """))
+            bind.execute(sa.text(f"""
+                DELETE FROM batch_ingredient WHERE batch_id IN ({batch_ids_str})
+            """))
+            bind.execute(sa.text(f"""
+                DELETE FROM batch_container WHERE batch_id IN ({batch_ids_str})
+            """))
+
+            # 5. Update inventory_history references to NULL (optional FK)
+            bind.execute(sa.text(f"""
+                UPDATE inventory_history SET batch_id = NULL WHERE batch_id IN ({batch_ids_str})
+            """))
+            bind.execute(sa.text(f"""
+                UPDATE inventory_history SET used_for_batch_id = NULL WHERE used_for_batch_id IN ({batch_ids_str})
+            """))
+
+            # 6. Update inventory_item references to NULL (optional FK)
+            bind.execute(sa.text(f"""
+                UPDATE inventory_item SET batch_id = NULL WHERE batch_id IN ({batch_ids_str})
+            """))
+
+            # 7. Update product_sku references to NULL (optional FK)  
+            bind.execute(sa.text(f"""
+                UPDATE product_sku SET batch_id = NULL WHERE batch_id IN ({batch_ids_str})
+            """))
+
+            # 8. Now safe to delete the duplicate batch records
+            bind.execute(sa.text(f"""
+                DELETE FROM batch WHERE id IN ({batch_ids_str})
+            """))
     else:
-        # For SQLite, use a simpler approach
-        bind.execute(sa.text("""
-            DELETE FROM batch 
+        # For SQLite, use a simpler approach with proper cleanup
+        duplicates = bind.execute(sa.text("""
+            SELECT rowid FROM batch 
             WHERE rowid NOT IN (
                 SELECT MIN(rowid) 
                 FROM batch 
                 GROUP BY label_code
             )
-        """))
+        """)).fetchall()
+
+        if duplicates:
+            duplicate_ids = [str(row[0]) for row in duplicates]
+            duplicate_ids_str = ','.join(duplicate_ids)
+
+            # Clean up ALL dependent records first (SQLite version)
+            batch_ids_subquery = f"SELECT id FROM batch WHERE rowid IN ({duplicate_ids_str})"
+
+            # 1. Delete batch logs
+            bind.execute(sa.text(f"""
+                DELETE FROM batch_inventory_log WHERE batch_id IN ({batch_ids_subquery})
+            """))
+
+            # 2. Delete extra batch records
+            bind.execute(sa.text(f"""
+                DELETE FROM extra_batch_consumable WHERE batch_id IN ({batch_ids_subquery})
+            """))
+            bind.execute(sa.text(f"""
+                DELETE FROM extra_batch_ingredient WHERE batch_id IN ({batch_ids_subquery})
+            """))
+            bind.execute(sa.text(f"""
+                DELETE FROM extra_batch_container WHERE batch_id IN ({batch_ids_subquery})
+            """))
+
+            # 3. Delete batch timers
+            bind.execute(sa.text(f"""
+                DELETE FROM batch_timer WHERE batch_id IN ({batch_ids_subquery})
+            """))
+
+            # 4. Delete main batch component records
+            bind.execute(sa.text(f"""
+                DELETE FROM batch_consumable WHERE batch_id IN ({batch_ids_subquery})
+            """))
+            bind.execute(sa.text(f"""
+                DELETE FROM batch_ingredient WHERE batch_id IN ({batch_ids_subquery})
+            """))
+            bind.execute(sa.text(f"""
+                DELETE FROM batch_container WHERE batch_id IN ({batch_ids_subquery})
+            """))
+
+            # 5. Update references to NULL
+            bind.execute(sa.text(f"""
+                UPDATE inventory_history SET batch_id = NULL WHERE batch_id IN ({batch_ids_subquery})
+            """))
+            bind.execute(sa.text(f"""
+                UPDATE inventory_history SET used_for_batch_id = NULL WHERE used_for_batch_id IN ({batch_ids_subquery})
+            """))
+            bind.execute(sa.text(f"""
+                UPDATE inventory_item SET batch_id = NULL WHERE batch_id IN ({batch_ids_subquery})
+            """))
+            bind.execute(sa.text(f"""
+                UPDATE product_sku SET batch_id = NULL WHERE batch_id IN ({batch_ids_subquery})
+            """))
+
+            # 6. Now delete the duplicate batches
+            bind.execute(sa.text(f"""
+                DELETE FROM batch WHERE rowid IN ({duplicate_ids_str})
+            """))
 
     # Now safe to create the unique constraint
     if not constraint_exists('batch', 'batch_label_code_key'):
