@@ -97,7 +97,7 @@ def seed_ingredients_from_files(selected_files):
                 aliases=item_data.get('aliases', []),
                 density=item_data.get('density', category_data.get('default_density')),
                 default_unit=item_data.get('default_unit', 'gram'),
-                recommended_usage_rate=item_data.get('recommended_usage_rate'),
+                
                 recommended_fragrance_load_pct=item_data.get('recommended_fragrance_load_pct'),
                 recommended_shelf_life_days=item_data.get('recommended_shelf_life_days'),
                 inci_name=item_data.get('inci_name'),
