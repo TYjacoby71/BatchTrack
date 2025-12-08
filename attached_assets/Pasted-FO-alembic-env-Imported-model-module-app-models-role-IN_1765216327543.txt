@@ -1,0 +1,143 @@
+FO  [alembic.env] Imported model module: app.models.role
+INFO  [alembic.env] Imported model module: app.models.statistics
+INFO  [alembic.env] Imported model module: app.models.stripe_event
+INFO  [alembic.env] Imported model module: app.models.subscription_tier
+INFO  [alembic.env] Imported model module: app.models.unified_inventory_history
+INFO  [alembic.env] Imported model module: app.models.unit
+INFO  [alembic.env] Imported model module: app.models.user_preferences
+INFO  [alembic.env] Imported model module: app.models.user_role_assignment
+INFO  [alembic.runtime.migration] Context impl PostgresqlImpl.
+INFO  [alembic.runtime.migration] Will assume transactional DDL.
+INFO  [alembic.runtime.migration] Running downgrade 0020_schema_alignment -> 0019, 0020 schema alignment - BatchTrack
+✅ Dropped foreign key fk_recipe_origin_org_id
+✅ Dropped foreign key fk_recipe_origin_recipe_id
+✅ Dropped index ix_recipe_is_public
+✅ Dropped index ix_recipe_is_for_sale
+✅ Dropped index ix_recipe_is_sellable
+✅ Dropped index ix_recipe_marketplace_status
+✅ Dropped index ix_recipe_origin_recipe_id
+✅ Dropped index ix_recipe_origin_organization_id
+✅ Dropped index ix_recipe_download_count
+✅ Dropped index ix_recipe_purchase_count
+   ✅ is_resellable column added successfully
+✅ Dropped index ix_recipe_lineage_event_type
+✅ Dropped index ix_recipe_lineage_source_recipe_id
+✅ Dropped index ix_recipe_lineage_recipe_id
+   ✅ marketplace_blocked column added successfully
+   ✅ marketplace_block_reason column added successfully
+   ✅ org_origin_source_recipe_id column added successfully
+   ✅ Created foreign key fk_recipe_origin_source_recipe_id
+INFO  [alembic.runtime.migration] Running downgrade 0019 -> 0018_recipe_resellable, Remove product_group_id from recipes
+INFO  [alembic.runtime.migration] Running downgrade 0018_recipe_resellable -> 0017_hot_query_indexes, add is_resellable flag to recipes
+INFO  [alembic.runtime.migration] Running downgrade 0017_hot_query_indexes -> 0016_optimize_unit_queries, add hot-path indexes for product, user, batch, unit, global item
+INFO  [alembic.runtime.migration] Running downgrade 0016_optimize_unit_queries -> 0015_batch_label_org_scope, 0016 optimize unit queries
+INFO  [alembic.runtime.migration] Running downgrade 0015_batch_label_org_scope -> 0014_batchbot_stack, 0015 batch label org scope
+INFO  [alembic.runtime.migration] Running downgrade 0014_batchbot_stack -> 0013_recipe_family, 0014 batchbot stack
+Traceback (most recent call last):
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/engine/base.py", line 1964, in _exec_single_context
+    self.dialect.do_execute(
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/engine/default.py", line 945, in do_execute
+    cursor.execute(statement, parameters)
+psycopg2.errors.UndefinedColumn: column "batchbot_credit_amount" of relation "addon" does not exist
+
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/home/runner/workspace/.pythonlibs/bin/flask", line 8, in <module>
+    sys.exit(main())
+             ^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/cli.py", line 1129, in main
+    cli.main()
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/click/core.py", line 1082, in main
+    rv = self.invoke(ctx)
+         ^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/click/core.py", line 1697, in invoke
+    return _process_result(sub_ctx.command.invoke(sub_ctx))
+                           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/click/core.py", line 1697, in invoke
+    return _process_result(sub_ctx.command.invoke(sub_ctx))
+                           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/click/core.py", line 1443, in invoke
+    return ctx.invoke(self.callback, **ctx.params)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/click/core.py", line 788, in invoke
+    return __callback(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/click/decorators.py", line 33, in new_func
+    return f(get_current_context(), *args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/cli.py", line 400, in decorator
+    return ctx.invoke(f, *args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/click/core.py", line 788, in invoke
+    return __callback(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask_migrate/cli.py", line 168, in downgrade
+    _downgrade(directory, revision, sql, tag, x_arg)
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask_migrate/__init__.py", line 111, in wrapped
+    f(*args, **kwargs)
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask_migrate/__init__.py", line 210, in downgrade
+    command.downgrade(config, revision, sql=sql, tag=tag)
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/alembic/command.py", line 455, in downgrade
+    script.run_env()
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/alembic/script/base.py", line 586, in run_env
+    util.load_python_file(self.dir, "env.py")
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/alembic/util/pyfiles.py", line 95, in load_python_file
+    module = load_module_py(module_id, path)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/alembic/util/pyfiles.py", line 113, in load_module_py
+    spec.loader.exec_module(module)  # type: ignore
+    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "<frozen importlib._bootstrap_external>", line 940, in exec_module
+  File "<frozen importlib._bootstrap>", line 241, in _call_with_frames_removed
+  File "/home/runner/workspace/migrations/env.py", line 194, in <module>
+    run_migrations_online()
+  File "/home/runner/workspace/migrations/env.py", line 188, in run_migrations_online
+    context.run_migrations()
+  File "<string>", line 8, in run_migrations
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/alembic/runtime/environment.py", line 946, in run_migrations
+    self.get_context().run_migrations(**kw)
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/alembic/runtime/migration.py", line 623, in run_migrations
+    step.migration_fn(**kw)
+  File "/home/runner/workspace/migrations/versions/0014_batchbot_stack.py", line 62, in downgrade
+    op.drop_column('addon', 'batchbot_credit_amount')
+  File "<string>", line 8, in drop_column
+  File "<string>", line 3, in drop_column
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/alembic/operations/ops.py", line 2302, in drop_column
+    return operations.invoke(op)
+           ^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/alembic/operations/base.py", line 441, in invoke
+    return fn(self, operation)
+           ^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/alembic/operations/toimpl.py", line 94, in drop_column
+    operations.impl.drop_column(
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/alembic/ddl/impl.py", line 382, in drop_column
+    self._exec(base.DropColumn(table_name, column, schema=schema))
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/alembic/ddl/impl.py", line 246, in _exec
+    return conn.execute(construct, params)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/engine/base.py", line 1416, in execute
+    return meth(
+           ^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/sql/ddl.py", line 187, in _execute_on_connection
+    return connection._execute_ddl(
+           ^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/engine/base.py", line 1527, in _execute_ddl
+    ret = self._execute_context(
+          ^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/engine/base.py", line 1843, in _execute_context
+    return self._exec_single_context(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/engine/base.py", line 1983, in _exec_single_context
+    self._handle_dbapi_exception(
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/engine/base.py", line 2352, in _handle_dbapi_exception
+    raise sqlalchemy_exception.with_traceback(exc_info[2]) from e
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/engine/base.py", line 1964, in _exec_single_context
+    self.dialect.do_execute(
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/engine/default.py", line 945, in do_execute
+    cursor.execute(statement, parameters)
+sqlalchemy.exc.ProgrammingError: (psycopg2.errors.UndefinedColumn) column "batchbot_credit_amount" of relation "addon" does not exist
+
+[SQL: ALTER TABLE addon DROP COLUMN batchbot_credit_amount]
+(Background on this error at: https://sqlalche.me/e/20/f405)
