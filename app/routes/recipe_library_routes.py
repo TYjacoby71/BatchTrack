@@ -8,7 +8,6 @@ from sqlalchemy.orm import joinedload
 from app.extensions import db, limiter, cache
 from app.models import Recipe, ProductCategory, Organization
 from app.models.statistics import RecipeStats, BatchStats
-from app.models.recipe_marketplace import RecipeProductGroup
 from app.services.statistics import AnalyticsDataService
 from app.utils.seo import slugify_value
 from app.utils.settings import is_feature_enabled
@@ -22,7 +21,6 @@ recipe_library_bp = Blueprint("recipe_library_bp", __name__)
 @limiter.limit("60000/hour;5000/minute")
 def recipe_library():
     search_query = (request.args.get("search") or "").strip()
-    group_filter = _safe_int(request.args.get("group"))
     category_filter = _safe_int(request.args.get("category"))
     sale_filter = (request.args.get("sale") or "any").lower()
     org_filter = _safe_int(request.args.get("organization"))
@@ -31,7 +29,6 @@ def recipe_library():
 
     cache_payload = {
         "search": search_query or "",
-        "group": group_filter or 0,
         "category": category_filter or 0,
         "sale": sale_filter,
         "org": org_filter or 0,
@@ -63,8 +60,6 @@ def recipe_library():
         )
     )
 
-    if group_filter:
-        query = query.filter(Recipe.product_group_id == group_filter)
     if category_filter:
         query = query.filter(Recipe.category_id == category_filter)
     if sale_filter == "sale":
@@ -114,11 +109,6 @@ def recipe_library():
         for recipe in recipes
     ]
 
-    product_groups = (
-        RecipeProductGroup.query.filter_by(is_active=True)
-        .order_by(RecipeProductGroup.display_order.asc(), RecipeProductGroup.name.asc())
-        .all()
-    )
     categories = ProductCategory.query.order_by(ProductCategory.name.asc()).all()
     organizations = (
         db.session.query(Organization.id, Organization.name)
@@ -142,8 +132,9 @@ def recipe_library():
     stats.setdefault('total_for_sale', 0)
     stats.setdefault('average_sale_price', 0.0)
     stats.setdefault('sale_percentage', 0)
-    stats.setdefault('top_group_name', None)
-    stats.setdefault('top_group_count', 0)
+    stats.setdefault('blocked_listings', 0)
+    stats.setdefault('total_downloads', 0)
+    stats.setdefault('total_purchases', 0)
     stats.setdefault('batchtrack_native_count', 0)
 
     purchase_enabled = is_feature_enabled("FEATURE_RECIPE_PURCHASE_OPTIONS")
@@ -152,14 +143,12 @@ def recipe_library():
     rendered = render_template(
         "library/recipe_library.html",
         recipes=recipe_cards,
-        product_groups=product_groups,
         categories=categories,
         stats=stats,
         purchase_enabled=purchase_enabled,
         organizations=org_options,
         org_marketplace_enabled=org_marketplace_enabled,
         search_query=search_query,
-        group_filter=group_filter,
         category_filter=category_filter,
         sale_filter=sale_filter,
         org_filter=org_filter,

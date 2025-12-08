@@ -31,6 +31,7 @@ class Recipe(ScopedModelMixin, db.Model):
     predicted_yield_unit = db.Column(db.String(50), default="oz")
     allowed_containers = db.Column(db.PickleType, default=list)
     status = db.Column(db.String(16), default='published', nullable=False, server_default='published')
+    sharing_scope = db.Column(db.String(16), nullable=False, default='private', server_default='private')
     category_id = db.Column(db.Integer, db.ForeignKey('product_category.id'), nullable=False)
     product_category = db.relationship('ProductCategory')
     created_by = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True)
@@ -77,9 +78,11 @@ class Recipe(ScopedModelMixin, db.Model):
     sale_price = db.Column(sa.Numeric(12, 4), nullable=True)
     is_sellable = db.Column(db.Boolean, nullable=False, default=True, server_default=sa.text("true"))
     marketplace_status = db.Column(db.String(32), nullable=False, default='draft', server_default='draft')
+    marketplace_notes = db.Column(db.Text, nullable=True)
     marketplace_violation_count = db.Column(db.Integer, nullable=False, default=0, server_default='0')
     public_description = db.Column(db.Text, nullable=True)
     product_store_url = db.Column(db.String(512), nullable=True)
+    shopify_product_url = db.Column(db.String(512), nullable=True)
     cover_image_path = db.Column(db.String(255), nullable=True)
     cover_image_url = db.Column(db.String(512), nullable=True)
     skin_opt_in = db.Column(db.Boolean, nullable=False, default=True, server_default=sa.text("true"))
@@ -94,7 +97,7 @@ class Recipe(ScopedModelMixin, db.Model):
     org_origin_source_org_id = db.Column(db.Integer, db.ForeignKey('organization.id'), nullable=True)
     org_origin_source_recipe_id = db.Column(db.Integer, db.ForeignKey('recipe.id'), nullable=True)
     org_origin_purchased = db.Column(db.Boolean, nullable=False, default=False, server_default=sa.text("false"))
-    is_resellable = db.Column(db.Boolean, nullable=False, default=True, server_default=sa.text("true"))
+    is_sellable = db.Column(db.Boolean, nullable=False, default=True, server_default=sa.text("true"))
 
     organization = db.relationship('Organization', foreign_keys='Recipe.organization_id')
     origin_recipe = db.relationship(
@@ -141,6 +144,7 @@ class Recipe(ScopedModelMixin, db.Model):
     __table_args__ = tuple([
         db.Index('ix_recipe_org', 'organization_id'),
         db.Index('ix_recipe_category_id', 'category_id'),
+        db.Index('ix_recipe_sharing_scope', 'sharing_scope'),
         db.Index('ix_recipe_parent_recipe_id', 'parent_recipe_id'),
         db.Index('ix_recipe_cloned_from_id', 'cloned_from_id'),
         db.Index('ix_recipe_root_recipe_id', 'root_recipe_id'),
@@ -159,8 +163,9 @@ class Recipe(ScopedModelMixin, db.Model):
         db.Index('ix_recipe_cosm_preservative_pct', 'cosm_preservative_pct'),
         db.Index('ix_recipe_is_public', 'is_public'),
         db.Index('ix_recipe_is_for_sale', 'is_for_sale'),
-        db.Index('ix_recipe_is_sellable', 'is_sellable'),
         db.Index('ix_recipe_marketplace_status', 'marketplace_status'),
+        db.Index('ix_recipe_is_sellable', 'is_sellable'),
+        db.Index('ix_recipe_product_store_url', 'product_store_url'),
         db.Index('ix_recipe_origin_recipe_id', 'origin_recipe_id'),
         db.Index('ix_recipe_origin_organization_id', 'origin_organization_id'),
         db.Index('ix_recipe_download_count', 'download_count'),
@@ -280,3 +285,9 @@ class RecipeLineage(ScopedModelMixin, db.Model):
 
     recipe = db.relationship('Recipe', foreign_keys=[recipe_id], backref='lineage_events')
     source_recipe = db.relationship('Recipe', foreign_keys=[source_recipe_id], backref='lineage_source_events', viewonly=True)
+
+    __table_args__ = (
+        db.Index('ix_recipe_lineage_recipe_id', 'recipe_id'),
+        db.Index('ix_recipe_lineage_source_recipe_id', 'source_recipe_id'),
+        db.Index('ix_recipe_lineage_event_type', 'event_type'),
+    )

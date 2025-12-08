@@ -321,9 +321,9 @@ class AuthenticatedMixin:
             except (ValueError, json.JSONDecodeError):
                 logger.warning("bootstrap.recipes API payload was invalid JSON")
 
-        # Fallback to legacy HTML scraping so we still populate IDs if API is unavailable
-        resp = self.client.get("/recipes", name="bootstrap.recipes.legacy", allow_redirects=True)
-        return _extract_ids(r"/recipes/(\d+)/view", resp.text) if resp.status_code == 200 else []
+        # Avoid hammering the legacy HTML routes during load; if the API fails, return an empty list.
+        logger.warning("bootstrap.recipes API unavailable (%s) for %s; skipping legacy fallback", response.status_code, self._active_username)
+        return []
 
     def _fetch_recipe_library_ids(self) -> List[Tuple[int, str]]:
         resp = self.client.get("/recipes/library", name="bootstrap.recipe_library", allow_redirects=True)
@@ -386,12 +386,9 @@ class AuthenticatedMixin:
             except (ValueError, json.JSONDecodeError):
                 logger.warning("bootstrap.products API payload was invalid JSON")
 
-        resp = self.client.get("/products", name="bootstrap.products.legacy", allow_redirects=True)
-        if resp.status_code != 200:
-            return [], []
-        product_ids = _extract_ids(r"/products/(\d+)", resp.text)
-        sku_ids = _extract_ids(r"/sku/(\d+)", resp.text)
-        return product_ids, sku_ids
+        # Avoid issuing extra legacy page requests during load; return empty IDs if the API cannot respond.
+        logger.warning("bootstrap.products API unavailable (%s) for %s; skipping legacy fallback", response.status_code, self._active_username)
+        return [], []
 
     # -----------------------
     # Random selection helpers

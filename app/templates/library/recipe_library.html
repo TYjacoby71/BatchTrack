@@ -29,7 +29,7 @@
             {{ stat_card('fas fa-dollar-sign text-success', stats.total_for_sale, 'For Sale', theme='success', subtext='Avg $' ~ ("{:.2f}".format(stats.average_sale_price))) }}
         </div>
         <div class="col-md-3">
-            {{ stat_card('fas fa-chart-line text-info', stats.top_group_name or '—', 'Top Product Group', theme='info', subtext=(stats.top_group_count or 0) ~ ' listings') }}
+            {{ stat_card('fas fa-download text-info', stats.total_downloads, 'Total Downloads', theme='info', subtext=(stats.total_purchases or 0) ~ ' purchases') }}
         </div>
         <div class="col-md-3">
             {{ stat_card('fas fa-award text-dark', stats.batchtrack_native_count, 'BatchTrack Originals', theme='dark', subtext='Platform-authored') }}
@@ -39,15 +39,6 @@
     <div class="card mb-4">
         <div class="card-body">
             <form class="row g-3" method="get" action="{{ url_for('recipe_library_bp.recipe_library') }}">
-                <div class="col-md-3 col-xl-2">
-                    <label class="form-label small text-muted">Product Group</label>
-                    <select class="form-select" name="group">
-                        <option value="">All groups</option>
-                        {% for group in product_groups %}
-                        <option value="{{ group.id }}" {% if group_filter and group_filter == group.id %}selected{% endif %}>{{ group.name }}</option>
-                        {% endfor %}
-                    </select>
-                </div>
                 <div class="col-md-3 col-xl-2">
                     <label class="form-label small text-muted">Product Category</label>
                     <select class="form-select" name="category">
@@ -117,9 +108,6 @@
                     <div class="d-flex justify-content-between align-items-start mb-2">
                         <div>
                             <span class="badge bg-secondary">{{ recipe.category or 'Uncategorized' }}</span>
-                            {% if recipe.product_group %}
-                            <span class="badge bg-light text-dark border">{{ recipe.product_group }}</span>
-                            {% endif %}
                         </div>
                         {% if recipe.is_for_sale %}
                         <span class="badge bg-success">${{ "%.2f"|format(recipe.sale_price) }}</span>
@@ -189,7 +177,7 @@
     </div>
     {% else %}
     <div class="alert alert-info">
-        <i class="fas fa-info-circle"></i> No recipes match your filters yet. Try clearing the search or checking another product group.
+        <i class="fas fa-info-circle"></i> No recipes match your filters yet. Try clearing the search or adjusting the filters.
     </div>
     {% endif %}
 </div>

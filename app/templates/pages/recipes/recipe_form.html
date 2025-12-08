@@ -132,7 +132,7 @@
     {% if recipe_sharing_enabled %}
     {% set sharing_scope_value = field_values.get('sharing_scope') if field_values and field_values.get('sharing_scope') else ('public' if recipe and recipe.is_public else 'private') %}
     {% set sale_mode_value = field_values.get('sale_mode') if field_values and field_values.get('sale_mode') else ('sale' if recipe and recipe.is_for_sale else 'free') %}
-    {% set sale_lock = recipe and (recipe.is_resellable is false) %}
+{% set sale_lock = recipe and (recipe.is_sellable is false) %}
     {% if sale_lock %}
         {% set sale_mode_value = 'free' %}
     {% endif %}
@@ -181,7 +181,7 @@
                 {% if sale_lock %}
                 <div class="alert alert-warning mt-3 mb-0">
                     <i class="fas fa-lock"></i>
-                    This recipe can't be marked for sale until it qualifies as a unique, resellable work.
+                    This recipe can't be marked for sale until it qualifies as a unique, sellable work.
                 </div>
                 {% endif %}
                 <div class="row g-3 align-items-end mt-2" id="salePriceRow" style="display: {% if sale_mode_value == 'sale' and not sale_lock %}flex{% else %}none{% endif %};">

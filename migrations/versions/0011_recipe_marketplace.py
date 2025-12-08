@@ -1,24 +1,9 @@
-"""0011 recipe marketplace
+"""Placeholder migration.
 
-Revision ID: 0011_recipe_marketplace
-Revises: 0010_recipe_status_drafts
-Create Date: 2025-11-24 00:00:00.000000
+This file is intentionally empty because its schema changes were
+folded into 0010_recipe_status_drafts. It remains only so Git can
+reconcile history before permanent removal.
 """
-
-from alembic import op
-import sqlalchemy as sa
-
-from migrations.postgres_helpers import (
-    safe_add_column,
-    safe_drop_column,
-    safe_create_index,
-    safe_drop_index,
-    safe_create_foreign_key,
-    safe_drop_foreign_key,
-    index_exists,
-    table_exists,
-    column_exists,
-)
 
 # revision identifiers, used by Alembic.
 revision = '0011_recipe_marketplace'
@@ -28,161 +13,10 @@ depends_on = None
 
 
 def upgrade():
-    # Recipe product groups
-    if not table_exists('recipe_product_group'):
-        op.create_table(
-            'recipe_product_group',
-            sa.Column('id', sa.Integer(), primary_key=True),
-            sa.Column('name', sa.String(length=80), nullable=False, unique=True),
-            sa.Column('slug', sa.String(length=80), nullable=False, unique=True),
-            sa.Column('description', sa.Text(), nullable=True),
-            sa.Column('icon', sa.String(length=64), nullable=True),
-            sa.Column('display_order', sa.Integer(), nullable=False, server_default='0'),
-            sa.Column('is_active', sa.Boolean(), nullable=False, server_default=sa.text('true')),
-            sa.Column('created_at', sa.DateTime(), server_default=sa.text('CURRENT_TIMESTAMP')),
-            sa.Column('updated_at', sa.DateTime(), server_default=sa.text('CURRENT_TIMESTAMP')),
-        )
-
-    # Moderation events
-    if not table_exists('recipe_moderation_event'):
-        op.create_table(
-            'recipe_moderation_event',
-            sa.Column('id', sa.Integer(), primary_key=True),
-            sa.Column('recipe_id', sa.Integer(), sa.ForeignKey('recipe.id'), nullable=False),
-            sa.Column('organization_id', sa.Integer(), sa.ForeignKey('organization.id'), nullable=True),
-            sa.Column('moderated_by', sa.Integer(), sa.ForeignKey('user.id'), nullable=True),
-            sa.Column('action', sa.String(length=64), nullable=False),
-            sa.Column('notes', sa.Text(), nullable=True),
-            sa.Column('violation_delta', sa.Integer(), nullable=False, server_default='0'),
-            sa.Column('created_at', sa.DateTime(), server_default=sa.text('CURRENT_TIMESTAMP'), nullable=False),
-        )
-        op.create_index('ix_recipe_moderation_recipe_id', 'recipe_moderation_event', ['recipe_id'])
-        op.create_index('ix_recipe_moderation_org_id', 'recipe_moderation_event', ['organization_id'])
-
-    # Recipe table enhancements
-    safe_add_column('recipe', sa.Column('sharing_scope', sa.String(length=16), nullable=False, server_default='private'))
-    safe_add_column('recipe', sa.Column('is_public', sa.Boolean(), nullable=False, server_default=sa.text('false')))
-    safe_add_column('recipe', sa.Column('is_for_sale', sa.Boolean(), nullable=False, server_default=sa.text('false')))
-    safe_add_column('recipe', sa.Column('sale_price', sa.Numeric(12, 4), nullable=True))
-    safe_add_column('recipe', sa.Column('marketplace_status', sa.String(length=32), nullable=False, server_default='draft'))
-    safe_add_column('recipe', sa.Column('marketplace_notes', sa.Text(), nullable=True))
-    safe_add_column('recipe', sa.Column('marketplace_blocked', sa.Boolean(), nullable=False, server_default=sa.text('false')))
-    safe_add_column('recipe', sa.Column('marketplace_block_reason', sa.Text(), nullable=True))
-    safe_add_column('recipe', sa.Column('marketplace_violation_count', sa.Integer(), nullable=False, server_default='0'))
-    safe_add_column('recipe', sa.Column('shopify_product_url', sa.String(length=512), nullable=True))
-    safe_add_column('recipe', sa.Column('product_group_id', sa.Integer(), nullable=True))
-    safe_add_column('recipe', sa.Column('cover_image_path', sa.String(length=255), nullable=True))
-    safe_add_column('recipe', sa.Column('cover_image_url', sa.String(length=512), nullable=True))
-    safe_add_column('recipe', sa.Column('skin_opt_in', sa.Boolean(), nullable=False, server_default=sa.text('true')))
-
-    if table_exists('recipe'):
-        try:
-            op.create_foreign_key(
-                'fk_recipe_product_group',
-                source_table='recipe',
-                referent_table='recipe_product_group',
-                local_cols=['product_group_id'],
-                remote_cols=['id'],
-            )
-        except Exception:
-            pass
-
-        if not index_exists('recipe', 'ix_recipe_sharing_scope'):
-            op.create_index('ix_recipe_sharing_scope', 'recipe', ['sharing_scope'])
-        if not index_exists('recipe', 'ix_recipe_is_public'):
-            op.create_index('ix_recipe_is_public', 'recipe', ['is_public'])
-        if not index_exists('recipe', 'ix_recipe_product_group_id'):
-            op.create_index('ix_recipe_product_group_id', 'recipe', ['product_group_id'])
-        if not index_exists('recipe', 'ix_recipe_marketplace_status'):
-            op.create_index('ix_recipe_marketplace_status', 'recipe', ['marketplace_status'])
-
-    # Organization level governance fields
-    safe_add_column('organization', sa.Column('recipe_sales_blocked', sa.Boolean(), nullable=False, server_default=sa.text('false')))
-    safe_add_column('organization', sa.Column('recipe_library_blocked', sa.Boolean(), nullable=False, server_default=sa.text('false')))
-    safe_add_column('organization', sa.Column('recipe_violation_count', sa.Integer(), nullable=False, server_default='0'))
-    safe_add_column('organization', sa.Column('recipe_policy_notes', sa.Text(), nullable=True))
+    """No-op placeholder."""
+    pass
 
 
 def downgrade():
-    # Clean up any unified_inventory_history references before dropping columns
-    from migrations.postgres_helpers import is_postgresql
-    bind = op.get_bind()
-    if is_postgresql():
-        # Check if batch_id column exists in unified_inventory_history
-        unified_history_columns = bind.execute(sa.text("""
-            SELECT column_name FROM information_schema.columns 
-            WHERE table_name = 'unified_inventory_history' AND column_name = 'batch_id'
-        """)).fetchone()
-        if unified_history_columns:
-            bind.execute(sa.text("""
-                UPDATE unified_inventory_history SET batch_id = NULL WHERE batch_id IS NOT NULL
-            """))
-
-        # Check if used_for_batch_id column exists in unified_inventory_history
-        used_for_batch_columns = bind.execute(sa.text("""
-            SELECT column_name FROM information_schema.columns 
-            WHERE table_name = 'unified_inventory_history' AND column_name = 'used_for_batch_id'
-        """)).fetchone()
-        if used_for_batch_columns:
-            bind.execute(sa.text("""
-                UPDATE unified_inventory_history SET used_for_batch_id = NULL WHERE used_for_batch_id IS NOT NULL
-            """))
-    else:
-        # SQLite version
-        # Check if batch_id column exists in unified_inventory_history
-        unified_history_check = bind.execute(sa.text("""
-            SELECT name FROM pragma_table_info('unified_inventory_history') WHERE name = 'batch_id'
-        """)).fetchone()
-        if unified_history_check:
-            bind.execute(sa.text("""
-                UPDATE unified_inventory_history SET batch_id = NULL WHERE batch_id IS NOT NULL
-            """))
-
-        # Check if used_for_batch_id column exists in unified_inventory_history  
-        used_for_batch_check = bind.execute(sa.text("""
-            SELECT name FROM pragma_table_info('unified_inventory_history') WHERE name = 'used_for_batch_id'
-        """)).fetchone()
-        if used_for_batch_check:
-            bind.execute(sa.text("""
-                UPDATE unified_inventory_history SET used_for_batch_id = NULL WHERE used_for_batch_id IS NOT NULL
-            """))
-
-    # Organization columns
-    safe_drop_column('organization', 'recipe_policy_notes')
-    safe_drop_column('organization', 'recipe_violation_count')
-    safe_drop_column('organization', 'recipe_library_blocked')
-    safe_drop_column('organization', 'recipe_sales_blocked')
-
-    # Recipe indexes and FK - use safe helpers
-    safe_drop_index('ix_recipe_marketplace_status', 'recipe')
-    safe_drop_index('ix_recipe_product_group_id', 'recipe')
-    safe_drop_index('ix_recipe_is_public', 'recipe')
-    safe_drop_index('ix_recipe_sharing_scope', 'recipe')
-
-    safe_drop_foreign_key('fk_recipe_product_group', 'recipe')
-
-    # Recipe columns - drop in reverse order of creation to avoid dependency issues
-    safe_drop_column('recipe', 'skin_opt_in')
-    safe_drop_column('recipe', 'cover_image_url')
-    safe_drop_column('recipe', 'cover_image_path')
-    safe_drop_column('recipe', 'product_group_id')
-    safe_drop_column('recipe', 'shopify_product_url')
-    safe_drop_column('recipe', 'marketplace_violation_count')
-    safe_drop_column('recipe', 'marketplace_block_reason')
-    safe_drop_column('recipe', 'marketplace_blocked')
-    safe_drop_column('recipe', 'marketplace_notes')
-    safe_drop_column('recipe', 'marketplace_status')
-    safe_drop_column('recipe', 'sale_price')
-    safe_drop_column('recipe', 'is_for_sale')
-    safe_drop_column('recipe', 'is_public')
-    safe_drop_column('recipe', 'sharing_scope')
-
-    # Moderation table/indexes - use safe helpers  
-    safe_drop_index('ix_recipe_moderation_org_id', 'recipe_moderation_event')
-    safe_drop_index('ix_recipe_moderation_recipe_id', 'recipe_moderation_event')
-    if table_exists('recipe_moderation_event'):
-        op.drop_table('recipe_moderation_event')
-
-    # Product group table
-    if table_exists('recipe_product_group'):
-        op.drop_table('recipe_product_group')
+    """No-op placeholder."""
+    pass

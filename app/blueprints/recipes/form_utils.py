@@ -13,7 +13,6 @@ from sqlalchemy import func
 from app.extensions import db
 from app.models import GlobalItem, InventoryItem, Recipe
 from app.models.product_category import ProductCategory
-from app.models.recipe_marketplace import RecipeProductGroup
 from app.models.unit import Unit
 from app.services.inventory_adjustment import create_inventory_item
 from app.services.recipe_marketplace_service import RecipeMarketplaceService
@@ -629,9 +628,9 @@ def create_variation_template(parent: Recipe) -> Recipe:
 
     template.allowed_containers = list(parent.allowed_containers or [])
     if getattr(parent, 'org_origin_purchased', False):
-        template.is_resellable = True
+        template.is_sellable = True
     else:
-        template.is_resellable = getattr(parent, 'is_resellable', True)
+        template.is_sellable = getattr(parent, 'is_sellable', True)
 
     if parent.portioning_data:
         template.portioning_data = (

@@ -302,9 +302,9 @@ def create_variation(recipe_id):
                 )
 
             if parent.org_origin_purchased:
-                payload['is_resellable'] = True
-            elif getattr(parent, 'is_resellable', True) is False:
-                payload['is_resellable'] = False
+                payload['is_sellable'] = True
+            elif getattr(parent, 'is_sellable', True) is False:
+                payload['is_sellable'] = False
 
             success, result = create_recipe(**payload)
 
