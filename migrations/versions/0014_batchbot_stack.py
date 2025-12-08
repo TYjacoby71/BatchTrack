@@ -59,15 +59,20 @@ def upgrade():
 
 
 def downgrade():
+    from migrations.postgres_helpers import safe_drop_column, safe_drop_index, table_exists
+    
     # Drop batchbot_credit_amount column from addon table
-    from migrations.postgres_helpers import safe_drop_column
     safe_drop_column('addon', 'batchbot_credit_amount')
 
-    op.drop_index('ix_batchbot_credit_bundle_addon_id', table_name='batchbot_credit_bundle')
-    op.drop_index('ix_batchbot_credit_bundle_org_id', table_name='batchbot_credit_bundle')
-    op.drop_table('batchbot_credit_bundle')
+    # Drop batchbot_credit_bundle table and indexes
+    safe_drop_index('ix_batchbot_credit_bundle_addon_id', 'batchbot_credit_bundle')
+    safe_drop_index('ix_batchbot_credit_bundle_org_id', 'batchbot_credit_bundle')
+    if table_exists('batchbot_credit_bundle'):
+        op.drop_table('batchbot_credit_bundle')
 
-    op.drop_index('ix_batchbot_usage_window_start', table_name='batchbot_usage')
-    op.drop_index('ix_batchbot_usage_user_id', table_name='batchbot_usage')
-    op.drop_index('ix_batchbot_usage_org_id', table_name='batchbot_usage')
-    op.drop_table('batchbot_usage')
+    # Drop batchbot_usage table and indexes
+    safe_drop_index('ix_batchbot_usage_window_start', 'batchbot_usage')
+    safe_drop_index('ix_batchbot_usage_user_id', 'batchbot_usage')
+    safe_drop_index('ix_batchbot_usage_org_id', 'batchbot_usage')
+    if table_exists('batchbot_usage'):
+        op.drop_table('batchbot_usage')
