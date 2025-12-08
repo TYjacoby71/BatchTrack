@@ -208,6 +208,30 @@ def upgrade():
 
 
 def downgrade():
+    # Clean up any unified_inventory_history references before dropping FKs
+    from migrations.postgres_helpers import is_postgresql
+    if is_postgresql():
+        bind = op.get_bind()
+        # Check if batch_id column exists in unified_inventory_history
+        unified_history_columns = bind.execute(sa.text("""
+            SELECT column_name FROM information_schema.columns 
+            WHERE table_name = 'unified_inventory_history' AND column_name = 'batch_id'
+        """)).fetchone()
+        if unified_history_columns:
+            bind.execute(sa.text("""
+                UPDATE unified_inventory_history SET batch_id = NULL WHERE batch_id IS NOT NULL
+            """))
+
+        # Check if used_for_batch_id column exists in unified_inventory_history
+        used_for_batch_columns = bind.execute(sa.text("""
+            SELECT column_name FROM information_schema.columns 
+            WHERE table_name = 'unified_inventory_history' AND column_name = 'used_for_batch_id'
+        """)).fetchone()
+        if used_for_batch_columns:
+            bind.execute(sa.text("""
+                UPDATE unified_inventory_history SET used_for_batch_id = NULL WHERE used_for_batch_id IS NOT NULL
+            """))
+
     for fk in (
         'fk_recipe_origin_org_id',
         'fk_recipe_origin_recipe_id',

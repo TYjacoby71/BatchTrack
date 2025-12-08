@@ -104,6 +104,49 @@ def upgrade():
 
 
 def downgrade():
+    # Clean up any unified_inventory_history references before dropping columns
+    from migrations.postgres_helpers import is_postgresql
+    bind = op.get_bind()
+    if is_postgresql():
+        # Check if batch_id column exists in unified_inventory_history
+        unified_history_columns = bind.execute(sa.text("""
+            SELECT column_name FROM information_schema.columns 
+            WHERE table_name = 'unified_inventory_history' AND column_name = 'batch_id'
+        """)).fetchone()
+        if unified_history_columns:
+            bind.execute(sa.text("""
+                UPDATE unified_inventory_history SET batch_id = NULL WHERE batch_id IS NOT NULL
+            """))
+
+        # Check if used_for_batch_id column exists in unified_inventory_history
+        used_for_batch_columns = bind.execute(sa.text("""
+            SELECT column_name FROM information_schema.columns 
+            WHERE table_name = 'unified_inventory_history' AND column_name = 'used_for_batch_id'
+        """)).fetchone()
+        if used_for_batch_columns:
+            bind.execute(sa.text("""
+                UPDATE unified_inventory_history SET used_for_batch_id = NULL WHERE used_for_batch_id IS NOT NULL
+            """))
+    else:
+        # SQLite version
+        # Check if batch_id column exists in unified_inventory_history
+        unified_history_check = bind.execute(sa.text("""
+            SELECT name FROM pragma_table_info('unified_inventory_history') WHERE name = 'batch_id'
+        """)).fetchone()
+        if unified_history_check:
+            bind.execute(sa.text("""
+                UPDATE unified_inventory_history SET batch_id = NULL WHERE batch_id IS NOT NULL
+            """))
+
+        # Check if used_for_batch_id column exists in unified_inventory_history  
+        used_for_batch_check = bind.execute(sa.text("""
+            SELECT name FROM pragma_table_info('unified_inventory_history') WHERE name = 'used_for_batch_id'
+        """)).fetchone()
+        if used_for_batch_check:
+            bind.execute(sa.text("""
+                UPDATE unified_inventory_history SET used_for_batch_id = NULL WHERE used_for_batch_id IS NOT NULL
+            """))
+
     # Organization columns
     safe_drop_column('organization', 'recipe_policy_notes')
     safe_drop_column('organization', 'recipe_violation_count')
