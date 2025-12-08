@@ -57,7 +57,6 @@ _export([
     ("global_item", "GlobalItem", None),
     ("batchbot_usage", "BatchBotUsage", None),
     ("batchbot_credit", "BatchBotCreditBundle", None),
-    ("recipe_marketplace", "RecipeProductGroup", None),
     ("recipe_marketplace", "RecipeModerationEvent", None),
 ])
 

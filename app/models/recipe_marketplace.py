@@ -5,21 +5,6 @@ from ..utils.timezone_utils import TimezoneUtils
 from .mixins import TimestampMixin
 
 
-class RecipeProductGroup(db.Model, TimestampMixin):
-    __tablename__ = 'recipe_product_group'
-
-    id = db.Column(db.Integer, primary_key=True)
-    name = db.Column(db.String(80), unique=True, nullable=False)
-    slug = db.Column(db.String(80), unique=True, nullable=False)
-    description = db.Column(db.Text, nullable=True)
-    icon = db.Column(db.String(64), nullable=True)
-    display_order = db.Column(db.Integer, nullable=False, default=0, server_default='0')
-    is_active = db.Column(db.Boolean, nullable=False, default=True, server_default=sa.text("true"))
-
-    def __repr__(self) -> str:
-        return f"<RecipeProductGroup {self.slug}>"
-
-
 class RecipeModerationEvent(db.Model):
     __tablename__ = 'recipe_moderation_event'
 
