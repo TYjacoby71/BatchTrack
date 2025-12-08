@@ -119,23 +119,46 @@ def downgrade():
                 DELETE FROM batch_container WHERE batch_id IN ({batch_ids_str})
             """))
 
-            # 5. Update inventory_history references to NULL (optional FK)
-            bind.execute(sa.text(f"""
-                UPDATE inventory_history SET batch_id = NULL WHERE batch_id IN ({batch_ids_str})
-            """))
-            bind.execute(sa.text(f"""
-                UPDATE inventory_history SET used_for_batch_id = NULL WHERE used_for_batch_id IN ({batch_ids_str})
-            """))
+            # 5. Update inventory_history references to NULL (optional FK) - check column exists first
+            # Check if batch_id column exists in inventory_history
+            inventory_history_columns = bind.execute(sa.text("""
+                SELECT column_name FROM information_schema.columns 
+                WHERE table_name = 'inventory_history' AND column_name = 'batch_id'
+            """)).fetchone()
+            if inventory_history_columns:
+                bind.execute(sa.text(f"""
+                    UPDATE inventory_history SET batch_id = NULL WHERE batch_id IN ({batch_ids_str})
+                """))
 
-            # 6. Update inventory_item references to NULL (optional FK)
-            bind.execute(sa.text(f"""
-                UPDATE inventory_item SET batch_id = NULL WHERE batch_id IN ({batch_ids_str})
-            """))
+            # Check if used_for_batch_id column exists in inventory_history
+            used_for_batch_columns = bind.execute(sa.text("""
+                SELECT column_name FROM information_schema.columns 
+                WHERE table_name = 'inventory_history' AND column_name = 'used_for_batch_id'
+            """)).fetchone()
+            if used_for_batch_columns:
+                bind.execute(sa.text(f"""
+                    UPDATE inventory_history SET used_for_batch_id = NULL WHERE used_for_batch_id IN ({batch_ids_str})
+                """))
 
-            # 7. Update product_sku references to NULL (optional FK)  
-            bind.execute(sa.text(f"""
-                UPDATE product_sku SET batch_id = NULL WHERE batch_id IN ({batch_ids_str})
-            """))
+            # 6. Update inventory_item references to NULL (optional FK) - check column exists first
+            inventory_item_columns = bind.execute(sa.text("""
+                SELECT column_name FROM information_schema.columns 
+                WHERE table_name = 'inventory_item' AND column_name = 'batch_id'
+            """)).fetchone()
+            if inventory_item_columns:
+                bind.execute(sa.text(f"""
+                    UPDATE inventory_item SET batch_id = NULL WHERE batch_id IN ({batch_ids_str})
+                """))
+
+            # 7. Update product_sku references to NULL (optional FK) - check column exists first
+            product_sku_columns = bind.execute(sa.text("""
+                SELECT column_name FROM information_schema.columns 
+                WHERE table_name = 'product_sku' AND column_name = 'batch_id'
+            """)).fetchone()
+            if product_sku_columns:
+                bind.execute(sa.text(f"""
+                    UPDATE product_sku SET batch_id = NULL WHERE batch_id IN ({batch_ids_str})
+                """))
 
             # 8. Now safe to delete the duplicate batch records
             bind.execute(sa.text(f"""
@@ -191,19 +214,42 @@ def downgrade():
                 DELETE FROM batch_container WHERE batch_id IN ({batch_ids_subquery})
             """))
 
-            # 5. Update references to NULL
-            bind.execute(sa.text(f"""
-                UPDATE inventory_history SET batch_id = NULL WHERE batch_id IN ({batch_ids_subquery})
-            """))
-            bind.execute(sa.text(f"""
-                UPDATE inventory_history SET used_for_batch_id = NULL WHERE used_for_batch_id IN ({batch_ids_subquery})
-            """))
-            bind.execute(sa.text(f"""
-                UPDATE inventory_item SET batch_id = NULL WHERE batch_id IN ({batch_ids_subquery})
-            """))
-            bind.execute(sa.text(f"""
-                UPDATE product_sku SET batch_id = NULL WHERE batch_id IN ({batch_ids_subquery})
-            """))
+            # 5. Update references to NULL - check columns exist first
+            # Check if batch_id column exists in inventory_history
+            inventory_history_check = bind.execute(sa.text("""
+                SELECT name FROM pragma_table_info('inventory_history') WHERE name = 'batch_id'
+            """)).fetchone()
+            if inventory_history_check:
+                bind.execute(sa.text(f"""
+                    UPDATE inventory_history SET batch_id = NULL WHERE batch_id IN ({batch_ids_subquery})
+                """))
+
+            # Check if used_for_batch_id column exists in inventory_history  
+            used_for_batch_check = bind.execute(sa.text("""
+                SELECT name FROM pragma_table_info('inventory_history') WHERE name = 'used_for_batch_id'
+            """)).fetchone()
+            if used_for_batch_check:
+                bind.execute(sa.text(f"""
+                    UPDATE inventory_history SET used_for_batch_id = NULL WHERE used_for_batch_id IN ({batch_ids_subquery})
+                """))
+
+            # Check if batch_id column exists in inventory_item
+            inventory_item_check = bind.execute(sa.text("""
+                SELECT name FROM pragma_table_info('inventory_item') WHERE name = 'batch_id'
+            """)).fetchone()
+            if inventory_item_check:
+                bind.execute(sa.text(f"""
+                    UPDATE inventory_item SET batch_id = NULL WHERE batch_id IN ({batch_ids_subquery})
+                """))
+
+            # Check if batch_id column exists in product_sku
+            product_sku_check = bind.execute(sa.text("""
+                SELECT name FROM pragma_table_info('product_sku') WHERE name = 'batch_id'
+            """)).fetchone()
+            if product_sku_check:
+                bind.execute(sa.text(f"""
+                    UPDATE product_sku SET batch_id = NULL WHERE batch_id IN ({batch_ids_subquery})
+                """))
 
             # 6. Now delete the duplicate batches
             bind.execute(sa.text(f"""
