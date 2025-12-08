@@ -350,35 +350,62 @@ function applyIngredientsFilters() {
     localStorage.setItem('ingredients_sort_filter', sortFilter.value);
     localStorage.setItem('ingredients_archived_filter', archivedFilter.checked);
     
-    // Apply filters using existing function
+    // Get the pagination system for ingredients
     const tableType = 'ingredients';
-    const filterAndSortFunc = window[`filterAndSort${tableType.charAt(0).toUpperCase() + tableType.slice(1)}`] || filterAndSort;
-    if (typeof filterAndSortFunc === 'function') {
-        filterAndSortFunc.call({ dataset: { type: tableType } });
-    } else {
-        // Fallback to manual filtering
-        const nameFilterValue = nameFilter.value.toLowerCase();
-        const tableBodyId = tableType + 'TableBody';
-        const allRows = Array.from(document.querySelectorAll(`#${tableBodyId} tr`));
+    const nameFilterValue = nameFilter.value.toLowerCase();
+    const sortValue = sortFilter.value;
+    const showArchived = archivedFilter.checked;
+    
+    // Get all rows and apply filters
+    let allRows = Array.from(document.querySelectorAll(`#${tableType}TableBody tr`));
+    let filteredRows = allRows.filter(row => {
+        const name = row.dataset.name || '';
+        const isArchived = row.querySelector('.col-status .badge')?.textContent === 'Archived';
         
-        allRows.forEach(row => {
-            const name = row.dataset.name || '';
-            const isArchived = row.querySelector('.col-status .badge')?.textContent === 'Archived';
-            
-            let showRow = true;
-            
-            // Apply name filter
-            if (nameFilterValue && !name.includes(nameFilterValue)) {
-                showRow = false;
-            }
-            
-            // Apply archived filter
-            if (!archivedFilter.checked && isArchived) {
-                showRow = false;
-            }
-            
-            row.style.display = showRow ? '' : 'none';
-        });
+        // Apply name filter
+        if (nameFilterValue && !name.includes(nameFilterValue)) {
+            return false;
+        }
+        
+        // Apply archived filter
+        if (!showArchived && isArchived) {
+            return false;
+        }
+        
+        return true;
+    });
+    
+    // Apply sorting
+    filteredRows.sort((a, b) => {
+        const [field, direction] = sortValue.split('_');
+        let aVal, bVal;
+        
+        if (field === 'name') {
+            aVal = a.dataset.name || '';
+            bVal = b.dataset.name || '';
+        } else if (field === 'quantity') {
+            aVal = parseFloat(a.dataset.quantity) || 0;
+            bVal = parseFloat(b.dataset.quantity) || 0;
+        } else if (field === 'cost') {
+            aVal = parseFloat(a.dataset.cost) || 0;
+            bVal = parseFloat(b.dataset.cost) || 0;
+        }
+        
+        if (direction === 'asc') {
+            return aVal > bVal ? 1 : -1;
+        } else {
+            return aVal < bVal ? 1 : -1;
+        }
+    });
+    
+    // Update the table display
+    allRows.forEach(row => row.style.display = 'none');
+    filteredRows.forEach(row => row.style.display = '');
+    
+    // Update pagination info
+    const infoEl = document.getElementById('ingredientsInfo');
+    if (infoEl) {
+        infoEl.textContent = `Showing ${filteredRows.length} of ${allRows.length} items`;
     }
 }
 
@@ -393,25 +420,58 @@ function applyContainersFilters() {
     
     const tableType = 'containers';
     const nameFilterValue = nameFilter.value.toLowerCase();
-    const tableBodyId = tableType + 'TableBody';
-    const allRows = Array.from(document.querySelectorAll(`#${tableBodyId} tr`));
+    const sortValue = sortFilter.value;
+    const showArchived = archivedFilter.checked;
     
-    allRows.forEach(row => {
+    let allRows = Array.from(document.querySelectorAll(`#${tableType}TableBody tr`));
+    let filteredRows = allRows.filter(row => {
         const name = row.dataset.name || '';
         const isArchived = row.querySelector('.col-status .badge')?.textContent === 'Archived';
         
-        let showRow = true;
-        
         if (nameFilterValue && !name.includes(nameFilterValue)) {
-            showRow = false;
+            return false;
         }
         
-        if (!archivedFilter.checked && isArchived) {
-            showRow = false;
+        if (!showArchived && isArchived) {
+            return false;
         }
         
-        row.style.display = showRow ? '' : 'none';
+        return true;
     });
+    
+    // Apply sorting
+    filteredRows.sort((a, b) => {
+        const [field, direction] = sortValue.split('_');
+        let aVal, bVal;
+        
+        if (field === 'name') {
+            aVal = a.dataset.name || '';
+            bVal = b.dataset.name || '';
+        } else if (field === 'quantity') {
+            aVal = parseFloat(a.dataset.quantity) || 0;
+            bVal = parseFloat(b.dataset.quantity) || 0;
+        } else if (field === 'cost') {
+            aVal = parseFloat(a.dataset.cost) || 0;
+            bVal = parseFloat(b.dataset.cost) || 0;
+        } else if (field === 'material') {
+            aVal = a.dataset.material || '';
+            bVal = b.dataset.material || '';
+        }
+        
+        if (direction === 'asc') {
+            return aVal > bVal ? 1 : -1;
+        } else {
+            return aVal < bVal ? 1 : -1;
+        }
+    });
+    
+    allRows.forEach(row => row.style.display = 'none');
+    filteredRows.forEach(row => row.style.display = '');
+    
+    const infoEl = document.getElementById('containersInfo');
+    if (infoEl) {
+        infoEl.textContent = `Showing ${filteredRows.length} of ${allRows.length} items`;
+    }
 }
 
 function applyPackagingFilters() {
@@ -425,25 +485,55 @@ function applyPackagingFilters() {
     
     const tableType = 'packaging';
     const nameFilterValue = nameFilter.value.toLowerCase();
-    const tableBodyId = tableType + 'TableBody';
-    const allRows = Array.from(document.querySelectorAll(`#${tableBodyId} tr`));
+    const sortValue = sortFilter.value;
+    const showArchived = archivedFilter.checked;
     
-    allRows.forEach(row => {
+    let allRows = Array.from(document.querySelectorAll(`#${tableType}TableBody tr`));
+    let filteredRows = allRows.filter(row => {
         const name = row.dataset.name || '';
         const isArchived = row.querySelector('.col-status .badge')?.textContent === 'Archived';
         
-        let showRow = true;
-        
         if (nameFilterValue && !name.includes(nameFilterValue)) {
-            showRow = false;
+            return false;
         }
         
-        if (!archivedFilter.checked && isArchived) {
-            showRow = false;
+        if (!showArchived && isArchived) {
+            return false;
         }
         
-        row.style.display = showRow ? '' : 'none';
+        return true;
     });
+    
+    // Apply sorting
+    filteredRows.sort((a, b) => {
+        const [field, direction] = sortValue.split('_');
+        let aVal, bVal;
+        
+        if (field === 'name') {
+            aVal = a.dataset.name || '';
+            bVal = b.dataset.name || '';
+        } else if (field === 'quantity') {
+            aVal = parseFloat(a.dataset.quantity) || 0;
+            bVal = parseFloat(b.dataset.quantity) || 0;
+        } else if (field === 'cost') {
+            aVal = parseFloat(a.dataset.cost) || 0;
+            bVal = parseFloat(b.dataset.cost) || 0;
+        }
+        
+        if (direction === 'asc') {
+            return aVal > bVal ? 1 : -1;
+        } else {
+            return aVal < bVal ? 1 : -1;
+        }
+    });
+    
+    allRows.forEach(row => row.style.display = 'none');
+    filteredRows.forEach(row => row.style.display = '');
+    
+    const infoEl = document.getElementById('packagingInfo');
+    if (infoEl) {
+        infoEl.textContent = `Showing ${filteredRows.length} of ${allRows.length} items`;
+    }
 }
 
 function applyConsumablesFilters() {
@@ -457,25 +547,55 @@ function applyConsumablesFilters() {
     
     const tableType = 'consumables';
     const nameFilterValue = nameFilter.value.toLowerCase();
-    const tableBodyId = tableType + 'TableBody';
-    const allRows = Array.from(document.querySelectorAll(`#${tableBodyId} tr`));
+    const sortValue = sortFilter.value;
+    const showArchived = archivedFilter.checked;
     
-    allRows.forEach(row => {
+    let allRows = Array.from(document.querySelectorAll(`#${tableType}TableBody tr`));
+    let filteredRows = allRows.filter(row => {
         const name = row.dataset.name || '';
         const isArchived = row.querySelector('.col-status .badge')?.textContent === 'Archived';
         
-        let showRow = true;
-        
         if (nameFilterValue && !name.includes(nameFilterValue)) {
-            showRow = false;
+            return false;
         }
         
-        if (!archivedFilter.checked && isArchived) {
-            showRow = false;
+        if (!showArchived && isArchived) {
+            return false;
         }
         
-        row.style.display = showRow ? '' : 'none';
+        return true;
     });
+    
+    // Apply sorting
+    filteredRows.sort((a, b) => {
+        const [field, direction] = sortValue.split('_');
+        let aVal, bVal;
+        
+        if (field === 'name') {
+            aVal = a.dataset.name || '';
+            bVal = b.dataset.name || '';
+        } else if (field === 'quantity') {
+            aVal = parseFloat(a.dataset.quantity) || 0;
+            bVal = parseFloat(b.dataset.quantity) || 0;
+        } else if (field === 'cost') {
+            aVal = parseFloat(a.dataset.cost) || 0;
+            bVal = parseFloat(b.dataset.cost) || 0;
+        }
+        
+        if (direction === 'asc') {
+            return aVal > bVal ? 1 : -1;
+        } else {
+            return aVal < bVal ? 1 : -1;
+        }
+    });
+    
+    allRows.forEach(row => row.style.display = 'none');
+    filteredRows.forEach(row => row.style.display = '');
+    
+    const infoEl = document.getElementById('consumablesInfo');
+    if (infoEl) {
+        infoEl.textContent = `Showing ${filteredRows.length} of ${allRows.length} items`;
+    }
 }
 
 // Reset filter functions
