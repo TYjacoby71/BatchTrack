@@ -122,6 +122,13 @@ def upgrade():
             pass
 
         try:
+            bind.execute(sa.text(
+                "CREATE INDEX IF NOT EXISTS ix_global_item_active_type_name ON global_item (is_archived, item_type, name)"
+            ))
+        except Exception:
+            pass
+
+        try:
             bind.execute(sa.text("""
                 CREATE INDEX IF NOT EXISTS ix_global_item_alias_tsv ON global_item_alias 
                 USING gin(to_tsvector('simple', alias))
