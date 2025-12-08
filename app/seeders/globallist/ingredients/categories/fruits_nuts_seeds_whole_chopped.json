@@ -8,7 +8,7 @@
       "default_unit": "gram",
       "moisture_content_percent": 5,
       "protein_content_pct": 21,
-      "recommended_usage_rate": "Use as inclusions up to 30% of batch weight",
+      
       "recommended_shelf_life_days": 365,
       "certifications": [
         "Non-GMO Project Verified"
@@ -24,7 +24,7 @@
       "default_unit": "gram",
       "moisture_content_percent": 4,
       "protein_content_pct": 15,
-      "recommended_usage_rate": "Use 10-25% in bakery and confectionery applications",
+      
       "recommended_shelf_life_days": 180,
       "certifications": [
         "Kosher"
@@ -40,7 +40,7 @@
       "default_unit": "gram",
       "moisture_content_percent": 6,
       "protein_content_pct": 30,
-      "recommended_usage_rate": "Sprinkle 5-15% as topping or inclusion",
+      
       "recommended_shelf_life_days": 365,
       "certifications": [
         "Organic"
@@ -56,7 +56,7 @@
       "default_unit": "gram",
       "moisture_content_percent": 6,
       "protein_content_pct": 20,
-      "recommended_usage_rate": "Use up to 15% in granolas and bars",
+      
       "recommended_shelf_life_days": 270,
       "certifications": [
         "Non-GMO"
@@ -72,7 +72,7 @@
       "default_unit": "gram",
       "moisture_content_percent": 14,
       "protein_content_pct": 0.5,
-      "recommended_usage_rate": "Use 10-25% in baked goods or trail mixes",
+      
       "recommended_shelf_life_days": 365,
       "certifications": [
         "Kosher"
@@ -87,7 +87,7 @@
   "attributes": [
     "moisture_content_percent",
     "protein_content_pct",
-    "recommended_usage_rate",
+
     "recommended_shelf_life_days",
     "certifications",
     "is_active_ingredient"

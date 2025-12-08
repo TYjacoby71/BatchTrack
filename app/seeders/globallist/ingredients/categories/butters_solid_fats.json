@@ -8,7 +8,7 @@
     "melting_point_c",
     "fatty_acid_profile",
     "comedogenic_rating",
-    "recommended_usage_rate",
+
     "recommended_shelf_life_days",
     "inci_name",
     "certifications",
@@ -28,7 +28,7 @@
         "palmitic": 4
       },
       "comedogenic_rating": 0,
-      "recommended_usage_rate": "3-20% in creams, balms, and soaps",
+      
       "recommended_shelf_life_days": 730,
       "inci_name": "Butyrospermum Parkii (Shea) Butter",
       "certifications": [
@@ -53,7 +53,7 @@
         "linoleic": 9
       },
       "comedogenic_rating": 2,
-      "recommended_usage_rate": "3-15% in body butters and lotions",
+      
       "recommended_shelf_life_days": 730,
       "inci_name": "Mangifera Indica (Mango) Seed Butter",
       "certifications": [
@@ -78,7 +78,7 @@
         "linoleic": 3
       },
       "comedogenic_rating": 3,
-      "recommended_usage_rate": "5-20% in anhydrous systems",
+      
       "recommended_shelf_life_days": 1095,
       "inci_name": "Theobroma Cacao (Cocoa) Seed Butter",
       "certifications": [
@@ -104,7 +104,7 @@
         "palmitic": 1
       },
       "comedogenic_rating": 1,
-      "recommended_usage_rate": "2-15% for structure and emollience",
+      
       "recommended_shelf_life_days": 730,
       "inci_name": "Garcinia Indica Seed Butter",
       "certifications": [],
@@ -127,7 +127,7 @@
         "linoleic": 3
       },
       "comedogenic_rating": 2,
-      "recommended_usage_rate": "2-8% in moisturizers and hair masks",
+      
       "recommended_shelf_life_days": 540,
       "inci_name": "Theobroma Grandiflorum Seed Butter",
       "certifications": [
@@ -152,7 +152,7 @@
         "linoleic": 3
       },
       "comedogenic_rating": 1,
-      "recommended_usage_rate": "2-10% in balms and sticks",
+      
       "recommended_shelf_life_days": 540,
       "inci_name": "Shorea Stenoptera Seed Butter",
       "certifications": [],
@@ -175,7 +175,7 @@
         "palmitic": 9
       },
       "comedogenic_rating": 0,
-      "recommended_usage_rate": "3-10% in hair and skin butters",
+      
       "recommended_shelf_life_days": 540,
       "inci_name": "Astrocaryum Murumuru Seed Butter",
       "certifications": [
@@ -200,7 +200,7 @@
         "butyric": 4
       },
       "comedogenic_rating": 3,
-      "recommended_usage_rate": "2-6% in soap formulations",
+      
       "recommended_shelf_life_days": 365,
       "inci_name": "Clarified Butter",
       "certifications": [],

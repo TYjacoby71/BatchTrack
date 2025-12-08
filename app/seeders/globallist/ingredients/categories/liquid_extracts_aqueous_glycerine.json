@@ -4,7 +4,7 @@
   "description": "Water or glycerine based botanical extracts supplying phytonutrients and humectancy.",
   "attributes": [
     "solvent_system",
-    "recommended_usage_rate",
+
     "recommended_shelf_life_days",
     "inci_name",
     "certifications",
@@ -19,7 +19,7 @@
       "density": 1.02,
       "default_unit": "milliliter",
       "solvent_system": "Aloe Barbadensis Leaf Juice, Sodium Benzoate, Potassium Sorbate",
-      "recommended_usage_rate": "5-20% in gels, toners, and after-sun products",
+      
       "recommended_shelf_life_days": 540,
       "inci_name": "Aloe Barbadensis Leaf Juice",
       "certifications": [
@@ -35,7 +35,7 @@
       "density": 1.04,
       "default_unit": "milliliter",
       "solvent_system": "Water, Glycerin",
-      "recommended_usage_rate": "1-5% in antioxidant serums and lotions",
+      
       "recommended_shelf_life_days": 365,
       "inci_name": "Camellia Sinensis Leaf Extract (and) Glycerin (and) Water",
       "certifications": [
@@ -51,7 +51,7 @@
       "density": 1.18,
       "default_unit": "milliliter",
       "solvent_system": "Glycerin, Water",
-      "recommended_usage_rate": "1-10% in soothing creams and rinses",
+      
       "recommended_shelf_life_days": 540,
       "inci_name": "Glycerin (and) Calendula Officinalis Flower Extract",
       "certifications": [

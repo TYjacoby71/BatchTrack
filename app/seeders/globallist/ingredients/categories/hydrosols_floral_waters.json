@@ -4,7 +4,7 @@
   "description": "Aromatic distillates and floral waters used for toners, mists, and gentle aromatherapy.",
   "attributes": [
     "ph_value",
-    "recommended_usage_rate",
+
     "recommended_shelf_life_days",
     "certifications",
     "is_active_ingredient"
@@ -18,7 +18,7 @@
       "density": 1.0,
       "default_unit": "milliliter",
       "ph_value": 5.5,
-      "recommended_usage_rate": "5-100% in toners, mists, and lotions",
+      
       "recommended_shelf_life_days": 365,
       "certifications": [
         "Organic"
@@ -33,7 +33,7 @@
       "density": 1.0,
       "default_unit": "milliliter",
       "ph_value": 6.0,
-      "recommended_usage_rate": "5-100% in calming sprays and creams",
+      
       "recommended_shelf_life_days": 365,
       "certifications": [
         "Organic"
@@ -48,7 +48,7 @@
       "density": 1.0,
       "default_unit": "milliliter",
       "ph_value": 6.5,
-      "recommended_usage_rate": "5-100% in pillow sprays, tonics, and masks",
+      
       "recommended_shelf_life_days": 365,
       "certifications": [
         "COSMOS Approved"
@@ -63,7 +63,7 @@
       "density": 0.98,
       "default_unit": "milliliter",
       "ph_value": 4.2,
-      "recommended_usage_rate": "5-100% in toners and compresses",
+      
       "recommended_shelf_life_days": 365,
       "certifications": [
         "USP Grade"

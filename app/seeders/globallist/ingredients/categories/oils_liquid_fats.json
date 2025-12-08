@@ -16,7 +16,7 @@
         "stearic": 3
       },
       "comedogenic_rating": 2,
-      "recommended_usage_rate": "2-15% in leave-on products, up to 100% in oil blends",
+      
       "recommended_shelf_life_days": 540,
       "inci_name": "Olea Europaea (Olive) Fruit Oil",
       "certifications": [
@@ -42,7 +42,7 @@
         "stearic": 2
       },
       "comedogenic_rating": 2,
-      "recommended_usage_rate": "3-20% in lotions and serums",
+      
       "recommended_shelf_life_days": 365,
       "inci_name": "Prunus Amygdalus Dulcis (Sweet Almond) Oil",
       "certifications": [
@@ -67,7 +67,7 @@
         "palmitoleic": 8
       },
       "comedogenic_rating": 3,
-      "recommended_usage_rate": "5-25% in creams, 100% in masks",
+      
       "recommended_shelf_life_days": 365,
       "inci_name": "Persea Gratissima (Avocado) Oil",
       "certifications": [
@@ -92,7 +92,7 @@
         "stearic": 4
       },
       "comedogenic_rating": 1,
-      "recommended_usage_rate": "3-20% in emulsions, 100% in massage blends",
+      
       "recommended_shelf_life_days": 365,
       "inci_name": "Helianthus Annuus (Sunflower) Seed Oil",
       "certifications": [
@@ -118,7 +118,7 @@
         "gamma_linolenic": 4
       },
       "comedogenic_rating": 0,
-      "recommended_usage_rate": "1-15% in serums and moisturizers",
+      
       "recommended_shelf_life_days": 180,
       "inci_name": "Cannabis Sativa Seed Oil",
       "certifications": [
@@ -143,7 +143,7 @@
         "stearic": 2
       },
       "comedogenic_rating": 1,
-      "recommended_usage_rate": "1-10% in emulsions, up to 20% in soap",
+      
       "recommended_shelf_life_days": 730,
       "inci_name": "Ricinus Communis (Castor) Seed Oil",
       "certifications": [
@@ -168,7 +168,7 @@
         "palmitic": 2
       },
       "comedogenic_rating": 2,
-      "recommended_usage_rate": "5-50% in leave-on products",
+      
       "recommended_shelf_life_days": 1825,
       "inci_name": "Simmondsia Chinensis (Jojoba) Seed Oil",
       "certifications": [
@@ -193,7 +193,7 @@
         "stearic": 5
       },
       "comedogenic_rating": 0,
-      "recommended_usage_rate": "1-10% in facial serums and hair oils",
+      
       "recommended_shelf_life_days": 540,
       "inci_name": "Argania Spinosa Kernel Oil",
       "certifications": [
@@ -218,7 +218,7 @@
         "palmitic": 4
       },
       "comedogenic_rating": 1,
-      "recommended_usage_rate": "5-20% in facial care",
+      
       "recommended_shelf_life_days": 365,
       "inci_name": "Rosa Canina Fruit Oil",
       "certifications": [
@@ -241,7 +241,7 @@
         "capric": 35
       },
       "comedogenic_rating": 1,
-      "recommended_usage_rate": "10-100% in anhydrous products",
+      
       "recommended_shelf_life_days": 1825,
       "inci_name": "Caprylic/Capric Triglyceride",
       "certifications": [
@@ -260,7 +260,7 @@
     "melting_point_c",
     "fatty_acid_profile",
     "comedogenic_rating",
-    "recommended_usage_rate",
+
     "recommended_shelf_life_days",
     "inci_name",
     "certifications",

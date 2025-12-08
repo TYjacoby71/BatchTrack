@@ -8,7 +8,7 @@
       "default_unit": "gram",
       "moisture_content_percent": 14,
       "protein_content_pct": 10,
-      "recommended_usage_rate": "Standard baking substitution 100%",
+      
       "recommended_shelf_life_days": 240,
       "certifications": [
         "Organic"
@@ -26,7 +26,7 @@
       "default_unit": "gram",
       "moisture_content_percent": 14,
       "protein_content_pct": 13,
-      "recommended_usage_rate": "Use 100% for yeast breads",
+      
       "recommended_shelf_life_days": 240,
       "certifications": [
         "Organic"
@@ -43,7 +43,7 @@
       "default_unit": "gram",
       "moisture_content_percent": 14,
       "protein_content_pct": 14,
-      "recommended_usage_rate": "Use 50-100% of total flour weight",
+      
       "recommended_shelf_life_days": 90,
       "certifications": [
         "Organic"
@@ -60,7 +60,7 @@
       "default_unit": "gram",
       "moisture_content_percent": 5,
       "protein_content_pct": 21,
-      "recommended_usage_rate": "Replace 25-30% of wheat flour in recipes",
+      
       "recommended_shelf_life_days": 180,
       "certifications": [
         "Gluten-Free"
@@ -77,7 +77,7 @@
       "default_unit": "gram",
       "moisture_content_percent": 8,
       "protein_content_pct": 18,
-      "recommended_usage_rate": "Use 15-25% with additional liquids",
+      
       "recommended_shelf_life_days": 365,
       "certifications": [
         "Gluten-Free"
@@ -93,7 +93,7 @@
       "default_unit": "gram",
       "moisture_content_percent": 11,
       "protein_content_pct": 17,
-      "recommended_usage_rate": "Substitute up to 30% of flour in baking",
+      
       "recommended_shelf_life_days": 180,
       "certifications": [
         "Gluten-Free Option"
@@ -109,7 +109,7 @@
       "default_unit": "gram",
       "moisture_content_percent": 10,
       "protein_content_pct": 22,
-      "recommended_usage_rate": "Use 25-100% in savory applications",
+      
       "recommended_shelf_life_days": 180,
       "certifications": [
         "Non-GMO"
@@ -126,7 +126,7 @@
       "default_unit": "gram",
       "moisture_content_percent": 6,
       "protein_content_pct": 30,
-      "recommended_usage_rate": "0.5-2% in beverages and confections",
+      
       "recommended_shelf_life_days": 365,
       "certifications": [
         "JAS Organic"
@@ -141,7 +141,7 @@
   "attributes": [
     "moisture_content_percent",
     "protein_content_pct",
-    "recommended_usage_rate",
+
     "recommended_shelf_life_days",
     "certifications",
     "is_active_ingredient"

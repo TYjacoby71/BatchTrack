@@ -7,7 +7,7 @@
       "name": "Lavender Essential Oil",
       "default_unit": "milliliter",
       "flash_point_c": 74,
-      "recommended_usage_rate": "Dermal max 2%",
+      
       "recommended_fragrance_load_pct": "Up to 6% in candles",
       "recommended_shelf_life_days": 1095,
       "inci_name": "Lavandula Angustifolia (Lavender) Oil",
@@ -25,7 +25,7 @@
       "name": "Tea Tree Essential Oil",
       "default_unit": "milliliter",
       "flash_point_c": 60,
-      "recommended_usage_rate": "Dermal max 15%",
+      
       "recommended_fragrance_load_pct": "Up to 4% in candles",
       "recommended_shelf_life_days": 730,
       "inci_name": "Melaleuca Alternifolia (Tea Tree) Leaf Oil",
@@ -43,7 +43,7 @@
       "name": "Peppermint Essential Oil",
       "default_unit": "milliliter",
       "flash_point_c": 66,
-      "recommended_usage_rate": "Dermal max 5%",
+      
       "recommended_fragrance_load_pct": "Up to 3% in candles",
       "recommended_shelf_life_days": 1095,
       "inci_name": "Mentha Piperita (Peppermint) Oil",
@@ -61,7 +61,7 @@
       "name": "Bergamot Essential Oil (FCF)",
       "default_unit": "milliliter",
       "flash_point_c": 60,
-      "recommended_usage_rate": "Dermal max 1%",
+      
       "recommended_fragrance_load_pct": "Up to 4% in candles",
       "recommended_shelf_life_days": 730,
       "inci_name": "Citrus Aurantium Bergamia (Bergamot) Fruit Oil",
@@ -80,7 +80,7 @@
       "name": "Patchouli Essential Oil",
       "default_unit": "milliliter",
       "flash_point_c": 60,
-      "recommended_usage_rate": "Dermal max 5%",
+      
       "recommended_fragrance_load_pct": "Up to 6% in candles",
       "recommended_shelf_life_days": 1825,
       "inci_name": "Pogostemon Cablin (Patchouli) Oil",
@@ -98,7 +98,7 @@
       "name": "Cedarwood Atlas Essential Oil",
       "default_unit": "milliliter",
       "flash_point_c": 96,
-      "recommended_usage_rate": "Dermal max 3%",
+      
       "recommended_fragrance_load_pct": "Up to 6% in candles",
       "recommended_shelf_life_days": 1460,
       "inci_name": "Cedrus Atlantica Bark Oil",
@@ -115,7 +115,7 @@
   ],
   "attributes": [
     "flash_point_c",
-    "recommended_usage_rate",
+
     "recommended_fragrance_load_pct",
     "recommended_shelf_life_days",
     "inci_name",

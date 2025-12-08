@@ -4,7 +4,7 @@
   "description": "Broad-spectrum preservatives and functional additives for stability, chelation, and protection.",
   "attributes": [
     "ph_value",
-    "recommended_usage_rate",
+
     "recommended_shelf_life_days",
     "inci_name",
     "certifications",
@@ -19,7 +19,7 @@
       "density": 1.02,
       "default_unit": "milliliter",
       "ph_value": "Effective pH 4.0-8.0",
-      "recommended_usage_rate": "0.75-1.5% in emulsions",
+      
       "recommended_shelf_life_days": 730,
       "inci_name": "Phenoxyethanol (and) Caprylyl Glycol (and) Sorbic Acid",
       "certifications": [],
@@ -33,7 +33,7 @@
       "density": 1.08,
       "default_unit": "milliliter",
       "ph_value": "Effective pH 3.0-8.0",
-      "recommended_usage_rate": "0.1-0.5% in water-based systems",
+      
       "recommended_shelf_life_days": 1095,
       "inci_name": "Propylene Glycol (and) Diazolidinyl Urea (and) Iodopropynyl Butylcarbamate",
       "certifications": [],
@@ -47,7 +47,7 @@
       "density": 1.05,
       "default_unit": "gram",
       "ph_value": "Effective pH 3.0-8.0",
-      "recommended_usage_rate": "0.6-1.0% in natural formulations",
+      
       "recommended_shelf_life_days": 730,
       "inci_name": "Benzyl Alcohol (and) Salicylic Acid (and) Glycerin (and) Sorbic Acid",
       "certifications": [
@@ -63,7 +63,7 @@
       "density": 1.03,
       "default_unit": "milliliter",
       "ph_value": "Effective pH 3.0-8.0",
-      "recommended_usage_rate": "2-4% in natural preservative systems",
+      
       "recommended_shelf_life_days": 540,
       "inci_name": "Leuconostoc/Radish Root Ferment Filtrate (and) Cocos Nucifera (Coconut) Fruit Extract",
       "certifications": [
@@ -79,7 +79,7 @@
       "density": 1.36,
       "default_unit": "gram",
       "ph_value": "Effective below pH 6.0",
-      "recommended_usage_rate": "0.1-0.3% in acidic systems",
+      
       "recommended_shelf_life_days": 1825,
       "inci_name": "Potassium Sorbate",
       "certifications": [
@@ -95,7 +95,7 @@
       "density": 1.66,
       "default_unit": "gram",
       "ph_value": "2.1 (1% solution)",
-      "recommended_usage_rate": "0.1-2% for pH adjustment and chelation",
+      
       "recommended_shelf_life_days": 1825,
       "inci_name": "Citric Acid",
       "certifications": [

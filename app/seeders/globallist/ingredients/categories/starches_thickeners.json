@@ -5,7 +5,7 @@
   "attributes": [
     "moisture_content_percent",
     "protein_content_pct",
-    "recommended_usage_rate",
+
     "recommended_shelf_life_days",
     "certifications",
     "is_active_ingredient"
@@ -20,7 +20,7 @@
       "default_unit": "gram",
       "moisture_content_percent": 12,
       "protein_content_pct": 0.3,
-      "recommended_usage_rate": "2-10% as thickener",
+      
       "recommended_shelf_life_days": 1095,
       "certifications": [
         "Non-GMO"
@@ -36,7 +36,7 @@
       "default_unit": "gram",
       "moisture_content_percent": 11,
       "protein_content_pct": 0.2,
-      "recommended_usage_rate": "2-8% as thickener or absorbent",
+      
       "recommended_shelf_life_days": 730,
       "certifications": [
         "Gluten-Free"
@@ -52,7 +52,7 @@
       "default_unit": "gram",
       "moisture_content_percent": 12,
       "protein_content_pct": 0.2,
-      "recommended_usage_rate": "2-8% as thickener and texturizer",
+      
       "recommended_shelf_life_days": 730,
       "certifications": [
         "Gluten-Free"
@@ -68,7 +68,7 @@
       "default_unit": "gram",
       "moisture_content_percent": 12,
       "protein_content_pct": 5,
-      "recommended_usage_rate": "0.2-1% as thickener or stabilizer",
+      
       "recommended_shelf_life_days": 540,
       "certifications": [
         "Kosher"
@@ -84,7 +84,7 @@
       "default_unit": "gram",
       "moisture_content_percent": 13,
       "protein_content_pct": 7,
-      "recommended_usage_rate": "0.1-1% in gels and emulsions",
+      
       "recommended_shelf_life_days": 540,
       "certifications": [
         "Non-GMO"
@@ -100,7 +100,7 @@
       "default_unit": "gram",
       "moisture_content_percent": 6,
       "protein_content_pct": 0,
-      "recommended_usage_rate": "1-20% as bulking agent or encapsulation aid",
+      
       "recommended_shelf_life_days": 730,
       "certifications": [
         "Non-GMO"
@@ -116,7 +116,7 @@
       "default_unit": "gram",
       "moisture_content_percent": 8,
       "protein_content_pct": 90,
-      "recommended_usage_rate": "2-10% in gels and confectionery",
+      
       "recommended_shelf_life_days": 720,
       "certifications": [
         "Halal Available"

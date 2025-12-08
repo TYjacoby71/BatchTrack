@@ -7,7 +7,7 @@
       "name": "Polysorbate 80",
       "default_unit": "milliliter",
       "ph_value": "5.0-7.0 (10% solution)",
-      "recommended_usage_rate": "1-10% as solubilizer/emulsifier",
+      
       "recommended_shelf_life_days": 1095,
       "inci_name": "Polysorbate 80",
       "certifications": [
@@ -23,7 +23,7 @@
       "name": "Polysorbate 20",
       "default_unit": "milliliter",
       "ph_value": "5.0-7.0 (10% solution)",
-      "recommended_usage_rate": "1-5% as solubilizer for EO/FO",
+      
       "recommended_shelf_life_days": 1095,
       "inci_name": "Polysorbate 20",
       "certifications": [
@@ -39,7 +39,7 @@
       "name": "Cocamidopropyl Betaine (30%)",
       "default_unit": "milliliter",
       "ph_value": "5.0-6.0",
-      "recommended_usage_rate": "5-30% in surfactant systems",
+      
       "recommended_shelf_life_days": 730,
       "inci_name": "Cocamidopropyl Betaine",
       "certifications": [
@@ -55,7 +55,7 @@
       "name": "Decyl Glucoside",
       "default_unit": "milliliter",
       "ph_value": "11.0-12.0",
-      "recommended_usage_rate": "5-25% as primary surfactant",
+      
       "recommended_shelf_life_days": 730,
       "inci_name": "Decyl Glucoside",
       "certifications": [
@@ -71,7 +71,7 @@
       "name": "Sodium Lauryl Sulfoacetate",
       "default_unit": "gram",
       "ph_value": "5.5-7.5",
-      "recommended_usage_rate": "10-60% in powdered cleansers",
+      
       "recommended_shelf_life_days": 1095,
       "inci_name": "Sodium Lauryl Sulfoacetate",
       "certifications": [
@@ -87,7 +87,7 @@
       "name": "BTMS-50",
       "default_unit": "gram",
       "ph_value": "5.0-6.0",
-      "recommended_usage_rate": "1-10% in conditioners and lotions",
+      
       "recommended_shelf_life_days": 730,
       "inci_name": "Behentrimonium Methosulfate (and) Cetyl Alcohol (and) Butylene Glycol",
       "certifications": [],
@@ -100,7 +100,7 @@
   ],
   "attributes": [
     "ph_value",
-    "recommended_usage_rate",
+
     "recommended_shelf_life_days",
     "inci_name",
     "certifications",

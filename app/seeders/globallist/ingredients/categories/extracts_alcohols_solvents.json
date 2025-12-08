@@ -4,7 +4,7 @@
   "description": "Water-free solvents and carrier liquids used for dissolving actives, perfumery, and preservative systems.",
   "attributes": [
     "flash_point_c",
-    "recommended_usage_rate",
+
     "recommended_shelf_life_days",
     "inci_name",
     "certifications",
@@ -19,7 +19,7 @@
       "density": 0.79,
       "default_unit": "milliliter",
       "flash_point_c": 16,
-      "recommended_usage_rate": "1-100% as solvent or sanitizer base",
+      
       "recommended_shelf_life_days": 1825,
       "inci_name": "Alcohol Denat.",
       "certifications": [
@@ -35,7 +35,7 @@
       "density": 1.04,
       "default_unit": "milliliter",
       "flash_point_c": 99,
-      "recommended_usage_rate": "1-10% as humectant or solvent",
+      
       "recommended_shelf_life_days": 1095,
       "inci_name": "Propylene Glycol",
       "certifications": [
@@ -51,7 +51,7 @@
       "density": 1.02,
       "default_unit": "milliliter",
       "flash_point_c": 130,
-      "recommended_usage_rate": "5-25% as fragrance diluent",
+      
       "recommended_shelf_life_days": 1095,
       "inci_name": "Dipropylene Glycol",
       "certifications": [
@@ -67,7 +67,7 @@
       "density": 1.26,
       "default_unit": "milliliter",
       "flash_point_c": 160,
-      "recommended_usage_rate": "1-15% as humectant or solvent",
+      
       "recommended_shelf_life_days": 1095,
       "inci_name": "Glycerin",
       "certifications": [

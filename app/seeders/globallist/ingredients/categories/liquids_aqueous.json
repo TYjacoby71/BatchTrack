@@ -5,7 +5,7 @@
   "attributes": [
     "ph_value",
     "conductivity_uS_cm",
-    "recommended_usage_rate",
+
     "recommended_shelf_life_days",
     "certifications",
     "is_active_ingredient"
@@ -20,7 +20,7 @@
       "default_unit": "milliliter",
       "ph_value": "7.0",
       "conductivity_uS_cm": "< 10",
-      "recommended_usage_rate": "Use 10-100% as aqueous phase",
+      
       "recommended_shelf_life_days": 1095,
       "certifications": [
         "USP Grade"
@@ -36,7 +36,7 @@
       "default_unit": "milliliter",
       "ph_value": "6.0-7.0",
       "conductivity_uS_cm": "< 1",
-      "recommended_usage_rate": "Use 10-100% as solvent for actives",
+      
       "recommended_shelf_life_days": 730,
       "certifications": [
         "Laboratory Grade"
@@ -52,7 +52,7 @@
       "default_unit": "milliliter",
       "ph_value": "6.5-7.5",
       "conductivity_uS_cm": "< 30",
-      "recommended_usage_rate": "Use 10-100% in base formulations",
+      
       "recommended_shelf_life_days": 540,
       "certifications": [
         "NSF Certified"
@@ -68,7 +68,7 @@
       "default_unit": "milliliter",
       "ph_value": "6.5-7.0",
       "conductivity_uS_cm": "< 0.1",
-      "recommended_usage_rate": "Use 50-100% for sensitive actives and peptides",
+      
       "recommended_shelf_life_days": 365,
       "certifications": [
         "ASTM Type I"
