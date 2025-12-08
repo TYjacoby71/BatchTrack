@@ -127,7 +127,8 @@ def _add_recipe_status_and_marketplace():
         op.execute(sa.text("UPDATE recipe SET skin_opt_in = COALESCE(skin_opt_in, TRUE)"))
         op.execute(sa.text("UPDATE recipe SET org_origin_purchased = COALESCE(org_origin_purchased, FALSE)"))
         op.execute(sa.text("UPDATE recipe SET org_origin_recipe_id = COALESCE(org_origin_recipe_id, COALESCE(root_recipe_id, id))"))
-        op.execute(
+        bind = op.get_bind()
+        bind.execute(
             sa.text(
                 """
                 UPDATE recipe
