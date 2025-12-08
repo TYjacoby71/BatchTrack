@@ -53,7 +53,10 @@ def upgrade():
     safe_add_column('global_item', sa.Column('recommended_usage_rate', sa.String(128)))
     safe_add_column('global_item', sa.Column('is_active_ingredient', sa.Boolean()))
 
-    # Alter is_active_ingredient server_default after it's added and set column types
+    # Update existing NULL values to False before setting NOT NULL constraint
+    op.execute("UPDATE global_item SET is_active_ingredient = FALSE WHERE is_active_ingredient IS NULL")
+    
+    # Now set the column to NOT NULL
     with op.batch_alter_table('global_item') as batch_op:
         batch_op.alter_column('is_active_ingredient', server_default=None, nullable=False)
         batch_op.alter_column('recommended_usage_rate',
