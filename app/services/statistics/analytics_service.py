@@ -657,16 +657,9 @@ class AnalyticsDataService:
                 .scalar()
             ) or 0.0
 
-            top_group_row = (
-                db.session.query(RecipeProductGroup.name, func.count(Recipe.id))
-                .join(Recipe, Recipe.product_group_id == RecipeProductGroup.id)
-                .filter(base_filter)
-                .group_by(RecipeProductGroup.name)
-                .order_by(func.count(Recipe.id).desc())
-                .first()
-            )
-            top_group_name = top_group_row[0] if top_group_row else None
-            top_group_count = top_group_row[1] if top_group_row else None
+            # Product groups were removed - set defaults
+            top_group_name = None
+            top_group_count = 0
 
             batchtrack_native_count = Recipe.query.filter(
                 base_filter,
