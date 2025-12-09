@@ -715,133 +715,64 @@ document.addEventListener('DOMContentLoaded', function() {
     bindGeneratedContainerNamePreview();
 });
 
-// Ingredient name search functionality
-document.addEventListener('DOMContentLoaded', function() {
-    const ingredientNameInput = document.getElementById('ingredientNameInput');
-    const ingredientSuggestions = document.getElementById('ingredientSuggestions');
-    const globalItemIdInput = document.getElementById('selectedGlobalItemId');
+function updateIngredientSelectionDetails(picked, source){
+  var details = document.getElementById('ingredientSelectionDetails');
+  if (!details) return;
+  if (!picked){
+    details.textContent = '';
+    return;
+  }
+  var headlineParts = [];
+  if (picked.ingredient_name) headlineParts.push(picked.ingredient_name);
+  else if (picked.text) headlineParts.push(picked.text);
+  if (picked.physical_form_name) headlineParts.push(picked.physical_form_name);
+  var headline = headlineParts.join(' — ');
+  var meta = [];
+  if (typeof picked.cost_per_unit === 'number'){
+    var unitLabel = picked.default_unit || 'unit';
+    meta.push('$' + picked.cost_per_unit.toFixed(2) + '/' + unitLabel);
+  }
+  if (picked.default_unit){
+    meta.push('Unit ' + picked.default_unit);
+  }
+  if (typeof picked.density === 'number'){
+    meta.push('Density ' + picked.density.toFixed(3) + ' g/ml');
+  }
+  details.textContent = (source === 'inventory' ? 'Inventory form: ' : 'Global form: ') +
+    (headline || picked.text || '') + (meta.length ? ' (' + meta.join(' • ') + ')' : '');
+}
 
-    // Check if all required elements exist before setting up event listeners
-    if (!ingredientNameInput || !ingredientSuggestions || !globalItemIdInput) {
-        console.log('Ingredient suggestion elements not found, skipping initialization');
-        return;
+document.addEventListener('DOMContentLoaded', function(){
+  const ingredientNameInput = document.getElementById('ingredientNameInput');
+  const ingredientSuggestions = document.getElementById('ingredientSuggestions');
+  const globalItemIdInput = document.getElementById('selectedGlobalItemId');
+  if (!ingredientNameInput || !ingredientSuggestions || !globalItemIdInput) {
+    return;
+  }
+  if (typeof window.attachMergedInventoryGlobalTypeahead !== 'function') {
+    return;
+  }
+
+  window.attachMergedInventoryGlobalTypeahead({
+    inputEl: ingredientNameInput,
+    giHiddenEl: globalItemIdInput,
+    listEl: ingredientSuggestions,
+    mode: 'inventory_create',
+    ingredientFirst: true,
+    onSelection: function(picked, source){
+      const unitSelect = document.querySelector('#addIngredientForm select[name="unit"]');
+      if (unitSelect && picked.default_unit){
+        unitSelect.value = picked.default_unit;
+      }
+      updateIngredientSelectionDetails(picked, source);
     }
+  });
 
-    ingredientNameInput.addEventListener('input', function() {
-        const query = this.value.trim();
-        if (query.length < 2) {
-            ingredientSuggestions.style.display = 'none';
-            return;
-        }
-
-        // Search both inventory items and global items
-        Promise.all([
-            fetch(`/api/ingredients/ingredients/search?q=${encodeURIComponent(query)}`).then(r => r.json()).catch(() => ({results: []})),
-            fetch(`/api/ingredients/global-items/search?q=${encodeURIComponent(query)}&type=ingredient`).then(r => r.json()).catch(() => ({results: []}))
-        ]).then(([invResults, globalResults]) => {
-            const suggestions = [];
-
-            // Add inventory results first
-            if (invResults && invResults.results) {
-                invResults.results.forEach(item => {
-                    suggestions.push({
-                        type: 'inventory',
-                        id: item.id,
-                        name: item.text,
-                        unit: item.unit || 'count',
-                        density: item.density || null,
-                        global_item_id: item.global_item_id || null
-                    });
-                });
-            }
-
-            // Add global results that aren't already in inventory
-            if (globalResults && globalResults.results) {
-                globalResults.results.forEach(item => {
-                    const alreadyExists = suggestions.some(s => 
-                        s.global_item_id === item.id || 
-                        s.name.toLowerCase() === item.text.toLowerCase()
-                    );
-                    if (!alreadyExists) {
-                        suggestions.push({
-                            type: 'global',
-                            id: item.id,
-                            name: item.text,
-                            unit: item.default_unit || 'count',
-                            density: item.density || null,
-                            global_item_id: item.id
-                        });
-                    }
-                });
-            }
-
-            displaySuggestions(suggestions);
-        }).catch(err => {
-            console.error('Search error:', err);
-            ingredientSuggestions.style.display = 'none';
-        });
-    });
-
-    function displaySuggestions(suggestions) {
-        if (suggestions.length === 0) {
-            ingredientSuggestions.style.display = 'none';
-            return;
-        }
-
-        const html = suggestions.map(item => `
-            <div class="suggestion-item p-2 border-bottom" style="cursor: pointer;" 
-                 data-type="${item.type}" 
-                 data-id="${item.id}" 
-                 data-name="${item.name}"
-                 data-unit="${item.unit}"
-                 data-density="${item.density || ''}"
-                 data-global-item-id="${item.global_item_id || ''}">
-                <div class="fw-bold">${item.name}</div>
-                <small class="text-muted">
-                    ${item.type === 'inventory' ? 'In Inventory' : 'From Global Library'} • 
-                    Unit: ${item.unit}
-                    ${item.density ? ` • Density: ${item.density}` : ''}
-                </small>
-            </div>
-        `).join('');
-
-        ingredientSuggestions.innerHTML = html;
-        ingredientSuggestions.style.display = 'block';
-
-        // Add click handlers
-        ingredientSuggestions.querySelectorAll('.suggestion-item').forEach(item => {
-            item.addEventListener('click', function() {
-                const name = this.dataset.name;
-                const unit = this.dataset.unit;
-                const density = this.dataset.density;
-                const globalItemId = this.dataset.globalItemId;
-
-                ingredientNameInput.value = name;
-                globalItemIdInput.value = globalItemId || '';
-
-                // Set unit if there's a unit select
-                const unitSelect = document.querySelector('select[name="unit"]');
-                if (unitSelect && unit) {
-                    unitSelect.value = unit;
-                }
-
-                // Set density if there's a density field
-                const densityInput = document.querySelector('input[name="density"]');
-                if (densityInput && density) {
-                    densityInput.value = density;
-                }
-
-                ingredientSuggestions.style.display = 'none';
-            });
-        });
+  ingredientNameInput.addEventListener('input', function(){
+    if (!this.value.trim()){
+      updateIngredientSelectionDetails(null);
     }
-
-    // Hide suggestions when clicking outside
-    document.addEventListener('click', function(e) {
-        if (!ingredientNameInput.contains(e.target) && !ingredientSuggestions.contains(e.target)) {
-            ingredientSuggestions.style.display = 'none';
-        }
-    });
+  });
 });
 
 // Tabs behavior (show one type at a time)

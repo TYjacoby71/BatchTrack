@@ -1,689 +1,297 @@
 """
-Locust scenarios that exercise concurrent recipe planning, batch creation,
-inventory adjustments, SKU updates, and public-library browsing with
-per-user session isolation to avoid session guard collisions.
+Locust Load Testing Configuration - Clean Version
+
+Fixed version that only hits valid endpoints with proper authentication.
 """
 
-import json
-import logging
-import os
-import queue
 import random
-import re
 import time
-from typing import Dict, List, Optional, Tuple
+from typing import Optional
 
 from bs4 import BeautifulSoup
-from locust import HttpUser, between, task
-from locust.exception import RescheduleTask
+from locust import HttpUser, task, between
 
+<<<<<<< HEAD
+GLOBAL_ITEM_SEARCH_TERMS = [
+    "basil",
+    "lavender",
+    "peppermint",
+    "powder",
+    "oil",
+    "butter",
+    "clay",
+    "extract",
+=======
+# Smaller pool to avoid rate limiting
+TEST_USER_POOL = [
+    {'username': f'loadtest_user{i}', 'password': 'loadtest123'}
+    for i in range(1, 11)  # Only 10 users
+>>>>>>> origin/main
+]
 
-logger = logging.getLogger("loadtests.locustfile")
+class AnonymousUser(HttpUser):
+    """Anonymous user browsing public content only."""
 
-CACHE_TTL_SECONDS = int(os.getenv("LOCUST_CACHE_TTL", "120"))
-DEFAULT_PASSWORD = os.getenv("LOCUST_USER_PASSWORD", "loadtest123")
-DEFAULT_USERNAME_BASE = os.getenv("LOCUST_USER_BASE", "loadtest_user")
-DEFAULT_USER_COUNT = int(os.getenv("LOCUST_USER_COUNT", "10000"))
-REQUIRE_HTTPS_HOST = os.getenv("LOCUST_REQUIRE_HTTPS", "1").lower() in {"1", "true", "yes"}
-LOG_LOGIN_FAILURE_CONTEXT = os.getenv("LOCUST_LOG_LOGIN_FAILURE_CONTEXT", "1").lower() in {"1", "true", "yes"}
+    wait_time = between(5, 15)  # Longer waits to avoid rate limits
+    weight = 4  # Most traffic
 
+    @task(5)
+    def view_homepage(self):
+        """Load homepage."""
+        self.client.get("/", name="homepage")
 
-def _load_credential_source() -> List[Dict[str, str]]:
-    """Load credential definitions from env or fall back to sequential pattern."""
-    raw = os.getenv("LOCUST_USER_CREDENTIALS")
-    if raw:
-        try:
-            loaded = json.loads(raw)
-            if isinstance(loaded, list):
-                credentials = [
-                    creds for creds in loaded
-                    if isinstance(creds, dict) and {"username", "password"} <= set(creds.keys())
-                ]
-                print(f"📋 Loaded {len(credentials)} credentials from LOCUST_USER_CREDENTIALS")
-                return credentials
-        except json.JSONDecodeError:
-            print("❌ Failed to parse LOCUST_USER_CREDENTIALS JSON")
+    @task(3)
+    def view_tools_index(self):
+        """Browse tools index page."""
+        self.client.get("/tools", name="tools_index")
 
-    # Fall back to sequential pattern
-    credentials = [
-        {"username": f"{DEFAULT_USERNAME_BASE}{i}", "password": DEFAULT_PASSWORD}
-        for i in range(1, DEFAULT_USER_COUNT + 1)
-    ]
-    print(f"📋 Generated {len(credentials)} sequential credentials ({DEFAULT_USERNAME_BASE}1-{DEFAULT_USER_COUNT})")
-    return credentials
+    @task(2)
+<<<<<<< HEAD
+    def view_global_library(self):
+        """Browse global item library."""
+        self.client.get("/library/global_items", name="global_library")
+    
+    @task(2)
+    def search_public_global_items(self):
+        """Exercise the public global item search endpoint."""
+        query = random.choice(GLOBAL_ITEM_SEARCH_TERMS)
+        params = {"q": query, "type": "ingredient", "group": "ingredient"}
+        self.client.get(
+            "/api/public/global-items/search",
+            params=params,
+            name="public_global_item_search",
+        )
+    
+=======
+    def view_global_items(self):
+        """Browse global items library."""
+        self.client.get("/global-items", name="global_items")
 
-
-class CredentialPool:
-    """Queue-backed pool to guarantee one active session per test user."""
-
-    def __init__(self):
-        self._pool = queue.Queue()
-        credentials = _load_credential_source()
-        
-        if not credentials:
-            raise RuntimeError("❌ No credentials available! Run: python loadtests/test_user_generator.py create --count=10000")
-            
-        for creds in credentials:
-            self._pool.put(creds)
-        
-        print(f"✅ Credential pool initialized with {len(credentials)} users")
-        print(f"   Pattern: {credentials[0]['username']} ... {credentials[-1]['username']}")
-        print(f"   Password: {credentials[0]['password']}")
-
-    def acquire(self) -> Dict[str, str]:
-        try:
-            return self._pool.get(timeout=5)
-        except queue.Empty as exc:  # pragma: no cover - defensive
-            remaining_size = self._pool.qsize()
-            raise RuntimeError(f"No available load-test users (pool size: {remaining_size}). You may need more test users or fewer concurrent Locust users.") from exc
-
-    def release(self, creds: Optional[Dict[str, str]]) -> None:
-        if creds:
-            self._pool.put(creds)
-
-
-CREDENTIAL_POOL = CredentialPool()
-
-
-def _extract_csrf_token(html: str) -> Optional[str]:
-    """Pull CSRF token from a login form or meta tag."""
-    try:
-        soup = BeautifulSoup(html, "html.parser")
-        field = soup.find("input", {"name": "csrf_token"})
-        if field and field.get("value"):
-            return field.get("value")
-        meta = soup.find("meta", {"name": "csrf-token"})
-        if meta and meta.get("content"):
-            return meta.get("content")
-    except Exception:
-        return None
-    return None
-
-
-def _extract_ids(pattern: str, text: str) -> List[int]:
-    """Helper to extract integer IDs from HTML snippets."""
-    ids = set()
-    for match in re.findall(pattern, text):
-        try:
-            ids.add(int(match))
-        except ValueError:
-            continue
-    return sorted(ids)
+>>>>>>> origin/main
+    @task(1)
+    def view_signup(self):
+        """View signup page."""
+        self.client.get("/auth/signup", name="signup_page")
 
 
 class AuthenticatedMixin:
-    """Reusable auth + caching helpers for stateful users."""
+    """Shared helpers for authenticated users."""
 
-    credential: Optional[Dict[str, str]] = None
-    _active_username: Optional[str] = None
-    recipe_ids: List[int]
-    library_recipe_ids: List[Tuple[int, str]]
-    inventory_item_ids: List[int]
-    product_ids: List[int]
-    sku_inventory_ids: List[int]
-    _cache_refreshed_at: float
+    login_username: str = ""
+    login_password: str = ""
 
     def on_start(self):
-        """Claim a test account, log in, and seed caches."""
+        """Perform login with a random test user."""
+        # Pick a random user from the pool
+        user_creds = random.choice(TEST_USER_POOL)
+        self.login_username = user_creds['username']
+        self.login_password = user_creds['password']
+
+        # Perform simple login without catch_response
+        self._perform_login(self.login_username, self.login_password)
+
+    def _extract_csrf(self, response) -> Optional[str]:
+        """Extract CSRF token from login page."""
         try:
-            self.credential = CREDENTIAL_POOL.acquire()
-            self._active_username = self.credential.get("username")
-        except RuntimeError as exc:
-            print(f"❌ {self.__class__.__name__} failed to acquire credential: {exc}")
-            raise RescheduleTask(str(exc)) from exc
+            soup = BeautifulSoup(response.text, "html.parser")
 
-        try:
-            self._login_with_credential()
-        except RescheduleTask as exc:
-            username = self._active_username or "unknown"
-            print(f"❌ {self.__class__.__name__} login failed for {username}: {exc}")
-            raise
-        self.recipe_ids = []
-        self.library_recipe_ids = []
-        self.inventory_item_ids = []
-        self.product_ids = []
-        self.sku_inventory_ids = []
-        self._cache_refreshed_at = 0.0
-        self.ensure_domain_cache(force=True)
+            # Try hidden input field
+            token_field = soup.find("input", {"name": "csrf_token"})
+            if token_field:
+                return token_field.get("value")
 
-    def on_stop(self):
-        """Release the credential so another simulated user can reuse it."""
-        if self.credential:
-            CREDENTIAL_POOL.release(self.credential)
-            self.credential = None
-        self._active_username = None
+            # Try meta tag
+            meta_csrf = soup.find("meta", {"name": "csrf-token"})
+            if meta_csrf:
+                return meta_csrf.get("content")
 
-    _https_warning_emitted = False
+        except Exception:
+            return None
+        return None
 
-    def _login_with_credential(self) -> None:
-        """Execute the login form flow with CSRF handling."""
-
-        self._emit_https_warning_once()
-
-        login_page = self.client.get("/auth/login", name="auth.login.page")
+    def _perform_login(self, username: str, password: str):
+        """Simple login without manual success/failure handling."""
+        # Get login page
+        login_page = self.client.get("/auth/login", name="login_page")
         if login_page.status_code != 200:
-            print(f"❌ Login page unavailable: {login_page.status_code}")
-            raise RescheduleTask("Login page unavailable")
+            return
 
-        token = _extract_csrf_token(login_page.text)
+        # Extract CSRF token
+        token = self._extract_csrf(login_page)
+
+        # Prepare login data
         payload = {
-            "username": self.credential["username"],
-            "password": self.credential["password"],
+            "username": username,
+            "password": password,
         }
         if token:
             payload["csrf_token"] = token
 
-        host = (getattr(self, "host", None) or getattr(getattr(self, "environment", None), "host", "") or "").rstrip("/")
-        if host and not host.startswith("http"):
-            host = ""
-
-        referer_url = f"{host}/auth/login" if host else login_page.url
-        if not referer_url.startswith("http"):
-            referer_url = "/auth/login"
-
-        headers = {"Content-Type": "application/x-www-form-urlencoded", "Referer": referer_url}
-
-        response = self.client.post(
-            "/auth/login",
-            data=payload,
-            headers=headers,
-            name="auth.login",
-            allow_redirects=False,
-        )
-        if response.status_code in (301, 302, 303):
-            redirect_url = response.headers.get("Location", "/dashboard")
-            if redirect_url:
-                try:
-                    name = "auth.login.redirect"
-                    target = redirect_url if redirect_url.startswith("/") else redirect_url
-                    self.client.get(target, name=name, allow_redirects=True)
-                except Exception as exc:
-                    print(f"⚠️ Redirect follow failed for {payload['username']}: {exc}")
-            print(f"✅ Login successful for {payload['username']}: redirected to {redirect_url}")
-        else:
-            self._log_login_failure(response, payload, token)
-            print(
-                f"❌ Login failed for {payload['username']}: status={response.status_code}, "
-                f"response={response.text[:200]}..."
-            )
-            CREDENTIAL_POOL.release(self.credential)
-            self.credential = None
-            raise RescheduleTask(f"Login failed for {payload['username']}: {response.status_code}")
-
-        self._verify_authenticated_session(context="post-login")
-
-    def _emit_https_warning_once(self) -> None:
-        """
-        Render deployments mark the session cookie as Secure, so running Locust
-        against http:// silently drops it. Emit a high-signal warning when we
-        detect an http-only host.
-        """
-        if AuthenticatedMixin._https_warning_emitted:
-            return
-        host = getattr(getattr(self, "environment", None), "host", "") or ""
-        if not host:
-            return
-        if host.startswith("http://") and REQUIRE_HTTPS_HOST:
-            AuthenticatedMixin._https_warning_emitted = True
-            logger.error(
-                "Locust host %s is not HTTPS. Secure session cookies will be dropped and login will always 400. "
-                "Re-run Locust with --host https://batchtrack.onrender.com (or set LOCUST_REQUIRE_HTTPS=0 to suppress).",
-                host,
-            )
-
-    def _log_login_failure(self, response, payload, csrf_token) -> None:
-        if not LOG_LOGIN_FAILURE_CONTEXT:
-            return
-
-        try:
-            request_headers = dict(response.request.headers) if response.request else {}
-        except Exception:
-            request_headers = {}
-
-        cookies = {}
-        try:
-            cookies = {
-                k: ("<redacted>" if "session" in k.lower() else v)
-                for k, v in self.client.cookies.get_dict().items()
-            }
-        except Exception:
-            pass
-
-        context = {
-            "username": payload.get("username"),
-            "status": response.status_code,
-            "has_csrf_token": bool(csrf_token),
-            "host": getattr(getattr(self, "environment", None), "host", ""),
-            "cookies": cookies,
-            "set_cookie": response.headers.get("Set-Cookie"),
-            "referer": request_headers.get("Referer"),
-            "content_type": request_headers.get("Content-Type"),
-            "response_snippet": (response.text or "")[:200],
+        # Set proper headers
+        headers = {
+            "Content-Type": "application/x-www-form-urlencoded",
+            "Referer": "/auth/login"
         }
-        logger.error("auth.login failed with context: %s", json.dumps(context, default=str))
 
-    def _verify_authenticated_session(self, *, context: str) -> None:
-        """
-        Issue a lightweight API request to ensure the session cookie is usable.
-        Fail fast (RescheduleTask) so we do not run the rest of the scenario unauthenticated.
-        """
-        try:
-            resp = self.client.get(
-                "/api/ingredients",
-                name="auth.session_check",
-                allow_redirects=False,
-            )
-        except Exception as exc:  # pragma: no cover - network defensive
-            raise RescheduleTask(f"{context}: session check failed ({exc})") from exc
-
-        if resp.status_code == 200:
-            return
-
-        # Unauthorized or unexpected response – tear down and retry the user
-        logger.warning(
-            "Session verification failed (%s): status=%s, location=%s",
-            context,
-            resp.status_code,
-            resp.headers.get("Location"),
-        )
-        CREDENTIAL_POOL.release(self.credential)
-        self.credential = None
-        raise RescheduleTask(f"{context}: session verification failed ({resp.status_code})")
-
-    # -----------------------
-    # Cached ID lookups
-    # -----------------------
-    def ensure_domain_cache(self, *, force: bool = False) -> None:
-        now = time.time()
-        if not force and (now - self._cache_refreshed_at) < CACHE_TTL_SECONDS:
-            return
-
-        self.recipe_ids = self._fetch_recipe_ids()
-        self.library_recipe_ids = self._fetch_recipe_library_ids()
-        self.inventory_item_ids = self._fetch_inventory_item_ids()
-        self.product_ids, self.sku_inventory_ids = self._fetch_product_and_sku_ids()
-        self._cache_refreshed_at = now
-
-    def _fetch_recipe_ids(self) -> List[int]:
-        # Prefer lightweight API for org-scoped recipe IDs
-        response = self.client.get("/api/bootstrap/recipes", name="bootstrap.recipes", allow_redirects=False)
-        if response.status_code == 200:
-            try:
-                data = response.json()
-                recipe_ids: List[int] = []
-                for item in data.get("recipes", []):
-                    try:
-                        recipe_ids.append(int(item.get("id")))
-                    except (TypeError, ValueError):
-                        continue
-                if recipe_ids:
-                    return recipe_ids
-            except (ValueError, json.JSONDecodeError):
-                logger.warning("bootstrap.recipes API payload was invalid JSON")
-
-        # Avoid hammering the legacy HTML routes during load; if the API fails, return an empty list.
-        logger.warning("bootstrap.recipes API unavailable (%s) for %s; skipping legacy fallback", response.status_code, self._active_username)
-        return []
-
-    def _fetch_recipe_library_ids(self) -> List[Tuple[int, str]]:
-        resp = self.client.get("/recipes/library", name="bootstrap.recipe_library", allow_redirects=True)
-        if resp.status_code != 200:
-            return []
-        pairs = re.findall(r"/recipes/library/(\d+)-([a-z0-9-]+)", resp.text)
-        refs = []
-        for recipe_id, slug in pairs:
-            try:
-                refs.append((int(recipe_id), slug))
-            except ValueError:
-                continue
-        return refs
-
-    def _fetch_inventory_item_ids(self) -> List[int]:
-        resp = self.client.get("/api/ingredients", name="bootstrap.inventory.api", allow_redirects=False)
-        if resp.status_code in {401, 403} or (
-            resp.status_code in {301, 302, 303} and "/auth/login" in resp.headers.get("Location", "")
-        ):
-            logger.warning(
-                "bootstrap.inventory.api got %s for %s – forcing re-authentication",
-                resp.status_code,
-                self._active_username,
-            )
-            self._login_with_credential()
-            resp = self.client.get("/api/ingredients", name="bootstrap.inventory.api", allow_redirects=False)
-
-        if resp.status_code != 200:
-            logger.error(
-                "bootstrap.inventory.api failed: status=%s body=%s",
-                resp.status_code,
-                (resp.text or "")[:200],
-            )
-            return []
-        try:
-            data = resp.json()
-        except json.JSONDecodeError:
-            return []
-        return [item["id"] for item in data if isinstance(item, dict) and item.get("id")]
-
-    def _fetch_product_and_sku_ids(self) -> Tuple[List[int], List[int]]:
-        response = self.client.get("/api/bootstrap/products", name="bootstrap.products", allow_redirects=False)
-        if response.status_code == 200:
-            try:
-                data = response.json()
-                product_ids: List[int] = []
-                for item in data.get("products", []):
-                    try:
-                        product_ids.append(int(item.get("id")))
-                    except (TypeError, ValueError):
-                        continue
-                sku_ids: List[int] = []
-                for raw in data.get("sku_inventory_ids", []):
-                    try:
-                        sku_ids.append(int(raw))
-                    except (TypeError, ValueError):
-                        continue
-                if product_ids or sku_ids:
-                    return product_ids, sku_ids
-            except (ValueError, json.JSONDecodeError):
-                logger.warning("bootstrap.products API payload was invalid JSON")
-
-        # Avoid issuing extra legacy page requests during load; return empty IDs if the API cannot respond.
-        logger.warning("bootstrap.products API unavailable (%s) for %s; skipping legacy fallback", response.status_code, self._active_username)
-        return [], []
-
-    # -----------------------
-    # Random selection helpers
-    # -----------------------
-    def pick_recipe_id(self) -> Optional[int]:
-        if not self.recipe_ids:
-            self.ensure_domain_cache(force=True)
-        return random.choice(self.recipe_ids) if self.recipe_ids else None
-
-    def pick_library_recipe_id(self) -> Optional[Tuple[int, str]]:
-        if not self.library_recipe_ids:
-            self.ensure_domain_cache(force=True)
-        return random.choice(self.library_recipe_ids) if self.library_recipe_ids else None
-
-    def pick_inventory_item_id(self) -> Optional[int]:
-        if not self.inventory_item_ids:
-            self.ensure_domain_cache(force=True)
-        return random.choice(self.inventory_item_ids) if self.inventory_item_ids else None
-
-    def pick_product_id(self) -> Optional[int]:
-        if not self.product_ids:
-            self.ensure_domain_cache(force=True)
-        return random.choice(self.product_ids) if self.product_ids else None
-
-    def pick_sku_inventory_id(self) -> Optional[int]:
-        if not self.sku_inventory_ids:
-            self.ensure_domain_cache(force=True)
-        return random.choice(self.sku_inventory_ids) if self.sku_inventory_ids else None
+        # Perform login - let Locust handle success/failure automatically
+        self.client.post("/auth/login", data=payload, headers=headers, name="login_submit")
 
 
-class RecipeOpsUser(AuthenticatedMixin, HttpUser):
-    """
-    Simulates users that plan recipes, import library entries, and spin up batches.
-    """
+class AuthenticatedUser(AuthenticatedMixin, HttpUser):
+    """Authenticated user with realistic usage patterns."""
 
-    wait_time = between(1, 3)
-    weight = 4
+    wait_time = between(8, 20)  # Longer waits to avoid rate limits
+    weight = 1  # Lower weight
 
-    @task(4)
+    @task(10)
     def view_dashboard(self):
+        """Load user dashboard."""
         self.client.get("/dashboard", name="dashboard")
 
-    @task(4)
-    def list_recipes(self):
-        self.client.get("/recipes", name="recipes.list")
+    @task(6)
+    def view_inventory_list(self):
+        """Browse inventory list."""
+        self.client.get("/inventory", name="inventory_list")
 
-    @task(3)
-    def plan_recipe(self):
-        recipe_id = self.pick_recipe_id()
-        if not recipe_id:
-            return
-        payload = {"scale": round(random.uniform(0.5, 3.0), 2)}
-        self.client.post(
-            f"/production-planning/recipe/{recipe_id}/plan",
-            json=payload,
-            name="production.plan",
-        )
-
-    @task(3)
-    def auto_fill_containers(self):
-        recipe_id = self.pick_recipe_id()
-        if not recipe_id:
-            return
-        payload = {
-            "scale": round(random.uniform(0.75, 2.5), 2),
-            "product_density": round(random.uniform(0.4, 1.4), 2),
-            "fill_pct": random.randint(70, 98),
-        }
-        self.client.post(
-            f"/production-planning/recipe/{recipe_id}/auto-fill-containers",
-            json=payload,
-            name="production.auto_fill",
-        )
+    @task(5)
+    def view_batches_list(self):
+        """Check batches list."""
+        self.client.get("/batches", name="batches_list")
 
     @task(4)
-    def start_batch(self):
-        recipe_id = self.pick_recipe_id()
-        if not recipe_id:
-            return
-        payload = {
-            "recipe_id": recipe_id,
-            "scale": round(random.uniform(0.5, 4.0), 2),
-            "batch_type": random.choice(["ingredient", "product"]),
-            "notes": "Locust load-test batch",
-            "containers": [],
-            "force_start": random.choice([True, False]),
-        }
-        with self.client.post(
-            "/batches/api/start-batch",
-            json=payload,
-            name="batches.api.start",
-            catch_response=True,
-        ) as response:
-            if response.status_code >= 500:
-                response.failure(f"Batch start failed ({response.status_code})")
-            else:
-                response.success()
-
-    @task(2)
-    def view_batch_list(self):
-        self.client.get("/batches", name="batches.list")
-
-    @task(2)
-    def view_recipe_details(self):
-        recipe_id = self.pick_recipe_id()
-        if not recipe_id:
-            return
-        self.client.get(f"/recipes/{recipe_id}/view", name="recipes.detail")
-
-    @task(2)
-    def browse_recipe_library(self):
-        params = {}
-        if random.random() < 0.5:
-            params["search"] = random.choice(["soap", "balm", "cookie", "toner"])
-        self.client.get("/recipes/library", params=params, name="recipes.library.list")
-
-    @task(1)
-    def preview_recipe_import(self):
-        library_ref = self.pick_library_recipe_id()
-        if not library_ref:
-            return
-        library_id, slug = library_ref
-        detail_path = f"/recipes/library/{library_id}-{slug}"
-        self.client.get(detail_path, name="recipes.library.detail")
-        with self.client.get(
-            f"/recipes/{library_id}/import",
-            name="recipes.import",
-            catch_response=True,
-        ) as response:
-            if response.status_code in (200, 302, 303, 403, 404):
-                response.success()
-            else:
-                response.failure(f"Unexpected import status {response.status_code}")
-
-
-class InventoryOpsUser(AuthenticatedMixin, HttpUser):
-    """
-    Simulates inventory managers restocking, spoiling, trashing, and auditing items.
-    """
-
-    wait_time = between(2, 5)
-    weight = 3
-
-    @task(4)
-    def inventory_dashboard(self):
-        self.client.get("/inventory", name="inventory.list")
+    def view_recipes_list(self):
+        """Browse recipes."""
+        self.client.get("/recipes", name="recipes_list")
 
     @task(3)
-    def view_inventory_item(self):
-        item_id = self.pick_inventory_item_id()
-        if not item_id:
-            return
-        self.client.get(f"/inventory/view/{item_id}", name="inventory.view")
-
-    @task(4)
-    def adjust_inventory(self):
-        item_id = self.pick_inventory_item_id()
-        if not item_id:
-            return
-        change_type = random.choice(["restock", "spoil", "trash"])
-        quantity = round(random.uniform(0.25, 5.0), 2)
-        payload = {
-            "change_type": change_type,
-            "quantity": str(quantity),
-            "input_unit": "count",
-            "notes": f"Locust {change_type}",
-        }
-        if change_type == "restock":
-            payload["cost_entry_type"] = "per_unit"
-            payload["cost_per_unit"] = str(round(random.uniform(0.1, 10.0), 2))
-        headers = {"X-Requested-With": "XMLHttpRequest"}
-        with self.client.post(
-            f"/inventory/adjust/{item_id}",
-            data=payload,
-            headers=headers,
-            name=f"inventory.adjust.{change_type}",
-            catch_response=True,
-        ) as response:
-            if response.status_code >= 500:
-                response.failure("Inventory adjustment failed")
-            else:
-                response.success()
+    def view_products_list(self):
+        """Browse products."""
+        self.client.get("/products", name="products_list")
 
     @task(2)
-    def expiration_summary(self):
-        self.client.get("/expiration/api/summary", name="expiration.summary")
-
-    @task(2)
-    def global_items_lookup(self):
-        params = {}
-        if random.random() < 0.5:
-            params["type"] = random.choice(["ingredient", "container", "consumable"])
-        self.client.get("/global-items", params=params, name="global.items")
-
-
-class ProductOpsUser(AuthenticatedMixin, HttpUser):
-    """Simulates SKU managers updating finished goods and reconciling product lots."""
-
-    wait_time = between(2, 6)
-    weight = 2
-
-    @task(3)
-    def list_products(self):
-        params = {}
-        if random.random() < 0.4:
-            params["sort"] = random.choice(["name", "popular", "stock"])
-        self.client.get("/products", params=params, name="products.list")
-
-    @task(2)
-    def view_product_detail(self):
-        product_id = self.pick_product_id()
-        if not product_id:
-            return
-        self.client.get(f"/products/{product_id}", name="products.detail")
-
-    @task(2)
-    def view_sku_detail(self):
-        sku_id = self.pick_sku_inventory_id()
-        if not sku_id:
-            return
-        self.client.get(f"/sku/{sku_id}", name="sku.detail")
-
-    @task(3)
-    def adjust_product_inventory(self):
-        sku_id = self.pick_sku_inventory_id()
-        if not sku_id:
-            return
-        change_type = random.choice(["restock", "sale", "spoil", "trash"])
-        payload = {
-            "change_type": change_type,
-            "quantity": round(random.uniform(1, 10), 2),
-            "unit": "count",
-            "notes": f"Locust {change_type}",
-        }
-        if change_type == "sale":
-            payload["sale_price"] = round(random.uniform(5, 75), 2)
-        headers = {"Content-Type": "application/json"}
-        with self.client.post(
-            f"/products/inventory/adjust/{sku_id}",
-            json=payload,
-            headers=headers,
-            name=f"products.inventory.{change_type}",
-            catch_response=True,
-        ) as response:
-            if response.status_code >= 500:
-                response.failure("Product inventory adjustment failed")
-            else:
-                response.success()
-
-
-class AnonymousUser(HttpUser):
-    """Public-only traffic to keep cache warm without authentication."""
-
-    wait_time = between(3, 8)
-    weight = 1
-
-    def _public_get(self, path: str, *, name: str, params: Optional[Dict[str, str]] = None):
-        """
-        Hit a public endpoint and fail fast if it redirects to login or errors.
-        This keeps anonymous traffic from accidentally hammering authorize spots.
-        """
-        with self.client.get(
-            path,
-            name=name,
+<<<<<<< HEAD
+    def search_global_library(self):
+        """Hit the authenticated global library search endpoint."""
+        query = random.choice(GLOBAL_ITEM_SEARCH_TERMS)
+        params = {"q": query, "type": "ingredient", "group": "ingredient"}
+        self.client.get(
+            "/api/ingredients/global-items/search",
             params=params,
-            catch_response=True,
-        ) as response:
-            final_path = response.request.path_url if response.request else ""
-            if "/auth/login" in final_path:
-                response.failure(f"{name} redirected to login ({final_path})")
-                return
-            if response.status_code >= 400:
-                response.failure(f"{name} returned {response.status_code}")
-                return
-            response.success()
-
-    @task(4)
-    def view_homepage(self):
-        self._public_get("/", name="public.homepage")
-
-    @task(3)
-    def view_tools_index(self):
-        self._public_get("/tools", name="public.tools")
-
-    @task(3)
-    def browse_global_items(self):
-        params = None
-        if random.random() < 0.5:
-            params = {"type": random.choice(["ingredient", "container"])}
-        self._public_get("/global-items", name="public.global_items", params=params)
-
+            name="auth_global_item_search",
+        )
+    
     @task(2)
-    def recipe_library_public(self):
-        self._public_get("/recipes/library", name="public.recipe_library")
+    def view_batches(self):
+        """Check batch status."""
+        self.client.get("/batches/list", name="batches_list")
+    
+    @task(2)
+    def production_planning(self):
+        """Access production planning."""
+        self.client.get("/production_planning/plan_production", 
+                       name="production_planning")
+    
+    @task(1)
+=======
+>>>>>>> origin/main
+    def view_settings(self):
+        """Access settings."""
+        self.client.get("/settings", name="settings")
 
     @task(1)
-    def signup_page(self):
-        self._public_get("/auth/signup", name="public.signup")
+<<<<<<< HEAD
+    def billing_status(self):
+        """Check billing status."""
+        self.client.get("/organization/dashboard#billing", name="billing_status")
+
+class HighFrequencyUser(AuthenticatedMixin, HttpUser):
+    """Simulates rapid API usage patterns."""
+    
+    wait_time = between(0.5, 2)
+    weight = 0.5  # 12.5% of traffic
+    login_username = "api@example.com"
+    login_password = "replace-me"
+    
+    def on_start(self):
+        """Quick login for API-like usage."""
+        self._perform_login(self.login_username, self.login_password, "api_login")
+    
+    @task(10)
+    def rapid_dashboard_checks(self):
+        """Frequent dashboard polling."""
+        self.client.get("/user_dashboard", name="rapid_dashboard")
+    
+    @task(5) 
+    def inventory_api_calls(self):
+        """Simulate frequent inventory checks."""
+        self.client.get("/api/inventory/summary", name="api_inventory")
+    
+    @task(4)
+    def rapid_global_item_search(self):
+        """Issue repeated global item search queries."""
+        query = random.choice(GLOBAL_ITEM_SEARCH_TERMS)
+        params = {"q": query, "type": "ingredient", "group": "ingredient"}
+        self.client.get(
+            "/api/ingredients/global-items/search",
+            params=params,
+            name="api_global_item_search",
+        )
+    
+    @task(3)
+    def batch_status_checks(self):
+        """Check batch status frequently."""
+        self.client.get("/api/batches/active", name="api_batches")
+
+# Load testing scenarios for different purposes
+class StressTest(HttpUser):
+    """High-intensity stress testing."""
+    
+    wait_time = between(0.1, 1)
+    
+    tasks = [
+        AnonymousUser.view_homepage,
+        AuthenticatedUser.view_dashboard,
+        AuthenticatedUser.view_inventory
+    ]
+
+
+class TimerHeavyUser(AuthenticatedMixin, HttpUser):
+    """Focus on timer endpoints and dashboard polling to stress check the timer service."""
+
+    wait_time = between(1, 4)
+    weight = 0.2  # optional addition to traffic mix
+    login_username = "loadtest@example.com"
+    login_password = "replace-me"
+
+    def on_start(self):
+        self._perform_login(self.login_username, self.login_password, "timer_login")
+
+    @task(6)
+    def heartbeat(self):
+=======
+    def check_server_time(self):
+        """Check server time API."""
+>>>>>>> origin/main
+        self.client.get("/api/server-time", name="server_time")
+
+
+class LightLoadUser(AuthenticatedMixin, HttpUser):
+    """Very light load user for testing basic functionality."""
+
+    wait_time = between(15, 30)  # Very long waits
+    weight = 0.5
+
+    @task(5)
+    def dashboard_only(self):
+        """Only check dashboard."""
+        self.client.get("/dashboard", name="light_dashboard")
+
+    @task(2)
+    def inventory_only(self):
+        """Only check inventory."""
+        self.client.get("/inventory", name="light_inventory")
+
+    @task(1)
+    def api_health_check(self):
+        """API health check."""
+        self.client.get("/api", name="api_health")

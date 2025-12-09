@@ -24,7 +24,13 @@
       "certifications": [
         "USP Grade"
       ],
-      "is_active_ingredient": true
+      "is_active_ingredient": true,
+      "ingredient": {
+        "name": "Niacinamide",
+        "slug": "niacinamide",
+        "inci_name": "Niacinamide"
+      },
+      "physical_form": "Active"
     },
     {
       "name": "Retinol (Stabilized)",
@@ -39,7 +45,13 @@
       "certifications": [
         "Cosmetic Grade"
       ],
-      "is_active_ingredient": true
+      "is_active_ingredient": true,
+      "ingredient": {
+        "name": "Retinol",
+        "slug": "retinol",
+        "inci_name": "Retinol"
+      },
+      "physical_form": "Stabilized"
     },
     {
       "name": "Ascorbic Acid (L)",
@@ -55,7 +67,13 @@
       "certifications": [
         "USP Grade"
       ],
-      "is_active_ingredient": true
+      "is_active_ingredient": true,
+      "ingredient": {
+        "name": "Ascorbic Acid",
+        "slug": "ascorbic-acid",
+        "inci_name": "Ascorbic Acid"
+      },
+      "physical_form": "L"
     },
     {
       "name": "DL-Panthenol",
@@ -71,7 +89,13 @@
       "certifications": [
         "COSMOS Approved"
       ],
-      "is_active_ingredient": true
+      "is_active_ingredient": true,
+      "ingredient": {
+        "name": "DL-Panthenol",
+        "slug": "dl-panthenol",
+        "inci_name": "Panthenol"
+      },
+      "physical_form": "Active"
     },
     {
       "name": "Alpha Arbutin",
@@ -86,7 +110,13 @@
       "certifications": [
         "REACH Registered"
       ],
-      "is_active_ingredient": true
+      "is_active_ingredient": true,
+      "ingredient": {
+        "name": "Alpha Arbutin",
+        "slug": "alpha-arbutin",
+        "inci_name": "Alpha-Arbutin"
+      },
+      "physical_form": "Active"
     }
   ]
 }

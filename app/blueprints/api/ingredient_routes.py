@@ -1,12 +1,25 @@
-from flask import Blueprint, jsonify, request
+from collections import OrderedDict
+
+from flask import Blueprint, jsonify, request, current_app
 from flask_login import login_required, current_user
 from sqlalchemy import or_, func
+from sqlalchemy.orm import joinedload
+
+from ...extensions import cache, limiter
 from ...models import IngredientCategory, InventoryItem, GlobalItem, db
 from ...services.statistics.global_item_stats import GlobalItemStatsService
 from ...services.density_assignment_service import DensityAssignmentService
-from ...extensions import limiter
+from ...services.cache_invalidation import global_library_cache_key
+from ...utils.cache_utils import stable_cache_key
 
 ingredient_api_bp = Blueprint('ingredient_api', __name__)
+
+
+def _global_library_cache_timeout() -> int:
+    return current_app.config.get(
+        "GLOBAL_LIBRARY_CACHE_TIMEOUT",
+        current_app.config.get("CACHE_DEFAULT_TIMEOUT", 120),
+    )
 
 @ingredient_api_bp.route('/categories', methods=['GET'])
 def get_categories():
@@ -60,7 +73,10 @@ def search_ingredients():
             'results': []
         })
 
-    query = InventoryItem.query
+    query = InventoryItem.query.options(
+        joinedload(InventoryItem.global_item).joinedload(GlobalItem.ingredient),
+        joinedload(InventoryItem.global_item).joinedload(GlobalItem.physical_form),
+    )
     # Scope to the user's organization for privacy
     if current_user.organization_id:
         query = query.filter(InventoryItem.organization_id == current_user.organization_id)
@@ -75,6 +91,9 @@ def search_ingredients():
 
     payload = []
     for item in results:
+        global_obj = getattr(item, 'global_item', None)
+        ingredient_obj = getattr(global_obj, 'ingredient', None) if global_obj else None
+        physical_form_obj = getattr(global_obj, 'physical_form', None) if global_obj else None
         payload.append({
             'id': item.id,
             'text': item.name,
@@ -82,7 +101,12 @@ def search_ingredients():
             'unit': item.unit,
             'density': item.density,
             'type': item.type,
-            'global_item_id': item.global_item_id
+            'global_item_id': item.global_item_id,
+            'ingredient_id': ingredient_obj.id if ingredient_obj else None,
+            'ingredient_name': ingredient_obj.name if ingredient_obj else item.name,
+            'physical_form_id': physical_form_obj.id if physical_form_obj else None,
+            'physical_form_name': physical_form_obj.name if physical_form_obj else None,
+            'cost_per_unit': item.cost_per_unit,
         })
 
     return jsonify({'results': payload})
@@ -168,6 +192,23 @@ def search_global_items():
     if not q:
         return jsonify({'results': []})
 
+    cache_key = None
+    if cache:
+        cache_key = global_library_cache_key(
+            stable_cache_key(
+                "auth-global-items",
+                {
+                    'q': q,
+                    'item_type': item_type or '',
+                    'group': request.args.get('group') or '',
+                    'org': getattr(current_user, 'organization_id', None),
+                },
+            )
+        )
+        cached_payload = cache.get(cache_key)
+        if cached_payload:
+            return jsonify(cached_payload)
+
     query = GlobalItem.query.filter(GlobalItem.is_archived != True)
     if item_type:
         query = query.filter(GlobalItem.item_type == item_type)
@@ -182,12 +223,53 @@ def search_global_items():
     except Exception:
         items = query.filter(name_match).order_by(func.length(GlobalItem.name).asc()).limit(20).all()
 
+    group_mode = request.args.get('group') == 'ingredient' and (not item_type or item_type == 'ingredient')
+    grouped = OrderedDict() if group_mode else None
     results = []
+
     for gi in items:
-        results.append({
+        ingredient_obj = gi.ingredient if getattr(gi, 'ingredient', None) else None
+        ingredient_category_obj = ingredient_obj.category if ingredient_obj and getattr(ingredient_obj, 'category', None) else None
+        physical_form_obj = gi.physical_form if getattr(gi, 'physical_form', None) else None
+        ingredient_payload = None
+        if ingredient_obj:
+            ingredient_payload = {
+                'id': ingredient_obj.id,
+                'name': ingredient_obj.name,
+                'slug': ingredient_obj.slug,
+                'inci_name': ingredient_obj.inci_name,
+                'cas_number': ingredient_obj.cas_number,
+                'ingredient_category_id': ingredient_obj.ingredient_category_id,
+                'ingredient_category_name': ingredient_category_obj.name if ingredient_category_obj else None,
+            }
+        physical_form_payload = None
+        if physical_form_obj:
+            physical_form_payload = {
+                'id': physical_form_obj.id,
+                'name': physical_form_obj.name,
+                'slug': physical_form_obj.slug,
+            }
+        function_names = [tag.name for tag in getattr(gi, 'functions', [])]
+        application_names = [tag.name for tag in getattr(gi, 'applications', [])]
+        ingredient_category_name = gi.ingredient_category.name if gi.ingredient_category else None
+
+        display_name = gi.name
+        if ingredient_payload and physical_form_payload:
+            display_name = f"{ingredient_payload['name']} ({physical_form_payload['name']})"
+        elif ingredient_payload:
+            display_name = ingredient_payload['name']
+
+        item_payload = {
             'id': gi.id,
-            'text': gi.name,
+            'name': display_name,
+            'text': display_name,
+            'display_name': display_name,
+            'raw_name': gi.name,
             'item_type': gi.item_type,
+            'ingredient': ingredient_payload,
+            'physical_form': physical_form_payload,
+            'functions': function_names,
+            'applications': application_names,
             'default_unit': gi.default_unit,
             'density': gi.density,
             'capacity': gi.capacity,
@@ -207,9 +289,89 @@ def search_global_items():
             'brewing_potential_sg': gi.brewing_potential_sg,
             'brewing_diastatic_power_lintner': gi.brewing_diastatic_power_lintner,
             'certifications': gi.certifications or [],
-        })
+            'ingredient_category_id': gi.ingredient_category_id,
+            'ingredient_category_name': ingredient_category_name,
+            'ingredient_name': ingredient_payload['name'] if ingredient_payload else None,
+            'physical_form_name': physical_form_payload['name'] if physical_form_payload else None,
+            'saponification_value': getattr(gi, 'saponification_value', None),
+            'iodine_value': getattr(gi, 'iodine_value', None),
+            'melting_point_c': getattr(gi, 'melting_point_c', None),
+            'flash_point_c': getattr(gi, 'flash_point_c', None),
+            'moisture_content_percent': getattr(gi, 'moisture_content_percent', None),
+            'comedogenic_rating': getattr(gi, 'comedogenic_rating', None),
+            'ph_value': getattr(gi, 'ph_value', None),
+        }
+        results.append(item_payload)
 
-    return jsonify({'results': results})
+        if group_mode:
+            group_key = ingredient_payload['id'] if ingredient_payload else f"item-{gi.id}"
+            group_entry = grouped.get(group_key)
+            if not group_entry:
+                group_entry = {
+                    'id': ingredient_payload['id'] if ingredient_payload else gi.id,
+                    'ingredient_id': ingredient_payload['id'] if ingredient_payload else None,
+                    'name': ingredient_payload['name'] if ingredient_payload else display_name,
+                    'text': ingredient_payload['name'] if ingredient_payload else display_name,
+                    'display_name': ingredient_payload['name'] if ingredient_payload else display_name,
+                    'item_type': gi.item_type,
+                    'ingredient': ingredient_payload,
+                    'ingredient_category_id': (ingredient_payload['ingredient_category_id']
+                                               if ingredient_payload else gi.ingredient_category_id),
+                    'ingredient_category_name': (ingredient_payload['ingredient_category_name']
+                                                 if ingredient_payload else ingredient_category_name),
+                    'forms': [],
+                }
+                grouped[group_key] = group_entry
+
+            group_entry['forms'].append({
+                'id': gi.id,
+                'name': display_name,
+                'text': display_name,
+                'display_name': display_name,
+                'raw_name': gi.name,
+                'item_type': gi.item_type,
+                'ingredient_id': ingredient_payload['id'] if ingredient_payload else None,
+                'ingredient_name': ingredient_payload['name'] if ingredient_payload else None,
+                'physical_form': physical_form_payload,
+                'physical_form_name': physical_form_payload['name'] if physical_form_payload else None,
+                'default_unit': gi.default_unit,
+                'density': gi.density,
+                'default_is_perishable': gi.default_is_perishable,
+                'recommended_shelf_life_days': gi.recommended_shelf_life_days,
+                'recommended_usage_rate': gi.recommended_usage_rate,
+                'recommended_fragrance_load_pct': gi.recommended_fragrance_load_pct,
+                'aliases': gi.aliases or [],
+                'certifications': gi.certifications or [],
+                'functions': function_names,
+                'applications': application_names,
+                'inci_name': gi.inci_name,
+                'protein_content_pct': gi.protein_content_pct,
+                'brewing_color_srm': gi.brewing_color_srm,
+                'brewing_potential_sg': gi.brewing_potential_sg,
+                'brewing_diastatic_power_lintner': gi.brewing_diastatic_power_lintner,
+                'ingredient_category_id': gi.ingredient_category_id,
+                'ingredient_category_name': ingredient_category_name,
+                'saponification_value': getattr(gi, 'saponification_value', None),
+                'iodine_value': getattr(gi, 'iodine_value', None),
+                'melting_point_c': getattr(gi, 'melting_point_c', None),
+                'flash_point_c': getattr(gi, 'flash_point_c', None),
+                'moisture_content_percent': getattr(gi, 'moisture_content_percent', None),
+                'comedogenic_rating': getattr(gi, 'comedogenic_rating', None),
+                'ph_value': getattr(gi, 'ph_value', None),
+            })
+
+    if group_mode:
+        payload = {'results': list(grouped.values())}
+    else:
+        payload = {'results': results}
+
+    if cache_key:
+        try:
+            cache.set(cache_key, payload, timeout=_global_library_cache_timeout())
+        except Exception:
+            current_app.logger.debug("Unable to write authenticated global item cache key %s", cache_key)
+
+    return jsonify(payload)
 
 @ingredient_api_bp.route('/global-items/<int:global_item_id>/stats', methods=['GET'])
 @login_required

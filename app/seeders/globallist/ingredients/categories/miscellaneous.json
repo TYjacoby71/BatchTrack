@@ -23,7 +23,13 @@
       "certifications": [
         "Ecocert Acceptable"
       ],
-      "is_active_ingredient": true
+      "is_active_ingredient": true,
+      "ingredient": {
+        "name": "Matrixyl 3000 Peptide Blend",
+        "slug": "matrixyl-3000-peptide-blend",
+        "inci_name": "Glycerin (and) Water (and) Palmitoyl Tripeptide-1 (and) Palmitoyl Tetrapeptide-7"
+      },
+      "physical_form": "General"
     },
     {
       "name": "Botanical Brightening Complex",
@@ -38,7 +44,13 @@
       "certifications": [
         "Vegan"
       ],
-      "is_active_ingredient": true
+      "is_active_ingredient": true,
+      "ingredient": {
+        "name": "Botanical Brightening Complex",
+        "slug": "botanical-brightening-complex",
+        "inci_name": "Water (and) Glycerin (and) Arctostaphylos Uva-Ursi Leaf Extract (and) Glycyrrhiza Glabra Root Extract"
+      },
+      "physical_form": "General"
     },
     {
       "name": "Peptide Repair Complex",
@@ -53,7 +65,13 @@
       "certifications": [
         "Cosmetic Grade"
       ],
-      "is_active_ingredient": true
+      "is_active_ingredient": true,
+      "ingredient": {
+        "name": "Peptide Repair Complex",
+        "slug": "peptide-repair-complex",
+        "inci_name": "Water (and) Acetyl Hexapeptide-8 (and) Palmitoyl Tripeptide-5 (and) Phenoxyethanol"
+      },
+      "physical_form": "General"
     }
   ]
 }

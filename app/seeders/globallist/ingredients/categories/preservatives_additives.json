@@ -23,7 +23,13 @@
       "recommended_shelf_life_days": 730,
       "inci_name": "Phenoxyethanol (and) Caprylyl Glycol (and) Sorbic Acid",
       "certifications": [],
-      "is_active_ingredient": false
+      "is_active_ingredient": false,
+      "ingredient": {
+        "name": "Optiphen Plus",
+        "slug": "optiphen-plus",
+        "inci_name": "Phenoxyethanol (and) Caprylyl Glycol (and) Sorbic Acid"
+      },
+      "physical_form": "Additive"
     },
     {
       "name": "Liquid Germall Plus",
@@ -37,7 +43,13 @@
       "recommended_shelf_life_days": 1095,
       "inci_name": "Propylene Glycol (and) Diazolidinyl Urea (and) Iodopropynyl Butylcarbamate",
       "certifications": [],
-      "is_active_ingredient": false
+      "is_active_ingredient": false,
+      "ingredient": {
+        "name": "Liquid Germall Plus",
+        "slug": "liquid-germall-plus",
+        "inci_name": "Propylene Glycol (and) Diazolidinyl Urea (and) Iodopropynyl Butylcarbamate"
+      },
+      "physical_form": "Liquid"
     },
     {
       "name": "Geogard ECT",
@@ -53,7 +65,13 @@
       "certifications": [
         "COSMOS Approved"
       ],
-      "is_active_ingredient": false
+      "is_active_ingredient": false,
+      "ingredient": {
+        "name": "Geogard ECT",
+        "slug": "geogard-ect",
+        "inci_name": "Benzyl Alcohol (and) Salicylic Acid (and) Glycerin (and) Sorbic Acid"
+      },
+      "physical_form": "Additive"
     },
     {
       "name": "Leucidal SF Complete",
@@ -69,7 +87,13 @@
       "certifications": [
         "Natural Product Association"
       ],
-      "is_active_ingredient": false
+      "is_active_ingredient": false,
+      "ingredient": {
+        "name": "Leucidal SF Complete",
+        "slug": "leucidal-sf-complete",
+        "inci_name": "Leuconostoc/Radish Root Ferment Filtrate (and) Cocos Nucifera (Coconut) Fruit Extract"
+      },
+      "physical_form": "Additive"
     },
     {
       "name": "Potassium Sorbate",
@@ -85,7 +109,13 @@
       "certifications": [
         "FCC Grade"
       ],
-      "is_active_ingredient": false
+      "is_active_ingredient": false,
+      "ingredient": {
+        "name": "Potassium Sorbate",
+        "slug": "potassium-sorbate",
+        "inci_name": "Potassium Sorbate"
+      },
+      "physical_form": "Additive"
     },
     {
       "name": "Citric Acid (Anhydrous)",
@@ -102,7 +132,13 @@
         "USP Grade",
         "Kosher"
       ],
-      "is_active_ingredient": false
+      "is_active_ingredient": false,
+      "ingredient": {
+        "name": "Citric Acid",
+        "slug": "citric-acid",
+        "inci_name": "Citric Acid"
+      },
+      "physical_form": "Anhydrous"
     }
   ]
 }

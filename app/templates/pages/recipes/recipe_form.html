@@ -1154,7 +1154,7 @@ document.getElementById('recipeForm').addEventListener('submit', function(e) {
         const list = container.querySelector('[data-role="suggestions"]');
         if (!input || !giHidden || !list) return;
         if (typeof window.attachMergedInventoryGlobalTypeahead === 'function'){
-            window.attachMergedInventoryGlobalTypeahead({ inputEl: input, invHiddenEl: invHidden, giHiddenEl: giHidden, listEl: list, mode: 'recipe' });
+            window.attachMergedInventoryGlobalTypeahead({ inputEl: input, invHiddenEl: invHidden, giHiddenEl: giHidden, listEl: list, mode: 'recipe', ingredientFirst: true });
         }
     }
     document.querySelectorAll('.ingredient-entry .position-relative').forEach(setupMerged);

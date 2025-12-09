@@ -27,7 +27,12 @@
       "certifications": [
         "Cosmetic Grade"
       ],
-      "is_active_ingredient": false
+      "is_active_ingredient": false,
+      "ingredient": {
+        "name": "Kaolin Clay",
+        "slug": "kaolin-clay"
+      },
+      "physical_form": "Powder"
     },
     {
       "name": "Bentonite Clay",
@@ -43,7 +48,12 @@
       "certifications": [
         "USP Grade"
       ],
-      "is_active_ingredient": false
+      "is_active_ingredient": false,
+      "ingredient": {
+        "name": "Bentonite Clay",
+        "slug": "bentonite-clay"
+      },
+      "physical_form": "Powder"
     },
     {
       "name": "Rhassoul Clay",
@@ -60,7 +70,12 @@
       "certifications": [
         "Ecocert Raw Material"
       ],
-      "is_active_ingredient": false
+      "is_active_ingredient": false,
+      "ingredient": {
+        "name": "Rhassoul Clay",
+        "slug": "rhassoul-clay"
+      },
+      "physical_form": "Powder"
     },
     {
       "name": "French Green Clay",
@@ -76,7 +91,12 @@
       "certifications": [
         "Ecocert Raw Material"
       ],
-      "is_active_ingredient": false
+      "is_active_ingredient": false,
+      "ingredient": {
+        "name": "French Green Clay",
+        "slug": "french-green-clay"
+      },
+      "physical_form": "Powder"
     },
     {
       "name": "Fuller's Earth",
@@ -90,7 +110,12 @@
       
       "recommended_shelf_life_days": 1095,
       "certifications": [],
-      "is_active_ingredient": false
+      "is_active_ingredient": false,
+      "ingredient": {
+        "name": "Fuller's Earth",
+        "slug": "fuller-s-earth"
+      },
+      "physical_form": "Powder"
     },
     {
       "name": "Zinc Oxide (Non-Nano)",
@@ -105,7 +130,12 @@
       "certifications": [
         "USP Grade"
       ],
-      "is_active_ingredient": false
+      "is_active_ingredient": false,
+      "ingredient": {
+        "name": "Zinc Oxide",
+        "slug": "zinc-oxide"
+      },
+      "physical_form": "Non-Nano"
     },
     {
       "name": "Titanium Dioxide (Anatase)",
@@ -120,7 +150,12 @@
       "certifications": [
         "FDA Batch Certified"
       ],
-      "is_active_ingredient": false
+      "is_active_ingredient": false,
+      "ingredient": {
+        "name": "Titanium Dioxide",
+        "slug": "titanium-dioxide"
+      },
+      "physical_form": "Anatase"
     }
   ]
 }

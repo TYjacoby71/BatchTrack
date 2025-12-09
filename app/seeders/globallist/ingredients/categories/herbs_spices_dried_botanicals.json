@@ -23,7 +23,12 @@
       "certifications": [
         "Cosmetic Grade"
       ],
-      "is_active_ingredient": false
+      "is_active_ingredient": false,
+      "ingredient": {
+        "name": "Walnut Shell Powder",
+        "slug": "walnut-shell-powder"
+      },
+      "physical_form": "Powder"
     },
     {
       "name": "Apricot Kernel Meal",
@@ -38,7 +43,12 @@
       "certifications": [
         "Kosher"
       ],
-      "is_active_ingredient": false
+      "is_active_ingredient": false,
+      "ingredient": {
+        "name": "Apricot Kernel Meal",
+        "slug": "apricot-kernel-meal"
+      },
+      "physical_form": "Cut & Sifted"
     },
     {
       "name": "Jojoba Esters (Eco Beads)",
@@ -53,7 +63,12 @@
       "certifications": [
         "Vegan"
       ],
-      "is_active_ingredient": false
+      "is_active_ingredient": false,
+      "ingredient": {
+        "name": "Jojoba Esters",
+        "slug": "jojoba-esters"
+      },
+      "physical_form": "Eco Beads"
     },
     {
       "name": "Pumice Powder (Fine)",
@@ -68,7 +83,12 @@
       "certifications": [
         "Natural"
       ],
-      "is_active_ingredient": false
+      "is_active_ingredient": false,
+      "ingredient": {
+        "name": "Pumice Powder",
+        "slug": "pumice-powder"
+      },
+      "physical_form": "Fine"
     },
     {
       "name": "Luffa Fiber (Milled)",
@@ -83,7 +103,12 @@
       "certifications": [
         "Sustainably Grown"
       ],
-      "is_active_ingredient": false
+      "is_active_ingredient": false,
+      "ingredient": {
+        "name": "Luffa Fiber",
+        "slug": "luffa-fiber"
+      },
+      "physical_form": "Milled"
     }
   ]
 }

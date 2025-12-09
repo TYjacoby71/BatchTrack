@@ -25,7 +25,12 @@
       "certifications": [
         "USP Grade"
       ],
-      "is_active_ingredient": false
+      "is_active_ingredient": false,
+      "ingredient": {
+        "name": "Distilled Water",
+        "slug": "distilled-water"
+      },
+      "physical_form": "Liquid"
     },
     {
       "name": "Deionized Water",
@@ -41,7 +46,12 @@
       "certifications": [
         "Laboratory Grade"
       ],
-      "is_active_ingredient": false
+      "is_active_ingredient": false,
+      "ingredient": {
+        "name": "Deionized Water",
+        "slug": "deionized-water"
+      },
+      "physical_form": "Liquid"
     },
     {
       "name": "Reverse Osmosis (RO) Water",
@@ -57,7 +67,12 @@
       "certifications": [
         "NSF Certified"
       ],
-      "is_active_ingredient": false
+      "is_active_ingredient": false,
+      "ingredient": {
+        "name": "Reverse Osmosis Water",
+        "slug": "reverse-osmosis-water"
+      },
+      "physical_form": "Ro"
     },
     {
       "name": "Ultra-Pure Water (Type I)",
@@ -73,7 +88,12 @@
       "certifications": [
         "ASTM Type I"
       ],
-      "is_active_ingredient": false
+      "is_active_ingredient": false,
+      "ingredient": {
+        "name": "Ultra-Pure Water",
+        "slug": "ultra-pure-water"
+      },
+      "physical_form": "Type I"
     }
   ]
 }
