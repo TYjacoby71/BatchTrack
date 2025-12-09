@@ -1,3 +1,4 @@
+
 {% extends 'layout.html' %}
 {% block content %}
 <h2>Inventory Management</h2>
@@ -101,8 +102,6 @@ function initTablePagination(tableType) {
   const tableBodyId = tableType + 'TableBody';
   const paginationId = tableType + 'Pagination';
   const infoId = tableType + 'Info';
-  const nameFilterId = tableType + 'NameFilter';
-  const sortFilterId = tableType + 'SortFilter';
   const perPageId = tableType + 'PerPage';
 
   let currentPage = 1;
@@ -174,48 +173,7 @@ function initTablePagination(tableType) {
     info.textContent = `Showing ${startIndex}-${endIndex} of ${filteredRows.length} items`;
   }
 
-  function filterAndSort() {
-    const nameFilter = document.getElementById(nameFilterId).value.toLowerCase();
-    const sortFilter = document.getElementById(sortFilterId).value;
-
-    // Filter by name
-    filteredRows = allRows.filter(row => {
-      const name = row.dataset.name || '';
-      return name.includes(nameFilter);
-    });
-
-    // Sort
-    filteredRows.sort((a, b) => {
-      const [field, direction] = sortFilter.split('_');
-      let aVal, bVal;
-
-      if (field === 'name') {
-        aVal = a.dataset.name || '';
-        bVal = b.dataset.name || '';
-      } else if (field === 'quantity') {
-        aVal = parseFloat(a.dataset.quantity) || 0;
-        bVal = parseFloat(b.dataset.quantity) || 0;
-      } else if (field === 'cost') {
-        aVal = parseFloat(a.dataset.cost) || 0;
-        bVal = parseFloat(b.dataset.cost) || 0;
-      } else if (field === 'material') {
-        aVal = (a.dataset.material || '');
-        bVal = (b.dataset.material || '');
-      }
-
-      if (direction === 'asc') {
-        return aVal > bVal ? 1 : -1;
-      } else {
-        return aVal < bVal ? 1 : -1;
-      }
-    });
-
-    currentPage = 1;
-    updateTable();
-  }
-
-  // Event listeners - remove auto-trigger for name filter, keep for sort and per page
-  document.getElementById(sortFilterId).addEventListener('change', filterAndSort);
+  // Only handle per page changes - filters are handled by apply functions
   document.getElementById(perPageId).addEventListener('change', function() {
     itemsPerPage = parseInt(this.value);
     currentPage = 1;
@@ -259,19 +217,9 @@ function initTablePagination(tableType) {
     });
   });
 
-    const archivedCheckboxIngredients = document.getElementById('ingredientsShowArchived');
-    if (archivedCheckboxIngredients) {
-        archivedCheckboxIngredients.addEventListener('change', function() {
-            filterAndSort(); // Re-apply filters to update the view
-        });
-    }
-
-    const archivedCheckboxContainers = document.getElementById('containersShowArchived');
-    if (archivedCheckboxContainers) {
-        archivedCheckboxContainers.addEventListener('change', function() {
-            filterAndSort(); // Re-apply filters to update the view
-        });
-    }
+  // Store filtered rows so apply functions can update them
+  window[`${tableType}FilteredRows`] = filteredRows;
+  window[`${tableType}UpdateTable`] = updateTable;
 
   // Initial load
   updateTable();
@@ -319,26 +267,6 @@ function toggleActionMenu(button) {
   menu.style.display = menu.style.display === 'block' ? 'none' : 'block';
 }
 
-function toggleArchivedFilter(tableType) {
-    const tableId = tableType + 'Table';
-    const tableBodyId = tableType + 'TableBody';
-    const showArchived = document.getElementById(tableType + 'ShowArchived').checked;
-
-    const allRows = Array.from(document.querySelectorAll(`#${tableBodyId} tr`));
-
-    allRows.forEach(row => {
-        const isArchived = row.querySelector('.col-status .badge')?.textContent === 'Archived';
-
-        if (showArchived) {
-            row.style.display = ''; // Show all rows
-        } else if (isArchived) {
-            row.style.display = 'none'; // Hide archived rows
-        } else {
-            row.style.display = ''; // Show non-archived rows
-        }
-    });
-}
-
 // Apply filter functions
 function applyIngredientsFilters() {
     const nameFilter = document.getElementById('ingredientsNameFilter');
@@ -350,14 +278,12 @@ function applyIngredientsFilters() {
     localStorage.setItem('ingredients_sort_filter', sortFilter.value);
     localStorage.setItem('ingredients_archived_filter', archivedFilter.checked);
     
-    // Get the pagination system for ingredients
-    const tableType = 'ingredients';
     const nameFilterValue = nameFilter.value.toLowerCase();
     const sortValue = sortFilter.value;
     const showArchived = archivedFilter.checked;
     
     // Get all rows and apply filters
-    let allRows = Array.from(document.querySelectorAll(`#${tableType}TableBody tr`));
+    let allRows = Array.from(document.querySelectorAll('#ingredientsTableBody tr'));
     let filteredRows = allRows.filter(row => {
         const name = row.dataset.name || '';
         const isArchived = row.querySelector('.col-status .badge')?.textContent === 'Archived';
@@ -402,7 +328,13 @@ function applyIngredientsFilters() {
     allRows.forEach(row => row.style.display = 'none');
     filteredRows.forEach(row => row.style.display = '');
     
-    // Update pagination info
+    // Update global filtered rows and trigger pagination update
+    window.ingredientsFilteredRows = filteredRows;
+    if (window.ingredientsUpdateTable) {
+        window.ingredientsUpdateTable();
+    }
+    
+    // Update info
     const infoEl = document.getElementById('ingredientsInfo');
     if (infoEl) {
         infoEl.textContent = `Showing ${filteredRows.length} of ${allRows.length} items`;
@@ -418,12 +350,11 @@ function applyContainersFilters() {
     localStorage.setItem('containers_sort_filter', sortFilter.value);
     localStorage.setItem('containers_archived_filter', archivedFilter.checked);
     
-    const tableType = 'containers';
     const nameFilterValue = nameFilter.value.toLowerCase();
     const sortValue = sortFilter.value;
     const showArchived = archivedFilter.checked;
     
-    let allRows = Array.from(document.querySelectorAll(`#${tableType}TableBody tr`));
+    let allRows = Array.from(document.querySelectorAll('#containersTableBody tr'));
     let filteredRows = allRows.filter(row => {
         const name = row.dataset.name || '';
         const isArchived = row.querySelector('.col-status .badge')?.textContent === 'Archived';
@@ -468,6 +399,12 @@ function applyContainersFilters() {
     allRows.forEach(row => row.style.display = 'none');
     filteredRows.forEach(row => row.style.display = '');
     
+    // Update global filtered rows and trigger pagination update
+    window.containersFilteredRows = filteredRows;
+    if (window.containersUpdateTable) {
+        window.containersUpdateTable();
+    }
+    
     const infoEl = document.getElementById('containersInfo');
     if (infoEl) {
         infoEl.textContent = `Showing ${filteredRows.length} of ${allRows.length} items`;
@@ -483,12 +420,11 @@ function applyPackagingFilters() {
     localStorage.setItem('packaging_sort_filter', sortFilter.value);
     localStorage.setItem('packaging_archived_filter', archivedFilter.checked);
     
-    const tableType = 'packaging';
     const nameFilterValue = nameFilter.value.toLowerCase();
     const sortValue = sortFilter.value;
     const showArchived = archivedFilter.checked;
     
-    let allRows = Array.from(document.querySelectorAll(`#${tableType}TableBody tr`));
+    let allRows = Array.from(document.querySelectorAll('#packagingTableBody tr'));
     let filteredRows = allRows.filter(row => {
         const name = row.dataset.name || '';
         const isArchived = row.querySelector('.col-status .badge')?.textContent === 'Archived';
@@ -529,6 +465,12 @@ function applyPackagingFilters() {
     
     allRows.forEach(row => row.style.display = 'none');
     filteredRows.forEach(row => row.style.display = '');
+    
+    // Update global filtered rows and trigger pagination update
+    window.packagingFilteredRows = filteredRows;
+    if (window.packagingUpdateTable) {
+        window.packagingUpdateTable();
+    }
     
     const infoEl = document.getElementById('packagingInfo');
     if (infoEl) {
@@ -545,12 +487,11 @@ function applyConsumablesFilters() {
     localStorage.setItem('consumables_sort_filter', sortFilter.value);
     localStorage.setItem('consumables_archived_filter', archivedFilter.checked);
     
-    const tableType = 'consumables';
     const nameFilterValue = nameFilter.value.toLowerCase();
     const sortValue = sortFilter.value;
     const showArchived = archivedFilter.checked;
     
-    let allRows = Array.from(document.querySelectorAll(`#${tableType}TableBody tr`));
+    let allRows = Array.from(document.querySelectorAll('#consumablesTableBody tr'));
     let filteredRows = allRows.filter(row => {
         const name = row.dataset.name || '';
         const isArchived = row.querySelector('.col-status .badge')?.textContent === 'Archived';
@@ -591,6 +532,12 @@ function applyConsumablesFilters() {
     
     allRows.forEach(row => row.style.display = 'none');
     filteredRows.forEach(row => row.style.display = '');
+    
+    // Update global filtered rows and trigger pagination update
+    window.consumablesFilteredRows = filteredRows;
+    if (window.consumablesUpdateTable) {
+        window.consumablesUpdateTable();
+    }
     
     const infoEl = document.getElementById('consumablesInfo');
     if (infoEl) {
@@ -1253,7 +1200,6 @@ function restoreFilterStates() {
         if (consumablesName || consumablesSort || consumablesArchived) applyConsumablesFilters();
     }, 100);
 }
-
 
 // Close the dropdown menu if the user clicks outside of it
 window.onclick = function(event) {
