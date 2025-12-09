@@ -2,7 +2,7 @@ from flask import render_template, request, redirect, url_for, flash, jsonify
 from flask_login import login_required, current_user
 from . import recipes_bp
 from app.extensions import db
-from app.models import Recipe, InventoryItem, GlobalItem
+from app.models import Recipe, InventoryItem, GlobalItem, RecipeLineage
 from app.utils.permissions import require_permission
 
 from app.services.recipe_service import (
@@ -16,6 +16,7 @@ from app.models.unit import Unit
 from app.models.product_category import ProductCategory
 import logging
 from sqlalchemy import func
+from itertools import zip_longest
 
 logger = logging.getLogger(__name__)
 
@@ -23,17 +24,17 @@ logger = logging.getLogger(__name__)
 @login_required
 def new_recipe():
     if request.method == 'POST':
+        is_clone = request.form.get('is_clone') == 'true'
+        cloned_from_id = _safe_int(request.form.get('cloned_from_id'))
+        target_status = _get_submission_status(request.form)
         try:
-            # Extract form data and delegate to service
             ingredients = _extract_ingredients_from_form(request.form)
 
-            # Portioning inputs from form (optional) - absolute minimal fields
             portioning_payload = None
             try:
                 is_portioned = request.form.get('is_portioned', '') == 'true'
                 if is_portioned:
                     portion_name = (request.form.get('portion_name') or '').strip() or None
-                    # Ensure portion_name is a valid Unit (count type). Use name as the key.
                     unit_id = None
                     if portion_name:
                         try:
@@ -69,11 +70,16 @@ def new_recipe():
             except Exception:
                 portioning_payload = None
 
+            try:
+                yield_amount = float(request.form.get('predicted_yield') or 0.0)
+            except ValueError:
+                yield_amount = 0.0
+
             success, result = create_recipe(
                 name=request.form.get('name'),
                 description=request.form.get('instructions'),
                 instructions=request.form.get('instructions'),
-                yield_amount=float(request.form.get('predicted_yield') or 0.0),
+                yield_amount=yield_amount,
                 yield_unit=request.form.get('predicted_yield_unit') or "",
                 ingredients=ingredients,
                 consumables=_extract_consumables_from_form(request.form),
@@ -81,27 +87,30 @@ def new_recipe():
                 label_prefix=request.form.get('label_prefix'),
                 category_id=int(request.form.get('category_id')) if request.form.get('category_id') else None,
                 portioning_data=portioning_payload,
+                cloned_from_id=cloned_from_id,
                 # Absolute columns mirror JSON for clarity
                 is_portioned=(portioning_payload.get('is_portioned') if portioning_payload else False),
                 portion_name=(portioning_payload.get('portion_name') if portioning_payload else None),
-                portion_count=(portioning_payload.get('portion_count') if portioning_payload else None)
+                portion_count=(portioning_payload.get('portion_count') if portioning_payload else None),
+                status=target_status
             )
 
             if success:
-                # Detect inline-created custom items (no global_item_id and zero quantity)
                 try:
                     created_names = []
                     for ing in ingredients:
                         from app.models import InventoryItem as _Inv
-                        item = _Inv.query.get(ing['item_id'])
+                        item = db.session.get(_Inv, ing['item_id'])
                         if item and not getattr(item, 'global_item_id', None) and float(getattr(item, 'quantity', 0) or 0) == 0.0:
                             created_names.append(item.name)
                     if created_names:
                         flash(f"Added {len(created_names)} new inventory item(s) from this recipe: " + ", ".join(created_names))
                 except Exception:
                     pass
-                flash('Recipe created successfully with ingredients.')
-                # Clear tool draft after successful save
+                if target_status == 'draft':
+                    flash('Recipe saved as a draft. You can finish it later from the recipes list.', 'info')
+                else:
+                    flash('Recipe published successfully.', 'success')
                 try:
                     from flask import session as _session
                     _session.pop('tool_draft', None)
@@ -109,18 +118,39 @@ def new_recipe():
                 except Exception:
                     pass
                 return redirect(url_for('recipes.view_recipe', recipe_id=result.id))
-            else:
-                flash(f'Error creating recipe: {result}', 'error')
+
+            error_message, missing_fields = _parse_service_error(result)
+            draft_prompt = _build_draft_prompt(missing_fields, target_status, error_message)
+            flash(f'Error creating recipe: {error_message}', 'error')
+            ingredient_prefill, consumable_prefill = _build_prefill_from_form(request.form)
+            form_recipe = _recipe_from_form(request.form)
+            return _render_recipe_form(
+                recipe=form_recipe,
+                ingredient_prefill=ingredient_prefill,
+                consumable_prefill=consumable_prefill,
+                is_clone=is_clone,
+                cloned_from_id=cloned_from_id,
+                form_values=request.form,
+                draft_prompt=draft_prompt
+            )
 
         except Exception as e:
+            db.session.rollback()
             logger.exception(f"Error creating recipe: {str(e)}")
             flash('An unexpected error occurred', 'error')
+            ingredient_prefill, consumable_prefill = _build_prefill_from_form(request.form)
+            form_recipe = _recipe_from_form(request.form)
+            return _render_recipe_form(
+                recipe=form_recipe,
+                ingredient_prefill=ingredient_prefill,
+                consumable_prefill=consumable_prefill,
+                is_clone=is_clone,
+                cloned_from_id=cloned_from_id,
+                form_values=request.form
+            )
 
-    # GET request - show form
-    # Prefill from public tools draft (if present)
     from flask import session
     draft = session.get('tool_draft', None)
-    # Expire stale drafts (>72 hours) so they don't linger indefinitely
     try:
         from datetime import datetime, timezone, timedelta
         from app.utils.timezone_utils import TimezoneUtils
@@ -144,7 +174,6 @@ def new_recipe():
                 predicted_yield=float(draft.get('predicted_yield') or 0) or 0.0,
                 predicted_yield_unit=(draft.get('predicted_yield_unit') or '')
             )
-            # Attempt to pre-select category by name if provided
             cat_name = (draft.get('category_name') or '').strip()
             if cat_name:
                 from app.models.product_category import ProductCategory
@@ -154,14 +183,13 @@ def new_recipe():
         except Exception:
             prefill = None
 
-    form_data = _get_recipe_form_data()
-    return render_template('pages/recipes/recipe_form.html', recipe=prefill, **form_data)
+    return _render_recipe_form(recipe=prefill)
 
 @recipes_bp.route('/')
 @login_required
 def list_recipes():
     # Simple data retrieval - no business logic
-    query = Recipe.query.filter_by(parent_id=None)
+    query = Recipe.query.filter_by(parent_recipe_id=None)
     if current_user.organization_id:
         query = query.filter_by(organization_id=current_user.organization_id)
 
@@ -204,49 +232,65 @@ def create_variation(recipe_id):
             return redirect(url_for('recipes.list_recipes'))
 
         if request.method == 'POST':
-            # Extract ingredients and delegate to service
+            target_status = _get_submission_status(request.form)
             ingredients = _extract_ingredients_from_form(request.form)
-
-            # Get label prefix or generate from parent
             label_prefix = request.form.get('label_prefix')
             if not label_prefix and parent.label_prefix:
-                # Auto-generate variation prefix from parent
-                label_prefix = ""  # Let the service handle variation prefix generation
+                label_prefix = ""
+
+            try:
+                yield_amount = float(request.form.get('predicted_yield') or parent.predicted_yield or 0.0)
+            except ValueError:
+                yield_amount = parent.predicted_yield or 0.0
 
             success, result = create_recipe(
                 name=request.form.get('name'),
                 description=request.form.get('instructions'),
                 instructions=request.form.get('instructions'),
-                yield_amount=float(request.form.get('predicted_yield') or parent.predicted_yield or 0.0),
+                yield_amount=yield_amount,
                 yield_unit=request.form.get('predicted_yield_unit') or parent.predicted_yield_unit or "",
                 ingredients=ingredients,
                 consumables=_extract_consumables_from_form(request.form),
-                parent_id=parent.id,
+                parent_recipe_id=parent.id,
                 allowed_containers=[int(id) for id in request.form.getlist('allowed_containers[]') if id] or [],
-                label_prefix=label_prefix
+                label_prefix=label_prefix,
+                status=target_status
             )
 
             if success:
-                flash('Recipe variation created successfully.')
+                if target_status == 'draft':
+                    flash('Variation saved as a draft.', 'info')
+                else:
+                    flash('Recipe variation created successfully.')
                 return redirect(url_for('recipes.view_recipe', recipe_id=result.id))
-            else:
-                flash(f'Error creating variation: {result}', 'error')
 
-        # GET - show variation form with parent data
-        form_data = _get_recipe_form_data()
+            error_message, missing_fields = _parse_service_error(result)
+            draft_prompt = _build_draft_prompt(missing_fields, target_status, error_message)
+            flash(f'Error creating variation: {error_message}', 'error')
+            ingredient_prefill, consumable_prefill = _build_prefill_from_form(request.form)
+            variation_draft = _recipe_from_form(request.form, base_recipe=parent)
+            variation_draft.parent_recipe_id = parent.id
+            return _render_recipe_form(
+                recipe=variation_draft,
+                is_variation=True,
+                parent_recipe=parent,
+                ingredient_prefill=ingredient_prefill,
+                consumable_prefill=consumable_prefill,
+                form_values=request.form,
+                draft_prompt=draft_prompt
+            )
+
         new_variation = _create_variation_template(parent)
+        ingredient_prefill = _serialize_assoc_rows(parent.recipe_ingredients)
+        consumable_prefill = _serialize_assoc_rows(parent.recipe_consumables)
 
-        # Extract parent ingredients for prefill
-        ingredients = [(ri.inventory_item_id, ri.quantity, ri.unit) for ri in parent.recipe_ingredients]
-        consumables = [(rc.inventory_item_id, rc.quantity, rc.unit) for rc in parent.recipe_consumables]
-
-        return render_template('pages/recipes/recipe_form.html',
-                             recipe=new_variation,
-                             is_variation=True,
-                             parent_recipe=parent,
-                             ingredient_prefill=ingredients,
-                             consumable_prefill=consumables,
-                             **form_data)
+        return _render_recipe_form(
+            recipe=new_variation,
+            is_variation=True,
+            parent_recipe=parent,
+            ingredient_prefill=ingredient_prefill,
+            consumable_prefill=consumable_prefill
+        )
 
     except Exception as e:
         flash(f"Error creating variation: {str(e)}", "error")
@@ -265,7 +309,10 @@ def edit_recipe(recipe_id):
         flash('This recipe is locked and cannot be edited.', 'error')
         return redirect(url_for('recipes.view_recipe', recipe_id=recipe_id))
 
+    draft_prompt = None
+    form_override = None
     if request.method == 'POST':
+        target_status = _get_submission_status(request.form)
         try:
             # DEBUG: Log form data for yield validation debugging
             logger.info(f"=== RECIPE EDIT FORM DEBUG ===")
@@ -347,14 +394,21 @@ def edit_recipe(recipe_id):
                 portioning_data=portioning_payload,
                 is_portioned=(portioning_payload.get('is_portioned') if portioning_payload else False),
                 portion_name=(portioning_payload.get('portion_name') if portioning_payload else None),
-                portion_count=(portioning_payload.get('portion_count') if portioning_payload else None)
+                portion_count=(portioning_payload.get('portion_count') if portioning_payload else None),
+                status=target_status
             )
 
             if success:
-                flash('Recipe updated successfully.')
+                if target_status == 'draft':
+                    flash('Recipe saved as a draft.', 'info')
+                else:
+                    flash('Recipe updated successfully.')
                 return redirect(url_for('recipes.view_recipe', recipe_id=recipe.id))
             else:
-                flash(f'Error updating recipe: {result}', 'error')
+                error_message, missing_fields = _parse_service_error(result)
+                draft_prompt = _build_draft_prompt(missing_fields, target_status, error_message)
+                form_override = request.form
+                flash(f'Error updating recipe: {error_message}', 'error')
 
         except Exception as e:
             logger.exception(f"Error updating recipe: {str(e)}")
@@ -369,49 +423,34 @@ def edit_recipe(recipe_id):
                          recipe=recipe,
                          edit_mode=True,
                          existing_batches=existing_batches,
+                         draft_prompt=draft_prompt,
+                         form_values=form_override,
                          **form_data)
 
 @recipes_bp.route('/<int:recipe_id>/clone')
 @login_required
 def clone_recipe(recipe_id):
     try:
-        success, result = duplicate_recipe(recipe_id)
+        success, payload = duplicate_recipe(recipe_id)
 
         if success:
-            # Get the recipe data but don't commit yet
-            cloned_recipe = result
-            
-            # Extract data before rollback
-            clone_data = {
-                'name': cloned_recipe.name,
-                'instructions': cloned_recipe.instructions,
-                'label_prefix': cloned_recipe.label_prefix,
-                'predicted_yield': cloned_recipe.predicted_yield,
-                'predicted_yield_unit': cloned_recipe.predicted_yield_unit,
-                'allowed_containers': cloned_recipe.allowed_containers
-            }
-            
-            ingredients = [(ri.inventory_item_id, ri.quantity, ri.unit) for ri in cloned_recipe.recipe_ingredients]
-            consumables = [(rc.inventory_item_id, rc.quantity, rc.unit) for rc in cloned_recipe.recipe_consumables]
-            
-            # Rollback the transaction - user will edit and save properly
-            db.session.rollback()
-            
-            # Create template object with extracted data
-            template_recipe = Recipe(**clone_data)
-            
-            form_data = _get_recipe_form_data()
+            template_recipe = payload['template']
+            ingredient_prefill = _serialize_prefill_rows(payload['ingredients'])
+            consumable_prefill = _serialize_prefill_rows(payload['consumables'])
 
-            return render_template('pages/recipes/recipe_form.html',
-                                recipe=template_recipe,
-                                is_clone=True,
-                                ingredient_prefill=ingredients,
-                                consumable_prefill=consumables,
-                                **form_data)
+            return _render_recipe_form(
+                recipe=template_recipe,
+                is_clone=True,
+                ingredient_prefill=ingredient_prefill,
+                consumable_prefill=consumable_prefill,
+                cloned_from_id=payload.get('cloned_from_id'),
+                form_values=None
+            )
         else:
-            flash(f"Error cloning recipe: {result}", "error")
+            flash(f"Error cloning recipe: {payload}", "error")
 
     except Exception as e:
+        db.session.rollback()
         flash(f"Error cloning recipe: {str(e)}", "error")
         logger.exception(f"Error cloning recipe: {str(e)}")
 
@@ -431,6 +470,52 @@ def delete_recipe_route(recipe_id):
         flash('An error occurred while deleting the recipe.', 'error')
 
     return redirect(url_for('recipes.list_recipes'))
+
+@recipes_bp.route('/<int:recipe_id>/make-parent', methods=['POST'])
+@login_required
+def make_parent_recipe(recipe_id):
+    """Convert a variation recipe into a standalone parent recipe"""
+    try:
+        recipe = db.session.get(Recipe, recipe_id)
+        if not recipe:
+            flash('Recipe not found.', 'error')
+            return redirect(url_for('recipes.list_recipes'))
+
+        if not recipe.parent_recipe_id:
+            flash('Recipe is already a parent recipe.', 'error')
+            return redirect(url_for('recipes.view_recipe', recipe_id=recipe_id))
+
+        # Store original parent for flash message
+        original_parent = recipe.parent
+
+        # Convert variation to parent by removing parent relationship
+        recipe.parent_recipe_id = None
+        
+        # Update the name to remove "Variation" suffix if present
+        if recipe.name.endswith(" Variation"):
+            recipe.name = recipe.name.replace(" Variation", "")
+
+        lineage_entry = RecipeLineage(
+            recipe_id=recipe.id,
+            source_recipe_id=original_parent.id if original_parent else None,
+            event_type='PROMOTE_TO_PARENT',
+            organization_id=recipe.organization_id,
+            user_id=getattr(current_user, 'id', None)
+        )
+        db.session.add(lineage_entry)
+        
+        db.session.commit()
+        
+        flash(f'Recipe "{recipe.name}" has been converted to a parent recipe and is no longer a variation of "{original_parent.name}".', 'success')
+        logger.info(f"Converted recipe {recipe_id} from variation to parent recipe")
+
+        return redirect(url_for('recipes.view_recipe', recipe_id=recipe_id))
+
+    except Exception as e:
+        db.session.rollback()
+        logger.error(f"Error converting recipe {recipe_id} to parent: {str(e)}")
+        flash('An error occurred while converting the recipe to a parent.', 'error')
+        return redirect(url_for('recipes.view_recipe', recipe_id=recipe_id))
 
 @recipes_bp.route('/<int:recipe_id>/lock', methods=['POST'])
 @login_required
@@ -569,6 +654,127 @@ def quick_add_ingredient():
         return jsonify({'error': str(e)}), 500
 
 # Helper functions to keep controllers clean
+def _render_recipe_form(recipe=None, **context):
+    form_data = _get_recipe_form_data()
+    payload = {**form_data, **context}
+    return render_template('pages/recipes/recipe_form.html', recipe=recipe, **payload)
+
+
+def _recipe_from_form(form, base_recipe=None):
+    recipe = Recipe()
+    recipe.name = form.get('name') or (base_recipe.name if base_recipe else '')
+    recipe.instructions = form.get('instructions') or (base_recipe.instructions if base_recipe else '')
+    recipe.label_prefix = form.get('label_prefix') or (base_recipe.label_prefix if base_recipe else '')
+    recipe.category_id = _safe_int(form.get('category_id')) or (base_recipe.category_id if base_recipe else None)
+    recipe.parent_recipe_id = base_recipe.parent_recipe_id if base_recipe and getattr(base_recipe, 'parent_recipe_id', None) else None
+
+    try:
+        recipe.predicted_yield = float(form.get('predicted_yield')) if form.get('predicted_yield') not in (None, '') else (base_recipe.predicted_yield if base_recipe else None)
+    except (TypeError, ValueError):
+        recipe.predicted_yield = base_recipe.predicted_yield if base_recipe else None
+    recipe.predicted_yield_unit = form.get('predicted_yield_unit') or (base_recipe.predicted_yield_unit if base_recipe else '')
+
+    recipe.allowed_containers = [int(id) for id in form.getlist('allowed_containers[]') if id] or (list(base_recipe.allowed_containers) if base_recipe and base_recipe.allowed_containers else [])
+
+    is_portioned = form.get('is_portioned') == 'true'
+    recipe.is_portioned = is_portioned or (base_recipe.is_portioned if base_recipe else False)
+    recipe.portion_name = form.get('portion_name') or (base_recipe.portion_name if base_recipe else None)
+    try:
+        recipe.portion_count = int(form.get('portion_count')) if form.get('portion_count') else (base_recipe.portion_count if base_recipe else None)
+    except (TypeError, ValueError):
+        recipe.portion_count = base_recipe.portion_count if base_recipe else None
+    recipe.portioning_data = {
+        'is_portioned': recipe.is_portioned,
+        'portion_name': recipe.portion_name,
+        'portion_count': recipe.portion_count
+    } if recipe.is_portioned else None
+
+    return recipe
+
+
+def _build_prefill_from_form(form):
+    ingredient_ids = [ _safe_int(val) for val in form.getlist('ingredient_ids[]') ]
+    amounts = form.getlist('amounts[]')
+    units = form.getlist('units[]')
+    global_ids = [ _safe_int(val) for val in form.getlist('global_item_ids[]') ]
+
+    consumable_ids = [ _safe_int(val) for val in form.getlist('consumable_ids[]') ]
+    consumable_amounts = form.getlist('consumable_amounts[]')
+    consumable_units = form.getlist('consumable_units[]')
+
+    lookup_ids = [i for i in ingredient_ids + consumable_ids if i]
+    name_lookup = _lookup_inventory_names(lookup_ids)
+
+    ingredient_rows = []
+    for ing_id, gi_id, amt, unit in zip_longest(ingredient_ids, global_ids, amounts, units, fillvalue=None):
+        if not any([ing_id, gi_id, amt, unit]):
+            continue
+        ingredient_rows.append({
+            'inventory_item_id': ing_id,
+            'global_item_id': gi_id,
+            'quantity': amt,
+            'unit': unit,
+            'name': name_lookup.get(ing_id, '')
+        })
+
+    consumable_rows = []
+    for cid, amt, unit in zip_longest(consumable_ids, consumable_amounts, consumable_units, fillvalue=None):
+        if not any([cid, amt, unit]):
+            continue
+        consumable_rows.append({
+            'inventory_item_id': cid,
+            'quantity': amt,
+            'unit': unit,
+            'name': name_lookup.get(cid, '')
+        })
+
+    return ingredient_rows, consumable_rows
+
+
+def _serialize_prefill_rows(rows):
+    ids = [row.get('item_id') for row in rows if row.get('item_id')]
+    name_lookup = _lookup_inventory_names(ids)
+    serialized = []
+    for row in rows:
+        item_id = row.get('item_id')
+        serialized.append({
+            'inventory_item_id': item_id,
+            'quantity': row.get('quantity'),
+            'unit': row.get('unit'),
+            'name': name_lookup.get(item_id, '')
+        })
+    return serialized
+
+
+def _serialize_assoc_rows(associations):
+    serialized = []
+    for assoc in associations:
+        serialized.append({
+            'inventory_item_id': assoc.inventory_item_id,
+            'quantity': assoc.quantity,
+            'unit': assoc.unit,
+            'name': assoc.inventory_item.name if assoc.inventory_item else ''
+        })
+    return serialized
+
+
+def _lookup_inventory_names(item_ids):
+    if not item_ids:
+        return {}
+    unique_ids = list({item_id for item_id in item_ids if item_id})
+    if not unique_ids:
+        return {}
+    items = InventoryItem.query.filter(InventoryItem.id.in_(unique_ids)).all()
+    return {item.id: item.name for item in items}
+
+
+def _safe_int(value):
+    try:
+        return int(value) if value not in (None, '', []) else None
+    except (TypeError, ValueError):
+        return None
+
+
 def _extract_ingredients_from_form(form):
     """Extract ingredient data from form submission.
     Supports inventory items and selected global items (auto-creates zero-qty inventory when needed).
@@ -697,6 +903,29 @@ def _extract_consumables_from_form(form):
                 continue
     return consumables
 
+
+def _get_submission_status(form):
+    mode = (form.get('save_mode') or '').strip().lower()
+    return 'draft' if mode == 'draft' else 'published'
+
+
+def _parse_service_error(error):
+    if isinstance(error, dict):
+        message = error.get('error') or error.get('message') or 'An error occurred'
+        missing_fields = error.get('missing_fields') or []
+        return message, missing_fields
+    return str(error), []
+
+
+def _build_draft_prompt(missing_fields, attempted_status, message):
+    if missing_fields and attempted_status != 'draft':
+        return {
+            'missing_fields': missing_fields,
+            'message': message
+        }
+    return None
+
+
 def _get_recipe_form_data():
     """Get common data needed for recipe forms"""
     ingredients_query = InventoryItem.query.filter(
@@ -741,14 +970,30 @@ def _create_variation_template(parent):
     variation_prefix = ""
     if parent.label_prefix:
         # Count existing variations to suggest next number
-        existing_variations = Recipe.query.filter_by(parent_id=parent.id).count()
+        existing_variations = Recipe.query.filter_by(parent_recipe_id=parent.id).count()
         variation_prefix = f"{parent.label_prefix}V{existing_variations + 1}"
     
-    return Recipe(
+    template = Recipe(
         name=f"{parent.name} Variation",
         instructions=parent.instructions,
         label_prefix=variation_prefix,
-        parent_id=parent.id,
+        parent_recipe_id=parent.id,
         predicted_yield=parent.predicted_yield,
-        predicted_yield_unit=parent.predicted_yield_unit
+        predicted_yield_unit=parent.predicted_yield_unit,
+        category_id=parent.category_id
     )
+
+    # Carry over structured settings so the entire form mirrors the parent
+    template.allowed_containers = list(parent.allowed_containers or [])
+
+    if parent.portioning_data:
+        template.portioning_data = parent.portioning_data.copy() if isinstance(parent.portioning_data, dict) else parent.portioning_data
+    template.is_portioned = parent.is_portioned
+    template.portion_name = parent.portion_name
+    template.portion_count = parent.portion_count
+    template.portion_unit_id = parent.portion_unit_id
+
+    if parent.category_data:
+        template.category_data = parent.category_data.copy() if isinstance(parent.category_data, dict) else parent.category_data
+
+    return template

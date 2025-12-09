@@ -81,7 +81,7 @@ class TestInventoryFIFOCharacterization:
             db_session.add(item)
             db_session.commit()  # Commit instead of flush
 
-            # Test product addition (should use ProductSKUHistory)
+            # Test product addition (should create InventoryLot entry)
             success, message = process_inventory_adjustment(
                 item_id=item.id,
                 quantity=250.0,

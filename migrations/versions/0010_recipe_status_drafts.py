@@ -1,4 +1,8 @@
+<<<<<<< HEAD
 """0010 recipe status, marketplace, and lineage baseline
+=======
+"""0010 recipe status drafts
+>>>>>>> origin/main
 
 Revision ID: 0010_recipe_status_drafts
 Revises: 0009_drop_billing_snapshots
@@ -7,6 +11,7 @@ Create Date: 2025-11-21 00:00:00.000000
 
 from alembic import op
 import sqlalchemy as sa
+<<<<<<< HEAD
 from sqlalchemy import text
 
 from migrations.postgres_helpers import (
@@ -22,6 +27,10 @@ from migrations.postgres_helpers import (
     safe_drop_index,
     table_exists,
 )
+=======
+
+from migrations.postgres_helpers import safe_add_column, safe_drop_column
+>>>>>>> origin/main
 
 
 # revision identifiers, used by Alembic.
@@ -30,6 +39,7 @@ down_revision = '0009_drop_billing_snapshots'
 branch_labels = None
 depends_on = None
 
+<<<<<<< HEAD
 BATCHTRACK_ORG_ID = 1
 LEGACY_BATCH_LABEL_CONSTRAINT = 'batch_label_code_key'
 SCOPED_BATCH_LABEL_CONSTRAINT = 'uq_batch_org_label'
@@ -441,3 +451,15 @@ def _drop_recipe_marketplace_columns():
     ]
     for column_name in recipe_columns:
         safe_drop_column('recipe', column_name, verbose=False)
+=======
+
+def upgrade():
+    safe_add_column(
+        'recipe',
+        sa.Column('status', sa.String(length=16), nullable=False, server_default='published')
+    )
+
+
+def downgrade():
+    safe_drop_column('recipe', 'status')
+>>>>>>> origin/main

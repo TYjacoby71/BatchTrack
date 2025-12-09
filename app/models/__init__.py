@@ -8,7 +8,7 @@ from .models import (
     db, Organization, User, InventoryItem, InventoryHistory, BatchInventoryLog,
     Recipe, RecipeIngredient
 )
-from .recipe import RecipeConsumable
+from .recipe import RecipeConsumable, RecipeLineage
 from .batch import (
     Batch,
     BatchIngredient,
@@ -35,7 +35,6 @@ from .product_category import ProductCategory
 from .feature_flag import FeatureFlag
 from .stripe_event import StripeEvent
 from .pricing_snapshot import PricingSnapshot
-from .billing_snapshot import BillingSnapshot
 from .user_preferences import UserPreferences
 from .user_role_assignment import UserRoleAssignment
 from .developer_permission import DeveloperPermission
@@ -51,6 +50,7 @@ except ImportError:
 from .subscription_tier import SubscriptionTier
 from .permission import Permission
 from .role import Role
+from .pending_signup import PendingSignup
 
 # OPTIONAL exports — don't crash if the module or names aren't present
 try:
@@ -71,11 +71,6 @@ from .models import *
 # Add missing exports for tests
 try:
     from .reservation import Reservation
-except ImportError:
-    pass
-
-try:
-    from .product import ProductSKUHistory
 except ImportError:
     pass
 

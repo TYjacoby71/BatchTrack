@@ -48,36 +48,40 @@
                                 <div class="row">
                                     <div class="col-md-6">
                                         <div class="mb-3">
-                                            <label for="max_recipes" class="form-label">Max Recipes</label>
-                                            <input type="number" class="form-control" id="max_recipes" name="max_recipes" value="{{ tier.max_recipes or '' }}" min="0">
+                                            <label for="max_recipes" class="form-label">Max Recipes (Total)</label>
+                                            <input type="number" class="form-control" id="max_recipes" name="max_recipes" 
+                                                   value="{{ tier.max_recipes if tier.max_recipes is not none else '' }}" 
+                                                   placeholder="Enter number or -1 for unlimited" min="-1">
+                                            <div class="form-text">Total recipes allowed. Use -1 for unlimited.</div>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="mb-3">
+                                            <label for="max_products" class="form-label">Max Products (Total)</label>
+                                            <input type="number" class="form-control" id="max_products" name="max_products" 
+                                                   value="{{ tier.max_products if tier.max_products is not none else '' }}" 
+                                                   placeholder="Enter number or -1 for unlimited" min="-1">
+                                            <div class="form-text">Total products allowed. Use -1 for unlimited.</div>
                                         </div>
                                     </div>
                                 </div>
                                 <div class="row">
                                     <div class="col-md-6">
                                         <div class="mb-3">
-                                            <label for="max_batches" class="form-label">Max Batches</label>
-                                            <input type="number" class="form-control" id="max_batches" name="max_batches" value="{{ tier.max_batches or '' }}" min="0">
-                                        </div>
-                                    </div>
-                                    <div class="col-md-6">
-                                        <div class="mb-3">
-                                            <label for="max_products" class="form-label">Max Products</label>
-                                            <input type="number" class="form-control" id="max_products" name="max_products" value="{{ tier.max_products or '' }}" min="0">
-                                        </div>
-                                    </div>
-                                </div>
-                                <div class="row">
-                                    <div class="col-md-6">
-                                        <div class="mb-3">
-                                            <label for="max_batchbot_requests" class="form-label">Max BatchBot Requests</label>
-                                            <input type="number" class="form-control" id="max_batchbot_requests" name="max_batchbot_requests" value="{{ tier.max_batchbot_requests or '' }}" min="0">
+                                            <label for="max_batchbot_requests" class="form-label">Max BatchBot Requests (Monthly)</label>
+                                            <input type="number" class="form-control" id="max_batchbot_requests" name="max_batchbot_requests" 
+                                                   value="{{ tier.max_batchbot_requests if tier.max_batchbot_requests is not none else '' }}" 
+                                                   placeholder="Enter number or -1 for unlimited" min="-1">
+                                            <div class="form-text">AI requests per month. Use -1 for unlimited.</div>
                                         </div>
                                     </div>
                                     <div class="col-md-6">
                                         <div class="mb-3">
                                             <label for="max_monthly_batches" class="form-label">Max Monthly Batches</label>
-                                            <input type="number" class="form-control" id="max_monthly_batches" name="max_monthly_batches" value="{{ tier.max_monthly_batches or '' }}" min="0">
+                                            <input type="number" class="form-control" id="max_monthly_batches" name="max_monthly_batches" 
+                                                   value="{{ tier.max_monthly_batches if tier.max_monthly_batches is not none else '' }}" 
+                                                   placeholder="Enter number or -1 for unlimited" min="-1">
+                                            <div class="form-text">Batches per month. Use -1 for unlimited.</div>
                                         </div>
                                     </div>
                                 </div>

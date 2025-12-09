@@ -93,38 +93,38 @@ def api_archive_expired():
 @login_required
 def api_debug_expiration():
     """Debug endpoint to check expiration setup"""
-    from ...models import ProductSKUHistory, InventoryItem
+    from ...models import InventoryItem, InventoryLot
     from ...models import db
     from sqlalchemy import and_
     from flask_login import current_user
 
-    # Get all SKU entries with remaining quantity
-    sku_entries = db.session.query(ProductSKUHistory).join(
-        InventoryItem, ProductSKUHistory.inventory_item_id == InventoryItem.id
+    sku_lots = db.session.query(InventoryLot).join(
+        InventoryItem, InventoryLot.inventory_item_id == InventoryItem.id
     ).filter(and_(
-        ProductSKUHistory.remaining_quantity > 0,
-        ProductSKUHistory.quantity_change > 0,
+        InventoryLot.remaining_quantity > 0,
+        InventoryItem.type == 'product',
         InventoryItem.organization_id == current_user.organization_id if current_user.is_authenticated and current_user.organization_id else True
     )).all()
 
     debug_info = []
-    for entry in sku_entries:
-        inventory_item = InventoryItem.query.get(entry.inventory_item_id)
+    for lot in sku_lots:
+        inventory_item = lot.inventory_item or db.session.get(InventoryItem, lot.inventory_item_id)
+        expiration = ExpirationService.get_effective_sku_expiration_date(lot)
         debug_info.append({
-            'sku_entry_id': entry.id,
+            'lot_id': lot.id,
             'inventory_item_name': inventory_item.name if inventory_item else 'Unknown',
-            'inventory_item_id': entry.inventory_item_id,
+            'inventory_item_id': lot.inventory_item_id,
             'is_perishable': inventory_item.is_perishable if inventory_item else False,
             'shelf_life_days': inventory_item.shelf_life_days if inventory_item else None,
-            'remaining_quantity': entry.remaining_quantity,
-            'timestamp': entry.timestamp.isoformat() if entry.timestamp else None,
-            'batch_id': entry.batch_id,
-            'calculated_expiration': ExpirationService.get_effective_sku_expiration_date(entry).isoformat() if ExpirationService.get_effective_sku_expiration_date(entry) else None
+            'remaining_quantity': float(lot.remaining_quantity or 0.0),
+            'received_date': lot.received_date.isoformat() if lot.received_date else None,
+            'batch_id': lot.batch_id,
+            'calculated_expiration': expiration.isoformat() if expiration else None
         })
 
     return jsonify({
-        'total_sku_entries': len(sku_entries),
-        'entries': debug_info[:10],  # First 10 entries for debugging
+        'total_product_lots': len(sku_lots),
+        'entries': debug_info[:10],
         'perishable_count': len([e for e in debug_info if e['is_perishable']]),
         'non_perishable_count': len([e for e in debug_info if not e['is_perishable']])
     })

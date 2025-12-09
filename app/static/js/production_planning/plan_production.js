@@ -20,15 +20,21 @@ class PlanProductionApp {
         this.scale = this._readScale();
         this.batchType = '';
         this.requiresContainers = false;
+        this.stockChecked = false;
+        this.stockCheckPassed = false;
+        this.stockIssues = [];
+        this.stockOverrideAcknowledged = false;
 
         this.containerManager = new ContainerManager(this);
         this.stockChecker = new StockChecker(this);
         this.validation = new ValidationManager(this);
         this.batchManager = new BatchManager(this);
+        window.planProductionApp = this;
     }
 
     init() {
         this._bindCoreEvents();
+        this._registerGlobalEvents();
         this.containerManager.bindEvents();
         this.stockChecker.bindEvents();
         this.validation.bindEvents();
@@ -56,11 +62,82 @@ class PlanProductionApp {
         }
     }
 
+    _registerGlobalEvents() {
+        window.addEventListener('recipe.yield.updated', (event) => {
+            const detail = event.detail || {};
+            if (!detail || detail.recipe_id !== this.recipe.id) {
+                return;
+            }
+
+            if (typeof detail.yield_amount !== 'undefined') {
+                this.baseYield = Number(detail.yield_amount) || 0;
+                window.recipeData.yield_amount = this.baseYield;
+            }
+            if (detail.yield_unit) {
+                this.unit = detail.yield_unit;
+                window.recipeData.yield_unit = detail.yield_unit;
+            }
+
+            this._updateProjectedYield();
+            this._updateProjectedPortions();
+
+            if (detail.refresh_plan) {
+                const requiresContainersCheckbox = document.getElementById('requiresContainers');
+                const wantsContainers = !!requiresContainersCheckbox?.checked;
+
+                if (!this.requiresContainers && wantsContainers) {
+                    this.requiresContainers = true;
+                    const card = document.getElementById('containerManagementCard');
+                    if (card) {
+                        card.style.display = 'block';
+                    }
+                }
+
+                if (this.containerManager?.planFetcher?.clearCache) {
+                    this.containerManager.planFetcher.clearCache();
+                }
+
+                if (this.requiresContainers || wantsContainers) {
+                    const fillPct = this.containerManager.getEffectiveFillPct();
+                    this.containerManager.planFetcher.fetchContainerPlan({ fill_pct: fillPct });
+                }
+
+                this._invalidateStockCheck('the recipe yield changed');
+            } else if (this.requiresContainers) {
+                const fillPct = this.containerManager.getEffectiveFillPct();
+                this.containerManager.planFetcher.fetchContainerPlan({ fill_pct: fillPct });
+            }
+        });
+
+        window.addEventListener('container.requirements.disable', (event) => {
+            const detail = event.detail || {};
+            if (detail.recipe_id && detail.recipe_id !== this.recipe.id) {
+                return;
+            }
+            this._disableContainersRequirement();
+        });
+    }
+
+    _disableContainersRequirement() {
+        const requiresContainersCheckbox = document.getElementById('requiresContainers');
+        if (requiresContainersCheckbox) {
+            requiresContainersCheckbox.checked = false;
+        }
+        this.requiresContainers = false;
+        const card = document.getElementById('containerManagementCard');
+        if (card) {
+            card.style.display = 'none';
+        }
+        this.containerManager.clearContainerResults();
+        this.updateValidation();
+    }
+
     _bindCoreEvents() {
         const scaleInput = document.getElementById('batchScale');
         if (scaleInput) {
             scaleInput.addEventListener('input', () => {
                 this.scale = this._readScale();
+                this._invalidateStockCheck('the batch scale changed');
                 this._updateProjectedYield();
                 this._updateProjectedPortions();
                 if (this.requiresContainers) {
@@ -82,6 +159,7 @@ class PlanProductionApp {
         const requiresContainersCheckbox = document.getElementById('requiresContainers');
         if (requiresContainersCheckbox) {
             requiresContainersCheckbox.addEventListener('change', () => {
+                this._invalidateStockCheck('container requirements changed');
                 const portioned = (window.recipeData?.is_portioned === true || window.recipeData?.is_portioned === 'true');
                 if (portioned && requiresContainersCheckbox.checked) {
                     // Show info card with bounce instead of enabling containers
@@ -110,6 +188,25 @@ class PlanProductionApp {
                 this.updateValidation();
             });
         }
+    }
+
+    _invalidateStockCheck(reason = 'a configuration change') {
+        this.stockChecked = false;
+        this.stockCheckPassed = false;
+        this.stockOverrideAcknowledged = false;
+        this.stockIssues = [];
+
+        const statusElement = document.getElementById('stockCheckStatus');
+        if (statusElement) {
+            statusElement.innerHTML = `
+                <div class="alert alert-info">
+                    <i class="fas fa-info-circle"></i>
+                    Stock check required because ${reason}.
+                </div>
+            `;
+        }
+
+        this.updateValidation();
     }
 
     _readScale() {

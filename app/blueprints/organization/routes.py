@@ -51,22 +51,13 @@ def dashboard():
             return redirect(url_for('app_routes.dashboard'))
 
     # Get organization statistics
-    from app.models import Batch
     org_id = organization.id
-    completed_batches = Batch.query.filter_by(
-        organization_id=org_id,
-        status='completed'
-    ).count()
-
-    failed_batches = Batch.query.filter_by(
-        organization_id=org_id,
-        status='failed'
-    ).count()
-
-    org_stats = {
-        'completed_batches': completed_batches,
-        'failed_batches': failed_batches
-    }
+    from app.services.statistics import AnalyticsDataService
+    force_refresh = (request.args.get('refresh') or '').lower() in ('1', 'true', 'yes')
+    dashboard_metrics = AnalyticsDataService.get_organization_dashboard(org_id, force_refresh=force_refresh)
+    org_stats = dashboard_metrics.get('organization_stats', {})
+    performance_metrics = dashboard_metrics.get('performance_metrics', {})
+    top_recipes = dashboard_metrics.get('top_recipes', [])
 
     # Count pending invites (inactive users)
     pending_invites = User.query.filter_by(
@@ -105,6 +96,8 @@ def dashboard():
         pricing_data=pricing_data,
         organization=organization,
         org_stats=org_stats,
+        performance_metrics=performance_metrics,
+        top_recipes=top_recipes,
         pending_invites=pending_invites,
         permission_categories=permission_categories,
         roles=roles,
@@ -230,7 +223,7 @@ def update_subscription_tier():
             _tier_id = int(tier_key)
         except (TypeError, ValueError):
             _tier_id = None
-        if not _tier_id or not SubscriptionTier.query.get(_tier_id):
+        if not _tier_id or not db.session.get(SubscriptionTier, _tier_id):
             return jsonify({'success': False, 'error': 'Invalid subscription tier'})
 
         # Update or create subscription

@@ -1,7 +1,11 @@
-from flask import Blueprint, render_template, request
+import json
+from typing import Optional
+
+from flask import Blueprint, render_template, request, redirect, url_for
 from app.models import db, GlobalItem
-from app.services.statistics.global_item_stats import GlobalItemStatsService
+from app.services.statistics import AnalyticsDataService
 from app.models.category import IngredientCategory
+from app.utils.seo import slugify_value
 
 global_library_bp = Blueprint('global_library_bp', __name__)
 
@@ -61,6 +65,14 @@ def global_library():
         ).order_by(IngredientCategory.name).all()
         categories = [cat.name for cat in global_categories]
 
+    canonical_url = url_for('global_library_bp.global_library', _external=True)
+    description_bits = [
+        "Search the BatchTrack global inventory library.",
+        "Browse ingredients, containers, packaging, and consumables with authoritative specs.",
+    ]
+    if item_type:
+        description_bits.insert(0, f"{item_type.capitalize()} from the BatchTrack library.")
+
     return render_template(
         'library/global_items_public.html',
         items=items,
@@ -68,6 +80,102 @@ def global_library():
         selected_type=item_type,
         selected_category=category_filter,
         search_query=search_query,
+        slugify=slugify_value,
+        page_title="Global Item Library — BatchTrack",
+        page_description=" ".join(description_bits),
+        canonical_url=canonical_url,
+    )
+
+
+@global_library_bp.route('/global-items/<int:item_id>')
+@global_library_bp.route('/global-items/<int:item_id>-<slug>')
+def global_item_detail(item_id: int, slug: Optional[str] = None):
+    """Public detail page for a specific Global Item."""
+    gi = GlobalItem.query.filter(
+        GlobalItem.is_archived != True,
+        GlobalItem.id == item_id,
+    ).first_or_404()
+
+    canonical_slug = slugify_value(gi.name)
+    if slug != canonical_slug:
+        return redirect(
+            url_for('global_library_bp.global_item_detail', item_id=item_id, slug=canonical_slug),
+            code=301,
+        )
+
+    metadata = gi.metadata_json or {}
+    description = metadata.get('meta_description') or f"{gi.name} specs, density, and usage guidance from the BatchTrack global library."
+    page_title = metadata.get('meta_title') or f"{gi.name} — {gi.item_type.capitalize()} Reference"
+    canonical_url = url_for('global_library_bp.global_item_detail', item_id=item_id, slug=canonical_slug, _external=True)
+
+    rollup = {}
+    cost = {}
+    try:
+        rollup = AnalyticsDataService.get_global_item_rollup(item_id) or {}
+    except Exception:
+        rollup = {}
+    try:
+        cost = AnalyticsDataService.get_cost_distribution(item_id) or {}
+    except Exception:
+        cost = {}
+
+    related_items = []
+    try:
+        related_query = GlobalItem.query.filter(
+            GlobalItem.item_type == gi.item_type,
+            GlobalItem.id != gi.id,
+            GlobalItem.is_archived != True,
+        ).order_by(GlobalItem.name.asc()).limit(6)
+        if gi.ingredient_category_id:
+            related_query = related_query.filter(
+                GlobalItem.ingredient_category_id == gi.ingredient_category_id
+            )
+        related_items = related_query.all()
+    except Exception:
+        related_items = []
+
+    structured_data = {
+        "@context": "https://schema.org",
+        "@type": "Product",
+        "name": gi.name,
+        "description": description,
+        "url": canonical_url,
+        "category": gi.item_type,
+        "sku": str(gi.id),
+        "additionalProperty": [],
+    }
+    if gi.aliases:
+        structured_data["alternateName"] = gi.aliases
+    if gi.density is not None:
+        structured_data["additionalProperty"].append({
+            "@type": "PropertyValue",
+            "name": "Density",
+            "value": gi.density,
+            "unitCode": "D41",
+        })
+    if gi.capacity is not None:
+        structured_data["additionalProperty"].append({
+            "@type": "PropertyValue",
+            "name": "Capacity",
+            "value": gi.capacity,
+            "unitCode": gi.capacity_unit or "",
+        })
+
+    ld_json = json.dumps(structured_data, ensure_ascii=False)
+
+    return render_template(
+        'library/global_item_detail.html',
+        item=gi,
+        metadata=metadata,
+        related_items=related_items,
+        rollup=rollup,
+        cost=cost,
+        structured_data=ld_json,
+        page_title=page_title,
+        page_description=description,
+        canonical_url=canonical_url,
+        page_og_image=metadata.get('hero_image'),
+        slugify=slugify_value,
     )
 
 
@@ -84,8 +192,8 @@ def global_library_item_stats(item_id: int):
         from app.models.global_item import GlobalItem
         gi = GlobalItem.query.get_or_404(item_id)
 
-        rollup = GlobalItemStatsService.get_rollup(item_id)
-        cost = GlobalItemStatsService.get_cost_distribution(item_id)
+        rollup = AnalyticsDataService.get_global_item_rollup(item_id)
+        cost = AnalyticsDataService.get_cost_distribution(item_id)
 
         # Basic item details for sidebar population
         item_payload = {

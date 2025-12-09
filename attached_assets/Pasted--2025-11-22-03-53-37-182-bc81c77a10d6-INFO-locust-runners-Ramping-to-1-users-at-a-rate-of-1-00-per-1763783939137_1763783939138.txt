@@ -1,0 +1,15 @@
+[2025-11-22 03:53:37,182] bc81c77a10d6/INFO/locust.runners: Ramping to 1 users at a rate of 1.00 per second
+
+[2025-11-22 03:53:37,183] bc81c77a10d6/INFO/locust.runners: All users spawned: {"AdminUser": 0, "AnonymousUser": 1, "AuthenticatedUser": 0, "HighFrequencyUser": 0, "StressTest": 0, "TimerHeavyUser": 0} (1 total users)
+
+[2025-11-22 03:53:57,916] bc81c77a10d6/INFO/locust.runners: Ramping to 10 users at a rate of 1.00 per second
+
+[2025-11-22 03:53:57,930] bc81c77a10d6/ERROR/locust.user.users: If you want to change the state of the request using .success() or .failure(), you must pass catch_response=True. See http://docs.locust.io/en/stable/writing-a-locustfile.html#validating-responses Traceback (most recent call last): File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/locust/user/users.py", line 149, in run self.on_start() File "/home/runner/workspace/loadtests/locustfile.py", line 96, in on_start return None File "/home/runner/workspace/loadtests/locustfile.py", line 82, in _perform_login if token_field: File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/locust/clients.py", line 444, in _missing_catch_response_True raise LocustError( locust.exception.LocustError: If you want to change the state of the request using .success() or .failure(), you must pass catch_response=True. See http://docs.locust.io/en/stable/writing-a-locustfile.html#validating-responses
+
+[2025-11-22 03:53:58,935] bc81c77a10d6/ERROR/locust.user.users: If you want to change the state of the request using .success() or .failure(), you must pass catch_response=True. See http://docs.locust.io/en/stable/writing-a-locustfile.html#validating-responses Traceback (most recent call last): File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/locust/user/users.py", line 149, in run self.on_start() File "/home/runner/workspace/loadtests/locustfile.py", line 96, in on_start return None File "/home/runner/workspace/loadtests/locustfile.py", line 82, in _perform_login if token_field: File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/locust/clients.py", line 444, in _missing_catch_response_True raise LocustError( locust.exception.LocustError: If you want to change the state of the request using .success() or .failure(), you must pass catch_response=True. See http://docs.locust.io/en/stable/writing-a-locustfile.html#validating-responses
+
+[2025-11-22 03:54:05,923] bc81c77a10d6/INFO/locust.runners: All users spawned: {"AdminUser": 0, "AnonymousUser": 5, "AuthenticatedUser": 2, "HighFrequencyUser": 1, "StressTest": 2, "TimerHeavyUser": 0} (10 total users)
+
+[2025-11-22 03:58:03,004] bc81c77a10d6/INFO/locust.runners: Ramping to 10 users at a rate of 1.00 per second
+
+[2025-11-22 03:58:12,010] bc81c77a10d6/INFO/locust.runners: All users spawned: {"AdminUser": 0, "AnonymousUser": 5, "AuthenticatedUser": 2, "HighFrequencyUser": 1, "StressTest": 2, "TimerHeavyUser": 0} (10 total users)

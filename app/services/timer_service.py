@@ -104,7 +104,7 @@ class TimerService:
         """Create a new timer for a batch"""
         try:
             # Get organization from the batch first
-            batch = Batch.query.get(batch_id)
+            batch = db.session.get(Batch, batch_id)
             if not batch:
                 raise ValueError("Batch not found")
 
@@ -143,7 +143,7 @@ class TimerService:
     @staticmethod
     def stop_timer(timer_id: int) -> bool:
         """Stop an active timer"""
-        timer = BatchTimer.query.get(timer_id)
+        timer = db.session.get(BatchTimer, timer_id)
         if not timer or timer.status != 'active':
             return False
 
@@ -170,7 +170,7 @@ class TimerService:
     @staticmethod
     def pause_timer(timer_id: int) -> bool:
         """Pause an active timer"""
-        timer = BatchTimer.query.get(timer_id)
+        timer = db.session.get(BatchTimer, timer_id)
         if not timer or timer.status != 'active':
             return False
 
@@ -181,7 +181,7 @@ class TimerService:
     @staticmethod
     def resume_timer(timer_id: int) -> bool:
         """Resume a paused timer"""
-        timer = BatchTimer.query.get(timer_id)
+        timer = db.session.get(BatchTimer, timer_id)
         if not timer or timer.status != 'paused':
             return False
 
@@ -192,7 +192,7 @@ class TimerService:
     @staticmethod
     def get_timer_status(timer_id: int) -> Dict:
         """Get comprehensive timer status"""
-        timer = BatchTimer.query.get(timer_id)
+        timer = db.session.get(BatchTimer, timer_id)
         if not timer:
             return {'error': 'Timer not found'}
         return TimerService._serialize_timer(timer)

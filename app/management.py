@@ -446,7 +446,7 @@ def clear_all_users_command():
 
         from .models import (
             User, Organization, UserRoleAssignment, 
-            UserStats, OrganizationStats, BillingSnapshot
+            UserStats, OrganizationStats
         )
         from .models.user_preferences import UserPreferences
 
@@ -466,10 +466,6 @@ def clear_all_users_command():
         print("🗑️  Clearing organization statistics...")
         if org_ids:
             db.session.execute(db.text("DELETE FROM organization_stats WHERE organization_id = ANY(:org_ids)"), {"org_ids": org_ids})
-
-        print("🗑️  Clearing billing snapshots...")
-        if org_ids:
-            db.session.execute(db.text("DELETE FROM billing_snapshots WHERE organization_id = ANY(:org_ids)"), {"org_ids": org_ids})
 
         print("🗑️  Clearing user preferences...")
         if user_ids:
@@ -605,7 +601,6 @@ def clear_customer_users_command():
         from .models import User, Organization
         from .models.user_role_assignment import UserRoleAssignment
         from .models.statistics import UserStats, OrganizationStats
-        from .models.billing_snapshot import BillingSnapshot
         from .models.user_preferences import UserPreferences
 
         # Get IDs for bulk operations
@@ -624,10 +619,6 @@ def clear_customer_users_command():
         print("🗑️  Clearing organization statistics...")
         if org_ids:
             db.session.execute(db.text("DELETE FROM organization_stats WHERE organization_id = ANY(:org_ids)"), {"org_ids": org_ids})
-
-        print("🗑️  Clearing billing snapshots...")
-        if org_ids:
-            db.session.execute(db.text("DELETE FROM billing_snapshots WHERE organization_id = ANY(:org_ids)"), {"org_ids": org_ids})
 
         print("🗑️  Clearing customer user preferences...")
         if customer_user_ids:

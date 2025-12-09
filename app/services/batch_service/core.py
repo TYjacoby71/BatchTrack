@@ -171,7 +171,7 @@ class BatchService(BaseService):
     def get_batch_remaining_details(cls, batch_id):
         """Get detailed remaining inventory for a specific batch"""
         try:
-            batch = Batch.query.get(batch_id)
+            batch = db.session.get(Batch, batch_id)
             if not batch:
                 return None, "Batch not found"
 

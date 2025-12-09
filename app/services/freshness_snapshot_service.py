@@ -11,7 +11,7 @@ class FreshnessSnapshotService:
         """Compute freshness metrics for a single item for the given date.
         Uses events up to end-of-day snapshot_date.
         """
-        item = InventoryItem.query.get(inventory_item_id)
+        item = db.session.get(InventoryItem, inventory_item_id)
         if not item:
             return None
 

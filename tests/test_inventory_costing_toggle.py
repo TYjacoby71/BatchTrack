@@ -1,7 +1,33 @@
 import pytest
+import sqlalchemy as sa
 from flask_login import login_user
 from app.models import InventoryItem
 from app.services.inventory_adjustment import process_inventory_adjustment
+from app.services.inventory_adjustment._creation_logic import _resolve_cost_per_unit
+from app.extensions import db
+
+
+@pytest.fixture(autouse=True)
+def ensure_inventory_item_schema(app):
+    """Ensure SQLite test DB has all columns expected by InventoryItem model."""
+    with app.app_context():
+        inspector = sa.inspect(db.engine)
+        try:
+            existing_columns = {col["name"] for col in inspector.get_columns("inventory_item")}
+        except sa.exc.NoSuchTableError:
+            InventoryItem.__table__.create(bind=db.engine, checkfirst=True)
+            inspector = sa.inspect(db.engine)
+            existing_columns = {col["name"] for col in inspector.get_columns("inventory_item")}
+
+        missing_columns = []
+        for column in InventoryItem.__table__.columns:
+            if column.name not in existing_columns:
+                column_type = column.type.compile(db.engine.dialect)
+                db.session.execute(sa.text(f'ALTER TABLE inventory_item ADD COLUMN {column.name} {column_type}'))
+                missing_columns.append(column.name)
+
+        if missing_columns:
+            db.session.commit()
 
 
 @pytest.mark.usefixtures("app", "db_session", "test_user", "test_org")
@@ -126,4 +152,27 @@ class TestInventoryCostingToggleAndWAC:
             # WAC after two restocks: (10*0.1 + 30*0.2) / 40 = (1 + 6) / 40 = 0.175
             fresh_item = db_session.get(InventoryItem, item.id)
             assert pytest.approx(fresh_item.cost_per_unit, rel=1e-9) == 0.175
+
+    def test_resolve_cost_per_unit_divides_total_entries(self, app, db_session, test_user, test_org):
+        form_data = {
+            'cost_entry_type': 'total',
+            'cost_per_unit': '32'
+        }
+
+        cost, error = _resolve_cost_per_unit(form_data, initial_quantity=32)
+
+        assert error is None
+        assert pytest.approx(cost, rel=1e-9) == 1.0
+
+    def test_resolve_cost_per_unit_requires_positive_quantity_for_total(self, app, db_session, test_user, test_org):
+        form_data = {
+            'cost_entry_type': 'total',
+            'cost_per_unit': '15'
+        }
+
+        cost, error = _resolve_cost_per_unit(form_data, initial_quantity=0)
+
+        assert cost == 0.0
+        assert error is not None
+        assert "positive quantity" in error
 

@@ -42,9 +42,8 @@
                                 </thead>
                                 <tbody>
                                     {% for res in reservations %}
-                                    {% set now = current_time %}
-                                    {% set is_expired = res.expires_at and res.expires_at < now %}
-                                    {% set is_expiring_soon = res.expires_at and not is_expired and (res.expires_at - now).total_seconds() < 3600 %}
+                                    {% set is_expired = res.expires_at and res.expires_at < current_time %}
+                                    {% set is_expiring_soon = res.expires_at and not is_expired and (res.expires_at - current_time).total_seconds() < 3600 %}
 
                                     <tr {% if is_expired %}class="table-danger"{% elif is_expiring_soon %}class="table-warning"{% endif %}>
                                         <td>

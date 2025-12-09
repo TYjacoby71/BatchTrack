@@ -63,41 +63,30 @@ export class ContainerPlanFetcher {
                 yield_unit: this.container.main.unit,
                 ...(extra || {})
             };
-            const data = await this.container.main.apiCall(`/production-planning/recipe/${this.container.main.recipe.id}/auto-fill-containers`, payload);
+            const apiEndpoint = `/production-planning/recipe/${this.container.main.recipe.id}/auto-fill-containers`;
+            const data = await this.container.main.apiCall(apiEndpoint, payload);
+            containerLogger.debug('Raw container plan response:', data);
 
-            this.fetchingPlan = false;
+            if (data && typeof data === 'object') {
+                // Check if this is a drawer response
+                if (data.drawer_payload || (data.data && data.data.drawer_payload)) {
+                    containerLogger.debug('🔍 FETCHER DEBUG: Received drawer payload in container response:', data);
+                    // Let the DrawerInterceptor handle this
+                }
 
-            if (data.success) {
-                containerLogger.debug('Plan successful');
-                containerLogger.debug('Container data received:', data);
                 this.container.containerPlan = data;
-                // Cache result for 60 seconds to reduce server load
-                appCache.set(baseKey, data, 60000);
                 this.container.displayContainerPlan();
+                this.fetchingPlan = false;
                 return data;
             } else {
-                // Check for universal drawer payload
-                if (data.drawer_payload) {
-                    containerLogger.debug('Drawer payload detected from container plan, opening drawer');
-                    const retryCallback = (evtDetail) => {
-                        const density = evtDetail?.density;
-                        containerLogger.debug('Retrying auto-fill with product density', density);
-                        return this.fetchContainerPlan({ product_density: density });
-                    };
-                    window.dispatchEvent(new CustomEvent('openDrawer', {
-                        detail: {
-                            ...data.drawer_payload,
-                            retry_callback: retryCallback
-                        }
-                    }));
-                }
-                containerLogger.error('Container plan failed:', data.error);
-                this.container.displayContainerError(data.error);
+                containerLogger.error('Invalid container plan format:', data);
+                this.container.displayContainerError('Invalid container plan response');
+                this.fetchingPlan = false;
                 return null;
             }
         } catch (error) {
-            containerLogger.error('Network error while loading containers:', error);
-            this.container.displayContainerError('Network error while loading containers');
+            containerLogger.error('Container plan failed:', error.message || error);
+            this.container.displayContainerError(error.message || 'Container plan failed');
             this.fetchingPlan = false;
             return null;
         }

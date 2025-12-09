@@ -7,7 +7,12 @@ def _api(client, app, path, payload):
     # Ensure an authenticated client session by setting flask-login keys
     user = User.query.first()
     if not user:
-        user = User(username='apitester', email='apitester@example.com', is_active=True, is_verified=True)
+        from app.models import Organization
+        org = Organization(name='Test Org')
+        db.session.add(org)
+        db.session.flush()
+        
+        user = User(username='apitester', email='apitester@example.com', is_active=True, is_verified=True, organization_id=org.id)
         db.session.add(user)
         db.session.commit()
 
@@ -20,8 +25,19 @@ def _api(client, app, path, payload):
 
 def test_plan_start_finish_non_portioned(app, client, db_session):
     # Arrange: create a simple recipe
-    from app.models import Recipe
-    r = Recipe(name='Simple Syrup', predicted_yield=10.0, predicted_yield_unit='oz', category_id=1)
+    from app.models import Recipe, Organization, User
+    
+    # Get or create user with organization
+    user = User.query.first()
+    if not user:
+        org = Organization(name='Test Org')
+        db_session.add(org)
+        db_session.flush()
+        user = User(username='apitester', email='apitester@example.com', is_active=True, is_verified=True, organization_id=org.id)
+        db_session.add(user)
+        db_session.commit()
+    
+    r = Recipe(name='Simple Syrup', predicted_yield=10.0, predicted_yield_unit='oz', category_id=1, organization_id=user.organization_id)
     db_session.add(r)
     db_session.commit()
 
@@ -59,12 +75,24 @@ def test_plan_start_finish_non_portioned(app, client, db_session):
 
 def test_plan_start_finish_portioned(app, client, db_session):
     # Arrange: create a portioned recipe
-    from app.models import Recipe
+    from app.models import Recipe, Organization, User
+    
+    # Get or create user with organization
+    user = User.query.first()
+    if not user:
+        org = Organization(name='Test Org')
+        db_session.add(org)
+        db_session.flush()
+        user = User(username='apitester', email='apitester@example.com', is_active=True, is_verified=True, organization_id=org.id)
+        db_session.add(user)
+        db_session.commit()
+    
     r = Recipe(
         name='Goat Milk Soap',
         predicted_yield=10.0,
         predicted_yield_unit='oz',
         category_id=1,
+        organization_id=user.organization_id,
         portioning_data={'is_portioned': True, 'portion_name': 'bars', 'portion_count': 20},
         is_portioned=True,
         portion_name='bars',

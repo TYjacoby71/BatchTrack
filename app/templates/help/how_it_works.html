@@ -1,0 +1,124 @@
+{% extends 'layout.html' %}
+{% block content %}
+<div class="py-4">
+  <div class="mb-4 text-center">
+    <h1 class="mb-2">How BatchTrack Works</h1>
+    <p class="text-muted">From your first login to finished products, here’s how to move through the system step by step.</p>
+    <a href="{{ url_for('auth.signup') }}" class="btn btn-primary btn-lg mt-2">See it in action — start free today</a>
+  </div>
+
+  <div class="row g-4">
+    <div class="col-lg-4">
+      <div class="card h-100 shadow-sm">
+        <div class="card-header fw-bold">Quick Links</div>
+        <div class="list-group list-group-flush">
+          <a class="list-group-item list-group-item-action" href="{{ url_for('help_routes.help_overview') }}#first-login">First Login Checklist</a>
+          <a class="list-group-item list-group-item-action" href="{{ url_for('help_routes.help_overview') }}#inventory-creation">Add Inventory</a>
+            <a class="list-group-item list-group-item-action" href="{{ url_for('help_routes.help_overview') }}#inventory-adjustments">Inventory Adjustments</a>
+          <a class="list-group-item list-group-item-action" href="{{ url_for('help_routes.help_overview') }}#recipes">Create Recipes</a>
+          <a class="list-group-item list-group-item-action" href="{{ url_for('help_routes.help_overview') }}#plan-production">Plan Production</a>
+            <a class="list-group-item list-group-item-action" href="{{ url_for('help_routes.help_overview') }}#costing">Costing & Profitability</a>
+          <a class="list-group-item list-group-item-action" href="{{ url_for('help_routes.help_overview') }}#batch-in-progress">Track Batches</a>
+          <a class="list-group-item list-group-item-action" href="{{ url_for('help_routes.help_overview') }}#product-variants">Products & SKUs</a>
+            <a class="list-group-item list-group-item-action" href="{{ url_for('help_routes.help_overview') }}#labels-exports">Labels & Exports</a>
+          <a class="list-group-item list-group-item-action" href="{{ url_for('help_routes.help_overview') }}#public-tools">Public Tools</a>
+        </div>
+      </div>
+
+      <div class="card mt-4">
+        <div class="card-body">
+          <h5 class="card-title">Need Answers Fast?</h5>
+          <p class="card-text">The <a href="{{ url_for('help_routes.help_faq') }}" class="text-decoration-none">Commonly Asked Questions</a> page links every question directly to these instructions.</p>
+          <a href="{{ url_for('help_routes.help_faq') }}" class="btn btn-outline-primary w-100">View FAQ</a>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-lg-8">
+      <div class="mb-4" id="first-login">
+        <h2 class="h4">First Login Checklist</h2>
+        <p>When a new account signs in, the dashboard shows empty states that guide makers to their next step. Decide whether you want to populate inventory first or write a recipe, then follow the on-screen ribbons that link back to this page.</p>
+        <ul>
+          <li>Inventory-first teams add ingredients, containers, consumables, and packaging so costs and conversions work out of the gate.</li>
+          <li>Recipe-first teams can sketch formulas immediately, but they’ll still be prompted to link lines to inventory for automation.</li>
+          <li>The same flow repeats for staging/preview environments so every teammate experiences a consistent launch.</li>
+        </ul>
+      </div>
+
+      {% for section in sections %}
+      <div class="mb-5" id="{{ section.slug }}">
+        <div class="d-flex align-items-center mb-2">
+          <div class="rounded-circle bg-primary text-white me-2" style="width:32px;height:32px;display:flex;align-items:center;justify-content:center;">
+            {{ loop.index }}
+          </div>
+          <h2 class="h4 mb-0">{{ section.title }}</h2>
+        </div>
+        <ul>
+          {% for point in section.points %}
+          <li>{{ point }}</li>
+          {% endfor %}
+        </ul>
+        {% if section.details %}
+        {% for detail in section.details %}
+        <div class="card mb-3">
+          <div class="card-body">
+            <h5 class="card-title">{{ detail.title }}</h5>
+            <div class="card-text">{{ detail.body|safe }}</div>
+          </div>
+        </div>
+        {% endfor %}
+        {% endif %}
+        {% if section.gallery %}
+        <div class="card border-dashed">
+          <div class="card-body">
+            <h6 class="text-uppercase text-muted mb-2">Image Placeholders</h6>
+            <p class="small text-muted mb-3">Drop screenshots for this section into <code>/app/static/images/help/{{ section.slug }}/</code>. The final onboarding tour can render them as a slideshow.</p>
+            <div class="row g-3">
+              {% for label in section.gallery %}
+              <div class="col-md-6">
+                {% set image_name = section.slug ~ '-' ~ loop.index ~ '.png' %}
+                {% set image_path = 'images/help/' ~ section.slug ~ '/' ~ image_name %}
+                {% if image_path|static_file_exists %}
+                <div class="placeholder-image-slot h-100">
+                  <img src="{{ url_for('static', filename=image_path) }}" class="img-fluid rounded mb-2" alt="{{ label }}">
+                  <p class="small text-muted mb-0">{{ label }}</p>
+                </div>
+                {% else %}
+                <div class="border rounded p-3 h-100 placeholder-image-slot">
+                  <strong>{{ label }}</strong>
+                  <p class="small text-muted mb-0">Add <code>{{ image_name }}</code> under <code>static/{{ image_path }}</code></p>
+                </div>
+                {% endif %}
+              </div>
+              {% endfor %}
+            </div>
+          </div>
+        </div>
+        {% endif %}
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+</div>
+<div class="cta-banner my-5">
+  <h2 class="h4 mb-2">Ready to run a batch the smart way?</h2>
+  <p class="mb-3">Sign up for BatchTrack, follow the checklist above, and you’ll have inventory, recipes, and production planning humming in minutes.</p>
+  <a href="{{ url_for('auth.signup') }}" class="btn btn-light btn-lg me-2">Start Free Trial</a>
+  <a href="{{ url_for('auth.login') }}" class="btn btn-outline-light btn-lg">Log In</a>
+</div>
+<style>
+  .border-dashed {
+    border: 2px dashed rgba(0,0,0,0.1);
+  }
+  .placeholder-image-slot {
+    background: rgba(0,0,0,0.02);
+  }
+  .cta-banner {
+    background: linear-gradient(135deg, #4158d0 0%, #c850c0 50%, #ffcc70 100%);
+    color: #fff;
+    border-radius: 1rem;
+    text-align: center;
+    padding: 2.5rem 1.5rem;
+  }
+</style>
+{% endblock %}

@@ -202,6 +202,17 @@ body {
   background-color: var(--color-navbar) !important;
 }
 
+/* Fixed navbar spacing - add padding to body when navbar is fixed */
+body {
+  padding-top: 76px; /* Account for fixed navbar height */
+}
+
+/* Hero section spacing adjustment */
+.hero-section {
+  padding-top: 3rem !important;
+  padding-bottom: 3rem !important;
+}
+
 /* List group improvements */
 .list-group-item {
   border-radius: var(--radius-2);
@@ -834,6 +845,40 @@ input:checked + .toggle-label:before {
 
 .batch-tools-section.active {
     border-left-color: var(--color-primary);
+}
+
+/* Recipe Form – floating ingredient actions */
+.ingredient-actions-floating {
+    position: sticky;
+    bottom: -1px;
+    width: 100%;
+    background-color: var(--color-surface, #fff);
+    border-top: 1px solid var(--color-border, #e2e8f0);
+    box-shadow: 0 -12px 25px rgba(15, 23, 42, 0.08);
+    border-bottom-left-radius: var(--radius-2, 0.5rem);
+    border-bottom-right-radius: var(--radius-2, 0.5rem);
+    padding: 1rem 1.25rem;
+    transition: transform 0.18s ease, opacity 0.18s ease;
+    transform: translateY(12px);
+    opacity: 0;
+    pointer-events: none;
+    z-index: 5;
+}
+
+.ingredient-actions-floating.is-visible {
+    transform: translateY(0);
+    opacity: 1;
+    pointer-events: auto;
+}
+
+.ingredient-actions-floating .btn {
+    min-width: 140px;
+}
+
+@media (max-width: 768px) {
+    .ingredient-actions-floating .btn {
+        width: 100%;
+    }
 }
 
 /* PRINT STYLES */

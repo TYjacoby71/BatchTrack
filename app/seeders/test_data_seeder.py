@@ -19,7 +19,6 @@ from ..models import (
     Product,
     ProductCategory,
     ProductSKU,
-    ProductSKUHistory,
     ProductVariant,
     Recipe,
     RecipeIngredient,
@@ -94,8 +93,6 @@ def seed_test_data(organization_id: Optional[int] = None):
     def reset_inventory_item(item: InventoryItem):
         UnifiedInventoryHistory.query.filter_by(inventory_item_id=item.id).delete(synchronize_session=False)
         InventoryLot.query.filter_by(inventory_item_id=item.id).delete(synchronize_session=False)
-        if item.type == "product":
-            ProductSKUHistory.query.filter_by(inventory_item_id=item.id).delete(synchronize_session=False)
         item.quantity = 0.0
         db.session.flush()
 
@@ -105,7 +102,6 @@ def seed_test_data(organization_id: Optional[int] = None):
             if not batch:
                 continue
             UnifiedInventoryHistory.query.filter_by(batch_id=batch.id).delete(synchronize_session=False)
-            ProductSKUHistory.query.filter_by(batch_id=batch.id).delete(synchronize_session=False)
             BatchIngredient.query.filter_by(batch_id=batch.id).delete(synchronize_session=False)
             BatchContainer.query.filter_by(batch_id=batch.id).delete(synchronize_session=False)
             BatchConsumable.query.filter_by(batch_id=batch.id).delete(synchronize_session=False)
@@ -254,7 +250,7 @@ def seed_test_data(organization_id: Optional[int] = None):
             "key": "container",
             "name": "4 fl oz Boston Round Bottle",
             "type": "container",
-            "unit": "unit",
+            "unit": "count",
             "cost_per_unit": 0.82,
             "category": categories["Container"],
             "density": None,
@@ -377,7 +373,7 @@ def seed_test_data(organization_id: Optional[int] = None):
         db.session.add(recipe)
 
     recipe.instructions = (
-        "Warm milk to 120°F, dissolve honey, blend until uniform, cool, and bottle immediately."
+        "Warm milk to 120F, dissolve honey, blend until uniform, cool, and bottle immediately."
     )
     recipe.predicted_yield = 4.0
     recipe.predicted_yield_unit = "floz"
@@ -610,6 +606,17 @@ def seed_test_data(organization_id: Optional[int] = None):
                     batch_id=batch.id,
                     defer_commit=True,
                 )
+                
+                # Create BatchIngredient record
+                batch_ingredient = BatchIngredient(
+                    batch_id=batch.id,
+                    inventory_item_id=honey_item.id,
+                    quantity_used=honey_required,
+                    unit=honey_item.unit,
+                    cost_per_unit=honey_item.cost_per_unit,
+                    organization_id=organization_id
+                )
+                db.session.add(batch_ingredient)
 
             # Milk consumption
             milk_assoc = ingredient_map.get(milk_item.id)
@@ -631,6 +638,17 @@ def seed_test_data(organization_id: Optional[int] = None):
                     batch_id=batch.id,
                     defer_commit=True,
                 )
+                
+                # Create BatchIngredient record
+                batch_ingredient = BatchIngredient(
+                    batch_id=batch.id,
+                    inventory_item_id=milk_item.id,
+                    quantity_used=milk_required,
+                    unit=milk_item.unit,
+                    cost_per_unit=milk_item.cost_per_unit,
+                    organization_id=organization_id
+                )
+                db.session.add(batch_ingredient)
 
             # Container consumption matches final output
             container_required = plan.get("final_quantity", 0) or 0
@@ -646,6 +664,18 @@ def seed_test_data(organization_id: Optional[int] = None):
                     batch_id=batch.id,
                     defer_commit=True,
                 )
+                
+                # Create BatchContainer record
+                batch_container = BatchContainer(
+                    batch_id=batch.id,
+                    container_id=container_item.id,
+                    container_quantity=int(container_required),
+                    quantity_used=int(container_required),
+                    fill_quantity=4.0,  # 4 fl oz per container
+                    fill_unit="floz",
+                    cost_each=container_item.cost_per_unit
+                )
+                db.session.add(batch_container)
 
             # Finished goods lot
             if plan.get("final_quantity"):
@@ -766,77 +796,6 @@ def seed_test_data(organization_id: Optional[int] = None):
         organization_id=organization_id,
     )
     db.session.add(reservation)
-    db.session.commit()
-
-    # ------------------------------------------------------------------
-    # Product SKU history snapshots
-    # ------------------------------------------------------------------
-    ProductSKUHistory.query.filter_by(inventory_item_id=product_item.id).delete(synchronize_session=False)
-    db.session.commit()
-
-    sku_history_events = []
-    for plan in batch_plan:
-        if plan["status"] != "completed" or not plan.get("final_quantity"):
-            continue
-        batch = batches_by_label[plan["label_code"]]
-        completed_at = normalize_timestamp(batch.completed_at or now)
-        sku_history_events.append({
-            "timestamp": completed_at,
-            "change_type": "production_completed",
-            "quantity": float(plan["final_quantity"]),
-            "unit_cost": plan.get("unit_cost"),
-            "batch_id": batch.id,
-            "notes": f"Finished goods received from {plan['label_code']}"
-        })
-
-    for sale in sales_plan:
-        batch = batches_by_label[sale["batch_label"]]
-        sku_history_events.append({
-            "timestamp": normalize_timestamp(now - timedelta(days=sale["days_ago"])),
-            "change_type": "sale",
-            "quantity": -float(sale["quantity"]),
-            "sale_price": sale.get("sale_price"),
-            "customer": sale.get("customer"),
-            "order_id": sale.get("order_id"),
-            "batch_id": batch.id,
-            "notes": f"Sale fulfilled for {sale['customer']}"
-        })
-
-    sku_history_events.append({
-        "timestamp": reservation_timestamp,
-        "change_type": "reserved",
-        "quantity": -float(reservation_quantity),
-        "customer": "Cafe Collective",
-        "order_id": reservation_order_id,
-        "notes": "Inventory reserved for pick-up"
-    })
-
-    for event in sku_history_events:
-        event["timestamp"] = normalize_timestamp(event.get("timestamp"))
-
-    sku_history_events.sort(key=lambda e: e["timestamp"] or normalize_timestamp(TimezoneUtils.utc_now()))
-    running_quantity = 0.0
-    for event in sku_history_events:
-        running_quantity += event["quantity"]
-        history_entry = ProductSKUHistory(
-            inventory_item_id=product_item.id,
-            change_type=event["change_type"],
-            quantity_change=event["quantity"],
-            remaining_quantity=max(running_quantity, 0.0),
-            unit=product_item.unit,
-            unit_cost=event.get("unit_cost"),
-            sale_price=event.get("sale_price"),
-            customer=event.get("customer"),
-            order_id=event.get("order_id"),
-            batch_id=event.get("batch_id"),
-            fifo_code=None,
-            timestamp=event["timestamp"],
-            organization_id=organization_id,
-            created_by=admin_user.id,
-            notes=event.get("notes"),
-        )
-        db.session.add(history_entry)
-
     db.session.commit()
 
     # ------------------------------------------------------------------

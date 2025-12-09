@@ -1,9 +1,11 @@
 
-from flask import Blueprint, render_template, jsonify
-from flask_login import login_required, current_user
+from flask import Blueprint, jsonify, render_template
+from flask_login import current_user, login_required
+
+from app.extensions import db
 from app.models import Permission
-from app.utils.permissions import has_permission, _org_tier_includes_permission
 from app.models.subscription_tier import SubscriptionTier
+from app.utils.permissions import _org_tier_includes_permission, has_permission
 
 debug_bp = Blueprint('debug', __name__, url_prefix='/debug')
 
@@ -25,7 +27,7 @@ def debug_permissions():
         tier_id = int(current_tier) if isinstance(current_tier, str) else current_tier
     except Exception:
         tier_id = None
-    tier_obj = SubscriptionTier.query.get(tier_id) if tier_id else None
+    tier_obj = db.session.get(SubscriptionTier, tier_id) if tier_id else None
     tier_permissions = [p.name for p in getattr(tier_obj, 'permissions', [])] if tier_obj else []
     
     # Check each permission

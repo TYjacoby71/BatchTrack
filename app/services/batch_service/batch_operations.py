@@ -3,7 +3,7 @@ from datetime import date, datetime, timezone
 from sqlalchemy import extract
 from flask_login import current_user
 
-from app.models import db, Batch, Recipe, InventoryItem, BatchContainer, BatchIngredient
+from app.models import db, Batch, Recipe, InventoryItem, BatchContainer, BatchIngredient, InventoryLot
 from app.models.batch import BatchConsumable
 from app import models
 from app.models import ExtraBatchIngredient, ExtraBatchContainer, Product, ProductVariant
@@ -30,12 +30,15 @@ class BatchOperationsService(BaseService):
             snap_scale = float(plan_snapshot.get('scale', 1.0))
             snap_batch_type = plan_snapshot.get('batch_type', 'ingredient')
             snap_notes = plan_snapshot.get('notes', '')
+            forced_summary = plan_snapshot.get('forced_start_summary')
+            if forced_summary:
+                snap_notes = f"{snap_notes}\n{forced_summary}" if snap_notes else forced_summary
             snap_projected_yield = float(plan_snapshot.get('projected_yield') or 0.0)
             snap_projected_yield_unit = plan_snapshot.get('projected_yield_unit') or ''
             snap_portioning = plan_snapshot.get('portioning') or {}
             containers_data = plan_snapshot.get('containers') or []
 
-            recipe = Recipe.query.get(snap_recipe_id)
+            recipe = db.session.get(Recipe, snap_recipe_id)
             if not recipe:
                 return None, "Recipe not found"
 
@@ -133,8 +136,16 @@ class BatchOperationsService(BaseService):
             # Handle containers if required
             container_errors = cls._process_batch_containers(batch, containers_data, defer_commit=True)
 
+            skip_ingredient_ids = set(plan_snapshot.get('skip_ingredient_ids', [])) if isinstance(plan_snapshot, dict) else set()
+
             # Process ingredient deductions
-            ingredient_errors = cls._process_batch_ingredients(batch, recipe, snap_scale, defer_commit=True)
+            ingredient_errors = cls._process_batch_ingredients(
+                batch,
+                recipe,
+                snap_scale,
+                skip_ingredient_ids=skip_ingredient_ids,
+                defer_commit=True
+            )
 
             # Process consumable deductions
             consumable_errors = cls._process_batch_consumables(batch, recipe, snap_scale, defer_commit=True)
@@ -155,7 +166,7 @@ class BatchOperationsService(BaseService):
                 print(f"🔍 BATCH_SERVICE DEBUG: Final batch ID: {batch.id}")
                 print(f"🔍 BATCH_SERVICE DEBUG: Final batch label: {batch.label_code}")
                 # Verify batch was persisted
-                fresh_batch = Batch.query.get(batch.id)
+                fresh_batch = db.session.get(Batch, batch.id)
                 if not fresh_batch:
                     print(f"🔍 BATCH_SERVICE DEBUG: ERROR - Could not fetch fresh batch from DB!")
 
@@ -199,7 +210,7 @@ class BatchOperationsService(BaseService):
                 quantity = container.get('quantity', 0)
 
                 if container_id and quantity:
-                    container_item = InventoryItem.query.get(container_id)
+                    container_item = db.session.get(InventoryItem, container_id)
                     if container_item:
                         try:
                             # Handle container unit
@@ -245,13 +256,18 @@ class BatchOperationsService(BaseService):
         return errors
 
     @classmethod
-    def _process_batch_ingredients(cls, batch, recipe, scale, defer_commit=False):
+    def _process_batch_ingredients(cls, batch, recipe, scale, skip_ingredient_ids=None, defer_commit=False):
         """Process ingredient deductions for batch start"""
         errors = []
         try:
+            skip_ids = set(skip_ingredient_ids or [])
             for assoc in recipe.recipe_ingredients:
                 ingredient = assoc.inventory_item
                 if not ingredient:
+                    continue
+
+                if ingredient.id in skip_ids:
+                    logger.info(f"Skipping deduction for {ingredient.name} (forced start with insufficient stock).")
                     continue
 
                 required_amount = assoc.quantity * scale
@@ -558,7 +574,7 @@ class BatchOperationsService(BaseService):
 
             if success:
                 try:
-                    refreshed = Batch.query.get(batch_id)
+                    refreshed = db.session.get(Batch, batch_id)
                     # Mirror final_portions into batch for reporting if provided
                     try:
                         if refreshed and form_data.get('final_portions'):
@@ -665,7 +681,7 @@ class BatchOperationsService(BaseService):
     def add_extra_items_to_batch(cls, batch_id, extra_ingredients=None, extra_containers=None, extra_consumables=None):
         """Add extra ingredients, containers, and consumables to an in-progress batch"""
         try:
-            batch = Batch.query.get(batch_id)
+            batch = db.session.get(Batch, batch_id)
             if not batch:
                 return False, "Batch not found", []
 
@@ -687,7 +703,7 @@ class BatchOperationsService(BaseService):
 
             # Process extra containers
             for container in extra_containers:
-                container_item = InventoryItem.query.get(container["item_id"])
+                container_item = db.session.get(InventoryItem, container["item_id"])
                 if not container_item:
                     errors.append({"item": "Unknown", "message": "Container not found"})
                     continue
@@ -762,7 +778,7 @@ class BatchOperationsService(BaseService):
 
             # Process extra ingredients
             for item in extra_ingredients:
-                inventory_item = InventoryItem.query.get(item["item_id"])
+                inventory_item = db.session.get(InventoryItem, item["item_id"])
                 if not inventory_item:
                     continue
 
@@ -838,7 +854,7 @@ class BatchOperationsService(BaseService):
 
             # Process extra consumables
             for cons in extra_consumables:
-                consumable_item = InventoryItem.query.get(cons["item_id"])
+                consumable_item = db.session.get(InventoryItem, cons["item_id"])
                 if not consumable_item:
                     errors.append({"item": "Unknown", "message": "Consumable not found"})
                     continue

@@ -9,7 +9,7 @@ from typing import Dict, List, Any, Optional, Tuple
 from flask_login import current_user
 
 from ...models import Recipe, RecipeIngredient, InventoryItem
-from ...models.recipe import RecipeConsumable
+from ...models.recipe import RecipeConsumable, RecipeLineage
 from ...extensions import db
 from ._validation import validate_recipe_data
 from ...utils.code_generator import generate_recipe_prefix
@@ -17,15 +17,27 @@ from ...services.event_emitter import EventEmitter
 
 logger = logging.getLogger(__name__)
 
+_ALLOWED_RECIPE_STATUSES = {'draft', 'published'}
+
+
+def _normalize_status(value: str | None) -> str:
+    if not value:
+        return 'published'
+    normalized = str(value).strip().lower()
+    return normalized if normalized in _ALLOWED_RECIPE_STATUSES else 'published'
+
 
 def create_recipe(name: str, description: str = "", instructions: str = "",
                  yield_amount: float = 0.0, yield_unit: str = "",
                  ingredients: List[Dict] = None, parent_id: int = None,
+                 parent_recipe_id: int = None, cloned_from_id: int | None = None,
+                 root_recipe_id: int | None = None,
                  allowed_containers: List[int] = None, label_prefix: str = "",
                  consumables: List[Dict] = None, category_id: int | None = None,
-                 portioning_data: Dict | None = None,
-                 is_portioned: bool = None, portion_name: str = None,
-                 portion_count: int = None, portion_unit_id: int = None) -> Tuple[bool, Any]:
+                  portioning_data: Dict | None = None,
+                  is_portioned: bool = None, portion_name: str = None,
+                  portion_count: int = None, portion_unit_id: int = None,
+                  status: str = 'published') -> Tuple[bool, Any]:
     """
     Create a new recipe with ingredients and UI fields.
 
@@ -36,7 +48,7 @@ def create_recipe(name: str, description: str = "", instructions: str = "",
         yield_amount: Expected yield quantity
         yield_unit: Unit for yield
         ingredients: List of ingredient dicts with item_id, quantity, unit
-        parent_id: Parent recipe ID for variations
+          parent_recipe_id: Parent recipe ID for variations (legacy parent_id supported)
         allowed_containers: List of container IDs
         label_prefix: Label prefix for batches
 
@@ -45,15 +57,31 @@ def create_recipe(name: str, description: str = "", instructions: str = "",
     """
     try:
         # Validate input data
+        normalized_status = _normalize_status(status)
+        allow_partial = normalized_status == 'draft'
+
         validation_result = validate_recipe_data(
             name=name,
             ingredients=ingredients or [],
             yield_amount=yield_amount,
-            portioning_data=portioning_data
+            portioning_data=portioning_data,
+            allow_partial=allow_partial
         )
 
         if not validation_result['valid']:
-            return False, validation_result['error']
+            return False, validation_result
+
+        parent_recipe_id = parent_recipe_id or parent_id
+        parent_recipe = None
+        clone_source = None
+        try:
+            if parent_recipe_id:
+                parent_recipe = db.session.get(Recipe, parent_recipe_id)
+            if cloned_from_id:
+                clone_source = db.session.get(Recipe, cloned_from_id)
+        except Exception:
+            parent_recipe = parent_recipe or None
+            clone_source = clone_source or None
 
         # Create recipe with proper label prefix
         final_label_prefix = label_prefix
@@ -62,14 +90,13 @@ def create_recipe(name: str, description: str = "", instructions: str = "",
             final_label_prefix = generate_recipe_prefix(name)
             
             # For variations, ensure unique prefix
-            if parent_id:
-                parent_recipe = Recipe.query.get(parent_id)
+            if parent_recipe_id:
                 if parent_recipe and parent_recipe.label_prefix:
                     # Use parent prefix with variation suffix
                     base_prefix = parent_recipe.label_prefix
                     # Check for existing variations with same base prefix
                     existing_variations = Recipe.query.filter(
-                        Recipe.parent_id == parent_id,
+                        Recipe.parent_recipe_id == parent_recipe_id,
                         Recipe.label_prefix.like(f"{base_prefix}%")
                     ).count()
                     if existing_variations > 0:
@@ -89,7 +116,7 @@ def create_recipe(name: str, description: str = "", instructions: str = "",
                     buid = portioning_data.get('bulk_yield_unit_id')
                     if buid:
                         from ...models.unit import Unit
-                        u = Unit.query.get(buid)
+                        u = db.session.get(Unit, buid)
                         if u and getattr(u, 'name', None):
                             derived_unit = u.name
         except Exception:
@@ -101,9 +128,11 @@ def create_recipe(name: str, description: str = "", instructions: str = "",
             predicted_yield=derived_yield,
             predicted_yield_unit=derived_unit,
             organization_id=(current_user.organization_id if getattr(current_user, 'is_authenticated', False) and getattr(current_user, 'organization_id', None) else (1)),
-            parent_id=parent_id,
+            parent_recipe_id=parent_recipe_id,
+            cloned_from_id=cloned_from_id,
             label_prefix=final_label_prefix,
-            category_id=category_id
+            category_id=category_id,
+            status=normalized_status
         )
 
         # Set allowed containers
@@ -114,9 +143,19 @@ def create_recipe(name: str, description: str = "", instructions: str = "",
         if portioning_data and isinstance(portioning_data, dict):
             try:
                 if portioning_data.get('is_portioned'):
-                    pc = int(portioning_data.get('portion_count') or 0)
+                    try:
+                        pc = int(portioning_data.get('portion_count') or 0)
+                    except Exception:
+                        pc = 0
                     if pc <= 0:
-                        return False, 'For portioned recipes, portion count must be provided.'
+                        if allow_partial:
+                            pc = None
+                        else:
+                            return False, {
+                                'message': 'For portioned recipes, portion count must be provided.',
+                                'error': 'For portioned recipes, portion count must be provided.',
+                                'missing_fields': ['portion count']
+                            }
                     recipe.portioning_data = portioning_data
                     # Also set discrete columns
                     recipe.is_portioned = True
@@ -166,8 +205,23 @@ def create_recipe(name: str, description: str = "", instructions: str = "",
         except Exception:
             pass
 
+        # Determine lineage root
+        inferred_root_id = root_recipe_id
+        if not inferred_root_id:
+            if parent_recipe:
+                inferred_root_id = parent_recipe.root_recipe_id or parent_recipe.id
+            elif clone_source:
+                inferred_root_id = clone_source.root_recipe_id or clone_source.id
+
+        if inferred_root_id:
+            recipe.root_recipe_id = inferred_root_id
+
         db.session.add(recipe)
         db.session.flush()  # Get recipe ID
+
+        if not recipe.root_recipe_id:
+            recipe.root_recipe_id = recipe.id
+            db.session.flush()
 
         # Add ingredients
         for ingredient_data in ingredients or []:
@@ -190,6 +244,18 @@ def create_recipe(name: str, description: str = "", instructions: str = "",
             db.session.add(recipe_consumable)
 
         db.session.commit()
+
+        # Log lineage metadata after commit to ensure recipe.id is available
+        lineage_event = 'CREATE'
+        lineage_source_id = None
+        if parent_recipe_id:
+            lineage_event = 'VARIATION'
+            lineage_source_id = parent_recipe_id
+        elif cloned_from_id:
+            lineage_event = 'CLONE'
+            lineage_source_id = cloned_from_id
+
+        _log_lineage_event(recipe, lineage_event, lineage_source_id)
         logger.info(f"Created recipe {recipe.id}: {name}")
 
         # Emit recipe_created
@@ -220,7 +286,8 @@ def update_recipe(recipe_id: int, name: str = None, description: str = None,
                  consumables: List[Dict] = None, category_id: int | None = None,
                  portioning_data: Dict | None = None,
                  is_portioned: bool = None, portion_name: str = None,
-                 portion_count: int = None, portion_unit_id: int = None) -> Tuple[bool, Any]:
+                 portion_count: int = None, portion_unit_id: int = None,
+                 status: str | None = None) -> Tuple[bool, Any]:
     """
     Update an existing recipe.
 
@@ -246,22 +313,27 @@ def update_recipe(recipe_id: int, name: str = None, description: str = None,
         logger.info(f"yield_amount: {yield_amount} (type: {type(yield_amount)})")
         logger.info(f"yield_unit: {yield_unit}")
         logger.info(f"portioning_data: {portioning_data}")
-        recipe = Recipe.query.get(recipe_id)
+        recipe = db.session.get(Recipe, recipe_id)
         if not recipe:
             return False, "Recipe not found"
 
         if recipe.is_locked:
             return False, "Recipe is locked and cannot be modified"
 
+        target_status = _normalize_status(status if status is not None else recipe.status)
+        allow_partial = target_status == 'draft'
+        recipe.status = target_status
+
         # Update basic fields
         if name is not None:
             # Validate name uniqueness for updates
             validation_result = validate_recipe_data(
                 name=name,
-                recipe_id=recipe_id
+                recipe_id=recipe_id,
+                allow_partial=True
             )
             if not validation_result['valid']:
-                return False, validation_result['error']
+                return False, validation_result
             recipe.name = name
         if instructions is not None:
             recipe.instructions = instructions
@@ -288,16 +360,23 @@ def update_recipe(recipe_id: int, name: str = None, description: str = None,
             else:
                 try:
                     pc = int(portioning_data.get('portion_count') or 0)
-                    if pc <= 0:
-                        return False, 'For portioned recipes, portion count must be provided.'
-                    recipe.portioning_data = portioning_data
-                    # Also update discrete columns
-                    recipe.is_portioned = True
-                    recipe.portion_name = portioning_data.get('portion_name')
-                    recipe.portion_count = pc
-                    recipe.portion_unit_id = portioning_data.get('portion_unit_id')
                 except Exception:
-                    return False, 'Invalid portioning data.'
+                    pc = 0
+                if pc <= 0:
+                    if allow_partial:
+                        pc = None
+                    else:
+                        return False, {
+                            'message': 'For portioned recipes, portion count must be provided.',
+                            'error': 'For portioned recipes, portion count must be provided.',
+                            'missing_fields': ['portion count']
+                        }
+                recipe.portioning_data = portioning_data
+                # Also update discrete columns
+                recipe.is_portioned = True
+                recipe.portion_name = portioning_data.get('portion_name')
+                recipe.portion_count = pc
+                recipe.portion_unit_id = portioning_data.get('portion_unit_id')
 
         # Handle discrete portioning parameters (if passed separately)
         if is_portioned is not None:
@@ -323,12 +402,14 @@ def update_recipe(recipe_id: int, name: str = None, description: str = None,
             validation_result = validate_recipe_data(
                 name=recipe.name,
                 ingredients=ingredients,
-                yield_amount=recipe.predicted_yield,
-                recipe_id=recipe_id
+                yield_amount=yield_amount if yield_amount is not None else recipe.predicted_yield,
+                recipe_id=recipe_id,
+                portioning_data=portioning_data,
+                allow_partial=allow_partial
             )
 
             if not validation_result['valid']:
-                return False, validation_result['error']
+                return False, validation_result
 
             # Remove existing ingredients
             RecipeIngredient.query.filter_by(recipe_id=recipe_id).delete()
@@ -408,7 +489,7 @@ def delete_recipe(recipe_id: int) -> Tuple[bool, str]:
         Tuple of (success: bool, message: str)
     """
     try:
-        recipe = Recipe.query.get(recipe_id)
+        recipe = db.session.get(Recipe, recipe_id)
         if not recipe:
             return False, "Recipe not found"
 
@@ -528,23 +609,51 @@ def duplicate_recipe(recipe_id: int) -> Tuple[bool, Any]:
             for rc in original.recipe_consumables
         ]
 
-        # Generate new prefix for clone (don't reuse original prefix)
         clone_name = f"{original.name} (Copy)"
         clone_prefix = generate_recipe_prefix(clone_name)
 
-        # Create new recipe
-        return create_recipe(
+        template = Recipe(
             name=clone_name,
-            description=original.instructions,
             instructions=original.instructions,
-            yield_amount=original.predicted_yield or 0.0,
-            yield_unit=original.predicted_yield_unit or "",
-            ingredients=ingredients,
-            consumables=consumables,
-            allowed_containers=getattr(original, 'allowed_containers', []),
-            label_prefix=clone_prefix
+            label_prefix=clone_prefix,
+            predicted_yield=original.predicted_yield or 0.0,
+            predicted_yield_unit=original.predicted_yield_unit or "",
+            category_id=original.category_id,
+            organization_id=original.organization_id,
+            cloned_from_id=original.id,
+            root_recipe_id=original.root_recipe_id or original.id
         )
+        template.allowed_containers = list(original.allowed_containers or [])
+        template.portioning_data = original.portioning_data.copy() if isinstance(original.portioning_data, dict) else original.portioning_data
+        template.is_portioned = original.is_portioned
+        template.portion_name = original.portion_name
+        template.portion_count = original.portion_count
+        template.portion_unit_id = original.portion_unit_id
+
+        return True, {
+            'template': template,
+            'ingredients': ingredients,
+            'consumables': consumables,
+            'cloned_from_id': original.id,
+            'root_recipe_id': original.root_recipe_id or original.id
+        }
 
     except Exception as e:
         logger.error(f"Error duplicating recipe {recipe_id}: {e}")
         return False, str(e)
+
+
+def _log_lineage_event(recipe: Recipe, event_type: str, source_recipe_id: int | None = None, notes: str | None = None) -> None:
+    """Persist a lineage audit row but never block recipe creation."""
+    try:
+        lineage = RecipeLineage(
+            recipe_id=recipe.id,
+            source_recipe_id=source_recipe_id,
+            event_type=event_type,
+            organization_id=recipe.organization_id,
+            user_id=getattr(current_user, 'id', None),
+            notes=notes
+        )
+        db.session.add(lineage)
+    except Exception as exc:  # pragma: no cover - audit best-effort
+        logger.debug(f"Unable to write recipe lineage event ({event_type}): {exc}")

@@ -4,7 +4,25 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="csrf-token" content="{{ csrf_token() }}">
-    <title>BatchTrack (pre variant changes)</title>
+      {% set resolved_title = page_title or "BatchTrack — Production & Inventory" %}
+      {% set resolved_description = page_description or "BatchTrack unifies batching, inventory, and the global item library for makers." %}
+      {% set resolved_canonical = canonical_url or request.base_url %}
+      <title>{{ resolved_title }}</title>
+      <meta name="description" content="{{ resolved_description }}">
+      <link rel="canonical" href="{{ resolved_canonical }}">
+      <meta property="og:type" content="website">
+      <meta property="og:title" content="{{ resolved_title }}">
+      <meta property="og:description" content="{{ resolved_description }}">
+      <meta property="og:url" content="{{ resolved_canonical }}">
+      {% if page_og_image %}
+      <meta property="og:image" content="{{ page_og_image }}">
+      {% endif %}
+      <meta name="twitter:card" content="summary_large_image">
+      <meta name="twitter:title" content="{{ resolved_title }}">
+      <meta name="twitter:description" content="{{ resolved_description }}">
+      {% if page_og_image %}
+      <meta name="twitter:image" content="{{ page_og_image }}">
+      {% endif %}
     <!-- Bootstrap CSS -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <!-- Font Awesome -->
@@ -48,7 +66,6 @@
             margin: -1px !important;
             padding: 0 !important;
         }
-
         .app-container {
             max-width: 1200px; /* Adjust as needed */
             margin: 0 auto;
@@ -63,7 +80,6 @@
                 BatchTrack 1.0
             </a>
             {% if current_user.is_authenticated %}
-
             {% if current_user.user_type == 'developer' %}
             <!-- Developer Navigation -->
             <div class="navbar-nav me-auto">
@@ -78,7 +94,6 @@
                     {% endif %}
                 </span>
             </div>
-
             <!-- Show both menus when developer is viewing an organization -->
             {% if session.get('dev_selected_org_id') %}
             <!-- Customer Menu (when developer is viewing as customer) -->
@@ -93,6 +108,11 @@
                         🔧 Tools
                     </a>
                 </li>
+                  <li class="nav-item">
+                      <a class="nav-link" href="{{ url_for('help_routes.help_overview') }}">
+                          ❓ Help
+                      </a>
+                  </li>
             </ul>
             <div class="dropdown me-2">
                 <button class="btn btn-light dropdown-toggle" type="button" id="customerDropdown" data-bs-toggle="dropdown" aria-expanded="false">
@@ -101,18 +121,14 @@
                 <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="customerDropdown">
                     <!-- User Dashboard -->
                     <li><a class="dropdown-item" href="{{ url_for('app_routes.dashboard') }}">User Dashboard</a></li>
-
                     <li><hr class="dropdown-divider"></li>
-
                     <!-- Core Features -->
                     <li><h6 class="dropdown-header">Core Features</h6></li>
                     <li><a class="dropdown-item" href="{{ url_for('inventory.list_inventory') }}">Inventory</a></li>
                     <li><a class="dropdown-item" href="{{ url_for('recipes.list_recipes') }}">Recipes</a></li>
                     <li><a class="dropdown-item" href="{{ url_for('batches.list_batches') }}">Batches</a></li>
                     <li><a class="dropdown-item" href="{{ url_for('products.list_products') }}">Products</a></li>
-
                     <li><hr class="dropdown-divider"></li>
-
                     <!-- Production Tools -->
                     <li><h6 class="dropdown-header">Production Tools</h6></li>
                     <li>
@@ -124,27 +140,20 @@
                     <li><a class="dropdown-item" href="{{ url_for('timers.list_timers') }}">Timers</a></li>
                     <li><a class="dropdown-item" href="{{ url_for('reservation.list_reservations') }}">Reservations</a></li>
                     <li><a class="dropdown-item" href="{{ url_for('bulk_stock.bulk_stock_check') }}">Bulk Stock Check</a></li>
-
                     <li><hr class="dropdown-divider"></li>
-
                     <!-- Resources -->
                     <li><h6 class="dropdown-header">Resources</h6></li>
                     <li><a class="dropdown-item" href="{{ url_for('global_library_bp.global_library') }}">Global Inventory Library</a></li>
-
                     <li><hr class="dropdown-divider"></li>
-
                     <!-- Admin -->
                     <li><h6 class="dropdown-header">Admin</h6></li>
                     <li><a class="dropdown-item" href="{{ url_for('organization.dashboard') }}">Organization Dashboard</a></li>
                     <li><a class="dropdown-item" href="{{ url_for('settings.index') }}">Settings</a></li>
-
                     <li><hr class="dropdown-divider"></li>
-
                     <li><a class="dropdown-item" href="{{ url_for('auth.logout') }}">Logout</a></li>
                 </ul>
             </div>
             {% endif %}
-
             <!-- Developer Menu (always available) -->
             <div class="dropdown ms-auto">
                 <button class="btn btn-danger dropdown-toggle" type="button" id="devDropdown" data-bs-toggle="dropdown" aria-expanded="false">
@@ -155,9 +164,7 @@
                     <li><a class="dropdown-item" href="{{ url_for('developer.dashboard') }}">
                         <i class="fas fa-tachometer-alt"></i> Developer Dashboard
                     </a></li>
-
                     <li><hr class="dropdown-divider"></li>
-
                     <!-- Organization Management -->
                     <li><h6 class="dropdown-header">Organization Management</h6></li>
                     <li><a class="dropdown-item" href="{{ url_for('developer.create_organization') }}">
@@ -175,9 +182,7 @@
                     <li><a class="dropdown-item" href="{{ url_for('auth.manage_permissions') }}">
                         <i class="fas fa-key"></i> Permissions
                     </a></li>
-
                     <li><hr class="dropdown-divider"></li>
-
                     <!-- Global Library -->
                     <li><h6 class="dropdown-header">Global Library</h6></li>
                     <li><a class="dropdown-item" href="{{ url_for('developer.global_items_admin') }}">
@@ -192,9 +197,7 @@
                     <li><a class="dropdown-item" href="{{ url_for('developer.container_management') }}">
                         <i class="fas fa-box-open"></i> Container Management
                     </a></li>
-
                     <li><hr class="dropdown-divider"></li>
-
                     <!-- Analytics -->
                     <li><h6 class="dropdown-header">Analytics</h6></li>
                     <li><a class="dropdown-item" href="{{ url_for('developer.analytics_catalog') }}">
@@ -206,9 +209,7 @@
                     <li><a class="dropdown-item" href="{{ url_for('developer.system_statistics') }}">
                         <i class="fas fa-chart-bar"></i> System Statistics
                     </a></li>
-
                     <li><hr class="dropdown-divider"></li>
-
                     <!-- Billing -->
                     <li><h6 class="dropdown-header">Billing</h6></li>
                     <li><a class="dropdown-item" href="{{ url_for('developer.subscription_tiers.manage_tiers') }}">
@@ -220,9 +221,7 @@
                     <li><a class="dropdown-item" href="{{ url_for('developer.billing_integration') }}">
                         <i class="fas fa-credit-card"></i> Billing Integration
                     </a></li>
-
                     <li><hr class="dropdown-divider"></li>
-
                     <!-- Marketing -->
                     <li><h6 class="dropdown-header">Marketing</h6></li>
                     <li><a class="dropdown-item" href="{{ url_for('developer.marketing_admin') }}">
@@ -231,13 +230,11 @@
                     <li><a class="dropdown-item" href="{{ url_for('developer.waitlist_statistics') }}">
                         <i class="fas fa-envelope"></i> Waitlist
                     </a></li>
-
                     <li><hr class="dropdown-divider"></li>
-
                     <!-- Customer Support -->
                     <li><h6 class="dropdown-header">Customer Support</h6></li>
                     <li><a class="dropdown-item" href="{{ url_for('developer.organizations') }}">
-                        <i class="fas fa-filter"></i> View as Customer
+                        <i class="fas fa-headset"></i> Customer Support
                         {% if session.get('dev_selected_org_id') %}
                         <span class="badge bg-primary ms-1">Active</span>
                         {% endif %}
@@ -247,25 +244,21 @@
                         <i class="fas fa-times"></i> Clear Customer Filter
                     </a></li>
                     {% endif %}
-
                     <li><hr class="dropdown-divider"></li>
-
                     <!-- System -->
                     <li><h6 class="dropdown-header">System</h6></li>
                     <li><a class="dropdown-item" href="{{ url_for('developer.integrations_checklist') }}">
                         <i class="fas fa-plug"></i> Integrations & Launch
                     </a></li>
-                    <li><a class="dropdown-item" href="{{ url_for('developer.system_settings') }}">
-                        <i class="fas fa-cog"></i> System Settings
+                    <li><a class="dropdown-item" href="{{ url_for('developer.feature_flags') }}">
+                        <i class="fas fa-toggle-on"></i> Feature Flags
                     </a></li>
-
                     <li><hr class="dropdown-divider"></li>
                     <li><a class="dropdown-item" href="{{ url_for('auth.logout') }}">
                         <i class="fas fa-sign-out-alt"></i> Logout
                     </a></li>
                 </ul>
             </div>
-
             {% else %}
             <!-- Customer Navigation -->
             <div class="navbar-nav me-auto">
@@ -281,6 +274,11 @@
                         🔧 Tools
                     </a>
                 </li>
+                  <li class="nav-item">
+                      <a class="nav-link" href="{{ url_for('help_routes.help_overview') }}">
+                          ❓ Help
+                      </a>
+                  </li>
                 <li class="nav-item">
                     <div class="navbar-text">
                         <span id="header-clock" class="text-muted">🕐 Loading...</span>
@@ -294,9 +292,7 @@
                 <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="directoryDropdown">
                     <!-- User Dashboard -->
                     <li><a class="dropdown-item" href="{{ url_for('app_routes.dashboard') }}">User Dashboard</a></li>
-
                     <li><hr class="dropdown-divider"></li>
-
                     <!-- Core Features -->
                     <li><h6 class="dropdown-header">Core Features</h6></li>
                     {% if current_user.is_authenticated and has_permission(current_user, 'inventory.view') %}
@@ -311,9 +307,7 @@
                     {% if current_user.is_authenticated and has_permission(current_user, 'products.view') %}
                     <li><a class="dropdown-item" href="{{ url_for('products.list_products') }}">Products</a></li>
                     {% endif %}
-
                     <li><hr class="dropdown-divider"></li>
-
                     <!-- Production Tools -->
                     <li><h6 class="dropdown-header">Production Tools</h6></li>
                     <li>
@@ -331,15 +325,11 @@
                     {% if current_user.is_authenticated and has_permission(current_user, 'products.view') %}
                     <li><a class="dropdown-item" href="{{ url_for('bulk_stock.bulk_stock_check') }}">Bulk Stock Check</a></li>
                     {% endif %}
-
                     <li><hr class="dropdown-divider"></li>
-
                     <!-- Resources -->
                     <li><h6 class="dropdown-header">Resources</h6></li>
                     <li><a class="dropdown-item" href="{{ url_for('global_library_bp.global_library') }}">Global Inventory Library</a></li>
-
                     <li><hr class="dropdown-divider"></li>
-
                     <!-- Admin -->
                     <li><h6 class="dropdown-header">Admin</h6></li>
                     {% if current_user.is_authenticated and has_permission(current_user, 'organization.view') %}
@@ -350,18 +340,14 @@
                     {% if current_user.is_authenticated %}
                     <li><a class="dropdown-item" href="{{ url_for('settings.index') }}">Settings</a></li>
                     {% endif %}
-
                     <li><hr class="dropdown-divider"></li>
-
                     <li><a class="dropdown-item" href="{{ url_for('auth.logout') }}">Logout</a></li>
                 </ul>
             </div>
             {% endif %}
-
             {% endif %}
         </div>
     </nav>
-
     <main class="container-xl mt-4">
         <div class="section-spacing">
             {% if breadcrumb_items is defined and breadcrumb_items %}
@@ -383,17 +369,13 @@
                         <div class="alert alert-info">{{ message }}</div>
                     {% endfor %}
                 {% endif %}
-
             {% endwith %}
-
             {% set TimezoneUtils = TimezoneUtils_global() %}
             {% block content %}{% endblock %}
         </div>
     </main>
-
     {% include 'components/shared/unit_converter_modal.html' %}
     </div>
-
     <footer class="bg-light text-center text-muted py-3 mt-5">
             <div class="container">
                 <div class="row">
@@ -408,7 +390,6 @@
                 </div>
             </div>
         </footer>
-
     <!-- jQuery -->
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <!-- Select2 -->
@@ -416,17 +397,17 @@
     <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
     <!-- Bootstrap Bundle with Popper -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
-    <!-- Custom scripts - Load SessionGuard before other modules -->
-    <script type="module" src="{{ url_for('static', filename='js/core/SessionGuard.js') }}"></script>
-    <!-- Load DrawerProtocol and CacheManager before DrawerInterceptor as modules -->
-    <script type="module" src="{{ url_for('static', filename='js/core/DrawerProtocol.js') }}"></script>
-    <script type="module" src="{{ url_for('static', filename='js/core/DrawerInterceptor.js') }}"></script>
-    <script type="module" src="{{ url_for('static', filename='js/main.js') }}"></script>
-    <script src="{{ url_for('static', filename='js/utils/utils.js') }}"></script>
-    <script src="{{ url_for('static', filename='js/inventory/inventory_adjust.js') }}"></script>
-    <script src="{{ url_for('static', filename='js/conversion/unit_converter.js') }}"></script>
-    <script type="module" src="{{ url_for('static', filename='js/drawers/retention_drawer.js') }}"></script>
-    <script type="module" src="{{ url_for('static', filename='js/drawers/global_link_drawer.js') }}"></script>
+      <!-- Custom scripts - Load SessionGuard before other modules -->
+      <script type="module" src="{{ url_for('static', filename='js/core/SessionGuard.js') }}"></script>
+      <!-- Load DrawerProtocol and CacheManager before DrawerInterceptor as modules -->
+      <script type="module" src="{{ url_for('static', filename='js/core/DrawerProtocol.js') }}"></script>
+      <script type="module" src="{{ url_for('static', filename='js/core/DrawerInterceptor.js') }}"></script>
+      <script type="module" src="{{ url_for('static', filename='js/main.js') }}"></script>
+      <script src="{{ url_for('static', filename='js/utils/utils.js') }}"></script>
+      <script src="{{ url_for('static', filename='js/inventory/inventory_adjust.js') }}"></script>
+      <script src="{{ url_for('static', filename='js/conversion/unit_converter.js') }}"></script>
+      <script type="module" src="{{ url_for('static', filename='js/drawers/drawer_cadence.js') }}"></script>
+      <script src="{{ url_for('static', filename='js/drawers/container_unit_mismatch_drawer.js') }}"></script>
 {% block scripts %}{% endblock %}
     <script src="{{ url_for('static', filename='js/expiration_alerts.js') }}"></script>
 
@@ -439,7 +420,6 @@
                 clockElement.textContent = `🕐 ${now.toLocaleTimeString()}`;
             }
         }
-
         // Update clock every second and start immediately
         setInterval(updateClock, 1000);
         updateClock();

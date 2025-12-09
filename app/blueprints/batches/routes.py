@@ -9,6 +9,7 @@ from ...services.inventory_adjustment import process_inventory_adjustment
 from ...utils.unit_utils import get_global_unit_list
 from ...models import Product
 from ...services.production_planning.service import PlanProductionService
+from ...services.stock_check.core import UniversalStockCheckService
 
 from . import batches_bp
 from .start_batch import start_batch_bp
@@ -18,6 +19,58 @@ from .finish_batch import finish_batch_bp
 
 import logging
 logger = logging.getLogger(__name__)
+
+BLOCKING_STOCK_STATUSES = {'NEEDED', 'OUT_OF_STOCK', 'ERROR', 'DENSITY_MISSING'}
+
+
+def _extract_stock_issues(stock_items):
+    issues = []
+    for item in stock_items or []:
+        needed = float(item.get('needed_quantity') or item.get('needed_amount') or 0)
+        available = float(item.get('available_quantity') or 0)
+        status = (item.get('status') or '').upper()
+        raw_category = (
+            item.get('category')
+            or item.get('type')
+            or item.get('item_type')
+            or ''
+        )
+        normalized_category = raw_category.strip().lower() or 'ingredient'
+        if status in BLOCKING_STOCK_STATUSES or available < needed:
+            issues.append({
+                'item_id': item.get('item_id'),
+                'name': item.get('item_name'),
+                'needed_quantity': needed,
+                'available_quantity': available,
+                'needed_unit': item.get('needed_unit'),
+                'available_unit': item.get('available_unit'),
+                'status': status or ('LOW' if available < needed else 'UNKNOWN'),
+                'category': normalized_category
+            })
+    return issues
+
+
+def _format_quantity(amount):
+    try:
+        value = float(amount or 0)
+        return f"{value:g}"
+    except (TypeError, ValueError):
+        return str(amount or 0)
+
+
+def _build_forced_start_note(stock_issues):
+    if not stock_issues:
+        return None
+    parts = []
+    for issue in stock_issues:
+        name = issue.get('name') or 'Unknown item'
+        qty = _format_quantity(issue.get('needed_quantity'))
+        unit = (issue.get('needed_unit') or issue.get('available_unit') or '').strip()
+        portion = f"{qty} {unit} of {name}".strip()
+        parts.append(portion)
+    if not parts:
+        return None
+    return "Started batch without: " + "; ".join(parts)
 
 @batches_bp.route('/api/batch-remaining-details/<int:batch_id>')
 @login_required
@@ -278,10 +331,39 @@ def api_start_batch():
         batch_type = data.get('batch_type', 'ingredient')
         notes = data.get('notes', '')
         containers_data = data.get('containers', []) or []
+        force_start = bool(data.get('force_start'))
 
-        recipe = Recipe.query.get(recipe_id)
+        recipe = db.session.get(Recipe, recipe_id)
         if not recipe:
             return jsonify({'success': False, 'message': 'Recipe not found.'}), 404
+
+        # Server-side stock validation to prevent bypassing the UI gate
+        stock_issues = []
+        try:
+            uscs = UniversalStockCheckService()
+            stock_result = uscs.check_recipe_stock(recipe_id, scale)
+            if not stock_result.get('success'):
+                error_msg = stock_result.get('error') or 'Unable to verify inventory for this recipe.'
+                return jsonify({'success': False, 'message': error_msg}), 400
+            stock_issues = _extract_stock_issues(stock_result.get('stock_check'))
+        except Exception as e:
+            logger.error(f"Error during stock validation: {e}")
+            return jsonify({'success': False, 'message': 'Inventory validation failed. Please try again.'}), 500
+
+        skip_ingredient_ids = [
+            issue['item_id']
+            for issue in stock_issues
+            if issue.get('item_id') and (issue.get('category') or '').lower() == 'ingredient'
+        ]
+        forced_note = _build_forced_start_note(stock_issues) if force_start and stock_issues else None
+
+        if stock_issues and not force_start:
+            return jsonify({
+                'success': False,
+                'requires_override': True,
+                'stock_issues': stock_issues,
+                'message': 'Insufficient inventory for one or more ingredients.'
+            })
 
         snapshot_obj = PlanProductionService.build_plan(
             recipe=recipe,
@@ -291,6 +373,13 @@ def api_start_batch():
             containers=containers_data
         )
         plan_dict = snapshot_obj.to_dict()
+        if stock_issues:
+            plan_dict['stock_issues'] = stock_issues
+            if force_start and skip_ingredient_ids:
+                plan_dict['skip_ingredient_ids'] = skip_ingredient_ids
+        if forced_note:
+            plan_dict['forced_start_summary'] = forced_note
+        plan_dict['forced_start'] = force_start
         batch, errors = BatchOperationsService.start_batch(plan_dict)
 
         if not batch:

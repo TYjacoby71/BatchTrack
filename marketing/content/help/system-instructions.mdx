@@ -1,0 +1,177 @@
+---
+title: BatchTrack Operations Guide
+description: Plain-language walkthrough of the core BatchTrack workflows for both prospective and current users.
+---
+
+# BatchTrack Operations Guide
+
+Use this guide as the “public-side” orientation. Each section mirrors the flows we expect the onboarding system to drive, starting from the moment a user signs up and sees the blank dashboard.
+
+## First Login Checklist {#first-login}
+1. **Welcome blank state** – After signup, the dashboard shows “Add Inventory” and “Add Recipe” CTAs plus quick links to tutorials.
+2. **Decide your path**  
+   - *Inventory-first teams* should create ingredients, containers, consumables, and packaging so conversions and costing work.  
+   - *Recipe-first teams* can sketch a formulation right away, but they’ll still need inventory links for automation.
+3. **Follow the ribbon tips** – The in-app tips mirror the sections below so every user experiences the same onboarding narrative.
+
+## Provision & Seed the Workspace {#provision-and-seed}
+- Install dependencies (`pip install -r requirements.txt`), run migrations (`flask db upgrade`), seed (`flask init-production` or individual seed commands).
+- Set `FLASK_APP=run.py` (or use the Makefile) and boot with `python run.py`.
+- Repeat the same flow for staging/preview environments to keep data consistent.
+
+## Manage Organizations, Roles, and Permissions {#organizations-and-permissions}
+- Developers have no `organization_id`; owners/team members always do.
+- Use `Organization → Dashboard` to create custom roles, invite teammates, and respect subscription limits.
+- Always guard UI/actions with `has_permission(...)` and `has_subscription_feature(...)` so onboarding stays tier-aware.
+
+## Curate the Global Item Library {#global-library}
+- Seed curated items via `scripts/seed_global_items_from_density_reference.py` and maintain them through `/developer/global-items`.
+- Global items are platform-owned identity records; customers link to them but cannot edit their identity.
+- Metadata (summary, FAQs, use cases) auto-populates when a `GlobalItem` is created or updated, ensuring the marketing-facing pages stay fresh.
+
+## Create Inventory from Global Templates {#inventory-creation}
+- The Drawer Picker in `/inventory/new` searches the global library; selecting a global item locks identity fields.
+- Custom organizational items (created by typing past suggestions) remain editable and are marked “Org-Owned.”
+- Global items provide densities, default units, perishable defaults, and categories; custom overrides are allowed but scoped to the org.
+
+### Step-by-Step: Add Inventory {#add-inventory}
+1. **Inventory list CTA** – Click “Add Inventory Item” or use the inline “Quick Add” drawer on `/inventory`.
+2. **Search & select** – Choose a global item (locks identity) or create a custom one. Identity banner confirms ownership (Global-Locked vs Org-Owned).
+3. **Complete the form:**
+   - Category (ingredients, containers, consumables, packaging).
+   - Default unit, density overrides, perishable defaults.
+   - Quantity, cost per unit, supplier, lot, expiration, storage location.
+4. **Save & restock** – The success modal offers an immediate restock dialog to create the first FIFO lot.
+5. **Automations** – Density, perishable defaults, and metadata flow down automatically from the library; linking inventory to recipes ensures conversions remain accurate.
+
+### Manage Inventory from the List Page {#inventory-list-flow}
+1. **Quick Adjust button** – Fast restock/spoil/recount modal that still routes through Inventory Adjustment Service.
+2. **Detail modal** – Clicking a row opens tabs for overview, stats, history, and lots. Actions available:
+   - Restock or deduct with reasons.
+   - View cost trends and usage analytics.
+   - Inspect FIFO lots, expirations, and remaining quantities.
+3. **Edit screen (`/inventory/<id>/edit`)** – Offers recount, recast (adjust by measured delta), density overrides, category changes, and ownership toggles (detach from global).
+4. **History & attachments** – Every adjustment logs to history with optional documents (COAs, invoices) so reviewers can trace why inventory changed.
+
+## Author Recipes & Category Data {#recipes}
+- Recipes define ingredients, consumables, containers, and category-specific JSON (`recipe.category_data`).
+- Linking lines to inventory/global items keeps densities and costing synced.
+- Portion defaults (names, units, counts) govern how finished goods are counted later.
+
+### Step-by-Step: Create a Recipe {#add-recipe}
+1. **Open** `Recipes → New Recipe`.
+2. **Choose category** – Soap, candle, lotion, etc. unlock relevant fields (SAP values, wick data, cure times).
+3. **Basic info** – Name, description, production category, default yield/unit, and whether the batch is **Bulk** (container-defined) or **Portioned** (self-defined items like bars).
+4. **Lines:**
+   - *Ingredients* – Link to inventory/global items for density + costing.
+   - *Consumables* – Supplies consumed per batch (liners, labels).
+   - *Containers & packaging* – The shortlist that will appear in production planning.
+5. **Instructions** – Store SOPs, QA notes, or warnings; they surface in PlanSnapshot and batch records.
+6. **Save** and immediately run a stock check from Production Planning if you’re ready to scale.
+
+### Variations, Clones, and Unlocking {#recipe-variants}
+1. **Clone** a recipe to create new scents, colors, or volumes.
+2. **Variations** inherit container lists and instructions but allow per-variant tweaks (line quantities, yields, notes).
+3. **Unlock/Lock** – Recipes can be locked for audit; unlocking logs who made changes and when.
+4. **Container shortlist** – Containers selected here seed the “Containers Required” auto-fill so makers see only relevant vessels.
+
+## Plan Production with PlanSnapshot {#plan-snapshot}
+- `PlanProductionService.build_plan()` freezes the scaled ingredients, consumables, containers, and category data.
+- The snapshot (sent to `POST /batches/api/start-batch`) becomes `batch.plan_snapshot` and never mutates.
+- Recipe edits after planning have no effect on in-progress batches, protecting deductions from drift.
+
+### Plan Config Options {#plan-config}
+1. **Batch type** – Choose **Product** (outputs sellable SKUs) or **Intermediate** (restocks component inventory like dough or syrups).
+2. **Intermediate ingredients** – Add component batches that should scale with the main batch (e.g., make frosting and cake batter simultaneously).
+3. **Product tab** – Select or create the SKU/variant this batch replenishes.
+4. **Containers required** – Auto-selection scans the recipe’s container list, converts projected yield into container capacity, and fills enough vessels to hold 100% of the batch. You can also disable auto and pick manually.
+5. **Unit alignment** – Ensure recipe yield units match container capacity units (grams vs ounces) for accurate auto-fill math.
+6. **Stock check** – Must pass (or be explicitly bypassed) before starting the batch. Missing inventory triggers drawer modals for quick fixes.
+
+### Step-by-Step: Plan & Start Production {#plan-production}
+1. **Open** `Production Planning`.
+2. **Select** the recipe/variation, batch type, and scale factor.
+3. **Configure** intermediate ingredients and target SKUs if needed.
+4. **Review** auto-selected containers; adjust manually if necessary.
+5. **Run** stock check; resolve shortages or choose to bypass (knowing missing items won’t deduct automatically).
+6. **Generate** the PlanSnapshot preview and submit; the system calls `POST /production/plan` followed by `POST /batches/api/start-batch`.
+7. **Redirect** to the batch in-progress page for live tracking.
+
+## Start, Monitor, and Finish Batches {#batches}
+- Starting a batch deducts inventory through FIFO, records projected yield/portions, and creates batch rows for every ingredient/consumable/container.
+- The in-progress page keeps planned vs actual data side by side, offers timers, and allows extras or notes.
+- Finishing, canceling, or failing a batch each have explicit workflows so deductions remain auditable.
+
+### Batch In-Progress Page {#batch-in-progress}
+1. **Header metrics** – Projected vs actual yield, portions, container counts; once finished, “Final” values appear for audit comparison.
+2. **Timers** – Tie prep/hold/cure timers to the batch; alerts show on the dashboard.
+3. **Extras** – Add extra ingredients/consumables/containers/packaging; each deducts inventory immediately with notes.
+4. **Notes & attachments** – Record observations, QC checks, or incident reports.
+5. **Costing tab** – Breaks down ingredient, labor (if tracked), and packaging costs with live totals.
+
+### Finish, Cancel, or Fail {#finish-batch}
+1. **Finish modal**:
+   - *Intermediate batches* ask how inventory should be replenished (unit, lot, storage).
+   - *Product batches* map output to SKUs/variants and ask for actual containers used.
+   - *Bulk/container batches* confirm container counts, divide yield into capacity, and capture any overage.
+   - *Portioned batches* request final bulk yield and portion counts; the system names portions for product tracking.
+   - *Container confirmation* ensures damaged/spare containers are accounted for (e.g., made 18 jars, only 17 passed QA).
+2. **Cancel** – Rolls back deductions and deletes batch rows entirely.
+3. **Fail** – Ends the batch, keeps deductions (for waste reporting), and requires a note explaining the failure.
+
+## Restock, Deduct, and Audit Inventory {#inventory-adjustments}
+- All restocks, deductions, spoilage events, and recounts call Inventory Adjustment Service.
+- Drawer payloads surface when density or unit mappings are missing, keeping flows recoverable.
+- Adjustment history + FIFO lots ensure audits can trace every change.
+
+## Track Expiration, Alerts, and Reservations {#alerts}
+- Expiration Service derives shelf life from inventory/global defaults; Dashboard Alert Service prioritizes what needs attention.
+- Reservation Service blocks finished goods for customers; Combined Inventory Alert Service rolls low stock + expiration alerts into a single queue.
+- The dashboard highlights the highest-risk alerts with deep links back to inventory, reservations, or batches.
+
+## Manage Products, SKUs, and Outputs {#products}
+- Product Service ties batch outputs to sellable SKUs; Reservation Service manages pre-sold inventory.
+- Use `/products` to define parents, variants, SKUs, and integrations (Shopify, etc.).
+- Reservations prevent accidental resale of promised inventory and feed customer service workflows.
+
+### Step-by-Step: Create Product Variants {#product-variants}
+1. **Go to** `Products → All Products`.
+2. **Create/select** a base product representing the customer-facing item.
+3. **Variants tab** (`/products/<id>/variants`):
+   - Define attributes (size, scent, color).
+   - Map each variant to the containers/ingredients it consumes.
+   - Set reorder targets/thresholds for alerts.
+4. **Link batches** to variants during batch finish so finished goods automatically restock the correct SKU.
+5. **Reservations tab** manages holds for wholesale or subscription orders.
+
+### SKUs & Sales System Hooks {#skus}
+1. **Define SKUs** – Product + Variant + Package Size + Quantity.
+2. **Sync** – When a batch finishes as “Product,” the SKU inventory increases. Integrations (Shopify, Square) subscribe to those changes.
+3. **External IDs** – Store marketplace IDs on SKUs so connectors know which listings to update.
+
+## Use Public Tools, Drafts, and Exports {#public-tools}
+- `/tools` hosts calculators (soap, candles, lotions, herbal, baker) accessible without login.
+- Drafts post to `/tools/draft`, store in session, and prefill `/recipes/new` after signup/login.
+- `/exports/...` routes render HTML/CSV/PDF for both authenticated recipes and public drafts.
+
+### Step-by-Step: Draft a Recipe via Public Tools {#public-draft}
+1. Visit `/tools` and choose a calculator.
+2. Use typeahead fields to pull global ingredients/containers; add quantities and units.
+3. Click **Save to BatchTrack** to stash the draft in session.
+4. Sign up or log in; `/recipes/new` detects the draft and pre-populates every line.
+5. Review, tweak, and save as a formal recipe.
+
+## Integrate via APIs & Webhooks {#api}
+- Authenticated APIs rely on Flask-Login sessions; developer-only endpoints support org impersonation for support.
+- Drawer endpoints (`/api/drawer-actions/...`) provide data needed to fix missing density/unit info.
+- Public APIs are limited to global-item search (`/api/public/global-items/search`), unit listings, and unit conversion for calculators.
+
+## Billing, Tiers, and Feature Flags {#billing}
+- Stripe webhook updates the Billing Snapshot; Billing Service enforces feature access and seat counts.
+- `has_subscription_feature(...)` in templates toggles premium features; developer feature flags live in `settings.json`.
+- Keep `docs/changelog` and `docs/system/FREE_TIER.md` aligned with any pricing/tier changes.
+
+## Deployments, Migrations, and Monitoring {#devops}
+- Every schema change requires an Alembic migration; never bypass core services.
+- Middleware enforces security headers and logs anonymous hits; monitor logs plus `docs/changelog` for release notes.
+- Update this guide & the CAQ whenever flows change so onboarding stays current.

@@ -3,9 +3,8 @@ from app.models import Recipe, InventoryItem, Batch
 from flask_login import login_required, current_user
 from app.utils.permissions import require_permission, get_effective_organization_id, permission_required, any_permission_required
 from app.services.combined_inventory_alerts import CombinedInventoryAlertService
-from app.services.dashboard_alerts import DashboardAlertService
 from app.blueprints.expiration.services import ExpirationService
-from app.utils.json_store import read_json_file
+from app.services.statistics import AnalyticsDataService
 import logging
 
 logger = logging.getLogger(__name__)
@@ -19,6 +18,7 @@ app_routes_bp = Blueprint('app_routes', __name__)
 @login_required
 def dashboard():
     """Main dashboard view with stock checking and alerts"""
+    force_refresh = (request.args.get('refresh') or '').lower() in ('1', 'true', 'yes')
     # Developer users should only access this dashboard when viewing an organization
     if current_user.user_type == 'developer':
         selected_org_id = session.get('dev_selected_org_id')
@@ -31,7 +31,7 @@ def dashboard():
         from ..extensions import db
 
         try:
-            selected_org = Organization.query.get(selected_org_id)
+            selected_org = db.session.get(Organization, selected_org_id)
             if not selected_org:
                 session.pop('dev_selected_org_id', None)
                 session.pop('dev_masquerade_context', None)
@@ -85,9 +85,10 @@ def dashboard():
         # Get dashboard alerts with explicit error catching
         try:
             dismissed_alerts = session.get('dismissed_alerts', [])
-            alert_data = DashboardAlertService.get_dashboard_alerts(
+            alert_data = AnalyticsDataService.get_dashboard_alerts(
                 max_alerts=3,
-                dismissed_alerts=dismissed_alerts
+                dismissed_alerts=dismissed_alerts,
+                force_refresh=force_refresh,
             )
         except Exception as alert_error:
             print("---!!! DASHBOARD ALERTS ERROR (ORIGINAL SIN?) !!!---")
@@ -166,13 +167,24 @@ def api_dashboard_alerts():
     """API endpoint to get fresh dashboard alerts"""
     try:
         dismissed_alerts = session.get('dismissed_alerts', [])
-        alert_data = DashboardAlertService.get_dashboard_alerts(
+        from app.services.statistics import AnalyticsDataService
+
+        force_refresh = (request.args.get('refresh') or '').lower() in ('1', 'true', 'yes')
+        alert_data = AnalyticsDataService.get_dashboard_alerts(
+            dismissed_alerts=dismissed_alerts,
             max_alerts=3,
-            dismissed_alerts=dismissed_alerts
+            force_refresh=force_refresh,
         )
         return jsonify(alert_data)
     except Exception as e:
         return jsonify({'error': str(e)}), 500
+
+
+@app_routes_bp.route('/auth-check', methods=['GET'])
+@login_required
+def auth_check():
+    """Lightweight endpoint to verify authentication status without heavy DB work."""
+    return jsonify({'status': 'ok'})
 
 
 @app_routes_bp.route('/fault-log')
@@ -180,28 +192,28 @@ def api_dashboard_alerts():
 @permission_required('view_fault_log')
 def view_fault_log():
     try:
-        from flask_login import current_user
-
-        fault_file = 'faults.json'
-        all_faults = read_json_file(fault_file, default=[]) or []
-
-        # Filter faults by organization unless user is developer
+        force_refresh = (request.args.get('refresh') or '').lower() in ('1', 'true', 'yes')
         if current_user.user_type == 'developer':
-            # Developers can see all faults or filtered by selected org
-            from flask import session
             selected_org_id = session.get('dev_selected_org_id')
             if selected_org_id:
-                faults = [f for f in all_faults if f.get('organization_id') == selected_org_id]
+                faults = AnalyticsDataService.get_fault_log_entries(
+                    organization_id=selected_org_id,
+                    include_all=False,
+                    force_refresh=force_refresh,
+                )
             else:
-                faults = all_faults
+                faults = AnalyticsDataService.get_fault_log_entries(
+                    include_all=True,
+                    force_refresh=force_refresh,
+                )
         elif current_user.organization_id:
-            # Regular users only see their organization's faults
-            faults = [f for f in all_faults if f.get('organization_id') == current_user.organization_id]
+            faults = AnalyticsDataService.get_fault_log_entries(
+                organization_id=current_user.organization_id,
+                include_all=False,
+                force_refresh=force_refresh,
+            )
         else:
             faults = []
-
-        # Sort by timestamp, newest first
-        faults.sort(key=lambda x: x.get('timestamp', ''), reverse=True)
 
         return render_template('fault_log.html', faults=faults)
     except Exception as e:

@@ -1,0 +1,312 @@
+-22 03:15:36,023 INFO: ratelimit 50 per 1 hour (127.0.0.1) exceeded at endpoint: index
+2025-11-22 03:15:36,043 INFO: ratelimit 50 per 1 hour (127.0.0.1) exceeded at endpoint: index
+2025-11-22 03:15:36,078 INFO: ratelimit 50 per 1 hour (127.0.0.1) exceeded at endpoint: index
+2025-11-22 03:15:36,094 INFO: ratelimit 50 per 1 hour (127.0.0.1) exceeded at endpoint: index
+2025-11-22 03:15:36,100 INFO: ratelimit 50 per 1 hour (127.0.0.1) exceeded at endpoint: index
+2025-11-22 03:15:36,101 INFO: ratelimit 50 per 1 hour (127.0.0.1) exceeded at endpoint: index
+Unauthenticated request to unknown endpoint: endpoint=None, path=/inventory/view, method=GET; user_agent=python-requests/2.32.4
+2025-11-22 03:15:36,116 INFO: ratelimit 30 per 1 minute (127.0.0.1) exceeded at endpoint: auth.login
+Unauthenticated request to unknown endpoint: endpoint=None, path=/inventory/view, method=GET; user_agent=python-requests/2.32.4
+2025-11-22 03:15:36,123 INFO: ratelimit 30 per 1 minute (127.0.0.1) exceeded at endpoint: auth.login
+2025-11-22 03:15:36,140 INFO: ratelimit 50 per 1 hour (127.0.0.1) exceeded at endpoint: index
+2025-11-22 03:15:36,148 INFO: ratelimit 50 per 1 hour (127.0.0.1) exceeded at endpoint: app_routes.dashboard
+2025-11-22 03:15:36,161 INFO: ratelimit 50 per 1 hour (127.0.0.1) exceeded at endpoint: index
+2025-11-22 03:15:36,172 INFO: ratelimit 50 per 1 hour (127.0.0.1) exceeded at endpoint: app_routes.dashboard
+2025-11-22 03:15:36,196 INFO: ratelimit 50 per 1 hour (127.0.0.1) exceeded at endpoint: app_routes.dashboard
+Unauthenticated request to unknown endpoint: endpoint=None, path=/inventory/view, method=GET; user_agent=python-requests/2.32.4
+2025-11-22 03:15:36,207 INFO: ratelimit 30 per 1 minute (127.0.0.1) exceeded at endpoint: auth.login
+Unauthenticated request to unknown endpoint: endpoint=None, path=/inventory/view, method=GET; user_agent=python-requests/2.32.4
+Unauthenticated request to unknown endpoint: endpoint=None, path=/inventory/view, method=GET; user_agent=python-requests/2.32.4
+2025-11-22 03:15:36,217 INFO: ratelimit 30 per 1 minute (127.0.0.1) exceeded at endpoint: auth.login
+2025-11-22 03:15:36,218 INFO: ratelimit 30 per 1 minute (127.0.0.1) exceeded at endpoint: auth.login
+2025-11-22 03:15:36,221 INFO: ratelimit 50 per 1 hour (127.0.0.1) exceeded at endpoint: index
+Unauthenticated request to unknown endpoint: endpoint=None, path=/inventory/view, method=GET; user_agent=python-requests/2.32.4
+2025-11-22 03:15:36,240 INFO: ratelimit 30 per 1 minute (127.0.0.1) exceeded at endpoint: auth.login
+Unauthenticated request to unknown endpoint: endpoint=None, path=/library/global_items, method=GET; user_agent=python-requests/2.32.4
+2025-11-22 03:15:36,329 INFO: ratelimit 30 per 1 minute (127.0.0.1) exceeded at endpoint: auth.login
+2025-11-22 03:15:36,333 INFO: ratelimit 50 per 1 hour (127.0.0.1) exceeded at endpoint: index
+2025-11-22 03:15:36,363 INFO: ratelimit 50 per 1 hour (127.0.0.1) exceeded at endpoint: app_routes.dashboard
+2025-11-22 03:15:36,371 INFO: ratelimit 50 per 1 hour (127.0.0.1) exceeded at endpoint: app_routes.dashboard
+2025-11-22 03:15:36,402 INFO: ratelimit 50 per 1 hour (127.0.0.1) exceeded at endpoint: index
+Unauthenticated request to unknown endpoint: endpoint=None, path=/inventory/view, method=GET; user_agent=python-requests/2.32.4
+2025-11-22 03:15:36,410 INFO: ratelimit 30 per 1 minute (127.0.0.1) exceeded at endpoint: auth.login
+Unauthenticated request to unknown endpoint: endpoint=None, path=/inventory/view, method=GET; user_agent=python-requests/2.32.4
+2025-11-22 03:15:36,420 INFO: ratelimit 30 per 1 minute (127.0.0.1) exceeded at endpoint: auth.login
+2025-11-22 03:15:36,445 INFO: ratelimit 50 per 1 hour (127.0.0.1) exceeded at endpoint: index
+2025-11-22 03:15:36,478 INFO: ratelimit 50 per 1 hour (127.0.0.1) exceeded at endpoint: index
+2025-11-22 03:15:36,523 INFO: ratelimit 50 per 1 hour (127.0.0.1) exceeded at endpoint: app_routes.dashboard
+2025-11-22 03:15:36,524 INFO: ratelimit 50 per 1 hour (127.0.0.1) exceeded at endpoint: index
+Unauthenticated request to unknown endpoint: endpoint=None, path=/inventory/view, method=GET; user_agent=python-requests/2.32.4
+2025-11-22 03:15:36,546 INFO: ratelimit 30 per 1 minute (127.0.0.1) exceeded at endpoint: auth.login
+Unauthenticated request to unknown endpoint: endpoint=None, path=/inventory/view, method=GET; user_agent=python-requests/2.32.4
+2025-11-22 03:15:36,555 INFO: ratelimit 30 per 1 minute (127.0.0.1) exceeded at endpoint: auth.login
+2025-11-22 03:15:36,562 INFO: ratelimit 50 per 1 hour (127.0.0.1) exceeded at endpoint: index
+2025-11-22 03:15:36,564 INFO: ratelimit 50 per 1 hour (127.0.0.1) exceeded at endpoint: index
+2025-11-22 03:15:36,601 INFO: ratelimit 50 per 1 hour (127.0.0.1) exceeded at endpoint: index
+Unauthenticated request to unknown endpoint: endpoint=None, path=/inventory/view, method=GET; user_agent=python-requests/2.32.4
+2025-11-22 03:15:36,640 INFO: ratelimit 30 per 1 minute (127.0.0.1) exceeded at endpoint: auth.login
+Unauthenticated request to unknown endpoint: endpoint=None, path=/inventory/view, method=GET; user_agent=python-requests/2.32.4
+2025-11-22 03:15:36,655 INFO: ratelimit 30 per 1 minute (127.0.0.1) exceeded at endpoint: auth.login
+2025-11-22 03:15:36,704 INFO: ratelimit 30 per 1 minute (127.0.0.1) exceeded at endpoint: auth.login
+2025-11-22 03:15:36,709 INFO: ratelimit 50 per 1 hour (127.0.0.1) exceeded at endpoint: index
+2025-11-22 03:15:36,713 INFO: ratelimit 30 per 1 minute (127.0.0.1) exceeded at endpoint: auth.login
+2025-11-22 03:15:36,760 INFO: ratelimit 50 per 1 hour (127.0.0.1) exceeded at endpoint: app_routes.dashboard
+2025-11-22 03:15:36,761 INFO: ratelimit 50 per 1 hour (127.0.0.1) exceeded at endpoint: app_routes.dashboard
+2025-11-22 03:15:36,762 INFO: ratelimit 50 per 1 hour (127.0.0.1) exceeded at endpoint: app_routes.dashboard
+2025-11-22 03:15:36,778 INFO: ratelimit 50 per 1 hour (127.0.0.1) exceeded at endpoint: app_routes.dashboard
+Unauthenticated request to unknown endpoint: endpoint=None, path=/library/global_items, method=GET; user_agent=python-requests/2.32.4
+2025-11-22 03:15:36,789 INFO: ratelimit 30 per 1 minute (127.0.0.1) exceeded at endpoint: auth.login
+2025-11-22 03:15:36,842 INFO: ratelimit 50 per 1 hour (127.0.0.1) exceeded at endpoint: index
+2025-11-22 03:15:36,851 INFO: ratelimit 50 per 1 hour (127.0.0.1) exceeded at endpoint: index
+2025-11-22 03:15:36,852 INFO: ratelimit 50 per 1 hour (127.0.0.1) exceeded at endpoint: index
+2025-11-22 03:15:36,895 INFO: ratelimit 50 per 1 hour (127.0.0.1) exceeded at endpoint: app_routes.dashboard
+Unauthenticated request to unknown endpoint: endpoint=None, path=/inventory/view, method=GET; user_agent=python-requests/2.32.4
+Unauthenticated request to unknown endpoint: endpoint=None, path=/inventory/view, method=GET; user_agent=python-requests/2.32.4
+2025-11-22 03:15:36,914 INFO: ratelimit 30 per 1 minute (127.0.0.1) exceeded at endpoint: auth.login
+2025-11-22 03:15:36,915 INFO: ratelimit 30 per 1 minute (127.0.0.1) exceeded at endpoint: auth.login
+Unauthenticated request to unknown endpoint: endpoint=None, path=/inventory/view, method=GET; user_agent=python-requests/2.32.4
+Unauthenticated request to unknown endpoint: endpoint=None, path=/inventory/view, method=GET; user_agent=python-requests/2.32.4
+2025-11-22 03:15:36,937 INFO: ratelimit 30 per 1 minute (127.0.0.1) exceeded at endpoint: auth.login
+2025-11-22 03:15:36,941 INFO: ratelimit 30 per 1 minute (127.0.0.1) exceeded at endpoint: auth.login
+Unauthenticated request to unknown endpoint: endpoint=None, path=/inventory/view, method=GET; user_agent=python-requests/2.32.4
+2025-11-22 03:15:36,971 INFO: ratelimit 30 per 1 minute (127.0.0.1) exceeded at endpoint: auth.login
+Unauthenticated request to unknown endpoint: endpoint=None, path=/inventory/view, method=GET; user_agent=python-requests/2.32.4
+2025-11-22 03:15:36,984 INFO: ratelimit 50 per 1 hour (127.0.0.1) exceeded at endpoint: index
+2025-11-22 03:15:36,984 INFO: ratelimit 30 per 1 minute (127.0.0.1) exceeded at endpoint: auth.login
+Unauthenticated request to unknown endpoint: endpoint=None, path=/library/global_items, method=GET; user_agent=python-requests/2.32.4
+2025-11-22 03:15:50,576 INFO: ratelimit 30 per 1 minute (127.0.0.1) exceeded at endpoint: auth.login
+2025-11-22 03:15:51,574 INFO: ratelimit 30 per 1 minute (127.0.0.1) exceeded at endpoint: auth.login
+2025-11-22 03:15:51,577 INFO: The CSRF token is missing.
+2025-11-22 03:15:52,579 INFO: ratelimit 30 per 1 minute (127.0.0.1) exceeded at endpoint: auth.login
+2025-11-22 03:15:52,580 INFO: ratelimit 50 per 1 hour (127.0.0.1) exceeded at endpoint: index
+2025-11-22 03:15:52,586 INFO: The CSRF token is missing.
+2025-11-22 03:15:53,252 INFO: ratelimit 50 per 1 hour (127.0.0.1) exceeded at endpoint: app_routes.dashboard
+2025-11-22 03:15:53,506 INFO: ratelimit 50 per 1 hour (127.0.0.1) exceeded at endpoint: index
+2025-11-22 03:15:53,577 INFO: ratelimit 50 per 1 hour (127.0.0.1) exceeded at endpoint: index
+2025-11-22 03:15:53,578 INFO: ratelimit 30 per 1 minute (127.0.0.1) exceeded at endpoint: auth.login
+2025-11-22 03:15:53,583 INFO: The CSRF token is missing.
+Unauthenticated request to unknown endpoint: endpoint=None, path=/inventory/view, method=GET; user_agent=python-requests/2.32.4
+2025-11-22 03:15:53,894 INFO: ratelimit 30 per 1 minute (127.0.0.1) exceeded at endpoint: auth.login
+Unauthenticated request to unknown endpoint: endpoint=None, path=/inventory/view, method=GET; user_agent=python-requests/2.32.4
+2025-11-22 03:15:53,901 INFO: ratelimit 30 per 1 minute (127.0.0.1) exceeded at endpoint: auth.login
+2025-11-22 03:15:54,578 INFO: ratelimit 30 per 1 minute (127.0.0.1) exceeded at endpoint: auth.login
+2025-11-22 03:15:54,579 INFO: ratelimit 30 per 1 minute (127.0.0.1) exceeded at endpoint: auth.login
+2025-11-22 03:15:54,582 INFO: The CSRF token is missing.
+2025-11-22 03:15:54,584 INFO: The CSRF token is missing.
+2025-11-22 03:15:54,657 INFO: ratelimit 50 per 1 hour (127.0.0.1) exceeded at endpoint: index
+Unauthenticated request to unknown endpoint: endpoint=None, path=/inventory/view, method=GET; user_agent=python-requests/2.32.4
+2025-11-22 03:15:55,269 INFO: ratelimit 30 per 1 minute (127.0.0.1) exceeded at endpoint: auth.login
+Unauthenticated request to unknown endpoint: endpoint=None, path=/inventory/view, method=GET; user_agent=python-requests/2.32.4
+2025-11-22 03:15:55,277 INFO: ratelimit 30 per 1 minute (127.0.0.1) exceeded at endpoint: auth.login
+2025-11-22 03:15:55,405 INFO: ratelimit 50 per 1 hour (127.0.0.1) exceeded at endpoint: index
+2025-11-22 03:15:55,584 INFO: ratelimit 30 per 1 minute (127.0.0.1) exceeded at endpoint: auth.login
+2025-11-22 03:15:55,588 INFO: ratelimit 30 per 1 minute (127.0.0.1) exceeded at endpoint: auth.login
+2025-11-22 03:15:55,602 INFO: The CSRF token is missing.
+2025-11-22 03:15:55,603 INFO: The CSRF token is missing.
+2025-11-22 03:15:56,056 INFO: ratelimit 50 per 1 hour (127.0.0.1) exceeded at endpoint: index
+2025-11-22 03:15:56,581 INFO: ratelimit 30 per 1 minute (127.0.0.1) exceeded at endpoint: auth.login
+2025-11-22 03:15:56,582 INFO: ratelimit 30 per 1 minute (127.0.0.1) exceeded at endpoint: auth.login
+2025-11-22 03:15:56,587 INFO: The CSRF token is missing.
+2025-11-22 03:15:56,588 INFO: The CSRF token is missing.
+2025-11-22 03:15:56,756 INFO: ratelimit 50 per 1 hour (127.0.0.1) exceeded at endpoint: app_routes.dashboard
+2025-11-22 03:15:57,311 INFO: ratelimit 50 per 1 hour (127.0.0.1) exceeded at endpoint: app_routes.dashboard
+2025-11-22 03:15:57,587 INFO: ratelimit 30 per 1 minute (127.0.0.1) exceeded at endpoint: auth.login
+2025-11-22 03:15:57,597 INFO: ratelimit 30 per 1 minute (127.0.0.1) exceeded at endpoint: auth.login
+2025-11-22 03:15:57,597 INFO: ratelimit 30 per 1 minute (127.0.0.1) exceeded at endpoint: auth.login
+2025-11-22 03:15:57,601 INFO: The CSRF token is missing.
+2025-11-22 03:15:57,610 INFO: The CSRF token is missing.
+2025-11-22 03:15:57,613 INFO: The CSRF token is missing.
+2025-11-22 03:15:57,802 INFO: ratelimit 50 per 1 hour (127.0.0.1) exceeded at endpoint: index
+2025-11-22 03:15:58,217 INFO: ratelimit 50 per 1 hour (127.0.0.1) exceeded at endpoint: index
+2025-11-22 03:15:58,219 INFO: ratelimit 50 per 1 hour (127.0.0.1) exceeded at endpoint: index
+2025-11-22 03:15:58,587 INFO: ratelimit 30 per 1 minute (127.0.0.1) exceeded at endpoint: auth.login
+2025-11-22 03:15:58,589 INFO: ratelimit 50 per 1 hour (127.0.0.1) exceeded at endpoint: index
+2025-11-22 03:15:58,590 INFO: ratelimit 30 per 1 minute (127.0.0.1) exceeded at endpoint: auth.login
+2025-11-22 03:15:58,592 INFO: ratelimit 30 per 1 minute (127.0.0.1) exceeded at endpoint: auth.login
+2025-11-22 03:15:58,593 INFO: The CSRF token is missing.
+2025-11-22 03:15:58,600 INFO: The CSRF token is missing.
+2025-11-22 03:15:58,600 INFO: The CSRF token is missing.
+2025-11-22 03:15:58,686 INFO: ratelimit 50 per 1 hour (127.0.0.1) exceeded at endpoint: index
+2025-11-22 03:15:58,937 INFO: ratelimit 50 per 1 hour (127.0.0.1) exceeded at endpoint: index
+2025-11-22 03:15:59,218 INFO: ratelimit 50 per 1 hour (127.0.0.1) exceeded at endpoint: app_routes.dashboard
+Unauthenticated request to unknown endpoint: endpoint=None, path=/inventory/view, method=GET; user_agent=python-requests/2.32.4
+2025-11-22 03:15:59,499 INFO: ratelimit 30 per 1 minute (127.0.0.1) exceeded at endpoint: auth.login
+Unauthenticated request to unknown endpoint: endpoint=None, path=/inventory/view, method=GET; user_agent=python-requests/2.32.4
+2025-11-22 03:15:59,509 INFO: ratelimit 30 per 1 minute (127.0.0.1) exceeded at endpoint: auth.login
+2025-11-22 03:15:59,599 INFO: ratelimit 30 per 1 minute (127.0.0.1) exceeded at endpoint: auth.login
+2025-11-22 03:15:59,601 INFO: ratelimit 30 per 1 minute (127.0.0.1) exceeded at endpoint: auth.login
+2025-11-22 03:15:59,602 INFO: ratelimit 30 per 1 minute (127.0.0.1) exceeded at endpoint: auth.login
+2025-11-22 03:15:59,617 INFO: The CSRF token is missing.
+2025-11-22 03:15:59,622 INFO: The CSRF token is missing.
+2025-11-22 03:15:59,623 INFO: The CSRF token is missing.
+Unauthenticated request to unknown endpoint: endpoint=None, path=/library/global_items, method=GET; user_agent=python-requests/2.32.4
+2025-11-22 03:15:59,656 INFO: ratelimit 30 per 1 minute (127.0.0.1) exceeded at endpoint: auth.login
+2025-11-22 03:16:00,001 INFO: ratelimit 50 per 1 hour (127.0.0.1) exceeded at endpoint: index
+Unauthenticated request to unknown endpoint: endpoint=None, path=/inventory/view, method=GET; user_agent=python-requests/2.32.4
+2025-11-22 03:16:00,035 INFO: ratelimit 30 per 1 minute (127.0.0.1) exceeded at endpoint: auth.login
+Unauthenticated request to unknown endpoint: endpoint=None, path=/inventory/view, method=GET; user_agent=python-requests/2.32.4
+2025-11-22 03:16:00,043 INFO: ratelimit 30 per 1 minute (127.0.0.1) exceeded at endpoint: auth.login
+2025-11-22 03:16:00,330 INFO: ratelimit 50 per 1 hour (127.0.0.1) exceeded at endpoint: index
+Unauthenticated request to unknown endpoint: endpoint=None, path=/inventory/view, method=GET; user_agent=python-requests/2.32.4
+2025-11-22 03:16:00,832 INFO: ratelimit 30 per 1 minute (127.0.0.1) exceeded at endpoint: auth.login
+Unauthenticated request to unknown endpoint: endpoint=None, path=/inventory/view, method=GET; user_agent=python-requests/2.32.4
+2025-11-22 03:16:00,839 INFO: ratelimit 30 per 1 minute (127.0.0.1) exceeded at endpoint: auth.login
+2025-11-22 03:16:00,874 INFO: ratelimit 50 per 1 hour (127.0.0.1) exceeded at endpoint: index
+2025-11-22 03:16:01,153 INFO: ratelimit 50 per 1 hour (127.0.0.1) exceeded at endpoint: index
+2025-11-22 03:16:01,283 INFO: ratelimit 50 per 1 hour (127.0.0.1) exceeded at endpoint: index
+Unauthenticated request to unknown endpoint: endpoint=None, path=/inventory/view, method=GET; user_agent=python-requests/2.32.4
+2025-11-22 03:16:01,681 INFO: ratelimit 30 per 1 minute (127.0.0.1) exceeded at endpoint: auth.login
+Unauthenticated request to unknown endpoint: endpoint=None, path=/inventory/view, method=GET; user_agent=python-requests/2.32.4
+2025-11-22 03:16:01,694 INFO: ratelimit 30 per 1 minute (127.0.0.1) exceeded at endpoint: auth.login
+2025-11-22 03:16:01,980 INFO: ratelimit 50 per 1 hour (127.0.0.1) exceeded at endpoint: app_routes.dashboard
+2025-11-22 03:16:02,196 INFO: ratelimit 50 per 1 hour (127.0.0.1) exceeded at endpoint: app_routes.dashboard
+2025-11-22 03:16:02,610 INFO: ratelimit 50 per 1 hour (127.0.0.1) exceeded at endpoint: app_routes.dashboard
+Unauthenticated request to unknown endpoint: endpoint=None, path=/inventory/view, method=GET; user_agent=python-requests/2.32.4
+2025-11-22 03:16:02,618 INFO: ratelimit 30 per 1 minute (127.0.0.1) exceeded at endpoint: auth.login
+Unauthenticated request to unknown endpoint: endpoint=None, path=/inventory/view, method=GET; user_agent=python-requests/2.32.4
+2025-11-22 03:16:02,624 INFO: ratelimit 30 per 1 minute (127.0.0.1) exceeded at endpoint: auth.login
+2025-11-22 03:16:02,768 INFO: ratelimit 50 per 1 hour (127.0.0.1) exceeded at endpoint: index
+2025-11-22 03:16:02,820 INFO: ratelimit 50 per 1 hour (127.0.0.1) exceeded at endpoint: app_routes.dashboard
+Unauthenticated request to unknown endpoint: endpoint=None, path=/inventory/view, method=GET; user_agent=python-requests/2.32.4
+2025-11-22 03:16:03,056 INFO: ratelimit 30 per 1 minute (127.0.0.1) exceeded at endpoint: auth.login
+Unauthenticated request to unknown endpoint: endpoint=None, path=/inventory/view, method=GET; user_agent=python-requests/2.32.4
+2025-11-22 03:16:03,064 INFO: ratelimit 30 per 1 minute (127.0.0.1) exceeded at endpoint: auth.login
+2025-11-22 03:16:03,214 INFO: ratelimit 50 per 1 hour (127.0.0.1) exceeded at endpoint: index
+2025-11-22 03:16:03,219 INFO: ratelimit 50 per 1 hour (127.0.0.1) exceeded at endpoint: index
+2025-11-22 03:16:03,666 INFO: ratelimit 50 per 1 hour (127.0.0.1) exceeded at endpoint: app_routes.dashboard
+2025-11-22 03:16:03,779 INFO: ratelimit 50 per 1 hour (127.0.0.1) exceeded at endpoint: app_routes.dashboard
+Unauthenticated request to unknown endpoint: endpoint=None, path=/inventory/view, method=GET; user_agent=python-requests/2.32.4
+2025-11-22 03:16:04,416 INFO: ratelimit 30 per 1 minute (127.0.0.1) exceeded at endpoint: auth.login
+Unauthenticated request to unknown endpoint: endpoint=None, path=/inventory/view, method=GET; user_agent=python-requests/2.32.4
+2025-11-22 03:16:04,421 INFO: ratelimit 30 per 1 minute (127.0.0.1) exceeded at endpoint: auth.login
+Unauthenticated request to unknown endpoint: endpoint=None, path=/inventory/view, method=GET; user_agent=python-requests/2.32.4
+2025-11-22 03:16:04,443 INFO: ratelimit 30 per 1 minute (127.0.0.1) exceeded at endpoint: auth.login
+Unauthenticated request to unknown endpoint: endpoint=None, path=/inventory/view, method=GET; user_agent=python-requests/2.32.4
+2025-11-22 03:16:04,457 INFO: ratelimit 30 per 1 minute (127.0.0.1) exceeded at endpoint: auth.login
+2025-11-22 03:16:04,817 INFO: ratelimit 50 per 1 hour (127.0.0.1) exceeded at endpoint: index
+2025-11-22 03:16:05,001 INFO: ratelimit 50 per 1 hour (127.0.0.1) exceeded at endpoint: app_routes.dashboard
+2025-11-22 03:16:05,271 INFO: ratelimit 50 per 1 hour (127.0.0.1) exceeded at endpoint: app_routes.dashboard
+2025-11-22 03:16:05,360 INFO: ratelimit 50 per 1 hour (127.0.0.1) exceeded at endpoint: app_routes.dashboard
+2025-11-22 03:16:05,680 INFO: ratelimit 50 per 1 hour (127.0.0.1) exceeded at endpoint: app_routes.dashboard
+Unauthenticated request to unknown endpoint: endpoint=None, path=/inventory/view, method=GET; user_agent=python-requests/2.32.4
+2025-11-22 03:16:06,225 INFO: ratelimit 30 per 1 minute (127.0.0.1) exceeded at endpoint: auth.login
+Unauthenticated request to unknown endpoint: endpoint=None, path=/inventory/view, method=GET; user_agent=python-requests/2.32.4
+2025-11-22 03:16:06,234 INFO: ratelimit 30 per 1 minute (127.0.0.1) exceeded at endpoint: auth.login
+Unauthenticated request to unknown endpoint: endpoint=None, path=/inventory/view, method=GET; user_agent=python-requests/2.32.4
+2025-11-22 03:16:06,591 INFO: ratelimit 30 per 1 minute (127.0.0.1) exceeded at endpoint: auth.login
+Unauthenticated request to unknown endpoint: endpoint=None, path=/inventory/view, method=GET; user_agent=python-requests/2.32.4
+2025-11-22 03:16:06,597 INFO: ratelimit 30 per 1 minute (127.0.0.1) exceeded at endpoint: auth.login
+Unauthenticated request to unknown endpoint: endpoint=None, path=/inventory/view, method=GET; user_agent=python-requests/2.32.4
+2025-11-22 03:16:06,709 INFO: ratelimit 30 per 1 minute (127.0.0.1) exceeded at endpoint: auth.login
+Unauthenticated request to unknown endpoint: endpoint=None, path=/inventory/view, method=GET; user_agent=python-requests/2.32.4
+2025-11-22 03:16:06,715 INFO: ratelimit 30 per 1 minute (127.0.0.1) exceeded at endpoint: auth.login
+Unauthenticated request to unknown endpoint: endpoint=None, path=/inventory/view, method=GET; user_agent=python-requests/2.32.4
+2025-11-22 03:16:06,985 INFO: ratelimit 30 per 1 minute (127.0.0.1) exceeded at endpoint: auth.login
+Unauthenticated request to unknown endpoint: endpoint=None, path=/inventory/view, method=GET; user_agent=python-requests/2.32.4
+2025-11-22 03:16:06,989 INFO: ratelimit 30 per 1 minute (127.0.0.1) exceeded at endpoint: auth.login
+2025-11-22 03:16:06,995 INFO: ratelimit 50 per 1 hour (127.0.0.1) exceeded at endpoint: app_routes.dashboard
+2025-11-22 03:16:07,159 INFO: ratelimit 50 per 1 hour (127.0.0.1) exceeded at endpoint: app_routes.dashboard
+2025-11-22 03:16:07,199 INFO: ratelimit 50 per 1 hour (127.0.0.1) exceeded at endpoint: index
+2025-11-22 03:16:07,557 INFO: ratelimit 50 per 1 hour (127.0.0.1) exceeded at endpoint: app_routes.dashboard
+2025-11-22 03:16:07,569 INFO: ratelimit 50 per 1 hour (127.0.0.1) exceeded at endpoint: index
+2025-11-22 03:16:07,642 INFO: ratelimit 50 per 1 hour (127.0.0.1) exceeded at endpoint: index
+Unauthenticated request to unknown endpoint: endpoint=None, path=/inventory/view, method=GET; user_agent=python-requests/2.32.4
+2025-11-22 03:16:07,798 INFO: ratelimit 30 per 1 minute (127.0.0.1) exceeded at endpoint: auth.login
+Unauthenticated request to unknown endpoint: endpoint=None, path=/inventory/view, method=GET; user_agent=python-requests/2.32.4
+2025-11-22 03:16:07,805 INFO: ratelimit 30 per 1 minute (127.0.0.1) exceeded at endpoint: auth.login
+2025-11-22 03:16:08,088 INFO: ratelimit 50 per 1 hour (127.0.0.1) exceeded at endpoint: index
+2025-11-22 03:16:08,255 INFO: ratelimit 50 per 1 hour (127.0.0.1) exceeded at endpoint: index
+2025-11-22 03:16:08,390 INFO: ratelimit 50 per 1 hour (127.0.0.1) exceeded at endpoint: index
+2025-11-22 03:16:08,588 INFO: ratelimit 50 per 1 hour (127.0.0.1) exceeded at endpoint: index
+2025-11-22 03:16:09,073 INFO: ratelimit 50 per 1 hour (127.0.0.1) exceeded at endpoint: index
+Unauthenticated request to unknown endpoint: endpoint=None, path=/inventory/view, method=GET; user_agent=python-requests/2.32.4
+2025-11-22 03:16:09,519 INFO: ratelimit 30 per 1 minute (127.0.0.1) exceeded at endpoint: auth.login
+Unauthenticated request to unknown endpoint: endpoint=None, path=/inventory/view, method=GET; user_agent=python-requests/2.32.4
+2025-11-22 03:16:09,531 INFO: ratelimit 30 per 1 minute (127.0.0.1) exceeded at endpoint: auth.login
+2025-11-22 03:16:09,844 INFO: ratelimit 50 per 1 hour (127.0.0.1) exceeded at endpoint: app_routes.dashboard
+Unauthenticated request to unknown endpoint: endpoint=None, path=/inventory/view, method=GET; user_agent=python-requests/2.32.4
+2025-11-22 03:16:09,960 INFO: ratelimit 30 per 1 minute (127.0.0.1) exceeded at endpoint: auth.login
+Unauthenticated request to unknown endpoint: endpoint=None, path=/inventory/view, method=GET; user_agent=python-requests/2.32.4
+2025-11-22 03:16:09,965 INFO: ratelimit 30 per 1 minute (127.0.0.1) exceeded at endpoint: auth.login
+2025-11-22 03:16:10,001 INFO: ratelimit 50 per 1 hour (127.0.0.1) exceeded at endpoint: index
+2025-11-22 03:16:10,204 INFO: ratelimit 50 per 1 hour (127.0.0.1) exceeded at endpoint: app_routes.dashboard
+Unauthenticated request to unknown endpoint: endpoint=None, path=/inventory/view, method=GET; user_agent=python-requests/2.32.4
+2025-11-22 03:16:10,357 INFO: ratelimit 30 per 1 minute (127.0.0.1) exceeded at endpoint: auth.login
+Unauthenticated request to unknown endpoint: endpoint=None, path=/inventory/view, method=GET; user_agent=python-requests/2.32.4
+2025-11-22 03:16:10,364 INFO: ratelimit 30 per 1 minute (127.0.0.1) exceeded at endpoint: auth.login
+2025-11-22 03:16:10,806 INFO: ratelimit 50 per 1 hour (127.0.0.1) exceeded at endpoint: index
+2025-11-22 03:16:11,274 INFO: ratelimit 50 per 1 hour (127.0.0.1) exceeded at endpoint: app_routes.dashboard
+2025-11-22 03:16:11,688 INFO: ratelimit 50 per 1 hour (127.0.0.1) exceeded at endpoint: app_routes.dashboard
+Unauthenticated request to unknown endpoint: endpoint=None, path=/inventory/view, method=GET; user_agent=python-requests/2.32.4
+2025-11-22 03:16:11,986 INFO: ratelimit 30 per 1 minute (127.0.0.1) exceeded at endpoint: auth.login
+Unauthenticated request to unknown endpoint: endpoint=None, path=/inventory/view, method=GET; user_agent=python-requests/2.32.4
+2025-11-22 03:16:11,991 INFO: ratelimit 30 per 1 minute (127.0.0.1) exceeded at endpoint: auth.login
+2025-11-22 03:16:12,205 INFO: ratelimit 50 per 1 hour (127.0.0.1) exceeded at endpoint: app_routes.dashboard
+Unauthenticated request to unknown endpoint: endpoint=None, path=/library/global_items, method=GET; user_agent=python-requests/2.32.4
+2025-11-22 03:16:12,285 INFO: ratelimit 30 per 1 minute (127.0.0.1) exceeded at endpoint: auth.login
+2025-11-22 03:16:12,323 INFO: ratelimit 50 per 1 hour (127.0.0.1) exceeded at endpoint: index
+2025-11-22 03:16:12,431 INFO: ratelimit 50 per 1 hour (127.0.0.1) exceeded at endpoint: index
+2025-11-22 03:16:12,548 INFO: ratelimit 50 per 1 hour (127.0.0.1) exceeded at endpoint: app_routes.dashboard
+Unauthenticated request to unknown endpoint: endpoint=None, path=/inventory/view, method=GET; user_agent=python-requests/2.32.4
+2025-11-22 03:16:12,868 INFO: ratelimit 30 per 1 minute (127.0.0.1) exceeded at endpoint: auth.login
+Unauthenticated request to unknown endpoint: endpoint=None, path=/inventory/view, method=GET; user_agent=python-requests/2.32.4
+2025-11-22 03:16:12,875 INFO: ratelimit 30 per 1 minute (127.0.0.1) exceeded at endpoint: auth.login
+Unauthenticated request to unknown endpoint: endpoint=None, path=/inventory/view, method=GET; user_agent=python-requests/2.32.4
+2025-11-22 03:16:13,143 INFO: ratelimit 30 per 1 minute (127.0.0.1) exceeded at endpoint: auth.login
+Unauthenticated request to unknown endpoint: endpoint=None, path=/inventory/view, method=GET; user_agent=python-requests/2.32.4
+2025-11-22 03:16:13,151 INFO: ratelimit 30 per 1 minute (127.0.0.1) exceeded at endpoint: auth.login
+2025-11-22 03:16:13,423 INFO: ratelimit 50 per 1 hour (127.0.0.1) exceeded at endpoint: app_routes.dashboard
+Unauthenticated request to unknown endpoint: endpoint=None, path=/inventory/view, method=GET; user_agent=python-requests/2.32.4
+2025-11-22 03:16:13,473 INFO: ratelimit 30 per 1 minute (127.0.0.1) exceeded at endpoint: auth.login
+Unauthenticated request to unknown endpoint: endpoint=None, path=/inventory/view, method=GET; user_agent=python-requests/2.32.4
+2025-11-22 03:16:13,480 INFO: ratelimit 30 per 1 minute (127.0.0.1) exceeded at endpoint: auth.login
+2025-11-22 03:16:13,561 INFO: ratelimit 50 per 1 hour (127.0.0.1) exceeded at endpoint: index
+2025-11-22 03:16:13,824 INFO: ratelimit 50 per 1 hour (127.0.0.1) exceeded at endpoint: index
+2025-11-22 03:16:14,206 INFO: ratelimit 50 per 1 hour (127.0.0.1) exceeded at endpoint: index
+2025-11-22 03:16:14,653 INFO: ratelimit 50 per 1 hour (127.0.0.1) exceeded at endpoint: index
+2025-11-22 03:16:14,813 INFO: ratelimit 50 per 1 hour (127.0.0.1) exceeded at endpoint: index
+2025-11-22 03:16:15,300 INFO: ratelimit 50 per 1 hour (127.0.0.1) exceeded at endpoint: app_routes.dashboard
+2025-11-22 03:16:15,487 INFO: ratelimit 50 per 1 hour (127.0.0.1) exceeded at endpoint: app_routes.dashboard
+2025-11-22 03:16:15,541 INFO: ratelimit 50 per 1 hour (127.0.0.1) exceeded at endpoint: app_routes.dashboard
+2025-11-22 03:16:15,853 INFO: ratelimit 50 per 1 hour (127.0.0.1) exceeded at endpoint: index
+2025-11-22 03:16:16,200 INFO: ratelimit 50 per 1 hour (127.0.0.1) exceeded at endpoint: app_routes.dashboard
+2025-11-22 03:16:16,410 INFO: ratelimit 50 per 1 hour (127.0.0.1) exceeded at endpoint: app_routes.dashboard
+2025-11-22 03:16:16,558 INFO: ratelimit 50 per 1 hour (127.0.0.1) exceeded at endpoint: index
+2025-11-22 03:16:17,072 INFO: ratelimit 50 per 1 hour (127.0.0.1) exceeded at endpoint: index
+2025-11-22 03:16:17,381 INFO: ratelimit 50 per 1 hour (127.0.0.1) exceeded at endpoint: index
+2025-11-22 03:16:17,413 INFO: ratelimit 50 per 1 hour (127.0.0.1) exceeded at endpoint: app_routes.dashboard
+Unauthenticated request to unknown endpoint: endpoint=None, path=/inventory/view, method=GET; user_agent=python-requests/2.32.4
+2025-11-22 03:16:17,487 INFO: ratelimit 30 per 1 minute (127.0.0.1) exceeded at endpoint: auth.login
+Unauthenticated request to unknown endpoint: endpoint=None, path=/inventory/view, method=GET; user_agent=python-requests/2.32.4
+2025-11-22 03:16:17,494 INFO: ratelimit 30 per 1 minute (127.0.0.1) exceeded at endpoint: auth.login
+2025-11-22 03:16:18,001 INFO: ratelimit 50 per 1 hour (127.0.0.1) exceeded at endpoint: app_routes.dashboard
+2025-11-22 03:16:18,019 INFO: ratelimit 50 per 1 hour (127.0.0.1) exceeded at endpoint: index
+2025-11-22 03:16:18,232 INFO: ratelimit 50 per 1 hour (127.0.0.1) exceeded at endpoint: app_routes.dashboard
+2025-11-22 03:16:18,614 INFO: ratelimit 50 per 1 hour (127.0.0.1) exceeded at endpoint: app_routes.dashboard
+2025-11-22 03:16:18,723 INFO: ratelimit 50 per 1 hour (127.0.0.1) exceeded at endpoint: index
+Unauthenticated request to unknown endpoint: endpoint=None, path=/inventory/view, method=GET; user_agent=python-requests/2.32.4
+Unauthenticated request to unknown endpoint: endpoint=None, path=/inventory/view, method=GET; user_agent=python-requests/2.32.4
+2025-11-22 03:16:18,847 INFO: ratelimit 50 per 1 hour (127.0.0.1) exceeded at endpoint: app_routes.dashboard
+Unauthenticated request to unknown endpoint: endpoint=None, path=/library/global_items, method=GET; user_agent=python-requests/2.32.4
+2025-11-22 03:16:19,061 INFO: ratelimit 50 per 1 hour (127.0.0.1) exceeded at endpoint: app_routes.dashboard
+Unauthenticated request to unknown endpoint: endpoint=None, path=/inventory/view, method=GET; user_agent=python-requests/2.32.4
+Unauthenticated request to unknown endpoint: endpoint=None, path=/inventory/view, method=GET; user_agent=python-requests/2.32.4
+2025-11-22 03:16:19,210 INFO: ratelimit 50 per 1 hour (127.0.0.1) exceeded at endpoint: index
+Unauthenticated request to unknown endpoint: endpoint=None, path=/inventory/view, method=GET; user_agent=python-requests/2.32.4
+Unauthenticated request to unknown endpoint: endpoint=None, path=/inventory/view, method=GET; user_agent=python-requests/2.32.4
+Unauthenticated request to unknown endpoint: endpoint=None, path=/inventory/view, method=GET; user_agent=python-requests/2.32.4
+Unauthenticated request to unknown endpoint: endpoint=None, path=/inventory/view, method=GET; user_agent=python-requests/2.32.4
+2025-11-22 03:16:20,071 INFO: ratelimit 50 per 1 hour (127.0.0.1) exceeded at endpoint: index
+2025-11-22 03:16:20,212 INFO: ratelimit 50 per 1 hour (127.0.0.1) exceeded at endpoint: index
+2025-11-22 03:16:20,534 INFO: ratelimit 50 per 1 hour (127.0.0.1) exceeded at endpoint: app_routes.dashboard
+Unauthenticated request to unknown endpoint: endpoint=None, path=/inventory/view, method=GET; user_agent=python-requests/2.32.4
+Unauthenticated request to unknown endpoint: endpoint=None, path=/inventory/view, method=GET; user_agent=python-requests/2.32.4
+Unauthenticated request to unknown endpoint: endpoint=None, path=/inventory/view, method=GET; user_agent=python-requests/2.32.4
+Unauthenticated request to unknown endpoint: endpoint=None, path=/inventory/view, method=GET; user_agent=python-requests/2.32.4
+Unauthenticated request to unknown endpoint: endpoint=None, path=/inventory/view, method=GET; user_agent=python-requests/2.32.4
+Unauthenticated request to unknown endpoint: endpoint=None, path=/inventory/view, method=GET; user_agent=python-requests/2.32.4
+Unauthenticated request to unknown endpoint: endpoint=None, path=/inventory/view, method=GET; user_agent=python-requests/2.32.4
+Unauthenticated request to unknown endpoint: endpoint=None, path=/inventory/view, method=GET; user_agent=python-requests/2.32.4
+2025-11-22 03:16:21,872 INFO: ratelimit 50 per 1 hour (127.0.0.1) exceeded at endpoint: index
+2025-11-22 03:16:22,146 INFO: ratelimit 50 per 1 hour (127.0.0.1) exceeded at endpoint: app_routes.dashboard
+2025-11-22 03:16:22,157 INFO: ratelimit 50 per 1 hour (127.0.0.1) exceeded at endpoint: app_routes.dashboard

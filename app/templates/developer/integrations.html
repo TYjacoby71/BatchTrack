@@ -6,423 +6,216 @@
 
 {% block content %}
 <div class="container my-4">
-  <h2>Integrations & Launch Checklist</h2>
-  <p class="text-muted">Use this page as a checklist to prepare for launch. Items marked in green are configured; items in red need attention.</p>
+  <h2 class="mb-2">Integrations & Launch Checklist</h2>
+  <p class="text-muted">Use this single matrix to verify every environment variable and secret. Once a row shows “Detected,” move on to the quick actions below.</p>
 
-  <hr>
-  <h4>1) Email (Transactional)</h4>
-  <p>Provider: <strong>{{ email_provider|upper }}</strong> — Status: {% if email_configured %}<span class="text-success">Configured</span>{% else %}<span class="text-danger">Not configured</span>{% endif %}</p>
-  <ul>
-    <li>SMTP: {{ 'OK' if email_keys.SMTP else 'Missing' }}</li>
-    <li>SendGrid API key: {{ 'OK' if email_keys.SendGrid else 'Missing' }}</li>
-    <li>Postmark Server Token: {{ 'OK' if email_keys.Postmark else 'Missing' }}</li>
-    <li>Mailgun API/Domain: {{ 'OK' if email_keys.Mailgun else 'Missing' }}</li>
-  </ul>
-  <div class="alert alert-info">
-    <strong>Setup instructions:</strong>
-    <ol class="mb-0">
-      <li>Pick a provider (SendGrid, SES, Postmark, Mailgun) and create an account.</li>
-      <li>Add domain DNS for SPF/DKIM (and DMARC optional) in your provider dashboard.</li>
-      <li>Set environment variables:
-        <ul>
-          <li>EMAIL_PROVIDER=smtp|sendgrid|postmark|mailgun</li>
-          <li>SMTP: MAIL_SERVER, MAIL_USERNAME, MAIL_PASSWORD, MAIL_DEFAULT_SENDER</li>
-          <li>SendGrid: SENDGRID_API_KEY, MAIL_DEFAULT_SENDER</li>
-          <li>Postmark: POSTMARK_SERVER_TOKEN, MAIL_DEFAULT_SENDER</li>
-          <li>Mailgun: MAILGUN_API_KEY, MAILGUN_DOMAIN, MAIL_DEFAULT_SENDER</li>
-        </ul>
-      </li>
-    </ol>
-  </div>
-  <form method="post" action="{{ url_for('developer.integrations_test_email') }}">
-    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-    <button class="btn btn-sm btn-primary" type="submit" {% if not email_configured %}disabled{% endif %}>Send Test Email</button>
-  </form>
-
-  <hr>
-  <h4>2) Billing (Stripe)</h4>
-  <p>Status:
-    <span class="badge {% if stripe_status.secret_key_present %}bg-success{% else %}bg-danger{% endif %}">Secret Key</span>
-    <span class="badge {% if stripe_status.publishable_key_present %}bg-success{% else %}bg-danger{% endif %}">Publishable Key</span>
-    <span class="badge {% if stripe_status.webhook_secret_present %}bg-success{% else %}bg-danger{% endif %}">Webhook Secret</span>
-    <span class="badge {% if stripe_status.tiers_configured %}bg-success{% else %}bg-danger{% endif %}">Tiers</span>
-  </p>
-  <div class="alert alert-info">
-    <strong>Setup instructions:</strong>
-    <ol class="mb-0">
-      <li>Create a Stripe account and products/prices with lookup keys per tier.</li>
-      <li>Configure environment:
-        <ul>
-          <li>STRIPE_SECRET_KEY=sk_live_xxx</li>
-          <li>STRIPE_PUBLISHABLE_KEY=pk_live_xxx</li>
-          <li>STRIPE_WEBHOOK_SECRET=whsec_xxx</li>
-        </ul>
-      </li>
-      <li>Set your webhook endpoint to: <code>/billing/webhooks/stripe</code> in Stripe and paste the webhook signing secret into STRIPE_WEBHOOK_SECRET.</li>
-      <li>Ensure subscription tiers in the database include the Stripe lookup keys.</li>
-    </ol>
-  </div>
-  <form method="post" action="{{ url_for('developer.integrations_test_stripe') }}">
-    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-    <button class="btn btn-sm btn-primary" type="submit" {% if not stripe_status.secret_key_present %}disabled{% endif %}>Test Stripe Connectivity</button>
-  </form>
-  <div class="mt-2">
-    <button class="btn btn-sm btn-outline-secondary" type="button" onclick="loadStripeEvents()">Show Recent Webhook Events</button>
-    <pre id="stripeEvents" class="mt-2" style="white-space: pre-wrap;"></pre>
-    <button class="btn btn-sm btn-outline-secondary" type="button" onclick="checkWebhook()">Check Webhook Endpoint Reachability</button>
-    <pre id="webhookCheck" class="mt-2" style="white-space: pre-wrap;"></pre>
-  </div>
-
-  <hr>
-  <h4>3) Feature Flags & System Toggles</h4>
-  <p>Features are broad functional areas. Permissions control specific actions within those features.</p>
-
-  <div class="card p-3">
-    <div id="flagSaveStatus" class="alert alert-success d-none" role="alert">
-      ✅ Feature flags updated successfully
+  <div class="card shadow-sm mt-3">
+    <div class="card-header bg-white border-0">
+      <h4 class="mb-1">Environment & Secrets Matrix</h4>
+      <p class="text-muted small mb-0">Auto-detected from the running process. Knock out every row before shipping.</p>
     </div>
-    <h6 class="mt-3">Core Business Features</h6>
-    <div class="form-check form-switch mb-2">
-      <input class="form-check-input" type="checkbox" id="ff_fifo_tracking" {% if feature_flags.get('FEATURE_FIFO_TRACKING', True) %}checked{% endif %} onchange="saveFlags()">
-      <label class="form-check-label" for="ff_fifo_tracking">
-        FIFO Inventory Tracking 
-        <span class="badge bg-success ms-1">WIRED</span>
-      </label>
-      <div><small class="text-muted">First-in-first-out inventory tracking via inventory_adjustment service</small></div>
-    </div>
-    <div class="form-check form-switch mb-2">
-      <input class="form-check-input" type="checkbox" id="ff_barcode_scanning" {% if feature_flags.get('FEATURE_BARCODE_SCANNING', False) %}checked{% endif %} onchange="saveFlags()">
-      <label class="form-check-label" for="ff_barcode_scanning">
-        Barcode Scanning 
-        <span class="badge bg-danger ms-1">STUB</span>
-      </label>
-      <div><small class="text-muted">Barcode scanning for inventory management - not implemented</small></div>
-    </div>
-    <div class="form-check form-switch mb-2">
-      <input class="form-check-input" type="checkbox" id="ff_product_variants" {% if feature_flags.get('FEATURE_PRODUCT_VARIANTS', True) %}checked{% endif %} onchange="saveFlags()">
-      <label class="form-check-label" for="ff_product_variants">
-        Product Variants System 
-        <span class="badge bg-success ms-1">WIRED</span>
-      </label>
-      <div><small class="text-muted">Working products system with variants via ProductService</small></div>
-    </div>
-    <div class="form-check form-switch mb-2">
-      <input class="form-check-input" type="checkbox" id="ff_auto_sku_generation" {% if feature_flags.get('FEATURE_AUTO_SKU_GENERATION', True) %}checked{% endif %} onchange="saveFlags()">
-      <label class="form-check-label" for="ff_auto_sku_generation">
-        Auto-generate SKUs 
-        <span class="badge bg-success ms-1">WIRED</span>
-      </label>
-      <div><small class="text-muted">Implemented in ProductService for automatic SKU code generation</small></div>
-    </div>
-    <div class="form-check form-switch mb-2">
-      <input class="form-check-input" type="checkbox" id="ff_recipe_variations" {% if feature_flags.get('FEATURE_RECIPE_VARIATIONS', True) %}checked{% endif %} onchange="saveFlags()">
-      <label class="form-check-label" for="ff_recipe_variations">
-        Recipe Variations 
-        <span class="badge bg-success ms-1">WIRED</span>
-      </label>
-      <div><small class="text-muted">Working recipe system with parent/child variation relationships</small></div>
-    </div>
-    <div class="form-check form-switch mb-2">
-      <input class="form-check-input" type="checkbox" id="ff_cost_tracking" {% if feature_flags.get('FEATURE_COST_TRACKING', True) %}checked{% endif %} onchange="saveFlags()">
-      <label class="form-check-label" for="ff_cost_tracking">
-        Cost Tracking & Profit Margins 
-        <span class="badge bg-success ms-1">WIRED</span>
-      </label>
-      <div><small class="text-muted">Implemented in costing_engine and inventory with FIFO/average costing</small></div>
-    </div>
-    <div class="form-check form-switch mb-2">
-      <input class="form-check-input" type="checkbox" id="ff_expiration_tracking" {% if feature_flags.get('FEATURE_EXPIRATION_TRACKING', True) %}checked{% endif %} onchange="saveFlags()">
-      <label class="form-check-label" for="ff_expiration_tracking">
-        Expiration Date Tracking 
-        <span class="badge bg-success ms-1">WIRED</span>
-      </label>
-      <div><small class="text-muted">Working expiration system with services and lot-based tracking</small></div>
-    </div>
-    <div class="form-check form-switch mb-2">
-      <input class="form-check-input" type="checkbox" id="ff_bulk_operations" {% if feature_flags.get('FEATURE_BULK_OPERATIONS', True) %}checked{% endif %} onchange="saveFlags()">
-      <label class="form-check-label" for="ff_bulk_operations">
-        Bulk Inventory Operations 
-        <span class="badge bg-success ms-1">WIRED</span>
-      </label>
-      <div><small class="text-muted">Implemented in bulk_stock routes for bulk inventory operations</small></div>
-    </div>
-
-    <h6 class="mt-3">Developer & Advanced Features</h6>
-    <div class="form-check form-switch mb-2">
-      <input class="form-check-input" type="checkbox" id="ff_analytics" {% if feature_flags.FEATURE_INVENTORY_ANALYTICS %}checked{% endif %} onchange="saveFlags()">
-      <label class="form-check-label" for="ff_analytics">
-        Inventory Analytics (developer only) 
-        <span class="badge bg-success ms-1">WIRED</span>
-      </label>
-      <div><small class="text-muted">Developer feature for advanced inventory analytics and reporting</small></div>
-    </div>
-    {% if config['DEBUG'] %}
-    <div class="form-check form-switch mb-2">
-      <input class="form-check-input" type="checkbox" id="ff_debug_mode" {% if feature_flags.get('FEATURE_DEBUG_MODE', False) %}checked{% endif %} onchange="saveFlags()">
-      <label class="form-check-label" for="ff_debug_mode">
-        Debug Mode 
-        <span class="badge bg-danger ms-1">STUB</span>
-      </label>
-      <div><small class="text-muted">Enables detailed logging and debugging information for development purposes</small></div>
-    </div>
-    {% endif %}
-    <div class="form-check form-switch mb-2">
-      <input class="form-check-input" type="checkbox" id="ff_auto_backup" {% if feature_flags.get('FEATURE_AUTO_BACKUP', False) %}checked{% endif %} onchange="saveFlags()">
-      <label class="form-check-label" for="ff_auto_backup">
-        Auto-backup System 
-        <span class="badge bg-danger ms-1">STUB</span>
-      </label>
-      <div><small class="text-muted">Automated backup of system data and configurations - not yet implemented</small></div>
-    </div>
-    <div class="form-check form-switch mb-2">
-      <input class="form-check-input" type="checkbox" id="ff_csv_export" {% if feature_flags.get('FEATURE_CSV_EXPORT', True) %}checked{% endif %} onchange="saveFlags()">
-      <label class="form-check-label" for="ff_csv_export">
-        CSV Export 
-        <span class="badge bg-success ms-1">WIRED</span>
-      </label>
-      <div><small class="text-muted">Functionality to export data and reports to CSV format</small></div>
-    </div>
-    <div class="form-check form-switch mb-2">
-      <input class="form-check-input" type="checkbox" id="ff_advanced_reports" {% if feature_flags.get('FEATURE_ADVANCED_REPORTS', False) %}checked{% endif %} onchange="saveFlags()">
-      <label class="form-check-label" for="ff_advanced_reports">
-        Advanced Reports 
-        <span class="badge bg-danger ms-1">STUB</span>
-      </label>
-      <div><small class="text-muted">Complex reporting features beyond standard reports - not implemented</small></div>
-    </div>
-    <div class="form-check form-switch mb-2">
-      <input class="form-check-input" type="checkbox" id="ff_global_item_library" {% if feature_flags.get('FEATURE_GLOBAL_ITEM_LIBRARY', True) %}checked{% endif %} onchange="saveFlags()">
-      <label class="form-check-label" for="ff_global_item_library">
-        Global Item Library Access 
-        <span class="badge bg-success ms-1">WIRED</span>
-      </label>
-      <div><small class="text-muted">Access to a shared library of items across multiple locations or systems</small></div>
-    </div>
-
-    <h6 class="mt-3">Notification Systems</h6>
-    <div class="form-check form-switch mb-2">
-      <input class="form-check-input" type="checkbox" id="ff_email_notifications" {% if feature_flags.get('FEATURE_EMAIL_NOTIFICATIONS', True) %}checked{% endif %} onchange="saveFlags()">
-      <label class="form-check-label" for="ff_email_notifications">
-        Email Notifications 
-        <span class="badge bg-success ms-1">WIRED</span>
-      </label>
-      <div><small class="text-muted">System for sending email notifications to users and administrators</small></div>
-    </div>
-    <div class="form-check form-switch mb-2">
-      <input class="form-check-input" type="checkbox" id="ff_browser_notifications" {% if feature_flags.get('FEATURE_BROWSER_NOTIFICATIONS', False) %}checked{% endif %} onchange="saveFlags()">
-      <label class="form-check-label" for="ff_browser_notifications">
-        Browser Push Notifications 
-        <span class="badge bg-danger ms-1">STUB</span>
-      </label>
-      <div><small class="text-muted">Real-time push notifications to the browser - not implemented</small></div>
-    </div>
-
-    <h6 class="mt-3">Integration Features</h6>
-    <div class="form-check form-switch mb-2">
-      <input class="form-check-input" type="checkbox" id="ff_shopify_integration" {% if feature_flags.get('FEATURE_SHOPIFY_INTEGRATION', False) %}checked{% endif %} onchange="saveFlags()">
-      <label class="form-check-label" for="ff_shopify_integration">
-        Shopify Integration (stubbed) 
-        <span class="badge bg-danger ms-1">STUB</span>
-      </label>
-      <div><small class="text-muted">Integration with Shopify for e-commerce synchronization - currently a placeholder</small></div>
-    </div>
-    <div class="form-check form-switch mb-2">
-      <input class="form-check-input" type="checkbox" id="ff_api_access" {% if feature_flags.get('FEATURE_API_ACCESS', False) %}checked{% endif %} onchange="saveFlags()">
-      <label class="form-check-label" for="ff_api_access">
-        REST API Access 
-        <span class="badge bg-danger ms-1">STUB</span>
-      </label>
-      <div><small class="text-muted">Enables access to the system via a RESTful API - not implemented</small></div>
-    </div>
-    <div class="form-check form-switch mb-2">
-      <input class="form-check-input" type="checkbox" id="ff_oauth_providers" {% if feature_flags.get('FEATURE_OAUTH_PROVIDERS', True) %}checked{% endif %} onchange="saveFlags()">
-      <label class="form-check-label" for="ff_oauth_providers">
-        OAuth Login Providers 
-        <span class="badge bg-success ms-1">WIRED</span>
-      </label>
-      <div><small class="text-muted">Support for authentication via OAuth 2.0 providers (e.g., Google, Facebook)</small></div>
-    </div>
-
-    <h6 class="mt-3">AI Features (Premium)</h6>
-    <div class="form-check form-switch mb-2">
-      <input class="form-check-input" type="checkbox" id="ff_ai_recipe_optimization" {% if feature_flags.get('FEATURE_AI_RECIPE_OPTIMIZATION', False) %}checked{% endif %} onchange="saveFlags()">
-      <label class="form-check-label" for="ff_ai_recipe_optimization">
-        AI Recipe Optimization 
-        <span class="badge bg-danger ms-1">STUB</span>
-      </label>
-      <div><small class="text-muted">Utilizes AI for optimizing recipes and ingredient usage - not implemented</small></div>
-    </div>
-    <div class="form-check form-switch mb-2">
-      <input class="form-check-input" type="checkbox" id="ff_ai_demand_forecasting" {% if feature_flags.get('FEATURE_AI_DEMAND_FORECASTING', False) %}checked{% endif %} onchange="saveFlags()">
-      <label class="form-check-label" for="ff_ai_demand_forecasting">
-        AI Demand Forecasting 
-        <span class="badge bg-danger ms-1">STUB</span>
-      </label>
-      <div><small class="text-muted">AI-powered demand forecasting for inventory management - not implemented</small></div>
-    </div>
-    <div class="form-check form-switch mb-2">
-      <input class="form-check-input" type="checkbox" id="ff_ai_quality_insights" {% if feature_flags.get('FEATURE_AI_QUALITY_INSIGHTS', False) %}checked{% endif %} onchange="saveFlags()">
-      <label class="form-check-label" for="ff_ai_quality_insights">
-        AI Quality Insights 
-        <span class="badge bg-danger ms-1">STUB</span>
-      </label>
-      <div><small class="text-muted">AI analysis for quality control and insights - not implemented</small></div>
-    </div>
-
-    <h6 class="mt-3">Public Tools Availability</h6>
-    <div class="form-check form-switch mb-2">
-      <input class="form-check-input" type="checkbox" id="tools_soap" {% if feature_flags.get('TOOLS_SOAP', True) %}checked{% endif %} onchange="saveFlags()">
-      <label class="form-check-label" for="tools_soap">
-        Soap Making Tools 
-        <span class="badge bg-success ms-1">WIRED</span>
-      </label>
-      <div><small class="text-muted">Tools and calculators for soap making recipes and processes</small></div>
-    </div>
-    <div class="form-check form-switch mb-2">
-      <input class="form-check-input" type="checkbox" id="tools_candles" {% if feature_flags.get('TOOLS_CANDLES', True) %}checked{% endif %} onchange="saveFlags()">
-      <label class="form-check-label" for="tools_candles">
-        Candle Making Tools 
-        <span class="badge bg-success ms-1">WIRED</span>
-      </label>
-      <div><small class="text-muted">Tools and calculators for candle making recipes and processes</small></div>
-    </div>
-    <div class="form-check form-switch mb-2">
-      <input class="form-check-input" type="checkbox" id="tools_lotions" {% if feature_flags.get('TOOLS_LOTIONS', True) %}checked{% endif %} onchange="saveFlags()">
-      <label class="form-check-label" for="tools_lotions">
-        Lotion & Cosmetic Tools 
-        <span class="badge bg-success ms-1">WIRED</span>
-      </label>
-      <div><small class="text-muted">Tools for creating lotions, creams, and other cosmetic products</small></div>
-    </div>
-    <div class="form-check form-switch mb-2">
-      <input class="form-check-input" type="checkbox" id="tools_herbal" {% if feature_flags.get('TOOLS_HERBAL', True) %}checked{% endif %} onchange="saveFlags()">
-      <label class="form-check-label" for="tools_herbal">
-        Herbalist Tools 
-        <span class="badge bg-success ms-1">WIRED</span>
-      </label>
-      <div><small class="text-muted">Tools for herbalists, including tincture calculators and formulation aids</small></div>
-    </div>
-    <div class="form-check form-switch mb-2">
-      <input class="form-check-input" type="checkbox" id="tools_baking" {% if feature_flags.get('TOOLS_BAKING', True) %}checked{% endif %} onchange="saveFlags()">
-      <label class="form-check-label" for="tools_baking">
-        Baking Tools 
-        <span class="badge bg-success ms-1">WIRED</span>
-      </label>
-      <div><small class="text-muted">Tools for bakers, including recipe scaling and ingredient conversions</small></div>
-    </div>
-
-    <small class="text-muted">Features control broad functionality. Permissions (managed via subscription tiers) control specific actions within features. Changes update the running app and persist to settings.json.</small>
-  </div>
-
-  <hr>
-  <h4>4) POS/Shopify</h4>
-  <p>Status: <span class="badge bg-secondary">{{ shopify_status.status|capitalize }}</span></p>
-  <div class="alert alert-secondary">
-    POS/Shopify is currently stubbed. When ready, we will add a provider adapter (webhooks and API client) and expose configuration here.
-  </div>
-
-  <hr>
-  <h4>5) Logging & Security</h4>
-  <ul>
-    <li>LOG_LEVEL: <code>{{ logging_status.LOG_LEVEL }}</code></li>
-    <li>PII Redaction: {% if logging_status.LOG_REDACT_PII %}<span class="text-success">On</span>{% else %}<span class="text-danger">Off</span>{% endif %}</li>
-  </ul>
-  <div class="alert alert-info">
-    <strong>Recommendation:</strong> Keep PII redaction enabled in production. Use DEBUG only in secure development environments.
-  </div>
-
-  <hr>
-  <h4>6) Pre-Launch Checklist (Quick View)</h4>
-  <ul>
-    <li>Email provider configured: {% if email_configured %}<span class="text-success">Yes</span>{% else %}<span class="text-danger">No</span>{% endif %}</li>
-    <li>Stripe keys present: {% if stripe_status.secret_key_present and stripe_status.webhook_secret_present %}<span class="text-success">Yes</span>{% else %}<span class="text-danger">No</span>{% endif %}</li>
-    <li>Tiers configured in DB: {% if tiers_count > 0 %}<span class="text-success">Yes</span>{% else %}<span class="text-danger">No</span>{% endif %}</li>
-    <li>Feature flags set appropriately: <span class="text-muted">Review above</span></li>
-  </ul>
-  <hr>
-<h4>7) Core Environment</h4>
-<p class="text-muted">Work through every launch-critical environment variable and secret below. Entries auto-check when detected from the runtime, and you can tick them manually while you deploy.</p>
-
-  <div class="alert alert-warning">
-    <strong>Environment switch:</strong> Set <code>FLASK_ENV=production</code> (and leave <code>FLASK_DEBUG</code> unset/false) in every live deployment. Local development should use <code>FLASK_ENV=development</code>. All runtime behavior—debug panels, logging verbosity, session security, and rate limits—now keys off this single variable.
-  </div>
-
-{% for section in launch_env_sections %}
-  <div class="mb-4">
-    <div class="d-flex align-items-center justify-content-between mb-2">
-      <h5 class="mb-0">{{ section.title }}</h5>
-    </div>
-    {% if section.note %}
-      <div class="alert alert-secondary small mb-2">{{ section.note }}</div>
-    {% endif %}
-    <div class="list-group">
-      {% for item in section.section_items %}
-        <label class="list-group-item d-flex align-items-start gap-3">
-          <input class="form-check-input mt-1" type="checkbox" id="env_{{ item.key }}" {% if item.present %}checked{% endif %}>
-          <div>
-            <div class="fw-semibold">
-              {{ item.key }}
-              {% if not item.required %}<span class="badge bg-secondary ms-2">Optional</span>{% endif %}
-              {% if item.is_secret %}<span class="badge bg-warning text-dark ms-2">Secret</span>{% endif %}
+    <div class="card-body">
+      {% for section in launch_env_sections %}
+      <div class="mb-4">
+        <div class="d-flex justify-content-between align-items-center mb-2">
+          <h5 class="mb-0">{{ section.title }}</h5>
+          <span class="badge bg-light text-muted border">Auto check</span>
+        </div>
+        {% if section.note %}
+        <p class="text-muted small">{{ section.note }}</p>
+        {% endif %}
+        <div class="list-group">
+          {% for item in section.section_items %}
+          <div class="list-group-item d-flex flex-column flex-md-row gap-3 justify-content-between align-items-start">
+            <div>
+              <div class="fw-semibold">
+                {{ item.display_key }}
+                {% if not item.required %}<span class="badge bg-secondary ms-2">Optional</span>{% endif %}
+                {% if item.is_secret %}<span class="badge bg-warning text-dark ms-2">Secret</span>{% endif %}
+              </div>
+              <div class="text-muted small">{{ item.description }}</div>
+              {% if item.note %}<div class="small text-info">{{ item.note }}</div>{% endif %}
+              {% if item.recommended %}<div class="small text-muted">Recommended: {{ item.recommended }}</div>{% endif %}
             </div>
-            <div class="small text-muted">{{ item.description }}</div>
-            <div class="small {% if item.present %}text-success{% else %}text-danger{% endif %}">
+            <div class="text-md-end">
               {% if item.present %}
-                Detected via {{ 'environment' if item.source == 'env' else 'configuration' }}
+              <span class="badge bg-success">Detected</span>
+              <div class="small text-muted">Source: {{ 'Environment' if item.source == 'env' else 'Config' }}</div>
               {% else %}
-                Not detected
+              <span class="badge bg-danger">Missing</span>
+              <div class="small text-muted">
+                Add via {{ 'environment or settings.json' if item.allow_config else 'environment variables' }}
+              </div>
               {% endif %}
-              {% if item.recommended %}<span class="text-muted ms-2">Recommended: {{ item.recommended }}</span>{% endif %}
             </div>
-            {% if item.note %}
-              <div class="small text-muted">{{ item.note }}</div>
-            {% endif %}
           </div>
-        </label>
+          {% endfor %}
+        </div>
+      </div>
       {% endfor %}
     </div>
   </div>
-{% endfor %}
 
-  <div class="alert alert-info">
-    <strong>Redis provisioning:</strong> Before launch, create a managed Redis instance (Render Redis, Upstash, AWS ElastiCache, etc.). Copy the connection URL into <code>REDIS_URL</code> and mirror it into <code>RATELIMIT_STORAGE_URI</code>. The app now refuses to start in production without Redis-backed sessions, caching, and rate limiting.
+  <div class="alert alert-warning mt-4">
+    <strong>Redis provisioning & presets:</strong>
+    <ul class="mb-2">
+      <li>Before launch, create a managed Redis instance (Render Redis, Upstash, AWS ElastiCache) and set <code>REDIS_URL</code> once. The app mirrors it into <code>RATELIMIT_STORAGE_URL</code> automatically unless you override it.</li>
+      <li>Use <code>SESSION_REDIS_MAX_CONNECTIONS</code> to cap each worker’s connection pool (default 10). Match this to your Redis plan’s <code>maxclients</code>.</li>
+      <li>Set <code>WEB_CONCURRENCY</code> only as high as the Redis/Postgres plans can handle. During testing, keep it at <code>1</code>–<code>2</code>; raise both concurrency and Redis limits together when upgrading.</li>
+      <li>For high-usage tiers (10k+ active users), a single well-sized Redis node normally suffices—scale memory and <code>maxclients</code> before considering sharding.</li>
+    </ul>
+    The app refuses to start in production without Redis-backed sessions, caching, and rate limiting.
   </div>
 
-<ul>
-  <li>Environment: <code>{{ env_core.FLASK_ENV }}</code></li>
-  <li>Replit Deployment: <code>{{ env_core.REPLIT_DEPLOYMENT }}</code></li>
-  <li>SECRET_KEY present: {% if env_core.SECRET_KEY_present %}<span class="text-success">Yes</span>{% else %}<span class="text-danger">No</span>{% endif %}</li>
-</ul>
-<div class="alert alert-info">
-  <strong>Database backend:</strong> <span class="text-uppercase">{{ db_info.backend }}</span> via <code>{{ db_info.source }}</code>. Ensure migrations run before flip to production.
+  <div class="row g-4 mt-1">
+    <div class="col-lg-6">
+      <div class="card shadow-sm h-100">
+        <div class="card-header bg-white border-0">
+          <h4 class="mb-1">Quick Actions</h4>
+          <p class="text-muted small mb-0">Run these only after the matrix above shows everything detected.</p>
+        </div>
+        <div class="card-body">
+          <div class="mb-4">
+            <h6 class="text-uppercase text-muted small mb-1">Email</h6>
+            <p class="small text-muted mb-2">Uses the provider and credentials from the matrix. DNS (SPF/DKIM) must already be verified.</p>
+            <form method="post" action="{{ url_for('developer.integrations_test_email') }}">
+              <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+              <button class="btn btn-sm btn-primary" type="submit" {% if not email_configured %}disabled{% endif %}>Send Test Email</button>
+            </form>
+          </div>
+          <div>
+            <h6 class="text-uppercase text-muted small mb-1">Stripe</h6>
+            <p class="small text-muted mb-2">Requires live secret, publishable key, webhook secret, and tier price IDs.</p>
+            <form method="post" action="{{ url_for('developer.integrations_test_stripe') }}" class="mb-3">
+              <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+              <button class="btn btn-sm btn-primary" type="submit" {% if not stripe_status.secret_key_present %}disabled{% endif %}>Test Stripe Connectivity</button>
+            </form>
+            <div class="d-grid gap-2">
+              <button class="btn btn-sm btn-outline-secondary" type="button" onclick="loadStripeEvents()">Show Recent Webhook Events</button>
+              <pre id="stripeEvents" class="small bg-light p-2" style="min-height: 60px; white-space: pre-wrap;"></pre>
+              <button class="btn btn-sm btn-outline-secondary" type="button" onclick="checkWebhook()">Check Webhook Endpoint</button>
+              <pre id="webhookCheck" class="small bg-light p-2" style="min-height: 60px; white-space: pre-wrap;"></pre>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="col-lg-6">
+      <div class="card shadow-sm h-100">
+        <div class="card-header bg-white border-0">
+          <h4 class="mb-1">Operational Notes</h4>
+        </div>
+        <div class="card-body">
+          <ul class="small text-muted mb-0">
+            <li>Logging level: <code>{{ logging_status.LOG_LEVEL }}</code>; PII redaction {% if logging_status.LOG_REDACT_PII %}<span class="text-success">enabled</span>{% else %}<span class="text-danger">disabled</span>{% endif %}. Keep DEBUG off in production.</li>
+            <li>Stripe tiers: {% if stripe_status.tiers_configured %}<span class="text-success">configured</span>{% else %}<span class="text-danger">missing price mappings</span>{% endif %}. Update <code>app/seeders/subscription_tiers.json</code> before launch.</li>
+            <li>POS / Shopify: {{ shopify_status.notes }}</li>
+            <li>Sessions use pooled Redis connections. Adjust <code>SESSION_REDIS_MAX_CONNECTIONS</code> when you change <code>WEB_CONCURRENCY</code>.</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card shadow-sm mt-4">
+    <div class="card-body">
+      <h6>Domain Event Dispatcher</h6>
+      <p class="small text-muted mb-2">
+        The app writes every significant action into the <code>domain_event</code> outbox table. To push those events downstream, run the dispatcher alongside your web workers.
+      </p>
+      <ol class="small mb-0">
+        <li>Provision any HTTP endpoint that should receive events (or leave the webhook unset to mark events processed without delivery).</li>
+        <li>Set <code>DOMAIN_EVENT_WEBHOOK_URL=https://your-endpoint</code> (optional if you only want local logging).</li>
+        <li>Run the worker: <code>flask dispatch-domain-events</code> (use <code>--once</code> for batches, or keep it running).</li>
+        <li>Monitor logs for retries; events exceeding the retry limit are marked with <code>_dispatch_errors</code>.</li>
+      </ol>
+    </div>
+  </div>
+
+  <div class="card shadow-sm mt-4">
+    <div class="card-header bg-white border-0">
+      <h4 class="mb-1">Configuration ID Map</h4>
+      <p class="text-muted small mb-0">Snapshot of every critical environment/configuration key, its status, and the scale-ready target value.</p>
+    </div>
+    <div class="card-body">
+      <div class="table-responsive">
+        <table class="table table-sm align-middle mb-0">
+          <thead>
+            <tr>
+              <th scope="col">Configuration Key</th>
+              <th scope="col">Status</th>
+              <th scope="col">Scale Target</th>
+              <th scope="col">Category</th>
+              <th scope="col">Instructions</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for config in config_matrix %}
+            <tr>
+              <td class="fw-semibold">
+                <code>{{ config.key }}</code>
+                {% if config.is_secret %}<span class="badge bg-warning text-dark ms-1">Secret</span>{% endif %}
+                {% if not config.required %}<span class="badge bg-secondary ms-1">Optional</span>{% endif %}
+              </td>
+              <td>
+                {% if config.present %}
+                <span class="badge bg-success">Detected</span>
+                {% else %}
+                <span class="badge bg-danger">Missing</span>
+                {% endif %}
+              </td>
+              <td class="small">{{ config.recommended or "—" }}</td>
+              <td class="small text-muted">{{ config.category }}</td>
+              <td class="small">
+                <div>{{ config.description }}</div>
+                {% if config.note %}<div class="text-info">{{ config.note }}</div>{% endif %}
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+    <div class="card shadow-sm mt-4">
+      <div class="card-header bg-white border-0">
+        <h4 class="mb-1">Rate Limiter Map</h4>
+        <p class="text-muted small mb-0">Adjust the limits below in the referenced files to unblock staging or load-testing traffic.</p>
+      </div>
+      <div class="card-body">
+        <div class="table-responsive">
+          <table class="table table-sm align-middle mb-0">
+            <thead>
+              <tr>
+                <th scope="col">Endpoint</th>
+                <th scope="col">Limit</th>
+                <th scope="col">Source File</th>
+                <th scope="col">Notes</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for limiter in rate_limiters %}
+              <tr>
+                <td><code>{{ limiter.endpoint }}</code></td>
+                <td><span class="badge bg-primary text-white">{{ limiter.limit }}</span></td>
+                <td class="small"><code>{{ limiter.source }}</code></td>
+                <td class="small text-muted">{{ limiter.notes }}</td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+  <div class="alert alert-secondary mt-4">
+    For detailed requirements and status, see <a href="{{ url_for('developer.dashboard') }}">Developer Dashboard</a> and <a href="/docs/todo/CRITICAL_PRELAUNCH.md" target="_blank">CRITICAL_PRELAUNCH.md</a>.
+  </div>
 </div>
-  <div class="card p-3">
-    <h6>Database Configuration</h6>
-    <div>Current URI: <code>{{ db_info.uri }}</code></div>
-    <div>Detected source: <code>{{ db_info.source }}</code></div>
-    <div class="text-muted small">Set <code>DATABASE_INTERNAL_URL</code> or <code>DATABASE_URL</code> for Postgres; falls back to SQLite for local dev.</div>
-  </div>
+{% endblock %}
 
-  <div class="card p-3 mt-3">
-    <h6>Domain Event Dispatcher</h6>
-    <p class="small text-muted mb-2">
-      The app writes every significant action into the <code>domain_event</code> outbox table. To push those events to downstream integrations, run the dispatcher alongside your web workers.
-    </p>
-    <ol class="small mb-2">
-      <li>Provision any HTTP endpoint that should receive events (or leave the webhook unset to mark events processed without delivery).</li>
-      <li>Set <code>DOMAIN_EVENT_WEBHOOK_URL=https://your-endpoint</code> (optional if you only want local logging).</li>
-      <li>Run the worker: <code>flask dispatch-domain-events</code> (use <code>--once</code> for ad-hoc batches, or keep it running as a background process/sidecar).</li>
-      <li>Monitor logs for retries; events exceeding the retry limit are marked with <code>_dispatch_errors</code> in the payload.</li>
-    </ol>
-  </div>
-
-
-    <div class="alert alert-secondary">
-      For detailed requirements and status, see <a href="{{ url_for('developer.dashboard') }}">Developer Dashboard</a> and <a href="/docs/todo/CRITICAL_PRELAUNCH.md" target="_blank">CRITICAL_PRELAUNCH.md</a>.
-  </div>
-
-</div>
-
+{% block scripts %}
 <script>
 async function loadStripeEvents() {
   try {
@@ -431,89 +224,6 @@ async function loadStripeEvents() {
     document.getElementById('stripeEvents').textContent = JSON.stringify(data, null, 2);
   } catch (e) {
     document.getElementById('stripeEvents').textContent = 'Error loading events';
-  }
-}
-
-async function saveFlags() {
-  // Get all feature flag checkboxes
-  const flags = {};
-
-  // Core business features
-  flags.FEATURE_FIFO_TRACKING = document.getElementById('ff_fifo_tracking').checked;
-  flags.FEATURE_BARCODE_SCANNING = document.getElementById('ff_barcode_scanning').checked;
-  flags.FEATURE_PRODUCT_VARIANTS = document.getElementById('ff_product_variants').checked;
-  flags.FEATURE_AUTO_SKU_GENERATION = document.getElementById('ff_auto_sku_generation').checked;
-  flags.FEATURE_RECIPE_VARIATIONS = document.getElementById('ff_recipe_variations').checked;
-  flags.FEATURE_COST_TRACKING = document.getElementById('ff_cost_tracking').checked;
-  flags.FEATURE_EXPIRATION_TRACKING = document.getElementById('ff_expiration_tracking').checked;
-  flags.FEATURE_BULK_OPERATIONS = document.getElementById('ff_bulk_operations').checked;
-
-  // Developer & advanced features
-  flags.FEATURE_INVENTORY_ANALYTICS = document.getElementById('ff_analytics').checked;
-  flags.FEATURE_DEBUG_MODE = document.getElementById('ff_debug_mode').checked;
-  flags.FEATURE_AUTO_BACKUP = document.getElementById('ff_auto_backup').checked;
-  flags.FEATURE_CSV_EXPORT = document.getElementById('ff_csv_export').checked;
-  flags.FEATURE_ADVANCED_REPORTS = document.getElementById('ff_advanced_reports').checked;
-  flags.FEATURE_GLOBAL_ITEM_LIBRARY = document.getElementById('ff_global_item_library').checked;
-
-  // Notification systems
-  flags.FEATURE_EMAIL_NOTIFICATIONS = document.getElementById('ff_email_notifications').checked;
-  flags.FEATURE_BROWSER_NOTIFICATIONS = document.getElementById('ff_browser_notifications').checked;
-
-  // Integration features
-  flags.FEATURE_SHOPIFY_INTEGRATION = document.getElementById('ff_shopify_integration').checked;
-  flags.FEATURE_API_ACCESS = document.getElementById('ff_api_access').checked;
-  flags.FEATURE_OAUTH_PROVIDERS = document.getElementById('ff_oauth_providers').checked;
-
-  // AI features
-  flags.FEATURE_AI_RECIPE_OPTIMIZATION = document.getElementById('ff_ai_recipe_optimization').checked;
-  flags.FEATURE_AI_DEMAND_FORECASTING = document.getElementById('ff_ai_demand_forecasting').checked;
-  flags.FEATURE_AI_QUALITY_INSIGHTS = document.getElementById('ff_ai_quality_insights').checked;
-
-  // Public tools
-  flags.TOOLS_SOAP = document.getElementById('tools_soap').checked;
-  flags.TOOLS_CANDLES = document.getElementById('tools_candles').checked;
-  flags.TOOLS_LOTIONS = document.getElementById('tools_lotions').checked;
-  flags.TOOLS_HERBAL = document.getElementById('tools_herbal').checked;
-  flags.TOOLS_BAKING = document.getElementById('tools_baking').checked;
-
-  const csrfToken = document.querySelector('meta[name=csrf-token]').getAttribute('content');
-  const resp = await fetch('{{ url_for('developer.integrations_set_feature_flags') }}', {
-    method: 'POST', 
-    headers: { 
-      'Content-Type': 'application/json',
-      'X-CSRFToken': csrfToken
-    },
-    body: JSON.stringify(flags)
-  });
-
-  if (resp.ok) {
-    // Show success feedback
-    const result = await resp.json();
-    console.log('Feature flags updated successfully');
-    
-    // Show visual confirmation
-    const statusDiv = document.getElementById('flagSaveStatus');
-    statusDiv.className = 'alert alert-success';
-    statusDiv.style.display = 'block';
-    
-    // Auto-hide after 3 seconds
-    setTimeout(() => {
-      statusDiv.style.display = 'none';
-    }, 3000);
-  } else {
-    console.error('Failed to update feature flags');
-    
-    // Show error feedback
-    const statusDiv = document.getElementById('flagSaveStatus');
-    statusDiv.className = 'alert alert-danger';
-    statusDiv.innerHTML = '❌ Failed to update feature flags';
-    statusDiv.style.display = 'block';
-    
-    // Auto-hide after 5 seconds
-    setTimeout(() => {
-      statusDiv.style.display = 'none';
-    }, 5000);
   }
 }
 

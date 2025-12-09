@@ -1,6 +1,7 @@
 from datetime import datetime, timezone
-from ..extensions import db
+from sqlalchemy import func
 from sqlalchemy.orm import backref
+from ..extensions import db
 
 # Association table for subscription tier permissions
 subscription_tier_permission = db.Table('subscription_tier_permission',
@@ -138,3 +139,42 @@ class SubscriptionTier(db.Model):
 
     def __repr__(self):
         return f'<SubscriptionTier {self.name}>'
+
+    @classmethod
+    def find_by_identifier(cls, identifier):
+        """Resolve tiers by numeric id, name, or legacy string identifiers."""
+        if identifier is None:
+            return None
+
+        ident = str(identifier).strip()
+        if not ident:
+            return None
+
+        # Try numeric ID first
+        if ident.isdigit():
+            tier = db.session.get(cls, int(ident))
+            if tier:
+                return tier
+
+        normalized = ident.lower()
+
+        # Match by name (case-insensitive)
+        tier = cls.query.filter(func.lower(cls.name) == normalized).first()
+        if tier:
+            return tier
+
+        # Support legacy string sentinels
+        if normalized == 'exempt':
+            tier = cls.query.filter_by(billing_provider='exempt').order_by(cls.id.asc()).first()
+            if tier:
+                return tier
+            return None
+
+        # Allow lookup via known external keys
+        for attr in ('stripe_lookup_key', 'whop_product_key', 'stripe_storage_lookup_key'):
+            column = getattr(cls, attr)
+            tier = cls.query.filter(column == ident).first()
+            if tier:
+                return tier
+
+        return None

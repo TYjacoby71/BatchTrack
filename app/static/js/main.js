@@ -1,3 +1,7 @@
+import { cachedFetch } from './core/CacheManager.js';
+
+window.cachedFetch = cachedFetch;
+
 // Get CSRF token from meta tag
 function getCSRFToken() {
   return document.querySelector('meta[name="csrf-token"]')?.content;

@@ -1,5 +1,5 @@
 from datetime import datetime, timedelta, date, timezone
-from ...models import db, InventoryItem, InventoryHistory, UnifiedInventoryHistory, ProductSKU, ProductSKUHistory, Batch, InventoryLot
+from ...models import db, InventoryItem, InventoryHistory, UnifiedInventoryHistory, ProductSKU, Batch, InventoryLot
 from sqlalchemy import and_, or_
 from sqlalchemy.exc import OperationalError
 from sqlalchemy.orm import joinedload
@@ -102,7 +102,7 @@ class ExpirationService:
             return None
 
         # Get the inventory item for master shelf life
-        inventory_item = InventoryItem.query.get(fifo_entry.inventory_item_id)
+        inventory_item = db.session.get(InventoryItem, fifo_entry.inventory_item_id)
         if not inventory_item:
             return None
 
@@ -110,7 +110,7 @@ class ExpirationService:
 
         # If this entry is from a batch
         if fifo_entry.batch_id:
-            batch = Batch.query.get(fifo_entry.batch_id)
+            batch = db.session.get(Batch, fifo_entry.batch_id)
             if batch and batch.is_perishable and batch.shelf_life_days:
                 # Use batch completion date (completed_at) as the start date
                 start_date = batch.completed_at
@@ -129,27 +129,29 @@ class ExpirationService:
         return None
 
     @staticmethod
-    def get_effective_sku_expiration_date(sku_entry) -> Optional[datetime]:
+    def get_effective_sku_expiration_date(lot) -> Optional[datetime]:
         """
-        Get the effective expiration date for a ProductSKU FIFO entry using proper hierarchy:
+        Get the effective expiration date for a product InventoryLot using proper hierarchy:
         1. If from batch - use batch's completed_at + batch shelf_life_days (or use greater of batch vs master)
-        2. If manual entry - use entry timestamp + master inventory item shelf_life_days
+        2. If manual entry - use lot.received_date + master inventory item shelf_life_days
         """
-        # Only process perishable items
-        if not sku_entry.is_perishable:
+        if not lot:
             return None
 
-        # Get the inventory item for master shelf life
-        inventory_item = InventoryItem.query.get(sku_entry.inventory_item_id)
-        if not inventory_item:
-            logger.warning(f"No inventory item found for SKU entry {sku_entry.id}")
+        # Only process perishable items
+        inventory_item = lot.inventory_item or db.session.get(InventoryItem, lot.inventory_item_id)
+        if not inventory_item or not inventory_item.is_perishable:
             return None
+
+        # If the lot already has an explicit expiration date, trust it
+        if lot.expiration_date:
+            return lot.expiration_date
 
         master_shelf_life = inventory_item.shelf_life_days if inventory_item.is_perishable else None
 
         # If this entry is from a batch
-        if sku_entry.batch_id:
-            batch = Batch.query.get(sku_entry.batch_id)
+        if lot.batch_id:
+            batch = db.session.get(Batch, lot.batch_id)
             if batch and batch.is_perishable and batch.shelf_life_days:
                 # Use batch completion date (completed_at) as the start date
                 start_date = batch.completed_at
@@ -164,14 +166,14 @@ class ExpirationService:
                 else:
                     logger.warning(f"Batch {batch.id} has no completion date")
             else:
-                logger.debug(f"Batch {sku_entry.batch_id} not found or not perishable")
+                logger.debug(f"Batch {lot.batch_id} not found or not perishable")
 
-        # For manual entries, use the entry timestamp + master shelf life
-        if master_shelf_life and sku_entry.timestamp:
-            expiration_date = ExpirationService.calculate_expiration_date(sku_entry.timestamp, master_shelf_life)
+        # For manual entries, use the lot received date + master shelf life
+        if master_shelf_life and lot.received_date:
+            expiration_date = ExpirationService.calculate_expiration_date(lot.received_date, master_shelf_life)
             return expiration_date
 
-        logger.debug(f"SKU entry {sku_entry.id}: No valid expiration calculation path found")
+        logger.debug(f"Lot {lot.id}: No valid expiration calculation path found")
         return None
 
     @staticmethod
@@ -233,94 +235,94 @@ class ExpirationService:
 
     @staticmethod
     def _query_sku_entries(expired=False, days_ahead: int = None):
-        """Query product SKU entries based on expiration criteria - only perishable items"""
+        """Query product SKU lots based on expiration criteria"""
         from ...utils.timezone_utils import TimezoneUtils
-        from ...models import Product, ProductVariant, ProductSKU, ProductSKUHistory
         from datetime import timezone
 
-        # Use UTC for all time comparisons
         now_utc = TimezoneUtils.utc_now()
 
-        base_filter = [
-            ProductSKUHistory.remaining_quantity > 0,
-            ProductSKUHistory.quantity_change > 0,  # Only addition entries
-            ProductSKUHistory.is_perishable == True,  # Only perishable items
-            InventoryItem.organization_id == current_user.organization_id if current_user.is_authenticated and current_user.organization_id else True
-        ]
+        query = db.session.query(InventoryLot).join(
+            InventoryItem, InventoryLot.inventory_item_id == InventoryItem.id
+        ).join(
+            ProductSKU, ProductSKU.inventory_item_id == InventoryLot.inventory_item_id
+        ).options(
+            joinedload(InventoryLot.inventory_item)
+        ).filter(
+            and_(
+                InventoryLot.remaining_quantity > 0,
+                InventoryItem.type == 'product',
+                InventoryItem.is_perishable == True,
+                InventoryItem.organization_id == current_user.organization_id if current_user.is_authenticated and current_user.organization_id else True
+            )
+        )
 
-        # Get SKU entries with expiration data
-        sku_entries = db.session.query(ProductSKUHistory).join(
-            InventoryItem, ProductSKUHistory.inventory_item_id == InventoryItem.id
-        ).filter(and_(*base_filter)).all()
-
-        # Filter by expiration criteria using new logic
+        lots = query.all()
         filtered_entries = []
-        for sku_entry in sku_entries:
-            # Calculate expiration date using proper hierarchy
-            expiration_date = ExpirationService.get_effective_sku_expiration_date(sku_entry)
+
+        for lot in lots:
+            expiration_date = ExpirationService.get_effective_sku_expiration_date(lot)
 
             if not expiration_date:
                 continue
 
             try:
-                # Convert expiration date to UTC for comparison
                 if expiration_date.tzinfo:
                     expiration_utc = expiration_date.astimezone(timezone.utc)
                 else:
                     expiration_utc = expiration_date.replace(tzinfo=timezone.utc)
 
-                # Ensure now_utc is timezone-aware
                 if now_utc.tzinfo is None:
                     now_utc = now_utc.replace(tzinfo=timezone.utc)
 
-                # Apply time-based filtering using UTC
                 if expired and expiration_utc < now_utc:
-                    filtered_entries.append(sku_entry)
+                    filtered_entries.append(lot)
                 elif days_ahead:
                     future_date_utc = now_utc + timedelta(days=days_ahead)
                     if now_utc <= expiration_utc <= future_date_utc:
-                        filtered_entries.append(sku_entry)
+                        filtered_entries.append(lot)
+                elif not expired and days_ahead is None:
+                    filtered_entries.append(lot)
             except (TypeError, ValueError) as e:
-                logger.warning(f"Timezone comparison error for SKU entry {sku_entry.id}: {e}")
+                logger.warning(f"Timezone comparison error for lot {lot.id}: {e}")
                 continue
 
         return filtered_entries
 
     @staticmethod
-    def _format_sku_entry(sku_entry):
+    def _format_sku_entry(lot):
         """Format SKU entry for consistent return structure"""
         # Calculate expiration date using new hierarchy logic
-        expiration_date = ExpirationService.get_effective_sku_expiration_date(sku_entry)
+        expiration_date = ExpirationService.get_effective_sku_expiration_date(lot)
 
         if expiration_date:
             # Get product info
             from ...models import Product, ProductVariant, ProductSKU
-            sku = ProductSKU.query.filter_by(inventory_item_id=sku_entry.inventory_item_id).first()
+            sku = ProductSKU.query.filter_by(inventory_item_id=lot.inventory_item_id).first()
             if not sku:
-                logger.warning(f"No SKU found for inventory_item_id {sku_entry.inventory_item_id}")
+                logger.warning(f"No SKU found for inventory_item_id {lot.inventory_item_id}")
                 return None
 
-            product = Product.query.get(sku.product_id)
-            variant = ProductVariant.query.get(sku.variant_id)
+            product = db.session.get(Product, sku.product_id)
+            variant = db.session.get(ProductVariant, sku.variant_id)
 
             return {
-                'inventory_item_id': sku_entry.inventory_item_id,
+                'inventory_item_id': lot.inventory_item_id,
                 'product_name': product.name if product else 'Unknown Product',
                 'variant_name': variant.name if variant else 'Unknown Variant',
                 'size_label': sku.size_label if sku else 'Unknown Size',
-                'quantity': sku_entry.remaining_quantity,
-                'unit': sku_entry.unit,
+                'quantity': float(lot.remaining_quantity or 0.0),
+                'unit': lot.unit,
                 'expiration_date': expiration_date,  # Keep as datetime object for template calculations
-                'history_id': sku_entry.id,
-                'product_inv_id': sku_entry.id,
+                'history_id': lot.id,
+                'product_inv_id': lot.id,
                 'product_id': sku.product_id if sku else None,
                 'variant_id': sku.variant_id if sku else None,
-                'lot_number': sku_entry.fifo_code or f"LOT-{sku_entry.id}"
+                'lot_number': lot.fifo_code or f"LOT-{lot.id}"
             }
 
     @staticmethod
     def get_expired_inventory_items() -> Dict:
-        """Get all expired inventory items using InventoryLot objects and legacy SKU history for products"""
+        """Get all expired inventory items, including product lots"""
         expired_fifo_entries = ExpirationService._query_fifo_entries(expired=True)
         expired_sku_entries = ExpirationService._query_sku_entries(expired=True)
 
@@ -338,7 +340,7 @@ class ExpirationService:
 
     @staticmethod
     def get_expiring_soon_items(days_ahead: int = 7) -> Dict:
-        """Get items expiring within specified days using InventoryLot objects and legacy SKU history for products"""
+        """Get items expiring within specified days, including product lots"""
         expiring_fifo_entries = ExpirationService._query_fifo_entries(days_ahead=days_ahead)
         expiring_sku_entries = ExpirationService._query_sku_entries(days_ahead=days_ahead)
 
@@ -358,7 +360,7 @@ class ExpirationService:
     def update_fifo_expiration_data(inventory_item_id: int, shelf_life_days: int):
         """Update expiration data for inventory item - updates master item and existing lots metadata"""
         # Update the master inventory item
-        item = InventoryItem.query.get(inventory_item_id)
+        item = db.session.get(InventoryItem, inventory_item_id)
         if item:
             item.is_perishable = True
             item.shelf_life_days = shelf_life_days
@@ -381,7 +383,7 @@ class ExpirationService:
     @staticmethod
     def get_expiration_date_for_new_entry(inventory_item_id: int, batch_id: Optional[int] = None) -> Optional[datetime]:
         """Calculate expiration date for a new lot being created (for InventoryLot creation)"""
-        inventory_item = InventoryItem.query.get(inventory_item_id)
+        inventory_item = db.session.get(InventoryItem, inventory_item_id)
         if not inventory_item or not inventory_item.is_perishable:
             return None
 
@@ -393,7 +395,7 @@ class ExpirationService:
 
         # If this entry is from a batch
         if batch_id:
-            batch = Batch.query.get(batch_id)
+            batch = db.session.get(Batch, batch_id)
             if batch and batch.is_perishable and batch.shelf_life_days:
                 # Use batch completion date (completed_at) as the start date
                 start_date = batch.completed_at or now_utc
@@ -507,7 +509,7 @@ class ExpirationService:
             if kind in ("fifo", "raw"):
                 # Use InventoryLot for lot-based tracking
                 try:
-                    lot = InventoryLot.query.get(entry_id)
+                    lot = db.session.get(InventoryLot, entry_id)
                 except OperationalError:
                     lot = None
                 # Fallback to UnifiedInventoryHistory for canonical FIFO entries
@@ -515,12 +517,12 @@ class ExpirationService:
                     entry = None
                 else:
                     try:
-                        entry = UnifiedInventoryHistory.query.get(entry_id)
+                        entry = db.session.get(UnifiedInventoryHistory, entry_id)
                     except OperationalError:
                         entry = None
                 # Legacy compatibility - some tests/bootstrap data still use InventoryHistory
                 if not entry and not lot:
-                    entry = InventoryHistory.query.get(entry_id)
+                    entry = db.session.get(InventoryHistory, entry_id)
 
                 if not entry and not lot:
                     return False, "Lot or FIFO entry not found"
@@ -543,18 +545,19 @@ class ExpirationService:
                 return result, ("Successfully marked FIFO entry as expired" if entry else "Successfully marked lot as expired")
 
             elif kind == "product":
-                entry = ProductSKUHistory.query.get(entry_id)
-                if not entry:
-                    return False, "Product SKU entry not found"
+                lot = db.session.get(InventoryLot, entry_id)
+                if not lot:
+                    return False, "Product lot not found"
+
+                use_qty = float(lot.remaining_quantity if quantity is None else quantity)
 
                 result = process_inventory_adjustment(
-                    item_id=entry.inventory_item_id,
-                    quantity=-quantity,
+                    item_id=lot.inventory_item_id,
+                    quantity=-use_qty,
                     change_type="spoil",
-                    unit=entry.unit,
+                    unit=lot.unit,
                     notes=f"Expired product lot disposal #{entry_id}: {notes}",
-                    created_by=current_user.id if getattr(current_user, "is_authenticated", False) else None,
-                    item_type='product'
+                    created_by=current_user.id if getattr(current_user, "is_authenticated", False) else None
                 )
                 return result, "Successfully marked product FIFO entry as expired"
 

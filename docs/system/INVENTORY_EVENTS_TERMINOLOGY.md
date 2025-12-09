@@ -13,7 +13,7 @@ Identifiers:
 - Legacy: `fifo_reference_id` (reference to another event). Deprecated in favor of `affected_lot_id`.
 
 Generation:
-- Event codes are generated in `app/utils/fifo_generator.py` based on `change_type`.
+ - Event codes are generated in `app/utils/inventory_event_code_generator.py` based on `change_type`.
 - Lot-creating operations use `LOT-` prefix; finished batch events display the batch label as the event code.
 
 Display rules:

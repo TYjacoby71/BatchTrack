@@ -1,376 +1,144 @@
+from __future__ import annotations
+
 import logging
+from dataclasses import dataclass
+from importlib import import_module
+from typing import Iterable, List
+
 logger = logging.getLogger(__name__)
 
-def register_blueprints(app):
-    """Register all blueprints with the Flask app."""
 
-    # Track successful registrations
-    successful_registrations = []
-    failed_registrations = []
+@dataclass(frozen=True)
+class BlueprintSpec:
+    module: str
+    attribute: str
+    url_prefix: str | None = None
+    description: str | None = None
 
-    def safe_register_blueprint(import_path, blueprint_name, url_prefix=None, description=None):
-        """Safely register a blueprint with error handling"""
-        try:
-            module_path, bp_name = import_path.rsplit('.', 1)
-            module = __import__(module_path, fromlist=[bp_name])
-            blueprint = getattr(module, bp_name)
 
-            if url_prefix:
-                app.register_blueprint(blueprint, url_prefix=url_prefix)
-            else:
-                app.register_blueprint(blueprint)
+CORE_BLUEPRINTS: tuple[BlueprintSpec, ...] = (
+    BlueprintSpec("app.blueprints.auth", "auth_bp", "/auth", "Authentication"),
+    BlueprintSpec("app.blueprints.admin", "admin_bp", "/admin", "Admin"),
+    BlueprintSpec("app.blueprints.developer", "developer_bp", "/developer", "Developer"),
+    BlueprintSpec("app.blueprints.inventory", "inventory_bp", "/inventory", "Inventory"),
+    BlueprintSpec("app.blueprints.recipes", "recipes_bp", "/recipes", "Recipes"),
+    BlueprintSpec("app.blueprints.batches", "batches_bp", "/batches", "Batches"),
+    BlueprintSpec("app.blueprints.organization.routes", "organization_bp", "/organization", "Organization"),
+    BlueprintSpec("app.blueprints.billing", "billing_bp", "/billing", "Billing"),
+    BlueprintSpec("app.blueprints.onboarding.routes", "onboarding_bp", "/onboarding", "Onboarding"),
+    BlueprintSpec("app.blueprints.settings", "settings_bp", "/settings", "Settings"),
+    BlueprintSpec("app.blueprints.timers", "timers_bp", "/timers", "Timers"),
+    BlueprintSpec("app.blueprints.expiration", "expiration_bp", "/expiration", "Expiration"),
+    BlueprintSpec("app.blueprints.conversion", "conversion_bp", "/conversion", "Conversion"),
+    BlueprintSpec("app.blueprints.production_planning", "production_planning_bp", "/production-planning", "Production Planning"),
+)
 
-            successful_registrations.append(description or blueprint_name)
-            return True
-        except Exception as e:
-            failed_registrations.append(f"{description or blueprint_name}: {e}")
-            return False
+API_BLUEPRINTS: tuple[BlueprintSpec, ...] = (
+    BlueprintSpec("app.blueprints.api.public", "public_api_bp", "/api/public", "Public API"),
+    BlueprintSpec("app.blueprints.api.routes", "api_bp", "/api", "Main API"),
+    BlueprintSpec("app.blueprints.api.drawers", "drawers_bp", None, "Drawer API"),
+)
 
-    # Core blueprints - these should always work
-    safe_register_blueprint('app.blueprints.auth.auth_bp', 'auth_bp', '/auth', 'Authentication')
-    safe_register_blueprint('app.blueprints.admin.admin_bp', 'admin_bp', '/admin', 'Admin')
-    safe_register_blueprint('app.blueprints.developer.developer_bp', 'developer_bp', '/developer', 'Developer')
-    safe_register_blueprint('app.blueprints.inventory.inventory_bp', 'inventory_bp', '/inventory', 'Inventory')
-    safe_register_blueprint('app.blueprints.recipes.recipes_bp', 'recipes_bp', '/recipes', 'Recipes')
-    safe_register_blueprint('app.blueprints.batches.batches_bp', 'batches_bp', '/batches', 'Batches')
-    safe_register_blueprint('app.blueprints.organization.routes.organization_bp', 'organization_bp', '/organization', 'Organization')
-    safe_register_blueprint('app.blueprints.billing.billing_bp', 'billing_bp', '/billing', 'Billing')
-    safe_register_blueprint('app.blueprints.settings.settings_bp', 'settings_bp', '/settings', 'Settings')
-    safe_register_blueprint('app.blueprints.timers.timers_bp', 'timers_bp', '/timers', 'Timers')
-    safe_register_blueprint('app.blueprints.expiration.expiration_bp', 'expiration_bp', '/expiration', 'Expiration')
-    safe_register_blueprint('app.blueprints.conversion.conversion_bp', 'conversion_bp', '/conversion', 'Conversion')
+ROUTE_BLUEPRINTS: tuple[BlueprintSpec, ...] = (
+    BlueprintSpec("app.routes.app_routes", "app_routes_bp", None, "App Routes"),
+    BlueprintSpec("app.routes.legal_routes", "legal_bp", "/legal", "Legal Routes"),
+    BlueprintSpec("app.routes.bulk_stock_routes", "bulk_stock_bp", "/bulk-stock", "Bulk Stock"),
+    BlueprintSpec("app.routes.fault_log_routes", "faults_bp", "/faults", "Fault Log"),
+    BlueprintSpec("app.routes.tag_manager_routes", "tag_manager_bp", "/tag-manager", "Tag Manager"),
+    BlueprintSpec("app.routes.global_library_routes", "global_library_bp", None, "Global Library"),
+    BlueprintSpec("app.routes.waitlist_routes", "waitlist_bp", None, "Waitlist"),
+    BlueprintSpec("app.routes.help_routes", "help_bp", None, "Help & Instructions"),
+    BlueprintSpec("app.routes.tools_routes", "tools_bp", "/tools", "Public Tools"),
+)
 
-    # Product blueprints - use the register function
+EXTRA_BLUEPRINTS: tuple[BlueprintSpec, ...] = (
+    BlueprintSpec("app.routes.exports_routes", "exports_bp", "/exports", "Exports"),
+)
+
+BLUEPRINT_SPECS: tuple[BlueprintSpec, ...] = CORE_BLUEPRINTS + API_BLUEPRINTS + ROUTE_BLUEPRINTS + EXTRA_BLUEPRINTS
+
+CSRF_EXEMPT_VIEWS: tuple[str, ...] = (
+    "inventory.adjust_inventory",
+    "waitlist.join_waitlist",
+    "tools_bp.tools_draft",
+)
+
+
+def register_blueprints(app) -> None:
+    """Safely register all application blueprints."""
+
+    successes: List[str] = []
+    failures: List[str] = []
+
+    for spec in BLUEPRINT_SPECS:
+        _safe_register_blueprint(app, spec, successes, failures)
+
+    _register_products(app, successes, failures)
+    _log_summary(app, successes, failures)
+    _apply_csrf_exemptions(app)
+
+
+def _safe_register_blueprint(app, spec: BlueprintSpec, successes: List[str], failures: List[str]) -> bool:
+    try:
+        module = import_module(spec.module)
+        blueprint = getattr(module, spec.attribute)
+        if spec.url_prefix:
+            app.register_blueprint(blueprint, url_prefix=spec.url_prefix)
+        else:
+            app.register_blueprint(blueprint)
+        successes.append(spec.description or spec.attribute)
+        return True
+    except Exception as exc:  # pragma: no cover - defensive
+        failures.append(f"{spec.description or spec.attribute}: {exc}")
+        return False
+
+
+def _register_products(app, successes: List[str], failures: List[str]) -> None:
     try:
         from app.blueprints.products import register_product_blueprints
+
         register_product_blueprints(app)
-        successful_registrations.append("Products Main")
-    except Exception as e:
-        failed_registrations.append(f"Products Main: {e}")
-        # Fallback - try to register just the main products blueprint
+        successes.append("Products")
+    except Exception as exc:
+        failures.append(f"Products: {exc}")
         try:
             from app.blueprints.products.products import products_bp
+
             app.register_blueprint(products_bp)
-            successful_registrations.append("Products Fallback")
-        except Exception as e2:
-            failed_registrations.append(f"Products Fallback: {e2}")
-
-    # Product blueprints are now registered via register_product_blueprints() above
-    # Remove individual registrations to avoid conflicts
-
-    # API blueprints - these are often problematic
-    safe_register_blueprint('app.blueprints.api.public.public_api_bp', 'public_api_bp', '/api/public', 'Public API')
-    safe_register_blueprint('app.blueprints.api.routes.api_bp', 'api_bp', '/api', 'Main API')
-    safe_register_blueprint('app.blueprints.api.drawer_actions.drawer_actions_bp', 'drawer_actions_bp', None, 'Drawer Actions')
-    safe_register_blueprint('app.blueprints.api.retention_drawer.retention_bp', 'retention_bp', None, 'Retention Drawer API')
-    safe_register_blueprint('app.blueprints.api.global_link_drawer.global_link_bp', 'global_link_bp', None, 'Global Link Drawer API')
-
-    # Note: FIFO blueprint removed - functionality moved to inventory_adjustment service
-
-    # Register standalone route modules
-    route_modules = [
-        ('app.routes.app_routes.app_routes_bp', 'app_routes_bp', None, 'App Routes'),
-        ('app.routes.legal_routes.legal_bp', 'legal_bp', '/legal', 'Legal Routes'),
-        ('app.routes.bulk_stock_routes.bulk_stock_bp', 'bulk_stock_bp', '/bulk-stock', 'Bulk Stock'),
-        ('app.routes.fault_log_routes.faults_bp', 'faults_bp', '/faults', 'Fault Log'),
-        ('app.routes.tag_manager_routes.tag_manager_bp', 'tag_manager_bp', '/tag-manager', 'Tag Manager'),
-        ('app.routes.global_library_routes.global_library_bp', 'global_library_bp', None, 'Global Library Public'),
-        ('app.routes.waitlist_routes.waitlist_bp', 'waitlist_bp', None, 'Waitlist'),
-        # Public tools mounted at /tools
-        ('app.routes.tools_routes.tools_bp', 'tools_bp', '/tools', 'Public Tools')
-    ]
-
-    for import_path, bp_name, url_prefix, description in route_modules:
-        safe_register_blueprint(import_path, bp_name, url_prefix, description)
-
-    # Register production planning blueprint
-    safe_register_blueprint('app.blueprints.production_planning.production_planning_bp', 'production_planning_bp', '/production-planning', 'Production Planning')
-
-    # Exports blueprint (category-specific exports)
-    try:
-        from flask import Blueprint
-        from flask_login import login_required, current_user
-        # Create a lightweight exports blueprint inline to avoid import churn
-        from app.models import Recipe
-        exports_bp = Blueprint('exports', __name__, url_prefix='/exports')
-
-        @exports_bp.route('/recipe/<int:recipe_id>/soap-inci')
-        @login_required
-        def soap_inci_recipe(recipe_id: int):
-            from flask import render_template, abort
-            rec = Recipe.query.get(recipe_id)
-            if not rec:
-                abort(404)
-            # Organization scoping
-            if getattr(current_user, 'organization_id', None) and rec.organization_id != current_user.organization_id:
-                abort(403)
-            return render_template('exports/soap_inci.html', recipe=rec, source='recipe')
-
-        @exports_bp.route('/recipe/<int:recipe_id>/candle-label')
-        @login_required
-        def candle_label_recipe(recipe_id: int):
-            from flask import render_template, abort
-            rec = Recipe.query.get(recipe_id)
-            if not rec:
-                abort(404)
-            if getattr(current_user, 'organization_id', None) and rec.organization_id != current_user.organization_id:
-                abort(403)
-            return render_template('exports/candle_label.html', recipe=rec, source='recipe')
-
-        @exports_bp.route('/recipe/<int:recipe_id>/baker-sheet')
-        @login_required
-        def baker_sheet_recipe(recipe_id: int):
-            from flask import render_template, abort
-            rec = Recipe.query.get(recipe_id)
-            if not rec:
-                abort(404)
-            if getattr(current_user, 'organization_id', None) and rec.organization_id != current_user.organization_id:
-                abort(403)
-            return render_template('exports/baker_sheet.html', recipe=rec, source='recipe')
-
-        @exports_bp.route('/recipe/<int:recipe_id>/lotion-inci')
-        @login_required
-        def lotion_inci_recipe(recipe_id: int):
-            from flask import render_template, abort
-            rec = Recipe.query.get(recipe_id)
-            if not rec:
-                abort(404)
-            if getattr(current_user, 'organization_id', None) and rec.organization_id != current_user.organization_id:
-                abort(403)
-            return render_template('exports/lotion_inci.html', recipe=rec, source='recipe')
-
-        @exports_bp.route('/tool/soaps/inci')
-        def soap_inci_tool():
-            from flask import render_template, session
-            draft = session.get('tool_draft') or {}
-            return render_template('exports/soap_inci.html', tool_draft=draft, source='tool')
-
-        @exports_bp.route('/tool/candles/label')
-        def candle_label_tool():
-            from flask import render_template, session
-            draft = session.get('tool_draft') or {}
-            return render_template('exports/candle_label.html', tool_draft=draft, source='tool')
-
-        @exports_bp.route('/tool/baker/sheet')
-        def baker_sheet_tool():
-            from flask import render_template, session
-            draft = session.get('tool_draft') or {}
-            return render_template('exports/baker_sheet.html', tool_draft=draft, source='tool')
-
-        @exports_bp.route('/tool/lotions/inci')
-        def lotion_inci_tool():
-            from flask import render_template, session
-            draft = session.get('tool_draft') or {}
-            return render_template('exports/lotion_inci.html', tool_draft=draft, source='tool')
-
-        # CSV/PDF export routes (recipe-scoped; require login)
-        @exports_bp.route('/recipe/<int:recipe_id>/soap-inci.csv')
-        @login_required
-        def soap_inci_recipe_csv(recipe_id: int):
-            from flask import abort, Response
-            rec = Recipe.query.get(recipe_id)
-            if not rec:
-                abort(404)
-            if getattr(current_user, 'organization_id', None) and rec.organization_id != current_user.organization_id:
-                abort(403)
-            # Delegate to export service
-            from app.services.exports import ExportService
-            csv_text = ExportService.soap_inci_csv(recipe=rec)
-            return Response(csv_text, mimetype='text/csv')
-
-        @exports_bp.route('/recipe/<int:recipe_id>/soap-inci.pdf')
-        @login_required
-        def soap_inci_recipe_pdf(recipe_id: int):
-            from flask import abort, Response
-            rec = Recipe.query.get(recipe_id)
-            if not rec:
-                abort(404)
-            if getattr(current_user, 'organization_id', None) and rec.organization_id != current_user.organization_id:
-                abort(403)
-            from app.services.exports import ExportService
-            pdf_bytes = ExportService.soap_inci_pdf(recipe=rec)
-            return Response(pdf_bytes, mimetype='application/pdf')
-
-        @exports_bp.route('/recipe/<int:recipe_id>/candle-label.csv')
-        @login_required
-        def candle_label_recipe_csv(recipe_id: int):
-            from flask import abort, Response
-            rec = Recipe.query.get(recipe_id)
-            if not rec:
-                abort(404)
-            if getattr(current_user, 'organization_id', None) and rec.organization_id != current_user.organization_id:
-                abort(403)
-            from app.services.exports import ExportService
-            csv_text = ExportService.candle_label_csv(recipe=rec)
-            return Response(csv_text, mimetype='text/csv')
-
-        @exports_bp.route('/recipe/<int:recipe_id>/candle-label.pdf')
-        @login_required
-        def candle_label_recipe_pdf(recipe_id: int):
-            from flask import abort, Response
-            rec = Recipe.query.get(recipe_id)
-            if not rec:
-                abort(404)
-            if getattr(current_user, 'organization_id', None) and rec.organization_id != current_user.organization_id:
-                abort(403)
-            from app.services.exports import ExportService
-            pdf_bytes = ExportService.candle_label_pdf(recipe=rec)
-            return Response(pdf_bytes, mimetype='application/pdf')
-
-        @exports_bp.route('/recipe/<int:recipe_id>/baker-sheet.csv')
-        @login_required
-        def baker_sheet_recipe_csv(recipe_id: int):
-            from flask import abort, Response
-            rec = Recipe.query.get(recipe_id)
-            if not rec:
-                abort(404)
-            if getattr(current_user, 'organization_id', None) and rec.organization_id != current_user.organization_id:
-                abort(403)
-            from app.services.exports import ExportService
-            csv_text = ExportService.baker_sheet_csv(recipe=rec)
-            return Response(csv_text, mimetype='text/csv')
-
-        @exports_bp.route('/recipe/<int:recipe_id>/baker-sheet.pdf')
-        @login_required
-        def baker_sheet_recipe_pdf(recipe_id: int):
-            from flask import abort, Response
-            rec = Recipe.query.get(recipe_id)
-            if not rec:
-                abort(404)
-            if getattr(current_user, 'organization_id', None) and rec.organization_id != current_user.organization_id:
-                abort(403)
-            from app.services.exports import ExportService
-            pdf_bytes = ExportService.baker_sheet_pdf(recipe=rec)
-            return Response(pdf_bytes, mimetype='application/pdf')
-
-        @exports_bp.route('/recipe/<int:recipe_id>/lotion-inci.csv')
-        @login_required
-        def lotion_inci_recipe_csv(recipe_id: int):
-            from flask import abort, Response
-            rec = Recipe.query.get(recipe_id)
-            if not rec:
-                abort(404)
-            if getattr(current_user, 'organization_id', None) and rec.organization_id != current_user.organization_id:
-                abort(403)
-            from app.services.exports import ExportService
-            csv_text = ExportService.lotion_inci_csv(recipe=rec)
-            return Response(csv_text, mimetype='text/csv')
-
-        @exports_bp.route('/recipe/<int:recipe_id>/lotion-inci.pdf')
-        @login_required
-        def lotion_inci_recipe_pdf(recipe_id: int):
-            from flask import abort, Response
-            rec = Recipe.query.get(recipe_id)
-            if not rec:
-                abort(404)
-            if getattr(current_user, 'organization_id', None) and rec.organization_id != current_user.organization_id:
-                abort(403)
-            from app.services.exports import ExportService
-            pdf_bytes = ExportService.lotion_inci_pdf(recipe=rec)
-            return Response(pdf_bytes, mimetype='application/pdf')
-
-        # Public tool preview CSV/PDF using session draft
-        @exports_bp.route('/tool/soaps/inci.csv')
-        def soap_inci_tool_csv():
-            from flask import session, Response
-            draft = session.get('tool_draft') or {}
-            from app.services.exports import ExportService
-            csv_text = ExportService.soap_inci_csv(tool_draft=draft)
-            return Response(csv_text, mimetype='text/csv')
-
-        @exports_bp.route('/tool/soaps/inci.pdf')
-        def soap_inci_tool_pdf():
-            from flask import session, Response
-            draft = session.get('tool_draft') or {}
-            from app.services.exports import ExportService
-            pdf_bytes = ExportService.soap_inci_pdf(tool_draft=draft)
-            return Response(pdf_bytes, mimetype='application/pdf')
-
-        @exports_bp.route('/tool/candles/label.csv')
-        def candle_label_tool_csv():
-            from flask import session, Response
-            draft = session.get('tool_draft') or {}
-            from app.services.exports import ExportService
-            csv_text = ExportService.candle_label_csv(tool_draft=draft)
-            return Response(csv_text, mimetype='text/csv')
-
-        @exports_bp.route('/tool/candles/label.pdf')
-        def candle_label_tool_pdf():
-            from flask import session, Response
-            draft = session.get('tool_draft') or {}
-            from app.services.exports import ExportService
-            pdf_bytes = ExportService.candle_label_pdf(tool_draft=draft)
-            return Response(pdf_bytes, mimetype='application/pdf')
-
-        @exports_bp.route('/tool/baker/sheet.csv')
-        def baker_sheet_tool_csv():
-            from flask import session, Response
-            draft = session.get('tool_draft') or {}
-            from app.services.exports import ExportService
-            csv_text = ExportService.baker_sheet_csv(tool_draft=draft)
-            return Response(csv_text, mimetype='text/csv')
-
-        @exports_bp.route('/tool/baker/sheet.pdf')
-        def baker_sheet_tool_pdf():
-            from flask import session, Response
-            draft = session.get('tool_draft') or {}
-            from app.services.exports import ExportService
-            pdf_bytes = ExportService.baker_sheet_pdf(tool_draft=draft)
-            return Response(pdf_bytes, mimetype='application/pdf')
-
-        @exports_bp.route('/tool/lotions/inci.csv')
-        def lotion_inci_tool_csv():
-            from flask import session, Response
-            draft = session.get('tool_draft') or {}
-            from app.services.exports import ExportService
-            csv_text = ExportService.lotion_inci_csv(tool_draft=draft)
-            return Response(csv_text, mimetype='text/csv')
-
-        @exports_bp.route('/tool/lotions/inci.pdf')
-        def lotion_inci_tool_pdf():
-            from flask import session, Response
-            draft = session.get('tool_draft') or {}
-            from app.services.exports import ExportService
-            pdf_bytes = ExportService.lotion_inci_pdf(tool_draft=draft)
-            return Response(pdf_bytes, mimetype='application/pdf')
-
-        app.register_blueprint(exports_bp)
-        successful_registrations.append('Exports')
-    except Exception as e:
-        failed_registrations.append(f"Exports: {e}")
-        # Don't let exports failure break the app
-        pass
+            successes.append("Products Fallback")
+        except Exception as fallback_exc:  # pragma: no cover
+            failures.append(f"Products Fallback: {fallback_exc}")
 
 
-    # Log summary (avoid noisy stdout in production)
-    app_logger = getattr(app, 'logger', logger)
-    summary_lines = [
-        "=== Blueprint Registration Summary ===",
-        f"Successful: {len(successful_registrations)}",
-        *[f"   - {success}" for success in successful_registrations]
-    ]
+def _log_summary(app, successes: List[str], failures: List[str]) -> None:
+    app_logger = getattr(app, "logger", logger)
+    if not (app.debug or failures):
+        return
 
-    if failed_registrations:
-        summary_lines.extend([
-            f"Failed: {len(failed_registrations)}",
-            *[f"   - {failure}" for failure in failed_registrations],
-            "App will continue running with available blueprints",
-        ])
-        log_method = app_logger.warning
+    app_logger.info("=== Blueprint Registration Summary ===")
+    app_logger.info("Successful: %s", len(successes))
+    if app.debug:
+        for name in successes:
+            app_logger.info("  - %s", name)
+
+    if failures:
+        app_logger.error("Failed: %s", len(failures))
+        for failure in failures:
+            app_logger.error("  - %s", failure)
     else:
-        summary_lines.append("All blueprints registered successfully!")
-        log_method = app_logger.info
+        app_logger.info("All blueprints registered successfully.")
 
-    log_method("\n".join(summary_lines))
 
-    # CSRF exemptions
+def _apply_csrf_exemptions(app) -> None:
     try:
         from .extensions import csrf
-        csrf.exempt(app.view_functions["inventory.adjust_inventory"])
-        if "waitlist.join_waitlist" in app.view_functions:
-            csrf.exempt(app.view_functions["waitlist.join_waitlist"])
-        # Exempt public tools draft endpoint for anonymous users saving drafts
-        if "tools_bp.tools_draft" in app.view_functions:
-            csrf.exempt(app.view_functions["tools_bp.tools_draft"])
     except Exception:
-        pass
+        return
+
+    for view_name in CSRF_EXEMPT_VIEWS:
+        view = app.view_functions.get(view_name)
+        if view:
+            try:
+                csrf.exempt(view)
+            except Exception:
+                continue

@@ -31,8 +31,8 @@ def manage_tiers():
 
         if tier.stripe_lookup_key:
             try:
-                from ...services.stripe_service import StripeService
-                live_pricing = StripeService.get_live_pricing_for_tier(tier)
+                from ...services.billing_service import BillingService
+                live_pricing = BillingService.get_live_pricing_for_tier(tier)
                 if live_pricing:
                     price_display = live_pricing['formatted_price']
             except Exception as e:
@@ -114,13 +114,20 @@ def create_tier():
 
         whop_key = request.form.get('whop_product_key', '').strip()
 
-        # Convert limit fields to integers or None if empty
-        # Do not set tier.max_users from form; maintained only for legacy compatibility elsewhere
-        max_recipes = int(max_recipes) if max_recipes and max_recipes.isdigit() else None
-        max_batches = int(max_batches) if max_batches and max_batches.isdigit() else None
-        max_products = int(max_products) if max_products and max_products.isdigit() else None
-        max_batchbot_requests = int(max_batchbot_requests) if max_batchbot_requests and max_batchbot_requests.isdigit() else None
-        max_monthly_batches = int(max_monthly_batches) if max_monthly_batches and max_monthly_batches.isdigit() else None
+        # Convert limit fields to integers or None if empty, allow -1 for unlimited
+        def parse_limit_field(value):
+            if not value or value.strip() == '':
+                return None
+            try:
+                num = int(value.strip())
+                return num  # Allow -1 for unlimited
+            except (ValueError, AttributeError):
+                return None
+        
+        max_recipes = parse_limit_field(max_recipes)
+        max_products = parse_limit_field(max_products)
+        max_batchbot_requests = parse_limit_field(max_batchbot_requests)
+        max_monthly_batches = parse_limit_field(max_monthly_batches)
         # Normalize retention settings
         data_retention_days = int(data_retention_days_raw) if data_retention_days_raw.isdigit() else None
         if retention_policy == 'one_year':
@@ -159,7 +166,6 @@ def create_tier():
             user_limit=user_limit,
             max_users=max_users,
             max_recipes=max_recipes,
-            max_batches=max_batches,
             max_products=max_products,
             max_batchbot_requests=max_batchbot_requests,
             max_monthly_batches=max_monthly_batches,
@@ -244,24 +250,30 @@ def edit_tier(tier_id):
             except (ValueError, TypeError):
                 tier.user_limit = tier.user_limit
 
-            # Update limit fields, converting to int or None
+            # Update limit fields, converting to int or None, allow -1 for unlimited
             # Stop processing legacy max_users from form; keep existing DB value intact
             # (We keep the column for backward compatibility but do not expose/edit it)
 
-            max_recipes = request.form.get('max_recipes', str(tier.max_recipes) if tier.max_recipes is not None else '')
-            tier.max_recipes = int(max_recipes) if max_recipes and max_recipes.isdigit() else None
+            def parse_limit_field(value):
+                if not value or value.strip() == '':
+                    return None
+                try:
+                    num = int(value.strip())
+                    return num  # Allow -1 for unlimited
+                except (ValueError, AttributeError):
+                    return None
 
-            max_batches = request.form.get('max_batches', str(tier.max_batches) if tier.max_batches is not None else '')
-            tier.max_batches = int(max_batches) if max_batches and max_batches.isdigit() else None
+            max_recipes = request.form.get('max_recipes', str(tier.max_recipes) if tier.max_recipes is not None else '')
+            tier.max_recipes = parse_limit_field(max_recipes)
 
             max_products = request.form.get('max_products', str(tier.max_products) if tier.max_products is not None else '')
-            tier.max_products = int(max_products) if max_products and max_products.isdigit() else None
+            tier.max_products = parse_limit_field(max_products)
 
             max_batchbot_requests = request.form.get('max_batchbot_requests', str(tier.max_batchbot_requests) if tier.max_batchbot_requests is not None else '')
-            tier.max_batchbot_requests = int(max_batchbot_requests) if max_batchbot_requests and max_batchbot_requests.isdigit() else None
+            tier.max_batchbot_requests = parse_limit_field(max_batchbot_requests)
 
             max_monthly_batches = request.form.get('max_monthly_batches', str(tier.max_monthly_batches) if tier.max_monthly_batches is not None else '')
-            tier.max_monthly_batches = int(max_monthly_batches) if max_monthly_batches and max_monthly_batches.isdigit() else None
+            tier.max_monthly_batches = parse_limit_field(max_monthly_batches)
 
             tier.billing_provider = billing_provider
             # tier.is_billing_exempt is removed from updates as it's derived from billing_provider
@@ -367,10 +379,10 @@ def sync_tier_with_stripe(tier_id):
         return jsonify({'success': False, 'error': 'No Stripe lookup key configured'}), 400
 
     try:
-        from ...services.stripe_service import StripeService
+        from ...services.billing_service import BillingService
 
         # Get live pricing from Stripe
-        live_pricing = StripeService.get_live_pricing_for_tier(tier)
+        live_pricing = BillingService.get_live_pricing_for_tier(tier)
         if live_pricing:
             logger.info(f'Successfully synced tier {tier.name} with Stripe - Price: {live_pricing["formatted_price"]}')
             return jsonify({

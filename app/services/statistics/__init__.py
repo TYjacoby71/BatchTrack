@@ -11,6 +11,7 @@ from ._recipe_stats import RecipeStatisticsService
 from ._inventory_stats import InventoryStatisticsService
 from ._reporting import ReportingService
 from .catalog import AnalyticsCatalogService, AnalyticsCatalogError
+from .analytics_service import AnalyticsDataService
 
 __all__ = [
     'StatisticsService',
@@ -19,5 +20,6 @@ __all__ = [
     'InventoryStatisticsService',
     'ReportingService',
     'AnalyticsCatalogService',
-    'AnalyticsCatalogError'
+    'AnalyticsCatalogError',
+    'AnalyticsDataService'
 ]

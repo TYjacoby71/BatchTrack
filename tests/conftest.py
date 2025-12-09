@@ -4,6 +4,11 @@ Pytest configuration and shared fixtures for BatchTrack tests.
 import os
 import tempfile
 import pytest
+from sqlalchemy import inspect, text
+
+# Ensure model modules know we're running against SQLite during pytest runs
+os.environ.setdefault("SQLALCHEMY_TEST_DATABASE_URI", "sqlite:///:memory:")
+
 from app import create_app
 from app.extensions import db
 from app.models.models import User, Organization, SubscriptionTier, Permission, Role
@@ -14,6 +19,8 @@ def app():
     """Create and configure a new app instance for each test."""
     # Create a temporary file to use as the database
     db_fd, db_path = tempfile.mkstemp()
+    previous_test_db_uri = os.environ.get("SQLALCHEMY_TEST_DATABASE_URI")
+    os.environ["SQLALCHEMY_TEST_DATABASE_URI"] = f'sqlite:///{db_path}'
 
     app = create_app({
         'TESTING': True,
@@ -27,30 +34,22 @@ def app():
         # Don't disable login - we need to test permissions properly
     })
 
-    with app.app_context():
-        # Prefer Alembic migrations to build schema if available; fallback to create_all for unit tests
-        try:
-            os.environ.setdefault('SQLALCHEMY_DISABLE_CREATE_ALL', '1')
-            # Build schema solely via migrations for closer prod parity
-            from flask.cli import ScriptInfo
-            # Invoke upgrade programmatically
-            from flask_migrate import upgrade
-            upgrade()
-        except Exception:
-            # If migrations are not runnable in test context, fall back to create_all
-            os.environ.pop('SQLALCHEMY_DISABLE_CREATE_ALL', None)
+    try:
+        with app.app_context():
+            db.drop_all()
             db.create_all()
-
-        # Create basic test data
-        _create_test_data()
+            _create_test_data()
 
         yield app
-
-        # Clean up database
-        db.drop_all()
-
-    os.close(db_fd)
-    os.unlink(db_path)
+    finally:
+        with app.app_context():
+            db.drop_all()
+        os.close(db_fd)
+        os.unlink(db_path)
+        if previous_test_db_uri is None:
+            os.environ.pop("SQLALCHEMY_TEST_DATABASE_URI", None)
+        else:
+            os.environ["SQLALCHEMY_TEST_DATABASE_URI"] = previous_test_db_uri
 
 
 @pytest.fixture
@@ -67,6 +66,7 @@ def runner(app):
 
 @pytest.fixture
 def db_session(app):
+    """Provides a database session for tests with rollback."""
     with app.app_context():
         yield db.session
         db.session.rollback()
@@ -126,6 +126,83 @@ def _create_test_data():
     )
     db.session.add(user)
     db.session.commit()
+
+
+def _ensure_sqlite_schema_columns():
+    """SQLite migrations can drop renamed columns; ensure critical columns exist for tests."""
+    inspector = inspect(db.engine)
+
+    def ensure_columns(table_name: str, column_defs: dict[str, str]):
+        nonlocal inspector
+        try:
+            existing = {col['name'] for col in inspector.get_columns(table_name)}
+        except Exception:
+            return
+        missing = {name: ddl for name, ddl in column_defs.items() if name not in existing}
+        if not missing:
+            return
+        for column_name, ddl in missing.items():
+            db.session.execute(text(f'ALTER TABLE "{table_name}" ADD COLUMN {column_name} {ddl}'))
+        db.session.commit()
+        inspector = inspect(db.engine)
+
+    from app.models.recipe import RecipeLineage
+    RecipeLineage.__table__.create(db.engine, checkfirst=True)
+
+    ensure_columns('user', {
+        'active_session_token': 'VARCHAR(255)'
+    })
+
+    ensure_columns('recipe', {
+        'parent_recipe_id': 'INTEGER',
+        'cloned_from_id': 'INTEGER',
+        'root_recipe_id': 'INTEGER'
+    })
+
+    ensure_columns('inventory_item', {
+        'recommended_fragrance_load_pct': 'VARCHAR(64)',
+        'inci_name': 'VARCHAR(256)',
+        'protein_content_pct': 'FLOAT',
+        'brewing_color_srm': 'FLOAT',
+        'brewing_potential_sg': 'FLOAT',
+        'brewing_diastatic_power_lintner': 'FLOAT',
+        'fatty_acid_profile': 'TEXT',
+        'certifications': 'TEXT'
+    })
+
+    ensure_columns('global_item', {
+        'aliases': 'TEXT',
+        'recommended_shelf_life_days': 'INTEGER',
+        'recommended_usage_rate': 'VARCHAR(64)',
+        'recommended_fragrance_load_pct': 'VARCHAR(64)',
+        'is_active_ingredient': 'BOOLEAN',
+        'inci_name': 'VARCHAR(256)',
+        'certifications': 'TEXT',
+        'capacity': 'FLOAT',
+        'capacity_unit': 'VARCHAR(32)',
+        'container_material': 'VARCHAR(64)',
+        'container_type': 'VARCHAR(64)',
+        'container_style': 'VARCHAR(64)',
+        'container_color': 'VARCHAR(64)',
+        'saponification_value': 'FLOAT',
+        'iodine_value': 'FLOAT',
+        'melting_point_c': 'FLOAT',
+        'flash_point_c': 'FLOAT',
+        'ph_value': 'VARCHAR(32)',
+        'ph_min': 'FLOAT',
+        'ph_max': 'FLOAT',
+        'moisture_content_percent': 'FLOAT',
+        'comedogenic_rating': 'INTEGER',
+        'fatty_acid_profile': 'TEXT',
+        'protein_content_pct': 'FLOAT',
+        'brewing_color_srm': 'FLOAT',
+        'brewing_potential_sg': 'FLOAT',
+        'brewing_diastatic_power_lintner': 'FLOAT',
+        'metadata_json': 'TEXT',
+        'is_archived': 'BOOLEAN',
+        'archived_at': 'DATETIME',
+        'archived_by': 'INTEGER'
+    })
 
 
 @pytest.fixture

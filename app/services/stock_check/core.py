@@ -165,7 +165,8 @@ class UniversalStockCheckService:
                     'available_unit': result.available_unit,
                     'status': result.status.value,
                     'formatted_needed': result.formatted_needed,
-                    'formatted_available': result.formatted_available
+                    'formatted_available': result.formatted_available,
+                    'category': result.category.value
                 }
 
                 if hasattr(result, 'error_message') and result.error_message:
@@ -216,7 +217,8 @@ class UniversalStockCheckService:
                         'available_unit': result.available_unit,
                         'status': result.status.value,
                         'formatted_needed': result.formatted_needed,
-                        'formatted_available': result.formatted_available
+                        'formatted_available': result.formatted_available,
+                        'category': result.category.value
                     }
 
                     if hasattr(result, 'error_message') and result.error_message:

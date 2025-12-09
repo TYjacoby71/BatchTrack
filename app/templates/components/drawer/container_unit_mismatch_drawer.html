@@ -1,0 +1,181 @@
+<div class="modal fade"
+     id="containerUnitMismatchDrawer"
+     tabindex="-1"
+     aria-labelledby="containerUnitMismatchDrawerLabel"
+     aria-hidden="true"
+     data-recipe-id="{{ recipe.id }}">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header bg-warning text-dark">
+                <h5 class="modal-title" id="containerUnitMismatchDrawerLabel">
+                    <i class="fas fa-exclamation-triangle me-2"></i>
+                    Recipe Yield &amp; Container Units Don’t Match
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="alert alert-warning d-flex align-items-start">
+                    <div class="me-3">
+                        <i class="fas fa-balance-scale fa-lg"></i>
+                    </div>
+                    <div>
+                        <strong>{{ recipe.name }}</strong> yields in
+                        <strong>{{ yield_unit }}</strong>, but none of the allowed containers can convert to that unit.
+                        Auto-fill can’t proceed until the yield unit and container capacity units are compatible.
+                    </div>
+                </div>
+                {% if container_items %}
+                <div class="mb-3">
+                    <h6 class="text-muted text-uppercase fw-bold small">Allowed Containers</h6>
+                    <div class="table-responsive border rounded">
+                        <table class="table table-sm mb-0">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Container</th>
+                                    <th>Capacity</th>
+                                    <th>Capacity Unit</th>
+                                    <th class="text-end">On Hand</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for container in container_items %}
+                                <tr>
+                                    <td>{{ container.name }}</td>
+                                    <td>{{ container.capacity or '-' }}</td>
+                                    <td>
+                                        <span class="badge bg-secondary">{{ container.capacity_unit or 'count' }}</span>
+                                    </td>
+                                    <td class="text-end">{{ container.quantity|int }}</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                {% endif %}
+                <div class="mb-4">
+                    <h6 class="text-muted text-uppercase fw-bold small">Let’s Get This Fixed</h6>
+                    <div class="card mb-3 shadow-sm border-warning">
+                        <div class="card-body">
+                            <h6 class="fw-bold mb-3">1. Update the recipe yield (recommended)</h6>
+                            <form id="yieldFixForm"
+                                  data-recipe-id="{{ recipe.id }}"
+                                  data-update-url="{{ url_for('drawers.container_unit_mismatch_update_yield', recipe_id=recipe.id) }}">
+                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                <div class="row g-2 align-items-end">
+                                    <div class="col-md-5">
+                                        <label class="form-label small text-muted">Predicted Yield Amount</label>
+                                        <input type="number"
+                                               class="form-control form-control-sm"
+                                               name="predicted_yield"
+                                               min="0"
+                                               step="0.01"
+                                               value="{{ recipe.predicted_yield or 0 }}">
+                                    </div>
+                                    <div class="col-md-5">
+                                        <label class="form-label small text-muted">Unit</label>
+                                        <select class="form-select form-select-sm" name="predicted_yield_unit" required>
+                                            {% for unit in unit_options %}
+                                                <option value="{{ unit.name }}"
+                                                    {% if unit.name == (recipe.predicted_yield_unit or '') %}selected{% endif %}>
+                                                    {{ unit.name }}
+                                                </option>
+                                            {% endfor %}
+                                        </select>
+                                    </div>
+                                    <div class="col-md-2 d-grid">
+                                        <button type="submit" class="btn btn-primary btn-sm" onclick="console.log('🔧 CONTAINER DRAWER: Save & Refresh button clicked');">
+                                            <i class="fas fa-sync-alt me-1"></i> Save &amp; Refresh
+                                        </button>
+                                    </div>
+                                </div>
+                                <div class="form-text mt-2">
+                                    Example: Lipstick tubes measure grams, so the recipe should yield a weight. Cosmetics jars measure fluid ounces, so the recipe should yield volume.
+                                </div>
+                                <div class="alert alert-success mt-3 py-2 px-3 d-none" id="yieldFixSuccess">
+                                    <i class="fas fa-check-circle me-1"></i>
+                                    Yield updated. Refreshing plan…
+                                </div>
+                                <div class="alert alert-danger mt-3 py-2 px-3 d-none" id="yieldFixError"></div>
+                            </form>
+                        </div>
+                    </div>
+                    <div class="card mb-3 shadow-sm">
+                        <div class="card-body">
+                            <h6 class="fw-bold mb-2">2. Add or edit containers</h6>
+                            <p class="text-muted mb-2">
+                                Update container capacity units in inventory so they match the recipe yield unit. This takes you out of the planning flow.
+                            </p>
+                            <a class="btn btn-outline-secondary btn-sm"
+                               href="{{ url_for('inventory.list_inventory') }}"
+                               target="_blank" rel="noopener">
+                                <i class="fas fa-box-open me-1"></i> Go to Inventory
+                            </a>
+                        </div>
+                    </div>
+                    <div class="card shadow-sm border-0">
+                        <div class="card-body">
+                            <h6 class="fw-bold mb-2">3. Continue without containers</h6>
+                            <p class="text-muted mb-2">
+                                Disable container requirements for this batch and proceed manually.
+                            </p>
+                              <button type="button"
+                                      class="btn btn-outline-danger btn-sm"
+                                      id="disableContainersBtn"
+                                      data-recipe-id="{{ recipe.id }}">
+                                <i class="fas fa-ban me-1"></i> Disable containers for now
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer d-flex flex-wrap justify-content-between">
+                <div class="text-muted small">
+                    Need help? <a href="mailto:support@batchtrack.com">Contact support</a>.
+                </div>
+                <div class="d-flex gap-2">
+                    <button type="button" class="btn btn-primary" data-bs-dismiss="modal">
+                        Got It
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+console.log('🔧 CONTAINER DRAWER: Modal script executing');
+console.log('🔧 CONTAINER DRAWER: Checking for containerUnitMismatchDrawer global');
+
+// Function to safely initialize the drawer
+function safeInitializeDrawer(attempts = 0) {
+    const maxAttempts = 10;
+    
+    if (window.containerUnitMismatchDrawer && typeof window.containerUnitMismatchDrawer.initializeModal === 'function') {
+        console.log('🔧 CONTAINER DRAWER: initializeModal function found, calling it');
+        try {
+            window.containerUnitMismatchDrawer.initializeModal();
+        } catch (error) {
+            console.error('🔧 CONTAINER DRAWER: Error calling initializeModal:', error);
+        }
+    } else if (attempts < maxAttempts) {
+        console.log('🔧 CONTAINER DRAWER: Waiting for drawer script... attempt', attempts + 1);
+        console.log('🔧 CONTAINER DRAWER: window.containerUnitMismatchDrawer =', window.containerUnitMismatchDrawer);
+        setTimeout(() => safeInitializeDrawer(attempts + 1), 50);
+    } else {
+        console.warn('🔧 CONTAINER DRAWER: Max attempts reached, drawer may not initialize properly');
+        // Create a fallback function
+        if (!window.containerUnitMismatchDrawer) {
+            window.containerUnitMismatchDrawer = {};
+        }
+        if (typeof window.containerUnitMismatchDrawer.initializeModal !== 'function') {
+            window.containerUnitMismatchDrawer.initializeModal = function() {
+                console.log('🔧 CONTAINER DRAWER: Fallback initializeModal called');
+            };
+        }
+    }
+}
+
+// Start the safe initialization
+safeInitializeDrawer();
+</script>

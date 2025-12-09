@@ -17,6 +17,10 @@ def test_catalog_service_domains_structure():
     assert 'storage' in sample and isinstance(sample['storage'], list)
     assert 'metrics' in sample and sample['metrics']
 
+    # Ensure the unified analytics service is represented in at least one domain
+    storage_models = {store['model'] for domain in domains for store in domain['storage']}
+    assert 'AnalyticsDataService' in storage_models, "Catalog storage should reference AnalyticsDataService"
+
 
 def test_developer_catalog_view_renders(client, developer_user):
     _login_as_developer(client, developer_user)

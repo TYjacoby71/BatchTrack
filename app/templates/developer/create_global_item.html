@@ -1,4 +1,5 @@
 {% extends 'layout.html' %}
+{% set form_data = form_data or {} %}
 {% block content %}
 <div class="d-flex justify-content-between align-items-center mb-3">
   <div>
@@ -17,6 +18,7 @@
   </a>
 </div>
 
+<<<<<<< HEAD
 <div class="card">
   <div class="card-body">
     <div class="mb-4">
@@ -352,13 +354,28 @@
           <h5 class="mb-0">Global Item Details</h5>
         </div>
         <div class="card-body">
+=======
+<div class="row">
+  <div class="col-lg-10">
+      <div class="card">
+        <div class="card-body">
+          <form method="post" id="createGlobalItemForm">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            {% set selected_item_type = form_data.get('item_type', 'ingredient') %}
+          
+>>>>>>> origin/main
           <div class="row g-3">
             <div class="col-md-6">
               <label class="form-label">Name *</label>
+<<<<<<< HEAD
               <input type="text" name="name" class="form-control" placeholder="Enter item name" required>
+=======
+                <input type="text" name="name" class="form-control" required placeholder="Enter item name" value="{{ form_data.get('name', '') }}">
+>>>>>>> origin/main
             </div>
             <div class="col-md-3">
               <label class="form-label">Item Type *</label>
+<<<<<<< HEAD
               <select name="item_type" id="genericItemTypeSelect" class="form-select" required>
                 <option value="container">Container</option>
                 <option value="packaging">Packaging</option>
@@ -373,16 +390,43 @@
                   <option value="{{ category.id }}">{{ category.name }}</option>
                 {% endfor %}
               </select>
+=======
+                <select name="item_type" id="itemType" class="form-select" required>
+                  <option value="ingredient" {% if selected_item_type == 'ingredient' %}selected{% endif %}>Ingredient</option>
+                  <option value="container" {% if selected_item_type == 'container' %}selected{% endif %}>Container</option>
+                  <option value="packaging" {% if selected_item_type == 'packaging' %}selected{% endif %}>Packaging</option>
+                  <option value="consumable" {% if selected_item_type == 'consumable' %}selected{% endif %}>Consumable</option>
+              </select>
+            </div>
+
+            <!-- Ingredient Category - Only for ingredients -->
+            <div class="col-md-6" id="ingredientCategorySection" style="display: block;">
+              <label class="form-label">Ingredient Category</label>
+                <div class="input-group">
+                <select name="ingredient_category_id" id="ingredientCategorySelect" class="form-select">
+                    {% set selected_category = form_data.get('ingredient_category_id', '') %}
+                    <option value="">Select Category</option>
+                  {% for category in global_ingredient_categories %}
+                      <option value="{{ category.id }}" {% if selected_category == category.id|string %}selected{% endif %}>{{ category.name }}</option>
+                  {% endfor %}
+                </select>
+                <a href="{{ url_for('developer.reference_categories') }}" class="btn btn-outline-secondary" title="Manage Global Categories">
+                  <i class="fas fa-cog"></i>
+                </a>
+              </div>
+>>>>>>> origin/main
             </div>
             <div class="col-md-3">
               <label class="form-label">Default Unit</label>
-              <select name="default_unit" class="form-select">
-                <option value="">Select Unit</option>
+                {% set selected_unit = form_data.get('default_unit', '') %}
+                <select name="default_unit" class="form-select">
+                  <option value="">Select Unit</option>
                 {% for unit in get_global_unit_list() %}
-                  <option value="{{ unit.name }}">{{ unit.name }}</option>
+                    <option value="{{ unit.name }}" {% if selected_unit == unit.name %}selected{% endif %}>{{ unit.name }}</option>
                 {% endfor %}
               </select>
             </div>
+<<<<<<< HEAD
             <div class="col-md-3">
               <label class="form-label">Density (g/ml)</label>
               <input type="number" step="0.001" name="density" class="form-control">
@@ -399,10 +443,68 @@
               <div class="form-check mt-4">
                 <input type="checkbox" class="form-check-input" id="genericPerishable" name="default_is_perishable">
                 <label for="genericPerishable" class="form-check-label">Perishable by default</label>
+=======
+
+              <!-- Density - Only for ingredients -->
+              <div class="col-md-3" id="densitySection" style="display: block;">
+                <label class="form-label">Density (g/ml)</label>
+                  <input type="number" step="0.001" name="density" class="form-control" placeholder="e.g. 0.920" value="{{ form_data.get('density', '') }}">
+              </div>
+
+            <!-- Container-specific fields -->
+            <div id="containerFields" style="display: none;">
+              <div class="col-12"><hr><h5 class="text-muted">Container Properties</h5></div>
+              
+                <div class="col-md-3">
+                <label class="form-label">Material</label>
+                  <select name="container_material" id="containerMaterial" class="form-select" data-selected="{{ form_data.get('container_material', '') }}">
+                  <option value="">Select Material</option>
+                </select>
+              </div>
+              
+              <div class="col-md-3">
+                <label class="form-label">Capacity</label>
+                  <input type="number" step="0.01" name="capacity" class="form-control" placeholder="e.g. 120" value="{{ form_data.get('capacity', '') }}">
+              </div>
+              
+              <div class="col-md-3">
+                <label class="form-label">Capacity Unit</label>
+                  <input type="text" name="capacity_unit" class="form-control" placeholder="e.g. ml, oz, count" value="{{ form_data.get('capacity_unit', '') }}">
+              </div>
+              
+              <div class="col-md-3">
+                <label class="form-label">Container Type</label>
+                  <select name="container_type" id="containerType" class="form-select" data-selected="{{ form_data.get('container_type', '') }}">
+                  <option value="">Select Type</option>
+                </select>
+              </div>
+              
+              <div class="col-md-3">
+                <label class="form-label">Container Style</label>
+                  <select name="container_style" id="containerStyle" class="form-select" data-selected="{{ form_data.get('container_style', '') }}">
+                  <option value="">Select Style</option>
+                </select>
+              </div>
+              
+              <div class="col-md-3">
+                <label class="form-label">Container Color (optional)</label>
+                  <select name="container_color" id="containerColor" class="form-select" data-selected="{{ form_data.get('container_color', '') }}">
+                  <option value="">Select Color</option>
+                </select>
+              </div>
+            </div>
+
+            <!-- Perishable - For ingredients and containers -->
+            <div class="col-md-3" id="perishableSection" style="display: block;">
+                <div class="form-check mt-4">
+                  <input type="checkbox" class="form-check-input" id="default_is_perishable" name="default_is_perishable" {% if form_data.get('default_is_perishable') %}checked{% endif %}>
+                <label for="default_is_perishable" class="form-check-label">Perishable by default</label>
+>>>>>>> origin/main
               </div>
             </div>
             <div class="col-md-3">
               <label class="form-label">Recommended Shelf Life (days)</label>
+<<<<<<< HEAD
               <input type="number" name="recommended_shelf_life_days" class="form-control">
             </div>
             <div class="col-md-3">
@@ -460,6 +562,114 @@
             <div class="col-md-3">
               <label class="form-label">Container Color</label>
               <input type="text" name="container_color" class="form-control">
+=======
+                <input type="number" name="recommended_shelf_life_days" class="form-control" placeholder="e.g. 365" value="{{ form_data.get('recommended_shelf_life_days', '') }}">
+            </div>
+
+              <!-- Ingredient-specific properties -->
+                <div id="ingredientProperties" style="display: block;">
+                  <div class="col-12"><hr><h5 class="text-muted">Ingredient Properties</h5></div>
+
+                  <div class="col-md-3">
+                    <div class="form-check mt-2">
+                      <input type="checkbox" class="form-check-input" id="is_active_ingredient" name="is_active_ingredient" {% if form_data.get('is_active_ingredient') %}checked{% endif %}>
+                      <label class="form-check-label" for="is_active_ingredient">Active Ingredient</label>
+                    </div>
+                  </div>
+
+                <div class="col-md-3">
+                  <label class="form-label">Saponification Value</label>
+                  <input type="number" step="0.1" name="saponification_value" class="form-control" placeholder="e.g. 189" value="{{ form_data.get('saponification_value', '') }}">
+                </div>
+
+                <div class="col-md-3">
+                  <label class="form-label">Iodine Value</label>
+                  <input type="number" step="0.1" name="iodine_value" class="form-control" placeholder="e.g. 125" value="{{ form_data.get('iodine_value', '') }}">
+                </div>
+
+                <div class="col-md-3">
+                  <label class="form-label">Melting Point (°C)</label>
+                  <input type="number" step="0.1" name="melting_point_c" class="form-control" placeholder="e.g. 25" value="{{ form_data.get('melting_point_c', '') }}">
+                </div>
+
+                <div class="col-md-3">
+                  <label class="form-label">Flash Point (°C)</label>
+                  <input type="number" step="0.1" name="flash_point_c" class="form-control" placeholder="e.g. 200" value="{{ form_data.get('flash_point_c', '') }}">
+                </div>
+
+                <div class="col-md-3">
+                  <label class="form-label">pH Value</label>
+                  <input type="number" step="0.1" name="ph_value" class="form-control" placeholder="e.g. 7.0" value="{{ form_data.get('ph_value', '') }}">
+                </div>
+
+                <div class="col-md-3">
+                  <label class="form-label">Moisture Content (%)</label>
+                  <input type="number" step="0.1" name="moisture_content_percent" class="form-control" placeholder="e.g. 2.5" value="{{ form_data.get('moisture_content_percent', '') }}">
+                </div>
+
+                <div class="col-md-3">
+                  <label class="form-label">Comedogenic Rating</label>
+                  {% set selected_comedogenic = form_data.get('comedogenic_rating', '') %}
+                  <select name="comedogenic_rating" class="form-select">
+                    <option value="" {% if not selected_comedogenic %}selected{% endif %}>Select Rating</option>
+                    {% for rating in range(6) %}
+                    <option value="{{ rating }}" {% if selected_comedogenic == rating|string %}selected{% endif %}>{{ rating }} - {% if rating == 0 %}Non-comedogenic{% elif rating == 1 %}Very low{% elif rating == 2 %}Low{% elif rating == 3 %}Moderate{% elif rating == 4 %}High{% else %}Very high{% endif %}</option>
+                    {% endfor %}
+                  </select>
+                </div>
+
+                <div class="col-md-3">
+                  <label class="form-label">INCI Name</label>
+                  <input type="text" name="inci_name" class="form-control" placeholder="e.g. Butyrospermum Parkii Butter" value="{{ form_data.get('inci_name', '') }}">
+                </div>
+
+                <div class="col-md-3">
+                  <label class="form-label">Recommended Usage Rate</label>
+                  <input type="text" name="recommended_usage_rate" class="form-control" placeholder="e.g. 0.5% - 2%" value="{{ form_data.get('recommended_usage_rate', '') }}">
+                </div>
+
+                <div class="col-md-3">
+                  <label class="form-label">Fragrance Load %</label>
+                  <input type="text" name="recommended_fragrance_load_pct" class="form-control" placeholder="e.g. 6% - 10%" value="{{ form_data.get('recommended_fragrance_load_pct', '') }}">
+                </div>
+
+                <div class="col-md-3">
+                  <label class="form-label">Protein Content (%)</label>
+                  <input type="number" step="0.01" name="protein_content_pct" class="form-control" placeholder="e.g. 12.5" value="{{ form_data.get('protein_content_pct', '') }}">
+                </div>
+
+                <div class="col-md-3">
+                  <label class="form-label">Brewing Color (SRM)</label>
+                  <input type="number" step="0.1" name="brewing_color_srm" class="form-control" placeholder="e.g. 5.0" value="{{ form_data.get('brewing_color_srm', '') }}">
+                </div>
+
+                <div class="col-md-3">
+                  <label class="form-label">Brewing Potential (SG)</label>
+                  <input type="number" step="0.001" name="brewing_potential_sg" class="form-control" placeholder="e.g. 1.035" value="{{ form_data.get('brewing_potential_sg', '') }}">
+                </div>
+
+                <div class="col-md-3">
+                  <label class="form-label">Diastatic Power (Lintner)</label>
+                  <input type="number" step="0.1" name="brewing_diastatic_power_lintner" class="form-control" placeholder="e.g. 140" value="{{ form_data.get('brewing_diastatic_power_lintner', '') }}">
+                </div>
+
+                <div class="col-md-6">
+                  <label class="form-label">Certifications (comma-separated)</label>
+                  <input type="text" name="certifications" class="form-control" placeholder="e.g. Organic, Fair Trade" value="{{ form_data.get('certifications', '') }}">
+                </div>
+
+                <div class="col-md-6">
+                  <label class="form-label">Fatty Acid Profile (JSON)</label>
+                  <textarea name="fatty_acid_profile" class="form-control" rows="3" placeholder='{"lauric": 45, "myristic": 16}'>{{ form_data.get('fatty_acid_profile', '') }}</textarea>
+                  <small class="text-muted">Provide a JSON object mapping fatty acid names to percentages.</small>
+                </div>
+              </div>
+
+            <!-- Synonyms - Always visible -->
+            <div class="col-12">
+              <label class="form-label">Aliases (comma-separated)</label>
+                <input type="text" name="aliases" class="form-control" placeholder="Alternative names for this item" value="{{ form_data.get('aliases', '') }}">
+>>>>>>> origin/main
             </div>
           </div>
         </div>
@@ -499,9 +709,67 @@
       }
     }
   }
+<<<<<<< HEAD
   if (typeSelect) {
     syncForms();
     typeSelect.addEventListener('change', syncForms);
+=======
+
+    function applySelectedValue(selectEl) {
+      if (!selectEl) return;
+      const selected = selectEl.dataset ? selectEl.dataset.selected : null;
+      if (selected) {
+        selectEl.value = selected;
+      }
+    }
+
+    function populateContainerDropdowns() {
+    if (!containerOptionsCache) return;
+    
+    // Populate materials
+    const materialSelect = document.getElementById('containerMaterial');
+    materialSelect.innerHTML = '<option value="">Select Material</option>';
+    containerOptionsCache.materials.forEach(material => {
+      const option = document.createElement('option');
+      option.value = material;
+      option.textContent = material;
+      materialSelect.appendChild(option);
+    });
+      applySelectedValue(materialSelect);
+    
+    // Populate types
+    const typeSelect = document.getElementById('containerType');
+    typeSelect.innerHTML = '<option value="">Select Type</option>';
+    containerOptionsCache.types.forEach(type => {
+      const option = document.createElement('option');
+      option.value = type;
+      option.textContent = type;
+      typeSelect.appendChild(option);
+    });
+      applySelectedValue(typeSelect);
+    
+    // Populate styles
+    const styleSelect = document.getElementById('containerStyle');
+    styleSelect.innerHTML = '<option value="">Select Style</option>';
+    containerOptionsCache.styles.forEach(style => {
+      const option = document.createElement('option');
+      option.value = style;
+      option.textContent = style;
+      styleSelect.appendChild(option);
+    });
+      applySelectedValue(styleSelect);
+    
+    // Populate colors
+    const colorSelect = document.getElementById('containerColor');
+    colorSelect.innerHTML = '<option value="">Select Color</option>';
+    containerOptionsCache.colors.forEach(color => {
+      const option = document.createElement('option');
+      option.value = color;
+      option.textContent = color;
+      colorSelect.appendChild(option);
+    });
+      applySelectedValue(colorSelect);
+>>>>>>> origin/main
   }
 
   const ingredientModeRadios = document.querySelectorAll('input[name="ingredient_mode"]');

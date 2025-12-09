@@ -1,18 +1,7 @@
-
 """
-Locust Load Testing Configuration
+Locust Load Testing Configuration - Clean Version
 
-Comprehensive load testing scenarios to validate 10k+ concurrent user capacity.
-
-Usage:
-    # Basic load test
-    locust -f loadtests/locustfile.py --host=http://localhost:5000
-
-    # High-load simulation  
-    locust -f loadtests/locustfile.py --host=https://your-app.replit.app -u 1000 -r 50
-
-    # Authenticated user flows
-    locust -f loadtests/locustfile.py AuthenticatedUser --host=https://your-app.replit.app
+Fixed version that only hits valid endpoints with proper authentication.
 """
 
 import random
@@ -22,6 +11,7 @@ from typing import Optional
 from bs4 import BeautifulSoup
 from locust import HttpUser, task, between
 
+<<<<<<< HEAD
 GLOBAL_ITEM_SEARCH_TERMS = [
     "basil",
     "lavender",
@@ -31,27 +21,32 @@ GLOBAL_ITEM_SEARCH_TERMS = [
     "butter",
     "clay",
     "extract",
+=======
+# Smaller pool to avoid rate limiting
+TEST_USER_POOL = [
+    {'username': f'loadtest_user{i}', 'password': 'loadtest123'}
+    for i in range(1, 11)  # Only 10 users
+>>>>>>> origin/main
 ]
 
 class AnonymousUser(HttpUser):
-    """Anonymous user browsing public content."""
-    
-    wait_time = between(2, 8)
-    weight = 3  # 75% of traffic
-    
+    """Anonymous user browsing public content only."""
+
+    wait_time = between(5, 15)  # Longer waits to avoid rate limits
+    weight = 4  # Most traffic
+
     @task(5)
     def view_homepage(self):
-        """Load homepage and public content."""
+        """Load homepage."""
         self.client.get("/", name="homepage")
-    
-    @task(3) 
-    def view_tools(self):
-        """Browse public tools."""
-        tools = ["/tools", "/tools/soap", "/tools/candles", "/tools/lotions"]
-        tool = random.choice(tools)
-        self.client.get(tool, name="public_tools")
-    
+
+    @task(3)
+    def view_tools_index(self):
+        """Browse tools index page."""
+        self.client.get("/tools", name="tools_index")
+
     @task(2)
+<<<<<<< HEAD
     def view_global_library(self):
         """Browse global item library."""
         self.client.get("/library/global_items", name="global_library")
@@ -67,91 +62,114 @@ class AnonymousUser(HttpUser):
             name="public_global_item_search",
         )
     
+=======
+    def view_global_items(self):
+        """Browse global items library."""
+        self.client.get("/global-items", name="global_items")
+
+>>>>>>> origin/main
     @task(1)
-    def attempt_signup(self):
-        """Simulate signup page visits."""
+    def view_signup(self):
+        """View signup page."""
         self.client.get("/auth/signup", name="signup_page")
 
+
 class AuthenticatedMixin:
-    """Shared helpers for users that require authentication."""
+    """Shared helpers for authenticated users."""
 
     login_username: str = ""
     login_password: str = ""
-    login_name: str = "login"
+
+    def on_start(self):
+        """Perform login with a random test user."""
+        # Pick a random user from the pool
+        user_creds = random.choice(TEST_USER_POOL)
+        self.login_username = user_creds['username']
+        self.login_password = user_creds['password']
+
+        # Perform simple login without catch_response
+        self._perform_login(self.login_username, self.login_password)
 
     def _extract_csrf(self, response) -> Optional[str]:
+        """Extract CSRF token from login page."""
         try:
             soup = BeautifulSoup(response.text, "html.parser")
+
+            # Try hidden input field
             token_field = soup.find("input", {"name": "csrf_token"})
             if token_field:
                 return token_field.get("value")
+
+            # Try meta tag
+            meta_csrf = soup.find("meta", {"name": "csrf-token"})
+            if meta_csrf:
+                return meta_csrf.get("content")
+
         except Exception:
             return None
         return None
 
-    def _perform_login(self, username: str, password: str, name: str):
+    def _perform_login(self, username: str, password: str):
+        """Simple login without manual success/failure handling."""
+        # Get login page
         login_page = self.client.get("/auth/login", name="login_page")
+        if login_page.status_code != 200:
+            return
+
+        # Extract CSRF token
         token = self._extract_csrf(login_page)
 
+        # Prepare login data
         payload = {
             "username": username,
             "password": password,
         }
         if token:
             payload["csrf_token"] = token
-        response = self.client.post("/auth/login", data=payload, name=name)
-        if response.status_code >= 400:
-            response.failure(f"Login failed ({response.status_code})")
-        return response
+
+        # Set proper headers
+        headers = {
+            "Content-Type": "application/x-www-form-urlencoded",
+            "Referer": "/auth/login"
+        }
+
+        # Perform login - let Locust handle success/failure automatically
+        self.client.post("/auth/login", data=payload, headers=headers, name="login_submit")
 
 
 class AuthenticatedUser(AuthenticatedMixin, HttpUser):
-    """Authenticated user performing typical app operations."""
-    
-    wait_time = between(3, 12)
-    weight = 1  # 25% of traffic
-    login_username = "loadtest@example.com"
-    login_password = "replace-me"
-    
-    def on_start(self):
-        """Login before starting tasks."""
-        self._perform_login(self.login_username, self.login_password, "login")
-    
-    @task(8)
+    """Authenticated user with realistic usage patterns."""
+
+    wait_time = between(8, 20)  # Longer waits to avoid rate limits
+    weight = 1  # Lower weight
+
+    @task(10)
     def view_dashboard(self):
         """Load user dashboard."""
-        self.client.get("/user_dashboard", name="dashboard")
-    
+        self.client.get("/dashboard", name="dashboard")
+
+    @task(6)
+    def view_inventory_list(self):
+        """Browse inventory list."""
+        self.client.get("/inventory", name="inventory_list")
+
     @task(5)
-    def view_inventory(self):
-        """Browse inventory sections."""
-        self.client.get("/inventory/view", name="inventory_main")
-        
-        # Simulate browsing different inventory types
-        inventory_sections = [
-            "/inventory/view?type=ingredients",
-            "/inventory/view?type=containers", 
-            "/inventory/view?type=products"
-        ]
-        section = random.choice(inventory_sections)
-        self.client.get(section, name="inventory_browse")
-    
+    def view_batches_list(self):
+        """Check batches list."""
+        self.client.get("/batches", name="batches_list")
+
     @task(4)
-    def view_products(self):
-        """Browse and view products."""
-        self.client.get("/products/list", name="products_list")
-        
-        # Simulate viewing individual products (if any exist)
-        product_id = random.randint(1, 10)
-        self.client.get(f"/products/{product_id}", 
-                       name="product_detail", catch_response=True)
-    
-    @task(3)
-    def view_recipes(self):
+    def view_recipes_list(self):
         """Browse recipes."""
-        self.client.get("/recipes/list", name="recipes_list")
-    
+        self.client.get("/recipes", name="recipes_list")
+
+    @task(3)
+    def view_products_list(self):
+        """Browse products."""
+        self.client.get("/products", name="products_list")
+
     @task(2)
+<<<<<<< HEAD
     def search_global_library(self):
         """Hit the authenticated global library search endpoint."""
         query = random.choice(GLOBAL_ITEM_SEARCH_TERMS)
@@ -174,33 +192,14 @@ class AuthenticatedUser(AuthenticatedMixin, HttpUser):
                        name="production_planning")
     
     @task(1)
+=======
+>>>>>>> origin/main
     def view_settings(self):
         """Access settings."""
         self.client.get("/settings", name="settings")
 
-class AdminUser(AuthenticatedMixin, HttpUser):
-    """Admin user performing administrative tasks."""
-    
-    wait_time = between(5, 20)
-    weight = 0.1  # 2.5% of traffic
-    login_username = "admin@example.com"
-    login_password = "replace-me"
-    
-    def on_start(self):
-        """Login as admin."""
-        self._perform_login(self.login_username, self.login_password, "admin_login")
-    
-    @task(3)
-    def organization_dashboard(self):
-        """View organization dashboard."""
-        self.client.get("/organization/dashboard", name="org_dashboard")
-    
-    @task(2)
-    def user_management(self):
-        """Access user management."""
-        self.client.get("/organization/dashboard#users", name="user_mgmt")
-    
     @task(1)
+<<<<<<< HEAD
     def billing_status(self):
         """Check billing status."""
         self.client.get("/organization/dashboard#billing", name="billing_status")
@@ -269,29 +268,30 @@ class TimerHeavyUser(AuthenticatedMixin, HttpUser):
 
     @task(6)
     def heartbeat(self):
+=======
+    def check_server_time(self):
+        """Check server time API."""
+>>>>>>> origin/main
         self.client.get("/api/server-time", name="server_time")
 
-    @task(4)
-    def dashboard_alerts(self):
-        self.client.get("/api/dashboard-alerts", name="dashboard_alerts")
 
-    @task(3)
-    def timer_summary(self):
-        self.client.get("/api/timer-summary", name="timer_summary")
+class LightLoadUser(AuthenticatedMixin, HttpUser):
+    """Very light load user for testing basic functionality."""
+
+    wait_time = between(15, 30)  # Very long waits
+    weight = 0.5
+
+    @task(5)
+    def dashboard_only(self):
+        """Only check dashboard."""
+        self.client.get("/dashboard", name="light_dashboard")
 
     @task(2)
-    def expired_timers(self):
-        self.client.get("/timers/api/expired-timers", name="expired_timers")
+    def inventory_only(self):
+        """Only check inventory."""
+        self.client.get("/inventory", name="light_inventory")
 
     @task(1)
-    def auto_expire(self):
-        self.client.post("/timers/api/auto-expire-timers", name="auto_expire_timers")
-
-if __name__ == "__main__":
-    print("Load test scenarios available:")
-    print("- AnonymousUser: Public browsing (75% weight)")
-    print("- AuthenticatedUser: Logged-in usage (25% weight)")  
-    print("- AdminUser: Administrative tasks (2.5% weight)")
-    print("- HighFrequencyUser: Rapid API usage (12.5% weight)")
-    print("- TimerHeavyUser: Timer-heavy polling (optional, add explicitly)")
-    print("- StressTest: High-intensity testing")
+    def api_health_check(self):
+        """API health check."""
+        self.client.get("/api", name="api_health")

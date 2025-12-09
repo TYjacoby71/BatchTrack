@@ -200,7 +200,7 @@ def view_variant(product_id, variant_name):
 
         # Add batch information for cost calculations
         for batch in sku.batches:
-            if batch.quantity > 0:
+            if batch.final_quantity and batch.final_quantity > 0:
                 size_groups[key]['batches'].append(batch)
 
     # Get available containers for manual stock addition
@@ -236,6 +236,90 @@ def view_variant(product_id, variant_name):
                              {'label': product.name, 'url': url_for('products.view_product', product_id=product.id)},
                              {'label': variant.name}
                          ])
+
+@product_variants_bp.route('/<int:product_id>/variant/<variant_name>/skus', methods=['POST'])
+@login_required
+def create_sku_for_variant(product_id, variant_name):
+    """Create a new SKU for an existing variant."""
+    product = Product.query.filter_by(
+        id=product_id,
+        organization_id=current_user.organization_id
+    ).first()
+
+    if not product:
+        flash('Product not found', 'error')
+        return redirect(url_for('products.product_list'))
+
+    variant = ProductVariant.query.filter_by(
+        product_id=product.id,
+        name=variant_name
+    ).first()
+
+    if not variant:
+        flash('Variant not found', 'error')
+        return redirect(url_for('products.view_product', product_id=product_id))
+
+    size_label = (request.form.get('size_label') or '').strip()
+    unit = (request.form.get('unit') or '').strip()
+    low_stock_threshold = request.form.get('low_stock_threshold')
+
+    if not size_label:
+        flash('Size label is required to create a SKU.', 'error')
+        return redirect(url_for('product_variants.view_variant', product_id=product_id, variant_name=variant_name))
+
+    if not unit:
+        flash('Unit is required to create a SKU.', 'error')
+        return redirect(url_for('product_variants.view_variant', product_id=product_id, variant_name=variant_name))
+
+    existing_sku = ProductSKU.query.filter_by(
+        product_id=product.id,
+        variant_id=variant.id,
+        size_label=size_label,
+        organization_id=current_user.organization_id
+    ).first()
+
+    if existing_sku:
+        flash(f'SKU with size "{size_label}" already exists for this variant.', 'error')
+        return redirect(url_for('product_variants.view_variant', product_id=product_id, variant_name=variant_name))
+
+    try:
+        inventory_item = InventoryItem(
+            name=f"{product.name} - {variant.name} - {size_label}",
+            type='product',
+            unit=unit,
+            quantity=0.0,
+            organization_id=current_user.organization_id,
+            created_by=current_user.id
+        )
+        db.session.add(inventory_item)
+        db.session.flush()
+
+        sku_code = ProductService.generate_sku_code(product.name, variant.name, size_label)
+
+        new_sku = ProductSKU(
+            inventory_item_id=inventory_item.id,
+            product_id=product.id,
+            variant_id=variant.id,
+            size_label=size_label,
+            sku_code=sku_code,
+            sku=sku_code,
+            sku_name=f"{variant.name} {product.name} ({size_label})",
+            unit=unit,
+            low_stock_threshold=float(low_stock_threshold) if low_stock_threshold else product.low_stock_threshold or 0,
+            organization_id=current_user.organization_id,
+            created_by=current_user.id,
+            is_active=True,
+            is_product_active=True
+        )
+        db.session.add(new_sku)
+        db.session.commit()
+
+        flash(f'SKU "{size_label}" created successfully.', 'success')
+    except Exception as e:
+        db.session.rollback()
+        flash(f'Failed to create SKU: {str(e)}', 'error')
+
+    return redirect(url_for('product_variants.view_variant', product_id=product_id, variant_name=variant_name))
 
 @product_variants_bp.route('/<int:product_id>/variant/<variant_name>/edit', methods=['POST'])
 @login_required

@@ -1,7 +1,6 @@
 from flask import Blueprint, request, jsonify, flash, redirect, url_for
 from flask_login import login_required, current_user
 from ...models import db, ProductSKU, Batch
-from ...models.product import ProductSKUHistory
 from ...services.product_service import ProductService
 from app.services.inventory_adjustment import process_inventory_adjustment
 from ...utils.timezone_utils import TimezoneUtils
@@ -150,14 +149,13 @@ def adjust_sku_inventory(inventory_item_id):
             logger.info(f"  - custom_expiration_date: {custom_expiration_date}")
             logger.info(f"  - custom_shelf_life_days: {custom_shelf_life_days}")
 
-            success = process_inventory_adjustment(
+            result = process_inventory_adjustment(
                 item_id=inventory_item_id,
                 quantity=quantity,
                 change_type=change_type,
                 unit=unit,
                 notes=notes,
                 created_by=current_user.id,
-                item_type='product',
                 customer=customer,
                 sale_price=sale_price,
                 order_id=order_id,
@@ -166,13 +164,28 @@ def adjust_sku_inventory(inventory_item_id):
                 custom_shelf_life_days=custom_shelf_life_days
             )
 
-            if success:
-                flash('Product inventory adjusted successfully', 'success')
+            if isinstance(result, tuple):
+                success = bool(result[0])
+                service_message = result[1] if len(result) > 1 else ''
             else:
-                flash('Error adjusting product inventory', 'error')
+                success = bool(result)
+                service_message = ''
+
+            response_message = service_message or ('Product inventory adjusted successfully' if success else 'Error adjusting product inventory')
+
+            if request.is_json:
+                status_code = 200 if success else 400
+                return jsonify({'success': success, 'message': response_message}), status_code
+
+            if success:
+                flash(response_message, 'success')
+            else:
+                flash(response_message, 'error')
 
         except ValueError as e:
             logger.error(f"ValueError in SKU inventory adjustment: {str(e)}")
+            if request.is_json:
+                return jsonify({'error': str(e)}), 400
             flash(f'Error: {str(e)}', 'error')
     except Exception as e:
         db.session.rollback()
@@ -208,37 +221,31 @@ def get_sku_fifo_status(sku_id):
 
     logger.info(f"Found SKU: {sku.inventory_item_id}, Product: {sku.product.name if sku.product else 'Unknown'}")
 
-    from ...models import UnifiedInventoryHistory
+    from ...models.inventory_lot import InventoryLot
 
     today = TimezoneUtils.utc_now().date()
     inventory_item_id = sku.inventory_item_id
 
-    # Get fresh FIFO entries (not expired, with remaining quantity)
-    fresh_entries = UnifiedInventoryHistory.query.filter(
-        UnifiedInventoryHistory.inventory_item_id == inventory_item_id,
-        UnifiedInventoryHistory.remaining_quantity > 0,
-        UnifiedInventoryHistory.organization_id == current_user.organization_id,
+    fresh_lots = InventoryLot.query.filter(
+        InventoryLot.inventory_item_id == inventory_item_id,
+        InventoryLot.organization_id == current_user.organization_id,
+        InventoryLot.remaining_quantity > 0,
         db.or_(
-            UnifiedInventoryHistory.expiration_date.is_(None),  # Non-perishable
-            UnifiedInventoryHistory.expiration_date >= today    # Not expired yet
+            InventoryLot.expiration_date.is_(None),
+            InventoryLot.expiration_date >= today
         )
-    ).order_by(UnifiedInventoryHistory.timestamp.asc()).all()
+    ).order_by(InventoryLot.received_date.asc()).all()
 
-    # Get expired FIFO entries (frozen, with remaining quantity)
-    # NOTE: This query should likely use UnifiedInventoryHistory, not InventoryHistory as it currently does.
-    # If InventoryHistory is intended, it needs to be imported or aliased correctly.
-    # For now, assuming UnifiedInventoryHistory is intended for consistency.
-    expired_entries = UnifiedInventoryHistory.query.filter(
-        UnifiedInventoryHistory.inventory_item_id == inventory_item_id,
-        UnifiedInventoryHistory.remaining_quantity > 0,
-        UnifiedInventoryHistory.organization_id == current_user.organization_id,
-        UnifiedInventoryHistory.expiration_date.isnot(None),
-        UnifiedInventoryHistory.expiration_date < today
-    ).order_by(UnifiedInventoryHistory.timestamp.asc()).all()
+    expired_lots = InventoryLot.query.filter(
+        InventoryLot.inventory_item_id == inventory_item_id,
+        InventoryLot.organization_id == current_user.organization_id,
+        InventoryLot.remaining_quantity > 0,
+        InventoryLot.expiration_date.isnot(None),
+        InventoryLot.expiration_date < today
+    ).order_by(InventoryLot.received_date.asc()).all()
 
-
-    fresh_total = sum(entry.remaining_quantity for entry in fresh_entries)
-    expired_total = sum(entry.remaining_quantity for entry in expired_entries)
+    fresh_total = sum(float(lot.remaining_quantity or 0.0) for lot in fresh_lots)
+    expired_total = sum(float(lot.remaining_quantity or 0.0) for lot in expired_lots)
 
     return jsonify({
         'sku_id': sku_id,
@@ -246,22 +253,24 @@ def get_sku_fifo_status(sku_id):
         'total_quantity': sku.quantity,
         'fresh_quantity': fresh_total,
         'expired_quantity': expired_total,
-        'fresh_entries_count': len(fresh_entries),
-        'expired_entries_count': len(expired_entries),
+        'fresh_entries_count': len(fresh_lots),
+        'expired_entries_count': len(expired_lots),
         'fresh_entries': [{
-            'id': entry.id,
-            'remaining_quantity': entry.remaining_quantity,
-            'expiration_date': entry.expiration_date.isoformat() if entry.expiration_date else None,
-            'timestamp': entry.timestamp.isoformat(),
-            'change_type': entry.change_type
-        } for entry in fresh_entries],
+            'id': lot.id,
+            'remaining_quantity': float(lot.remaining_quantity or 0.0),
+            'expiration_date': lot.expiration_date.isoformat() if lot.expiration_date else None,
+            'received_date': lot.received_date.isoformat() if lot.received_date else None,
+            'fifo_code': lot.fifo_code,
+            'unit_cost': float(lot.unit_cost or 0.0)
+        } for lot in fresh_lots],
         'expired_entries': [{
-            'id': entry.id,
-            'remaining_quantity': entry.remaining_quantity,
-            'expiration_date': entry.expiration_date.isoformat(),
-            'timestamp': entry.timestamp.isoformat(),
-            'change_type': entry.change_type
-        } for entry in expired_entries]
+            'id': lot.id,
+            'remaining_quantity': float(lot.remaining_quantity or 0.0),
+            'expiration_date': lot.expiration_date.isoformat() if lot.expiration_date else None,
+            'received_date': lot.received_date.isoformat() if lot.received_date else None,
+            'fifo_code': lot.fifo_code,
+            'unit_cost': float(lot.unit_cost or 0.0)
+        } for lot in expired_lots]
     })
 
 @product_inventory_bp.route('/dispose-expired/<int:sku_id>', methods=['POST'])
@@ -280,27 +289,23 @@ def dispose_expired_sku(sku_id):
     disposal_type = data.get('disposal_type', 'expired_disposal')
     notes = data.get('notes', 'Expired inventory disposal')
 
-    from ...models import InventoryHistory # Assuming InventoryHistory is still needed for this specific function
-
     today = TimezoneUtils.utc_now().date()
     inventory_item_id = sku.inventory_item_id
 
-    # Get all expired entries with remaining quantity
-    # NOTE: This query should likely use UnifiedInventoryHistory, not InventoryHistory as it currently does.
-    # If InventoryHistory is intended, it needs to be imported or aliased correctly.
-    # For now, assuming UnifiedInventoryHistory is intended for consistency.
-    expired_entries = UnifiedInventoryHistory.query.filter(
-        UnifiedInventoryHistory.inventory_item_id == inventory_item_id,
-        UnifiedInventoryHistory.remaining_quantity > 0,
-        UnifiedInventoryHistory.organization_id == current_user.organization_id,
-        UnifiedInventoryHistory.expiration_date.isnot(None),
-        UnifiedInventoryHistory.expiration_date < today
+    from ...models.inventory_lot import InventoryLot
+
+    expired_lots = InventoryLot.query.filter(
+        InventoryLot.inventory_item_id == inventory_item_id,
+        InventoryLot.organization_id == current_user.organization_id,
+        InventoryLot.remaining_quantity > 0,
+        InventoryLot.expiration_date.isnot(None),
+        InventoryLot.expiration_date < today
     ).all()
 
-    if not expired_entries:
+    if not expired_lots:
         return jsonify({'error': 'No expired inventory found'}), 400
 
-    total_expired = sum(entry.remaining_quantity for entry in expired_entries)
+    total_expired = sum(float(lot.remaining_quantity or 0.0) for lot in expired_lots)
 
     try:
         # Use centralized service to dispose of expired inventory
@@ -309,9 +314,8 @@ def dispose_expired_sku(sku_id):
             quantity=total_expired,
             change_type=disposal_type,
             unit=sku.unit,
-            notes=f"{notes} - {len(expired_entries)} expired lots",
-            created_by=current_user.id,
-            item_type='product'
+            notes=f"{notes} - {len(expired_lots)} expired lots",
+            created_by=current_user.id
         )
 
         if success:
@@ -319,7 +323,7 @@ def dispose_expired_sku(sku_id):
                 'success': True,
                 'message': f'Disposed {total_expired} {sku.unit} of expired inventory',
                 'disposed_quantity': total_expired,
-                'disposed_lots': len(expired_entries)
+                'disposed_lots': len(expired_lots)
             })
         else:
             return jsonify({'error': 'Failed to dispose expired inventory'}), 500
@@ -361,7 +365,6 @@ def process_sale_webhook():
             unit=sku.unit,
             notes=f"Sale from {data.get('source', 'external system')}",
             created_by=current_user.id,
-            item_type='product',
             customer=data.get('customer'),
             sale_price=float(data['sale_price']),
             order_id=data.get('order_id')
@@ -414,7 +417,6 @@ def process_return_webhook():
             unit=sku.unit,
             notes=f"Return from {data.get('source', 'external system')}",
             created_by=current_user.id,
-            item_type='product',
             customer=data.get('customer'),
             order_id=data.get('original_order_id')
         )
@@ -474,7 +476,6 @@ def create_manual_reservation():
             unit=None,  # Will use item's unit
             notes=f"Manual reservation: {notes}",
             created_by=current_user.id,
-            item_type='product',
             customer=customer,
             sale_price=float(sale_price) if sale_price else None,
             order_id=order_id
@@ -500,7 +501,7 @@ def create_manual_reservation():
     if not request.is_json:
         return redirect(url_for('sku.view_sku', inventory_item_id=inventory_item_id))
 
-@product_inventory_bp.route('/inventory/add-from-batch', methods=['POST'])
+@product_inventory_bp.route('/add-from-batch', methods=['POST'])
 @login_required
 def add_inventory_from_batch():
     """Add product inventory from finished batch"""
@@ -542,8 +543,7 @@ def add_inventory_from_batch():
             unit=sku.unit,
             notes=f'Added from batch {batch_id}',
             batch_id=batch_id,
-            created_by=current_user.id,
-            item_type='product'
+            created_by=current_user.id
         )
 
         if success:

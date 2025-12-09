@@ -80,7 +80,7 @@ class RecipeStatisticsService:
         """Recalculate all statistics for a recipe from batch data"""
         try:
             from ...models import Recipe
-            recipe = Recipe.query.get(recipe_id)
+            recipe = db.session.get(Recipe, recipe_id)
             if not recipe:
                 return
                 

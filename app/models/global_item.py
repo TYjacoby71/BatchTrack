@@ -6,7 +6,6 @@ from ..utils.timezone_utils import TimezoneUtils
 from .db_dialect import is_postgres
 from app.services.cache_invalidation import invalidate_global_library_cache
 
-
 class GlobalItem(db.Model):
     __tablename__ = 'global_item'
 

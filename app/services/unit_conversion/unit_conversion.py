@@ -237,7 +237,7 @@ class ConversionEngine:
         elif {'volume', 'weight'} <= {from_u.unit_type, to_u.unit_type}:
             # Only use ingredient-level density
             if density is None and ingredient_id:
-                ingredient = Ingredient.query.get(ingredient_id)
+                ingredient = db.session.get(Ingredient, ingredient_id)
                 if ingredient and ingredient.density and ingredient.density > 0:
                     density = ingredient.density
             # Hard guard: density must be > 0
@@ -245,7 +245,7 @@ class ConversionEngine:
                 # Get ingredient name for better error context
                 ingredient_name = None
                 if ingredient_id:
-                    ingredient = Ingredient.query.get(ingredient_id)
+                    ingredient = db.session.get(Ingredient, ingredient_id)
                     if ingredient:
                         ingredient_name = ingredient.name
 
@@ -410,3 +410,60 @@ class ConversionEngine:
         # Cache successful result (1 hour TTL by default via conversion_cache)
         conversion_cache.set(cache_key, result)
         return result
+
+    @staticmethod
+    def validate_density_requirements(from_unit, to_unit, ingredient=None):
+        """
+        Determine whether a conversion between two units requires density context.
+
+        Accepts unit objects, strings, or UnitOption-style dataclasses.
+        Ingredient can be an ORM instance, dataclass, or an ID.
+        """
+        def _resolve_unit(unit_ref):
+            if unit_ref is None:
+                return None
+            if hasattr(unit_ref, 'unit_type'):
+                return unit_ref
+            if isinstance(unit_ref, str):
+                return Unit.query.filter_by(name=unit_ref).first()
+            return unit_ref
+
+        def _resolve_ingredient(ingredient_ref):
+            if ingredient_ref is None:
+                return None
+            if hasattr(ingredient_ref, 'density') or hasattr(ingredient_ref, 'category'):
+                return ingredient_ref
+            try:
+                ingredient_id = int(ingredient_ref)
+            except (TypeError, ValueError):
+                return None
+            return db.session.get(Ingredient, ingredient_id)
+
+        from_u = _resolve_unit(from_unit)
+        to_u = _resolve_unit(to_unit)
+        if not from_u or not to_u:
+            return False, None
+
+        from_type = (getattr(from_u, 'unit_type', None) or '').lower()
+        to_type = (getattr(to_u, 'unit_type', None) or '').lower()
+
+        if not from_type or not to_type or from_type == to_type:
+            return False, None
+
+        if {'volume', 'weight'}.issubset({from_type, to_type}):
+            ingredient_obj = _resolve_ingredient(ingredient)
+            if not ingredient_obj:
+                return True, "Ingredient context required for volume ↔ weight conversion"
+
+            density_value = getattr(ingredient_obj, 'density', None)
+            if density_value:
+                return False, None
+
+            category = getattr(ingredient_obj, 'category', None)
+            if category and getattr(category, 'default_density', None):
+                return False, None
+
+            ingredient_name = getattr(ingredient_obj, 'name', 'this ingredient')
+            return True, f"Density required for {ingredient_name}. Set ingredient density or category."
+
+        return False, None

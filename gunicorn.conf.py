@@ -1,16 +1,47 @@
+from __future__ import annotations
 
-import os
+import logging
 import multiprocessing
+import os
+import sys
+from typing import Final
 
-# Gunicorn configuration for high-concurrency production deployment
-# Optimized for 10k+ concurrent users
+LOGGER: Final = logging.getLogger("gunicorn.config")
 
-def _env_int(key, default):
-    """Helper to parse environment integers with fallback."""
+
+def _env_int(key: str, default: int) -> int:
+    """Parse integer environment values with sane fallbacks."""
     try:
         return int(os.environ.get(key, default))
-    except (ValueError, TypeError):
+    except (TypeError, ValueError):
         return default
+
+
+def _configured_workers() -> int:
+    """Respect explicit worker counts while preventing overcommit."""
+    cpu_count = max(multiprocessing.cpu_count(), 1)
+    default_workers = max(1, min(4, cpu_count))
+
+    if "GUNICORN_WORKERS" in os.environ:
+        return _env_int("GUNICORN_WORKERS", default_workers)
+    if "WEB_CONCURRENCY" in os.environ:
+        return _env_int("WEB_CONCURRENCY", default_workers)
+    return default_workers
+
+
+def _log_runtime_configuration() -> None:
+    summary = (
+        f"Gunicorn bind={bind} class={worker_class} workers={workers} "
+        f"connections={worker_connections} timeout={timeout}s backlog={backlog}"
+    )
+    try:
+        if LOGGER.handlers:
+            LOGGER.info(summary)
+        else:
+            raise RuntimeError("no handlers")
+    except Exception:
+        sys.stderr.write(summary + "\n")
+
 
 # Server socket
 bind = f"0.0.0.0:{os.environ.get('PORT', 5000)}"
@@ -18,7 +49,7 @@ backlog = _env_int("GUNICORN_BACKLOG", 2048)
 
 # Worker processes - use gevent for async I/O
 worker_class = os.environ.get("GUNICORN_WORKER_CLASS", "gevent")
-workers = _env_int("GUNICORN_WORKERS", max(4, multiprocessing.cpu_count() * 2 + 1))
+workers = _configured_workers()
 worker_connections = _env_int("GUNICORN_WORKER_CONNECTIONS", 1000)
 
 # Timeouts and keepalive
@@ -46,4 +77,4 @@ limit_request_line = 8192
 limit_request_fields = 100
 limit_request_field_size = 8192
 
-print(f"Gunicorn config: {workers} {worker_class} workers, {worker_connections} connections each")
+_log_runtime_configuration()

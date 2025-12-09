@@ -1,273 +1,247 @@
 <div class="card">
-    <div class="card-header">
-        <h5 class="card-title mb-0">Product History</h5>
-    </div>
-    <div class="card-body">
-        {% if history %}
-        <div class="table-responsive">
-            <table class="table table-striped table-sm">
-                <thead>
-                    <tr>
-                        <th>Date</th>
-                        <th>Type</th>
-                        <th>Source</th>
-                        <th>Qty Change</th>
-                        <th>Remaining</th>
-                        <th>Unit Cost</th>
-                        <th>Sale Price</th>
-                        <th>Customer</th>
-                        <th>Event Code</th>
-                        <th>Location</th>
-                        <th>Quality</th>
-                        <th>Order ID</th>
-                        <th>Expiration</th>
-                        <th>Notes</th>
-                        <th>Actions</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for entry in history %}
-                    {% if not fifo_filter or entry.remaining_quantity > 0 %}
-                    <tr>
-                        <td>
-                            {% if entry.timestamp %}
-                                {% set user_time = TimezoneUtils.to_user_timezone(entry.timestamp) %}
-                                {{ user_time.strftime('%m/%d %H:%M') if user_time else entry.timestamp.strftime('%m/%d %H:%M') }}
-                            {% else %}
-                                N/A
-                            {% endif %}
-                        </td>
-                        <td>
-                            <span class="badge badge-sm
-                                {% if entry.change_type == 'batch_production' or entry.change_type == 'batch_addition' %}bg-success
-                                {% elif entry.change_type == 'sale' %}bg-primary
-                                {% elif entry.change_type == 'spoil' %}bg-danger
-                                {% elif entry.change_type == 'recount' %}bg-warning
-                                {% elif entry.change_type == 'reserved' %}bg-info
-                                {% else %}bg-secondary{% endif %}">
-                                {{ entry.change_type.replace('_', ' ').title() }}
-                            </span>
-                        </td>
-                        <td>
-                            {% if entry.batch_id %}
-                                <span class="text-info">
-                                    {% if entry.batch and entry.batch.label_code %}
-                                        {{ entry.batch.label_code }}
-                                    {% else %}
-                                        Batch #{{ entry.batch_id }}
-                                    {% endif %}
-                                </span>
-                            {% elif entry.change_type in ['restock', 'manual_addition', 'finished_batch'] %}
-                                <span class="text-success">
-                                    New Lot
-                                </span>
-                            {% else %}
-                                <span class="text-muted">-</span>
-                            {% endif %}
-                        </td>
-                        <td>
-                            <span class="{% if entry.quantity_change > 0 %}text-success{% else %}text-danger{% endif %}">
-                                {% if entry.quantity_change > 0 %}+{% endif %}{{ "%.1f"|format(entry.quantity_change) }}
-                            </span>
-                        </td>
-                        <td>
-                            {% if entry.remaining_quantity is not none %}
-                                {{ "%.1f"|format(entry.remaining_quantity) }}
-                            {% else %}
-                                <span class="text-muted">-</span>
-                            {% endif %}
-                        </td>
-                        <td>
-                            {% if entry.unit_cost %}
-                                ${{ "%.2f"|format(entry.unit_cost) }}
-                            {% else %}
-                                <span class="text-muted">-</span>
-                            {% endif %}
-                        </td>
-                        <td>
-                            {% if entry.sale_price %}
-                                ${{ "%.2f"|format(entry.sale_price) }}
-                            {% else %}
-                                <span class="text-muted">-</span>
-                            {% endif %}
-                        </td>
-                        <td>
-                            {% if entry.customer %}
-                                <small>{{ entry.customer[:12] }}{% if entry.customer|length > 12 %}...{% endif %}</small>
-                            {% else %}
-                                <span class="text-muted">-</span>
-                            {% endif %}
-                        </td>
-                        <td>
-                            {% if entry.fifo_code %}
-                                <small class="font-monospace">{{ entry.fifo_code }}</small>
-                            {% else %}
-                                <span class="text-muted">-</span>
-                            {% endif %}
-                        </td>
-                        <td>
-                            {% if entry.location_name %}
-                                <small>{{ entry.location_name[:10] }}{% if entry.location_name|length > 10 %}...{% endif %}</small>
-                            {% elif entry.location_id %}
-                                <small class="text-muted">{{ entry.location_id[:8] }}</small>
-                            {% endif %}
-                            {% if entry.temperature_at_time %}
-                                <br><small class="text-info">{{ entry.temperature_at_time }}°</small>
-                            {% endif %}
-                            {% if not entry.location_name and not entry.location_id and not entry.temperature_at_time %}
-                                <span class="text-muted">-</span>
-                            {% endif %}
-                        </td>
-                        <td>
-                            {% if entry.quality_status %}
-                                <span class="badge badge-sm 
-                                    {% if entry.quality_status == 'passed' %}bg-success
-                                    {% elif entry.quality_status == 'failed' %}bg-danger
-                                    {% elif entry.quality_status == 'quarantine' %}bg-warning
-                                    {% else %}bg-secondary{% endif %}">
-                                    {{ entry.quality_status.title() }}
-                                </span>
-                            {% endif %}
-                            {% if entry.compliance_status and entry.compliance_status != entry.quality_status %}
-                                <br><span class="badge badge-sm 
-                                    {% if entry.compliance_status == 'compliant' %}bg-success
-                                    {% elif entry.compliance_status == 'non_compliant' %}bg-danger
-                                    {% else %}bg-secondary{% endif %}">
-                                    {{ entry.compliance_status.replace('_', ' ').title() }}
-                                </span>
-                            {% endif %}
-                            {% if not entry.quality_status and not entry.compliance_status %}
-                                <span class="text-muted">-</span>
-                            {% endif %}
-                        </td>
-                        <td>
-                            {% if entry.order_id %}
-                                <small class="font-monospace">{{ entry.order_id[:8] }}{% if entry.order_id|length > 8 %}...{% endif %}</small>
-                            {% endif %}
-                            {% if entry.reservation_id %}
-                                <br><small class="text-info">R{{ entry.reservation_id[:6] }}</small>
-                            {% endif %}
-                            {% if entry.marketplace_order_id %}
-                                <br><small class="text-success">{{ entry.marketplace_source or 'MP' }}:{{ entry.marketplace_order_id[:6] }}</small>
-                            {% endif %}
-                            {% if not entry.order_id and not entry.reservation_id and not entry.marketplace_order_id %}
-                                <span class="text-muted">-</span>
-                            {% endif %}
-                        </td>
-                        <td>
-                            {% if entry.expiration_date %}
-                                {% set exp_date = entry.expiration_date.strftime('%m/%d/%y') %}
-                                {% set exp_time = entry.expiration_date.strftime('%H:%M') %}
-                                {% set is_expired = entry.expiration_date < now %}
-                                {% set days_until = (entry.expiration_date.date() - now.date()).days %}
-
-                                <span class="badge 
-                                    {% if is_expired %}
-                                        bg-danger
-                                    {% elif days_until <= 7 %}
-                                        bg-warning text-dark
-                                    {% else %}
-                                        bg-success
-                                    {% endif %}
-                                " title="{% if is_expired %}EXPIRED {{ (-days_until) }} days ago{% else %}Expires in {{ days_until }} days{% endif %}: {{ entry.expiration_date.strftime('%Y-%m-%d %H:%M') }}">
-                                    {% if is_expired %}
-                                        <i class="fas fa-exclamation-triangle me-1"></i>
-                                        EXPIRED {{ exp_date }}
-                                    {% elif days_until <= 7 %}
-                                        <i class="fas fa-clock me-1"></i>
-                                        {{ exp_date }} ({{ days_until }}d)
-                                    {% else %}
-                                        <i class="fas fa-check-circle me-1"></i>
-                                        {% if exp_time != '00:00' %}
-                                            {{ exp_date }} {{ exp_time }}
-                                        {% else %}
-                                            {{ exp_date }}
-                                        {% endif %}
-                                    {% endif %}
-                                </span>
-                            {% else %}
-                                <span class="text-muted">-</span>
-                            {% endif %}
-                        </td>
-                        <td>
-                            {% set note_text = entry.notes or entry.note or '' %}
-                            {% if note_text %}
-                                <small class="text-muted" title="{{ note_text }}">{{ note_text[:15] }}{% if note_text|length > 15 %}...{% endif %}</small>
-                            {% else %}
-                                <span class="text-muted">-</span>
-                            {% endif %}
-                        </td>
-                        <td>
-                            {% if entry.remaining_quantity and entry.remaining_quantity > 0 %}
-                                {% set is_expired = entry.expiration_date and entry.expiration_date < now %}
-                                {% if is_expired %}
-                                    <button class="btn btn-sm btn-outline-danger" 
-                                            onclick="markAsExpired('product', '{{ entry.id }}')"
-                                            title="Mark as expired and remove from inventory">
-                                        <i class="fas fa-clock"></i> Mark Expired
-                                    </button>
-                                {% else %}
-                                    <button class="btn btn-sm btn-outline-warning" 
-                                            data-bs-toggle="modal" 
-                                            data-bs-target="#adjustFifoModal"
-                                            data-inventory-id="{{ entry.id }}"
-                                            data-current-quantity="{{ entry.remaining_quantity }}"
-                                            data-unit="{{ entry.unit }}">
-                                        Adj
-                                    </button>
-                                {% endif %}
-                            {% else %}
-                                <span class="text-muted">-</span>
-                            {% endif %}
-                        </td>
-                    </tr>
-                    {% endif %}
-                    {% endfor %}
-                </tbody>
-            </table>
-        </div>
-
-        <!-- Pagination -->
-        {% if history_pagination and history_pagination.pages > 1 %}
-        <nav aria-label="History pagination">
-            <ul class="pagination justify-content-center">
-                {% if history_pagination.has_prev %}
-                    <li class="page-item">
-                        <a class="page-link" href="{{ url_for('products.view_sku', sku_id=sku.id, page=history_pagination.prev_num, fifo=request.args.get('fifo')) }}">Previous</a>
-                    </li>
-                {% endif %}
-
-                {% for page_num in history_pagination.iter_pages() %}
-                    {% if page_num %}
-                        {% if page_num != history_pagination.page %}
-                            <li class="page-item">
-                                <a class="page-link" href="{{ url_for('products.view_sku', sku_id=sku.id, page=page_num, fifo=request.args.get('fifo')) }}">{{ page_num }}</a>
-                            </li>
-                        {% else %}
-                            <li class="page-item active">
-                                <span class="page-link">{{ page_num }}</span>
-                            </li>
-                        {% endif %}
+  <div class="card-header d-flex align-items-center justify-content-between">
+    <h5 class="mb-0">Product History</h5>
+    {% if fifo_filter %}
+      <span class="badge bg-dark">FIFO Filter Active</span>
+    {% endif %}
+  </div>
+  <div class="card-body p-0">
+    {% if history %}
+      <div class="table-responsive">
+        <table class="table table-hover table-sm mb-0" style="min-width: 1150px;">
+          <thead>
+            <tr>
+              <th style="white-space: nowrap;">Date</th>
+              <th style="white-space: nowrap;">Change Type</th>
+              <th style="white-space: nowrap;">Quantity Δ</th>
+              <th style="white-space: nowrap;">Lot Remaining</th>
+              <th style="white-space: nowrap;">Unit Cost</th>
+              <th style="white-space: nowrap;">Total Value</th>
+              <th style="white-space: nowrap;">Source</th>
+              <th style="white-space: nowrap;">FIFO Code
+                <i class="fas fa-info-circle text-muted ms-1"
+                   data-bs-toggle="popover"
+                   data-bs-placement="top"
+                   data-bs-trigger="click"
+                   data-bs-html="true"
+                   data-bs-content="
+                     <div class='fifo-prefix-guide'>
+                       <h6 class='mb-2'>FIFO ID Prefixes</h6>
+                       <div class='row'>
+                         <div class='col-6'>
+                           <strong>LOT</strong> - Inventory Lots<br>
+                           <strong>SLD</strong> - Sold<br>
+                           <strong>SHP</strong> - Shipped<br>
+                           <strong>SPL</strong> - Spoilage<br>
+                           <strong>TRS</strong> - Trash<br>
+                           <strong>DMG</strong> - Damaged<br>
+                           <strong>BCH</strong> - Batch<br>
+                           <strong>RCN</strong> - Recount
+                         </div>
+                         <div class='col-6'>
+                           <strong>REF</strong> - Refunded<br>
+                           <strong>RTN</strong> - Returned<br>
+                           <strong>CST</strong> - Cost Override<br>
+                           <strong>ADD</strong> - Manual Addition<br>
+                           <strong>TST</strong> - Tester<br>
+                           <strong>GFT</strong> - Gift<br>
+                           <strong>QFL</strong> - Quality Fail<br>
+                           <strong>Note:</strong> finished_batch shows batch label
+                         </div>
+                       </div>
+                     </div>"
+                   title="FIFO ID Reference"
+                   style="cursor: pointer;">
+                </i>
+              </th>
+              <th style="white-space: nowrap;">Expiration</th>
+              <th style="white-space: nowrap;">Customer</th>
+              <th style="white-space: nowrap;">Order</th>
+              <th style="white-space: nowrap;">Created By</th>
+              <th style="white-space: nowrap;">Notes</th>
+              <th style="white-space: nowrap;">Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for entry in history %}
+              {% if not fifo_filter or entry.remaining_quantity > 0 %}
+                {% set lot = entry.affected_lot %}
+                {% set lot_remaining = lot.remaining_quantity if lot else entry.remaining_quantity %}
+                {% set lot_expiration = lot.expiration_date if lot else entry.expiration_date %}
+                {% set is_expired = lot_expiration and lot_remaining and lot_expiration < now %}
+                {% set expiring_soon = lot_expiration and lot_remaining and not is_expired and (lot_expiration.date() - now.date()).days <= 7 %}
+                <tr class="{% if is_expired %}table-danger{% elif expiring_soon %}table-warning{% endif %}">
+                  <td style="white-space: nowrap;">
+                    {{ TimezoneUtils.format_for_user(entry.timestamp, '%Y-%m-%d %H:%M') if entry.timestamp else 'N/A' }}
+                  </td>
+                  <td>
+                    <span class="badge
+                      {% if entry.change_type in ['finished_batch', 'restock', 'manual_addition', 'returned', 'refunded'] %}bg-success
+                      {% elif entry.change_type in ['sale', 'sold'] %}bg-primary
+                      {% elif entry.change_type in ['spoil', 'trash', 'damaged'] %}bg-danger
+                      {% elif entry.change_type in ['recount', 'adjustment'] %}bg-warning text-dark
+                      {% elif entry.change_type == 'reserved' %}bg-info text-dark
+                      {% else %}bg-secondary{% endif %}">
+                      {{ entry.change_type.replace('_', ' ')|title }}
+                    </span>
+                  </td>
+                  <td>
+                    <span class="{% if entry.quantity_change > 0 %}text-success{% else %}text-danger{% endif %}">
+                      {% if entry.quantity_change > 0 %}+{% endif %}
+                      {{ "%.2f"|format(entry.quantity_change) }} {{ entry.unit or sku.unit }}
+                    </span>
+                  </td>
+                  <td>
+                    {% if lot_remaining is not none %}
+                      {{ "%.2f"|format(lot_remaining) }} {{ entry.unit or sku.unit }}
                     {% else %}
-                        <li class="page-item disabled">
-                            <span class="page-link">...</span>
-                        </li>
+                      <span class="text-muted">-</span>
                     {% endif %}
-                {% endfor %}
+                  </td>
+                  <td>
+                    {% if lot and lot.unit_cost is not none %}
+                      ${{ "%.2f"|format(lot.unit_cost) }}
+                    {% elif entry.unit_cost %}
+                      ${{ "%.2f"|format(entry.unit_cost) }}
+                    {% else %}
+                      <span class="text-muted">-</span>
+                    {% endif %}
+                  </td>
+                  <td>
+                    {% set unit_cost = (lot.unit_cost if lot and lot.unit_cost is not none else entry.unit_cost) %}
+                    {% if unit_cost is not none %}
+                      ${{ "%.2f"|format(abs(entry.quantity_change) * unit_cost) }}
+                    {% else %}
+                      <span class="text-muted">-</span>
+                    {% endif %}
+                  </td>
+                  <td style="white-space: nowrap;">
+                    {% if entry.batch %}
+                      <a href="{{ url_for('batches.view_batch_record', batch_identifier=entry.batch.id) }}">
+                        {{ entry.batch.label_code or ('Batch #' ~ entry.batch_id) }}
+                      </a>
+                    {% elif entry.batch_id %}
+                      Batch #{{ entry.batch_id }}
+                    {% elif entry.change_type in ['finished_batch', 'manual_addition', 'restock'] %}
+                      <span class="text-success">New Lot</span>
+                    {% else %}
+                      <span class="text-muted">-</span>
+                    {% endif %}
+                  </td>
+                  <td style="white-space: nowrap;">
+                    {% set fifo_display = entry.fifo_code or (lot.fifo_code if lot else None) %}
+                    {% if fifo_display %}
+                      <a href="{{ url_for('inventory.view_inventory', id=sku.inventory_item_id) }}#entry-{{ entry.id }}"
+                         class="text-decoration-none font-monospace">
+                        {{ fifo_display }}
+                      </a>
+                    {% else %}
+                      <span class="text-muted">-</span>
+                    {% endif %}
+                  </td>
+                  <td style="white-space: nowrap;">
+                    {% if lot_expiration %}
+                      <span class="badge {% if is_expired %}bg-danger{% elif expiring_soon %}bg-warning text-dark{% else %}bg-success{% endif %}">
+                        {{ TimezoneUtils.format_for_user(lot_expiration, '%Y-%m-%d') }}
+                      </span>
+                    {% else %}
+                      <span class="text-muted">-</span>
+                    {% endif %}
+                  </td>
+                  <td>
+                    {% if entry.customer %}
+                      <small>{{ entry.customer }}</small>
+                    {% else %}
+                      <span class="text-muted">-</span>
+                    {% endif %}
+                  </td>
+                  <td style="white-space: nowrap;">
+                    {% if entry.order_id %}
+                      <span class="badge bg-light text-dark">
+                        {{ entry.order_id[:10] }}{% if entry.order_id|length > 10 %}…{% endif %}
+                      </span>
+                    {% elif entry.reservation_id %}
+                      <span class="badge bg-info text-dark">
+                        Res {{ entry.reservation_id[:8] }}
+                      </span>
+                    {% else %}
+                      <span class="text-muted">-</span>
+                    {% endif %}
+                  </td>
+                  <td>
+                    {% if entry.user and entry.user.username %}
+                      {{ entry.user.username }}
+                    {% elif entry.user %}
+                      User #{{ entry.user.id }}
+                    {% elif entry.created_by %}
+                      User #{{ entry.created_by }}
+                    {% else %}
+                      <span class="text-muted">System</span>
+                    {% endif %}
+                  </td>
+                  <td>
+                    {% set note_text = entry.notes or entry.note %}
+                    {% if note_text %}
+                      <small title="{{ note_text }}">
+                        {{ note_text[:25] }}{% if note_text|length > 25 %}…{% endif %}
+                      </small>
+                    {% else %}
+                      <span class="text-muted">-</span>
+                    {% endif %}
+                  </td>
+                  <td style="white-space: nowrap;">
+                    {% if lot_remaining and lot_remaining > 0 %}
+                      {% if lot_expiration and lot_expiration < now %}
+                        <button class="btn btn-sm btn-outline-danger"
+                                onclick="markAsExpired('product', '{{ entry.id }}')"
+                                title="Mark this lot as expired and remove remaining quantity">
+                          <i class="fas fa-clock"></i>
+                        </button>
+                      {% endif %}
+                    {% else %}
+                      <span class="text-muted">-</span>
+                    {% endif %}
+                  </td>
+                </tr>
+              {% endif %}
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
 
-                {% if history_pagination.has_next %}
-                    <li class="page-item">
-                        <a class="page-link" href="{{ url_for('products.view_sku', sku_id=sku.id, page=history_pagination.next_num, fifo=request.args.get('fifo')) }}">Next</a>
-                    </li>
+      {% if history_pagination and history_pagination.pages > 1 %}
+        <div class="card-footer">
+          <nav aria-label="Product history pagination">
+            <ul class="pagination pagination-sm justify-content-center mb-0">
+              {% if history_pagination.has_prev %}
+                <li class="page-item">
+                  <a class="page-link" href="{{ url_for('products.view_sku', sku_id=sku.id, page=history_pagination.prev_num, fifo=request.args.get('fifo')) }}">&laquo;</a>
+                </li>
+              {% endif %}
+
+              {% for page_num in history_pagination.iter_pages() %}
+                {% if page_num %}
+                  <li class="page-item {% if page_num == history_pagination.page %}active{% endif %}">
+                    <a class="page-link" href="{{ url_for('products.view_sku', sku_id=sku.id, page=page_num, fifo=request.args.get('fifo')) }}">{{ page_num }}</a>
+                  </li>
+                {% else %}
+                  <li class="page-item disabled"><span class="page-link">…</span></li>
                 {% endif %}
-            </ul>
-        </nav>
-        {% endif %}
+              {% endfor %}
 
-        {% else %}
-        <div class="text-center py-4">
-            <p class="text-muted">No history entries found for this SKU.</p>
+              {% if history_pagination.has_next %}
+                <li class="page-item">
+                  <a class="page-link" href="{{ url_for('products.view_sku', sku_id=sku.id, page=history_pagination.next_num, fifo=request.args.get('fifo')) }}">&raquo;</a>
+                </li>
+              {% endif %}
+            </ul>
+          </nav>
         </div>
-        {% endif %}
-    </div>
+      {% endif %}
+    {% else %}
+      <div class="py-4 text-center text-muted">
+        No history entries found for this SKU.
+      </div>
+    {% endif %}
+  </div>
 </div>

@@ -50,6 +50,7 @@ class BaseConfig:
     WTF_CSRF_ENABLED = True
     SESSION_USE_SIGNER = True
     SESSION_PERMANENT = True
+    SESSION_REDIS_MAX_CONNECTIONS = _env_int('SESSION_REDIS_MAX_CONNECTIONS', 10)
 
     # Uploads
     UPLOAD_FOLDER = 'static/product_images'
@@ -124,6 +125,7 @@ class DevelopmentConfig(BaseConfig):
     DEBUG = True
     DEVELOPMENT = True
     SESSION_COOKIE_SECURE = False
+    SESSION_REDIS_MAX_CONNECTIONS = _env_int('SESSION_REDIS_MAX_CONNECTIONS', 4)
 
     # Prefer internal URL (Render) then DATABASE_URL; else SQLite for local dev
     _db_url = _normalize_db_url(os.environ.get('DATABASE_INTERNAL_URL')) or _normalize_db_url(os.environ.get('DATABASE_URL'))
@@ -154,6 +156,7 @@ class TestingConfig(BaseConfig):
     TESTING = True
     WTF_CSRF_ENABLED = False
     SESSION_COOKIE_SECURE = False
+    SESSION_REDIS_MAX_CONNECTIONS = _env_int('SESSION_REDIS_MAX_CONNECTIONS', 2)
     # In tests we often use file-based temp SQLite from fixtures; default to memory
     SQLALCHEMY_DATABASE_URI = 'sqlite:///:memory:'
     SQLALCHEMY_ENGINE_OPTIONS = {
@@ -171,6 +174,7 @@ class StagingConfig(BaseConfig):
     PREFERRED_URL_SCHEME = 'https'
     DEBUG = False
     TESTING = False
+    SESSION_REDIS_MAX_CONNECTIONS = _env_int('SESSION_REDIS_MAX_CONNECTIONS', 20)
     SQLALCHEMY_DATABASE_URI = _normalize_db_url(os.environ.get('DATABASE_INTERNAL_URL')) or _normalize_db_url(os.environ.get('DATABASE_URL'))
     SQLALCHEMY_ENGINE_OPTIONS = {
         'pool_size': 10,
@@ -189,6 +193,7 @@ class ProductionConfig(BaseConfig):
     PREFERRED_URL_SCHEME = 'https'
     DEBUG = False
     TESTING = False
+    SESSION_REDIS_MAX_CONNECTIONS = _env_int('SESSION_REDIS_MAX_CONNECTIONS', 40)
     SQLALCHEMY_DATABASE_URI = _normalize_db_url(os.environ.get('DATABASE_INTERNAL_URL')) or _normalize_db_url(os.environ.get('DATABASE_URL'))
     SQLALCHEMY_ENGINE_OPTIONS = {
         'pool_size': int(os.environ.get('SQLALCHEMY_POOL_SIZE', 80)),

@@ -1,92 +1,76 @@
-from flask import jsonify, request, Response
-from typing import Any, Dict, Optional, Union, List
-import json
+from __future__ import annotations
+
+from functools import wraps
+from typing import Any, Dict, List, Optional
+
+from flask import Response, current_app, jsonify, request
+
+__all__ = ["APIResponse", "api_route", "api_error", "api_success"]
+
 
 class APIResponse:
-    """Standardized API response handler"""
+    """Standardized API response helper."""
 
     @staticmethod
     def success(data: Any = None, message: str = "Success", status_code: int = 200) -> Response:
-        """Standard success response"""
-        response_data = {
-            'success': True,
-            'message': message,
-            'data': data
-        }
-        return jsonify(response_data), status_code
+        payload = {"success": True, "message": message, "data": data}
+        return jsonify(payload), status_code
 
     @staticmethod
     def error(message: str, errors: Optional[Dict] = None, status_code: int = 400) -> Response:
-        """Standard error response"""
-        response_data = {
-            'success': False,
-            'message': message,
-            'errors': errors or {}
-        }
-        return jsonify(response_data), status_code
+        payload = {"success": False, "message": message, "errors": errors or {}}
+        return jsonify(payload), status_code
 
     @staticmethod
     def validation_error(errors: Dict[str, List[str]]) -> Response:
-        """Validation error response"""
-        return APIResponse.error(
-            message="Validation failed",
-            errors=errors,
-            status_code=422
-        )
+        return APIResponse.error("Validation failed", errors=errors, status_code=422)
 
     @staticmethod
     def not_found(resource: str = "Resource") -> Response:
-        """404 error response"""
-        return APIResponse.error(
-            message=f"{resource} not found",
-            status_code=404
-        )
+        return APIResponse.error(f"{resource} not found", status_code=404)
 
     @staticmethod
     def forbidden(message: str = "Access denied") -> Response:
-        """403 error response"""
-        return APIResponse.error(
-            message=message,
-            status_code=403
-        )
+        return APIResponse.error(message, status_code=403)
 
     @staticmethod
-    def handle_request_content():
-        """Smart request content handling"""
+    def handle_request_content() -> Dict[str, Any]:
         if request.is_json:
-            return request.get_json()
-        elif request.form:
+            return request.get_json() or {}
+        if request.form:
             return request.form.to_dict()
-        else:
-            return {}
+        return {}
 
-def api_route(methods=['GET']):
-    """Decorator for API routes with consistent error handling"""
-    def decorator(func):
-        def wrapper(*args, **named_args):
-            try:
-                return func(*args, **named_args)
-            except ValueError as e:
-                return APIResponse.validation_error({'general': [str(e)]})
-            except PermissionError as e:
-                return APIResponse.forbidden(str(e))
-            except Exception as e:
-                from flask import current_app
-                current_app.logger.error(f"API error in {func.__name__}: {str(e)}")
-                return APIResponse.error("Internal server error", status_code=500)
 
-        wrapper.__name__ = func.__name__
-        return wrapper
-    return decorator
-
-# Backwards compatibility functions
 def api_error(message: str, status_code: int = 400, errors: Optional[Dict] = None) -> Response:
-    """Legacy function - use APIResponse.error() instead"""
-    return APIResponse.error(message, status_code=status_code, errors=errors)
+    """Legacy helper function for API error responses."""
+    return APIResponse.error(message, errors=errors, status_code=status_code)
+
 
 def api_success(data: Any = None, message: str = "Success", status_code: int = 200) -> Response:
-    """Legacy function - use APIResponse.success() instead"""
-    return APIResponse.success(data, message=message, status_code=status_code)
+    """Legacy helper function for API success responses."""
+    return APIResponse.success(data=data, message=message, status_code=status_code)
 
-# Export APIResponse class for backwards compatibility
-__all__ = ['APIResponse', 'api_response', 'api_error', 'api_success']
+
+def api_route(methods: Optional[List[str]] = None):
+    """Decorator for API routes with consistent failure handling."""
+
+    methods = methods or ["GET"]
+
+    def decorator(func):
+        @wraps(func)
+        def wrapper(*args, **kwargs):
+            try:
+                return func(*args, **kwargs)
+            except ValueError as exc:
+                return APIResponse.validation_error({"general": [str(exc)]})
+            except PermissionError as exc:
+                return APIResponse.forbidden(str(exc))
+            except Exception as exc:  # pragma: no cover - defensive logging
+                current_app.logger.exception("API error in %s: %s", func.__name__, exc)
+                return APIResponse.error("Internal server error", status_code=500)
+
+        wrapper.methods = methods  # type: ignore[attr-defined]
+        return wrapper
+
+    return decorator

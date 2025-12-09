@@ -1,4 +1,3 @@
-
 from flask import render_template, request, redirect, url_for, flash, jsonify
 from flask_login import login_required, current_user
 from . import production_planning_bp
@@ -118,7 +117,7 @@ def debug_recipe_containers(recipe_id):
     try:
         from app.models import Recipe, InventoryItem, IngredientCategory
 
-        recipe = Recipe.query.get(recipe_id)
+        recipe = db.session.get(Recipe, recipe_id)
         if not recipe:
             return jsonify({'error': 'Recipe not found'}), 404
 
@@ -166,21 +165,29 @@ def plan_container_route(recipe_id):
         yield_amount = float(data.get('yield_amount'))
         yield_unit = data.get('yield_unit')
         preferred_container_id = data.get('preferred_container_id')
+        fill_pct = data.get('fill_pct')
 
         if not scale or not yield_amount or not yield_unit:
             return jsonify({"error": "Scale, yield amount, and yield unit are required"}), 400
 
         # Delegate to service
-        container_plan = analyze_container_options(
-            recipe_id=recipe_id,
+        # Import production_service dynamically to avoid circular imports
+        from app.services.production_planning import ProductionPlanningService
+        production_service = ProductionPlanningService()
+
+        container_result = production_service.analyze_containers(
+            recipe=recipe,
             scale=scale,
-            yield_amount=yield_amount,
-            yield_unit=yield_unit,
             preferred_container_id=preferred_container_id,
-            organization_id=current_user.organization_id
+            fill_pct=fill_pct
         )
 
-        return jsonify(container_plan)
+        # If container analysis returns a drawer payload, return it immediately
+        if isinstance(container_result, dict) and container_result.get('drawer_payload'):
+            return jsonify(container_result)
+
+
+        return jsonify(container_result)
 
     except Exception as e:
         logger.error(f"Error in container planning API: {e}")

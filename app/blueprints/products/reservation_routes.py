@@ -1,7 +1,7 @@
 from flask import Blueprint, request, jsonify, render_template
 from flask_login import login_required, current_user
 from sqlalchemy import and_, func, desc
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 
 from ...models import db, Reservation, InventoryItem
 from ...services.pos_integration import POSIntegrationService
@@ -50,19 +50,18 @@ def list_reservations():
 
             # Get lot information from FIFO entry if available
             if reservation.source_fifo_id:
-                from ...models import UnifiedInventoryHistory
-                from ...models.product import ProductSKUHistory
-
-                # Try to get lot information from either UnifiedInventoryHistory or ProductSKUHistory
                 from ...extensions import db
-                fifo_entry = None
-                if reservation.product_item and reservation.product_item.type == 'product':
-                    fifo_entry = db.session.get(ProductSKUHistory, reservation.source_fifo_id)
-                else:
-                    fifo_entry = db.session.get(UnifiedInventoryHistory, reservation.source_fifo_id)
+                from ...models.inventory_lot import InventoryLot
+                from ...models import UnifiedInventoryHistory
 
-                if fifo_entry and hasattr(fifo_entry, 'lot_number') and fifo_entry.lot_number:
-                    lot_number = fifo_entry.lot_number
+                lot = db.session.get(InventoryLot, reservation.source_fifo_id)
+
+                if lot and getattr(lot, "lot_number", None):
+                    lot_number = lot.lot_number
+                else:
+                    history_entry = db.session.get(UnifiedInventoryHistory, reservation.source_fifo_id)
+                    if history_entry and getattr(history_entry, "affected_lot", None):
+                        lot_number = history_entry.affected_lot.lot_number
 
             reservation_data = {
                 'order_id': reservation.order_id,
@@ -107,7 +106,8 @@ def list_reservations():
                          reservation_groups=reservation_groups,
                          stats=stats,
                          status_filter=status_filter,
-                         order_id_filter=order_id_filter)
+                         order_id_filter=order_id_filter,
+                         current_time=datetime.now(timezone.utc))
 
 @reservations_bp.route('/api/reservations/create', methods=['POST'])
 @login_required
@@ -164,21 +164,23 @@ def release_reservation(order_id):
 
             # Check if source FIFO entry exists
             if reservation.source_fifo_id:
+                from ...models.inventory_lot import InventoryLot
                 from ...models import UnifiedInventoryHistory
-                from ...models.product import ProductSKUHistory
 
-                if reservation.product_item and reservation.product_item.type == 'product':
-                    fifo_entry = db.session.get(ProductSKUHistory, reservation.source_fifo_id)
-                    print(f"  - FIFO Entry (ProductSKUHistory): {fifo_entry}")
-                    if fifo_entry:
-                        print(f"    - Lot Number: {fifo_entry.lot_number if hasattr(fifo_entry, 'lot_number') else 'N/A'}")
-                        print(f"    - Remaining Quantity: {fifo_entry.remaining_quantity}")
+                lot = db.session.get(InventoryLot, reservation.source_fifo_id)
+                if lot:
+                    print(f"  - FIFO Lot: {lot}")
+                    print(f"    - Lot Number: {getattr(lot, 'lot_number', 'N/A')}")
+                    print(f"    - Remaining Quantity: {getattr(lot, 'remaining_quantity', 'N/A')}")
                 else:
-                    fifo_entry = db.session.get(UnifiedInventoryHistory, reservation.source_fifo_id)
-                    print(f"  - FIFO Entry (UnifiedInventoryHistory): {fifo_entry}")
-                    if fifo_entry:
-                        print(f"    - Lot Number: {fifo_entry.lot_number if hasattr(fifo_entry, 'lot_number') else 'N/A'}")
-                        print(f"    - Remaining Quantity: {fifo_entry.remaining_quantity}")
+                    history_entry = db.session.get(UnifiedInventoryHistory, reservation.source_fifo_id)
+                    print(f"  - FIFO History Entry: {history_entry}")
+                    if history_entry:
+                        if getattr(history_entry, 'affected_lot', None):
+                            affected_lot = history_entry.affected_lot
+                            print(f"    - Lot Number: {getattr(affected_lot, 'lot_number', 'N/A')}")
+                            print(f"    - Lot Remaining Quantity: {getattr(affected_lot, 'remaining_quantity', 'N/A')}")
+                        print(f"    - Quantity Change: {history_entry.quantity_change}")
             else:
                 print(f"  - WARNING: No source_fifo_id recorded for this reservation!")
 

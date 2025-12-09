@@ -1,5 +1,5 @@
-import os
 from ..extensions import db
+from .db_dialect import is_postgres
 
 
 class GlobalItemAlias(db.Model):
@@ -9,17 +9,7 @@ class GlobalItemAlias(db.Model):
     global_item_id = db.Column(db.Integer, db.ForeignKey('global_item.id', ondelete='CASCADE'), nullable=False)
     alias = db.Column(db.Text, nullable=False)
 
-    def _is_postgres_url(url: str) -> bool:
-        if not url:
-            return False
-        url = url.lower()
-        return (
-            url.startswith("postgres://")
-            or url.startswith("postgresql://")
-            or url.startswith("postgresql+psycopg2://")
-        )
-
-    _IS_PG = _is_postgres_url(os.environ.get("DATABASE_URL", ""))
+    _IS_PG = is_postgres()
 
     __table_args__ = tuple([
         db.Index('ix_global_item_alias_alias', 'alias'),

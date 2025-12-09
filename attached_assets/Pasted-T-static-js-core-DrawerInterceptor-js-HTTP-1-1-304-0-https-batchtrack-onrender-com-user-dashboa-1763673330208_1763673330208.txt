@@ -1,0 +1,78 @@
+T /static/js/core/DrawerInterceptor.js HTTP/1.1" 304 0 "https://batchtrack.onrender.com/user_dashboard" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36" 2474
+10.25.175.137 "GET /static/js/core/DrawerProtocol.js HTTP/1.1" 304 0 "https://batchtrack.onrender.com/user_dashboard" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36" 2602
+10.24.148.39 "GET /static/js/inventory/inventory_adjust.js HTTP/1.1" 304 0 "https://batchtrack.onrender.com/user_dashboard" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36" 1854
+10.24.154.1 "GET /static/js/core/CacheManager.js HTTP/1.1" 304 0 "https://batchtrack.onrender.com/static/js/core/DrawerInterceptor.js" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36" 4372
+10.24.148.39 "GET /api/drawers/check?include=retention HTTP/1.1" 200 112 "https://batchtrack.onrender.com/user_dashboard" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36" 19281
+10.24.148.39 "GET /api/dashboard-alerts HTTP/1.1" 200 860 "https://batchtrack.onrender.com/user_dashboard" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36" 35968
+10.25.175.137 "GET /favicon.ico HTTP/1.1" 404 207 "https://batchtrack.onrender.com/user_dashboard" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36" 14775
+Stripe lookup by lookup_key failed for batchtrack_team_monthly; attempting to treat it as a price ID
+No active Stripe price found for lookup key batchtrack_team_monthly; ensure the price exists and is active
+Stripe lookup by lookup_key failed for batchtrack_enterprise_monthly; attempting to treat it as a price ID
+No active Stripe price found for lookup key batchtrack_enterprise_monthly; ensure the price exists and is active
+[2025-11-20 21:13:14 +0000] [62] [ERROR] Error handling request /settings
+Traceback (most recent call last):
+  File "/opt/render/project/src/.venv/lib/python3.13/site-packages/gunicorn/workers/base_async.py", line 54, in handle
+    self.handle_request(listener_name, req, client, addr)
+    ~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/render/project/src/.venv/lib/python3.13/site-packages/gunicorn/workers/ggevent.py", line 127, in handle_request
+    super().handle_request(listener_name, req, sock, addr)
+    ~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/render/project/src/.venv/lib/python3.13/site-packages/gunicorn/workers/base_async.py", line 107, in handle_request
+    respiter = self.wsgi(environ, resp.start_response)
+  File "/opt/render/project/src/.venv/lib/python3.13/site-packages/flask/app.py", line 1536, in __call__
+    return self.wsgi_app(environ, start_response)
+           ~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/render/project/src/.venv/lib/python3.13/site-packages/flask/app.py", line 1514, in wsgi_app
+    response = self.handle_exception(e)
+  File "/opt/render/project/src/.venv/lib/python3.13/site-packages/flask/app.py", line 1511, in wsgi_app
+    response = self.full_dispatch_request()
+  File "/opt/render/project/src/.venv/lib/python3.13/site-packages/flask/app.py", line 919, in full_dispatch_request
+    rv = self.handle_user_exception(e)
+  File "/opt/render/project/src/.venv/lib/python3.13/site-packages/flask/app.py", line 917, in full_dispatch_request
+    rv = self.dispatch_request()
+  File "/opt/render/project/src/.venv/lib/python3.13/site-packages/flask/app.py", line 902, in dispatch_request
+    return self.ensure_sync(self.view_functions[rule.endpoint])(**view_args)  # type: ignore[no-any-return]
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^
+  File "/opt/render/project/src/.venv/lib/python3.13/site-packages/flask_login/utils.py", line 290, in decorated_view
+    return current_app.ensure_sync(func)(*args, **kwargs)
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^
+  File "/opt/render/project/src/app/blueprints/settings/routes.py", line 119, in index
+    return render_template('settings/index.html',
+                         user_prefs=user_prefs,
+    ...<5 lines>...
+                         TimezoneUtils=TimezoneUtils,
+                         pricing_data=pricing_data)
+  File "/opt/render/project/src/.venv/lib/python3.13/site-packages/flask/templating.py", line 150, in render_template
+    return _render(app, template, context)
+  File "/opt/render/project/src/.venv/lib/python3.13/site-packages/flask/templating.py", line 131, in _render
+    rv = template.render(context)
+  File "/opt/render/project/src/.venv/lib/python3.13/site-packages/jinja2/environment.py", line 1295, in render
+    self.environment.handle_exception()
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^
+  File "/opt/render/project/src/.venv/lib/python3.13/site-packages/jinja2/environment.py", line 942, in handle_exception
+    raise rewrite_traceback_stack(source=source)
+  File "/opt/render/project/src/app/templates/settings/index.html", line 1, in top-level template code
+    {% extends "layout.html" %}
+    ^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/render/project/src/app/templates/layout.html", line 374, in top-level template code
+    {% block content %}{% endblock %}
+    ^^^^^^^^^^^^^
+  File "/opt/render/project/src/app/templates/settings/index.html", line 97, in block 'content'
+    {% include 'settings/components/billing_tab.html' %}
+    ^^^^^^^^^^^^^
+  File "/opt/render/project/src/app/templates/settings/components/billing_tab.html", line 45, in top-level template code
+    <a href="{{ url_for('billing.billing') }}" class="btn btn-light">View All Plans</a>
+    ^^^^^
+  File "/opt/render/project/src/.venv/lib/python3.13/site-packages/flask/app.py", line 1121, in url_for
+    return self.handle_url_build_error(error, endpoint, values)
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/render/project/src/.venv/lib/python3.13/site-packages/flask/app.py", line 1110, in url_for
+    rv = url_adapter.build(  # type: ignore[union-attr]
+        endpoint,
+    ...<3 lines>...
+        force_external=_external,
+    )
+  File "/opt/render/project/src/.venv/lib/python3.13/site-packages/werkzeug/routing/map.py", line 924, in build
+    raise BuildError(endpoint, values, method, self)
+werkzeug.routing.exceptions.BuildError: Could not build url for endpoint 'billing.billing'. Did you mean 'billing.debug_billing' instead?
+10.25.175.137 "GET /settings HTTP/1.1" 500 0 "-" "-" 21742

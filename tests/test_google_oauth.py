@@ -62,10 +62,16 @@ class TestGoogleOAuthCharacterization:
                 'generate_state'
             ]
 
+            missing = [method for method in expected_methods if not hasattr(service, method)]
+            assert not missing, f"OAuthService is missing methods: {missing}"
+
             for method in expected_methods:
-                # Document what should exist for our refactoring target
-                # Some methods may not exist yet
-                pass  # TODO: Assert methods exist once interface is standardized
+                attr = getattr(service, method)
+                assert callable(attr), f"{method} should be callable on OAuthService"
+
+            # Characterize the behavior of helper methods without hitting Google
+            token = service.generate_state()
+            assert isinstance(token, str) and len(token) >= 16
 
     def test_oauth_configuration_status(self, app):
         """Test OAuth configuration detection"""
