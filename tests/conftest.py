@@ -173,7 +173,6 @@ def _ensure_sqlite_schema_columns():
     ensure_columns('global_item', {
         'aliases': 'TEXT',
         'recommended_shelf_life_days': 'INTEGER',
-        'recommended_usage_rate': 'VARCHAR(64)',
         'recommended_fragrance_load_pct': 'VARCHAR(64)',
         'is_active_ingredient': 'BOOLEAN',
         'inci_name': 'VARCHAR(256)',
