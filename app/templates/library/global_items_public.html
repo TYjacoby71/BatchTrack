@@ -69,26 +69,16 @@
     </thead>
     <tbody>
       {% for gi in items %}
-<<<<<<< HEAD
         <tr>
-=======
-      <tr>
->>>>>>> origin/main
           <td>
             <a href="{{ url_for('global_library_bp.global_item_detail', item_id=gi.id, slug=slugify(gi.name)) }}"
                class="text-decoration-none js-open-global-item-stats"
                data-global-item-id="{{ gi.id }}">{{ gi.name }}</a>
-<<<<<<< HEAD
           </td>
           <td><span class="badge bg-secondary">{{ gi.item_type }}</span></td>
           <td>{{ gi.ingredient.name if gi.ingredient else '-' }}</td>
           <td>{{ gi.physical_form.name if gi.physical_form else '-' }}</td>
           <td>{{ gi.ingredient_category.name if gi.ingredient_category else '-' }}</td>
-=======
-        </td>
-        <td><span class="badge bg-secondary">{{ gi.item_type }}</span></td>
-        <td>{{ gi.ingredient_category.name if gi.ingredient_category else '-' }}</td>
->>>>>>> origin/main
           <td>
           {% if gi.density is not none %}
             {{ '%.3f'|format(gi.density) }}
