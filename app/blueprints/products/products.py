@@ -316,7 +316,8 @@ def list_products():
                             'quantity': quantity,
                             'unit': unit or '',
                             'sku_id': sku.inventory_item_id,
-                            'sku_code': sku.sku or sku.sku_code
+                            'sku_code': sku.sku or sku.sku_code,
+                            'retail_price': sku.retail_price
                         })()
                         self.inventory.append(inventory_entry)
 
@@ -533,7 +534,7 @@ def view_product(product_id):
                          get_global_unit_list=get_global_unit_list,
                          inventory_groups={},
                          product_categories=product_categories,
-                         breadcrumb_items=[{'label': 'Products', 'url': url_for('products.list_products')}, {'label': product.name}])
+                         breadcrumb_items=[{'label': 'Product Dashboard', 'url': url_for('products.list_products')}, {'label': product.name + ' Overview'}])
 
 # Keep the old route for backward compatibility
 @products_bp.route('/<product_name>')
