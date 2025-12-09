@@ -160,7 +160,6 @@ document.addEventListener('DOMContentLoaded', function() {
                       physical_form_name: form.physical_form_name || (physical && physical.name) || null,
                       default_is_perishable: form.default_is_perishable,
                       recommended_shelf_life_days: form.recommended_shelf_life_days,
-                      recommended_usage_rate: form.recommended_usage_rate || item.recommended_usage_rate,
                       recommended_fragrance_load_pct: form.recommended_fragrance_load_pct || item.recommended_fragrance_load_pct,
                       aliases: form.aliases || item.aliases || [],
                       certifications: form.certifications || item.certifications || [],
