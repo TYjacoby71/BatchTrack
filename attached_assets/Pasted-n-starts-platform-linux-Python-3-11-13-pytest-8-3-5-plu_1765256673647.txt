@@ -1,0 +1,532 @@
+n starts ==============================
+platform linux -- Python 3.11.13, pytest-8.3.5, pluggy-1.5.0
+rootdir: /home/runner/workspace
+collecting 19 items                      collecting 23 items                      collected 113 items                     
+
+tests/developer/test_analytics_catalog.py .. [  1%]
+tests/developer/test_developer_routes.py ...... [  7%]
+tests/developer/test_service_layers.py ...... [ 12%]
+tests/test_auth_permissions.py ... [ 15%]
+tests/test_batch_label_generator.py .. [ 16%]
+tests/test_batch_label_uniqueness.py .. [ 18%]
+tests/test_batchbot_jobs.py ..    [ 20%]
+tests/test_billing_and_tier_enforcement.py ......... [ 28%]
+tests/test_bulk_inventory_service.py .F... [ 32%]
+tests/test_container_auto_fill.py . [ 33%]
+tests/test_expiration_canonicalization.py ... [ 36%]
+tests/test_extras_expiration.py . [ 37%]
+tests/test_global_link_drawer.py F [ 38%]
+tests/test_google_oauth.py ....... [ 44%]
+tests/test_help_routes_access.py . [ 45%]
+tests/test_inventory_adjustment_guardrails.py . [ 46%]
+tests/test_inventory_adjustment_initial_stock.py . [ 46%]
+tests/test_inventory_costing_toggle.py .... [ 50%]
+tests/test_inventory_fifo.py ...  [ 53%]
+tests/test_inventory_routes_canonicalization.py .. [ 54%]
+tests/test_inventory_search_service.py .. [ 56%]
+tests/test_plan_production_gating.py . [ 57%]
+tests/test_plan_production_integration.py .. [ 59%]
+tests/test_portioning_sku_derivation.py .. [ 61%]
+tests/test_pos_integration_canonicalization.py .... [ 64%]
+tests/test_public_tools_access.py .. [ 66%]
+tests/test_public_tools_and_exports_smoke.py .. [ 68%]
+tests/test_recipe_drafts.py ...   [ 70%]
+tests/test_recipe_marketplace_service.py ... [ 73%]
+tests/test_recipe_origin.py ...   [ 76%]
+tests/test_recipe_proportionality_service.py .. [ 77%]
+tests/test_recipe_service_workflows.py ..FFFF.. [ 84%]
+tests/test_reservation_canonicalization.py ... [ 87%]
+tests/test_retention_drawer.py .  [ 88%]
+tests/test_signup_stripe_flow.py . [ 89%]
+tests/test_signup_tiers.py .....  [ 93%]
+tests/test_single_session_enforcement.py . [ 94%]
+tests/test_start_batch_integration.py . [ 95%]
+tests/test_stripe_webhooks.py .... [ 99%]
+tests/test_timezone_conventions.py . [100%]
+
+=============== FAILURES ================
+_ test_bulk_service_creates_inventory_from_global_item _
+
+app = <Flask 'app'>
+test_user = <User testuser_1765256439533233>
+
+    def test_bulk_service_creates_inventory_from_global_item(app, test_user):
+        with app.app_context():
+            global_item = GlobalItem(name="Global Wax", item_type="ingredient", default_unit="oz")
+            db.session.add(global_item)
+            db.session.commit()
+    
+            service = BulkInventoryService(organization_id=test_user.organization_id, user=test_user)
+    
+            payload = [
+                {
+                    "inventory_item_name": "My Global Wax",
+                    "inventory_type": "ingredient",
+                    "change_type": "create",
+                    "quantity": 7,
+                    "unit": "oz",
+                    "global_item_id": global_item.id,
+                    "allow_create": True,
+                }
+            ]
+    
+            result = service.submit_bulk_inventory_update(payload)
+    
+>           assert result["success"] is True
+E           assert False is True
+
+tests/test_bulk_inventory_service.py:67: AssertionError
+--------- Captured stderr setup ---------
+Environment configuration warning: APP_BASE_URL not set; defaulting to http://localhost:5000 for local/testing environments.
+--------- Captured stderr call ----------
+Error creating inventory item: 'GlobalItem' object has no attribute 'recommended_usage_rate'
+_ test_global_link_suggestions_and_link_flow _
+
+app = <Flask 'app'>
+db_session = <sqlalchemy.orm.scoping.scoped_session object at 0x7f5a27064e90>
+
+    @pytest.mark.usefixtures("app", "db_session")
+    def test_global_link_suggestions_and_link_flow(app, db_session):
+        from app.models import InventoryItem, GlobalItem, IngredientCategory, Unit, User, Organization
+    
+        # Ensure base units exist (weight, volume, count)
+        if not Unit.query.filter_by(name='g').first():
+            db_session.add(Unit(name='g', symbol='g', unit_type='weight', conversion_factor=1.0))
+        if not Unit.query.filter_by(name='ml').first():
+            db_session.add(Unit(name='ml', symbol='ml', unit_type='volume', conversion_factor=1.0))
+        if not Unit.query.filter_by(name='count').first():
+            db_session.add(Unit(name='count', symbol='ct', unit_type='count', conversion_factor=1.0))
+        db_session.commit()
+    
+        # Create org and user context
+        org = Organization(name='Test Org')
+        db_session.add(org)
+        db_session.flush()
+    
+        user = User(email='test@example.com', user_type='developer', is_active=True, organization_id=org.id)
+        db_session.add(user)
+        db_session.commit()
+    
+        # Create a curated category and global item 'Milk' stored in volume (ml) with density
+        cat = IngredientCategory(name='Liquids', default_density=1.0, organization_id=None, is_global_category=True)
+        db_session.add(cat)
+        db_session.flush()
+    
+        gi = GlobalItem(name='Milk', item_type='ingredient', default_unit='ml', density=1.03, ingredient_category_id=cat.id)
+        db_session.add(gi)
+        db_session.commit()
+    
+        # Create org inventory items: matchable and non-matchable
+        milk_ml = InventoryItem(name='milk', type='ingredient', unit='ml', quantity=0.0, organization_id=org.id)
+        milk_g = InventoryItem(name='MILK', type='ingredient', unit='g', quantity=0.0, organization_id=org.id)
+        milk_count = InventoryItem(name='milk (units)', type='ingredient', unit='count', quantity=0.0, organization_id=org.id)
+        db_session.add_all([milk_ml, milk_g, milk_count])
+        db_session.commit()
+    
+        # Create flask client with the provided app fixture to share the same DB
+        app.config['SKIP_PERMISSIONS'] = True
+        with app.test_client() as client:
+            # Login helper: set session org and auth
+            with client.session_transaction() as sess:
+                sess['_user_id'] = str(user.id)
+                sess['_fresh'] = True
+                # Developer scoping to org
+                sess['dev_selected_org_id'] = org.id
+            # Check suggestions
+            res = client.get('/api/drawers/global-link/check')
+            assert res.status_code == 200
+            data = res.get_json() or {}
+            assert 'needs_drawer' in data
+            # Depending on which global has candidates, the service returns first; ensure payload present when true
+            if data['needs_drawer']:
+                assert data.get('drawer_payload', {}).get('modal_url')
+    
+            # Force modal for our specific global item
+            res2 = client.get(f'/api/drawers/global-link/modal?global_item_id={gi.id}')
+            assert res2.status_code == 200
+            html_payload = res2.get_json() or {}
+            assert html_payload.get('success') is True
+            assert 'modal_html' in html_payload
+            # The modal should list ml and g items but not count
+            html = html_payload['modal_html']
+            assert 'MILK' in html or 'Milk' in html  # will become name
+            assert f'value="{milk_ml.id}"' in html
+            assert f'value="{milk_g.id}"' in html
+            assert f'value="{milk_count.id}"' not in html  # non-convertible count excluded
+    
+            # Confirm linking for ml and g
+            payload = {
+                'global_item_id': gi.id,
+                'item_ids': [milk_ml.id]
+            }
+            res3 = client.post('/api/drawers/global-link/confirm', data=json.dumps(payload), content_type='application/json')
+            assert res3.status_code == 200
+            result = res3.get_json()
+            assert result.get('success') is True
+>           assert result.get('updated') == 1
+E           AssertionError: assert 0 == 1
+E            +  where 0 = <built-in method get of dict object at 0x7f5a1a7616c0>('updated')
+E            +    where <built-in method get of dict object at 0x7f5a1a7616c0> = {'skipped': 1, 'success': True, 'updated': 0}.get
+
+tests/test_global_link_drawer.py:83: AssertionError
+--------- Captured stderr setup ---------
+Environment configuration warning: APP_BASE_URL not set; defaulting to http://localhost:5000 for local/testing environments.
+_ test_duplicate_recipe_maps_global_items_for_import _
+
+    @pytest.mark.usefixtures('app_context')
+    def test_duplicate_recipe_maps_global_items_for_import():
+        category = _create_category("ImportMap")
+    
+        # Seller org/user from fixtures
+        seller_org = Organization.query.first()
+        seller_user = User.query.filter_by(organization_id=seller_org.id).first()
+    
+        # Buyer org/user setup
+        tier = seller_org.subscription_tier
+        buyer_org = Organization(name=_unique_name("Buyer Org"), subscription_tier=tier)
+        db.session.add(buyer_org)
+        db.session.commit()
+    
+        buyer_user = User(
+            email=f'{_unique_name("buyer")}@example.com',
+            username=_unique_name("buyer"),
+            password_hash='test_hash',
+            is_verified=True,
+            organization_id=buyer_org.id,
+        )
+        db.session.add(buyer_user)
+        db.session.commit()
+    
+        # Shared global item plus org-specific inventory
+        global_item = GlobalItem(name=_unique_name("Global Oil"), item_type='ingredient', default_unit='oz')
+        db.session.add(global_item)
+        db.session.commit()
+    
+        seller_item = InventoryItem(
+            name="Seller Oil",
+            unit='oz',
+            type='ingredient',
+            quantity=25.0,
+            organization_id=seller_org.id,
+            global_item_id=global_item.id,
+        )
+        buyer_item = InventoryItem(
+            name="Buyer Oil",
+            unit='oz',
+            type='ingredient',
+            quantity=10.0,
+            organization_id=buyer_org.id,
+            global_item_id=global_item.id,
+        )
+        db.session.add_all([seller_item, buyer_item])
+        db.session.commit()
+    
+        with current_app.test_request_context():
+            login_user(seller_user)
+            ok, recipe_or_err = create_recipe(
+                name=_unique_name("Import Ready"),
+                instructions='Mix thoroughly.',
+                yield_amount=10,
+                yield_unit='oz',
+                ingredients=[{'item_id': seller_item.id, 'quantity': 10, 'unit': 'oz'}],
+                allowed_containers=[],
+                label_prefix='IMP',
+                category_id=category.id,
+                sharing_scope='public',
+                is_public=True,
+                status='published',
+            )
+            assert ok, recipe_or_err
+            recipe: Recipe = recipe_or_err
+    
+            login_user(buyer_user)
+            dup_ok, payload_or_err = duplicate_recipe(
+                recipe.id,
+                allow_cross_org=True,
+                target_org_id=buyer_org.id,
+            )
+>           assert dup_ok, payload_or_err
+E           AssertionError: 'Recipe' object has no attribute 'marketplace_blocked'
+E           assert False
+
+tests/test_recipe_service_workflows.py:188: AssertionError
+--------- Captured stderr setup ---------
+Environment configuration warning: APP_BASE_URL not set; defaulting to http://localhost:5000 for local/testing environments.
+--------- Captured stderr call ----------
+Error retrieving recipe 1: 'Recipe' object has no attribute 'marketplace_blocked'
+Error duplicating recipe 1: 'Recipe' object has no attribute 'marketplace_blocked'
+_ test_duplicate_recipe_creates_missing_inventory_for_import _
+
+    @pytest.mark.usefixtures('app_context')
+    def test_duplicate_recipe_creates_missing_inventory_for_import():
+        category = _create_category("MissingImport")
+    
+        seller_org = Organization.query.first()
+        seller_user = User.query.filter_by(organization_id=seller_org.id).first()
+    
+        tier = seller_org.subscription_tier
+        buyer_org = Organization(name=_unique_name("Buyer Missing"), subscription_tier=tier)
+        db.session.add(buyer_org)
+        db.session.commit()
+    
+        buyer_user = User(
+            email=f'{_unique_name("missing")}@example.com',
+            username=_unique_name("missing"),
+            password_hash='test_hash',
+            is_verified=True,
+            organization_id=buyer_org.id,
+        )
+        db.session.add(buyer_user)
+        db.session.commit()
+    
+        global_item = GlobalItem(name=_unique_name("New Oil"), item_type='ingredient', default_unit='oz')
+        db.session.add(global_item)
+        db.session.commit()
+    
+        seller_item = InventoryItem(
+            name="Seller Only Oil",
+            unit='oz',
+            type='ingredient',
+            quantity=12.0,
+            organization_id=seller_org.id,
+            global_item_id=global_item.id,
+        )
+        db.session.add(seller_item)
+        db.session.commit()
+    
+        with current_app.test_request_context():
+            login_user(seller_user)
+            ok, recipe_or_err = create_recipe(
+                name=_unique_name("Needs Inventory"),
+                instructions='Blend oils.',
+                yield_amount=6,
+                yield_unit='oz',
+                ingredients=[{'item_id': seller_item.id, 'quantity': 6, 'unit': 'oz'}],
+                allowed_containers=[],
+                label_prefix='IMP2',
+                category_id=category.id,
+                sharing_scope='public',
+                is_public=True,
+                status='published',
+            )
+            assert ok, recipe_or_err
+            recipe: Recipe = recipe_or_err
+    
+            login_user(buyer_user)
+            dup_ok, payload_or_err = duplicate_recipe(
+                recipe.id,
+                allow_cross_org=True,
+                target_org_id=buyer_org.id,
+            )
+>           assert dup_ok, payload_or_err
+E           AssertionError: 'Recipe' object has no attribute 'marketplace_blocked'
+E           assert False
+
+tests/test_recipe_service_workflows.py:255: AssertionError
+--------- Captured stderr setup ---------
+Environment configuration warning: APP_BASE_URL not set; defaulting to http://localhost:5000 for local/testing environments.
+--------- Captured stderr call ----------
+Error retrieving recipe 1: 'Recipe' object has no attribute 'marketplace_blocked'
+Error duplicating recipe 1: 'Recipe' object has no attribute 'marketplace_blocked'
+_ test_duplicate_recipe_creates_inventory_without_global_link _
+
+    @pytest.mark.usefixtures('app_context')
+    def test_duplicate_recipe_creates_inventory_without_global_link():
+        category = _create_category("NoGlobal")
+    
+        seller_org = Organization.query.first()
+        seller_user = User.query.filter_by(organization_id=seller_org.id).first()
+    
+        tier = seller_org.subscription_tier
+        buyer_org = Organization(name=_unique_name("Buyer NoGlobal"), subscription_tier=tier)
+        db.session.add(buyer_org)
+        db.session.commit()
+    
+        buyer_user = User(
+            email=f'{_unique_name("noglobal")}@example.com',
+            username=_unique_name("noglobal"),
+            password_hash='test_hash',
+            is_verified=True,
+            organization_id=buyer_org.id,
+        )
+        db.session.add(buyer_user)
+        db.session.commit()
+    
+        seller_item = InventoryItem(
+            name="Secret Blend",
+            unit='oz',
+            type='ingredient',
+            quantity=5.0,
+            organization_id=seller_org.id,
+            global_item_id=None,
+        )
+        db.session.add(seller_item)
+        db.session.commit()
+    
+        with current_app.test_request_context():
+            login_user(seller_user)
+            ok, recipe_or_err = create_recipe(
+                name=_unique_name("No Global Recipe"),
+                instructions='Just mix.',
+                yield_amount=5,
+                yield_unit='oz',
+                ingredients=[{'item_id': seller_item.id, 'quantity': 5, 'unit': 'oz'}],
+                allowed_containers=[],
+                label_prefix='NGL',
+                category_id=category.id,
+                sharing_scope='public',
+                is_public=True,
+                status='published',
+            )
+            assert ok, recipe_or_err
+            recipe: Recipe = recipe_or_err
+    
+            login_user(buyer_user)
+            dup_ok, payload_or_err = duplicate_recipe(
+                recipe.id,
+                allow_cross_org=True,
+                target_org_id=buyer_org.id,
+            )
+>           assert dup_ok, payload_or_err
+E           AssertionError: 'Recipe' object has no attribute 'marketplace_blocked'
+E           assert False
+
+tests/test_recipe_service_workflows.py:323: AssertionError
+--------- Captured stderr setup ---------
+Environment configuration warning: APP_BASE_URL not set; defaulting to http://localhost:5000 for local/testing environments.
+--------- Captured stderr call ----------
+Error retrieving recipe 1: 'Recipe' object has no attribute 'marketplace_blocked'
+Error duplicating recipe 1: 'Recipe' object has no attribute 'marketplace_blocked'
+_ test_duplicate_recipe_matches_plural_names_without_global_link _
+
+    @pytest.mark.usefixtures('app_context')
+    def test_duplicate_recipe_matches_plural_names_without_global_link():
+        category = _create_category("PluralMatch")
+    
+        seller_org = Organization.query.first()
+        seller_user = User.query.filter_by(organization_id=seller_org.id).first()
+    
+        tier = seller_org.subscription_tier
+        buyer_org = Organization(name=_unique_name("Buyer Plural"), subscription_tier=tier)
+        db.session.add(buyer_org)
+        db.session.commit()
+    
+        buyer_user = User(
+            email=f'{_unique_name("plural")}@example.com',
+            username=_unique_name("plural"),
+            password_hash='test_hash',
+            is_verified=True,
+            organization_id=buyer_org.id,
+        )
+        db.session.add(buyer_user)
+        db.session.commit()
+    
+        buyer_inventory = InventoryItem(
+            name="Apples",
+            unit='oz',
+            type='ingredient',
+            quantity=3.0,
+            organization_id=buyer_org.id,
+        )
+        db.session.add(buyer_inventory)
+        db.session.commit()
+    
+        seller_item = InventoryItem(
+            name="Apple",
+            unit='oz',
+            type='ingredient',
+            quantity=5.0,
+            organization_id=seller_org.id,
+        )
+        db.session.add(seller_item)
+        db.session.commit()
+    
+        with current_app.test_request_context():
+            login_user(seller_user)
+            ok, recipe_or_err = create_recipe(
+                name=_unique_name("Plural Apples"),
+                instructions='Mix apples.',
+                yield_amount=5,
+                yield_unit='oz',
+                ingredients=[{'item_id': seller_item.id, 'quantity': 5, 'unit': 'oz'}],
+                allowed_containers=[],
+                label_prefix='APL',
+                category_id=category.id,
+                sharing_scope='public',
+                is_public=True,
+                status='published',
+            )
+            assert ok, recipe_or_err
+            recipe: Recipe = recipe_or_err
+    
+            login_user(buyer_user)
+            dup_ok, payload_or_err = duplicate_recipe(
+                recipe.id,
+                allow_cross_org=True,
+                target_org_id=buyer_org.id,
+            )
+>           assert dup_ok, payload_or_err
+E           AssertionError: 'Recipe' object has no attribute 'marketplace_blocked'
+E           assert False
+
+tests/test_recipe_service_workflows.py:400: AssertionError
+--------- Captured stderr setup ---------
+Environment configuration warning: APP_BASE_URL not set; defaulting to http://localhost:5000 for local/testing environments.
+--------- Captured stderr call ----------
+Error retrieving recipe 1: 'Recipe' object has no attribute 'marketplace_blocked'
+Error duplicating recipe 1: 'Recipe' object has no attribute 'marketplace_blocked'
+=========== warnings summary ============
+tests/developer/test_analytics_catalog.py: 1 warning
+tests/developer/test_developer_routes.py: 6 warnings
+tests/developer/test_service_layers.py: 6 warnings
+tests/test_auth_permissions.py: 3 warnings
+tests/test_batch_label_generator.py: 2 warnings
+tests/test_batch_label_uniqueness.py: 2 warnings
+tests/test_batchbot_jobs.py: 2 warnings
+tests/test_billing_and_tier_enforcement.py: 9 warnings
+tests/test_bulk_inventory_service.py: 5 warnings
+tests/test_container_auto_fill.py: 1 warning
+tests/test_expiration_canonicalization.py: 1 warning
+tests/test_extras_expiration.py: 1 warning
+tests/test_global_link_drawer.py: 1 warning
+tests/test_google_oauth.py: 7 warnings
+tests/test_help_routes_access.py: 1 warning
+tests/test_inventory_adjustment_initial_stock.py: 1 warning
+tests/test_inventory_costing_toggle.py: 4 warnings
+tests/test_inventory_fifo.py: 3 warnings
+tests/test_inventory_routes_canonicalization.py: 2 warnings
+tests/test_inventory_search_service.py: 2 warnings
+tests/test_plan_production_gating.py: 1 warning
+tests/test_plan_production_integration.py: 2 warnings
+tests/test_portioning_sku_derivation.py: 2 warnings
+tests/test_pos_integration_canonicalization.py: 3 warnings
+tests/test_public_tools_access.py: 2 warnings
+tests/test_public_tools_and_exports_smoke.py: 2 warnings
+tests/test_recipe_drafts.py: 3 warnings
+tests/test_recipe_origin.py: 3 warnings
+tests/test_recipe_proportionality_service.py: 2 warnings
+tests/test_recipe_service_workflows.py: 8 warnings
+tests/test_reservation_canonicalization.py: 3 warnings
+tests/test_retention_drawer.py: 1 warning
+tests/test_signup_stripe_flow.py: 1 warning
+tests/test_signup_tiers.py: 5 warnings
+tests/test_single_session_enforcement.py: 1 warning
+tests/test_start_batch_integration.py: 1 warning
+tests/test_stripe_webhooks.py: 4 warnings
+  /home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask_sqlalchemy/extension.py:881: SAWarning: Can't sort tables for DROP; an unresolvable foreign key dependency exists between tables: batch, product_sku; and backend does not support ALTER.  To restore at least a partial sort, apply use_alter=True to ForeignKey and ForeignKeyConstraint objects involved in the cycle to mark these as known cycles that will be ignored.
+    getattr(metadata, op_name)(bind=engine)
+
+tests/developer/test_developer_routes.py::test_toggle_user_active_endpoint
+tests/developer/test_developer_routes.py::test_user_update_api
+  /home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask_sqlalchemy/query.py:30: LegacyAPIWarning: The Query.get() method is considered legacy as of the 1.x series of SQLAlchemy and becomes a legacy construct in 2.0. The method is now available as Session.get() (deprecated since: 2.0) (Background on SQLAlchemy 2.0 at: https://sqlalche.me/e/b8d9)
+    rv = self.get(ident)
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+======== short test summary info ========
+FAILED tests/test_bulk_inventory_service.py::test_bulk_service_creates_inventory_from_global_item - assert False is True
+FAILED tests/test_global_link_drawer.py::test_global_link_suggestions_and_link_flow - AssertionError: assert 0 == 1
+FAILED tests/test_recipe_service_workflows.py::test_duplicate_recipe_maps_global_items_for_import - AssertionError: 'Recipe' object has ...
+FAILED tests/test_recipe_service_workflows.py::test_duplicate_recipe_creates_missing_inventory_for_import - AssertionError: 'Recipe' object has ...
+FAILED tests/test_recipe_service_workflows.py::test_duplicate_recipe_creates_inventory_without_global_link - AssertionError: 'Recipe' object has ...
+FAILED tests/test_recipe_service_workflows.py::test_duplicate_recipe_matches_plural_names_without_global_link - AssertionError: 'Recipe' object has ...
+= 6 failed, 107 passed, 106 warnings in 324.36s (0:05:24) =
