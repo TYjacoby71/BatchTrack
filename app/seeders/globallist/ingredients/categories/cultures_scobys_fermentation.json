@@ -5,7 +5,7 @@
   "attributes": [
     "ph_value",
     "moisture_content_percent",
-    "recommended_usage_rate",
+
     "recommended_shelf_life_days",
     "certifications",
     "protein_content_pct",
@@ -21,7 +21,7 @@
       "default_unit": "piece",
       "ph_value": "3.0-3.5",
       "moisture_content_percent": 92,
-      "recommended_usage_rate": "1 SCOBY + 60 ml starter per 3.8 L sweet tea",
+      
       "recommended_shelf_life_days": 30,
       "certifications": [
         "Raw",
@@ -44,7 +44,7 @@
       "default_unit": "gram",
       "ph_value": "3.0-3.5",
       "moisture_content_percent": 88,
-      "recommended_usage_rate": "60 g grains per 1 L sugar water",
+      
       "recommended_shelf_life_days": 14,
       "certifications": [
         "Vegan"
@@ -66,7 +66,7 @@
       "default_unit": "gram",
       "ph_value": "3.8-4.2",
       "moisture_content_percent": 50,
-      "recommended_usage_rate": "20-30% baker's percentage",
+      
       "recommended_shelf_life_days": 7,
       "certifications": [],
       "protein_content_pct": 11,
@@ -86,7 +86,7 @@
       "default_unit": "gram",
       "ph_value": "4.5-5.0",
       "moisture_content_percent": 5,
-      "recommended_usage_rate": "1 g per 1 L pasteurized milk",
+      
       "recommended_shelf_life_days": 365,
       "certifications": [
         "Kosher"

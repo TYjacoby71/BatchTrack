@@ -1,16 +1,20 @@
 import json
 from typing import Optional
 
-from flask import Blueprint, render_template, request, redirect, url_for
+from flask import Blueprint, render_template, request, redirect, url_for, current_app
 from app.models import db, GlobalItem
 from app.services.statistics import AnalyticsDataService
 from app.models.category import IngredientCategory
 from app.utils.seo import slugify_value
+from app.extensions import limiter, cache
+from app.utils.cache_utils import should_bypass_cache, stable_cache_key
+from app.services.cache_invalidation import global_library_cache_key
 
 global_library_bp = Blueprint('global_library_bp', __name__)
 
 
 @global_library_bp.route('/global-items')
+@limiter.limit("60000/hour;5000/minute")
 def global_library():
     """Public, read-only view of the Global Inventory Library.
     Supports filtering by item type and ingredient category, plus text search.
@@ -25,6 +29,21 @@ def global_library():
 
     # Base query: active (not archived) items
     query = GlobalItem.query.filter(GlobalItem.is_archived != True)
+
+    cache_payload = {
+        "item_type": item_type or "",
+        "category": category_filter or "",
+        "search": search_query or "",
+    }
+    raw_cache_key = stable_cache_key("global_library", cache_payload)
+    cache_key = global_library_cache_key(raw_cache_key)
+
+    if should_bypass_cache():
+        cache.delete(cache_key)
+    else:
+        cached_page = cache.get(cache_key)
+        if cached_page is not None:
+            return cached_page
 
     # Filter by item type if provided
     if item_type:
@@ -53,7 +72,7 @@ def global_library():
         except Exception:
             query = query.filter(GlobalItem.name.ilike(term))
 
-    items = query.order_by(GlobalItem.item_type.asc(), GlobalItem.name.asc()).limit(500).all()
+    items = query.order_by(GlobalItem.item_type.asc(), GlobalItem.name.asc()).limit(200).all()
 
     # Get global ingredient categories for the filter dropdown (only for ingredients)
     categories = []
@@ -73,7 +92,7 @@ def global_library():
     if item_type:
         description_bits.insert(0, f"{item_type.capitalize()} from the BatchTrack library.")
 
-    return render_template(
+    rendered = render_template(
         'library/global_items_public.html',
         items=items,
         categories=categories,
@@ -85,6 +104,8 @@ def global_library():
         page_description=" ".join(description_bits),
         canonical_url=canonical_url,
     )
+    cache.set(cache_key, rendered, timeout=current_app.config.get("GLOBAL_LIBRARY_CACHE_TTL", 300))
+    return rendered
 
 
 @global_library_bp.route('/global-items/<int:item_id>')
@@ -187,7 +208,7 @@ def global_library_item_stats(item_id: int):
     import logging
     logger = logging.getLogger(__name__)
     logger.info(f"Stats request for global item {item_id}")
-    
+
     try:
         from app.models.global_item import GlobalItem
         gi = GlobalItem.query.get_or_404(item_id)

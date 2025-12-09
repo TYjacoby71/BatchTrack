@@ -272,7 +272,6 @@ def upgrade():
 def downgrade():
     bind = op.get_bind()
 
-<<<<<<< HEAD
     # Clean up any unified_inventory_history references before dropping tables/columns
     from migrations.postgres_helpers import is_postgresql
     if is_postgresql():
@@ -315,8 +314,6 @@ def downgrade():
                 UPDATE unified_inventory_history SET used_for_batch_id = NULL WHERE used_for_batch_id IS NOT NULL
             """))
 
-=======
->>>>>>> origin/main
     _store_lineage_backup(bind)
 
     # Drop lineage table

@@ -43,7 +43,8 @@ def configure_logging(app: Flask) -> None:
         for noisy in ("werkzeug", "flask_limiter", "sqlalchemy.engine", "app.blueprints_registry"):
             logging.getLogger(noisy).setLevel(logging.WARNING)
 
-    formatter = logging.Formatter(PROD_FORMAT if os.environ.get("REPLIT_DEPLOYMENT") == "true" else DEV_FORMAT)
+    is_production = app.config.get("ENV") == "production" and not app.debug
+    formatter = logging.Formatter(PROD_FORMAT if is_production else DEV_FORMAT)
     redact_pii = app.config.get("LOG_REDACT_PII", True)
     _apply_formatter(logging.getLogger().handlers, formatter, redact_pii)
     _apply_formatter(app.logger.handlers, formatter, redact_pii)

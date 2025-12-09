@@ -25,6 +25,7 @@ This directory is the curated reference library for every master document that e
 
 - **[FREE_TIER.md](FREE_TIER.md)** – Subscription tier allowances and gating rules
 - **[TRACKING_PLAN.md](TRACKING_PLAN.md)** – Analytics instrumentation map and event taxonomy
+- **[recipe_library_marketplace.md](recipe_library_marketplace.md)** – Global recipe library, marketplace toggles, sharing controls, moderation policy, and purchase options
 - **[CURRENTLY_STUBBED.md](CURRENTLY_STUBBED.md)** – Feature stubs with implementation status
 - **[DEPRECATED_FEATURES.md](DEPRECATED_FEATURES.md)** – Functionality scheduled for sunset and migration notes
 

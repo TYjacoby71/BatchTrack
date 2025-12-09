@@ -22,6 +22,7 @@ class Addon(db.Model):
     # Billing integration
     billing_type = db.Column(db.String(32), nullable=False, default='subscription')  # 'subscription' | 'one_time'
     stripe_lookup_key = db.Column(db.String(128), nullable=True)
+    batchbot_credit_amount = db.Column(db.Integer, nullable=False, default=0)
 
     is_active = db.Column(db.Boolean, default=True, nullable=False)
     created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc), nullable=False)

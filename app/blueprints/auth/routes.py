@@ -23,6 +23,31 @@ from datetime import datetime, timedelta
 
 logger = logging.getLogger(__name__)
 
+
+def _log_loadtest_login_context(reason: str, extra: dict | None = None) -> None:
+    """Emit structured diagnostics for load-test login failures."""
+    if not current_app.config.get("LOADTEST_LOG_LOGIN_FAILURE_CONTEXT"):
+        return
+
+    try:
+        details = {
+            "reason": reason,
+            "remote_addr": request.headers.get("X-Forwarded-For", request.remote_addr),
+            "host": request.host,
+            "scheme": request.scheme,
+            "is_secure": request.is_secure,
+            "x_forwarded_proto": request.headers.get("X-Forwarded-Proto"),
+            "cookies_present": bool(request.cookies),
+            "session_cookie_present": "session" in request.cookies,
+            "csrf_token_in_form": bool(request.form.get("csrf_token")),
+            "user_agent": (request.headers.get("User-Agent") or "")[:160],
+        }
+        if extra:
+            details.update(extra)
+        current_app.logger.warning("Load test login context: %s", details)
+    except Exception as exc:  # pragma: no cover - diagnostics should never fail login
+        current_app.logger.warning("Failed to log load test login context: %s", exc)
+
 def load_tiers_config():
     raise RuntimeError('load_tiers_config has been removed. Use DB via SubscriptionTier queries.')
 
@@ -32,7 +57,7 @@ class LoginForm(FlaskForm):
     submit = SubmitField('Login')
 
 @auth_bp.route('/login', methods=['GET', 'POST'])
-@limiter.limit("30/minute")
+@limiter.limit("6000/minute")
 def login():
     if current_user.is_authenticated:
         return redirect(url_for('app_routes.dashboard'))
@@ -56,9 +81,29 @@ def login():
 
         user = User.query.filter_by(username=username).first()
 
+        if username and username.startswith("loadtest_user"):
+            logger.info(
+                "Load test login attempt: %s, user_found=%s",
+                username,
+                bool(user),
+            )
+            if user:
+                try:
+                    password_valid = user.check_password(password or "")
+                except Exception:
+                    password_valid = False
+                logger.info(
+                    "Load test user state: is_active=%s, password_valid=%s",
+                    user.is_active,
+                    password_valid,
+                )
+
         if user and user.check_password(password):
             # Ensure user is active
             if not user.is_active:
+                if username and username.startswith("loadtest_user"):
+                    logger.warning("Load test user %s is inactive", username)
+                _log_loadtest_login_context("inactive_user", {"username": username})
                 flash('Account is inactive. Please contact administrator.')
                 return render_template('pages/auth/login.html', form=form)
 
@@ -86,13 +131,16 @@ def login():
                     return redirect(next_url)
                 return redirect(url_for('app_routes.dashboard'))
         else:
+            _log_loadtest_login_context("invalid_credentials", {"username": username, "user_found": bool(user)})
+            if username and username.startswith("loadtest_user"):
+                logger.warning("Load test login failed: invalid credentials for %s", username)
             flash('Invalid username or password')
             return render_template('pages/auth/login.html', form=form)
 
     return render_template('pages/auth/login.html', form=form, oauth_available=OAuthService.is_oauth_configured())
 
 @auth_bp.route('/oauth/google')
-@limiter.limit("20/minute")
+@limiter.limit("1200/minute")
 def oauth_google():
     """Initiate Google OAuth flow"""
     logger.info("OAuth Google route accessed")
@@ -119,7 +167,7 @@ def oauth_google():
     return redirect(authorization_url)
 
 @auth_bp.route('/oauth/callback')
-@limiter.limit("30/minute")
+@limiter.limit("1200/minute")
 def oauth_callback():
     """Handle OAuth callback"""
     try:
@@ -202,7 +250,7 @@ def oauth_callback():
                     next_url = None
                 if isinstance(next_url, str) and next_url.startswith('/') and not next_url.startswith('//'):
                     return redirect(next_url)
-                return redirect(url_for('app_routes.dashboard'))
+                return redirect(url_for('organization.dashboard'))
 
         else:
             # New user - store info for signup flow
@@ -225,7 +273,7 @@ def oauth_callback():
         return redirect(url_for('auth.login'))
 
 @auth_bp.route('/callback')
-@limiter.limit("30/minute")
+@limiter.limit("1200/minute")
 def oauth_callback_compat():
     """Compatibility alias for tests expecting /auth/callback."""
     return oauth_callback()
@@ -392,7 +440,7 @@ def debug_oauth_config():
     })
 
 @auth_bp.route('/signup', methods=['GET', 'POST'])
-@limiter.limit("20/minute")
+@limiter.limit("600/minute")
 def signup():
     """Simplified signup flow - tier selection only, then redirect to payment"""
     if current_user.is_authenticated:

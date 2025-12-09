@@ -170,7 +170,7 @@ async function saveCategoryDensity(categoryName) {
     const density = input.value ? parseFloat(input.value) : null;
 
     try {
-        const response = await fetch('{{ url_for('developer.update_category_density') }}', {
+        const response = await fetch('{{ url_for('developer.update_reference_category_density') }}', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',

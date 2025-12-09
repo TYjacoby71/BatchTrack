@@ -4,7 +4,7 @@
   "description": "Solid particles used for mechanical exfoliation in scrubs, soaps, and polishes.",
   "attributes": [
     "particle_size_microns",
-    "recommended_usage_rate",
+
     "recommended_shelf_life_days",
     "certifications",
     "is_active_ingredient"
@@ -18,7 +18,7 @@
       "density": 0.7,
       "default_unit": "gram",
       "particle_size_microns": "200-500",
-      "recommended_usage_rate": "1-10% in body scrubs and soaps",
+      
       "recommended_shelf_life_days": 730,
       "certifications": [
         "Cosmetic Grade"
@@ -38,7 +38,7 @@
       "density": 0.68,
       "default_unit": "gram",
       "particle_size_microns": "300-600",
-      "recommended_usage_rate": "2-8% in body scrubs",
+      
       "recommended_shelf_life_days": 540,
       "certifications": [
         "Kosher"
@@ -58,7 +58,7 @@
       "density": 0.9,
       "default_unit": "gram",
       "particle_size_microns": "250-500",
-      "recommended_usage_rate": "1-5% in facial scrubs",
+      
       "recommended_shelf_life_days": 1095,
       "certifications": [
         "Vegan"
@@ -78,7 +78,7 @@
       "density": 0.85,
       "default_unit": "gram",
       "particle_size_microns": "120-220",
-      "recommended_usage_rate": "1-5% in heavy-duty hand scrubs",
+      
       "recommended_shelf_life_days": 1825,
       "certifications": [
         "Natural"
@@ -98,7 +98,7 @@
       "density": 0.4,
       "default_unit": "gram",
       "particle_size_microns": "800-1200",
-      "recommended_usage_rate": "1-4% in bar soaps or solid scrubs",
+      
       "recommended_shelf_life_days": 365,
       "certifications": [
         "Sustainably Grown"

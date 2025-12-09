@@ -45,17 +45,27 @@
     <div class="card card-body">
         <div class="row g-3">
             <div class="col-md-4">
+                <label class="form-label small text-muted">Search</label>
                 <input type="text" id="recipeFilter" class="form-control" placeholder="Search recipes...">
             </div>
             <div class="col-md-4">
+                <label class="form-label small text-muted">Origin</label>
+                <select id="originFilter" class="form-select">
+                    <option value="any">All origins</option>
+                    <option value="org">Org owned</option>
+                    <option value="purchased">Purchased origin</option>
+                </select>
+            </div>
+            <div class="col-md-4">
+                <label class="form-label small text-muted">Sort</label>
                 <select id="sortFilter" class="form-select">
                     <option value="name">Sort by Name</option>
                     <option value="created">Sort by Created Date</option>
                     <option value="batches">Sort by Batch Count</option>
                 </select>
             </div>
-            <div class="col-md-4">
-                <div class="form-check mt-2">
+            <div class="col-md-4 d-flex align-items-end">
+                <div class="form-check">
                     <input class="form-check-input" type="checkbox" id="showVariations">
                     <label class="form-check-label" for="showVariations">
                         Show Variations
@@ -69,7 +79,8 @@
 <!-- Recipes Card View -->
 <div class="row" id="recipesContainer">
     {% for recipe in recipes if not recipe.parent_recipe_id %}
-    <div class="col-xl-4 col-lg-6 col-md-12 mb-4 recipe-card" data-recipe-name="{{ recipe.name|lower }}" data-batches="{{ recipe.batches|length }}" data-variations="{{ recipe.variations|length }}">
+    {% set origin_tag = 'purchased' if recipe.org_origin_purchased else 'org' %}
+    <div class="col-xl-4 col-lg-6 col-md-12 mb-4 recipe-card" data-recipe-name="{{ recipe.name|lower }}" data-batches="{{ recipe.batches|length }}" data-variations="{{ recipe.variations|length }}" data-origin="{{ origin_tag }}">
         <div class="card h-100 shadow-sm">
             <div class="card-header d-flex justify-content-between align-items-center">
                 <h5 class="card-title mb-0">{{ recipe.name }}</h5>
@@ -77,6 +88,11 @@
                       <span class="badge bg-primary">{{ recipe.label_prefix or 'BTH' }}</span>
                       {% if recipe.status == 'draft' %}
                       <span class="badge bg-warning text-dark">Draft</span>
+                      {% endif %}
+                      {% if recipe.org_origin_purchased %}
+                      <span class="badge bg-warning text-dark">Purchased Origin</span>
+                      {% else %}
+                      <span class="badge bg-light text-dark border">Org Owned</span>
                       {% endif %}
                   </div>
             </div>
@@ -200,12 +216,20 @@
                 </thead>
                 <tbody>
                     {% for recipe in recipes if not recipe.parent_recipe_id %}
-                    <tr class="recipe-row" data-recipe-name="{{ recipe.name|lower }}" data-batches="{{ recipe.batches|length }}" data-variations="{{ recipe.variations|length }}">
+                    {% set origin_tag = 'purchased' if recipe.org_origin_purchased else 'org' %}
+                    <tr class="recipe-row" data-recipe-name="{{ recipe.name|lower }}" data-batches="{{ recipe.batches|length }}" data-variations="{{ recipe.variations|length }}" data-origin="{{ origin_tag }}">
                         <td>
                             <strong>{{ recipe.name }}</strong>
                             {% if recipe.instructions %}
                             <br><small class="text-muted">{{ recipe.instructions[:50] }}{% if recipe.instructions|length > 50 %}...{% endif %}</small>
                             {% endif %}
+                            <div class="mt-1">
+                                {% if recipe.org_origin_purchased %}
+                                <span class="badge bg-warning text-dark">Purchased Origin</span>
+                                {% else %}
+                                <span class="badge bg-light text-dark border">Org Owned</span>
+                                {% endif %}
+                            </div>
                         </td>
                         <td>
                             <span class="badge bg-primary">{{ recipe.label_prefix or 'BTH' }}</span>
@@ -356,6 +380,8 @@
 </style>
 
 <script>
+let currentRecipeView = 'card';
+
 // Global showView function
 function showView(viewType) {
     const recipesContainer = document.getElementById('recipesContainer');
@@ -364,39 +390,56 @@ function showView(viewType) {
     const tableViewBtn = document.getElementById('tableViewBtn');
 
     if (viewType === 'cardView') {
+        currentRecipeView = 'card';
         recipesContainer.style.display = 'flex';
         recipesTableContainer.style.display = 'none';
         cardViewBtn.className = 'btn btn-secondary btn-sm';
         tableViewBtn.className = 'btn btn-outline-secondary btn-sm';
     } else {
+        currentRecipeView = 'table';
         recipesContainer.style.display = 'none';
         recipesTableContainer.style.display = 'block';
         cardViewBtn.className = 'btn btn-outline-secondary btn-sm';
         tableViewBtn.className = 'btn btn-secondary btn-sm';
     }
-    filterRecipes(); // Re-apply filters for current view
+    if (typeof window.filterRecipes === 'function') {
+        window.filterRecipes(); // Re-apply filters for current view
+    }
 }
 
 document.addEventListener('DOMContentLoaded', function() {
     const recipeFilter = document.getElementById('recipeFilter');
     const sortFilter = document.getElementById('sortFilter');
     const showVariations = document.getElementById('showVariations');
+    const originFilter = document.getElementById('originFilter');
     const recipesContainer = document.getElementById('recipesContainer');
     const recipesTableContainer = document.getElementById('recipesTableContainer');
     const noResults = document.getElementById('noResults');
+
+    function matchesOrigin(element) {
+        if (!originFilter) {
+            return true;
+        }
+        const selected = originFilter.value;
+        if (selected === 'any') {
+            return true;
+        }
+        const originValue = element.dataset.origin || 'org';
+        return originValue === selected;
+    }
 
     // Make filterRecipes globally accessible
     window.filterRecipes = function() {
         const searchTerm = recipeFilter.value.toLowerCase();
         let visibleCount = 0;
 
-        const isCardView = recipesContainer.style.display !== 'none';
+        const isCardView = currentRecipeView !== 'table';
 
         if (isCardView) {
             const cards = recipesContainer.querySelectorAll('.recipe-card');
             cards.forEach(card => {
                 const recipeName = card.dataset.recipeName;
-                const isVisible = recipeName.includes(searchTerm);
+                const isVisible = recipeName.includes(searchTerm) && matchesOrigin(card);
                 card.style.display = isVisible ? 'block' : 'none';
                 if (isVisible) visibleCount++;
             });
@@ -404,7 +447,7 @@ document.addEventListener('DOMContentLoaded', function() {
             const rows = recipesTableContainer.querySelectorAll('.recipe-row');
             rows.forEach(row => {
                 const recipeName = row.dataset.recipeName;
-                const isVisible = recipeName.includes(searchTerm);
+                const isVisible = recipeName.includes(searchTerm) && matchesOrigin(row);
                 row.style.display = isVisible ? '' : 'none';
                 if (isVisible) visibleCount++;
             });
@@ -417,7 +460,7 @@ document.addEventListener('DOMContentLoaded', function() {
     function sortRecipes() {
         const sortBy = sortFilter.value;
 
-        const isCardView = recipesContainer.style.display !== 'none';
+        const isCardView = currentRecipeView !== 'table';
 
         if (isCardView) {
             const cards = Array.from(recipesContainer.querySelectorAll('.recipe-card'));
@@ -460,6 +503,9 @@ document.addEventListener('DOMContentLoaded', function() {
     // Event listeners
     recipeFilter.addEventListener('input', filterRecipes);
     sortFilter.addEventListener('change', sortRecipes);
+    if (originFilter) {
+        originFilter.addEventListener('change', filterRecipes);
+    }
 
     // Variation toggle functionality
     document.querySelectorAll('[data-bs-toggle="collapse"]').forEach(button => {

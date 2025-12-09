@@ -1,4 +1,9 @@
 (function () {
+  const isAuthenticated = typeof window !== 'undefined' && Boolean(window.__IS_AUTHENTICATED__);
+  if (!isAuthenticated) {
+    return;
+  }
+
   const AUTH_PAGES = ['/auth/login', '/auth/signup', '/auth/oauth', '/auth/callback'];
 
   function shouldSkipCadence() {

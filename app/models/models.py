@@ -39,8 +39,6 @@ _export([
     ("role", "Role", None),
 
     # Recipes and Batches
-    ("recipe", "Recipe", None),
-    ("recipe", "RecipeIngredient", None),
     ("batch", "Batch", None),
     ("batch", "BatchIngredient", None),
     ("batch", "BatchContainer", None),
@@ -57,6 +55,9 @@ _export([
     ("category", "Tag", None),
     ("product_category", "ProductCategory", None),
     ("global_item", "GlobalItem", None),
+    ("batchbot_usage", "BatchBotUsage", None),
+    ("batchbot_credit", "BatchBotCreditBundle", None),
+    ("recipe_marketplace", "RecipeModerationEvent", None),
 ])
 
 # Build __all__ from whatever successfully imported
@@ -109,6 +110,12 @@ class Organization(db.Model):
     inventory_cost_method = db.Column(db.String(16), nullable=True)  # 'fifo' | 'average' (default handled in logic)
     inventory_cost_method_changed_at = db.Column(db.DateTime, nullable=True)
 
+    # Recipe marketplace governance
+    recipe_sales_blocked = db.Column(db.Boolean, default=False)
+    recipe_library_blocked = db.Column(db.Boolean, default=False)
+    recipe_violation_count = db.Column(db.Integer, default=0)
+    recipe_policy_notes = db.Column(db.Text, nullable=True)
+
     # Relationships
     users = db.relationship('User', backref='organization')
     subscription_tier = db.relationship('SubscriptionTier', foreign_keys=[subscription_tier_id])
@@ -117,7 +124,7 @@ class Organization(db.Model):
     @property
     def active_users_count(self):
         # Only count users that belong to this organization AND are not developers
-        return len([u for u in self.users if u.is_active and u.user_type != 'developer' and u.organization_id == self.id])
+        return len([u for u in self.users if u.is_active and u.user_type != 'developer'])
 
     @property
     def owner(self):
@@ -272,6 +279,8 @@ class User(UserMixin, db.Model):
     # Indexes
     __table_args__ = (
         db.Index('ix_user_org', 'organization_id'),
+        db.Index('ix_user_org_created_at', 'organization_id', 'created_at'),
+        db.Index('ix_user_active_type', 'is_active', 'user_type'),
     )
 
     # Legacy compatibility: is_verified hybrid property

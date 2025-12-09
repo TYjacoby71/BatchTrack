@@ -4,7 +4,7 @@
   "description": "Naturally derived resins and balsams used for fixation, aroma, and varnish-like properties.",
   "attributes": [
     "softening_point_c",
-    "recommended_usage_rate",
+
     "recommended_shelf_life_days",
     "certifications",
     "is_active_ingredient"
@@ -18,7 +18,7 @@
       "density": 1.12,
       "default_unit": "gram",
       "softening_point_c": 65,
-      "recommended_usage_rate": "1-5% in perfumery or balms",
+      
       "recommended_shelf_life_days": 1825,
       "certifications": [
         "Wildcrafted"
@@ -38,7 +38,7 @@
       "density": 1.1,
       "default_unit": "gram",
       "softening_point_c": 70,
-      "recommended_usage_rate": "0.5-3% in incense blends and tinctures",
+      
       "recommended_shelf_life_days": 1825,
       "certifications": [
         "Fair Trade"
@@ -58,7 +58,7 @@
       "density": 1.08,
       "default_unit": "gram",
       "softening_point_c": 60,
-      "recommended_usage_rate": "0.5-4% in aromatic blends and infusions",
+      
       "recommended_shelf_life_days": 1825,
       "certifications": [
         "Organic"

@@ -1,6 +1,7 @@
 const STORAGE_PREFIX = 'sessionGuard:draft:';
 const DRAFT_TTL_MS = 30 * 60 * 1000; // 30 minutes
 const LOGIN_PATH = '/auth/login';
+const IS_AUTHENTICATED = typeof window !== 'undefined' && Boolean(window.__IS_AUTHENTICATED__);
 let redirectInProgress = false;
 
 function getStorage() {
@@ -443,10 +444,14 @@ function init() {
   monitorXHR();
 }
 
-if (document.readyState === 'loading') {
-  document.addEventListener('DOMContentLoaded', init, { once: true });
+if (IS_AUTHENTICATED) {
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', init, { once: true });
+  } else {
+    init();
+  }
 } else {
-  init();
+  console.debug('SessionGuard: disabled for anonymous visitor');
 }
 
 export default {

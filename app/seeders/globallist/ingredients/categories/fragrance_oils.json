@@ -9,7 +9,7 @@
       "default_unit": "milliliter",
       "flash_point_c": 82,
       "recommended_fragrance_load_pct": "6-10% in candles",
-      "recommended_usage_rate": "3-5% in soaps and lotions",
+      
       "recommended_shelf_life_days": 730,
       "inci_name": "Fragrance",
       "certifications": [
@@ -32,7 +32,7 @@
       "default_unit": "milliliter",
       "flash_point_c": 71,
       "recommended_fragrance_load_pct": "6-9% in candles",
-      "recommended_usage_rate": "3-4% in soaps and bath products",
+      
       "recommended_shelf_life_days": 730,
       "inci_name": "Fragrance",
       "certifications": [
@@ -55,7 +55,7 @@
       "default_unit": "milliliter",
       "flash_point_c": 79,
       "recommended_fragrance_load_pct": "7-10% in candles",
-      "recommended_usage_rate": "2-4% in soaps and lotions",
+      
       "recommended_shelf_life_days": 730,
       "inci_name": "Fragrance",
       "certifications": [
@@ -78,7 +78,7 @@
       "default_unit": "milliliter",
       "flash_point_c": 67,
       "recommended_fragrance_load_pct": "6-8% in candles",
-      "recommended_usage_rate": "2-3% in soaps and lotions",
+      
       "recommended_shelf_life_days": 540,
       "inci_name": "Fragrance",
       "certifications": [
@@ -100,7 +100,7 @@
   "attributes": [
     "flash_point_c",
     "recommended_fragrance_load_pct",
-    "recommended_usage_rate",
+
     "recommended_shelf_life_days",
     "inci_name",
     "certifications",

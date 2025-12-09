@@ -3,7 +3,15 @@
 
 ## Overview
 
-This runbook provides step-by-step instructions for scaling BatchTrack to handle 10,000+ concurrent users. The application has been optimized with cooperative workers, database connection pooling, Redis-backed caching, and rate limiting.
+This runbook provides step-by-step instructions for scaling BatchTrack to handle 5,000–10,000 concurrent users. The stack is:
+
+- **Framework**: Flask + SQLAlchemy + Flask-Limiter + Flask-Session
+- **Runtime**: Gunicorn (`gevent` workers) running `wsgi:app`
+- **Data Stores**: PostgreSQL (primary), Redis (rate limits, caching, sessions)
+- **Workers**: Domain-event dispatcher + background scripts
+- **Traffic Simulation**: Locust scenarios that mirror production ratios
+
+All guidance below reflects what is currently shipping in the repository—disregard older refactor docs that may contradict these instructions.
 
 ## Prerequisites
 
@@ -42,31 +50,84 @@ Copy and populate the production environment template:
 cp docs/operations/env.production.example .env.production
 ```
 
-**Critical settings to configure:**
+**Critical settings to configure (minimum for the 5k Locust run):**
 
 ```bash
-# Database connection pool (tune based on concurrent users)
+# Core Flask
+FLASK_ENV=production
+ENV=production
+SECRET_KEY=32+char-random-value
+
+# Database connection pool (prevents QueuePool exhaustion)
 SQLALCHEMY_POOL_SIZE=80
 SQLALCHEMY_MAX_OVERFLOW=40
-SQLALCHEMY_POOL_TIMEOUT=30
+SQLALCHEMY_POOL_TIMEOUT=45
+SQLALCHEMY_POOL_RECYCLE=1800
+SQLALCHEMY_POOL_USE_LIFO=true
+SQLALCHEMY_POOL_RESET_ON_RETURN=commit
 
-# Redis for rate limiting and caching (REQUIRED in production)
+# PostgreSQL (Render/Neon/etc.)
+DATABASE_INTERNAL_URL=postgresql://internal-user:...        # Preferred when present
+DATABASE_URL=postgresql://external-user:...                 # Fallback for CLI tools
+
+# Redis for rate limiting, caching, and sessions (REQUIRED)
 REDIS_URL=redis://your-redis-host:6379/0
 RATELIMIT_STORAGE_URI=${REDIS_URL}
+RATELIMIT_STORAGE_URL=${REDIS_URL}
+RATELIMIT_ENABLED=true
+RATELIMIT_DEFAULT="5000 per hour;1000 per minute"            # Matches app/extensions defaults
 SESSION_TYPE=redis
+SESSION_LIFETIME_MINUTES=60
+CACHE_TYPE=RedisCache
+CACHE_REDIS_URL=${REDIS_URL}
+CACHE_DEFAULT_TIMEOUT=120
 
 # Gunicorn worker configuration
 GUNICORN_WORKERS=8                    # 2x CPU cores + 1
-GUNICORN_WORKER_CLASS=gevent          # Async workers
-GUNICORN_WORKER_CONNECTIONS=1000      # Connections per worker
+GUNICORN_WORKER_CLASS=gevent
+GUNICORN_WORKER_CONNECTIONS=1000
+GUNICORN_TIMEOUT=30
+GUNICORN_KEEPALIVE=2
+GUNICORN_MAX_REQUESTS=2000
 
 # Billing cache (reduces database load)
 BILLING_CACHE_ENABLED=true
 BILLING_GATE_CACHE_TTL_SECONDS=60
+BILLING_STATUS_CACHE_TTL=120
 
-# Domain events
+# Locust credential defaults (overridden if LOCUST_USER_CREDENTIALS is set)
+LOCUST_USER_BASE=loadtest_user
+LOCUST_USER_PASSWORD=loadtest123
+LOCUST_USER_COUNT=5000
+LOCUST_CACHE_TTL=120
+
+# Domain events & observability
 DOMAIN_EVENT_WEBHOOK_URL=https://your-domain-event-endpoint.example
+LOG_LEVEL=INFO
+SENTRY_DSN=https://your-sentry-dsn
 ```
+
+> ℹ️ `app/config.py` automatically normalizes `postgres://` URLs to `postgresql://`, so the higher pool sizes above work with Render’s managed PostgreSQL out of the box.
+> 
+> 🔐 Authenticated rate limits are keyed per user session (not per IP) starting with this release; anonymous/public routes still use client IP. When running Locust from a single host, make sure every simulated user logs in so the limiter buckets correctly.
+
+#### 5k Load-Test Environment Checklist
+
+Use the following table when preparing staging/pre-production for a 5,000-user Locust run:
+
+| Category | Variables | Recommended values | Why it matters |
+| --- | --- | --- | --- |
+| Core Flask runtime | `FLASK_ENV`, `ENV`, `SECRET_KEY` | `production`, `production`, 32+ char key | Enables production config + disables unsafe dev server options. |
+| Database connectivity | `DATABASE_INTERNAL_URL`, `DATABASE_URL` | Internal Render URL, fallback external URL | `_normalize_db_url` prefers internal networking for lower latency. |
+| SQLAlchemy pooling | `SQLALCHEMY_POOL_SIZE=80`, `SQLALCHEMY_MAX_OVERFLOW=40`, `SQLALCHEMY_POOL_TIMEOUT=45`, `SQLALCHEMY_POOL_RECYCLE=1800`, `SQLALCHEMY_POOL_USE_LIFO=true`, `SQLALCHEMY_POOL_RESET_ON_RETURN=commit` | Ship these verbatim | Prevents the `QueuePool limit of size 5 overflow 10 reached` errors observed in the latest load test logs. |
+| Redis + rate limiting | `REDIS_URL`, `RATELIMIT_STORAGE_URI`, `RATELIMIT_STORAGE_URL`, `RATELIMIT_ENABLED=true`, `RATELIMIT_DEFAULT="5000 per hour;1000 per minute"` | Point at HA Redis | Keeps Flask-Limiter aligned with the in-code defaults in `app/extensions.py`. |
+| Sessions & cache | `SESSION_TYPE=redis`, `SESSION_LIFETIME_MINUTES=60`, `CACHE_TYPE=RedisCache`, `CACHE_REDIS_URL=${REDIS_URL}`, `CACHE_DEFAULT_TIMEOUT=120` | Use Redis for shared state | 60-minute lifetime keeps Locust logins valid through multi-hour tests. |
+| Billing cache tuning | `BILLING_CACHE_ENABLED=true`, `BILLING_GATE_CACHE_TTL_SECONDS=60`, `BILLING_STATUS_CACHE_TTL=120` | Enabled | Cuts repeated billing queries during recipe dashboards. |
+| Worker / Gunicorn | `GUNICORN_WORKERS=8`, `GUNICORN_WORKER_CLASS=gevent`, `GUNICORN_WORKER_CONNECTIONS=1000`, `GUNICORN_TIMEOUT=30`, `GUNICORN_KEEPALIVE=2`, `GUNICORN_MAX_REQUESTS=2000` | Matches `gunicorn.conf.py` | Provides 8×1k concurrent sockets (8k connections) before queueing. |
+| Locust credentials | `LOCUST_USER_BASE`, `LOCUST_USER_PASSWORD`, `LOCUST_USER_COUNT`, optional `LOCUST_USER_CREDENTIALS` JSON | `loadtest_user`, `loadtest123`, `5000` | Ensures credential pool has a unique login per virtual user. |
+| Locust cache TTL | `LOCUST_CACHE_TTL=120` | 120 seconds | Balances upstream churn with per-user cache hits. |
+| Observability | `LOG_LEVEL=INFO`, `SENTRY_DSN`, `ANON_REQUEST_LOG_LEVEL=DEBUG` | As needed | Surface 401/500 spikes quickly during the run. |
+| Domain events | `DOMAIN_EVENT_WEBHOOK_URL` | Real webhook or leave blank | When blank, dispatcher logs events but skips HTTP POSTs. |
 
 ### 3. Database Optimization
 
@@ -162,28 +223,85 @@ save 300 10
 
 ### Load Testing
 
-Run the included load tests to validate performance:
+Run the bundled Locust scenarios before every major scale event.
 
 ```bash
-# Install Locust (if not already installed)
-pip install locust
-
-# Basic load test
-locust -f loadtests/locustfile.py --host=https://your-app.replit.app
-
-# High-concurrency test
-locust -f loadtests/locustfile.py -u 1000 -r 50 --host=https://your-app.replit.app
-
-# Run specific user types
-locust -f loadtests/locustfile.py AuthenticatedUser --host=https://your-app.replit.app
+# Install/upgrade Locust and browser parser dependency
+pip install -U "locust>=2.36.0" beautifulsoup4
 ```
 
-**Test Scenarios Included:**
+#### Prepare 5k test credentials
 
-- **AnonymousUser**: Public browsing (75% of traffic)
-- **AuthenticatedUser**: Logged-in operations (25% of traffic) 
-- **AdminUser**: Administrative tasks (2.5% of traffic)
-- **HighFrequencyUser**: API-like rapid requests (12.5% of traffic)
+Each simulated user needs a unique account to avoid session collisions. Create them (only once per environment) and keep the username/password pattern handy for future runs.
+
+```bash
+python loadtests/test_user_generator.py create \
+  --count=5000 \
+  --username=loadtest_user \
+  --password=loadtest123
+
+# Optionally export for non-default naming
+export LOCUST_USER_BASE=loadtest_user
+export LOCUST_USER_PASSWORD=loadtest123
+export LOCUST_USER_COUNT=5000
+```
+
+> ℹ️ `loadtests/locustfile.py` falls back to sequential usernames (`loadtest_user1` … `loadtest_user5000`) whenever the `LOCUST_USER_CREDENTIALS` env var is not supplied, so exporting the three variables above is enough for most cases.
+
+#### Scenario mix
+
+| Class              | Weight | Share | Focus areas |
+| ------------------ | ------ | ----- | ----------- |
+| `RecipeOpsUser`    | 4      | 40%   | Recipe planning, batch creation, library browsing |
+| `InventoryOpsUser` | 3      | 30%   | Ingredient lookup, adjustments, expirations |
+| `ProductOpsUser`   | 2      | 20%   | SKU audits, product adjustments |
+| `AnonymousUser`    | 1      | 10%   | Public pages, signup, catalog cache warming |
+
+Weights map directly to Locust’s user ratios, so any total user count keeps the same production-like blend.
+
+#### Launch the 5k-user run (headless)
+
+```bash
+HOST_URL="https://your-app.example.com"  # or http://127.0.0.1:5000 for local tests
+
+locust -f loadtests/locustfile.py \
+  --headless \
+  --host="${HOST_URL}" \
+  -u 5000 \            # total concurrent users
+  -r 100 \             # spawn rate (users/second)
+  --run-time 30m \
+  --logfile logs/locust-5k.log \
+  --csv logs/locust-5k
+```
+
+Adjust `-r` (spawn rate) based on infrastructure headroom; `100` spawns all users in ~50 seconds and has been stable in staging. Monitor errors such as `auth.login` (500s) or `bootstrap.inventory.api` (401s) closely—persistent failures here usually indicate missing fixtures or throttled services and must be resolved before another high-concurrency attempt.
+
+##### Quick reference for other sizes
+
+| Scenario | Command snippet (change `HOST_URL` to your environment) |
+| --- | --- |
+| 1k-user soak | `locust -f loadtests/locustfile.py --host "$HOST_URL" --headless -u 1000 -r 50 --run-time 30m --stop-timeout 120 --csv logs/locust-1k --logfile logs/locust-1k.log` |
+| 5k-user soak (baseline) | `locust -f loadtests/locustfile.py --host "$HOST_URL" --headless -u 5000 -r 100 --run-time 60m --stop-timeout 120 --csv logs/locust-5k --logfile logs/locust-5k.log` |
+| 10k-user stress | `locust -f loadtests/locustfile.py --host "$HOST_URL" --headless -u 10000 -r 200 --run-time 60m --stop-timeout 180 --csv logs/locust-10k --logfile logs/locust-10k.log` |
+
+Use the same base command and adjust only `-u` (target users) and `-r` (spawn rate). Add or remove optional flags as needed:
+
+- `--run-time <duration>`: auto-stop after N seconds/minutes/hours.
+- `--stop-timeout <seconds>`: graceful shutdown window for active users.
+- `--csv <path-prefix>` / `--logfile <path>`: persist stats and logs for later review.
+- Drop `--headless` if you want to drive the run from the Locust web UI instead of the CLI.
+
+#### Optional: Web UI smoke test
+
+```bash
+locust -f loadtests/locustfile.py \
+  --host=http://127.0.0.1:5000 \
+  --web-host=0.0.0.0 \
+  --users 200 \
+  --spawn-rate 10
+```
+
+Use the UI to experiment with lower loads, then switch back to the headless command for reproducible 5k-user validation.
 
 ### Monitoring Key Metrics
 

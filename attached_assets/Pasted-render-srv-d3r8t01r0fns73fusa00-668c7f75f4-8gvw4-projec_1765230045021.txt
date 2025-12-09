@@ -1,0 +1,200 @@
+render@srv-d3r8t01r0fns73fusa00-668c7f75f4-8gvw4:~/project/src$ flask db downgrade base
+INFO  [alembic.env] Imported model module: app.models.addon
+INFO  [alembic.env] Imported model module: app.models.batch
+INFO  [alembic.env] Imported model module: app.models.batchbot_credit
+INFO  [alembic.env] Imported model module: app.models.batchbot_usage
+INFO  [alembic.env] Imported model module: app.models.category
+INFO  [alembic.env] Imported model module: app.models.db_dialect
+INFO  [alembic.env] Imported model module: app.models.developer_permission
+INFO  [alembic.env] Imported model module: app.models.developer_role
+INFO  [alembic.env] Imported model module: app.models.domain_event
+INFO  [alembic.env] Imported model module: app.models.feature_flag
+INFO  [alembic.env] Imported model module: app.models.freshness_snapshot
+INFO  [alembic.env] Imported model module: app.models.global_item
+INFO  [alembic.env] Imported model module: app.models.global_item_alias
+INFO  [alembic.env] Imported model module: app.models.inventory
+INFO  [alembic.env] Imported model module: app.models.inventory_lot
+INFO  [alembic.env] Imported model module: app.models.mixins
+INFO  [alembic.env] Imported model module: app.models.models
+INFO  [alembic.env] Imported model module: app.models.pending_signup
+INFO  [alembic.env] Imported model module: app.models.permission
+INFO  [alembic.env] Imported model module: app.models.pricing_snapshot
+INFO  [alembic.env] Imported model module: app.models.product
+INFO  [alembic.env] Imported model module: app.models.product_category
+INFO  [alembic.env] Imported model module: app.models.recipe
+INFO  [alembic.env] Imported model module: app.models.recipe_marketplace
+INFO  [alembic.env] Imported model module: app.models.reservation
+INFO  [alembic.env] Imported model module: app.models.retention
+INFO  [alembic.env] Imported model module: app.models.role
+INFO  [alembic.env] Imported model module: app.models.statistics
+INFO  [alembic.env] Imported model module: app.models.stripe_event
+INFO  [alembic.env] Imported model module: app.models.subscription_tier
+INFO  [alembic.env] Imported model module: app.models.unified_inventory_history
+INFO  [alembic.env] Imported model module: app.models.unit
+INFO  [alembic.env] Imported model module: app.models.user_preferences
+INFO  [alembic.env] Imported model module: app.models.user_role_assignment
+INFO  [alembic.runtime.migration] Context impl PostgresqlImpl.
+INFO  [alembic.runtime.migration] Will assume transactional DDL.
+INFO  [alembic.runtime.migration] Running downgrade 0020_schema_alignment -> 0019, 0020 schema alignment - BatchTrack
+✅ Dropped foreign key fk_recipe_origin_org_id
+✅ Dropped foreign key fk_recipe_origin_recipe_id
+✅ Dropped index ix_recipe_is_public
+✅ Dropped index ix_recipe_is_for_sale
+✅ Dropped index ix_recipe_is_sellable
+✅ Dropped index ix_recipe_marketplace_status
+✅ Dropped index ix_recipe_origin_recipe_id
+✅ Dropped index ix_recipe_origin_organization_id
+✅ Dropped index ix_recipe_download_count
+✅ Dropped index ix_recipe_purchase_count
+   ✅ is_resellable column added successfully
+✅ Dropped index ix_recipe_lineage_event_type
+✅ Dropped index ix_recipe_lineage_source_recipe_id
+✅ Dropped index ix_recipe_lineage_recipe_id
+   ✅ marketplace_blocked column added successfully
+   ✅ marketplace_block_reason column added successfully
+   ✅ org_origin_source_recipe_id column added successfully
+   ✅ Created foreign key fk_recipe_origin_source_recipe_id
+INFO  [alembic.runtime.migration] Running downgrade 0019 -> 0018_recipe_resellable, Remove product_group_id from recipes
+INFO  [alembic.runtime.migration] Running downgrade 0018_recipe_resellable -> 0017_hot_query_indexes, add is_resellable flag to recipes
+INFO  [alembic.runtime.migration] Running downgrade 0017_hot_query_indexes -> 0016_optimize_unit_queries, add hot-path indexes for product, user, batch, unit, global item
+INFO  [alembic.runtime.migration] Running downgrade 0016_optimize_unit_queries -> 0015_batch_label_org_scope, 0016 optimize unit queries
+INFO  [alembic.runtime.migration] Running downgrade 0015_batch_label_org_scope -> 0014_batchbot_stack, 0015 batch label org scope
+Traceback (most recent call last):
+  File "/opt/render/project/src/.venv/lib/python3.13/site-packages/sqlalchemy/engine/base.py", line 1964, in _exec_single_context
+    self.dialect.do_execute(
+    ~~~~~~~~~~~~~~~~~~~~~~~^
+        cursor, str_statement, effective_parameters, context
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "/opt/render/project/src/.venv/lib/python3.13/site-packages/sqlalchemy/engine/default.py", line 945, in do_execute
+    cursor.execute(statement, parameters)
+    ~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^
+psycopg2.errors.ForeignKeyViolation: update or delete on table "batch" violates foreign key constraint "unified_inventory_history_batch_id_fkey" on table "unified_inventory_history"
+DETAIL:  Key (id)=(21) is still referenced from table "unified_inventory_history".
+
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/opt/render/project/src/.venv/bin/flask", line 8, in <module>
+    sys.exit(main())
+             ~~~~^^
+  File "/opt/render/project/src/.venv/lib/python3.13/site-packages/flask/cli.py", line 1129, in main
+    cli.main()
+    ~~~~~~~~^^
+  File "/opt/render/project/src/.venv/lib/python3.13/site-packages/click/core.py", line 1082, in main
+    rv = self.invoke(ctx)
+  File "/opt/render/project/src/.venv/lib/python3.13/site-packages/click/core.py", line 1697, in invoke
+    return _process_result(sub_ctx.command.invoke(sub_ctx))
+                           ~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^
+  File "/opt/render/project/src/.venv/lib/python3.13/site-packages/click/core.py", line 1697, in invoke
+    return _process_result(sub_ctx.command.invoke(sub_ctx))
+                           ~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^
+  File "/opt/render/project/src/.venv/lib/python3.13/site-packages/click/core.py", line 1443, in invoke
+    return ctx.invoke(self.callback, **ctx.params)
+           ~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/render/project/src/.venv/lib/python3.13/site-packages/click/core.py", line 788, in invoke
+    return __callback(*args, **kwargs)
+  File "/opt/render/project/src/.venv/lib/python3.13/site-packages/click/decorators.py", line 33, in new_func
+    return f(get_current_context(), *args, **kwargs)
+  File "/opt/render/project/src/.venv/lib/python3.13/site-packages/flask/cli.py", line 400, in decorator
+    return ctx.invoke(f, *args, **kwargs)
+           ~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^
+  File "/opt/render/project/src/.venv/lib/python3.13/site-packages/click/core.py", line 788, in invoke
+    return __callback(*args, **kwargs)
+  File "/opt/render/project/src/.venv/lib/python3.13/site-packages/flask_migrate/cli.py", line 168, in downgrade
+    _downgrade(directory, revision, sql, tag, x_arg)
+    ~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/render/project/src/.venv/lib/python3.13/site-packages/flask_migrate/__init__.py", line 111, in wrapped
+    f(*args, **kwargs)
+    ~^^^^^^^^^^^^^^^^^
+  File "/opt/render/project/src/.venv/lib/python3.13/site-packages/flask_migrate/__init__.py", line 210, in downgrade
+    command.downgrade(config, revision, sql=sql, tag=tag)
+    ~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/render/project/src/.venv/lib/python3.13/site-packages/alembic/command.py", line 455, in downgrade
+    script.run_env()
+    ~~~~~~~~~~~~~~^^
+  File "/opt/render/project/src/.venv/lib/python3.13/site-packages/alembic/script/base.py", line 586, in run_env
+    util.load_python_file(self.dir, "env.py")
+    ~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^
+  File "/opt/render/project/src/.venv/lib/python3.13/site-packages/alembic/util/pyfiles.py", line 95, in load_python_file
+    module = load_module_py(module_id, path)
+  File "/opt/render/project/src/.venv/lib/python3.13/site-packages/alembic/util/pyfiles.py", line 113, in load_module_py
+    spec.loader.exec_module(module)  # type: ignore
+    ~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^
+  File "<frozen importlib._bootstrap_external>", line 1026, in exec_module
+  File "<frozen importlib._bootstrap>", line 488, in _call_with_frames_removed
+  File "/opt/render/project/src/migrations/env.py", line 194, in <module>
+    run_migrations_online()
+    ~~~~~~~~~~~~~~~~~~~~~^^
+  File "/opt/render/project/src/migrations/env.py", line 188, in run_migrations_online
+    context.run_migrations()
+    ~~~~~~~~~~~~~~~~~~~~~~^^
+  File "<string>", line 8, in run_migrations
+  File "/opt/render/project/src/.venv/lib/python3.13/site-packages/alembic/runtime/environment.py", line 946, in run_migrations
+    self.get_context().run_migrations(**kw)
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^
+  File "/opt/render/project/src/.venv/lib/python3.13/site-packages/alembic/runtime/migration.py", line 623, in run_migrations
+    step.migration_fn(**kw)
+    ~~~~~~~~~~~~~~~~~^^^^^^
+  File "/opt/render/project/src/migrations/versions/0015_batch_label_org_scope.py", line 164, in downgrade
+    bind.execute(sa.text(f"""
+    ~~~~~~~~~~~~^^^^^^^^^^^^^
+        DELETE FROM batch WHERE id IN ({batch_ids_str})
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    """))
+    ^^^^^
+  File "/opt/render/project/src/.venv/lib/python3.13/site-packages/sqlalchemy/engine/base.py", line 1416, in execute
+    return meth(
+        self,
+        distilled_parameters,
+        execution_options or NO_OPTIONS,
+    )
+  File "/opt/render/project/src/.venv/lib/python3.13/site-packages/sqlalchemy/sql/elements.py", line 523, in _execute_on_connection
+    return connection._execute_clauseelement(
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^
+        self, distilled_params, execution_options
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "/opt/render/project/src/.venv/lib/python3.13/site-packages/sqlalchemy/engine/base.py", line 1638, in _execute_clauseelement
+    ret = self._execute_context(
+        dialect,
+    ...<8 lines>...
+        cache_hit=cache_hit,
+    )
+  File "/opt/render/project/src/.venv/lib/python3.13/site-packages/sqlalchemy/engine/base.py", line 1843, in _execute_context
+    return self._exec_single_context(
+           ~~~~~~~~~~~~~~~~~~~~~~~~~^
+        dialect, context, statement, parameters
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "/opt/render/project/src/.venv/lib/python3.13/site-packages/sqlalchemy/engine/base.py", line 1983, in _exec_single_context
+    self._handle_dbapi_exception(
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~^
+        e, str_statement, effective_parameters, cursor, context
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "/opt/render/project/src/.venv/lib/python3.13/site-packages/sqlalchemy/engine/base.py", line 2352, in _handle_dbapi_exception
+    raise sqlalchemy_exception.with_traceback(exc_info[2]) from e
+  File "/opt/render/project/src/.venv/lib/python3.13/site-packages/sqlalchemy/engine/base.py", line 1964, in _exec_single_context
+    self.dialect.do_execute(
+    ~~~~~~~~~~~~~~~~~~~~~~~^
+        cursor, str_statement, effective_parameters, context
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "/opt/render/project/src/.venv/lib/python3.13/site-packages/sqlalchemy/engine/default.py", line 945, in do_execute
+    cursor.execute(statement, parameters)
+    ~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^
+sqlalchemy.exc.IntegrityError: (psycopg2.errors.ForeignKeyViolation) update or delete on table "batch" violates foreign key constraint "unified_inventory_history_batch_id_fkey" on table "unified_inventory_history"
+DETAIL:  Key (id)=(21) is still referenced from table "unified_inventory_history".
+
+[SQL: 
+                DELETE FROM batch WHERE id IN (21)
+            ]
+(Background on this error at: https://sqlalche.me/e/20/gkpj)
+render@srv-d3r8t01r0fns73fusa00-668c7f75f4-8gvw4:~/project/src$ 

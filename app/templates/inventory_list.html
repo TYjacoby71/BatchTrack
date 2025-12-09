@@ -1,3 +1,4 @@
+
 {% extends 'layout.html' %}
 {% block content %}
 <h2>Inventory Management</h2>
@@ -28,6 +29,9 @@ document.addEventListener('DOMContentLoaded', function() {
   initTablePagination('containers');
   initTablePagination('packaging');
   initTablePagination('consumables');
+
+  // Restore saved filter states
+  restoreFilterStates();
 
   // Add form submission handlers for better UX
   const ingredientForm = document.getElementById('addIngredientForm');
@@ -98,8 +102,6 @@ function initTablePagination(tableType) {
   const tableBodyId = tableType + 'TableBody';
   const paginationId = tableType + 'Pagination';
   const infoId = tableType + 'Info';
-  const nameFilterId = tableType + 'NameFilter';
-  const sortFilterId = tableType + 'SortFilter';
   const perPageId = tableType + 'PerPage';
 
   let currentPage = 1;
@@ -171,49 +173,7 @@ function initTablePagination(tableType) {
     info.textContent = `Showing ${startIndex}-${endIndex} of ${filteredRows.length} items`;
   }
 
-  function filterAndSort() {
-    const nameFilter = document.getElementById(nameFilterId).value.toLowerCase();
-    const sortFilter = document.getElementById(sortFilterId).value;
-
-    // Filter by name
-    filteredRows = allRows.filter(row => {
-      const name = row.dataset.name || '';
-      return name.includes(nameFilter);
-    });
-
-    // Sort
-    filteredRows.sort((a, b) => {
-      const [field, direction] = sortFilter.split('_');
-      let aVal, bVal;
-
-      if (field === 'name') {
-        aVal = a.dataset.name || '';
-        bVal = b.dataset.name || '';
-      } else if (field === 'quantity') {
-        aVal = parseFloat(a.dataset.quantity) || 0;
-        bVal = parseFloat(b.dataset.quantity) || 0;
-      } else if (field === 'cost') {
-        aVal = parseFloat(a.dataset.cost) || 0;
-        bVal = parseFloat(b.dataset.cost) || 0;
-      } else if (field === 'material') {
-        aVal = (a.dataset.material || '');
-        bVal = (b.dataset.material || '');
-      }
-
-      if (direction === 'asc') {
-        return aVal > bVal ? 1 : -1;
-      } else {
-        return aVal < bVal ? 1 : -1;
-      }
-    });
-
-    currentPage = 1;
-    updateTable();
-  }
-
-  // Event listeners
-  document.getElementById(nameFilterId).addEventListener('input', filterAndSort);
-  document.getElementById(sortFilterId).addEventListener('change', filterAndSort);
+  // Only handle per page changes - filters are handled by apply functions
   document.getElementById(perPageId).addEventListener('change', function() {
     itemsPerPage = parseInt(this.value);
     currentPage = 1;
@@ -257,19 +217,28 @@ function initTablePagination(tableType) {
     });
   });
 
-    const archivedCheckboxIngredients = document.getElementById('ingredientsShowArchived');
-    if (archivedCheckboxIngredients) {
-        archivedCheckboxIngredients.addEventListener('change', function() {
-            filterAndSort(); // Re-apply filters to update the view
-        });
+  // Store filtered rows so apply functions update the same state
+  Object.defineProperty(window, `${tableType}FilteredRows`, {
+    configurable: true,
+    get() {
+      return filteredRows;
+    },
+    set(newRows) {
+      if (Array.isArray(newRows)) {
+        filteredRows = newRows;
+      }
     }
-
-    const archivedCheckboxContainers = document.getElementById('containersShowArchived');
-    if (archivedCheckboxContainers) {
-        archivedCheckboxContainers.addEventListener('change', function() {
-            filterAndSort(); // Re-apply filters to update the view
-        });
+  });
+  window[`${tableType}UpdateTable`] = updateTable;
+  Object.defineProperty(window, `${tableType}CurrentPage`, {
+    configurable: true,
+    get() {
+      return currentPage;
     }
+  });
+  window[`${tableType}SetCurrentPage`] = function(page) {
+    currentPage = page;
+  };
 
   // Initial load
   updateTable();
@@ -317,24 +286,325 @@ function toggleActionMenu(button) {
   menu.style.display = menu.style.display === 'block' ? 'none' : 'block';
 }
 
-function toggleArchivedFilter(tableType) {
-    const tableId = tableType + 'Table';
-    const tableBodyId = tableType + 'TableBody';
-    const showArchived = document.getElementById(tableType + 'ShowArchived').checked;
-
-    const allRows = Array.from(document.querySelectorAll(`#${tableBodyId} tr`));
-
-    allRows.forEach(row => {
+// Apply filter functions
+function applyIngredientsFilters() {
+    const nameFilter = document.getElementById('ingredientsNameFilter');
+    const sortFilter = document.getElementById('ingredientsSortFilter');
+    const archivedFilter = document.getElementById('ingredientsShowArchived');
+    
+    if (!nameFilter || !sortFilter || !archivedFilter) return;
+    
+    // Store current filter values
+    localStorage.setItem('ingredients_name_filter', nameFilter.value);
+    localStorage.setItem('ingredients_sort_filter', sortFilter.value);
+    localStorage.setItem('ingredients_archived_filter', archivedFilter.checked);
+    
+    const nameFilterValue = nameFilter.value.toLowerCase();
+    const sortValue = sortFilter.value;
+    const showArchived = archivedFilter.checked;
+    
+    // Get all rows and apply filters
+    let allRows = Array.from(document.querySelectorAll('#ingredientsTableBody tr'));
+    let filteredRows = allRows.filter(row => {
+        const name = row.dataset.name || '';
         const isArchived = row.querySelector('.col-status .badge')?.textContent === 'Archived';
-
-        if (showArchived) {
-            row.style.display = ''; // Show all rows
-        } else if (isArchived) {
-            row.style.display = 'none'; // Hide archived rows
+        
+        // Apply name filter
+        if (nameFilterValue && !name.includes(nameFilterValue)) {
+            return false;
+        }
+        
+        // Apply archived filter
+        if (!showArchived && isArchived) {
+            return false;
+        }
+        
+        return true;
+    });
+    
+    // Apply sorting
+    filteredRows.sort((a, b) => {
+        const [field, direction] = sortValue.split('_');
+        let aVal, bVal;
+        
+        if (field === 'name') {
+            aVal = a.dataset.name || '';
+            bVal = b.dataset.name || '';
+        } else if (field === 'quantity') {
+            aVal = parseFloat(a.dataset.quantity) || 0;
+            bVal = parseFloat(b.dataset.quantity) || 0;
+        } else if (field === 'cost') {
+            aVal = parseFloat(a.dataset.cost) || 0;
+            bVal = parseFloat(b.dataset.cost) || 0;
+        }
+        
+        if (direction === 'asc') {
+            return aVal > bVal ? 1 : -1;
         } else {
-            row.style.display = ''; // Show non-archived rows
+            return aVal < bVal ? 1 : -1;
         }
     });
+    
+    // Reset to page 1 when filters change
+    if (window.ingredientsSetCurrentPage) {
+        window.ingredientsSetCurrentPage(1);
+    }
+    
+    // Update global filtered rows and trigger pagination update
+    window.ingredientsFilteredRows = filteredRows;
+    if (window.ingredientsUpdateTable) {
+        window.ingredientsUpdateTable();
+    }
+}
+
+function applyContainersFilters() {
+    const nameFilter = document.getElementById('containersNameFilter');
+    const sortFilter = document.getElementById('containersSortFilter');
+    const archivedFilter = document.getElementById('containersShowArchived');
+    
+    if (!nameFilter || !sortFilter || !archivedFilter) return;
+    
+    localStorage.setItem('containers_name_filter', nameFilter.value);
+    localStorage.setItem('containers_sort_filter', sortFilter.value);
+    localStorage.setItem('containers_archived_filter', archivedFilter.checked);
+    
+    const nameFilterValue = nameFilter.value.toLowerCase();
+    const sortValue = sortFilter.value;
+    const showArchived = archivedFilter.checked;
+    
+    let allRows = Array.from(document.querySelectorAll('#containersTableBody tr'));
+    let filteredRows = allRows.filter(row => {
+        const name = row.dataset.name || '';
+        const isArchived = row.querySelector('.col-status .badge')?.textContent === 'Archived';
+        
+        if (nameFilterValue && !name.includes(nameFilterValue)) {
+            return false;
+        }
+        
+        if (!showArchived && isArchived) {
+            return false;
+        }
+        
+        return true;
+    });
+    
+    // Apply sorting
+    filteredRows.sort((a, b) => {
+        const [field, direction] = sortValue.split('_');
+        let aVal, bVal;
+        
+        if (field === 'name') {
+            aVal = a.dataset.name || '';
+            bVal = b.dataset.name || '';
+        } else if (field === 'quantity') {
+            aVal = parseFloat(a.dataset.quantity) || 0;
+            bVal = parseFloat(b.dataset.quantity) || 0;
+        } else if (field === 'cost') {
+            aVal = parseFloat(a.dataset.cost) || 0;
+            bVal = parseFloat(b.dataset.cost) || 0;
+        } else if (field === 'material') {
+            aVal = a.dataset.material || '';
+            bVal = b.dataset.material || '';
+        }
+        
+        if (direction === 'asc') {
+            return aVal > bVal ? 1 : -1;
+        } else {
+            return aVal < bVal ? 1 : -1;
+        }
+    });
+    
+    // Reset to page 1 when filters change
+    if (window.containersSetCurrentPage) {
+        window.containersSetCurrentPage(1);
+    }
+    
+    // Update global filtered rows and trigger pagination update
+    window.containersFilteredRows = filteredRows;
+    if (window.containersUpdateTable) {
+        window.containersUpdateTable();
+    }
+}
+
+function applyPackagingFilters() {
+    const nameFilter = document.getElementById('packagingNameFilter');
+    const sortFilter = document.getElementById('packagingSortFilter');
+    const archivedFilter = document.getElementById('packagingShowArchived');
+    
+    if (!nameFilter || !sortFilter || !archivedFilter) return;
+    
+    localStorage.setItem('packaging_name_filter', nameFilter.value);
+    localStorage.setItem('packaging_sort_filter', sortFilter.value);
+    localStorage.setItem('packaging_archived_filter', archivedFilter.checked);
+    
+    const nameFilterValue = nameFilter.value.toLowerCase();
+    const sortValue = sortFilter.value;
+    const showArchived = archivedFilter.checked;
+    
+    let allRows = Array.from(document.querySelectorAll('#packagingTableBody tr'));
+    let filteredRows = allRows.filter(row => {
+        const name = row.dataset.name || '';
+        const isArchived = row.querySelector('.col-status .badge')?.textContent === 'Archived';
+        
+        if (nameFilterValue && !name.includes(nameFilterValue)) {
+            return false;
+        }
+        
+        if (!showArchived && isArchived) {
+            return false;
+        }
+        
+        return true;
+    });
+    
+    // Apply sorting
+    filteredRows.sort((a, b) => {
+        const [field, direction] = sortValue.split('_');
+        let aVal, bVal;
+        
+        if (field === 'name') {
+            aVal = a.dataset.name || '';
+            bVal = b.dataset.name || '';
+        } else if (field === 'quantity') {
+            aVal = parseFloat(a.dataset.quantity) || 0;
+            bVal = parseFloat(b.dataset.quantity) || 0;
+        } else if (field === 'cost') {
+            aVal = parseFloat(a.dataset.cost) || 0;
+            bVal = parseFloat(b.dataset.cost) || 0;
+        }
+        
+        if (direction === 'asc') {
+            return aVal > bVal ? 1 : -1;
+        } else {
+            return aVal < bVal ? 1 : -1;
+        }
+    });
+    
+    // Reset to page 1 when filters change
+    if (window.packagingSetCurrentPage) {
+        window.packagingSetCurrentPage(1);
+    }
+    
+    // Update global filtered rows and trigger pagination update
+    window.packagingFilteredRows = filteredRows;
+    if (window.packagingUpdateTable) {
+        window.packagingUpdateTable();
+    }
+}
+
+function applyConsumablesFilters() {
+    const nameFilter = document.getElementById('consumablesNameFilter');
+    const sortFilter = document.getElementById('consumablesSortFilter');
+    const archivedFilter = document.getElementById('consumablesShowArchived');
+    
+    if (!nameFilter || !sortFilter || !archivedFilter) return;
+    
+    localStorage.setItem('consumables_name_filter', nameFilter.value);
+    localStorage.setItem('consumables_sort_filter', sortFilter.value);
+    localStorage.setItem('consumables_archived_filter', archivedFilter.checked);
+    
+    const nameFilterValue = nameFilter.value.toLowerCase();
+    const sortValue = sortFilter.value;
+    const showArchived = archivedFilter.checked;
+    
+    let allRows = Array.from(document.querySelectorAll('#consumablesTableBody tr'));
+    let filteredRows = allRows.filter(row => {
+        const name = row.dataset.name || '';
+        const isArchived = row.querySelector('.col-status .badge')?.textContent === 'Archived';
+        
+        if (nameFilterValue && !name.includes(nameFilterValue)) {
+            return false;
+        }
+        
+        if (!showArchived && isArchived) {
+            return false;
+        }
+        
+        return true;
+    });
+    
+    // Apply sorting
+    filteredRows.sort((a, b) => {
+        const [field, direction] = sortValue.split('_');
+        let aVal, bVal;
+        
+        if (field === 'name') {
+            aVal = a.dataset.name || '';
+            bVal = b.dataset.name || '';
+        } else if (field === 'quantity') {
+            aVal = parseFloat(a.dataset.quantity) || 0;
+            bVal = parseFloat(b.dataset.quantity) || 0;
+        } else if (field === 'cost') {
+            aVal = parseFloat(a.dataset.cost) || 0;
+            bVal = parseFloat(b.dataset.cost) || 0;
+        }
+        
+        if (direction === 'asc') {
+            return aVal > bVal ? 1 : -1;
+        } else {
+            return aVal < bVal ? 1 : -1;
+        }
+    });
+    
+    // Reset to page 1 when filters change
+    if (window.consumablesSetCurrentPage) {
+        window.consumablesSetCurrentPage(1);
+    }
+    
+    // Update global filtered rows and trigger pagination update
+    window.consumablesFilteredRows = filteredRows;
+    if (window.consumablesUpdateTable) {
+        window.consumablesUpdateTable();
+    }
+}
+
+// Reset filter functions
+function resetIngredientsFilters() {
+    document.getElementById('ingredientsNameFilter').value = '';
+    document.getElementById('ingredientsSortFilter').value = 'name_asc';
+    document.getElementById('ingredientsShowArchived').checked = false;
+    
+    localStorage.removeItem('ingredients_name_filter');
+    localStorage.removeItem('ingredients_sort_filter');
+    localStorage.removeItem('ingredients_archived_filter');
+    
+    applyIngredientsFilters();
+}
+
+function resetContainersFilters() {
+    document.getElementById('containersNameFilter').value = '';
+    document.getElementById('containersSortFilter').value = 'name_asc';
+    document.getElementById('containersShowArchived').checked = false;
+    
+    localStorage.removeItem('containers_name_filter');
+    localStorage.removeItem('containers_sort_filter');
+    localStorage.removeItem('containers_archived_filter');
+    
+    applyContainersFilters();
+}
+
+function resetPackagingFilters() {
+    document.getElementById('packagingNameFilter').value = '';
+    document.getElementById('packagingSortFilter').value = 'name_asc';
+    document.getElementById('packagingShowArchived').checked = false;
+    
+    localStorage.removeItem('packaging_name_filter');
+    localStorage.removeItem('packaging_sort_filter');
+    localStorage.removeItem('packaging_archived_filter');
+    
+    applyPackagingFilters();
+}
+
+function resetConsumablesFilters() {
+    document.getElementById('consumablesNameFilter').value = '';
+    document.getElementById('consumablesSortFilter').value = 'name_asc';
+    document.getElementById('consumablesShowArchived').checked = false;
+    
+    localStorage.removeItem('consumables_name_filter');
+    localStorage.removeItem('consumables_sort_filter');
+    localStorage.removeItem('consumables_archived_filter');
+    
+    applyConsumablesFilters();
 }
 
 function updateAddIngredientCostHelp() {
@@ -363,6 +633,73 @@ function updateAddContainerCostHelp() {
     }
 }
 
+function titleCaseContainerPart(value) {
+  return value.split(/(\s|-|\/)/).map(segment => {
+    if (!segment || segment.trim() === '' || /(\s|-|\/)/.test(segment)) {
+      return segment;
+    }
+    return segment.charAt(0).toUpperCase() + segment.slice(1).toLowerCase();
+  }).join('');
+}
+
+function formatContainerCapacityValue(value) {
+  if (value === undefined || value === null || value === '') return '';
+  const numeric = Number(value);
+  if (!isFinite(numeric) || numeric <= 0) return '';
+  if (Number.isInteger(numeric)) return numeric.toString();
+  return parseFloat(numeric.toFixed(3)).toString().replace(/\.?0+$/, '');
+}
+
+function updateGeneratedContainerName() {
+  const form = document.getElementById('addContainerForm');
+  if (!form) return '';
+  const getField = (name) => (form.querySelector(`[name="${name}"]`)?.value || '').trim();
+
+  const descriptorParts = [];
+  const color = getField('container_color');
+  const style = getField('container_style');
+  const material = getField('container_material');
+  const type = getField('container_type') || 'Container';
+
+  if (color) descriptorParts.push(color);
+  if (style && !descriptorParts.join(' ').toLowerCase().includes(style.toLowerCase())) descriptorParts.push(style);
+  if (material && !descriptorParts.join(' ').toLowerCase().includes(material.toLowerCase())) descriptorParts.push(material);
+  if (type && !descriptorParts.join(' ').toLowerCase().includes(type.toLowerCase())) descriptorParts.push(type);
+
+  const descriptor = descriptorParts.map(titleCaseContainerPart).join(' ').trim();
+
+  const capacityValue = formatContainerCapacityValue(getField('capacity'));
+  const capacityUnit = getField('capacity_unit');
+  let computedName = descriptor;
+
+  if (capacityValue) {
+    const capacitySegment = `${capacityValue} ${capacityUnit}`.trim();
+    computedName = descriptor ? `${descriptor} - ${capacitySegment}` : capacitySegment;
+  }
+
+  const finalName = computedName || descriptor || 'Custom Container';
+  const previewInput = document.getElementById('containerNamePreview');
+  const hiddenInput = document.getElementById('generatedContainerName');
+  if (previewInput) previewInput.value = finalName;
+  if (hiddenInput) hiddenInput.value = finalName;
+
+  return finalName;
+}
+window.updateGeneratedContainerName = updateGeneratedContainerName;
+
+function bindGeneratedContainerNamePreview() {
+  const form = document.getElementById('addContainerForm');
+  if (!form) return;
+  const fields = ['capacity', 'capacity_unit', 'container_material', 'container_type', 'container_style', 'container_color', 'quantity'];
+  fields.forEach(name => {
+    const el = form.querySelector(`[name="${name}"]`);
+    if (el) {
+      ['input', 'change'].forEach(evt => el.addEventListener(evt, updateGeneratedContainerName));
+    }
+  });
+  updateGeneratedContainerName();
+}
+
 // Add event listeners for quantity changes to update help text
 document.addEventListener('DOMContentLoaded', function() {
     const ingredientQtyInput = document.querySelector('#addIngredientForm input[name="quantity"]');
@@ -375,6 +712,7 @@ document.addEventListener('DOMContentLoaded', function() {
     if (containerQtyInput) {
         containerQtyInput.addEventListener('input', updateAddContainerCostHelp);
     }
+    bindGeneratedContainerNamePreview();
 });
 
 function updateIngredientSelectionDetails(picked, source){
@@ -598,6 +936,10 @@ document.addEventListener('DOMContentLoaded', function() {
                 if (styleEl) styleEl.value = this.dataset.style || '';
                 if (colorEl) colorEl.value = this.dataset.color || '';
 
+                if (typeof window.updateGeneratedContainerName === 'function') {
+                    window.updateGeneratedContainerName();
+                }
+
                 suggestionsEl.style.display = 'none';
             });
         });
@@ -756,6 +1098,52 @@ document.addEventListener('DOMContentLoaded', function() {
     if (consQty) consQty.addEventListener('input', updateAddConsumableCostHelp);
 });
 
+// Restore filter states from localStorage
+function restoreFilterStates() {
+    // Ingredients
+    const ingredientsName = localStorage.getItem('ingredients_name_filter');
+    const ingredientsSort = localStorage.getItem('ingredients_sort_filter');
+    const ingredientsArchived = localStorage.getItem('ingredients_archived_filter');
+    
+    if (ingredientsName) document.getElementById('ingredientsNameFilter').value = ingredientsName;
+    if (ingredientsSort) document.getElementById('ingredientsSortFilter').value = ingredientsSort;
+    if (ingredientsArchived !== null) document.getElementById('ingredientsShowArchived').checked = ingredientsArchived === 'true';
+    
+    // Containers
+    const containersName = localStorage.getItem('containers_name_filter');
+    const containersSort = localStorage.getItem('containers_sort_filter');
+    const containersArchived = localStorage.getItem('containers_archived_filter');
+    
+    if (containersName) document.getElementById('containersNameFilter').value = containersName;
+    if (containersSort) document.getElementById('containersSortFilter').value = containersSort;
+    if (containersArchived !== null) document.getElementById('containersShowArchived').checked = containersArchived === 'true';
+    
+    // Packaging
+    const packagingName = localStorage.getItem('packaging_name_filter');
+    const packagingSort = localStorage.getItem('packaging_sort_filter');
+    const packagingArchived = localStorage.getItem('packaging_archived_filter');
+    
+    if (packagingName) document.getElementById('packagingNameFilter').value = packagingName;
+    if (packagingSort) document.getElementById('packagingSortFilter').value = packagingSort;
+    if (packagingArchived !== null) document.getElementById('packagingShowArchived').checked = packagingArchived === 'true';
+    
+    // Consumables
+    const consumablesName = localStorage.getItem('consumables_name_filter');
+    const consumablesSort = localStorage.getItem('consumables_sort_filter');
+    const consumablesArchived = localStorage.getItem('consumables_archived_filter');
+    
+    if (consumablesName) document.getElementById('consumablesNameFilter').value = consumablesName;
+    if (consumablesSort) document.getElementById('consumablesSortFilter').value = consumablesSort;
+    if (consumablesArchived !== null) document.getElementById('consumablesShowArchived').checked = consumablesArchived === 'true';
+    
+    // Apply the restored filters
+    setTimeout(() => {
+        if (ingredientsName || ingredientsSort || ingredientsArchived) applyIngredientsFilters();
+        if (containersName || containersSort || containersArchived) applyContainersFilters();
+        if (packagingName || packagingSort || packagingArchived) applyPackagingFilters();
+        if (consumablesName || consumablesSort || consumablesArchived) applyConsumablesFilters();
+    }, 100);
+}
 
 // Close the dropdown menu if the user clicks outside of it
 window.onclick = function(event) {

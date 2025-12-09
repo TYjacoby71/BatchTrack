@@ -166,7 +166,8 @@ class UniversalStockCheckService:
                     'status': result.status.value,
                     'formatted_needed': result.formatted_needed,
                     'formatted_available': result.formatted_available,
-                    'category': result.category.value
+                    'category': result.category.value,
+                    'item_type': getattr(recipe_ingredient.inventory_item, 'type', result.category.value)
                 }
 
                 if hasattr(result, 'error_message') and result.error_message:
@@ -218,7 +219,9 @@ class UniversalStockCheckService:
                         'status': result.status.value,
                         'formatted_needed': result.formatted_needed,
                         'formatted_available': result.formatted_available,
-                        'category': result.category.value
+                        # Override category/type so downstream gating can distinguish
+                        'category': 'consumable',
+                        'item_type': 'consumable'
                     }
 
                     if hasattr(result, 'error_message') and result.error_message:

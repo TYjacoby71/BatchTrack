@@ -11,7 +11,8 @@ tables, warehouse sync) trivial to swap in.
 from __future__ import annotations
 
 import logging
-from datetime import timedelta, datetime
+import re
+from datetime import datetime, timedelta
 from typing import Any, Dict, List, Optional
 
 from sqlalchemy import func
@@ -23,12 +24,14 @@ from ...models import (
     InventoryItem,
     Organization,
     Permission,
+    Recipe,
     Role,
     UnifiedInventoryHistory,
     User,
 )
 from ...models.inventory_lot import InventoryLot
 from ...models.subscription_tier import SubscriptionTier
+from ...models.statistics import RecipeStats
 from ...utils.timezone_utils import TimezoneUtils
 from ...utils.json_store import read_json_file
 from ..dashboard_alerts import DashboardAlertService
@@ -36,6 +39,51 @@ from .global_item_stats import GlobalItemStatsService
 from ._core import StatisticsService
 
 logger = logging.getLogger(__name__)
+
+_WAITLIST_DEFAULT_CHANNELS: Dict[str, Dict[str, Any]] = {
+    "public_homepage": {
+        "label": "Homepage Waitlist",
+        "category": "Marketing Site",
+        "color": "warning",
+        "description": "Primary beta waitlist via homepage modal.",
+    },
+    "homepage": {
+        "label": "Legacy Homepage Waitlist",
+        "category": "Marketing Site",
+        "color": "warning",
+    },
+    "general": {
+        "label": "General Waitlist",
+        "category": "Marketing Site",
+        "color": "secondary",
+    },
+    "tools.soap": {
+        "label": "Soap Tools Waitlist",
+        "category": "Public Tools",
+        "color": "success",
+        "description": "Early access requests for soap calculators.",
+    },
+    "tools.candles": {
+        "label": "Candle Tools Waitlist",
+        "category": "Public Tools",
+        "color": "info",
+    },
+    "tools.lotions": {
+        "label": "Lotion & Cosmetic Tools Waitlist",
+        "category": "Public Tools",
+        "color": "primary",
+    },
+    "tools.herbal": {
+        "label": "Herbal Tools Waitlist",
+        "category": "Public Tools",
+        "color": "success",
+    },
+    "tools.baker": {
+        "label": "Baker Tools Waitlist",
+        "category": "Public Tools",
+        "color": "secondary",
+    },
+}
 
 
 class AnalyticsDataService:
@@ -58,7 +106,48 @@ class AnalyticsDataService:
         "faults": 60,
         "developer": 60,
         "marketing": 300,
+        "recipe_library": 120,
     }
+    _DEFAULT_WAITLIST_KEY = "public_homepage"
+
+    # ------------------------------------------------------------------ #
+    # Internal helpers                                                   #
+    # ------------------------------------------------------------------ #
+
+    @classmethod
+    def _normalize_waitlist_key(cls, value: Optional[str]) -> str:
+        if not value or not isinstance(value, str):
+            return cls._DEFAULT_WAITLIST_KEY
+        normalized = re.sub(r"\s+", "_", value.strip().lower())
+        normalized = normalized.strip("_")
+        return normalized or cls._DEFAULT_WAITLIST_KEY
+
+    @staticmethod
+    def _humanize_waitlist_label(key: str) -> str:
+        return key.replace(".", " / ").replace("_", " ").title()
+
+    @classmethod
+    def _waitlist_registry(cls) -> Dict[str, Dict[str, Any]]:
+        settings = read_json_file("settings.json", default={}) or {}
+        configured = settings.get("waitlists") if isinstance(settings.get("waitlists"), dict) else {}
+
+        registry: Dict[str, Dict[str, Any]] = {}
+        for key, meta in _WAITLIST_DEFAULT_CHANNELS.items():
+            registry[cls._normalize_waitlist_key(key)] = dict(meta)
+
+        for raw_key, meta in configured.items():
+            if not isinstance(meta, dict):
+                meta = {"label": str(meta)}
+            normalized_key = cls._normalize_waitlist_key(raw_key)
+            registry[normalized_key] = {
+                **registry.get(normalized_key, {}),
+                **meta,
+            }
+            registry[normalized_key]["label"] = meta.get("label") or meta.get("name") or cls._humanize_waitlist_label(raw_key)
+            registry[normalized_key]["color"] = meta.get("color") or registry[normalized_key].get("color") or "secondary"
+            registry[normalized_key]["category"] = meta.get("category") or registry[normalized_key].get("category") or "Uncategorized"
+
+        return registry
 
     # --------------------------------------------------------------------- #
     # Public API                                                            #
@@ -430,6 +519,7 @@ class AnalyticsDataService:
             total_global_items = GlobalItem.query.filter_by(is_archived=False).count()
             total_permissions = Permission.query.count()
             total_roles = Role.query.count()
+            recipe_metrics = cls.get_recipe_library_metrics(force_refresh=force_refresh)
             tier_counts = cls._get_subscription_tier_counts()
 
             payload = {
@@ -441,6 +531,14 @@ class AnalyticsDataService:
                 "total_permissions": total_permissions,
                 "total_roles": total_roles,
                 "tiers": tier_counts,
+                "public_recipes": recipe_metrics["total_public"],
+                "recipes_for_sale": recipe_metrics["total_for_sale"],
+                "blocked_recipes": recipe_metrics["blocked_listings"],
+                "average_recipe_price": recipe_metrics["average_sale_price"],
+                "average_yield_per_dollar": recipe_metrics["average_yield_per_dollar"],
+                "batchtrack_native_recipes": recipe_metrics["batchtrack_native_count"],
+                "total_recipe_downloads": recipe_metrics["total_downloads"],
+                "total_recipe_purchases": recipe_metrics["total_purchases"],
             }
             cls._store_cache(cache_key, payload)
             return payload
@@ -455,6 +553,14 @@ class AnalyticsDataService:
                 "total_permissions": 0,
                 "total_roles": 0,
                 "tiers": {},
+                "public_recipes": 0,
+                "recipes_for_sale": 0,
+                "blocked_recipes": 0,
+                "average_recipe_price": 0.0,
+                "average_yield_per_dollar": 0.0,
+                "batchtrack_native_recipes": 0,
+                "total_recipe_downloads": 0,
+                "total_recipe_purchases": 0,
             }
 
     @classmethod
@@ -518,6 +624,107 @@ class AnalyticsDataService:
             }
             cls._store_cache(cache_key, payload)
             return payload
+        except Exception as exc:
+            logger.error("Failed to build developer dashboard: %s", exc, exc_info=True)
+            return {
+                "overview": {},
+                "recent_organizations": [],
+                "recent_count": 0,
+                "attention_organizations": [],
+                "attention_count": 0,
+                "waitlist_count": 0,
+                "generated_at": None,
+            }
+    @classmethod
+    def get_recipe_library_metrics(cls, *, force_refresh: bool = False) -> Dict[str, Any]:
+        cache_key = cls._cache_key("recipe_library")
+        cached = cls._get_cached(cache_key, force_refresh)
+        if cached is not None:
+            return cached
+
+        try:
+            base_filter = (
+                (Recipe.is_public.is_(True)) &
+                (Recipe.marketplace_status == "listed")
+            )
+            total_public = Recipe.query.filter(base_filter).count()
+            total_for_sale = Recipe.query.filter(base_filter, Recipe.is_for_sale.is_(True)).count()
+            blocked_listings = Recipe.query.filter(Recipe.marketplace_status == "blocked").count()
+            avg_price = (
+                db.session.query(func.avg(Recipe.sale_price))
+                .filter(base_filter, Recipe.is_for_sale.is_(True), Recipe.sale_price.isnot(None))
+                .scalar()
+            ) or 0.0
+
+            # Product groups were removed - set defaults
+            top_group_name = None
+            top_group_count = 0
+
+            batchtrack_native_count = Recipe.query.filter(
+                base_filter,
+                Recipe.org_origin_type == "batchtrack_native",
+            ).count()
+            total_downloads = (
+                db.session.query(func.sum(Recipe.download_count))
+                .filter(base_filter)
+                .scalar()
+                or 0
+            )
+            total_purchases = (
+                db.session.query(func.sum(Recipe.purchase_count))
+                .filter(base_filter)
+                .scalar()
+                or 0
+            )
+
+            avg_yield_per_dollar = (
+                db.session.query(
+                    func.avg(
+                        func.nullif(Recipe.predicted_yield, 0) / func.nullif(RecipeStats.avg_cost_per_batch, 0)
+                    )
+                )
+                .join(RecipeStats, RecipeStats.recipe_id == Recipe.id)
+                .filter(
+                    base_filter,
+                    RecipeStats.avg_cost_per_batch.isnot(None),
+                    RecipeStats.avg_cost_per_batch > 0,
+                    Recipe.predicted_yield.isnot(None),
+                    Recipe.predicted_yield > 0,
+                )
+                .scalar()
+            ) or 0.0
+
+            sale_percentage = 0
+            if total_public:
+                sale_percentage = round((total_for_sale / total_public) * 100, 1)
+
+            payload = {
+                "total_public": total_public,
+                "total_for_sale": total_for_sale,
+                "blocked_listings": blocked_listings,
+                "average_sale_price": float(avg_price),
+                "average_yield_per_dollar": float(avg_yield_per_dollar),
+                "top_group_name": top_group_name,
+                "top_group_count": top_group_count,
+                "sale_percentage": sale_percentage,
+                "batchtrack_native_count": batchtrack_native_count,
+                "total_downloads": int(total_downloads),
+                "total_purchases": int(total_purchases),
+            }
+            cls._store_cache(cache_key, payload)
+            return payload
+        except SQLAlchemyError as exc:
+            logger.error("Failed to compute recipe library metrics: %s", exc, exc_info=True)
+            return {
+                "total_public": 0,
+                "total_for_sale": 0,
+                "blocked_listings": 0,
+                "average_sale_price": 0.0,
+                "average_yield_per_dollar": 0.0,
+                "top_group_name": None,
+                "top_group_count": 0,
+                "sale_percentage": 0,
+            }
         except Exception as exc:  # pragma: no cover - defensive
             logger.error("Failed to build developer dashboard analytics: %s", exc, exc_info=True)
             return {
@@ -537,24 +744,59 @@ class AnalyticsDataService:
         if cached is not None:
             return cached
 
-        waitlist_data = read_json_file("data/waitlist.json", default=[]) or []
+        raw_data = read_json_file("data/waitlist.json", default=[]) or []
+        if isinstance(raw_data, list):
+            waitlist_rows = raw_data
+        elif isinstance(raw_data, dict):
+            if isinstance(raw_data.get("entries"), list):
+                waitlist_rows = raw_data.get("entries", [])
+            else:
+                waitlist_rows = []
+                for _, maybe_list in raw_data.items():
+                    if isinstance(maybe_list, list):
+                        waitlist_rows.extend(maybe_list)
+        else:
+            waitlist_rows = []
+
+        registry = cls._waitlist_registry()
         processed: List[Dict[str, Any]] = []
-        for entry in waitlist_data:
+        summary_map: Dict[str, Dict[str, Any]] = {}
+
+        def _ensure_summary(key: str, channel_meta: Dict[str, Any]) -> Dict[str, Any]:
+            summary = summary_map.get(key)
+            if summary is None:
+                summary = {
+                    "key": key,
+                    "label": channel_meta.get("label") or cls._humanize_waitlist_label(key),
+                    "category": channel_meta.get("category") or "Uncategorized",
+                    "color": channel_meta.get("color", "secondary"),
+                    "description": channel_meta.get("description"),
+                    "count": 0,
+                    "latest_iso": None,
+                    "latest_display": None,
+                }
+                summary_map[key] = summary
+            return summary
+
+        for entry in waitlist_rows:
+            if not isinstance(entry, dict):
+                continue
+
             timestamp = entry.get("timestamp")
             formatted = "Unknown"
             iso_value = None
             if timestamp:
                 try:
-                    dt = datetime.fromisoformat(timestamp.replace("Z", "+00:00"))
+                    dt = datetime.fromisoformat(str(timestamp).replace("Z", "+00:00"))
                     formatted = dt.strftime("%Y-%m-%d %H:%M UTC")
                     iso_value = dt.isoformat()
                 except Exception:
-                    formatted = timestamp
-                    iso_value = timestamp
+                    formatted = str(timestamp)
+                    iso_value = str(timestamp)
 
-            first_name = entry.get("first_name", "")
-            last_name = entry.get("last_name", "")
-            legacy_name = entry.get("name", "")
+            first_name = (entry.get("first_name") or "").strip()
+            last_name = (entry.get("last_name") or "").strip()
+            legacy_name = (entry.get("name") or "").strip()
             if first_name or last_name:
                 full_name = f"{first_name} {last_name}".strip()
             elif legacy_name:
@@ -562,22 +804,65 @@ class AnalyticsDataService:
             else:
                 full_name = "Not provided"
 
+            business_type = (entry.get("business_type") or "").strip() or "Not specified"
+            if business_type.lower() in {"not_specified", "not specified"}:
+                business_type = "Not specified"
+
+            waitlist_key = cls._normalize_waitlist_key(entry.get("waitlist_key") or entry.get("source"))
+            channel_meta = registry.get(waitlist_key) or {
+                "label": cls._humanize_waitlist_label(waitlist_key),
+                "category": "Uncategorized",
+                "color": "secondary",
+                "description": None,
+            }
+
             processed.append(
                 {
                     "email": entry.get("email", ""),
                     "full_name": full_name,
-                    "business_type": entry.get("business_type", "Not specified"),
+                    "business_type": business_type,
                     "formatted_date": formatted,
                     "timestamp": iso_value,
-                    "source": entry.get("source", "Unknown"),
+                    "source": entry.get("source", waitlist_key),
+                    "waitlist_key": waitlist_key,
+                    "waitlist_label": channel_meta.get("label"),
+                    "waitlist_category": channel_meta.get("category"),
+                    "waitlist_color": channel_meta.get("color", "secondary"),
                 }
             )
 
+            channel_summary = _ensure_summary(waitlist_key, channel_meta)
+            channel_summary["count"] += 1
+            if iso_value and (channel_summary["latest_iso"] is None or iso_value > channel_summary["latest_iso"]):
+                channel_summary["latest_iso"] = iso_value
+                channel_summary["latest_display"] = formatted
+
+        for key, meta in registry.items():
+            _ensure_summary(key, meta)
+
         processed.sort(key=lambda item: item.get("timestamp") or "", reverse=True)
+
+        channel_summary_list = sorted(
+            (
+                {
+                    "key": item["key"],
+                    "label": item["label"],
+                    "category": item["category"],
+                    "color": item["color"],
+                    "description": item.get("description"),
+                    "count": item["count"],
+                    "latest_signup": item.get("latest_display"),
+                }
+                for item in summary_map.values()
+            ),
+            key=lambda row: (-row["count"], row["label"]),
+        )
 
         payload = {
             "entries": processed,
-            "total": len(waitlist_data),
+            "total": len(processed),
+            "unique_waitlists": len(channel_summary_list),
+            "channel_summary": channel_summary_list,
             "generated_at": TimezoneUtils.utc_now().isoformat(),
         }
         cls._store_cache(cache_key, payload)

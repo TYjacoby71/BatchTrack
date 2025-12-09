@@ -9,7 +9,7 @@
       "saponification_value": 95,
       "iodine_value": 10,
       "melting_point_c": 63,
-      "recommended_usage_rate": "5-30% in balms and salves",
+      
       "recommended_shelf_life_days": 1095,
       "certifications": [
         "USP Grade",
@@ -32,7 +32,7 @@
       "saponification_value": 95,
       "iodine_value": 10,
       "melting_point_c": 62,
-      "recommended_usage_rate": "5-25% in cosmetics",
+      
       "recommended_shelf_life_days": 1095,
       "certifications": [
         "USP Grade"
@@ -54,7 +54,7 @@
       "saponification_value": 190,
       "iodine_value": 70,
       "melting_point_c": 49,
-      "recommended_usage_rate": "70-100% as primary candle wax",
+      
       "recommended_shelf_life_days": 730,
       "certifications": [
         "Renewable"
@@ -76,7 +76,7 @@
       "saponification_value": 0,
       "iodine_value": 0,
       "melting_point_c": 60,
-      "recommended_usage_rate": "50-100% in pillar and container candles",
+      
       "recommended_shelf_life_days": 1825,
       "certifications": [],
       "density": 0.9,
@@ -96,7 +96,7 @@
       "saponification_value": 78,
       "iodine_value": 7,
       "melting_point_c": 85,
-      "recommended_usage_rate": "1-10% for gloss and hardness",
+      
       "recommended_shelf_life_days": 1095,
       "certifications": [
         "Vegan"
@@ -118,7 +118,7 @@
       "saponification_value": 65,
       "iodine_value": 15,
       "melting_point_c": 68,
-      "recommended_usage_rate": "1-12% as vegan wax alternative",
+      
       "recommended_shelf_life_days": 1095,
       "certifications": [
         "Vegan"
@@ -140,7 +140,7 @@
       "saponification_value": 75,
       "iodine_value": 10,
       "melting_point_c": 79,
-      "recommended_usage_rate": "1-5% to boost hardness and stability",
+      
       "recommended_shelf_life_days": 730,
       "certifications": [
         "Vegan"
@@ -161,7 +161,7 @@
     "saponification_value",
     "iodine_value",
     "melting_point_c",
-    "recommended_usage_rate",
+
     "recommended_shelf_life_days",
     "certifications",
     "is_active_ingredient"

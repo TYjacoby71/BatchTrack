@@ -1,5 +1,4 @@
 from collections import OrderedDict
-
 from flask import Blueprint, jsonify, make_response, request, current_app
 from datetime import datetime, timezone
 from app.extensions import limiter, csrf, cache

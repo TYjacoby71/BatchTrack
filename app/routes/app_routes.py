@@ -1,10 +1,11 @@
 from flask import Blueprint, render_template, request, redirect, url_for, session, jsonify, flash
-from app.models import Recipe, InventoryItem, Batch
+from app.models import Batch
 from flask_login import login_required, current_user
 from app.utils.permissions import require_permission, get_effective_organization_id, permission_required, any_permission_required
 from app.services.combined_inventory_alerts import CombinedInventoryAlertService
 from app.blueprints.expiration.services import ExpirationService
 from app.services.statistics import AnalyticsDataService
+from app.extensions import limiter
 import logging
 
 logger = logging.getLogger(__name__)
@@ -16,6 +17,7 @@ app_routes_bp = Blueprint('app_routes', __name__)
 @app_routes_bp.route('/dashboard')
 @app_routes_bp.route('/user_dashboard')
 @login_required
+@limiter.limit("1000 per minute")
 def dashboard():
     """Main dashboard view with stock checking and alerts"""
     force_refresh = (request.args.get('refresh') or '').lower() in ('1', 'true', 'yes')
@@ -48,7 +50,6 @@ def dashboard():
     from ..extensions import db
 
     # Initialize with safe defaults
-    recipes = []
     active_batch = None
     alert_data = {'alerts': [], 'total_alerts': 0, 'hidden_count': 0}
     low_stock_ingredients = []
@@ -57,17 +58,6 @@ def dashboard():
     try:
         # Force clean state
         db.session.rollback()
-
-        # Get recipes with explicit error catching
-        try:
-            recipes_query = Recipe.query
-            if current_user.organization_id:
-                recipes_query = recipes_query.filter_by(organization_id=current_user.organization_id)
-            recipes = recipes_query.all()
-        except Exception as recipe_error:
-            logger.warning(f"Recipe query error: {recipe_error}")
-            db.session.rollback()
-            recipes = []
 
         # Get active batch with explicit error catching
         try:
@@ -125,7 +115,6 @@ def dashboard():
         flash('Dashboard temporarily unavailable. Please try refreshing the page.', 'error')
 
     return render_template("dashboard.html",
-                         recipes=recipes,
                          active_batch=active_batch,
                          current_user=current_user,
                          alert_data=alert_data,
@@ -182,6 +171,7 @@ def api_dashboard_alerts():
 
 @app_routes_bp.route('/auth-check', methods=['GET'])
 @login_required
+@limiter.limit("500 per minute")
 def auth_check():
     """Lightweight endpoint to verify authentication status without heavy DB work."""
     return jsonify({'status': 'ok'})

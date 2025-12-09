@@ -3,12 +3,12 @@
 <div>
   <div class="row">
     <div class="col-12">
-      
+
 
       <!-- Product Header -->
       <div class="d-flex justify-content-between align-items-center mb-4">
         <div>
-          <h2>{{ product.name }}</h2>
+          <h2>{{ product.name }} - Product Overview</h2>
           <small class="text-muted">
             Low Stock Alert: {{ product.low_stock_threshold }} | 
             Created: {{ product.created_at | user_date }}
@@ -93,7 +93,7 @@
             <div class="col-md-6 col-lg-3">
               <div class="card bg-light h-100">
                 <div class="card-body text-center">
-                  <div class="fs-4 fw-bold text-primary">{{ "%.2f"|format(ns_product.total_bulk) }}</div>
+                  <div class="fs-4 fw-bold text-dark">{{ "%.2f"|format(ns_product.total_bulk) }}</div>
                   <div class="text-muted small">Total Bulk</div>
                   <div class="text-muted small">&nbsp;</div>
                 </div>
@@ -102,7 +102,7 @@
             <div class="col-md-6 col-lg-3">
               <div class="card bg-light h-100">
                 <div class="card-body text-center">
-                  <div class="fs-4 fw-bold text-success">{{ ns_product.total_packaged|int }}</div>
+                  <div class="fs-4 fw-bold text-dark">{{ ns_product.total_packaged|int }}</div>
                   <div class="text-muted small">Total Packaged</div>
                   <div class="text-muted small">Items</div>
                 </div>
@@ -111,7 +111,7 @@
             <div class="col-md-6 col-lg-3">
               <div class="card bg-light h-100">
                 <div class="card-body text-center">
-                  <div class="fs-4 fw-bold text-warning">${{ "%.2f"|format(ns_product.total_cost) }}</div>
+                  <div class="fs-4 fw-bold text-dark">${{ "%.2f"|format(ns_product.total_cost) }}</div>
                   <div class="text-muted small">Total Cost</div>
                   <div class="text-muted small">Inventory</div>
                 </div>
@@ -120,7 +120,7 @@
             <div class="col-md-6 col-lg-3">
               <div class="card bg-light h-100">
                 <div class="card-body text-center">
-                  <div class="fs-4 fw-bold text-info">${{ "%.2f"|format(ns_product.total_value) }}</div>
+                  <div class="fs-4 fw-bold text-dark">${{ "%.2f"|format(ns_product.total_value) }}</div>
                   <div class="text-muted small">Total Value</div>
                   <div class="text-muted small">Retail Price</div>
                 </div>
@@ -205,28 +205,15 @@
               <div class="variant-stats mb-3">
                 <div class="row text-center">
                   <div class="col-4">
-                    <small class="text-muted">Total Bulk</small><br>
-                    <strong>{{ "%.2f"|format(ns_variant.total_bulk) }}</strong><br>
-                    <small>&nbsp;</small>
-                  </div>
-                  <div class="col-4">
-                    <small class="text-muted">Total Packaged</small><br>
-                    <strong>{{ ns_variant.total_packaged|int }}</strong><br>
-                    <small>items</small>
-                  </div>
-                  <div class="col-4">
                     <small class="text-muted">Size Count</small><br>
                     <strong>{{ var_size_count }}</strong><br>
                     <small>sizes</small>
                   </div>
-                </div>
-
-                <div class="row text-center mt-2">
-                  <div class="col-6">
+                  <div class="col-4">
                     <small class="text-muted">Total Cost</small><br>
                     <strong>${{ "%.2f"|format(ns_variant.total_cost) }}</strong>
                   </div>
-                  <div class="col-6">
+                  <div class="col-4">
                     <small class="text-muted">Total Value</small><br>
                     <strong>${{ "%.2f"|format(ns_variant.total_value) }}</strong>
                   </div>
@@ -367,6 +354,7 @@
     position: relative;
     overflow: hidden;
     padding: 0 40px;
+    margin: 0 -15px; /* Offset Bootstrap container padding to align with grid */
 }
 
 .variants-carousel {
@@ -376,7 +364,7 @@
     scroll-behavior: smooth;
     scrollbar-width: none;
     -ms-overflow-style: none;
-    padding: 10px 0;
+    padding: 10px 15px; /* Add padding back to align content */
 }
 
 .variants-carousel::-webkit-scrollbar {
@@ -433,11 +421,11 @@
     .variant-card-item {
         width: 280px;
     }
-    
+
     .variants-carousel-wrapper {
         padding: 0 30px;
     }
-    
+
     .carousel-nav {
         width: 35px;
         height: 35px;
@@ -466,7 +454,7 @@ document.addEventListener('DOMContentLoaded', function() {
         });
 
         noResults.style.display = visibleCount === 0 ? 'block' : 'none';
-        
+
         // Update navigation buttons after filtering
         setTimeout(updateNavigationButtons, 100);
     }
@@ -494,7 +482,7 @@ document.addEventListener('DOMContentLoaded', function() {
         });
 
         cards.forEach(card => variantsContainer.appendChild(card));
-        
+
         // Update navigation buttons after sorting
         setTimeout(updateNavigationButtons, 100);
     }
@@ -502,7 +490,7 @@ document.addEventListener('DOMContentLoaded', function() {
     // Event listeners
     if (variantFilter) variantFilter.addEventListener('input', filterVariants);
     if (sortFilter) sortFilter.addEventListener('change', sortVariants);
-    
+
     // Initialize carousel
     initializeCarousel();
 
@@ -644,7 +632,7 @@ document.addEventListener('DOMContentLoaded', function() {
         // Also hide buttons if all cards fit in view
         const totalWidth = container.scrollWidth;
         const visibleWidth = container.clientWidth;
-        
+
         if (totalWidth <= visibleWidth) {
             leftBtn.style.display = 'none';
             rightBtn.style.display = 'none';

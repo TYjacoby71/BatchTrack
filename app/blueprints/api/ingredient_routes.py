@@ -5,7 +5,7 @@ from flask_login import login_required, current_user
 from sqlalchemy import or_, func
 from sqlalchemy.orm import joinedload
 
-from ...extensions import cache
+from ...extensions import cache, limiter
 from ...models import IngredientCategory, InventoryItem, GlobalItem, db
 from ...services.statistics.global_item_stats import GlobalItemStatsService
 from ...services.density_assignment_service import DensityAssignmentService
@@ -62,6 +62,7 @@ def get_ingredient_density(id):
 
 @ingredient_api_bp.route('/ingredients/search', methods=['GET'])
 @login_required
+@limiter.limit("3000/minute")
 def search_ingredients():
     """Search existing inventory items and return top matches for name field autocomplete.
     This preserves current add flow while enabling typeahead suggestions.
@@ -80,8 +81,8 @@ def search_ingredients():
     if current_user.organization_id:
         query = query.filter(InventoryItem.organization_id == current_user.organization_id)
 
-    # Only show inventory-manageable types (exclude products)
-    query = query.filter(~InventoryItem.type.in_(['product', 'product-reserved']))
+    # Only show true ingredients (exclude containers, products, etc.)
+    query = query.filter(InventoryItem.type == 'ingredient')
 
     ilike_term = f"%{q}%"
     results = query.filter(

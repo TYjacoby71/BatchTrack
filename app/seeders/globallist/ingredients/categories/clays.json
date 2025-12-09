@@ -5,7 +5,7 @@
   "attributes": [
     "ph_value",
     "moisture_content_percent",
-    "recommended_usage_rate",
+
     "recommended_shelf_life_days",
     "certifications",
     "particle_size_microns",
@@ -22,7 +22,7 @@
       "default_unit": "gram",
       "ph_value": "4.5-5.5",
       "moisture_content_percent": 1,
-      "recommended_usage_rate": "5-60% in masks and powders",
+      
       "recommended_shelf_life_days": 1095,
       "certifications": [
         "Cosmetic Grade"
@@ -43,7 +43,7 @@
       "default_unit": "gram",
       "ph_value": "8.5-9.5",
       "moisture_content_percent": 8,
-      "recommended_usage_rate": "5-25% in masks and poultices",
+      
       "recommended_shelf_life_days": 1095,
       "certifications": [
         "USP Grade"
@@ -65,7 +65,7 @@
       "default_unit": "gram",
       "ph_value": "7.0-7.5",
       "moisture_content_percent": 6,
-      "recommended_usage_rate": "10-50% in masks and shampoos",
+      
       "recommended_shelf_life_days": 1095,
       "certifications": [
         "Ecocert Raw Material"
@@ -86,7 +86,7 @@
       "default_unit": "gram",
       "ph_value": "6.5-7.5",
       "moisture_content_percent": 5,
-      "recommended_usage_rate": "2-30% in masks and purifying bars",
+      
       "recommended_shelf_life_days": 1095,
       "certifications": [
         "Ecocert Raw Material"
@@ -107,7 +107,7 @@
       "default_unit": "gram",
       "ph_value": "7.0-8.0",
       "moisture_content_percent": 10,
-      "recommended_usage_rate": "10-40% in cleansing masks",
+      
       "recommended_shelf_life_days": 1095,
       "certifications": [],
       "is_active_ingredient": false,
@@ -125,7 +125,7 @@
       "density": 5.61,
       "default_unit": "gram",
       "particle_size_microns": "200-500",
-      "recommended_usage_rate": "1-25% in balms, powders, and mineral sunscreen bases",
+      
       "recommended_shelf_life_days": 1825,
       "certifications": [
         "USP Grade"
@@ -145,7 +145,7 @@
       "density": 4.23,
       "default_unit": "gram",
       "particle_size_microns": "300-500",
-      "recommended_usage_rate": "1-10% for opacity and color adjustment",
+      
       "recommended_shelf_life_days": 1825,
       "certifications": [
         "FDA Batch Certified"

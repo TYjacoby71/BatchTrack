@@ -7,7 +7,7 @@
       "name": "Honey",
       "default_unit": "gram",
       "moisture_content_percent": 18,
-      "recommended_usage_rate": "Replace sugar 1:1 by weight, adjust liquids",
+      
       "recommended_shelf_life_days": 1825,
       "certifications": [
         "True Source Certified"
@@ -28,7 +28,7 @@
       "name": "Maple Syrup",
       "default_unit": "milliliter",
       "moisture_content_percent": 33,
-      "recommended_usage_rate": "Replace sugar at 60-75% of weight",
+      
       "recommended_shelf_life_days": 365,
       "certifications": [
         "Grade A Dark Amber"
@@ -48,7 +48,7 @@
       "name": "Corn Syrup",
       "default_unit": "milliliter",
       "moisture_content_percent": 23,
-      "recommended_usage_rate": "Use 5-30% to control crystallization",
+      
       "recommended_shelf_life_days": 1095,
       "certifications": [
         "Kosher"
@@ -68,7 +68,7 @@
       "name": "Agave Nectar",
       "default_unit": "milliliter",
       "moisture_content_percent": 25,
-      "recommended_usage_rate": "Use 65-75% of sugar weight",
+      
       "recommended_shelf_life_days": 730,
       "certifications": [
         "Organic"
@@ -88,7 +88,7 @@
       "name": "Molasses (Blackstrap)",
       "default_unit": "milliliter",
       "moisture_content_percent": 22,
-      "recommended_usage_rate": "Use 5-15% for flavor and color",
+      
       "recommended_shelf_life_days": 730,
       "certifications": [
         "Unsulphured"
@@ -108,7 +108,7 @@
       "name": "Golden Syrup",
       "default_unit": "milliliter",
       "moisture_content_percent": 20,
-      "recommended_usage_rate": "Use 5-20% in confections and baking",
+      
       "recommended_shelf_life_days": 730,
       "certifications": [
         "Kosher"
@@ -128,7 +128,7 @@
       "name": "Rice Syrup",
       "default_unit": "milliliter",
       "moisture_content_percent": 18,
-      "recommended_usage_rate": "Use 75-100% of sugar weight",
+      
       "recommended_shelf_life_days": 540,
       "certifications": [
         "Organic"
@@ -148,7 +148,7 @@
       "name": "White Sugar",
       "default_unit": "gram",
       "moisture_content_percent": 0.5,
-      "recommended_usage_rate": "Use 100% as primary sweetener",
+      
       "recommended_shelf_life_days": 1825,
       "certifications": [
         "Non-GMO"
@@ -168,7 +168,7 @@
       "name": "Brown Sugar",
       "default_unit": "gram",
       "moisture_content_percent": 4,
-      "recommended_usage_rate": "Use 100% for moist baked goods",
+      
       "recommended_shelf_life_days": 730,
       "certifications": [
         "Fair Trade"
@@ -189,7 +189,7 @@
       "name": "Powdered Sugar",
       "default_unit": "gram",
       "moisture_content_percent": 1,
-      "recommended_usage_rate": "Use 100% for icings and dusting",
+      
       "recommended_shelf_life_days": 1095,
       "certifications": [
         "Kosher"
@@ -209,7 +209,7 @@
       "name": "Raw Sugar",
       "default_unit": "gram",
       "moisture_content_percent": 2,
-      "recommended_usage_rate": "Use 100% for coarse sweetening",
+      
       "recommended_shelf_life_days": 1460,
       "certifications": [
         "Fair Trade"
@@ -229,7 +229,7 @@
       "name": "Coconut Sugar",
       "default_unit": "gram",
       "moisture_content_percent": 3,
-      "recommended_usage_rate": "Use 100% as palm-derived sweetener",
+      
       "recommended_shelf_life_days": 730,
       "certifications": [
         "Organic"
@@ -248,7 +248,7 @@
   ],
   "attributes": [
     "moisture_content_percent",
-    "recommended_usage_rate",
+
     "recommended_shelf_life_days",
     "certifications",
     "is_active_ingredient"

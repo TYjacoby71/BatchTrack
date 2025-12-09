@@ -24,7 +24,6 @@ class GlobalItem(db.Model):
     # Perishable information
     default_is_perishable = db.Column(db.Boolean, nullable=True, default=False)
     recommended_shelf_life_days = db.Column(db.Integer, nullable=True)
-    recommended_usage_rate = db.Column(db.String(64), nullable=True)
     recommended_fragrance_load_pct = db.Column(db.String(64), nullable=True)
     is_active_ingredient = db.Column(db.Boolean, nullable=False, default=False)
 

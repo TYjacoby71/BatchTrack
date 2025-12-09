@@ -6,9 +6,9 @@ from .mixins import ScopedModelMixin
 # 1. Base models with no dependencies
 from .models import (
     db, Organization, User, InventoryItem, InventoryHistory, BatchInventoryLog,
-    Recipe, RecipeIngredient
 )
-from .recipe import RecipeConsumable, RecipeLineage
+from .recipe import Recipe, RecipeIngredient, RecipeConsumable, RecipeLineage
+from .recipe_marketplace import RecipeModerationEvent
 from .batch import (
     Batch,
     BatchIngredient,
@@ -84,6 +84,7 @@ except ImportError:
 from .unified_inventory_history import UnifiedInventoryHistory
 from .domain_event import DomainEvent
 from .freshness_snapshot import FreshnessSnapshot
+from .batchbot_credit import BatchBotCreditBundle
 
 # Import inventory lot model 
 from .inventory_lot import InventoryLot
