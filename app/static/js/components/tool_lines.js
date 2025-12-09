@@ -40,7 +40,14 @@
     var list = row.querySelector('[data-role="suggestions"]');
 
     if (typeof window.attachMergedInventoryGlobalTypeahead === 'function'){
-      window.attachMergedInventoryGlobalTypeahead({ inputEl: input, giHiddenEl: giHidden, listEl: list, mode: 'recipe', context: context });
+      window.attachMergedInventoryGlobalTypeahead({
+        inputEl: input,
+        giHiddenEl: giHidden,
+        listEl: list,
+        mode: 'recipe',
+        context: context,
+        ingredientFirst: kind === 'ingredient'
+      });
     }
     row.querySelector('.tool-remove').addEventListener('click', function(){ row.remove(); });
     return row;

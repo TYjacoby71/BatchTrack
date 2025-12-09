@@ -63,6 +63,7 @@ class BaseConfig:
     CACHE_TYPE = os.environ.get('CACHE_TYPE', 'SimpleCache') # Default to SimpleCache if Redis isn't set
     CACHE_REDIS_URL = os.environ.get('CACHE_REDIS_URL') or os.environ.get('REDIS_URL')
     CACHE_DEFAULT_TIMEOUT = _env_int('CACHE_DEFAULT_TIMEOUT', 120)
+    GLOBAL_LIBRARY_CACHE_TIMEOUT = _env_int('GLOBAL_LIBRARY_CACHE_TIMEOUT', 120)
 
     # Billing cache tuning
     BILLING_STATUS_CACHE_TTL = _env_int('BILLING_STATUS_CACHE_TTL', 120)

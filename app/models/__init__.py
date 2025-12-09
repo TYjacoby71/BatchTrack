@@ -28,6 +28,8 @@ from .ingredient_reference import (
     ApplicationTag,
     GlobalItemFunctionTag,
     GlobalItemApplicationTag,
+    IngredientCategoryTag,
+    GlobalItemCategoryTag,
 )
 from .product_category import ProductCategory
 from .feature_flag import FeatureFlag

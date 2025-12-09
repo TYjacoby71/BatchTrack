@@ -1105,7 +1105,13 @@ def create_global_item():
     """Create or update global items (developer-only)"""
     from sqlalchemy import func
     from app.models.category import IngredientCategory
-    from app.models.ingredient_reference import IngredientDefinition, PhysicalForm
+    from app.models.ingredient_reference import (
+        IngredientDefinition,
+        PhysicalForm,
+        FunctionTag,
+        ApplicationTag,
+        IngredientCategoryTag,
+    )
 
     def _slugify(value: str | None) -> str | None:
         if not value:
@@ -1114,6 +1120,65 @@ def create_global_item():
         slug = re.sub(r'[^a-z0-9]+', '-', value.strip().lower())
         slug = slug.strip('-')
         return slug or None
+
+    def _parse_tag_field(field_name: str):
+        raw_value = (request.form.get(field_name) or '').strip()
+        if not raw_value:
+            return []
+        return [part.strip() for part in raw_value.split(',') if part.strip()]
+
+    _function_tag_cache = {}
+    _application_tag_cache = {}
+    _category_tag_cache = {}
+
+    def _get_or_create_tag(model, cache, tag_name: str):
+        if not tag_name:
+            return None
+        key = tag_name.strip().lower()
+        if not key:
+            return None
+        if key in cache:
+            return cache[key]
+
+        tag = model.query.filter(func.lower(model.name) == key).first()
+        if tag:
+            cache[key] = tag
+            return tag
+
+        slug_value = _slugify(tag_name)
+        tag = model(
+            name=tag_name.strip(),
+            slug=slug_value,
+            is_active=True,
+        )
+        db.session.add(tag)
+        db.session.flush()
+        cache[key] = tag
+        return tag
+
+    def _resolve_function_tags(tag_names):
+        resolved = []
+        for tag_name in tag_names:
+            tag = _get_or_create_tag(FunctionTag, _function_tag_cache, tag_name)
+            if tag:
+                resolved.append(tag)
+        return resolved
+
+    def _resolve_application_tags(tag_names):
+        resolved = []
+        for tag_name in tag_names:
+            tag = _get_or_create_tag(ApplicationTag, _application_tag_cache, tag_name)
+            if tag:
+                resolved.append(tag)
+        return resolved
+
+    def _resolve_category_tags(tag_names):
+        resolved = []
+        for tag_name in tag_names:
+            tag = _get_or_create_tag(IngredientCategoryTag, _category_tag_cache, tag_name)
+            if tag:
+                resolved.append(tag)
+        return resolved
 
     def _validate_category_id(category_id_str: str | None):
         if not category_id_str:
@@ -1274,6 +1339,10 @@ def create_global_item():
                 return redirect(url_for('developer.create_global_item'))
             ingredient_category_id = category_id
 
+        function_names = _parse_tag_field('item_function_tags')
+        application_names = _parse_tag_field('item_application_tags')
+        category_tag_names = _parse_tag_field('item_category_tags')
+
         ingredient = None
         if ingredient_mode == 'existing':
             existing_ingredient_id = (request.form.get('existing_ingredient_id') or '').strip()
@@ -1313,6 +1382,12 @@ def create_global_item():
             )
             db.session.add(ingredient)
             db.session.flush()
+
+        fallback_category_name = None
+        if ingredient and ingredient.ingredient_category_id:
+            category_obj = IngredientCategory.query.get(ingredient.ingredient_category_id)
+            if category_obj and category_obj.name:
+                fallback_category_name = category_obj.name
 
         physical_form_mode = request.form.get('physical_form_mode', 'existing')
         physical_form = None
@@ -1468,6 +1543,17 @@ def create_global_item():
             global_item.aliases = [alias.strip() for alias in aliases_raw.split(',') if alias.strip()]
         else:
             global_item.aliases = None
+
+        fallback_tags = category_tag_names[:]
+        if fallback_category_name:
+            if not fallback_tags:
+                fallback_tags = [fallback_category_name]
+            elif fallback_category_name not in fallback_tags:
+                fallback_tags.append(fallback_category_name)
+
+        global_item.functions = _resolve_function_tags(function_names)
+        global_item.applications = _resolve_application_tags(application_names)
+        global_item.category_tags = _resolve_category_tags(fallback_tags)
 
         db.session.add(global_item)
         db.session.commit()

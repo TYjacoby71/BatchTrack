@@ -17,12 +17,14 @@ from app.models.ingredient_reference import (
     PhysicalForm,
     FunctionTag,
     ApplicationTag,
+    IngredientCategoryTag,
 )
 
 _ingredient_cache = {}
 _physical_form_cache = {}
 _function_tag_cache = {}
 _application_tag_cache = {}
+_category_tag_cache = {}
 
 
 def _slugify(value: str) -> str | None:
@@ -241,10 +243,53 @@ def _get_or_create_application_tag(tag_name: str | None) -> ApplicationTag | Non
     return tag
 
 
-def _assign_tags(global_item: GlobalItem, item_data: dict):
+def _get_or_create_category_tag(tag_name: str | None) -> IngredientCategoryTag | None:
+    if not tag_name:
+        return None
+    tag_name = tag_name.strip()
+    if not tag_name:
+        return None
+
+    slug = _slugify(tag_name)
+    cache_key = slug or tag_name
+    if cache_key in _category_tag_cache:
+        return _category_tag_cache[cache_key]
+
+    query = IngredientCategoryTag.query
+    if slug:
+        tag = query.filter(
+            (IngredientCategoryTag.slug == slug) | (IngredientCategoryTag.name == tag_name)
+        ).first()
+    else:
+        tag = query.filter(IngredientCategoryTag.name == tag_name).first()
+
+    if tag:
+        if slug and not tag.slug:
+            tag.slug = slug
+            db.session.add(tag)
+    else:
+        tag = IngredientCategoryTag(
+            name=tag_name,
+            slug=slug,
+            is_active=True,
+        )
+        db.session.add(tag)
+        db.session.flush()
+
+    _category_tag_cache[cache_key] = tag
+    return tag
+
+
+def _assign_tags(global_item: GlobalItem, item_data: dict, fallback_category_name: str | None = None):
     """Attach function and application tags to a global item."""
     functions = item_data.get('functions') or []
     applications = item_data.get('applications') or []
+    category_tags = item_data.get('category_tags') or []
+    if fallback_category_name:
+        if not category_tags:
+            category_tags = [fallback_category_name]
+        elif fallback_category_name not in category_tags:
+            category_tags.append(fallback_category_name)
 
     global_item.functions = []
     for tag_name in functions:
@@ -257,6 +302,13 @@ def _assign_tags(global_item: GlobalItem, item_data: dict):
         tag = _get_or_create_application_tag(tag_name)
         if tag:
             global_item.applications.append(tag)
+
+    resolved_category_tags = []
+    for tag_name in category_tags:
+        tag = _get_or_create_category_tag(tag_name)
+        if tag:
+            resolved_category_tags.append(tag)
+    global_item.category_tags = resolved_category_tags
 
 
 def seed_ingredients_from_files(selected_files):
@@ -385,7 +437,7 @@ def seed_ingredients_from_files(selected_files):
             if physical_form:
                 global_item.physical_form = physical_form
 
-            _assign_tags(global_item, item_data)
+            _assign_tags(global_item, item_data, fallback_category_name=category.name)
 
     return created_categories, created_items
 

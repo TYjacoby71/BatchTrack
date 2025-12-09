@@ -1,10 +1,15 @@
 
-import os
+from sqlalchemy import event
+
 from ..extensions import db
 from ..utils.timezone_utils import TimezoneUtils
+from .db_dialect import is_postgres
+from app.services.cache_invalidation import invalidate_global_library_cache
+
 
 class GlobalItem(db.Model):
     __tablename__ = 'global_item'
+
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(128), nullable=False, index=True)
     item_type = db.Column(db.String(32), nullable=False, index=True)  # ingredient, container, packaging, consumable
@@ -88,22 +93,18 @@ class GlobalItem(db.Model):
         secondary='global_item_application_tag',
         back_populates='global_items',
     )
+    category_tags = db.relationship(
+        'IngredientCategoryTag',
+        secondary='global_item_category_tag',
+        back_populates='global_items',
+    )
     archived_by_user = db.relationship('User', foreign_keys=[archived_by])
 
-    def _is_postgres_url(url: str) -> bool:
-        if not url:
-            return False
-        url = url.lower()
-        return (
-            url.startswith("postgres://")
-            or url.startswith("postgresql://")
-            or url.startswith("postgresql+psycopg2://")
-        )
-
-    _IS_PG = _is_postgres_url(os.environ.get("DATABASE_URL", ""))
+    _IS_PG = is_postgres()
 
     _table_args = [
         db.UniqueConstraint('name', 'item_type', name='_global_item_name_type_uc'),
+        db.Index('ix_global_item_archive_type_name', 'is_archived', 'item_type', 'name'),
         db.Index('ix_global_item_ingredient_id', 'ingredient_id'),
         db.Index('ix_global_item_physical_form_id', 'physical_form_id'),
     ]
@@ -116,3 +117,39 @@ class GlobalItem(db.Model):
             )
         )
     __table_args__ = tuple(_table_args)
+
+
+def _apply_metadata_defaults(target):
+    try:
+        from app.services.global_item_metadata_service import GlobalItemMetadataService
+    except Exception:
+        return
+
+    new_metadata = GlobalItemMetadataService.merge_metadata(target)
+    if new_metadata != (target.metadata_json or {}):
+        target.metadata_json = new_metadata
+
+
+@event.listens_for(GlobalItem, "before_insert")
+def _global_item_metadata_before_insert(mapper, connection, target):
+    _apply_metadata_defaults(target)
+
+
+@event.listens_for(GlobalItem, "before_update")
+def _global_item_metadata_before_update(mapper, connection, target):
+    _apply_metadata_defaults(target)
+
+
+@event.listens_for(GlobalItem, "after_insert")
+def _global_item_after_insert(mapper, connection, target):
+    invalidate_global_library_cache()
+
+
+@event.listens_for(GlobalItem, "after_update")
+def _global_item_after_update(mapper, connection, target):
+    invalidate_global_library_cache()
+
+
+@event.listens_for(GlobalItem, "after_delete")
+def _global_item_after_delete(mapper, connection, target):
+    invalidate_global_library_cache()

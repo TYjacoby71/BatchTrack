@@ -1,14 +1,25 @@
 from collections import OrderedDict
 
-from flask import Blueprint, jsonify, make_response, request
+from flask import Blueprint, jsonify, make_response, request, current_app
 from datetime import datetime, timezone
-from app.extensions import limiter, csrf
+from app.extensions import limiter, csrf, cache
 from app.models.models import Unit
 from app.models.global_item import GlobalItem
 from app.services.unit_conversion.unit_conversion import ConversionEngine
+from app.services.public_bot_service import PublicBotService, PublicBotServiceError
+from app.services.ai import GoogleAIClientError
+from app.services.cache_invalidation import global_library_cache_key
+from app.utils.cache_utils import stable_cache_key
 from sqlalchemy import func, or_
 
 public_api_bp = Blueprint("public_api", __name__)
+
+
+def _global_library_cache_timeout() -> int:
+    return current_app.config.get(
+        "GLOBAL_LIBRARY_CACHE_TIMEOUT",
+        current_app.config.get("CACHE_DEFAULT_TIMEOUT", 120),
+    )
 
 @public_api_bp.route("/server-time", methods=["GET"])
 @limiter.exempt
@@ -50,6 +61,21 @@ def public_global_item_search():
         return jsonify({'success': True, 'results': []})
 
     try:
+        cache_key = None
+        if cache:
+            raw_key = stable_cache_key(
+                "public-global-items",
+                {
+                    'q': q,
+                    'item_type': item_type or '',
+                    'group': request.args.get('group') or '',
+                },
+            )
+            cache_key = global_library_cache_key(raw_key)
+            cached_payload = cache.get(cache_key)
+            if cached_payload:
+                return jsonify(cached_payload)
+
         query = GlobalItem.query.filter(GlobalItem.is_archived != True)
         if item_type:
             query = query.filter(GlobalItem.item_type == item_type)
@@ -98,6 +124,7 @@ def public_global_item_search():
                 }
             function_names = [tag.name for tag in getattr(gi, 'functions', [])]
             application_names = [tag.name for tag in getattr(gi, 'applications', [])]
+            category_tag_names = [tag.name for tag in getattr(gi, 'category_tags', [])]
 
             display_name = gi.name
             if ingredient_payload and physical_form_payload:
@@ -131,6 +158,7 @@ def public_global_item_search():
                 'brewing_potential_sg': gi.brewing_potential_sg,
                 'brewing_diastatic_power_lintner': gi.brewing_diastatic_power_lintner,
                 'certifications': gi.certifications or [],
+                'category_tags': category_tag_names,
                 'ingredient_name': ingredient_payload['name'] if ingredient_payload else None,
                 'physical_form_name': physical_form_payload['name'] if physical_form_payload else None,
             }
@@ -188,12 +216,20 @@ def public_global_item_search():
                     'moisture_content_percent': getattr(gi, 'moisture_content_percent', None),
                     'comedogenic_rating': getattr(gi, 'comedogenic_rating', None),
                     'ph_value': getattr(gi, 'ph_value', None),
+                    'category_tags': category_tag_names,
                 })
 
         if group_mode:
-            return jsonify({'success': True, 'results': list(grouped.values())})
+            payload = {'success': True, 'results': list(grouped.values())}
+        else:
+            payload = {'success': True, 'results': results}
 
-        return jsonify({'success': True, 'results': results})
+        if cache_key:
+            try:
+                cache.set(cache_key, payload, timeout=_global_library_cache_timeout())
+            except Exception:
+                current_app.logger.debug("Unable to write global library cache key %s", cache_key)
+        return jsonify(payload)
     except Exception as e:
         return jsonify({'success': False, 'error': str(e)}), 500
 
@@ -217,3 +253,28 @@ def public_convert_units():
         return jsonify({'success': result.get('success', False), 'data': result})
     except Exception as e:
         return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@public_api_bp.route("/help-bot", methods=["POST"])
+@limiter.limit("30/minute")
+@csrf.exempt
+def public_help_bot():
+    data = request.get_json() or {}
+    prompt = (data.get("prompt") or data.get("question") or "").strip()
+    tone = data.get("tone")
+
+    if not prompt:
+        return jsonify({"success": False, "error": "Prompt is required."}), 400
+
+    try:
+        service = PublicBotService()
+        result = service.answer(prompt, tone=tone)
+        return jsonify({"success": True, **result})
+    except PublicBotServiceError as exc:
+        return jsonify({"success": False, "error": str(exc)}), 400
+    except GoogleAIClientError as exc:
+        current_app.logger.exception("Public help bot AI failure")
+        return jsonify({"success": False, "error": str(exc)}), 502
+    except Exception:
+        current_app.logger.exception("Public help bot unexpected error")
+        return jsonify({"success": False, "error": "Unexpected help bot failure."}), 500

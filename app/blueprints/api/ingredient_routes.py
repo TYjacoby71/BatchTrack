@@ -1,13 +1,25 @@
 from collections import OrderedDict
 
-from flask import Blueprint, jsonify, request
+from flask import Blueprint, jsonify, request, current_app
 from flask_login import login_required, current_user
 from sqlalchemy import or_, func
+from sqlalchemy.orm import joinedload
+
+from ...extensions import cache
 from ...models import IngredientCategory, InventoryItem, GlobalItem, db
 from ...services.statistics.global_item_stats import GlobalItemStatsService
 from ...services.density_assignment_service import DensityAssignmentService
+from ...services.cache_invalidation import global_library_cache_key
+from ...utils.cache_utils import stable_cache_key
 
 ingredient_api_bp = Blueprint('ingredient_api', __name__)
+
+
+def _global_library_cache_timeout() -> int:
+    return current_app.config.get(
+        "GLOBAL_LIBRARY_CACHE_TIMEOUT",
+        current_app.config.get("CACHE_DEFAULT_TIMEOUT", 120),
+    )
 
 @ingredient_api_bp.route('/categories', methods=['GET'])
 def get_categories():
@@ -60,7 +72,10 @@ def search_ingredients():
             'results': []
         })
 
-    query = InventoryItem.query
+    query = InventoryItem.query.options(
+        joinedload(InventoryItem.global_item).joinedload(GlobalItem.ingredient),
+        joinedload(InventoryItem.global_item).joinedload(GlobalItem.physical_form),
+    )
     # Scope to the user's organization for privacy
     if current_user.organization_id:
         query = query.filter(InventoryItem.organization_id == current_user.organization_id)
@@ -75,6 +90,9 @@ def search_ingredients():
 
     payload = []
     for item in results:
+        global_obj = getattr(item, 'global_item', None)
+        ingredient_obj = getattr(global_obj, 'ingredient', None) if global_obj else None
+        physical_form_obj = getattr(global_obj, 'physical_form', None) if global_obj else None
         payload.append({
             'id': item.id,
             'text': item.name,
@@ -82,7 +100,12 @@ def search_ingredients():
             'unit': item.unit,
             'density': item.density,
             'type': item.type,
-            'global_item_id': item.global_item_id
+            'global_item_id': item.global_item_id,
+            'ingredient_id': ingredient_obj.id if ingredient_obj else None,
+            'ingredient_name': ingredient_obj.name if ingredient_obj else item.name,
+            'physical_form_id': physical_form_obj.id if physical_form_obj else None,
+            'physical_form_name': physical_form_obj.name if physical_form_obj else None,
+            'cost_per_unit': item.cost_per_unit,
         })
 
     return jsonify({'results': payload})
@@ -167,6 +190,23 @@ def search_global_items():
     item_type = (request.args.get('type') or '').strip()  # optional: ingredient, container, packaging, consumable
     if not q:
         return jsonify({'results': []})
+
+    cache_key = None
+    if cache:
+        cache_key = global_library_cache_key(
+            stable_cache_key(
+                "auth-global-items",
+                {
+                    'q': q,
+                    'item_type': item_type or '',
+                    'group': request.args.get('group') or '',
+                    'org': getattr(current_user, 'organization_id', None),
+                },
+            )
+        )
+        cached_payload = cache.get(cache_key)
+        if cached_payload:
+            return jsonify(cached_payload)
 
     query = GlobalItem.query.filter(GlobalItem.is_archived != True)
     if item_type:
@@ -320,9 +360,17 @@ def search_global_items():
             })
 
     if group_mode:
-        return jsonify({'results': list(grouped.values())})
+        payload = {'results': list(grouped.values())}
+    else:
+        payload = {'results': results}
 
-    return jsonify({'results': results})
+    if cache_key:
+        try:
+            cache.set(cache_key, payload, timeout=_global_library_cache_timeout())
+        except Exception:
+            current_app.logger.debug("Unable to write authenticated global item cache key %s", cache_key)
+
+    return jsonify(payload)
 
 @ingredient_api_bp.route('/global-items/<int:global_item_id>/stats', methods=['GET'])
 @login_required
