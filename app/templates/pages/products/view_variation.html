@@ -66,30 +66,39 @@
 
           <!-- Display metrics -->
           <div class="row g-3">
-            <div class="col-md-4">
+            <div class="col-md-6 col-lg-3">
+              <div class="card bg-light h-100">
+                <div class="card-body text-center">
+                  <div class="fs-4 fw-bold text-dark">{{ "%.2f"|format(ns.bulk_quantity) }}</div>
+                  <div class="text-muted small">Total Bulk</div>
+                  <div class="text-muted small">&nbsp;</div>
+                </div>
+              </div>
+            </div>
+            <div class="col-md-6 col-lg-3">
+              <div class="card bg-light h-100">
+                <div class="card-body text-center">
+                  <div class="fs-4 fw-bold text-dark">{{ ns.packaged_quantity|int }}</div>
+                  <div class="text-muted small">Total Packaged</div>
+                  <div class="text-muted small">Items</div>
+                </div>
+              </div>
+            </div>
+            <div class="col-md-6 col-lg-3">
+              <div class="card bg-light h-100">
+                <div class="card-body text-center">
+                  <div class="fs-4 fw-bold text-dark">${{ "%.2f"|format(ns.total_cost) }}</div>
+                  <div class="text-muted small">Total Cost</div>
+                  <div class="text-muted small">{{ size_count }} Sizes</div>
+                </div>
+              </div>
+            </div>
+            <div class="col-md-6 col-lg-3">
               <div class="card bg-light h-100">
                 <div class="card-body text-center">
                   <div class="fs-4 fw-bold text-dark">${{ "%.2f"|format(ns.total_value) }}</div>
                   <div class="text-muted small">Total Value</div>
                   <div class="text-muted small">Retail Price</div>
-                </div>
-              </div>
-            </div>
-            <div class="col-md-4">
-              <div class="card bg-light h-100">
-                <div class="card-body text-center">
-                  <div class="fs-4 fw-bold text-dark">${{ "%.2f"|format(ns.total_cost) }}</div>
-                  <div class="text-muted small">Total Cost</div>
-                  <div class="text-muted small">Inventory</div>
-                </div>
-              </div>
-            </div>
-            <div class="col-md-4">
-              <div class="card bg-light h-100">
-                <div class="card-body text-center">
-                  <div class="fs-4 fw-bold text-dark">{{ size_count }}</div>
-                  <div class="text-muted small">Total SKUs</div>
-                  <div class="text-muted small">Sizes</div>
                 </div>
               </div>
             </div>
