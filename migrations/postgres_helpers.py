@@ -163,6 +163,64 @@ def unique_constraint_exists(table_name: str, constraint_name: str) -> bool:
     return False
 
 
+def constraint_exists(table_name: str, constraint_name: str) -> bool:
+    """Generic constraint existence check (FK/PK/unique/check)."""
+    if not table_exists(table_name):
+        return False
+    try:
+        insp = _inspector()
+        try:
+            pk = insp.get_pk_constraint(table_name)
+            if pk and pk.get("name") == constraint_name:
+                return True
+        except Exception:
+            pass
+
+        for fk in insp.get_foreign_keys(table_name):
+            if fk.get("name") == constraint_name:
+                return True
+
+        for uq in insp.get_unique_constraints(table_name):
+            if uq.get("name") == constraint_name:
+                return True
+
+        get_checks = getattr(insp, "get_check_constraints", None)
+        if callable(get_checks):
+            for ck in get_checks(table_name):
+                if ck.get("name") == constraint_name:
+                    return True
+    except Exception:
+        pass
+
+    if is_postgresql():
+        res = _bind().execute(
+            text(
+                """
+                SELECT 1
+                FROM information_schema.table_constraints
+                WHERE table_name = :t AND constraint_name = :c
+            """
+            ),
+            {"t": table_name, "c": constraint_name},
+        )
+        return res.first() is not None
+
+    if is_sqlite():
+        res = _bind().execute(
+            text(
+                """
+                SELECT name
+                FROM sqlite_master
+                WHERE name = :name
+                """
+            ),
+            {"name": constraint_name},
+        )
+        return res.first() is not None
+
+    return False
+
+
 # --------------- Safe DDL operations ---------------
 def safe_add_column(table_name: str, column_def, verbose: bool = True) -> bool:
     if not table_exists(table_name):

@@ -11,6 +11,17 @@ import re
 from alembic import op
 import sqlalchemy as sa
 
+from migrations.postgres_helpers import (
+    safe_add_column,
+    safe_drop_column,
+    safe_create_index,
+    safe_drop_index,
+    safe_create_foreign_key,
+    safe_drop_foreign_key,
+    table_exists,
+    column_exists,
+)
+
 
 # revision identifiers, used by Alembic.
 revision = '0011_ingredient_hierarchy'
@@ -77,107 +88,115 @@ def _normalize_ingredient_name(value: str | None) -> str:
 
 def upgrade():
     # Create core lookup tables
-    op.create_table(
-        'ingredient',
-        sa.Column('id', sa.Integer(), primary_key=True),
-        sa.Column('name', sa.String(length=128), nullable=False),
-        sa.Column('slug', sa.String(length=128), nullable=True, unique=True),
-        sa.Column('ingredient_category_id', sa.Integer(), sa.ForeignKey('ingredient_category.id', ondelete='SET NULL'), nullable=True),
-        sa.Column('inci_name', sa.String(length=256), nullable=True),
-        sa.Column('cas_number', sa.String(length=64), nullable=True),
-        sa.Column('description', sa.Text(), nullable=True),
-        sa.Column('is_active', sa.Boolean(), nullable=False, server_default=sa.true()),
-        sa.Column('created_at', sa.DateTime(), nullable=False, server_default=sa.func.now()),
-        sa.Column('updated_at', sa.DateTime(), nullable=False, server_default=sa.func.now()),
-    )
-    op.create_index('ix_ingredient_name', 'ingredient', ['name'])
-    op.create_index('ix_ingredient_slug', 'ingredient', ['slug'])
-    op.create_index('ix_ingredient_category_id', 'ingredient', ['ingredient_category_id'])
+    if not table_exists('ingredient'):
+        op.create_table(
+            'ingredient',
+            sa.Column('id', sa.Integer(), primary_key=True),
+            sa.Column('name', sa.String(length=128), nullable=False),
+            sa.Column('slug', sa.String(length=128), nullable=True, unique=True),
+            sa.Column('ingredient_category_id', sa.Integer(), sa.ForeignKey('ingredient_category.id', ondelete='SET NULL'), nullable=True),
+            sa.Column('inci_name', sa.String(length=256), nullable=True),
+            sa.Column('cas_number', sa.String(length=64), nullable=True),
+            sa.Column('description', sa.Text(), nullable=True),
+            sa.Column('is_active', sa.Boolean(), nullable=False, server_default=sa.true()),
+            sa.Column('created_at', sa.DateTime(), nullable=False, server_default=sa.func.now()),
+            sa.Column('updated_at', sa.DateTime(), nullable=False, server_default=sa.func.now()),
+        )
+    safe_create_index('ix_ingredient_name', 'ingredient', ['name'])
+    safe_create_index('ix_ingredient_slug', 'ingredient', ['slug'])
+    safe_create_index('ix_ingredient_category_id', 'ingredient', ['ingredient_category_id'])
 
-    op.create_table(
-        'physical_form',
-        sa.Column('id', sa.Integer(), primary_key=True),
-        sa.Column('name', sa.String(length=64), nullable=False, unique=True),
-        sa.Column('slug', sa.String(length=64), nullable=True, unique=True),
-        sa.Column('description', sa.Text(), nullable=True),
-        sa.Column('is_active', sa.Boolean(), nullable=False, server_default=sa.true()),
-        sa.Column('created_at', sa.DateTime(), nullable=False, server_default=sa.func.now()),
-        sa.Column('updated_at', sa.DateTime(), nullable=False, server_default=sa.func.now()),
-    )
+    if not table_exists('physical_form'):
+        op.create_table(
+            'physical_form',
+            sa.Column('id', sa.Integer(), primary_key=True),
+            sa.Column('name', sa.String(length=64), nullable=False, unique=True),
+            sa.Column('slug', sa.String(length=64), nullable=True, unique=True),
+            sa.Column('description', sa.Text(), nullable=True),
+            sa.Column('is_active', sa.Boolean(), nullable=False, server_default=sa.true()),
+            sa.Column('created_at', sa.DateTime(), nullable=False, server_default=sa.func.now()),
+            sa.Column('updated_at', sa.DateTime(), nullable=False, server_default=sa.func.now()),
+        )
 
-    op.create_table(
-        'function_tag',
-        sa.Column('id', sa.Integer(), primary_key=True),
-        sa.Column('name', sa.String(length=64), nullable=False, unique=True),
-        sa.Column('slug', sa.String(length=64), nullable=True, unique=True),
-        sa.Column('description', sa.Text(), nullable=True),
-        sa.Column('is_active', sa.Boolean(), nullable=False, server_default=sa.true()),
-        sa.Column('created_at', sa.DateTime(), nullable=False, server_default=sa.func.now()),
-        sa.Column('updated_at', sa.DateTime(), nullable=False, server_default=sa.func.now()),
-    )
+    if not table_exists('function_tag'):
+        op.create_table(
+            'function_tag',
+            sa.Column('id', sa.Integer(), primary_key=True),
+            sa.Column('name', sa.String(length=64), nullable=False, unique=True),
+            sa.Column('slug', sa.String(length=64), nullable=True, unique=True),
+            sa.Column('description', sa.Text(), nullable=True),
+            sa.Column('is_active', sa.Boolean(), nullable=False, server_default=sa.true()),
+            sa.Column('created_at', sa.DateTime(), nullable=False, server_default=sa.func.now()),
+            sa.Column('updated_at', sa.DateTime(), nullable=False, server_default=sa.func.now()),
+        )
 
-    op.create_table(
-        'application_tag',
-        sa.Column('id', sa.Integer(), primary_key=True),
-        sa.Column('name', sa.String(length=128), nullable=False, unique=True),
-        sa.Column('slug', sa.String(length=128), nullable=True, unique=True),
-        sa.Column('description', sa.Text(), nullable=True),
-        sa.Column('is_active', sa.Boolean(), nullable=False, server_default=sa.true()),
-        sa.Column('created_at', sa.DateTime(), nullable=False, server_default=sa.func.now()),
-        sa.Column('updated_at', sa.DateTime(), nullable=False, server_default=sa.func.now()),
-    )
+    if not table_exists('application_tag'):
+        op.create_table(
+            'application_tag',
+            sa.Column('id', sa.Integer(), primary_key=True),
+            sa.Column('name', sa.String(length=128), nullable=False, unique=True),
+            sa.Column('slug', sa.String(length=128), nullable=True, unique=True),
+            sa.Column('description', sa.Text(), nullable=True),
+            sa.Column('is_active', sa.Boolean(), nullable=False, server_default=sa.true()),
+            sa.Column('created_at', sa.DateTime(), nullable=False, server_default=sa.func.now()),
+            sa.Column('updated_at', sa.DateTime(), nullable=False, server_default=sa.func.now()),
+        )
 
-    op.create_table(
-        'global_item_function_tag',
-        sa.Column('id', sa.Integer(), primary_key=True),
-        sa.Column('global_item_id', sa.Integer(), sa.ForeignKey('global_item.id', ondelete='CASCADE'), nullable=False),
-        sa.Column('function_tag_id', sa.Integer(), sa.ForeignKey('function_tag.id', ondelete='CASCADE'), nullable=False),
-        sa.Column('created_at', sa.DateTime(), nullable=False, server_default=sa.func.now()),
-        sa.UniqueConstraint('global_item_id', 'function_tag_id', name='uq_global_item_function_tag'),
-    )
-    op.create_index('ix_global_item_function_tag_item', 'global_item_function_tag', ['global_item_id'])
-    op.create_index('ix_global_item_function_tag_function', 'global_item_function_tag', ['function_tag_id'])
+    if not table_exists('global_item_function_tag'):
+        op.create_table(
+            'global_item_function_tag',
+            sa.Column('id', sa.Integer(), primary_key=True),
+            sa.Column('global_item_id', sa.Integer(), sa.ForeignKey('global_item.id', ondelete='CASCADE'), nullable=False),
+            sa.Column('function_tag_id', sa.Integer(), sa.ForeignKey('function_tag.id', ondelete='CASCADE'), nullable=False),
+            sa.Column('created_at', sa.DateTime(), nullable=False, server_default=sa.func.now()),
+            sa.UniqueConstraint('global_item_id', 'function_tag_id', name='uq_global_item_function_tag'),
+        )
+    safe_create_index('ix_global_item_function_tag_item', 'global_item_function_tag', ['global_item_id'])
+    safe_create_index('ix_global_item_function_tag_function', 'global_item_function_tag', ['function_tag_id'])
 
-    op.create_table(
-        'global_item_application_tag',
-        sa.Column('id', sa.Integer(), primary_key=True),
-        sa.Column('global_item_id', sa.Integer(), sa.ForeignKey('global_item.id', ondelete='CASCADE'), nullable=False),
-        sa.Column('application_tag_id', sa.Integer(), sa.ForeignKey('application_tag.id', ondelete='CASCADE'), nullable=False),
-        sa.Column('created_at', sa.DateTime(), nullable=False, server_default=sa.func.now()),
-        sa.UniqueConstraint('global_item_id', 'application_tag_id', name='uq_global_item_application_tag'),
-    )
-    op.create_index('ix_global_item_application_tag_item', 'global_item_application_tag', ['global_item_id'])
-    op.create_index('ix_global_item_application_tag_application', 'global_item_application_tag', ['application_tag_id'])
+    if not table_exists('global_item_application_tag'):
+        op.create_table(
+            'global_item_application_tag',
+            sa.Column('id', sa.Integer(), primary_key=True),
+            sa.Column('global_item_id', sa.Integer(), sa.ForeignKey('global_item.id', ondelete='CASCADE'), nullable=False),
+            sa.Column('application_tag_id', sa.Integer(), sa.ForeignKey('application_tag.id', ondelete='CASCADE'), nullable=False),
+            sa.Column('created_at', sa.DateTime(), nullable=False, server_default=sa.func.now()),
+            sa.UniqueConstraint('global_item_id', 'application_tag_id', name='uq_global_item_application_tag'),
+        )
+    safe_create_index('ix_global_item_application_tag_item', 'global_item_application_tag', ['global_item_id'])
+    safe_create_index('ix_global_item_application_tag_application', 'global_item_application_tag', ['application_tag_id'])
 
-    op.create_table(
-        'ingredient_category_tag',
-        sa.Column('id', sa.Integer(), primary_key=True),
-        sa.Column('name', sa.String(length=128), nullable=False, unique=True),
-        sa.Column('slug', sa.String(length=128), nullable=True, unique=True),
-        sa.Column('description', sa.Text(), nullable=True),
-        sa.Column('is_active', sa.Boolean(), nullable=False, server_default=sa.true()),
-        sa.Column('created_at', sa.DateTime(), nullable=False, server_default=sa.func.now()),
-        sa.Column('updated_at', sa.DateTime(), nullable=False, server_default=sa.func.now()),
-    )
-    op.create_index('ix_ingredient_category_tag_slug', 'ingredient_category_tag', ['slug'])
+    if not table_exists('ingredient_category_tag'):
+        op.create_table(
+            'ingredient_category_tag',
+            sa.Column('id', sa.Integer(), primary_key=True),
+            sa.Column('name', sa.String(length=128), nullable=False, unique=True),
+            sa.Column('slug', sa.String(length=128), nullable=True, unique=True),
+            sa.Column('description', sa.Text(), nullable=True),
+            sa.Column('is_active', sa.Boolean(), nullable=False, server_default=sa.true()),
+            sa.Column('created_at', sa.DateTime(), nullable=False, server_default=sa.func.now()),
+            sa.Column('updated_at', sa.DateTime(), nullable=False, server_default=sa.func.now()),
+        )
+    safe_create_index('ix_ingredient_category_tag_slug', 'ingredient_category_tag', ['slug'])
 
-    op.create_table(
-        'global_item_category_tag',
-        sa.Column('id', sa.Integer(), primary_key=True),
-        sa.Column('global_item_id', sa.Integer(), sa.ForeignKey('global_item.id', ondelete='CASCADE'), nullable=False),
-        sa.Column('ingredient_category_tag_id', sa.Integer(), sa.ForeignKey('ingredient_category_tag.id', ondelete='CASCADE'), nullable=False),
-        sa.Column('created_at', sa.DateTime(), nullable=False, server_default=sa.func.now()),
-        sa.UniqueConstraint('global_item_id', 'ingredient_category_tag_id', name='uq_global_item_category_tag'),
-    )
-    op.create_index('ix_global_item_category_tag_item', 'global_item_category_tag', ['global_item_id'])
-    op.create_index('ix_global_item_category_tag_category', 'global_item_category_tag', ['ingredient_category_tag_id'])
+    if not table_exists('global_item_category_tag'):
+        op.create_table(
+            'global_item_category_tag',
+            sa.Column('id', sa.Integer(), primary_key=True),
+            sa.Column('global_item_id', sa.Integer(), sa.ForeignKey('global_item.id', ondelete='CASCADE'), nullable=False),
+            sa.Column('ingredient_category_tag_id', sa.Integer(), sa.ForeignKey('ingredient_category_tag.id', ondelete='CASCADE'), nullable=False),
+            sa.Column('created_at', sa.DateTime(), nullable=False, server_default=sa.func.now()),
+            sa.UniqueConstraint('global_item_id', 'ingredient_category_tag_id', name='uq_global_item_category_tag'),
+        )
+    safe_create_index('ix_global_item_category_tag_item', 'global_item_category_tag', ['global_item_id'])
+    safe_create_index('ix_global_item_category_tag_category', 'global_item_category_tag', ['ingredient_category_tag_id'])
 
     # Extend global_item with ingredient + physical form references
-    op.add_column('global_item', sa.Column('ingredient_id', sa.Integer(), nullable=True))
-    op.add_column('global_item', sa.Column('physical_form_id', sa.Integer(), nullable=True))
-    op.create_index('ix_global_item_ingredient_id', 'global_item', ['ingredient_id'])
-    op.create_index('ix_global_item_physical_form_id', 'global_item', ['physical_form_id'])
-    op.create_foreign_key(
+    safe_add_column('global_item', sa.Column('ingredient_id', sa.Integer(), nullable=True))
+    safe_add_column('global_item', sa.Column('physical_form_id', sa.Integer(), nullable=True))
+    safe_create_index('ix_global_item_ingredient_id', 'global_item', ['ingredient_id'])
+    safe_create_index('ix_global_item_physical_form_id', 'global_item', ['physical_form_id'])
+    safe_create_foreign_key(
         'fk_global_item_ingredient',
         'global_item',
         'ingredient',
@@ -185,7 +204,7 @@ def upgrade():
         ['id'],
         ondelete='SET NULL',
     )
-    op.create_foreign_key(
+    safe_create_foreign_key(
         'fk_global_item_physical_form',
         'global_item',
         'physical_form',
@@ -310,25 +329,25 @@ def downgrade():
         batch_op.drop_column('ingredient_id')
 
     # Drop association tables and lookup tables
-    op.drop_index('ix_global_item_category_tag_category', table_name='global_item_category_tag')
-    op.drop_index('ix_global_item_category_tag_item', table_name='global_item_category_tag')
+    safe_drop_index('ix_global_item_category_tag_category', 'global_item_category_tag')
+    safe_drop_index('ix_global_item_category_tag_item', 'global_item_category_tag')
     op.drop_table('global_item_category_tag')
 
-    op.drop_index('ix_ingredient_category_tag_slug', table_name='ingredient_category_tag')
+    safe_drop_index('ix_ingredient_category_tag_slug', 'ingredient_category_tag')
     op.drop_table('ingredient_category_tag')
 
-    op.drop_index('ix_global_item_application_tag_application', table_name='global_item_application_tag')
-    op.drop_index('ix_global_item_application_tag_item', table_name='global_item_application_tag')
+    safe_drop_index('ix_global_item_application_tag_application', 'global_item_application_tag')
+    safe_drop_index('ix_global_item_application_tag_item', 'global_item_application_tag')
     op.drop_table('global_item_application_tag')
 
-    op.drop_index('ix_global_item_function_tag_function', table_name='global_item_function_tag')
-    op.drop_index('ix_global_item_function_tag_item', table_name='global_item_function_tag')
+    safe_drop_index('ix_global_item_function_tag_function', 'global_item_function_tag')
+    safe_drop_index('ix_global_item_function_tag_item', 'global_item_function_tag')
     op.drop_table('global_item_function_tag')
 
     op.drop_table('application_tag')
     op.drop_table('function_tag')
     op.drop_table('physical_form')
-    op.drop_index('ix_ingredient_category_id', table_name='ingredient')
-    op.drop_index('ix_ingredient_slug', table_name='ingredient')
-    op.drop_index('ix_ingredient_name', table_name='ingredient')
+    safe_drop_index('ix_ingredient_category_id', 'ingredient')
+    safe_drop_index('ix_ingredient_slug', 'ingredient')
+    safe_drop_index('ix_ingredient_name', 'ingredient')
     op.drop_table('ingredient')
