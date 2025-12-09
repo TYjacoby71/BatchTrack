@@ -772,99 +772,54 @@
     physicalModeRadios.forEach(radio => radio.addEventListener('change', togglePhysicalMode));
   }
 
-  // Setup ingredient definition search using shared suggestions
+  // Setup ingredient definition search using shared suggestions system
   const ingredientInput = document.getElementById('existingIngredientInput');
   const ingredientHidden = document.getElementById('existingIngredientSelect');
   const ingredientSuggestions = document.getElementById('ingredientSuggestions');
   
-  if (ingredientInput && ingredientHidden && ingredientSuggestions) {
-    let searchTimeout;
-    
-    ingredientInput.addEventListener('input', function() {
-      clearTimeout(searchTimeout);
-      const query = this.value.trim();
+  if (ingredientInput && ingredientHidden && ingredientSuggestions && window.attachMergedInventoryGlobalTypeahead) {
+    // Clear the input container and setup for shared system
+    const container = ingredientInput.closest('.position-relative');
+    if (container) {
+      // Clear existing suggestions div
+      ingredientSuggestions.remove();
       
-      if (!query) {
-        ingredientSuggestions.classList.add('d-none');
-        ingredientSuggestions.innerHTML = '';
-        ingredientHidden.value = '';
-        return;
-      }
+      // Create new suggestions div that matches the shared system
+      const newSuggestionsDiv = document.createElement('div');
+      newSuggestionsDiv.className = 'list-group position-absolute w-100 d-none inventory-suggestions';
+      newSuggestionsDiv.style.zIndex = '1050';
+      newSuggestionsDiv.style.maxHeight = '300px';
+      newSuggestionsDiv.style.overflowY = 'auto';
+      container.appendChild(newSuggestionsDiv);
       
-      searchTimeout = setTimeout(async () => {
-        try {
-          const response = await fetch('/api/ingredients/definitions/search?q=' + encodeURIComponent(query));
-          const data = await response.json();
-          
-          ingredientSuggestions.innerHTML = '';
-          
-          if (data.results && data.results.length > 0) {
-            // Add header
-            const header = document.createElement('div');
-            header.className = 'list-group-item text-muted small fw-semibold';
-            header.textContent = 'Ingredient Definitions';
-            ingredientSuggestions.appendChild(header);
+      // Create a dummy global item hidden field for the shared system
+      const dummyGlobalHidden = document.createElement('input');
+      dummyGlobalHidden.type = 'hidden';
+      dummyGlobalHidden.name = 'dummy_global_item_id';
+      container.appendChild(dummyGlobalHidden);
+      
+      // Use the shared typeahead system in special mode for ingredient definitions
+      window.attachMergedInventoryGlobalTypeahead({
+        inputEl: ingredientInput,
+        invHiddenEl: null, // No inventory search needed
+        giHiddenEl: dummyGlobalHidden, // Use dummy field
+        listEl: newSuggestionsDiv,
+        mode: 'inventory_create', // Use create mode
+        context: 'customer', // Use customer context
+        onSelection: function(picked, source) {
+          // Custom handler for ingredient definition selection
+          if (picked && picked.ingredient_id) {
+            ingredientHidden.value = picked.ingredient_id;
             
-            data.results.forEach(ingredient => {
-              const item = document.createElement('a');
-              item.className = 'list-group-item list-group-item-action suggestion-item';
-              item.href = '#';
-              
-              const name = ingredient.name + (ingredient.slug ? ' (' + ingredient.slug + ')' : '');
-              const meta = [];
-              if (ingredient.inci_name) meta.push('INCI: ' + ingredient.inci_name);
-              if (ingredient.cas_number) meta.push('CAS: ' + ingredient.cas_number);
-              if (ingredient.ingredient_category_name) meta.push('Category: ' + ingredient.ingredient_category_name);
-              
-              item.innerHTML = `
-                <div class="fw-semibold">${name}</div>
-                ${meta.length > 0 ? '<div class="small text-muted">' + meta.join(' • ') + '</div>' : ''}
-              `;
-              
-              item.addEventListener('click', function(e) {
-                e.preventDefault();
-                ingredientInput.value = name;
-                ingredientHidden.value = ingredient.id;
-                ingredientSuggestions.classList.add('d-none');
-                
-                // Navigate to update the page with selected ingredient
-                const url = new URL(window.location.href);
-                url.searchParams.set('ingredient_id', ingredient.id);
-                url.searchParams.delete('physical_form_id');
-                window.location.href = url.toString();
-              });
-              
-              ingredientSuggestions.appendChild(item);
-            });
-            
-            ingredientSuggestions.classList.remove('d-none');
-          } else {
-            ingredientSuggestions.classList.add('d-none');
+            // Navigate to update the page with selected ingredient
+            const url = new URL(window.location.href);
+            url.searchParams.set('ingredient_id', picked.ingredient_id);
+            url.searchParams.delete('physical_form_id');
+            window.location.href = url.toString();
           }
-        } catch (error) {
-          console.error('Error searching ingredients:', error);
-          ingredientSuggestions.classList.add('d-none');
         }
-      }, 200);
-    });
-    
-    // Close suggestions when clicking outside
-    document.addEventListener('click', function(e) {
-      if (!ingredientInput.contains(e.target) && !ingredientSuggestions.contains(e.target)) {
-        ingredientSuggestions.classList.add('d-none');
-      }
-    });
-    
-    // Clear hidden value when input is cleared
-    ingredientInput.addEventListener('keydown', function(e) {
-      if (e.key === 'Backspace' || e.key === 'Delete') {
-        setTimeout(() => {
-          if (!this.value.trim()) {
-            ingredientHidden.value = '';
-          }
-        }, 10);
-      }
-    });
+      });
+    }
   }
 
   // Setup Select2 for physical form selector with basic search
