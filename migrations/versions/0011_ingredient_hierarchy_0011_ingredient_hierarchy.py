@@ -1,7 +1,7 @@
-"""0006 ingredient hierarchy and tagging layer
+"""0011 ingredient hierarchy and tagging layer
 
-Revision ID: 0006_ingredient_hierarchy
-Revises: 0005_cleanup_guardrails
+Revision ID: 0011_ingredient_hierarchy
+Revises: 0010_recipe_status_drafts
 Create Date: 2025-11-12 18:22:00.000000
 
 """
@@ -13,8 +13,8 @@ import sqlalchemy as sa
 
 
 # revision identifiers, used by Alembic.
-revision = '0006_ingredient_hierarchy'
-down_revision = '0005_cleanup_guardrails'
+revision = '0011_ingredient_hierarchy'
+down_revision = '0010_recipe_status_drafts'
 branch_labels = None
 depends_on = None
 
