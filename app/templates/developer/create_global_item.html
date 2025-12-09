@@ -56,12 +56,12 @@
                 <div class="position-relative">
                   <input type="text" 
                          id="existingIngredientInput" 
-                         class="form-control" 
+                         class="form-control ingredient-definition-typeahead" 
                          placeholder="Search for an ingredient..." 
                          autocomplete="off"
                          value="{% if selected_ingredient %}{{ selected_ingredient.name }}{% if selected_ingredient.slug %} ({{ selected_ingredient.slug }}){% endif %}{% endif %}">
                   <input type="hidden" name="existing_ingredient_id" id="existingIngredientSelect" value="{% if selected_ingredient %}{{ selected_ingredient.id }}{% endif %}">
-                  <div class="list-group position-absolute w-100 d-none" id="ingredientSuggestions" style="z-index: 1050; max-height: 300px; overflow-y: auto;"></div>
+                  <div class="list-group position-absolute w-100 d-none suggestion-item" id="ingredientSuggestions" style="z-index: 1050; max-height: 300px; overflow-y: auto;"></div>
                 </div>
               </div>
               <div class="col-lg-5 small text-muted">
@@ -772,7 +772,7 @@
     physicalModeRadios.forEach(radio => radio.addEventListener('change', togglePhysicalMode));
   }
 
-  // Setup ingredient definition search with styled suggestions
+  // Setup ingredient definition search using shared suggestions
   const ingredientInput = document.getElementById('existingIngredientInput');
   const ingredientHidden = document.getElementById('existingIngredientSelect');
   const ingredientSuggestions = document.getElementById('ingredientSuggestions');
@@ -791,54 +791,60 @@
         return;
       }
       
-      searchTimeout = setTimeout(() => {
-        fetch('/api/ingredients/definitions/search?q=' + encodeURIComponent(query))
-          .then(response => response.json())
-          .then(data => {
-            ingredientSuggestions.innerHTML = '';
+      searchTimeout = setTimeout(async () => {
+        try {
+          const response = await fetch('/api/ingredients/definitions/search?q=' + encodeURIComponent(query));
+          const data = await response.json();
+          
+          ingredientSuggestions.innerHTML = '';
+          
+          if (data.results && data.results.length > 0) {
+            // Add header
+            const header = document.createElement('div');
+            header.className = 'list-group-item text-muted small fw-semibold';
+            header.textContent = 'Ingredient Definitions';
+            ingredientSuggestions.appendChild(header);
             
-            if (data.results && data.results.length > 0) {
-              data.results.forEach(ingredient => {
-                const item = document.createElement('a');
-                item.className = 'list-group-item list-group-item-action suggestion-item';
-                item.href = '#';
+            data.results.forEach(ingredient => {
+              const item = document.createElement('a');
+              item.className = 'list-group-item list-group-item-action suggestion-item';
+              item.href = '#';
+              
+              const name = ingredient.name + (ingredient.slug ? ' (' + ingredient.slug + ')' : '');
+              const meta = [];
+              if (ingredient.inci_name) meta.push('INCI: ' + ingredient.inci_name);
+              if (ingredient.cas_number) meta.push('CAS: ' + ingredient.cas_number);
+              if (ingredient.ingredient_category_name) meta.push('Category: ' + ingredient.ingredient_category_name);
+              
+              item.innerHTML = `
+                <div class="fw-semibold">${name}</div>
+                ${meta.length > 0 ? '<div class="small text-muted">' + meta.join(' • ') + '</div>' : ''}
+              `;
+              
+              item.addEventListener('click', function(e) {
+                e.preventDefault();
+                ingredientInput.value = name;
+                ingredientHidden.value = ingredient.id;
+                ingredientSuggestions.classList.add('d-none');
                 
-                const name = ingredient.name + (ingredient.slug ? ' (' + ingredient.slug + ')' : '');
-                const meta = [];
-                if (ingredient.inci_name) meta.push('INCI: ' + ingredient.inci_name);
-                if (ingredient.cas_number) meta.push('CAS: ' + ingredient.cas_number);
-                if (ingredient.ingredient_category_name) meta.push('Category: ' + ingredient.ingredient_category_name);
-                
-                item.innerHTML = `
-                  <div class="fw-semibold">${name}</div>
-                  ${meta.length > 0 ? '<div class="small text-muted">' + meta.join(' • ') + '</div>' : ''}
-                `;
-                
-                item.addEventListener('click', function(e) {
-                  e.preventDefault();
-                  ingredientInput.value = name;
-                  ingredientHidden.value = ingredient.id;
-                  ingredientSuggestions.classList.add('d-none');
-                  
-                  // Navigate to update the page with selected ingredient
-                  const url = new URL(window.location.href);
-                  url.searchParams.set('ingredient_id', ingredient.id);
-                  url.searchParams.delete('physical_form_id');
-                  window.location.href = url.toString();
-                });
-                
-                ingredientSuggestions.appendChild(item);
+                // Navigate to update the page with selected ingredient
+                const url = new URL(window.location.href);
+                url.searchParams.set('ingredient_id', ingredient.id);
+                url.searchParams.delete('physical_form_id');
+                window.location.href = url.toString();
               });
               
-              ingredientSuggestions.classList.remove('d-none');
-            } else {
-              ingredientSuggestions.classList.add('d-none');
-            }
-          })
-          .catch(error => {
-            console.error('Error searching ingredients:', error);
+              ingredientSuggestions.appendChild(item);
+            });
+            
+            ingredientSuggestions.classList.remove('d-none');
+          } else {
             ingredientSuggestions.classList.add('d-none');
-          });
+          }
+        } catch (error) {
+          console.error('Error searching ingredients:', error);
+          ingredientSuggestions.classList.add('d-none');
+        }
       }, 200);
     });
     
