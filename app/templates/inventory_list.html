@@ -741,33 +741,26 @@ function updateIngredientSelectionDetails(picked, source){
     (headline || picked.text || '') + (meta.length ? ' (' + meta.join(' • ') + ')' : '');
 }
 
-// Initialize typeahead for ingredient search
-document.addEventListener('DOMContentLoaded', function() {
-  // Wait for suggestions component to be available
-  if (typeof window.attachMergedInventoryGlobalTypeahead === 'function') {
-    setupTypeaheadForIngredients();
-  } else {
-    // Retry after a short delay
-    setTimeout(function() {
-      console.log('🔧 INVENTORY LIST: Retrying typeahead setup');
-      setupTypeaheadForIngredients();
-    }, 100);
-  }
-});
-
-// Also ensure suggestions.js is loaded by adding it to the page
-document.addEventListener('DOMContentLoaded', function() {
+// Initialize typeahead for ingredient search with better error handling and timing
+function initializeTypeaheadForIngredients() {
+  // Check if suggestions.js is already loaded
   if (!document.querySelector('script[src*="suggestions.js"]')) {
     console.log('🔧 INVENTORY LIST: Loading suggestions.js');
     const script = document.createElement('script');
     script.src = '/static/js/components/suggestions.js';
     script.onload = function() {
-      console.log('🔧 INVENTORY LIST: suggestions.js loaded, initializing typeahead');
-      setupTypeaheadForIngredients();
+      console.log('🔧 INVENTORY LIST: suggestions.js loaded, setting up typeahead');
+      setTimeout(setupTypeaheadForIngredients, 50); // Small delay to ensure DOM is ready
+    };
+    script.onerror = function() {
+      console.error('🔧 INVENTORY LIST: Failed to load suggestions.js');
     };
     document.head.appendChild(script);
+  } else {
+    // Script already loaded, proceed with setup
+    setupTypeaheadForIngredients();
   }
-});
+}
 
 function setupTypeaheadForIngredients() {
   const ingredientNameInput = document.getElementById('ingredientNameInput');
@@ -777,44 +770,66 @@ function setupTypeaheadForIngredients() {
   console.log('🔧 TYPEAHEAD SETUP: Elements found:', {
     input: !!ingredientNameInput,
     suggestions: !!ingredientSuggestions,
-    globalId: !!globalItemIdInput
+    globalId: !!globalItemIdInput,
+    attachFunction: typeof window.attachMergedInventoryGlobalTypeahead
   });
 
   if (!ingredientNameInput || !ingredientSuggestions || !globalItemIdInput) {
-    console.error('🔧 TYPEAHEAD SETUP: Missing required elements');
+    console.error('🔧 TYPEAHEAD SETUP: Missing required DOM elements');
     return;
   }
 
   if (typeof window.attachMergedInventoryGlobalTypeahead !== 'function') {
     console.error('🔧 TYPEAHEAD SETUP: attachMergedInventoryGlobalTypeahead function not available');
+    // Retry once more after a delay
+    setTimeout(function() {
+      if (typeof window.attachMergedInventoryGlobalTypeahead === 'function') {
+        console.log('🔧 TYPEAHEAD SETUP: Function now available, retrying setup');
+        setupTypeaheadForIngredients();
+      } else {
+        console.error('🔧 TYPEAHEAD SETUP: Function still not available after retry');
+      }
+    }, 200);
     return;
   }
 
-  console.log('🔧 TYPEAHEAD SETUP: Attaching typeahead functionality');
+  try {
+    console.log('🔧 TYPEAHEAD SETUP: Attaching typeahead functionality');
 
-  window.attachMergedInventoryGlobalTypeahead({
-    inputEl: ingredientNameInput,
-    giHiddenEl: globalItemIdInput,
-    listEl: ingredientSuggestions,
-    mode: 'inventory_create',
-    ingredientFirst: true,
-    onSelection: function(picked, source){
-      console.log('🔧 TYPEAHEAD SELECTION:', picked, source);
-      const unitSelect = document.querySelector('#addIngredientForm select[name="unit"]');
-      if (unitSelect && picked.default_unit){
-        unitSelect.value = picked.default_unit;
+    window.attachMergedInventoryGlobalTypeahead({
+      inputEl: ingredientNameInput,
+      giHiddenEl: globalItemIdInput,
+      listEl: ingredientSuggestions,
+      mode: 'inventory_create',
+      ingredientFirst: true,
+      onSelection: function(picked, source){
+        console.log('🔧 TYPEAHEAD SELECTION:', picked, source);
+        const unitSelect = document.querySelector('#addIngredientForm select[name="unit"]');
+        if (unitSelect && picked.default_unit){
+          unitSelect.value = picked.default_unit;
+        }
+        updateIngredientSelectionDetails(picked, source);
       }
-      updateIngredientSelectionDetails(picked, source);
-    }
-  });
+    });
 
-  ingredientNameInput.addEventListener('input', function(){
-    console.log('🔧 TYPEAHEAD INPUT:', this.value);
-    if (!this.value.trim()){
-      updateIngredientSelectionDetails(null);
-    }
-  });
+    ingredientNameInput.addEventListener('input', function(){
+      console.log('🔧 TYPEAHEAD INPUT:', this.value);
+      if (!this.value.trim()){
+        updateIngredientSelectionDetails(null);
+      }
+    });
+
+    console.log('🔧 TYPEAHEAD SETUP: Successfully initialized');
+  } catch (error) {
+    console.error('🔧 TYPEAHEAD SETUP: Error during initialization:', error);
+  }
 }
+
+// Initialize when DOM is ready
+document.addEventListener('DOMContentLoaded', function() {
+  console.log('🔧 INVENTORY LIST: DOM loaded, initializing typeahead');
+  initializeTypeaheadForIngredients();
+});
 
 // Tabs behavior (show one type at a time)
 document.addEventListener('DOMContentLoaded', function() {
@@ -1199,6 +1214,7 @@ window.onclick = function(event) {
   }
 }
 </script>
+<script src="{{ url_for('static', filename='js/components/suggestions.js') }}"></script>
 <script type="module">
   import { configureGlobalItemStats } from "{{ url_for('static', filename='js/global_item_stats.js') }}";
   configureGlobalItemStats();
