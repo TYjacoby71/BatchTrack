@@ -215,7 +215,8 @@ def upgrade():
 
     # Backfill canonical ingredient rows for existing ingredient-type items
     bind = op.get_bind()
-    meta = sa.MetaData(bind=bind)
+    meta = sa.MetaData()
+    meta.bind = bind
     global_item_table = sa.Table('global_item', meta, autoload_with=bind)
     ingredient_table = sa.Table('ingredient', meta, autoload_with=bind)
     ingredient_category_table = sa.Table('ingredient_category', meta, autoload_with=bind)
