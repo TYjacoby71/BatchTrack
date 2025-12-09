@@ -39,7 +39,7 @@
     <!-- Products Card View -->
     <div class="row" id="productsContainer">
       {% for product in products %}
-      <div class="col-md-6 col-lg-4 mb-4">
+      <div class="col-md-6 col-lg-4 mb-4 product-card" data-product-name="{{ product.name|lower }}">
         <div class="card h-100">
           <div class="card-header d-flex justify-content-between align-items-center">
             <div class="d-flex align-items-center">
@@ -167,7 +167,7 @@
             </thead>
             <tbody>
               {% for product in products %}
-              <tr class="product-row">
+              <tr class="product-row" data-product-name="{{ product.name|lower }}">
                 <td>
                   <a href="/products/{{ product.id }}" class="text-decoration-none">
                     <strong>{{ product.name }}</strong>
@@ -332,6 +332,8 @@
 </style>
 
 <script>
+let currentProductView = 'card';
+
 // Global showView function
 function showView(viewType) {
   const productsContainer = document.getElementById('productsContainer');
@@ -339,31 +341,33 @@ function showView(viewType) {
   const cardViewBtn = document.getElementById('cardViewBtn');
   const tableViewBtn = document.getElementById('tableViewBtn');
 
+  if (!productsContainer || !productsTableContainer) {
+    currentProductView = viewType === 'cardView' ? 'card' : 'table';
+    return;
+  }
+
   if (viewType === 'cardView') {
+    currentProductView = 'card';
     productsContainer.style.display = 'flex';
     productsContainer.style.flexWrap = 'wrap';
     productsTableContainer.style.display = 'none';
     cardViewBtn.className = 'btn btn-secondary btn-sm';
     tableViewBtn.className = 'btn btn-outline-secondary btn-sm';
   } else {
+    currentProductView = 'table';
     productsContainer.style.display = 'none';
     productsTableContainer.style.display = 'block';
     cardViewBtn.className = 'btn btn-outline-secondary btn-sm';
     tableViewBtn.className = 'btn btn-secondary btn-sm';
   }
+
+  if (typeof window.filterProducts === 'function') {
+    window.filterProducts();
+  }
 }
 
 // Sort products function
 function sortProducts(sortType) {
-  // Update active button state
-  document.querySelectorAll('.btn-group button').forEach(btn => {
-    if (btn.onclick && btn.onclick.toString().includes('sortProducts')) {
-      btn.className = 'btn btn-outline-secondary btn-sm';
-    }
-  });
-  event.target.className = 'btn btn-secondary btn-sm';
-
-  // Redirect to products page with sort parameter
   const currentUrl = new URL(window.location);
   currentUrl.searchParams.set('sort', sortType);
   window.location.href = currentUrl.toString();
@@ -372,25 +376,43 @@ function sortProducts(sortType) {
 document.addEventListener('DOMContentLoaded', function() {
   // Product search functionality
   const productFilter = document.getElementById('productFilter');
-  if (productFilter) {
-    productFilter.addEventListener('input', function() {
-      const searchTerm = this.value.toLowerCase();
-      const isCardView = document.getElementById('productsContainer').style.display !== 'none';
+  const productsContainer = document.getElementById('productsContainer');
+  const productsTableContainer = document.getElementById('productsTableContainer');
 
-      if (isCardView) {
-        const cards = document.querySelectorAll('#productsContainer .col-md-6');
-        cards.forEach(card => {
-          const productName = card.querySelector('.card-header h6').textContent.toLowerCase();
-          card.style.display = productName.includes(searchTerm) ? 'block' : 'none';
-        });
-      } else {
-        const rows = document.querySelectorAll('#productsTableContainer tbody .product-row');
-        rows.forEach(row => {
-          const productName = row.querySelector('td a strong').textContent.toLowerCase();
-          row.style.display = productName.includes(searchTerm) ? '' : 'none';
-        });
-      }
-    });
+  window.filterProducts = function() {
+    const searchTerm = (productFilter?.value || '').toLowerCase();
+    const isCardView = currentProductView !== 'table';
+
+    if (isCardView && productsContainer) {
+      const cards = productsContainer.querySelectorAll('.product-card');
+      cards.forEach(card => {
+        const productName = card.dataset.productName || '';
+        card.style.display = productName.includes(searchTerm) ? '' : 'none';
+      });
+    } else if (productsTableContainer) {
+      const rows = productsTableContainer.querySelectorAll('.product-row');
+      rows.forEach(row => {
+        const productName = row.dataset.productName || '';
+        const matches = productName.includes(searchTerm);
+        row.style.display = matches ? '' : 'none';
+
+        const detailRow = row.nextElementSibling;
+        if (detailRow && detailRow.classList.contains('collapse')) {
+          if (!matches) {
+            detailRow.classList.remove('show');
+            detailRow.dataset.searchHidden = 'true';
+            detailRow.style.display = 'none';
+          } else if (detailRow.dataset.searchHidden) {
+            detailRow.style.removeProperty('display');
+            delete detailRow.dataset.searchHidden;
+          }
+        }
+      });
+    }
+  };
+
+  if (productFilter) {
+    productFilter.addEventListener('input', () => filterProducts());
   }
 
   // Variation toggle functionality
