@@ -83,12 +83,7 @@
     <div class="card mb-4">
       <div class="card-header d-flex justify-content-between align-items-center">
         <h5 class="mb-0">Portfolio Summary</h5>
-        <div class="d-flex align-items-center gap-2">
-          <span class="text-muted small">{{ ns_all.product_count }} Products • {{ ns_all.variant_count }} Variants</span>
-          <button class="btn btn-outline-secondary btn-sm" type="button" data-bs-toggle="collapse" data-bs-target="#summaryDetails">
-            <i class="fas fa-chart-bar"></i> Details
-          </button>
-        </div>
+        <span class="text-muted small">{{ ns_all.product_count }} Products • {{ ns_all.variant_count }} Variants</span>
       </div>
       <div class="card-body">
           <div class="row g-3 mt-2">
@@ -118,77 +113,6 @@
                 <div class="text-muted small">Total Variants</div>
                 <div class="text-muted small">All SKUs</div>
               </div>
-            </div>
-          </div>
-        </div>
-
-        <!-- Detailed Breakdown (Collapsible) -->
-        <div class="collapse mt-4" id="summaryDetails">
-          <div class="border-top pt-3">
-            <h6 class="text-muted mb-3">SKU-Level Breakdown</h6>
-            <div class="table-responsive">
-              <table class="table table-sm">
-                <thead>
-                  <tr>
-                    <th>Product</th>
-                    <th>Variant</th>
-                    <th>Size</th>
-                    <th>SKU</th>
-                    <th>Quantity</th>
-                    <th>Unit</th>
-                    <th>Status</th>
-                    <th>Actions</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {% for product in products %}
-                    {% for inv in product.inventory %}
-                      {% if inv.quantity and inv.quantity > 0 %}
-                      <tr>
-                        <td>
-                          <a href="{{ url_for('products.view_product', product_id=product.id) }}" class="text-decoration-none">
-                            <strong>{{ product.name }}</strong>
-                          </a>
-                        </td>
-                        <td>{{ inv.variant }}</td>
-                        <td>{{ inv.size_label if inv.size_label else 'Bulk' }}</td>
-                        <td>
-                          {% if inv.sku_code %}
-                          <span class="badge bg-secondary small">{{ inv.sku_code }}</span>
-                          {% else %}
-                          <span class="text-muted">-</span>
-                          {% endif %}
-                        </td>
-                        <td><strong>{{ "%.1f"|format(inv.quantity) }}</strong></td>
-                        <td>{{ inv.unit if inv.unit else 'units' }}</td>
-                        <td>
-                          {% if inv.quantity == 0 %}
-                            <span class="badge bg-danger small">Out of Stock</span>
-                          {% else %}
-                            <span class="badge bg-success small">In Stock</span>
-                          {% endif %}
-                        </td>
-                        <td>
-                          <div class="btn-group" role="group">
-                            <button type="button" class="btn btn-outline-secondary btn-xs dropdown-toggle" data-bs-toggle="dropdown">
-                              Actions
-                            </button>
-                            <ul class="dropdown-menu">
-                              <li><a class="dropdown-item" href="{{ url_for('inventory.view_inventory', id=inv.sku_id) }}">
-                                <i class="fas fa-eye"></i> View SKU
-                              </a></li>
-                              <li><a class="dropdown-item" href="{{ url_for('products.view_product', product_id=product.id) }}">
-                                <i class="fas fa-box"></i> View Product
-                              </a></li>
-                            </ul>
-                          </div>
-                        </td>
-                      </tr>
-                      {% endif %}
-                    {% endfor %}
-                  {% endfor %}
-                </tbody>
-              </table>
             </div>
           </div>
         </div>
