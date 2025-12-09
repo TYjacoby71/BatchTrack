@@ -53,14 +53,16 @@
           <div class="ingredient-existing-fields ms-4 mt-3">
             <div class="row g-2 align-items-center">
               <div class="col-lg-7">
-                <select name="existing_ingredient_id" id="existingIngredientSelect" class="form-select">
-                  <option value="">Select Ingredient</option>
-                  {% for ingredient in ingredient_definitions %}
-                    <option value="{{ ingredient.id }}" {% if selected_ingredient and ingredient.id == selected_ingredient.id %}selected{% endif %}>
-                      {{ ingredient.name }}{% if ingredient.slug %} ({{ ingredient.slug }}){% endif %}
-                    </option>
-                  {% endfor %}
-                </select>
+                <div class="position-relative">
+                  <input type="text" 
+                         id="existingIngredientInput" 
+                         class="form-control" 
+                         placeholder="Search for an ingredient..." 
+                         autocomplete="off"
+                         value="{% if selected_ingredient %}{{ selected_ingredient.name }}{% if selected_ingredient.slug %} ({{ selected_ingredient.slug }}){% endif %}{% endif %}">
+                  <input type="hidden" name="existing_ingredient_id" id="existingIngredientSelect" value="{% if selected_ingredient %}{{ selected_ingredient.id }}{% endif %}">
+                  <div class="list-group position-absolute w-100 d-none" id="ingredientSuggestions" style="z-index: 1050; max-height: 300px; overflow-y: auto;"></div>
+                </div>
               </div>
               <div class="col-lg-5 small text-muted">
                 {% if selected_ingredient %}
@@ -770,80 +772,92 @@
     physicalModeRadios.forEach(radio => radio.addEventListener('change', togglePhysicalMode));
   }
 
-  // Setup Select2 for existing ingredient selector with AJAX search
-  if (typeof $ !== 'undefined' && $.fn.select2) {
-    const $existingIngredientSelect = $('#existingIngredientSelect');
-    if ($existingIngredientSelect.length) {
-      $existingIngredientSelect.select2({
-        placeholder: 'Search for an ingredient...',
-        allowClear: true,
-        minimumInputLength: 1,
-        ajax: {
-          url: '/api/ingredients/definitions/search',
-          dataType: 'json',
-          delay: 150,
-          data: function (params) {
-            return { q: params.term };
-          },
-          processResults: function (data) {
-            return {
-              results: (data.results || []).map(function(ingredient) {
-                return {
-                  id: ingredient.id,
-                  text: ingredient.name + (ingredient.slug ? ' (' + ingredient.slug + ')' : ''),
-                  ingredient: ingredient
-                };
-              })
-            };
-          },
-          cache: true
-        },
-        templateResult: function(item) {
-          if (item.loading) return item.text;
-          if (!item.ingredient) return item.text;
-          
-          const $result = $('<div>');
-          $result.text(item.text);
-          if (item.ingredient.inci_name || item.ingredient.cas_number) {
-            const meta = [];
-            if (item.ingredient.inci_name) meta.push('INCI: ' + item.ingredient.inci_name);
-            if (item.ingredient.cas_number) meta.push('CAS: ' + item.ingredient.cas_number);
-            $result.append('<div class="small text-muted">' + meta.join(' • ') + '</div>');
-          }
-          return $result;
-        }
-      });
-
-      // Handle selection change
-      $existingIngredientSelect.on('change', function() {
-        const value = $(this).val();
-        const url = new URL(window.location.href);
-        if (value) {
-          url.searchParams.set('ingredient_id', value);
-          url.searchParams.delete('physical_form_id');
-        } else {
-          url.searchParams.delete('ingredient_id');
-          url.searchParams.delete('physical_form_id');
-        }
-        window.location.href = url.toString();
-      });
-    }
-  }
-
-  // Fallback for non-Select2 functionality
-  const existingIngredientSelect = document.getElementById('existingIngredientSelect');
-  if (existingIngredientSelect && !$('#existingIngredientSelect').hasClass('select2-hidden-accessible')) {
-    existingIngredientSelect.addEventListener('change', () => {
-      const value = existingIngredientSelect.value;
-      const url = new URL(window.location.href);
-      if (value) {
-        url.searchParams.set('ingredient_id', value);
-        url.searchParams.delete('physical_form_id');
-      } else {
-        url.searchParams.delete('ingredient_id');
-        url.searchParams.delete('physical_form_id');
+  // Setup ingredient definition search with styled suggestions
+  const ingredientInput = document.getElementById('existingIngredientInput');
+  const ingredientHidden = document.getElementById('existingIngredientSelect');
+  const ingredientSuggestions = document.getElementById('ingredientSuggestions');
+  
+  if (ingredientInput && ingredientHidden && ingredientSuggestions) {
+    let searchTimeout;
+    
+    ingredientInput.addEventListener('input', function() {
+      clearTimeout(searchTimeout);
+      const query = this.value.trim();
+      
+      if (!query) {
+        ingredientSuggestions.classList.add('d-none');
+        ingredientSuggestions.innerHTML = '';
+        ingredientHidden.value = '';
+        return;
       }
-      window.location.href = url.toString();
+      
+      searchTimeout = setTimeout(() => {
+        fetch('/api/ingredients/definitions/search?q=' + encodeURIComponent(query))
+          .then(response => response.json())
+          .then(data => {
+            ingredientSuggestions.innerHTML = '';
+            
+            if (data.results && data.results.length > 0) {
+              data.results.forEach(ingredient => {
+                const item = document.createElement('a');
+                item.className = 'list-group-item list-group-item-action suggestion-item';
+                item.href = '#';
+                
+                const name = ingredient.name + (ingredient.slug ? ' (' + ingredient.slug + ')' : '');
+                const meta = [];
+                if (ingredient.inci_name) meta.push('INCI: ' + ingredient.inci_name);
+                if (ingredient.cas_number) meta.push('CAS: ' + ingredient.cas_number);
+                if (ingredient.ingredient_category_name) meta.push('Category: ' + ingredient.ingredient_category_name);
+                
+                item.innerHTML = `
+                  <div class="fw-semibold">${name}</div>
+                  ${meta.length > 0 ? '<div class="small text-muted">' + meta.join(' • ') + '</div>' : ''}
+                `;
+                
+                item.addEventListener('click', function(e) {
+                  e.preventDefault();
+                  ingredientInput.value = name;
+                  ingredientHidden.value = ingredient.id;
+                  ingredientSuggestions.classList.add('d-none');
+                  
+                  // Navigate to update the page with selected ingredient
+                  const url = new URL(window.location.href);
+                  url.searchParams.set('ingredient_id', ingredient.id);
+                  url.searchParams.delete('physical_form_id');
+                  window.location.href = url.toString();
+                });
+                
+                ingredientSuggestions.appendChild(item);
+              });
+              
+              ingredientSuggestions.classList.remove('d-none');
+            } else {
+              ingredientSuggestions.classList.add('d-none');
+            }
+          })
+          .catch(error => {
+            console.error('Error searching ingredients:', error);
+            ingredientSuggestions.classList.add('d-none');
+          });
+      }, 200);
+    });
+    
+    // Close suggestions when clicking outside
+    document.addEventListener('click', function(e) {
+      if (!ingredientInput.contains(e.target) && !ingredientSuggestions.contains(e.target)) {
+        ingredientSuggestions.classList.add('d-none');
+      }
+    });
+    
+    // Clear hidden value when input is cleared
+    ingredientInput.addEventListener('keydown', function(e) {
+      if (e.key === 'Backspace' || e.key === 'Delete') {
+        setTimeout(() => {
+          if (!this.value.trim()) {
+            ingredientHidden.value = '';
+          }
+        }, 10);
+      }
     });
   }
 
