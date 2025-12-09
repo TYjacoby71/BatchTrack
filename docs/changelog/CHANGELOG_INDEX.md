@@ -13,6 +13,12 @@ This directory contains the complete history of all fixes, improvements, and cha
 
 ### 2025
 
+#### November
+- **[2025-11-24: BatchBot Refills & Usage Limits](2025-11-24-batchbot-refills-and-limits.md)**
+  - Separate chat vs action quotas, Stripe-powered refill add-on, and dashboard prompts.
+  - Public vs paid Batchley experiences clarified for homepage vs authenticated users.
+  - Developer checklist updated with new AI env variables and refill lookup key.
+
 #### October
 - **[2025-10-28: Timezone Standardization](2025-10-28-timezone-standardization.md)**
   - Complete timezone system overhaul

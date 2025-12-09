@@ -161,7 +161,8 @@ def adjust_sku_inventory(inventory_item_id):
                 order_id=order_id,
                 cost_override=cost_override,
                 custom_expiration_date=custom_expiration_date,
-                custom_shelf_life_days=custom_shelf_life_days
+                custom_shelf_life_days=custom_shelf_life_days,
+                target_quantity=quantity if change_type == 'recount' else None
             )
 
             if isinstance(result, tuple):

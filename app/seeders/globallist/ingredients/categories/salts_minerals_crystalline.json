@@ -8,7 +8,7 @@
       "default_unit": "gram",
       "ph_value": "Neutral in solution",
       "moisture_content_percent": 0.5,
-      "recommended_usage_rate": "0.5-2% seasoning or 1-5% in brines",
+      
       "recommended_shelf_life_days": 1825,
       "certifications": [
         "USP Grade"
@@ -18,14 +18,19 @@
         "sodium chloride",
         "iodized salt"
       ],
-      "is_active_ingredient": false
+      "is_active_ingredient": false,
+      "ingredient": {
+        "name": "Table Salt",
+        "slug": "table-salt"
+      },
+      "physical_form": "Crystal"
     },
     {
       "name": "Sea Salt (Fine)",
       "default_unit": "gram",
       "ph_value": "Neutral in solution",
       "moisture_content_percent": 1,
-      "recommended_usage_rate": "1-6% in brines or bath soaks",
+      
       "recommended_shelf_life_days": 1825,
       "certifications": [
         "Kosher"
@@ -34,14 +39,19 @@
       "aliases": [
         "fine sea salt"
       ],
-      "is_active_ingredient": false
+      "is_active_ingredient": false,
+      "ingredient": {
+        "name": "Sea Salt",
+        "slug": "sea-salt"
+      },
+      "physical_form": "Fine"
     },
     {
       "name": "Himalayan Pink Salt",
       "default_unit": "gram",
       "ph_value": "Neutral in solution",
       "moisture_content_percent": 0.1,
-      "recommended_usage_rate": "1-6% in culinary or bath blends",
+      
       "recommended_shelf_life_days": 1825,
       "certifications": [
         "Halal"
@@ -50,14 +60,19 @@
       "aliases": [
         "rock salt"
       ],
-      "is_active_ingredient": false
+      "is_active_ingredient": false,
+      "ingredient": {
+        "name": "Himalayan Pink Salt",
+        "slug": "himalayan-pink-salt"
+      },
+      "physical_form": "Crystal"
     },
     {
       "name": "Epsom Salt",
       "default_unit": "gram",
       "ph_value": "5.0-7.0 (5% solution)",
       "moisture_content_percent": 0,
-      "recommended_usage_rate": "10-30% in bath soaks",
+      
       "recommended_shelf_life_days": 1825,
       "certifications": [
         "FCC Grade"
@@ -66,14 +81,19 @@
       "aliases": [
         "magnesium sulfate"
       ],
-      "is_active_ingredient": false
+      "is_active_ingredient": false,
+      "ingredient": {
+        "name": "Epsom Salt",
+        "slug": "epsom-salt"
+      },
+      "physical_form": "Crystal"
     },
     {
       "name": "Dead Sea Salt",
       "default_unit": "gram",
       "ph_value": "6.0-7.0 (5% solution)",
       "moisture_content_percent": 3,
-      "recommended_usage_rate": "15-30% in spa soaks",
+      
       "recommended_shelf_life_days": 1095,
       "certifications": [
         "Natural"
@@ -82,14 +102,19 @@
       "aliases": [
         "mineral salt blend"
       ],
-      "is_active_ingredient": false
+      "is_active_ingredient": false,
+      "ingredient": {
+        "name": "Dead Sea Salt",
+        "slug": "dead-sea-salt"
+      },
+      "physical_form": "Crystal"
     },
     {
       "name": "Calcium Chloride Flakes",
       "default_unit": "gram",
       "ph_value": "8.0-9.0 (5% solution)",
       "moisture_content_percent": 0,
-      "recommended_usage_rate": "0.02-0.2% in cheesemaking and brewing",
+      
       "recommended_shelf_life_days": 1825,
       "certifications": [
         "FCC Grade"
@@ -98,13 +123,18 @@
       "aliases": [
         "CaCl2"
       ],
-      "is_active_ingredient": false
+      "is_active_ingredient": false,
+      "ingredient": {
+        "name": "Calcium Chloride Flakes",
+        "slug": "calcium-chloride-flakes"
+      },
+      "physical_form": "Flakes"
     }
   ],
   "attributes": [
     "ph_value",
     "moisture_content_percent",
-    "recommended_usage_rate",
+
     "recommended_shelf_life_days",
     "certifications",
     "is_active_ingredient"

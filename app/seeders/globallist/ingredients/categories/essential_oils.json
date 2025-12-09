@@ -7,7 +7,7 @@
       "name": "Lavender Essential Oil",
       "default_unit": "milliliter",
       "flash_point_c": 74,
-      "recommended_usage_rate": "Dermal max 2%",
+      
       "recommended_fragrance_load_pct": "Up to 6% in candles",
       "recommended_shelf_life_days": 1095,
       "inci_name": "Lavandula Angustifolia (Lavender) Oil",
@@ -19,13 +19,19 @@
       "aliases": [
         "lavandula angustifolia"
       ],
-      "is_active_ingredient": false
+      "is_active_ingredient": false,
+      "ingredient": {
+        "name": "Lavender Essential Oil",
+        "slug": "lavender-essential-oil",
+        "inci_name": "Lavandula Angustifolia (Lavender) Oil"
+      },
+      "physical_form": "Liquid"
     },
     {
       "name": "Tea Tree Essential Oil",
       "default_unit": "milliliter",
       "flash_point_c": 60,
-      "recommended_usage_rate": "Dermal max 15%",
+      
       "recommended_fragrance_load_pct": "Up to 4% in candles",
       "recommended_shelf_life_days": 730,
       "inci_name": "Melaleuca Alternifolia (Tea Tree) Leaf Oil",
@@ -37,13 +43,19 @@
       "aliases": [
         "melaleuca oil"
       ],
-      "is_active_ingredient": false
+      "is_active_ingredient": false,
+      "ingredient": {
+        "name": "Tea Tree Essential Oil",
+        "slug": "tea-tree-essential-oil",
+        "inci_name": "Melaleuca Alternifolia (Tea Tree) Leaf Oil"
+      },
+      "physical_form": "Liquid"
     },
     {
       "name": "Peppermint Essential Oil",
       "default_unit": "milliliter",
       "flash_point_c": 66,
-      "recommended_usage_rate": "Dermal max 5%",
+      
       "recommended_fragrance_load_pct": "Up to 3% in candles",
       "recommended_shelf_life_days": 1095,
       "inci_name": "Mentha Piperita (Peppermint) Oil",
@@ -55,13 +67,19 @@
       "aliases": [
         "mentha piperita"
       ],
-      "is_active_ingredient": false
+      "is_active_ingredient": false,
+      "ingredient": {
+        "name": "Peppermint Essential Oil",
+        "slug": "peppermint-essential-oil",
+        "inci_name": "Mentha Piperita (Peppermint) Oil"
+      },
+      "physical_form": "Liquid"
     },
     {
       "name": "Bergamot Essential Oil (FCF)",
       "default_unit": "milliliter",
       "flash_point_c": 60,
-      "recommended_usage_rate": "Dermal max 1%",
+      
       "recommended_fragrance_load_pct": "Up to 4% in candles",
       "recommended_shelf_life_days": 730,
       "inci_name": "Citrus Aurantium Bergamia (Bergamot) Fruit Oil",
@@ -74,13 +92,19 @@
       "aliases": [
         "citrus aurantium bergamia oil"
       ],
-      "is_active_ingredient": false
+      "is_active_ingredient": false,
+      "ingredient": {
+        "name": "Bergamot Essential Oil",
+        "slug": "bergamot-essential-oil",
+        "inci_name": "Citrus Aurantium Bergamia (Bergamot) Fruit Oil"
+      },
+      "physical_form": "Fcf"
     },
     {
       "name": "Patchouli Essential Oil",
       "default_unit": "milliliter",
       "flash_point_c": 60,
-      "recommended_usage_rate": "Dermal max 5%",
+      
       "recommended_fragrance_load_pct": "Up to 6% in candles",
       "recommended_shelf_life_days": 1825,
       "inci_name": "Pogostemon Cablin (Patchouli) Oil",
@@ -92,13 +116,19 @@
       "aliases": [
         "pogostemon cablin oil"
       ],
-      "is_active_ingredient": false
+      "is_active_ingredient": false,
+      "ingredient": {
+        "name": "Patchouli Essential Oil",
+        "slug": "patchouli-essential-oil",
+        "inci_name": "Pogostemon Cablin (Patchouli) Oil"
+      },
+      "physical_form": "Liquid"
     },
     {
       "name": "Cedarwood Atlas Essential Oil",
       "default_unit": "milliliter",
       "flash_point_c": 96,
-      "recommended_usage_rate": "Dermal max 3%",
+      
       "recommended_fragrance_load_pct": "Up to 6% in candles",
       "recommended_shelf_life_days": 1460,
       "inci_name": "Cedrus Atlantica Bark Oil",
@@ -110,12 +140,18 @@
       "aliases": [
         "cedrus atlantica"
       ],
-      "is_active_ingredient": false
+      "is_active_ingredient": false,
+      "ingredient": {
+        "name": "Cedarwood Atlas Essential Oil",
+        "slug": "cedarwood-atlas-essential-oil",
+        "inci_name": "Cedrus Atlantica Bark Oil"
+      },
+      "physical_form": "Liquid"
     }
   ],
   "attributes": [
     "flash_point_c",
-    "recommended_usage_rate",
+
     "recommended_fragrance_load_pct",
     "recommended_shelf_life_days",
     "inci_name",

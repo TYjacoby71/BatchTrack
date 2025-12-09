@@ -1,151 +1,471 @@
 {
-  "category_name": "Botanicals (Dried)",
-  "default_density": 0.35,
-  "description": "Whole, cut, or powdered botanical materials used for infusions, aroma, color, or garnish.",
-  "attributes": [
-    "moisture_content_percent",
-    "recommended_usage_rate",
-    "recommended_shelf_life_days",
-    "certifications",
-    "ph_value",
-    "is_active_ingredient"
-  ],
-  "items": [
-    {
-      "name": "Lavender Buds",
-      "aliases": [
-        "lavandula angustifolia buds"
-      ],
-      "density": 0.21,
-      "default_unit": "gram",
-      "moisture_content_percent": 8,
-      "recommended_usage_rate": "0.5-2% infusion or decorative topping",
-      "recommended_shelf_life_days": 540,
-      "certifications": [
-        "USDA Organic",
-        "Kosher"
-      ],
-      "is_active_ingredient": false
-    },
-    {
-      "name": "Calendula Petals",
-      "aliases": [
-        "calendula officinalis petals"
-      ],
-      "density": 0.18,
-      "default_unit": "gram",
-      "moisture_content_percent": 7,
-      "recommended_usage_rate": "0.5-1.5% in oil infusions and soaps",
-      "recommended_shelf_life_days": 540,
-      "certifications": [
-        "USDA Organic"
-      ],
-      "is_active_ingredient": false
-    },
-    {
-      "name": "Rosehips (Cut & Sifted)",
-      "aliases": [
-        "rosa canina hips"
-      ],
-      "density": 0.38,
-      "default_unit": "gram",
-      "moisture_content_percent": 9,
-      "recommended_usage_rate": "1-5% in tea blends or oil infusions",
-      "recommended_shelf_life_days": 365,
-      "certifications": [
-        "Fair Trade Certified"
-      ],
-      "is_active_ingredient": false
-    },
-    {
-      "name": "Hibiscus Flowers",
-      "aliases": [
-        "hibiscus sabdariffa petals"
-      ],
-      "density": 0.32,
-      "default_unit": "gram",
-      "moisture_content_percent": 11,
-      "recommended_usage_rate": "0.5-3% in botanical infusions and colorants",
-      "recommended_shelf_life_days": 365,
-      "certifications": [],
-      "is_active_ingredient": false
-    },
-    {
-      "name": "Chamomile (German) Flowers",
-      "aliases": [
-        "matricaria recutita whole flowers"
-      ],
-      "density": 0.17,
-      "default_unit": "gram",
-      "moisture_content_percent": 7,
-      "recommended_usage_rate": "0.5-2% infusion or bath blends",
-      "recommended_shelf_life_days": 365,
-      "certifications": [
-        "EU Organic"
-      ],
-      "is_active_ingredient": false
-    },
-    {
-      "name": "Turmeric Root Powder",
-      "aliases": [
-        "curcuma longa powder"
-      ],
-      "density": 0.55,
-      "default_unit": "gram",
-      "moisture_content_percent": 9,
-      "ph_value": "6.0-6.5",
-      "recommended_usage_rate": "0.5-2% for color and antioxidants",
-      "recommended_shelf_life_days": 730,
-      "certifications": [
-        "Organic"
-      ],
-      "is_active_ingredient": false
-    },
-    {
-      "name": "Ginger Powder",
-      "aliases": [
-        "zingiber officinale powder"
-      ],
-      "density": 0.53,
-      "default_unit": "gram",
-      "moisture_content_percent": 8,
-      "ph_value": "6.0-6.5",
-      "recommended_usage_rate": "0.2-1% in spice or wellness blends",
-      "recommended_shelf_life_days": 540,
-      "certifications": [
-        "Kosher"
-      ],
-      "is_active_ingredient": false
-    },
-    {
-      "name": "Sweet Paprika",
-      "aliases": [
-        "capsicum annuum powder"
-      ],
-      "density": 0.46,
-      "default_unit": "gram",
-      "moisture_content_percent": 12,
-      "ph_value": "5.0-5.5",
-      "recommended_usage_rate": "0.5-3% for flavor and warm color",
-      "recommended_shelf_life_days": 540,
-      "certifications": [
-        "Non-GMO"
-      ],
-      "is_active_ingredient": false
-    },
-    {
-      "name": "Black Pepper (Ground)",
-      "aliases": [
-        "piper nigrum powder"
-      ],
-      "density": 0.55,
-      "default_unit": "gram",
-      "moisture_content_percent": 11,
-      "ph_value": "5.5-6.0",
-      "recommended_usage_rate": "0.1-0.5% in savory blends",
-      "recommended_shelf_life_days": 540,
-      "certifications": [],
-      "is_active_ingredient": false
-    }
-  ]
+    "category_name": "Botanicals (Dried)",
+    "default_density": 0.35,
+    "description": "Whole, cut, or powdered botanical materials used for infusions, aroma, color, or garnish.",
+    "attributes": [
+        "moisture_content_percent",
+        "recommended_shelf_life_days",
+        "certifications",
+        "ph_value",
+        "is_active_ingredient"
+    ],
+    "items": [
+        {
+            "name": "Lavender Buds",
+            "ingredient": {
+                "name": "Lavender",
+                "slug": "lavender",
+                "inci_name": "Lavandula angustifolia"
+            },
+            "physical_form": "Whole Bud",
+            "aliases": [
+                "lavandula angustifolia buds"
+            ],
+            "density": 0.21,
+            "default_unit": "gram",
+            "moisture_content_percent": 8,
+            "recommended_shelf_life_days": 540,
+            "certifications": [
+                "USDA Organic",
+                "Kosher"
+            ],
+            "is_active_ingredient": false
+        },
+        {
+            "name": "Calendula Petals",
+            "ingredient": {
+                "name": "Calendula",
+                "slug": "calendula",
+                "inci_name": "Calendula officinalis"
+            },
+            "physical_form": "Petal",
+            "aliases": [
+                "calendula officinalis petals"
+            ],
+            "density": 0.18,
+            "default_unit": "gram",
+            "moisture_content_percent": 7,
+            "recommended_shelf_life_days": 540,
+            "certifications": [
+                "USDA Organic"
+            ],
+            "is_active_ingredient": false
+        },
+        {
+            "name": "Rosehips (Cut & Sifted)",
+            "ingredient": {
+                "name": "Rosehip",
+                "slug": "rosehip",
+                "inci_name": "Rosa canina"
+            },
+            "physical_form": "Cut & Sifted",
+            "aliases": [
+                "rosa canina hips"
+            ],
+            "density": 0.38,
+            "default_unit": "gram",
+            "moisture_content_percent": 9,
+            "recommended_shelf_life_days": 365,
+            "certifications": [
+                "Fair Trade Certified"
+            ],
+            "is_active_ingredient": false
+        },
+        {
+            "name": "Hibiscus Flowers",
+            "ingredient": {
+                "name": "Hibiscus",
+                "slug": "hibiscus",
+                "inci_name": "Hibiscus sabdariffa"
+            },
+            "physical_form": "Whole Flower",
+            "aliases": [
+                "hibiscus sabdariffa petals"
+            ],
+            "density": 0.32,
+            "default_unit": "gram",
+            "moisture_content_percent": 11,
+            "recommended_shelf_life_days": 365,
+            "certifications": [],
+            "is_active_ingredient": false
+        },
+        {
+            "name": "Chamomile (German) Flowers",
+            "ingredient": {
+                "name": "Chamomile (German)",
+                "slug": "chamomile-german",
+                "inci_name": "Matricaria recutita"
+            },
+            "physical_form": "Whole Flower",
+            "aliases": [
+                "matricaria recutita whole flowers"
+            ],
+            "density": 0.17,
+            "default_unit": "gram",
+            "moisture_content_percent": 7,
+            "recommended_shelf_life_days": 365,
+            "certifications": [
+                "EU Organic"
+            ],
+            "is_active_ingredient": false
+        },
+        {
+            "name": "Turmeric Root Powder",
+            "ingredient": {
+                "name": "Turmeric Root",
+                "slug": "turmeric-root",
+                "inci_name": "Curcuma longa"
+            },
+            "physical_form": "Powder",
+            "aliases": [
+                "curcuma longa powder"
+            ],
+            "density": 0.55,
+            "default_unit": "gram",
+            "moisture_content_percent": 9,
+            "ph_value": "6.0-6.5",
+            "recommended_shelf_life_days": 730,
+            "certifications": [
+                "Organic"
+            ],
+            "is_active_ingredient": false
+        },
+        {
+            "name": "Ginger Powder",
+            "ingredient": {
+                "name": "Ginger Root",
+                "slug": "ginger-root",
+                "inci_name": "Zingiber officinale"
+            },
+            "physical_form": "Powder",
+            "aliases": [
+                "zingiber officinale powder"
+            ],
+            "density": 0.53,
+            "default_unit": "gram",
+            "moisture_content_percent": 8,
+            "ph_value": "6.0-6.5",
+            "recommended_shelf_life_days": 540,
+            "certifications": [
+                "Kosher"
+            ],
+            "is_active_ingredient": false
+        },
+        {
+            "name": "Sweet Paprika",
+            "ingredient": {
+                "name": "Paprika",
+                "slug": "paprika",
+                "inci_name": "Capsicum annuum"
+            },
+            "physical_form": "Powder",
+            "aliases": [
+                "capsicum annuum powder"
+            ],
+            "density": 0.46,
+            "default_unit": "gram",
+            "moisture_content_percent": 12,
+            "ph_value": "5.0-5.5",
+            "recommended_shelf_life_days": 540,
+            "certifications": [
+                "Non-GMO"
+            ],
+            "is_active_ingredient": false
+        },
+        {
+            "name": "Black Pepper (Ground)",
+            "ingredient": {
+                "name": "Black Pepper",
+                "slug": "black-pepper",
+                "inci_name": "Piper nigrum"
+            },
+            "physical_form": "Powder",
+            "aliases": [
+                "piper nigrum powder"
+            ],
+            "density": 0.55,
+            "default_unit": "gram",
+            "moisture_content_percent": 11,
+            "ph_value": "5.5-6.0",
+            "recommended_shelf_life_days": 540,
+        "certifications": [],
+        "is_active_ingredient": false
+      },
+      {
+        "name": "Basil Leaf (Whole)",
+        "ingredient": {
+          "name": "Basil Leaf",
+          "slug": "basil-leaf",
+          "inci_name": "Ocimum Basilicum Leaf"
+        },
+        "physical_form": "Whole Leaf",
+        "aliases": [
+          "ocimum basilicum leaf"
+        ],
+        "density": 0.17,
+        "default_unit": "gram",
+        "moisture_content_percent": 8,
+        "recommended_shelf_life_days": 365,
+        "certifications": [
+          "USDA Organic"
+        ],
+        "is_active_ingredient": false
+      },
+      {
+        "name": "Basil Leaf (Cut & Sifted)",
+        "ingredient": {
+          "name": "Basil Leaf",
+          "slug": "basil-leaf",
+          "inci_name": "Ocimum Basilicum Leaf"
+        },
+        "physical_form": "Cut & Sifted",
+        "aliases": [
+          "ocimum basilicum cut leaf"
+        ],
+        "density": 0.16,
+        "default_unit": "gram",
+        "moisture_content_percent": 9,
+        "recommended_shelf_life_days": 365,
+        "certifications": [],
+        "is_active_ingredient": false
+      },
+      {
+        "name": "Basil Leaf Powder",
+        "ingredient": {
+          "name": "Basil Leaf",
+          "slug": "basil-leaf",
+          "inci_name": "Ocimum Basilicum Leaf"
+        },
+        "physical_form": "Powder",
+        "aliases": [
+          "ocimum basilicum powder"
+        ],
+        "density": 0.32,
+        "default_unit": "gram",
+        "moisture_content_percent": 8,
+        "recommended_shelf_life_days": 365,
+        "certifications": [],
+        "is_active_ingredient": false
+      },
+      {
+        "name": "Rosemary Leaf (Whole Needles)",
+        "ingredient": {
+          "name": "Rosemary Leaf",
+          "slug": "rosemary-leaf",
+          "inci_name": "Rosmarinus Officinalis Leaf"
+        },
+        "physical_form": "Whole Needle",
+        "aliases": [
+          "rosmarinus officinalis leaf"
+        ],
+        "density": 0.19,
+        "default_unit": "gram",
+        "moisture_content_percent": 7,
+        "recommended_shelf_life_days": 365,
+        "certifications": [
+          "Kosher"
+        ],
+        "is_active_ingredient": false
+      },
+      {
+        "name": "Rosemary Leaf (Cut & Sifted)",
+        "ingredient": {
+          "name": "Rosemary Leaf",
+          "slug": "rosemary-leaf",
+          "inci_name": "Rosmarinus Officinalis Leaf"
+        },
+        "physical_form": "Cut & Sifted",
+        "aliases": [
+          "rosmarinus officinalis cut leaf"
+        ],
+        "density": 0.18,
+        "default_unit": "gram",
+        "moisture_content_percent": 8,
+        "recommended_shelf_life_days": 365,
+        "certifications": [],
+        "is_active_ingredient": false
+      },
+      {
+        "name": "Rosemary Leaf Powder",
+        "ingredient": {
+          "name": "Rosemary Leaf",
+          "slug": "rosemary-leaf",
+          "inci_name": "Rosmarinus Officinalis Leaf"
+        },
+        "physical_form": "Powder",
+        "aliases": [
+          "rosmarinus officinalis powder"
+        ],
+        "density": 0.34,
+        "default_unit": "gram",
+        "moisture_content_percent": 8,
+        "recommended_shelf_life_days": 365,
+        "certifications": [],
+        "is_active_ingredient": false
+      },
+      {
+        "name": "Oregano Leaf (Whole)",
+        "ingredient": {
+          "name": "Oregano Leaf",
+          "slug": "oregano-leaf",
+          "inci_name": "Origanum Vulgare Leaf"
+        },
+        "physical_form": "Whole Leaf",
+        "aliases": [
+          "origanum vulgare leaf"
+        ],
+        "density": 0.17,
+        "default_unit": "gram",
+        "moisture_content_percent": 9,
+        "recommended_shelf_life_days": 365,
+        "certifications": [],
+        "is_active_ingredient": false
+      },
+      {
+        "name": "Oregano Leaf Powder",
+        "ingredient": {
+          "name": "Oregano Leaf",
+          "slug": "oregano-leaf",
+          "inci_name": "Origanum Vulgare Leaf"
+        },
+        "physical_form": "Powder",
+        "aliases": [
+          "origanum vulgare powder"
+        ],
+        "density": 0.31,
+        "default_unit": "gram",
+        "moisture_content_percent": 8,
+        "recommended_shelf_life_days": 365,
+        "certifications": [],
+        "is_active_ingredient": false
+      },
+      {
+        "name": "Thyme Leaf (Whole)",
+        "ingredient": {
+          "name": "Thyme Leaf",
+          "slug": "thyme-leaf",
+          "inci_name": "Thymus Vulgaris Leaf"
+        },
+        "physical_form": "Whole Leaf",
+        "aliases": [
+          "thymus vulgaris leaf"
+        ],
+        "density": 0.18,
+        "default_unit": "gram",
+        "moisture_content_percent": 7,
+        "recommended_shelf_life_days": 365,
+        "certifications": [],
+        "is_active_ingredient": false
+      },
+      {
+        "name": "Thyme Leaf Powder",
+        "ingredient": {
+          "name": "Thyme Leaf",
+          "slug": "thyme-leaf",
+          "inci_name": "Thymus Vulgaris Leaf"
+        },
+        "physical_form": "Powder",
+        "aliases": [
+          "thymus vulgaris powder"
+        ],
+        "density": 0.29,
+        "default_unit": "gram",
+        "moisture_content_percent": 8,
+        "recommended_shelf_life_days": 365,
+        "certifications": [],
+        "is_active_ingredient": false
+      },
+      {
+        "name": "Peppermint Leaf (Whole)",
+        "ingredient": {
+          "name": "Peppermint Leaf",
+          "slug": "peppermint-leaf",
+          "inci_name": "Mentha Piperita Leaf"
+        },
+        "physical_form": "Whole Leaf",
+        "aliases": [
+          "mentha piperita leaf"
+        ],
+        "density": 0.16,
+        "default_unit": "gram",
+        "moisture_content_percent": 9,
+        "recommended_shelf_life_days": 365,
+        "certifications": [
+          "USDA Organic"
+        ],
+        "is_active_ingredient": false
+      },
+      {
+        "name": "Peppermint Leaf (Cut & Sifted)",
+        "ingredient": {
+          "name": "Peppermint Leaf",
+          "slug": "peppermint-leaf",
+          "inci_name": "Mentha Piperita Leaf"
+        },
+        "physical_form": "Cut & Sifted",
+        "aliases": [
+          "mentha piperita cut leaf"
+        ],
+        "density": 0.15,
+        "default_unit": "gram",
+        "moisture_content_percent": 8,
+        "recommended_shelf_life_days": 365,
+        "certifications": [],
+        "is_active_ingredient": false
+      },
+      {
+        "name": "Peppermint Leaf Powder",
+        "ingredient": {
+          "name": "Peppermint Leaf",
+          "slug": "peppermint-leaf",
+          "inci_name": "Mentha Piperita Leaf"
+        },
+        "physical_form": "Powder",
+        "aliases": [
+          "mentha piperita powder"
+        ],
+        "density": 0.30,
+        "default_unit": "gram",
+        "moisture_content_percent": 8,
+        "recommended_shelf_life_days": 365,
+        "certifications": [],
+        "is_active_ingredient": false
+      },
+      {
+        "name": "Cinnamon (Cassia) Sticks",
+        "ingredient": {
+          "name": "Cinnamon (Cassia)",
+          "slug": "cinnamon-cassia",
+          "inci_name": "Cinnamomum Cassia Bark"
+        },
+        "physical_form": "Whole Stick",
+        "aliases": [
+          "cinnamomum cassia bark"
+        ],
+        "density": 0.45,
+        "default_unit": "gram",
+        "moisture_content_percent": 10,
+        "recommended_shelf_life_days": 730,
+        "certifications": [],
+        "is_active_ingredient": false
+      },
+      {
+        "name": "Cinnamon (Cassia) Powder",
+        "ingredient": {
+          "name": "Cinnamon (Cassia)",
+          "slug": "cinnamon-cassia",
+          "inci_name": "Cinnamomum Cassia Bark"
+        },
+        "physical_form": "Powder",
+        "aliases": [
+          "cinnamomum cassia powder"
+        ],
+        "density": 0.50,
+        "default_unit": "gram",
+        "moisture_content_percent": 9,
+        "recommended_shelf_life_days": 540,
+        "certifications": [],
+        "is_active_ingredient": false
+      }
+    ]
 }

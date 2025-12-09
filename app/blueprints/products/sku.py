@@ -43,10 +43,10 @@ def view_sku(inventory_item_id):
                          timedelta=timedelta,
                          TimezoneUtils=TimezoneUtils,
                          breadcrumb_items=[
-                            {'label': 'Products', 'url': url_for('products.list_products')},
-                            {'label': sku.product_name, 'url': url_for('products.view_product', product_id=sku.product_id)},
-                            {'label': sku.variant_name, 'url': url_for('product_variants.view_variant', product_id=sku.product_id, variant_name=sku.variant_name)},
-                            {'label': sku.size_label}
+                            {'label': 'Product Dashboard', 'url': url_for('products.list_products')},
+                            {'label': sku.product_name + ' Overview', 'url': url_for('products.view_product', product_id=sku.product_id)},
+                            {'label': sku.variant_name + ' Sizes', 'url': url_for('product_variants.view_variant', product_id=sku.product_id, variant_name=sku.variant_name)},
+                            {'label': sku.size_label + ' SKU'}
                          ])
 
 @sku_bp.route('/<int:inventory_item_id>/edit', methods=['POST'])

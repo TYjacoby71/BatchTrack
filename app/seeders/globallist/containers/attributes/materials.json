@@ -1,18 +1,5 @@
-
 {
   "materials": [
-    "Aluminum",
-    "Cardboard",
-    "Glass",
-    "HDPE Plastic",
-    "Mixed",
-    "PET Plastic",
-    "PP Plastic",
-    "Paper",
-    "Paperboard",
-    "Plastic Film",
-    "Silicone",
-    "Steel",
-    "Tin"
+    "Glass"
   ]
 }

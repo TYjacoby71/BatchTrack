@@ -20,13 +20,16 @@ def _env_int(key: str, default: int) -> int:
 def _configured_workers() -> int:
     """Respect explicit worker counts while preventing overcommit."""
     cpu_count = max(multiprocessing.cpu_count(), 1)
-    default_workers = max(1, min(4, cpu_count))
+    # Default to a conservative 2x CPU with sensible caps for shared cores
+    auto_workers = max(2, min(8, cpu_count * 2))
 
     if "GUNICORN_WORKERS" in os.environ:
-        return _env_int("GUNICORN_WORKERS", default_workers)
+        return _env_int("GUNICORN_WORKERS", auto_workers)
     if "WEB_CONCURRENCY" in os.environ:
-        return _env_int("WEB_CONCURRENCY", default_workers)
-    return default_workers
+        return _env_int("WEB_CONCURRENCY", auto_workers)
+
+    max_auto = _env_int("GUNICORN_MAX_WORKERS", auto_workers)
+    return min(auto_workers, max_auto)
 
 
 def _log_runtime_configuration() -> None:
@@ -50,11 +53,11 @@ backlog = _env_int("GUNICORN_BACKLOG", 2048)
 # Worker processes - use gevent for async I/O
 worker_class = os.environ.get("GUNICORN_WORKER_CLASS", "gevent")
 workers = _configured_workers()
-worker_connections = _env_int("GUNICORN_WORKER_CONNECTIONS", 1000)
+worker_connections = _env_int("GUNICORN_WORKER_CONNECTIONS", 2000)
 
 # Timeouts and keepalive
-timeout = _env_int("GUNICORN_TIMEOUT", 30)
-keepalive = _env_int("GUNICORN_KEEPALIVE", 2)
+timeout = _env_int("GUNICORN_TIMEOUT", 60)
+keepalive = _env_int("GUNICORN_KEEPALIVE", 5)
 
 # Resource limits
 max_requests = _env_int("GUNICORN_MAX_REQUESTS", 2000)

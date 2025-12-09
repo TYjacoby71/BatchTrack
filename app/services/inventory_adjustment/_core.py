@@ -1,4 +1,6 @@
 import logging
+from typing import Any, Dict, Optional
+
 from app.models import db, InventoryItem, UnifiedInventoryHistory
 from app.services.unit_conversion import ConversionEngine
 from ._validation import validate_inventory_fifo_sync
@@ -16,7 +18,24 @@ ADDITIVE_OPERATIONS = set()
 for group in ADDITIVE_OPERATION_GROUPS.values():
     ADDITIVE_OPERATIONS.update(group.get('operations', []))
 
-def process_inventory_adjustment(item_id, change_type, quantity, notes=None, created_by=None, cost_override=None, custom_expiration_date=None, custom_shelf_life_days=None, customer=None, sale_price=None, order_id=None, target_quantity=None, unit=None, batch_id=None, defer_commit=False):
+def process_inventory_adjustment(
+    item_id,
+    change_type,
+    quantity,
+    notes=None,
+    created_by=None,
+    cost_override=None,
+    custom_expiration_date=None,
+    custom_shelf_life_days=None,
+    customer=None,
+    sale_price=None,
+    order_id=None,
+    target_quantity=None,
+    unit=None,
+    batch_id=None,
+    defer_commit=False,
+    include_event_payload: bool = False,
+):
     """
     CENTRAL DELEGATOR - The single entry point for ALL inventory adjustments.
 
@@ -30,9 +49,14 @@ def process_inventory_adjustment(item_id, change_type, quantity, notes=None, cre
     """
     logger.info(f"CENTRAL DELEGATOR: item_id={item_id}, qty={quantity}, type={change_type}")
 
+    def _response(success: bool, message: str, payload: Optional[Dict[str, Any]] = None):
+        if include_event_payload:
+            return success, message, payload
+        return success, message
+
     item = db.session.get(InventoryItem, item_id)
     if not item:
-        return False, "Inventory item not found."
+        return _response(False, "Inventory item not found.")
 
     # Store original quantity for logging
     original_quantity = float(item.quantity)
@@ -69,11 +93,11 @@ def process_inventory_adjustment(item_id, change_type, quantity, notes=None, cre
                 else:
                     db.session.rollback()
                     logger.error(f"Unit conversion returned None for item {item.id}: {unit} -> {item.unit}")
-                    return False, f"Cannot convert {unit} to {item.unit}. Please check unit compatibility or use the item's default unit ({item.unit})."
+                    return _response(False, f"Cannot convert {unit} to {item.unit}. Please check unit compatibility or use the item's default unit ({item.unit}).")
             except Exception as e:
                 db.session.rollback()
                 logger.error(f"Unit conversion failed for item {item.id}: {e}")
-                return False, f"Unit conversion failed: {str(e)}"
+                return _response(False, f"Unit conversion failed: {str(e)}")
 
         # CENTRAL DELEGATION - Route to appropriate operation module
         result = _delegate_to_operation_module(
@@ -102,12 +126,12 @@ def process_inventory_adjustment(item_id, change_type, quantity, notes=None, cre
             success, message, quantity_delta = result
         else:
             logger.error(f"Operation returned unexpected format: {result}")
-            return False, "Operation returned invalid response format"
+            return _response(False, "Operation returned invalid response format")
 
         if not success:
             db.session.rollback()
             logger.error(f"DELEGATION FAILED: {change_type} operation failed for item {item.id}: {message}")
-            return False, message
+            return _response(False, message)
 
         # CENTRAL QUANTITY CONTROL - Only this core function modifies item.quantity
         if quantity_delta is not None:
@@ -136,12 +160,12 @@ def process_inventory_adjustment(item_id, change_type, quantity, notes=None, cre
             if not is_valid:
                 logger.error(f"FIFO VALIDATION FAILED before commit for item {item_id}: {error_msg}")
                 db.session.rollback()
-                return False, f"FIFO validation failed: {error_msg}"
+                return _response(False, f"FIFO validation failed: {error_msg}")
 
         except Exception as e:
             logger.error(f"FIFO VALIDATION ERROR for item {item_id}: {str(e)}")
             db.session.rollback()
-            return False, f"FIFO validation error: {str(e)}"
+            return _response(False, f"FIFO validation error: {str(e)}")
 
         # Update master item's moving average cost (WAC) only for additive ops; skip for deductions/spoilage
         try:
@@ -150,6 +174,9 @@ def process_inventory_adjustment(item_id, change_type, quantity, notes=None, cre
                 if effective_change_type in group_cfg['operations']:
                     is_additive = True
                     break
+            # Preserve additive semantics for remapped "initial_stock" operations
+            if not is_additive and effective_change_type == 'initial_stock':
+                is_additive = True
             if is_additive:
                 new_wac = weighted_average_cost_for_item(item.id)
                 try:
@@ -162,52 +189,54 @@ def process_inventory_adjustment(item_id, change_type, quantity, notes=None, cre
             # Do not fail the adjustment because of WAC recompute issues
             pass
 
+        event_properties = {
+            'change_type': change_type,
+            'quantity_delta': quantity_delta if quantity_delta is not None else (target_quantity - original_quantity if change_type == 'recount' and target_quantity is not None else None),
+            'unit': item.unit,
+            'notes': notes,
+            'cost_override': cost_override,
+            'original_quantity': original_quantity,
+            'new_quantity': float(item.quantity),
+            'item_name': item.name,
+            'item_type': item.type,
+            'batch_id': batch_id,
+            'is_initial_stock': is_initial_stock,
+        }
+        event_payload: Dict[str, Any] = {
+            'event_name': 'inventory_adjusted',
+            'properties': event_properties,
+            'organization_id': item.organization_id,
+            'user_id': created_by,
+            'entity_type': 'inventory_item',
+            'entity_id': item.id,
+        }
+
         # Commit database changes unless caller defers commit for an outer transaction
         try:
             if defer_commit:
                 logger.info(f"SUCCESS (DEFERRED): {change_type} prepared for item {item.id} (FIFO validated)")
-                return True, message
+                return _response(True, message, event_payload)
             else:
                 db.session.commit()
                 logger.info(f"SUCCESS: {change_type} completed for item {item.id} (FIFO validated)")
 
                 # Emit domain event (non-blocking best-effort; don't fail the operation on emitter errors)
                 try:
-                    EventEmitter.emit(
-                        event_name='inventory_adjusted',
-                        properties={
-                            'change_type': change_type,
-                            'quantity_delta': quantity_delta if quantity_delta is not None else (target_quantity - original_quantity if change_type == 'recount' and target_quantity is not None else None),
-                            'unit': item.unit,
-                            'notes': notes,
-                            'cost_override': cost_override,
-                            'original_quantity': original_quantity,
-                            'new_quantity': float(item.quantity),
-                            'item_name': item.name,
-                            'item_type': item.type,
-                            'batch_id': batch_id,
-                            'is_initial_stock': is_initial_stock,
-                        },
-                        organization_id=item.organization_id,
-                        user_id=created_by,
-                        entity_type='inventory_item',
-                        entity_id=item.id,
-                        auto_commit=False
-                    )
+                    EventEmitter.emit(**event_payload, auto_commit=False)
                 except Exception:
                     pass
 
-                return True, message
+                return _response(True, message, event_payload if include_event_payload else None)
 
         except Exception as e:
             logger.error(f"FAILED: Database commit failed for item {item_id}: {str(e)}")
             db.session.rollback()
-            return False, f"Database error: {str(e)}"
+            return _response(False, f"Database error: {str(e)}")
 
     except Exception as e:
         db.session.rollback()
         logger.error(f"Central delegation error for {change_type} on item {item.id}: {e}", exc_info=True)
-        return False, "A critical internal error occurred."
+        return _response(False, "A critical internal error occurred.")
 
 
 def _delegate_to_operation_module(effective_change_type, original_change_type, item, quantity, notes, created_by, cost_override, custom_expiration_date, custom_shelf_life_days, customer, sale_price, order_id, target_quantity, unit, batch_id):

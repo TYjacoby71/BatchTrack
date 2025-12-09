@@ -925,3 +925,47 @@ input:checked + .toggle-label:before {
 .position-relative {
     position: relative;
 }
+
+/* Universal inventory suggestions styling - applies to all suggestion dropdowns */
+#containerSuggestions,
+#ingredientSuggestions,
+#packagingSuggestions,
+#consumableSuggestions,
+.inventory-suggestions {
+    background-color: #ffffff !important;
+    border: 1px solid var(--color-border);
+    border-radius: 0.375rem;
+    box-shadow: var(--shadow-3);
+    z-index: 1050 !important;
+    max-height: 300px;
+    overflow-y: auto;
+}
+
+#containerSuggestions .suggestion-item,
+#ingredientSuggestions .suggestion-item,
+#packagingSuggestions .suggestion-item,
+#consumableSuggestions .suggestion-item,
+.inventory-suggestions .suggestion-item {
+    background-color: #ffffff !important;
+    color: var(--color-text) !important;
+    border-bottom: 1px solid var(--color-border);
+    padding: 0.75rem;
+    cursor: pointer;
+    transition: background-color 0.15s ease;
+}
+
+#containerSuggestions .suggestion-item:hover,
+#ingredientSuggestions .suggestion-item:hover,
+#packagingSuggestions .suggestion-item:hover,
+#consumableSuggestions .suggestion-item:hover,
+.inventory-suggestions .suggestion-item:hover {
+    background-color: var(--color-subtle-bg) !important;
+}
+
+#containerSuggestions .suggestion-item:last-child,
+#ingredientSuggestions .suggestion-item:last-child,
+#packagingSuggestions .suggestion-item:last-child,
+#consumableSuggestions .suggestion-item:last-child,
+.inventory-suggestions .suggestion-item:last-child {
+    border-bottom: none;
+}

@@ -35,6 +35,10 @@ This document consolidates stubs, placeholders, no-ops, and partially implemente
   - Files: `app/blueprints/developer/routes.py`
   - Notes: Placeholder `require_developer_permission` and `permission_required` defined when imports fail.
 
+- Recipe library customer-facing detail view [PARTIAL]
+  - Files: `app/routes/recipe_library_routes.py`, `app/templates/library/recipe_detail.html`
+  - Notes: Developer/org view shows blurred sections; customer-facing unblur still needs UI.
+
 ## Permissions & Roles
 
 - Role checking decorator [TODO/PLACEHOLDER]

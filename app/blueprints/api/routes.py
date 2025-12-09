@@ -3,14 +3,47 @@ from flask_login import login_required, current_user
 from datetime import datetime, timezone
 from flask import session
 import logging
-from app.models import InventoryItem  # Added for get_ingredients endpoint
+from sqlalchemy.orm import selectinload, load_only
+from app.models import InventoryItem, Recipe, Product  # Added for get_ingredients endpoint
+from app.models.product import ProductSKU
 from app import db  # Assuming db is imported from app
 from app.utils.permissions import require_permission
+from app.services.batchbot_service import BatchBotService, BatchBotServiceError
+from app.services.batchbot_usage_service import (
+    BatchBotUsageService,
+    BatchBotLimitError,
+    BatchBotChatLimitError,
+)
+from app.services.batchbot_credit_service import BatchBotCreditService
+from app.services.ai import GoogleAIClientError
+from app.extensions import cache
+from app.services.cache_invalidation import (
+    ingredient_list_cache_key,
+    product_bootstrap_cache_key,
+    recipe_bootstrap_cache_key,
+)
+from app.utils.cache_utils import should_bypass_cache
 
 # Configure logging
 logger = logging.getLogger(__name__)
 
 api_bp = Blueprint('api', __name__, url_prefix='/api')
+
+
+def _is_batchbot_enabled() -> bool:
+    return bool(current_app.config.get('FEATURE_BATCHBOT', False))
+
+
+def _resolve_org_id():
+    """
+    Determine the organization scope for the current request, respecting developer masquerade.
+    """
+    org_id = getattr(current_user, "organization_id", None)
+    if getattr(current_user, "user_type", None) == "developer":
+        dev_selected = session.get("dev_selected_org_id")
+        if dev_selected:
+            org_id = dev_selected
+    return org_id
 
 @api_bp.route('/', methods=['GET', 'HEAD'])
 def health_check():
@@ -207,8 +240,9 @@ def get_container_suggestions():
         limit = max(1, min(int(request.args.get('limit', 20)), 100))
 
         # Load master lists from settings - single source of truth
-        from app.blueprints.developer.routes import load_curated_container_lists
-        curated_lists = load_curated_container_lists()
+        from app.services.developer.reference_data_service import ReferenceDataService
+
+        curated_lists = ReferenceDataService.load_curated_container_lists()
 
         def filter_list(items):
             if q:
@@ -259,20 +293,145 @@ def get_timezone():
 def get_ingredients():
     """Get user's ingredients for unit converter"""
     try:
-        ingredients = InventoryItem.query.filter_by(
-            organization_id=current_user.organization_id,
-            type='ingredient'
-        ).order_by(InventoryItem.name).all()
+        org_id = getattr(current_user, "organization_id", None) or 0
+        cache_key = ingredient_list_cache_key(org_id)
+        bypass_cache = should_bypass_cache()
 
-        return jsonify([{
+        if bypass_cache:
+            cache.delete(cache_key)
+        else:
+            cached = cache.get(cache_key)
+            if cached is not None:
+                return jsonify(cached)
+
+        query = InventoryItem.query.filter_by(type='ingredient')
+        if current_user.organization_id:
+            query = query.filter_by(organization_id=current_user.organization_id)
+
+        ingredients = query.order_by(InventoryItem.name).all()
+        payload = [{
             'id': ing.id,
             'name': ing.name,
             'density': ing.density,
             'type': ing.type,
             'unit': ing.unit
-        } for ing in ingredients])
+        } for ing in ingredients]
+
+        cache.set(
+            cache_key,
+            payload,
+            timeout=current_app.config.get("INGREDIENT_LIST_CACHE_TTL", 120),
+        )
+        return jsonify(payload)
     except Exception as e:
         return jsonify({'error': str(e)}), 500
+
+
+@api_bp.route('/bootstrap/recipes', methods=['GET'])
+@login_required
+def bootstrap_recipes():
+    """Lightweight recipe bootstrap payload for clients that only need IDs + variants."""
+    org_id = _resolve_org_id()
+    if not org_id:
+        return jsonify({'recipes': [], 'count': 0})
+
+    cache_key = recipe_bootstrap_cache_key(org_id)
+    bypass_cache = should_bypass_cache()
+    cache_ttl = current_app.config.get("RECIPE_BOOTSTRAP_CACHE_TTL", 300)
+
+    if not bypass_cache:
+        cached = cache.get(cache_key)
+        if cached is not None:
+            return jsonify({'recipes': cached, 'count': len(cached), 'cache': 'hit', 'version': 1})
+
+    query = (
+        Recipe.query.options(
+            load_only(Recipe.id, Recipe.name, Recipe.label_prefix, Recipe.status),
+            selectinload(Recipe.variations).load_only(
+                Recipe.id,
+                Recipe.name,
+                Recipe.label_prefix,
+                Recipe.status,
+            ),
+        )
+        .filter(
+            Recipe.parent_recipe_id.is_(None),
+            Recipe.organization_id == org_id,
+        )
+        .order_by(Recipe.name.asc())
+    )
+
+    recipes = []
+    for recipe in query.all():
+        variations = [
+            {
+                'id': variation.id,
+                'name': variation.name,
+                'status': getattr(variation, 'status', None),
+                'label_prefix': getattr(variation, 'label_prefix', None),
+            }
+            for variation in getattr(recipe, 'variations', []) or []
+        ]
+        recipes.append(
+            {
+                'id': recipe.id,
+                'name': recipe.name,
+                'label_prefix': getattr(recipe, 'label_prefix', None),
+                'status': getattr(recipe, 'status', None),
+                'variations': variations,
+            }
+        )
+
+    cache.set(cache_key, recipes, timeout=cache_ttl)
+    return jsonify({'recipes': recipes, 'count': len(recipes), 'cache': 'miss', 'version': 1})
+
+
+@api_bp.route('/bootstrap/products', methods=['GET'])
+@login_required
+def bootstrap_products():
+    """Return product + SKU inventory identifiers for fast client bootstrapping."""
+    org_id = _resolve_org_id()
+    if not org_id:
+        return jsonify({'products': [], 'sku_inventory_ids': []})
+
+    cache_key = product_bootstrap_cache_key(org_id)
+    bypass_cache = should_bypass_cache()
+    cache_ttl = current_app.config.get("PRODUCT_BOOTSTRAP_CACHE_TTL", 300)
+
+    if not bypass_cache:
+        cached = cache.get(cache_key)
+        if cached is not None:
+            return jsonify({**cached, 'cache': 'hit', 'version': 1})
+
+    products = (
+        Product.query.options(load_only(Product.id, Product.name))
+        .filter(
+            Product.organization_id == org_id,
+            Product.is_active.is_(True),
+            Product.is_discontinued.is_(False),
+        )
+        .order_by(Product.name.asc())
+        .all()
+    )
+
+    sku_rows = (
+        ProductSKU.query.options(load_only(ProductSKU.inventory_item_id))
+        .filter(
+            ProductSKU.organization_id == org_id,
+            ProductSKU.is_active.is_(True),
+        )
+        .all()
+    )
+
+    payload = {
+        'products': [{'id': product.id, 'name': product.name} for product in products],
+        'sku_inventory_ids': [
+            row.inventory_item_id for row in sku_rows if getattr(row, 'inventory_item_id', None)
+        ],
+    }
+
+    cache.set(cache_key, payload, timeout=cache_ttl)
+    return jsonify({**payload, 'cache': 'miss', 'version': 1})
 
 @api_bp.route('/unit-converter', methods=['POST'])
 @login_required
@@ -315,3 +474,118 @@ def unit_converter():
     except Exception as e:
         current_app.logger.error(f"Unit converter API error: {str(e)}")
         return jsonify({'success': False, 'error': str(e)})
+
+
+@api_bp.route('/batchbot/chat', methods=['POST'])
+@login_required
+def batchbot_chat():
+    if not _is_batchbot_enabled():
+        return jsonify({'success': False, 'error': 'BatchBot is disabled for this deployment.'}), 404
+    data = request.get_json() or {}
+    prompt = (data.get('prompt') or '').strip()
+    history = data.get('history') or []
+    metadata = data.get('metadata') or {}
+
+    if not prompt:
+        return jsonify({'success': False, 'error': 'Prompt is required.'}), 400
+
+    try:
+        service = BatchBotService(current_user)
+        response = service.chat(prompt=prompt, history=history, metadata=metadata)
+        return jsonify({
+            'success': True,
+            'message': response.text,
+            'tool_results': response.tool_results,
+            'usage': response.usage,
+            'quota': _serialize_quota(response.quota, response.credits),
+        })
+    except BatchBotLimitError as exc:
+        return jsonify({
+            'success': False,
+            'error': str(exc),
+            'limit': {
+                'allowed': exc.allowed,
+                'used': exc.used,
+                'window_end': exc.window_end.isoformat(),
+            },
+            'refill_checkout_url': _generate_refill_checkout_url(),
+        }), 429
+    except BatchBotChatLimitError as exc:
+        return jsonify({
+            'success': False,
+            'error': str(exc),
+            'chat_limit': {
+                'allowed': exc.limit,
+                'used': exc.used,
+                'window_end': exc.window_end.isoformat(),
+            },
+            'refill_checkout_url': _generate_refill_checkout_url(),
+        }), 429
+    except BatchBotServiceError as exc:
+        return jsonify({'success': False, 'error': str(exc)}), 400
+    except GoogleAIClientError as exc:
+        current_app.logger.exception("BatchBot AI failure")
+        return jsonify({'success': False, 'error': str(exc)}), 502
+    except Exception:
+        current_app.logger.exception("Unexpected BatchBot failure")
+        return jsonify({'success': False, 'error': 'Unexpected BatchBot failure.'}), 500
+
+
+@api_bp.route('/batchbot/usage', methods=['GET'])
+@login_required
+def batchbot_usage():
+    if not _is_batchbot_enabled():
+        return jsonify({'success': False, 'error': 'BatchBot is disabled for this deployment.'}), 404
+    org = getattr(current_user, 'organization', None)
+    if not org:
+        return jsonify({'success': False, 'error': 'Organization is required.'}), 400
+
+    snapshot = BatchBotUsageService.get_usage_snapshot(org)
+    credit_snapshot = BatchBotCreditService.snapshot(org)
+    return jsonify({'success': True, 'quota': _serialize_quota(snapshot, credit_snapshot)})
+
+
+def _serialize_quota(snapshot, credits=None):
+    return {
+        'allowed': snapshot.allowed,
+        'used': snapshot.used,
+        'remaining': snapshot.remaining,
+        'window_start': snapshot.window_start.isoformat(),
+        'window_end': snapshot.window_end.isoformat(),
+        'chat_limit': snapshot.chat_limit,
+        'chat_used': snapshot.chat_used,
+        'chat_remaining': snapshot.chat_remaining,
+        'credits': {
+            'total': getattr(credits, "total", None),
+            'remaining': getattr(credits, "remaining", None),
+            'next_expiration': getattr(credits, "expires_next", None).isoformat() if getattr(credits, "expires_next", None) else None,
+        } if credits else None,
+    }
+
+
+def _generate_refill_checkout_url():
+    try:
+        lookup_key = current_app.config.get('BATCHBOT_REFILL_LOOKUP_KEY')
+        if not lookup_key:
+            return None
+        if not current_user or not getattr(current_user, 'email', None):
+            return None
+        from app.services.billing_service import BillingService
+        success_url = url_for('app_routes.dashboard', _external=True) + "?refill=success"
+        cancel_url = url_for('app_routes.dashboard', _external=True) + "?refill=cancel"
+        metadata = {
+            'organization_id': str(current_user.organization_id or ''),
+            'user_id': str(current_user.id),
+            'batchbot_refill_lookup_key': lookup_key,
+        }
+        session = BillingService.create_one_time_checkout_by_lookup_key(
+            lookup_key=lookup_key,
+            customer_email=current_user.email,
+            success_url=success_url,
+            cancel_url=cancel_url,
+            metadata=metadata,
+        )
+        return getattr(session, 'url', None)
+    except Exception as exc:
+        current_app.logger.warning("Unable to generate BatchBot refill checkout: %s", exc)
+        return None

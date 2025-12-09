@@ -77,6 +77,13 @@ function showAlert(type, message) {
 document.addEventListener('DOMContentLoaded', function() {
   // Debug navigation clicks
   console.log('Page loaded:', window.location.pathname);
+  
+  // Check if suggestions component is available
+  if (typeof window.attachMergedInventoryGlobalTypeahead === 'function') {
+    console.log('🔧 MAIN: Suggestions component loaded successfully');
+  } else {
+    console.warn('🔧 MAIN: Suggestions component not available');
+  }
 
   // Track permissions navigation attempts
   document.addEventListener('click', function(e) {
@@ -124,18 +131,77 @@ document.addEventListener('DOMContentLoaded', function() {
       ...select2Config,
       placeholder: 'Type ingredient name...',
       tags: true, // allow custom entries
-      ajax: {
-        url: '/api/ingredients/global-items/search',
-        dataType: 'json',
-        delay: 150,
-        data: function (params) {
-          return { q: params.term, type: 'ingredient' };
+        ajax: {
+          url: '/api/ingredients/global-items/search',
+          dataType: 'json',
+          delay: 150,
+          data: function (params) {
+            return { q: params.term, type: 'ingredient', group: 'ingredient' };
+          },
+          processResults: function (data) {
+            var expanded = [];
+            (data.results || []).forEach(function(item){
+                if (item && Array.isArray(item.forms) && item.forms.length){
+                  var baseIngredientName = (item.ingredient && item.ingredient.name) || item.ingredient_name || null;
+                  item.forms.forEach(function(form){
+                    var physical = form.physical_form || {};
+                    var display = form.display_name || form.text || form.name || '';
+                    if (!display && baseIngredientName && (physical && physical.name)){
+                      display = baseIngredientName + ' (' + physical.name + ')';
+                    }
+                    if (!display){
+                      display = item.display_name || item.text || item.name || '';
+                    }
+                    expanded.push({
+                      id: form.id,
+                      text: display,
+                      name: display,
+                      display_name: display,
+                      raw_name: form.raw_name || form.name || form.text || item.raw_name || item.name || '',
+                      default_unit: form.default_unit || form.unit || item.default_unit || item.unit || null,
+                      unit: form.default_unit || form.unit || item.default_unit || item.unit || null,
+                      density: typeof form.density === 'number' ? form.density : item.density,
+                      ingredient_id: form.ingredient_id || (item.ingredient && item.ingredient.id) || item.ingredient_id || null,
+                      ingredient_name: form.ingredient_name || baseIngredientName,
+                      physical_form_id: form.physical_form_id || (physical && physical.id) || null,
+                      physical_form_name: form.physical_form_name || (physical && physical.name) || null,
+                      default_is_perishable: form.default_is_perishable,
+                      recommended_shelf_life_days: form.recommended_shelf_life_days,
+                      recommended_fragrance_load_pct: form.recommended_fragrance_load_pct || item.recommended_fragrance_load_pct,
+                      aliases: form.aliases || item.aliases || [],
+                      certifications: form.certifications || item.certifications || [],
+                    });
+                  });
+                } else if (item) {
+                  var itemDisplay = item.display_name || item.text || item.name || '';
+                  if (!itemDisplay && item.ingredient_name && item.physical_form_name){
+                    itemDisplay = item.ingredient_name + ' (' + item.physical_form_name + ')';
+                  }
+                  expanded.push({
+                    id: item.id,
+                    text: itemDisplay,
+                    name: itemDisplay,
+                    display_name: itemDisplay,
+                    raw_name: item.raw_name || item.name || item.text || '',
+                    default_unit: item.default_unit || item.unit || null,
+                    unit: item.default_unit || item.unit || null,
+                    density: item.density,
+                    ingredient_id: (item.ingredient && item.ingredient.id) || item.ingredient_id || null,
+                    ingredient_name: (item.ingredient && item.ingredient.name) || item.ingredient_name || null,
+                    physical_form_id: (item.physical_form && item.physical_form.id) || item.physical_form_id || null,
+                    physical_form_name: (item.physical_form && item.physical_form.name) || item.physical_form_name || null,
+                    default_is_perishable: item.default_is_perishable,
+                    recommended_shelf_life_days: item.recommended_shelf_life_days,
+                    recommended_fragrance_load_pct: item.recommended_fragrance_load_pct,
+                    aliases: item.aliases || [],
+                    certifications: item.certifications || [],
+                  });
+                }
+            });
+            return { results: expanded };
+          },
+          cache: true
         },
-        processResults: function (data) {
-          return data;
-        },
-        cache: true
-      },
       minimumInputLength: 1,
       createTag: function (params) {
         const term = $.trim(params.term);

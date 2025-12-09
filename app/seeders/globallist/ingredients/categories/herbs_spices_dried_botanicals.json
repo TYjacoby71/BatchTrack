@@ -4,7 +4,7 @@
   "description": "Solid particles used for mechanical exfoliation in scrubs, soaps, and polishes.",
   "attributes": [
     "particle_size_microns",
-    "recommended_usage_rate",
+
     "recommended_shelf_life_days",
     "certifications",
     "is_active_ingredient"
@@ -18,12 +18,17 @@
       "density": 0.7,
       "default_unit": "gram",
       "particle_size_microns": "200-500",
-      "recommended_usage_rate": "1-10% in body scrubs and soaps",
+      
       "recommended_shelf_life_days": 730,
       "certifications": [
         "Cosmetic Grade"
       ],
-      "is_active_ingredient": false
+      "is_active_ingredient": false,
+      "ingredient": {
+        "name": "Walnut Shell Powder",
+        "slug": "walnut-shell-powder"
+      },
+      "physical_form": "Powder"
     },
     {
       "name": "Apricot Kernel Meal",
@@ -33,12 +38,17 @@
       "density": 0.68,
       "default_unit": "gram",
       "particle_size_microns": "300-600",
-      "recommended_usage_rate": "2-8% in body scrubs",
+      
       "recommended_shelf_life_days": 540,
       "certifications": [
         "Kosher"
       ],
-      "is_active_ingredient": false
+      "is_active_ingredient": false,
+      "ingredient": {
+        "name": "Apricot Kernel Meal",
+        "slug": "apricot-kernel-meal"
+      },
+      "physical_form": "Cut & Sifted"
     },
     {
       "name": "Jojoba Esters (Eco Beads)",
@@ -48,12 +58,17 @@
       "density": 0.9,
       "default_unit": "gram",
       "particle_size_microns": "250-500",
-      "recommended_usage_rate": "1-5% in facial scrubs",
+      
       "recommended_shelf_life_days": 1095,
       "certifications": [
         "Vegan"
       ],
-      "is_active_ingredient": false
+      "is_active_ingredient": false,
+      "ingredient": {
+        "name": "Jojoba Esters",
+        "slug": "jojoba-esters"
+      },
+      "physical_form": "Eco Beads"
     },
     {
       "name": "Pumice Powder (Fine)",
@@ -63,12 +78,17 @@
       "density": 0.85,
       "default_unit": "gram",
       "particle_size_microns": "120-220",
-      "recommended_usage_rate": "1-5% in heavy-duty hand scrubs",
+      
       "recommended_shelf_life_days": 1825,
       "certifications": [
         "Natural"
       ],
-      "is_active_ingredient": false
+      "is_active_ingredient": false,
+      "ingredient": {
+        "name": "Pumice Powder",
+        "slug": "pumice-powder"
+      },
+      "physical_form": "Fine"
     },
     {
       "name": "Luffa Fiber (Milled)",
@@ -78,12 +98,17 @@
       "density": 0.4,
       "default_unit": "gram",
       "particle_size_microns": "800-1200",
-      "recommended_usage_rate": "1-4% in bar soaps or solid scrubs",
+      
       "recommended_shelf_life_days": 365,
       "certifications": [
         "Sustainably Grown"
       ],
-      "is_active_ingredient": false
+      "is_active_ingredient": false,
+      "ingredient": {
+        "name": "Luffa Fiber",
+        "slug": "luffa-fiber"
+      },
+      "physical_form": "Milled"
     }
   ]
 }

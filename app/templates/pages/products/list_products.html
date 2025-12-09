@@ -1,8 +1,18 @@
 {% extends 'layout.html' %}
 {% block content %}
 <div>
+  {% set variant_namespace = namespace(options=[]) %}
+  {% if products %}
+    {% for product in products %}
+      {% for variation in product.variations %}
+        {% if variation.name and variation.name not in variant_namespace.options %}
+          {% set variant_namespace.options = variant_namespace.options + [variation.name] %}
+        {% endif %}
+      {% endfor %}
+    {% endfor %}
+  {% endif %}
   <div class="d-flex justify-content-between align-items-center mb-4">
-    <h2>Products</h2>
+    <h2>Product Dashboard</h2>
     <div class="d-flex gap-2 align-items-center">
       <a href="{{ url_for('products.new_product') }}" class="btn btn-primary">+ New Product</a>
       <button class="btn btn-outline-secondary" type="button" data-bs-toggle="collapse" data-bs-target="#filterSection">
@@ -27,19 +37,137 @@
             <button class="btn {% if current_sort == 'stock' %}btn-warning{% else %}btn-outline-warning{% endif %} btn-sm" onclick="sortProducts('stock')">Low Stock</button>
           </div>
         </div>
-        <div class="col-md-6">
+        <div class="col-md-4">
           <label class="form-label">Search Products:</label>
           <input type="text" id="productFilter" class="form-control" placeholder="Search products...">
+        </div>
+        <div class="col-md-4">
+          <label class="form-label">Filter by Stock Status:</label>
+          <select id="stockFilter" class="form-select">
+            <option value="">All Stock Levels</option>
+            <option value="in-stock">In Stock Only</option>
+            <option value="out-of-stock">Out of Stock Only</option>
+            <option value="low-stock">Low Stock Only</option>
+          </select>
+        </div>
+        <div class="col-md-4">
+          <label class="form-label">Filter by Variant:</label>
+          <select id="variantFilter" class="form-select">
+            <option value="">All Variants</option>
+            {% set all_variants = [] %}
+            {% for product in products %}
+              {% for inv in product.inventory %}
+                {% if inv.variant not in all_variants %}
+                  {% set _ = all_variants.append(inv.variant) %}
+                {% endif %}
+              {% endfor %}
+            {% endfor %}
+            {% for variant in all_variants|sort %}
+              <option value="{{ variant }}">{{ variant }}</option>
+            {% endfor %}
+          </select>
+        </div>
+      </div>
+      <div class="row g-3 mt-2">
+        <div class="col-md-3">
+          <label class="form-label">Stock Status:</label>
+          <select id="stockFilter" class="form-select">
+            <option value="">All stock statuses</option>
+            <option value="in-stock">In Stock</option>
+            <option value="out-of-stock">Out of Stock</option>
+          </select>
+        </div>
+        <div class="col-md-3">
+          <label class="form-label">Variant:</label>
+          <select id="variantFilter" class="form-select">
+            <option value="">All variants</option>
+            {% for variant_name in variant_namespace.options|sort %}
+              <option value="{{ variant_name }}">{{ variant_name }}</option>
+            {% endfor %}
+          </select>
         </div>
       </div>
     </div>
   </div>
 
   {% if products %}
+    <!-- Aggregated Product Summary Section -->
+    {% set ns_all = namespace(total_qty=0, total_cost=0, total_value=0, total_bulk=0, total_packaged=0, variant_count=0, product_count=0, sku_count=0) %}
+    {% for product in products %}
+      {% set ns_all.product_count = ns_all.product_count + 1 %}
+      {% set ns_all.variant_count = ns_all.variant_count + product.variant_count %}
+      {% for inv in product.inventory %}
+        {% set ns_all.sku_count = ns_all.sku_count + 1 %}
+        {% if inv.quantity and inv.quantity > 0 %}
+          {% set ns_all.total_qty = ns_all.total_qty + inv.quantity %}
+          {% if inv.retail_price %}
+            {% set ns_all.total_value = ns_all.total_value + (inv.retail_price * inv.quantity) %}
+          {% endif %}
+          {% set size_label = inv.size_label if inv.size_label else 'Bulk' %}
+          {% if size_label == 'Bulk' or not inv.size_label %}
+            {% set ns_all.total_bulk = ns_all.total_bulk + inv.quantity %}
+          {% else %}
+            {% set ns_all.total_packaged = ns_all.total_packaged + inv.quantity %}
+          {% endif %}
+        {% endif %}
+      {% endfor %}
+    {% endfor %}
+
+    <div class="card mb-4">
+      <div class="card-header d-flex justify-content-between align-items-center">
+        <h5 class="mb-0">Portfolio Summary</h5>
+        <span class="text-muted small">{{ ns_all.product_count }} Products • {{ ns_all.variant_count }} Variants • {{ ns_all.sku_count }} SKUs</span>
+      </div>
+      <div class="card-body">
+          <div class="row g-3 mt-2">
+            <div class="col-md-6 col-lg-3">
+              <div class="card bg-light h-100">
+                <div class="card-body text-center">
+                  <div class="fs-4 fw-bold text-dark">{{ ns_all.product_count }}</div>
+                  <div class="text-muted small">Total Products</div>
+                  <div class="text-muted small">In Portfolio</div>
+                </div>
+              </div>
+            </div>
+            <div class="col-md-6 col-lg-3">
+              <div class="card bg-light h-100">
+                <div class="card-body text-center">
+                  <div class="fs-4 fw-bold text-dark">{{ ns_all.variant_count }}</div>
+                  <div class="text-muted small">Total Variants</div>
+                  <div class="text-muted small">All Variations</div>
+                </div>
+              </div>
+            </div>
+            <div class="col-md-6 col-lg-3">
+              <div class="card bg-light h-100">
+                <div class="card-body text-center">
+                  <div class="fs-4 fw-bold text-dark">{{ ns_all.sku_count }}</div>
+                  <div class="text-muted small">Total SKUs</div>
+                  <div class="text-muted small">Unique Items</div>
+                </div>
+              </div>
+            </div>
+            <div class="col-md-6 col-lg-3">
+              <div class="card bg-light h-100">
+                <div class="card-body text-center">
+                  <div class="fs-4 fw-bold text-dark">${{ "%.2f"|format(ns_all.total_value) }}</div>
+                  <div class="text-muted small">Total Retail Value</div>
+                  <div class="text-muted small">Current Inventory</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
     <!-- Products Card View -->
     <div class="row" id="productsContainer">
       {% for product in products %}
-      <div class="col-md-6 col-lg-4 mb-4">
+      {% set product_total_quantity = (product.total_bulk + product.total_packaged) %}
+      <div class="col-md-6 col-lg-4 mb-4 product-card"
+           data-product-name="{{ product.name|lower }}"
+           data-stock-status="{{ 'out-of-stock' if product_total_quantity == 0 else 'in-stock' }}">
         <div class="card h-100">
           <div class="card-header d-flex justify-content-between align-items-center">
             <div class="d-flex align-items-center">
@@ -127,8 +255,7 @@
                 <small class="text-muted">Last updated: {{ product.last_updated | user_date if product.last_updated else 'N/A' }}</small>
               </div>
               <div>
-                {% set total_quantity = (product.total_bulk + product.total_packaged) %}
-                {% if total_quantity == 0 %}
+                {% if product_total_quantity == 0 %}
                   <span class="badge bg-danger">Out of Stock</span>
                 {% else %}
                   <span class="badge bg-success">In Stock</span>
@@ -138,7 +265,7 @@
           </div>
           <div class="card-footer">
 
-            <a href="{{ url_for('products.view_product', product_id=product.id) }}" 
+            <a href="{{ url_for('products.view_product', product_id=product.id) }}"
                class="btn btn-outline-primary btn-sm w-100">
               View Details
             </a>
@@ -167,7 +294,10 @@
             </thead>
             <tbody>
               {% for product in products %}
-              <tr class="product-row">
+              {% set product_total_quantity = (product.total_bulk + product.total_packaged) %}
+              <tr class="product-row"
+                  data-product-name="{{ product.name|lower }}"
+                  data-stock-status="{{ 'out-of-stock' if product_total_quantity == 0 else 'in-stock' }}">
                 <td>
                   <a href="/products/{{ product.id }}" class="text-decoration-none">
                     <strong>{{ product.name }}</strong>
@@ -189,8 +319,7 @@
                   {% endif %}
                 </td>
                 <td>
-                  {% set total_quantity = (product.total_bulk + product.total_packaged) %}
-                  {% if total_quantity == 0 %}
+                  {% if product_total_quantity == 0 %}
                     <span class="badge bg-danger">Out of Stock</span>
                   {% else %}
                     <span class="badge bg-success">In Stock</span>
@@ -332,6 +461,8 @@
 </style>
 
 <script>
+let currentProductView = 'card';
+
 // Global showView function
 function showView(viewType) {
   const productsContainer = document.getElementById('productsContainer');
@@ -339,59 +470,187 @@ function showView(viewType) {
   const cardViewBtn = document.getElementById('cardViewBtn');
   const tableViewBtn = document.getElementById('tableViewBtn');
 
+  if (!productsContainer || !productsTableContainer) {
+    currentProductView = viewType === 'cardView' ? 'card' : 'table';
+    return;
+  }
+
   if (viewType === 'cardView') {
+    currentProductView = 'card';
     productsContainer.style.display = 'flex';
     productsContainer.style.flexWrap = 'wrap';
     productsTableContainer.style.display = 'none';
     cardViewBtn.className = 'btn btn-secondary btn-sm';
     tableViewBtn.className = 'btn btn-outline-secondary btn-sm';
   } else {
+    currentProductView = 'table';
     productsContainer.style.display = 'none';
     productsTableContainer.style.display = 'block';
     cardViewBtn.className = 'btn btn-outline-secondary btn-sm';
     tableViewBtn.className = 'btn btn-secondary btn-sm';
   }
+
+  if (typeof window.filterProducts === 'function') {
+    window.filterProducts();
+  }
 }
 
 // Sort products function
 function sortProducts(sortType) {
-  // Update active button state
-  document.querySelectorAll('.btn-group button').forEach(btn => {
-    if (btn.onclick && btn.onclick.toString().includes('sortProducts')) {
-      btn.className = 'btn btn-outline-secondary btn-sm';
-    }
-  });
-  event.target.className = 'btn btn-secondary btn-sm';
-
-  // Redirect to products page with sort parameter
   const currentUrl = new URL(window.location);
   currentUrl.searchParams.set('sort', sortType);
   window.location.href = currentUrl.toString();
 }
 
 document.addEventListener('DOMContentLoaded', function() {
-  // Product search functionality
   const productFilter = document.getElementById('productFilter');
-  if (productFilter) {
-    productFilter.addEventListener('input', function() {
-      const searchTerm = this.value.toLowerCase();
-      const isCardView = document.getElementById('productsContainer').style.display !== 'none';
+  const stockFilter = document.getElementById('stockFilter');
+  const variantFilter = document.getElementById('variantFilter');
+  const productsContainer = document.getElementById('productsContainer');
+  const productsTableContainer = document.getElementById('productsTableContainer');
+  const summaryTable = document.getElementById('summaryDetails');
 
-      if (isCardView) {
-        const cards = document.querySelectorAll('#productsContainer .col-md-6');
-        cards.forEach(card => {
-          const productName = card.querySelector('.card-header h6').textContent.toLowerCase();
-          card.style.display = productName.includes(searchTerm) ? 'block' : 'none';
-        });
-      } else {
-        const rows = document.querySelectorAll('#productsTableContainer tbody .product-row');
-        rows.forEach(row => {
-          const productName = row.querySelector('td a strong').textContent.toLowerCase();
-          row.style.display = productName.includes(searchTerm) ? '' : 'none';
-        });
-      }
+  const summaryMetricElements = {
+    bulk: document.querySelector('[data-summary-metric="bulk"]'),
+    packaged: document.querySelector('[data-summary-metric="packaged"]'),
+    products: document.querySelector('[data-summary-metric="products"]'),
+    variants: document.querySelector('[data-summary-metric="variants"]')
+  };
+  const summaryMetricInitials = {};
+  Object.entries(summaryMetricElements).forEach(([key, el]) => {
+    if (el) {
+      summaryMetricInitials[key] = el.textContent;
+    }
+  });
+
+  function toggleDetailRow(row, shouldShow) {
+    const detailRow = row?.nextElementSibling;
+    if (!detailRow || !detailRow.classList.contains('collapse')) return;
+
+    if (!shouldShow) {
+      detailRow.classList.remove('show');
+      detailRow.dataset.searchHidden = 'true';
+      detailRow.style.display = 'none';
+    } else if (detailRow.dataset.searchHidden) {
+      detailRow.style.removeProperty('display');
+      delete detailRow.dataset.searchHidden;
+    }
+  }
+
+  function filterProductCards(searchTerm, stockStatus) {
+    if (!productsContainer) return;
+    const cards = productsContainer.querySelectorAll('.product-card');
+    cards.forEach(card => {
+      const productName = card.dataset.productName || '';
+      const matchesSearch = !searchTerm || productName.includes(searchTerm);
+      const matchesStock = !stockStatus || (card.dataset.stockStatus === stockStatus);
+      card.style.display = matchesSearch && matchesStock ? '' : 'none';
     });
   }
+
+  function filterProductRows(searchTerm, stockStatus) {
+    if (!productsTableContainer) return;
+    const rows = productsTableContainer.querySelectorAll('.product-row');
+    rows.forEach(row => {
+      const productName = row.dataset.productName || '';
+      const matchesSearch = !searchTerm || productName.includes(searchTerm);
+      const matchesStock = !stockStatus || (row.dataset.stockStatus === stockStatus);
+      const shouldShow = matchesSearch && matchesStock;
+      row.style.display = shouldShow ? '' : 'none';
+      toggleDetailRow(row, shouldShow);
+    });
+  }
+
+  function filterSummaryRows(searchTerm, stockStatus, variantName) {
+    if (!summaryTable) return;
+    const rows = summaryTable.querySelectorAll('tbody tr');
+    rows.forEach(row => {
+      const productCell = row.querySelector('[data-summary-product]') || row.querySelector('td:first-child');
+      const variantCell = row.querySelector('[data-summary-variant]') || row.querySelector('td:nth-child(2)');
+      const sizeCell = row.querySelector('[data-summary-size]') || row.querySelector('td:nth-child(3)');
+      const stockBadge = row.querySelector('.badge');
+
+      const productName = (productCell?.textContent || '').trim().toLowerCase();
+      const rowVariant = (variantCell?.textContent || '').trim();
+      const matchesSearch = !searchTerm || productName.includes(searchTerm);
+      const matchesVariant = !variantName || rowVariant === variantName;
+
+      let matchesStock = !stockStatus;
+      if (stockStatus && stockBadge) {
+        const stockText = stockBadge.textContent;
+        if (stockStatus === 'in-stock') {
+          matchesStock = stockText.includes('In Stock');
+        } else if (stockStatus === 'out-of-stock') {
+          matchesStock = stockText.includes('Out of Stock');
+        }
+      }
+
+      row.style.display = matchesSearch && matchesVariant && matchesStock ? '' : 'none';
+    });
+
+    updateSummaryCounters(Boolean(searchTerm || stockStatus || variantName));
+  }
+
+  function updateSummaryCounters(hasActiveFilters) {
+    if (!summaryTable) return;
+
+    if (!hasActiveFilters) {
+      Object.entries(summaryMetricElements).forEach(([key, el]) => {
+        if (el && summaryMetricInitials[key] !== undefined) {
+          el.textContent = summaryMetricInitials[key];
+        }
+      });
+      return;
+    }
+
+    const visibleRows = Array.from(summaryTable.querySelectorAll('tbody tr')).filter(row => row.style.display !== 'none');
+    let totalBulk = 0;
+    let totalPackaged = 0;
+    const visibleProducts = new Set();
+    const visibleVariants = new Set();
+
+    visibleRows.forEach(row => {
+      const productCell = row.querySelector('[data-summary-product]') || row.querySelector('td:first-child');
+      const variantCell = row.querySelector('[data-summary-variant]') || row.querySelector('td:nth-child(2)');
+      const sizeCell = row.querySelector('[data-summary-size]') || row.querySelector('td:nth-child(3)');
+      const quantityCell = row.querySelector('[data-summary-quantity]') || row.querySelector('td:nth-child(5)');
+      const quantityText = quantityCell ? (quantityCell.querySelector('strong')?.textContent || quantityCell.textContent) : '0';
+
+      const productName = (productCell?.textContent || '').trim();
+      const variantName = (variantCell?.textContent || '').trim();
+      const sizeLabel = (sizeCell?.textContent || '').trim();
+      const quantity = parseFloat(quantityText) || 0;
+
+      if (productName) visibleProducts.add(productName);
+      if (productName && variantName) visibleVariants.add(`${productName}-${variantName}`);
+      if (sizeLabel.toLowerCase() === 'bulk') {
+        totalBulk += quantity;
+      } else {
+        totalPackaged += quantity;
+      }
+    });
+
+    if (summaryMetricElements.bulk) summaryMetricElements.bulk.textContent = totalBulk.toFixed(2);
+    if (summaryMetricElements.packaged) summaryMetricElements.packaged.textContent = Math.round(totalPackaged).toString();
+    if (summaryMetricElements.products) summaryMetricElements.products.textContent = visibleProducts.size.toString();
+    if (summaryMetricElements.variants) summaryMetricElements.variants.textContent = visibleVariants.size.toString();
+  }
+
+  function applyFilters() {
+    const searchTerm = (productFilter?.value || '').trim().toLowerCase();
+    const stockStatus = stockFilter?.value || '';
+    const variantName = variantFilter?.value || '';
+
+    filterProductCards(searchTerm, stockStatus);
+    filterProductRows(searchTerm, stockStatus);
+    filterSummaryRows(searchTerm, stockStatus, variantName);
+  }
+
+  window.filterProducts = applyFilters;
+
+  productFilter?.addEventListener('input', applyFilters);
+  stockFilter?.addEventListener('change', applyFilters);
+  variantFilter?.addEventListener('change', applyFilters);
 
   // Variation toggle functionality
   document.querySelectorAll('[data-bs-toggle="collapse"]').forEach(button => {
@@ -399,14 +658,16 @@ document.addEventListener('DOMContentLoaded', function() {
       const icon = this.querySelector('i');
       setTimeout(() => {
         const target = document.querySelector(this.dataset.bsTarget);
-        if (target.classList.contains('show')) {
-          icon.classList.replace('fa-chevron-down', 'fa-chevron-up');
+        if (target?.classList.contains('show')) {
+          icon?.classList.replace('fa-chevron-down', 'fa-chevron-up');
         } else {
-          icon.classList.replace('fa-chevron-up', 'fa-chevron-down');
+          icon?.classList.replace('fa-chevron-up', 'fa-chevron-down');
         }
       }, 100);
     });
   });
+
+  applyFilters();
 });
 
 // Edit product function

@@ -232,9 +232,9 @@ def view_variant(product_id, variant_name):
                          get_global_unit_list=get_global_unit_list,
                          product_breadcrumb_id=product_breadcrumb_id,
                          breadcrumb_items=[
-                             {'label': 'Products', 'url': url_for('products.list_products')},
-                             {'label': product.name, 'url': url_for('products.view_product', product_id=product.id)},
-                             {'label': variant.name}
+                             {'label': 'Product Dashboard', 'url': url_for('products.list_products')},
+                             {'label': product.name + ' Overview', 'url': url_for('products.view_product', product_id=product.id)},
+                             {'label': variant.name + ' Sizes'}
                          ])
 
 @product_variants_bp.route('/<int:product_id>/variant/<variant_name>/skus', methods=['POST'])

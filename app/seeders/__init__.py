@@ -16,5 +16,5 @@ __all__ = [
     'seed_subscription_tiers',
     'seed_subscriptions',
     'seed_users',
-    'seed_test_data'
+    'seed_test_data',
 ]

@@ -8,7 +8,7 @@
       "default_unit": "gram",
       "moisture_content_percent": 5,
       "protein_content_pct": 21,
-      "recommended_usage_rate": "Use as inclusions up to 30% of batch weight",
+      
       "recommended_shelf_life_days": 365,
       "certifications": [
         "Non-GMO Project Verified"
@@ -17,14 +17,19 @@
       "aliases": [
         "whole almonds"
       ],
-      "is_active_ingredient": false
+      "is_active_ingredient": false,
+      "ingredient": {
+        "name": "Almonds",
+        "slug": "almonds"
+      },
+      "physical_form": "Whole"
     },
     {
       "name": "Walnuts (Chopped)",
       "default_unit": "gram",
       "moisture_content_percent": 4,
       "protein_content_pct": 15,
-      "recommended_usage_rate": "Use 10-25% in bakery and confectionery applications",
+      
       "recommended_shelf_life_days": 180,
       "certifications": [
         "Kosher"
@@ -33,14 +38,19 @@
       "aliases": [
         "english walnuts"
       ],
-      "is_active_ingredient": false
+      "is_active_ingredient": false,
+      "ingredient": {
+        "name": "Walnuts",
+        "slug": "walnuts"
+      },
+      "physical_form": "Chopped"
     },
     {
       "name": "Pumpkin Seeds (Hulled)",
       "default_unit": "gram",
       "moisture_content_percent": 6,
       "protein_content_pct": 30,
-      "recommended_usage_rate": "Sprinkle 5-15% as topping or inclusion",
+      
       "recommended_shelf_life_days": 365,
       "certifications": [
         "Organic"
@@ -49,14 +59,19 @@
       "aliases": [
         "pepitas"
       ],
-      "is_active_ingredient": false
+      "is_active_ingredient": false,
+      "ingredient": {
+        "name": "Pumpkin Seeds",
+        "slug": "pumpkin-seeds"
+      },
+      "physical_form": "Hulled"
     },
     {
       "name": "Sunflower Seeds (Hulled)",
       "default_unit": "gram",
       "moisture_content_percent": 6,
       "protein_content_pct": 20,
-      "recommended_usage_rate": "Use up to 15% in granolas and bars",
+      
       "recommended_shelf_life_days": 270,
       "certifications": [
         "Non-GMO"
@@ -65,14 +80,19 @@
       "aliases": [
         "hulled sunflower kernels"
       ],
-      "is_active_ingredient": false
+      "is_active_ingredient": false,
+      "ingredient": {
+        "name": "Sunflower Seeds",
+        "slug": "sunflower-seeds"
+      },
+      "physical_form": "Hulled"
     },
     {
       "name": "Dried Cranberries",
       "default_unit": "gram",
       "moisture_content_percent": 14,
       "protein_content_pct": 0.5,
-      "recommended_usage_rate": "Use 10-25% in baked goods or trail mixes",
+      
       "recommended_shelf_life_days": 365,
       "certifications": [
         "Kosher"
@@ -81,13 +101,18 @@
       "aliases": [
         "sweetened dried cranberries"
       ],
-      "is_active_ingredient": false
+      "is_active_ingredient": false,
+      "ingredient": {
+        "name": "Dried Cranberries",
+        "slug": "dried-cranberries"
+      },
+      "physical_form": "Pieces"
     }
   ],
   "attributes": [
     "moisture_content_percent",
     "protein_content_pct",
-    "recommended_usage_rate",
+
     "recommended_shelf_life_days",
     "certifications",
     "is_active_ingredient"

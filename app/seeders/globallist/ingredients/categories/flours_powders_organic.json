@@ -1,6 +1,6 @@
 {
   "category_name": "Flours (Grain & Nut)",
-  "default_density": 0.60,
+  "default_density": 0.6,
   "description": "Ground grains, nuts, and seeds used as base ingredients in baking and cooking.",
   "items": [
     {
@@ -8,7 +8,7 @@
       "default_unit": "gram",
       "moisture_content_percent": 14,
       "protein_content_pct": 10,
-      "recommended_usage_rate": "Standard baking substitution 100%",
+      
       "recommended_shelf_life_days": 240,
       "certifications": [
         "Organic"
@@ -19,14 +19,19 @@
         "white flour",
         "wheat flour"
       ],
-      "is_active_ingredient": false
+      "is_active_ingredient": false,
+      "ingredient": {
+        "name": "All-Purpose Flour",
+        "slug": "all-purpose-flour"
+      },
+      "physical_form": "Powder"
     },
     {
       "name": "Bread Flour",
       "default_unit": "gram",
       "moisture_content_percent": 14,
       "protein_content_pct": 13,
-      "recommended_usage_rate": "Use 100% for yeast breads",
+      
       "recommended_shelf_life_days": 240,
       "certifications": [
         "Organic"
@@ -36,14 +41,19 @@
         "high gluten flour",
         "strong flour"
       ],
-      "is_active_ingredient": false
+      "is_active_ingredient": false,
+      "ingredient": {
+        "name": "Bread Flour",
+        "slug": "bread-flour"
+      },
+      "physical_form": "Powder"
     },
     {
       "name": "Whole Wheat Flour",
       "default_unit": "gram",
       "moisture_content_percent": 14,
       "protein_content_pct": 14,
-      "recommended_usage_rate": "Use 50-100% of total flour weight",
+      
       "recommended_shelf_life_days": 90,
       "certifications": [
         "Organic"
@@ -53,14 +63,19 @@
         "wholemeal flour",
         "graham flour"
       ],
-      "is_active_ingredient": false
+      "is_active_ingredient": false,
+      "ingredient": {
+        "name": "Whole Wheat Flour",
+        "slug": "whole-wheat-flour"
+      },
+      "physical_form": "Whole"
     },
     {
       "name": "Almond Flour",
       "default_unit": "gram",
       "moisture_content_percent": 5,
       "protein_content_pct": 21,
-      "recommended_usage_rate": "Replace 25-30% of wheat flour in recipes",
+      
       "recommended_shelf_life_days": 180,
       "certifications": [
         "Gluten-Free"
@@ -70,14 +85,19 @@
         "almond meal",
         "ground almonds"
       ],
-      "is_active_ingredient": false
+      "is_active_ingredient": false,
+      "ingredient": {
+        "name": "Almond Flour",
+        "slug": "almond-flour"
+      },
+      "physical_form": "Powder"
     },
     {
       "name": "Coconut Flour",
       "default_unit": "gram",
       "moisture_content_percent": 8,
       "protein_content_pct": 18,
-      "recommended_usage_rate": "Use 15-25% with additional liquids",
+      
       "recommended_shelf_life_days": 365,
       "certifications": [
         "Gluten-Free"
@@ -86,14 +106,19 @@
       "aliases": [
         "ground coconut"
       ],
-      "is_active_ingredient": false
+      "is_active_ingredient": false,
+      "ingredient": {
+        "name": "Coconut Flour",
+        "slug": "coconut-flour"
+      },
+      "physical_form": "Powder"
     },
     {
       "name": "Oat Flour",
       "default_unit": "gram",
       "moisture_content_percent": 11,
       "protein_content_pct": 17,
-      "recommended_usage_rate": "Substitute up to 30% of flour in baking",
+      
       "recommended_shelf_life_days": 180,
       "certifications": [
         "Gluten-Free Option"
@@ -102,14 +127,19 @@
       "aliases": [
         "ground oats"
       ],
-      "is_active_ingredient": false
+      "is_active_ingredient": false,
+      "ingredient": {
+        "name": "Oat Flour",
+        "slug": "oat-flour"
+      },
+      "physical_form": "Powder"
     },
     {
       "name": "Chickpea Flour",
       "default_unit": "gram",
       "moisture_content_percent": 10,
       "protein_content_pct": 22,
-      "recommended_usage_rate": "Use 25-100% in savory applications",
+      
       "recommended_shelf_life_days": 180,
       "certifications": [
         "Non-GMO"
@@ -119,14 +149,19 @@
         "gram flour",
         "besan"
       ],
-      "is_active_ingredient": false
+      "is_active_ingredient": false,
+      "ingredient": {
+        "name": "Chickpea Flour",
+        "slug": "chickpea-flour"
+      },
+      "physical_form": "Powder"
     },
     {
       "name": "Matcha Powder",
       "default_unit": "gram",
       "moisture_content_percent": 6,
       "protein_content_pct": 30,
-      "recommended_usage_rate": "0.5-2% in beverages and confections",
+      
       "recommended_shelf_life_days": 365,
       "certifications": [
         "JAS Organic"
@@ -135,13 +170,18 @@
       "aliases": [
         "green tea powder"
       ],
-      "is_active_ingredient": false
+      "is_active_ingredient": false,
+      "ingredient": {
+        "name": "Matcha Powder",
+        "slug": "matcha-powder"
+      },
+      "physical_form": "Powder"
     }
   ],
   "attributes": [
     "moisture_content_percent",
     "protein_content_pct",
-    "recommended_usage_rate",
+
     "recommended_shelf_life_days",
     "certifications",
     "is_active_ingredient"

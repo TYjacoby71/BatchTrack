@@ -12,6 +12,7 @@ from app.utils.cache_manager import app_cache
 from app.utils.unit_utils import get_global_unit_list
 
 from .utils.json_store import read_json_file
+from .utils.settings import is_feature_enabled
 from .utils.permissions import (
     has_permission,
     has_role,
@@ -24,6 +25,26 @@ from .utils.timezone_utils import TimezoneUtils
 _REVIEWS_PATH = Path("data/reviews.json")
 _SPOTLIGHTS_PATH = Path("data/spotlights.json")
 _SETTINGS_PATH = Path("settings.json")
+
+
+def _serialize_ingredient_category(category) -> Dict[str, Any]:
+    """Return a cache-safe representation of IngredientCategory."""
+    if isinstance(category, dict):
+        return category
+    return {
+        "id": getattr(category, "id", None),
+        "name": getattr(category, "name", None),
+        "organization_id": getattr(category, "organization_id", None),
+        "is_active": getattr(category, "is_active", None),
+        "is_global_category": getattr(category, "is_global_category", None),
+        "description": getattr(category, "description", None),
+    }
+
+
+def _normalize_cached_categories(raw) -> list[Dict[str, Any]]:
+    if not raw:
+        return []
+    return [_serialize_ingredient_category(cat) for cat in raw]
 
 
 def register_template_context(app: Flask) -> None:
@@ -49,9 +70,11 @@ def register_template_context(app: Flask) -> None:
                 units = []
             app_cache.set(units_cache_key, units, ttl=3600)
 
-        if categories is None:
+        # Older cache entries may still contain ORM rows; normalize aggressively.
+        categories = _normalize_cached_categories(categories)
+        if not categories:
             try:
-                categories = (
+                raw_categories = (
                     IngredientCategory.query.filter_by(
                         organization_id=None,
                         is_active=True,
@@ -61,7 +84,8 @@ def register_template_context(app: Flask) -> None:
                     .all()
                 )
             except Exception:
-                categories = []
+                raw_categories = []
+            categories = _normalize_cached_categories(raw_categories)
             app_cache.set("template:ingredient_categories", categories, ttl=3600)
 
         return {"units": units, "global_units": units, "categories": categories}
@@ -104,6 +128,7 @@ def register_template_context(app: Flask) -> None:
             "is_developer": is_developer,
             "get_reservation_summary": get_reservation_summary,
             "user_tier": user_tier,
+            "is_feature_enabled": is_feature_enabled,
         }
 
     @app.context_processor
@@ -153,9 +178,15 @@ def register_template_context(app: Flask) -> None:
         lifetime_used = 0
         if all((Organization, User, SubscriptionTier)):
             try:
-                total_active_users = (
-                    User.query.filter(User.user_type != "developer", User.is_active.is_(True)).count()
-                )
+                active_user_cache_key = "marketing:active_users"
+                cached_total_users = app_cache.get(active_user_cache_key)
+                if cached_total_users is None:
+                    total_active_users = (
+                        User.query.filter(User.user_type != "developer", User.is_active.is_(True)).count()
+                    )
+                    app_cache.set(active_user_cache_key, total_active_users, ttl=600)
+                else:
+                    total_active_users = cached_total_users
                 lifetime_tiers = SubscriptionTier.query.filter(
                     SubscriptionTier.name.ilike("%lifetime%")
                 ).all()

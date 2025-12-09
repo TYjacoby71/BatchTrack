@@ -59,6 +59,7 @@ Restock → Inventory Adjustment Service → FIFO Service → Inventory History
    ↓                    ↓                     ↓              ↓
 Cost Tracking → Apply Change → Update Lots → Log Change
 ```
+- Container records follow the same path. `Inventory Adjustment Service` derives the display name via `container_name_builder.py` and checks for an existing container with the same material/style/type/color/capacity signature before inserting. This keeps every organization’s inventory free of near-duplicate container SKUs even when the UI allows repeated submissions.
 
 ### User Management Flow
 ```

@@ -4,7 +4,7 @@
   "description": "Water-free solvents and carrier liquids used for dissolving actives, perfumery, and preservative systems.",
   "attributes": [
     "flash_point_c",
-    "recommended_usage_rate",
+
     "recommended_shelf_life_days",
     "inci_name",
     "certifications",
@@ -19,13 +19,19 @@
       "density": 0.79,
       "default_unit": "milliliter",
       "flash_point_c": 16,
-      "recommended_usage_rate": "1-100% as solvent or sanitizer base",
+      
       "recommended_shelf_life_days": 1825,
       "inci_name": "Alcohol Denat.",
       "certifications": [
         "USP Grade"
       ],
-      "is_active_ingredient": false
+      "is_active_ingredient": false,
+      "ingredient": {
+        "name": "Ethanol SDA 40-B",
+        "slug": "ethanol-sda-40-b",
+        "inci_name": "Alcohol Denat."
+      },
+      "physical_form": "Liquid"
     },
     {
       "name": "Propylene Glycol",
@@ -35,13 +41,19 @@
       "density": 1.04,
       "default_unit": "milliliter",
       "flash_point_c": 99,
-      "recommended_usage_rate": "1-10% as humectant or solvent",
+      
       "recommended_shelf_life_days": 1095,
       "inci_name": "Propylene Glycol",
       "certifications": [
         "USP Grade"
       ],
-      "is_active_ingredient": false
+      "is_active_ingredient": false,
+      "ingredient": {
+        "name": "Propylene Glycol",
+        "slug": "propylene-glycol",
+        "inci_name": "Propylene Glycol"
+      },
+      "physical_form": "Liquid"
     },
     {
       "name": "Dipropylene Glycol (Fragrance Grade)",
@@ -51,13 +63,19 @@
       "density": 1.02,
       "default_unit": "milliliter",
       "flash_point_c": 130,
-      "recommended_usage_rate": "5-25% as fragrance diluent",
+      
       "recommended_shelf_life_days": 1095,
       "inci_name": "Dipropylene Glycol",
       "certifications": [
         "IFRA Compliant"
       ],
-      "is_active_ingredient": false
+      "is_active_ingredient": false,
+      "ingredient": {
+        "name": "Dipropylene Glycol",
+        "slug": "dipropylene-glycol",
+        "inci_name": "Dipropylene Glycol"
+      },
+      "physical_form": "Fragrance Grade"
     },
     {
       "name": "Vegetable Glycerin",
@@ -67,14 +85,20 @@
       "density": 1.26,
       "default_unit": "milliliter",
       "flash_point_c": 160,
-      "recommended_usage_rate": "1-15% as humectant or solvent",
+      
       "recommended_shelf_life_days": 1095,
       "inci_name": "Glycerin",
       "certifications": [
         "USP Grade",
         "Kosher"
       ],
-      "is_active_ingredient": false
+      "is_active_ingredient": false,
+      "ingredient": {
+        "name": "Vegetable Glycerin",
+        "slug": "vegetable-glycerin",
+        "inci_name": "Glycerin"
+      },
+      "physical_form": "Liquid"
     }
   ]
 }

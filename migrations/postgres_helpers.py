@@ -1,4 +1,3 @@
-
 """
 Cross-dialect (PostgreSQL + SQLite) migration helpers.
 
@@ -15,6 +14,7 @@ from typing import Iterable
 
 from alembic import op
 from sqlalchemy import inspect, text
+import sqlalchemy as sa # Import sqlalchemy
 
 logger = logging.getLogger("alembic.helpers")
 
@@ -84,8 +84,35 @@ def safe_batch_alter_table(table_name: str, **kwargs):
 
 # --------------- Existence checks ---------------
 def table_exists(table_name: str) -> bool:
+    """Check if a table exists."""
     try:
-        return table_name in _inspector().get_table_names()
+        inspector = sa.inspect(op.get_bind())
+        return inspector.has_table(table_name)
+    except Exception:
+        return False
+
+
+def constraint_exists(table_name: str, constraint_name: str) -> bool:
+    """Check if a constraint exists on a table."""
+    try:
+        inspector = sa.inspect(op.get_bind())
+        # Check for foreign keys specifically
+        foreign_keys = inspector.get_foreign_keys(table_name)
+        if any(fk.get('name') == constraint_name for fk in foreign_keys):
+            return True
+        # Check for unique constraints
+        unique_constraints = inspector.get_unique_constraints(table_name)
+        if any(uc.get('name') == constraint_name for uc in unique_constraints):
+            return True
+        # Check for primary key constraints
+        pk_constraint = inspector.get_pk_constraint(table_name)
+        if pk_constraint.get('name') == constraint_name:
+            return True
+        # Check for indexes (which can also be unique constraints)
+        indexes = inspector.get_indexes(table_name)
+        if any(idx.get('name') == constraint_name for idx in indexes):
+            return True
+        return False
     except Exception:
         return False
 
@@ -160,6 +187,64 @@ def unique_constraint_exists(table_name: str, constraint_name: str) -> bool:
             return res.first() is not None
     except Exception:
         return False
+    return False
+
+
+def constraint_exists(table_name: str, constraint_name: str) -> bool:
+    """Generic constraint existence check (FK/PK/unique/check)."""
+    if not table_exists(table_name):
+        return False
+    try:
+        insp = _inspector()
+        try:
+            pk = insp.get_pk_constraint(table_name)
+            if pk and pk.get("name") == constraint_name:
+                return True
+        except Exception:
+            pass
+
+        for fk in insp.get_foreign_keys(table_name):
+            if fk.get("name") == constraint_name:
+                return True
+
+        for uq in insp.get_unique_constraints(table_name):
+            if uq.get("name") == constraint_name:
+                return True
+
+        get_checks = getattr(insp, "get_check_constraints", None)
+        if callable(get_checks):
+            for ck in get_checks(table_name):
+                if ck.get("name") == constraint_name:
+                    return True
+    except Exception:
+        pass
+
+    if is_postgresql():
+        res = _bind().execute(
+            text(
+                """
+                SELECT 1
+                FROM information_schema.table_constraints
+                WHERE table_name = :t AND constraint_name = :c
+            """
+            ),
+            {"t": table_name, "c": constraint_name},
+        )
+        return res.first() is not None
+
+    if is_sqlite():
+        res = _bind().execute(
+            text(
+                """
+                SELECT name
+                FROM sqlite_master
+                WHERE name = :name
+                """
+            ),
+            {"name": constraint_name},
+        )
+        return res.first() is not None
+
     return False
 
 
@@ -280,6 +365,11 @@ def safe_create_foreign_key(
     if is_sqlite():
         # SQLite cannot ALTER TABLE to add FKs without table rebuild; skip safely
         return False
+    # Check if the foreign key already exists
+    if constraint_exists(source_table, fk_name):
+        if verbose:
+            print(f"   ℹ️ Foreign key {fk_name} already exists on {source_table}")
+        return False
     try:
         op.create_foreign_key(fk_name, source_table, referent_table, list(local_cols), list(remote_cols), ondelete=ondelete)
         if verbose:
@@ -297,6 +387,11 @@ def safe_drop_foreign_key(fk_name: str, table_name: str, verbose: bool = True) -
         return False
     if is_sqlite():
         # SQLite doesn't support dropping individual foreign keys
+        return False
+    # Check if the foreign key exists before trying to drop
+    if not constraint_exists(table_name, fk_name):
+        if verbose:
+            print(f"   ℹ️ Foreign key {fk_name} does not exist on {table_name}, skipping drop.")
         return False
     try:
         op.drop_constraint(fk_name, table_name, type_="foreignkey")

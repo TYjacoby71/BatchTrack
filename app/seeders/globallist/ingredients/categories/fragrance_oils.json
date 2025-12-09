@@ -9,7 +9,7 @@
       "default_unit": "milliliter",
       "flash_point_c": 82,
       "recommended_fragrance_load_pct": "6-10% in candles",
-      "recommended_usage_rate": "3-5% in soaps and lotions",
+      
       "recommended_shelf_life_days": 730,
       "inci_name": "Fragrance",
       "certifications": [
@@ -19,14 +19,20 @@
       "aliases": [
         "vanilla sugar fragrance"
       ],
-      "is_active_ingredient": false
+      "is_active_ingredient": false,
+      "ingredient": {
+        "name": "Warm Vanilla Sugar Fragrance Oil",
+        "slug": "warm-vanilla-sugar-fragrance-oil",
+        "inci_name": "Fragrance"
+      },
+      "physical_form": "Liquid"
     },
     {
       "name": "Ocean Breeze Fragrance Oil",
       "default_unit": "milliliter",
       "flash_point_c": 71,
       "recommended_fragrance_load_pct": "6-9% in candles",
-      "recommended_usage_rate": "3-4% in soaps and bath products",
+      
       "recommended_shelf_life_days": 730,
       "inci_name": "Fragrance",
       "certifications": [
@@ -36,14 +42,20 @@
       "aliases": [
         "sea spray fragrance"
       ],
-      "is_active_ingredient": false
+      "is_active_ingredient": false,
+      "ingredient": {
+        "name": "Ocean Breeze Fragrance Oil",
+        "slug": "ocean-breeze-fragrance-oil",
+        "inci_name": "Fragrance"
+      },
+      "physical_form": "Liquid"
     },
     {
       "name": "Bamboo & Coconut Fragrance Oil",
       "default_unit": "milliliter",
       "flash_point_c": 79,
       "recommended_fragrance_load_pct": "7-10% in candles",
-      "recommended_usage_rate": "2-4% in soaps and lotions",
+      
       "recommended_shelf_life_days": 730,
       "inci_name": "Fragrance",
       "certifications": [
@@ -53,14 +65,20 @@
       "aliases": [
         "bamboo coconut scent"
       ],
-      "is_active_ingredient": false
+      "is_active_ingredient": false,
+      "ingredient": {
+        "name": "Bamboo & Coconut Fragrance Oil",
+        "slug": "bamboo-coconut-fragrance-oil",
+        "inci_name": "Fragrance"
+      },
+      "physical_form": "Liquid"
     },
     {
       "name": "Citrus Herb Fragrance Oil",
       "default_unit": "milliliter",
       "flash_point_c": 67,
       "recommended_fragrance_load_pct": "6-8% in candles",
-      "recommended_usage_rate": "2-3% in soaps and lotions",
+      
       "recommended_shelf_life_days": 540,
       "inci_name": "Fragrance",
       "certifications": [
@@ -70,13 +88,19 @@
       "aliases": [
         "citrus thyme fragrance"
       ],
-      "is_active_ingredient": false
+      "is_active_ingredient": false,
+      "ingredient": {
+        "name": "Citrus Herb Fragrance Oil",
+        "slug": "citrus-herb-fragrance-oil",
+        "inci_name": "Fragrance"
+      },
+      "physical_form": "Liquid"
     }
   ],
   "attributes": [
     "flash_point_c",
     "recommended_fragrance_load_pct",
-    "recommended_usage_rate",
+
     "recommended_shelf_life_days",
     "inci_name",
     "certifications",

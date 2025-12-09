@@ -329,31 +329,49 @@ def seed_test_data(organization_id: Optional[int] = None):
 
     print("→ Restocking ingredient and container lots via adjustment service...")
 
+    # Create all lots in chronological order (oldest first)
+    all_lot_operations = []
     for spec in inventory_plan:
         item = inventory_items[spec["key"]]
         for lot_spec in spec["lots"]:
             received_at = now - timedelta(days=lot_spec.get("days_ago", 0))
-            process_adjustment(
-                context=f"Restock {item.name}",
-                item_id=item.id,
-                change_type="restock",
-                quantity=float(lot_spec["quantity"]),
-                unit=item.unit,
-                notes=lot_spec.get("notes"),
-                cost_override=lot_spec.get("unit_cost"),
-                created_by=admin_user.id,
-                defer_commit=True,
-            )
-            db.session.flush()
-            new_lot = InventoryLot.query.filter_by(inventory_item_id=item.id).order_by(InventoryLot.id.desc()).first()
-            expiration = None
-            if lot_spec.get("expired"):
-                expiration = received_at + timedelta(days=1)
-            elif item.is_perishable and item.shelf_life_days:
-                expiration = received_at + timedelta(days=item.shelf_life_days)
-            update_lot_dates(new_lot, received_at, expiration_at=expiration, source_notes=lot_spec.get("notes"))
-            total_lots_created += 1
-            db.session.commit()
+            all_lot_operations.append({
+                'item': item,
+                'spec': lot_spec,
+                'received_at': received_at,
+                'operation_type': 'restock'
+            })
+    
+    # Sort by timestamp (oldest first) to ensure chronological order
+    all_lot_operations.sort(key=lambda x: x['received_at'])
+    
+    # Execute lot creation operations in chronological order
+    for operation in all_lot_operations:
+        item = operation['item']
+        lot_spec = operation['spec']
+        received_at = operation['received_at']
+        
+        process_adjustment(
+            context=f"Restock {item.name}",
+            item_id=item.id,
+            change_type="restock",
+            quantity=float(lot_spec["quantity"]),
+            unit=item.unit,
+            notes=lot_spec.get("notes"),
+            cost_override=lot_spec.get("unit_cost"),
+            created_by=admin_user.id,
+            defer_commit=True,
+        )
+        db.session.flush()
+        new_lot = InventoryLot.query.filter_by(inventory_item_id=item.id).order_by(InventoryLot.id.desc()).first()
+        expiration = None
+        if lot_spec.get("expired"):
+            expiration = received_at + timedelta(days=1)
+        elif item.is_perishable and item.shelf_life_days:
+            expiration = received_at + timedelta(days=item.shelf_life_days)
+        update_lot_dates(new_lot, received_at, expiration_at=expiration, source_notes=lot_spec.get("notes"))
+        total_lots_created += 1
+        db.session.commit()
 
     # ------------------------------------------------------------------
     # Recipe configuration
@@ -552,7 +570,10 @@ def seed_test_data(organization_id: Optional[int] = None):
         assoc.inventory_item_id: assoc for assoc in recipe.recipe_ingredients
     }
 
-    for plan in batch_plan:
+    # Sort batch plan by start date (oldest first) for chronological processing
+    sorted_batch_plan = sorted(batch_plan, key=lambda x: x["started_days_ago"], reverse=True)
+
+    for plan in sorted_batch_plan:
         started_at = normalize_timestamp(now - timedelta(days=plan["started_days_ago"]))
         completed_at = None
         if plan.get("completed_days_ago") is not None:
@@ -722,7 +743,10 @@ def seed_test_data(organization_id: Optional[int] = None):
         {"batch_label": "MH-241001", "quantity": 50, "days_ago": 2, "customer": "Cafe Collective", "order_id": "CAFE-2411", "sale_price": 14.5},
     ]
 
-    for sale in sales_plan:
+    # Sort sales by days_ago (oldest first) for chronological processing
+    sorted_sales_plan = sorted(sales_plan, key=lambda x: x["days_ago"], reverse=True)
+
+    for sale in sorted_sales_plan:
         sale_timestamp = normalize_timestamp(now - timedelta(days=sale["days_ago"]))
         notes = f"Sale {sale['order_id']} - {sale['customer']}"
         process_adjustment(

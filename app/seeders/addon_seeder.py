@@ -13,6 +13,7 @@ def seed_addons():
             'function_key': 'retention',
             'billing_type': 'subscription',
             'stripe_lookup_key': 'data-retention',  # Set or override in prod as needed
+            'batchbot_credit_amount': 0,
             'is_active': True
         },
         {
@@ -23,6 +24,18 @@ def seed_addons():
             'function_key': 'analytics',
             'billing_type': 'subscription',
             'stripe_lookup_key': None,
+            'batchbot_credit_amount': 0,
+            'is_active': True
+        },
+        {
+            'key': 'batchbot_refill_100',
+            'name': 'Batchley Refill - 100 Actions',
+            'description': 'Adds 100 Batchley automation requests to the organization quota.',
+            'permission_name': None,
+            'function_key': 'batchbot_credits',
+            'billing_type': 'one_time',
+            'stripe_lookup_key': 'batchbot-refill-100',
+            'batchbot_credit_amount': 100,
             'is_active': True
         }
     ]
@@ -39,6 +52,7 @@ def seed_addons():
             # Do not overwrite stripe_lookup_key if already set in prod
             if not existing.stripe_lookup_key:
                 existing.stripe_lookup_key = data['stripe_lookup_key']
+            existing.batchbot_credit_amount = data.get('batchbot_credit_amount', existing.batchbot_credit_amount or 0)
             existing.is_active = data['is_active']
         else:
             db.session.add(Addon(**data))

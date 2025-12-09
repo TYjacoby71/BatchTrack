@@ -1,13 +1,15 @@
-from flask_login import current_user
-from app.models import db, InventoryItem, IngredientCategory
-from app.models.inventory_lot import InventoryLot
-from app.models.unit import Unit
-from app.services.unit_conversion import ConversionEngine
 from flask import session
-from app.services.density_assignment_service import DensityAssignmentService
+from flask_login import current_user
 from sqlalchemy import and_
 import logging
 import json
+
+from app.models import db, InventoryItem, IngredientCategory
+from app.models.inventory_lot import InventoryLot
+from app.models.unit import Unit
+from app.services.container_name_builder import build_container_name
+from app.services.density_assignment_service import DensityAssignmentService
+from app.services.unit_conversion import ConversionEngine
 
 logger = logging.getLogger(__name__)
 
@@ -116,8 +118,22 @@ def update_inventory_item(item_id: int, form_data: dict) -> tuple[bool, str]:
                 item.container_color = (form_data.get('container_color') or '').strip() or None
 
         # Update basic item details (excluding quantity)
-        if 'name' in form_data and not is_global_locked:
-            item.name = form_data['name'].strip()
+        if not is_global_locked:
+            raw_name = form_data.get('name') if 'name' in form_data else None
+            cleaned_name = raw_name.strip() if isinstance(raw_name, str) else (str(raw_name).strip() if raw_name else '')
+            if cleaned_name:
+                item.name = cleaned_name
+            elif item.type == 'container':
+                auto_name = build_container_name(
+                    style=item.container_style,
+                    material=item.container_material,
+                    container_type=item.container_type,
+                    color=item.container_color,
+                    capacity=item.capacity,
+                    capacity_unit=item.capacity_unit,
+                )
+                if auto_name:
+                    item.name = auto_name
 
         if 'cost_per_unit' in form_data and form_data['cost_per_unit']:
             try:

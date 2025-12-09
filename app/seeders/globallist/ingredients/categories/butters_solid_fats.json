@@ -8,7 +8,7 @@
     "melting_point_c",
     "fatty_acid_profile",
     "comedogenic_rating",
-    "recommended_usage_rate",
+
     "recommended_shelf_life_days",
     "inci_name",
     "certifications",
@@ -28,7 +28,7 @@
         "palmitic": 4
       },
       "comedogenic_rating": 0,
-      "recommended_usage_rate": "3-20% in creams, balms, and soaps",
+      
       "recommended_shelf_life_days": 730,
       "inci_name": "Butyrospermum Parkii (Shea) Butter",
       "certifications": [
@@ -38,7 +38,13 @@
       "aliases": [
         "african shea butter"
       ],
-      "is_active_ingredient": false
+      "is_active_ingredient": false,
+      "ingredient": {
+        "name": "Shea Butter",
+        "slug": "shea-butter",
+        "inci_name": "Butyrospermum Parkii (Shea) Butter"
+      },
+      "physical_form": "Butter"
     },
     {
       "name": "Mango Butter",
@@ -53,7 +59,7 @@
         "linoleic": 9
       },
       "comedogenic_rating": 2,
-      "recommended_usage_rate": "3-15% in body butters and lotions",
+      
       "recommended_shelf_life_days": 730,
       "inci_name": "Mangifera Indica (Mango) Seed Butter",
       "certifications": [
@@ -63,7 +69,13 @@
       "aliases": [
         "mango kernel butter"
       ],
-      "is_active_ingredient": false
+      "is_active_ingredient": false,
+      "ingredient": {
+        "name": "Mango Butter",
+        "slug": "mango-butter",
+        "inci_name": "Mangifera Indica (Mango) Seed Butter"
+      },
+      "physical_form": "Butter"
     },
     {
       "name": "Cocoa Butter",
@@ -78,7 +90,7 @@
         "linoleic": 3
       },
       "comedogenic_rating": 3,
-      "recommended_usage_rate": "5-20% in anhydrous systems",
+      
       "recommended_shelf_life_days": 1095,
       "inci_name": "Theobroma Cacao (Cocoa) Seed Butter",
       "certifications": [
@@ -89,7 +101,13 @@
       "aliases": [
         "theobroma oil"
       ],
-      "is_active_ingredient": false
+      "is_active_ingredient": false,
+      "ingredient": {
+        "name": "Cocoa Butter",
+        "slug": "cocoa-butter",
+        "inci_name": "Theobroma Cacao (Cocoa) Seed Butter"
+      },
+      "physical_form": "Butter"
     },
     {
       "name": "Kokum Butter",
@@ -104,7 +122,7 @@
         "palmitic": 1
       },
       "comedogenic_rating": 1,
-      "recommended_usage_rate": "2-15% for structure and emollience",
+      
       "recommended_shelf_life_days": 730,
       "inci_name": "Garcinia Indica Seed Butter",
       "certifications": [],
@@ -112,7 +130,13 @@
       "aliases": [
         "garcinia indica butter"
       ],
-      "is_active_ingredient": false
+      "is_active_ingredient": false,
+      "ingredient": {
+        "name": "Kokum Butter",
+        "slug": "kokum-butter",
+        "inci_name": "Garcinia Indica Seed Butter"
+      },
+      "physical_form": "Butter"
     },
     {
       "name": "Cupuacu Butter",
@@ -127,7 +151,7 @@
         "linoleic": 3
       },
       "comedogenic_rating": 2,
-      "recommended_usage_rate": "2-8% in moisturizers and hair masks",
+      
       "recommended_shelf_life_days": 540,
       "inci_name": "Theobroma Grandiflorum Seed Butter",
       "certifications": [
@@ -137,7 +161,13 @@
       "aliases": [
         "theobroma grandiflorum seed butter"
       ],
-      "is_active_ingredient": false
+      "is_active_ingredient": false,
+      "ingredient": {
+        "name": "Cupuacu Butter",
+        "slug": "cupuacu-butter",
+        "inci_name": "Theobroma Grandiflorum Seed Butter"
+      },
+      "physical_form": "Butter"
     },
     {
       "name": "Illipe Butter",
@@ -152,7 +182,7 @@
         "linoleic": 3
       },
       "comedogenic_rating": 1,
-      "recommended_usage_rate": "2-10% in balms and sticks",
+      
       "recommended_shelf_life_days": 540,
       "inci_name": "Shorea Stenoptera Seed Butter",
       "certifications": [],
@@ -160,7 +190,13 @@
       "aliases": [
         "shorea stenoptera butter"
       ],
-      "is_active_ingredient": false
+      "is_active_ingredient": false,
+      "ingredient": {
+        "name": "Illipe Butter",
+        "slug": "illipe-butter",
+        "inci_name": "Shorea Stenoptera Seed Butter"
+      },
+      "physical_form": "Butter"
     },
     {
       "name": "Murumuru Butter",
@@ -175,7 +211,7 @@
         "palmitic": 9
       },
       "comedogenic_rating": 0,
-      "recommended_usage_rate": "3-10% in hair and skin butters",
+      
       "recommended_shelf_life_days": 540,
       "inci_name": "Astrocaryum Murumuru Seed Butter",
       "certifications": [
@@ -185,7 +221,13 @@
       "aliases": [
         "astrocaryum murumuru seed butter"
       ],
-      "is_active_ingredient": false
+      "is_active_ingredient": false,
+      "ingredient": {
+        "name": "Murumuru Butter",
+        "slug": "murumuru-butter",
+        "inci_name": "Astrocaryum Murumuru Seed Butter"
+      },
+      "physical_form": "Butter"
     },
     {
       "name": "Ghee (Clarified Butter)",
@@ -200,7 +242,7 @@
         "butyric": 4
       },
       "comedogenic_rating": 3,
-      "recommended_usage_rate": "2-6% in soap formulations",
+      
       "recommended_shelf_life_days": 365,
       "inci_name": "Clarified Butter",
       "certifications": [],
@@ -208,7 +250,13 @@
       "aliases": [
         "clarified butter"
       ],
-      "is_active_ingredient": false
+      "is_active_ingredient": false,
+      "ingredient": {
+        "name": "Ghee",
+        "slug": "ghee",
+        "inci_name": "Clarified Butter"
+      },
+      "physical_form": "Butter"
     }
   ]
 }

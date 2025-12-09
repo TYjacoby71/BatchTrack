@@ -4,9 +4,11 @@ from sqlalchemy import event
 from ..extensions import db
 from ..utils.timezone_utils import TimezoneUtils
 from .db_dialect import is_postgres
+from app.services.cache_invalidation import invalidate_global_library_cache
 
 class GlobalItem(db.Model):
     __tablename__ = 'global_item'
+
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(128), nullable=False, index=True)
     item_type = db.Column(db.String(32), nullable=False, index=True)  # ingredient, container, packaging, consumable
@@ -16,11 +18,12 @@ class GlobalItem(db.Model):
 
     # Category relationship - proper FK to IngredientCategory
     ingredient_category_id = db.Column(db.Integer, db.ForeignKey('ingredient_category.id'), nullable=True, index=True)
+    ingredient_id = db.Column(db.Integer, db.ForeignKey('ingredient.id'), nullable=True, index=True)
+    physical_form_id = db.Column(db.Integer, db.ForeignKey('physical_form.id'), nullable=True, index=True)
 
     # Perishable information
     default_is_perishable = db.Column(db.Boolean, nullable=True, default=False)
     recommended_shelf_life_days = db.Column(db.Integer, nullable=True)
-    recommended_usage_rate = db.Column(db.String(64), nullable=True)
     recommended_fragrance_load_pct = db.Column(db.String(64), nullable=True)
     is_active_ingredient = db.Column(db.Boolean, nullable=False, default=False)
 
@@ -70,14 +73,48 @@ class GlobalItem(db.Model):
 
     # Relationships
     ingredient_category = db.relationship('IngredientCategory', backref='global_items')
+    ingredient = db.relationship(
+        'IngredientDefinition',
+        backref=db.backref('global_items', lazy='dynamic'),
+    )
+    physical_form = db.relationship(
+        'PhysicalForm',
+        backref=db.backref('global_items', lazy='dynamic'),
+    )
+    functions = db.relationship(
+        'FunctionTag',
+        secondary='global_item_function_tag',
+        back_populates='global_items',
+    )
+    applications = db.relationship(
+        'ApplicationTag',
+        secondary='global_item_application_tag',
+        back_populates='global_items',
+    )
+    category_tags = db.relationship(
+        'IngredientCategoryTag',
+        secondary='global_item_category_tag',
+        back_populates='global_items',
+    )
     archived_by_user = db.relationship('User', foreign_keys=[archived_by])
 
     _IS_PG = is_postgres()
 
-    __table_args__ = tuple([
+    _table_args = [
         db.UniqueConstraint('name', 'item_type', name='_global_item_name_type_uc'),
-        *([db.Index('ix_global_item_aliases_gin', db.text('(aliases::jsonb)'), postgresql_using='gin')] if _IS_PG else []),
-    ])
+        db.Index('ix_global_item_archive_type_name', 'is_archived', 'item_type', 'name'),
+        db.Index('ix_global_item_ingredient_id', 'ingredient_id'),
+        db.Index('ix_global_item_physical_form_id', 'physical_form_id'),
+    ]
+    if _IS_PG:
+        _table_args.append(
+            db.Index(
+                'ix_global_item_aliases_gin',
+                db.text('(aliases::jsonb)'),
+                postgresql_using='gin',
+            )
+        )
+    __table_args__ = tuple(_table_args)
 
 
 def _apply_metadata_defaults(target):
@@ -85,6 +122,7 @@ def _apply_metadata_defaults(target):
         from app.services.global_item_metadata_service import GlobalItemMetadataService
     except Exception:
         return
+
     new_metadata = GlobalItemMetadataService.merge_metadata(target)
     if new_metadata != (target.metadata_json or {}):
         target.metadata_json = new_metadata
@@ -98,3 +136,18 @@ def _global_item_metadata_before_insert(mapper, connection, target):
 @event.listens_for(GlobalItem, "before_update")
 def _global_item_metadata_before_update(mapper, connection, target):
     _apply_metadata_defaults(target)
+
+
+@event.listens_for(GlobalItem, "after_insert")
+def _global_item_after_insert(mapper, connection, target):
+    invalidate_global_library_cache()
+
+
+@event.listens_for(GlobalItem, "after_update")
+def _global_item_after_update(mapper, connection, target):
+    invalidate_global_library_cache()
+
+
+@event.listens_for(GlobalItem, "after_delete")
+def _global_item_after_delete(mapper, connection, target):
+    invalidate_global_library_cache()

@@ -3,7 +3,7 @@
   "default_density": 2.8,
   "description": "Inorganic and specialty colorants used to impart hue or opacity to formulations.",
   "attributes": [
-    "recommended_usage_rate",
+
     "recommended_shelf_life_days",
     "inci_name",
     "certifications",
@@ -17,13 +17,19 @@
       ],
       "density": 4.23,
       "default_unit": "gram",
-      "recommended_usage_rate": "1-5% in CP/HP soaps and cosmetics",
+      
       "recommended_shelf_life_days": 1825,
       "inci_name": "Titanium Dioxide",
       "certifications": [
         "FDA Batch Certified"
       ],
-      "is_active_ingredient": false
+      "is_active_ingredient": false,
+      "ingredient": {
+        "name": "Titanium Dioxide",
+        "slug": "titanium-dioxide",
+        "inci_name": "Titanium Dioxide"
+      },
+      "physical_form": "Oil Dispersible"
     },
     {
       "name": "Red Iron Oxide",
@@ -32,13 +38,19 @@
       ],
       "density": 5.1,
       "default_unit": "gram",
-      "recommended_usage_rate": "0.1-3% in mineral makeup and soap",
+      
       "recommended_shelf_life_days": 1825,
       "inci_name": "Iron Oxides (CI 77491)",
       "certifications": [
         "Cosmetic Grade"
       ],
-      "is_active_ingredient": false
+      "is_active_ingredient": false,
+      "ingredient": {
+        "name": "Red Iron Oxide",
+        "slug": "red-iron-oxide",
+        "inci_name": "Iron Oxides (CI 77491)"
+      },
+      "physical_form": "Pigment"
     },
     {
       "name": "Yellow Iron Oxide",
@@ -47,13 +59,19 @@
       ],
       "density": 4.4,
       "default_unit": "gram",
-      "recommended_usage_rate": "0.1-3% in mineral makeup and soap",
+      
       "recommended_shelf_life_days": 1825,
       "inci_name": "Iron Oxides (CI 77492)",
       "certifications": [
         "Cosmetic Grade"
       ],
-      "is_active_ingredient": false
+      "is_active_ingredient": false,
+      "ingredient": {
+        "name": "Yellow Iron Oxide",
+        "slug": "yellow-iron-oxide",
+        "inci_name": "Iron Oxides (CI 77492)"
+      },
+      "physical_form": "Pigment"
     },
     {
       "name": "Ultramarine Blue",
@@ -62,13 +80,19 @@
       ],
       "density": 2.35,
       "default_unit": "gram",
-      "recommended_usage_rate": "0.1-1% in mineral cosmetics",
+      
       "recommended_shelf_life_days": 1825,
       "inci_name": "Ultramarines (CI 77007)",
       "certifications": [
         "Cosmetic Grade"
       ],
-      "is_active_ingredient": false
+      "is_active_ingredient": false,
+      "ingredient": {
+        "name": "Ultramarine Blue",
+        "slug": "ultramarine-blue",
+        "inci_name": "Ultramarines (CI 77007)"
+      },
+      "physical_form": "Pigment"
     },
     {
       "name": "Sparkle Silver Mica",
@@ -77,14 +101,20 @@
       ],
       "density": 2.8,
       "default_unit": "gram",
-      "recommended_usage_rate": "1-10% in cosmetics and soap swirls",
+      
       "recommended_shelf_life_days": 1825,
       "inci_name": "Mica (and) Titanium Dioxide",
       "certifications": [
         "Vegan",
         "Cruelty-Free"
       ],
-      "is_active_ingredient": false
+      "is_active_ingredient": false,
+      "ingredient": {
+        "name": "Sparkle Silver Mica",
+        "slug": "sparkle-silver-mica",
+        "inci_name": "Mica (and) Titanium Dioxide"
+      },
+      "physical_form": "Pigment"
     },
     {
       "name": "Liquid Chlorophyll",
@@ -93,13 +123,19 @@
       ],
       "density": 1.01,
       "default_unit": "milliliter",
-      "recommended_usage_rate": "0.1-0.5% as natural colorant",
+      
       "recommended_shelf_life_days": 365,
       "inci_name": "Water (and) Chlorophyllin-Copper Complex",
       "certifications": [
         "Vegan"
       ],
-      "is_active_ingredient": false
+      "is_active_ingredient": false,
+      "ingredient": {
+        "name": "Liquid Chlorophyll",
+        "slug": "liquid-chlorophyll",
+        "inci_name": "Water (and) Chlorophyllin-Copper Complex"
+      },
+      "physical_form": "Liquid"
     }
   ]
 }

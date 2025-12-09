@@ -1,8 +1,80 @@
+from __future__ import annotations
+
 import os
+from dataclasses import dataclass
 from datetime import timedelta
+from typing import Mapping
+from urllib.parse import urlparse
+
+_DEFAULT_ENV = "development"
+_ENV_KEY = "FLASK_ENV"
+_VALID_ENVS = {"development", "testing", "staging", "production"}
+_FORBIDDEN_ENV_KEYS = ("APP_ENV", "BATCHTRACK_ENV", "ENVIRONMENT")
+_FORBIDDEN_FLAGS = ("ALLOW_LOADTEST_LOGIN_BYPASS", "LOADTEST_ALLOW_LOGIN_WITHOUT_CSRF")
+_TRUE_VALUES = {"1", "true", "yes", "on"}
+_FALSE_VALUES = {"0", "false", "no", "off"}
 
 
-_DEFAULT_ENV = 'development'
+@dataclass(frozen=True)
+class EnvironmentInfo:
+    name: str
+    source: str
+    raw_value: str
+
+
+class EnvReader:
+    def __init__(self, data: Mapping[str, str] | None = None):
+        self._data = dict(data or os.environ)
+        self.warnings: list[str] = []
+
+    def warn(self, message: str) -> None:
+        self.warnings.append(message)
+
+    def _value(self, key: str) -> str | None:
+        value = self._data.get(key)
+        if value is None:
+            return None
+        stripped = value.strip()
+        return stripped if stripped else None
+
+    def str(self, key: str, default: str | None = None) -> str | None:
+        value = self._value(key)
+        return value if value is not None else default
+
+    def int(self, key: str, default: int = 0) -> int:
+        value = self._value(key)
+        if value is None:
+            return default
+        try:
+            return int(value)
+        except ValueError:
+            self.warn(f"{key} expected integer but received {value!r}; falling back to {default}.")
+            return default
+
+    def float(self, key: str, default: float = 0.0) -> float:
+        value = self._value(key)
+        if value is None:
+            return default
+        try:
+            return float(value)
+        except ValueError:
+            self.warn(f"{key} expected float but received {value!r}; falling back to {default}.")
+            return default
+
+    def bool(self, key: str, default: bool = False) -> bool:
+        value = self._value(key)
+        if value is None:
+            return default
+        lowered = value.lower()
+        if lowered in _TRUE_VALUES:
+            return True
+        if lowered in _FALSE_VALUES:
+            return False
+        self.warn(f"{key} expected boolean but received {value!r}; falling back to {default}.")
+        return default
+
+    def raw(self, key: str) -> str | None:
+        return self._data.get(key)
 
 
 def _normalized_env(value: str | None, *, default: str = _DEFAULT_ENV) -> str:
@@ -17,106 +89,176 @@ def _normalize_db_url(url: str | None) -> str | None:
     return 'postgresql://' + url[len('postgres://'):] if url.startswith('postgres://') else url
 
 
-def _resolve_ratelimit_uri() -> str:
-    """Resolve the rate limit storage URI with backwards compatibility."""
-    candidate = os.environ.get('RATELIMIT_STORAGE_URI') or os.environ.get('RATELIMIT_STORAGE_URL')
+def _extract_host(value: str | None) -> str | None:
+    if not value:
+        return None
+    parsed = urlparse(value if "://" in value else f"https://{value}")
+    host = parsed.netloc or parsed.path
+    return host or None
+
+
+def _derive_scheme(base_url: str | None) -> str | None:
+    if not base_url:
+        return None
+    parsed = urlparse(base_url)
+    return parsed.scheme or None
+
+
+def _resolve_ratelimit_uri(reader: EnvReader) -> str:
+    candidate = reader.str('RATELIMIT_STORAGE_URI') or reader.str('RATELIMIT_STORAGE_URL')
     if candidate:
         return candidate
-    redis_url = os.environ.get('REDIS_URL')
+    redis_url = reader.str('REDIS_URL')
     if redis_url:
         return redis_url
     return 'memory://'
 
 
-def _env_int(key, default):
-    """Helper to parse environment integers with fallback."""
-    try:
-        return int(os.environ.get(key, default))
-    except (ValueError, TypeError):
-        return default
+def _resolve_environment(reader: EnvReader) -> EnvironmentInfo:
+    for key in _FORBIDDEN_ENV_KEYS:
+        if reader.raw(key) not in (None, ""):
+            raise RuntimeError(
+                f"{key} is no longer supported. Set {_ENV_KEY} to one of {sorted(_VALID_ENVS)} instead."
+            )
+
+    raw_value = reader.str(_ENV_KEY, _DEFAULT_ENV) or _DEFAULT_ENV
+    normalized = _normalized_env(raw_value)
+    if normalized not in _VALID_ENVS:
+        raise RuntimeError(
+            f"Invalid {_ENV_KEY}={raw_value!r}. Expected one of {sorted(_VALID_ENVS)}."
+        )
+    return EnvironmentInfo(name=normalized, source=_ENV_KEY, raw_value=raw_value)
+
+
+def _resolve_base_url(reader: EnvReader, env_name: str) -> str:
+    value = reader.str('APP_BASE_URL')
+    if value:
+        return value
+    if env_name in {'development', 'testing'}:
+        fallback = 'http://localhost:5000'
+        reader.warn(
+            "APP_BASE_URL not set; defaulting to http://localhost:5000 for local/testing environments."
+        )
+        return fallback
+    raise RuntimeError('APP_BASE_URL must be set for staging and production environments.')
+
+
+def _preferred_scheme(base_url: str, env_name: str) -> str:
+    scheme = _derive_scheme(base_url)
+    if scheme:
+        return scheme
+    return 'http' if env_name == 'development' else 'https'
+
+
+env = EnvReader()
+ENV_INFO = _resolve_environment(env)
+
+for flag in _FORBIDDEN_FLAGS:
+    if env.raw(flag) not in (None, ""):
+        raise RuntimeError(
+            f"{flag} has been removed. Load tests must behave like real clients and supply CSRF tokens."
+        )
+
+_BASE_URL = _resolve_base_url(env, ENV_INFO.name)
+_CANONICAL_HOST = env.str('APP_HOST') or _extract_host(_BASE_URL)
+_PREFERRED_SCHEME = _preferred_scheme(_BASE_URL, ENV_INFO.name)
 
 
 class BaseConfig:
-    SECRET_KEY = os.environ.get('FLASK_SECRET_KEY', 'devkey-please-change-in-production')
+    FLASK_ENV = ENV_INFO.name
+    SECRET_KEY = env.str('FLASK_SECRET_KEY', 'devkey-please-change-in-production')
 
-    # Database defaults; subclasses should set SQLALCHEMY_DATABASE_URI explicitly
     SQLALCHEMY_TRACK_MODIFICATIONS = False
     SQLALCHEMY_RECORD_QUERIES = True
 
-    # Sessions & security
-    PERMANENT_SESSION_LIFETIME = timedelta(minutes=30)
+    SESSION_LIFETIME_MINUTES = env.int('SESSION_LIFETIME_MINUTES', 60)
+    PERMANENT_SESSION_LIFETIME = timedelta(minutes=SESSION_LIFETIME_MINUTES)
     SESSION_COOKIE_HTTPONLY = True
     SESSION_COOKIE_SAMESITE = 'Lax'
     WTF_CSRF_ENABLED = True
     SESSION_USE_SIGNER = True
     SESSION_PERMANENT = True
-    SESSION_REDIS_MAX_CONNECTIONS = _env_int('SESSION_REDIS_MAX_CONNECTIONS', 10)
 
-    # Uploads
     UPLOAD_FOLDER = 'static/product_images'
     MAX_CONTENT_LENGTH = 16 * 1024 * 1024
 
-   # Rate limiting & Cache
-    RATELIMIT_STORAGE_URI = _resolve_ratelimit_uri()
-    RATELIMIT_STORAGE_URL = RATELIMIT_STORAGE_URI  # Backwards compatibility
+    APP_BASE_URL = _BASE_URL
+    EXTERNAL_BASE_URL = _BASE_URL
+    CANONICAL_HOST = _CANONICAL_HOST
+    PREFERRED_URL_SCHEME = _PREFERRED_SCHEME
 
-    # Cache / shared state
-    CACHE_TYPE = os.environ.get('CACHE_TYPE', 'SimpleCache') # Default to SimpleCache if Redis isn't set
-    CACHE_REDIS_URL = os.environ.get('CACHE_REDIS_URL') or os.environ.get('REDIS_URL')
-    CACHE_DEFAULT_TIMEOUT = _env_int('CACHE_DEFAULT_TIMEOUT', 120)
+    RATELIMIT_STORAGE_URI = _resolve_ratelimit_uri(env)
+    RATELIMIT_STORAGE_URL = RATELIMIT_STORAGE_URI
+    RATELIMIT_ENABLED = env.bool('RATELIMIT_ENABLED', True)
+    RATELIMIT_DEFAULT = env.str('RATELIMIT_DEFAULT', '5000 per hour;1000 per minute')
 
-    # Billing cache tuning
-    BILLING_STATUS_CACHE_TTL = _env_int('BILLING_STATUS_CACHE_TTL', 120)
+    CACHE_TYPE = env.str('CACHE_TYPE', 'SimpleCache')
+    CACHE_REDIS_URL = env.str('CACHE_REDIS_URL') or env.str('REDIS_URL')
+    CACHE_DEFAULT_TIMEOUT = env.int('CACHE_DEFAULT_TIMEOUT', 120)
+    INGREDIENT_LIST_CACHE_TTL = env.int('INGREDIENT_LIST_CACHE_TTL', 120)
+    RECIPE_LIST_CACHE_TTL = env.int('RECIPE_LIST_CACHE_TTL', 180)
+    PRODUCT_LIST_CACHE_TTL = env.int('PRODUCT_LIST_CACHE_TTL', 180)
+    GLOBAL_LIBRARY_CACHE_TTL = env.int('GLOBAL_LIBRARY_CACHE_TTL', 300)
+    RECIPE_LIBRARY_CACHE_TTL = env.int('RECIPE_LIBRARY_CACHE_TTL', 180)
 
-    # Logging
-    LOG_LEVEL = os.environ.get('LOG_LEVEL', 'WARNING')
-    ANON_REQUEST_LOG_LEVEL = os.environ.get('ANON_REQUEST_LOG_LEVEL', 'DEBUG')
+    BILLING_STATUS_CACHE_TTL = env.int('BILLING_STATUS_CACHE_TTL', 120)
 
-    # Email - Support multiple providers
-    EMAIL_PROVIDER = os.environ.get('EMAIL_PROVIDER', 'smtp').lower()
+    LOG_LEVEL = env.str('LOG_LEVEL', 'WARNING') or 'WARNING'
+    ANON_REQUEST_LOG_LEVEL = env.str('ANON_REQUEST_LOG_LEVEL', 'DEBUG') or 'DEBUG'
 
-    # SMTP (default)
-    MAIL_SERVER = os.environ.get('MAIL_SERVER', 'smtp.gmail.com')
-    MAIL_PORT = int(os.environ.get('MAIL_PORT', 587))
-    MAIL_USE_TLS = os.environ.get('MAIL_USE_TLS', 'true').lower() == 'true'
-    MAIL_USE_SSL = os.environ.get('MAIL_USE_SSL', 'false').lower() == 'true'
-    MAIL_USERNAME = os.environ.get('MAIL_USERNAME')
-    MAIL_PASSWORD = os.environ.get('MAIL_PASSWORD')
-    MAIL_DEFAULT_SENDER = os.environ.get('MAIL_DEFAULT_SENDER', 'noreply@batchtrack.app')
+    EMAIL_PROVIDER = (env.str('EMAIL_PROVIDER', 'smtp') or 'smtp').lower()
+    MAIL_SERVER = env.str('MAIL_SERVER', 'smtp.gmail.com')
+    MAIL_PORT = env.int('MAIL_PORT', 587)
+    MAIL_USE_TLS = env.bool('MAIL_USE_TLS', True)
+    MAIL_USE_SSL = env.bool('MAIL_USE_SSL', False)
+    MAIL_USERNAME = env.str('MAIL_USERNAME')
+    MAIL_PASSWORD = env.str('MAIL_PASSWORD')
+    MAIL_DEFAULT_SENDER = env.str('MAIL_DEFAULT_SENDER', 'noreply@batchtrack.app')
 
-    # Alternative providers
-    SENDGRID_API_KEY = os.environ.get('SENDGRID_API_KEY')
-    POSTMARK_SERVER_TOKEN = os.environ.get('POSTMARK_SERVER_TOKEN')
-    MAILGUN_API_KEY = os.environ.get('MAILGUN_API_KEY')
-    MAILGUN_DOMAIN = os.environ.get('MAILGUN_DOMAIN')
+    SENDGRID_API_KEY = env.str('SENDGRID_API_KEY')
+    POSTMARK_SERVER_TOKEN = env.str('POSTMARK_SERVER_TOKEN')
+    MAILGUN_API_KEY = env.str('MAILGUN_API_KEY')
+    MAILGUN_DOMAIN = env.str('MAILGUN_DOMAIN')
 
-    # Billing / OAuth
-    STRIPE_PUBLISHABLE_KEY = os.environ.get('STRIPE_PUBLISHABLE_KEY')
-    STRIPE_SECRET_KEY = os.environ.get('STRIPE_SECRET_KEY')
-    STRIPE_WEBHOOK_SECRET = os.environ.get('STRIPE_WEBHOOK_SECRET')
-    WHOP_API_KEY = os.environ.get('WHOP_API_KEY')
-    WHOP_APP_ID = os.environ.get('WHOP_APP_ID')
-    GOOGLE_OAUTH_CLIENT_ID = os.environ.get('GOOGLE_OAUTH_CLIENT_ID')
-    GOOGLE_OAUTH_CLIENT_SECRET = os.environ.get('GOOGLE_OAUTH_CLIENT_SECRET')
+    STRIPE_PUBLISHABLE_KEY = env.str('STRIPE_PUBLISHABLE_KEY')
+    STRIPE_SECRET_KEY = env.str('STRIPE_SECRET_KEY')
+    STRIPE_WEBHOOK_SECRET = env.str('STRIPE_WEBHOOK_SECRET')
+    WHOP_API_KEY = env.str('WHOP_API_KEY')
+    WHOP_APP_ID = env.str('WHOP_APP_ID')
+    GOOGLE_OAUTH_CLIENT_ID = env.str('GOOGLE_OAUTH_CLIENT_ID')
+    GOOGLE_OAUTH_CLIENT_SECRET = env.str('GOOGLE_OAUTH_CLIENT_SECRET')
 
-    # Enhanced SQLAlchemy pool configuration for high concurrency
-    # These are default values; specific environments may override them.
-    # For 10k users, ProductionConfig should be the primary beneficiary.
     SQLALCHEMY_ENGINE_OPTIONS = {
-        'pool_size': _env_int('SQLALCHEMY_POOL_SIZE', 20), # Default for base
-        'max_overflow': _env_int('SQLALCHEMY_MAX_OVERFLOW', 30), # Default for base
+        'pool_size': env.int('SQLALCHEMY_POOL_SIZE', 15),
+        'max_overflow': env.int('SQLALCHEMY_MAX_OVERFLOW', 5),
         'pool_pre_ping': True,
-        'pool_recycle': _env_int('SQLALCHEMY_POOL_RECYCLE', 1800),
-        'pool_timeout': _env_int('SQLALCHEMY_POOL_TIMEOUT', 30),
+        'pool_recycle': env.int('SQLALCHEMY_POOL_RECYCLE', 900),
+        'pool_timeout': env.int('SQLALCHEMY_POOL_TIMEOUT', 15),
         'pool_use_lifo': True,
+        'pool_reset_on_return': 'commit',
     }
 
-    # Billing cache configuration
-    BILLING_CACHE_ENABLED = os.environ.get('BILLING_CACHE_ENABLED', 'true').lower() == 'true'
-    BILLING_GATE_CACHE_TTL_SECONDS = _env_int('BILLING_GATE_CACHE_TTL_SECONDS', 60)
+    BILLING_CACHE_ENABLED = env.bool('BILLING_CACHE_ENABLED', True)
+    BILLING_GATE_CACHE_TTL_SECONDS = env.int('BILLING_GATE_CACHE_TTL_SECONDS', 60)
 
-    # Feature flags
-    FEATURE_INVENTORY_ANALYTICS = os.environ.get('FEATURE_INVENTORY_ANALYTICS', 'true').lower() == 'true'
+    FEATURE_INVENTORY_ANALYTICS = env.bool('FEATURE_INVENTORY_ANALYTICS', True)
+    FEATURE_BATCHBOT = env.bool('FEATURE_BATCHBOT', True)
+
+    GOOGLE_AI_API_KEY = env.str('GOOGLE_AI_API_KEY') or env.str('GOOGLE_GENERATIVE_AI_API_KEY')
+    GOOGLE_AI_DEFAULT_MODEL = env.str('GOOGLE_AI_DEFAULT_MODEL', 'gemini-1.5-flash') or 'gemini-1.5-flash'
+    GOOGLE_AI_BATCHBOT_MODEL = env.str('GOOGLE_AI_BATCHBOT_MODEL') or GOOGLE_AI_DEFAULT_MODEL or 'gemini-1.5-pro'
+    GOOGLE_AI_PUBLICBOT_MODEL = env.str('GOOGLE_AI_PUBLICBOT_MODEL', 'gemini-1.5-flash') or 'gemini-1.5-flash'
+    GOOGLE_AI_ENABLE_SEARCH = env.bool('GOOGLE_AI_ENABLE_SEARCH', True)
+    GOOGLE_AI_ENABLE_FILE_SEARCH = env.bool('GOOGLE_AI_ENABLE_FILE_SEARCH', True)
+    GOOGLE_AI_SEARCH_TOOL = env.str('GOOGLE_AI_SEARCH_TOOL', 'google_search') or 'google_search'
+    BATCHBOT_REQUEST_TIMEOUT_SECONDS = env.int('BATCHBOT_REQUEST_TIMEOUT_SECONDS', 45)
+    BATCHBOT_DEFAULT_MAX_REQUESTS = env.int('BATCHBOT_DEFAULT_MAX_REQUESTS', 0)
+    BATCHBOT_REQUEST_WINDOW_DAYS = env.int('BATCHBOT_REQUEST_WINDOW_DAYS', 30)
+    BATCHBOT_CHAT_MAX_MESSAGES = env.int('BATCHBOT_CHAT_MAX_MESSAGES', 60)
+    BATCHBOT_COST_PER_MILLION_INPUT = env.float('BATCHBOT_COST_PER_MILLION_INPUT', 0.35)
+    BATCHBOT_COST_PER_MILLION_OUTPUT = env.float('BATCHBOT_COST_PER_MILLION_OUTPUT', 0.53)
+    BATCHBOT_SIGNUP_BONUS_REQUESTS = env.int('BATCHBOT_SIGNUP_BONUS_REQUESTS', 20)
+    BATCHBOT_REFILL_LOOKUP_KEY = env.str('BATCHBOT_REFILL_LOOKUP_KEY', 'batchbot_refill_100') or 'batchbot_refill_100'
 
 
 class DevelopmentConfig(BaseConfig):
@@ -124,10 +266,8 @@ class DevelopmentConfig(BaseConfig):
     DEBUG = True
     DEVELOPMENT = True
     SESSION_COOKIE_SECURE = False
-    SESSION_REDIS_MAX_CONNECTIONS = _env_int('SESSION_REDIS_MAX_CONNECTIONS', 4)
 
-    # Prefer internal URL (Render) then DATABASE_URL; else SQLite for local dev
-    _db_url = _normalize_db_url(os.environ.get('DATABASE_INTERNAL_URL')) or _normalize_db_url(os.environ.get('DATABASE_URL'))
+    _db_url = _normalize_db_url(env.str('DATABASE_INTERNAL_URL')) or _normalize_db_url(env.str('DATABASE_URL'))
     if _db_url:
         SQLALCHEMY_DATABASE_URI = _db_url
     else:
@@ -136,17 +276,12 @@ class DevelopmentConfig(BaseConfig):
         os.chmod(instance_path, 0o777)
         SQLALCHEMY_DATABASE_URI = 'sqlite:///' + os.path.join(instance_path, 'batchtrack.db')
 
-    # Development specific engine options, less aggressive than production
     SQLALCHEMY_ENGINE_OPTIONS = {
         'pool_pre_ping': True,
         'pool_recycle': 3600,
         'echo': False,
     }
-    RATELIMIT_STORAGE_URI = (
-        os.environ.get('RATELIMIT_STORAGE_URI')
-        or os.environ.get('RATELIMIT_STORAGE_URL')
-        or 'memory://'
-    )
+    RATELIMIT_STORAGE_URI = env.str('RATELIMIT_STORAGE_URI') or env.str('RATELIMIT_STORAGE_URL') or 'memory://'
     RATELIMIT_STORAGE_URL = RATELIMIT_STORAGE_URI
 
 
@@ -155,14 +290,11 @@ class TestingConfig(BaseConfig):
     TESTING = True
     WTF_CSRF_ENABLED = False
     SESSION_COOKIE_SECURE = False
-    SESSION_REDIS_MAX_CONNECTIONS = _env_int('SESSION_REDIS_MAX_CONNECTIONS', 2)
-    # In tests we often use file-based temp SQLite from fixtures; default to memory
     SQLALCHEMY_DATABASE_URI = 'sqlite:///:memory:'
     SQLALCHEMY_ENGINE_OPTIONS = {
         'pool_pre_ping': True,
     }
-    # Add rate limiter storage configuration for tests
-    RATELIMIT_STORAGE_URI = os.environ.get('RATELIMIT_STORAGE_URI', 'memory://')
+    RATELIMIT_STORAGE_URI = env.str('RATELIMIT_STORAGE_URI', 'memory://') or 'memory://'
     RATELIMIT_STORAGE_URL = RATELIMIT_STORAGE_URI
     SESSION_TYPE = 'filesystem'
 
@@ -173,15 +305,14 @@ class StagingConfig(BaseConfig):
     PREFERRED_URL_SCHEME = 'https'
     DEBUG = False
     TESTING = False
-    SESSION_REDIS_MAX_CONNECTIONS = _env_int('SESSION_REDIS_MAX_CONNECTIONS', 20)
-    SQLALCHEMY_DATABASE_URI = _normalize_db_url(os.environ.get('DATABASE_INTERNAL_URL')) or _normalize_db_url(os.environ.get('DATABASE_URL'))
+    SQLALCHEMY_DATABASE_URI = _normalize_db_url(env.str('DATABASE_INTERNAL_URL')) or _normalize_db_url(env.str('DATABASE_URL'))
     SQLALCHEMY_ENGINE_OPTIONS = {
         'pool_size': 10,
         'max_overflow': 20,
         'pool_pre_ping': True,
         'pool_recycle': 1800,
     }
-    _staging_ratelimit_uri = os.environ.get('RATELIMIT_STORAGE_URI') or os.environ.get('REDIS_URL') or 'memory://'
+    _staging_ratelimit_uri = env.str('RATELIMIT_STORAGE_URI') or env.str('REDIS_URL') or 'memory://'
     RATELIMIT_STORAGE_URI = _staging_ratelimit_uri
     RATELIMIT_STORAGE_URL = _staging_ratelimit_uri
 
@@ -192,19 +323,24 @@ class ProductionConfig(BaseConfig):
     PREFERRED_URL_SCHEME = 'https'
     DEBUG = False
     TESTING = False
-    SESSION_REDIS_MAX_CONNECTIONS = _env_int('SESSION_REDIS_MAX_CONNECTIONS', 40)
-    SQLALCHEMY_DATABASE_URI = _normalize_db_url(os.environ.get('DATABASE_INTERNAL_URL')) or _normalize_db_url(os.environ.get('DATABASE_URL'))
+    SQLALCHEMY_DATABASE_URI = _normalize_db_url(env.str('DATABASE_INTERNAL_URL')) or _normalize_db_url(env.str('DATABASE_URL'))
     SQLALCHEMY_ENGINE_OPTIONS = {
-        'pool_size': int(os.environ.get('SQLALCHEMY_POOL_SIZE', 80)),
-        'max_overflow': int(os.environ.get('SQLALCHEMY_MAX_OVERFLOW', 40)),
+        'pool_size': env.int('SQLALCHEMY_POOL_SIZE', 80),
+        'max_overflow': env.int('SQLALCHEMY_MAX_OVERFLOW', 40),
         'pool_pre_ping': True,
         'pool_recycle': 1800,
-        'pool_timeout': int(os.environ.get('SQLALCHEMY_POOL_TIMEOUT', 30)),
+        'pool_timeout': env.int('SQLALCHEMY_POOL_TIMEOUT', 30),
+        'pool_use_lifo': True,
     }
-    _prod_ratelimit_uri = os.environ.get('RATELIMIT_STORAGE_URI') or os.environ.get('REDIS_URL') or os.environ.get('RATELIMIT_STORAGE_URL') or _resolve_ratelimit_uri()
+    _prod_ratelimit_uri = (
+        env.str('RATELIMIT_STORAGE_URI')
+        or env.str('REDIS_URL')
+        or env.str('RATELIMIT_STORAGE_URL')
+        or _resolve_ratelimit_uri(env)
+    )
     RATELIMIT_STORAGE_URI = _prod_ratelimit_uri
     RATELIMIT_STORAGE_URL = _prod_ratelimit_uri
-    LOG_LEVEL = os.environ.get('LOG_LEVEL', 'INFO')
+    LOG_LEVEL = env.str('LOG_LEVEL', 'INFO') or 'INFO'
 
 
 config_map = {
@@ -216,16 +352,17 @@ config_map = {
 
 
 def get_active_config_name() -> str:
-    """Return the canonical configuration key for the current environment."""
-    env_name = _normalized_env(os.environ.get('FLASK_ENV'), default=_DEFAULT_ENV)
-    return env_name if env_name in config_map else _DEFAULT_ENV
+    return ENV_INFO.name
 
 
 def get_config():
-    """Return the config class for the active environment."""
-    config_name = get_active_config_name()
-    return config_map[config_name]
+    return config_map[get_active_config_name()]
 
 
-# Backwards compatibility for existing imports
-Config = get_config()
+Config = config_map[ENV_INFO.name]
+ENV_DIAGNOSTICS = {
+    'active': ENV_INFO.name,
+    'source': ENV_INFO.source,
+    'variables': {ENV_INFO.source: ENV_INFO.raw_value},
+    'warnings': tuple(env.warnings),
+}

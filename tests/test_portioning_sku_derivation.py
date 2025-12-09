@@ -4,11 +4,14 @@ from app.models import Product, ProductVariant, ProductSKU
 from app.models.product_category import ProductCategory
 from app.models.unit import Unit
 from app.models.recipe import Recipe
-from app.models.batch import Batch
+from app.models.batch import Batch, BatchIngredient
+from app.models.inventory import InventoryItem
+from app.models.models import User
 from app.services.product_service import ProductService
 from app.services.recipe_service._core import create_recipe
 from app.services.batch_service.batch_operations import BatchOperationsService
 from app.services.production_planning.service import PlanProductionService
+from flask_login import login_user
 
 
 @pytest.mark.usefixtures('app_context')
@@ -100,4 +103,100 @@ def test_portioning_sku_labels_differ(client):
 
     assert size_a != size_b, f"Expected different size labels, got {size_a} == {size_b}"
     assert sku_a.sku_name != sku_b.sku_name
+
+
+@pytest.mark.usefixtures('app_context')
+def test_portion_costing_uses_portion_count(app):
+    """Portioned batch inventory should divide total cost by actual portion output."""
+    with app.test_request_context('/'):
+        user = User.query.first()
+        login_user(user)
+
+        org_id = user.organization_id
+        category = ProductCategory.query.filter_by(name='Uncategorized').first()
+
+        # Core product/variant scaffolding
+        product = Product(
+            name='Portioned Product',
+            category_id=category.id,
+            organization_id=org_id,
+            created_by=user.id
+        )
+        variant = ProductVariant(
+            product=product,
+            name='Classic',
+            organization_id=org_id,
+            created_by=user.id
+        )
+        recipe = Recipe(
+            name='Portioned Recipe',
+            label_prefix='PORT',
+            category_id=category.id,
+            organization_id=org_id,
+            created_by=user.id,
+            is_portioned=True,
+            portion_name='Bar',
+            portion_count=4
+        )
+        ingredient = InventoryItem(
+            name='Olive Oil',
+            type='ingredient',
+            unit='kg',
+            quantity=0.0,
+            cost_per_unit=3.0,
+            organization_id=org_id,
+            created_by=user.id
+        )
+
+        db.session.add_all([product, variant, recipe, ingredient])
+        db.session.flush()
+
+        batch = Batch(
+            recipe_id=recipe.id,
+            label_code='PORT-TEST',
+            batch_type='product',
+            status='in_progress',
+            organization_id=org_id,
+            created_by=user.id,
+            is_portioned=True,
+            portion_name='Bar'
+        )
+        db.session.add(batch)
+        db.session.flush()
+
+        snapshot = BatchIngredient(
+            batch_id=batch.id,
+            inventory_item_id=ingredient.id,
+            quantity_used=4.0,
+            unit='kg',
+            cost_per_unit=3.0,
+            organization_id=org_id
+        )
+        db.session.add(snapshot)
+        db.session.commit()
+
+        # Sanity check: snapshot captured expected cost basis
+        assert len(batch.batch_ingredients) == 1
+        material_cost = sum((ing.quantity_used or 0) * (ing.cost_per_unit or 0) for ing in batch.batch_ingredients)
+        assert material_cost == pytest.approx(12.0)
+
+        success, message = BatchOperationsService.complete_batch(batch.id, {
+            'output_type': 'product',
+            'product_id': product.id,
+            'variant_id': variant.id,
+            'final_quantity': '1',   # Deliberately not equal to portions to catch regression
+            'output_unit': 'kg',
+            'final_portions': '4'
+        })
+        assert success, f"Complete batch failed: {message}"
+
+        portion_sku = ProductSKU.query.filter_by(product_id=product.id, variant_id=variant.id).order_by(ProductSKU.id.desc()).first()
+        assert portion_sku is not None
+        from app.models.inventory_lot import InventoryLot
+        lots = InventoryLot.query.filter_by(inventory_item_id=portion_sku.inventory_item_id).all()
+        assert lots, "Portion SKU should have at least one FIFO lot"
+        assert lots[0].unit_cost == pytest.approx(3.0)
+        from app.services.costing_engine import weighted_average_cost_for_item
+        assert weighted_average_cost_for_item(portion_sku.inventory_item_id) == pytest.approx(3.0)
+        assert portion_sku.inventory_item.cost_per_unit == pytest.approx(3.0)
 

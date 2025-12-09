@@ -91,7 +91,14 @@
     const list = row.querySelector('[data-role="suggestions"]');
     // Use unified typeahead in public context (global-only)
     if (typeof window.attachMergedInventoryGlobalTypeahead === 'function'){
-      window.attachMergedInventoryGlobalTypeahead({ inputEl: input, giHiddenEl: giHidden, listEl: list, mode: 'recipe', context: 'public' });
+      window.attachMergedInventoryGlobalTypeahead({
+        inputEl: input,
+        giHiddenEl: giHidden,
+        listEl: list,
+        mode: 'recipe',
+        context: 'public',
+        ingredientFirst: kind === 'ingredient'
+      });
     }
     row.querySelector('.tool-remove').addEventListener('click', function(){ row.remove(); });
     return row;

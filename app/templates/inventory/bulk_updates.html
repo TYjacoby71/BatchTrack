@@ -1,0 +1,1027 @@
+{% extends "layout.html" %}
+
+{% block content %}
+<style>
+#bulkTable {
+    min-width: 1200px;
+}
+#bulkTable th,
+#bulkTable td {
+    vertical-align: middle;
+}
+#bulkTable th.col-change-type,
+#bulkTable td.col-change-type {
+    width: 150px;
+    min-width: 150px;
+}
+#bulkTable th.col-inventory-type,
+#bulkTable td.col-inventory-type {
+    width: 170px;
+    min-width: 170px;
+}
+#bulkTable th.col-item,
+#bulkTable td.col-item {
+    min-width: 360px;
+}
+#bulkTable th.col-qty,
+#bulkTable td.col-qty,
+#bulkTable th.col-unit,
+#bulkTable td.col-unit {
+    width: 140px;
+    min-width: 140px;
+}
+#bulkTable th.col-cost,
+#bulkTable td.col-cost {
+    width: 220px;
+    min-width: 220px;
+}
+#bulkTable th.col-notes,
+#bulkTable td.col-notes {
+    min-width: 200px;
+}
+#bulkTable th.col-actions,
+#bulkTable td.col-actions {
+    width: 60px;
+}
+#bulkTable .item-name {
+    width: 100%;
+}
+</style>
+<div class="row">
+    <div class="col-lg-10 mx-auto">
+        <div class="card shadow-sm mb-4">
+            <div class="card-body d-flex justify-content-between align-items-center">
+                <div>
+                    <h2 class="h4 mb-1">Bulk Inventory Assistant</h2>
+                    <p class="text-muted mb-0">
+                        Draft high-volume restocks, spoils, or trash events in one place.
+                        Drafts stay local to your browser until you submit or close the modal.
+                    </p>
+                </div>
+                <div class="d-flex flex-wrap gap-2">
+                    <a class="btn btn-outline-secondary btn-lg" href="{{ url_for('inventory.list_inventory') }}">
+                        <i class="fas fa-warehouse me-2"></i>Inventory List
+                    </a>
+                    <button class="btn btn-primary btn-lg" data-bs-toggle="modal" data-bs-target="#bulkUpdateModal">
+                        <i class="fas fa-layer-group me-2"></i>Open Bulk Modal
+                    </button>
+                </div>
+            </div>
+        </div>
+        <div class="alert alert-info">
+            <strong>Tip:</strong> Batchley can pre-fill this modal for you. Ask it to “set up a bulk restock draft”
+            and it will push line items here for review.
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="bulkUpdateModal" tabindex="-1" aria-labelledby="bulkUpdateModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-xl modal-dialog-scrollable">
+        <div class="modal-content">
+            <div class="modal-header">
+                <div>
+                    <h5 class="modal-title" id="bulkUpdateModalLabel">Bulk Inventory Update</h5>
+                    <small class="text-muted">Create inventory, restock, spoil, or trash multiple items in a single run.</small>
+                </div>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3">
+                    <div>
+                        <span class="fw-semibold">Drafts</span>
+                        <span class="badge bg-secondary" id="draftCount">0</span>
+                        <div id="draftList" class="mt-1 small text-muted"></div>
+                    </div>
+                    <div class="btn-group">
+                        <button class="btn btn-outline-secondary btn-sm" id="loadDraftBtn" disabled>Load Selected</button>
+                        <button class="btn btn-outline-danger btn-sm" id="deleteDraftBtn" disabled>Delete Selected</button>
+                    </div>
+                </div>
+
+                <div class="table-responsive mb-3">
+                    <table class="table table-sm align-middle" id="bulkTable">
+                        <thead class="table-light">
+                            <tr>
+                                <th class="col-change-type">Change Type</th>
+                                <th class="col-inventory-type">Inventory Type</th>
+                                <th class="col-item">Inventory Item</th>
+                                <th class="col-qty">Quantity</th>
+                                <th class="col-unit">Unit</th>
+                                <th class="col-cost">Cost Entry</th>
+                                <th class="col-notes">Notes</th>
+                                <th class="col-actions"></th>
+                            </tr>
+                        </thead>
+                        <tbody></tbody>
+                    </table>
+                </div>
+
+                <div class="d-flex flex-wrap gap-2">
+                    <button class="btn btn-outline-primary" id="addRowBtn">
+                        <i class="fas fa-plus"></i> Add Row
+                    </button>
+                    <button class="btn btn-outline-danger" id="clearRowsBtn">
+                        <i class="fas fa-trash"></i> Clear All
+                    </button>
+                    <button class="btn btn-outline-secondary ms-auto" id="saveDraftBtn">
+                        <i class="fas fa-save"></i> Save Draft
+                    </button>
+                    <button class="btn btn-primary" id="submitDraftBtn">
+                        <i class="fas fa-paper-plane"></i> Submit
+                    </button>
+                </div>
+
+                <div class="mt-3">
+                    <label class="form-label fw-semibold">Status</label>
+                    <div id="bulkStatus" class="alert alert-secondary mb-0">No lines queued yet. Submissions use the standard adjustment flow.</div>
+                    <div class="small text-muted mt-2">
+                        <span class="me-3">
+                            <i class="fas fa-boxes-stacked me-1"></i>{{ inventory_items|length if inventory_items else 0 }} inventory items connected
+                        </span>
+                        <span>
+                            <i class="fas fa-ruler-combined me-1"></i>{{ unit_options|length if unit_options else 0 }} unit options loaded
+                        </span>
+                    </div>
+                    <div id="resultDetails" class="mt-3" style="display: none;"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+{{ super() }}
+<script>
+(function () {
+    const storageKey = 'bt_bulk_inventory_drafts';
+    const rawInventoryOptions = {{ (inventory_items or [])|tojson }};
+    const rawUnitOptions = {{ (unit_options or [])|tojson }};
+    const inventoryOptions = Array.isArray(rawInventoryOptions) ? rawInventoryOptions : [];
+    const unitOptions = Array.isArray(rawUnitOptions) ? rawUnitOptions : [];
+    const inventoryById = new Map(inventoryOptions.map(item => [Number(item.id), item]));
+    const safeUnitOptions = unitOptions.length ? unitOptions : [{ name: 'count', symbol: null, unit_type: 'count' }];
+    const defaultUnit = safeUnitOptions[0]?.name || '';
+    const csrfToken = {{ csrf_token()|tojson }} || document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
+    const adjustUrlTemplate = {{ url_for('inventory.adjust_inventory', item_id=0)|tojson }};
+    const tableBody = document.querySelector('#bulkTable tbody');
+    const draftCountEl = document.getElementById('draftCount');
+    const draftListEl = document.getElementById('draftList');
+    const statusEl = document.getElementById('bulkStatus');
+    const resultsEl = document.getElementById('resultDetails');
+    const loadBtn = document.getElementById('loadDraftBtn');
+    const deleteBtn = document.getElementById('deleteDraftBtn');
+    const submitBtn = document.getElementById('submitDraftBtn');
+    const modalEl = document.getElementById('bulkUpdateModal');
+    let selectedDraftId = null;
+
+    function escapeHtml(value) {
+        if (value === undefined || value === null) {
+            return '';
+        }
+        return String(value)
+            .replace(/&/g, '&amp;')
+            .replace(/"/g, '&quot;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;');
+    }
+
+    const typeLabels = {
+        ingredient: 'Ingredients',
+        container: 'Containers',
+        consumable: 'Consumables',
+        packaging: 'Packaging',
+        product: 'Products',
+        intermediate: 'Intermediate Goods',
+    };
+    const defaultTypes = ['ingredient', 'container', 'consumable', 'packaging', 'product', 'intermediate'];
+    const typeOptions = [];
+    const inventoryByType = new Map();
+
+    function normalizeType(value) {
+        return (value || 'ingredient').toString().trim().toLowerCase() || 'ingredient';
+    }
+
+    function registerType(value) {
+        const normalized = normalizeType(value);
+        if (!typeOptions.includes(normalized)) {
+            typeOptions.push(normalized);
+        }
+        if (!inventoryByType.has(normalized)) {
+            inventoryByType.set(normalized, []);
+        }
+        return normalized;
+    }
+
+    defaultTypes.forEach(registerType);
+    inventoryOptions.forEach(item => {
+        const normalized = registerType(item.type);
+        inventoryByType.get(normalized).push(item);
+    });
+    inventoryByType.forEach(list => list.sort((a, b) => (a.name || '').localeCompare(b.name || '')));
+
+    function typeLabel(value) {
+        const label = typeLabels[value];
+        if (label) {
+            return label;
+        }
+        if (!value) {
+            return 'Items';
+        }
+        return value.charAt(0).toUpperCase() + value.slice(1);
+    }
+
+    function buildTypeOptionsMarkup(selectedValue) {
+        return typeOptions
+            .map(type => {
+                const selectedAttr = type === selectedValue ? ' selected' : '';
+                return `<option value="${type}"${selectedAttr}>${escapeHtml(typeLabel(type))}</option>`;
+            })
+            .join('');
+    }
+
+    function renderInventoryOptions(selectEl, typeValue, selectedId) {
+        const normalized = normalizeType(typeValue);
+        const items = inventoryByType.get(normalized) || [];
+        let optionsHtml = '<option value="">Select Item</option>';
+        optionsHtml += items
+            .map(item => `<option value="${item.id}">${escapeHtml(item.name || `Item #${item.id}`)}</option>`)
+            .join('');
+        selectEl.innerHTML = optionsHtml;
+        if (selectedId) {
+            selectEl.value = String(selectedId);
+            if (selectEl.value !== String(selectedId)) {
+                selectEl.value = '';
+            }
+        } else {
+            selectEl.value = '';
+        }
+    }
+
+    const unitOptionsMarkup = safeUnitOptions
+        .map(unit => {
+            const label = escapeHtml(unit.name || '');
+            const suffix = unit.symbol ? ` (${escapeHtml(unit.symbol)})` : '';
+            return `<option value="${label}">${label}${suffix}</option>`;
+        })
+        .join('');
+
+    const costHelpText = {
+        no_change: 'Cost stays the same',
+        per_unit: 'Override cost per unit',
+        total: 'Enter total cost; converted per unit',
+    };
+
+    function helperCopy(match, typeValue) {
+        if (match) {
+            return `Linked to ${match.name} (${match.unit || 'unit'})`;
+        }
+        if (!inventoryOptions.length) {
+            return 'Inventory list is empty for this organization.';
+        }
+        const label = typeLabel(typeValue);
+        return `Select a ${label.toLowerCase()} item to enable submission.`;
+    }
+
+    function buildAdjustUrl(itemId) {
+        return adjustUrlTemplate.replace(/\d+$/, String(itemId));
+    }
+
+    function getDrafts() {
+        try {
+            return JSON.parse(localStorage.getItem(storageKey) || '[]');
+        } catch (err) {
+            console.warn('Failed to parse drafts', err);
+            return [];
+        }
+    }
+
+    function saveDrafts(drafts) {
+        localStorage.setItem(storageKey, JSON.stringify(drafts));
+        renderDraftList();
+    }
+
+    function debounce(fn, wait) {
+        let timeout;
+        return function (...args) {
+            clearTimeout(timeout);
+            timeout = setTimeout(() => fn.apply(this, args), wait);
+        };
+    }
+
+    function renderDraftList() {
+        const drafts = getDrafts();
+        draftCountEl.textContent = drafts.length;
+        if (!drafts.length) {
+            draftListEl.innerHTML = '<em>No saved drafts.</em>';
+            loadBtn.disabled = true;
+            deleteBtn.disabled = true;
+            selectedDraftId = null;
+            return;
+        }
+        const chips = drafts
+            .map((draft, idx) => `
+                <button class="btn btn-sm btn-outline-secondary me-1 mb-1 draft-chip" data-draft="${idx}">
+                    ${escapeHtml(draft.name)}
+                </button>
+            `)
+            .join('');
+        draftListEl.innerHTML = chips;
+        document.querySelectorAll('.draft-chip').forEach(btn => {
+            btn.addEventListener('click', () => {
+                document.querySelectorAll('.draft-chip').forEach(el => el.classList.remove('active'));
+                btn.classList.add('active');
+                selectedDraftId = Number(btn.dataset.draft);
+                loadBtn.disabled = false;
+                deleteBtn.disabled = false;
+            });
+        });
+    }
+
+    const INVENTORY_TYPES = [
+        { value: 'ingredient', label: 'Ingredient' },
+        { value: 'consumable', label: 'Consumable' },
+        { value: 'intermediate', label: 'Intermediate' },
+        { value: 'packaging', label: 'Packaging' },
+        { value: 'container', label: 'Container' },
+        { value: 'product', label: 'Product' },
+    ];
+
+    const CHANGE_TYPES = [
+        { value: 'create', label: 'Create' },
+        { value: 'restock', label: 'Restock' },
+        { value: 'spoil', label: 'Spoil' },
+        { value: 'trash', label: 'Trash' },
+    ];
+
+    function buildOptions(options, selected) {
+        return options.map(opt => `<option value="${opt.value}" ${opt.value === selected ? 'selected' : ''}>${opt.label}</option>`).join('');
+    }
+
+    function setStatus(level, message) {
+        statusEl.className = `alert alert-${level}`;
+        statusEl.textContent = message;
+    }
+
+    function addRow(data = {}) {
+        const match = data.inventory_item_id ? inventoryById.get(Number(data.inventory_item_id)) : null;
+        const normalizedType = registerType(data.inventory_type || match?.type || typeOptions[0] || 'ingredient');
+        const helperText = helperCopy(match || null, normalizedType);
+        const costType = (data.cost_entry_type || 'no_change').toLowerCase();
+        const costValue = data.cost_per_unit ?? '';
+        const requestedChange = (data.change_type || '').toLowerCase();
+        const changeTypeValue = CHANGE_TYPES.some(opt => opt.value === requestedChange) ? requestedChange : 'restock';
+        const nameValue = data.inventory_item_name || match?.name || '';
+        const notesValue = data.notes || '';
+        const row = document.createElement('tr');
+        row.dataset.unitTouched = data.unit ? 'true' : '';
+        row.innerHTML = `
+            <td class="col-change-type">
+                <select class="form-select form-select-sm change-type">
+                    ${buildOptions(CHANGE_TYPES, changeTypeValue)}
+                </select>
+            </td>
+            <td class="col-inventory-type">
+                <select class="form-select form-select-sm inventory-type">
+                    ${buildTypeOptionsMarkup(normalizedType)}
+                </select>
+            </td>
+            <td class="col-item">
+                <div class="position-relative suggestion-wrapper">
+                    <input type="hidden" class="item-id" value="${data.inventory_item_id || ''}">
+                    <input type="hidden" class="global-item-id" value="${data.global_item_id || ''}">
+                    <input type="text"
+                        class="form-control form-control-sm item-name"
+                        placeholder="Search inventory..."
+                        value="${escapeHtml(nameValue)}">
+                    <div class="list-group position-absolute w-100 shadow suggestion-list d-none" style="z-index: 1060;"></div>
+                </div>
+                <small class="text-muted item-helper">${escapeHtml(helperText)}</small>
+                <small class="text-muted action-hint"></small>
+            </td>
+            <td class="col-qty">
+                <input type="number" step="0.01" class="form-control form-control-sm quantity" value="${data.quantity ?? ''}">
+            </td>
+            <td class="col-unit">
+                <select class="form-select form-select-sm unit">
+                    <option value="">Select unit</option>
+                    ${unitOptionsMarkup}
+                </select>
+            </td>
+            <td class="col-cost">
+                <select class="form-select form-select-sm cost-entry-type">
+                    <option value="no_change"${costType === 'no_change' ? ' selected' : ''}>Keep Cost</option>
+                    <option value="per_unit"${costType === 'per_unit' ? ' selected' : ''}>Per Unit Cost</option>
+                    <option value="total"${costType === 'total' ? ' selected' : ''}>Total Cost</option>
+                </select>
+                <input type="number" step="0.01" class="form-control form-control-sm mt-1 cost" value="${costValue === null ? '' : costValue}">
+                <div class="form-text cost-help">${escapeHtml(costHelpText[costType] || costHelpText.no_change)}</div>
+            </td>
+            <td class="col-notes">
+                <input type="text" class="form-control form-control-sm notes" value="${escapeHtml(notesValue)}">
+            </td>
+            <td class="col-actions">
+                <button class="btn btn-link text-danger p-0 remove-row" aria-label="Remove line">
+                    <i class="fas fa-times"></i>
+                </button>
+            </td>
+        `;
+
+        const typeSelect = row.querySelector('.inventory-type');
+        const unitSelect = row.querySelector('.unit');
+        const costTypeSelect = row.querySelector('.cost-entry-type');
+        const helperEl = row.querySelector('.item-helper');
+
+        typeSelect.value = normalizedType;
+
+        if (helperEl) {
+            helperEl.textContent = helperText;
+        }
+
+        costTypeSelect.addEventListener('change', () => {
+            const type = (costTypeSelect.value || 'no_change').toLowerCase();
+            const costInput = row.querySelector('.cost');
+            const help = row.querySelector('.cost-help');
+            costInput.disabled = type === 'no_change';
+            if (type === 'no_change') {
+                costInput.value = '';
+            }
+            help.textContent = costHelpText[type] || costHelpText.no_change;
+        });
+
+        const initialCostType = (costTypeSelect.value || 'no_change').toLowerCase();
+        if (initialCostType === 'no_change') {
+            row.querySelector('.cost').disabled = true;
+        }
+
+        unitSelect.addEventListener('change', () => {
+            row.dataset.unitTouched = 'true';
+        });
+        unitSelect.value = data.unit || match?.unit || defaultUnit || '';
+
+        row.querySelector('.remove-row').addEventListener('click', () => {
+            row.remove();
+            if (!tableBody.querySelectorAll('tr').length) {
+                addRow();
+                updateStatus('No lines remaining.', { resetResults: true });
+            } else {
+                updateStatus();
+            }
+        });
+
+        tableBody.appendChild(row);
+        attachRowBehavior(row, data);
+        updateStatus();
+    }
+
+    function attachRowBehavior(row, data = {}) {
+        const changeSelect = row.querySelector('.change-type');
+        const typeSelect = row.querySelector('.inventory-type');
+        const nameInput = row.querySelector('.item-name');
+        const idInput = row.querySelector('.item-id');
+        const globalIdInput = row.querySelector('.global-item-id');
+        const suggestionList = row.querySelector('.suggestion-list');
+        const actionHint = row.querySelector('.action-hint');
+        const helperEl = row.querySelector('.item-helper');
+
+        const searchInventory = debounce(() => fetchInventorySuggestions(row), 250);
+
+        function refreshHelper(matchOverride = null) {
+            if (!helperEl) return;
+            const activeMatch = matchOverride
+                || (idInput.value ? inventoryById.get(Number(idInput.value)) : null);
+            helperEl.textContent = helperCopy(activeMatch || null, typeSelect.value);
+        }
+
+        changeSelect.addEventListener('change', () => {
+            syncActionHint(row);
+            if (changeSelect.value !== 'create' && !idInput.value) {
+                nameInput.focus();
+            }
+            if (changeSelect.value !== 'create' && globalIdInput) {
+                globalIdInput.value = '';
+            }
+            if (nameInput.value.trim().length >= 2) {
+                searchInventory();
+            }
+        });
+
+        typeSelect.addEventListener('change', () => {
+            idInput.value = '';
+            if (globalIdInput) {
+                globalIdInput.value = '';
+            }
+            if (nameInput.value.trim().length >= 2) {
+                searchInventory();
+            } else {
+                hideSuggestions(suggestionList);
+            }
+            refreshHelper();
+            syncActionHint(row);
+        });
+
+        nameInput.addEventListener('input', () => {
+            idInput.value = '';
+            if (globalIdInput) {
+                globalIdInput.value = '';
+            }
+            if (nameInput.value.trim().length >= 2) {
+                searchInventory();
+            } else {
+                hideSuggestions(suggestionList);
+            }
+            refreshHelper();
+        });
+
+        nameInput.addEventListener('focus', () => {
+            if (nameInput.value.trim().length >= 2) {
+                searchInventory();
+            }
+        });
+
+        suggestionList.addEventListener('click', (event) => {
+            const target = event.target.closest('button[data-id]');
+            if (target) {
+                selectSuggestion(row, {
+                    id: target.dataset.id,
+                    name: target.dataset.name,
+                    type: target.dataset.type,
+                    source: target.dataset.source,
+                    global_item_id: target.dataset.globalId,
+                    unit: target.dataset.unit,
+                });
+            }
+        });
+
+        if (data.inventory_item_id) {
+            prefillInventoryItem(data.inventory_item_id, row);
+        }
+
+        refreshHelper();
+        syncActionHint(row);
+    }
+
+    function syncActionHint(row) {
+        const changeType = row.querySelector('.change-type').value;
+        const typeValue = row.querySelector('.inventory-type').value;
+        const hintEl = row.querySelector('.action-hint');
+        const friendlyType = typeLabel(typeValue).toLowerCase();
+        if (changeType === 'create') {
+            hintEl.textContent = `Will create a new ${friendlyType} if it doesn't exist.`;
+        } else if (changeType === 'restock') {
+            hintEl.textContent = `Select an existing ${friendlyType} to restock.`;
+        } else if (changeType === 'spoil') {
+            hintEl.textContent = `Select an existing ${friendlyType} to mark as spoiled.`;
+        } else if (changeType === 'trash') {
+            hintEl.textContent = `Select an existing ${friendlyType} to trash.`;
+        }
+    }
+
+    function fetchInventorySuggestions(row) {
+        const input = row.querySelector('.item-name');
+        const typeSelect = row.querySelector('.inventory-type');
+        const changeSelect = row.querySelector('.change-type');
+        const list = row.querySelector('.suggestion-list');
+        const query = input.value.trim();
+        if (query.length < 2) {
+            hideSuggestions(list);
+            return;
+        }
+        const params = new URLSearchParams({ q: query });
+        if (typeSelect.value) {
+            params.append('type', typeSelect.value);
+        }
+        if (changeSelect && changeSelect.value) {
+            params.append('change_type', changeSelect.value);
+        }
+        fetch(`/inventory/api/search?${params.toString()}`)
+            .then(resp => resp.json())
+            .then(data => {
+                const items = (data.results || []).map(item => ({
+                    id: item.id,
+                    name: item.text,
+                    type: item.type,
+                    source: item.source || 'inventory',
+                    unit: item.unit || '',
+                    global_item_id: item.global_item_id || '',
+                }));
+                renderSuggestions(list, items);
+            })
+            .catch(() => hideSuggestions(list));
+    }
+
+    function renderSuggestions(container, items) {
+        if (!items.length) {
+            hideSuggestions(container);
+            return;
+        }
+        container.innerHTML = items.map(item => `
+            <button type="button" class="list-group-item list-group-item-action"
+                data-id="${item.id}"
+                data-name="${escapeHtml(item.name)}"
+                data-type="${item.type || ''}"
+                data-source="${item.source || 'inventory'}"
+                data-global-id="${item.global_item_id || ''}"
+                data-unit="${item.unit || ''}">
+                ${escapeHtml(item.name)}
+                ${item.source === 'global' ? '<span class="badge bg-info-subtle text-info-emphasis ms-2">Global</span>' : ''}
+            </button>
+        `).join('');
+        container.classList.remove('d-none');
+    }
+
+    function hideSuggestions(container) {
+        container.classList.add('d-none');
+        container.innerHTML = '';
+    }
+
+    function selectSuggestion(row, item) {
+        const nameInput = row.querySelector('.item-name');
+        const idInput = row.querySelector('.item-id');
+        const globalIdInput = row.querySelector('.global-item-id');
+        const unitSelect = row.querySelector('.unit');
+        const list = row.querySelector('.suggestion-list');
+        const typeSelect = row.querySelector('.inventory-type');
+        const helperEl = row.querySelector('.item-helper');
+        const source = (item.source || 'inventory').toLowerCase();
+        const inventoryMatch = inventoryById.get(Number(item.id)) || null;
+        nameInput.value = item.name || '';
+        if (source === 'inventory') {
+            idInput.value = item.id || '';
+            if (globalIdInput) {
+                globalIdInput.value = '';
+            }
+            if (unitSelect && (row.dataset.unitTouched !== 'true' || !unitSelect.value)) {
+                const matchUnit = inventoryMatch?.unit || item.unit;
+                if (matchUnit) {
+                    unitSelect.value = matchUnit;
+                }
+            }
+        } else {
+            idInput.value = '';
+            if (globalIdInput) {
+                globalIdInput.value = item.global_item_id || item.id || '';
+            }
+            if (unitSelect && !row.dataset.unitTouched && item.unit) {
+                unitSelect.value = item.unit;
+            }
+        }
+        if (item.type) {
+            const normalized = registerType(item.type);
+            if (!Array.from(typeSelect.options).some(opt => opt.value === normalized)) {
+                typeSelect.insertAdjacentHTML(
+                    'beforeend',
+                    `<option value="${normalized}">${escapeHtml(typeLabel(normalized))}</option>`
+                );
+            }
+            typeSelect.value = normalized;
+        }
+        hideSuggestions(list);
+        if (source === 'inventory') {
+            prefillInventoryItem(item.id, row);
+        }
+        if (helperEl) {
+            if (source === 'global') {
+                helperEl.textContent = `Global catalog match. A new ${typeLabel(typeSelect.value).toLowerCase()} will be created.`;
+            } else {
+                const match = inventoryMatch || { name: item.name, unit: item.unit };
+                helperEl.textContent = helperCopy(match, typeSelect.value);
+            }
+        }
+        syncActionHint(row);
+    }
+
+    function prefillInventoryItem(itemId, row) {
+        if (!itemId) return;
+        fetch(`/inventory/api/get-item/${itemId}`)
+            .then(resp => resp.ok ? resp.json() : null)
+            .then(data => {
+                if (!data) return;
+                const unitInput = row.querySelector('.unit');
+                const costInput = row.querySelector('.cost');
+                if (!unitInput.value && data.unit) {
+                    unitInput.value = data.unit;
+                }
+                if (!costInput.value && typeof data.cost_per_unit === 'number') {
+                    costInput.value = data.cost_per_unit;
+                }
+            })
+            .catch(() => {});
+    }
+
+    function collectRows() {
+        const lines = [];
+        const elements = [];
+        tableBody.querySelectorAll('tr').forEach(row => {
+            const typeSelect = row.querySelector('.inventory-type');
+            const nameInput = row.querySelector('.item-name');
+            const idInput = row.querySelector('.item-id');
+            const globalIdInput = row.querySelector('.global-item-id');
+            const costTypeValue = (row.querySelector('.cost-entry-type').value || 'no_change').toLowerCase();
+            const costValueRaw = row.querySelector('.cost').value;
+            const quantityInput = row.querySelector('.quantity').value;
+            const normalizedType = normalizeType(typeSelect.value);
+            lines.push({
+                change_type: row.querySelector('.change-type').value,
+                inventory_type: normalizedType,
+                inventory_item_id: idInput.value ? Number(idInput.value) : null,
+                global_item_id: globalIdInput && globalIdInput.value ? Number(globalIdInput.value) : null,
+                inventory_item_name: nameInput.value.trim(),
+                quantity: quantityInput ? Number(quantityInput) : null,
+                unit: row.querySelector('.unit').value.trim(),
+                cost_entry_type: costTypeValue,
+                cost_per_unit: costValueRaw ? Number(costValueRaw) : null,
+                notes: row.querySelector('.notes').value.trim(),
+                allow_create: row.querySelector('.change-type').value === 'create',
+            });
+            elements.push(row);
+        });
+        return { lines, elements };
+    }
+
+    function validateRows(lines, elements) {
+        const errors = [];
+        elements.forEach(row => row.classList.remove('table-danger'));
+        lines.forEach((line, idx) => {
+            const rowErrors = [];
+            if (!line.inventory_type) {
+                rowErrors.push('inventory type is required');
+            }
+            if (!line.inventory_item_name) {
+                rowErrors.push('name is required');
+            }
+            if (line.change_type !== 'create' && !line.inventory_item_id) {
+                rowErrors.push('select an existing inventory item');
+            }
+            if (!line.quantity || Number.isNaN(line.quantity) || line.quantity <= 0) {
+                rowErrors.push('quantity must be greater than zero');
+            }
+            if (!line.unit) {
+                rowErrors.push('unit is required');
+            }
+            if (rowErrors.length) {
+                errors.push(`Row ${idx + 1}: ${rowErrors.join(', ')}`);
+                elements[idx].classList.add('table-danger');
+            }
+        });
+        return errors;
+    }
+
+    function clearResults() {
+        if (!resultsEl) return;
+        resultsEl.style.display = 'none';
+        resultsEl.innerHTML = '';
+    }
+
+    function renderResults(results) {
+        if (!resultsEl) return;
+        if (!Array.isArray(results) || !results.length) {
+            clearResults();
+            return;
+        }
+        const rows = results
+            .map(entry => {
+                const resolvedName = entry.item_name
+                    || (entry.item_id && inventoryById.get(Number(entry.item_id))?.name)
+                    || '—';
+                const statusBadge = entry.success
+                    ? '<span class="badge bg-success">Success</span>'
+                    : '<span class="badge bg-danger">Failed</span>';
+                return `
+                    <tr>
+                        <td>${entry.line ?? '—'}</td>
+                        <td>${escapeHtml(resolvedName)}</td>
+                        <td class="text-capitalize">${escapeHtml(entry.change_type || '—')}</td>
+                        <td>${statusBadge}</td>
+                        <td>${escapeHtml(entry.message || '')}</td>
+                    </tr>
+                `;
+            })
+            .join('');
+        resultsEl.innerHTML = `
+            <div class="table-responsive">
+                <table class="table table-sm align-middle mb-0">
+                    <thead>
+                        <tr>
+                            <th>#</th>
+                            <th>Item</th>
+                            <th>Change</th>
+                            <th>Status</th>
+                            <th>Message</th>
+                        </tr>
+                    </thead>
+                    <tbody>${rows}</tbody>
+                </table>
+            </div>
+        `;
+        resultsEl.style.display = 'block';
+    }
+
+    function updateStatus(message, options = {}) {
+        const { resetResults = false } = options;
+        if (resetResults) {
+            clearResults();
+        }
+        if (message) {
+            statusEl.className = 'alert alert-info';
+            statusEl.textContent = message;
+            return;
+        }
+        const rows = tableBody.querySelectorAll('tr').length;
+        if (!rows) {
+            statusEl.className = 'alert alert-secondary';
+            statusEl.textContent = 'No lines queued yet. Submissions use the standard adjustment flow.';
+            return;
+        }
+        const linkedCount = Array.from(tableBody.querySelectorAll('.item-id')).filter(hidden => hidden.value).length;
+        statusEl.className = 'alert alert-primary';
+        const linkedLabel = linkedCount ? ` · ${linkedCount} linked item(s)` : '';
+        statusEl.textContent = `${rows} line(s) ready${linkedLabel}.`;
+    }
+
+    async function submitSingleAdjustment(line, lineNumber) {
+        const targetUrl = buildAdjustUrl(line.inventory_item_id);
+        const formData = new FormData();
+        formData.append('csrf_token', csrfToken);
+        formData.append('quantity', String(line.quantity));
+        formData.append('input_unit', line.unit);
+        formData.append('change_type', line.change_type);
+        formData.append('cost_entry_type', line.cost_entry_type || 'no_change');
+        if (line.cost_entry_type !== 'no_change' && line.cost_per_unit !== null && line.cost_per_unit !== undefined) {
+            formData.append('cost_per_unit', String(line.cost_per_unit));
+        }
+        if (line.notes) {
+            formData.append('notes', line.notes);
+        }
+
+        const response = await fetch(targetUrl, {
+            method: 'POST',
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest',
+                'Accept': 'application/json',
+            },
+            body: formData,
+        });
+
+        const contentType = response.headers.get('content-type') || '';
+        let payload = {};
+        if (contentType.includes('application/json')) {
+            payload = await response.json();
+        }
+        const success = response.ok && payload.success !== false;
+        const message = payload.message || payload.error || (success ? 'Adjustment completed.' : `Request failed (${response.status})`);
+        return {
+            line: lineNumber,
+            item_id: line.inventory_item_id,
+            item_name: line.inventory_item_name,
+            change_type: line.change_type,
+            success,
+            message,
+        };
+    }
+
+    async function submitAdjustments(rows) {
+        const results = [];
+        for (let idx = 0; idx < rows.length; idx += 1) {
+            updateStatus(`Processing line ${idx + 1} of ${rows.length}…`);
+            try {
+                const result = await submitSingleAdjustment(rows[idx], idx + 1);
+                results.push(result);
+            } catch (err) {
+                results.push({
+                    line: idx + 1,
+                    item_id: rows[idx].inventory_item_id,
+                    item_name: rows[idx].inventory_item_name,
+                    change_type: rows[idx].change_type,
+                    success: false,
+                    message: err?.message || 'Unexpected error running adjustment.',
+                });
+            }
+        }
+        return results;
+    }
+
+    function loadDraft(index) {
+        const drafts = getDrafts();
+        const draft = drafts[index];
+        if (!draft) return;
+        tableBody.innerHTML = '';
+        (draft.lines || []).forEach(line => addRow(line));
+        updateStatus(`Loaded draft “${draft.name}”.`, { resetResults: true });
+    }
+
+    function deleteDraft(index) {
+        const drafts = getDrafts();
+        drafts.splice(index, 1);
+        saveDrafts(drafts);
+        loadBtn.disabled = true;
+        deleteBtn.disabled = true;
+        selectedDraftId = null;
+        updateStatus('Draft deleted.', { resetResults: true });
+    }
+
+    document.getElementById('addRowBtn').addEventListener('click', () => addRow());
+
+    document.getElementById('clearRowsBtn').addEventListener('click', () => {
+        tableBody.innerHTML = '';
+        addRow();
+        updateStatus('All lines cleared.', { resetResults: true });
+    });
+
+    document.getElementById('saveDraftBtn').addEventListener('click', () => {
+        const { lines } = collectRows();
+        if (!lines.length) {
+            updateStatus('Nothing to save.');
+            return;
+        }
+        const name = prompt('Name this draft:', `Draft ${new Date().toLocaleString()}`);
+        if (!name) return;
+        const drafts = getDrafts();
+        drafts.unshift({ name, lines });
+        saveDrafts(drafts);
+        updateStatus(`Saved draft “${name}”.`);
+    });
+
+    document.getElementById('submitDraftBtn').addEventListener('click', () => {
+        const { lines, elements } = collectRows();
+        if (!lines.length) {
+            updateStatus('Add at least one row before submitting.');
+            return;
+        }
+        const validationErrors = validateRows(lines, elements);
+        if (validationErrors.length) {
+            setStatus('danger', `Please fix the highlighted rows:\n${validationErrors.join(' | ')}`);
+            return;
+        }
+        setStatus('info', 'Submitting…');
+        fetch('{{ url_for("inventory.api_bulk_inventory_adjustments") }}', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-Requested-With': 'XMLHttpRequest',
+                'X-CSRFToken': csrfToken,
+            },
+            body: JSON.stringify({ lines })
+        })
+        .then(resp => resp.json().then(data => ({ status: resp.status, body: data })))
+        .then(({ status, body }) => {
+            if (status >= 200 && status < 300 && body.success) {
+                tableBody.innerHTML = '';
+                setStatus('success', 'Bulk update submitted successfully.');
+            } else {
+                setStatus('danger', body.error || 'Bulk update failed.');
+                if (body.results) {
+                    console.table(body.results);
+                }
+            }
+        })
+        .catch(err => {
+            console.error(err);
+            setStatus('danger', 'Unexpected error submitting bulk update.');
+        });
+    });
+
+    loadBtn.addEventListener('click', () => {
+        if (selectedDraftId === null) return;
+        loadDraft(selectedDraftId);
+    });
+    deleteBtn.addEventListener('click', () => {
+        if (selectedDraftId === null) return;
+        if (confirm('Delete this draft?')) {
+            deleteDraft(selectedDraftId);
+        }
+    });
+
+    modalEl.addEventListener('hide.bs.modal', () => {
+        const { lines } = collectRows();
+        if (!lines.length) {
+            return;
+        }
+        const save = confirm('Save this draft before closing?');
+        if (save) {
+            const name = prompt('Name this draft:', `Draft ${new Date().toLocaleString()}`) || `Draft ${new Date().toLocaleString()}`;
+            const drafts = getDrafts();
+            drafts.unshift({ name, lines });
+            saveDrafts(drafts);
+            updateStatus(`Draft “${name}” saved.`);
+        } else {
+            tableBody.innerHTML = '';
+            clearResults();
+            addRow();
+            updateStatus('Draft discarded.');
+        }
+    });
+
+    document.addEventListener('click', (event) => {
+        if (!event.target.closest('.suggestion-wrapper')) {
+            document.querySelectorAll('.suggestion-list').forEach(list => hideSuggestions(list));
+        }
+    });
+
+    renderDraftList();
+    addRow();
+})();
+</script>
+
+
+{% endblock %}

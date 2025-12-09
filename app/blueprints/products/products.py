@@ -1,4 +1,6 @@
-from flask import Blueprint, request, render_template, redirect, url_for, flash
+from datetime import datetime
+
+from flask import Blueprint, request, render_template, redirect, url_for, flash, current_app
 from flask_login import login_required, current_user
 from ...models import db, InventoryItem
 from ...models.product import Product, ProductVariant, ProductSKU
@@ -26,8 +28,11 @@ def _write_product_created_audit(variant):
     return True
 
 
+from ...extensions import cache
+from ...services.cache_invalidation import product_list_cache_key, product_list_page_cache_key
 from ...services.product_service import ProductService
 from ...services.inventory_adjustment import process_inventory_adjustment
+from ...utils.cache_utils import should_bypass_cache
 
 # Wrapper for audit entry - used by tests
 # This function is also defined twice, the second one is the one that is used.
@@ -43,6 +48,119 @@ from ...services.inventory_adjustment import process_inventory_adjustment
 # The second definition `_write_product_created_audit(sku)` which is likely for testing, is kept as is.
 
 products_bp = Blueprint('products', __name__, url_prefix='/products')
+
+
+class _ProductInventoryEntryView:
+    __slots__ = ("variant", "size_label", "quantity", "unit", "sku_id", "sku_code")
+
+    def __init__(self, data: dict):
+        self.variant = data.get("variant")
+        self.size_label = data.get("size_label")
+        self.quantity = data.get("quantity", 0)
+        self.unit = data.get("unit")
+        self.sku_id = data.get("sku_id")
+        self.sku_code = data.get("sku_code")
+
+
+class _ProductVariationView:
+    __slots__ = ("name", "description", "id", "sku", "created_at")
+
+    def __init__(self, data: dict):
+        self.name = data.get("name")
+        self.description = data.get("description")
+        self.id = data.get("id")
+        self.sku = data.get("sku")
+        created_at = data.get("created_at")
+        if isinstance(created_at, str):
+            try:
+                self.created_at = datetime.fromisoformat(created_at)
+            except ValueError:
+                self.created_at = None
+        else:
+            self.created_at = created_at
+
+
+class _ProductSummaryCacheView:
+    __slots__ = (
+        "id",
+        "name",
+        "total_quantity",
+        "total_bulk",
+        "total_packaged",
+        "variant_count",
+        "last_updated",
+        "variations",
+        "inventory",
+    )
+
+    def __init__(self, data: dict):
+        self.id = data.get("id")
+        self.name = data.get("name")
+        self.total_quantity = data.get("total_quantity", 0)
+        self.total_bulk = data.get("total_bulk", 0)
+        self.total_packaged = data.get("total_packaged", 0)
+        self.variant_count = data.get("variant_count", 0)
+        last_updated = data.get("last_updated")
+        if isinstance(last_updated, str):
+            try:
+                self.last_updated = datetime.fromisoformat(last_updated)
+            except ValueError:
+                self.last_updated = None
+        else:
+            self.last_updated = last_updated
+        self.variations = [_ProductVariationView(item) for item in data.get("variations", [])]
+        self.inventory = [_ProductInventoryEntryView(item) for item in data.get("inventory", [])]
+
+
+def _serialize_product_summary(product) -> dict:
+    def _serialize_variation(variation) -> dict:
+        created_at = getattr(variation, "created_at", None)
+        if created_at is not None:
+            try:
+                created_at = created_at.isoformat()
+            except AttributeError:
+                created_at = None
+        return {
+            "name": getattr(variation, "name", None),
+            "description": getattr(variation, "description", None),
+            "id": getattr(variation, "id", None),
+            "sku": getattr(variation, "sku", None),
+            "created_at": created_at,
+        }
+
+    def _serialize_inventory(entry) -> dict:
+        return {
+            "variant": getattr(entry, "variant", None),
+            "size_label": getattr(entry, "size_label", None),
+            "quantity": float(getattr(entry, "quantity", 0) or 0),
+            "unit": getattr(entry, "unit", None),
+            "sku_id": getattr(entry, "sku_id", None),
+            "sku_code": getattr(entry, "sku_code", None),
+        }
+
+    last_updated = getattr(product, "last_updated", None)
+    if last_updated is not None:
+        try:
+            last_updated = last_updated.isoformat()
+        except AttributeError:
+            last_updated = None
+
+    return {
+        "id": getattr(product, "id", None),
+        "name": getattr(product, "name", None),
+        "total_quantity": float(getattr(product, "total_quantity", 0) or 0),
+        "total_bulk": float(getattr(product, "total_bulk", 0) or 0),
+        "total_packaged": float(getattr(product, "total_packaged", 0) or 0),
+        "variant_count": getattr(product, "variant_count", 0),
+        "last_updated": last_updated,
+        "variations": [_serialize_variation(v) for v in getattr(product, "variations", [])],
+        "inventory": [_serialize_inventory(entry) for entry in getattr(product, "inventory", [])],
+    }
+
+
+def _hydrate_product_summary(data: dict) -> _ProductSummaryCacheView:
+    return _ProductSummaryCacheView(data)
+
 
 def create_product_from_data(data):
     """
@@ -92,9 +210,35 @@ def create_product_from_data(data):
 @login_required
 def list_products():
     """List all products with inventory summary and sorting"""
-    from ...services.product_service import ProductService
+    sort_type = (request.args.get('sort', 'name') or 'name').lower()
+    org_id = getattr(current_user, "organization_id", None) or 0
+    cache_key = product_list_cache_key(org_id, sort_type)
+    page_cache_key = product_list_page_cache_key(org_id, sort_type)
+    bypass_cache = should_bypass_cache()
+    cache_ttl = current_app.config.get("PRODUCT_LIST_CACHE_TTL", 180)
 
-    sort_type = request.args.get('sort', 'name')
+    if bypass_cache:
+        cache.delete(cache_key)
+        cache.delete(page_cache_key)
+    else:
+        cached_page = cache.get(page_cache_key)
+        if cached_page is not None:
+            return cached_page
+        cached_payload = cache.get(cache_key)
+        if cached_payload is not None:
+            products = [_hydrate_product_summary(entry) for entry in cached_payload]
+            rendered = render_template(
+                'pages/products/list_products.html',
+                products=products,
+                current_sort=sort_type,
+                breadcrumb_items=[{'label': 'Products'}],
+            )
+            try:
+                cache.set(page_cache_key, rendered, timeout=cache_ttl)
+            except Exception:
+                pass
+            return rendered
+
     product_data = ProductService.get_product_summary_skus()
 
     # Convert dict data to objects with the attributes the template expects
@@ -172,7 +316,8 @@ def list_products():
                             'quantity': quantity,
                             'unit': unit or '',
                             'sku_id': sku.inventory_item_id,
-                            'sku_code': sku.sku or sku.sku_code
+                            'sku_code': sku.sku or sku.sku_code,
+                            'retail_price': sku.retail_price
                         })()
                         self.inventory.append(inventory_entry)
 
@@ -216,8 +361,20 @@ def list_products():
     else:  # default to name
         products.sort(key=lambda p: p.name.lower())
 
-    return render_template('pages/products/list_products.html', products=products, current_sort=sort_type,
+    serialized_products = [_serialize_product_summary(product) for product in products]
+    cache.set(
+        cache_key,
+        serialized_products,
+        timeout=cache_ttl,
+    )
+
+    rendered = render_template('pages/products/list_products.html', products=products, current_sort=sort_type,
                            breadcrumb_items=[{'label': 'Products'}])
+    try:
+        cache.set(page_cache_key, rendered, timeout=cache_ttl)
+    except Exception:
+        pass
+    return rendered
 
 @products_bp.route('/new', methods=['GET', 'POST'])
 @login_required
@@ -377,7 +534,7 @@ def view_product(product_id):
                          get_global_unit_list=get_global_unit_list,
                          inventory_groups={},
                          product_categories=product_categories,
-                         breadcrumb_items=[{'label': 'Products', 'url': url_for('products.list_products')}, {'label': product.name}])
+                         breadcrumb_items=[{'label': 'Product Dashboard', 'url': url_for('products.list_products')}, {'label': product.name + ' Overview'}])
 
 # Keep the old route for backward compatibility
 @products_bp.route('/<product_name>')

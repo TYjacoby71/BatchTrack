@@ -15,7 +15,7 @@ logger = logging.getLogger(__name__)
 
 def validate_recipe_data(name: str, ingredients: List[Dict] = None,
                          yield_amount: float = None, recipe_id: int = None, notes: str = None, category: str = None, tags: str = None, batch_size: float = None,
-                         portioning_data: Dict | None = None, allow_partial: bool = False) -> Dict[str, Any]:
+                         portioning_data: Dict | None = None, allow_partial: bool = False, organization_id: int | None = None) -> Dict[str, Any]:
     """
     Validate recipe data before creation or update.
 
@@ -34,7 +34,7 @@ def validate_recipe_data(name: str, ingredients: List[Dict] = None,
     """
     try:
         # Validate name - pass recipe_id for edit validation
-        is_valid, error = validate_recipe_name(name, recipe_id)
+        is_valid, error = validate_recipe_name(name, recipe_id, organization_id=organization_id)
         if not is_valid:
             return {'valid': False, 'error': error, 'missing_fields': []}
 
@@ -47,33 +47,22 @@ def validate_recipe_data(name: str, ingredients: List[Dict] = None,
                 logger.error(f"Exception loading recipe {recipe_id} for validation: {e}")
                 existing_recipe = None
 
-        logger.info("=== YIELD VALIDATION DEBUG ===")
-        logger.info(f"yield_amount: {yield_amount} (type: {type(yield_amount)})")
-        logger.info(f"recipe_id: {recipe_id}")
-        logger.info(f"portioning_data: {portioning_data}")
-        logger.info(f"allow_partial: {allow_partial}")
-
         has_direct_yield = bool(yield_amount is not None and yield_amount > 0)
         bulk_yield_ok = False
         try:
             if portioning_data and portioning_data.get('is_portioned'):
                 byq = float(portioning_data.get('bulk_yield_quantity') or 0)
                 bulk_yield_ok = byq > 0
-                logger.info(f"Bulk yield quantity: {byq}")
-        except Exception as e:
-            logger.info(f"Exception checking bulk yield: {e}")
+        except Exception:
             bulk_yield_ok = False
 
         has_valid_yield = has_direct_yield or bulk_yield_ok
 
         if not allow_partial and not has_valid_yield:
-            logger.info("Yield missing from payload, checking existing recipe fallback")
             if existing_recipe and (existing_recipe.predicted_yield or 0) > 0:
                 has_valid_yield = True
-                logger.info("Existing recipe has a valid yield; accepting")
 
             if not has_valid_yield:
-                logger.error("Yield still invalid after fallbacks")
                 missing_fields.append('yield amount')
 
         portion_requires_count = False
@@ -120,7 +109,7 @@ def validate_recipe_data(name: str, ingredients: List[Dict] = None,
         return {'valid': False, 'error': "Validation error occurred", 'missing_fields': []}
 
 
-def validate_recipe_name(name: str, recipe_id: int = None) -> Tuple[bool, str]:
+def validate_recipe_name(name: str, recipe_id: int = None, organization_id: int | None = None) -> Tuple[bool, str]:
     """
     Validate recipe name for uniqueness and format.
 
@@ -145,15 +134,30 @@ def validate_recipe_name(name: str, recipe_id: int = None) -> Tuple[bool, str]:
 
         # Check for uniqueness - exclude current recipe if editing
         from flask_login import current_user
-        query = Recipe.query.filter_by(name=name)
+        from flask import session
 
-        # Filter by organization when available
-        try:
-            if getattr(current_user, 'is_authenticated', False) and getattr(current_user, 'organization_id', None):
-                query = query.filter_by(organization_id=current_user.organization_id)
-        except Exception:
-            # If current_user is unavailable in context, skip org scoping for validation
-            pass
+        scoped_org_id = organization_id
+        if scoped_org_id is None and recipe_id:
+            try:
+                existing_recipe = db.session.get(Recipe, recipe_id)
+                if existing_recipe:
+                    scoped_org_id = existing_recipe.organization_id
+            except Exception:
+                scoped_org_id = scoped_org_id or None
+
+        if scoped_org_id is None:
+            try:
+                if getattr(current_user, 'is_authenticated', False):
+                    if getattr(current_user, 'user_type', None) == 'developer':
+                        scoped_org_id = session.get('dev_selected_org_id')
+                    else:
+                        scoped_org_id = getattr(current_user, 'organization_id', None)
+            except Exception:
+                scoped_org_id = scoped_org_id or None
+
+        query = Recipe.query.filter_by(name=name)
+        if scoped_org_id:
+            query = query.filter(Recipe.organization_id == scoped_org_id)
 
         # Exclude current recipe when editing
         if recipe_id:

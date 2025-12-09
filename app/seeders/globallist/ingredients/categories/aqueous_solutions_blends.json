@@ -1,4 +1,3 @@
-
 {
   "category_name": "Aqueous Solutions & Blends",
   "description": "Ready-to-use water-based solutions containing dissolved actives, humectants, functional blends, or basic food-grade liquids. These are typically pre-formulated for specific purposes in cosmetics, food, or other crafts.",
@@ -7,268 +6,424 @@
     {
       "name": "Hyaluronic Acid 1% Solution",
       "density": 1.02,
-      "aliases": ["sodium hyaluronate solution", "HA serum base"],
+      "aliases": [
+        "sodium hyaluronate solution",
+        "HA serum base"
+      ],
       "default_unit": "ml",
       "default_is_perishable": true,
       "recommended_shelf_life_days": 365,
       "saponification_value": null,
       "melting_point_c": null,
       "flash_point_c": null,
-      "recommended_usage_rate": "1-5% in hydrating serums and gels",
+      
       "inci_name": "Water (and) Sodium Hyaluronate (and) Phenoxyethanol (and) Ethylhexylglycerin",
       "protein_content_pct": null,
       "brewing_data": null,
       "fatty_acid_profile": null,
-      "certifications": ["Vegan"],
+      "certifications": [
+        "Vegan"
+      ],
       "is_active_ingredient": true,
-      "ph_value": "6.0-7.0"
+      "ph_value": "6.0-7.0",
+      "ingredient": {
+        "name": "Hyaluronic Acid 1% Solution",
+        "slug": "hyaluronic-acid-1-solution",
+        "inci_name": "Water (and) Sodium Hyaluronate (and) Phenoxyethanol (and) Ethylhexylglycerin"
+      },
+      "physical_form": "Solution"
     },
     {
       "name": "Salicylic Acid 2% Solution",
       "density": 1.04,
-      "aliases": ["BHA liquid exfoliant", "Beta Hydroxy Acid solution"],
+      "aliases": [
+        "BHA liquid exfoliant",
+        "Beta Hydroxy Acid solution"
+      ],
       "default_unit": "ml",
       "default_is_perishable": true,
       "recommended_shelf_life_days": 365,
       "saponification_value": null,
       "melting_point_c": null,
       "flash_point_c": null,
-      "recommended_usage_rate": "1-5% in exfoliating toners and spot treatments",
+      
       "inci_name": "Water (and) Salicylic Acid (and) Propanediol (and) Sodium Hydroxide",
       "protein_content_pct": null,
       "brewing_data": null,
       "fatty_acid_profile": null,
-      "certifications": ["Cosmetic Grade"],
+      "certifications": [
+        "Cosmetic Grade"
+      ],
       "is_active_ingredient": true,
-      "ph_value": "3.2-3.8"
+      "ph_value": "3.2-3.8",
+      "ingredient": {
+        "name": "Salicylic Acid 2% Solution",
+        "slug": "salicylic-acid-2-solution",
+        "inci_name": "Water (and) Salicylic Acid (and) Propanediol (and) Sodium Hydroxide"
+      },
+      "physical_form": "Solution"
     },
     {
       "name": "Niacinamide 10% Solution",
       "density": 1.05,
-      "aliases": ["vitamin B3 active toner", "Nicotinamide solution"],
+      "aliases": [
+        "vitamin B3 active toner",
+        "Nicotinamide solution"
+      ],
       "default_unit": "ml",
       "default_is_perishable": true,
       "recommended_shelf_life_days": 540,
       "saponification_value": null,
       "melting_point_c": null,
       "flash_point_c": null,
-      "recommended_usage_rate": "2-10% in serums or lotions",
+      
       "inci_name": "Water (and) Niacinamide (and) Glycerin (and) Sodium PCA (and) Phenoxyethanol",
       "protein_content_pct": null,
       "brewing_data": null,
       "fatty_acid_profile": null,
-      "certifications": ["USP Grade"],
+      "certifications": [
+        "USP Grade"
+      ],
       "is_active_ingredient": true,
-      "ph_value": "5.0-6.0"
+      "ph_value": "5.0-6.0",
+      "ingredient": {
+        "name": "Niacinamide 10% Solution",
+        "slug": "niacinamide-10-solution",
+        "inci_name": "Water (and) Niacinamide (and) Glycerin (and) Sodium PCA (and) Phenoxyethanol"
+      },
+      "physical_form": "Solution"
     },
     {
       "name": "Oat Milk Concentrate",
       "density": 1.01,
-      "aliases": ["oat beverage base", "Avena Sativa liquid"],
+      "aliases": [
+        "oat beverage base",
+        "Avena Sativa liquid"
+      ],
       "default_unit": "ml",
       "default_is_perishable": true,
       "recommended_shelf_life_days": 90,
       "saponification_value": null,
       "melting_point_c": null,
       "flash_point_c": null,
-      "recommended_usage_rate": "10-50% in beverages or soothing lotions",
+      
       "inci_name": "Water (and) Avena Sativa (Oat) Kernel Extract",
       "protein_content_pct": 1.0,
       "brewing_data": null,
       "fatty_acid_profile": null,
-      "certifications": ["Non-GMO"],
+      "certifications": [
+        "Non-GMO"
+      ],
       "is_active_ingredient": false,
-      "ph_value": "6.5-7.5"
+      "ph_value": "6.5-7.5",
+      "ingredient": {
+        "name": "Oat Milk Concentrate",
+        "slug": "oat-milk-concentrate",
+        "inci_name": "Water (and) Avena Sativa (Oat) Kernel Extract"
+      },
+      "physical_form": "Solution"
     },
     {
       "name": "Whole Milk (Pasteurized)",
       "density": 1.03,
-      "aliases": ["grade A milk", "full cream milk"],
+      "aliases": [
+        "grade A milk",
+        "full cream milk"
+      ],
       "default_unit": "ml",
       "default_is_perishable": true,
       "recommended_shelf_life_days": 30,
       "saponification_value": null,
       "melting_point_c": null,
       "flash_point_c": null,
-      "recommended_usage_rate": "Use within 5-20% in culinary or cosmetic applications",
+      
       "inci_name": "Milk",
       "protein_content_pct": 3.4,
       "brewing_data": null,
       "fatty_acid_profile": null,
-      "certifications": ["Grade A"],
+      "certifications": [
+        "Grade A"
+      ],
       "is_active_ingredient": false,
-      "ph_value": "6.6-6.8"
+      "ph_value": "6.6-6.8",
+      "ingredient": {
+        "name": "Whole Milk",
+        "slug": "whole-milk",
+        "inci_name": "Milk"
+      },
+      "physical_form": "Paste"
     },
     {
       "name": "Aloe Vera 10x Concentrate (Aqueous)",
       "density": 1.01,
-      "aliases": ["Aloe Barbadensis Leaf Juice 10x", "10X Aloe liquid"],
+      "aliases": [
+        "Aloe Barbadensis Leaf Juice 10x",
+        "10X Aloe liquid"
+      ],
       "default_unit": "ml",
       "default_is_perishable": true,
       "recommended_shelf_life_days": 365,
       "saponification_value": null,
       "melting_point_c": null,
       "flash_point_c": null,
-      "recommended_usage_rate": "1-10% in soothing formulations",
+      
       "inci_name": "Aloe Barbadensis Leaf Juice (and) Citric Acid (and) Sodium Benzoate (and) Potassium Sorbate",
       "protein_content_pct": null,
       "brewing_data": null,
       "fatty_acid_profile": null,
-      "certifications": ["Organic", "ECOCERT"],
+      "certifications": [
+        "Organic",
+        "ECOCERT"
+      ],
       "is_active_ingredient": true,
-      "ph_value": "4.0-5.0"
+      "ph_value": "4.0-5.0",
+      "ingredient": {
+        "name": "Aloe Vera 10x Concentrate",
+        "slug": "aloe-vera-10x-concentrate",
+        "inci_name": "Aloe Barbadensis Leaf Juice (and) Citric Acid (and) Sodium Benzoate (and) Potassium Sorbate"
+      },
+      "physical_form": "Aqueous"
     },
     {
       "name": "Hydrolyzed Rice Protein (Aqueous Solution)",
       "density": 1.05,
-      "aliases": ["Rice Protein liquid", "Hydrolyzed Vegetable Protein"],
+      "aliases": [
+        "Rice Protein liquid",
+        "Hydrolyzed Vegetable Protein"
+      ],
       "default_unit": "ml",
       "default_is_perishable": true,
       "recommended_shelf_life_days": 365,
       "saponification_value": null,
       "melting_point_c": null,
       "flash_point_c": null,
-      "recommended_usage_rate": "1-5% in hair and skin products for strengthening",
+      
       "inci_name": "Hydrolyzed Rice Protein (and) Water (and) Phenoxyethanol (and) Caprylyl Glycol",
       "protein_content_pct": 10.0,
       "brewing_data": null,
       "fatty_acid_profile": null,
-      "certifications": ["Vegan"],
+      "certifications": [
+        "Vegan"
+      ],
       "is_active_ingredient": true,
-      "ph_value": "4.0-6.0"
+      "ph_value": "4.0-6.0",
+      "ingredient": {
+        "name": "Hydrolyzed Rice Protein",
+        "slug": "hydrolyzed-rice-protein",
+        "inci_name": "Hydrolyzed Rice Protein (and) Water (and) Phenoxyethanol (and) Caprylyl Glycol"
+      },
+      "physical_form": "Solution"
     },
     {
       "name": "Sodium Lactate Solution (60%)",
       "density": 1.31,
-      "aliases": ["Lactic Acid Salt Solution", "humectant solution"],
+      "aliases": [
+        "Lactic Acid Salt Solution",
+        "humectant solution"
+      ],
       "default_unit": "ml",
       "default_is_perishable": false,
       "recommended_shelf_life_days": 730,
       "saponification_value": null,
       "melting_point_c": null,
       "flash_point_c": null,
-      "recommended_usage_rate": "0.5-4% as a humectant in cosmetics, 1-2% in soap to harden",
+      
       "inci_name": "Sodium Lactate",
       "protein_content_pct": null,
       "brewing_data": null,
       "fatty_acid_profile": null,
-      "certifications": ["USP Grade"],
+      "certifications": [
+        "USP Grade"
+      ],
       "is_active_ingredient": false,
-      "ph_value": "6.5-7.5"
+      "ph_value": "6.5-7.5",
+      "ingredient": {
+        "name": "Sodium Lactate Solution",
+        "slug": "sodium-lactate-solution",
+        "inci_name": "Sodium Lactate"
+      },
+      "physical_form": "60%"
     },
     {
       "name": "Allantoin Liquid (2% Solution)",
       "density": 1.01,
-      "aliases": ["Allantoin aqueous", "skin soothing liquid"],
+      "aliases": [
+        "Allantoin aqueous",
+        "skin soothing liquid"
+      ],
       "default_unit": "ml",
       "default_is_perishable": true,
       "recommended_shelf_life_days": 365,
       "saponification_value": null,
       "melting_point_c": null,
       "flash_point_c": null,
-      "recommended_usage_rate": "1-5% in lotions and creams for soothing",
+      
       "inci_name": "Water (and) Allantoin (and) Glycerin (and) Phenoxyethanol",
       "protein_content_pct": null,
       "brewing_data": null,
       "fatty_acid_profile": null,
-      "certifications": ["Cosmetic Grade"],
+      "certifications": [
+        "Cosmetic Grade"
+      ],
       "is_active_ingredient": true,
-      "ph_value": "4.0-7.0"
+      "ph_value": "4.0-7.0",
+      "ingredient": {
+        "name": "Allantoin Liquid",
+        "slug": "allantoin-liquid",
+        "inci_name": "Water (and) Allantoin (and) Glycerin (and) Phenoxyethanol"
+      },
+      "physical_form": "Solution"
     },
     {
       "name": "Panthenol 75% Solution (Pro-Vitamin B5)",
       "density": 1.18,
-      "aliases": ["D-Panthenol liquid", "Pro-Vitamin B5"],
+      "aliases": [
+        "D-Panthenol liquid",
+        "Pro-Vitamin B5"
+      ],
       "default_unit": "ml",
       "default_is_perishable": true,
       "recommended_shelf_life_days": 730,
       "saponification_value": null,
       "melting_point_c": null,
       "flash_point_c": null,
-      "recommended_usage_rate": "0.5-5% in hair care and skin care",
+      
       "inci_name": "Panthenol (and) Water",
       "protein_content_pct": null,
       "brewing_data": null,
       "fatty_acid_profile": null,
-      "certifications": ["USP Grade"],
+      "certifications": [
+        "USP Grade"
+      ],
       "is_active_ingredient": true,
-      "ph_value": "7.0-8.5"
+      "ph_value": "7.0-8.5",
+      "ingredient": {
+        "name": "Panthenol 75% Solution",
+        "slug": "panthenol-75-solution",
+        "inci_name": "Panthenol (and) Water"
+      },
+      "physical_form": "Pro-Vitamin B5"
     },
     {
       "name": "Lactic Acid 80% Solution",
-      "density": 1.20,
-      "aliases": ["Alpha Hydroxy Acid (AHA) liquid"],
+      "density": 1.2,
+      "aliases": [
+        "Alpha Hydroxy Acid (AHA) liquid"
+      ],
       "default_unit": "ml",
       "default_is_perishable": false,
       "recommended_shelf_life_days": 730,
       "saponification_value": null,
       "melting_point_c": null,
       "flash_point_c": null,
-      "recommended_usage_rate": "1-10% in exfoliants and pH adjusters",
+      
       "inci_name": "Lactic Acid (and) Water",
       "protein_content_pct": null,
       "brewing_data": null,
       "fatty_acid_profile": null,
-      "certifications": ["USP Grade", "Vegan"],
+      "certifications": [
+        "USP Grade",
+        "Vegan"
+      ],
       "is_active_ingredient": true,
-      "ph_value": "1.0-2.0"
+      "ph_value": "1.0-2.0",
+      "ingredient": {
+        "name": "Lactic Acid 80% Solution",
+        "slug": "lactic-acid-80-solution",
+        "inci_name": "Lactic Acid (and) Water"
+      },
+      "physical_form": "Solution"
     },
     {
       "name": "Vitamin C Serum (L-Ascorbic Acid 15%)",
       "density": 1.05,
-      "aliases": ["Ascorbic Acid solution", "Antioxidant serum base"],
+      "aliases": [
+        "Ascorbic Acid solution",
+        "Antioxidant serum base"
+      ],
       "default_unit": "ml",
       "default_is_perishable": true,
       "recommended_shelf_life_days": 180,
       "saponification_value": null,
       "melting_point_c": null,
       "flash_point_c": null,
-      "recommended_usage_rate": "Use as a base or active component",
+      
       "inci_name": "Water (and) L-Ascorbic Acid (and) Propanediol (and) Ferulic Acid (and) Phenoxyethanol",
       "protein_content_pct": null,
       "brewing_data": null,
       "fatty_acid_profile": null,
-      "certifications": ["Cosmetic Grade"],
+      "certifications": [
+        "Cosmetic Grade"
+      ],
       "is_active_ingredient": true,
-      "ph_value": "2.5-3.5"
+      "ph_value": "2.5-3.5",
+      "ingredient": {
+        "name": "Vitamin C Serum",
+        "slug": "vitamin-c-serum",
+        "inci_name": "Water (and) L-Ascorbic Acid (and) Propanediol (and) Ferulic Acid (and) Phenoxyethanol"
+      },
+      "physical_form": "L-Ascorbic Acid 15%"
     },
     {
       "name": "Apple Cider Vinegar (Raw, Unfiltered)",
       "density": 1.01,
-      "aliases": ["ACV", "Cider Vinegar with Mother"],
+      "aliases": [
+        "ACV",
+        "Cider Vinegar with Mother"
+      ],
       "default_unit": "ml",
       "default_is_perishable": false,
       "recommended_shelf_life_days": 1095,
       "saponification_value": null,
       "melting_point_c": null,
       "flash_point_c": null,
-      "recommended_usage_rate": "1-50% in food, beverages, or hair rinses",
+      
       "inci_name": "Pyrus Malus (Apple) Fruit Extract (and) Acetic Acid (and) Water",
       "protein_content_pct": null,
       "brewing_data": null,
       "fatty_acid_profile": null,
-      "certifications": ["Organic", "Non-GMO"],
+      "certifications": [
+        "Organic",
+        "Non-GMO"
+      ],
       "is_active_ingredient": false,
-      "ph_value": "2.5-3.5"
+      "ph_value": "2.5-3.5",
+      "ingredient": {
+        "name": "Apple Cider Vinegar",
+        "slug": "apple-cider-vinegar",
+        "inci_name": "Pyrus Malus (Apple) Fruit Extract (and) Acetic Acid (and) Water"
+      },
+      "physical_form": "Raw, Unfiltered"
     },
     {
       "name": "Liquid Soy Lecithin (Aqueous Dispersion)",
       "density": 1.03,
-      "aliases": ["Soy Phospholipids liquid", "emulsifier solution"],
+      "aliases": [
+        "Soy Phospholipids liquid",
+        "emulsifier solution"
+      ],
       "default_unit": "ml",
       "default_is_perishable": true,
       "recommended_shelf_life_days": 365,
       "saponification_value": null,
       "melting_point_c": null,
       "flash_point_c": null,
-      "recommended_usage_rate": "0.5-5% as an emulsifier or thickener",
+      
       "inci_name": "Water (and) Lecithin (and) Benzyl Alcohol (and) Dehydroacetic Acid (and) Sorbic Acid (and) Benzoic Acid",
       "protein_content_pct": null,
       "brewing_data": null,
       "fatty_acid_profile": null,
-      "certifications": ["Non-GMO"],
+      "certifications": [
+        "Non-GMO"
+      ],
       "is_active_ingredient": false,
-      "ph_value": "6.0-7.0"
+      "ph_value": "6.0-7.0",
+      "ingredient": {
+        "name": "Liquid Soy Lecithin",
+        "slug": "liquid-soy-lecithin",
+        "inci_name": "Water (and) Lecithin (and) Benzyl Alcohol (and) Dehydroacetic Acid (and) Sorbic Acid (and) Benzoic Acid"
+      },
+      "physical_form": "Aqueous Dispersion"
     }
   ]
 }
