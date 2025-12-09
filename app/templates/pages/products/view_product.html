@@ -205,28 +205,15 @@
               <div class="variant-stats mb-3">
                 <div class="row text-center">
                   <div class="col-4">
-                    <small class="text-muted">Total Bulk</small><br>
-                    <strong>{{ "%.2f"|format(ns_variant.total_bulk) }}</strong><br>
-                    <small>&nbsp;</small>
-                  </div>
-                  <div class="col-4">
-                    <small class="text-muted">Total Packaged</small><br>
-                    <strong>{{ ns_variant.total_packaged|int }}</strong><br>
-                    <small>items</small>
-                  </div>
-                  <div class="col-4">
                     <small class="text-muted">Size Count</small><br>
                     <strong>{{ var_size_count }}</strong><br>
                     <small>sizes</small>
                   </div>
-                </div>
-
-                <div class="row text-center mt-2">
-                  <div class="col-6">
+                  <div class="col-4">
                     <small class="text-muted">Total Cost</small><br>
                     <strong>${{ "%.2f"|format(ns_variant.total_cost) }}</strong>
                   </div>
-                  <div class="col-6">
+                  <div class="col-4">
                     <small class="text-muted">Total Value</small><br>
                     <strong>${{ "%.2f"|format(ns_variant.total_value) }}</strong>
                   </div>
