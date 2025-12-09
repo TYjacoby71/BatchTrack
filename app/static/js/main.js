@@ -77,6 +77,13 @@ function showAlert(type, message) {
 document.addEventListener('DOMContentLoaded', function() {
   // Debug navigation clicks
   console.log('Page loaded:', window.location.pathname);
+  
+  // Check if suggestions component is available
+  if (typeof window.attachMergedInventoryGlobalTypeahead === 'function') {
+    console.log('🔧 MAIN: Suggestions component loaded successfully');
+  } else {
+    console.warn('🔧 MAIN: Suggestions component not available');
+  }
 
   // Track permissions navigation attempts
   document.addEventListener('click', function(e) {

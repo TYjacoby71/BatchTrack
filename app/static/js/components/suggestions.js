@@ -308,18 +308,31 @@
           .catch(function(){ return { results: [] }; });
       } else {
         invPromise = fetch('/api/ingredients/ingredients/search?q=' + encodeURIComponent(q))
-          .then(function(r){ return r.json(); })
-          .catch(function(){ return { results: [] }; });
+          .then(function(r){ 
+            console.log('🔧 TYPEAHEAD API: Inventory search response status:', r.status);
+            return r.json(); 
+          })
+          .catch(function(err){ 
+            console.error('🔧 TYPEAHEAD API: Inventory search error:', err);
+            return { results: [] }; 
+          });
           giPromise = fetch('/api/ingredients/global-items/search?q=' + encodeURIComponent(q) + '&type=ingredient&group=ingredient')
-          .then(function(r){ return r.json(); })
-          .catch(function(){ return { results: [] }; });
+          .then(function(r){ 
+            console.log('🔧 TYPEAHEAD API: Global items search response status:', r.status);
+            return r.json(); 
+          })
+          .catch(function(err){ 
+            console.error('🔧 TYPEAHEAD API: Global items search error:', err);
+            return { results: [] }; 
+          });
       }
 
       Promise.all([invPromise, giPromise]).then(function(results){
+        console.log('🔧 TYPEAHEAD API: Search results received', results);
         var inv = results[0] || {results: []};
         var gi = results[1] || {results: []};
         var invResults = inv.results || [];
-          var giResults = expandGlobalItems(gi.results || []);
+        var giResults = expandGlobalItems(gi.results ||| []);
 
         // Build maps for dedupe
         var invByGlobalId = new Map();
