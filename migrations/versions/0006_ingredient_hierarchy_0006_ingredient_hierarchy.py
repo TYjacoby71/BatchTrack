@@ -19,12 +19,60 @@ branch_labels = None
 depends_on = None
 
 
+_FORM_KEYWORDS = (
+    'powder',
+    'whole',
+    'cut',
+    'sifted',
+    'granules',
+    'granule',
+    'flakes',
+    'flake',
+    'shredded',
+    'shred',
+    'ground',
+    'liquid',
+    'solid',
+    'pellet',
+    'pellets',
+    'form',
+    'extract',
+    'concentrate',
+    'paste',
+    'powdered',
+    'crushed',
+)
+
+
 def _slugify(value: str | None) -> str | None:
     if not value:
         return None
     slug = re.sub(r'[^a-z0-9]+', '-', value.strip().lower())
     slug = slug.strip('-')
     return slug or None
+
+
+def _normalize_ingredient_name(value: str | None) -> str:
+    if not value:
+        return ''
+    cleaned = value
+    # Remove parenthetical form hints
+    cleaned = re.sub(r'\s*\(.*?\)\s*', ' ', cleaned)
+    # Replace separators with spaces
+    cleaned = re.sub(r'[-_/]+', ' ', cleaned)
+    parts = [part.strip() for part in cleaned.split(',') if part.strip()]
+    if parts:
+        cleaned = parts[0]
+    cleaned = re.sub(r'\s+', ' ', cleaned).strip()
+    tokens = cleaned.split(' ')
+    trimmed = []
+    for token in tokens:
+        lowered = token.lower()
+        if lowered in _FORM_KEYWORDS:
+            continue
+        trimmed.append(token)
+    normalized = ' '.join(trimmed).strip()
+    return normalized or value.strip()
 
 
 def upgrade():
@@ -164,22 +212,47 @@ def upgrade():
     ).where(global_item_table.c.item_type == 'ingredient').order_by(global_item_table.c.id)
 
     rows = list(bind.execute(select_stmt))
+
+    ingredient_groups: dict[str, dict] = {}
     for row in rows:
-        slug_value = f"global-item-{row.id}"
+        normalized = _normalize_ingredient_name(row.name)
+        if not normalized:
+            normalized = row.name
+        group = ingredient_groups.setdefault(
+            normalized,
+            {
+                'sample': row,
+                'ids': [],
+            },
+        )
+        group['ids'].append(row.id)
+
+    name_to_ingredient_id: dict[str, int] = {}
+    for normalized_name, payload in ingredient_groups.items():
+        sample = payload['sample']
+        slug_value = _slugify(normalized_name) or f"ingredient-{sample.id}"
         insert_stmt = ingredient_table.insert().values(
-            name=row.name,
+            name=normalized_name,
             slug=slug_value,
-            inci_name=row.inci_name,
-            ingredient_category_id=row.ingredient_category_id,
+            inci_name=sample.inci_name,
+            ingredient_category_id=sample.ingredient_category_id,
             is_active=True,
             created_at=now,
             updated_at=now,
         )
         result = bind.execute(insert_stmt)
-        ingredient_id = result.inserted_primary_key[0]
+        name_to_ingredient_id[normalized_name] = result.inserted_primary_key[0]
+
+    for normalized_name, payload in ingredient_groups.items():
+        ingredient_id = name_to_ingredient_id.get(normalized_name)
+        if not ingredient_id:
+            continue
+        id_chunk = payload['ids']
+        if not id_chunk:
+            continue
         update_stmt = (
             global_item_table.update()
-            .where(global_item_table.c.id == row.id)
+            .where(global_item_table.c.id.in_(id_chunk))
             .values(ingredient_id=ingredient_id)
         )
         bind.execute(update_stmt)
