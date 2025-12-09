@@ -22,7 +22,7 @@
   function ensureListContainer(listEl){
     if (listEl) return listEl;
     var div = document.createElement('div');
-    div.className = 'list-group position-absolute w-100 d-none';
+    div.className = 'list-group position-absolute w-100 d-none inventory-suggestions';
     return div;
   }
 
@@ -46,7 +46,7 @@
       group.items.forEach(function(r){
         var a = document.createElement('a');
         a.href = '#';
-        a.className = 'list-group-item list-group-item-action';
+        a.className = 'list-group-item list-group-item-action suggestion-item';
           var primaryLabel = r.text || '';
           var metaBits = [];
           if (r.ingredient_name && r.ingredient_name !== primaryLabel) {
@@ -123,7 +123,7 @@
         ingredient.forms.forEach(function(form){
           var btn = document.createElement('button');
           btn.type = 'button';
-          btn.className = 'btn btn-sm btn-outline-primary w-100 text-start mb-2 ingredient-form-option';
+          btn.className = 'btn btn-sm btn-outline-primary w-100 text-start mb-2 ingredient-form-option suggestion-item';
           var primaryLabel = form.ingredient_name || ingredient.name || form.text || 'Ingredient';
           if (form.physical_form_name){
             primaryLabel += ' — ' + form.physical_form_name;
