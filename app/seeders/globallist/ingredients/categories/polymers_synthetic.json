@@ -3,7 +3,6 @@
   "default_density": 0.95,
   "description": "Synthetic or semi-synthetic polymers used for thickening, film-forming, conditioning, or texture building.",
   "attributes": [
-    "recommended_usage_rate",
     "recommended_shelf_life_days",
     "hydration_instructions",
     "certifications",
@@ -18,7 +17,6 @@
       "density": 0.7,
       "default_unit": "gram",
       "hydration_instructions": "Hydrate in deionized water at 0.1-1% with vigorous mixing; allow to swell fully.",
-      "recommended_usage_rate": "0.1-2% in serums, creams, and gels",
       "recommended_shelf_life_days": 720,
       "certifications": [
         "COSMOS Approved"
@@ -38,7 +36,6 @@
       "density": 0.85,
       "default_unit": "gram",
       "hydration_instructions": "Disperse 0.1-1% into water, allow to wet fully, then neutralize to desired pH.",
-      "recommended_usage_rate": "0.1-1% in gels and emulsions for thickening",
       "recommended_shelf_life_days": 1095,
       "certifications": [
         "Cosmetic Grade"
@@ -58,7 +55,6 @@
       "density": 1.05,
       "default_unit": "milliliter",
       "hydration_instructions": "Use as-supplied solution; add during cool-down phase below 40°C.",
-      "recommended_usage_rate": "0.5-5% in hair conditioners and body washes",
       "recommended_shelf_life_days": 730,
       "certifications": [
         "INCI Registered"

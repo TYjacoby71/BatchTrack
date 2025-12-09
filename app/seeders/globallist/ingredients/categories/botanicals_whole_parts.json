@@ -4,7 +4,6 @@
     "description": "Whole, cut, or powdered botanical materials used for infusions, aroma, color, or garnish.",
     "attributes": [
         "moisture_content_percent",
-        "recommended_usage_rate",
         "recommended_shelf_life_days",
         "certifications",
         "ph_value",
@@ -25,7 +24,6 @@
             "density": 0.21,
             "default_unit": "gram",
             "moisture_content_percent": 8,
-            "recommended_usage_rate": "0.5-2% infusion or decorative topping",
             "recommended_shelf_life_days": 540,
             "certifications": [
                 "USDA Organic",
@@ -47,7 +45,6 @@
             "density": 0.18,
             "default_unit": "gram",
             "moisture_content_percent": 7,
-            "recommended_usage_rate": "0.5-1.5% in oil infusions and soaps",
             "recommended_shelf_life_days": 540,
             "certifications": [
                 "USDA Organic"
@@ -68,7 +65,6 @@
             "density": 0.38,
             "default_unit": "gram",
             "moisture_content_percent": 9,
-            "recommended_usage_rate": "1-5% in tea blends or oil infusions",
             "recommended_shelf_life_days": 365,
             "certifications": [
                 "Fair Trade Certified"
@@ -89,7 +85,6 @@
             "density": 0.32,
             "default_unit": "gram",
             "moisture_content_percent": 11,
-            "recommended_usage_rate": "0.5-3% in botanical infusions and colorants",
             "recommended_shelf_life_days": 365,
             "certifications": [],
             "is_active_ingredient": false
@@ -108,7 +103,6 @@
             "density": 0.17,
             "default_unit": "gram",
             "moisture_content_percent": 7,
-            "recommended_usage_rate": "0.5-2% infusion or bath blends",
             "recommended_shelf_life_days": 365,
             "certifications": [
                 "EU Organic"
@@ -130,7 +124,6 @@
             "default_unit": "gram",
             "moisture_content_percent": 9,
             "ph_value": "6.0-6.5",
-            "recommended_usage_rate": "0.5-2% for color and antioxidants",
             "recommended_shelf_life_days": 730,
             "certifications": [
                 "Organic"
@@ -152,7 +145,6 @@
             "default_unit": "gram",
             "moisture_content_percent": 8,
             "ph_value": "6.0-6.5",
-            "recommended_usage_rate": "0.2-1% in spice or wellness blends",
             "recommended_shelf_life_days": 540,
             "certifications": [
                 "Kosher"
@@ -174,7 +166,6 @@
             "default_unit": "gram",
             "moisture_content_percent": 12,
             "ph_value": "5.0-5.5",
-            "recommended_usage_rate": "0.5-3% for flavor and warm color",
             "recommended_shelf_life_days": 540,
             "certifications": [
                 "Non-GMO"
@@ -196,7 +187,6 @@
             "default_unit": "gram",
             "moisture_content_percent": 11,
             "ph_value": "5.5-6.0",
-            "recommended_usage_rate": "0.1-0.5% in savory blends",
             "recommended_shelf_life_days": 540,
         "certifications": [],
         "is_active_ingredient": false
@@ -215,7 +205,6 @@
         "density": 0.17,
         "default_unit": "gram",
         "moisture_content_percent": 8,
-        "recommended_usage_rate": "Use whole leaves for infusions, teas, and botanical garnishes",
         "recommended_shelf_life_days": 365,
         "certifications": [
           "USDA Organic"
@@ -236,7 +225,6 @@
         "density": 0.16,
         "default_unit": "gram",
         "moisture_content_percent": 9,
-        "recommended_usage_rate": "0.5-1.5% in herbal blends, soaps, and bath soaks",
         "recommended_shelf_life_days": 365,
         "certifications": [],
         "is_active_ingredient": false
@@ -255,7 +243,6 @@
         "density": 0.32,
         "default_unit": "gram",
         "moisture_content_percent": 8,
-        "recommended_usage_rate": "0.2-1% for culinary blends, color, or exfoliation",
         "recommended_shelf_life_days": 365,
         "certifications": [],
         "is_active_ingredient": false
@@ -274,7 +261,6 @@
         "density": 0.19,
         "default_unit": "gram",
         "moisture_content_percent": 7,
-        "recommended_usage_rate": "Use whole needles for teas, sachets, and simmer pots",
         "recommended_shelf_life_days": 365,
         "certifications": [
           "Kosher"
@@ -295,7 +281,6 @@
         "density": 0.18,
         "default_unit": "gram",
         "moisture_content_percent": 8,
-        "recommended_usage_rate": "0.5-2% in botanical blends and infusions",
         "recommended_shelf_life_days": 365,
         "certifications": [],
         "is_active_ingredient": false
@@ -314,7 +299,6 @@
         "density": 0.34,
         "default_unit": "gram",
         "moisture_content_percent": 8,
-        "recommended_usage_rate": "0.1-0.5% for fragrance, color, or exfoliation",
         "recommended_shelf_life_days": 365,
         "certifications": [],
         "is_active_ingredient": false
@@ -333,7 +317,6 @@
         "density": 0.17,
         "default_unit": "gram",
         "moisture_content_percent": 9,
-        "recommended_usage_rate": "Use whole leaves for aromatic infusions and sachets",
         "recommended_shelf_life_days": 365,
         "certifications": [],
         "is_active_ingredient": false
@@ -352,7 +335,6 @@
         "density": 0.31,
         "default_unit": "gram",
         "moisture_content_percent": 8,
-        "recommended_usage_rate": "0.2-0.8% in seasonings, soaps, and scrubs",
         "recommended_shelf_life_days": 365,
         "certifications": [],
         "is_active_ingredient": false
@@ -371,7 +353,6 @@
         "density": 0.18,
         "default_unit": "gram",
         "moisture_content_percent": 7,
-        "recommended_usage_rate": "Use whole leaves for herbal sachets and infusions",
         "recommended_shelf_life_days": 365,
         "certifications": [],
         "is_active_ingredient": false
@@ -390,7 +371,6 @@
         "density": 0.29,
         "default_unit": "gram",
         "moisture_content_percent": 8,
-        "recommended_usage_rate": "0.2-0.6% as a botanical colorant or exfoliant",
         "recommended_shelf_life_days": 365,
         "certifications": [],
         "is_active_ingredient": false
@@ -409,7 +389,6 @@
         "density": 0.16,
         "default_unit": "gram",
         "moisture_content_percent": 9,
-        "recommended_usage_rate": "Use whole leaves in teas, infusions, and botanical baths",
         "recommended_shelf_life_days": 365,
         "certifications": [
           "USDA Organic"
@@ -430,7 +409,6 @@
         "density": 0.15,
         "default_unit": "gram",
         "moisture_content_percent": 8,
-        "recommended_usage_rate": "0.5-2% in botanical blends and soaps",
         "recommended_shelf_life_days": 365,
         "certifications": [],
         "is_active_ingredient": false
@@ -449,7 +427,6 @@
         "density": 0.30,
         "default_unit": "gram",
         "moisture_content_percent": 8,
-        "recommended_usage_rate": "0.2-0.8% for natural color and exfoliation",
         "recommended_shelf_life_days": 365,
         "certifications": [],
         "is_active_ingredient": false
@@ -468,7 +445,6 @@
         "density": 0.45,
         "default_unit": "gram",
         "moisture_content_percent": 10,
-        "recommended_usage_rate": "Use whole sticks for infusions, potpourri, and simmer pots",
         "recommended_shelf_life_days": 730,
         "certifications": [],
         "is_active_ingredient": false
@@ -487,7 +463,6 @@
         "density": 0.50,
         "default_unit": "gram",
         "moisture_content_percent": 9,
-        "recommended_usage_rate": "0.1-0.5% for aroma, color, or exfoliation",
         "recommended_shelf_life_days": 540,
         "certifications": [],
         "is_active_ingredient": false

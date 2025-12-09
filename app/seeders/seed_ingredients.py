@@ -375,7 +375,6 @@ def seed_ingredients_from_files(selected_files):
                 global_item.aliases = item_data.get('aliases', [])
                 global_item.density = item_data.get('density', category_data.get('default_density'))
                 global_item.default_unit = item_data.get('default_unit', 'gram')
-                global_item.recommended_usage_rate = item_data.get('recommended_usage_rate')
                 global_item.recommended_fragrance_load_pct = item_data.get('recommended_fragrance_load_pct')
                 global_item.recommended_shelf_life_days = item_data.get('recommended_shelf_life_days')
                 global_item.inci_name = item_data.get('inci_name')
@@ -403,7 +402,6 @@ def seed_ingredients_from_files(selected_files):
                     aliases=item_data.get('aliases', []),
                     density=item_data.get('density', category_data.get('default_density')),
                     default_unit=item_data.get('default_unit', 'gram'),
-                    recommended_usage_rate=item_data.get('recommended_usage_rate'),
                     recommended_fragrance_load_pct=item_data.get('recommended_fragrance_load_pct'),
                     recommended_shelf_life_days=item_data.get('recommended_shelf_life_days'),
                     inci_name=item_data.get('inci_name'),
