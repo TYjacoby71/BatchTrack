@@ -380,6 +380,8 @@
 </style>
 
 <script>
+let currentRecipeView = 'card';
+
 // Global showView function
 function showView(viewType) {
     const recipesContainer = document.getElementById('recipesContainer');
@@ -388,17 +390,21 @@ function showView(viewType) {
     const tableViewBtn = document.getElementById('tableViewBtn');
 
     if (viewType === 'cardView') {
+        currentRecipeView = 'card';
         recipesContainer.style.display = 'flex';
         recipesTableContainer.style.display = 'none';
         cardViewBtn.className = 'btn btn-secondary btn-sm';
         tableViewBtn.className = 'btn btn-outline-secondary btn-sm';
     } else {
+        currentRecipeView = 'table';
         recipesContainer.style.display = 'none';
         recipesTableContainer.style.display = 'block';
         cardViewBtn.className = 'btn btn-outline-secondary btn-sm';
         tableViewBtn.className = 'btn btn-secondary btn-sm';
     }
-    filterRecipes(); // Re-apply filters for current view
+    if (typeof window.filterRecipes === 'function') {
+        window.filterRecipes(); // Re-apply filters for current view
+    }
 }
 
 document.addEventListener('DOMContentLoaded', function() {
@@ -427,7 +433,7 @@ document.addEventListener('DOMContentLoaded', function() {
         const searchTerm = recipeFilter.value.toLowerCase();
         let visibleCount = 0;
 
-        const isCardView = recipesContainer.style.display !== 'none';
+        const isCardView = currentRecipeView !== 'table';
 
         if (isCardView) {
             const cards = recipesContainer.querySelectorAll('.recipe-card');
@@ -454,7 +460,7 @@ document.addEventListener('DOMContentLoaded', function() {
     function sortRecipes() {
         const sortBy = sortFilter.value;
 
-        const isCardView = recipesContainer.style.display !== 'none';
+        const isCardView = currentRecipeView !== 'table';
 
         if (isCardView) {
             const cards = Array.from(recipesContainer.querySelectorAll('.recipe-card'));
