@@ -6,6 +6,7 @@ Create Date: 2025-11-12 18:22:00.000000
 
 """
 from datetime import datetime
+import re
 
 from alembic import op
 import sqlalchemy as sa
@@ -16,6 +17,14 @@ revision = '0006_ingredient_hierarchy'
 down_revision = '0005_cleanup_guardrails'
 branch_labels = None
 depends_on = None
+
+
+def _slugify(value: str | None) -> str | None:
+    if not value:
+        return None
+    slug = re.sub(r'[^a-z0-9]+', '-', value.strip().lower())
+    slug = slug.strip('-')
+    return slug or None
 
 
 def upgrade():
@@ -92,6 +101,29 @@ def upgrade():
     op.create_index('ix_global_item_application_tag_item', 'global_item_application_tag', ['global_item_id'])
     op.create_index('ix_global_item_application_tag_application', 'global_item_application_tag', ['application_tag_id'])
 
+    op.create_table(
+        'ingredient_category_tag',
+        sa.Column('id', sa.Integer(), primary_key=True),
+        sa.Column('name', sa.String(length=128), nullable=False, unique=True),
+        sa.Column('slug', sa.String(length=128), nullable=True, unique=True),
+        sa.Column('description', sa.Text(), nullable=True),
+        sa.Column('is_active', sa.Boolean(), nullable=False, server_default=sa.true()),
+        sa.Column('created_at', sa.DateTime(), nullable=False, server_default=sa.func.now()),
+        sa.Column('updated_at', sa.DateTime(), nullable=False, server_default=sa.func.now()),
+    )
+    op.create_index('ix_ingredient_category_tag_slug', 'ingredient_category_tag', ['slug'])
+
+    op.create_table(
+        'global_item_category_tag',
+        sa.Column('id', sa.Integer(), primary_key=True),
+        sa.Column('global_item_id', sa.Integer(), sa.ForeignKey('global_item.id', ondelete='CASCADE'), nullable=False),
+        sa.Column('ingredient_category_tag_id', sa.Integer(), sa.ForeignKey('ingredient_category_tag.id', ondelete='CASCADE'), nullable=False),
+        sa.Column('created_at', sa.DateTime(), nullable=False, server_default=sa.func.now()),
+        sa.UniqueConstraint('global_item_id', 'ingredient_category_tag_id', name='uq_global_item_category_tag'),
+    )
+    op.create_index('ix_global_item_category_tag_item', 'global_item_category_tag', ['global_item_id'])
+    op.create_index('ix_global_item_category_tag_category', 'global_item_category_tag', ['ingredient_category_tag_id'])
+
     # Extend global_item with ingredient + physical form references
     op.add_column('global_item', sa.Column('ingredient_id', sa.Integer(), nullable=True))
     op.add_column('global_item', sa.Column('physical_form_id', sa.Integer(), nullable=True))
@@ -119,6 +151,9 @@ def upgrade():
     meta = sa.MetaData(bind=bind)
     global_item_table = sa.Table('global_item', meta, autoload_with=bind)
     ingredient_table = sa.Table('ingredient', meta, autoload_with=bind)
+    ingredient_category_table = sa.Table('ingredient_category', meta, autoload_with=bind)
+    ingredient_category_tag_table = sa.Table('ingredient_category_tag', meta, autoload_with=bind)
+    global_item_category_tag_table = sa.Table('global_item_category_tag', meta, autoload_with=bind)
 
     now = datetime.utcnow()
     select_stmt = sa.select(
@@ -149,6 +184,46 @@ def upgrade():
         )
         bind.execute(update_stmt)
 
+    # Seed ingredient_category_tag entries mirroring existing categories
+    category_rows = list(
+        bind.execute(
+            sa.select(
+                ingredient_category_table.c.id,
+                ingredient_category_table.c.name,
+                ingredient_category_table.c.description,
+            )
+        )
+    )
+    category_tag_map = {}
+    for category in category_rows:
+        if not category.name:
+            continue
+        slug = _slugify(category.name) or f"ingredient-category-{category.id}"
+        insert_stmt = ingredient_category_tag_table.insert().values(
+            name=category.name,
+            slug=slug,
+            description=category.description,
+            is_active=True,
+            created_at=now,
+            updated_at=now,
+        )
+        result = bind.execute(insert_stmt)
+        category_tag_map[category.id] = result.inserted_primary_key[0]
+
+    # Link existing global items to their converted category tags
+    for row in rows:
+        category_id = row.ingredient_category_id
+        tag_id = category_tag_map.get(category_id)
+        if not tag_id:
+            continue
+        bind.execute(
+            global_item_category_tag_table.insert().values(
+                global_item_id=row.id,
+                ingredient_category_tag_id=tag_id,
+                created_at=now,
+            )
+        )
+
 
 def downgrade():
     # Drop relationships and columns from global_item first
@@ -162,6 +237,13 @@ def downgrade():
         batch_op.drop_column('ingredient_id')
 
     # Drop association tables and lookup tables
+    op.drop_index('ix_global_item_category_tag_category', table_name='global_item_category_tag')
+    op.drop_index('ix_global_item_category_tag_item', table_name='global_item_category_tag')
+    op.drop_table('global_item_category_tag')
+
+    op.drop_index('ix_ingredient_category_tag_slug', table_name='ingredient_category_tag')
+    op.drop_table('ingredient_category_tag')
+
     op.drop_index('ix_global_item_application_tag_application', table_name='global_item_application_tag')
     op.drop_index('ix_global_item_application_tag_item', table_name='global_item_application_tag')
     op.drop_table('global_item_application_tag')

@@ -255,6 +255,21 @@
               <label class="form-label">Certifications (comma-separated)</label>
               <input type="text" name="item_certifications" class="form-control" placeholder="e.g. Organic, Fair Trade" value="{% if existing_item and existing_item.certifications %}{{ existing_item.certifications | join(', ') }}{% endif %}">
             </div>
+            <div class="col-md-4">
+              <label class="form-label">Function Tags</label>
+              <input type="text" name="item_function_tags" class="form-control" placeholder="e.g. Humectant, Emulsifier" value="{% if existing_item and existing_item.functions %}{{ existing_item.functions | map(attribute='name') | join(', ') }}{% endif %}">
+              <small class="text-muted">Comma-separated functions for ingredient behavior.</small>
+            </div>
+            <div class="col-md-4">
+              <label class="form-label">Application Tags</label>
+              <input type="text" name="item_application_tags" class="form-control" placeholder="e.g. Cold Process Soap, Lotion" value="{% if existing_item and existing_item.applications %}{{ existing_item.applications | map(attribute='name') | join(', ') }}{% endif %}">
+              <small class="text-muted">Comma-separated uses or product types.</small>
+            </div>
+            <div class="col-md-4">
+              <label class="form-label">Category Tags</label>
+              <input type="text" name="item_category_tags" class="form-control" placeholder="Override default category tags" value="{% if existing_item and existing_item.category_tags %}{{ existing_item.category_tags | map(attribute='name') | join(', ') }}{% endif %}">
+              <small class="text-muted">Defaults to reference category when left blank.</small>
+            </div>
           </div>
 
           <hr>

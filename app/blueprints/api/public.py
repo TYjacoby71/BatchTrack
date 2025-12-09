@@ -1,11 +1,13 @@
 from collections import OrderedDict
 
-from flask import Blueprint, jsonify, make_response, request
+from flask import Blueprint, jsonify, make_response, request, current_app
 from datetime import datetime, timezone
 from app.extensions import limiter, csrf
 from app.models.models import Unit
 from app.models.global_item import GlobalItem
 from app.services.unit_conversion.unit_conversion import ConversionEngine
+from app.services.public_bot_service import PublicBotService, PublicBotServiceError
+from app.services.ai import GoogleAIClientError
 from sqlalchemy import func, or_
 
 public_api_bp = Blueprint("public_api", __name__)
@@ -98,6 +100,7 @@ def public_global_item_search():
                 }
             function_names = [tag.name for tag in getattr(gi, 'functions', [])]
             application_names = [tag.name for tag in getattr(gi, 'applications', [])]
+            category_tag_names = [tag.name for tag in getattr(gi, 'category_tags', [])]
 
             display_name = gi.name
             if ingredient_payload and physical_form_payload:
@@ -131,6 +134,7 @@ def public_global_item_search():
                 'brewing_potential_sg': gi.brewing_potential_sg,
                 'brewing_diastatic_power_lintner': gi.brewing_diastatic_power_lintner,
                 'certifications': gi.certifications or [],
+                'category_tags': category_tag_names,
                 'ingredient_name': ingredient_payload['name'] if ingredient_payload else None,
                 'physical_form_name': physical_form_payload['name'] if physical_form_payload else None,
             }
@@ -188,6 +192,7 @@ def public_global_item_search():
                     'moisture_content_percent': getattr(gi, 'moisture_content_percent', None),
                     'comedogenic_rating': getattr(gi, 'comedogenic_rating', None),
                     'ph_value': getattr(gi, 'ph_value', None),
+                    'category_tags': category_tag_names,
                 })
 
         if group_mode:
@@ -217,3 +222,28 @@ def public_convert_units():
         return jsonify({'success': result.get('success', False), 'data': result})
     except Exception as e:
         return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@public_api_bp.route("/help-bot", methods=["POST"])
+@limiter.limit("30/minute")
+@csrf.exempt
+def public_help_bot():
+    data = request.get_json() or {}
+    prompt = (data.get("prompt") or data.get("question") or "").strip()
+    tone = data.get("tone")
+
+    if not prompt:
+        return jsonify({"success": False, "error": "Prompt is required."}), 400
+
+    try:
+        service = PublicBotService()
+        result = service.answer(prompt, tone=tone)
+        return jsonify({"success": True, **result})
+    except PublicBotServiceError as exc:
+        return jsonify({"success": False, "error": str(exc)}), 400
+    except GoogleAIClientError as exc:
+        current_app.logger.exception("Public help bot AI failure")
+        return jsonify({"success": False, "error": str(exc)}), 502
+    except Exception:
+        current_app.logger.exception("Public help bot unexpected error")
+        return jsonify({"success": False, "error": "Unexpected help bot failure."}), 500

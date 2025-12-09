@@ -97,6 +97,31 @@ class ApplicationTag(db.Model):
     )
 
 
+class IngredientCategoryTag(db.Model):
+    """Flexible tagging layer derived from legacy ingredient categories."""
+
+    __tablename__ = 'ingredient_category_tag'
+
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(128), nullable=False, unique=True)
+    slug = db.Column(db.String(128), nullable=True, unique=True, index=True)
+    description = db.Column(db.Text, nullable=True)
+    is_active = db.Column(db.Boolean, nullable=False, default=True)
+    created_at = db.Column(db.DateTime, default=TimezoneUtils.utc_now, nullable=False)
+    updated_at = db.Column(
+        db.DateTime,
+        default=TimezoneUtils.utc_now,
+        onupdate=TimezoneUtils.utc_now,
+        nullable=False,
+    )
+
+    global_items = db.relationship(
+        'GlobalItem',
+        secondary='global_item_category_tag',
+        back_populates='category_tags',
+    )
+
+
 class GlobalItemFunctionTag(db.Model):
     """Association table linking global items to function tags."""
 
@@ -152,4 +177,33 @@ class GlobalItemApplicationTag(db.Model):
         ),
         db.Index('ix_global_item_application_tag_item', 'global_item_id'),
         db.Index('ix_global_item_application_tag_application', 'application_tag_id'),
+    )
+
+
+class GlobalItemCategoryTag(db.Model):
+    """Association table linking global items to flexible ingredient category tags."""
+
+    __tablename__ = 'global_item_category_tag'
+
+    id = db.Column(db.Integer, primary_key=True)
+    global_item_id = db.Column(
+        db.Integer,
+        db.ForeignKey('global_item.id', ondelete='CASCADE'),
+        nullable=False,
+    )
+    ingredient_category_tag_id = db.Column(
+        db.Integer,
+        db.ForeignKey('ingredient_category_tag.id', ondelete='CASCADE'),
+        nullable=False,
+    )
+    created_at = db.Column(db.DateTime, default=TimezoneUtils.utc_now, nullable=False)
+
+    __table_args__ = (
+        db.UniqueConstraint(
+            'global_item_id',
+            'ingredient_category_tag_id',
+            name='uq_global_item_category_tag',
+        ),
+        db.Index('ix_global_item_category_tag_item', 'global_item_id'),
+        db.Index('ix_global_item_category_tag_category', 'ingredient_category_tag_id'),
     )
