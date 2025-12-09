@@ -779,34 +779,22 @@
         allowClear: true,
         minimumInputLength: 1,
         ajax: {
-          url: '/api/ingredients/global-items/search',
+          url: '/api/ingredients/definitions/search',
           dataType: 'json',
           delay: 150,
           data: function (params) {
-            return { 
-              q: params.term, 
-              type: 'ingredient',
-              group: 'ingredient'
-            };
+            return { q: params.term };
           },
           processResults: function (data) {
-            const results = [];
-            if (data && data.results) {
-              data.results.forEach(function(item) {
-                if (item.ingredient && item.ingredient.id) {
-                  // Check if we already added this ingredient
-                  const existingResult = results.find(r => r.id === item.ingredient.id);
-                  if (!existingResult) {
-                    results.push({
-                      id: item.ingredient.id,
-                      text: item.ingredient.name + (item.ingredient.slug ? ' (' + item.ingredient.slug + ')' : ''),
-                      ingredient: item.ingredient
-                    });
-                  }
-                }
-              });
-            }
-            return { results: results };
+            return {
+              results: (data.results || []).map(function(ingredient) {
+                return {
+                  id: ingredient.id,
+                  text: ingredient.name + (ingredient.slug ? ' (' + ingredient.slug + ')' : ''),
+                  ingredient: ingredient
+                };
+              })
+            };
           },
           cache: true
         },

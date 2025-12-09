@@ -111,6 +111,41 @@ def search_ingredients():
 
     return jsonify({'results': payload})
 
+@ingredient_api_bp.route('/ingredients/definitions/search', methods=['GET'])
+@login_required
+@limiter.limit("3000/minute")
+def search_ingredient_definitions():
+    """Search ingredient definitions for the create global item form."""
+    q = (request.args.get('q') or '').strip()
+    if not q:
+        return jsonify({'results': []})
+    
+    from app.models.ingredient_reference import IngredientDefinition
+    
+    ilike_term = f"%{q}%"
+    definitions = IngredientDefinition.query.filter(
+        or_(
+            IngredientDefinition.name.ilike(ilike_term),
+            IngredientDefinition.inci_name.ilike(ilike_term),
+            IngredientDefinition.cas_number.ilike(ilike_term)
+        ),
+        IngredientDefinition.is_active == True
+    ).order_by(func.length(IngredientDefinition.name).asc()).limit(20).all()
+    
+    results = []
+    for definition in definitions:
+        results.append({
+            'id': definition.id,
+            'name': definition.name,
+            'slug': definition.slug,
+            'inci_name': definition.inci_name,
+            'cas_number': definition.cas_number,
+            'ingredient_category_id': definition.ingredient_category_id,
+            'ingredient_category_name': definition.category.name if definition.category else None
+        })
+    
+    return jsonify({'results': results})
+
 @ingredient_api_bp.route('/ingredients/create-or-link', methods=['POST'])
 @login_required
 def create_or_link_ingredient():
