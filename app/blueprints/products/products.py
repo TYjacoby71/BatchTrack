@@ -316,7 +316,8 @@ def list_products():
                             'quantity': quantity,
                             'unit': unit or '',
                             'sku_id': sku.inventory_item_id,
-                            'sku_code': sku.sku or sku.sku_code
+                            'sku_code': sku.sku or sku.sku_code,
+                            'retail_price': sku.retail_price
                         })()
                         self.inventory.append(inventory_entry)
 
