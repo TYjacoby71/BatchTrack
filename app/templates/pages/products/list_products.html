@@ -91,17 +91,9 @@
         </div>
       </div>
       <div class="card-body">
-        <div class="row g-3">
-          <div class="col-md-6 col-lg-3">
-            <div class="card bg-light h-100">
-              <div class="card-body text-center">
-                <div class="fs-4 fw-bold text-primary">{{ "%.2f"|format(ns_all.total_bulk) }}</div>
-                <div class="text-muted small">Total Bulk Inventory</div>
-                <div class="text-muted small">All Products</div>
-              </div>
-            </div>
-          </div>
-          <div class="col-md-6 col-lg-3">
+          <div class="row g-3 mt-2">
+            <div class="col-md-6 col-lg-3"></div>
+            <div class="col-md-6 col-lg-3">
             <div class="card bg-light h-100">
               <div class="card-body text-center">
                 <div class="fs-4 fw-bold text-success">{{ ns_all.total_packaged|int }}</div>
@@ -305,7 +297,7 @@
           </div>
           <div class="card-footer">
 
-            <a href="{{ url_for('products.view_product', product_id=product.id) }}" 
+            <a href="{{ url_for('products.view_product', product_id=product.id) }}"
                class="btn btn-outline-primary btn-sm w-100">
               View Details
             </a>
@@ -554,18 +546,18 @@ document.addEventListener('DOMContentLoaded', function() {
       cards.forEach(card => {
         const productName = card.querySelector('.card-header h6').textContent.toLowerCase();
         const matchesSearch = !searchTerm || productName.includes(searchTerm);
-        
+
         // Check stock status
         const stockBadges = card.querySelectorAll('.badge');
         let matchesStock = !stockStatus;
         if (stockStatus && stockBadges.length > 0) {
           const hasInStock = Array.from(stockBadges).some(badge => badge.textContent.includes('In Stock'));
           const hasOutOfStock = Array.from(stockBadges).some(badge => badge.textContent.includes('Out of Stock'));
-          
+
           if (stockStatus === 'in-stock') matchesStock = hasInStock;
           else if (stockStatus === 'out-of-stock') matchesStock = hasOutOfStock;
         }
-        
+
         card.style.display = (matchesSearch && matchesStock) ? 'block' : 'none';
       });
     } else {
@@ -574,7 +566,7 @@ document.addEventListener('DOMContentLoaded', function() {
       rows.forEach(row => {
         const productName = row.querySelector('td a strong').textContent.toLowerCase();
         const matchesSearch = !searchTerm || productName.includes(searchTerm);
-        
+
         const stockBadge = row.querySelector('.badge');
         let matchesStock = !stockStatus;
         if (stockStatus && stockBadge) {
@@ -582,7 +574,7 @@ document.addEventListener('DOMContentLoaded', function() {
           if (stockStatus === 'in-stock') matchesStock = stockText.includes('In Stock');
           else if (stockStatus === 'out-of-stock') matchesStock = stockText.includes('Out of Stock');
         }
-        
+
         row.style.display = (matchesSearch && matchesStock) ? '' : 'none';
       });
     }
@@ -593,17 +585,17 @@ document.addEventListener('DOMContentLoaded', function() {
       const productName = row.querySelector('td:first-child a strong').textContent.toLowerCase();
       const rowVariant = row.querySelector('td:nth-child(2)').textContent;
       const stockBadge = row.querySelector('.badge');
-      
+
       const matchesSearch = !searchTerm || productName.includes(searchTerm);
       const matchesVariant = !variantName || rowVariant === variantName;
-      
+
       let matchesStock = !stockStatus;
       if (stockStatus && stockBadge) {
         const stockText = stockBadge.textContent;
         if (stockStatus === 'in-stock') matchesStock = stockText.includes('In Stock');
         else if (stockStatus === 'out-of-stock') matchesStock = stockText.includes('Out of Stock');
       }
-      
+
       row.style.display = (matchesSearch && matchesVariant && matchesStock) ? '' : 'none';
     });
 
@@ -620,10 +612,10 @@ document.addEventListener('DOMContentLoaded', function() {
       const variantName = row.querySelector('td:nth-child(2)').textContent;
       const sizeLabel = row.querySelector('td:nth-child(3)').textContent;
       const quantity = parseFloat(row.querySelector('td:nth-child(5) strong').textContent) || 0;
-      
+
       visibleProducts.add(productName);
       visibleVariants.add(`${productName}-${variantName}`);
-      
+
       if (sizeLabel === 'Bulk') {
         totalBulk += quantity;
       } else {
@@ -632,16 +624,16 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 
     // Update summary cards if filtering is active
-    const hasActiveFilters = (productFilter && productFilter.value) || 
-                            (stockFilter && stockFilter.value) || 
+    const hasActiveFilters = (productFilter && productFilter.value) ||
+                            (stockFilter && stockFilter.value) ||
                             (variantFilter && variantFilter.value);
-    
+
     if (hasActiveFilters) {
       const bulkCard = document.querySelector('.fs-4.fw-bold.text-primary');
       const packagedCard = document.querySelector('.fs-4.fw-bold.text-success');
       const productsCard = document.querySelector('.fs-4.fw-bold.text-info');
       const variantsCard = document.querySelector('.fs-4.fw-bold.text-warning');
-      
+
       if (bulkCard) bulkCard.textContent = totalBulk.toFixed(2);
       if (packagedCard) packagedCard.textContent = Math.round(totalPackaged).toString();
       if (productsCard) productsCard.textContent = visibleProducts.size.toString();
