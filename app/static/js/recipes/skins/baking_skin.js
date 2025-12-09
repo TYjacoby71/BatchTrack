@@ -68,7 +68,13 @@
         const giHidden = hostEl.querySelector('#bk_base_gi');
         const list = hostEl.querySelector('[data-role="suggestions"]');
         if (typeof window.attachMergedInventoryGlobalTypeahead === 'function'){
-          window.attachMergedInventoryGlobalTypeahead({ inputEl: input, giHiddenEl: giHidden, listEl: list, mode: 'recipe' });
+          window.attachMergedInventoryGlobalTypeahead({
+            inputEl: input,
+            giHiddenEl: giHidden,
+            listEl: list,
+            mode: 'recipe',
+            ingredientFirst: true
+          });
         }
       })();
 
