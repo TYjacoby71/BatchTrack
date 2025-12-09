@@ -296,6 +296,7 @@ def create_global_item():
 
     def render_form(form_data=None):
         from app.models.category import IngredientCategory
+        from app.models.ingredient_reference import IngredientDefinition, PhysicalForm
 
         global_ingredient_categories = (
             IngredientCategory.query.filter_by(
@@ -307,9 +308,43 @@ def create_global_item():
             .all()
         )
 
+        # Get ingredient definitions and physical forms for the form
+        ingredient_definitions = IngredientDefinition.query.order_by(IngredientDefinition.name).all()
+        physical_forms = PhysicalForm.query.order_by(PhysicalForm.name).all()
+
+        # Check if we have selected ingredient/form from URL params
+        ingredient_id = request.args.get('ingredient_id')
+        physical_form_id = request.args.get('physical_form_id')
+        
+        selected_ingredient = None
+        selected_physical_form = None
+        existing_items = []
+
+        if ingredient_id:
+            try:
+                selected_ingredient = IngredientDefinition.query.get(int(ingredient_id))
+                if selected_ingredient:
+                    existing_items = GlobalItem.query.filter_by(
+                        ingredient_id=selected_ingredient.id,
+                        is_archived=False
+                    ).all()
+            except (ValueError, TypeError):
+                pass
+
+        if physical_form_id:
+            try:
+                selected_physical_form = PhysicalForm.query.get(int(physical_form_id))
+            except (ValueError, TypeError):
+                pass
+
         return render_template(
             "developer/create_global_item.html",
             global_ingredient_categories=global_ingredient_categories,
+            ingredient_definitions=ingredient_definitions,
+            physical_forms=physical_forms,
+            selected_ingredient=selected_ingredient,
+            selected_physical_form=selected_physical_form,
+            existing_items=existing_items,
             form_data=form_data or {},
         )
 

@@ -770,9 +770,81 @@
     physicalModeRadios.forEach(radio => radio.addEventListener('change', togglePhysicalMode));
   }
 
-  // Logic for ingredient select change to update URL
+  // Setup Select2 for existing ingredient selector with AJAX search
+  if (typeof $ !== 'undefined' && $.fn.select2) {
+    const $existingIngredientSelect = $('#existingIngredientSelect');
+    if ($existingIngredientSelect.length) {
+      $existingIngredientSelect.select2({
+        placeholder: 'Search for an ingredient...',
+        allowClear: true,
+        minimumInputLength: 1,
+        ajax: {
+          url: '/api/ingredients/global-items/search',
+          dataType: 'json',
+          delay: 150,
+          data: function (params) {
+            return { 
+              q: params.term, 
+              type: 'ingredient',
+              group: 'ingredient'
+            };
+          },
+          processResults: function (data) {
+            const results = [];
+            if (data && data.results) {
+              data.results.forEach(function(item) {
+                if (item.ingredient && item.ingredient.id) {
+                  // Check if we already added this ingredient
+                  const existingResult = results.find(r => r.id === item.ingredient.id);
+                  if (!existingResult) {
+                    results.push({
+                      id: item.ingredient.id,
+                      text: item.ingredient.name + (item.ingredient.slug ? ' (' + item.ingredient.slug + ')' : ''),
+                      ingredient: item.ingredient
+                    });
+                  }
+                }
+              });
+            }
+            return { results: results };
+          },
+          cache: true
+        },
+        templateResult: function(item) {
+          if (item.loading) return item.text;
+          if (!item.ingredient) return item.text;
+          
+          const $result = $('<div>');
+          $result.text(item.text);
+          if (item.ingredient.inci_name || item.ingredient.cas_number) {
+            const meta = [];
+            if (item.ingredient.inci_name) meta.push('INCI: ' + item.ingredient.inci_name);
+            if (item.ingredient.cas_number) meta.push('CAS: ' + item.ingredient.cas_number);
+            $result.append('<div class="small text-muted">' + meta.join(' • ') + '</div>');
+          }
+          return $result;
+        }
+      });
+
+      // Handle selection change
+      $existingIngredientSelect.on('change', function() {
+        const value = $(this).val();
+        const url = new URL(window.location.href);
+        if (value) {
+          url.searchParams.set('ingredient_id', value);
+          url.searchParams.delete('physical_form_id');
+        } else {
+          url.searchParams.delete('ingredient_id');
+          url.searchParams.delete('physical_form_id');
+        }
+        window.location.href = url.toString();
+      });
+    }
+  }
+
+  // Fallback for non-Select2 functionality
   const existingIngredientSelect = document.getElementById('existingIngredientSelect');
-  if (existingIngredientSelect) {
+  if (existingIngredientSelect && !$('#existingIngredientSelect').hasClass('select2-hidden-accessible')) {
     existingIngredientSelect.addEventListener('change', () => {
       const value = existingIngredientSelect.value;
       const url = new URL(window.location.href);
@@ -787,9 +859,33 @@
     });
   }
 
-  // Logic for physical form select change to update URL
+  // Setup Select2 for physical form selector with basic search
+  if (typeof $ !== 'undefined' && $.fn.select2) {
+    const $existingPhysicalFormSelect = $('#existingPhysicalFormSelect');
+    if ($existingPhysicalFormSelect.length) {
+      $existingPhysicalFormSelect.select2({
+        placeholder: 'Search for a physical form...',
+        allowClear: true,
+        minimumInputLength: 0
+      });
+
+      // Handle selection change
+      $existingPhysicalFormSelect.on('change', function() {
+        const ingredientId = $('#existingIngredientSelect').val();
+        const formId = $(this).val();
+        if (ingredientId && formId) {
+          const url = new URL(window.location.href);
+          url.searchParams.set('ingredient_id', ingredientId);
+          url.searchParams.set('physical_form_id', formId);
+          window.location.href = url.toString();
+        }
+      });
+    }
+  }
+
+  // Fallback for non-Select2 functionality
   const existingPhysicalFormSelect = document.getElementById('existingPhysicalFormSelect');
-  if (existingPhysicalFormSelect) {
+  if (existingPhysicalFormSelect && !$('#existingPhysicalFormSelect').hasClass('select2-hidden-accessible')) {
     existingPhysicalFormSelect.addEventListener('change', () => {
       const ingredientId = existingIngredientSelect ? existingIngredientSelect.value : '';
       const formId = existingPhysicalFormSelect.value;
