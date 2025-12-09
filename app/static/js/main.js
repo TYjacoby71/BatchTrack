@@ -186,7 +186,6 @@ document.addEventListener('DOMContentLoaded', function() {
                     physical_form_name: (item.physical_form && item.physical_form.name) || item.physical_form_name || null,
                     default_is_perishable: item.default_is_perishable,
                     recommended_shelf_life_days: item.recommended_shelf_life_days,
-                    recommended_usage_rate: item.recommended_usage_rate,
                     recommended_fragrance_load_pct: item.recommended_fragrance_load_pct,
                     aliases: item.aliases || [],
                     certifications: item.certifications || [],

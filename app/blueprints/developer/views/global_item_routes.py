@@ -184,7 +184,6 @@ def global_item_edit(item_id):
         "default_is_perishable": item.default_is_perishable,
         "recommended_shelf_life_days": item.recommended_shelf_life_days,
         "aliases": item.aliases,
-        "recommended_usage_rate": item.recommended_usage_rate,
         "recommended_fragrance_load_pct": item.recommended_fragrance_load_pct,
         "is_active_ingredient": item.is_active_ingredient,
         "inci_name": item.inci_name,
@@ -219,7 +218,6 @@ def global_item_edit(item_id):
     if aliases is not None:
         item.aliases = [n.strip() for n in aliases.split(",") if n.strip()]
 
-    item.recommended_usage_rate = request.form.get("recommended_usage_rate") or None
     item.recommended_fragrance_load_pct = request.form.get("recommended_fragrance_load_pct") or None
     item.is_active_ingredient = request.form.get("is_active_ingredient") == "on"
     item.inci_name = request.form.get("inci_name") or None
@@ -396,7 +394,6 @@ def create_global_item():
                     flash("Invalid shelf life value", "error")
                     return render_form(form_data)
 
-            new_item.recommended_usage_rate = form_data.get("recommended_usage_rate", "").strip() or None
             new_item.recommended_fragrance_load_pct = (
                 form_data.get("recommended_fragrance_load_pct", "").strip() or None
             )
