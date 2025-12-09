@@ -1,6 +1,16 @@
 {% extends 'layout.html' %}
 {% block content %}
 <div>
+  {% set variant_namespace = namespace(options=[]) %}
+  {% if products %}
+    {% for product in products %}
+      {% for variation in product.variations %}
+        {% if variation.name and variation.name not in variant_namespace.options %}
+          {% set variant_namespace.options = variant_namespace.options + [variation.name] %}
+        {% endif %}
+      {% endfor %}
+    {% endfor %}
+  {% endif %}
   <div class="d-flex justify-content-between align-items-center mb-4">
     <h2>Product Dashboard</h2>
     <div class="d-flex gap-2 align-items-center">
@@ -54,6 +64,25 @@
             {% endfor %}
             {% for variant in all_variants|sort %}
               <option value="{{ variant }}">{{ variant }}</option>
+            {% endfor %}
+          </select>
+        </div>
+      </div>
+      <div class="row g-3 mt-2">
+        <div class="col-md-3">
+          <label class="form-label">Stock Status:</label>
+          <select id="stockFilter" class="form-select">
+            <option value="">All stock statuses</option>
+            <option value="in-stock">In Stock</option>
+            <option value="out-of-stock">Out of Stock</option>
+          </select>
+        </div>
+        <div class="col-md-3">
+          <label class="form-label">Variant:</label>
+          <select id="variantFilter" class="form-select">
+            <option value="">All variants</option>
+            {% for variant_name in variant_namespace.options|sort %}
+              <option value="{{ variant_name }}">{{ variant_name }}</option>
             {% endfor %}
           </select>
         </div>
@@ -135,7 +164,10 @@
     <!-- Products Card View -->
     <div class="row" id="productsContainer">
       {% for product in products %}
-      <div class="col-md-6 col-lg-4 mb-4">
+      {% set product_total_quantity = (product.total_bulk + product.total_packaged) %}
+      <div class="col-md-6 col-lg-4 mb-4 product-card"
+           data-product-name="{{ product.name|lower }}"
+           data-stock-status="{{ 'out-of-stock' if product_total_quantity == 0 else 'in-stock' }}">
         <div class="card h-100">
           <div class="card-header d-flex justify-content-between align-items-center">
             <div class="d-flex align-items-center">
@@ -223,8 +255,7 @@
                 <small class="text-muted">Last updated: {{ product.last_updated | user_date if product.last_updated else 'N/A' }}</small>
               </div>
               <div>
-                {% set total_quantity = (product.total_bulk + product.total_packaged) %}
-                {% if total_quantity == 0 %}
+                {% if product_total_quantity == 0 %}
                   <span class="badge bg-danger">Out of Stock</span>
                 {% else %}
                   <span class="badge bg-success">In Stock</span>
@@ -263,7 +294,10 @@
             </thead>
             <tbody>
               {% for product in products %}
-              <tr class="product-row">
+              {% set product_total_quantity = (product.total_bulk + product.total_packaged) %}
+              <tr class="product-row"
+                  data-product-name="{{ product.name|lower }}"
+                  data-stock-status="{{ 'out-of-stock' if product_total_quantity == 0 else 'in-stock' }}">
                 <td>
                   <a href="/products/{{ product.id }}" class="text-decoration-none">
                     <strong>{{ product.name }}</strong>
@@ -285,8 +319,7 @@
                   {% endif %}
                 </td>
                 <td>
-                  {% set total_quantity = (product.total_bulk + product.total_packaged) %}
-                  {% if total_quantity == 0 %}
+                  {% if product_total_quantity == 0 %}
                     <span class="badge bg-danger">Out of Stock</span>
                   {% else %}
                     <span class="badge bg-success">In Stock</span>
@@ -428,6 +461,8 @@
 </style>
 
 <script>
+let currentProductView = 'card';
+
 // Global showView function
 function showView(viewType) {
   const productsContainer = document.getElementById('productsContainer');
@@ -435,153 +470,187 @@ function showView(viewType) {
   const cardViewBtn = document.getElementById('cardViewBtn');
   const tableViewBtn = document.getElementById('tableViewBtn');
 
+  if (!productsContainer || !productsTableContainer) {
+    currentProductView = viewType === 'cardView' ? 'card' : 'table';
+    return;
+  }
+
   if (viewType === 'cardView') {
+    currentProductView = 'card';
     productsContainer.style.display = 'flex';
     productsContainer.style.flexWrap = 'wrap';
     productsTableContainer.style.display = 'none';
     cardViewBtn.className = 'btn btn-secondary btn-sm';
     tableViewBtn.className = 'btn btn-outline-secondary btn-sm';
   } else {
+    currentProductView = 'table';
     productsContainer.style.display = 'none';
     productsTableContainer.style.display = 'block';
     cardViewBtn.className = 'btn btn-outline-secondary btn-sm';
     tableViewBtn.className = 'btn btn-secondary btn-sm';
   }
+
+  if (typeof window.filterProducts === 'function') {
+    window.filterProducts();
+  }
 }
 
 // Sort products function
 function sortProducts(sortType) {
-  // Update active button state
-  document.querySelectorAll('.btn-group button').forEach(btn => {
-    if (btn.onclick && btn.onclick.toString().includes('sortProducts')) {
-      btn.className = 'btn btn-outline-secondary btn-sm';
-    }
-  });
-  event.target.className = 'btn btn-secondary btn-sm';
-
-  // Redirect to products page with sort parameter
   const currentUrl = new URL(window.location);
   currentUrl.searchParams.set('sort', sortType);
   window.location.href = currentUrl.toString();
 }
 
 document.addEventListener('DOMContentLoaded', function() {
-  // Product search and filter functionality
   const productFilter = document.getElementById('productFilter');
   const stockFilter = document.getElementById('stockFilter');
   const variantFilter = document.getElementById('variantFilter');
+  const productsContainer = document.getElementById('productsContainer');
+  const productsTableContainer = document.getElementById('productsTableContainer');
+  const summaryTable = document.getElementById('summaryDetails');
 
-  function applyFilters() {
-    const searchTerm = productFilter ? productFilter.value.toLowerCase() : '';
-    const stockStatus = stockFilter ? stockFilter.value : '';
-    const variantName = variantFilter ? variantFilter.value : '';
-    const isCardView = document.getElementById('productsContainer').style.display !== 'none';
-
-    // Filter products in card view
-    if (isCardView) {
-      const cards = document.querySelectorAll('#productsContainer .col-md-6');
-      cards.forEach(card => {
-        const productName = card.querySelector('.card-header h6').textContent.toLowerCase();
-        const matchesSearch = !searchTerm || productName.includes(searchTerm);
-
-        // Check stock status
-        const stockBadges = card.querySelectorAll('.badge');
-        let matchesStock = !stockStatus;
-        if (stockStatus && stockBadges.length > 0) {
-          const hasInStock = Array.from(stockBadges).some(badge => badge.textContent.includes('In Stock'));
-          const hasOutOfStock = Array.from(stockBadges).some(badge => badge.textContent.includes('Out of Stock'));
-
-          if (stockStatus === 'in-stock') matchesStock = hasInStock;
-          else if (stockStatus === 'out-of-stock') matchesStock = hasOutOfStock;
-        }
-
-        card.style.display = (matchesSearch && matchesStock) ? 'block' : 'none';
-      });
-    } else {
-      // Filter products in table view
-      const rows = document.querySelectorAll('#productsTableContainer tbody .product-row');
-      rows.forEach(row => {
-        const productName = row.querySelector('td a strong').textContent.toLowerCase();
-        const matchesSearch = !searchTerm || productName.includes(searchTerm);
-
-        const stockBadge = row.querySelector('.badge');
-        let matchesStock = !stockStatus;
-        if (stockStatus && stockBadge) {
-          const stockText = stockBadge.textContent;
-          if (stockStatus === 'in-stock') matchesStock = stockText.includes('In Stock');
-          else if (stockStatus === 'out-of-stock') matchesStock = stockText.includes('Out of Stock');
-        }
-
-        row.style.display = (matchesSearch && matchesStock) ? '' : 'none';
-      });
+  const summaryMetricElements = {
+    bulk: document.querySelector('[data-summary-metric="bulk"]'),
+    packaged: document.querySelector('[data-summary-metric="packaged"]'),
+    products: document.querySelector('[data-summary-metric="products"]'),
+    variants: document.querySelector('[data-summary-metric="variants"]')
+  };
+  const summaryMetricInitials = {};
+  Object.entries(summaryMetricElements).forEach(([key, el]) => {
+    if (el) {
+      summaryMetricInitials[key] = el.textContent;
     }
+  });
 
-    // Filter SKU breakdown table
-    const skuRows = document.querySelectorAll('#summaryDetails tbody tr');
-    skuRows.forEach(row => {
-      const productName = row.querySelector('td:first-child a strong').textContent.toLowerCase();
-      const rowVariant = row.querySelector('td:nth-child(2)').textContent;
+  function toggleDetailRow(row, shouldShow) {
+    const detailRow = row?.nextElementSibling;
+    if (!detailRow || !detailRow.classList.contains('collapse')) return;
+
+    if (!shouldShow) {
+      detailRow.classList.remove('show');
+      detailRow.dataset.searchHidden = 'true';
+      detailRow.style.display = 'none';
+    } else if (detailRow.dataset.searchHidden) {
+      detailRow.style.removeProperty('display');
+      delete detailRow.dataset.searchHidden;
+    }
+  }
+
+  function filterProductCards(searchTerm, stockStatus) {
+    if (!productsContainer) return;
+    const cards = productsContainer.querySelectorAll('.product-card');
+    cards.forEach(card => {
+      const productName = card.dataset.productName || '';
+      const matchesSearch = !searchTerm || productName.includes(searchTerm);
+      const matchesStock = !stockStatus || (card.dataset.stockStatus === stockStatus);
+      card.style.display = matchesSearch && matchesStock ? '' : 'none';
+    });
+  }
+
+  function filterProductRows(searchTerm, stockStatus) {
+    if (!productsTableContainer) return;
+    const rows = productsTableContainer.querySelectorAll('.product-row');
+    rows.forEach(row => {
+      const productName = row.dataset.productName || '';
+      const matchesSearch = !searchTerm || productName.includes(searchTerm);
+      const matchesStock = !stockStatus || (row.dataset.stockStatus === stockStatus);
+      const shouldShow = matchesSearch && matchesStock;
+      row.style.display = shouldShow ? '' : 'none';
+      toggleDetailRow(row, shouldShow);
+    });
+  }
+
+  function filterSummaryRows(searchTerm, stockStatus, variantName) {
+    if (!summaryTable) return;
+    const rows = summaryTable.querySelectorAll('tbody tr');
+    rows.forEach(row => {
+      const productCell = row.querySelector('[data-summary-product]') || row.querySelector('td:first-child');
+      const variantCell = row.querySelector('[data-summary-variant]') || row.querySelector('td:nth-child(2)');
+      const sizeCell = row.querySelector('[data-summary-size]') || row.querySelector('td:nth-child(3)');
       const stockBadge = row.querySelector('.badge');
 
+      const productName = (productCell?.textContent || '').trim().toLowerCase();
+      const rowVariant = (variantCell?.textContent || '').trim();
       const matchesSearch = !searchTerm || productName.includes(searchTerm);
       const matchesVariant = !variantName || rowVariant === variantName;
 
       let matchesStock = !stockStatus;
       if (stockStatus && stockBadge) {
         const stockText = stockBadge.textContent;
-        if (stockStatus === 'in-stock') matchesStock = stockText.includes('In Stock');
-        else if (stockStatus === 'out-of-stock') matchesStock = stockText.includes('Out of Stock');
+        if (stockStatus === 'in-stock') {
+          matchesStock = stockText.includes('In Stock');
+        } else if (stockStatus === 'out-of-stock') {
+          matchesStock = stockText.includes('Out of Stock');
+        }
       }
 
-      row.style.display = (matchesSearch && matchesVariant && matchesStock) ? '' : 'none';
+      row.style.display = matchesSearch && matchesVariant && matchesStock ? '' : 'none';
     });
 
-    // Update summary counters based on visible rows
-    updateSummaryCounters();
+    updateSummaryCounters(Boolean(searchTerm || stockStatus || variantName));
   }
 
-  function updateSummaryCounters() {
-    const visibleSkuRows = document.querySelectorAll('#summaryDetails tbody tr[style=""]');
-    let totalBulk = 0, totalPackaged = 0, visibleProducts = new Set(), visibleVariants = new Set();
+  function updateSummaryCounters(hasActiveFilters) {
+    if (!summaryTable) return;
 
-    visibleSkuRows.forEach(row => {
-      const productName = row.querySelector('td:first-child a strong').textContent;
-      const variantName = row.querySelector('td:nth-child(2)').textContent;
-      const sizeLabel = row.querySelector('td:nth-child(3)').textContent;
-      const quantity = parseFloat(row.querySelector('td:nth-child(5) strong').textContent) || 0;
+    if (!hasActiveFilters) {
+      Object.entries(summaryMetricElements).forEach(([key, el]) => {
+        if (el && summaryMetricInitials[key] !== undefined) {
+          el.textContent = summaryMetricInitials[key];
+        }
+      });
+      return;
+    }
 
-      visibleProducts.add(productName);
-      visibleVariants.add(`${productName}-${variantName}`);
+    const visibleRows = Array.from(summaryTable.querySelectorAll('tbody tr')).filter(row => row.style.display !== 'none');
+    let totalBulk = 0;
+    let totalPackaged = 0;
+    const visibleProducts = new Set();
+    const visibleVariants = new Set();
 
-      if (sizeLabel === 'Bulk') {
+    visibleRows.forEach(row => {
+      const productCell = row.querySelector('[data-summary-product]') || row.querySelector('td:first-child');
+      const variantCell = row.querySelector('[data-summary-variant]') || row.querySelector('td:nth-child(2)');
+      const sizeCell = row.querySelector('[data-summary-size]') || row.querySelector('td:nth-child(3)');
+      const quantityCell = row.querySelector('[data-summary-quantity]') || row.querySelector('td:nth-child(5)');
+      const quantityText = quantityCell ? (quantityCell.querySelector('strong')?.textContent || quantityCell.textContent) : '0';
+
+      const productName = (productCell?.textContent || '').trim();
+      const variantName = (variantCell?.textContent || '').trim();
+      const sizeLabel = (sizeCell?.textContent || '').trim();
+      const quantity = parseFloat(quantityText) || 0;
+
+      if (productName) visibleProducts.add(productName);
+      if (productName && variantName) visibleVariants.add(`${productName}-${variantName}`);
+      if (sizeLabel.toLowerCase() === 'bulk') {
         totalBulk += quantity;
       } else {
         totalPackaged += quantity;
       }
     });
 
-    // Update summary cards if filtering is active
-    const hasActiveFilters = (productFilter && productFilter.value) ||
-                            (stockFilter && stockFilter.value) ||
-                            (variantFilter && variantFilter.value);
-
-    if (hasActiveFilters) {
-      const bulkCard = document.querySelector('.fs-4.fw-bold.text-primary');
-      const packagedCard = document.querySelector('.fs-4.fw-bold.text-success');
-      const productsCard = document.querySelector('.fs-4.fw-bold.text-info');
-      const variantsCard = document.querySelector('.fs-4.fw-bold.text-warning');
-
-      if (bulkCard) bulkCard.textContent = totalBulk.toFixed(2);
-      if (packagedCard) packagedCard.textContent = Math.round(totalPackaged).toString();
-      if (productsCard) productsCard.textContent = visibleProducts.size.toString();
-      if (variantsCard) variantsCard.textContent = visibleVariants.size.toString();
-    }
+    if (summaryMetricElements.bulk) summaryMetricElements.bulk.textContent = totalBulk.toFixed(2);
+    if (summaryMetricElements.packaged) summaryMetricElements.packaged.textContent = Math.round(totalPackaged).toString();
+    if (summaryMetricElements.products) summaryMetricElements.products.textContent = visibleProducts.size.toString();
+    if (summaryMetricElements.variants) summaryMetricElements.variants.textContent = visibleVariants.size.toString();
   }
 
-  // Event listeners
-  if (productFilter) productFilter.addEventListener('input', applyFilters);
-  if (stockFilter) stockFilter.addEventListener('change', applyFilters);
-  if (variantFilter) variantFilter.addEventListener('change', applyFilters);
+  function applyFilters() {
+    const searchTerm = (productFilter?.value || '').trim().toLowerCase();
+    const stockStatus = stockFilter?.value || '';
+    const variantName = variantFilter?.value || '';
+
+    filterProductCards(searchTerm, stockStatus);
+    filterProductRows(searchTerm, stockStatus);
+    filterSummaryRows(searchTerm, stockStatus, variantName);
+  }
+
+  window.filterProducts = applyFilters;
+
+  productFilter?.addEventListener('input', applyFilters);
+  stockFilter?.addEventListener('change', applyFilters);
+  variantFilter?.addEventListener('change', applyFilters);
 
   // Variation toggle functionality
   document.querySelectorAll('[data-bs-toggle="collapse"]').forEach(button => {
@@ -589,14 +658,16 @@ document.addEventListener('DOMContentLoaded', function() {
       const icon = this.querySelector('i');
       setTimeout(() => {
         const target = document.querySelector(this.dataset.bsTarget);
-        if (target.classList.contains('show')) {
-          icon.classList.replace('fa-chevron-down', 'fa-chevron-up');
+        if (target?.classList.contains('show')) {
+          icon?.classList.replace('fa-chevron-down', 'fa-chevron-up');
         } else {
-          icon.classList.replace('fa-chevron-up', 'fa-chevron-down');
+          icon?.classList.replace('fa-chevron-up', 'fa-chevron-down');
         }
       }, 100);
     });
   });
+
+  applyFilters();
 });
 
 // Edit product function

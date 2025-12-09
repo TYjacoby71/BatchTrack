@@ -217,10 +217,25 @@ function initTablePagination(tableType) {
     });
   });
 
-  // Store filtered rows so apply functions can update them
-  window[`${tableType}FilteredRows`] = filteredRows;
+  // Store filtered rows so apply functions update the same state
+  Object.defineProperty(window, `${tableType}FilteredRows`, {
+    configurable: true,
+    get() {
+      return filteredRows;
+    },
+    set(newRows) {
+      if (Array.isArray(newRows)) {
+        filteredRows = newRows;
+      }
+    }
+  });
   window[`${tableType}UpdateTable`] = updateTable;
-  window[`${tableType}CurrentPage`] = currentPage;
+  Object.defineProperty(window, `${tableType}CurrentPage`, {
+    configurable: true,
+    get() {
+      return currentPage;
+    }
+  });
   window[`${tableType}SetCurrentPage`] = function(page) {
     currentPage = page;
   };
