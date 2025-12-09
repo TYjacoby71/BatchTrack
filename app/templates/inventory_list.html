@@ -742,26 +742,6 @@ function updateIngredientSelectionDetails(picked, source){
 }
 
 // Initialize typeahead for ingredient search with better error handling and timing
-function initializeTypeaheadForIngredients() {
-  // Check if suggestions.js is already loaded
-  if (!document.querySelector('script[src*="suggestions.js"]')) {
-    console.log('🔧 INVENTORY LIST: Loading suggestions.js');
-    const script = document.createElement('script');
-    script.src = '/static/js/components/suggestions.js';
-    script.onload = function() {
-      console.log('🔧 INVENTORY LIST: suggestions.js loaded, setting up typeahead');
-      setTimeout(setupTypeaheadForIngredients, 50); // Small delay to ensure DOM is ready
-    };
-    script.onerror = function() {
-      console.error('🔧 INVENTORY LIST: Failed to load suggestions.js');
-    };
-    document.head.appendChild(script);
-  } else {
-    // Script already loaded, proceed with setup
-    setupTypeaheadForIngredients();
-  }
-}
-
 function setupTypeaheadForIngredients() {
   const ingredientNameInput = document.getElementById('ingredientNameInput');
   const ingredientSuggestions = document.getElementById('ingredientSuggestions');
@@ -781,15 +761,6 @@ function setupTypeaheadForIngredients() {
 
   if (typeof window.attachMergedInventoryGlobalTypeahead !== 'function') {
     console.error('🔧 TYPEAHEAD SETUP: attachMergedInventoryGlobalTypeahead function not available');
-    // Retry once more after a delay
-    setTimeout(function() {
-      if (typeof window.attachMergedInventoryGlobalTypeahead === 'function') {
-        console.log('🔧 TYPEAHEAD SETUP: Function now available, retrying setup');
-        setupTypeaheadForIngredients();
-      } else {
-        console.error('🔧 TYPEAHEAD SETUP: Function still not available after retry');
-      }
-    }, 200);
     return;
   }
 
@@ -825,10 +796,21 @@ function setupTypeaheadForIngredients() {
   }
 }
 
-// Initialize when DOM is ready
+// Initialize when suggestions script is loaded
+function initializeTypeaheadWhenReady() {
+  if (typeof window.attachMergedInventoryGlobalTypeahead === 'function') {
+    setupTypeaheadForIngredients();
+  } else {
+    // Wait for the script to load
+    setTimeout(initializeTypeaheadWhenReady, 100);
+  }
+}
+
+// Start initialization after DOM and scripts are ready
 document.addEventListener('DOMContentLoaded', function() {
-  console.log('🔧 INVENTORY LIST: DOM loaded, initializing typeahead');
-  initializeTypeaheadForIngredients();
+  console.log('🔧 INVENTORY LIST: DOM loaded, waiting for typeahead function');
+  // Give a moment for the suggestions script to load
+  setTimeout(initializeTypeaheadWhenReady, 200);
 });
 
 // Tabs behavior (show one type at a time)

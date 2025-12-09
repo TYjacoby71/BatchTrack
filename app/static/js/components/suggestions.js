@@ -202,7 +202,6 @@
               certifications: form.certifications || item.certifications || [],
               default_is_perishable: form.default_is_perishable,
               recommended_shelf_life_days: form.recommended_shelf_life_days,
-              recommended_usage_rate: form.recommended_usage_rate || item.recommended_usage_rate,
               recommended_fragrance_load_pct: form.recommended_fragrance_load_pct || item.recommended_fragrance_load_pct,
               functions: form.functions || item.functions || [],
               applications: form.applications || item.applications || [],
@@ -332,7 +331,7 @@
         var inv = results[0] || {results: []};
         var gi = results[1] || {results: []};
         var invResults = inv.results || [];
-        var giResults = expandGlobalItems(gi.results ||| []);
+        var giResults = expandGlobalItems(gi.results || []);
 
         // Build maps for dedupe
         var invByGlobalId = new Map();
