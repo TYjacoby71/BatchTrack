@@ -26,7 +26,13 @@
     return div;
   }
 
-    function renderSuggestions(listEl, groups, onPick){
+    function renderSuggestions(listEl, groups, onPick, opts){
+    opts = opts || {};
+    if (opts.ingredientFirst){
+      renderIngredientFirst(listEl, groups, onPick);
+      return;
+    }
+
     listEl.innerHTML = '';
     var hasAny = false;
     groups.forEach(function(group){
@@ -69,6 +75,92 @@
     listEl.classList.toggle('d-none', !hasAny);
   }
 
+  function buildFormMeta(form){
+    var meta = [];
+    if (typeof form.cost_per_unit === 'number'){
+      var unitLabel = form.default_unit || 'unit';
+      meta.push('$' + form.cost_per_unit.toFixed(2) + '/' + unitLabel);
+    }
+    if (form.default_unit){
+      meta.push('Unit: ' + form.default_unit);
+    }
+    if (typeof form.density === 'number'){
+      meta.push('Density: ' + form.density.toFixed(3) + ' g/ml');
+    }
+    if (typeof form.recommended_shelf_life_days === 'number'){
+      meta.push('Shelf life: ' + form.recommended_shelf_life_days + ' days');
+    }
+    return meta.join(' • ');
+  }
+
+  function renderIngredientFirst(listEl, groups, onPick){
+    listEl.innerHTML = '';
+    var hasAny = false;
+
+    groups.forEach(function(group){
+      if (!group.ingredients || !group.ingredients.length) return;
+      hasAny = true;
+
+      var header = document.createElement('div');
+      header.className = 'list-group-item text-muted small fw-semibold';
+      header.textContent = group.title;
+      listEl.appendChild(header);
+
+      group.ingredients.forEach(function(ingredient){
+        var itemEl = document.createElement('div');
+        itemEl.className = 'list-group-item ingredient-result';
+
+        var summary = document.createElement('div');
+        summary.className = 'd-flex justify-content-between align-items-center ingredient-summary py-1';
+        summary.setAttribute('role', 'button');
+        summary.setAttribute('tabindex', '0');
+        summary.innerHTML = '<span class="fw-semibold">' + (ingredient.name || 'Ingredient') + '</span>' +
+          '<span class="badge bg-light text-dark">' + ingredient.forms.length + ' form' + (ingredient.forms.length === 1 ? '' : 's') + '</span>';
+        summary.style.cursor = 'pointer';
+
+        var formsContainer = document.createElement('div');
+        formsContainer.className = 'ingredient-form-options d-none mt-2 ps-3 border-start border-2';
+        ingredient.forms.forEach(function(form){
+          var btn = document.createElement('button');
+          btn.type = 'button';
+          btn.className = 'btn btn-sm btn-outline-primary w-100 text-start mb-2 ingredient-form-option';
+          var primaryLabel = form.ingredient_name || ingredient.name || form.text || 'Ingredient';
+          if (form.physical_form_name){
+            primaryLabel += ' — ' + form.physical_form_name;
+          }
+          var meta = buildFormMeta(form);
+          btn.innerHTML = '<div class="fw-semibold">' + primaryLabel + '</div>' +
+            (meta ? '<div class="small text-muted">' + meta + '</div>' : '');
+          btn.addEventListener('click', function(){
+            onPick(form, form.source || group.source);
+            listEl.classList.add('d-none');
+            listEl.innerHTML = '';
+          });
+          formsContainer.appendChild(btn);
+        });
+
+        function toggleForms(e){
+          if (e.type === 'keydown' && e.key !== 'Enter' && e.key !== ' ') return;
+          e.preventDefault();
+          formsContainer.classList.toggle('d-none');
+        }
+
+        summary.addEventListener('click', toggleForms);
+        summary.addEventListener('keydown', toggleForms);
+
+        itemEl.appendChild(summary);
+        itemEl.appendChild(formsContainer);
+        listEl.appendChild(itemEl);
+
+        if (ingredient.forms.length === 1){
+          formsContainer.classList.remove('d-none');
+        }
+      });
+    });
+
+    listEl.classList.toggle('d-none', !hasAny);
+  }
+
   function attachMergedInventoryGlobalTypeahead(options){
     var inputEl = options && options.inputEl;
     var invHiddenEl = options && options.invHiddenEl;
@@ -76,6 +168,8 @@
     var listEl = ensureListContainer(options && options.listEl);
     var mode = (options && options.mode) || 'recipe'; // 'recipe' or 'inventory_create'
     var context = (options && options.context) || 'customer'; // 'customer' or 'public'
+    var ingredientFirst = !!(options && options.ingredientFirst);
+    var onSelection = options && options.onSelection;
 
     if (!inputEl || (!invHiddenEl && mode === 'recipe') || !giHiddenEl) return;
 
@@ -134,6 +228,69 @@
         return expanded;
       }
 
+  function groupInventoryByIngredient(items){
+    var map = new Map();
+    (items || []).forEach(function(item){
+      var baseName = item.ingredient_name || item.text || item.name || '';
+      var key = item.ingredient_id ? ('id:' + item.ingredient_id) : ('name:' + normalizedName(baseName));
+      var entry = map.get(key);
+      if (!entry){
+        entry = {
+          ingredient_id: item.ingredient_id || null,
+          name: baseName,
+          forms: [],
+        };
+        map.set(key, entry);
+      }
+      entry.forms.push({
+        id: item.id_numeric || item.id,
+        id_numeric: item.id_numeric || item.id,
+        text: baseName + (item.physical_form_name ? ' (' + item.physical_form_name + ')' : ''),
+        ingredient_name: baseName,
+        physical_form_name: item.physical_form_name || null,
+        default_unit: item.unit || item.default_unit || null,
+        density: item.density,
+        cost_per_unit: item.cost_per_unit,
+        source: 'inventory',
+        global_item_id: item.global_item_id || null,
+        item_type: item.type,
+      });
+    });
+    return Array.from(map.values());
+  }
+
+  function groupGlobalByIngredient(rawGroups, allowedIds){
+    var groups = [];
+    (rawGroups || []).forEach(function(group){
+      var forms = (group.forms || []).filter(function(form){
+        if (!allowedIds) return true;
+        return allowedIds.has(String(form.id));
+      }).map(function(form){
+        var ingredientName = group.name || (group.ingredient && group.ingredient.name) || form.ingredient_name || form.name;
+        return {
+          id: form.id,
+          text: ingredientName + (form.physical_form_name ? ' (' + form.physical_form_name + ')' : ''),
+          ingredient_name: ingredientName,
+          physical_form_name: form.physical_form_name || null,
+          default_unit: form.default_unit || form.unit || null,
+          density: form.density,
+          default_is_perishable: form.default_is_perishable,
+          recommended_shelf_life_days: form.recommended_shelf_life_days,
+          source: 'global',
+          global_item_id: form.id,
+        };
+      });
+      if (forms.length){
+        groups.push({
+          ingredient_id: group.ingredient_id || group.id || null,
+          name: group.name || (group.ingredient && group.ingredient.name) || (forms[0] && forms[0].ingredient_name) || 'Ingredient',
+          forms: forms,
+        });
+      }
+    });
+    return groups;
+  }
+
     var doSearch = debounce(function(){
       var q = (inputEl.value || '').trim();
       if (!q){
@@ -179,6 +336,33 @@
           return !(coveredByGlobalId || coveredByName);
         });
 
+        if (ingredientFirst){
+          var allowedGlobalIds = new Set(giFiltered.map(function(r){ return String(r.id); }));
+          var inventoryGroups = mode === 'recipe' ? groupInventoryByIngredient(invResults) : [];
+          var globalGroups = groupGlobalByIngredient(gi.results || [], allowedGlobalIds);
+          var ingredientGroups = [];
+          if (inventoryGroups.length && mode === 'recipe'){
+            ingredientGroups.push({ title: 'Your Inventory', source: 'inventory', ingredients: inventoryGroups });
+          }
+          if (globalGroups.length){
+            ingredientGroups.push({ title: 'Global Library', source: 'global', ingredients: globalGroups });
+          }
+          renderSuggestions(listEl, ingredientGroups, function(picked, source){
+            inputEl.value = picked.text;
+            if (source === 'inventory'){
+              if (invHiddenEl) invHiddenEl.value = picked.id_numeric || picked.id || '';
+              if (giHiddenEl) giHiddenEl.value = '';
+            } else {
+              if (giHiddenEl) giHiddenEl.value = picked.id;
+              if (invHiddenEl) invHiddenEl.value = '';
+            }
+            if (typeof onSelection === 'function'){
+              onSelection(picked, source);
+            }
+          }, { ingredientFirst: true });
+          return;
+        }
+
         // Build groups based on mode
         var groups = [];
         if (mode === 'recipe') {
@@ -196,6 +380,9 @@
           } else {
             if (giHiddenEl) giHiddenEl.value = picked.id;
             if (invHiddenEl) invHiddenEl.value = '';
+          }
+          if (typeof onSelection === 'function'){
+            onSelection(picked, source);
           }
         });
       }).catch(function(){
