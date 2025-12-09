@@ -2,15 +2,24 @@ from collections import OrderedDict
 
 from flask import Blueprint, jsonify, make_response, request, current_app
 from datetime import datetime, timezone
-from app.extensions import limiter, csrf
+from app.extensions import limiter, csrf, cache
 from app.models.models import Unit
 from app.models.global_item import GlobalItem
 from app.services.unit_conversion.unit_conversion import ConversionEngine
 from app.services.public_bot_service import PublicBotService, PublicBotServiceError
 from app.services.ai import GoogleAIClientError
+from app.services.cache_invalidation import global_library_cache_key
+from app.utils.cache_utils import stable_cache_key
 from sqlalchemy import func, or_
 
 public_api_bp = Blueprint("public_api", __name__)
+
+
+def _global_library_cache_timeout() -> int:
+    return current_app.config.get(
+        "GLOBAL_LIBRARY_CACHE_TIMEOUT",
+        current_app.config.get("CACHE_DEFAULT_TIMEOUT", 120),
+    )
 
 @public_api_bp.route("/server-time", methods=["GET"])
 @limiter.exempt
@@ -52,6 +61,21 @@ def public_global_item_search():
         return jsonify({'success': True, 'results': []})
 
     try:
+        cache_key = None
+        if cache:
+            raw_key = stable_cache_key(
+                "public-global-items",
+                {
+                    'q': q,
+                    'item_type': item_type or '',
+                    'group': request.args.get('group') or '',
+                },
+            )
+            cache_key = global_library_cache_key(raw_key)
+            cached_payload = cache.get(cache_key)
+            if cached_payload:
+                return jsonify(cached_payload)
+
         query = GlobalItem.query.filter(GlobalItem.is_archived != True)
         if item_type:
             query = query.filter(GlobalItem.item_type == item_type)
@@ -196,9 +220,16 @@ def public_global_item_search():
                 })
 
         if group_mode:
-            return jsonify({'success': True, 'results': list(grouped.values())})
+            payload = {'success': True, 'results': list(grouped.values())}
+        else:
+            payload = {'success': True, 'results': results}
 
-        return jsonify({'success': True, 'results': results})
+        if cache_key:
+            try:
+                cache.set(cache_key, payload, timeout=_global_library_cache_timeout())
+            except Exception:
+                current_app.logger.debug("Unable to write global library cache key %s", cache_key)
+        return jsonify(payload)
     except Exception as e:
         return jsonify({'success': False, 'error': str(e)}), 500
 
