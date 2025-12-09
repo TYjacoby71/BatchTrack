@@ -220,6 +220,10 @@ function initTablePagination(tableType) {
   // Store filtered rows so apply functions can update them
   window[`${tableType}FilteredRows`] = filteredRows;
   window[`${tableType}UpdateTable`] = updateTable;
+  window[`${tableType}CurrentPage`] = currentPage;
+  window[`${tableType}SetCurrentPage`] = function(page) {
+    currentPage = page;
+  };
 
   // Initial load
   updateTable();
@@ -273,6 +277,8 @@ function applyIngredientsFilters() {
     const sortFilter = document.getElementById('ingredientsSortFilter');
     const archivedFilter = document.getElementById('ingredientsShowArchived');
     
+    if (!nameFilter || !sortFilter || !archivedFilter) return;
+    
     // Store current filter values
     localStorage.setItem('ingredients_name_filter', nameFilter.value);
     localStorage.setItem('ingredients_sort_filter', sortFilter.value);
@@ -324,20 +330,15 @@ function applyIngredientsFilters() {
         }
     });
     
-    // Update the table display
-    allRows.forEach(row => row.style.display = 'none');
-    filteredRows.forEach(row => row.style.display = '');
+    // Reset to page 1 when filters change
+    if (window.ingredientsSetCurrentPage) {
+        window.ingredientsSetCurrentPage(1);
+    }
     
     // Update global filtered rows and trigger pagination update
     window.ingredientsFilteredRows = filteredRows;
     if (window.ingredientsUpdateTable) {
         window.ingredientsUpdateTable();
-    }
-    
-    // Update info
-    const infoEl = document.getElementById('ingredientsInfo');
-    if (infoEl) {
-        infoEl.textContent = `Showing ${filteredRows.length} of ${allRows.length} items`;
     }
 }
 
@@ -345,6 +346,8 @@ function applyContainersFilters() {
     const nameFilter = document.getElementById('containersNameFilter');
     const sortFilter = document.getElementById('containersSortFilter');
     const archivedFilter = document.getElementById('containersShowArchived');
+    
+    if (!nameFilter || !sortFilter || !archivedFilter) return;
     
     localStorage.setItem('containers_name_filter', nameFilter.value);
     localStorage.setItem('containers_sort_filter', sortFilter.value);
@@ -396,18 +399,15 @@ function applyContainersFilters() {
         }
     });
     
-    allRows.forEach(row => row.style.display = 'none');
-    filteredRows.forEach(row => row.style.display = '');
+    // Reset to page 1 when filters change
+    if (window.containersSetCurrentPage) {
+        window.containersSetCurrentPage(1);
+    }
     
     // Update global filtered rows and trigger pagination update
     window.containersFilteredRows = filteredRows;
     if (window.containersUpdateTable) {
         window.containersUpdateTable();
-    }
-    
-    const infoEl = document.getElementById('containersInfo');
-    if (infoEl) {
-        infoEl.textContent = `Showing ${filteredRows.length} of ${allRows.length} items`;
     }
 }
 
@@ -415,6 +415,8 @@ function applyPackagingFilters() {
     const nameFilter = document.getElementById('packagingNameFilter');
     const sortFilter = document.getElementById('packagingSortFilter');
     const archivedFilter = document.getElementById('packagingShowArchived');
+    
+    if (!nameFilter || !sortFilter || !archivedFilter) return;
     
     localStorage.setItem('packaging_name_filter', nameFilter.value);
     localStorage.setItem('packaging_sort_filter', sortFilter.value);
@@ -463,18 +465,15 @@ function applyPackagingFilters() {
         }
     });
     
-    allRows.forEach(row => row.style.display = 'none');
-    filteredRows.forEach(row => row.style.display = '');
+    // Reset to page 1 when filters change
+    if (window.packagingSetCurrentPage) {
+        window.packagingSetCurrentPage(1);
+    }
     
     // Update global filtered rows and trigger pagination update
     window.packagingFilteredRows = filteredRows;
     if (window.packagingUpdateTable) {
         window.packagingUpdateTable();
-    }
-    
-    const infoEl = document.getElementById('packagingInfo');
-    if (infoEl) {
-        infoEl.textContent = `Showing ${filteredRows.length} of ${allRows.length} items`;
     }
 }
 
@@ -482,6 +481,8 @@ function applyConsumablesFilters() {
     const nameFilter = document.getElementById('consumablesNameFilter');
     const sortFilter = document.getElementById('consumablesSortFilter');
     const archivedFilter = document.getElementById('consumablesShowArchived');
+    
+    if (!nameFilter || !sortFilter || !archivedFilter) return;
     
     localStorage.setItem('consumables_name_filter', nameFilter.value);
     localStorage.setItem('consumables_sort_filter', sortFilter.value);
@@ -530,18 +531,15 @@ function applyConsumablesFilters() {
         }
     });
     
-    allRows.forEach(row => row.style.display = 'none');
-    filteredRows.forEach(row => row.style.display = '');
+    // Reset to page 1 when filters change
+    if (window.consumablesSetCurrentPage) {
+        window.consumablesSetCurrentPage(1);
+    }
     
     // Update global filtered rows and trigger pagination update
     window.consumablesFilteredRows = filteredRows;
     if (window.consumablesUpdateTable) {
         window.consumablesUpdateTable();
-    }
-    
-    const infoEl = document.getElementById('consumablesInfo');
-    if (infoEl) {
-        infoEl.textContent = `Showing ${filteredRows.length} of ${allRows.length} items`;
     }
 }
 
