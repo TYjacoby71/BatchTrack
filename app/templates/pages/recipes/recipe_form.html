@@ -382,9 +382,9 @@
                         <div class="col-md-4">
                             <label class="form-label">Ingredient</label>
                             <div class="position-relative">
-                                <input type="text" class="form-control recipe-ingredient-typeahead" placeholder="Search inventory and global..." autocomplete="off" value="{{ assoc.inventory_item.name if assoc.inventory_item else '' }}">
+                                <input type="text" name="ingredient_names[]" class="form-control recipe-ingredient-typeahead" placeholder="Search inventory and global..." autocomplete="off" value="{{ assoc.inventory_item.name if assoc.inventory_item else '' }}">
                                 <input type="hidden" name="ingredient_ids[]" value="{{ assoc.inventory_item_id or '' }}">
-                                <input type="hidden" name="global_item_ids[]" value="">
+                                <input type="hidden" name="global_item_ids[]" value="{{ assoc.inventory_item.global_item_id if assoc.inventory_item and assoc.inventory_item.global_item_id else '' }}">
                                 <div class="list-group position-absolute w-100 d-none" data-role="suggestions" style="z-index: 1050;"></div>
                             </div>
                         </div>
@@ -415,10 +415,10 @@
                   {% elif ingredient_prefill %}
                       {% for entry in ingredient_prefill %}
                     <div class="ingredient-entry row mb-3 p-3 border rounded">
-                        <div class="col-md-4">
+                    <div class="col-md-4">
                             <label class="form-label small">Ingredient</label>
                             <div class="position-relative">
-                                  <input type="text" class="form-control recipe-ingredient-typeahead" placeholder="Search inventory and global..." autocomplete="off" value="{{ entry.name or '' }}">
+                                  <input type="text" name="ingredient_names[]" class="form-control recipe-ingredient-typeahead" placeholder="Search inventory and global..." autocomplete="off" value="{{ entry.name or '' }}">
                                   <input type="hidden" name="ingredient_ids[]" value="{{ entry.inventory_item_id or '' }}">
                                   <input type="hidden" name="global_item_ids[]" value="{{ entry.global_item_id or '' }}">
                                 <div class="list-group position-absolute w-100 d-none" data-role="suggestions" style="z-index: 1050;"></div>
@@ -495,12 +495,12 @@
                 <div class="consumable-entry row mb-3 p-3 border rounded" data-consumable-id="{{ assoc.inventory_item_id }}">
                     <div class="col-md-4">
                         <label class="form-label">Consumable</label>
-                        <select name="consumable_ids[]" class="form-select consumable-select" required>
-                            <option value="">Select consumable...</option>
-                            {% for item in all_consumables %}
-                            <option value="{{ item.id }}" data-unit="{{ item.unit }}" {% if item.id == assoc.inventory_item_id %}selected{% endif %}>{{ item.name }}</option>
-                            {% endfor %}
-                        </select>
+                        <div class="position-relative">
+                            <input type="text" name="consumable_names[]" class="form-control recipe-consumable-typeahead" placeholder="Search inventory and global..." autocomplete="off" value="{{ assoc.inventory_item.name if assoc.inventory_item else '' }}">
+                            <input type="hidden" name="consumable_ids[]" value="{{ assoc.inventory_item_id or '' }}">
+                            <input type="hidden" name="consumable_global_item_ids[]" value="{{ assoc.inventory_item.global_item_id if assoc.inventory_item and assoc.inventory_item.global_item_id else '' }}">
+                            <div class="list-group position-absolute w-100 d-none" data-role="consumable-suggestions" style="z-index: 1050;"></div>
+                        </div>
                     </div>
                     <div class="col-md-3">
                         <label class="form-label small">Amount</label>
@@ -519,6 +519,9 @@
                             <i class="fas fa-trash"></i>
                         </button>
                     </div>
+                    <div class="col-12 mt-2">
+                        <div class="consumable-warning text-center small text-muted"></div>
+                    </div>
                 </div>
                 {% endfor %}
               {% elif consumable_prefill %}
@@ -526,12 +529,12 @@
                   <div class="consumable-entry row mb-3 p-3 border rounded" data-consumable-id="{{ entry.inventory_item_id }}">
                       <div class="col-md-4">
                           <label class="form-label">Consumable</label>
-                          <select name="consumable_ids[]" class="form-select consumable-select" required>
-                              <option value="">Select consumable...</option>
-                              {% for item in all_consumables %}
-                              <option value="{{ item.id }}" data-unit="{{ item.unit }}" {% if item.id == entry.inventory_item_id %}selected{% endif %}>{{ item.name }}</option>
-                              {% endfor %}
-                          </select>
+                          <div class="position-relative">
+                              <input type="text" name="consumable_names[]" class="form-control recipe-consumable-typeahead" placeholder="Search inventory and global..." autocomplete="off" value="{{ entry.name or '' }}">
+                              <input type="hidden" name="consumable_ids[]" value="{{ entry.inventory_item_id or '' }}">
+                              <input type="hidden" name="consumable_global_item_ids[]" value="{{ entry.global_item_id or '' }}">
+                              <div class="list-group position-absolute w-100 d-none" data-role="consumable-suggestions" style="z-index: 1050;"></div>
+                          </div>
                       </div>
                       <div class="col-md-3">
                           <label class="form-label small">Amount</label>
@@ -549,6 +552,9 @@
                           <button type="button" class="btn btn-outline-danger btn-sm remove-consumable w-100">
                               <i class="fas fa-trash"></i>
                           </button>
+                      </div>
+                      <div class="col-12 mt-2">
+                          <div class="consumable-warning text-center small text-muted"></div>
                       </div>
                   </div>
                   {% endfor %}
@@ -630,6 +636,39 @@
     </div>
 </form>
 
+<!-- Inventory confirmation modal -->
+<div class="modal fade" id="inventoryConfirmationModal" tabindex="-1" aria-labelledby="inventoryConfirmationLabel" aria-hidden="true" data-bs-backdrop="static">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="inventoryConfirmationLabel">Confirm New Inventory Items</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p class="mb-3">
+                    You're publishing a recipe that references items not found in your curated inventory or the global library.
+                    Saving will add the following names to your inventory exactly as written. Please confirm that these labels
+                    are how you want them to appear everywhere in the system.
+                </p>
+                <div class="border rounded p-3 mb-3 bg-light">
+                    <h6 class="fw-semibold mb-2">Items to be added</h6>
+                    <ul id="inventoryConfirmationList" class="mb-0 ps-3"></ul>
+                </div>
+                <div class="alert alert-warning mb-0">
+                    <strong>Keep names readable.</strong> Avoid initials or shorthand like "HBE".
+                    Instead, use descriptive names such as "Hard Boiled Egg" so your inventory stays clean and searchable.
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Review entries</button>
+                <button type="button" class="btn btn-primary" id="confirmInventoryModalButton">
+                    Yes, add these inventory items
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
 <!-- Drawer modals will be loaded dynamically via DrawerProtocol -->
 
 <script src="{{ url_for('static', filename='js/components/suggestions.js') }}"></script>
@@ -648,6 +687,15 @@ let originalYieldUnit = (formEl.getAttribute('data-original-yield-unit') || '').
 const ingredientActionTop = document.getElementById('ingredientActionControlsTop');
 const ingredientActionBottom = document.getElementById('ingredientActionControlsBottom');
 let ingredientActionFloatVisible = false;
+const csrfTokenInput = formEl ? formEl.querySelector('input[name="csrf_token"]') : null;
+const csrfTokenValue = csrfTokenInput ? csrfTokenInput.value : '';
+const inventoryConfirmationModalEl = document.getElementById('inventoryConfirmationModal');
+const inventoryConfirmationList = document.getElementById('inventoryConfirmationList');
+const confirmInventoryModalButton = document.getElementById('confirmInventoryModalButton');
+let inventoryConfirmationModal = null;
+let pendingInventoryConfirmations = [];
+const confirmedInventoryNames = new Set();
+let skipInventoryCheckOnce = false;
 
 function getIngredientLineCount() {
     const container = document.getElementById('ingredients-container');
@@ -697,6 +745,12 @@ function syncIngredientActionAnchors() {
 syncIngredientActionAnchors();
 
 document.addEventListener('DOMContentLoaded', function() {
+      if (inventoryConfirmationModalEl && typeof bootstrap !== 'undefined') {
+          inventoryConfirmationModal = new bootstrap.Modal(inventoryConfirmationModalEl);
+      }
+      if (confirmInventoryModalButton) {
+          confirmInventoryModalButton.addEventListener('click', handleInventoryConfirmationApprove);
+      }
       const draftAlert = document.getElementById('draftMissingFieldsAlert');
       const draftDismissBtn = document.querySelector('[data-role="dismiss-draft-prompt"]');
       const promptDraftBtn = document.getElementById('promptSaveDraftButton');
@@ -938,7 +992,7 @@ function addIngredient(preselectId = null, presetUnit = null) {
         <div class="col-md-4">
             <label class="form-label small">Ingredient</label>
             <div class="position-relative">
-                <input type="text" class="form-control recipe-ingredient-typeahead" placeholder="Search inventory and global..." autocomplete="off">
+                <input type="text" name="ingredient_names[]" class="form-control recipe-ingredient-typeahead" placeholder="Search inventory and global..." autocomplete="off">
                 <input type="hidden" name="ingredient_ids[]" value="">
                 <input type="hidden" name="global_item_ids[]" value="">
                 <div class="list-group position-absolute w-100 d-none" data-role="suggestions" style="z-index: 1050;"></div>
@@ -1066,12 +1120,12 @@ function addConsumable(preselectId = null) {
     entry.innerHTML = `
         <div class="col-md-4">
             <label class="form-label small">Consumable</label>
-            <select name="consumable_ids[]" class="form-select" required>
-                <option value="">Select a consumable</option>
-                {% for item in all_consumables %}
-                <option value="{{ item.id }}">{{ item.name }}</option>
-                {% endfor %}
-            </select>
+            <div class="position-relative">
+                <input type="text" name="consumable_names[]" class="form-control recipe-consumable-typeahead" placeholder="Search inventory and global..." autocomplete="off">
+                <input type="hidden" name="consumable_ids[]" value="">
+                <input type="hidden" name="consumable_global_item_ids[]" value="">
+                <div class="list-group position-absolute w-100 d-none" data-role="consumable-suggestions" style="z-index: 1050;"></div>
+            </div>
         </div>
         <div class="col-md-3">
             <label class="form-label small">Amount</label>
@@ -1090,13 +1144,18 @@ function addConsumable(preselectId = null) {
                 <i class="fas fa-trash"></i>
             </button>
         </div>
+        <div class="col-12 mt-2">
+            <div class="consumable-warning text-center small text-muted"></div>
+        </div>
     `;
     container.appendChild(entry);
 
     if (preselectId) {
-        const select = entry.querySelector('select[name="consumable_ids[]"]');
-        if (select) select.value = preselectId;
+        const hidden = entry.querySelector('input[name="consumable_ids[]"]');
+        if (hidden) hidden.value = String(preselectId);
     }
+
+    return entry;
 }
 
 document.addEventListener('click', function(e) {
@@ -1124,45 +1183,62 @@ window.addEventListener('inventory.created', function(e) {
 });
 
 // Client-side validation: ensure each ingredient line has a selected item
-document.getElementById('recipeForm').addEventListener('submit', function(e) {
-    const rows = document.querySelectorAll('.ingredient-entry');
-    for (const row of rows) {
-        const inv = row.querySelector('input[name="ingredient_ids[]"]').value.trim();
-        const gi = row.querySelector('input[name="global_item_ids[]"]').value.trim();
-        const hasSelection = inv || gi;
-        if (!hasSelection) {
-            e.preventDefault();
-            // Freeze and guide: highlight row and scroll into view instead of alert/reset
-            row.classList.add('border-danger');
-            row.scrollIntoView({ behavior: 'smooth', block: 'center' });
-            const input = row.querySelector('input.recipe-ingredient-typeahead');
-            if (input) input.focus();
-            // Inline helper
-            const warning = row.querySelector('.conversion-warning');
-            if (warning) warning.innerHTML = '<span class="text-danger"><i class="fas fa-exclamation-triangle"></i> Select an ingredient from Inventory or Global.</span>';
-            return false;
-        }
-    }
-});
+if (formEl) {
+    formEl.addEventListener('submit', handleRecipeFormSubmit);
+}
 
 // Unified ingredient typeahead using shared component
 (function(){
-    function setupMerged(container){
-        const input = container.querySelector('input.recipe-ingredient-typeahead');
-        const invHidden = container.querySelector('input[name="ingredient_ids[]"]');
-        const giHidden = container.querySelector('input[name="global_item_ids[]"]');
-        const list = container.querySelector('[data-role="suggestions"]');
+    function setupMerged(container, itemType){
+        if (!container) return;
+        const config =
+            itemType === 'consumable'
+                ? {
+                      inputSelector: 'input.recipe-consumable-typeahead',
+                      inventorySelector: 'input[name="consumable_ids[]"]',
+                      globalSelector: 'input[name="consumable_global_item_ids[]"]',
+                      listSelector: '[data-role="consumable-suggestions"]',
+                  }
+                : {
+                      inputSelector: 'input.recipe-ingredient-typeahead',
+                      inventorySelector: 'input[name="ingredient_ids[]"]',
+                      globalSelector: 'input[name="global_item_ids[]"]',
+                      listSelector: '[data-role="suggestions"]',
+                  };
+        const input = container.querySelector(config.inputSelector);
+        const invHidden = container.querySelector(config.inventorySelector);
+        const giHidden = container.querySelector(config.globalSelector);
+        const list = container.querySelector(config.listSelector);
         if (!input || !giHidden || !list) return;
-        if (typeof window.attachMergedInventoryGlobalTypeahead === 'function'){
-            window.attachMergedInventoryGlobalTypeahead({ inputEl: input, invHiddenEl: invHidden, giHiddenEl: giHidden, listEl: list, mode: 'recipe' });
+        if (typeof window.attachMergedInventoryGlobalTypeahead === 'function') {
+            window.attachMergedInventoryGlobalTypeahead({
+                inputEl: input,
+                invHiddenEl: invHidden,
+                giHiddenEl: giHidden,
+                listEl: list,
+                mode: 'recipe',
+                itemType: itemType,
+            });
         }
     }
-    document.querySelectorAll('.ingredient-entry .position-relative').forEach(setupMerged);
-    const originalAdd = addIngredient;
+    document.querySelectorAll('.ingredient-entry .position-relative').forEach(function(el){
+        setupMerged(el, 'ingredient');
+    });
+    document.querySelectorAll('.consumable-entry .position-relative').forEach(function(el){
+        setupMerged(el, 'consumable');
+    });
+    const originalAddIngredient = addIngredient;
     window.addIngredient = function(preselectId, presetUnit){
-        const entry = originalAdd(preselectId, presetUnit);
+        const entry = originalAddIngredient(preselectId, presetUnit);
         const container = entry.querySelector('.position-relative');
-        if (container) setupMerged(container);
+        if (container) setupMerged(container, 'ingredient');
+        return entry;
+    };
+    const originalAddConsumable = addConsumable;
+    window.addConsumable = function(preselectId){
+        const entry = originalAddConsumable(preselectId);
+        const container = entry.querySelector('.position-relative');
+        if (container) setupMerged(container, 'consumable');
         return entry;
     };
 })();
@@ -1170,6 +1246,206 @@ document.getElementById('recipeForm').addEventListener('submit', function(e) {
 function setSaveMode(mode) {
     if (!saveModeInput) return;
     saveModeInput.value = mode === 'draft' ? 'draft' : 'publish';
+}
+
+function validateIngredientRows() {
+    let invalidRow = null;
+    const rows = document.querySelectorAll('.ingredient-entry');
+    rows.forEach(row => {
+        if (invalidRow) return;
+        const inv = (row.querySelector('input[name="ingredient_ids[]"]')?.value || '').trim();
+        const gi = (row.querySelector('input[name="global_item_ids[]"]')?.value || '').trim();
+        const name = (row.querySelector('input[name="ingredient_names[]"]')?.value || '').trim();
+        const hasSelection = Boolean(inv || gi || name);
+        const warning = row.querySelector('.conversion-warning');
+        if (!hasSelection) {
+            invalidRow = row;
+            row.classList.add('border-danger');
+            row.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            const input = row.querySelector('input.recipe-ingredient-typeahead');
+            if (input) input.focus();
+            if (warning) {
+                warning.innerHTML =
+                    '<span class="text-danger"><i class="fas fa-exclamation-triangle"></i> Enter or select an ingredient name.</span>';
+                warning.dataset.validationMessage = 'true';
+            }
+        } else {
+            row.classList.remove('border-danger');
+            if (warning && warning.dataset.validationMessage === 'true') {
+                warning.innerHTML = '';
+                delete warning.dataset.validationMessage;
+            }
+        }
+    });
+    return invalidRow;
+}
+
+function validateConsumableRows() {
+    let invalidRow = null;
+    const rows = document.querySelectorAll('.consumable-entry');
+    rows.forEach(row => {
+        if (invalidRow) return;
+        const inv = (row.querySelector('input[name="consumable_ids[]"]')?.value || '').trim();
+        const name = (row.querySelector('input[name="consumable_names[]"]')?.value || '').trim();
+        const hasSelection = Boolean(inv || name);
+        const warning = row.querySelector('.consumable-warning');
+        if (!hasSelection) {
+            invalidRow = row;
+            row.classList.add('border-danger');
+            row.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            const input = row.querySelector('input.recipe-consumable-typeahead');
+            if (input) input.focus();
+            if (warning) {
+                warning.innerHTML =
+                    '<span class="text-danger"><i class="fas fa-exclamation-triangle"></i> Enter or select a consumable name.</span>';
+                warning.dataset.validationMessage = 'true';
+            }
+        } else {
+            row.classList.remove('border-danger');
+            if (warning && warning.dataset.validationMessage === 'true') {
+                warning.innerHTML = '';
+                delete warning.dataset.validationMessage;
+            }
+        }
+    });
+    return invalidRow;
+}
+
+function handleRecipeFormSubmit(e) {
+    if (!formEl) return;
+    if (skipInventoryCheckOnce) {
+        skipInventoryCheckOnce = false;
+        return true;
+    }
+
+    const invalidIngredient = validateIngredientRows();
+    if (invalidIngredient) {
+        e.preventDefault();
+        return false;
+    }
+    const invalidConsumable = validateConsumableRows();
+    if (invalidConsumable) {
+        e.preventDefault();
+        return false;
+    }
+
+    const pendingItems = collectPendingInventoryItems();
+    if (!pendingItems.length) {
+        return true;
+    }
+
+    e.preventDefault();
+    checkNewInventoryItems(pendingItems)
+        .then(missing => {
+            if (!missing.length) {
+                skipInventoryCheckOnce = true;
+                formEl.requestSubmit();
+                return;
+            }
+            pendingInventoryConfirmations = missing;
+            renderInventoryConfirmationList(missing);
+            if (inventoryConfirmationModal) {
+                inventoryConfirmationModal.show();
+            }
+        })
+        .catch(() => {
+            skipInventoryCheckOnce = true;
+            formEl.requestSubmit();
+        });
+    return false;
+}
+
+function collectPendingInventoryItems() {
+    const pending = [];
+    document.querySelectorAll('.ingredient-entry').forEach(row => {
+        const inv = (row.querySelector('input[name="ingredient_ids[]"]')?.value || '').trim();
+        const gi = (row.querySelector('input[name="global_item_ids[]"]')?.value || '').trim();
+        const name = (row.querySelector('input[name="ingredient_names[]"]')?.value || '').trim();
+        if (!name || inv || gi) {
+            return;
+        }
+        pending.push({ name, item_type: 'ingredient' });
+    });
+    document.querySelectorAll('.consumable-entry').forEach(row => {
+        const inv = (row.querySelector('input[name="consumable_ids[]"]')?.value || '').trim();
+        const name = (row.querySelector('input[name="consumable_names[]"]')?.value || '').trim();
+        if (!name || inv) {
+            return;
+        }
+        pending.push({ name, item_type: 'consumable' });
+    });
+    const seen = new Set();
+    const unique = [];
+    pending.forEach(item => {
+        const key = buildInventoryKey(item);
+        if (confirmedInventoryNames.has(key) || seen.has(key)) {
+            return;
+        }
+        seen.add(key);
+        unique.push({ name: item.name, item_type: item.item_type });
+    });
+    return unique;
+}
+
+function buildInventoryKey(item) {
+    const type = (item?.item_type || 'ingredient').toLowerCase();
+    const name = (item?.name || '').trim().toLowerCase();
+    return `${type}::${name}`;
+}
+
+function checkNewInventoryItems(items) {
+    if (!items.length) {
+        return Promise.resolve([]);
+    }
+    const headers = { 'Content-Type': 'application/json' };
+    if (csrfTokenValue) {
+        headers['X-CSRFToken'] = csrfTokenValue;
+    }
+    return fetch('/recipes/inventory/check-new-items', {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({ items }),
+    })
+        .then(response => {
+            if (!response.ok) {
+                throw new Error('Failed to validate inventory items');
+            }
+            return response.json();
+        })
+        .then(data => (data && Array.isArray(data.missing) ? data.missing : []));
+}
+
+function renderInventoryConfirmationList(items) {
+    if (!inventoryConfirmationList) return;
+    inventoryConfirmationList.innerHTML = '';
+    if (!items.length) {
+        const empty = document.createElement('li');
+        empty.className = 'text-muted';
+        empty.textContent = 'No custom items detected.';
+        inventoryConfirmationList.appendChild(empty);
+        return;
+    }
+    items.forEach(item => {
+        const li = document.createElement('li');
+        li.textContent = `${item.name} (${item.item_type === 'consumable' ? 'Consumable' : 'Ingredient'})`;
+        inventoryConfirmationList.appendChild(li);
+    });
+}
+
+function handleInventoryConfirmationApprove() {
+    pendingInventoryConfirmations.forEach(item => {
+        confirmedInventoryNames.add(buildInventoryKey(item));
+    });
+    pendingInventoryConfirmations = [];
+    skipInventoryCheckOnce = true;
+    if (inventoryConfirmationModal) {
+        inventoryConfirmationModal.hide();
+    }
+    window.requestAnimationFrame(() => {
+        if (formEl) {
+            formEl.requestSubmit();
+        }
+    });
 }
 
 // Category aids JS moved into shared include

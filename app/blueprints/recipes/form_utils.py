@@ -340,42 +340,68 @@ def build_prefill_from_form(form):
     amounts = form.getlist('amounts[]')
     units = form.getlist('units[]')
     global_ids = [safe_int(val) for val in form.getlist('global_item_ids[]')]
+    names = form.getlist('ingredient_names[]')
 
     consumable_ids = [safe_int(val) for val in form.getlist('consumable_ids[]')]
     consumable_amounts = form.getlist('consumable_amounts[]')
     consumable_units = form.getlist('consumable_units[]')
+    consumable_names = form.getlist('consumable_names[]')
+    consumable_global_ids = [safe_int(val) for val in form.getlist('consumable_global_item_ids[]')]
 
     lookup_ids = [identifier for identifier in ingredient_ids + consumable_ids if identifier]
     name_lookup = lookup_inventory_names(lookup_ids)
 
     ingredient_rows = []
-    for ing_id, gi_id, amt, unit in zip_longest(
-        ingredient_ids, global_ids, amounts, units, fillvalue=None
+    max_ing_len = max(len(ingredient_ids), len(global_ids), len(amounts), len(units), len(names)) if ingredient_ids or global_ids or amounts or units or names else 0
+    ingredient_ids += [None] * (max_ing_len - len(ingredient_ids))
+    global_ids += [None] * (max_ing_len - len(global_ids))
+    amounts += [''] * (max_ing_len - len(amounts))
+    units += [''] * (max_ing_len - len(units))
+    names += [''] * (max_ing_len - len(names))
+
+    for ing_id, gi_id, amt, unit, raw_name in zip(
+        ingredient_ids, global_ids, amounts, units, names
     ):
         if not any([ing_id, gi_id, amt, unit]):
             continue
+        display_name = (raw_name or '').strip() or name_lookup.get(ing_id, '')
         ingredient_rows.append(
             {
                 'inventory_item_id': ing_id,
                 'global_item_id': gi_id,
                 'quantity': amt,
                 'unit': unit,
-                'name': name_lookup.get(ing_id, ''),
+                'name': display_name,
             }
         )
 
     consumable_rows = []
-    for cid, amt, unit in zip_longest(
-        consumable_ids, consumable_amounts, consumable_units, fillvalue=None
+    max_cons_len = max(
+        len(consumable_ids),
+        len(consumable_amounts),
+        len(consumable_units),
+        len(consumable_names),
+        len(consumable_global_ids),
+    ) if consumable_ids or consumable_amounts or consumable_units or consumable_names or consumable_global_ids else 0
+    consumable_ids += [None] * (max_cons_len - len(consumable_ids))
+    consumable_amounts += [''] * (max_cons_len - len(consumable_amounts))
+    consumable_units += [''] * (max_cons_len - len(consumable_units))
+    consumable_names += [''] * (max_cons_len - len(consumable_names))
+    consumable_global_ids += [None] * (max_cons_len - len(consumable_global_ids))
+
+    for cid, amt, unit, raw_name, gi_id in zip(
+        consumable_ids, consumable_amounts, consumable_units, consumable_names, consumable_global_ids
     ):
         if not any([cid, amt, unit]):
             continue
+        display_name = (raw_name or '').strip() or name_lookup.get(cid, '')
         consumable_rows.append(
             {
                 'inventory_item_id': cid,
+                'global_item_id': gi_id,
                 'quantity': amt,
                 'unit': unit,
-                'name': name_lookup.get(cid, ''),
+                'name': display_name,
             }
         )
 
@@ -424,6 +450,129 @@ def lookup_inventory_names(item_ids):
     return {item.id: item.name for item in items}
 
 
+def resolve_inventory_item_from_global(global_item_id, item_type, unit_hint=''):
+    if not global_item_id:
+        return None
+    try:
+        gi = db.session.get(GlobalItem, int(global_item_id))
+    except Exception:
+        gi = None
+    if not gi:
+        logger.error("Global item not found for id %s", global_item_id)
+        return None
+    if gi.item_type != item_type:
+        logger.warning(
+            "Global item type mismatch: expected %s got %s",
+            item_type,
+            gi.item_type,
+        )
+    try:
+        existing = (
+            InventoryItem.query.filter_by(
+                organization_id=current_user.organization_id,
+                global_item_id=gi.id,
+                type=gi.item_type,
+            )
+            .order_by(InventoryItem.id.asc())
+            .first()
+        )
+    except Exception:
+        existing = None
+
+    if existing:
+        return int(existing.id)
+
+    try:
+        name_match = (
+            InventoryItem.query.filter(
+                InventoryItem.organization_id == current_user.organization_id,
+                func.lower(InventoryItem.name) == func.lower(db.literal(gi.name)),
+                InventoryItem.type == gi.item_type,
+            )
+            .order_by(InventoryItem.id.asc())
+            .first()
+        )
+    except Exception:
+        name_match = None
+
+    if name_match:
+        try:
+            name_match.global_item_id = gi.id
+            name_match.ownership = 'global'
+            db.session.flush()
+        except Exception:
+            db.session.rollback()
+        return int(name_match.id)
+
+    form_like = {
+        'name': gi.name,
+        'type': gi.item_type,
+        'unit': unit_hint or gi.default_unit or '',
+        'global_item_id': gi.id,
+    }
+
+    success, message, created_id = create_inventory_item(
+        form_data=form_like,
+        organization_id=current_user.organization_id,
+        created_by=current_user.id,
+    )
+    if not success:
+        logger.error(
+            "Failed to auto-create inventory for global item %s: %s",
+            gi.id,
+            message,
+        )
+        return None
+    return int(created_id)
+
+
+def resolve_or_create_custom_inventory_item(name, item_type, unit, cache):
+    normalized = (name or '').strip()
+    if not normalized:
+        return None
+    key = (item_type, normalized.lower())
+    if cache and key in cache:
+        return cache[key]
+
+    try:
+        existing = (
+            InventoryItem.query.filter(
+                InventoryItem.organization_id == current_user.organization_id,
+                func.lower(InventoryItem.name) == func.lower(db.literal(normalized)),
+                InventoryItem.type == item_type,
+            )
+            .order_by(InventoryItem.id.asc())
+            .first()
+        )
+    except Exception:
+        existing = None
+
+    if existing:
+        cache[key] = existing.id
+        return existing.id
+
+    form_like = {
+        'name': normalized,
+        'type': item_type,
+        'unit': (unit or '').strip(),
+    }
+    success, message, created_id = create_inventory_item(
+        form_data=form_like,
+        organization_id=current_user.organization_id,
+        created_by=current_user.id,
+    )
+    if not success:
+        logger.error(
+            "Failed to auto-create %s inventory item %s: %s",
+            item_type,
+            normalized,
+            message,
+        )
+        return None
+    cache[key] = int(created_id)
+    return int(created_id)
+
+
 def safe_int(value):
     try:
         return int(value) if value not in (None, '', []) else None
@@ -437,14 +586,17 @@ def extract_ingredients_from_form(form):
     global_item_ids = form.getlist('global_item_ids[]')
     amounts = form.getlist('amounts[]')
     units = form.getlist('units[]')
+    names = form.getlist('ingredient_names[]')
 
-    max_len = max(len(ingredient_ids), len(global_item_ids), len(amounts), len(units))
+    max_len = max(len(ingredient_ids), len(global_item_ids), len(amounts), len(units), len(names))
     ingredient_ids += [''] * (max_len - len(ingredient_ids))
     global_item_ids += [''] * (max_len - len(global_item_ids))
     amounts += [''] * (max_len - len(amounts))
     units += [''] * (max_len - len(units))
+    names += [''] * (max_len - len(names))
+    custom_cache: dict[tuple[str, str], int] = {}
 
-    for ing_id, gi_id, amt, unit in zip(ingredient_ids, global_item_ids, amounts, units):
+    for ing_id, gi_id, amt, unit, name in zip(ingredient_ids, global_item_ids, amounts, units, names):
         if not amt or not unit:
             continue
 
@@ -461,74 +613,13 @@ def extract_ingredients_from_form(form):
             except (ValueError, TypeError):
                 item_id = None
 
+        normalized_name = (name or '').strip()
+
         if not item_id and gi_id:
-            try:
-                gi = db.session.get(GlobalItem, int(gi_id)) if gi_id else None
-            except Exception:
-                gi = None
+            item_id = resolve_inventory_item_from_global(gi_id, 'ingredient', unit)
 
-            if gi:
-                try:
-                    existing = (
-                        InventoryItem.query.filter_by(
-                            organization_id=current_user.organization_id,
-                            global_item_id=gi.id,
-                            type=gi.item_type,
-                        )
-                        .order_by(InventoryItem.id.asc())
-                        .first()
-                    )
-                except Exception:
-                    existing = None
-
-                if existing:
-                    item_id = int(existing.id)
-                else:
-                    try:
-                        name_match = (
-                            InventoryItem.query.filter(
-                                InventoryItem.organization_id == current_user.organization_id,
-                                func.lower(InventoryItem.name)
-                                == func.lower(db.literal(gi.name)),
-                                InventoryItem.type == gi.item_type,
-                            )
-                            .order_by(InventoryItem.id.asc())
-                            .first()
-                        )
-                    except Exception:
-                        name_match = None
-
-                    if name_match:
-                        try:
-                            name_match.global_item_id = gi.id
-                            name_match.ownership = 'global'
-                            db.session.flush()
-                        except Exception:
-                            db.session.rollback()
-                        item_id = int(name_match.id)
-                    else:
-                        form_like = {
-                            'name': gi.name,
-                            'type': gi.item_type,
-                            'unit': gi.default_unit or '',
-                            'global_item_id': gi.id,
-                        }
-
-                        success, message, created_id = create_inventory_item(
-                            form_data=form_like,
-                            organization_id=current_user.organization_id,
-                            created_by=current_user.id,
-                        )
-                        if not success:
-                            logger.error(
-                                "Failed to auto-create inventory for global item %s: %s",
-                                gi.id,
-                                message,
-                            )
-                        else:
-                            item_id = int(created_id)
-            else:
-                logger.error("Global item not found for id %s", gi_id)
+        if not item_id and normalized_name:
+            item_id = resolve_or_create_custom_inventory_item(normalized_name, 'ingredient', unit, custom_cache)
 
         if item_id:
             ingredients.append(
@@ -547,19 +638,49 @@ def extract_consumables_from_form(form):
     ids = form.getlist('consumable_ids[]')
     amounts = form.getlist('consumable_amounts[]')
     units = form.getlist('consumable_units[]')
-    for item_id, amt, unit in zip(ids, amounts, units):
-        if item_id and amt and unit:
+    names = form.getlist('consumable_names[]')
+    global_ids = form.getlist('consumable_global_item_ids[]')
+
+    max_len = max(len(ids), len(amounts), len(units), len(names), len(global_ids))
+    ids += [''] * (max_len - len(ids))
+    amounts += [''] * (max_len - len(amounts))
+    units += [''] * (max_len - len(units))
+    names += [''] * (max_len - len(names))
+    global_ids += [''] * (max_len - len(global_ids))
+    custom_cache: dict[tuple[str, str], int] = {}
+
+    for raw_id, gi_id, amt, unit, name in zip(ids, global_ids, amounts, units, names):
+        if not amt or not unit:
+            continue
+        try:
+            quantity = float(str(amt).strip())
+        except (ValueError, TypeError):
+            logger.error("Invalid consumable quantity: %s", amt)
+            continue
+
+        item_id = None
+        if raw_id:
             try:
-                consumables.append(
-                    {
-                        'item_id': int(item_id),
-                        'quantity': float(amt.strip()),
-                        'unit': unit.strip(),
-                    }
-                )
-            except (ValueError, TypeError) as exc:
-                logger.error("Invalid consumable data: %s", exc)
-                continue
+                item_id = int(raw_id)
+            except (TypeError, ValueError):
+                item_id = None
+
+        normalized_name = (name or '').strip()
+
+        if not item_id and gi_id:
+            item_id = resolve_inventory_item_from_global(gi_id, 'consumable', unit)
+
+        if not item_id and normalized_name:
+            item_id = resolve_or_create_custom_inventory_item(normalized_name, 'consumable', unit, custom_cache)
+
+        if item_id:
+            consumables.append(
+                {
+                    'item_id': int(item_id),
+                    'quantity': quantity,
+                    'unit': unit.strip(),
+                }
+            )
     return consumables
 
 
