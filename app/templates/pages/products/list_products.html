@@ -1,6 +1,16 @@
 {% extends 'layout.html' %}
 {% block content %}
 <div>
+  {% set variant_namespace = namespace(options=[]) %}
+  {% if products %}
+    {% for product in products %}
+      {% for variation in product.variations %}
+        {% if variation.name and variation.name not in variant_namespace.options %}
+          {% set variant_namespace.options = variant_namespace.options + [variation.name] %}
+        {% endif %}
+      {% endfor %}
+    {% endfor %}
+  {% endif %}
   <div class="d-flex justify-content-between align-items-center mb-4">
     <h2>Products</h2>
     <div class="d-flex gap-2 align-items-center">
@@ -32,6 +42,25 @@
           <input type="text" id="productFilter" class="form-control" placeholder="Search products...">
         </div>
       </div>
+      <div class="row g-3 mt-2">
+        <div class="col-md-3">
+          <label class="form-label">Stock Status:</label>
+          <select id="stockFilter" class="form-select">
+            <option value="">All stock statuses</option>
+            <option value="in-stock">In Stock</option>
+            <option value="out-of-stock">Out of Stock</option>
+          </select>
+        </div>
+        <div class="col-md-3">
+          <label class="form-label">Variant:</label>
+          <select id="variantFilter" class="form-select">
+            <option value="">All variants</option>
+            {% for variant_name in variant_namespace.options|sort %}
+              <option value="{{ variant_name }}">{{ variant_name }}</option>
+            {% endfor %}
+          </select>
+        </div>
+      </div>
     </div>
   </div>
 
@@ -39,7 +68,10 @@
     <!-- Products Card View -->
     <div class="row" id="productsContainer">
       {% for product in products %}
-      <div class="col-md-6 col-lg-4 mb-4 product-card" data-product-name="{{ product.name|lower }}">
+      {% set product_total_quantity = (product.total_bulk + product.total_packaged) %}
+      <div class="col-md-6 col-lg-4 mb-4 product-card"
+           data-product-name="{{ product.name|lower }}"
+           data-stock-status="{{ 'out-of-stock' if product_total_quantity == 0 else 'in-stock' }}">
         <div class="card h-100">
           <div class="card-header d-flex justify-content-between align-items-center">
             <div class="d-flex align-items-center">
@@ -127,8 +159,7 @@
                 <small class="text-muted">Last updated: {{ product.last_updated | user_date if product.last_updated else 'N/A' }}</small>
               </div>
               <div>
-                {% set total_quantity = (product.total_bulk + product.total_packaged) %}
-                {% if total_quantity == 0 %}
+                {% if product_total_quantity == 0 %}
                   <span class="badge bg-danger">Out of Stock</span>
                 {% else %}
                   <span class="badge bg-success">In Stock</span>
@@ -167,7 +198,10 @@
             </thead>
             <tbody>
               {% for product in products %}
-              <tr class="product-row" data-product-name="{{ product.name|lower }}">
+              {% set product_total_quantity = (product.total_bulk + product.total_packaged) %}
+              <tr class="product-row"
+                  data-product-name="{{ product.name|lower }}"
+                  data-stock-status="{{ 'out-of-stock' if product_total_quantity == 0 else 'in-stock' }}">
                 <td>
                   <a href="/products/{{ product.id }}" class="text-decoration-none">
                     <strong>{{ product.name }}</strong>
@@ -189,8 +223,7 @@
                   {% endif %}
                 </td>
                 <td>
-                  {% set total_quantity = (product.total_bulk + product.total_packaged) %}
-                  {% if total_quantity == 0 %}
+                  {% if product_total_quantity == 0 %}
                     <span class="badge bg-danger">Out of Stock</span>
                   {% else %}
                     <span class="badge bg-success">In Stock</span>
@@ -374,46 +407,154 @@ function sortProducts(sortType) {
 }
 
 document.addEventListener('DOMContentLoaded', function() {
-  // Product search functionality
   const productFilter = document.getElementById('productFilter');
+  const stockFilter = document.getElementById('stockFilter');
+  const variantFilter = document.getElementById('variantFilter');
   const productsContainer = document.getElementById('productsContainer');
   const productsTableContainer = document.getElementById('productsTableContainer');
+  const summaryTable = document.getElementById('summaryDetails');
 
-  window.filterProducts = function() {
-    const searchTerm = (productFilter?.value || '').toLowerCase();
-    const isCardView = currentProductView !== 'table';
+  const summaryMetricElements = {
+    bulk: document.querySelector('[data-summary-metric="bulk"]'),
+    packaged: document.querySelector('[data-summary-metric="packaged"]'),
+    products: document.querySelector('[data-summary-metric="products"]'),
+    variants: document.querySelector('[data-summary-metric="variants"]')
+  };
+  const summaryMetricInitials = {};
+  Object.entries(summaryMetricElements).forEach(([key, el]) => {
+    if (el) {
+      summaryMetricInitials[key] = el.textContent;
+    }
+  });
 
-    if (isCardView && productsContainer) {
-      const cards = productsContainer.querySelectorAll('.product-card');
-      cards.forEach(card => {
-        const productName = card.dataset.productName || '';
-        card.style.display = productName.includes(searchTerm) ? '' : 'none';
-      });
-    } else if (productsTableContainer) {
-      const rows = productsTableContainer.querySelectorAll('.product-row');
-      rows.forEach(row => {
-        const productName = row.dataset.productName || '';
-        const matches = productName.includes(searchTerm);
-        row.style.display = matches ? '' : 'none';
+  function toggleDetailRow(row, shouldShow) {
+    const detailRow = row?.nextElementSibling;
+    if (!detailRow || !detailRow.classList.contains('collapse')) return;
 
-        const detailRow = row.nextElementSibling;
-        if (detailRow && detailRow.classList.contains('collapse')) {
-          if (!matches) {
-            detailRow.classList.remove('show');
-            detailRow.dataset.searchHidden = 'true';
-            detailRow.style.display = 'none';
-          } else if (detailRow.dataset.searchHidden) {
-            detailRow.style.removeProperty('display');
-            delete detailRow.dataset.searchHidden;
-          }
+    if (!shouldShow) {
+      detailRow.classList.remove('show');
+      detailRow.dataset.searchHidden = 'true';
+      detailRow.style.display = 'none';
+    } else if (detailRow.dataset.searchHidden) {
+      detailRow.style.removeProperty('display');
+      delete detailRow.dataset.searchHidden;
+    }
+  }
+
+  function filterProductCards(searchTerm, stockStatus) {
+    if (!productsContainer) return;
+    const cards = productsContainer.querySelectorAll('.product-card');
+    cards.forEach(card => {
+      const productName = card.dataset.productName || '';
+      const matchesSearch = !searchTerm || productName.includes(searchTerm);
+      const matchesStock = !stockStatus || (card.dataset.stockStatus === stockStatus);
+      card.style.display = matchesSearch && matchesStock ? '' : 'none';
+    });
+  }
+
+  function filterProductRows(searchTerm, stockStatus) {
+    if (!productsTableContainer) return;
+    const rows = productsTableContainer.querySelectorAll('.product-row');
+    rows.forEach(row => {
+      const productName = row.dataset.productName || '';
+      const matchesSearch = !searchTerm || productName.includes(searchTerm);
+      const matchesStock = !stockStatus || (row.dataset.stockStatus === stockStatus);
+      const shouldShow = matchesSearch && matchesStock;
+      row.style.display = shouldShow ? '' : 'none';
+      toggleDetailRow(row, shouldShow);
+    });
+  }
+
+  function filterSummaryRows(searchTerm, stockStatus, variantName) {
+    if (!summaryTable) return;
+    const rows = summaryTable.querySelectorAll('tbody tr');
+    rows.forEach(row => {
+      const productCell = row.querySelector('[data-summary-product]') || row.querySelector('td:first-child');
+      const variantCell = row.querySelector('[data-summary-variant]') || row.querySelector('td:nth-child(2)');
+      const sizeCell = row.querySelector('[data-summary-size]') || row.querySelector('td:nth-child(3)');
+      const stockBadge = row.querySelector('.badge');
+
+      const productName = (productCell?.textContent || '').trim().toLowerCase();
+      const rowVariant = (variantCell?.textContent || '').trim();
+      const matchesSearch = !searchTerm || productName.includes(searchTerm);
+      const matchesVariant = !variantName || rowVariant === variantName;
+
+      let matchesStock = !stockStatus;
+      if (stockStatus && stockBadge) {
+        const stockText = stockBadge.textContent;
+        if (stockStatus === 'in-stock') {
+          matchesStock = stockText.includes('In Stock');
+        } else if (stockStatus === 'out-of-stock') {
+          matchesStock = stockText.includes('Out of Stock');
+        }
+      }
+
+      row.style.display = matchesSearch && matchesVariant && matchesStock ? '' : 'none';
+    });
+
+    updateSummaryCounters(Boolean(searchTerm || stockStatus || variantName));
+  }
+
+  function updateSummaryCounters(hasActiveFilters) {
+    if (!summaryTable) return;
+
+    if (!hasActiveFilters) {
+      Object.entries(summaryMetricElements).forEach(([key, el]) => {
+        if (el && summaryMetricInitials[key] !== undefined) {
+          el.textContent = summaryMetricInitials[key];
         }
       });
+      return;
     }
-  };
 
-  if (productFilter) {
-    productFilter.addEventListener('input', () => filterProducts());
+    const visibleRows = Array.from(summaryTable.querySelectorAll('tbody tr')).filter(row => row.style.display !== 'none');
+    let totalBulk = 0;
+    let totalPackaged = 0;
+    const visibleProducts = new Set();
+    const visibleVariants = new Set();
+
+    visibleRows.forEach(row => {
+      const productCell = row.querySelector('[data-summary-product]') || row.querySelector('td:first-child');
+      const variantCell = row.querySelector('[data-summary-variant]') || row.querySelector('td:nth-child(2)');
+      const sizeCell = row.querySelector('[data-summary-size]') || row.querySelector('td:nth-child(3)');
+      const quantityCell = row.querySelector('[data-summary-quantity]') || row.querySelector('td:nth-child(5)');
+      const quantityText = quantityCell ? (quantityCell.querySelector('strong')?.textContent || quantityCell.textContent) : '0';
+
+      const productName = (productCell?.textContent || '').trim();
+      const variantName = (variantCell?.textContent || '').trim();
+      const sizeLabel = (sizeCell?.textContent || '').trim();
+      const quantity = parseFloat(quantityText) || 0;
+
+      if (productName) visibleProducts.add(productName);
+      if (productName && variantName) visibleVariants.add(`${productName}-${variantName}`);
+      if (sizeLabel.toLowerCase() === 'bulk') {
+        totalBulk += quantity;
+      } else {
+        totalPackaged += quantity;
+      }
+    });
+
+    if (summaryMetricElements.bulk) summaryMetricElements.bulk.textContent = totalBulk.toFixed(2);
+    if (summaryMetricElements.packaged) summaryMetricElements.packaged.textContent = Math.round(totalPackaged).toString();
+    if (summaryMetricElements.products) summaryMetricElements.products.textContent = visibleProducts.size.toString();
+    if (summaryMetricElements.variants) summaryMetricElements.variants.textContent = visibleVariants.size.toString();
   }
+
+  function applyFilters() {
+    const searchTerm = (productFilter?.value || '').trim().toLowerCase();
+    const stockStatus = stockFilter?.value || '';
+    const variantName = variantFilter?.value || '';
+
+    filterProductCards(searchTerm, stockStatus);
+    filterProductRows(searchTerm, stockStatus);
+    filterSummaryRows(searchTerm, stockStatus, variantName);
+  }
+
+  window.filterProducts = applyFilters;
+
+  productFilter?.addEventListener('input', applyFilters);
+  stockFilter?.addEventListener('change', applyFilters);
+  variantFilter?.addEventListener('change', applyFilters);
 
   // Variation toggle functionality
   document.querySelectorAll('[data-bs-toggle="collapse"]').forEach(button => {
@@ -421,14 +562,16 @@ document.addEventListener('DOMContentLoaded', function() {
       const icon = this.querySelector('i');
       setTimeout(() => {
         const target = document.querySelector(this.dataset.bsTarget);
-        if (target.classList.contains('show')) {
-          icon.classList.replace('fa-chevron-down', 'fa-chevron-up');
+        if (target?.classList.contains('show')) {
+          icon?.classList.replace('fa-chevron-down', 'fa-chevron-up');
         } else {
-          icon.classList.replace('fa-chevron-up', 'fa-chevron-down');
+          icon?.classList.replace('fa-chevron-up', 'fa-chevron-down');
         }
       }, 100);
     });
   });
+
+  applyFilters();
 });
 
 // Edit product function
