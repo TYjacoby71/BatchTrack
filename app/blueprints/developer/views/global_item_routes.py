@@ -446,7 +446,6 @@ def global_item_edit(item_id):
         "recommended_shelf_life_days": item.recommended_shelf_life_days,
         "aliases": item.aliases,
         "recommended_fragrance_load_pct": item.recommended_fragrance_load_pct,
-        "recommended_usage_rate": getattr(item, "recommended_usage_rate", None),
         "is_active_ingredient": item.is_active_ingredient,
         "inci_name": item.inci_name,
         "protein_content_pct": item.protein_content_pct,
@@ -481,7 +480,6 @@ def global_item_edit(item_id):
     if aliases is not None:
         item.aliases = [n.strip() for n in aliases.split(",") if n.strip()]
 
-    item.recommended_usage_rate = form_data.get("recommended_usage_rate", "").strip() or None
     item.recommended_fragrance_load_pct = form_data.get("recommended_fragrance_load_pct") or None
     item.is_active_ingredient = form_data.get("is_active_ingredient") == "on"
     item.inci_name = form_data.get("inci_name") or None
@@ -764,9 +762,6 @@ def create_global_item():
                 except ValueError:
                     return _error_response("Invalid shelf life value")
 
-            new_item.recommended_usage_rate = (
-                form_data.get("recommended_usage_rate", "").strip() or None
-            )
             new_item.recommended_fragrance_load_pct = (
                 form_data.get("recommended_fragrance_load_pct", "").strip() or None
             )
