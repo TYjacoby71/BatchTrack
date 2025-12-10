@@ -1,0 +1,113 @@
+{% extends 'layout.html' %}
+
+{% block content %}
+<div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center mb-4">
+  <div>
+    <h2 class="mb-1">Physical Forms</h2>
+    <p class="text-muted mb-0">Curate the canonical list of ingredient physical forms used across the global item library.</p>
+  </div>
+  <div class="d-flex gap-2">
+    <a href="{{ url_for('developer.create_global_item') }}" class="btn btn-outline-primary">
+      <i class="fas fa-plus"></i> New Global Item
+    </a>
+    <a href="{{ url_for('developer.global_items_admin') }}" class="btn btn-outline-secondary">
+      <i class="fas fa-boxes"></i> Back to Library
+    </a>
+  </div>
+</div>
+
+<div class="card shadow-sm border-0 mb-4">
+  <div class="card-header bg-light">
+    <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center">
+      <div>
+        <h5 class="mb-0">Curated Physical Forms</h5>
+        <small class="text-muted">These options power the ingredient workflow on the global item form.</small>
+      </div>
+      <span class="badge bg-primary mt-3 mt-md-0">{{ forms|length }} total</span>
+    </div>
+  </div>
+  <div class="card-body p-0">
+    <div class="table-responsive">
+      <table class="table table-hover mb-0 align-middle">
+        <thead class="table-light">
+          <tr>
+            <th>Name</th>
+            <th>Slug</th>
+            <th>Status</th>
+            <th class="text-center">Linked Items</th>
+            <th class="text-end">Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% if forms %}
+            {% for form in forms %}
+            <tr>
+              <td>
+                <div class="fw-semibold">{{ form.name }}</div>
+                {% if form.description %}
+                  <div class="small text-muted">{{ form.description }}</div>
+                {% endif %}
+              </td>
+              <td><code>{{ form.slug or '—' }}</code></td>
+              <td>
+                {% if form.is_active %}
+                  <span class="badge bg-success">Active</span>
+                {% else %}
+                  <span class="badge bg-secondary">Archived</span>
+                {% endif %}
+              </td>
+              <td class="text-center">
+                {{ usage_map.get(form.id, 0) }}
+              </td>
+              <td class="text-end">
+                <form method="post" action="{{ url_for('developer.toggle_physical_form', form_id=form.id) }}">
+                  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                  <button type="submit" class="btn btn-sm {% if form.is_active %}btn-outline-warning{% else %}btn-outline-success{% endif %}">
+                    {% if form.is_active %}
+                      <i class="fas fa-archive"></i> Archive
+                    {% else %}
+                      <i class="fas fa-undo"></i> Activate
+                    {% endif %}
+                  </button>
+                </form>
+              </td>
+            </tr>
+            {% endfor %}
+          {% else %}
+            <tr>
+              <td colspan="5" class="text-center py-4 text-muted">
+                <i class="fas fa-leaf fa-2x mb-2"></i>
+                <div>No physical forms have been created yet.</div>
+              </td>
+            </tr>
+          {% endif %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<div class="card shadow-sm border-0">
+  <div class="card-header bg-light">
+    <h5 class="mb-0">Add Physical Form</h5>
+  </div>
+  <div class="card-body">
+    <form method="post" action="{{ url_for('developer.create_physical_form') }}" class="row g-3">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <div class="col-md-6">
+        <label class="form-label">Name</label>
+        <input type="text" name="name" class="form-control" placeholder="e.g. Whole Bud" required>
+      </div>
+      <div class="col-md-12">
+        <label class="form-label">Description <span class="text-muted">(optional)</span></label>
+        <textarea name="description" class="form-control" rows="2" placeholder="Helpful context for researchers and library admins"></textarea>
+      </div>
+      <div class="col-12 d-flex justify-content-end">
+        <button type="submit" class="btn btn-primary">
+          <i class="fas fa-save"></i> Save Physical Form
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}

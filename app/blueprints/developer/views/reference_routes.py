@@ -1,13 +1,27 @@
 from __future__ import annotations
 
-from flask import jsonify, render_template, request
+from flask import flash, jsonify, redirect, render_template, request, url_for
 from flask_login import login_required
+
+from sqlalchemy import func
 
 from app.extensions import db
 from app.models import GlobalItem
+from app.models.ingredient_reference import PhysicalForm
 from app.services.developer.reference_data_service import ReferenceDataService
+from app.utils.seo import slugify_value
 
 from ..routes import developer_bp
+
+
+def _generate_unique_slug(model, seed: str) -> str:
+    base_slug = slugify_value(seed or "item")
+    candidate = base_slug
+    counter = 2
+    while model.query.filter_by(slug=candidate).first():
+        candidate = f"{base_slug}-{counter}"
+        counter += 1
+    return candidate
 
 
 @developer_bp.route("/reference-categories")
@@ -264,3 +278,68 @@ def api_container_options():
         return jsonify({"success": True, "options": curated_lists})
     except Exception as exc:
         return jsonify({"success": False, "error": str(exc)})
+
+
+@developer_bp.route("/physical-forms", methods=["GET"])
+@login_required
+def manage_physical_forms():
+    """Curate physical forms used by global items."""
+    forms = PhysicalForm.query.order_by(PhysicalForm.name.asc()).all()
+    usage_rows = (
+        db.session.query(GlobalItem.physical_form_id, func.count(GlobalItem.id))
+        .filter(
+            GlobalItem.physical_form_id.isnot(None),
+            GlobalItem.is_archived != True,
+        )
+        .group_by(GlobalItem.physical_form_id)
+        .all()
+    )
+    usage_map = {form_id: count for form_id, count in usage_rows}
+    return render_template(
+        "developer/physical_forms.html",
+        forms=forms,
+        usage_map=usage_map,
+        breadcrumb_items=[
+            {"label": "Developer Dashboard", "url": url_for("developer.dashboard")},
+            {"label": "Physical Forms"},
+        ],
+    )
+
+
+@developer_bp.route("/physical-forms", methods=["POST"])
+@login_required
+def create_physical_form():
+    """Create a new physical form entry."""
+    name = (request.form.get("name") or "").strip()
+    description = (request.form.get("description") or "").strip() or None
+    if not name:
+        flash("Physical form name is required.", "error")
+        return redirect(url_for("developer.manage_physical_forms"))
+
+    existing = (
+        PhysicalForm.query.filter(func.lower(PhysicalForm.name) == func.lower(name))
+        .order_by(PhysicalForm.id.asc())
+        .first()
+    )
+    if existing:
+        flash(f'Physical form "{name}" already exists.', "error")
+        return redirect(url_for("developer.manage_physical_forms"))
+
+    slug = _generate_unique_slug(PhysicalForm, name)
+    new_form = PhysicalForm(name=name, slug=slug, description=description, is_active=True)
+    db.session.add(new_form)
+    db.session.commit()
+    flash(f'Physical form "{name}" created.', "success")
+    return redirect(url_for("developer.manage_physical_forms"))
+
+
+@developer_bp.route("/physical-forms/<int:form_id>/toggle", methods=["POST"])
+@login_required
+def toggle_physical_form(form_id: int):
+    """Toggle a physical form's active state."""
+    physical_form = PhysicalForm.query.get_or_404(form_id)
+    physical_form.is_active = not physical_form.is_active
+    db.session.commit()
+    state = "activated" if physical_form.is_active else "archived"
+    flash(f'Physical form "{physical_form.name}" {state}.', "success")
+    return redirect(url_for("developer.manage_physical_forms"))

@@ -7,6 +7,7 @@ from sqlalchemy.orm import joinedload
 
 from ...extensions import cache, limiter
 from ...models import IngredientCategory, InventoryItem, GlobalItem, db
+from ...models.ingredient_reference import IngredientDefinition, PhysicalForm
 from ...services.statistics.global_item_stats import GlobalItemStatsService
 from ...services.density_assignment_service import DensityAssignmentService
 from ...services.cache_invalidation import global_library_cache_key
@@ -119,32 +120,109 @@ def search_ingredient_definitions():
     q = (request.args.get('q') or '').strip()
     if not q:
         return jsonify({'results': []})
-    
-    from app.models.ingredient_reference import IngredientDefinition
-    
+
     ilike_term = f"%{q}%"
-    definitions = IngredientDefinition.query.filter(
-        or_(
-            IngredientDefinition.name.ilike(ilike_term),
-            IngredientDefinition.inci_name.ilike(ilike_term),
-            IngredientDefinition.cas_number.ilike(ilike_term)
-        ),
-        IngredientDefinition.is_active == True
-    ).order_by(func.length(IngredientDefinition.name).asc()).limit(20).all()
-    
+    definitions = (
+        IngredientDefinition.query.filter(
+            or_(
+                IngredientDefinition.name.ilike(ilike_term),
+                IngredientDefinition.inci_name.ilike(ilike_term),
+                IngredientDefinition.cas_number.ilike(ilike_term),
+            ),
+            IngredientDefinition.is_active == True,
+        )
+        .order_by(func.length(IngredientDefinition.name).asc())
+        .limit(20)
+        .all()
+    )
+
     results = []
     for definition in definitions:
-        results.append({
-            'id': definition.id,
-            'name': definition.name,
-            'slug': definition.slug,
-            'inci_name': definition.inci_name,
-            'cas_number': definition.cas_number,
-            'ingredient_category_id': definition.ingredient_category_id,
-            'ingredient_category_name': definition.category.name if definition.category else None
-        })
-    
+        results.append(
+            {
+                'id': definition.id,
+                'name': definition.name,
+                'slug': definition.slug,
+                'inci_name': definition.inci_name,
+                'cas_number': definition.cas_number,
+                'ingredient_category_id': definition.ingredient_category_id,
+                'ingredient_category_name': definition.category.name if definition.category else None,
+                'description': definition.description,
+            }
+        )
+
     return jsonify({'results': results})
+
+
+@ingredient_api_bp.route('/ingredients/definitions/<int:ingredient_id>/forms', methods=['GET'])
+@login_required
+@limiter.limit("3000/minute")
+def list_forms_for_ingredient_definition(ingredient_id: int):
+    """Return the existing global items tied to a specific ingredient definition."""
+    ingredient = IngredientDefinition.query.get_or_404(ingredient_id)
+    items = (
+        GlobalItem.query.filter(
+            GlobalItem.ingredient_id == ingredient.id,
+            GlobalItem.is_archived != True,
+        )
+        .order_by(GlobalItem.name.asc())
+        .all()
+    )
+
+    payload = []
+    for item in items:
+        payload.append(
+            {
+                'id': item.id,
+                'name': item.name,
+                'physical_form_name': item.physical_form.name if item.physical_form else None,
+                'physical_form_id': item.physical_form_id,
+                'slug': item.physical_form.slug if item.physical_form else None,
+            }
+        )
+
+    return jsonify(
+        {
+            'ingredient': {
+                'id': ingredient.id,
+                'name': ingredient.name,
+                'inci_name': ingredient.inci_name,
+                'cas_number': ingredient.cas_number,
+                'ingredient_category_id': ingredient.ingredient_category_id,
+                'ingredient_category_name': ingredient.category.name if ingredient.category else None,
+            },
+            'items': payload,
+        }
+    )
+
+
+@ingredient_api_bp.route('/physical-forms/search', methods=['GET'])
+@login_required
+@limiter.limit("3000/minute")
+def search_physical_forms():
+    """Search physical forms with lightweight typeahead payloads."""
+    q = (request.args.get('q') or '').strip()
+    query = PhysicalForm.query.filter(PhysicalForm.is_active == True)
+    if q:
+        ilike_term = f"%{q}%"
+        query = query.filter(
+            or_(PhysicalForm.name.ilike(ilike_term), PhysicalForm.slug.ilike(ilike_term))
+        )
+
+    forms = query.order_by(func.length(PhysicalForm.name).asc(), PhysicalForm.name.asc()).limit(30).all()
+    return jsonify(
+        {
+            'results': [
+                {
+                    'id': physical_form.id,
+                    'name': physical_form.name,
+                    'slug': physical_form.slug,
+                    'description': physical_form.description,
+                }
+                for physical_form in forms
+            ]
+        }
+    )
 
 @ingredient_api_bp.route('/ingredients/create-or-link', methods=['POST'])
 @login_required

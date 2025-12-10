@@ -36,6 +36,29 @@
   {% endif %}
 {% endif %}
 
+{% set ingredient_context = selected_ingredient and {
+  'id': selected_ingredient.id,
+  'name': selected_ingredient.name,
+  'inci_name': selected_ingredient.inci_name,
+  'cas_number': selected_ingredient.cas_number,
+  'ingredient_category_id': selected_ingredient.ingredient_category_id,
+  'ingredient_category_name': selected_ingredient.category.name if selected_ingredient and selected_ingredient.category else None
+} %}
+{% set physical_form_context = selected_physical_form and {
+  'id': selected_physical_form.id,
+  'name': selected_physical_form.name,
+  'slug': selected_physical_form.slug
+} %}
+{% set existing_items_context = [] %}
+{% for existing in existing_items %}
+  {% set _ = existing_items_context.append({
+    'id': existing.id,
+    'name': existing.name,
+    'physical_form_name': existing.physical_form.name if existing.physical_form else 'Unknown form',
+    'physical_form_id': existing.physical_form_id
+  }) %}
+{% endfor %}
+
 {% set default_unit_value = form_values.get('default_unit', item.default_unit if is_edit else '') %}
 {% set density_value = form_values.get('density', '%.3f'|format(item.density) if is_edit and item.density is not none else '') %}
 {% set capacity_value = form_values.get('capacity', item.capacity if is_edit and item.capacity is not none else '') %}
@@ -78,6 +101,10 @@
 </div>
 
 <div id="ingredientWorkflow" class="{{ ingredient_workflow_class }}">
+  <div id="globalItemFormState"
+       data-selected-ingredient='{{ ingredient_context|tojson }}'
+       data-selected-physical-form='{{ physical_form_context|tojson }}'
+       data-existing-items='{{ existing_items_context|tojson }}'></div>
   <div class="card border-0 shadow-sm mb-4">
     <div class="card-header bg-light">
       <h5 class="mb-0">Step 1 — Ingredient Definition</h5>
@@ -90,7 +117,7 @@
         </label>
       </div>
       <div class="ingredient-existing-fields ms-4 mt-3">
-        <div class="row g-2 align-items-center">
+        <div class="row g-2 align-items-start">
           <div class="col-lg-7">
             <div class="position-relative">
               <input type="text"
@@ -98,19 +125,21 @@
                      class="form-control ingredient-definition-typeahead"
                      placeholder="Search for an ingredient..."
                      autocomplete="off"
-                     value="{% if selected_ingredient %}{{ selected_ingredient.name }}{% if selected_ingredient.slug %} ({{ selected_ingredient.slug }}){% endif %}{% endif %}">
+                     value="{% if selected_ingredient %}{{ selected_ingredient.name }}{% endif %}">
               <input type="hidden" name="existing_ingredient_id" id="existingIngredientSelect" value="{% if selected_ingredient %}{{ selected_ingredient.id }}{% elif form_values.get('existing_ingredient_id') %}{{ form_values.get('existing_ingredient_id') }}{% endif %}">
-              <div class="list-group position-absolute w-100 d-none suggestion-item" id="ingredientSuggestions" style="z-index: 1050; max-height: 300px; overflow-y: auto;"></div>
             </div>
+            <div class="list-group mt-2 d-none" id="ingredientDefinitionResults" data-empty-message="Start typing to search ingredient definitions."></div>
           </div>
-          <div class="col-lg-5 small text-muted">
-            {% if selected_ingredient %}
-              <div><strong>INCI:</strong> {{ selected_ingredient.inci_name or '—' }}</div>
-              <div><strong>CAS:</strong> {{ selected_ingredient.cas_number or '—' }}</div>
-              <div><strong>Category:</strong> {{ selected_ingredient.category.name if selected_ingredient.category else '—' }}</div>
-            {% else %}
-              Select an ingredient to review its metadata and existing physical forms.
-            {% endif %}
+          <div class="col-lg-5">
+            <div class="small text-muted" id="ingredientDefinitionSummary">
+              {% if selected_ingredient %}
+                <div><strong>INCI:</strong> {{ selected_ingredient.inci_name or '—' }}</div>
+                <div><strong>CAS:</strong> {{ selected_ingredient.cas_number or '—' }}</div>
+                <div><strong>Category:</strong> {{ selected_ingredient.category.name if selected_ingredient.category else '—' }}</div>
+              {% else %}
+                Select an ingredient to review metadata and any existing forms before creating a new one.
+              {% endif %}
+            </div>
           </div>
         </div>
       </div>
@@ -147,41 +176,30 @@
         </div>
       </div>
 
-      <div class="row g-3 align-items-end mt-4">
-        <div class="col-md-6">
-          <label class="form-label">Ingredient Category {% if selected_ingredient %}(updates apply to the base definition){% endif %}</label>
-          <select name="ingredient_category_id" id="ingredientCategorySelect" class="form-select" style="{{ ingredient_category_style }}">
-            <option value="">Select Category</option>
-            {% for category in global_ingredient_categories %}
-              <option value="{{ category.id }}"
-                {% if selected_category and selected_category|string == category.id|string %}selected{% endif %}>
-                {{ category.name }}
-              </option>
-            {% endfor %}
-          </select>
-        </div>
-        <div class="col-md-6">
-          <a href="{{ url_for('developer.reference_categories') }}" class="btn btn-outline-secondary mt-3 mt-md-0">
-            <i class="fas fa-tags me-1"></i> Manage Reference Categories
-          </a>
-        </div>
-      </div>
     </div>
   </div>
 
-  {% if selected_ingredient and existing_items %}
-    <div class="alert alert-info small shadow-sm mb-4">
-      <div class="fw-semibold">Existing forms for {{ selected_ingredient.name }}:</div>
-      <ul class="mb-0 ps-3">
+  <div class="alert alert-info small shadow-sm mb-4 {% if not selected_ingredient %}d-none{% endif %}" id="existingFormsContainer" data-empty-text="No forms registered for this ingredient yet.">
+    <div class="fw-semibold" id="existingFormsTitle">
+      {% if selected_ingredient %}
+        Existing forms for {{ selected_ingredient.name }}:
+      {% else %}
+        Existing forms
+      {% endif %}
+    </div>
+    <ul class="mb-0 ps-3" id="existingFormsList">
+      {% if selected_ingredient and existing_items %}
         {% for existing in existing_items %}
           <li>
             {{ existing.physical_form.name if existing.physical_form else 'Unknown form' }}
             — <a href="{{ url_for('developer.create_global_item', ingredient_id=selected_ingredient.id, physical_form_id=existing.physical_form_id) }}" class="link-dark text-decoration-underline">Edit</a>
           </li>
         {% endfor %}
-      </ul>
-    </div>
-  {% endif %}
+      {% else %}
+        <li class="text-muted">No forms registered for this ingredient yet.</li>
+      {% endif %}
+    </ul>
+  </div>
 
   <div class="card border-0 shadow-sm mb-4">
     <div class="card-header bg-light">
@@ -195,19 +213,21 @@
         </label>
       </div>
       <div class="physical-form-existing-fields ms-4 mt-3">
-        <div class="row g-2 align-items-center">
+        <div class="row g-2 align-items-start">
           <div class="col-lg-7">
-            <select name="existing_physical_form_id" id="existingPhysicalFormSelect" class="form-select">
-              <option value="">Select Physical Form</option>
-              {% for form in physical_forms %}
-                <option value="{{ form.id }}" {% if selected_physical_form and form.id == selected_physical_form.id %}selected{% elif form_values.get('existing_physical_form_id') and form_values.get('existing_physical_form_id')|int == form.id %}selected{% endif %}>
-                  {{ form.name }}{% if form.slug %} ({{ form.slug }}){% endif %}
-                </option>
-              {% endfor %}
-            </select>
+            <div class="position-relative">
+              <input type="text"
+                     id="physicalFormSearchInput"
+                     class="form-control"
+                     placeholder="Search physical forms..."
+                     autocomplete="off"
+                     value="{% if selected_physical_form %}{{ selected_physical_form.name }}{% endif %}">
+              <input type="hidden" name="existing_physical_form_id" id="existingPhysicalFormSelect" value="{% if selected_physical_form %}{{ selected_physical_form.id }}{% elif form_values.get('existing_physical_form_id') %}{{ form_values.get('existing_physical_form_id') }}{% endif %}">
+            </div>
+            <div class="list-group mt-2 d-none" id="physicalFormSuggestions" data-empty-message="Start typing to search curated physical forms."></div>
           </div>
           <div class="col-lg-5 small text-muted">
-            Select a form to reuse an existing item or to start a new variant under that form.
+            Select a curated form. Need to add one? <a href="{{ url_for('developer.manage_physical_forms') }}" class="text-decoration-underline">Manage physical forms</a>.
           </div>
         </div>
       </div>
@@ -222,12 +242,8 @@
         <div class="row g-3">
           <div class="col-md-6">
             <label class="form-label">Physical Form Name *</label>
-            <input type="text" name="new_physical_form_name" class="form-control" placeholder="e.g. Whole Bud" value="{{ form_values.get('new_physical_form_name', '') }}">
-          </div>
-          <div class="col-md-6">
-            <label class="form-label">Slug (optional)</label>
-            <input type="text" name="new_physical_form_slug" class="form-control" placeholder="e.g. whole-bud" value="{{ form_values.get('new_physical_form_slug', '') }}">
-            <small class="text-muted">Leave blank to auto-generate from the name.</small>
+            <input type="text" name="new_physical_form_name" id="newPhysicalFormInput" class="form-control" placeholder="e.g. Whole Bud" value="{{ form_values.get('new_physical_form_name', '') }}">
+            <small class="text-muted">Names auto-generate slugs; double-check the curated list before adding a new entry.</small>
           </div>
         </div>
       </div>
@@ -244,11 +260,7 @@
   </div>
   <div class="card-body">
     <div class="row g-3">
-      <div class="col-md-6">
-        <label class="form-label">Item Name *</label>
-        <input type="text" name="name" class="form-control" placeholder="e.g. Lavender Buds" value="{{ form_values.get('name', item.name if is_edit else '') }}" required>
-      </div>
-      <div class="col-md-3" id="ingredientCategorySection" style="{{ ingredient_category_style }}">
+      <div class="col-md-4" id="ingredientCategorySection" style="{{ ingredient_category_style }}">
         <label class="form-label">Ingredient Category</label>
         <div class="input-group">
           <select name="ingredient_category_id" class="form-select">
@@ -262,7 +274,7 @@
           </a>
         </div>
       </div>
-      <div class="col-md-3" id="defaultUnitSection" style="{{ default_unit_style }}">
+      <div class="col-md-4" id="defaultUnitSection" style="{{ default_unit_style }}">
         <label class="form-label">Default Unit</label>
         <select name="default_unit" class="form-select">
           <option value="">Select Unit</option>
@@ -271,7 +283,7 @@
           {% endfor %}
         </select>
       </div>
-      <div class="col-md-3" id="densitySection" style="{{ density_section_style }}">
+      <div class="col-md-4" id="densitySection" style="{{ density_section_style }}">
         <label class="form-label">Density (g/ml)</label>
         <input type="number" step="0.001" name="density" class="form-control" placeholder="e.g. 0.920" value="{{ density_value }}">
       </div>
@@ -314,7 +326,7 @@
     </div>
 
     <div class="row g-3 mt-3">
-      <div class="col-md-3" id="perishableSection" style="{% if current_item_type in ['ingredient', 'container'] %}display:block;{% else %}display:none;{% endif %}">
+      <div class="col-md-3" id="perishableSection" data-ingredient-only style="{% if current_item_type == 'ingredient' %}display:block;{% else %}display:none;{% endif %}">
         <div class="form-check mt-4">
           <input type="checkbox" class="form-check-input" id="default_is_perishable" name="default_is_perishable" {% if default_is_perishable_checked %}checked{% endif %}>
           <label for="default_is_perishable" class="form-check-label">Perishable by default</label>
@@ -324,11 +336,11 @@
         <label class="form-label">Recommended Shelf Life (days)</label>
         <input type="number" name="recommended_shelf_life_days" class="form-control" value="{{ recommended_shelf_value }}">
       </div>
-      <div class="col-md-3">
+      <div class="col-md-3" data-ingredient-only>
         <label class="form-label">Aliases (comma-separated)</label>
         <input type="text" name="aliases" class="form-control" placeholder="Alternative names" value="{% if has_form_values %}{{ form_values.get('aliases', '') }}{% elif is_edit and item.aliases %}{{ item.aliases | join(', ') }}{% endif %}">
       </div>
-      <div class="col-md-3">
+      <div class="col-md-3" data-ingredient-only>
         <label class="form-label">Certifications (comma-separated)</label>
         <input type="text" name="certifications" class="form-control" placeholder="e.g. Organic, Fair Trade" value="{% if has_form_values %}{{ form_values.get('certifications', '') }}{% elif is_edit and item.certifications %}{{ item.certifications | join(', ') }}{% endif %}">
       </div>
@@ -350,10 +362,6 @@
         <div class="col-md-3">
           <label class="form-label">Fragrance Load %</label>
           <input type="text" name="recommended_fragrance_load_pct" class="form-control" placeholder="e.g. 6% - 10%" value="{{ form_values.get('recommended_fragrance_load_pct', item.recommended_fragrance_load_pct if is_edit else '') }}">
-        </div>
-        <div class="col-md-3">
-          <label class="form-label">INCI Name Override</label>
-          <input type="text" name="inci_name" class="form-control" placeholder="Inherit from ingredient unless specified" value="{{ form_values.get('inci_name', item.inci_name if is_edit else '') }}">
         </div>
         <div class="col-md-3">
           <label class="form-label">Saponification Value</label>
@@ -426,6 +434,21 @@
           <label class="form-label">Fatty Acid Profile (JSON)</label>
           <textarea name="fatty_acid_profile" rows="3" class="form-control" placeholder='{"oleic": 40, "linoleic": 8}'>{% if has_form_values %}{{ form_values.get('fatty_acid_profile', '') }}{% elif is_edit and item.fatty_acid_profile %}{{ item.fatty_acid_profile | tojson }}{% endif %}</textarea>
         </div>
+      </div>
+    </div>
+    <div class="row g-3 mt-4">
+      <div class="col-12">
+        <label class="form-label">Generated Item Name *</label>
+        <input type="text"
+               name="name"
+               id="globalItemNameInput"
+               class="form-control"
+               value="{{ form_values.get('name', item.name if is_edit else '') }}"
+               data-lock-types="ingredient,container"
+               data-current-type="{{ current_item_type }}"
+               {% if current_item_type in ['ingredient', 'container'] %}readonly{% endif %}
+               required>
+        <small class="text-muted" id="globalItemNameHelp">Names update automatically for ingredients and containers based on the definitions above.</small>
       </div>
     </div>
   </div>
