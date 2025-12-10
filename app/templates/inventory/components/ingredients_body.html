@@ -36,6 +36,15 @@
       <div class="col-md-4">
         <input type="text" id="ingredientsNameFilter" class="form-control" placeholder="Search by name...">
       </div>
+      <div class="col-md-4">
+        <label class="form-label small text-muted mb-1">Filter by ingredient definition</label>
+        <div class="position-relative">
+          <input type="text" id="ingredientDefinitionFilter" class="form-control" placeholder="Start typing a definition..." autocomplete="off">
+          <input type="hidden" id="ingredientDefinitionFilterId">
+          <div id="ingredientDefinitionFilterSuggestions" class="list-group position-absolute w-100 d-none" data-empty-message="No definitions yet. Keep typing." style="z-index: 1050; max-height: 240px; overflow-y: auto;"></div>
+        </div>
+        <small class="text-muted">Shows all inventory linked to the selected definition.</small>
+      </div>
       <div class="col-md-3">
         <select id="ingredientsSortFilter" class="form-select">
           <option value="name_asc">Name (A-Z)</option>
@@ -274,7 +283,10 @@
         </thead>
         <tbody id="ingredientsTableBody">
           {% for item in items if item.type != 'container' %}
-          <tr data-name="{{ item.name.lower() }}" data-quantity="{{ item.quantity }}" data-cost="{{ item.cost_per_unit or 0 }}">
+          {% set definition = item.global_item.ingredient if item.global_item and item.global_item.ingredient else None %}
+          <tr data-name="{{ item.name.lower() }}" data-quantity="{{ item.quantity }}" data-cost="{{ item.cost_per_unit or 0 }}"
+              data-definition-id="{{ definition.id if definition else '' }}"
+              data-definition-name="{{ definition.name.lower() if definition and definition.name else '' }}">
             <td class="col-name">
                 <a href="{{ url_for('inventory.view_inventory', id=item.id) }}" class="text-decoration-none">
                     {{ item.name }}

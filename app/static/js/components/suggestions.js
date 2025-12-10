@@ -47,6 +47,19 @@
     return div;
   }
 
+  function resolveOption(value){
+    return typeof value === 'function' ? value() : value;
+  }
+
+  function buildGlobalIdSet(items){
+    const set = new Set();
+    (items || []).forEach(item => {
+      const gid = item && (item.global_item_id || item.id);
+      if (gid) set.add(String(gid));
+    });
+    return set;
+  }
+
   function createSourceBadge(source){
     if (!source) return '';
     const label = SOURCE_LABELS[source] || source;
@@ -65,13 +78,13 @@
         const entry = document.createElement('a');
         entry.href = '#';
         entry.className = 'list-group-item list-group-item-action suggestion-item';
-        entry.innerHTML = `<div class="d-flex justify-content-between align-items-center">
-          <div>
-            <div class="fw-semibold">${item.text || item.display_name || item.name || ''}</div>
-            ${item.subtitle ? `<div class="small text-muted">${item.subtitle}</div>` : ''}
-          </div>
-          ${opts.showSourceBadge ? createSourceBadge(item.source) : ''}
-        </div>`;
+        const subtitle = opts.showSubtitle && item.subtitle
+          ? `<div class="small text-muted mt-1">${item.subtitle}</div>`
+          : '';
+        entry.innerHTML = `<div class="d-flex justify-content-between align-items-center gap-2">
+          <span class="fw-semibold text-truncate">${item.text || item.display_name || item.name || ''}</span>
+          ${opts.showSourceBadge ? createSourceBadge(group.source || item.source) : ''}
+        </div>${subtitle}`;
         entry.addEventListener('click', function(e){
           e.preventDefault();
           onPick(item, group.source || item.source);
@@ -149,6 +162,33 @@
     listEl.classList.toggle('d-none', !hasAny);
   }
 
+  function renderDefinitionResults(listEl, items, onPick){
+    listEl.innerHTML = '';
+    let hasAny = false;
+    (items || []).forEach(item => {
+      hasAny = true;
+      const entry = document.createElement('a');
+      entry.href = '#';
+      entry.className = 'list-group-item list-group-item-action suggestion-item';
+      const meta = item.inci_name ? `<div class="small text-muted">${item.inci_name}</div>` : '';
+      entry.innerHTML = `<div class="fw-semibold">${item.text || item.name}</div>${meta}`;
+      entry.addEventListener('click', function(e){
+        e.preventDefault();
+        onPick(item, 'definition');
+        listEl.classList.add('d-none');
+      });
+      listEl.appendChild(entry);
+    });
+    listEl.classList.toggle('d-none', !hasAny);
+    if (!hasAny && listEl.dataset.emptyMessage) {
+      const empty = document.createElement('div');
+      empty.className = 'list-group-item text-muted small';
+      empty.textContent = listEl.dataset.emptyMessage;
+      listEl.appendChild(empty);
+      listEl.classList.remove('d-none');
+    }
+  }
+
   function expandGlobalItems(items){
     const expanded = [];
     (items || []).forEach(item => {
@@ -168,6 +208,15 @@
             ingredient_name: form.ingredient_name || baseIngredientName,
             physical_form_id: form.physical_form_id || (physical && physical.id) || null,
             physical_form_name: form.physical_form_name || (physical && physical.name) || null,
+            density: form.density || item.density || null,
+            capacity: form.capacity || item.capacity || null,
+            capacity_unit: form.capacity_unit || item.capacity_unit || null,
+            container_material: form.container_material || item.container_material || null,
+            container_type: form.container_type || item.container_type || null,
+            container_style: form.container_style || item.container_style || null,
+            container_color: form.container_color || item.container_color || null,
+            default_is_perishable: form.default_is_perishable ?? item.default_is_perishable,
+            recommended_shelf_life_days: form.recommended_shelf_life_days ?? item.recommended_shelf_life_days,
           });
         });
       } else if (item) {
@@ -181,6 +230,15 @@
           ingredient_name: (item.ingredient && item.ingredient.name) || item.ingredient_name || item.name,
           physical_form_name: (item.physical_form && item.physical_form.name) || item.physical_form_name || null,
           default_unit: item.default_unit || item.unit || null,
+          density: item.density || null,
+          capacity: item.capacity || null,
+          capacity_unit: item.capacity_unit || null,
+          container_material: item.container_material || null,
+          container_type: item.container_type || null,
+          container_style: item.container_style || null,
+          container_color: item.container_color || null,
+          default_is_perishable: item.default_is_perishable,
+          recommended_shelf_life_days: item.recommended_shelf_life_days,
         });
       }
     });
@@ -211,7 +269,7 @@
     return Array.from(map.values());
   }
 
-  function groupGlobalByIngredient(rawGroups){
+  function groupGlobalByIngredient(rawGroups, dedupeIds){
     const groups = [];
     (rawGroups || []).forEach(group => {
       const forms = (group.forms || []).map(form => ({
@@ -222,16 +280,33 @@
         default_unit: form.default_unit || form.unit || null,
         source: 'global',
         global_item_id: form.id,
+        density: form.density || null,
+        capacity: form.capacity || null,
+        capacity_unit: form.capacity_unit || null,
+        container_material: form.container_material || null,
+        container_type: form.container_type || null,
+        container_style: form.container_style || null,
+        container_color: form.container_color || null,
       }));
-      if (forms.length){
+      const filteredForms = dedupeIds
+        ? forms.filter(form => !form.global_item_id || !dedupeIds.has(String(form.global_item_id)))
+        : forms;
+      if (filteredForms.length){
         groups.push({
           ingredient_id: group.ingredient_id || group.id || null,
           name: group.name || (group.ingredient && group.ingredient.name) || (forms[0] && forms[0].ingredient_name) || 'Ingredient',
-          forms,
+          forms: filteredForms,
         });
       }
     });
     return groups;
+  }
+
+  function fetchIngredientDefinitions(q){
+    const params = new URLSearchParams({ q });
+    return fetch(`/api/ingredients/definitions/search?${params.toString()}`)
+      .then(r => r.json())
+      .catch(() => ({ results: [] }));
   }
 
   function attachMergedInventoryGlobalTypeahead(options){
@@ -241,14 +316,14 @@
     const giHiddenEl = opts.giHiddenEl;
     const listEl = ensureListContainer(opts.listEl);
     const mode = opts.mode || 'recipe';
-    const searchType = (opts.searchType || 'ingredient').toLowerCase();
-    const includeInventory = opts.includeInventory !== false;
-    const includeGlobal = opts.includeGlobal !== false;
-    const ingredientFirst = !!opts.ingredientFirst;
-    const displayVariant = opts.displayVariant || (ingredientFirst ? 'grouped' : 'compact');
+    const searchTypeOption = opts.searchType || 'ingredient';
+    const includeInventoryOption = opts.includeInventory;
+    const includeGlobalOption = opts.includeGlobal;
+    const ingredientFirstOption = opts.ingredientFirst;
+    const displayVariant = opts.displayVariant;
     const onSelection = typeof opts.onSelection === 'function' ? opts.onSelection : null;
 
-    if (!inputEl || (!invHiddenEl && mode === 'recipe') || !giHiddenEl) return;
+    if (!inputEl || (!invHiddenEl && mode === 'recipe') || (!giHiddenEl && opts.requireHidden !== false)) return;
 
     if (listEl && !listEl.classList.contains('list-group')) {
       listEl.classList.add('list-group');
@@ -257,16 +332,16 @@
       inputEl.parentNode.appendChild(listEl);
     }
 
-    function buildInventoryUrl(q){
+    function buildInventoryUrl(q, effectiveSearchType){
       const params = new URLSearchParams({ q });
-      if (searchType && searchType !== 'all') params.set('type', searchType);
+      if (effectiveSearchType && effectiveSearchType !== 'all') params.set('type', effectiveSearchType);
       return `/inventory/api/search?${params.toString()}`;
     }
 
-    function buildGlobalUrl(q){
+    function buildGlobalUrl(q, effectiveSearchType, useIngredientFirst){
       const params = new URLSearchParams({ q });
-      if (searchType && searchType !== 'all') params.set('type', searchType);
-      if (searchType === 'ingredient' && ingredientFirst) params.set('group', 'ingredient');
+      if (effectiveSearchType && effectiveSearchType !== 'all') params.set('type', effectiveSearchType);
+      if (effectiveSearchType === 'ingredient' && useIngredientFirst) params.set('group', 'ingredient');
       return `/api/ingredients/global-items/search?${params.toString()}`;
     }
 
@@ -280,21 +355,44 @@
         return;
       }
 
-      const inventoryPromise = includeInventory
-        ? fetch(buildInventoryUrl(q)).then(r => r.json()).catch(() => ({ results: [] }))
+      const effectiveSearchType = (resolveOption(searchTypeOption) || 'ingredient').toLowerCase();
+      const includeInventory = resolveOption(includeInventoryOption);
+      const includeGlobal = resolveOption(includeGlobalOption);
+      const ingredientFirst = effectiveSearchType === 'ingredient' && !!resolveOption(ingredientFirstOption);
+      const variant = displayVariant || (ingredientFirst ? 'grouped' : 'compact');
+
+      if (effectiveSearchType === 'ingredient_definition' || effectiveSearchType === 'definition') {
+        fetchIngredientDefinitions(q).then(results => {
+          const items = (results && results.results) || [];
+          renderDefinitionResults(listEl, items.map(item => ({
+            id: item.id,
+            text: item.name,
+            name: item.name,
+            inci_name: item.inci_name,
+            slug: item.slug,
+            ingredient_category_id: item.ingredient_category_id,
+            ingredient_category_name: item.ingredient_category_name,
+          })), handleSelection);
+        }).catch(() => listEl.classList.add('d-none'));
+        return;
+      }
+
+      const inventoryPromise = includeInventory !== false
+        ? fetch(buildInventoryUrl(q, effectiveSearchType)).then(r => r.json()).catch(() => ({ results: [] }))
         : Promise.resolve({ results: [] });
-      const globalPromise = includeGlobal
-        ? fetch(buildGlobalUrl(q)).then(r => r.json()).catch(() => ({ results: [] }))
+      const globalPromise = includeGlobal !== false
+        ? fetch(buildGlobalUrl(q, effectiveSearchType, ingredientFirst)).then(r => r.json()).catch(() => ({ results: [] }))
         : Promise.resolve({ results: [] });
 
       Promise.all([inventoryPromise, globalPromise]).then(results => {
         const inventory = (results[0] && results[0].results) || [];
         const globalRaw = (results[1] && results[1].results) || [];
-        const globalExpanded = expandGlobalItems(globalRaw);
+        const seenGlobalIds = buildGlobalIdSet(inventory);
+        const globalExpanded = expandGlobalItems(globalRaw).filter(item => !item.global_item_id || !seenGlobalIds.has(String(item.global_item_id)));
 
-        if (ingredientFirst && searchType === 'ingredient') {
+        if (ingredientFirst) {
           const inventoryGroups = groupInventoryByIngredient(inventory);
-          const globalGroups = groupGlobalByIngredient(globalRaw);
+          const globalGroups = groupGlobalByIngredient(globalRaw, seenGlobalIds);
           const ingredientGroups = [];
           if (inventoryGroups.length) {
             ingredientGroups.push({ title: 'Your Inventory', source: 'inventory', ingredients: inventoryGroups });
@@ -313,7 +411,10 @@
         if (globalExpanded.length) {
           mergedGroups.push({ title: 'Global Library', source: 'global', items: globalExpanded });
         }
-        renderFlatList(listEl, mergedGroups, handleSelection, { showSourceBadge: opts.showSourceBadge !== false });
+        renderFlatList(listEl, mergedGroups, handleSelection, {
+          showSourceBadge: opts.showSourceBadge !== false,
+          showSubtitle: variant === 'detailed'
+        });
       }).catch(() => {
         listEl.classList.add('d-none');
       });

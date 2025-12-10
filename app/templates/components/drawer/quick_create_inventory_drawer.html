@@ -14,8 +14,11 @@
                     <div class="row g-3">
                         <div class="col-md-6">
                             <label class="form-label">Name</label>
-                            <input type="text" class="form-control" id="qcInvName" placeholder="Search global or enter custom..." autocomplete="off">
-                            <div class="form-text">Start typing to search the Global Library. Selecting a global item will be added to your inventory.</div>
+                            <div class="position-relative">
+                                <input type="text" class="form-control" id="qcInvName" placeholder="Search global or enter custom..." autocomplete="off">
+                                <div id="qcInvSuggestions" class="list-group position-absolute w-100 d-none" data-empty-message="Start typing to search your inventory and the global library." style="z-index: 1050; max-height: 260px; overflow-y: auto;"></div>
+                            </div>
+                            <div class="form-text">Start typing to search your inventory and the global library. Selecting a global item will be added to your inventory.</div>
                         </div>
                         <div class="col-md-6">
                             <label class="form-label">Type</label>
@@ -141,7 +144,12 @@
             }
         }
         if (typeSelect) {
-            typeSelect.addEventListener('change', updateTypeVisibility);
+            typeSelect.addEventListener('change', function(){
+                updateTypeVisibility();
+                if (nameInput && nameInput.value.trim()) {
+                    nameInput.dispatchEvent(new Event('input'));
+                }
+            });
             updateTypeVisibility();
         }
 
@@ -175,58 +183,53 @@
             })();
         }
 
-        // Global search: debounce typing and fetch suggestions
-        let debounceTimer = null;
-        if (nameInput) {
-            nameInput.addEventListener('input', function(){
-                if (globalIdField) globalIdField.value = '';
-                if (globalHint) globalHint.style.display = 'none';
-                const q = nameInput.value ? nameInput.value.trim() : '';
-                if (debounceTimer) clearTimeout(debounceTimer);
-                if (!q) return;
-                debounceTimer = setTimeout(async () => {
-                    const itemType = typeSelect ? typeSelect.value : 'ingredient';
-                    try {
-                        const res = await fetch(`/api/ingredients/global-items/search?q=${encodeURIComponent(q)}&type=${encodeURIComponent(itemType)}`);
-                        const data = await res.json();
-                        const results = (data && data.results) || [];
-                        // Simple inline suggestion dropdown
-                        let list = document.getElementById('qcInvSuggestions');
-                        if (!list) {
-                            list = document.createElement('div');
-                            list.id = 'qcInvSuggestions';
-                            list.className = 'list-group position-absolute w-100';
-                            if (nameInput.parentElement) {
-                                nameInput.parentElement.appendChild(list);
-                                nameInput.parentElement.style.position = 'relative';
-                            }
-                        }
-                        if (list) list.innerHTML = '';
-                        results.forEach(item => {
-                            const a = document.createElement('a');
-                            a.href = '#';
-                            a.className = 'list-group-item list-group-item-action';
-                            a.textContent = item.text;
-                            a.addEventListener('click', (e) => {
-                                e.preventDefault();
-                                nameInput.value = item.text;
-                                if (globalIdField) globalIdField.value = item.id;
-                                if (item.default_unit && unitSelect) {
-                                    unitSelect.value = item.default_unit;
-                                }
-                                if (item.item_type === 'container') {
-                                    if (item.capacity && capInput) capInput.value = item.capacity;
-                                    if (item.capacity_unit && capUnit) capUnit.value = item.capacity_unit;
-                                }
-                                if (globalHint) globalHint.style.display = 'block';
-                                if (list) list.innerHTML = '';
-                            });
-                            if (list) list.appendChild(a);
-                        });
-                    } catch (err) {
-                        console.warn('Global search failed', err);
+        if (nameInput && globalIdField && typeof window.attachMergedInventoryGlobalTypeahead === 'function') {
+            const suggestionList = document.getElementById('qcInvSuggestions');
+            const populateContainerFields = (picked) => {
+                if (!picked) return;
+                const setValue = (el, value) => {
+                    if (el && value !== undefined && value !== null && value !== '') {
+                        el.value = value;
                     }
-                }, 250);
+                };
+                setValue(capInput, picked.capacity);
+                setValue(capUnit, picked.capacity_unit);
+                setValue(matInput, picked.container_material);
+                setValue(typeNameInput, picked.container_type);
+                setValue(styleInput, picked.container_style);
+                setValue(colorInput, picked.container_color);
+            };
+
+            window.attachMergedInventoryGlobalTypeahead({
+                inputEl: nameInput,
+                giHiddenEl: globalIdField,
+                listEl: suggestionList,
+                mode: 'quick_create_inventory',
+                searchType: () => (typeSelect ? typeSelect.value : 'ingredient'),
+                includeInventory: true,
+                includeGlobal: true,
+                ingredientFirst: () => (typeSelect && typeSelect.value === 'ingredient'),
+                onSelection: function(picked, source){
+                    if (unitSelect && picked && picked.default_unit) {
+                        unitSelect.value = picked.default_unit;
+                    }
+                    if (typeSelect && typeSelect.value === 'container') {
+                        populateContainerFields(picked || {});
+                    }
+                    if (globalHint) {
+                        globalHint.style.display = 'block';
+                        globalHint.textContent = source === 'global'
+                          ? 'This global item will be added to your inventory.'
+                          : 'You already have this item. Creating will restock it.';
+                    }
+                }
+            });
+
+            nameInput.addEventListener('input', function(){
+                if (!this.value.trim()) {
+                    globalIdField.value = '';
+                    if (globalHint) globalHint.style.display = 'none';
+                }
             });
         }
 
