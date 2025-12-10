@@ -350,10 +350,11 @@ def global_items_admin():
         "consumable": "Consumables",
     }
 
-    base_query_params = {
-        "search": search_query,
-        "page_size": per_page,
-    }
+    base_query_params = {}
+    if search_query:
+        base_query_params["search"] = search_query
+    if per_page != per_page_options[0]:
+        base_query_params["page_size"] = per_page
     if category_filter and scope == "ingredient":
         base_query_params["category"] = category_filter
 

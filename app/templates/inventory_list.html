@@ -715,102 +715,119 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 
 function updateIngredientSelectionDetails(picked, source){
-  var details = document.getElementById('ingredientSelectionDetails');
+  const details = document.getElementById('ingredientSelectionDetails');
   if (!details) return;
   if (!picked){
     details.textContent = '';
     return;
   }
-  var headlineParts = [];
-  if (picked.ingredient_name) headlineParts.push(picked.ingredient_name);
-  else if (picked.text) headlineParts.push(picked.text);
-  if (picked.physical_form_name) headlineParts.push(picked.physical_form_name);
-  var headline = headlineParts.join(' — ');
-  var meta = [];
-  if (typeof picked.cost_per_unit === 'number'){
-    var unitLabel = picked.default_unit || 'unit';
-    meta.push('$' + picked.cost_per_unit.toFixed(2) + '/' + unitLabel);
-  }
-  if (picked.default_unit){
-    meta.push('Unit ' + picked.default_unit);
-  }
-  if (typeof picked.density === 'number'){
-    meta.push('Density ' + picked.density.toFixed(3) + ' g/ml');
-  }
-  details.textContent = (source === 'inventory' ? 'Inventory form: ' : 'Global form: ') +
-    (headline || picked.text || '') + (meta.length ? ' (' + meta.join(' • ') + ')' : '');
+  const parts = [];
+  if (picked.ingredient_name) parts.push(picked.ingredient_name);
+  if (picked.physical_form_name) parts.push(picked.physical_form_name);
+  if (!parts.length && picked.text) parts.push(picked.text);
+  const badge = source === 'inventory' ? 'Inventory' : (source === 'global' ? 'Global Library' : '');
+  details.textContent = `${parts.join(', ') || ''}${badge ? ' • ' + badge : ''}`.trim();
 }
 
-// Initialize typeahead for ingredient search with better error handling and timing
-function setupTypeaheadForIngredients() {
-  const ingredientNameInput = document.getElementById('ingredientNameInput');
-  const ingredientSuggestions = document.getElementById('ingredientSuggestions');
-  const globalItemIdInput = document.getElementById('selectedGlobalItemId');
+function initScopedInventoryTypeahead(config){
+  const inputEl = document.getElementById(config.inputId);
+  const listEl = document.getElementById(config.listId);
+  const globalHiddenEl = config.globalHiddenId ? document.getElementById(config.globalHiddenId) : null;
+  if (!inputEl || !listEl || typeof window.attachMergedInventoryGlobalTypeahead !== 'function') {
+    return;
+  }
 
-  console.log('🔧 TYPEAHEAD SETUP: Elements found:', {
-    input: !!ingredientNameInput,
-    suggestions: !!ingredientSuggestions,
-    globalId: !!globalItemIdInput,
-    attachFunction: typeof window.attachMergedInventoryGlobalTypeahead
+  window.attachMergedInventoryGlobalTypeahead({
+    inputEl,
+    listEl,
+    giHiddenEl: globalHiddenEl,
+    mode: config.mode || 'inventory_create',
+    searchType: config.searchType || 'ingredient',
+    ingredientFirst: !!config.ingredientFirst,
+    displayVariant: config.displayVariant || (config.ingredientFirst ? 'grouped' : 'compact'),
+    includeInventory: config.includeInventory !== false,
+    includeGlobal: config.includeGlobal !== false,
+    onSelection: function(picked, source){
+      if (typeof config.onSelection === 'function') {
+        config.onSelection(picked, source);
+      }
+    }
   });
 
-  if (!ingredientNameInput || !ingredientSuggestions || !globalItemIdInput) {
-    console.error('🔧 TYPEAHEAD SETUP: Missing required DOM elements');
-    return;
-  }
-
-  if (typeof window.attachMergedInventoryGlobalTypeahead !== 'function') {
-    console.error('🔧 TYPEAHEAD SETUP: attachMergedInventoryGlobalTypeahead function not available');
-    return;
-  }
-
-  try {
-    console.log('🔧 TYPEAHEAD SETUP: Attaching typeahead functionality');
-
-    window.attachMergedInventoryGlobalTypeahead({
-      inputEl: ingredientNameInput,
-      giHiddenEl: globalItemIdInput,
-      listEl: ingredientSuggestions,
-      mode: 'inventory_create',
-      ingredientFirst: true,
-      onSelection: function(picked, source){
-        console.log('🔧 TYPEAHEAD SELECTION:', picked, source);
-        const unitSelect = document.querySelector('#addIngredientForm select[name="unit"]');
-        if (unitSelect && picked.default_unit){
-          unitSelect.value = picked.default_unit;
-        }
-        updateIngredientSelectionDetails(picked, source);
+  if (typeof config.onClear === 'function') {
+    inputEl.addEventListener('input', function(){
+      if (!this.value.trim()) {
+        config.onClear();
       }
     });
-
-    ingredientNameInput.addEventListener('input', function(){
-      console.log('🔧 TYPEAHEAD INPUT:', this.value);
-      if (!this.value.trim()){
-        updateIngredientSelectionDetails(null);
-      }
-    });
-
-    console.log('🔧 TYPEAHEAD SETUP: Successfully initialized');
-  } catch (error) {
-    console.error('🔧 TYPEAHEAD SETUP: Error during initialization:', error);
   }
 }
 
-// Initialize when suggestions script is loaded
-function initializeTypeaheadWhenReady() {
-  if (typeof window.attachMergedInventoryGlobalTypeahead === 'function') {
-    setupTypeaheadForIngredients();
-  } else {
-    // Wait for the script to load
-    setTimeout(initializeTypeaheadWhenReady, 100);
-  }
-}
-
-// Start initialization after DOM and scripts are ready
 document.addEventListener('DOMContentLoaded', function() {
-  console.log('🔧 INVENTORY LIST: DOM loaded, waiting for typeahead function');
-  // Give a moment for the suggestions script to load
-  setTimeout(initializeTypeaheadWhenReady, 200);
+  initScopedInventoryTypeahead({
+    inputId: 'ingredientNameInput',
+    listId: 'ingredientSuggestions',
+    globalHiddenId: 'selectedIngredientGlobalId',
+    searchType: 'ingredient',
+    ingredientFirst: true,
+    onSelection: function(picked, source){
+      updateIngredientSelectionDetails(picked, source);
+      const unitSelect = document.querySelector('#addIngredientForm select[name=\"unit\"]');
+      if (unitSelect && picked.default_unit) {
+        unitSelect.value = picked.default_unit;
+      }
+    },
+    onClear: function(){
+      updateIngredientSelectionDetails(null);
+    }
+  });
+
+  initScopedInventoryTypeahead({
+    inputId: 'containerNameInput',
+    listId: 'containerSuggestions',
+    globalHiddenId: 'selectedGlobalContainerId',
+    searchType: 'container',
+    displayVariant: 'compact',
+    onSelection: function(picked){
+      const form = document.getElementById('addContainerForm');
+      if (!form) return;
+      const setValue = (selector, value) => {
+        const el = form.querySelector(selector);
+        if (el && value !== undefined && value !== null) {
+          el.value = value;
+        }
+      };
+      setValue('input[name=\"capacity\"]', picked.capacity || '');
+      setValue('select[name=\"capacity_unit\"]', picked.capacity_unit || '');
+      setValue('input[name=\"container_material\"]', picked.container_material || '');
+      setValue('input[name=\"container_type\"]', picked.container_type || '');
+      setValue('input[name=\"container_style\"]', picked.container_style || '');
+      setValue('input[name=\"container_color\"]', picked.container_color || '');
+      if (typeof window.updateGeneratedContainerName === 'function') {
+        window.updateGeneratedContainerName();
+      }
+    },
+    onClear: function(){
+      const hidden = document.getElementById('selectedGlobalContainerId');
+      if (hidden) hidden.value = '';
+    }
+  });
+
+  initScopedInventoryTypeahead({
+    inputId: 'packagingNameInput',
+    listId: 'packagingSuggestions',
+    globalHiddenId: 'selectedGlobalPackagingId',
+    searchType: 'packaging',
+    displayVariant: 'compact'
+  });
+
+  initScopedInventoryTypeahead({
+    inputId: 'consumableNameInput',
+    listId: 'consumableSuggestions',
+    globalHiddenId: 'selectedGlobalConsumableId',
+    searchType: 'consumable',
+    displayVariant: 'compact'
+  });
 });
 
 // Tabs behavior (show one type at a time)
@@ -857,276 +874,6 @@ function toggleConsumablesFilter(){ const el = document.getElementById('consumab
 function toggleConsumableForm(){ const f = document.getElementById('addConsumableForm'); if (f) f.style.display = f.style.display === 'none' ? 'block' : 'none'; }
 function toggleConsumableUpdateForm(){ const f = document.getElementById('updateConsumableForm'); if (f) f.style.display = f.style.display === 'none' ? 'block' : 'none'; }
 function updateAddConsumableCostHelp(){ const t = document.getElementById('addConsumableCostType').value; const h = document.getElementById('addConsumableCostHelp'); const qEl = document.querySelector('#addConsumableForm input[name="quantity"]'); const q = parseFloat(qEl?.value)||1; h.textContent = t==='per_unit' ? 'Enter cost per unit' : `Enter total cost (will be divided by ${q} units)`; }
-
-// Container name search functionality (mirrors ingredients)
-document.addEventListener('DOMContentLoaded', function() {
-    const nameInput = document.getElementById('containerNameInput');
-    const suggestionsEl = document.getElementById('containerSuggestions');
-    const globalIdInput = document.getElementById('selectedGlobalContainerId');
-
-    if (!nameInput || !suggestionsEl || !globalIdInput) {
-        return;
-    }
-
-    nameInput.addEventListener('input', function() {
-        const query = this.value.trim();
-        if (query.length < 2) {
-            suggestionsEl.style.display = 'none';
-            return;
-        }
-
-        Promise.all([
-            fetch(`/inventory/api/search?type=container&q=${encodeURIComponent(query)}`).then(r => r.json()).catch(() => ({results: []})),
-            fetch(`/api/ingredients/global-items/search?q=${encodeURIComponent(query)}&type=container`).then(r => r.json()).catch(() => ({results: []}))
-        ]).then(([invResults, globalResults]) => {
-            const suggestions = [];
-
-            if (invResults && invResults.results) {
-                invResults.results.forEach(item => {
-                    suggestions.push({
-                        source: 'inventory',
-                        id: item.id,
-                        name: item.text,
-                        capacity: item.capacity,
-                        capacity_unit: item.capacity_unit,
-                        container_material: item.container_material,
-                        container_type: item.container_type,
-                        container_style: item.container_style,
-                        container_color: item.container_color
-                    });
-                });
-            }
-
-            if (globalResults && globalResults.results) {
-                globalResults.results.forEach(item => {
-                    const exists = suggestions.some(s => s.name.toLowerCase() === item.text.toLowerCase());
-                    if (!exists) {
-                        suggestions.push({
-                            source: 'global',
-                            id: item.id,
-                            name: item.text,
-                            capacity: item.capacity,
-                            capacity_unit: item.capacity_unit,
-                            container_material: item.container_material,
-                            container_type: item.container_type,
-                            container_style: item.container_style,
-                            container_color: item.container_color
-                        });
-                    }
-                });
-            }
-
-            renderSuggestions(suggestions);
-        }).catch(() => {
-            suggestionsEl.style.display = 'none';
-        });
-    });
-
-    function renderSuggestions(list) {
-        if (!list.length) {
-            suggestionsEl.style.display = 'none';
-            return;
-        }
-
-        const html = list.map(item => `
-            <div class="suggestion-item p-2 border-bottom" style="cursor: pointer;"
-                 data-source="${item.source}"
-                 data-id="${item.id || ''}"
-                 data-name="${item.name || ''}"
-                 data-capacity="${item.capacity || ''}"
-                 data-capacity_unit="${item.capacity_unit || ''}"
-                 data-material="${item.container_material || ''}"
-                 data-ctype="${item.container_type || ''}"
-                 data-style="${item.container_style || ''}"
-                 data-color="${item.container_color || ''}">
-                <div class="fw-bold">${item.name}</div>
-                <small class="text-muted">
-                    ${item.source === 'inventory' ? 'In Inventory' : 'From Global Library'}
-                    ${item.capacity ? ` • ${item.capacity} ${item.capacity_unit || ''}` : ''}
-                </small>
-            </div>
-        `).join('');
-
-        suggestionsEl.innerHTML = html;
-        suggestionsEl.style.display = 'block';
-
-        suggestionsEl.querySelectorAll('.suggestion-item').forEach(el => {
-            el.addEventListener('click', function() {
-                const src = this.dataset.source;
-                nameInput.value = this.dataset.name || '';
-                if (src === 'global') {
-                    globalIdInput.value = this.dataset.id || '';
-                } else {
-                    globalIdInput.value = '';
-                }
-
-                const capEl = document.querySelector('#addContainerForm input[name="capacity"]');
-                const capUnitEl = document.querySelector('#addContainerForm select[name="capacity_unit"]');
-                const matEl = document.querySelector('#addContainerForm input[name="container_material"]');
-                const typeEl = document.querySelector('#addContainerForm input[name="container_type"]');
-                const styleEl = document.querySelector('#addContainerForm input[name="container_style"]');
-                const colorEl = document.querySelector('#addContainerForm input[name="container_color"]');
-
-                if (capEl) capEl.value = this.dataset.capacity || '';
-                if (capUnitEl && this.dataset.capacity_unit) capUnitEl.value = this.dataset.capacity_unit;
-                if (matEl) matEl.value = this.dataset.material || '';
-                if (typeEl) typeEl.value = this.dataset.ctype || '';
-                if (styleEl) styleEl.value = this.dataset.style || '';
-                if (colorEl) colorEl.value = this.dataset.color || '';
-
-                if (typeof window.updateGeneratedContainerName === 'function') {
-                    window.updateGeneratedContainerName();
-                }
-
-                suggestionsEl.style.display = 'none';
-            });
-        });
-    }
-
-    document.addEventListener('click', function(e) {
-        if (!nameInput.contains(e.target) && !suggestionsEl.contains(e.target)) {
-            suggestionsEl.style.display = 'none';
-        }
-    });
-});
-
-// Packaging name search functionality
-document.addEventListener('DOMContentLoaded', function() {
-    const nameInput = document.getElementById('packagingNameInput');
-    const suggestionsEl = document.getElementById('packagingSuggestions');
-    const globalIdInput = document.getElementById('selectedGlobalPackagingId');
-
-    if (!nameInput || !suggestionsEl || !globalIdInput) {
-        return;
-    }
-
-    nameInput.addEventListener('input', function() {
-        const query = this.value.trim();
-        if (query.length < 2) {
-            suggestionsEl.style.display = 'none';
-            return;
-        }
-
-        Promise.all([
-            fetch(`/inventory/api/search?type=packaging&q=${encodeURIComponent(query)}`).then(r => r.json()).catch(() => ({results: []})),
-            fetch(`/api/ingredients/global-items/search?q=${encodeURIComponent(query)}&type=packaging`).then(r => r.json()).catch(() => ({results: []}))
-        ]).then(([invResults, globalResults]) => {
-            const suggestions = [];
-
-            if (invResults && invResults.results) {
-                invResults.results.forEach(item => {
-                    suggestions.push({ source: 'inventory', id: item.id, name: item.text, unit: item.unit });
-                });
-            }
-            if (globalResults && globalResults.results) {
-                globalResults.results.forEach(item => {
-                    const exists = suggestions.some(s => s.name.toLowerCase() === item.text.toLowerCase());
-                    if (!exists) {
-                        suggestions.push({ source: 'global', id: item.id, name: item.text, unit: item.default_unit });
-                    }
-                });
-            }
-
-            renderSuggestions(suggestions);
-        }).catch(() => { suggestionsEl.style.display = 'none'; });
-    });
-
-    function renderSuggestions(list) {
-        if (!list.length) { suggestionsEl.style.display = 'none'; return; }
-        const html = list.map(item => `
-            <div class="suggestion-item p-2 border-bottom" style="cursor: pointer;"
-                 data-source="${item.source}" data-id="${item.id || ''}" data-name="${item.name || ''}" data-unit="${item.unit || ''}">
-                <div class="fw-bold">${item.name}</div>
-                <small class="text-muted">${item.source === 'inventory' ? 'In Inventory' : 'From Global Library'}</small>
-            </div>
-        `).join('');
-        suggestionsEl.innerHTML = html;
-        suggestionsEl.style.display = 'block';
-        suggestionsEl.querySelectorAll('.suggestion-item').forEach(el => {
-            el.addEventListener('click', function() {
-                nameInput.value = this.dataset.name || '';
-                if (this.dataset.source === 'global') { globalIdInput.value = this.dataset.id || ''; } else { globalIdInput.value = ''; }
-                const unitEl = document.querySelector('#addPackagingForm select[name="unit"]');
-                if (unitEl && this.dataset.unit) unitEl.value = this.dataset.unit;
-                suggestionsEl.style.display = 'none';
-            });
-        });
-    }
-
-    document.addEventListener('click', function(e) {
-        if (!nameInput.contains(e.target) && !suggestionsEl.contains(e.target)) {
-            suggestionsEl.style.display = 'none';
-        }
-    });
-});
-
-// Consumable name search functionality
-document.addEventListener('DOMContentLoaded', function() {
-    const nameInput = document.getElementById('consumableNameInput');
-    const suggestionsEl = document.getElementById('consumableSuggestions');
-    const globalIdInput = document.getElementById('selectedGlobalConsumableId');
-
-    if (!nameInput || !suggestionsEl || !globalIdInput) {
-        return;
-    }
-
-    nameInput.addEventListener('input', function() {
-        const query = this.value.trim();
-        if (query.length < 2) {
-            suggestionsEl.style.display = 'none';
-            return;
-        }
-
-        Promise.all([
-            fetch(`/inventory/api/search?type=consumable&q=${encodeURIComponent(query)}`).then(r => r.json()).catch(() => ({results: []})),
-            fetch(`/api/ingredients/global-items/search?q=${encodeURIComponent(query)}&type=consumable`).then(r => r.json()).catch(() => ({results: []}))
-        ]).then(([invResults, globalResults]) => {
-            const suggestions = [];
-            if (invResults && invResults.results) {
-                invResults.results.forEach(item => {
-                    suggestions.push({ source: 'inventory', id: item.id, name: item.text, unit: item.unit });
-                });
-            }
-            if (globalResults && globalResults.results) {
-                globalResults.results.forEach(item => {
-                    const exists = suggestions.some(s => s.name.toLowerCase() === item.text.toLowerCase());
-                    if (!exists) {
-                        suggestions.push({ source: 'global', id: item.id, name: item.text, unit: item.default_unit });
-                    }
-                });
-            }
-            renderSuggestions(suggestions);
-        }).catch(() => { suggestionsEl.style.display = 'none'; });
-    });
-
-    function renderSuggestions(list) {
-        if (!list.length) { suggestionsEl.style.display = 'none'; return; }
-        const html = list.map(item => `
-            <div class="suggestion-item p-2 border-bottom" style="cursor: pointer;"
-                 data-source="${item.source}" data-id="${item.id || ''}" data-name="${item.name || ''}" data-unit="${item.unit || ''}">
-                <div class="fw-bold">${item.name}</div>
-                <small class="text-muted">${item.source === 'inventory' ? 'In Inventory' : 'From Global Library'}</small>
-            </div>
-        `).join('');
-        suggestionsEl.innerHTML = html;
-        suggestionsEl.style.display = 'block';
-        suggestionsEl.querySelectorAll('.suggestion-item').forEach(el => {
-            el.addEventListener('click', function() {
-                nameInput.value = this.dataset.name || '';
-                if (this.dataset.source === 'global') { globalIdInput.value = this.dataset.id || ''; } else { globalIdInput.value = ''; }
-                const unitEl = document.querySelector('#addConsumableForm select[name="unit"]');
-                if (unitEl && this.dataset.unit) unitEl.value = this.dataset.unit;
-                suggestionsEl.style.display = 'none';
-            });
-        });
-    }
-
-    document.addEventListener('click', function(e) {
-        if (!nameInput.contains(e.target) && !suggestionsEl.contains(e.target)) {
-            suggestionsEl.style.display = 'none';
-        }
-    });
-});
 
 // Update help text when quantity changes (packaging/consumables)
 document.addEventListener('DOMContentLoaded', function() {
