@@ -291,14 +291,12 @@ def global_items_admin():
         buckets = OrderedDict()
         for gi in items:
             key = gi.ingredient_id or f"item-{gi.id}"
-            bucket = buckets.setdefault(
-                key,
-                {
+            if key not in buckets:
+                buckets[key] = {
                     "ingredient": gi.ingredient,
                     "items": [],
-                },
-            )
-            bucket["items"].append(gi)
+                }
+            buckets[key]["items"].append(gi)
         grouped_items = list(buckets.values())
 
     try:
