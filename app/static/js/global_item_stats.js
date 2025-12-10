@@ -48,6 +48,12 @@ function formatNumber(value, digits = 2) {
   return typeof value === 'number' && !Number.isNaN(value) ? value.toFixed(digits) : '-';
 }
 
+function formatBoolean(value) {
+  if (value === true) return 'Yes';
+  if (value === false) return 'No';
+  return '';
+}
+
 function formatText(value) {
   if (value === null || value === undefined) {
     return '–';
@@ -68,6 +74,73 @@ function formatList(values) {
 function showElement(el, show = true) {
   if (!el) return;
   el.style.display = show ? '' : 'none';
+}
+
+function hasContent(value) {
+  if (value === null || value === undefined) return false;
+  if (typeof value === 'string') return value.trim().length > 0;
+  return true;
+}
+
+function formatShelfLifeDays(days) {
+  if (!Number.isFinite(Number(days))) return '';
+  const value = Number(days);
+  return `${value} day${value === 1 ? '' : 's'}`;
+}
+
+const META_CONFIG = {
+  ingredient: [
+    { label: 'Aliases', getter: item => formatList(item.aliases) },
+    { label: 'Certifications', getter: item => formatList(item.certifications) },
+    { label: 'Recommended Usage', getter: item => formatText(item.recommended_usage_rate) },
+    { label: 'Fragrance Load', getter: item => (item.recommended_fragrance_load_pct != null ? `${item.recommended_fragrance_load_pct}%` : '') },
+    { label: 'Recommended Shelf Life', getter: item => formatShelfLifeDays(item.recommended_shelf_life_days) },
+    { label: 'Perishable', getter: item => formatBoolean(item.default_is_perishable) },
+  ],
+  container: [
+    { label: 'Capacity', getter: item => {
+      if (item.capacity == null) return '';
+      const unit = item.capacity_unit ? ` ${item.capacity_unit}` : '';
+      return `${item.capacity}${unit}`;
+    }},
+    { label: 'Material', getter: item => item.container_material || '' },
+    { label: 'Type', getter: item => item.container_type || '' },
+    { label: 'Style', getter: item => item.container_style || '' },
+    { label: 'Color', getter: item => item.container_color || '' },
+    { label: 'Default Unit', getter: item => item.default_unit || '' },
+  ],
+  packaging: [
+    { label: 'Capacity', getter: item => {
+      if (item.capacity == null) return '';
+      const unit = item.capacity_unit ? ` ${item.capacity_unit}` : '';
+      return `${item.capacity}${unit}`;
+    }},
+    { label: 'Material', getter: item => item.container_material || '' },
+    { label: 'Color', getter: item => item.container_color || '' },
+    { label: 'Default Unit', getter: item => item.default_unit || '' },
+  ],
+  consumable: [
+    { label: 'Default Unit', getter: item => item.default_unit || '' },
+    { label: 'Perishable', getter: item => formatBoolean(item.default_is_perishable) },
+    { label: 'Recommended Usage', getter: item => formatText(item.recommended_usage_rate) },
+  ],
+};
+
+function renderMetaAttributes(metaEl, item) {
+  if (!metaEl) return;
+  const itemType = (item.item_type || '').toLowerCase();
+  const config = META_CONFIG[itemType] || [];
+  const rows = [];
+  config.forEach(entry => {
+    const rawValue = typeof entry.getter === 'function' ? entry.getter(item) : item[entry.key];
+    if (!hasContent(rawValue) || rawValue === '–') return;
+    rows.push(`<div><strong>${entry.label}:</strong> ${rawValue}</div>`);
+  });
+  if (rows.length) {
+    metaEl.innerHTML = rows.join('');
+  } else {
+    metaEl.innerHTML = '<div class="text-muted">No additional attributes.</div>';
+  }
 }
 
 export async function openGlobalItemStats(globalItemId, options = {}) {
@@ -156,14 +229,20 @@ export async function openGlobalItemStats(globalItemId, options = {}) {
   // Container metadata
   const isContainer = item.item_type === 'container' || item.item_type === 'packaging';
   const containerSection = getElement(opts.containerSectionId);
-  showElement(containerSection, isContainer);
-  if (isContainer) {
-    setText(opts.containerMaterialId, item.container_material || '');
+  if (containerSection) {
     const typeStyle = [item.container_type || '', item.container_style ? `(${item.container_style})` : '']
       .join(' ')
       .trim();
-    setText(opts.containerTypeStyleId, typeStyle);
-    setText(opts.containerColorId, item.container_color || '');
+    const containerFields = [
+      { id: opts.containerMaterialId, value: item.container_material },
+      { id: opts.containerTypeStyleId, value: typeStyle },
+      { id: opts.containerColorId, value: item.container_color },
+    ];
+    const hasContainerData = containerFields.some(field => hasContent(field.value));
+    showElement(containerSection, isContainer && hasContainerData);
+    if (isContainer && hasContainerData) {
+      containerFields.forEach(field => setText(field.id, field.value || ''));
+    }
   }
 
   // Ingredient fields
@@ -175,7 +254,8 @@ export async function openGlobalItemStats(globalItemId, options = {}) {
     ingredientGrid.innerHTML = '';
     const addProp = (label, value, show) => {
       if (!show) return;
-      const display = value == null || value === '' ? '-' : value;
+      if (value === null || value === undefined || value === '') return;
+      const display = value;
       const col = document.createElement('div');
       col.innerHTML = `<div><strong>${label}:</strong> ${display}</div>`;
       ingredientGrid.appendChild(col);
@@ -189,6 +269,12 @@ export async function openGlobalItemStats(globalItemId, options = {}) {
     addProp('Moisture %', item.moisture_content_percent, categoryVisibility.show_moisture_content);
     addProp('Shelf Life (months)', item.shelf_life_months, categoryVisibility.show_shelf_life_months);
     addProp('Comedogenic', item.comedogenic_rating, categoryVisibility.show_comedogenic_rating);
+    if (!ingredientGrid.childElementCount) {
+      const empty = document.createElement('div');
+      empty.className = 'text-muted';
+      empty.textContent = 'No ingredient-specific attributes available.';
+      ingredientGrid.appendChild(empty);
+    }
   }
 
   // Cost summary
@@ -206,24 +292,7 @@ export async function openGlobalItemStats(globalItemId, options = {}) {
     }
   }
 
-  const metaEl = getElement(opts.metaId);
-  if (metaEl) {
-    const aliases = formatList(item.aliases);
-    const certifications = formatList(item.certifications);
-    const usage = formatText(item.recommended_usage_rate);
-    const fragrance = formatText(item.recommended_fragrance_load_pct);
-    const shelfLifeDays = item.recommended_shelf_life_days;
-    const shelfLifeDisplay = Number.isFinite(Number(shelfLifeDays))
-      ? `${shelfLifeDays} day${Number(shelfLifeDays) === 1 ? '' : 's'}`
-      : '–';
-    metaEl.innerHTML = `
-      <div><strong>Aliases:</strong> ${aliases}</div>
-      <div><strong>Certifications:</strong> ${certifications}</div>
-      <div><strong>Recommended Usage:</strong> ${usage}</div>
-      <div><strong>Fragrance Load:</strong> ${fragrance}</div>
-      <div><strong>Recommended Shelf Life:</strong> ${shelfLifeDisplay}</div>
-    `;
-  }
+  renderMetaAttributes(getElement(opts.metaId), item);
 
   // Developer link
   const devLink = getElement(opts.developerLinkId);

@@ -103,8 +103,9 @@
                  id="containerNameInput"
                  placeholder="Search by name to prefill attributes">
           <div id="containerSuggestions"
-               class="list-group position-absolute w-100 shadow-sm"
-               style="display: none; z-index: 15; max-height: 260px; overflow-y: auto;"></div>
+               class="list-group position-absolute w-100 shadow-sm d-none"
+               data-empty-message="No containers matched that search."
+               style="z-index: 15; max-height: 260px; overflow-y: auto;"></div>
         </div>
         <div class="form-text">Use search to load an existing container. Leave blank to define a new combination.</div>
       </div>

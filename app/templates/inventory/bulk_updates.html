@@ -301,14 +301,6 @@
         renderDraftList();
     }
 
-    function debounce(fn, wait) {
-        let timeout;
-        return function (...args) {
-            clearTimeout(timeout);
-            timeout = setTimeout(() => fn.apply(this, args), wait);
-        };
-    }
-
     function renderDraftList() {
         const drafts = getDrafts();
         draftCountEl.textContent = drafts.length;
@@ -361,6 +353,12 @@
     function setStatus(level, message) {
         statusEl.className = `alert alert-${level}`;
         statusEl.textContent = message;
+    }
+
+    function hideSuggestions(el) {
+        if (!el) return;
+        el.classList.add('d-none');
+        el.innerHTML = '';
     }
 
     function addRow(data = {}) {
@@ -481,10 +479,8 @@
         const idInput = row.querySelector('.item-id');
         const globalIdInput = row.querySelector('.global-item-id');
         const suggestionList = row.querySelector('.suggestion-list');
-        const actionHint = row.querySelector('.action-hint');
         const helperEl = row.querySelector('.item-helper');
-
-        const searchInventory = debounce(() => fetchInventorySuggestions(row), 250);
+        const unitSelect = row.querySelector('.unit');
 
         function refreshHelper(matchOverride = null) {
             if (!helperEl) return;
@@ -493,16 +489,73 @@
             helperEl.textContent = helperCopy(activeMatch || null, typeSelect.value);
         }
 
+        function applySelection(item, source) {
+            if (!item) return;
+            const normalizedSource = (source || '').toLowerCase();
+            nameInput.value = item.text || item.name || '';
+            if (normalizedSource === 'inventory') {
+                const numericId = item.id_numeric || item.id || '';
+                idInput.value = numericId;
+                if (globalIdInput) {
+                    globalIdInput.value = item.global_item_id || '';
+                }
+                if (unitSelect && (row.dataset.unitTouched !== 'true' || !unitSelect.value)) {
+                    const matchUnit = item.unit || item.default_unit;
+                    if (matchUnit) unitSelect.value = matchUnit;
+                }
+                prefillInventoryItem(numericId, row);
+                refreshHelper(inventoryById.get(Number(numericId)) || null);
+            } else {
+                idInput.value = '';
+                if (globalIdInput) {
+                    globalIdInput.value = item.global_item_id || item.id || '';
+                }
+                if (unitSelect && row.dataset.unitTouched !== 'true' && (item.default_unit || item.unit)) {
+                    unitSelect.value = item.default_unit || item.unit;
+                }
+                refreshHelper(null);
+            }
+            if (helperEl && normalizedSource === 'global') {
+                helperEl.textContent = `Global catalog match. A new ${typeLabel(typeSelect.value).toLowerCase()} will be created.`;
+            }
+            if (item.type) {
+                const normalized = registerType(item.type);
+                if (!Array.from(typeSelect.options).some(opt => opt.value === normalized)) {
+                    typeSelect.insertAdjacentHTML(
+                        'beforeend',
+                        `<option value="${normalized}">${escapeHtml(typeLabel(normalized))}</option>`
+                    );
+                }
+                typeSelect.value = normalized;
+            }
+            syncActionHint(row);
+        }
+
+        if (suggestionList && typeof window.attachMergedInventoryGlobalTypeahead === 'function') {
+            window.attachMergedInventoryGlobalTypeahead({
+                inputEl: nameInput,
+                listEl: suggestionList,
+                invHiddenEl: idInput,
+                giHiddenEl: globalIdInput,
+                mode: 'inventory_bulk',
+                searchType: () => (typeSelect.value || 'ingredient'),
+                includeInventory: true,
+                includeGlobal: () => changeSelect.value === 'create',
+                ingredientFirst: () => typeSelect.value === 'ingredient',
+                onSelection: applySelection,
+            });
+        }
+
         changeSelect.addEventListener('change', () => {
             syncActionHint(row);
-            if (changeSelect.value !== 'create' && !idInput.value) {
-                nameInput.focus();
-            }
             if (changeSelect.value !== 'create' && globalIdInput) {
                 globalIdInput.value = '';
             }
-            if (nameInput.value.trim().length >= 2) {
-                searchInventory();
+            if (changeSelect.value !== 'create' && !idInput.value) {
+                nameInput.focus();
+            }
+            if (nameInput.value.trim()) {
+                nameInput.dispatchEvent(new Event('input'));
             }
         });
 
@@ -511,45 +564,20 @@
             if (globalIdInput) {
                 globalIdInput.value = '';
             }
-            if (nameInput.value.trim().length >= 2) {
-                searchInventory();
-            } else {
-                hideSuggestions(suggestionList);
-            }
             refreshHelper();
             syncActionHint(row);
+            if (nameInput.value.trim()) {
+                nameInput.dispatchEvent(new Event('input'));
+            }
         });
 
         nameInput.addEventListener('input', () => {
-            idInput.value = '';
-            if (globalIdInput) {
-                globalIdInput.value = '';
-            }
-            if (nameInput.value.trim().length >= 2) {
-                searchInventory();
-            } else {
-                hideSuggestions(suggestionList);
-            }
-            refreshHelper();
-        });
-
-        nameInput.addEventListener('focus', () => {
-            if (nameInput.value.trim().length >= 2) {
-                searchInventory();
-            }
-        });
-
-        suggestionList.addEventListener('click', (event) => {
-            const target = event.target.closest('button[data-id]');
-            if (target) {
-                selectSuggestion(row, {
-                    id: target.dataset.id,
-                    name: target.dataset.name,
-                    type: target.dataset.type,
-                    source: target.dataset.source,
-                    global_item_id: target.dataset.globalId,
-                    unit: target.dataset.unit,
-                });
+            if (!nameInput.value.trim()) {
+                idInput.value = '';
+                if (globalIdInput) {
+                    globalIdInput.value = '';
+                }
+                refreshHelper();
             }
         });
 
@@ -577,119 +605,7 @@
         }
     }
 
-    function fetchInventorySuggestions(row) {
-        const input = row.querySelector('.item-name');
-        const typeSelect = row.querySelector('.inventory-type');
-        const changeSelect = row.querySelector('.change-type');
-        const list = row.querySelector('.suggestion-list');
-        const query = input.value.trim();
-        if (query.length < 2) {
-            hideSuggestions(list);
-            return;
-        }
-        const params = new URLSearchParams({ q: query });
-        if (typeSelect.value) {
-            params.append('type', typeSelect.value);
-        }
-        if (changeSelect && changeSelect.value) {
-            params.append('change_type', changeSelect.value);
-        }
-        fetch(`/inventory/api/search?${params.toString()}`)
-            .then(resp => resp.json())
-            .then(data => {
-                const items = (data.results || []).map(item => ({
-                    id: item.id,
-                    name: item.text,
-                    type: item.type,
-                    source: item.source || 'inventory',
-                    unit: item.unit || '',
-                    global_item_id: item.global_item_id || '',
-                }));
-                renderSuggestions(list, items);
-            })
-            .catch(() => hideSuggestions(list));
-    }
-
-    function renderSuggestions(container, items) {
-        if (!items.length) {
-            hideSuggestions(container);
-            return;
-        }
-        container.innerHTML = items.map(item => `
-            <button type="button" class="list-group-item list-group-item-action"
-                data-id="${item.id}"
-                data-name="${escapeHtml(item.name)}"
-                data-type="${item.type || ''}"
-                data-source="${item.source || 'inventory'}"
-                data-global-id="${item.global_item_id || ''}"
-                data-unit="${item.unit || ''}">
-                ${escapeHtml(item.name)}
-                ${item.source === 'global' ? '<span class="badge bg-info-subtle text-info-emphasis ms-2">Global</span>' : ''}
-            </button>
-        `).join('');
-        container.classList.remove('d-none');
-    }
-
-    function hideSuggestions(container) {
-        container.classList.add('d-none');
-        container.innerHTML = '';
-    }
-
-    function selectSuggestion(row, item) {
-        const nameInput = row.querySelector('.item-name');
-        const idInput = row.querySelector('.item-id');
-        const globalIdInput = row.querySelector('.global-item-id');
-        const unitSelect = row.querySelector('.unit');
-        const list = row.querySelector('.suggestion-list');
-        const typeSelect = row.querySelector('.inventory-type');
-        const helperEl = row.querySelector('.item-helper');
-        const source = (item.source || 'inventory').toLowerCase();
-        const inventoryMatch = inventoryById.get(Number(item.id)) || null;
-        nameInput.value = item.name || '';
-        if (source === 'inventory') {
-            idInput.value = item.id || '';
-            if (globalIdInput) {
-                globalIdInput.value = '';
-            }
-            if (unitSelect && (row.dataset.unitTouched !== 'true' || !unitSelect.value)) {
-                const matchUnit = inventoryMatch?.unit || item.unit;
-                if (matchUnit) {
-                    unitSelect.value = matchUnit;
-                }
-            }
-        } else {
-            idInput.value = '';
-            if (globalIdInput) {
-                globalIdInput.value = item.global_item_id || item.id || '';
-            }
-            if (unitSelect && !row.dataset.unitTouched && item.unit) {
-                unitSelect.value = item.unit;
-            }
-        }
-        if (item.type) {
-            const normalized = registerType(item.type);
-            if (!Array.from(typeSelect.options).some(opt => opt.value === normalized)) {
-                typeSelect.insertAdjacentHTML(
-                    'beforeend',
-                    `<option value="${normalized}">${escapeHtml(typeLabel(normalized))}</option>`
-                );
-            }
-            typeSelect.value = normalized;
-        }
-        hideSuggestions(list);
-        if (source === 'inventory') {
-            prefillInventoryItem(item.id, row);
-        }
-        if (helperEl) {
-            if (source === 'global') {
-                helperEl.textContent = `Global catalog match. A new ${typeLabel(typeSelect.value).toLowerCase()} will be created.`;
-            } else {
-                const match = inventoryMatch || { name: item.name, unit: item.unit };
-                helperEl.textContent = helperCopy(match, typeSelect.value);
-            }
-        }
-        syncActionHint(row);
-    }
+    // Legacy suggestion helpers removed in favor of unified typeahead
 
     function prefillInventoryItem(itemId, row) {
         if (!itemId) return;
