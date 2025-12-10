@@ -355,6 +355,12 @@
         statusEl.textContent = message;
     }
 
+    function hideSuggestions(el) {
+        if (!el) return;
+        el.classList.add('d-none');
+        el.innerHTML = '';
+    }
+
     function addRow(data = {}) {
         const match = data.inventory_item_id ? inventoryById.get(Number(data.inventory_item_id)) : null;
         const normalizedType = registerType(data.inventory_type || match?.type || typeOptions[0] || 'ingredient');

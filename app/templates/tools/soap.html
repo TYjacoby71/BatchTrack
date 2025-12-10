@@ -133,136 +133,29 @@
     const input = row.querySelector('.oil-typeahead');
     const hiddenSap = row.querySelector('.oil-sap-koh');
     const list = row.querySelector('[data-role="suggestions"]');
-    function render(items){
-      list.innerHTML='';
-      let any=false;
-      (items||[]).forEach(function(r){
-        const a=document.createElement('a');a.href='#';a.className='list-group-item list-group-item-action';
-          a.textContent=r.display + (r.saponification_value? ` (SAP ${r.saponification_value})` : '');
-          a.addEventListener('click', function(ev){ev.preventDefault(); input.value=r.text; hiddenSap.value = r.saponification_value || ''; list.classList.add('d-none'); list.innerHTML='';});
-        list.appendChild(a); any=true;
-      });
-      list.classList.toggle('d-none', !any);
+    if (!input || !list || typeof window.attachMergedInventoryGlobalTypeahead !== 'function') {
+      return;
     }
-      function expandResults(items){
-        const expanded = [];
-        (items||[]).forEach(item=>{
-          if (item && Array.isArray(item.forms) && item.forms.length){
-            const ingredientName = (item.ingredient && item.ingredient.name) || '';
-            item.forms.forEach(form=>{
-              const display = form.display_name || form.text || form.name || (ingredientName ? `${ingredientName} — ${form.name || form.text || ''}` : (form.name || form.text || ''));
-              expanded.push({
-                id: form.id,
-                text: form.text || form.name || display,
-                display: display,
-                saponification_value: form.saponification_value || item.saponification_value || null,
-              });
-            });
-          } else if (item){
-            const display = item.display_name || item.text || item.name || '';
-            expanded.push({
-              id: item.id,
-              text: item.text || item.name || display,
-              display: display,
-              saponification_value: item.saponification_value || null,
-            });
-          }
-        });
-        return expanded;
+    window.attachMergedInventoryGlobalTypeahead({
+      inputEl: input,
+      listEl: list,
+      giHiddenEl: null,
+      includeInventory: false,
+      includeGlobal: true,
+      ingredientFirst: true,
+      searchType: 'ingredient',
+      requireHidden: false,
+      onSelection: function(picked){
+        if (hiddenSap) {
+          hiddenSap.value = picked?.saponification_value || '';
+        }
       }
-    let t;
-    input.addEventListener('input', function(){
-      hiddenSap.value='';
-      clearTimeout(t);
-      const q=(input.value||'').trim(); if(!q){ list.classList.add('d-none'); list.innerHTML=''; return; }
-      t=setTimeout(async function(){
-        try{
-            const r = await fetch('/api/public/global-items/search?q='+encodeURIComponent(q)+'&type=ingredient&group=ingredient');
-          const data = await r.json();
-            const items = expandResults((data && (data.results||data.data||[])) || []);
-          render(items);
-        }catch(e){ list.classList.add('d-none'); }
-      }, 200);
     });
-    document.addEventListener('click', function(e){ if(!list.contains(e.target) && e.target!==input){ list.classList.add('d-none'); }});
-  }
-
-  // Shared ingredient typeahead identical to internal form (inventory + global + quick-create)
-  function setupSharedTypeahead(container){
-    const input = container.querySelector('input.recipe-ingredient-typeahead');
-    const invHidden = container.querySelector('input[name="ingredient_ids[]"]');
-    const giHidden = container.querySelector('input[name="global_item_ids[]"]');
-    const list = container.querySelector('[data-role="suggestions"]');
-    if (!input || !invHidden || !giHidden || !list) return;
-    let t;
-      function expandGlobalItems(items){
-        const expanded = [];
-        (items || []).forEach(item=>{
-          if (item && Array.isArray(item.forms) && item.forms.length){
-            const ingredientName = (item.ingredient && item.ingredient.name) || '';
-            item.forms.forEach(form=>{
-              expanded.push({
-                id: null,
-                global_item_id: form.id,
-                text: form.name || form.text,
-                ingredient_name: ingredientName,
-                physical_form_name: (form.physical_form && form.physical_form.name) || '',
-              });
-            });
-          } else if (item){
-            expanded.push({
-              id: null,
-              global_item_id: item.id,
-              text: item.text || item.name,
-              ingredient_name: (item.ingredient && item.ingredient.name) || '',
-              physical_form_name: (item.physical_form && item.physical_form.name) || '',
-            });
-          }
-        });
-        return expanded;
+    input.addEventListener('input', function(){
+      if (!this.value.trim() && hiddenSap) {
+        hiddenSap.value = '';
       }
-    function render(groups){
-      list.innerHTML=''; let any=false;
-      groups.forEach(group => {
-        if (!group.items || !group.items.length) return; any=true;
-        const header = document.createElement('div'); header.className='list-group-item text-muted small'; header.textContent = group.title; list.appendChild(header);
-        group.items.forEach(r => {
-            const meta = [];
-            if (r.ingredient_name) meta.push(r.ingredient_name);
-            if (r.physical_form_name) meta.push(r.physical_form_name);
-            const a=document.createElement('a'); a.href='#'; a.className='list-group-item list-group-item-action';
-            a.innerHTML = '<div class="fw-semibold">'+r.text+'</div>' + (meta.length ? '<div class="small text-muted">'+meta.join(' • ')+'</div>' : '');
-          a.addEventListener('click', function(e){ e.preventDefault(); input.value=r.text; invHidden.value=r.id||''; giHidden.value=r.global_item_id||''; list.classList.add('d-none'); list.innerHTML=''; });
-          list.appendChild(a);
-        });
-      });
-      const q=(input.value||'').trim();
-      if (q){ const a=document.createElement('a'); a.href='#'; a.className='list-group-item list-group-item-action text-primary'; a.textContent=`Create "${q}"`; a.addEventListener('click', function(e){ e.preventDefault(); createInline(q); }); list.appendChild(a); any=true; }
-      list.classList.toggle('d-none', !any);
-    }
-    function search(){
-      clearTimeout(t); const q=(input.value||'').trim(); if (!q){ list.classList.add('d-none'); list.innerHTML=''; invHidden.value=''; giHidden.value=''; return; }
-      t=setTimeout(function(){
-        Promise.all([
-          fetch('/api/ingredients/ingredients/search?q='+encodeURIComponent(q)).then(r=>r.json()).catch(()=>({results:[]})),
-            fetch('/api/ingredients/global-items/search?q='+encodeURIComponent(q)+'&type=ingredient&group=ingredient').then(r=>r.json()).catch(()=>({results:[]}))
-        ]).then(([inv, gi])=>{
-            const groups=[];
-            if (inv && inv.results && inv.results.length) groups.push({title:'Your Inventory', items: inv.results});
-            if (gi && gi.results && gi.results.length) groups.push({title:'Global Library', items: expandGlobalItems(gi.results)});
-            render(groups);
-        }).catch(()=>{ list.classList.add('d-none'); list.innerHTML=''; });
-      }, 250);
-    }
-    async function createInline(name){
-      try{
-        const res = await fetch('/api/ingredients/ingredients/create-or-link', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ name: name, type: 'ingredient' }) });
-        const data = await res.json();
-        if (data && data.success && data.item){ input.value = data.item.name; invHidden.value = data.item.id; giHidden.value = data.item.global_item_id||''; list.classList.add('d-none'); list.innerHTML=''; }
-      } catch(_) {}
-    }
-    input.addEventListener('input', function(){ invHidden.value=''; giHidden.value=''; search(); });
-    input.addEventListener('keydown', function(e){ if (e.key==='Enter'){ e.preventDefault(); const q=(input.value||'').trim(); if (q) createInline(q); }});
+    });
   }
 
   function computeTotalOils(){

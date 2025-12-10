@@ -217,6 +217,7 @@
             container_color: form.container_color || item.container_color || null,
             default_is_perishable: form.default_is_perishable ?? item.default_is_perishable,
             recommended_shelf_life_days: form.recommended_shelf_life_days ?? item.recommended_shelf_life_days,
+            saponification_value: form.saponification_value ?? item.saponification_value ?? null,
           });
         });
       } else if (item) {
@@ -239,6 +240,7 @@
           container_color: item.container_color || null,
           default_is_perishable: item.default_is_perishable,
           recommended_shelf_life_days: item.recommended_shelf_life_days,
+          saponification_value: item.saponification_value || null,
         });
       }
     });
@@ -287,6 +289,7 @@
         container_type: form.container_type || null,
         container_style: form.container_style || null,
         container_color: form.container_color || null,
+        saponification_value: form.saponification_value || null,
       }));
       const filteredForms = dedupeIds
         ? forms.filter(form => !form.global_item_id || !dedupeIds.has(String(form.global_item_id)))
