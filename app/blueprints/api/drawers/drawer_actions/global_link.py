@@ -126,7 +126,7 @@ def global_link_confirm():
                 inventory_item.ph_value = global_item.ph_value
                 inventory_item.moisture_content_percent = global_item.moisture_content_percent
                 inventory_item.comedogenic_rating = global_item.comedogenic_rating
-                inventory_item.recommended_usage_rate = global_item.recommended_usage_rate
+                
                 inventory_item.recommended_fragrance_load_pct = global_item.recommended_fragrance_load_pct
                 inventory_item.inci_name = global_item.inci_name
                 inventory_item.protein_content_pct = global_item.protein_content_pct
