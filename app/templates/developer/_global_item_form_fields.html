@@ -154,7 +154,20 @@
         <div class="row g-3">
           <div class="col-md-6">
             <label class="form-label">Ingredient Name *</label>
-            <input type="text" name="new_ingredient_name" class="form-control" placeholder="e.g. Lavender" value="{{ form_values.get('new_ingredient_name', '') }}">
+            <div class="position-relative">
+              <input type="text"
+                     name="new_ingredient_name"
+                     id="newIngredientNameInput"
+                     class="form-control"
+                     placeholder="e.g. Lavender"
+                     value="{{ form_values.get('new_ingredient_name', '') }}"
+                     autocomplete="off">
+              <div id="newIngredientSuggestions"
+                   class="list-group position-absolute w-100 d-none"
+                   data-empty-message="No matching definitions."
+                   style="z-index: 1060; max-height: 240px; overflow-y: auto; top: 100%; left: 0; margin-top: 2px; background-color: var(--color-surface, #fff); border: 1px solid var(--color-border, #dee2e6); border-radius: 0.375rem;">
+              </div>
+            </div>
           </div>
           <div class="col-md-6">
             <label class="form-label">INCI Name</label>
@@ -237,8 +250,21 @@
         <div class="row g-3">
           <div class="col-md-6">
             <label class="form-label">Physical Form Name *</label>
-            <input type="text" name="new_physical_form_name" id="newPhysicalFormInput" class="form-control" placeholder="e.g. Whole Bud" value="{{ form_values.get('new_physical_form_name', '') }}">
-            <small class="text-muted">Names auto-generate slugs; double-check the curated list before adding a new entry.</small>
+            <div class="position-relative">
+              <input type="text"
+                     name="new_physical_form_name"
+                     id="newPhysicalFormInput"
+                     class="form-control"
+                     placeholder="e.g. Whole Bud"
+                     value="{{ form_values.get('new_physical_form_name', '') }}"
+                     autocomplete="off">
+              <div id="newPhysicalFormSuggestions"
+                   class="list-group position-absolute w-100 d-none"
+                   data-empty-message="No existing physical forms yet."
+                   style="z-index: 1060; max-height: 240px; overflow-y: auto; top: 100%; left: 0; margin-top: 2px; background-color: var(--color-surface, #fff); border: 1px solid var(--color-border, #dee2e6); border-radius: 0.375rem;">
+              </div>
+            </div>
+            <small class="text-muted d-block mt-1">Names auto-generate slugs; double-check the curated list before adding a new entry.</small>
           </div>
         </div>
       </div>
