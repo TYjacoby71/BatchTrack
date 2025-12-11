@@ -108,13 +108,13 @@
       <label class="form-label">Cost Entry Type</label>
       <select name="cost_entry_type" class="form-select" id="addConsumableCostType" onchange="updateAddConsumableCostHelp()">
         <option value="per_unit">Per Unit Cost</option>
-        <option value="total">Total Cost</option>
+        <option value="total" selected>Total Cost</option>
       </select>
     </div>
     <div class="col">
       <label class="form-label">Cost</label>
       <input type="number" step="0.01" name="cost_per_unit" class="form-control" id="addConsumableCost" required>
-      <small class="form-text text-muted" id="addConsumableCostHelp">Enter cost per unit</small>
+      <small class="form-text text-muted" id="addConsumableCostHelp">Enter total cost (will be divided by quantity)</small>
     </div>
     <div class="col-auto">
       <button type="submit" class="btn btn-success" id="saveConsumableBtn">
