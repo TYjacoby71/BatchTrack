@@ -1,0 +1,416 @@
+{% extends 'layout.html' %}
+
+{% block content %}
+<div class="global-library-page">
+  <div class="d-flex flex-column flex-lg-row justify-content-between align-items-lg-end gap-3 mb-4">
+    <div>
+      <h2 class="mb-1">Global Item Library</h2>
+      <p class="text-muted mb-0">Shared ingredient, container, packaging, and consumable definitions that mirror the inventory list experience.</p>
+    </div>
+    {% if show_dev_controls %}
+      <div class="d-flex flex-wrap gap-2">
+        <a class="btn btn-primary" href="{{ url_for('developer.create_global_item') }}">
+          <i class="fas fa-plus me-2"></i>Add global item
+        </a>
+        <a class="btn btn-outline-secondary" href="{{ url_for('developer.reference_categories') }}">
+          <i class="fas fa-tags me-2"></i>Manage categories
+        </a>
+        <a class="btn btn-outline-secondary" href="{{ url_for('developer.manage_physical_forms') }}">
+          <i class="fas fa-layer-group me-2"></i>Manage physical forms
+        </a>
+        <a class="btn btn-outline-secondary" href="{{ url_for('developer.container_management') }}">
+          <i class="fas fa-box-open me-2"></i>Container attributes
+        </a>
+      </div>
+    {% endif %}
+  </div>
+
+  <ul class="nav nav-tabs mb-3" id="globalLibraryScopeTabs">
+    {% for scope, label in scope_labels.items() %}
+      <li class="nav-item">
+        <a class="nav-link {% if active_scope == scope %}active{% endif %}" href="{{ build_scope_url(scope) }}">
+          {{ label }}
+          {% if active_scope == scope and pagination %}
+            <span class="badge bg-light text-dark ms-2">{{ pagination.total }}</span>
+          {% endif %}
+        </a>
+      </li>
+    {% endfor %}
+  </ul>
+
+  <form method="GET" class="card border-0 shadow-sm mb-4">
+    <div class="card-body">
+      <input type="hidden" name="scope" value="{{ active_scope }}">
+      <input type="hidden" name="page" value="1">
+      <div class="row g-3 align-items-end">
+        <div class="col-md-5 col-lg-4">
+          <label for="globalSearchInput" class="form-label">Search library</label>
+          <input type="text"
+                 class="form-control"
+                 id="globalSearchInput"
+                 name="search"
+                 placeholder="Name, alias, or ingredient"
+                 value="{{ search_query }}">
+        </div>
+        <div class="col-md-4 col-lg-3 {% if active_scope != 'ingredient' %}d-none{% endif %}" id="categoryFilterWrapper">
+          <label for="globalCategoryFilter" class="form-label">Ingredient category</label>
+          <select class="form-select"
+                  id="globalCategoryFilter"
+                  name="category"
+                  {% if active_scope != 'ingredient' %}disabled{% endif %}>
+            <option value="">All categories</option>
+            {% for category in categories %}
+              <option value="{{ category }}" {% if selected_category == category %}selected{% endif %}>{{ category }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="col-md-3 col-lg-2">
+          <label for="pageSizeSelect" class="form-label">Rows per page</label>
+          <select class="form-select" id="pageSizeSelect" name="page_size">
+            {% for size in per_page_options %}
+              <option value="{{ size }}" {% if per_page == size %}selected{% endif %}>{{ size }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="col-lg-3 col-md-12 d-flex gap-2">
+          <button type="submit" class="btn btn-primary w-100 w-lg-auto">
+            <i class="fas fa-filter me-2"></i>Apply filters
+          </button>
+          <a class="btn btn-outline-secondary w-100 w-lg-auto" href="{{ clear_filters_url }}">Clear</a>
+        </div>
+        <div class="col-12 text-muted small text-end">
+          {% if pagination and pagination.total %}
+            Showing {{ first_item_index }}–{{ last_item_index }} of {{ pagination.total }} {{ scope_labels[active_scope]|lower }}
+          {% else %}
+            No {{ scope_labels[active_scope]|lower }} found
+          {% endif %}
+        </div>
+      </div>
+    </div>
+  </form>
+
+  <div class="card border-0 shadow-sm">
+    <div class="table-responsive">
+      <table class="table table-hover align-middle mb-0" id="globalItemsTable">
+        {% if active_scope == 'ingredient' %}
+          <thead class="table-light">
+            <tr>
+              <th scope="col">Global item</th>
+              <th scope="col">Ingredient definition</th>
+              <th scope="col">Physical form</th>
+              <th scope="col">Default unit</th>
+              <th scope="col">Density (g/ml)</th>
+              <th scope="col">Category</th>
+              <th scope="col">Perishable</th>
+              <th scope="col" class="text-end">Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for gi in items %}
+              <tr>
+                <td>
+                  <div class="fw-semibold">{{ gi.name }}</div>
+                  <div class="text-muted small">#{{ gi.id }}</div>
+                  {% if show_hidden_columns and gi.aliases %}
+                    <div class="text-muted small">Aliases: {{ gi.aliases|join(', ') }}</div>
+                  {% endif %}
+                </td>
+                <td>
+                  {% if gi.ingredient %}
+                    <div class="fw-semibold">{{ gi.ingredient.name }}</div>
+                    <div class="text-muted small">
+                      {% if gi.ingredient.inci_name %}INCI {{ gi.ingredient.inci_name }}{% endif %}
+                      {% if gi.ingredient.cas_number %}
+                        <span class="ms-1">CAS {{ gi.ingredient.cas_number }}</span>
+                      {% endif %}
+                    </div>
+                  {% else %}
+                    <span class="text-muted">Unlinked definition</span>
+                  {% endif %}
+                </td>
+                <td>{{ gi.physical_form.name if gi.physical_form else '—' }}</td>
+                <td>{{ gi.default_unit or '—' }}</td>
+                <td>{{ '%.3f'|format(gi.density) if gi.density is not none else '—' }}</td>
+                <td>{{ gi.ingredient_category.name if gi.ingredient_category else '—' }}</td>
+                <td>
+                  {% if gi.default_is_perishable %}
+                    <span class="badge bg-warning text-dark">Perishable</span>
+                    {% if show_hidden_columns and gi.recommended_shelf_life_days %}
+                      <span class="badge bg-light text-dark ms-1">{{ gi.recommended_shelf_life_days }} days</span>
+                    {% endif %}
+                  {% else %}
+                    <span class="text-muted">No</span>
+                  {% endif %}
+                </td>
+                <td class="text-end">
+                  <div class="btn-group btn-group-sm" role="group">
+                    <button type="button"
+                            class="btn btn-outline-primary js-open-global-item-stats"
+                            title="Quick stats"
+                            data-global-item-id="{{ gi.id }}">
+                      <i class="fas fa-chart-column"></i>
+                    </button>
+                    {% if show_dev_controls %}
+                      <a class="btn btn-outline-secondary"
+                         title="Edit"
+                         href="{{ url_for('developer.global_item_detail', item_id=gi.id) }}">
+                        <i class="fas fa-edit"></i>
+                      </a>
+                      <button type="button"
+                              class="btn btn-outline-danger"
+                              title="Delete"
+                              onclick="deleteGlobalItem({{ gi.id }}, '{{ gi.name|replace(\"'\", \"\\'\") }}')">
+                        <i class="fas fa-trash"></i>
+                      </button>
+                    {% else %}
+                      <a class="btn btn-outline-secondary"
+                         title="View"
+                         href="{{ url_for('global_library_bp.global_item_detail', item_id=gi.id, slug=slugify(gi.name)) }}">
+                        <i class="fas fa-eye"></i>
+                      </a>
+                    {% endif %}
+                  </div>
+                </td>
+              </tr>
+            {% else %}
+              <tr>
+                <td colspan="8" class="text-center text-muted py-4">
+                  <i class="fas fa-box-open fa-2x d-block mb-2"></i>
+                  No {{ scope_labels[active_scope]|lower }} match these filters.
+                </td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        {% else %}
+          <thead class="table-light">
+            <tr>
+              <th scope="col">Global item</th>
+              <th scope="col">Material / Unit</th>
+              <th scope="col">Capacity</th>
+              <th scope="col">Perishable</th>
+              <th scope="col" class="text-end">Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for gi in items %}
+              <tr>
+                <td>
+                  <div class="fw-semibold">{{ gi.name }}</div>
+                  <div class="text-muted small">#{{ gi.id }}</div>
+                  {% if show_hidden_columns and gi.aliases %}
+                    <div class="text-muted small">Aliases: {{ gi.aliases|join(', ') }}</div>
+                  {% endif %}
+                </td>
+                <td>
+                  {% if gi.item_type == 'container' %}
+                    {{ gi.container_material or '—' }}
+                  {% else %}
+                    {{ gi.default_unit or 'count' }}
+                  {% endif %}
+                </td>
+                <td>
+                  {% if gi.capacity %}
+                    {{ gi.capacity }} {{ gi.capacity_unit or '' }}
+                  {% else %}
+                    —
+                  {% endif %}
+                </td>
+                <td>
+                  {% if gi.default_is_perishable %}
+                    <span class="badge bg-warning text-dark">Perishable</span>
+                  {% else %}
+                    <span class="text-muted">No</span>
+                  {% endif %}
+                </td>
+                <td class="text-end">
+                  <div class="btn-group btn-group-sm" role="group">
+                    <button type="button"
+                            class="btn btn-outline-primary js-open-global-item-stats"
+                            title="Quick stats"
+                            data-global-item-id="{{ gi.id }}">
+                      <i class="fas fa-chart-column"></i>
+                    </button>
+                    {% if show_dev_controls %}
+                      <a class="btn btn-outline-secondary"
+                         href="{{ url_for('developer.global_item_detail', item_id=gi.id) }}"
+                         title="Edit">
+                        <i class="fas fa-edit"></i>
+                      </a>
+                      <button type="button"
+                              class="btn btn-outline-danger"
+                              title="Delete"
+                              onclick="deleteGlobalItem({{ gi.id }}, '{{ gi.name|replace(\"'\", \"\\'\") }}')">
+                        <i class="fas fa-trash"></i>
+                      </button>
+                    {% else %}
+                      <a class="btn btn-outline-secondary"
+                         href="{{ url_for('global_library_bp.global_item_detail', item_id=gi.id, slug=slugify(gi.name)) }}"
+                         title="View">
+                        <i class="fas fa-eye"></i>
+                      </a>
+                    {% endif %}
+                  </div>
+                </td>
+              </tr>
+            {% else %}
+              <tr>
+                <td colspan="5" class="text-center text-muted py-4">
+                  <i class="fas fa-box-open fa-2x d-block mb-2"></i>
+                  No {{ scope_labels[active_scope]|lower }} match these filters.
+                </td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        {% endif %}
+      </table>
+    </div>
+  </div>
+
+  {% if pagination and pagination.pages > 1 %}
+    {% set window_start = pagination.page - 2 if pagination.page - 2 > 1 else 1 %}
+    {% set window_end = pagination.page + 2 if pagination.page + 2 < pagination.pages else pagination.pages %}
+    <nav class="mt-4" aria-label="Global items pagination">
+      <ul class="pagination justify-content-center flex-wrap gap-2 mb-0">
+        <li class="page-item {% if not pagination.has_prev %}disabled{% endif %}">
+          <a class="page-link" href="{{ build_page_url(pagination.prev_num) if pagination.has_prev else '#' }}">&laquo; Prev</a>
+        </li>
+        {% if window_start > 1 %}
+          <li class="page-item"><a class="page-link" href="{{ build_page_url(1) }}">1</a></li>
+          {% if window_start > 2 %}
+            <li class="page-item disabled"><span class="page-link">…</span></li>
+          {% endif %}
+        {% endif %}
+        {% for page_number in range(window_start, window_end + 1) %}
+          <li class="page-item {% if pagination.page == page_number %}active{% endif %}">
+            <a class="page-link" href="{{ build_page_url(page_number) }}">{{ page_number }}</a>
+          </li>
+        {% endfor %}
+        {% if window_end < pagination.pages %}
+          {% if window_end < pagination.pages - 1 %}
+            <li class="page-item disabled"><span class="page-link">…</span></li>
+          {% endif %}
+          <li class="page-item">
+            <a class="page-link" href="{{ build_page_url(pagination.pages) }}">{{ pagination.pages }}</a>
+          </li>
+        {% endif %}
+        <li class="page-item {% if not pagination.has_next %}disabled{% endif %}">
+          <a class="page-link" href="{{ build_page_url(pagination.next_num) if pagination.has_next else '#' }}">Next &raquo;</a>
+        </li>
+      </ul>
+    </nav>
+  {% endif %}
+</div>
+
+{% with show_dev_link=show_dev_controls %}
+  {% include 'components/drawer/global_item_stats_offcanvas.html' %}
+{% endwith %}
+
+{% if show_dev_controls %}
+<div class="modal fade" id="deleteGlobalItemModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">Delete Global Item</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <div class="alert alert-warning">
+          <strong>Warning:</strong> You are about to delete the global item <strong id="deleteItemName"></strong>.
+        </div>
+        <div class="mb-3">
+          <label for="confirmItemName" class="form-label">Type the item name to confirm deletion:</label>
+          <input type="text" id="confirmItemName" class="form-control" placeholder="Enter item name">
+        </div>
+        <div id="deleteConfirmationSection" style="display: none;">
+          <div class="alert alert-info">
+            <strong>Impact:</strong> This item is connected to <span id="connectedItemsCount"></span> inventory records.<br>
+            <strong>Organizations:</strong> <span id="affectedOrganizations"></span>
+          </div>
+          <div class="form-check">
+            <input type="checkbox" id="forceDelete" class="form-check-input">
+            <label for="forceDelete" class="form-check-label">I understand the impact and want to proceed.</label>
+          </div>
+        </div>
+        <input type="hidden" id="deleteItemId">
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+        <button type="button" class="btn btn-danger" onclick="confirmDeleteGlobalItem()">Delete item</button>
+      </div>
+    </div>
+  </div>
+</div>
+{% endif %}
+{% endblock %}
+
+{% block scripts %}
+<script>
+  document.getElementById('pageSizeSelect')?.addEventListener('change', function() {
+    const form = this.closest('form');
+    if (form) {
+      form.submit();
+    }
+  });
+</script>
+{% if show_dev_controls %}
+<script>
+  function deleteGlobalItem(itemId, itemName) {
+    const modal = new bootstrap.Modal(document.getElementById('deleteGlobalItemModal'));
+    document.getElementById('deleteItemId').value = itemId;
+    document.getElementById('deleteItemName').textContent = itemName;
+    document.getElementById('confirmItemName').value = '';
+    document.getElementById('forceDelete').checked = false;
+    document.getElementById('deleteConfirmationSection').style.display = 'none';
+    modal.show();
+  }
+
+  function confirmDeleteGlobalItem() {
+    const itemId = document.getElementById('deleteItemId').value;
+    const confirmName = document.getElementById('confirmItemName').value;
+    const forceDelete = document.getElementById('forceDelete').checked;
+
+    if (!confirmName) {
+      alert('Please enter the item name to confirm deletion');
+      return;
+    }
+
+    fetch(`/developer/global-items/${itemId}/delete`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-CSRFToken': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+      },
+      body: JSON.stringify({ confirm_name: confirmName, force_delete: forceDelete })
+    })
+    .then(response => response.json())
+    .then(result => {
+      if (result.success) {
+        bootstrap.Modal.getInstance(document.getElementById('deleteGlobalItemModal')).hide();
+        window.location.reload();
+      } else if (result.requires_confirmation) {
+        document.getElementById('deleteConfirmationSection').style.display = 'block';
+        document.getElementById('connectedItemsCount').textContent = result.connected_count;
+        document.getElementById('affectedOrganizations').textContent = (result.organizations || []).join(', ');
+      } else {
+        alert(result.error || 'Unknown error occurred');
+      }
+    })
+    .catch(error => {
+      console.error('Error deleting global item:', error);
+      alert('Failed to delete global item');
+    });
+  }
+</script>
+{% endif %}
+<script type="module">
+  import { configureGlobalItemStats, bindGlobalItemStatTriggers } from "{{ url_for('static', filename='js/global_item_stats.js') }}";
+
+  configureGlobalItemStats({
+    developerLinkBase: {{ developer_link_base|tojson }}
+  });
+
+  document.addEventListener('DOMContentLoaded', () => {
+    bindGlobalItemStatTriggers('.js-open-global-item-stats');
+  });
+</script>
+{% endblock %}

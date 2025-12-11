@@ -3,8 +3,6 @@ from __future__ import annotations
 import json
 import logging
 
-from collections import OrderedDict
-
 from flask import (
     flash,
     jsonify,
@@ -28,6 +26,11 @@ from app.models.ingredient_reference import (
     PhysicalForm,
 )
 from app.utils.seo import slugify_value
+from app.services.global_item_listing_service import (
+    DEFAULT_PER_PAGE_OPTIONS as GLOBAL_LIBRARY_PER_PAGE_OPTIONS,
+    SCOPE_LABELS as GLOBAL_SCOPE_LABELS,
+    fetch_global_item_listing,
+)
 
 from ..routes import developer_bp
 
@@ -237,141 +240,75 @@ def _generate_item_name(item_type, form_data, *, ingredient=None, physical_form=
 @login_required
 def global_items_admin():
     """Developer admin page for managing Global Items."""
-    scope = (request.args.get("scope", "ingredient") or "ingredient").lower()
-    valid_scopes = ["ingredient", "container", "packaging", "consumable"]
-    if scope not in valid_scopes:
-        scope = "ingredient"
 
-    category_filter = request.args.get("category", "").strip() if scope == "ingredient" else ""
-    search_query = request.args.get("search", "").strip()
-    page = request.args.get("page", type=int) or 1
-    if page < 1:
-        page = 1
-    per_page_options = [10, 50, 100]
-    per_page = request.args.get("page_size", type=int) or per_page_options[0]
-    if per_page not in per_page_options:
-        per_page = per_page_options[0]
+    requested_scope = request.args.get("scope") or request.args.get("type")
+    search_query = (request.args.get("search") or "").strip()
+    raw_category = (request.args.get("category") or "").strip()
+    page = request.args.get("page", type=int)
+    per_page = request.args.get("page_size", type=int)
 
-    query = GlobalItem.query.filter(
-        GlobalItem.is_archived != True,
-        GlobalItem.item_type == scope,
+    listing = fetch_global_item_listing(
+        scope=requested_scope,
+        search_query=search_query,
+        category_filter=raw_category,
+        page=page,
+        per_page=per_page,
+        per_page_options=GLOBAL_LIBRARY_PER_PAGE_OPTIONS,
     )
 
-    if scope == "ingredient" and category_filter:
-        query = query.join(
-            IngredientCategory, GlobalItem.ingredient_category_id == IngredientCategory.id
-        ).filter(IngredientCategory.name == category_filter)
+    active_scope = listing["scope"]
+    selected_category = raw_category if active_scope == "ingredient" else ""
+    pagination = listing["pagination"]
+    per_page_value = listing["per_page"]
 
-    if search_query:
-        term = f"%{search_query}%"
-        try:
-            alias_tbl = db.Table("global_item_alias", db.metadata, autoload_with=db.engine)
-            query = query.filter(
-                or_(
-                    GlobalItem.name.ilike(term),
-                    exists().where(
-                        and_(alias_tbl.c.global_item_id == GlobalItem.id, alias_tbl.c.alias.ilike(term))
-                    ),
-                )
-            )
-        except Exception:
-            query = query.filter(GlobalItem.name.ilike(term))
+    def _shared_query_params(include_category_for_scope: str | None = None) -> dict[str, str]:
+        params: dict[str, str] = {}
+        params["scope"] = include_category_for_scope or active_scope
+        if search_query:
+            params["search"] = search_query
+        if per_page_value != GLOBAL_LIBRARY_PER_PAGE_OPTIONS[0]:
+            params["page_size"] = str(per_page_value)
+        if include_category_for_scope == "ingredient" and selected_category:
+            params["category"] = selected_category
+        elif include_category_for_scope is None and active_scope == "ingredient" and selected_category:
+            params["category"] = selected_category
+        return params
 
-    if scope == "ingredient":
-        query = query.options(joinedload(GlobalItem.ingredient), joinedload(GlobalItem.physical_form))
-        order_by = [GlobalItem.ingredient_id.asc(), GlobalItem.name.asc()]
-    else:
-        order_by = [GlobalItem.name.asc()]
-
-    pagination = query.order_by(*order_by).paginate(page=page, per_page=per_page, error_out=False)
-    items = pagination.items
-
-    grouped_items = []
-    if scope == "ingredient":
-        buckets = OrderedDict()
-        for gi in items:
-            key = gi.ingredient_id or f"item-{gi.id}"
-            if key not in buckets:
-                buckets[key] = {
-                    "ingredient": gi.ingredient,
-                    "items": [],
-                }
-            buckets[key]["items"].append(gi)
-        grouped_items = list(buckets.values())
-
-    try:
-        categories = (
-            db.session.query(IngredientCategory.name)
-            .join(GlobalItem, GlobalItem.ingredient_category_id == IngredientCategory.id)
-            .filter(
-                IngredientCategory.organization_id == None,
-                IngredientCategory.is_global_category == True,
-                GlobalItem.item_type == "ingredient",
-            )
-            .distinct()
-            .order_by(IngredientCategory.name)
-            .all()
-        )
-        categories = [row[0] for row in categories if row[0]]
-    except Exception:
-        categories = [
-            c.name
-            for c in IngredientCategory.query.filter_by(
-                organization_id=None, is_active=True, is_global_category=True
-            )
-            .order_by(IngredientCategory.name)
-            .all()
-        ]
-
-    filter_params = {
-        "scope": scope,
-    }
-    if category_filter:
-        filter_params["category"] = category_filter
-    if search_query:
-        filter_params["search"] = search_query
-    if per_page != per_page_options[0]:
-        filter_params["page_size"] = per_page
-
-    def build_page_url(page_number: int):
-        params = dict(filter_params)
-        params["page"] = page_number
+    def build_page_url(page_number: int) -> str:
+        params = _shared_query_params()
+        params["page"] = str(page_number)
         return url_for("developer.global_items_admin", **params)
 
-    first_item_index = ((pagination.page - 1) * pagination.per_page) + 1 if pagination.total else 0
-    last_item_index = min(pagination.page * pagination.per_page, pagination.total)
+    def build_scope_url(target_scope: str) -> str:
+        params = _shared_query_params(include_category_for_scope=target_scope)
+        params.pop("page", None)
+        params["scope"] = target_scope
+        return url_for("developer.global_items_admin", **params)
 
-    scope_labels = {
-        "ingredient": "Ingredients",
-        "container": "Containers",
-        "packaging": "Packaging",
-        "consumable": "Consumables",
-    }
-
-    base_query_params = {}
-    if search_query:
-        base_query_params["search"] = search_query
-    if per_page != per_page_options[0]:
-        base_query_params["page_size"] = per_page
-    if category_filter and scope == "ingredient":
-        base_query_params["category"] = category_filter
+    clear_filters_url = url_for("developer.global_items_admin", scope=active_scope)
 
     return render_template(
-        "developer/global_items.html",
-        items=items,
-        grouped_items=grouped_items,
-        categories=categories,
-        active_scope=scope,
-        scope_labels=scope_labels,
-        selected_category=category_filter,
+        "library/global_items_list.html",
+        items=listing["items"],
+        grouped_items=listing["grouped_items"],
+        categories=listing["categories"],
+        active_scope=active_scope,
+        scope_labels=GLOBAL_SCOPE_LABELS,
+        selected_category=selected_category,
         search_query=search_query,
         pagination=pagination,
-        per_page=per_page,
-        per_page_options=per_page_options,
+        per_page=per_page_value,
+        per_page_options=GLOBAL_LIBRARY_PER_PAGE_OPTIONS,
         build_page_url=build_page_url,
-        first_item_index=first_item_index,
-        last_item_index=last_item_index,
-        base_query_params=base_query_params,
+        build_scope_url=build_scope_url,
+        first_item_index=listing["first_item_index"],
+        last_item_index=listing["last_item_index"],
+        clear_filters_url=clear_filters_url,
+        show_dev_controls=True,
+        show_hidden_columns=True,
+        is_public_view=False,
+        slugify=slugify_value,
+        developer_link_base=url_for("developer.global_item_detail", item_id=0)[:-1],
         breadcrumb_items=[
             {"label": "Developer Dashboard", "url": url_for("developer.dashboard")},
             {"label": "Global Item Library"},
