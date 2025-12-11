@@ -159,7 +159,7 @@
                       <button type="button"
                               class="btn btn-outline-danger"
                               title="Delete"
-                              onclick="deleteGlobalItem({{ gi.id }}, '{{ gi.name|replace(\"'\", \"\\'\") }}')">
+                              onclick="deleteGlobalItem({{ gi.id }}, '{{ gi.name|replace("'", "\\'") }}')">
                         <i class="fas fa-trash"></i>
                       </button>
                     {% else %}
@@ -239,7 +239,7 @@
                       <button type="button"
                               class="btn btn-outline-danger"
                               title="Delete"
-                              onclick="deleteGlobalItem({{ gi.id }}, '{{ gi.name|replace(\"'\", \"\\'\") }}')">
+                              onclick="deleteGlobalItem({{ gi.id }}, '{{ gi.name|replace("'", "\\'") }}')">
                         <i class="fas fa-trash"></i>
                       </button>
                     {% else %}
