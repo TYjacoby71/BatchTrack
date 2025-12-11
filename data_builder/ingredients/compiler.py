@@ -17,7 +17,7 @@ except ImportError:  # pragma: no cover
     import ai_worker  # type: ignore
     import database_manager  # type: ignore
 
-LOGGER = logging.getLogger("data_builder.compiler")
+LOGGER = logging.getLogger("data_builder.ingredients.compiler")
 BASE_DIR = Path(__file__).resolve().parent
 OUTPUT_DIR = BASE_DIR / "output"
 INGREDIENT_DIR = OUTPUT_DIR / "ingredients"

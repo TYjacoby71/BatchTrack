@@ -1,1 +1,3 @@
-"""Helper package for the iterative ingredient compiler."""
+"""Data builder toolkit for BatchTrack."""
+
+__all__ = ["ingredients"]

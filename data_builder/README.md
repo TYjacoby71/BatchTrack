@@ -6,20 +6,20 @@ This folder contains the autonomous tooling that compiles the ingredient library
 
 | Module | Purpose |
 | --- | --- |
-| `term_collector.py` | Finds the canonical ingredient terms plus the master list of physical forms (botanical, extract, essential oil, solutions, etc.). It ships with built-in exemplar ingredients, can optionally read any directory of seed JSON you point it to, and leverages the AI API to generate 5k+ bases. |
-| `database_manager.py` | Manages the resumable SQLite queue (`compiler_state.db`). |
-| `ai_worker.py` | Sends the “perfect prompt” to the model for one ingredient and validates the JSON payload (including category assignment, shelf-life-in-days, and optional form bypass flags for items like water/ice). |
-| `compiler.py` | Orchestrates the iterative build: grabs the next term, locks it, calls the AI worker, validates, writes `output/ingredients/<slug>.json`, and updates lookup files. |
+| `ingredients/term_collector.py` | Finds the canonical ingredient terms plus the master list of physical forms (botanical, extract, essential oil, solutions, etc.). It ships with built-in exemplar ingredients, can optionally read any directory of seed JSON you point it to, and leverages the AI API to generate 5k+ bases. |
+| `ingredients/database_manager.py` | Manages the resumable SQLite queue (`compiler_state.db`). |
+| `ingredients/ai_worker.py` | Sends the “perfect prompt” to the model for one ingredient and validates the JSON payload (including category assignment, shelf-life-in-days, and optional form bypass flags for items like water/ice). |
+| `ingredients/compiler.py` | Orchestrates the iterative build: grabs the next term, locks it, calls the AI worker, validates, writes `ingredients/output/ingredients/<slug>.json`, and updates lookup files. |
 
 ## Workflow
 
 1. **Generate base ingredient terms (Phase 1).**
    ```bash
-   python -m data_builder.term_collector \
+   python -m data_builder.ingredients.term_collector \
      --target-count 5000 \   # minimum you want for this run; increase for long hauls
      --batch-size 250 \      # or try --batch-size 10 for quick smoke tests
-     --terms-file data_builder/terms.txt \
-     --forms-file data_builder/output/physical_forms.json
+     --terms-file data_builder/ingredients/terms.txt \
+     --forms-file data_builder/ingredients/output/physical_forms.json
    ```
    - By default, relies solely on the built-in exemplar list plus the AI librarian. Pass `--seed-root <dir>` if you want to ingest legacy files for inspiration, or leave it blank to stay independent.
    - Uses the AI API (unless `--skip-ai`) to create a strictly alphabetical roster of base ingredients, assign them to canonical categories, and enumerate the physical forms they appear in (including essential oils, extracts, lye solutions, tinctures, powders, dairy variants, etc.).
@@ -28,13 +28,13 @@ This folder contains the autonomous tooling that compiles the ingredient library
 
 2. **Initialize the processing queue.**
    ```bash
-   python -m data_builder.compiler --terms-file data_builder/terms.txt --max-iterations 0
+   python -m data_builder.ingredients.compiler --terms-file data_builder/ingredients/terms.txt --max-iterations 0
    ```
    - `database_manager.initialize_queue()` ingests the term list into `compiler_state.db` with status `pending`.
 
 3. **Compile the library (Phase 2).**
    ```bash
-   OPENAI_API_KEY=... python -m data_builder.compiler --sleep-seconds 3
+   OPENAI_API_KEY=... python -m data_builder.ingredients.compiler --sleep-seconds 3
    ```
    - The compiler loops forever: fetches the next alphabetical term, calls `ai_worker`, writes the manicured JSON file, updates `physical_forms.json`/`taxonomies.json`, and marks the task `completed` (or `error`).
    - Each ingredient lives in its own file, e.g., `output/ingredients/lavender.json` containing the parent ingredient and all of its items/forms.
@@ -43,10 +43,11 @@ This folder contains the autonomous tooling that compiles the ingredient library
 
 ```
 data_builder/
-  output/
-    ingredients/        # one file per ingredient (parent + items/forms)
-    physical_forms.json # curated lookup (seeded by term_collector, enriched by compiler)
-    taxonomies.json     # auto-built during compilation
+  ingredients/
+    output/
+      ingredients/        # one file per ingredient (parent + items/forms)
+      physical_forms.json # curated lookup (seeded by term_collector, enriched by compiler)
+      taxonomies.json     # auto-built during compilation
 ```
 
 ## Notes
