@@ -6,7 +6,7 @@ import json
 import logging
 import os
 from pathlib import Path
-from typing import Any, Dict, List, Set
+from typing import Any, Dict, List, Optional, Set
 
 import openai
 
@@ -15,8 +15,6 @@ BASE_DIR = Path(__file__).resolve().parent
 OUTPUT_DIR = BASE_DIR / "output"
 TERMS_FILE = BASE_DIR / "terms.txt"
 PHYSICAL_FORMS_FILE = OUTPUT_DIR / "physical_forms.json"
-DEFAULT_SEED_ROOT = Path("app/seeders")
-
 openai.api_key = os.environ.get("OPENAI_API_KEY")
 MODEL_NAME = os.getenv("OPENAI_MODEL", "gpt-4-turbo-preview")
 TEMPERATURE = float(os.getenv("OPENAI_TEMPERATURE", "0.2"))
@@ -40,10 +38,77 @@ BASE_PHYSICAL_FORMS: Set[str] = {
     "Glycerite", "Vinegar Extract", "Alcohol Extract", "Supercritical Extract"
 }
 
+EXAMPLE_INGREDIENTS: List[str] = [
+    "Acacia Gum",
+    "Activated Charcoal",
+    "Agar Agar",
+    "Alkanet Root",
+    "Aloe Vera",
+    "Apricot Kernel Oil",
+    "Arrowroot Powder",
+    "Beeswax",
+    "Bentonite Clay",
+    "Blue Cornflower",
+    "Calendula",
+    "Candelilla Wax",
+    "Cane Sugar",
+    "Cocoa Butter",
+    "Coconut Oil",
+    "Epsom Salt",
+    "Gluconic Acid",
+    "Glycerin",
+    "Grapefruit Essential Oil",
+    "Green Tea",
+    "Honey Powder",
+    "Jojoba Oil",
+    "Kaolin Clay",
+    "Kombucha Starter",
+    "Lanolin",
+    "Lavender",
+    "Lye Solution (50% NaOH)",
+    "Madder Root",
+    "Magnesium Hydroxide",
+    "Neem Oil",
+    "Orange Peel",
+    "Pink Himalayan Salt",
+    "Potassium Carbonate Solution",
+    "Propolis",
+    "Rosemary Oleoresin",
+    "Sassafras Bark",
+    "Sea Buckthorn Pulp",
+    "Shea Butter",
+    "Sodium Bicarbonate",
+    "Soy Lecithin",
+    "Stearic Acid",
+    "Tapioca Starch",
+    "Turmeric",
+    "Vanilla Bean",
+    "White Willow Bark",
+    "Witch Hazel Distillate",
+    "Xanthan Gum",
+    "Ylang Ylang Essential Oil",
+    "Zinc Oxide",
+]
+
+EXAMPLE_PHYSICAL_FORMS: Set[str] = {
+    "Essential Oil",
+    "CO2 Extract",
+    "Absolute",
+    "Hydrosol",
+    "Infusion",
+    "Decoction",
+    "Tincture",
+    "Oil Infusion",
+    "Pressed Cake",
+    "Macreate",
+    "Lye Solution",
+    "Stock Solution",
+}
+
 SYSTEM_PROMPT = (
     "You are IngredientLibrarianGPT, a research assistant who curates canonical "
     "raw ingredients for small-batch makers across soap, cosmetic, confectionery, "
-    "baking, beverage, herbal, aromatherapy, and fermentation domains."
+    "baking, beverage, herbal, aromatherapy, candle, and fermentation domains."
 )
 
 TERMS_PROMPT = """
@@ -58,10 +123,15 @@ DEFINITIONS:
 TASK:
 Return a strictly alphabetical list of NEW base ingredient names that have not appeared previously. Every entry must be unique, discoverable in supplier catalogs, and relevant to at least one target industry: soapmaking, personal care, artisan food & beverage, herbal apothecary, candles, cosmetics, confectionery, or fermentation.
 
+SOLUTION & EXTRACT GUIDANCE:
+- Include buffered solutions, stock lye solutions (e.g., 50% NaOH), mineral brines, herbal glycerites, tinctures, vinegars, and other make-ready raw solutions when they are handled as ingredients.
+- For botanicals with essential oils, hydrosols, absolutes, CO2 extracts, etc., treat the plant as the ingredient and enumerate those forms inside `common_forms`.
+- Treat {count} as a minimum for this batch. If more valid ingredients exist beyond that count, KEEP ADDING them until you naturally reach the response limit. The overarching library will eventually exceed 5,000 and may reach 15,000+, so never intentionally leave alphabetical gaps.
+
 For each ingredient, list the most common PHYSICAL FORMS (include essential oil/extract variants when applicable).
 
 CONSTRAINTS:
-- Provide exactly {count} ingredient records.
+- Provide AT LEAST {count} ingredient records (more is welcome if available).
 - The first ingredient must be lexicographically GREATER than "{start_after}".
 - Alphabetize A-Z.
 - Avoid duplicates of the provided examples.
@@ -83,7 +153,7 @@ Return JSON only:
   "physical_forms": ["unique physical forms referenced"]
 }}
 
-EXAMPLES_ALREADY_USED:
+EXAMPLES TO EMULATE:
 {examples}
 """
 
@@ -91,20 +161,35 @@ EXAMPLES_ALREADY_USED:
 class TermCollector:
     """Coordinates local seeding, AI expansion, and output writing."""
 
-    def __init__(self, seed_root: Path, target_count: int, batch_size: int, include_ai: bool = True) -> None:
-        self.seed_root = seed_root
+    def __init__(
+        self,
+        target_count: int,
+        batch_size: int,
+        include_ai: bool = True,
+        seed_root: Optional[Path] = None,
+        example_file: Optional[Path] = None,
+    ) -> None:
+        self.seed_root = seed_root if seed_root and seed_root.exists() else None
         self.target_count = target_count
         self.batch_size = batch_size
         self.include_ai = include_ai and bool(openai.api_key)
         self.terms: Set[str] = set()
-        self.physical_forms: Set[str] = set(BASE_PHYSICAL_FORMS)
+        self.physical_forms: Set[str] = set(BASE_PHYSICAL_FORMS) | EXAMPLE_PHYSICAL_FORMS
+        self.prompt_examples: Set[str] = set(EXAMPLE_INGREDIENTS)
+        if example_file and example_file.exists():
+            try:
+                data = json.loads(example_file.read_text(encoding="utf-8"))
+                if isinstance(data, list):
+                    self.prompt_examples.update(str(item).strip() for item in data if str(item).strip())
+            except json.JSONDecodeError:
+                LOGGER.warning("Example file %s is not valid JSON; ignoring", example_file)
 
     # ------------------------------------------------------------------
     # Seed extraction
     # ------------------------------------------------------------------
-    def load_existing_terms(self) -> None:
-        if not self.seed_root.exists():
-            LOGGER.warning("Seed root %s not found; skipping repo-term extraction", self.seed_root)
+    def ingest_seed_directory(self) -> None:
+        if not self.seed_root:
+            LOGGER.info("No seed directory supplied; relying entirely on AI generation.")
             return
 
         for json_path in self.seed_root.rglob("*.json"):
@@ -115,7 +200,7 @@ class TermCollector:
                 continue
             self._collect_from_obj(data)
 
-        LOGGER.info("Loaded %s seed terms from repository", len(self.terms))
+        LOGGER.info("Loaded %s seed terms from %s", len(self.terms), self.seed_root)
 
     def _collect_from_obj(self, obj: Any) -> None:
         if isinstance(obj, dict):
@@ -155,7 +240,7 @@ class TermCollector:
                 len(self.terms),
                 self.target_count,
             )
-            examples = self._sample_examples(12)
+            examples = self._compose_examples(24)
             payload = self._request_ai_batch(batch_size, start_after, examples)
             if not payload:
                 LOGGER.warning("AI returned no payload; breaking out")
@@ -179,9 +264,11 @@ class TermCollector:
             if new_terms == 0:
                 break
 
-    def _sample_examples(self, limit: int) -> List[str]:
-        sample = sorted(self.terms)[:limit]
-        return sample
+    def _compose_examples(self, limit: int) -> List[str]:
+        live_samples = sorted(self.terms)[: limit // 2]
+        curated = sorted(self.prompt_examples)[: limit - len(live_samples)]
+        combined = curated + live_samples
+        return combined[:limit]
 
     def _request_ai_batch(self, count: int, start_after: str, examples: List[str]) -> Dict[str, Any]:
         user_prompt = TERMS_PROMPT.format(
@@ -226,7 +313,8 @@ class TermCollector:
 
 def parse_args(argv: List[str] | None = None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Generate the ingredient term queue via local + AI sources")
-    parser.add_argument("--seed-root", default=str(DEFAULT_SEED_ROOT), help="Directory to scan for existing seed data")
+    parser.add_argument("--seed-root", default="", help="Optional directory to scan for seed data (leave blank to skip)")
+    parser.add_argument("--example-file", default="", help="Optional JSON array of canonical example ingredients for prompt context")
     parser.add_argument("--target-count", type=int, default=5000, help="Desired total number of base ingredients")
     parser.add_argument("--batch-size", type=int, default=250, help="AI batch size per request")
     parser.add_argument("--terms-file", default=str(TERMS_FILE), help="Destination file for term list")
@@ -243,13 +331,14 @@ def main(argv: List[str] | None = None) -> None:
     args = parse_args(argv)
 
     collector = TermCollector(
-        seed_root=Path(args.seed_root),
         target_count=args.target_count,
         batch_size=args.batch_size,
         include_ai=not args.skip_ai,
+        seed_root=Path(args.seed_root).resolve() if args.seed_root else None,
+        example_file=Path(args.example_file).resolve() if args.example_file else None,
     )
 
-    collector.load_existing_terms()
+    collector.ingest_seed_directory()
     collector.expand_with_ai()
     collector.write_terms_file(Path(args.terms_file))
     collector.write_forms_file(Path(args.forms_file))
