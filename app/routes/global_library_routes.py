@@ -33,6 +33,7 @@ def global_library():
     scope_param = (request.args.get('scope') or request.args.get('type') or '').strip()
     search_query = (request.args.get('search') or '').strip()
     raw_category = (request.args.get('category') or '').strip()
+    show_columns = request.args.get('show_columns') == 'true'
     page = request.args.get('page', type=int) or 1
     if page < 1:
         page = 1
@@ -90,6 +91,8 @@ def global_library():
             or (target_scope is None and active_scope == "ingredient")
         ):
             params["category"] = selected_category
+        if show_columns:
+            params["show_columns"] = "true"
         return params
 
     def build_page_url(page_number: int) -> str:
@@ -132,7 +135,7 @@ def global_library():
         last_item_index=listing["last_item_index"],
         clear_filters_url=clear_filters_url,
         show_dev_controls=can_manage,
-        show_hidden_columns=can_manage,
+        show_hidden_columns=can_manage and show_columns,
         is_public_view=True,
         slugify=slugify_value,
         developer_link_base=url_for('developer.global_item_detail', item_id=0)[:-1] if can_manage else None,

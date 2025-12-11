@@ -21,6 +21,9 @@
         <a class="btn btn-outline-secondary" href="{{ url_for('developer.container_management') }}">
           <i class="fas fa-box-open me-2"></i>Container attributes
         </a>
+        <button type="button" class="btn btn-outline-info" onclick="toggleColumnVisibility()">
+          <i class="fas fa-columns me-2"></i>Toggle columns
+        </button>
       </div>
     {% endif %}
   </div>
@@ -95,26 +98,21 @@
         {% if active_scope == 'ingredient' %}
           <thead class="table-light">
             <tr>
-              <th scope="col">Global item</th>
               <th scope="col">Ingredient definition</th>
+              <th scope="col">Global item</th>
               <th scope="col">Physical form</th>
-              <th scope="col">Default unit</th>
-              <th scope="col">Density (g/ml)</th>
               <th scope="col">Category</th>
               <th scope="col">Perishable</th>
+              {% if show_hidden_columns %}
+                <th scope="col">Default unit</th>
+                <th scope="col">Density (g/ml)</th>
+              {% endif %}
               <th scope="col" class="text-end">Actions</th>
             </tr>
           </thead>
           <tbody>
             {% for gi in items %}
               <tr>
-                <td>
-                  <div class="fw-semibold">{{ gi.name }}</div>
-                  <div class="text-muted small">#{{ gi.id }}</div>
-                  {% if show_hidden_columns and gi.aliases %}
-                    <div class="text-muted small">Aliases: {{ gi.aliases|join(', ') }}</div>
-                  {% endif %}
-                </td>
                 <td>
                   {% if gi.ingredient %}
                     <div class="fw-semibold">{{ gi.ingredient.name }}</div>
@@ -128,9 +126,14 @@
                     <span class="text-muted">Unlinked definition</span>
                   {% endif %}
                 </td>
+                <td>
+                  <div class="fw-semibold">{{ gi.name }}</div>
+                  <div class="text-muted small">#{{ gi.id }}</div>
+                  {% if show_hidden_columns and gi.aliases %}
+                    <div class="text-muted small">Aliases: {{ gi.aliases|join(', ') }}</div>
+                  {% endif %}
+                </td>
                 <td>{{ gi.physical_form.name if gi.physical_form else '—' }}</td>
-                <td>{{ gi.default_unit or '—' }}</td>
-                <td>{{ '%.3f'|format(gi.density) if gi.density is not none else '—' }}</td>
                 <td>{{ gi.ingredient_category.name if gi.ingredient_category else '—' }}</td>
                 <td>
                   {% if gi.default_is_perishable %}
@@ -142,6 +145,10 @@
                     <span class="text-muted">No</span>
                   {% endif %}
                 </td>
+                {% if show_hidden_columns %}
+                  <td>{{ gi.default_unit or '—' }}</td>
+                  <td>{{ '%.3f'|format(gi.density) if gi.density is not none else '—' }}</td>
+                {% endif %}
                 <td class="text-end">
                   <div class="btn-group btn-group-sm" role="group">
                     <button type="button"
@@ -174,7 +181,7 @@
               </tr>
             {% else %}
               <tr>
-                <td colspan="8" class="text-center text-muted py-4">
+                <td colspan="{% if show_hidden_columns %}7{% else %}5{% endif %}" class="text-center text-muted py-4">
                   <i class="fas fa-box-open fa-2x d-block mb-2"></i>
                   No {{ scope_labels[active_scope]|lower }} match these filters.
                 </td>
@@ -362,6 +369,18 @@
     document.getElementById('forceDelete').checked = false;
     document.getElementById('deleteConfirmationSection').style.display = 'none';
     modal.show();
+  }
+
+  function toggleColumnVisibility() {
+    // Toggle show_hidden_columns in URL and reload
+    const url = new URL(window.location);
+    const currentValue = url.searchParams.get('show_columns');
+    if (currentValue === 'true') {
+      url.searchParams.delete('show_columns');
+    } else {
+      url.searchParams.set('show_columns', 'true');
+    }
+    window.location.href = url.toString();
   }
 
   function confirmDeleteGlobalItem() {
