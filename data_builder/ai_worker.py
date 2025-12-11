@@ -20,6 +20,24 @@ TEMPERATURE = float(os.getenv("OPENAI_TEMPERATURE", "0.1"))
 MAX_RETRIES = int(os.getenv("AI_MAX_RETRIES", "3"))
 RETRY_BACKOFF_SECONDS = float(os.getenv("AI_RETRY_BACKOFF", "3"))
 
+INGREDIENT_CATEGORIES = [
+    "Botanical",
+    "Mineral",
+    "Animal-Derived",
+    "Fermentation",
+    "Chemical",
+    "Resin",
+    "Wax",
+    "Fat or Oil",
+    "Sugar or Sweetener",
+    "Acid",
+    "Salt",
+    "Solution or Stock",
+    "Aroma or Flavor",
+    "Colorant",
+    "Functional Additive",
+]
+
 SYSTEM_PROMPT = (
     "You are IngredientCompilerGPT, an expert data extraction agent for artisanal "
     "manufacturing. You only output JSON that conforms to the provided schema."
@@ -30,6 +48,7 @@ Return JSON using this schema (all strings trimmed, booleans only true/false, li
 {
   "ingredient": {
     "common_name": "string (required)",
+    "category": "one of the approved ingredient categories",
     "botanical_name": "string",
     "inci_name": "string",
     "cas_number": "string",
@@ -50,7 +69,7 @@ Return JSON using this schema (all strings trimmed, booleans only true/false, li
         "applications": ["Soap", "Bath Bomb", "Chocolate", "Lotion", "Candle"],
         "function_tags": ["Stabilizer", "Fragrance", "Colorant", "Binder", "Fuel"],
         "safety_tags": ["Dermal Limit 3%", "Photosensitizer", ...],
-        "shelf_life_months": 0-120,
+          "shelf_life_days": 30-3650,
         "sds_hazards": ["Flammable", "Allergen"],
         "storage": {
           "temperature_celsius": {"min": 5, "max": 25},
@@ -71,7 +90,8 @@ Return JSON using this schema (all strings trimmed, booleans only true/false, li
           "certifications": ["Organic", "Fair Trade"],
           "supply_risks": ["Seasonal Harvest"],
           "sustainability_notes": "Tree nut resource"
-        }
+        },
+        "form_bypass": true | false  // when true, display should use item_name alone (e.g., Water, Ice)
       }
     ],
     "taxonomy": {
@@ -112,7 +132,7 @@ CONTEXT:
 - For each ingredient, enumerate every common PHYSICAL FORM (solid, powder, puree, resin, etc.) used in craft production. Create a dedicated `items` entry for every form.
 - Populate every applicable attribute in the schema. Use "unknown" only when absolutely no data exists.
 - Use authoritative references (USP, FCC, cosmetic suppliers, herbal materia medica) when citing specs.
-- Use metric units. Shelf life expressed in months. Temperature in Celsius.
+- Use metric units. Shelf life must be expressed in DAYS (convert from months/years when needed). Temperature in Celsius.
 - All string values must be clear, sentence case, and free of marketing fluff.
 - Return strictly valid JSON (UTF-8, double quotes, no trailing commas). If you are uncertain, respond with {"error": "explanation"}.
 
@@ -120,6 +140,14 @@ CONTROLLED VOCAB REMINDERS:
 - physical_form must be a short noun (e.g., "Powder", "Chips", "Pellets", "Whole", "Puree", "Pressed Cake").
 - function_tags should draw from: Emollient, Humectant, Surfactant, Emulsifier, Preservative, Antioxidant, Colorant, Fragrance, Exfoliant, Thickener, Binder, Fuel, Hardener, Stabilizer, Plasticizer, Chelator, Buffer, Flavor, Sweetener, Bittering Agent, Fermentation Nutrient.
 - applications should be chosen from: Cold Process Soap, Hot Process Soap, Melt & Pour Soap, Lotion, Cream, Balm, Serum, Scrub, Perfume, Candle, Wax Melt, Lip Balm, Chocolate, Confection, Baked Good, Beverage, Fermented Beverage, Herbal Tincture, Hydro-distillation, Bath Bomb, Shower Steamer, Haircare, Skincare, Deodorant, Cleaner, Detergent, Paint, Dye Bath.
+- ingredient.category must be one of: {categories}
+
+FORM & SOLUTION GUIDANCE:
+- Always include dairy variants (e.g., whole milk, 2% milk, skim milk powder) and note their distinct forms.
+- Include buffered/stock solutions (e.g., 50% Sodium Hydroxide Solution, 20% Potassium Carbonate Solution) when common in production.
+- Essential oils, hydrosols, absolutes, CO2 extracts, glycerites, tinctures, macerations, and infusions should be represented as distinct forms under the parent ingredient.
+- When an ingredient should display without a suffix (Water, Ice, Steam), set `form_bypass`=true so the interface shows just "Water" or "Ice" while still recording the underlying physical_form.
+- When no better industry name exists, use a concise solution label such as "Potassium Carbonate Solution (20%)" or simply "Brine Solution".
 
 SCHEMA (required):
 {schema}
@@ -135,6 +163,7 @@ def _render_prompt(ingredient_name: str) -> str:
         ingredient=ingredient_name.strip(),
         schema=JSON_SCHEMA_SPEC,
         error_object=json.dumps(ERROR_OBJECT),
+        categories=", ".join(INGREDIENT_CATEGORIES),
     )
 
 
