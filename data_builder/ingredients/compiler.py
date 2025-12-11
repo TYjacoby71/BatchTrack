@@ -23,7 +23,7 @@ OUTPUT_DIR = BASE_DIR / "output"
 INGREDIENT_DIR = OUTPUT_DIR / "ingredients"
 PHYSICAL_FORMS_FILE = OUTPUT_DIR / "physical_forms.json"
 TAXONOMY_FILE = OUTPUT_DIR / "taxonomies.json"
-DEFAULT_TERMS_FILE = BASE_DIR / "terms.txt"
+DEFAULT_TERMS_FILE = BASE_DIR / "terms.json"
 DEFAULT_SLEEP_SECONDS = float(os.getenv("COMPILER_SLEEP_SECONDS", "3"))
 
 
@@ -136,15 +136,16 @@ def save_payload(payload: Dict[str, Any], slug: str) -> Path:
     return target
 
 
-def process_next_term(sleep_seconds: float) -> bool:
-    """Process a single pending task. Returns False when queue is empty."""
+def process_next_term(sleep_seconds: float, min_priority: int) -> bool:
+    """Process a single pending task honoring the priority floor. Returns False when queue is empty."""
 
-    term = database_manager.get_next_pending_task()
-    if not term:
-        LOGGER.info("Queue empty; compiler is finished.")
+    task = database_manager.get_next_pending_task(min_priority=min_priority)
+    if not task:
+        LOGGER.info("No pending tasks found at priority >= %s; compiler is finished.", min_priority)
         return False
 
-    LOGGER.info("Processing term: %s", term)
+    term, priority = task
+    LOGGER.info("Processing term: %s (priority %s)", term, priority)
     database_manager.update_task_status(term, "processing")
 
     try:
@@ -166,23 +167,24 @@ def process_next_term(sleep_seconds: float) -> bool:
     return True
 
 
-def run_compiler(sleep_seconds: float, max_iterations: int | None = None) -> None:
+def run_compiler(sleep_seconds: float, max_ingredients: int | None, min_priority: int) -> None:
     ensure_output_dirs()
     iterations = 0
     while True:
-        if max_iterations and iterations >= max_iterations:
-            LOGGER.info("Reached iteration cap (%s); stopping.", max_iterations)
+        if max_ingredients and iterations >= max_ingredients:
+            LOGGER.info("Reached ingredient cap (%s); stopping.", max_ingredients)
             break
-        if not process_next_term(sleep_seconds):
+        if not process_next_term(sleep_seconds, min_priority):
             break
         iterations += 1
 
 
 def parse_args(argv: List[str]) -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Iteratively compile ingredient data via OpenAI")
-    parser.add_argument("--terms-file", default=str(DEFAULT_TERMS_FILE), help="Seed term file (JSON array or text list)")
+    parser.add_argument("--terms-file", default=str(DEFAULT_TERMS_FILE), help="Seed term file (JSON array of {term, priority})")
     parser.add_argument("--sleep-seconds", type=float, default=DEFAULT_SLEEP_SECONDS, help="Delay between API calls")
-    parser.add_argument("--max-iterations", type=int, default=0, help="Optional cap for number of processed terms")
+    parser.add_argument("--max-ingredients", type=int, default=0, help="Optional cap for number of processed ingredients in this run")
+    parser.add_argument("--min-priority", type=int, default=database_manager.MIN_PRIORITY, help="Minimum priority (1-10) required to process a queued ingredient")
     return parser.parse_args(argv)
 
 
@@ -200,7 +202,11 @@ def main(argv: List[str] | None = None) -> None:
     except FileNotFoundError:
         LOGGER.warning("Terms file %s not found; queue will only use existing entries.", args.terms_file)
 
-    run_compiler(sleep_seconds=args.sleep_seconds, max_iterations=args.max_iterations or None)
+    run_compiler(
+        sleep_seconds=args.sleep_seconds,
+        max_ingredients=args.max_ingredients or None,
+        min_priority=max(database_manager.MIN_PRIORITY, min(args.min_priority, database_manager.MAX_PRIORITY)),
+    )
 
 
 if __name__ == "__main__":

@@ -13,12 +13,18 @@ import openai
 LOGGER = logging.getLogger(__name__)
 BASE_DIR = Path(__file__).resolve().parent
 OUTPUT_DIR = BASE_DIR / "output"
-TERMS_FILE = BASE_DIR / "terms.txt"
+TERMS_FILE = BASE_DIR / "terms.json"
 PHYSICAL_FORMS_FILE = OUTPUT_DIR / "physical_forms.json"
 openai.api_key = os.environ.get("OPENAI_API_KEY")
+if not openai.api_key:
+    LOGGER.warning("OPENAI_API_KEY is not set; term_collector will run in repository-only mode unless --skip-ai is provided.")
 MODEL_NAME = os.getenv("OPENAI_MODEL", "gpt-4-turbo-preview")
 TEMPERATURE = float(os.getenv("OPENAI_TEMPERATURE", "0.2"))
 MAX_BATCH_RETRIES = int(os.getenv("AI_MAX_RETRIES", "3"))
+DEFAULT_PRIORITY = 5
+SEED_PRIORITY = 7
+MIN_PRIORITY = 1
+MAX_PRIORITY = 10
 
 BASE_PHYSICAL_FORMS: Set[str] = {
     "Whole", "Slices", "Diced", "Chopped", "Minced", "Crushed", "Ground",
@@ -136,6 +142,7 @@ CONSTRAINTS:
 - Alphabetize A-Z.
 - Avoid duplicates of the provided examples.
 - Use concise proper names (e.g., "Calendula", "Magnesium Hydroxide").
+- Assign a relevance score from 1-10 (integer) where 10 = essential for small-batch makers and 1 = niche or situational.
 - If absolutely no valid ingredients remain, return an empty list.
 
 OUTPUT FORMAT:
@@ -147,7 +154,8 @@ Return JSON only:
       "category": "one of: Botanical, Mineral, Animal-Derived, Fermentation, Chemical, Resin, Wax, Fatty Acid, Sugar, Acid, Salt, Aroma",
       "industries": ["Soap", "Cosmetic", "Candle", "Confection", "Beverage", "Herbal", "Baking", "Fermentation", "Aromatherapy"],
       "common_forms": ["Powder", "Essential Oil", ...],
-      "notes": "1-sentence rationale"
+      "notes": "1-sentence rationale",
+      "priority_score": 1-10 integer (10 = highest relevance/urgency for makers)
     }}
   ],
   "physical_forms": ["unique physical forms referenced"]
@@ -173,7 +181,7 @@ class TermCollector:
         self.target_count = target_count
         self.batch_size = batch_size
         self.include_ai = include_ai and bool(openai.api_key)
-        self.terms: Set[str] = set()
+        self.terms: Dict[str, int] = {}
         self.physical_forms: Set[str] = set(BASE_PHYSICAL_FORMS) | EXAMPLE_PHYSICAL_FORMS
         self.prompt_examples: Set[str] = set(EXAMPLE_INGREDIENTS)
         if example_file and example_file.exists():
@@ -183,6 +191,25 @@ class TermCollector:
                     self.prompt_examples.update(str(item).strip() for item in data if str(item).strip())
             except json.JSONDecodeError:
                 LOGGER.warning("Example file %s is not valid JSON; ignoring", example_file)
+
+    def _extract_priority(self, value) -> int:
+        try:
+            priority = int(value)
+        except (TypeError, ValueError):
+            priority = DEFAULT_PRIORITY
+        return max(MIN_PRIORITY, min(MAX_PRIORITY, priority))
+
+    def _register_term(self, term: str, priority: int) -> bool:
+        """Track a term with the highest observed priority. Returns True if newly added."""
+        cleaned = term.strip()
+        if not cleaned:
+            return False
+        normalized_priority = self._extract_priority(priority)
+        existing = self.terms.get(cleaned)
+        if existing is None or normalized_priority > existing:
+            self.terms[cleaned] = normalized_priority
+            return existing is None
+        return False
 
     # ------------------------------------------------------------------
     # Seed extraction
@@ -210,11 +237,11 @@ class TermCollector:
                 if key in {"name", "common_name", "ingredient_name"} and isinstance(value, str):
                     cleaned = value.strip()
                     if cleaned:
-                        self.terms.add(cleaned)
+                        self._register_term(cleaned, SEED_PRIORITY)
                 if key == "ingredient" and isinstance(value, dict):
                     name = value.get("name")
                     if isinstance(name, str) and name.strip():
-                        self.terms.add(name.strip())
+                        self._register_term(name.strip(), SEED_PRIORITY)
                 if key == "physical_form" and isinstance(value, str):
                     self.physical_forms.add(value.strip())
                 self._collect_from_obj(value)
@@ -231,7 +258,7 @@ class TermCollector:
             return
 
         while len(self.terms) < self.target_count:
-            start_after = sorted(self.terms)[-1] if self.terms else ""
+            start_after = sorted(self.terms.keys())[-1] if self.terms else ""
             batch_size = min(self.batch_size, self.target_count - len(self.terms))
             LOGGER.info(
                 "Requesting %s new terms after '%s' (current total: %s/%s)",
@@ -251,8 +278,10 @@ class TermCollector:
                 if not isinstance(name, str):
                     continue
                 cleaned = name.strip()
-                if cleaned and cleaned not in self.terms:
-                    self.terms.add(cleaned)
+                if not cleaned:
+                    continue
+                priority = record.get("priority_score")
+                if self._register_term(cleaned, priority):
                     new_terms += 1
                 for form in record.get("common_forms", []) or []:
                     if isinstance(form, str) and form.strip():
@@ -265,7 +294,7 @@ class TermCollector:
                 break
 
     def _compose_examples(self, limit: int) -> List[str]:
-        live_samples = sorted(self.terms)[: limit // 2]
+        live_samples = sorted(self.terms.keys())[: limit // 2]
         curated = sorted(self.prompt_examples)[: limit - len(live_samples)]
         combined = curated + live_samples
         return combined[:limit]
@@ -300,9 +329,12 @@ class TermCollector:
     # ------------------------------------------------------------------
     def write_terms_file(self, path: Path = TERMS_FILE) -> None:
         path.parent.mkdir(parents=True, exist_ok=True)
-        ordered = sorted(self.terms)
-        path.write_text("\n".join(ordered), encoding="utf-8")
-        LOGGER.info("Wrote %s terms to %s", len(ordered), path)
+        payload = [
+            {"term": term, "priority": priority}
+            for term, priority in sorted(self.terms.items(), key=lambda item: (-item[1], item[0]))
+        ]
+        path.write_text(json.dumps(payload, indent=2), encoding="utf-8")
+        LOGGER.info("Wrote %s prioritized terms to %s", len(payload), path)
 
     def write_forms_file(self, path: Path = PHYSICAL_FORMS_FILE) -> None:
         path.parent.mkdir(parents=True, exist_ok=True)
@@ -317,7 +349,7 @@ def parse_args(argv: List[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--example-file", default="", help="Optional JSON array of canonical example ingredients for prompt context")
     parser.add_argument("--target-count", type=int, default=5000, help="Desired total number of base ingredients")
     parser.add_argument("--batch-size", type=int, default=250, help="AI batch size per request")
-    parser.add_argument("--terms-file", default=str(TERMS_FILE), help="Destination file for term list")
+    parser.add_argument("--terms-file", default=str(TERMS_FILE), help="Destination JSON file for term list (term + priority)")
     parser.add_argument("--forms-file", default=str(PHYSICAL_FORMS_FILE), help="Destination file for physical forms list")
     parser.add_argument("--skip-ai", action="store_true", help="Only use repo seeds; do not call the AI API")
     return parser.parse_args(argv)
