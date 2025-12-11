@@ -7,7 +7,13 @@ from sqlalchemy import func
 
 from app.extensions import db
 from app.models import GlobalItem
-from app.models.ingredient_reference import PhysicalForm
+from app.models.ingredient_reference import (
+    ApplicationTag,
+    FunctionTag,
+    IngredientCategoryTag,
+    PhysicalForm,
+    Variation,
+)
 from app.services.developer.reference_data_service import ReferenceDataService
 from app.utils.seo import slugify_value
 
@@ -280,33 +286,48 @@ def api_container_options():
         return jsonify({"success": False, "error": str(exc)})
 
 
-@developer_bp.route("/physical-forms", methods=["GET"])
+@developer_bp.route("/ingredient-attributes", methods=["GET"])
 @login_required
-def manage_physical_forms():
-    """Curate physical forms used by global items."""
+def manage_ingredient_attributes():
+    """Curate ingredient lookup tables: tags, physical forms, variations."""
     forms = PhysicalForm.query.order_by(PhysicalForm.name.asc()).all()
-    usage_rows = (
-        db.session.query(GlobalItem.physical_form_id, func.count(GlobalItem.id))
-        .filter(
-            GlobalItem.physical_form_id.isnot(None),
-            GlobalItem.is_archived != True,
-        )
-        .group_by(GlobalItem.physical_form_id)
+    variations = Variation.query.order_by(Variation.name.asc()).all()
+    variation_usage_rows = (
+        db.session.query(Variation.id, func.count(GlobalItem.id))
+        .join(GlobalItem, GlobalItem.variation_id == Variation.id)
+        .filter(GlobalItem.is_archived != True)
+        .group_by(Variation.id)
         .all()
     )
-    usage_map = {form_id: count for form_id, count in usage_rows}
+    variation_usage = {variation_id: count for variation_id, count in variation_usage_rows}
+
+    function_tags = FunctionTag.query.order_by(FunctionTag.name.asc()).all()
+    application_tags = ApplicationTag.query.order_by(ApplicationTag.name.asc()).all()
+    category_tags = IngredientCategoryTag.query.order_by(IngredientCategoryTag.name.asc()).all()
+
     return render_template(
-        "developer/physical_forms.html",
-        forms=forms,
-        usage_map=usage_map,
+        "developer/ingredient_attributes.html",
+        physical_forms=forms,
+        variations=variations,
+        variation_usage=variation_usage,
+        function_tags=function_tags,
+        application_tags=application_tags,
+        category_tags=category_tags,
         breadcrumb_items=[
             {"label": "Developer Dashboard", "url": url_for("developer.dashboard")},
-            {"label": "Physical Forms"},
+            {"label": "Ingredient Attributes"},
         ],
     )
 
 
-@developer_bp.route("/physical-forms", methods=["POST"])
+@developer_bp.route("/physical-forms", methods=["GET"])
+@login_required
+def legacy_physical_forms_redirect():
+    """Backwards-compatible redirect to the new ingredient attributes hub."""
+    return redirect(url_for("developer.manage_ingredient_attributes"))
+
+
+@developer_bp.route("/ingredient-attributes/physical-forms", methods=["POST"])
 @login_required
 def create_physical_form():
     """Create a new physical form entry."""
@@ -314,7 +335,7 @@ def create_physical_form():
     description = (request.form.get("description") or "").strip() or None
     if not name:
         flash("Physical form name is required.", "error")
-        return redirect(url_for("developer.manage_physical_forms"))
+        return redirect(url_for("developer.manage_ingredient_attributes"))
 
     existing = (
         PhysicalForm.query.filter(func.lower(PhysicalForm.name) == func.lower(name))
@@ -323,17 +344,17 @@ def create_physical_form():
     )
     if existing:
         flash(f'Physical form "{name}" already exists.', "error")
-        return redirect(url_for("developer.manage_physical_forms"))
+        return redirect(url_for("developer.manage_ingredient_attributes"))
 
     slug = _generate_unique_slug(PhysicalForm, name)
     new_form = PhysicalForm(name=name, slug=slug, description=description, is_active=True)
     db.session.add(new_form)
     db.session.commit()
     flash(f'Physical form "{name}" created.', "success")
-    return redirect(url_for("developer.manage_physical_forms"))
+    return redirect(url_for("developer.manage_ingredient_attributes"))
 
 
-@developer_bp.route("/physical-forms/<int:form_id>/toggle", methods=["POST"])
+@developer_bp.route("/ingredient-attributes/physical-forms/<int:form_id>/toggle", methods=["POST"])
 @login_required
 def toggle_physical_form(form_id: int):
     """Toggle a physical form's active state."""
@@ -342,4 +363,112 @@ def toggle_physical_form(form_id: int):
     db.session.commit()
     state = "activated" if physical_form.is_active else "archived"
     flash(f'Physical form "{physical_form.name}" {state}.', "success")
-    return redirect(url_for("developer.manage_physical_forms"))
+    return redirect(url_for("developer.manage_ingredient_attributes"))
+
+
+@developer_bp.route("/ingredient-attributes/variations", methods=["POST"])
+@login_required
+def create_variation():
+    """Create a curated variation entry."""
+    name = (request.form.get("name") or "").strip()
+    physical_form_id = (request.form.get("physical_form_id") or "").strip()
+    description = (request.form.get("description") or "").strip() or None
+    default_unit = (request.form.get("default_unit") or "").strip() or None
+    form_bypass = request.form.get("form_bypass") == "on"
+
+    if not name:
+        flash("Variation name is required.", "error")
+        return redirect(url_for("developer.manage_ingredient_attributes"))
+
+    existing = (
+        Variation.query.filter(func.lower(Variation.name) == func.lower(name))
+        .order_by(Variation.id.asc())
+        .first()
+    )
+    if existing:
+        flash(f'Variation "{name}" already exists.', "error")
+        return redirect(url_for("developer.manage_ingredient_attributes"))
+
+    physical_form = None
+    if physical_form_id:
+        try:
+            physical_form = PhysicalForm.query.get(int(physical_form_id))
+        except (TypeError, ValueError):
+            physical_form = None
+    slug = _generate_unique_slug(Variation, name)
+    variation = Variation(
+        name=name,
+        slug=slug,
+        physical_form=physical_form,
+        description=description,
+        default_unit=default_unit,
+        form_bypass=form_bypass,
+        is_active=True,
+    )
+    db.session.add(variation)
+    db.session.commit()
+    flash(f'Variation "{name}" created.', "success")
+    return redirect(url_for("developer.manage_ingredient_attributes"))
+
+
+@developer_bp.route("/ingredient-attributes/variations/<int:variation_id>/toggle", methods=["POST"])
+@login_required
+def toggle_variation(variation_id: int):
+    variation = Variation.query.get_or_404(variation_id)
+    variation.is_active = not variation.is_active
+    db.session.commit()
+    state = "activated" if variation.is_active else "archived"
+    flash(f'Variation "{variation.name}" {state}.', "success")
+    return redirect(url_for("developer.manage_ingredient_attributes"))
+
+
+def _create_tag_entry(model, name: str, description: str | None):
+    existing = model.query.filter(func.lower(model.name) == func.lower(name)).first()
+    if existing:
+        return existing, False
+    slug = _generate_unique_slug(model, name)
+    tag = model(name=name, slug=slug, description=description or None, is_active=True)
+    db.session.add(tag)
+    return tag, True
+
+
+@developer_bp.route("/ingredient-attributes/function-tags", methods=["POST"])
+@login_required
+def create_function_tag():
+    name = (request.form.get("name") or "").strip()
+    description = (request.form.get("description") or "").strip() or None
+    if not name:
+        flash("Function tag name is required.", "error")
+        return redirect(url_for("developer.manage_ingredient_attributes"))
+    _create_tag_entry(FunctionTag, name, description)
+    db.session.commit()
+    flash(f'Function tag "{name}" saved.', "success")
+    return redirect(url_for("developer.manage_ingredient_attributes"))
+
+
+@developer_bp.route("/ingredient-attributes/application-tags", methods=["POST"])
+@login_required
+def create_application_tag():
+    name = (request.form.get("name") or "").strip()
+    description = (request.form.get("description") or "").strip() or None
+    if not name:
+        flash("Application tag name is required.", "error")
+        return redirect(url_for("developer.manage_ingredient_attributes"))
+    _create_tag_entry(ApplicationTag, name, description)
+    db.session.commit()
+    flash(f'Application tag "{name}" saved.', "success")
+    return redirect(url_for("developer.manage_ingredient_attributes"))
+
+
+@developer_bp.route("/ingredient-attributes/category-tags", methods=["POST"])
+@login_required
+def create_category_tag():
+    name = (request.form.get("name") or "").strip()
+    description = (request.form.get("description") or "").strip() or None
+    if not name:
+        flash("Category tag name is required.", "error")
+        return redirect(url_for("developer.manage_ingredient_attributes"))
+    _create_tag_entry(IngredientCategoryTag, name, description)
+    db.session.commit()
+    flash(f'Use case tag "{name}" saved.', "success")
+    return redirect(url_for("developer.manage_ingredient_attributes"))

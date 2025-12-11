@@ -24,6 +24,7 @@ from .category import IngredientCategory, Tag
 from .ingredient_reference import (
     IngredientDefinition,
     PhysicalForm,
+    Variation,
     FunctionTag,
     ApplicationTag,
     GlobalItemFunctionTag,

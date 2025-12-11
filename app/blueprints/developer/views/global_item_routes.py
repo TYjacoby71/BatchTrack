@@ -24,6 +24,7 @@ from app.models.ingredient_reference import (
     IngredientCategoryTag,
     IngredientDefinition,
     PhysicalForm,
+    Variation,
 )
 from app.utils.seo import slugify_value
 from app.services.global_item_listing_service import (
@@ -135,36 +136,53 @@ def _determine_ingredient_layer(form_data, ingredient_category_id, *, current_in
     return ingredient, False
 
 
-def _determine_physical_form_layer(form_data, *, current_physical_form=None):
-    fallback_mode = "existing" if current_physical_form else "new"
-    mode = (form_data.get("physical_form_mode") or fallback_mode).lower()
+def _determine_variation_layer(form_data, *, current_variation=None):
+    fallback_mode = "existing" if current_variation else "new"
+    mode = (form_data.get("variation_mode") or fallback_mode).lower()
 
     if mode == "existing":
-        existing_id = form_data.get("existing_physical_form_id") or (
-            current_physical_form.id if current_physical_form else None
+        existing_id = form_data.get("existing_variation_id") or (
+            current_variation.id if current_variation else None
         )
         if not existing_id:
-            raise FormValidationError("Select a physical form or define a new one.")
+            raise FormValidationError("Select a variation or define a new one.")
         try:
-            physical_form_id = int(existing_id)
+            variation_id = int(existing_id)
         except (TypeError, ValueError):
-            raise FormValidationError("Invalid physical form selected.")
+            raise FormValidationError("Invalid variation selected.")
 
-        physical_form = PhysicalForm.query.get(physical_form_id)
-        if not physical_form:
-            raise FormValidationError("Physical form not found.")
+        variation = Variation.query.get(variation_id)
+        if not variation:
+            raise FormValidationError("Variation not found.")
 
-        return physical_form, True
+        return variation, True
 
-    name = (form_data.get("new_physical_form_name") or "").strip()
+    name = (form_data.get("new_variation_name") or "").strip()
     if not name:
-        raise FormValidationError("Physical form name is required when creating a new entry.")
+        raise FormValidationError("Variation name is required when creating a new entry.")
 
-    slug_field = (form_data.get("new_physical_form_slug") or "").strip()
-    slug = _generate_unique_slug(PhysicalForm, slug_field or name)
+    physical_form_id = form_data.get("new_variation_physical_form_id")
+    physical_form = None
+    if physical_form_id:
+        try:
+            physical_form = PhysicalForm.query.get(int(physical_form_id))
+        except (TypeError, ValueError):
+            raise FormValidationError("Invalid physical form selected for the variation.")
 
-    physical_form = PhysicalForm(name=name, slug=slug)
-    return physical_form, False
+    slug_field = (form_data.get("new_variation_slug") or "").strip()
+    slug = _generate_unique_slug(Variation, slug_field or name)
+    form_bypass_flag = (form_data.get("new_variation_form_bypass") or "").lower() in {"1", "true", "yes", "on"}
+
+    variation = Variation(
+        name=name,
+        slug=slug,
+        physical_form=physical_form,
+        description=(form_data.get("new_variation_description") or "").strip() or None,
+        default_unit=(form_data.get("new_variation_default_unit") or "").strip() or None,
+        form_bypass=form_bypass_flag,
+        is_active=True,
+    )
+    return variation, False
 
 
 def _format_capacity_value(value):
@@ -210,17 +228,19 @@ def _compose_container_name(form_data, *, existing_item=None):
     return name.strip()
 
 
-def _compose_ingredient_name(ingredient, physical_form, *, fallback=None):
-    if ingredient and physical_form:
-        return f"{ingredient.name}, {physical_form.name}"
+def _compose_ingredient_name(ingredient, variation, *, fallback=None):
+    if ingredient and variation:
+        if getattr(variation, "form_bypass", False):
+            return ingredient.name
+        return f"{ingredient.name}, {variation.name}"
     if ingredient:
         return ingredient.name
     return fallback
 
 
-def _generate_item_name(item_type, form_data, *, ingredient=None, physical_form=None, existing_item=None):
+def _generate_item_name(item_type, form_data, *, ingredient=None, variation=None, existing_item=None):
     if item_type == "ingredient":
-        name = _compose_ingredient_name(ingredient, physical_form, fallback=form_data.get("name") if form_data else None)
+        name = _compose_ingredient_name(ingredient, variation, fallback=form_data.get("name") if form_data else None)
         return (name or "").strip()
     if item_type == "container":
         name = _compose_container_name(form_data, existing_item=existing_item)
