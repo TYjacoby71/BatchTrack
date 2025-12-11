@@ -104,8 +104,12 @@ class ConversionEngine:
                 'requires_attention': False
             }
 
-        from_u = Unit.query.filter_by(name=from_unit).first()
-        to_u = Unit.query.filter_by(name=to_unit).first()
+        from_u = Unit.query.filter(
+            (Unit.name == from_unit) | (Unit.symbol == from_unit)
+        ).first()
+        to_u = Unit.query.filter(
+            (Unit.name == to_unit) | (Unit.symbol == to_unit)
+        ).first()
 
         if not from_u:
             base_result = {
