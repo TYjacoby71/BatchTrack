@@ -163,8 +163,6 @@ class GlobalItem(db.Model):
     _table_args = [
         db.UniqueConstraint('name', 'item_type', name='_global_item_name_type_uc'),
         db.Index('ix_global_item_archive_type_name', 'is_archived', 'item_type', 'name'),
-        db.Index('ix_global_item_ingredient_id', 'ingredient_id'),
-        db.Index('ix_global_item_variation_id', 'variation_id'),
     ]
     if _IS_PG:
         _table_args.append(
