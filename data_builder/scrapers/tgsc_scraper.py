@@ -1,277 +1,358 @@
 
-"""TGSC (The Good Scents Company) scraper for fragrance demo formulas."""
+"""TGSC (The Good Scents Company) scraper for ingredient data and attributes."""
 import csv
 import re
 import requests
 from pathlib import Path
 from typing import Dict, List, Optional, Tuple
+import time
+import urllib.parse
 
-# Working TGSC formula URLs that contain actual ingredient tables
-TGSC_FORMULA_URLS = [
-    "https://www.thegoodscentscompany.com/demos/dm1001001.html",  # Floral demo formulas
-    "https://www.thegoodscentscompany.com/demos/dm1002001.html",  # Citrus demo formulas  
-    "https://www.thegoodscentscompany.com/demos/dm1003001.html",  # Woody demo formulas
-    "https://www.thegoodscentscompany.com/demos/dm1004001.html",  # Oriental demo formulas
-    "https://www.thegoodscentscompany.com/demos/dm1005001.html",  # Fresh demo formulas
-]
+# Base URLs for different ingredient categories
+TGSC_BASE_URL = "https://www.thegoodscentscompany.com"
+TGSC_SEARCH_URL = f"{TGSC_BASE_URL}/search/fragrance.html"
+
+# Category endpoints for ingredient discovery
+TGSC_INGREDIENT_CATEGORIES = {
+    "essential_oils": f"{TGSC_BASE_URL}/categories/essential-oils.html",
+    "absolutes": f"{TGSC_BASE_URL}/categories/absolutes.html", 
+    "extracts": f"{TGSC_BASE_URL}/categories/extracts.html",
+    "aromatic_chemicals": f"{TGSC_BASE_URL}/categories/aromatic-chemicals.html",
+    "fixed_oils": f"{TGSC_BASE_URL}/categories/fixed-oils.html",
+    "resins_balsams": f"{TGSC_BASE_URL}/categories/resins-balsams.html",
+    "botanicals": f"{TGSC_BASE_URL}/categories/botanicals.html",
+    "solvents": f"{TGSC_BASE_URL}/categories/solvents.html",
+    "fragrance_compounds": f"{TGSC_BASE_URL}/categories/fragrance-compounds.html"
+}
 
 
-class TGSCScraper:
-    """Scraper for The Good Scents Company fragrance demo formulas."""
+class TGSCIngredientScraper:
+    """Scraper for The Good Scents Company ingredient data and attributes."""
     
-    def __init__(self, url: str, user_agent: str, title: str):
-        self.url = url
+    def __init__(self, user_agent: str, delay_seconds: float = 1.0):
         self.user_agent = user_agent
-        self.title = title
+        self.delay_seconds = delay_seconds
         self.headers = {"User-Agent": user_agent}
+        self.session = requests.Session()
+        self.session.headers.update(self.headers)
 
     def searchsingle(self, start: str, end: str, content: str) -> str:
         """Extract single match between start and end markers."""
         if end != "" and start != "":
-            pattern = re.compile(f'{re.escape(start)}(.*?){re.escape(end)}', re.DOTALL)
+            pattern = re.compile(f'{re.escape(start)}(.*?){re.escape(end)}', re.DOTALL | re.IGNORECASE)
         elif end == "":
-            pattern = re.compile(re.escape(start) + r"\s*(.*)")
+            pattern = re.compile(re.escape(start) + r"\s*(.*)", re.IGNORECASE)
         elif start == "":
-            pattern = re.compile(r"^(.*?)" + re.escape(end))
+            pattern = re.compile(r"^(.*?)" + re.escape(end), re.IGNORECASE)
         
         match = re.search(pattern, content)
-        return match.group(1) if match else ""
+        return match.group(1).strip() if match else ""
 
     def searchmultiple(self, start: str, end: str, content: str) -> List[str]:
         """Extract multiple matches between start and end markers."""
         if end != "" and start != "":
-            pattern = re.compile(f'{re.escape(start)}(.*?){re.escape(end)}', re.DOTALL)
+            pattern = re.compile(f'{re.escape(start)}(.*?){re.escape(end)}', re.DOTALL | re.IGNORECASE)
         elif end == "":
-            pattern = re.compile(re.escape(start) + r"\s*(.*)")
+            pattern = re.compile(re.escape(start) + r"\s*(.*)", re.IGNORECASE)
         elif start == "":
-            pattern = re.compile(r"^(.*?)" + re.escape(end))
+            pattern = re.compile(r"^(.*?)" + re.escape(end), re.IGNORECASE)
         
         matches = pattern.findall(content)
-        return matches
+        return [match.strip() for match in matches]
 
-    def fetch_html(self, url: str, title: str) -> Optional[str]:
-        """Fetch HTML content from URL and save to file."""
+    def fetch_html(self, url: str, save_filename: str = None) -> Optional[str]:
+        """Fetch HTML content from URL with error handling and rate limiting."""
         try:
-            response = requests.get(url, headers=self.headers, timeout=30)
+            print(f"Fetching: {url}")
+            response = self.session.get(url, timeout=30)
+            
             if response.status_code == 200:
                 html = response.text
-                # Write HTML content to file
-                with open(f"{title}.txt", "w", errors="ignore", encoding="utf-8") as fp:
-                    fp.write(html)
-                print(f"HTML content from {url} written to {title}.txt")
+                if save_filename:
+                    with open(f"{save_filename}.html", "w", errors="ignore", encoding="utf-8") as fp:
+                        fp.write(html)
+                    print(f"HTML content saved to {save_filename}.html")
+                
+                time.sleep(self.delay_seconds)  # Rate limiting
                 return html
             else:
-                print(f"Failed to fetch HTML from {url}. Status code: {response.status_code}")
+                print(f"Failed to fetch {url}. Status code: {response.status_code}")
                 return None
+                
         except Exception as e:
-            print(f"An error occurred while fetching HTML from {url}: {e}")
+            print(f"Error fetching {url}: {e}")
             return None
 
-    def read_html(self, filename: str) -> str:
-        """Read and return the content of an HTML file."""
-        try:
-            with open(filename, "r", encoding="utf-8") as fp:
-                content = fp.read()
-            return content
-        except Exception as e:
-            print(f"Error reading file {filename}: {e}")
-            return ""
+    def extract_ingredient_links(self, category_html: str) -> List[str]:
+        """Extract ingredient detail page URLs from category listings."""
+        ingredient_links = []
+        
+        # Look for ingredient links in various formats
+        link_patterns = [
+            r'<a[^>]+href="([^"]*(?:data|ingredient|fragrance)[^"]*\.html)"[^>]*>',
+            r'href="(/data/[^"]+\.html)"',
+            r'href="(/ingredients?/[^"]+\.html)"'
+        ]
+        
+        for pattern in link_patterns:
+            matches = re.findall(pattern, category_html, re.IGNORECASE)
+            for match in matches:
+                if match.startswith('/'):
+                    full_url = TGSC_BASE_URL + match
+                elif match.startswith('http'):
+                    full_url = match
+                else:
+                    full_url = TGSC_BASE_URL + '/' + match
+                    
+                if full_url not in ingredient_links:
+                    ingredient_links.append(full_url)
+        
+        return ingredient_links
 
-    def write_csv(self, filename: str, data: List[Dict], fieldnames: List[str]):
-        """Write data to CSV file."""
+    def parse_ingredient_data(self, html: str, url: str) -> Dict:
+        """Parse ingredient page HTML to extract comprehensive data."""
+        ingredient_data = {
+            'url': url,
+            'common_name': '',
+            'botanical_name': '',
+            'cas_number': '',
+            'einecs_number': '',
+            'fema_number': '',
+            'category': '',
+            'description': '',
+            'odor_description': '',
+            'flavor_description': '',
+            'molecular_formula': '',
+            'molecular_weight': '',
+            'boiling_point': '',
+            'melting_point': '',
+            'density': '',
+            'solubility': '',
+            'synonyms': [],
+            'uses': [],
+            'safety_notes': '',
+            'natural_occurrence': []
+        }
+
+        # Extract common name (usually in title or main heading)
+        name_patterns = [
+            r'<title>([^<]+?)(?:\s*-\s*The Good Scents Company)?</title>',
+            r'<h1[^>]*>([^<]+)</h1>',
+            r'<h2[^>]*>([^<]+)</h2>'
+        ]
+        
+        for pattern in name_patterns:
+            name = self.searchsingle(pattern.split('(')[1].split(')')[0], '', html)
+            if name and len(name) > 3:
+                ingredient_data['common_name'] = re.sub(r'\s+', ' ', name).strip()
+                break
+
+        # CAS Number
+        cas_patterns = [
+            r'CAS[:\s]*(\d{1,7}-\d{2}-\d)',
+            r'cas[:\s]*(\d{1,7}-\d{2}-\d)',
+            r'(\d{1,7}-\d{2}-\d)'
+        ]
+        
+        for pattern in cas_patterns:
+            cas = re.search(pattern, html, re.IGNORECASE)
+            if cas:
+                ingredient_data['cas_number'] = cas.group(1)
+                break
+
+        # EINECS Number  
+        einecs = self.searchsingle(r'EINECS[:\s]*(\d{3}-\d{3}-\d)', '', html)
+        if einecs:
+            ingredient_data['einecs_number'] = einecs
+
+        # FEMA Number
+        fema = self.searchsingle(r'FEMA[:\s]*(\d+)', '', html)
+        if fema:
+            ingredient_data['fema_number'] = fema
+
+        # Botanical name
+        botanical_patterns = [
+            r'<i>([A-Z][a-z]+ [a-z]+)</i>',
+            r'botanical[:\s]*([A-Z][a-z]+ [a-z]+)',
+            r'species[:\s]*([A-Z][a-z]+ [a-z]+)'
+        ]
+        
+        for pattern in botanical_patterns:
+            botanical = re.search(pattern, html, re.IGNORECASE)
+            if botanical:
+                ingredient_data['botanical_name'] = botanical.group(1)
+                break
+
+        # Molecular formula and weight
+        formula = self.searchsingle(r'molecular formula[:\s]*([A-Z0-9]+)', '', html)
+        if formula:
+            ingredient_data['molecular_formula'] = formula
+            
+        weight = self.searchsingle(r'molecular weight[:\s]*([0-9.]+)', '', html)
+        if weight:
+            ingredient_data['molecular_weight'] = weight
+
+        # Physical properties
+        bp = self.searchsingle(r'boiling point[:\s]*([0-9.-]+)', '', html)
+        if bp:
+            ingredient_data['boiling_point'] = bp
+            
+        mp = self.searchsingle(r'melting point[:\s]*([0-9.-]+)', '', html)
+        if mp:
+            ingredient_data['melting_point'] = mp
+            
+        density = self.searchsingle(r'density[:\s]*([0-9.]+)', '', html)
+        if density:
+            ingredient_data['density'] = density
+
+        # Odor and flavor descriptions
+        odor_desc = self.searchsingle(r'odor[:\s]*([^<\n]+)', '', html)
+        if odor_desc:
+            ingredient_data['odor_description'] = odor_desc[:500]  # Limit length
+            
+        flavor_desc = self.searchsingle(r'flavor[:\s]*([^<\n]+)', '', html)
+        if flavor_desc:
+            ingredient_data['flavor_description'] = flavor_desc[:500]
+
+        # Extract synonyms (alternative names)
+        synonym_section = self.searchsingle(r'synonyms?[:\s]*([^<]+)', '', html)
+        if synonym_section:
+            synonyms = [s.strip() for s in re.split(r'[,;]', synonym_section) if s.strip()]
+            ingredient_data['synonyms'] = synonyms[:10]  # Limit to top 10
+
+        # Natural occurrence
+        occurrence_text = self.searchsingle(r'(?:found in|occurs in|natural occurrence)[:\s]*([^<]+)', '', html)
+        if occurrence_text:
+            occurrences = [o.strip() for o in re.split(r'[,;]', occurrence_text) if o.strip()]
+            ingredient_data['natural_occurrence'] = occurrences[:15]
+
+        return ingredient_data
+
+    def scrape_category(self, category_name: str, category_url: str, max_ingredients: int = 50) -> List[Dict]:
+        """Scrape all ingredients from a specific category."""
+        print(f"\n{'='*60}")
+        print(f"SCRAPING CATEGORY: {category_name.upper()}")
+        print(f"URL: {category_url}")
+        print(f"{'='*60}")
+        
+        # Fetch category page
+        category_html = self.fetch_html(category_url, f"category_{category_name}")
+        if not category_html:
+            print(f"❌ Failed to fetch category page: {category_name}")
+            return []
+
+        # Extract ingredient links
+        ingredient_links = self.extract_ingredient_links(category_html)
+        print(f"📋 Found {len(ingredient_links)} ingredient links")
+        
+        if not ingredient_links:
+            print("⚠️  No ingredient links found - checking page structure...")
+            return []
+
+        # Limit ingredients per category
+        ingredient_links = ingredient_links[:max_ingredients]
+        ingredients_data = []
+
+        # Scrape each ingredient
+        for i, link in enumerate(ingredient_links, 1):
+            print(f"\n[{i}/{len(ingredient_links)}] Processing: {link}")
+            
+            html = self.fetch_html(link)
+            if html:
+                ingredient_data = self.parse_ingredient_data(html, link)
+                if ingredient_data['common_name']:  # Only save if we got a name
+                    ingredients_data.append(ingredient_data)
+                    print(f"✅ Extracted: {ingredient_data['common_name']}")
+                else:
+                    print("⚠️  No name found - skipping")
+            else:
+                print("❌ Failed to fetch ingredient page")
+
+        print(f"\n🎉 Category {category_name} complete: {len(ingredients_data)} ingredients extracted")
+        return ingredients_data
+
+    def save_ingredients_csv(self, ingredients: List[Dict], filename: str):
+        """Save ingredients data to CSV file."""
+        if not ingredients:
+            print("No ingredients to save")
+            return
+
+        fieldnames = [
+            'common_name', 'botanical_name', 'cas_number', 'einecs_number', 
+            'fema_number', 'category', 'molecular_formula', 'molecular_weight',
+            'boiling_point', 'melting_point', 'density', 'odor_description',
+            'flavor_description', 'synonyms', 'natural_occurrence', 'url'
+        ]
+
         try:
-            with open(filename, "w", encoding="utf-8", newline="") as fp:
-                writer = csv.DictWriter(fp, fieldnames=fieldnames)
+            with open(filename, 'w', newline='', encoding='utf-8') as csvfile:
+                writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
                 writer.writeheader()
-                writer.writerows(data)
+                
+                for ingredient in ingredients:
+                    # Convert lists to semicolon-separated strings
+                    row = ingredient.copy()
+                    for field in ['synonyms', 'natural_occurrence', 'uses']:
+                        if field in row and isinstance(row[field], list):
+                            row[field] = '; '.join(row[field])
+                    writer.writerow(row)
+                    
+            print(f"💾 Saved {len(ingredients)} ingredients to {filename}")
+            
         except Exception as e:
-            print(f"Error writing CSV file {filename}: {e}")
-
-    def parse_formulas(self, html: str) -> Tuple[List[Dict], List[Dict]]:
-        """Parse HTML content to extract formula information and ingredients."""
-        all_information = []
-        all_ingredients = []
-        
-        # Extract formula blocks
-        formula_blocks = self.searchmultiple("<tr><td", "Total</td></tr>", html)
-
-        for i, block in enumerate(formula_blocks):
-            # Parse formula information
-            formula_info = {}
-            name = self.searchsingle('class="dmow1" colspan="3">', '</td></tr>', block)
-            
-            try:
-                application = self.searchsingle(
-                    '<tr><td class="dmow3" colspan="3">Application: ', '</td></tr>', block
-                )
-            except:
-                application = ""
-            
-            try:
-                description = self.searchsingle('<tr><td class="dmow2" colspan="3">', '</td></tr>', block)
-                if "href" in description:
-                    description = self.searchsingle('">', "</a>", description)
-            except:
-                description = ""
-            
-            # Extract total percentage
-            lines = self.searchmultiple("<tr>", "", block)
-            total = ""
-            for line in lines:
-                if "</tr>" not in line:
-                    total = self.searchsingle('<td class="dmow5">', '</td>', line)
-            
-            formula_info.update({
-                "id": i,
-                "name": name,
-                "application": application,
-                "description": description,
-                "total": total
-            })
-            all_information.append(formula_info)
-
-            # Parse ingredients for this formula
-            ingredient_rows = self.searchmultiple('<tr><td class="dmow5">', '</td></tr>', block)
-            
-            for ingredient_row in ingredient_rows:
-                ingredient_info = {}
-                
-                try:
-                    website = self.searchsingle('<a href="', '">', ingredient_row)
-                except:
-                    website = ""
-                
-                percentage = self.searchsingle('', '</td>', ingredient_row)
-                content = self.searchsingle('colspan="2">', '', ingredient_row)
-                
-                # Clean up ingredient name
-                if "<sup>" in content:
-                    content = content.replace("<sup>&reg;</sup>", "")
-                if "href" in content:
-                    content = self.searchsingle('.html">', "</a>", content)
-                if "dmow9" in content:
-                    content = self.searchsingle('"dmow9">', '</span>', content)
-                
-                ingredient_info.update({
-                    "id": i,
-                    "ingredients": content,
-                    "percentage": percentage,
-                    "website": website,
-                    "total": total
-                })
-                
-                # Calculate normalized percentage
-                try:
-                    ingredient_info["100 pct"] = round(
-                        float(percentage) / float(total) * 100, 2
-                    )
-                except:
-                    ingredient_info["100 pct"] = ""
-                
-                all_ingredients.append(ingredient_info)
-
-        return all_information, all_ingredients
-
-    def scrape(self) -> bool:
-        """Main scraping method."""
-        print(f"Starting TGSC scrape for: {self.title}")
-        
-        # Fetch HTML
-        html = self.fetch_html(self.url, "sourcecode")
-        if not html:
-            print("Failed to fetch HTML content")
-            return False
-        
-        # Parse the data
-        formulas, ingredients = self.parse_formulas(html)
-        
-        if not formulas:
-            print("No formula data found")
-            return False
-        
-        # Define CSV headers
-        formula_headers = ["id", "name", "application", "description", "total"]
-        ingredient_headers = ["id", "ingredients", "percentage", "100 pct", "website", "total"]
-        
-        # Write CSV files
-        formula_file = f"{self.title}Information.csv"
-        ingredient_file = f"{self.title}Ingredients.csv"
-        
-        self.write_csv(formula_file, formulas, formula_headers)
-        self.write_csv(ingredient_file, ingredients, ingredient_headers)
-        
-        print(f"Scraping completed:")
-        print(f"  - {len(formulas)} formulas saved to {formula_file}")
-        print(f"  - {len(ingredients)} ingredients saved to {ingredient_file}")
-        
-        return True
-
-    @classmethod
-    def scrape_formula_url(cls, url: str, user_agent: str, title: str) -> bool:
-        """Convenience method to scrape a single formula URL."""
-        scraper = cls(url, user_agent, title)
-        return scraper.scrape()
+            print(f"❌ Error saving CSV: {e}")
 
 
 def main():
-    """Main function to run TGSC scraper with working formula URLs."""
+    """Main function to scrape TGSC ingredient database."""
     user_agent = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
     
-    successful_batches = []
-    failed_batches = []
+    scraper = TGSCIngredientScraper(user_agent, delay_seconds=2.0)
+    all_ingredients = []
     
-    for i, url in enumerate(TGSC_FORMULA_URLS, 1):
-        batch_name = f"tgsc_batch_{i}"
-        
-        print(f"\n{'='*50}")
-        print(f"Scraping batch {i}: {url}")
-        print(f"{'='*50}")
-        
+    print("🚀 TGSC Ingredient Database Scraper")
+    print("=" * 50)
+    
+    # Scrape each category
+    for category_name, category_url in TGSC_INGREDIENT_CATEGORIES.items():
         try:
-            scraper = TGSCScraper(url, user_agent, batch_name)
-            success = scraper.scrape()
+            ingredients = scraper.scrape_category(category_name, category_url, max_ingredients=30)
             
-            if success:
-                successful_batches.append(batch_name)
-                print(f"✅ Batch {i} completed successfully!")
-                print(f"Generated files:")
-                print(f"  - {batch_name}Information.csv")
-                print(f"  - {batch_name}Ingredients.csv")
-            else:
-                failed_batches.append(batch_name)
-                print(f"❌ Batch {i} failed - no formula data found")
+            if ingredients:
+                # Save category-specific file
+                category_filename = f"tgsc_{category_name}_ingredients.csv"
+                scraper.save_ingredients_csv(ingredients, category_filename)
                 
+                # Add to master list
+                for ingredient in ingredients:
+                    ingredient['category'] = category_name
+                all_ingredients.extend(ingredients)
+            
         except Exception as e:
-            failed_batches.append(batch_name)
-            print(f"❌ Batch {i} failed with error: {e}")
+            print(f"❌ Error scraping category {category_name}: {e}")
+            continue
     
-    # Summary
-    print(f"\n{'='*50}")
-    print("SCRAPING SUMMARY")
-    print(f"{'='*50}")
-    print(f"Successful batches: {len(successful_batches)}")
-    print(f"Failed batches: {len(failed_batches)}")
-    
-    if successful_batches:
-        print(f"\nSuccessful: {', '.join(successful_batches)}")
+    # Save master file
+    if all_ingredients:
+        master_filename = "tgsc_all_ingredients.csv"
+        scraper.save_ingredients_csv(all_ingredients, master_filename)
         
-        # Copy the first successful ingredients file to data sources
-        first_success = successful_batches[0]
-        source_file = f"{first_success}Ingredients.csv"
+        # Copy to data sources directory
+        import shutil
         target_dir = Path("data_builder/ingredients/data_sources")
         target_file = target_dir / "tgsc_ingredients.csv"
         
-        import os
-        import shutil
-        if os.path.exists(source_file):
-            target_dir.mkdir(parents=True, exist_ok=True)
-            shutil.copy2(source_file, target_file)
-            print(f"\n📋 Copied {source_file} to {target_file}")
-            print("Ready for ingredient compilation!")
-        
-    if failed_batches:
-        print(f"\nFailed: {', '.join(failed_batches)}")
-        print("\nTip: Check if the URLs contain actual formula tables with ingredient percentages")
+        target_dir.mkdir(parents=True, exist_ok=True)
+        shutil.copy2(master_filename, target_file)
+        print(f"📋 Copied master file to {target_file}")
+        print("Ready for ingredient compilation!")
+    
+    print(f"\n🎊 SCRAPING COMPLETE!")
+    print(f"📊 Total ingredients extracted: {len(all_ingredients)}")
+    print(f"📁 Files generated:")
+    for category in TGSC_INGREDIENT_CATEGORIES.keys():
+        print(f"   - tgsc_{category}_ingredients.csv")
+    print(f"   - tgsc_all_ingredients.csv")
 
 
 if __name__ == "__main__":
