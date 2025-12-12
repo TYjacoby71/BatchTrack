@@ -1,0 +1,202 @@
+{
+  "data_quality": {
+    "caveats": [
+      "SAP values, iodine value, melting point, and pH range for bay leaf and its oil are not widely documented."
+    ],
+    "confidence": 0.9
+  },
+  "ingredient": {
+    "botanical_name": "Laurus nobilis",
+    "cas_number": "8007-48-5",
+    "category": "Herbs & Spices (Dried Botanicals)",
+    "common_name": "Bay Leaf",
+    "detailed_description": "Bay leaves are derived from the bay laurel tree, a plant native to the Mediterranean region. The leaves are known for their distinctive fragrance and flavor, which is slightly floral and herbal. Bay leaves are used in a variety of culinary and artisanal applications, including cooking, herbalism, and aromatherapy. They contain essential oils, notably cineole, which contribute to their characteristic scent and taste.",
+    "documentation": {
+      "last_verified": "2023-12-01",
+      "references": [
+        {
+          "notes": "Confirms bay leaf's status as generally recognized as safe (GRAS) for food use.",
+          "title": "GRAS Notice Inventory",
+          "url": "https://www.fda.gov/food/generally-recognized-safe-gras/gras-notice-inventory"
+        }
+      ]
+    },
+    "inci_name": "LAURUS NOBILIS LEAF",
+    "items": [
+      {
+        "applications": [
+          "Cold Process Soap",
+          "Hot Process Soap",
+          "Herbal Tincture",
+          "Hydro-distillation",
+          "Baked Good",
+          "Beverage",
+          "Fermented Beverage"
+        ],
+        "form_bypass": false,
+        "function_tags": [
+          "Flavor",
+          "Fragrance"
+        ],
+        "item_name": "Bay Leaf (Whole)",
+        "physical_form": "Whole",
+        "safety_tags": [],
+        "sds_hazards": [],
+        "shelf_life_days": 730,
+        "sourcing": {
+          "certifications": [
+            "Organic"
+          ],
+          "common_origins": [
+            "Turkey",
+            "Greece"
+          ],
+          "supply_risks": [
+            "Seasonal variations"
+          ],
+          "sustainability_notes": "Sustainable when harvested responsibly"
+        },
+        "specifications": {
+          "flash_point_celsius": "unknown",
+          "iodine_value": "unknown",
+          "melting_point_celsius": {
+            "max": "unknown",
+            "min": "unknown"
+          },
+          "ph_range": {
+            "max": "unknown",
+            "min": "unknown"
+          },
+          "sap_koh": "unknown",
+          "sap_naoh": "unknown",
+          "usage_rate_percent": {
+            "leave_on_max": "unknown",
+            "rinse_off_max": "unknown"
+          }
+        },
+        "storage": {
+          "humidity_percent": {
+            "max": 60
+          },
+          "special_instructions": "Store in a cool, dry place away from direct sunlight.",
+          "temperature_celsius": {
+            "max": 25,
+            "min": 0
+          }
+        },
+        "synonyms": [
+          "Sweet Bay",
+          "Bay Laurel"
+        ]
+      },
+      {
+        "applications": [
+          "Perfume",
+          "Candle",
+          "Wax Melt",
+          "Soap",
+          "Aromatherapy"
+        ],
+        "form_bypass": false,
+        "function_tags": [
+          "Fragrance"
+        ],
+        "item_name": "Bay Leaf Essential Oil",
+        "physical_form": "Oil",
+        "safety_tags": [
+          "Dermal Limit 0.5%"
+        ],
+        "sds_hazards": [
+          "Flammable"
+        ],
+        "shelf_life_days": 1095,
+        "sourcing": {
+          "certifications": [
+            "Organic"
+          ],
+          "common_origins": [
+            "Turkey",
+            "Greece"
+          ],
+          "supply_risks": [
+            "Seasonal variations",
+            "Overharvesting"
+          ],
+          "sustainability_notes": "Sustainable sourcing is crucial to prevent overharvesting."
+        },
+        "specifications": {
+          "flash_point_celsius": 50,
+          "iodine_value": "unknown",
+          "melting_point_celsius": {
+            "max": "unknown",
+            "min": "unknown"
+          },
+          "ph_range": {
+            "max": "unknown",
+            "min": "unknown"
+          },
+          "sap_koh": "unknown",
+          "sap_naoh": "unknown",
+          "usage_rate_percent": {
+            "leave_on_max": 0.5,
+            "rinse_off_max": "unknown"
+          }
+        },
+        "storage": {
+          "humidity_percent": {
+            "max": 60
+          },
+          "special_instructions": "Store in a cool, dark place in an airtight container.",
+          "temperature_celsius": {
+            "max": 25,
+            "min": 5
+          }
+        },
+        "synonyms": [
+          "Bay Laurel Oil"
+        ]
+      }
+    ],
+    "origin": {
+      "processing_methods": [
+        "Dried",
+        "Distilled"
+      ],
+      "regions": [
+        "Mediterranean",
+        "North America",
+        "Asia"
+      ],
+      "source_material": "Leaves"
+    },
+    "primary_functions": [
+      "Flavor",
+      "Fragrance"
+    ],
+    "regulatory_notes": [
+      "Generally recognized as safe (GRAS)"
+    ],
+    "short_description": "Aromatic leaf from the bay laurel tree, used for flavoring and fragrance.",
+    "taxonomy": {
+      "color_profile": [
+        "Green"
+      ],
+      "compatible_processes": [
+        "Cold Process Soap",
+        "Hot Process Soap",
+        "Hydro-distillation",
+        "Infusion",
+        "Baking",
+        "Brewing"
+      ],
+      "incompatible_processes": [],
+      "scent_profile": [
+        "Herbal",
+        "Slightly Floral"
+      ],
+      "texture_profile": [
+        "Brittle"
+      ]
+    }
+  }
+}

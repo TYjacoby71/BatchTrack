@@ -1,0 +1,182 @@
+{
+  "data_quality": {
+    "caveats": [],
+    "confidence": 1
+  },
+  "ingredient": {
+    "botanical_name": "",
+    "cas_number": "7487-88-9",
+    "category": "Salts & Minerals",
+    "common_name": "Epsom Salt",
+    "detailed_description": "Epsom salt, chemically known as magnesium sulfate, is a pure mineral compound. In artisanal formulating, it is prized for its ability to soothe muscles, provide relief from stress, and enhance skin health among other benefits. It is widely used in bath soaks, cosmetics, and even in gardening.",
+    "documentation": {
+      "last_verified": "2023-12-01",
+      "references": [
+        {
+          "notes": "Comprehensive chemical information",
+          "title": "Magnesium Sulfate Monograph",
+          "url": "https://pubchem.ncbi.nlm.nih.gov/compound/Magnesium-sulfate"
+        }
+      ]
+    },
+    "inci_name": "Magnesium Sulfate",
+    "items": [
+      {
+        "applications": [
+          "Bath Bomb",
+          "Scrub",
+          "Soak",
+          "Gardening"
+        ],
+        "form_bypass": false,
+        "function_tags": [
+          "Exfoliant",
+          "Humectant"
+        ],
+        "item_name": "Epsom Salt (Granular)",
+        "physical_form": "Granules",
+        "safety_tags": [],
+        "sds_hazards": [],
+        "shelf_life_days": 1825,
+        "sourcing": {
+          "certifications": [],
+          "common_origins": [
+            "USA",
+            "China",
+            "Germany"
+          ],
+          "supply_risks": [
+            "None"
+          ],
+          "sustainability_notes": "Widely available and sustainable"
+        },
+        "specifications": {
+          "flash_point_celsius": 0,
+          "iodine_value": 0,
+          "melting_point_celsius": {
+            "max": 112,
+            "min": 112
+          },
+          "ph_range": {
+            "max": 6.5,
+            "min": 5.5
+          },
+          "sap_koh": 0,
+          "sap_naoh": 0,
+          "usage_rate_percent": {
+            "leave_on_max": 100,
+            "rinse_off_max": 100
+          }
+        },
+        "storage": {
+          "humidity_percent": {
+            "max": 60
+          },
+          "special_instructions": "Store in a dry place",
+          "temperature_celsius": {
+            "max": 30,
+            "min": 0
+          }
+        },
+        "synonyms": [
+          "Magnesium sulfate heptahydrate"
+        ]
+      },
+      {
+        "applications": [
+          "Lotion",
+          "Cream",
+          "Scrub",
+          "Bath Bomb"
+        ],
+        "form_bypass": false,
+        "function_tags": [
+          "Exfoliant",
+          "Humectant"
+        ],
+        "item_name": "Epsom Salt (Fine)",
+        "physical_form": "Powder",
+        "safety_tags": [],
+        "sds_hazards": [],
+        "shelf_life_days": 1825,
+        "sourcing": {
+          "certifications": [],
+          "common_origins": [
+            "USA",
+            "China",
+            "Germany"
+          ],
+          "supply_risks": [
+            "None"
+          ],
+          "sustainability_notes": "Widely available and sustainable"
+        },
+        "specifications": {
+          "flash_point_celsius": 0,
+          "iodine_value": 0,
+          "melting_point_celsius": {
+            "max": 112,
+            "min": 112
+          },
+          "ph_range": {
+            "max": 6.5,
+            "min": 5.5
+          },
+          "sap_koh": 0,
+          "sap_naoh": 0,
+          "usage_rate_percent": {
+            "leave_on_max": 100,
+            "rinse_off_max": 100
+          }
+        },
+        "storage": {
+          "humidity_percent": {
+            "max": 60
+          },
+          "special_instructions": "Keep container tightly closed",
+          "temperature_celsius": {
+            "max": 30,
+            "min": 0
+          }
+        },
+        "synonyms": [
+          "Magnesium sulfate"
+        ]
+      }
+    ],
+    "origin": {
+      "processing_methods": [
+        "Crystallized",
+        "Dried"
+      ],
+      "regions": [
+        "Global"
+      ],
+      "source_material": "Mineral"
+    },
+    "primary_functions": [
+      "Exfoliant",
+      "Humectant"
+    ],
+    "regulatory_notes": [
+      "Generally recognized as safe (GRAS)"
+    ],
+    "short_description": "A mineral compound known for its numerous health and beauty benefits.",
+    "taxonomy": {
+      "color_profile": [
+        "White"
+      ],
+      "compatible_processes": [
+        "Bath Soak",
+        "Exfoliating Scrubs",
+        "Cosmetic Formulations"
+      ],
+      "incompatible_processes": [],
+      "scent_profile": [],
+      "texture_profile": [
+        "Crystalline",
+        "Powdery"
+      ]
+    }
+  }
+}

@@ -1,0 +1,190 @@
+{
+  "data_quality": {
+    "caveats": [
+      "Supply risks and sustainability notes are based on general industry trends and may vary."
+    ],
+    "confidence": 0.9
+  },
+  "ingredient": {
+    "botanical_name": "Copernicia prunifera",
+    "cas_number": "8015-86-9",
+    "category": "Waxes",
+    "common_name": "Carnauba Wax",
+    "detailed_description": "Carnauba wax is a vegetable wax harvested from the leaves of the Brazilian palm, Copernicia prunifera. Known for its high melting point and glossy finish, it is widely used in various industries, including cosmetics, food, and automotive. Carnauba wax is celebrated for its durability and ability to create a protective barrier, making it an ideal ingredient for artisanal formulators.",
+    "documentation": {
+      "last_verified": "2023-12-01",
+      "references": [
+        {
+          "notes": "Overview of carnauba wax uses in cosmetics.",
+          "title": "Carnauba Wax as a Natural Cosmetic Ingredient",
+          "url": "https://www.cosmeticsinfo.org/ingredient/carnauba-wax"
+        }
+      ]
+    },
+    "inci_name": "Copernicia Cerifera (Carnauba) Wax",
+    "items": [
+      {
+        "applications": [
+          "Candle",
+          "Wax Melt",
+          "Lip Balm",
+          "Chocolate",
+          "Confection",
+          "Cosmetics"
+        ],
+        "form_bypass": false,
+        "function_tags": [
+          "Hardener",
+          "Stabilizer",
+          "Thickener"
+        ],
+        "item_name": "Carnauba Wax (Flakes)",
+        "physical_form": "Flakes",
+        "safety_tags": [],
+        "sds_hazards": [],
+        "shelf_life_days": 1095,
+        "sourcing": {
+          "certifications": [
+            "Organic",
+            "Fair Trade"
+          ],
+          "common_origins": [
+            "Brazil"
+          ],
+          "supply_risks": [
+            "Seasonal Harvest"
+          ],
+          "sustainability_notes": "Sustainable harvesting practices are crucial to prevent deforestation and ensure the preservation of biodiversity."
+        },
+        "specifications": {
+          "flash_point_celsius": 299,
+          "iodine_value": 10,
+          "melting_point_celsius": {
+            "max": 86,
+            "min": 82
+          },
+          "ph_range": {
+            "max": 7,
+            "min": 6
+          },
+          "sap_koh": 0.112,
+          "sap_naoh": 0.079,
+          "usage_rate_percent": {
+            "leave_on_max": 10,
+            "rinse_off_max": 20
+          }
+        },
+        "storage": {
+          "humidity_percent": {
+            "max": 60
+          },
+          "special_instructions": "Store in a cool, dry place away from direct sunlight.",
+          "temperature_celsius": {
+            "max": 30,
+            "min": 15
+          }
+        },
+        "synonyms": []
+      },
+      {
+        "applications": [
+          "Lotion",
+          "Cream",
+          "Balm",
+          "Serum",
+          "Scrub"
+        ],
+        "form_bypass": false,
+        "function_tags": [
+          "Thickener",
+          "Stabilizer"
+        ],
+        "item_name": "Carnauba Wax (Pellets)",
+        "physical_form": "Pellets",
+        "safety_tags": [],
+        "sds_hazards": [],
+        "shelf_life_days": 1095,
+        "sourcing": {
+          "certifications": [
+            "Organic"
+          ],
+          "common_origins": [
+            "Brazil"
+          ],
+          "supply_risks": [
+            "Seasonal Harvest"
+          ],
+          "sustainability_notes": "Engagement in responsible sourcing practices is essential to support local communities and ecosystems."
+        },
+        "specifications": {
+          "flash_point_celsius": 299,
+          "iodine_value": 10,
+          "melting_point_celsius": {
+            "max": 86,
+            "min": 82
+          },
+          "ph_range": {
+            "max": 7,
+            "min": 6
+          },
+          "sap_koh": 0.112,
+          "sap_naoh": 0.079,
+          "usage_rate_percent": {
+            "leave_on_max": 5,
+            "rinse_off_max": 15
+          }
+        },
+        "storage": {
+          "humidity_percent": {
+            "max": 60
+          },
+          "special_instructions": "Keep in a well-ventilated place. Store away from incompatible materials.",
+          "temperature_celsius": {
+            "max": 30,
+            "min": 15
+          }
+        },
+        "synonyms": []
+      }
+    ],
+    "origin": {
+      "processing_methods": [
+        "Refined"
+      ],
+      "regions": [
+        "Brazil"
+      ],
+      "source_material": "Leaves"
+    },
+    "primary_functions": [
+      "Hardener",
+      "Stabilizer",
+      "Thickener",
+      "Glossing Agent"
+    ],
+    "regulatory_notes": [
+      "Food grade",
+      "Cosmetic grade"
+    ],
+    "short_description": "A hard, natural wax obtained from the leaves of the carnauba palm.",
+    "taxonomy": {
+      "color_profile": [
+        "Translucent"
+      ],
+      "compatible_processes": [
+        "Cold Process Soap",
+        "Hot Process Soap",
+        "Melt & Pour Soap",
+        "Lotion Making",
+        "Chocolate Making",
+        "Candle Making"
+      ],
+      "incompatible_processes": [],
+      "scent_profile": [],
+      "texture_profile": [
+        "Hard",
+        "Brittle"
+      ]
+    }
+  }
+}

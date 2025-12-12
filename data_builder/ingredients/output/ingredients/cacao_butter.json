@@ -1,0 +1,215 @@
+{
+  "data_quality": {
+    "caveats": [
+      "Seasonal variations in cacao production may affect butter characteristics."
+    ],
+    "confidence": 0.9
+  },
+  "ingredient": {
+    "botanical_name": "Theobroma cacao",
+    "cas_number": "8002-31-1",
+    "category": "Butters (Solid Fats)",
+    "common_name": "Cacao Butter",
+    "detailed_description": "Cacao butter, also known as cocoa butter, is a pure, stable fat that is pressed out of cacao beans. It is known for its rich, creamy texture and is a key ingredient in chocolate production. Beyond confectionery, it is widely used in cosmetic formulations for its moisturizing properties and in various artisanal crafts for its pleasant aroma and texture.",
+    "documentation": {
+      "last_verified": "2023-12-01",
+      "references": [
+        {
+          "notes": "Provides detailed chemical and physical properties of cocoa butter.",
+          "title": "Cocoa Butter - Physical and Chemical Information",
+          "url": "https://www.cocoabutter.com/Chemical-Physical"
+        }
+      ]
+    },
+    "inci_name": "Theobroma Cacao (Cocoa) Seed Butter",
+    "items": [
+      {
+        "applications": [
+          "Chocolate",
+          "Confection",
+          "Lotion",
+          "Cream",
+          "Balm",
+          "Lip Balm",
+          "Skincare"
+        ],
+        "form_bypass": false,
+        "function_tags": [
+          "Emollient",
+          "Antioxidant",
+          "Stabilizer"
+        ],
+        "item_name": "Cacao Butter (Unrefined)",
+        "physical_form": "Butter",
+        "safety_tags": [],
+        "sds_hazards": [],
+        "shelf_life_days": 730,
+        "sourcing": {
+          "certifications": [
+            "Organic",
+            "Fair Trade"
+          ],
+          "common_origins": [
+            "Ivory Coast",
+            "Ghana",
+            "Ecuador"
+          ],
+          "supply_risks": [
+            "Seasonal Harvest"
+          ],
+          "sustainability_notes": "Sustainable sourcing is crucial due to deforestation concerns."
+        },
+        "specifications": {
+          "flash_point_celsius": 260,
+          "iodine_value": 34,
+          "melting_point_celsius": {
+            "max": 35,
+            "min": 32
+          },
+          "ph_range": {
+            "max": 6,
+            "min": 5
+          },
+          "sap_koh": 0.193,
+          "sap_naoh": 0.137,
+          "usage_rate_percent": {
+            "leave_on_max": 100,
+            "rinse_off_max": 100
+          }
+        },
+        "storage": {
+          "humidity_percent": {
+            "max": 60
+          },
+          "special_instructions": "Store in a cool, dry place away from direct sunlight.",
+          "temperature_celsius": {
+            "max": 25,
+            "min": 15
+          }
+        },
+        "synonyms": [
+          "Raw Cacao Butter",
+          "Pure Cacao Butter"
+        ]
+      },
+      {
+        "applications": [
+          "Chocolate",
+          "Confection",
+          "Lotion",
+          "Cream",
+          "Balm",
+          "Lip Balm",
+          "Skincare"
+        ],
+        "form_bypass": false,
+        "function_tags": [
+          "Emollient",
+          "Antioxidant",
+          "Stabilizer"
+        ],
+        "item_name": "Cacao Butter (Refined)",
+        "physical_form": "Butter",
+        "safety_tags": [],
+        "sds_hazards": [],
+        "shelf_life_days": 730,
+        "sourcing": {
+          "certifications": [
+            "Organic",
+            "Fair Trade"
+          ],
+          "common_origins": [
+            "Ivory Coast",
+            "Ghana",
+            "Ecuador"
+          ],
+          "supply_risks": [
+            "Seasonal Harvest"
+          ],
+          "sustainability_notes": "Refining process may reduce the environmental impact by removing impurities."
+        },
+        "specifications": {
+          "flash_point_celsius": 260,
+          "iodine_value": 34,
+          "melting_point_celsius": {
+            "max": 35,
+            "min": 32
+          },
+          "ph_range": {
+            "max": 6,
+            "min": 5
+          },
+          "sap_koh": 0.193,
+          "sap_naoh": 0.137,
+          "usage_rate_percent": {
+            "leave_on_max": 100,
+            "rinse_off_max": 100
+          }
+        },
+        "storage": {
+          "humidity_percent": {
+            "max": 60
+          },
+          "special_instructions": "Store in a cool, dry place away from direct sunlight.",
+          "temperature_celsius": {
+            "max": 25,
+            "min": 15
+          }
+        },
+        "synonyms": [
+          "Deodorized Cacao Butter"
+        ]
+      }
+    ],
+    "origin": {
+      "processing_methods": [
+        "Cold Pressed",
+        "Refined"
+      ],
+      "regions": [
+        "West Africa",
+        "South America",
+        "Southeast Asia"
+      ],
+      "source_material": "Cacao beans"
+    },
+    "primary_functions": [
+      "Emollient",
+      "Antioxidant",
+      "Stabilizer"
+    ],
+    "regulatory_notes": [
+      "Food grade",
+      "Generally recognized as safe (GRAS)"
+    ],
+    "short_description": "A natural fat derived from the seeds of the cacao tree.",
+    "taxonomy": {
+      "color_profile": [
+        "Ivory",
+        "Yellow"
+      ],
+      "compatible_processes": [
+        "Cold Process Soap",
+        "Hot Process Soap",
+        "Melt & Pour Soap",
+        "Lotion",
+        "Cream",
+        "Balm",
+        "Chocolate",
+        "Confection",
+        "Skincare"
+      ],
+      "incompatible_processes": [
+        "High-heat frying"
+      ],
+      "scent_profile": [
+        "Nutty",
+        "Mild"
+      ],
+      "texture_profile": [
+        "Hard",
+        "Brittle"
+      ]
+    }
+  }
+}

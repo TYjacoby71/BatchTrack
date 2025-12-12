@@ -1,0 +1,143 @@
+{
+  "data_quality": {
+    "caveats": [
+      "SAP values, iodine value, and pH range are not typically specified for birch tar oil due to its primary use as a fragrance or preservative rather than a saponification agent."
+    ],
+    "confidence": 0.9
+  },
+  "ingredient": {
+    "botanical_name": "Betula spp.",
+    "cas_number": "8001-88-5",
+    "category": "Essential Oils",
+    "common_name": "Birch Tar",
+    "detailed_description": "Birch Tar is a phenolic-rich, tar-like substance obtained through the dry distillation of the bark of birch trees. It has a strong, characteristic smoky odor reminiscent of leather and is traditionally used in medicinal, cosmetic, and aromatic applications. Its primary components include guaiacol, cresol, and other phenols, which contribute to its antiseptic, anti-inflammatory, and fragrance properties.",
+    "documentation": {
+      "last_verified": "2023-12-01",
+      "references": [
+        {
+          "notes": "Guidelines for safe use in fragrances",
+          "title": "IFRA Standards",
+          "url": "https://ifrafragrance.org/safe-use/standards-library"
+        }
+      ]
+    },
+    "inci_name": "Betula Alba Oil",
+    "items": [
+      {
+        "applications": [
+          "Cold Process Soap",
+          "Hot Process Soap",
+          "Perfume",
+          "Candle",
+          "Wax Melt",
+          "Skincare",
+          "Deodorant"
+        ],
+        "form_bypass": false,
+        "function_tags": [
+          "Fragrance",
+          "Antioxidant",
+          "Preservative"
+        ],
+        "item_name": "Birch Tar Oil",
+        "physical_form": "Oil",
+        "safety_tags": [
+          "Dermal Limit 3%",
+          "Avoid during pregnancy"
+        ],
+        "sds_hazards": [
+          "Flammable",
+          "Irritant"
+        ],
+        "shelf_life_days": 1095,
+        "sourcing": {
+          "certifications": [
+            "Wildcrafted"
+          ],
+          "common_origins": [
+            "Finland",
+            "Russia"
+          ],
+          "supply_risks": [
+            "Seasonal Harvest",
+            "Sustainable Sourcing Practices"
+          ],
+          "sustainability_notes": "Considered a by-product of birch bark, promoting a use for otherwise waste material"
+        },
+        "specifications": {
+          "flash_point_celsius": 93,
+          "iodine_value": "unknown",
+          "melting_point_celsius": {
+            "max": "unknown",
+            "min": "unknown"
+          },
+          "ph_range": {
+            "max": "unknown",
+            "min": "unknown"
+          },
+          "sap_koh": "unknown",
+          "sap_naoh": "unknown",
+          "usage_rate_percent": {
+            "leave_on_max": 0.5,
+            "rinse_off_max": 5
+          }
+        },
+        "storage": {
+          "humidity_percent": {
+            "max": 60
+          },
+          "special_instructions": "Store in a cool, dark place in an airtight container",
+          "temperature_celsius": {
+            "max": 25,
+            "min": 5
+          }
+        },
+        "synonyms": [
+          "Betula Alba Tar"
+        ]
+      }
+    ],
+    "origin": {
+      "processing_methods": [
+        "Dry Distillation"
+      ],
+      "regions": [
+        "Northern Europe",
+        "Russia"
+      ],
+      "source_material": "Birch bark"
+    },
+    "primary_functions": [
+      "Fragrance",
+      "Antioxidant",
+      "Preservative"
+    ],
+    "regulatory_notes": [
+      "IFRA safe within recommended usage rates",
+      "Not for internal use in high concentrations"
+    ],
+    "short_description": "A dark, viscous liquid derived from the dry distillation of birch bark.",
+    "taxonomy": {
+      "color_profile": [
+        "Dark Brown"
+      ],
+      "compatible_processes": [
+        "Cold Process Soap",
+        "Hot Process Soap",
+        "Perfume Blending",
+        "Candle Making"
+      ],
+      "incompatible_processes": [
+        "High-heat applications",
+        "Direct food flavoring"
+      ],
+      "scent_profile": [
+        "Smoky",
+        "Woody"
+      ],
+      "texture_profile": [
+        "Viscous"
+      ]
+    }
+  }
+}

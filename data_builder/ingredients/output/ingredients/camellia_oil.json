@@ -1,0 +1,140 @@
+{
+  "data_quality": {
+    "caveats": [
+      "Limited data on high-temperature stability for culinary uses"
+    ],
+    "confidence": 0.9
+  },
+  "ingredient": {
+    "botanical_name": "Camellia oleifera",
+    "cas_number": "225233-97-6",
+    "category": "Oils (Carrier & Fixed)",
+    "common_name": "Camellia Oil",
+    "detailed_description": "Camellia oil, also known as tea seed oil, is a pale greenish-yellow oil obtained from the seeds of the Camellia oleifera plant. It is rich in oleic acid and antioxidants, making it highly beneficial for skin and hair care formulations. It is known for its ability to moisturize, condition, and provide a silky smooth feel to the skin and hair without leaving a greasy residue. Camellia oil is also used in culinary applications, particularly in Asian cuisine.",
+    "documentation": {
+      "last_verified": "2023-12-01",
+      "references": [
+        {
+          "notes": "CIR safety review on Camellia Oleifera Seed Oil",
+          "title": "Safety Assessment of Camellia Oleifera Seed Oil",
+          "url": "https://www.cir-safety.org/ingredient/camellia-oleifera-seed-oil"
+        }
+      ]
+    },
+    "inci_name": "Camellia Oleifera Seed Oil",
+    "items": [
+      {
+        "applications": [
+          "Lotion",
+          "Cream",
+          "Balm",
+          "Serum",
+          "Scrub",
+          "Lip Balm",
+          "Haircare",
+          "Skincare",
+          "Confection",
+          "Baked Good"
+        ],
+        "form_bypass": false,
+        "function_tags": [
+          "Emollient",
+          "Antioxidant"
+        ],
+        "item_name": "Camellia Oil (Cold Pressed)",
+        "physical_form": "Oil",
+        "safety_tags": [],
+        "sds_hazards": [],
+        "shelf_life_days": 730,
+        "sourcing": {
+          "certifications": [
+            "Organic",
+            "Non-GMO"
+          ],
+          "common_origins": [
+            "China",
+            "Japan"
+          ],
+          "supply_risks": [
+            "Seasonal variability"
+          ],
+          "sustainability_notes": "Sustainable when sourced from non-GMO, organic certified farms"
+        },
+        "specifications": {
+          "flash_point_celsius": 250,
+          "iodine_value": 82,
+          "melting_point_celsius": {
+            "max": -5,
+            "min": -10
+          },
+          "ph_range": {
+            "max": 7,
+            "min": 5
+          },
+          "sap_koh": 0.19,
+          "sap_naoh": 0.135,
+          "usage_rate_percent": {
+            "leave_on_max": 10,
+            "rinse_off_max": 100
+          }
+        },
+        "storage": {
+          "humidity_percent": {
+            "max": 60
+          },
+          "special_instructions": "Store in a cool, dark place",
+          "temperature_celsius": {
+            "max": 25,
+            "min": 15
+          }
+        },
+        "synonyms": [
+          "Tea Seed Oil",
+          "Camellia Oleifera Seed Oil"
+        ]
+      }
+    ],
+    "origin": {
+      "processing_methods": [
+        "Cold Pressed"
+      ],
+      "regions": [
+        "China",
+        "Japan"
+      ],
+      "source_material": "Seeds"
+    },
+    "primary_functions": [
+      "Emollient",
+      "Antioxidant"
+    ],
+    "regulatory_notes": [
+      "Generally recognized as safe (GRAS) for food use",
+      "Cosmetic Ingredient Review (CIR) approved"
+    ],
+    "short_description": "A moisturizing and conditioning oil derived from the seeds of the Camellia oleifera plant.",
+    "taxonomy": {
+      "color_profile": [
+        "Pale Greenish-Yellow"
+      ],
+      "compatible_processes": [
+        "Cold Process Soap",
+        "Hot Process Soap",
+        "Lotion Making",
+        "Balm Formulation",
+        "Serum Formulation",
+        "Confectionery",
+        "Baking"
+      ],
+      "incompatible_processes": [
+        "High-heat frying due to low smoke point"
+      ],
+      "scent_profile": [
+        "Nutty"
+      ],
+      "texture_profile": [
+        "Liquid"
+      ]
+    }
+  }
+}

@@ -1,0 +1,177 @@
+{
+  "data_quality": {
+    "caveats": [
+      "Supply risks due to geopolitical tensions"
+    ],
+    "confidence": 0.9
+  },
+  "ingredient": {
+    "botanical_name": "",
+    "cas_number": "7647-14-5",
+    "category": "Salts & Minerals",
+    "common_name": "Dead Sea Salt",
+    "detailed_description": "Dead Sea Salt is known for its high mineral content, including magnesium, calcium, sulfur, bromide, iodine, sodium, zinc, and potassium. These minerals make it highly valued in various artisanal formulations for its therapeutic and skin nourishing properties.",
+    "documentation": {
+      "last_verified": "2023-12-01",
+      "references": [
+        {
+          "notes": "Overview of mineral content and health benefits",
+          "title": "The therapeutic benefits of Dead Sea mineral salts",
+          "url": "https://example.com/benefits-dead-sea-salts"
+        }
+      ]
+    },
+    "inci_name": "Maris Sal",
+    "items": [
+      {
+        "applications": [
+          "Bath Bomb",
+          "Scrub",
+          "Soak",
+          "Skincare"
+        ],
+        "form_bypass": false,
+        "function_tags": [
+          "Exfoliant",
+          "Humectant"
+        ],
+        "item_name": "Dead Sea Salt (Fine)",
+        "physical_form": "Granules",
+        "safety_tags": [],
+        "sds_hazards": [],
+        "shelf_life_days": 1825,
+        "sourcing": {
+          "certifications": [],
+          "common_origins": [
+            "Israel",
+            "Jordan"
+          ],
+          "supply_risks": [
+            "Geopolitical tensions"
+          ],
+          "sustainability_notes": "Sustainable harvesting practices are important to maintain mineral balance and environmental health."
+        },
+        "specifications": {
+          "flash_point_celsius": null,
+          "iodine_value": null,
+          "melting_point_celsius": null,
+          "ph_range": {
+            "max": 8,
+            "min": 6
+          },
+          "sap_koh": null,
+          "sap_naoh": null,
+          "usage_rate_percent": {
+            "leave_on_max": 100,
+            "rinse_off_max": 100
+          }
+        },
+        "storage": {
+          "humidity_percent": {
+            "max": 75
+          },
+          "special_instructions": "Keep dry and tightly sealed",
+          "temperature_celsius": {
+            "max": 30,
+            "min": 5
+          }
+        },
+        "synonyms": [
+          "Fine Dead Sea Salt"
+        ]
+      },
+      {
+        "applications": [
+          "Bath Bomb",
+          "Scrub",
+          "Soak"
+        ],
+        "form_bypass": false,
+        "function_tags": [
+          "Exfoliant",
+          "Humectant"
+        ],
+        "item_name": "Dead Sea Salt (Coarse)",
+        "physical_form": "Crystals",
+        "safety_tags": [],
+        "sds_hazards": [],
+        "shelf_life_days": 1825,
+        "sourcing": {
+          "certifications": [],
+          "common_origins": [
+            "Israel",
+            "Jordan"
+          ],
+          "supply_risks": [
+            "Geopolitical tensions"
+          ],
+          "sustainability_notes": "Sustainable harvesting practices are important to maintain mineral balance and environmental health."
+        },
+        "specifications": {
+          "flash_point_celsius": null,
+          "iodine_value": null,
+          "melting_point_celsius": null,
+          "ph_range": {
+            "max": 8,
+            "min": 6
+          },
+          "sap_koh": null,
+          "sap_naoh": null,
+          "usage_rate_percent": {
+            "leave_on_max": 100,
+            "rinse_off_max": 100
+          }
+        },
+        "storage": {
+          "humidity_percent": {
+            "max": 75
+          },
+          "special_instructions": "Keep dry and tightly sealed",
+          "temperature_celsius": {
+            "max": 30,
+            "min": 5
+          }
+        },
+        "synonyms": [
+          "Coarse Dead Sea Salt"
+        ]
+      }
+    ],
+    "origin": {
+      "processing_methods": [
+        "Evaporated"
+      ],
+      "regions": [
+        "Middle East"
+      ],
+      "source_material": "Sea salt"
+    },
+    "primary_functions": [
+      "Exfoliant",
+      "Humectant"
+    ],
+    "regulatory_notes": [
+      "Food grade"
+    ],
+    "short_description": "Mineral-rich salt from the Dead Sea",
+    "taxonomy": {
+      "color_profile": [
+        "White",
+        "Translucent"
+      ],
+      "compatible_processes": [
+        "Cold Process Soap",
+        "Hot Process Soap",
+        "Bath Bomb",
+        "Scrub",
+        "Soak"
+      ],
+      "incompatible_processes": [],
+      "scent_profile": [],
+      "texture_profile": [
+        "Coarse",
+        "Fine"
+      ]
+    }
+  }
+}

@@ -1,0 +1,246 @@
+{
+  "data_quality": {
+    "caveats": [
+      "SAP values for cinnamon essential oil are not widely available."
+    ],
+    "confidence": 0.9
+  },
+  "ingredient": {
+    "botanical_name": "Cinnamomum verum, Cinnamomum cassia",
+    "cas_number": "8015-91-6",
+    "category": "Herbs & Spices (Dried Botanicals)",
+    "common_name": "Cinnamon",
+    "detailed_description": "Cinnamon is a highly aromatic and flavorful spice, used across various industries including food, cosmetics, and aromatherapy. It is obtained by peeling off the inner bark of the Cinnamomum trees and is available in several forms. Cinnamon is known for its sweet, woody fragrance in both culinary and non-culinary applications. It possesses antioxidant, anti-inflammatory, and antimicrobial properties, making it a versatile ingredient in many formulations.",
+    "documentation": {
+      "last_verified": "2023-12-01",
+      "references": [
+        {
+          "notes": "Confirms cinnamon's status as generally recognized as safe.",
+          "title": "FDA GRAS Notice for Cinnamon",
+          "url": "https://www.fda.gov"
+        },
+        {
+          "notes": "Details on the safe use of cinnamon essential oil in fragrances.",
+          "title": "IFRA Standards",
+          "url": "https://ifrafragrance.org"
+        }
+      ]
+    },
+    "inci_name": "CINNAMOMUM VERUM BARK",
+    "items": [
+      {
+        "applications": [
+          "Beverage",
+          "Fermented Beverage",
+          "Baked Good",
+          "Herbal Tincture",
+          "Aromatherapy"
+        ],
+        "form_bypass": false,
+        "function_tags": [
+          "Flavor",
+          "Fragrance"
+        ],
+        "item_name": "Cinnamon Sticks",
+        "physical_form": "Whole",
+        "safety_tags": [],
+        "sds_hazards": [],
+        "shelf_life_days": 1095,
+        "sourcing": {
+          "certifications": [
+            "Organic"
+          ],
+          "common_origins": [
+            "Sri Lanka",
+            "Indonesia"
+          ],
+          "supply_risks": [
+            "Seasonal variations may affect availability"
+          ],
+          "sustainability_notes": "Sustainable harvesting practices are important to prevent overexploitation."
+        },
+        "specifications": {},
+        "storage": {
+          "humidity_percent": {
+            "max": 60
+          },
+          "special_instructions": "Store in a cool, dry place away from direct sunlight.",
+          "temperature_celsius": {
+            "max": 25,
+            "min": 0
+          }
+        },
+        "synonyms": [
+          "Cinnamon quills"
+        ]
+      },
+      {
+        "applications": [
+          "Chocolate",
+          "Confection",
+          "Baked Good",
+          "Lotion",
+          "Cream",
+          "Balm",
+          "Perfume",
+          "Candle"
+        ],
+        "form_bypass": false,
+        "function_tags": [
+          "Flavor",
+          "Fragrance",
+          "Colorant"
+        ],
+        "item_name": "Cinnamon Powder",
+        "physical_form": "Powder",
+        "safety_tags": [],
+        "sds_hazards": [],
+        "shelf_life_days": 730,
+        "sourcing": {
+          "certifications": [
+            "Organic"
+          ],
+          "common_origins": [
+            "China",
+            "Vietnam"
+          ],
+          "supply_risks": [
+            "Adulteration with other cinnamon species"
+          ],
+          "sustainability_notes": "Monitoring for quality and authenticity is recommended."
+        },
+        "specifications": {},
+        "storage": {
+          "humidity_percent": {
+            "max": 60
+          },
+          "special_instructions": "Keep container tightly closed in a dry and well-ventilated place.",
+          "temperature_celsius": {
+            "max": 25,
+            "min": 0
+          }
+        },
+        "synonyms": [
+          "Ground cinnamon"
+        ]
+      },
+      {
+        "applications": [
+          "Perfume",
+          "Aromatherapy",
+          "Soap",
+          "Candle",
+          "Wax Melt",
+          "Lotion",
+          "Balm"
+        ],
+        "form_bypass": false,
+        "function_tags": [
+          "Fragrance",
+          "Antioxidant"
+        ],
+        "item_name": "Cinnamon Essential Oil",
+        "physical_form": "Oil",
+        "safety_tags": [
+          "Dermal Limit 0.07%",
+          "Potential skin irritant"
+        ],
+        "sds_hazards": [
+          "Irritant"
+        ],
+        "shelf_life_days": 1825,
+        "sourcing": {
+          "certifications": [
+            "Organic",
+            "Fair Trade"
+          ],
+          "common_origins": [
+            "Sri Lanka",
+            "Madagascar"
+          ],
+          "supply_risks": [
+            "Limited availability of organic sources"
+          ],
+          "sustainability_notes": "Ethical sourcing is crucial due to the high demand for essential oils."
+        },
+        "specifications": {
+          "flash_point_celsius": 85,
+          "iodine_value": "unknown",
+          "melting_point_celsius": {
+            "max": "unknown",
+            "min": "unknown"
+          },
+          "ph_range": {
+            "max": "unknown",
+            "min": "unknown"
+          },
+          "sap_koh": "unknown",
+          "sap_naoh": "unknown",
+          "usage_rate_percent": {
+            "leave_on_max": 0.07,
+            "rinse_off_max": "unknown"
+          }
+        },
+        "storage": {
+          "humidity_percent": {
+            "max": 60
+          },
+          "special_instructions": "Store in a cool, dark place in tightly sealed containers.",
+          "temperature_celsius": {
+            "max": 25,
+            "min": 5
+          }
+        },
+        "synonyms": [
+          "Cinnamon bark oil"
+        ]
+      }
+    ],
+    "origin": {
+      "processing_methods": [
+        "Dried",
+        "Ground"
+      ],
+      "regions": [
+        "Sri Lanka",
+        "Indonesia",
+        "China",
+        "Vietnam"
+      ],
+      "source_material": "Bark"
+    },
+    "primary_functions": [
+      "Flavor",
+      "Fragrance",
+      "Antioxidant"
+    ],
+    "regulatory_notes": [
+      "Generally recognized as safe (GRAS) by the FDA",
+      "IFRA safe"
+    ],
+    "short_description": "Aromatic spice derived from the inner bark of trees from the genus Cinnamomum.",
+    "taxonomy": {
+      "color_profile": [
+        "Brown"
+      ],
+      "compatible_processes": [
+        "Cold Process Soap",
+        "Hot Process Soap",
+        "Melt & Pour Soap",
+        "Small Batch Baking",
+        "Aromatherapy",
+        "Hydro-distillation"
+      ],
+      "incompatible_processes": [],
+      "scent_profile": [
+        "Warm",
+        "Woody",
+        "Sweet"
+      ],
+      "texture_profile": [
+        "Hard",
+        "Fine Powder"
+      ]
+    }
+  }
+}

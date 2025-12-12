@@ -1,0 +1,169 @@
+{
+  "data_quality": {
+    "caveats": [
+      "Seasonal variations in quality and availability"
+    ],
+    "confidence": 0.9
+  },
+  "ingredient": {
+    "botanical_name": "Nepeta cataria",
+    "cas_number": "84696-15-1",
+    "category": "Herbs & Spices (Dried Botanicals)",
+    "common_name": "Catnip",
+    "detailed_description": "Catnip, scientifically known as Nepeta cataria, is a member of the mint family Lamiaceae. It is native to Europe and Asia but has become widespread throughout North America and other regions. Catnip is well-known for its sedative effects on cats, caused by the compound nepetalactone. In artisanal crafting, catnip is valued for its aromatic, culinary, and medicinal properties. It is used in a variety of applications, including herbal teas, culinary dishes, and in natural health products for its soothing and relaxing effects.",
+    "documentation": {
+      "last_verified": "2023-12-01",
+      "references": [
+        {
+          "notes": "Comprehensive details on medicinal and aromatic uses of catnip.",
+          "title": "Herbal Materia Medica",
+          "url": "https://exampleherbalsite.com/catnip"
+        }
+      ]
+    },
+    "inci_name": "NEPETA CATARIA EXTRACT",
+    "items": [
+      {
+        "applications": [
+          "Herbal Tincture",
+          "Tea",
+          "Culinary"
+        ],
+        "form_bypass": false,
+        "function_tags": [
+          "Flavor"
+        ],
+        "item_name": "Catnip Leaves (Dried)",
+        "physical_form": "Whole",
+        "safety_tags": [
+          "Safe for consumption"
+        ],
+        "sds_hazards": [],
+        "shelf_life_days": 730,
+        "sourcing": {
+          "certifications": [
+            "Organic"
+          ],
+          "common_origins": [
+            "United States",
+            "Canada",
+            "United Kingdom"
+          ],
+          "supply_risks": [
+            "Seasonal variations may affect availability"
+          ],
+          "sustainability_notes": "Sustainable when harvested responsibly"
+        },
+        "specifications": {},
+        "storage": {
+          "humidity_percent": {
+            "max": 60
+          },
+          "special_instructions": "Store in a cool, dry place away from direct sunlight.",
+          "temperature_celsius": {
+            "max": 30,
+            "min": 10
+          }
+        },
+        "synonyms": [
+          "Catmint"
+        ]
+      },
+      {
+        "applications": [
+          "Aromatherapy",
+          "Perfume",
+          "Skincare"
+        ],
+        "form_bypass": false,
+        "function_tags": [
+          "Fragrance"
+        ],
+        "item_name": "Catnip Essential Oil",
+        "physical_form": "Oil",
+        "safety_tags": [
+          "Dermal Limit 0.7%"
+        ],
+        "sds_hazards": [
+          "Irritant"
+        ],
+        "shelf_life_days": 1095,
+        "sourcing": {
+          "certifications": [
+            "Organic",
+            "Wildcrafted"
+          ],
+          "common_origins": [
+            "United States",
+            "Europe"
+          ],
+          "supply_risks": [
+            "Limited availability"
+          ],
+          "sustainability_notes": "Considered sustainable, but overharvesting can pose risks to wild populations"
+        },
+        "specifications": {
+          "flash_point_celsius": 70,
+          "ph_range": {
+            "max": 7,
+            "min": 5
+          }
+        },
+        "storage": {
+          "humidity_percent": {
+            "max": 60
+          },
+          "special_instructions": "Store in a cool, dark place in an airtight container.",
+          "temperature_celsius": {
+            "max": 25,
+            "min": 5
+          }
+        },
+        "synonyms": [
+          "Catnip Oil"
+        ]
+      }
+    ],
+    "origin": {
+      "processing_methods": [
+        "Dried",
+        "Distilled"
+      ],
+      "regions": [
+        "Europe",
+        "Asia",
+        "North America"
+      ],
+      "source_material": "Leaves, Flowers"
+    },
+    "primary_functions": [
+      "Fragrance",
+      "Flavor"
+    ],
+    "regulatory_notes": [
+      "Generally recognized as safe (GRAS)"
+    ],
+    "short_description": "A perennial herb from the mint family known for its aromatic leaves.",
+    "taxonomy": {
+      "color_profile": [
+        "Green"
+      ],
+      "compatible_processes": [
+        "Cold Process Soap",
+        "Hot Process Soap",
+        "Tea Blending",
+        "Aromatherapy",
+        "Herbal Tincture"
+      ],
+      "incompatible_processes": [],
+      "scent_profile": [
+        "Herbaceous",
+        "Woody"
+      ],
+      "texture_profile": [
+        "Crumbly",
+        "Oily"
+      ]
+    }
+  }
+}

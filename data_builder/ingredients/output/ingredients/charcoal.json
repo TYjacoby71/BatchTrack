@@ -1,0 +1,220 @@
+{
+  "data_quality": {
+    "caveats": [
+      "Variability in adsorption properties depending on source material and processing"
+    ],
+    "confidence": 0.9
+  },
+  "ingredient": {
+    "botanical_name": "",
+    "cas_number": "7440-44-0",
+    "category": "Salts & Minerals",
+    "common_name": "Charcoal",
+    "detailed_description": "Charcoal is produced by heating wood or other organic materials in the absence of oxygen. It is widely used in various industries due to its high surface area, adsorption capabilities, and thermal stability. In artisanal formulating, it is prized for its detoxifying, purifying, and colorant properties.",
+    "documentation": {
+      "last_verified": "2023-12-01",
+      "references": [
+        {
+          "notes": "Specifies purity and identity standards for food-grade activated charcoal",
+          "title": "Food Chemicals Codex (FCC)",
+          "url": "https://www.usp.org/food-ingredients"
+        }
+      ]
+    },
+    "inci_name": "CHARCOAL POWDER",
+    "items": [
+      {
+        "applications": [
+          "Cold Process Soap",
+          "Hot Process Soap",
+          "Melt & Pour Soap",
+          "Lotion",
+          "Cream",
+          "Balm",
+          "Serum",
+          "Scrub",
+          "Perfume",
+          "Candle",
+          "Wax Melt",
+          "Lip Balm",
+          "Confection",
+          "Baked Good",
+          "Beverage",
+          "Herbal Tincture",
+          "Bath Bomb",
+          "Shower Steamer",
+          "Skincare",
+          "Deodorant",
+          "Detergent"
+        ],
+        "form_bypass": false,
+        "function_tags": [
+          "Colorant",
+          "Absorbent"
+        ],
+        "item_name": "Activated Charcoal Powder",
+        "physical_form": "Powder",
+        "safety_tags": [
+          "Avoid inhalation of dust"
+        ],
+        "sds_hazards": [
+          "None"
+        ],
+        "shelf_life_days": 1825,
+        "sourcing": {
+          "certifications": [
+            "Organic",
+            "Food Grade"
+          ],
+          "common_origins": [
+            "USA",
+            "India",
+            "China"
+          ],
+          "supply_risks": [
+            "None"
+          ],
+          "sustainability_notes": "Renewable resource but requires responsible sourcing to ensure sustainability"
+        },
+        "specifications": {
+          "flash_point_celsius": 400,
+          "iodine_value": 1000,
+          "melting_point_celsius": {
+            "max": 3700,
+            "min": 3600
+          },
+          "ph_range": {
+            "max": 9,
+            "min": 5
+          },
+          "sap_koh": 0,
+          "sap_naoh": 0,
+          "usage_rate_percent": {
+            "leave_on_max": 5,
+            "rinse_off_max": 10
+          }
+        },
+        "storage": {
+          "humidity_percent": {
+            "max": 70
+          },
+          "special_instructions": "Keep container tightly closed in a dry and well-ventilated place",
+          "temperature_celsius": {
+            "max": 30,
+            "min": 0
+          }
+        },
+        "synonyms": [
+          "Activated Carbon",
+          "Activated Coal"
+        ]
+      },
+      {
+        "applications": [
+          "Fermented Beverage",
+          "Water Filtration"
+        ],
+        "form_bypass": false,
+        "function_tags": [
+          "Absorbent"
+        ],
+        "item_name": "Charcoal Pellets",
+        "physical_form": "Pellets",
+        "safety_tags": [
+          "None"
+        ],
+        "sds_hazards": [
+          "None"
+        ],
+        "shelf_life_days": 1825,
+        "sourcing": {
+          "certifications": [
+            "None"
+          ],
+          "common_origins": [
+            "USA",
+            "Brazil",
+            "Indonesia"
+          ],
+          "supply_risks": [
+            "None"
+          ],
+          "sustainability_notes": "Sustainable when sourced from managed forests or agricultural waste"
+        },
+        "specifications": {
+          "flash_point_celsius": 400,
+          "iodine_value": 600,
+          "melting_point_celsius": {
+            "max": 3700,
+            "min": 3600
+          },
+          "ph_range": {
+            "max": 9,
+            "min": 5
+          },
+          "sap_koh": 0,
+          "sap_naoh": 0,
+          "usage_rate_percent": {
+            "leave_on_max": 0,
+            "rinse_off_max": 0
+          }
+        },
+        "storage": {
+          "humidity_percent": {
+            "max": 70
+          },
+          "special_instructions": "Store in a cool, dry place",
+          "temperature_celsius": {
+            "max": 30,
+            "min": 0
+          }
+        },
+        "synonyms": [
+          "Charcoal Briquettes"
+        ]
+      }
+    ],
+    "origin": {
+      "processing_methods": [
+        "Pyrolysis"
+      ],
+      "regions": [
+        "Global"
+      ],
+      "source_material": "Wood, Coconut shells, Bamboo, Peat"
+    },
+    "primary_functions": [
+      "Colorant",
+      "Absorbent"
+    ],
+    "regulatory_notes": [
+      "Generally recognized as safe (GRAS) for food applications",
+      "IFRA safe for use in fragrances"
+    ],
+    "short_description": "Charcoal is a lightweight, black residue, consisting of carbon and any remaining ash.",
+    "taxonomy": {
+      "color_profile": [
+        "Black"
+      ],
+      "compatible_processes": [
+        "Cold Process Soap",
+        "Hot Process Soap",
+        "Melt & Pour Soap",
+        "Emulsion",
+        "Anhydrous Balm",
+        "Small Batch Brewing",
+        "Filtration"
+      ],
+      "incompatible_processes": [
+        "High-heat cooking"
+      ],
+      "scent_profile": [
+        "Odorless"
+      ],
+      "texture_profile": [
+        "Fine",
+        "Granular"
+      ]
+    }
+  }
+}

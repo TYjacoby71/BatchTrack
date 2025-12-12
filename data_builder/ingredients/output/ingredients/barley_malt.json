@@ -1,0 +1,189 @@
+{
+  "data_quality": {
+    "caveats": [
+      "Specific SAP, KOH, iodine values, and usage rates for soap making and cosmetic applications are not widely established or documented."
+    ],
+    "confidence": 0.9
+  },
+  "ingredient": {
+    "botanical_name": "Hordeum vulgare",
+    "cas_number": "8002-48-0",
+    "category": "Flours & Powders (Organic)",
+    "common_name": "Barley Malt",
+    "detailed_description": "Barley malt is produced by soaking barley grains in water, allowing them to germinate, and then drying the sprouted grains. This process converts the stored starches in the barley into sugars, primarily maltose, making it a valuable sweetener and flavor enhancer in various artisanal applications. It is rich in enzymes, vitamins, and minerals, and is used in brewing, baking, and in the production of malt vinegar.",
+    "documentation": {
+      "last_verified": "2023-12-01",
+      "references": [
+        {
+          "notes": "Confirms barley malt's status as Generally Recognized As Safe (GRAS)",
+          "title": "FDA GRAS Notice for Barley Malt",
+          "url": "https://www.fda.gov"
+        }
+      ]
+    },
+    "inci_name": "Hordeum Vulgare Malt",
+    "items": [
+      {
+        "applications": [
+          "Baked Good",
+          "Beverage",
+          "Fermented Beverage",
+          "Confection"
+        ],
+        "form_bypass": false,
+        "function_tags": [
+          "Sweetener",
+          "Flavor",
+          "Fermentation Nutrient"
+        ],
+        "item_name": "Barley Malt Powder",
+        "physical_form": "Powder",
+        "safety_tags": [],
+        "sds_hazards": [],
+        "shelf_life_days": 365,
+        "sourcing": {
+          "certifications": [
+            "Organic"
+          ],
+          "common_origins": [
+            "Germany",
+            "United States",
+            "Canada"
+          ],
+          "supply_risks": [
+            "Seasonal Harvest"
+          ],
+          "sustainability_notes": "Sustainable when sourced from farms practicing regenerative agriculture"
+        },
+        "specifications": {
+          "flash_point_celsius": "unknown",
+          "iodine_value": "unknown",
+          "melting_point_celsius": "unknown",
+          "ph_range": {
+            "max": 6,
+            "min": 5
+          },
+          "sap_koh": "unknown",
+          "sap_naoh": "unknown",
+          "usage_rate_percent": "unknown"
+        },
+        "storage": {
+          "humidity_percent": {
+            "max": 60
+          },
+          "special_instructions": "Store in a cool, dry place",
+          "temperature_celsius": {
+            "max": 25,
+            "min": 10
+          }
+        },
+        "synonyms": [
+          "Malted Barley Flour"
+        ]
+      },
+      {
+        "applications": [
+          "Baked Good",
+          "Beverage",
+          "Confection"
+        ],
+        "form_bypass": false,
+        "function_tags": [
+          "Sweetener",
+          "Humectant",
+          "Flavor"
+        ],
+        "item_name": "Barley Malt Syrup",
+        "physical_form": "Syrup",
+        "safety_tags": [],
+        "sds_hazards": [],
+        "shelf_life_days": 730,
+        "sourcing": {
+          "certifications": [
+            "Organic",
+            "Non-GMO"
+          ],
+          "common_origins": [
+            "United Kingdom",
+            "Australia"
+          ],
+          "supply_risks": [
+            "Seasonal Harvest",
+            "Climate Change Impacts"
+          ],
+          "sustainability_notes": "Considered sustainable, especially when organic practices are followed"
+        },
+        "specifications": {
+          "flash_point_celsius": "unknown",
+          "iodine_value": "unknown",
+          "melting_point_celsius": "unknown",
+          "ph_range": {
+            "max": 5.5,
+            "min": 4.5
+          },
+          "sap_koh": "unknown",
+          "sap_naoh": "unknown",
+          "usage_rate_percent": "unknown"
+        },
+        "storage": {
+          "humidity_percent": {
+            "max": 60
+          },
+          "special_instructions": "Store in a cool, dry place, away from direct sunlight",
+          "temperature_celsius": {
+            "max": 20,
+            "min": 10
+          }
+        },
+        "synonyms": [
+          "Malt Extract"
+        ]
+      }
+    ],
+    "origin": {
+      "processing_methods": [
+        "Soaked",
+        "Germinated",
+        "Dried"
+      ],
+      "regions": [
+        "Europe",
+        "North America",
+        "Asia"
+      ],
+      "source_material": "Barley grains"
+    },
+    "primary_functions": [
+      "Sweetener",
+      "Flavor",
+      "Fermentation Nutrient"
+    ],
+    "regulatory_notes": [
+      "Food grade",
+      "Generally recognized as safe (GRAS) by the FDA"
+    ],
+    "short_description": "Barley malt is derived from the sprouting barley grains, offering a sweet, nutty flavor.",
+    "taxonomy": {
+      "color_profile": [
+        "Golden",
+        "Brown"
+      ],
+      "compatible_processes": [
+        "Cold Process Soap",
+        "Hot Process",
+        "Baking",
+        "Brewing",
+        "Confectionery"
+      ],
+      "incompatible_processes": [],
+      "scent_profile": [
+        "Nutty",
+        "Sweet"
+      ],
+      "texture_profile": [
+        "Fine",
+        "Viscous"
+      ]
+    }
+  }
+}

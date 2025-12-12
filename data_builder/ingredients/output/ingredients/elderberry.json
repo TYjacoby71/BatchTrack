@@ -1,0 +1,205 @@
+{
+  "data_quality": {
+    "caveats": [
+      "Seasonal availability may affect sourcing and price."
+    ],
+    "confidence": 0.9
+  },
+  "ingredient": {
+    "botanical_name": "Sambucus nigra",
+    "cas_number": "84603-58-7",
+    "category": "Botanicals (Dried)",
+    "common_name": "Elderberry",
+    "detailed_description": "Elderberry, from the Sambucus nigra plant, is widely recognized for its rich nutritional profile and versatility in use. It is commonly utilized in the form of syrups, teas, and extracts for its health benefits, including immune support. In artisanal manufacturing, elderberry is valued for its deep color, distinctive flavor, and antioxidant properties, finding applications in soaps, confections, cosmetics, and more.",
+    "documentation": {
+      "last_verified": "2023-12-01",
+      "references": [
+        {
+          "notes": "Overview of elderberry's historical and traditional uses.",
+          "title": "Elderberry in Traditional Medicine",
+          "url": "https://example.com/elderberry-traditional-medicine"
+        }
+      ]
+    },
+    "inci_name": "Sambucus Nigra Fruit",
+    "items": [
+      {
+        "applications": [
+          "Herbal Tincture",
+          "Fermented Beverage",
+          "Dye Bath"
+        ],
+        "form_bypass": false,
+        "function_tags": [
+          "Colorant",
+          "Flavor"
+        ],
+        "item_name": "Elderberry Whole",
+        "physical_form": "Whole",
+        "safety_tags": [],
+        "sds_hazards": [],
+        "shelf_life_days": 730,
+        "sourcing": {
+          "certifications": [
+            "Organic"
+          ],
+          "common_origins": [
+            "Germany",
+            "Poland"
+          ],
+          "supply_risks": [
+            "Seasonal availability"
+          ],
+          "sustainability_notes": "Wildcrafted sources should be sustainably harvested to prevent overexploitation."
+        },
+        "specifications": {},
+        "storage": {
+          "humidity_percent": {
+            "max": 60
+          },
+          "special_instructions": "Store in a cool, dry place away from direct sunlight.",
+          "temperature_celsius": {
+            "max": 25,
+            "min": 10
+          }
+        },
+        "synonyms": [
+          "Elderberries"
+        ]
+      },
+      {
+        "applications": [
+          "Cold Process Soap",
+          "Lotion",
+          "Baked Good",
+          "Chocolate"
+        ],
+        "form_bypass": false,
+        "function_tags": [
+          "Colorant",
+          "Antioxidant",
+          "Flavor"
+        ],
+        "item_name": "Elderberry Powder",
+        "physical_form": "Powder",
+        "safety_tags": [],
+        "sds_hazards": [],
+        "shelf_life_days": 365,
+        "sourcing": {
+          "certifications": [
+            "Organic",
+            "Non-GMO"
+          ],
+          "common_origins": [
+            "USA",
+            "Canada"
+          ],
+          "supply_risks": [
+            "Seasonal availability"
+          ],
+          "sustainability_notes": "Sourcing from organic farms supports sustainable agriculture practices."
+        },
+        "specifications": {},
+        "storage": {
+          "humidity_percent": {
+            "max": 60
+          },
+          "special_instructions": "Keep sealed in a dry environment to prevent clumping.",
+          "temperature_celsius": {
+            "max": 25,
+            "min": 10
+          }
+        },
+        "synonyms": [
+          "Elderberry Fruit Powder"
+        ]
+      },
+      {
+        "applications": [
+          "Serum",
+          "Lotion",
+          "Herbal Tincture"
+        ],
+        "form_bypass": false,
+        "function_tags": [
+          "Antioxidant",
+          "Colorant"
+        ],
+        "item_name": "Elderberry Extract",
+        "physical_form": "Liquid",
+        "safety_tags": [],
+        "sds_hazards": [],
+        "shelf_life_days": 1095,
+        "sourcing": {
+          "certifications": [
+            "Organic"
+          ],
+          "common_origins": [
+            "European Union",
+            "North America"
+          ],
+          "supply_risks": [
+            "Dependent on crop yield and quality"
+          ],
+          "sustainability_notes": "Extraction process should minimize waste and use environmentally friendly solvents."
+        },
+        "specifications": {},
+        "storage": {
+          "humidity_percent": {
+            "max": 60
+          },
+          "special_instructions": "Store in a cool, dark place. Keep container tightly closed.",
+          "temperature_celsius": {
+            "max": 25,
+            "min": 10
+          }
+        },
+        "synonyms": [
+          "Elderberry Tincture"
+        ]
+      }
+    ],
+    "origin": {
+      "processing_methods": [
+        "Dried",
+        "Freeze-Dried",
+        "Cold Pressed",
+        "Solvent Extracted"
+      ],
+      "regions": [
+        "Europe",
+        "North America"
+      ],
+      "source_material": "Fruit"
+    },
+    "primary_functions": [
+      "Antioxidant",
+      "Colorant",
+      "Flavor"
+    ],
+    "regulatory_notes": [
+      "Generally recognized as safe (GRAS) for food use"
+    ],
+    "short_description": "Elderberry is a dark purple berry from the elder tree, known for its use in wellness and various artisanal applications.",
+    "taxonomy": {
+      "color_profile": [
+        "Dark Purple"
+      ],
+      "compatible_processes": [
+        "Cold Process Soap",
+        "Hot Process",
+        "Fermentation",
+        "Hydro-distillation",
+        "Small Batch Baking"
+      ],
+      "incompatible_processes": [],
+      "scent_profile": [
+        "Fruity"
+      ],
+      "texture_profile": [
+        "Soft",
+        "Powdery"
+      ]
+    }
+  }
+}

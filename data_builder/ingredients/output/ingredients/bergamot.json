@@ -1,0 +1,218 @@
+{
+  "data_quality": {
+    "caveats": [
+      "SAP values, iodine value, melting point, and pH range are not typically specified for essential oils."
+    ],
+    "confidence": 0.9
+  },
+  "ingredient": {
+    "botanical_name": "Citrus bergamia",
+    "cas_number": "8007-75-8",
+    "category": "Essential Oils",
+    "common_name": "Bergamot",
+    "detailed_description": "Bergamot essential oil is extracted from the peel of the bergamot orange fruit. It is widely used for its refreshing and floral citrus scent and flavor. Bergamot oil is a popular ingredient in perfumery, aromatherapy, and as a flavoring in food and beverages. It also has applications in skincare products due to its purported benefits for oily and troubled skin.",
+    "documentation": {
+      "last_verified": "2023-12-01",
+      "references": [
+        {
+          "notes": "Regulatory guidelines for safe use in fragrances",
+          "title": "IFRA Standards",
+          "url": "https://ifrafragrance.org/standards"
+        }
+      ]
+    },
+    "inci_name": "Citrus Aurantium Bergamia Fruit Oil",
+    "items": [
+      {
+        "applications": [
+          "Perfume",
+          "Candle",
+          "Wax Melt",
+          "Lotion",
+          "Cream",
+          "Balm",
+          "Serum",
+          "Scrub",
+          "Lip Balm",
+          "Chocolate",
+          "Confection",
+          "Beverage",
+          "Fermented Beverage"
+        ],
+        "form_bypass": false,
+        "function_tags": [
+          "Fragrance",
+          "Flavor"
+        ],
+        "item_name": "Bergamot Essential Oil (Cold Pressed)",
+        "physical_form": "Oil",
+        "safety_tags": [
+          "Dermal Limit 0.4%",
+          "Photosensitizer"
+        ],
+        "sds_hazards": [
+          "Flammable",
+          "Irritant"
+        ],
+        "shelf_life_days": 1095,
+        "sourcing": {
+          "certifications": [
+            "Organic",
+            "Fair Trade"
+          ],
+          "common_origins": [
+            "Italy"
+          ],
+          "supply_risks": [
+            "Seasonal Harvest",
+            "Climate Change"
+          ],
+          "sustainability_notes": "Risk of adulteration with cheaper citrus oils"
+        },
+        "specifications": {
+          "flash_point_celsius": 52,
+          "iodine_value": "unknown",
+          "melting_point_celsius": "unknown",
+          "ph_range": "unknown",
+          "sap_koh": "unknown",
+          "sap_naoh": "unknown",
+          "usage_rate_percent": {
+            "leave_on_max": 0.4,
+            "rinse_off_max": "unknown"
+          }
+        },
+        "storage": {
+          "humidity_percent": {
+            "max": 60
+          },
+          "special_instructions": "Store in a cool, dark place",
+          "temperature_celsius": {
+            "max": 25,
+            "min": 5
+          }
+        },
+        "synonyms": [
+          "Bergamot Oil"
+        ]
+      },
+      {
+        "applications": [
+          "Perfume",
+          "Candle",
+          "Wax Melt",
+          "Lotion",
+          "Cream",
+          "Balm",
+          "Serum",
+          "Scrub",
+          "Lip Balm",
+          "Chocolate",
+          "Confection",
+          "Beverage",
+          "Fermented Beverage"
+        ],
+        "form_bypass": false,
+        "function_tags": [
+          "Fragrance",
+          "Flavor"
+        ],
+        "item_name": "Bergamot Essential Oil (Steam Distilled)",
+        "physical_form": "Oil",
+        "safety_tags": [
+          "Non-photosensitizing"
+        ],
+        "sds_hazards": [
+          "Flammable",
+          "Irritant"
+        ],
+        "shelf_life_days": 1095,
+        "sourcing": {
+          "certifications": [
+            "Organic"
+          ],
+          "common_origins": [
+            "Italy",
+            "Ivory Coast"
+          ],
+          "supply_risks": [
+            "Seasonal Harvest",
+            "Climate Change"
+          ],
+          "sustainability_notes": "Less risk of adulteration compared to cold pressed"
+        },
+        "specifications": {
+          "flash_point_celsius": 65,
+          "iodine_value": "unknown",
+          "melting_point_celsius": "unknown",
+          "ph_range": "unknown",
+          "sap_koh": "unknown",
+          "sap_naoh": "unknown",
+          "usage_rate_percent": {
+            "leave_on_max": 5,
+            "rinse_off_max": "unknown"
+          }
+        },
+        "storage": {
+          "humidity_percent": {
+            "max": 60
+          },
+          "special_instructions": "Store in a cool, dark place",
+          "temperature_celsius": {
+            "max": 25,
+            "min": 5
+          }
+        },
+        "synonyms": [
+          "Bergamot Oil Steam Distilled"
+        ]
+      }
+    ],
+    "origin": {
+      "processing_methods": [
+        "Cold Pressed",
+        "Steam Distilled"
+      ],
+      "regions": [
+        "Italy",
+        "Ivory Coast",
+        "Argentina",
+        "Turkey"
+      ],
+      "source_material": "Bergamot orange peel"
+    },
+    "primary_functions": [
+      "Fragrance",
+      "Flavor"
+    ],
+    "regulatory_notes": [
+      "IFRA safe",
+      "Food grade",
+      "Photosensitizer"
+    ],
+    "short_description": "A citrus essential oil known for its distinctive aroma and flavor.",
+    "taxonomy": {
+      "color_profile": [
+        "Yellow",
+        "Green"
+      ],
+      "compatible_processes": [
+        "Cold Process Soap",
+        "Hot Process Soap",
+        "Melt & Pour Soap",
+        "Lotion Making",
+        "Candle Making",
+        "Chocolate Making",
+        "Beverage Flavoring"
+      ],
+      "incompatible_processes": [],
+      "scent_profile": [
+        "Citrus",
+        "Floral",
+        "Fresh"
+      ],
+      "texture_profile": [
+        "Liquid"
+      ]
+    }
+  }
+}

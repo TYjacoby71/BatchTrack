@@ -1,0 +1,143 @@
+{
+  "data_quality": {
+    "caveats": [
+      "SAP values, iodine value, melting point, and pH range are not specified due to the nature of essential oils."
+    ],
+    "confidence": 0.9
+  },
+  "ingredient": {
+    "botanical_name": "Tanacetum annuum",
+    "cas_number": "8016-84-0",
+    "category": "Essential Oils",
+    "common_name": "Blue Tansy",
+    "detailed_description": "Blue Tansy, also known as Moroccan Tansy, is a perennial herb native to Morocco. The essential oil is extracted from the flowers and leaves by steam distillation. It is prized in aromatherapy for its soothing effects and in skincare for its anti-inflammatory and antimicrobial properties. Its distinctive blue color is due to the presence of chamazulene, which forms during the distillation process.",
+    "documentation": {
+      "last_verified": "2023-12-01",
+      "references": [
+        {
+          "notes": "Comprehensive safety guidelines for the use of essential oils.",
+          "title": "Essential Oil Safety: A Guide for Health Care Professionals",
+          "url": "https://example.com"
+        }
+      ]
+    },
+    "inci_name": "Tanacetum Annuum (Blue Tansy) Oil",
+    "items": [
+      {
+        "applications": [
+          "Perfume",
+          "Candle",
+          "Wax Melt",
+          "Lotion",
+          "Cream",
+          "Balm",
+          "Serum",
+          "Skincare"
+        ],
+        "form_bypass": false,
+        "function_tags": [
+          "Fragrance",
+          "Antioxidant",
+          "Colorant"
+        ],
+        "item_name": "Blue Tansy Essential Oil",
+        "physical_form": "Oil",
+        "safety_tags": [
+          "Avoid during pregnancy",
+          "Photosensitizer"
+        ],
+        "sds_hazards": [
+          "Flammable"
+        ],
+        "shelf_life_days": 1095,
+        "sourcing": {
+          "certifications": [
+            "Organic",
+            "Wildcrafted"
+          ],
+          "common_origins": [
+            "Morocco"
+          ],
+          "supply_risks": [
+            "Limited harvest periods"
+          ],
+          "sustainability_notes": "Overharvesting and habitat destruction are concerns. Sustainable sourcing is crucial."
+        },
+        "specifications": {
+          "flash_point_celsius": 93,
+          "iodine_value": "unknown",
+          "melting_point_celsius": {
+            "max": "unknown",
+            "min": "unknown"
+          },
+          "ph_range": {
+            "max": "unknown",
+            "min": "unknown"
+          },
+          "sap_koh": "unknown",
+          "sap_naoh": "unknown",
+          "usage_rate_percent": {
+            "leave_on_max": 1,
+            "rinse_off_max": "unknown"
+          }
+        },
+        "storage": {
+          "humidity_percent": {
+            "max": 60
+          },
+          "special_instructions": "Store in a cool, dark place",
+          "temperature_celsius": {
+            "max": 25,
+            "min": 15
+          }
+        },
+        "synonyms": [
+          "Moroccan Tansy Oil"
+        ]
+      }
+    ],
+    "origin": {
+      "processing_methods": [
+        "Steam Distilled"
+      ],
+      "regions": [
+        "Morocco"
+      ],
+      "source_material": "Flowers, Leaves"
+    },
+    "primary_functions": [
+      "Fragrance",
+      "Antioxidant",
+      "Colorant"
+    ],
+    "regulatory_notes": [
+      "IFRA safe",
+      "Not for internal use"
+    ],
+    "short_description": "Blue Tansy is known for its vivid blue color and sweet, herbaceous aroma.",
+    "taxonomy": {
+      "color_profile": [
+        "Blue"
+      ],
+      "compatible_processes": [
+        "Cold Process Soap",
+        "Hot Process Soap",
+        "Lotion",
+        "Cream",
+        "Balm",
+        "Serum",
+        "Skincare"
+      ],
+      "incompatible_processes": [
+        "High-heat processes"
+      ],
+      "scent_profile": [
+        "Sweet",
+        "Herbaceous"
+      ],
+      "texture_profile": [
+        "Liquid"
+      ]
+    }
+  }
+}

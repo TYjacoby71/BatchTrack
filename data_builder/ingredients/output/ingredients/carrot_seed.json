@@ -1,0 +1,201 @@
+{
+  "data_quality": {
+    "caveats": [
+      "SAP values for carrot seed powder are not widely documented."
+    ],
+    "confidence": 0.9
+  },
+  "ingredient": {
+    "botanical_name": "Daucus carota",
+    "cas_number": "8015-88-1",
+    "category": "Botanicals (Dried)",
+    "common_name": "Carrot Seed",
+    "detailed_description": "Carrot seed, derived from the dried seeds of Daucus carota, is widely used in various artisanal formulations for its rich aroma and beneficial properties. It is particularly noted for its use in skincare for its antioxidant properties, as well as in aromatherapy for its soothing earthy fragrance.",
+    "documentation": {
+      "last_verified": "2023-12-01",
+      "references": [
+        {
+          "notes": "Comprehensive safety guidelines for essential oil use.",
+          "title": "Essential Oil Safety: A Guide for Health Care Professionals",
+          "url": "https://example.com"
+        }
+      ]
+    },
+    "inci_name": "Daucus Carota Sativa Seed",
+    "items": [
+      {
+        "applications": [
+          "Perfume",
+          "Skincare",
+          "Haircare",
+          "Aromatherapy"
+        ],
+        "form_bypass": false,
+        "function_tags": [
+          "Fragrance",
+          "Antioxidant"
+        ],
+        "item_name": "Carrot Seed Essential Oil",
+        "physical_form": "Oil",
+        "safety_tags": [
+          "Dermal Limit 1%"
+        ],
+        "sds_hazards": [
+          "Flammable"
+        ],
+        "shelf_life_days": 1095,
+        "sourcing": {
+          "certifications": [
+            "Organic",
+            "Wildcrafted"
+          ],
+          "common_origins": [
+            "India",
+            "France"
+          ],
+          "supply_risks": [
+            "Seasonal Harvest"
+          ],
+          "sustainability_notes": "Sustainable harvesting practices recommended"
+        },
+        "specifications": {
+          "flash_point_celsius": 61,
+          "iodine_value": 95,
+          "melting_point_celsius": {
+            "max": 5,
+            "min": -5
+          },
+          "ph_range": {
+            "max": 7,
+            "min": 5
+          },
+          "sap_koh": 0.19,
+          "sap_naoh": 0.135,
+          "usage_rate_percent": {
+            "leave_on_max": 1,
+            "rinse_off_max": 5
+          }
+        },
+        "storage": {
+          "humidity_percent": {
+            "max": 60
+          },
+          "special_instructions": "Store in a cool, dark place",
+          "temperature_celsius": {
+            "max": 25,
+            "min": 5
+          }
+        },
+        "synonyms": [
+          "Carrot Seed Oil"
+        ]
+      },
+      {
+        "applications": [
+          "Soap",
+          "Lotion",
+          "Cream",
+          "Balm",
+          "Scrub"
+        ],
+        "form_bypass": false,
+        "function_tags": [
+          "Exfoliant",
+          "Colorant"
+        ],
+        "item_name": "Carrot Seed Powder",
+        "physical_form": "Powder",
+        "safety_tags": [
+          "Non-toxic"
+        ],
+        "sds_hazards": [
+          "Dust Inhalation"
+        ],
+        "shelf_life_days": 730,
+        "sourcing": {
+          "certifications": [
+            "Organic"
+          ],
+          "common_origins": [
+            "China",
+            "Egypt"
+          ],
+          "supply_risks": [
+            "Seasonal variability"
+          ],
+          "sustainability_notes": "Consider sourcing from suppliers practicing sustainable agriculture"
+        },
+        "specifications": {
+          "flash_point_celsius": "unknown",
+          "iodine_value": "unknown",
+          "melting_point_celsius": {
+            "max": "unknown",
+            "min": "unknown"
+          },
+          "ph_range": {
+            "max": 7,
+            "min": 6
+          },
+          "sap_koh": "unknown",
+          "sap_naoh": "unknown",
+          "usage_rate_percent": {
+            "leave_on_max": 5,
+            "rinse_off_max": 10
+          }
+        },
+        "storage": {
+          "humidity_percent": {
+            "max": 60
+          },
+          "special_instructions": "Keep dry and away from direct sunlight",
+          "temperature_celsius": {
+            "max": 25,
+            "min": 5
+          }
+        }
+      }
+    ],
+    "origin": {
+      "processing_methods": [
+        "Cold Pressed",
+        "Steam Distilled"
+      ],
+      "regions": [
+        "Europe",
+        "Asia"
+      ],
+      "source_material": "Seeds"
+    },
+    "primary_functions": [
+      "Antioxidant",
+      "Fragrance"
+    ],
+    "regulatory_notes": [
+      "IFRA safe",
+      "Food grade"
+    ],
+    "short_description": "Carrot seed is known for its aromatic and therapeutic properties.",
+    "taxonomy": {
+      "color_profile": [
+        "Yellow",
+        "Brown"
+      ],
+      "compatible_processes": [
+        "Cold Process Soap",
+        "Hot Process Soap",
+        "Lotion Making",
+        "Aromatherapy",
+        "Skincare Formulations"
+      ],
+      "incompatible_processes": [],
+      "scent_profile": [
+        "Earthy",
+        "Woody"
+      ],
+      "texture_profile": [
+        "Liquid",
+        "Fine Powder"
+      ]
+    }
+  }
+}

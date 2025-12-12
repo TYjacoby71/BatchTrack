@@ -1,0 +1,131 @@
+{
+  "data_quality": {
+    "caveats": [
+      "SAP, iodine value, and melting point data are not typically relevant or available for this ingredient."
+    ],
+    "confidence": 0.9
+  },
+  "ingredient": {
+    "botanical_name": "Hordeum vulgare",
+    "cas_number": "8002-48-0",
+    "category": "Flours & Powders (Organic)",
+    "common_name": "Diastatic malt powder",
+    "detailed_description": "Diastatic malt powder is produced by drying and grinding sprouted grains, which activates enzymes that break down starches into sugars. This process makes it a valuable ingredient for promoting yeast fermentation in baking, enhancing the flavor, texture, and crust color of bread and other baked goods. It also finds applications in brewing and as a natural sweetener and flavor enhancer in various food products.",
+    "documentation": {
+      "last_verified": "2023-12-01",
+      "references": [
+        {
+          "notes": "Specifies identity and purity of food ingredients including diastatic malt powder.",
+          "title": "Food Chemicals Codex (FCC)",
+          "url": "https://www.foodchemicalscodex.org/"
+        }
+      ]
+    },
+    "inci_name": "Malted Barley Extract",
+    "items": [
+      {
+        "applications": [
+          "Baked Good",
+          "Beverage",
+          "Fermented Beverage"
+        ],
+        "form_bypass": false,
+        "function_tags": [
+          "Flavor",
+          "Sweetener",
+          "Fermentation Nutrient"
+        ],
+        "item_name": "Diastatic Malt Powder",
+        "physical_form": "Powder",
+        "safety_tags": [],
+        "sds_hazards": [],
+        "shelf_life_days": 730,
+        "sourcing": {
+          "certifications": [
+            "Organic"
+          ],
+          "common_origins": [
+            "Germany",
+            "United States"
+          ],
+          "supply_risks": [
+            "Dependent on barley crop yields"
+          ],
+          "sustainability_notes": "Sustainable when sourced from organic farming practices"
+        },
+        "specifications": {
+          "flash_point_celsius": "unknown",
+          "iodine_value": "unknown",
+          "melting_point_celsius": {
+            "max": "unknown",
+            "min": "unknown"
+          },
+          "ph_range": {
+            "max": 6.5,
+            "min": 5.5
+          },
+          "sap_koh": "unknown",
+          "sap_naoh": "unknown",
+          "usage_rate_percent": {
+            "leave_on_max": "unknown",
+            "rinse_off_max": "unknown"
+          }
+        },
+        "storage": {
+          "humidity_percent": {
+            "max": 60
+          },
+          "special_instructions": "Store in a cool, dry place away from strong odors",
+          "temperature_celsius": {
+            "max": 25,
+            "min": 0
+          }
+        },
+        "synonyms": [
+          "Malted Barley Flour",
+          "Malt Flour"
+        ]
+      }
+    ],
+    "origin": {
+      "processing_methods": [
+        "Sprouted",
+        "Dried",
+        "Ground"
+      ],
+      "regions": [
+        "Europe",
+        "North America"
+      ],
+      "source_material": "Barley"
+    },
+    "primary_functions": [
+      "Flavor",
+      "Sweetener",
+      "Fermentation Nutrient"
+    ],
+    "regulatory_notes": [
+      "Food grade",
+      "Generally Recognized as Safe (GRAS)"
+    ],
+    "short_description": "A powder made from malted grains, primarily barley, used to enhance fermentation and flavor.",
+    "taxonomy": {
+      "color_profile": [
+        "Beige"
+      ],
+      "compatible_processes": [
+        "Small Batch Brewing",
+        "Cold Process Soap",
+        "Hot Process",
+        "Sugar Confectionery"
+      ],
+      "incompatible_processes": [],
+      "scent_profile": [
+        "Nutty"
+      ],
+      "texture_profile": [
+        "Fine"
+      ]
+    }
+  }
+}
