@@ -11,7 +11,7 @@ from sqlalchemy.sql import expression
 
 # revision identifiers, used by Alembic.
 revision = "0012_variation_refactor"
-down_revision = "0011_ingredient_hierarchy_0011_ingredient_hierarchy"
+down_revision = "0011_ingredient_hierarchy"
 branch_labels = None
 depends_on = None
 
