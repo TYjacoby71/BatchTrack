@@ -6,6 +6,7 @@ from pathlib import Path
 from typing import Dict, List, Optional, Tuple
 import time
 import urllib.parse
+from concurrent.futures import ThreadPoolExecutor, as_completed
 
 # Base URLs for different ingredient categories
 TGSC_BASE_URL = "https://www.thegoodscentscompany.com"
@@ -83,9 +84,9 @@ class TGSCIngredientScraper:
         # Look for the main content table with ingredient links
         # TGSC uses JavaScript onclick handlers, so we need to extract from those
         onclick_pattern = r"onclick=\"openMainWindow\('([^']+)'\)"
-        
+
         matches = re.findall(onclick_pattern, category_html)
-        
+
         for match in matches:
             if match.startswith('/data/'):
                 full_url = TGSC_BASE_URL + match
@@ -94,7 +95,7 @@ class TGSCIngredientScraper:
         # Also try direct href links to /data/ pages
         href_pattern = r'href="(/data/[^"]+\.html)"'
         href_matches = re.findall(href_pattern, category_html, re.IGNORECASE)
-        
+
         for match in href_matches:
             full_url = TGSC_BASE_URL + match
             if full_url not in ingredient_links:
@@ -135,12 +136,12 @@ class TGSCIngredientScraper:
             title = re.sub(r'\s*-\s*The Good Scents Company.*', '', title)
             title = re.sub(r'\s*Information.*', '', title)
             title = re.sub(r'\s*Catalog.*', '', title)
-            
+
             # Extract CAS number from title if present and remove it from name
             cas_in_title = re.search(r'(\d{1,7}-\d{2}-\d)', title)
             if cas_in_title and not ingredient_data['cas_number']:
                 ingredient_data['cas_number'] = cas_in_title.group(1)
-            
+
             # Remove CAS numbers from the name
             title = re.sub(r'\s*\d{1,7}-\d{2}-\d\s*', ' ', title)
             # Remove extra whitespace
@@ -156,17 +157,17 @@ class TGSCIngredientScraper:
                 r'<h1[^>]*>([^<]+)</h1>',
                 r'<h2[^>]*>([^<]+)</h2>',
             ]
-            
+
             for pattern in name_patterns:
                 match = re.search(pattern, html, re.IGNORECASE)
                 if match:
                     name = match.group(1).strip()
-                    
+
                     # Extract CAS number from name if present
                     cas_in_name = re.search(r'(\d{1,7}-\d{2}-\d)', name)
                     if cas_in_name and not ingredient_data['cas_number']:
                         ingredient_data['cas_number'] = cas_in_name.group(1)
-                    
+
                     # Clean CAS numbers from extracted names
                     name = re.sub(r'\s*\d{1,7}-\d{2}-\d\s*', ' ', name)
                     name = re.sub(r'\s+', ' ', name).strip()
@@ -254,11 +255,13 @@ class TGSCIngredientScraper:
 
         return ingredient_data
 
-    def scrape_category(self, category_name: str, category_url: str, max_ingredients: int = 50) -> List[Dict]:
-        """Scrape all ingredients from a specific category."""
+    def scrape_category(self, category_name: str, category_url: str, max_ingredients: int = 50, resume_from_url: Optional[str] = None) -> List[Dict]:
+        """Scrape all ingredients from a specific category, with resume capability."""
         print(f"\n{'='*60}")
         print(f"SCRAPING CATEGORY: {category_name.upper()}")
         print(f"URL: {category_url}")
+        if resume_from_url:
+            print(f"Resuming from: {resume_from_url}")
         print(f"{'='*60}")
 
         # Fetch category page
@@ -268,32 +271,47 @@ class TGSCIngredientScraper:
             return []
 
         # Extract ingredient links
-        ingredient_links = self.extract_ingredient_links(category_html)
-        print(f"📋 Found {len(ingredient_links)} ingredient links")
+        all_ingredient_links = self.extract_ingredient_links(category_html)
+        print(f"📋 Found {len(all_ingredient_links)} ingredient links")
 
-        if not ingredient_links:
+        if not all_ingredient_links:
             print("⚠️  No ingredient links found - checking page structure...")
             return []
 
-        # Limit ingredients per category
-        ingredient_links = ingredient_links[:max_ingredients]
-        ingredients_data = []
+        # Determine start index for resuming
+        start_index = 0
+        if resume_from_url:
+            try:
+                start_index = all_ingredient_links.index(resume_from_url) + 1
+                print(f"Resuming scrape at index: {start_index}")
+            except ValueError:
+                print(f"Warning: Resume URL '{resume_from_url}' not found in category links. Starting from beginning.")
+                start_index = 0
         
+        # Limit ingredients per category
+        ingredient_links_to_process = all_ingredient_links[start_index : start_index + max_ingredients]
+        
+        if not ingredient_links_to_process:
+            print("No ingredients to scrape in this category for the current limit.")
+            return []
+
+        ingredients_data = []
+
         # Data quality tracking
         cas_count = 0
         einecs_count = 0
         description_count = 0
 
         # Scrape each ingredient
-        for i, link in enumerate(ingredient_links, 1):
-            print(f"\n[{i}/{len(ingredient_links)}] Processing: {link}")
+        for i, link in enumerate(ingredient_links_to_process, start=start_index + 1):
+            print(f"\n[{i}/{len(all_ingredient_links)}] Processing: {link}")
 
             html = self.fetch_html(link)
             if html:
                 ingredient_data = self.parse_ingredient_data(html, link)
                 if ingredient_data['common_name']:  # Only save if we got a name
                     ingredients_data.append(ingredient_data)
-                    
+
                     # Track data quality
                     if ingredient_data.get('cas_number'):
                         cas_count += 1
@@ -301,7 +319,7 @@ class TGSCIngredientScraper:
                         einecs_count += 1
                     if ingredient_data.get('description'):
                         description_count += 1
-                        
+
                     print(f"✅ Extracted: {ingredient_data['common_name']}")
                     if ingredient_data.get('cas_number'):
                         print(f"   CAS: {ingredient_data['cas_number']}")
@@ -311,14 +329,31 @@ class TGSCIngredientScraper:
                 print("❌ Failed to fetch ingredient page")
 
         # Data quality summary
-        print(f"\n📊 Data Quality Summary:")
-        print(f"   Total ingredients: {len(ingredients_data)}")
-        print(f"   CAS numbers found: {cas_count} ({cas_count/len(ingredients_data)*100:.1f}%)")
-        print(f"   EINECS numbers found: {einecs_count} ({einecs_count/len(ingredients_data)*100:.1f}%)")
-        print(f"   Descriptions found: {description_count} ({description_count/len(ingredients_data)*100:.1f}%)")
-        
-        print(f"\n🎉 Category {category_name} complete: {len(ingredients_data)} ingredients extracted")
+        print(f"\n📊 Data Quality Summary for {category_name}:")
+        print(f"   Total ingredients processed in this run: {len(ingredients_data)}")
+        if len(ingredients_data) > 0:
+            print(f"   CAS numbers found: {cas_count} ({cas_count/len(ingredients_data)*100:.1f}%)")
+            print(f"   EINECS numbers found: {einecs_count} ({einecs_count/len(ingredients_data)*100:.1f}%)")
+            print(f"   Descriptions found: {description_count} ({description_count/len(ingredients_data)*100:.1f}%)")
+
+        print(f"\n🎉 Category {category_name} scrape complete: {len(ingredients_data)} ingredients extracted in this run")
         return ingredients_data
+    
+    def get_last_scraped_url(self, category_name: str, csv_filepath: str) -> Optional[str]:
+        """Reads the CSV and returns the URL of the last scraped item for a given category."""
+        if not Path(csv_filepath).exists():
+            return None
+
+        try:
+            with open(csv_filepath, 'r', newline='', encoding='utf-8') as csvfile:
+                reader = csv.DictReader(csvfile)
+                # Filter by category and get the last entry
+                category_entries = [row for row in reader if row.get('category') == category_name]
+                if category_entries:
+                    return category_entries[-1].get('url')
+        except Exception as e:
+            print(f"⚠️ Error reading {csv_filepath} for resume: {e}")
+        return None
 
     def save_ingredients_csv(self, ingredients: List[Dict], filename: str):
         """Save ingredients data to CSV file."""
@@ -358,66 +393,114 @@ class TGSCIngredientScraper:
         except Exception as e:
             print(f"❌ Error saving CSV: {e}")
 
+def scrape_category_with_resume(scraper, category_name, category_url, max_ingredients, target_file):
+    """Scrape a single category with resume capability."""
+    # Check for existing progress
+    last_scraped_url = scraper.get_last_scraped_url(category_name, str(target_file))
+
+    try:
+        ingredients = scraper.scrape_category(
+            category_name, 
+            category_url, 
+            max_ingredients=max_ingredients,
+            resume_from_url=last_scraped_url
+        )
+
+        if ingredients:
+            # Add category info
+            for ingredient in ingredients:
+                ingredient['category'] = category_name
+
+        return category_name, ingredients
+
+    except Exception as e:
+        print(f"❌ Error scraping category {category_name}: {e}")
+        return category_name, []
 
 def main():
-    """Main function to scrape TGSC ingredient database."""
+    """Main function to scrape TGSC ingredient database with parallel processing."""
     import argparse
 
     parser = argparse.ArgumentParser(description="Scrape TGSC ingredient database")
     parser.add_argument("--max-ingredients", type=int, default=30, 
-                       help="Maximum number of ingredients to scrape in total (default: 30)")
+                       help="Maximum number of ingredients to scrape per category (default: 30)")
+    parser.add_argument("--max-workers", type=int, default=3,
+                       help="Maximum number of parallel workers (default: 3)")
+    parser.add_argument("--resume", action="store_true",
+                       help="Resume from last scraped position in each category")
     args = parser.parse_args()
 
     user_agent = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
 
-    scraper = TGSCIngredientScraper(user_agent, delay_seconds=2.0)
+    scraper = TGSCIngredientScraper(user_agent, delay_seconds=1.5)  # Slightly faster for parallel
+
+    # Create target directory and file path
+    target_dir = Path(__file__).parent.parent / "ingredients" / "data_sources"
+    target_file = target_dir / "tgsc_ingredients.csv"
+    target_dir.mkdir(parents=True, exist_ok=True)
+
+    print("🚀 TGSC Ingredient Database Scraper (Parallel)")
+    print("=" * 60)
+    print(f"📊 Max ingredients per category: {args.max_ingredients}")
+    print(f"⚡ Max parallel workers: {args.max_workers}")
+    print(f"🔄 Resume mode: {'Enabled' if args.resume else 'Disabled'}")
+
     all_ingredients = []
 
-    print("🚀 TGSC Ingredient Database Scraper")
-    print("=" * 50)
-    print(f"📊 Max ingredients to scrape: {args.max_ingredients}")
-
-    # Scrape each category
-    total_scraped = 0
-    max_total_ingredients = args.max_ingredients
-
-    for category_name, category_url in TGSC_INGREDIENT_CATEGORIES.items():
-        # Check if we have reached the maximum total ingredients limit
-        if total_scraped >= max_total_ingredients:
-            print(f"\nReached maximum total ingredients limit ({max_total_ingredients}). Stopping scrape.")
-            break
-
-        # Determine how many ingredients to scrape from this category
-        ingredients_to_scrape = max_total_ingredients - total_scraped
-        
+    # Load existing data if resuming
+    if args.resume and target_file.exists():
         try:
-            ingredients = scraper.scrape_category(category_name, category_url, max_ingredients=ingredients_to_scrape)
-
-            if ingredients:
-                # Add to master list with category info
-                for ingredient in ingredients:
-                    ingredient['category'] = category_name
-                all_ingredients.extend(ingredients)
-                total_scraped += len(ingredients) # Update total scraped count
-
+            with open(target_file, 'r', newline='', encoding='utf-8') as csvfile:
+                reader = csv.DictReader(csvfile)
+                existing_ingredients = list(reader)
+                all_ingredients.extend(existing_ingredients)
+                print(f"📋 Loaded {len(existing_ingredients)} existing ingredients")
         except Exception as e:
-            print(f"❌ Error scraping category {category_name}: {e}")
-            continue
+            print(f"⚠️  Error loading existing data: {e}")
 
-    # Save only the master file directly to the target location
+    # Process categories in parallel
+    with ThreadPoolExecutor(max_workers=args.max_workers) as executor:
+        # Submit all category tasks
+        futures = {
+            executor.submit(
+                scrape_category_with_resume, 
+                scraper, 
+                category_name, 
+                category_url, 
+                args.max_ingredients,
+                target_file
+            ): category_name 
+            for category_name, category_url in TGSC_INGREDIENT_CATEGORIES.items()
+        }
+
+        # Process completed tasks
+        for future in as_completed(futures):
+            category_name = futures[future]
+            try:
+                category_name_result, ingredients = future.result()
+                if ingredients:
+                    # Remove existing ingredients from this category if resuming
+                    if args.resume:
+                        all_ingredients = [ing for ing in all_ingredients if ing.get('category') != category_name]
+
+                    all_ingredients.extend(ingredients)
+                    print(f"🎉 {category_name}: {len(ingredients)} ingredients completed")
+                else:
+                    print(f"⚠️  {category_name}: No new ingredients found")
+            except Exception as e:
+                print(f"❌ {category_name}: Failed with error: {e}")
+
+    # Save consolidated results
     if all_ingredients:
-        # Create target directory and file path
-        target_dir = Path(__file__).parent.parent / "ingredients" / "data_sources"
-        target_file = target_dir / "tgsc_ingredients.csv"
-        
-        target_dir.mkdir(parents=True, exist_ok=True)
         scraper.save_ingredients_csv(all_ingredients, str(target_file))
-        print(f"📋 Saved ingredients to {target_file}")
+        print(f"📋 Saved {len(all_ingredients)} total ingredients to {target_file}")
         print("Ready for ingredient compilation!")
+    else:
+        print("⚠️  No ingredients were scraped")
 
     print(f"\n🎊 SCRAPING COMPLETE!")
-    print(f"📊 Total ingredients extracted: {len(all_ingredients)}")
-    print(f"📁 File generated: {target_file}")
+    print(f"📊 Total ingredients: {len(all_ingredients)}")
+    print(f"📁 File: {target_file}")
 
 
 if __name__ == "__main__":
