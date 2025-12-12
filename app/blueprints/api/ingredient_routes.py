@@ -7,7 +7,7 @@ from sqlalchemy.orm import joinedload
 
 from ...extensions import cache, limiter
 from ...models import IngredientCategory, InventoryItem, GlobalItem, db
-from ...models.ingredient_reference import IngredientDefinition, PhysicalForm
+from ...models.ingredient_reference import IngredientDefinition, PhysicalForm, Variation
 from ...services.statistics.global_item_stats import GlobalItemStatsService
 from ...services.density_assignment_service import DensityAssignmentService
 from ...services.cache_invalidation import global_library_cache_key
@@ -76,7 +76,9 @@ def search_ingredients():
 
     query = InventoryItem.query.options(
         joinedload(InventoryItem.global_item).joinedload(GlobalItem.ingredient),
-        joinedload(InventoryItem.global_item).joinedload(GlobalItem.physical_form),
+        joinedload(InventoryItem.global_item)
+        .joinedload(GlobalItem.variation)
+        .joinedload(Variation.physical_form),
     )
     # Scope to the user's organization for privacy
     if current_user.organization_id:
@@ -94,7 +96,8 @@ def search_ingredients():
     for item in results:
         global_obj = getattr(item, 'global_item', None)
         ingredient_obj = getattr(global_obj, 'ingredient', None) if global_obj else None
-        physical_form_obj = getattr(global_obj, 'physical_form', None) if global_obj else None
+        variation_obj = getattr(global_obj, 'variation', None) if global_obj else None
+        physical_form_obj = getattr(variation_obj, 'physical_form', None) if variation_obj else None
         payload.append({
             'id': item.id,
             'text': item.name,
@@ -105,6 +108,8 @@ def search_ingredients():
             'global_item_id': item.global_item_id,
             'ingredient_id': ingredient_obj.id if ingredient_obj else None,
             'ingredient_name': ingredient_obj.name if ingredient_obj else item.name,
+            'variation_id': variation_obj.id if variation_obj else None,
+            'variation_name': variation_obj.name if variation_obj else None,
             'physical_form_id': physical_form_obj.id if physical_form_obj else None,
             'physical_form_name': physical_form_obj.name if physical_form_obj else None,
             'cost_per_unit': item.cost_per_unit,
@@ -175,9 +180,11 @@ def list_forms_for_ingredient_definition(ingredient_id: int):
             {
                 'id': item.id,
                 'name': item.name,
+                'variation_id': item.variation.id if item.variation else None,
+                'variation_name': item.variation.name if item.variation else None,
                 'physical_form_name': item.physical_form.name if item.physical_form else None,
                 'physical_form_id': item.physical_form_id,
-                'slug': item.physical_form.slug if item.physical_form else None,
+                'slug': item.variation.slug if item.variation else None,
             }
         )
 
@@ -223,6 +230,44 @@ def search_physical_forms():
             ]
         }
     )
+
+
+@ingredient_api_bp.route('/variations/search', methods=['GET'])
+@login_required
+@limiter.limit("3000/minute")
+def search_variations():
+    """Search curated variations with physical form metadata."""
+    q = (request.args.get('q') or '').strip()
+    query = Variation.query.filter(Variation.is_active == True)
+    if q:
+        ilike_term = f"%{q}%"
+        query = query.filter(
+            or_(Variation.name.ilike(ilike_term), Variation.slug.ilike(ilike_term))
+        )
+
+    variations = (
+        query.order_by(func.length(Variation.name).asc(), Variation.name.asc())
+        .limit(30)
+        .all()
+    )
+    return jsonify(
+        {
+            'results': [
+                {
+                    'id': variation.id,
+                    'name': variation.name,
+                    'slug': variation.slug,
+                    'description': variation.description,
+                    'physical_form_name': variation.physical_form.name if variation.physical_form else None,
+                    'physical_form_id': variation.physical_form_id,
+                    'default_unit': variation.default_unit,
+                    'form_bypass': variation.form_bypass,
+                }
+                for variation in variations
+            ]
+        }
+    )
+
 
 @ingredient_api_bp.route('/ingredients/create-or-link', methods=['POST'])
 @login_required

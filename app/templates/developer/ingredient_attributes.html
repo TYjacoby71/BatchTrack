@@ -1,0 +1,301 @@
+{% extends 'layout.html' %}
+
+{% block content %}
+<div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center mb-4">
+  <div>
+    <h2 class="mb-1">Ingredient Attributes</h2>
+    <p class="text-muted mb-0">Manage the curated vocabularies that power the global ingredient library: function tags, application tags, physical forms, and variations.</p>
+  </div>
+  <div class="d-flex gap-2">
+    <a href="{{ url_for('developer.create_global_item') }}" class="btn btn-outline-primary">
+      <i class="fas fa-plus"></i> New Global Item
+    </a>
+    <a href="{{ url_for('developer.global_items_admin') }}" class="btn btn-outline-secondary">
+      <i class="fas fa-boxes"></i> Back to Library
+    </a>
+  </div>
+</div>
+
+<div class="row g-4">
+  <div class="col-12 col-xxl-6">
+    <div class="card shadow-sm border-0 h-100">
+      <div class="card-header bg-light">
+        <div class="d-flex justify-content-between align-items-center">
+          <div>
+            <h5 class="mb-0">Function Tags</h5>
+            <small class="text-muted">Use cases such as Emulsifier, Humectant, Preservative.</small>
+          </div>
+          <span class="badge bg-primary">{{ function_tags|length }} total</span>
+        </div>
+      </div>
+      <div class="card-body p-0">
+        <div class="table-responsive">
+          <table class="table table-hover mb-0">
+            <tbody>
+              {% for tag in function_tags %}
+              <tr>
+                <td><strong>{{ tag.name }}</strong>{% if tag.description %}<br><small class="text-muted">{{ tag.description }}</small>{% endif %}</td>
+              </tr>
+              {% else %}
+              <tr><td class="text-center text-muted py-3">No function tags yet.</td></tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+      <div class="card-footer">
+        <form method="post" action="{{ url_for('developer.create_function_tag') }}" class="row g-2">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <div class="col-12 col-lg-6">
+            <input type="text" name="name" class="form-control" placeholder="e.g. Emulsifier" required>
+          </div>
+          <div class="col-12 col-lg-6">
+            <input type="text" name="description" class="form-control" placeholder="Optional description">
+          </div>
+          <div class="col-12 text-end">
+            <button type="submit" class="btn btn-primary btn-sm"><i class="fas fa-save"></i> Save Tag</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-12 col-xxl-6">
+    <div class="card shadow-sm border-0 h-100">
+      <div class="card-header bg-light">
+        <div class="d-flex justify-content-between align-items-center">
+          <div>
+            <h5 class="mb-0">Application Tags</h5>
+            <small class="text-muted">Where the ingredient is used (Lotion, Cold Process Soap, Confection).</small>
+          </div>
+          <span class="badge bg-primary">{{ application_tags|length }} total</span>
+        </div>
+      </div>
+      <div class="card-body p-0">
+        <div class="table-responsive">
+          <table class="table table-hover mb-0">
+            <tbody>
+              {% for tag in application_tags %}
+              <tr>
+                <td><strong>{{ tag.name }}</strong>{% if tag.description %}<br><small class="text-muted">{{ tag.description }}</small>{% endif %}</td>
+              </tr>
+              {% else %}
+              <tr><td class="text-center text-muted py-3">No application tags yet.</td></tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+      <div class="card-footer">
+        <form method="post" action="{{ url_for('developer.create_application_tag') }}" class="row g-2">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <div class="col-12 col-lg-6">
+            <input type="text" name="name" class="form-control" placeholder="e.g. Bath Bomb" required>
+          </div>
+          <div class="col-12 col-lg-6">
+            <input type="text" name="description" class="form-control" placeholder="Optional description">
+          </div>
+          <div class="col-12 text-end">
+            <button type="submit" class="btn btn-primary btn-sm"><i class="fas fa-save"></i> Save Tag</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="row g-4 mt-1">
+  <div class="col-12 col-xl-6">
+    <div class="card shadow-sm border-0 h-100">
+      <div class="card-header bg-light">
+        <div class="d-flex justify-content-between align-items-center">
+          <div>
+            <h5 class="mb-0">Use Case Tags</h5>
+            <small class="text-muted">Flexible category tags for grouping ingredients.</small>
+          </div>
+          <span class="badge bg-primary">{{ category_tags|length }} total</span>
+        </div>
+      </div>
+      <div class="card-body p-0">
+        <div class="table-responsive">
+          <table class="table table-hover mb-0">
+            <tbody>
+              {% for tag in category_tags %}
+              <tr>
+                <td><strong>{{ tag.name }}</strong>{% if tag.description %}<br><small class="text-muted">{{ tag.description }}</small>{% endif %}</td>
+              </tr>
+              {% else %}
+              <tr><td class="text-center text-muted py-3">No use case tags yet.</td></tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+      <div class="card-footer">
+        <form method="post" action="{{ url_for('developer.create_category_tag') }}" class="row g-2">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <div class="col-12 col-lg-6">
+            <input type="text" name="name" class="form-control" placeholder="e.g. Botanical Extract" required>
+          </div>
+          <div class="col-12 col-lg-6">
+            <input type="text" name="description" class="form-control" placeholder="Optional description">
+          </div>
+          <div class="col-12 text-end">
+            <button type="submit" class="btn btn-primary btn-sm"><i class="fas fa-save"></i> Save Tag</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-12 col-xl-6">
+    <div class="card shadow-sm border-0 h-100">
+      <div class="card-header bg-light">
+        <div class="d-flex justify-content-between align-items-center">
+          <div>
+            <h5 class="mb-0">Physical Forms</h5>
+            <small class="text-muted">High-level descriptors (Powder, Whole Bud, Hydrosol).</small>
+          </div>
+          <span class="badge bg-primary">{{ physical_forms|length }} total</span>
+        </div>
+      </div>
+      <div class="card-body p-0">
+        <div class="table-responsive">
+          <table class="table table-hover mb-0">
+            <thead class="table-light">
+              <tr>
+                <th>Name</th>
+                <th>Status</th>
+                <th class="text-end">Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for form in physical_forms %}
+              <tr>
+                <td>
+                  <div class="fw-semibold">{{ form.name }}</div>
+                  {% if form.description %}<div class="small text-muted">{{ form.description }}</div>{% endif %}
+                </td>
+                <td>{% if form.is_active %}<span class="badge bg-success">Active</span>{% else %}<span class="badge bg-secondary">Archived</span>{% endif %}</td>
+                <td class="text-end">
+                  <form method="post" action="{{ url_for('developer.toggle_physical_form', form_id=form.id) }}">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <button type="submit" class="btn btn-sm {% if form.is_active %}btn-outline-warning{% else %}btn-outline-success{% endif %}">
+                      {% if form.is_active %}<i class="fas fa-archive"></i> Archive{% else %}<i class="fas fa-undo"></i> Activate{% endif %}
+                    </button>
+                  </form>
+                </td>
+              </tr>
+              {% else %}
+              <tr><td colspan="3" class="text-center text-muted py-3">No physical forms defined.</td></tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+      <div class="card-footer">
+        <form method="post" action="{{ url_for('developer.create_physical_form') }}" class="row g-2">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <div class="col-12 col-lg-6">
+            <input type="text" name="name" class="form-control" placeholder="e.g. Whole Bud" required>
+          </div>
+          <div class="col-12 col-lg-6">
+            <input type="text" name="description" class="form-control" placeholder="Optional description">
+          </div>
+          <div class="col-12 text-end">
+            <button type="submit" class="btn btn-primary btn-sm"><i class="fas fa-save"></i> Save Form</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="card shadow-sm border-0 mt-4">
+  <div class="card-header bg-light">
+    <div class="d-flex justify-content-between align-items-center">
+      <div>
+        <h5 class="mb-0">Variations</h5>
+        <small class="text-muted">Purchasable states such as 2% Milk, Glacial (99%), Powder, Whole Fresh.</small>
+      </div>
+      <span class="badge bg-primary">{{ variations|length }} total</span>
+    </div>
+  </div>
+  <div class="card-body p-0">
+    <div class="table-responsive">
+      <table class="table table-hover mb-0 align-middle">
+        <thead class="table-light">
+          <tr>
+            <th>Name</th>
+            <th>Physical Form</th>
+            <th>Default Unit</th>
+            <th class="text-center">Linked Items</th>
+            <th>Status</th>
+            <th class="text-end">Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for variation in variations %}
+          <tr>
+            <td>
+              <div class="fw-semibold">{{ variation.name }}</div>
+              {% if variation.description %}<div class="small text-muted">{{ variation.description }}</div>{% endif %}
+              {% if variation.form_bypass %}<span class="badge bg-info-subtle text-info-emphasis mt-1">Form bypass</span>{% endif %}
+            </td>
+            <td>{{ variation.physical_form.name if variation.physical_form else '—' }}</td>
+            <td>{{ variation.default_unit or '—' }}</td>
+            <td class="text-center">{{ variation_usage.get(variation.id, 0) }}</td>
+            <td>{% if variation.is_active %}<span class="badge bg-success">Active</span>{% else %}<span class="badge bg-secondary">Archived</span>{% endif %}</td>
+            <td class="text-end">
+              <form method="post" action="{{ url_for('developer.toggle_variation', variation_id=variation.id) }}">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <button type="submit" class="btn btn-sm {% if variation.is_active %}btn-outline-warning{% else %}btn-outline-success{% endif %}">
+                  {% if variation.is_active %}<i class="fas fa-archive"></i> Archive{% else %}<i class="fas fa-undo"></i> Activate{% endif %}
+                </button>
+              </form>
+            </td>
+          </tr>
+          {% else %}
+          <tr><td colspan="6" class="text-center text-muted py-4">No variations defined yet.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+  <div class="card-footer">
+    <form method="post" action="{{ url_for('developer.create_variation') }}" class="row g-3">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <div class="col-12 col-lg-4">
+        <label class="form-label">Name</label>
+        <input type="text" name="name" class="form-control" placeholder="e.g. Powder" required>
+      </div>
+      <div class="col-12 col-lg-4">
+        <label class="form-label">Physical Form</label>
+        <select name="physical_form_id" class="form-select">
+          <option value="">— Select form —</option>
+          {% for form in physical_forms %}
+          <option value="{{ form.id }}">{{ form.name }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="col-12 col-lg-4">
+        <label class="form-label">Default Unit</label>
+        <input type="text" name="default_unit" class="form-control" placeholder="e.g. gram">
+      </div>
+      <div class="col-12">
+        <label class="form-label">Description</label>
+        <textarea name="description" class="form-control" rows="2" placeholder="Optional guidance for researchers"></textarea>
+      </div>
+      <div class="col-12">
+        <div class="form-check">
+          <input class="form-check-input" type="checkbox" name="form_bypass" id="variationFormBypass">
+          <label class="form-check-label" for="variationFormBypass">Display ingredient name without appending this variation (e.g. Water)</label>
+        </div>
+      </div>
+      <div class="col-12 text-end">
+        <button type="submit" class="btn btn-primary"><i class="fas fa-save"></i> Save Variation</button>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}

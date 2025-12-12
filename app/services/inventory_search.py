@@ -6,6 +6,7 @@ from sqlalchemy import func
 from sqlalchemy.orm import joinedload
 
 from app.models import GlobalItem, InventoryItem
+from app.models.ingredient_reference import Variation
 
 
 class InventorySearchService:
@@ -62,7 +63,9 @@ class InventorySearchService:
         )
         query = query.options(
             joinedload(InventoryItem.global_item).joinedload(GlobalItem.ingredient),
-            joinedload(InventoryItem.global_item).joinedload(GlobalItem.physical_form),
+            joinedload(InventoryItem.global_item)
+            .joinedload(GlobalItem.variation)
+            .joinedload(Variation.physical_form),
         )
         query = query.filter(~InventoryItem.type.in_(("product", "product-reserved")))
         if inventory_type:
@@ -100,14 +103,19 @@ class InventorySearchService:
             "density": item.density,
         }
         ingredient_obj = None
+        variation_obj = None
         physical_form_obj = None
         if getattr(item, "global_item", None):
             ingredient_obj = getattr(item.global_item, "ingredient", None)
-            physical_form_obj = getattr(item.global_item, "physical_form", None)
+            variation_obj = getattr(item.global_item, "variation", None)
+            if variation_obj:
+                physical_form_obj = getattr(variation_obj, "physical_form", None)
         payload["ingredient_id"] = getattr(ingredient_obj, "id", None)
         payload["ingredient_name"] = (
             getattr(ingredient_obj, "name", None) or item.name
         )
+        payload["variation_id"] = getattr(variation_obj, "id", None)
+        payload["variation_name"] = getattr(variation_obj, "name", None)
         payload["physical_form_id"] = getattr(physical_form_obj, "id", None)
         payload["physical_form_name"] = getattr(physical_form_obj, "name", None)
 

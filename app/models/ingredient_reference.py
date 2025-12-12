@@ -47,6 +47,37 @@ class PhysicalForm(db.Model):
     )
 
 
+class Variation(db.Model):
+    """Curated purchasable variations (e.g., Powder, Whole Fresh, 2% Liquid) with physical form metadata."""
+
+    __tablename__ = 'variation'
+
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(128), nullable=False, unique=True)
+    slug = db.Column(db.String(128), nullable=True, unique=True, index=True)
+    physical_form_id = db.Column(
+        db.Integer,
+        db.ForeignKey('physical_form.id', ondelete='SET NULL'),
+        nullable=True,
+    )
+    description = db.Column(db.Text, nullable=True)
+    default_unit = db.Column(db.String(32), nullable=True)
+    form_bypass = db.Column(db.Boolean, nullable=False, default=False)
+    is_active = db.Column(db.Boolean, nullable=False, default=True)
+    created_at = db.Column(db.DateTime, default=TimezoneUtils.utc_now, nullable=False)
+    updated_at = db.Column(
+        db.DateTime,
+        default=TimezoneUtils.utc_now,
+        onupdate=TimezoneUtils.utc_now,
+        nullable=False,
+    )
+
+    physical_form = db.relationship(
+        'PhysicalForm',
+        backref=db.backref('variations', lazy='dynamic'),
+    )
+
+
 class FunctionTag(db.Model):
     """Functional classifications (e.g., Humectant, Emulsifier)."""
 
