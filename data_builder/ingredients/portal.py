@@ -1,0 +1,286 @@
+"""Lightweight viewer/exporter for the ingredient compiler state DB.
+
+This is intentionally small and self-contained: it reads `compiler_state.db`
+and renders a basic table + CSV export so you can *see* progress and back it up.
+"""
+
+from __future__ import annotations
+
+import argparse
+import csv
+import io
+import os
+from datetime import datetime
+from pathlib import Path
+from typing import Any, Optional
+
+from flask import Flask, Response, request, send_file
+
+from . import database_manager
+
+
+def _parse_int(value: Any, default: int) -> int:
+    try:
+        return int(value)
+    except (TypeError, ValueError):
+        return default
+
+
+def _to_bool_compiled(status: str) -> bool:
+    return (status or "").lower() == "completed"
+
+
+def _serialize_dt(value: Any) -> str:
+    if isinstance(value, datetime):
+        return value.isoformat()
+    return str(value or "")
+
+
+def create_app(db_path: Optional[Path] = None) -> Flask:
+    app = Flask(__name__)
+
+    # Ensure DB exists / schema present.
+    if db_path is not None:
+        os.environ["COMPILER_DB_PATH"] = str(db_path)
+    database_manager.ensure_tables_exist()
+
+    @app.get("/")
+    def index() -> str:
+        q = (request.args.get("q") or "").strip()
+        status = (request.args.get("status") or "").strip().lower()
+        min_priority = _parse_int(request.args.get("min_priority"), 1)
+        max_priority = _parse_int(request.args.get("max_priority"), 10)
+        page = max(1, _parse_int(request.args.get("page"), 1))
+        page_size = min(500, max(10, _parse_int(request.args.get("page_size"), 50)))
+        offset = (page - 1) * page_size
+
+        database_manager.ensure_tables_exist()
+
+        with database_manager.get_session() as session:
+            base = session.query(database_manager.TaskQueue)
+            if q:
+                base = base.filter(database_manager.TaskQueue.term.ilike(f"%{q}%"))
+            if status:
+                base = base.filter(database_manager.TaskQueue.status == status)
+            base = base.filter(database_manager.TaskQueue.priority >= min_priority)
+            base = base.filter(database_manager.TaskQueue.priority <= max_priority)
+
+            total = base.count()
+            rows = (
+                base.order_by(database_manager.TaskQueue.term.asc())
+                .offset(offset)
+                .limit(page_size)
+                .all()
+            )
+
+            # Summary counts
+            summary = database_manager.get_queue_summary()
+
+        def _qs(**overrides: Any) -> str:
+            args = dict(request.args)
+            for k, v in overrides.items():
+                if v is None:
+                    args.pop(k, None)
+                else:
+                    args[k] = str(v)
+            # stable ordering not required
+            parts = [f"{k}={args[k]}" for k in args]
+            return "?" + "&".join(parts) if parts else ""
+
+        # Minimal HTML (no templates) to keep footprint tiny.
+        table_rows = "\n".join(
+            "<tr>"
+            f"<td>{r.term}</td>"
+            f"<td>{r.term}</td>"
+            f"<td>{'true' if _to_bool_compiled(r.status) else 'false'}</td>"
+            f"<td>{r.priority}</td>"
+            f"<td>{r.status}</td>"
+            f"<td>{_serialize_dt(r.last_updated)}</td>"
+            "</tr>"
+            for r in rows
+        )
+
+        prev_link = _qs(page=page - 1) if page > 1 else ""
+        next_link = _qs(page=page + 1) if offset + page_size < total else ""
+
+        return f"""
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <title>Data Builder • Ingredient State DB</title>
+    <style>
+      body {{ font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif; margin: 24px; }}
+      table {{ border-collapse: collapse; width: 100%; }}
+      th, td {{ border: 1px solid #ddd; padding: 8px; font-size: 13px; }}
+      th {{ background: #f6f6f6; text-align: left; position: sticky; top: 0; }}
+      .muted {{ color: #666; font-size: 12px; }}
+      .row {{ display: flex; gap: 12px; flex-wrap: wrap; align-items: end; }}
+      .card {{ padding: 12px; border: 1px solid #ddd; border-radius: 10px; }}
+      input, select {{ padding: 6px 8px; }}
+      a {{ text-decoration: none; }}
+    </style>
+  </head>
+  <body>
+    <h2>Ingredient compiler state</h2>
+    <div class="muted">
+      DB: <code>{database_manager.DB_PATH}</code>
+    </div>
+
+    <div class="row" style="margin-top: 12px;">
+      <div class="card">
+        <div><b>Summary</b></div>
+        <div class="muted">total: {summary.get('total', 0)}</div>
+        <div class="muted">pending: {summary.get('pending', 0)}</div>
+        <div class="muted">processing: {summary.get('processing', 0)}</div>
+        <div class="muted">completed: {summary.get('completed', 0)}</div>
+        <div class="muted">error: {summary.get('error', 0)}</div>
+      </div>
+
+      <div class="card" style="flex: 1;">
+        <form method="get" class="row">
+          <div>
+            <div class="muted">Search term</div>
+            <input name="q" value="{q}" placeholder="e.g. acacia" />
+          </div>
+          <div>
+            <div class="muted">Status</div>
+            <select name="status">
+              <option value="" {"selected" if status=="" else ""}>any</option>
+              <option value="pending" {"selected" if status=="pending" else ""}>pending</option>
+              <option value="processing" {"selected" if status=="processing" else ""}>processing</option>
+              <option value="completed" {"selected" if status=="completed" else ""}>completed</option>
+              <option value="error" {"selected" if status=="error" else ""}>error</option>
+            </select>
+          </div>
+          <div>
+            <div class="muted">Min priority</div>
+            <input name="min_priority" value="{min_priority}" size="4" />
+          </div>
+          <div>
+            <div class="muted">Max priority</div>
+            <input name="max_priority" value="{max_priority}" size="4" />
+          </div>
+          <div>
+            <div class="muted">Page size</div>
+            <input name="page_size" value="{page_size}" size="4" />
+          </div>
+          <div>
+            <button type="submit">Apply</button>
+            <a href="/export.csv{_qs(page=None)}" style="margin-left: 10px;">Export CSV</a>
+            <a href="/download.db" style="margin-left: 10px;">Download DB</a>
+          </div>
+        </form>
+        <div class="muted" style="margin-top: 8px;">
+          Showing {len(rows)} of {total}. Page {page}.
+          {"<a href='" + prev_link + "'>Prev</a>" if prev_link else ""}
+          {" | <a href='" + next_link + "'>Next</a>" if next_link else ""}
+        </div>
+      </div>
+    </div>
+
+    <h3 style="margin-top: 18px;">Rows</h3>
+    <table>
+      <thead>
+        <tr>
+          <th>name</th>
+          <th>id</th>
+          <th>is_compiled</th>
+          <th>priority</th>
+          <th>status</th>
+          <th>last_updated</th>
+        </tr>
+      </thead>
+      <tbody>
+        {table_rows if table_rows else "<tr><td colspan='6' class='muted'>No rows match your filters.</td></tr>"}
+      </tbody>
+    </table>
+  </body>
+</html>
+"""
+
+    @app.get("/export.csv")
+    def export_csv() -> Response:
+        q = (request.args.get("q") or "").strip()
+        status = (request.args.get("status") or "").strip().lower()
+        min_priority = _parse_int(request.args.get("min_priority"), 1)
+        max_priority = _parse_int(request.args.get("max_priority"), 10)
+
+        database_manager.ensure_tables_exist()
+
+        with database_manager.get_session() as session:
+            query = session.query(database_manager.TaskQueue)
+            if q:
+                query = query.filter(database_manager.TaskQueue.term.ilike(f"%{q}%"))
+            if status:
+                query = query.filter(database_manager.TaskQueue.status == status)
+            query = query.filter(database_manager.TaskQueue.priority >= min_priority)
+            query = query.filter(database_manager.TaskQueue.priority <= max_priority)
+            query = query.order_by(database_manager.TaskQueue.term.asc())
+            rows = query.all()
+
+        buf = io.StringIO()
+        writer = csv.DictWriter(
+            buf,
+            fieldnames=["name", "id", "is_compiled", "priority", "status", "last_updated"],
+        )
+        writer.writeheader()
+        for r in rows:
+            writer.writerow(
+                {
+                    "name": r.term,
+                    "id": r.term,
+                    "is_compiled": "true" if _to_bool_compiled(r.status) else "false",
+                    "priority": r.priority,
+                    "status": r.status,
+                    "last_updated": _serialize_dt(r.last_updated),
+                }
+            )
+
+        out = buf.getvalue()
+        return Response(
+            out,
+            mimetype="text/csv; charset=utf-8",
+            headers={"Content-Disposition": "attachment; filename=ingredient_compiler_state.csv"},
+        )
+
+    @app.get("/download.db")
+    def download_db() -> Response:
+        """Download the raw SQLite state DB for backup."""
+        # Ensure tables exist so the DB file is created if missing.
+        database_manager.ensure_tables_exist()
+
+        path = Path(database_manager.DB_PATH).resolve()
+        if not path.exists():
+            return Response("State DB file not found.", status=404, mimetype="text/plain; charset=utf-8")
+
+        return send_file(
+            path,
+            as_attachment=True,
+            download_name="compiler_state.db",
+            mimetype="application/octet-stream",
+            conditional=True,
+        )
+
+    return app
+
+
+def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
+    parser = argparse.ArgumentParser(description="View/export the ingredient compiler_state.db")
+    parser.add_argument("--host", default="127.0.0.1")
+    parser.add_argument("--port", type=int, default=5055)
+    parser.add_argument("--db-path", default="", help="Override COMPILER_DB_PATH for this portal run")
+    return parser.parse_args(argv)
+
+
+def main(argv: list[str] | None = None) -> None:
+    args = parse_args(argv)
+    db_path = Path(args.db_path).resolve() if args.db_path else None
+    app = create_app(db_path=db_path)
+    # Note: this is a dev portal; use a reverse proxy if exposing beyond localhost.
+    app.run(host=args.host, port=args.port, debug=False)
+
+
+if __name__ == "__main__":
+    main()
+

@@ -6,6 +6,7 @@ import json
 import logging
 import os
 import re
+import hashlib
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Set
 
@@ -16,6 +17,7 @@ BASE_DIR = Path(__file__).resolve().parent
 OUTPUT_DIR = BASE_DIR / "output"
 TERMS_FILE = BASE_DIR / "terms.json"
 PHYSICAL_FORMS_FILE = OUTPUT_DIR / "physical_forms.json"
+TERM_STUBS_DIR = OUTPUT_DIR / "term_stubs"
 openai.api_key = os.environ.get("OPENAI_API_KEY")
 if not openai.api_key:
     LOGGER.warning("OPENAI_API_KEY is not set; term_collector will run in repository-only mode unless --skip-ai is provided.")
@@ -177,6 +179,8 @@ class TermCollector:
         include_ai: bool = True,
         seed_root: Optional[Path] = None,
         example_file: Optional[Path] = None,
+        terms_file: Optional[Path] = None,
+        seed_from_db: bool = True,
     ) -> None:
         self.seed_root = seed_root if seed_root and seed_root.exists() else None
         self.target_count = target_count
@@ -192,6 +196,15 @@ class TermCollector:
                     self.prompt_examples.update(str(item).strip() for item in data if str(item).strip())
             except json.JSONDecodeError:
                 LOGGER.warning("Example file %s is not valid JSON; ignoring", example_file)
+
+        # If a terms file already exists, load it so the collector can resume
+        # from the last known term and avoid regenerating duplicates across runs.
+        if terms_file:
+            self.ingest_terms_file(terms_file)
+
+        # Prefer the queue DB as the true source-of-truth for resuming across runs.
+        if seed_from_db:
+            self.ingest_terms_from_db()
 
     def _extract_priority(self, value) -> int:
         try:
@@ -222,6 +235,60 @@ class TermCollector:
         value = re.sub(r'[^\w\s-]', '', value).strip().lower()
         value = re.sub(r'[-\s]+', '-', value)
         return value
+
+    def _term_file_key(self, term: str) -> str:
+        """Stable per-term file key to avoid collisions."""
+        base = re.sub(r"[^a-zA-Z0-9]+", "_", term.lower()).strip("_") or "term"
+        digest = hashlib.sha1(term.encode("utf-8")).hexdigest()[:8]  # deterministic, short
+        return f"{base}_{digest}"
+
+    # ------------------------------------------------------------------
+    # Existing term ingestion (ratchet persistence)
+    # ------------------------------------------------------------------
+    def ingest_terms_file(self, terms_file: Path) -> None:
+        """Load an existing terms.json file to resume A→Z progression across runs."""
+        try:
+            if not terms_file.exists():
+                return
+            raw_text = terms_file.read_text(encoding="utf-8").strip()
+            if not raw_text:
+                return
+            data = json.loads(raw_text)
+            if not isinstance(data, list):
+                LOGGER.warning("Terms file %s is not a JSON list; ignoring", terms_file)
+                return
+            loaded = 0
+            for item in data:
+                if isinstance(item, str):
+                    term = item.strip()
+                    if term and self._register_term(term, DEFAULT_PRIORITY):
+                        loaded += 1
+                    continue
+                if isinstance(item, dict):
+                    term = str(item.get("term") or item.get("name") or "").strip()
+                    if not term:
+                        continue
+                    priority = item.get("priority") if "priority" in item else item.get("priority_score")
+                    if self._register_term(term, priority):
+                        loaded += 1
+            if loaded:
+                LOGGER.info("Loaded %s existing terms from %s", loaded, terms_file)
+        except Exception as exc:  # pylint: disable=broad-except
+            LOGGER.warning("Failed to ingest existing terms from %s: %s", terms_file, exc)
+
+    def ingest_terms_from_db(self) -> None:
+        """Load existing terms from the compiler queue DB (preferred persistence layer)."""
+        try:
+            from . import database_manager
+        except Exception:  # pragma: no cover
+            return
+
+        try:
+            existing = database_manager.get_all_terms()
+            for term, priority in existing:
+                self._register_term(term, priority)
+        except Exception as exc:  # pylint: disable=broad-except
+            LOGGER.debug("Skipping DB term ingestion: %s", exc)
 
     # ------------------------------------------------------------------
     # Seed extraction
@@ -356,16 +423,41 @@ class TermCollector:
         path.parent.mkdir(parents=True, exist_ok=True)
         payload = [
             {"term": term, "priority": priority}
-            for term, priority in sorted(self.terms.items(), key=lambda item: (-item[1], item[0]))
+            # IMPORTANT: `terms.json` is the canonical master list and must be
+            # strict lexicographic order (A→Z, with punctuation like '.' first).
+            # Priority is metadata for the compiler, not an ordering dimension here.
+            for term, priority in sorted(self.terms.items(), key=lambda item: (item[0].casefold(), item[0]))
         ]
         path.write_text(json.dumps(payload, indent=2), encoding="utf-8")
-        LOGGER.info("Wrote %s prioritized terms to %s", len(payload), path)
+        LOGGER.info("Wrote %s terms to %s", len(payload), path)
 
     def write_forms_file(self, path: Path = PHYSICAL_FORMS_FILE) -> None:
         path.parent.mkdir(parents=True, exist_ok=True)
         ordered = sorted(self.physical_forms)
         path.write_text(json.dumps(ordered, indent=2), encoding="utf-8")
         LOGGER.info("Wrote %s physical forms to %s", len(ordered), path)
+
+    def write_term_stubs(self, directory: Path = TERM_STUBS_DIR) -> None:
+        """Write one small JSON stub per term (avoids a single giant terms.json)."""
+        directory.mkdir(parents=True, exist_ok=True)
+        for term, priority in self.terms.items():
+            key = self._term_file_key(term)
+            path = directory / f"{key}.json"
+            payload = {
+                "term": term,
+                "priority": int(priority),
+                "status": "pending",
+            }
+            path.write_text(json.dumps(payload, indent=2), encoding="utf-8")
+        LOGGER.info("Wrote %s term stubs to %s", len(self.terms), directory)
+
+    def seed_queue_db(self) -> int:
+        """Upsert all known terms into the compiler queue database."""
+        try:
+            from . import database_manager
+        except Exception:  # pragma: no cover
+            return 0
+        return database_manager.upsert_terms(self.terms.items())
 
     
 
@@ -376,7 +468,10 @@ def parse_args(argv: List[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--example-file", default="", help="Optional JSON array of canonical example ingredients for prompt context")
     parser.add_argument("--target-count", type=int, default=5000, help="Desired total number of base ingredients")
     parser.add_argument("--batch-size", type=int, default=250, help="AI batch size per request")
-    parser.add_argument("--terms-file", default=str(TERMS_FILE), help="Destination JSON file for term list (term + priority)")
+    parser.add_argument("--terms-file", default=str(TERMS_FILE), help="Optional legacy JSON destination for term list (term + priority)")
+    parser.add_argument("--write-terms-file", action="store_true", help="Write the legacy terms.json output (otherwise prefer DB + per-term stubs)")
+    parser.add_argument("--stubs-dir", default=str(TERM_STUBS_DIR), help="Directory to write per-term stub JSON files")
+    parser.add_argument("--no-db-seed", action="store_true", help="Do not upsert terms into compiler_state.db")
     parser.add_argument("--forms-file", default=str(PHYSICAL_FORMS_FILE), help="Destination file for physical forms list")
     parser.add_argument("--skip-ai", action="store_true", help="Only use repo seeds; do not call the AI API")
     return parser.parse_args(argv)
@@ -395,11 +490,16 @@ def main(argv: List[str] | None = None) -> None:
         include_ai=not args.skip_ai,
         seed_root=Path(args.seed_root).resolve() if args.seed_root else None,
         example_file=Path(args.example_file).resolve() if args.example_file else None,
+        terms_file=Path(args.terms_file).resolve() if args.terms_file else None,
     )
 
     collector.ingest_seed_directory()
     collector.expand_with_ai()
-    collector.write_terms_file(Path(args.terms_file))
+    if not args.no_db_seed:
+        collector.seed_queue_db()
+    collector.write_term_stubs(Path(args.stubs_dir))
+    if args.write_terms_file:
+        collector.write_terms_file(Path(args.terms_file))
     collector.write_forms_file(Path(args.forms_file))
 
 

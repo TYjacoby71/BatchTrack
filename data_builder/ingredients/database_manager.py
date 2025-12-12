@@ -181,6 +181,55 @@ def initialize_queue(terms_file_path: str | os.PathLike[str]) -> int:
     return inserted
 
 
+def upsert_terms(term_entries: Iterable[Tuple[str, int]]) -> int:
+    """Upsert terms directly into the queue (preferred for large runs).
+
+    This avoids requiring a giant `terms.json` file as an intermediate artifact.
+
+    Returns:
+        Number of newly inserted terms.
+    """
+    ensure_tables_exist()
+    inserted = 0
+    with get_session() as session:
+        existing_rows = {
+            row[0]: row[1]
+            for row in session.execute(select(TaskQueue.term, TaskQueue.priority))
+        }
+        for term, priority in term_entries:
+            cleaned = (term or "").strip()
+            if not cleaned:
+                continue
+            normalized_priority = _sanitize_priority(priority)
+            existing_priority = existing_rows.get(cleaned)
+            if existing_priority is not None:
+                if normalized_priority > existing_priority:
+                    session.query(TaskQueue).filter(TaskQueue.term == cleaned).update(
+                        {"priority": normalized_priority, "last_updated": datetime.utcnow()}
+                    )
+                continue
+            session.add(
+                TaskQueue(
+                    term=cleaned,
+                    status="pending",
+                    last_updated=datetime.utcnow(),
+                    priority=normalized_priority,
+                )
+            )
+            inserted += 1
+    if inserted:
+        LOGGER.info("Inserted %s new terms into the queue via upsert.", inserted)
+    return inserted
+
+
+def get_all_terms() -> List[Tuple[str, int]]:
+    """Return all terms currently known to the queue (term, priority)."""
+    ensure_tables_exist()
+    with get_session() as session:
+        rows = session.execute(select(TaskQueue.term, TaskQueue.priority)).all()
+        return [(term, priority) for term, priority in rows]
+
+
 def get_next_pending_task(min_priority: int = MIN_PRIORITY) -> Optional[tuple[str, int]]:
     """Return the next pending term honoring priority sorting."""
 

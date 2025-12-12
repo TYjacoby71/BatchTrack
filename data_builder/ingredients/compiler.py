@@ -196,9 +196,11 @@ def main(argv: List[str] | None = None) -> None:
 
     args = parse_args(argv or sys.argv[1:])
 
-    # Initialize queue if needed
+    # Optional legacy queue seeding from a terms.json file.
+    # Preferred flow: term_collector seeds compiler_state.db directly.
     try:
-        database_manager.initialize_queue(args.terms_file)
+        if args.terms_file and Path(args.terms_file).exists():
+            database_manager.initialize_queue(args.terms_file)
     except FileNotFoundError:
         LOGGER.warning("Terms file %s not found; queue will only use existing entries.", args.terms_file)
 
