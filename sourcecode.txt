@@ -1,0 +1,291 @@
+<!DOCTYPE html>
+<html lang="en-US" prefix="og: https://ogp.me/ns#">
+<head>
+<script async src="https://www.googletagmanager.com/gtag/js?id=UA-46820683-1"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];function gtag(){dataLayer.push(arguments);}gtag('js', new Date());gtag('config', 'UA-46820683-1');
+</script>
+<title>1,2,2-trimethyl propyl 2-butenoate</title>
+<meta charset="UTF-8" />
+<meta name="description" content="Functional use(s) - information only not used for fragrances or flavors. Has an fruity type odor." />
+<link rel="canonical" href="https://www.thegoodscentscompany.com/data/rw1012041.html" />
+<meta property="og:locale" content="en_US" />
+<meta property="og:type" content="article" />
+<meta property="og:title" content="The Good Scents Company - Aromatic/Hydrocarbon/Inorganic Ingredients Catalog information" />
+<meta property="og:description" content="Aromatic/Hydrocarbon/Inorganic Ingredients Catalog information" />
+<meta property="og:url" content="https://www.thegoodscentscompany.com/data/rw1012041.html" />
+<link rel="shortcut icon" href="/images/favicon.ico" type="image/x-icon" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<link rel="stylesheet" type="text/css" href="/css/v1/data.css" />
+<script src="/js/jquery.min.js"></script>
+<script src="/js/jquery.accordion.min.js"></script>
+<script src="/js/v1/index.js"></script>
+<script src="https://cdn.dev.skype.com/uri/skype-uri.js"></script>
+<script>
+(function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){(i[r].q=i[r].q||[]).push(arguments);},i[r].l=1*new Date();a=s.createElement(o),m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m);})(window,document,'script','//www.google-analytics.com/analytics.js','ga');
+  ga('create', 'UA-46820683-1', 'auto');
+  ga('send', 'pageview');
+</script>
+<script>
+$('.accordion').accordion({
+    transitionSpeed: 300,
+    transitionEasing: 'ease',
+    controlElement: '[data-control]',
+    contentElement: '[data-content]',
+    groupElement: '[data-accordion-group]',
+    singleOpen: true
+});
+</script>
+<script>
+$(document).ready(function() {
+    if($( window ).width() <= "851") {
+    $('#menu-icon').click(function() {
+        $('#datanavmenu ul').toggle();
+    });
+}});
+</script>
+</head>
+<body>
+<header id="datapageheader">
+<div data-role="header" data-position="fixed">
+<div id="logo">TGSC Information System
+<nav id="datanavmenu" class="navsmall">
+<a href="#" id="menu-icon"></a>
+<ul>
+<a href="/index.html"><li>Home</li></a>
+<a href="/misc/about.html"><li>About</li></a>
+<a href="/misc/associations.html"><li>Associations</li></a>
+<a href="/misc/contact.html"><li>Contact</li></a>
+<a href="/categories.html"><li>Categories</li></a>
+<a href="/supply.html"><li>Supplies</li></a>
+<a href="/search.html"><li>Search</li></a>
+</ul>
+</nav>
+</div>
+</div>
+<div class="subdrssection5">
+    <span><a href="#toeuus">EU/US</a></span>
+    <span><a href="#tophyp">Properties</a></span>
+    <span><a href="#toorgano">Organoleptics</a></span>
+    <span><a href="#tocosmtc">Cosmetics</a></span>
+    <span><a href="#tosupp">Suppliers</a></span>
+    <span><a href="#tosafty">Safety</a></span>
+    <span><a href="#tosafiu">Safety in use</a></span>
+    <span><a href="#tosafrf">Safety references</a></span>
+    <span><a href="#torefrc">References</a></span>
+    <span><a href="#toother">Other</a></span>
+    <span><a href="#toblndr">Blenders</a></span>
+    <span><a href="#touses">Uses</a></span>
+    <span><a href="#tooccur">Occurrence</a></span>
+    <span><a href="#tosynm">Synonyms</a></span>
+    <span><a href="#toartc">Articles</a></span>
+    <span><a href="#tonotes">Notes</a></span></div>
+</header>
+
+<section id="datapagesection">
+<h1 itemscope itemtype="https://schema.org/Thing"><span itemprop="name">1,2,2-trimethyl propyl 2-butenoate</span>
+<br /><span class="headsynonym">but-2-enoic acid 1,2,2-trimethylpropyl ester</span></h1>
+<h2>Supplier Sponsors</h2>
+<ul id="multiple" data-accordion-group>
+<table>
+<tr><td>
+<table class="cheminfo">
+<tbody>
+</tbody>
+</table>
+<div class="qinfr2">Category:<span>information only not used for fragrances or flavors</span></div>
+<div><span id="toeuus"></span>&nbsp;</div>
+<div class="sectionclass">US / EU / FDA / JECFA / FEMA / FLAVIS / Scholar / Patent Information:</div>
+<table class="cheminfo">
+<tbody>
+<tr><td class="radw4">Google Scholar:</td><td class="radw11"><a href="https://scholar.google.com/scholar?hl=en&amp;q=%22but-2-enoic+acid+1%2C2%2C2-trimethyl-propyl+ester%22+OR+%221%2C2%2C2-trimethylpropyl+2-butenoate%22">Search</a></td></tr>
+<tr><td class="radw4">Google Books:</td><td class="radw11"><a href="https://www.google.com/search?tbm=bks&amp;q=%22but-2-enoic+acid+1%2C2%2C2-trimethyl-propyl+ester%22+OR+%221%2C2%2C2-trimethylpropyl+2-butenoate%22">Search</a></td></tr>
+<tr><td class="radw4">Google Scholar: with word "volatile"</td><td class="radw11"><a href="https://scholar.google.com/scholar?hl=en&amp;q=%22but-2-enoic+acid+1%2C2%2C2-trimethyl-propyl+ester%22+OR+%221%2C2%2C2-trimethylpropyl+2-butenoate%22 volatile">Search</a></td></tr>
+<tr><td class="radw4">Google Scholar: with word "flavor"</td><td class="radw11"><a href="https://scholar.google.com/scholar?hl=en&amp;q=%22but-2-enoic+acid+1%2C2%2C2-trimethyl-propyl+ester%22+OR+%221%2C2%2C2-trimethylpropyl+2-butenoate%22 flavor">Search</a></td></tr>
+<tr><td class="radw4">Google Scholar: with word "odor"</td><td class="radw11"><a href="https://scholar.google.com/scholar?hl=en&amp;q=%22but-2-enoic+acid+1%2C2%2C2-trimethyl-propyl+ester%22+OR+%221%2C2%2C2-trimethylpropyl+2-butenoate%22 odor">Search</a></td></tr>
+<tr><td class="radw4">Google Patents:</td><td class="radw11"><a href="https://www.google.com/search?site=&amp;tbm=pts&amp;source=hp&amp;q=%22but-2-enoic+acid+1%2C2%2C2-trimethyl-propyl+ester%22+OR+%221%2C2%2C2-trimethylpropyl+2-butenoate%22">Search</a></td></tr>
+<tr><td class="radw4"><a href="https://patft.uspto.gov/netahtml/PTO/search-bool.html">US Patents:</a></td><td class="radw11"><a href="https://patft.uspto.gov/netacgi/nph-Parser?Sect1=PTO2&amp;Sect2=HITOFF&amp;u=%2Fnetahtml%2FPTO%2Fsearch-adv.htm&amp;r=0&amp;p=1&amp;f=S&amp;l=50&amp;Query=%22but-2-enoic+acid+1%2C2%2C2-trimethyl-propyl+ester%22+OR+%221%2C2%2C2-trimethylpropyl+2-butenoate%22&amp;d=PTXT">Search</a></td></tr>
+<tr><td class="radw4"><a href="https://worldwide.espacenet.com/">EU Patents:</a></td><td class="radw11"><a href="https://worldwide.espacenet.com/searchResults?submitted=true&amp;locale=en_EP&amp;DB=en.worldwide.espacenet.com&amp;ST=singleline&amp;query=%22but-2-enoic+acid+1%2C2%2C2-trimethyl-propyl+ester%22+OR+%221%2C2%2C2-trimethylpropyl+2-butenoate%22&amp;Submit=Search">Search</a></td></tr>
+<tr><td class="radw4">PubMed:</td><td class="radw11"><span id="topubmed"></span><a href="https://pubmed.ncbi.nlm.nih.gov/?term=1,2,2-trimethyl+propyl+2-butenoate">Search</a></td></tr>
+<tr><td class="radw4">NCBI:</td><td class="radw11"><a href="https://www.ncbi.nlm.nih.gov/gquery/gquery.fcgi?term=1,2,2-trimethyl+propyl+2-butenoate">Search</a></td></tr>
+</tbody>
+</table>
+<div><span id="tophyp"></span>&nbsp;</div>
+<div class="sectionclass">Physical Properties:</div>
+<table class="cheminfo">
+<tbody>
+<tr><td class="radw4">Appearance:</td><td class="radw11">colorless to pale yellow clear liquid (est)</td></tr>
+<tr><td class="radw4">Assay:</td><td class="radw11"> 95.00 to 100.00 
+</td></tr>
+<tr><td class="radw4">Food Chemicals Codex Listed: </td><td class="radw11">No</td></tr>
+<tr><td class="radw4">Boiling Point:</td><td class="radw11">  66.00 &#176;C. @    0.72 mm Hg
+</td></tr>
+<tr><td colspan="2" class="synonyms">Soluble in:</td></tr>
+<tr><td>&nbsp;</td><td class="wrd8">alcohol</td></tr>
+<tr><td colspan="2" class="synonyms">Insoluble in:</td></tr>
+<tr><td>&nbsp;</td><td class="wrd8">water</td></tr>
+</tbody>
+</table>
+<div><span id="toorgano"></span>&nbsp;</div>
+<div class="sectionclass">Organoleptic Properties:</div>
+<table class="cheminfo">
+<tbody>
+<tr><td class="qinfr2">Odor Type: fruity</td></tr>
+<tr><td class="radw5"><span><a href="/odor/fruity.html">fruity</a> <a href="/odor/sweet.html">sweet</a> <a href="/odor/hay.html">hay</a> <a href="/odor/metallic.html">metallic</a> </span></td></tr>
+<tr><td class="radw5">Odor Description:<span>at 100.00 %. </span><span>fruity, sweet, slightly hay-like, and slightly metallic</span></td></tr>
+<tr><td class="demstrafrm">Odor and/or flavor descriptions from others (if found).</td></tr>
+</tbody>
+</table>
+<div><span id="tocosmtc"></span>&nbsp;</div>
+<div class="sectionclass">Cosmetic Information:</div>
+<table class="cheminfo">
+<tbody>
+<tr><td colspan="2" class="radw9">None found</td></tr>
+</tbody>
+</table>
+<div><span id="tosupp"></span>&nbsp;</div>
+<div class="sectionclass">Suppliers:</div>
+<table class="cheminfo">
+<tbody>
+<tr><td>&nbsp;</td><td>None found</td></tr>
+</tbody>
+</table>
+<div><span id="tosafty"></span>&nbsp;</div>
+<div class="sectionclass">Safety Information:</div>
+<table class="cheminfo">
+<tbody>
+<tr><td colspan="2">&#160;</td></tr>
+<tr><td colspan="2" class="radw46">Hazards identification</td></tr>
+<tr><td colspan="2">&#160;</td></tr>
+<tr><td colspan="2" class="radw45"> Classification of the substance or mixture</td></tr>
+<tr><td class="radw45" colspan="2">GHS Classification in accordance with 29 CFR 1910 (OSHA HCS)</td></tr>
+<tr><td colspan="2" class="radw11">None found.</td></tr>
+<tr><td colspan="2" class="radw45"> GHS Label elements, including precautionary statements</td></tr>
+<tr><td colspan="2">&#160;</td></tr>
+<tr><td class="radw45">Pictogram</td><td class="radw11"></td></tr>
+<tr><td colspan="2">&#160;</td></tr>
+                                                                     
+<tr><td colspan="2" class="radw45">Hazard statement(s)</td></tr>
+<tr><td colspan="2" class="radw11">None found.</td></tr>
+<tr><td colspan="2" class="radw45">Precautionary statement(s)</td></tr>
+<tr><td colspan="2" class="radw11">None found.</td></tr>
+<tr><td colspan="2" class="radw46">Oral/Parenteral Toxicity: </td></tr>
+<tr><td colspan="2" class="radw11">
+Not determined
+</td></tr>
+<tr><td colspan="2" class="radw46">Dermal Toxicity: </td></tr>
+<tr><td colspan="2" class="radw11">
+Not determined
+</td></tr>
+<tr><td colspan="2" class="radw46">Inhalation Toxicity: </td></tr>
+<tr><td colspan="2" class="radw11">
+Not determined
+</td></tr>
+</tbody>
+</table>
+<div><span id="tosafiu"></span>&nbsp;</div>
+<div class="sectionclass">Safety in Use Information:</div>
+<table class="cheminfo">
+<tbody>
+<tr><td class="radw3" colspan="4">Category: </td></tr><tr><td class="radw7" colspan="4">information only not used for fragrances or flavors</td></tr>
+<tr><td colspan="4" class="radw5">Recommendation for 1,2,2-trimethyl propyl 2-butenoate usage levels up to: </td></tr><tr><td>&nbsp;</td><td colspan="3" class="radw7">not for fragrance use.
+</td></tr>
+<tr><td colspan="4" class="refchem">&nbsp;</td></tr>
+<tr><td colspan="4" class="radw5">Recommendation for 1,2,2-trimethyl propyl 2-butenoate flavor usage levels up to: </td></tr>
+<tr><td>&nbsp;</td><td class="radw7" colspan="3">not for flavor use.
+</td></tr>
+</tbody>
+</table>
+<div><span id="tosafrf"></span>&nbsp;</div>
+<div class="sectionclass">Safety References:</div>
+<table class="cheminfo">
+<tbody>
+<tr><td class="radw5">AIDS Citations:<span><a href="https://www.ncbi.nlm.nih.gov/sites/entrez?cmd=search&amp;db=pubmed&amp;cmd_current=Limits&amp;pmfilter_Subsets=AIDS&amp;term=1,2,2-trimethyl+propyl+2-butenoate">Search</a></span></td></tr>
+<tr><td class="radw5">Cancer Citations:<span><a href="https://www.ncbi.nlm.nih.gov/sites/entrez?cmd=search&amp;db=pubmed&amp;cmd_current=Limits&amp;pmfilter_Subsets=Cancer&amp;term=1,2,2-trimethyl+propyl+2-butenoate">Search</a></span></td></tr>
+<tr><td class="radw5">Toxicology Citations:<span><a href="https://www.ncbi.nlm.nih.gov/sites/entrez?cmd=search&amp;db=pubmed&amp;cmd_current=Limits&amp;pmfilter_Subsets=Toxicology&amp;term=1,2,2-trimethyl+propyl+2-butenoate">Search</a></span></td></tr>
+</tbody>
+</table>
+<div><span id="torefrc"></span>&nbsp;</div>
+<div class="sectionclass">References:</div>
+<table class="cheminfo">
+<tbody>
+<tr><td colspan="2" class="radw4">None found</td></tr>
+</tbody>
+</table>
+<div><span id="toother"></span>&nbsp;</div>
+<div class="sectionclass">Other Information:</div>
+<table class="cheminfo">
+<tbody>
+</tbody>
+</table>
+<div><span id="toblndr"></span>&nbsp;</div>
+<div class="sectionclass">Potential Blenders and core components <a class="bldrloc" href="/misc/pblndrs2.html">note</a></div>
+<table class="cheminfo">
+<tbody>
+<tr><td class="nonfnd1">None Found</td></tr>
+</tbody>
+</table>
+<div><span id="touses"></span>&nbsp;</div>
+<div class="sectionclass">Potential Uses:</div>
+<table class="cheminfo">
+<tbody>
+<tr><td colspan="2" class="nonfnd1">None Found</td></tr>
+</tbody>
+</table>
+<div><span id="tooccur"></span>&nbsp;</div>
+<div class="sectionclass">Occurrence (nature, food, other):<a class="bldrloc" href="/misc/natocc.html">note</a></div>
+<table class="cheminfo">
+<tbody>
+<tr><td class="wrd79">&nbsp;</td><td class="wrd89">not found in nature</td></tr>
+</tbody>
+</table>
+<div><span id="tosynm"></span>&nbsp;</div>
+<div class="sectionclass">Synonyms:</div>
+<table class="cheminfo">
+<tbody>
+<tr itemscope itemtype="https://schema.org/Thing"><td itemprop="alternateName" class="wrd9">&nbsp;</td><td class="wrd10">but-2-enoic acid 1,2,2-trimethyl propyl ester</td></tr><tr itemscope itemtype="https://schema.org/Thing"><td itemprop="alternateName" class="wrd7">&nbsp;</td><td class="wrd8">but-2-enoic acid 1,2,2-trimethyl-propyl ester</td></tr><tr itemscope itemtype="https://schema.org/Thing"><td itemprop="alternateName" class="wrd9">&nbsp;</td><td class="wrd10">but-2-enoic acid 1,2,2-trimethylpropyl ester</td></tr><tr itemscope itemtype="https://schema.org/Thing"><td itemprop="alternateName" class="wrd7">1,2,2-</td><td class="wrd8">trimethyl propyl crotonate</td></tr><tr itemscope itemtype="https://schema.org/Thing"><td itemprop="alternateName" class="wrd9">1,2,2-</td><td class="wrd10">trimethylpropyl 2-butenoate</td></tr><tr itemscope itemtype="https://schema.org/Thing"><td itemprop="alternateName" class="wrd7">1,2,2-</td><td class="wrd8">trimethylpropyl crotonate</td></tr>
+</tbody>
+</table>
+<div><span id="toartc"></span>&nbsp;</div>
+<article itemscope itemtype="https://schema.org/TechArticle">
+<h2 class="sectionclass">Articles:</h2>
+<table class="cheminfo">
+<tbody>
+<tr><td class="wrd85">US Patents:<a href="http://patft.uspto.gov/netacgi/nph-Parser?Sect1=PTO2&Sect2=HITOFF&p=1&u=%2Fnetahtml%2FPTO%2Fsearch-bool.html&r=1&f=G&l=50&co1=AND&d=PTXT&s1=8,183,200&OS=8,183,200&RS=8,183,200">8,183,200 - Organoleptic compound</a></td></tr>
+<tr><td class="wrd85">US Patents:<a href="http://patft.uspto.gov/netacgi/nph-Parser?Sect1=PTO2&Sect2=HITOFF&u=%2Fnetahtml%2FPTO%2Fsearch-adv.htm&r=4&p=1&f=G&l=50&d=PTXT&S1=(%22International+Flavors+%26+Fragrances%22.ASNM.)">Organoleptic compound</a></td></tr>
+</tbody>
+</table>
+</article>
+<div><span id="tonotes"></span>&nbsp;</div>
+<tr><td class="subaskdrs"><div class="footnoteclass">Notes: </div><div class="fotq">None found</div></td></tr>
+</tbody></table>
+<div class=qinfr>
+<form action="/cgi-bin/mymail.pl" method="post">
+<input type="hidden" name="recipient" value="pageinfo@thegoodscentscompany.com" />
+<input type="hidden" name="subject" value="pageinfo-RW101204" />
+<input type="hidden" name="required" value="email" />
+<input type=hidden name="redirect" value="/misc/thankyouto.html" />
+<div class="qinfr2">Please share your Comments.</div>
+<div class="qinfr2">Email Address:<input type="text" name="email" size="30" /></div>
+<div class="qinfr2"><textarea name="comments" cols="25" rows="6"></textarea></div>
+<div class="qinfr2"><input type="submit" value="Submit" />
+<input type="reset"  value="Clear" /></div>
+</form>
+</div>
+<script>
+$(document).ready(function() {
+$('#only-one [data-accordion]').accordion();
+$('#multiple [data-accordion]').accordion({
+ singleOpen: true
+});
+$('#single[data-accordion]').accordion({
+transitionEasing: 'cubic-bezier(0.455, 0.030, 0.515, 0.955)',
+transitionSpeed: 200
+});
+});
+</script>
+<div class="rethom"><a class="cpyrght" href="#" onclick="scrollWinTop()">Top of Page</a>&nbsp;|&nbsp;<a class="cpyrght" href="/">Home</a></div>
+</section>
+<div class="cpyrght"><a href="/misc/copyright.html">Copyright</a> &copy; 1980-2025 The Good Scents Company (tgsc) &trade; |&nbsp;<a href="/misc/disclaimer.html">Disclaimer</a>&nbsp;|<a href="/misc/pp2.html"> Privacy Policy</a></div>
+</body>
+</html>
