@@ -146,4 +146,3 @@ def downgrade():
     op.drop_index("ix_variation_slug", table_name="variation")
     op.drop_index("ix_variation_name", table_name="variation")
     op.drop_table("variation")
-*** End of File***
