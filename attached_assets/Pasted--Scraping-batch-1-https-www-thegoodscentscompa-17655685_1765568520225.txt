@@ -1,0 +1,60 @@
+
+==================================================
+Scraping batch 1: https://www.thegoodscentscompany.com/demos/dm1001001.html
+==================================================
+Starting TGSC scrape for: tgsc_batch_1
+Failed to fetch HTML from https://www.thegoodscentscompany.com/demos/dm1001001.html. Status code: 404
+Failed to fetch HTML content
+❌ Batch 1 failed - no formula data found
+
+==================================================
+Scraping batch 2: https://www.thegoodscentscompany.com/demos/dm1002001.html
+==================================================
+Starting TGSC scrape for: tgsc_batch_2
+HTML content from https://www.thegoodscentscompany.com/demos/dm1002001.html written to sourcecode.txt
+Scraping completed:
+  - 3 formulas saved to tgsc_batch_2Information.csv
+  - 63 ingredients saved to tgsc_batch_2Ingredients.csv
+✅ Batch 2 completed successfully!
+Generated files:
+  - tgsc_batch_2Information.csv
+  - tgsc_batch_2Ingredients.csv
+
+==================================================
+Scraping batch 3: https://www.thegoodscentscompany.com/demos/dm1003001.html
+==================================================
+Starting TGSC scrape for: tgsc_batch_3
+Failed to fetch HTML from https://www.thegoodscentscompany.com/demos/dm1003001.html. Status code: 404
+Failed to fetch HTML content
+❌ Batch 3 failed - no formula data found
+
+==================================================
+Scraping batch 4: https://www.thegoodscentscompany.com/demos/dm1004001.html
+==================================================
+Starting TGSC scrape for: tgsc_batch_4
+Failed to fetch HTML from https://www.thegoodscentscompany.com/demos/dm1004001.html. Status code: 404
+Failed to fetch HTML content
+❌ Batch 4 failed - no formula data found
+
+==================================================
+Scraping batch 5: https://www.thegoodscentscompany.com/demos/dm1005001.html
+==================================================
+Starting TGSC scrape for: tgsc_batch_5
+Failed to fetch HTML from https://www.thegoodscentscompany.com/demos/dm1005001.html. Status code: 404
+Failed to fetch HTML content
+❌ Batch 5 failed - no formula data found
+
+==================================================
+SCRAPING SUMMARY
+==================================================
+Successful batches: 1
+Failed batches: 4
+
+Successful: tgsc_batch_2
+
+📋 Copied tgsc_batch_2Ingredients.csv to data_builder/ingredients/data_sources/tgsc_ingredients.csv
+Ready for ingredient compilation!
+
+Failed: tgsc_batch_1, tgsc_batch_3, tgsc_batch_4, tgsc_batch_5
+
+Tip: Check if the URLs contain actual formula tables with ingredient percentages
