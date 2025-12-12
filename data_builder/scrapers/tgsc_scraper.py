@@ -1,4 +1,3 @@
-
 """TGSC (The Good Scents Company) scraper for ingredient data and attributes."""
 import csv
 import re
@@ -28,7 +27,7 @@ TGSC_INGREDIENT_CATEGORIES = {
 
 class TGSCIngredientScraper:
     """Scraper for The Good Scents Company ingredient data and attributes."""
-    
+
     def __init__(self, user_agent: str, delay_seconds: float = 1.0):
         self.user_agent = user_agent
         self.delay_seconds = delay_seconds
@@ -44,7 +43,7 @@ class TGSCIngredientScraper:
             pattern = re.compile(re.escape(start) + r"\s*(.*)", re.IGNORECASE)
         elif start == "":
             pattern = re.compile(r"^(.*?)" + re.escape(end), re.IGNORECASE)
-        
+
         match = re.search(pattern, content)
         return match.group(1).strip() if match else ""
 
@@ -56,7 +55,7 @@ class TGSCIngredientScraper:
             pattern = re.compile(re.escape(start) + r"\s*(.*)", re.IGNORECASE)
         elif start == "":
             pattern = re.compile(r"^(.*?)" + re.escape(end), re.IGNORECASE)
-        
+
         matches = pattern.findall(content)
         return [match.strip() for match in matches]
 
@@ -65,20 +64,20 @@ class TGSCIngredientScraper:
         try:
             print(f"Fetching: {url}")
             response = self.session.get(url, timeout=30)
-            
+
             if response.status_code == 200:
                 html = response.text
                 if save_filename:
                     with open(f"{save_filename}.html", "w", errors="ignore", encoding="utf-8") as fp:
                         fp.write(html)
                     print(f"HTML content saved to {save_filename}.html")
-                
+
                 time.sleep(self.delay_seconds)  # Rate limiting
                 return html
             else:
                 print(f"Failed to fetch {url}. Status code: {response.status_code}")
                 return None
-                
+
         except Exception as e:
             print(f"Error fetching {url}: {e}")
             return None
@@ -86,14 +85,14 @@ class TGSCIngredientScraper:
     def extract_ingredient_links(self, category_html: str) -> List[str]:
         """Extract ingredient detail page URLs from category listings."""
         ingredient_links = []
-        
+
         # Look for ingredient links in various formats
         link_patterns = [
             r'<a[^>]+href="([^"]*(?:data|ingredient|fragrance)[^"]*\.html)"[^>]*>',
             r'href="(/data/[^"]+\.html)"',
             r'href="(/ingredients?/[^"]+\.html)"'
         ]
-        
+
         for pattern in link_patterns:
             matches = re.findall(pattern, category_html, re.IGNORECASE)
             for match in matches:
@@ -103,10 +102,10 @@ class TGSCIngredientScraper:
                     full_url = match
                 else:
                     full_url = TGSC_BASE_URL + '/' + match
-                    
+
                 if full_url not in ingredient_links:
                     ingredient_links.append(full_url)
-        
+
         return ingredient_links
 
     def parse_ingredient_data(self, html: str, url: str) -> Dict:
@@ -140,7 +139,7 @@ class TGSCIngredientScraper:
             r'<h1[^>]*>([^<]+)</h1>',
             r'<h2[^>]*>([^<]+)</h2>'
         ]
-        
+
         for pattern in name_patterns:
             name = self.searchsingle(pattern.split('(')[1].split(')')[0], '', html)
             if name and len(name) > 3:
@@ -153,7 +152,7 @@ class TGSCIngredientScraper:
             r'cas[:\s]*(\d{1,7}-\d{2}-\d)',
             r'(\d{1,7}-\d{2}-\d)'
         ]
-        
+
         for pattern in cas_patterns:
             cas = re.search(pattern, html, re.IGNORECASE)
             if cas:
@@ -176,7 +175,7 @@ class TGSCIngredientScraper:
             r'botanical[:\s]*([A-Z][a-z]+ [a-z]+)',
             r'species[:\s]*([A-Z][a-z]+ [a-z]+)'
         ]
-        
+
         for pattern in botanical_patterns:
             botanical = re.search(pattern, html, re.IGNORECASE)
             if botanical:
@@ -187,7 +186,7 @@ class TGSCIngredientScraper:
         formula = self.searchsingle(r'molecular formula[:\s]*([A-Z0-9]+)', '', html)
         if formula:
             ingredient_data['molecular_formula'] = formula
-            
+
         weight = self.searchsingle(r'molecular weight[:\s]*([0-9.]+)', '', html)
         if weight:
             ingredient_data['molecular_weight'] = weight
@@ -196,11 +195,11 @@ class TGSCIngredientScraper:
         bp = self.searchsingle(r'boiling point[:\s]*([0-9.-]+)', '', html)
         if bp:
             ingredient_data['boiling_point'] = bp
-            
+
         mp = self.searchsingle(r'melting point[:\s]*([0-9.-]+)', '', html)
         if mp:
             ingredient_data['melting_point'] = mp
-            
+
         density = self.searchsingle(r'density[:\s]*([0-9.]+)', '', html)
         if density:
             ingredient_data['density'] = density
@@ -209,7 +208,7 @@ class TGSCIngredientScraper:
         odor_desc = self.searchsingle(r'odor[:\s]*([^<\n]+)', '', html)
         if odor_desc:
             ingredient_data['odor_description'] = odor_desc[:500]  # Limit length
-            
+
         flavor_desc = self.searchsingle(r'flavor[:\s]*([^<\n]+)', '', html)
         if flavor_desc:
             ingredient_data['flavor_description'] = flavor_desc[:500]
@@ -234,7 +233,7 @@ class TGSCIngredientScraper:
         print(f"SCRAPING CATEGORY: {category_name.upper()}")
         print(f"URL: {category_url}")
         print(f"{'='*60}")
-        
+
         # Fetch category page
         category_html = self.fetch_html(category_url, f"category_{category_name}")
         if not category_html:
@@ -244,7 +243,7 @@ class TGSCIngredientScraper:
         # Extract ingredient links
         ingredient_links = self.extract_ingredient_links(category_html)
         print(f"📋 Found {len(ingredient_links)} ingredient links")
-        
+
         if not ingredient_links:
             print("⚠️  No ingredient links found - checking page structure...")
             return []
@@ -256,7 +255,7 @@ class TGSCIngredientScraper:
         # Scrape each ingredient
         for i, link in enumerate(ingredient_links, 1):
             print(f"\n[{i}/{len(ingredient_links)}] Processing: {link}")
-            
+
             html = self.fetch_html(link)
             if html:
                 ingredient_data = self.parse_ingredient_data(html, link)
@@ -288,7 +287,7 @@ class TGSCIngredientScraper:
             with open(filename, 'w', newline='', encoding='utf-8') as csvfile:
                 writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
                 writer.writeheader()
-                
+
                 for ingredient in ingredients:
                     # Convert lists to semicolon-separated strings
                     row = ingredient.copy()
@@ -296,61 +295,83 @@ class TGSCIngredientScraper:
                         if field in row and isinstance(row[field], list):
                             row[field] = '; '.join(row[field])
                     writer.writerow(row)
-                    
+
             print(f"💾 Saved {len(ingredients)} ingredients to {filename}")
-            
+
         except Exception as e:
             print(f"❌ Error saving CSV: {e}")
 
 
 def main():
     """Main function to scrape TGSC ingredient database."""
+    import argparse
+
+    parser = argparse.ArgumentParser(description="Scrape TGSC ingredient database")
+    parser.add_argument("--max-ingredients", type=int, default=30, 
+                       help="Maximum number of ingredients to scrape in total (default: 30)")
+    args = parser.parse_args()
+
     user_agent = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
-    
+
     scraper = TGSCIngredientScraper(user_agent, delay_seconds=2.0)
     all_ingredients = []
-    
+
     print("🚀 TGSC Ingredient Database Scraper")
     print("=" * 50)
-    
+    print(f"📊 Max ingredients to scrape: {args.max_ingredients}")
+
     # Scrape each category
+    total_scraped = 0
+    max_total_ingredients = args.max_ingredients
+
     for category_name, category_url in TGSC_INGREDIENT_CATEGORIES.items():
+        # Check if we have reached the maximum total ingredients limit
+        if total_scraped >= max_total_ingredients:
+            print(f"\nReached maximum total ingredients limit ({max_total_ingredients}). Stopping scrape.")
+            break
+
+        # Determine how many ingredients to scrape from this category
+        ingredients_to_scrape = max_total_ingredients - total_scraped
+        
         try:
-            ingredients = scraper.scrape_category(category_name, category_url, max_ingredients=30)
-            
+            ingredients = scraper.scrape_category(category_name, category_url, max_ingredients=ingredients_to_scrape)
+
             if ingredients:
                 # Save category-specific file
                 category_filename = f"tgsc_{category_name}_ingredients.csv"
                 scraper.save_ingredients_csv(ingredients, category_filename)
-                
+
                 # Add to master list
                 for ingredient in ingredients:
                     ingredient['category'] = category_name
                 all_ingredients.extend(ingredients)
-            
+                total_scraped += len(ingredients) # Update total scraped count
+
         except Exception as e:
             print(f"❌ Error scraping category {category_name}: {e}")
             continue
-    
+
     # Save master file
     if all_ingredients:
         master_filename = "tgsc_all_ingredients.csv"
         scraper.save_ingredients_csv(all_ingredients, master_filename)
-        
+
         # Copy to data sources directory
         import shutil
         target_dir = Path(__file__).parent.parent / "ingredients" / "data_sources"
         target_file = target_dir / "tgsc_ingredients.csv"
-        
+
         target_dir.mkdir(parents=True, exist_ok=True)
         shutil.copy2(master_filename, target_file)
         print(f"📋 Copied master file to {target_file}")
         print("Ready for ingredient compilation!")
-    
+
     print(f"\n🎊 SCRAPING COMPLETE!")
     print(f"📊 Total ingredients extracted: {len(all_ingredients)}")
     print(f"📁 Files generated:")
     for category in TGSC_INGREDIENT_CATEGORIES.keys():
+        # Only list generated files if they were potentially created
+        # This logic might need refinement if we break early
         print(f"   - tgsc_{category}_ingredients.csv")
     print(f"   - tgsc_all_ingredients.csv")
 
