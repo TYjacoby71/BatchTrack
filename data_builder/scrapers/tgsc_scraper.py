@@ -175,83 +175,256 @@ class TGSCIngredientScraper:
                         ingredient_data['common_name'] = name
                         break
 
-        # Extract CAS Number - look in structured format
-        cas_match = re.search(r'CAS:\s*(\d{1,7}-\d{2}-\d)', html, re.IGNORECASE)
-        if cas_match:
-            ingredient_data['cas_number'] = cas_match.group(1)
+        # Extract CAS Number - multiple patterns
+        cas_patterns = [
+            r'CAS[:\s#-]*(\d{1,7}-\d{2}-\d)',
+            r'(\d{1,7}-\d{2}-\d)',  # Standalone CAS number
+            r'Registry Number[:\s]*(\d{1,7}-\d{2}-\d)',
+            r'Chemical Abstracts[:\s]*(\d{1,7}-\d{2}-\d)'
+        ]
+        
+        for pattern in cas_patterns:
+            cas_match = re.search(pattern, html, re.IGNORECASE)
+            if cas_match and not ingredient_data['cas_number']:
+                ingredient_data['cas_number'] = cas_match.group(1)
+                break
 
-        # Extract EINECS Number
-        einecs_match = re.search(r'EC:\s*(\d{3}-\d{3}-\d)', html, re.IGNORECASE)
-        if einecs_match:
-            ingredient_data['einecs_number'] = einecs_match.group(1)
+        # Extract EINECS Number - multiple patterns
+        einecs_patterns = [
+            r'EINECS[:\s#-]*(\d{3}-\d{3}-\d)',
+            r'EC[:\s#-]*(\d{3}-\d{3}-\d)',
+            r'ELINCS[:\s#-]*(\d{3}-\d{3}-\d)',
+            r'European Inventory[:\s]*(\d{3}-\d{3}-\d)'
+        ]
+        
+        for pattern in einecs_patterns:
+            einecs_match = re.search(pattern, html, re.IGNORECASE)
+            if einecs_match:
+                ingredient_data['einecs_number'] = einecs_match.group(1)
+                break
 
-        # Extract FEMA Number
-        fema_match = re.search(r'FEMA:\s*(\d+)', html, re.IGNORECASE)
-        if fema_match:
-            ingredient_data['fema_number'] = fema_match.group(1)
+        # Extract FEMA Number - multiple patterns
+        fema_patterns = [
+            r'FEMA[:\s#-]*(\d+)',
+            r'Flavor and Extract[:\s]*(\d+)',
+            r'GRAS[:\s]*(\d+)'
+        ]
+        
+        for pattern in fema_patterns:
+            fema_match = re.search(pattern, html, re.IGNORECASE)
+            if fema_match:
+                ingredient_data['fema_number'] = fema_match.group(1)
+                break
 
-        # Extract uses/applications
-        uses_match = re.search(r'Use\(s\):\s*([^<\n]+)', html, re.IGNORECASE)
-        if uses_match:
-            uses_text = uses_match.group(1).strip()
-            ingredient_data['uses'] = [use.strip() for use in uses_text.split(',') if use.strip()]
-            ingredient_data['description'] = uses_text
+        # Extract uses/applications - multiple patterns
+        uses_patterns = [
+            r'Use\(?s?\)?[:\s]*([^<\n]{10,200})',
+            r'Application[:\s]*([^<\n]{10,200})',
+            r'Used\s+(?:in|for|as)[:\s]*([^<\n]{10,200})',
+            r'Function[:\s]*([^<\n]{10,200})',
+            r'Purpose[:\s]*([^<\n]{10,200})'
+        ]
+        
+        for pattern in uses_patterns:
+            uses_match = re.search(pattern, html, re.IGNORECASE)
+            if uses_match:
+                uses_text = uses_match.group(1).strip()
+                if len(uses_text) > 5:  # Ensure we got meaningful text
+                    ingredient_data['uses'] = [use.strip() for use in uses_text.split(',') if use.strip()]
+                    ingredient_data['description'] = uses_text
+                    break
 
-        # Botanical name
+        # Botanical name - more comprehensive patterns
         botanical_patterns = [
-            r'<i>([A-Z][a-z]+ [a-z]+)</i>',
-            r'botanical[:\s]*([A-Z][a-z]+ [a-z]+)',
-            r'species[:\s]*([A-Z][a-z]+ [a-z]+)'
+            r'<i>([A-Z][a-z]+\s+[a-z]+(?:\s+[a-z]+)?)</i>',  # Italic scientific names
+            r'botanical[:\s]*([A-Z][a-z]+\s+[a-z]+(?:\s+[a-z]+)?)',
+            r'species[:\s]*([A-Z][a-z]+\s+[a-z]+(?:\s+[a-z]+)?)',
+            r'Scientific name[:\s]*([A-Z][a-z]+\s+[a-z]+(?:\s+[a-z]+)?)',
+            r'Latin name[:\s]*([A-Z][a-z]+\s+[a-z]+(?:\s+[a-z]+)?)',
+            r'Genus[:\s]*([A-Z][a-z]+\s+[a-z]+(?:\s+[a-z]+)?)',
+            r'\b([A-Z][a-z]+\s+[a-z]+)\s+(?:extract|oil|essence)',  # From product names
         ]
 
         for pattern in botanical_patterns:
             botanical = re.search(pattern, html, re.IGNORECASE)
             if botanical:
-                ingredient_data['botanical_name'] = botanical.group(1)
+                botanical_name = botanical.group(1).strip()
+                # Validate it looks like a proper binomial name
+                if len(botanical_name.split()) >= 2 and botanical_name[0].isupper():
+                    ingredient_data['botanical_name'] = botanical_name
+                    break
+
+        # Molecular formula and weight - enhanced patterns
+        formula_patterns = [
+            r'molecular formula[:\s]*([A-Z0-9]+)',
+            r'formula[:\s]*([A-Z0-9]{3,})',
+            r'chemical formula[:\s]*([A-Z0-9]+)'
+        ]
+        
+        for pattern in formula_patterns:
+            formula_match = re.search(pattern, html, re.IGNORECASE)
+            if formula_match:
+                ingredient_data['molecular_formula'] = formula_match.group(1)
                 break
 
-        # Molecular formula and weight
-        formula = self.searchsingle(r'molecular formula[:\s]*([A-Z0-9]+)', '', html)
-        if formula:
-            ingredient_data['molecular_formula'] = formula
+        weight_patterns = [
+            r'molecular weight[:\s]*([0-9.,]+)',
+            r'mol(?:ecular)?\s*wt[:\s]*([0-9.,]+)',
+            r'MW[:\s]*([0-9.,]+)',
+            r'weight[:\s]*([0-9.,]+)'
+        ]
+        
+        for pattern in weight_patterns:
+            weight_match = re.search(pattern, html, re.IGNORECASE)
+            if weight_match:
+                ingredient_data['molecular_weight'] = weight_match.group(1)
+                break
 
-        weight = self.searchsingle(r'molecular weight[:\s]*([0-9.]+)', '', html)
-        if weight:
-            ingredient_data['molecular_weight'] = weight
+        # Physical properties - enhanced patterns
+        bp_patterns = [
+            r'boiling point[:\s]*([0-9.,°C°F-]+)',
+            r'b\.p\.?[:\s]*([0-9.,°C°F-]+)',
+            r'BP[:\s]*([0-9.,°C°F-]+)',
+            r'boils[:\s]*(?:at)?[:\s]*([0-9.,°C°F-]+)'
+        ]
+        
+        for pattern in bp_patterns:
+            bp_match = re.search(pattern, html, re.IGNORECASE)
+            if bp_match:
+                ingredient_data['boiling_point'] = bp_match.group(1)
+                break
 
-        # Physical properties
-        bp = self.searchsingle(r'boiling point[:\s]*([0-9.-]+)', '', html)
-        if bp:
-            ingredient_data['boiling_point'] = bp
+        mp_patterns = [
+            r'melting point[:\s]*([0-9.,°C°F-]+)',
+            r'm\.p\.?[:\s]*([0-9.,°C°F-]+)',
+            r'MP[:\s]*([0-9.,°C°F-]+)',
+            r'melts[:\s]*(?:at)?[:\s]*([0-9.,°C°F-]+)'
+        ]
+        
+        for pattern in mp_patterns:
+            mp_match = re.search(pattern, html, re.IGNORECASE)
+            if mp_match:
+                ingredient_data['melting_point'] = mp_match.group(1)
+                break
 
-        mp = self.searchsingle(r'melting point[:\s]*([0-9.-]+)', '', html)
-        if mp:
-            ingredient_data['melting_point'] = mp
+        density_patterns = [
+            r'density[:\s]*([0-9.,]+)',
+            r'specific gravity[:\s]*([0-9.,]+)',
+            r'd20[:\s]*([0-9.,]+)',
+            r'ρ[:\s]*([0-9.,]+)'
+        ]
+        
+        for pattern in density_patterns:
+            density_match = re.search(pattern, html, re.IGNORECASE)
+            if density_match:
+                ingredient_data['density'] = density_match.group(1)
+                break
 
-        density = self.searchsingle(r'density[:\s]*([0-9.]+)', '', html)
-        if density:
-            ingredient_data['density'] = density
+        # Solubility - new comprehensive patterns
+        solubility_patterns = [
+            r'solubility[:\s]*([^<\n]{10,200})',
+            r'soluble[:\s]*(?:in)?[:\s]*([^<\n]{10,200})',
+            r'dissolves[:\s]*(?:in)?[:\s]*([^<\n]{10,200})',
+            r'sol\.[:\s]*([^<\n]{10,200})'
+        ]
+        
+        for pattern in solubility_patterns:
+            sol_match = re.search(pattern, html, re.IGNORECASE)
+            if sol_match:
+                solubility = sol_match.group(1).strip()
+                if len(solubility) > 5:
+                    ingredient_data['solubility'] = solubility[:200]
+                    break
 
-        # Odor and flavor descriptions
-        odor_desc = self.searchsingle(r'odor[:\s]*([^<\n]+)', '', html)
-        if odor_desc:
-            ingredient_data['odor_description'] = odor_desc[:500]  # Limit length
+        # Odor and flavor descriptions - enhanced patterns
+        odor_patterns = [
+            r'odor[:\s]*([^<\n]{5,300})',
+            r'odour[:\s]*([^<\n]{5,300})',
+            r'smell[:\s]*([^<\n]{5,300})',
+            r'scent[:\s]*([^<\n]{5,300})',
+            r'aroma[:\s]*([^<\n]{5,300})',
+            r'fragrance[:\s]*([^<\n]{5,300})'
+        ]
+        
+        for pattern in odor_patterns:
+            odor_match = re.search(pattern, html, re.IGNORECASE)
+            if odor_match:
+                odor_desc = odor_match.group(1).strip()
+                if len(odor_desc) > 5:
+                    ingredient_data['odor_description'] = odor_desc[:500]
+                    break
 
-        flavor_desc = self.searchsingle(r'flavor[:\s]*([^<\n]+)', '', html)
-        if flavor_desc:
-            ingredient_data['flavor_description'] = flavor_desc[:500]
+        flavor_patterns = [
+            r'flavor[:\s]*([^<\n]{5,300})',
+            r'flavour[:\s]*([^<\n]{5,300})',
+            r'taste[:\s]*([^<\n]{5,300})',
+            r'gustatory[:\s]*([^<\n]{5,300})'
+        ]
+        
+        for pattern in flavor_patterns:
+            flavor_match = re.search(pattern, html, re.IGNORECASE)
+            if flavor_match:
+                flavor_desc = flavor_match.group(1).strip()
+                if len(flavor_desc) > 5:
+                    ingredient_data['flavor_description'] = flavor_desc[:500]
+                    break
 
-        # Extract synonyms (alternative names)
-        synonym_section = self.searchsingle(r'synonyms?[:\s]*([^<]+)', '', html)
-        if synonym_section:
-            synonyms = [s.strip() for s in re.split(r'[,;]', synonym_section) if s.strip()]
-            ingredient_data['synonyms'] = synonyms[:10]  # Limit to top 10
+        # Extract synonyms - enhanced patterns
+        synonym_patterns = [
+            r'synonyms?[:\s]*([^<\n]{10,500})',
+            r'also known as[:\s]*([^<\n]{10,500})',
+            r'alternative names?[:\s]*([^<\n]{10,500})',
+            r'other names?[:\s]*([^<\n]{10,500})',
+            r'aliases?[:\s]*([^<\n]{10,500})'
+        ]
+        
+        for pattern in synonym_patterns:
+            synonym_match = re.search(pattern, html, re.IGNORECASE)
+            if synonym_match:
+                synonym_section = synonym_match.group(1).strip()
+                if len(synonym_section) > 5:
+                    synonyms = [s.strip() for s in re.split(r'[,;|]', synonym_section) if s.strip() and len(s.strip()) > 2]
+                    ingredient_data['synonyms'] = synonyms[:10]  # Limit to top 10
+                    break
 
-        # Natural occurrence
-        occurrence_text = self.searchsingle(r'(?:found in|occurs in|natural occurrence)[:\s]*([^<]+)', '', html)
-        if occurrence_text:
-            occurrences = [o.strip() for o in re.split(r'[,;]', occurrence_text) if o.strip()]
-            ingredient_data['natural_occurrence'] = occurrences[:15]
+        # Natural occurrence - enhanced patterns
+        occurrence_patterns = [
+            r'(?:found in|occurs in|natural occurrence)[:\s]*([^<\n]{10,300})',
+            r'(?:natural|naturally)\s+(?:found|occurs?)[:\s]*(?:in)?[:\s]*([^<\n]{10,300})',
+            r'source[:\s]*([^<\n]{10,300})',
+            r'derived from[:\s]*([^<\n]{10,300})',
+            r'obtained from[:\s]*([^<\n]{10,300})',
+            r'present in[:\s]*([^<\n]{10,300})'
+        ]
+        
+        for pattern in occurrence_patterns:
+            occurrence_match = re.search(pattern, html, re.IGNORECASE)
+            if occurrence_match:
+                occurrence_text = occurrence_match.group(1).strip()
+                if len(occurrence_text) > 5:
+                    occurrences = [o.strip() for o in re.split(r'[,;|]', occurrence_text) if o.strip() and len(o.strip()) > 2]
+                    ingredient_data['natural_occurrence'] = occurrences[:15]
+                    break
+
+        # Safety notes - new comprehensive patterns
+        safety_patterns = [
+            r'safety[:\s]*([^<\n]{10,300})',
+            r'hazard[:\s]*([^<\n]{10,300})',
+            r'warning[:\s]*([^<\n]{10,300})',
+            r'caution[:\s]*([^<\n]{10,300})',
+            r'precaution[:\s]*([^<\n]{10,300})',
+            r'toxicity[:\s]*([^<\n]{10,300})',
+            r'health effects?[:\s]*([^<\n]{10,300})',
+            r'side effects?[:\s]*([^<\n]{10,300})'
+        ]
+        
+        for pattern in safety_patterns:
+            safety_match = re.search(pattern, html, re.IGNORECASE)
+            if safety_match:
+                safety_text = safety_match.group(1).strip()
+                if len(safety_text) > 5:
+                    ingredient_data['safety_notes'] = safety_text[:300]
+                    break
 
         return ingredient_data
 
