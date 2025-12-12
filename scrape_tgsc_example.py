@@ -12,10 +12,10 @@ Usage:
 from data_builder.scrapers import TGSCScraper
 
 def main():
-    # Example URLs to scrape
+    # Example URLs to scrape - these should be direct formula URLs from TGSC
     urls = [
-        "https://www.thegoodscentscompany.com/search2.php?str=lavender&submit.x=0&submit.y=0",
-        "https://www.thegoodscentscompany.com/search2.php?str=rose&submit.x=0&submit.y=0"
+        "https://www.thegoodscentscompany.com/data/rw1009301.html",  # Example formula page
+        "https://www.thegoodscentscompany.com/data/rw1012041.html"   # Example formula page
     ]
     
     # Your browser's User-Agent string (get from browser dev tools > Network tab)
