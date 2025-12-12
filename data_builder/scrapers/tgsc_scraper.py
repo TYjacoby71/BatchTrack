@@ -85,32 +85,25 @@ class TGSCIngredientScraper:
         """Extract ingredient detail page URLs from category listings."""
         ingredient_links = []
 
-        # Look for ingredient links in various formats
-        # Updated patterns to match current TGSC site structure
-        link_patterns = [
-            r'href="(/data/[^"]+\.html)"',  # Data pages (ingredient details)
-            r'href="(/search/[^"]*\.html[^"]*)"',  # Search results
-            r'<a[^>]+href="([^"]*(?:fragrance|ingredient|essential|oil)[^"]*\.html)"[^>]*>',
-            r'href="([^"]*\.html)"'  # Any HTML page
-        ]
+        # Look for the main content table with ingredient links
+        # TGSC uses JavaScript onclick handlers, so we need to extract from those
+        onclick_pattern = r"onclick=\"openMainWindow\('([^']+)'\)"
+        
+        matches = re.findall(onclick_pattern, category_html)
+        
+        for match in matches:
+            if match.startswith('/data/'):
+                full_url = TGSC_BASE_URL + match
+                ingredient_links.append(full_url)
 
-        for pattern in link_patterns:
-            matches = re.findall(pattern, category_html, re.IGNORECASE)
-            for match in matches:
-                if match.startswith('/'):
-                    full_url = TGSC_BASE_URL + match
-                elif match.startswith('http'):
-                    full_url = match
-                else:
-                    full_url = TGSC_BASE_URL + '/' + match
-
-                # Filter to only include likely ingredient pages
-                if ('data/' in full_url or 
-                    'fragrance' in full_url.lower() or 
-                    'ingredient' in full_url.lower() or
-                    'essential' in full_url.lower() or
-                    'oil' in full_url.lower()) and full_url not in ingredient_links:
-                    ingredient_links.append(full_url)
+        # Also try direct href links to /data/ pages
+        href_pattern = r'href="(/data/[^"]+\.html)"'
+        href_matches = re.findall(href_pattern, category_html, re.IGNORECASE)
+        
+        for match in href_matches:
+            full_url = TGSC_BASE_URL + match
+            if full_url not in ingredient_links:
+                ingredient_links.append(full_url)
 
         return ingredient_links
 
@@ -139,41 +132,55 @@ class TGSCIngredientScraper:
             'natural_occurrence': []
         }
 
-        # Extract common name (usually in title or main heading)
-        name_patterns = [
-            r'<title>([^<]+?)(?:\s*-\s*The Good Scents Company)?</title>',
-            r'<h1[^>]*>([^<]+)</h1>',
-            r'<h2[^>]*>([^<]+)</h2>'
-        ]
+        # Extract common name from title
+        title_match = re.search(r'<title>([^<]+?)</title>', html, re.IGNORECASE)
+        if title_match:
+            title = title_match.group(1).strip()
+            # Clean up title - remove "The Good Scents Company" and other generic text
+            title = re.sub(r'\s*-\s*The Good Scents Company.*', '', title)
+            title = re.sub(r'\s*Information.*', '', title)
+            title = re.sub(r'\s*Catalog.*', '', title)
+            if title and len(title) > 2:
+                ingredient_data['common_name'] = title.strip()
 
-        for pattern in name_patterns:
-            name = self.searchsingle(pattern.split('(')[1].split(')')[0], '', html)
-            if name and len(name) > 3:
-                ingredient_data['common_name'] = re.sub(r'\s+', ' ', name).strip()
-                break
+        # If no good title, try to extract from page content
+        if not ingredient_data['common_name']:
+            # Look for ingredient name in various places in the HTML
+            name_patterns = [
+                r'<td><a[^>]*>([^<]+)</a>',  # Link text in table cells
+                r'<h1[^>]*>([^<]+)</h1>',
+                r'<h2[^>]*>([^<]+)</h2>',
+            ]
+            
+            for pattern in name_patterns:
+                match = re.search(pattern, html, re.IGNORECASE)
+                if match:
+                    name = match.group(1).strip()
+                    if name and len(name) > 2 and not name.lower().startswith('the good'):
+                        ingredient_data['common_name'] = name
+                        break
 
-        # CAS Number
-        cas_patterns = [
-            r'CAS[:\s]*(\d{1,7}-\d{2}-\d)',
-            r'cas[:\s]*(\d{1,7}-\d{2}-\d)',
-            r'(\d{1,7}-\d{2}-\d)'
-        ]
+        # Extract CAS Number - look in structured format
+        cas_match = re.search(r'CAS:\s*(\d{1,7}-\d{2}-\d)', html, re.IGNORECASE)
+        if cas_match:
+            ingredient_data['cas_number'] = cas_match.group(1)
 
-        for pattern in cas_patterns:
-            cas = re.search(pattern, html, re.IGNORECASE)
-            if cas:
-                ingredient_data['cas_number'] = cas.group(1)
-                break
+        # Extract EINECS Number
+        einecs_match = re.search(r'EC:\s*(\d{3}-\d{3}-\d)', html, re.IGNORECASE)
+        if einecs_match:
+            ingredient_data['einecs_number'] = einecs_match.group(1)
 
-        # EINECS Number  
-        einecs = self.searchsingle(r'EINECS[:\s]*(\d{3}-\d{3}-\d)', '', html)
-        if einecs:
-            ingredient_data['einecs_number'] = einecs
+        # Extract FEMA Number
+        fema_match = re.search(r'FEMA:\s*(\d+)', html, re.IGNORECASE)
+        if fema_match:
+            ingredient_data['fema_number'] = fema_match.group(1)
 
-        # FEMA Number
-        fema = self.searchsingle(r'FEMA[:\s]*(\d+)', '', html)
-        if fema:
-            ingredient_data['fema_number'] = fema
+        # Extract uses/applications
+        uses_match = re.search(r'Use\(s\):\s*([^<\n]+)', html, re.IGNORECASE)
+        if uses_match:
+            uses_text = uses_match.group(1).strip()
+            ingredient_data['uses'] = [use.strip() for use in uses_text.split(',') if use.strip()]
+            ingredient_data['description'] = uses_text
 
         # Botanical name
         botanical_patterns = [
