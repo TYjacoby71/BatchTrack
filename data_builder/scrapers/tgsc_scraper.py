@@ -13,7 +13,14 @@ TGSC_SEARCH_URL = f"{TGSC_BASE_URL}/search/fragrance.html"
 
 # Category endpoints for ingredient discovery
 TGSC_INGREDIENT_CATEGORIES = {
-    "categories": f"{TGSC_BASE_URL}/categories.html"
+    "essential_oils": f"{TGSC_BASE_URL}/essentlx-a.html",
+    "absolutes": f"{TGSC_BASE_URL}/abs-az.html",
+    "extracts": f"{TGSC_BASE_URL}/extractx-a.html",
+    "aromatic_ingredients": f"{TGSC_BASE_URL}/rawmatex-a.html",
+    "all_ingredients": f"{TGSC_BASE_URL}/allprod-a.html",
+    "concretes": f"{TGSC_BASE_URL}/con-az.html",
+    "cosmetic_ingredients": f"{TGSC_BASE_URL}/cosmetix-a.html",
+    "botanical_species": f"{TGSC_BASE_URL}/botaspes-a.html"
 }
 
 
