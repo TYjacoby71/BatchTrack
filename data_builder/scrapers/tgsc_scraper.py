@@ -13,15 +13,7 @@ TGSC_SEARCH_URL = f"{TGSC_BASE_URL}/search/fragrance.html"
 
 # Category endpoints for ingredient discovery
 TGSC_INGREDIENT_CATEGORIES = {
-    "essential_oils": f"{TGSC_BASE_URL}/categories/essential-oils.html",
-    "absolutes": f"{TGSC_BASE_URL}/categories/absolutes.html", 
-    "extracts": f"{TGSC_BASE_URL}/categories/extracts.html",
-    "aromatic_chemicals": f"{TGSC_BASE_URL}/categories/aromatic-chemicals.html",
-    "fixed_oils": f"{TGSC_BASE_URL}/categories/fixed-oils.html",
-    "resins_balsams": f"{TGSC_BASE_URL}/categories/resins-balsams.html",
-    "botanicals": f"{TGSC_BASE_URL}/categories/botanicals.html",
-    "solvents": f"{TGSC_BASE_URL}/categories/solvents.html",
-    "fragrance_compounds": f"{TGSC_BASE_URL}/categories/fragrance-compounds.html"
+    "categories": f"{TGSC_BASE_URL}/categories.html"
 }
 
 
@@ -87,10 +79,12 @@ class TGSCIngredientScraper:
         ingredient_links = []
 
         # Look for ingredient links in various formats
+        # Updated patterns to match current TGSC site structure
         link_patterns = [
-            r'<a[^>]+href="([^"]*(?:data|ingredient|fragrance)[^"]*\.html)"[^>]*>',
-            r'href="(/data/[^"]+\.html)"',
-            r'href="(/ingredients?/[^"]+\.html)"'
+            r'href="(/data/[^"]+\.html)"',  # Data pages (ingredient details)
+            r'href="(/search/[^"]*\.html[^"]*)"',  # Search results
+            r'<a[^>]+href="([^"]*(?:fragrance|ingredient|essential|oil)[^"]*\.html)"[^>]*>',
+            r'href="([^"]*\.html)"'  # Any HTML page
         ]
 
         for pattern in link_patterns:
@@ -103,7 +97,12 @@ class TGSCIngredientScraper:
                 else:
                     full_url = TGSC_BASE_URL + '/' + match
 
-                if full_url not in ingredient_links:
+                # Filter to only include likely ingredient pages
+                if ('data/' in full_url or 
+                    'fragrance' in full_url.lower() or 
+                    'ingredient' in full_url.lower() or
+                    'essential' in full_url.lower() or
+                    'oil' in full_url.lower()) and full_url not in ingredient_links:
                     ingredient_links.append(full_url)
 
         return ingredient_links
