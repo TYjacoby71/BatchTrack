@@ -147,11 +147,13 @@ def fetch_global_item_listing(
         query = _attach_search_filter(query, search_query)
 
     eager_options = [
-        joinedload(GlobalItem.physical_form),
         joinedload(GlobalItem.ingredient_category),
     ]
     if normalized_scope == "ingredient":
-        eager_options.append(joinedload(GlobalItem.ingredient))
+        eager_options.extend([
+            joinedload(GlobalItem.ingredient),
+            joinedload(GlobalItem.variation).joinedload("physical_form"),
+        ])
 
     query = query.options(*eager_options)
 
