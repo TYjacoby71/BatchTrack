@@ -21,9 +21,9 @@ class TGSCScraper:
         if end != "" and start != "":
             pattern = re.compile(f'{re.escape(start)}(.*?){re.escape(end)}', re.DOTALL)
         elif end == "":
-            pattern = re.compile(f'{re.escape(start) + r"\s*(.*)"}')
+            pattern = re.compile(re.escape(start) + r"\s*(.*)")
         elif start == "":
-            pattern = re.compile(f'{r"^(.*?)" + re.escape(end)}')
+            pattern = re.compile(r"^(.*?)" + re.escape(end))
         
         match = re.search(pattern, content)
         return match.group(1) if match else ""
@@ -33,9 +33,9 @@ class TGSCScraper:
         if end != "" and start != "":
             pattern = re.compile(f'{re.escape(start)}(.*?){re.escape(end)}', re.DOTALL)
         elif end == "":
-            pattern = re.compile(f'{re.escape(start) + r"\s*(.*)"}')
+            pattern = re.compile(re.escape(start) + r"\s*(.*)")
         elif start == "":
-            pattern = re.compile(f'{r"^(.*?)" + re.escape(end)}')
+            pattern = re.compile(r"^(.*?)" + re.escape(end))
         
         matches = pattern.findall(content)
         return matches
