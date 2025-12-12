@@ -103,6 +103,46 @@ class TGSCIngredientScraper:
 
         return ingredient_links
 
+    def clean_text(self, text: str) -> str:
+        """Clean extracted text by removing HTML entities, tags, and normalizing whitespace."""
+        if not text:
+            return ""
+        
+        import html
+        # Decode HTML entities
+        text = html.unescape(text)
+        
+        # Remove HTML tags
+        text = re.sub(r'<[^>]+>', '', text)
+        
+        # Remove common scraping artifacts
+        text = re.sub(r'""">Search', '', text)
+        text = re.sub(r'=hp&amp;.*?"">Search', '', text)
+        text = re.sub(r'scompany\.com/data/[^"]*\.html[^"]*', '', text)
+        text = re.sub(r'&amp;.*?Search', '', text)
+        text = re.sub(r'""">.*?</.*?>', '', text)
+        
+        # Normalize whitespace
+        text = re.sub(r'\s+', ' ', text)
+        text = text.strip()
+        
+        # Filter out very short or meaningless text
+        if len(text) < 3 or text.lower() in ['search', 'references', 'agents', 'ing', 'and']:
+            return ""
+            
+        return text
+
+    def extract_clean_content(self, html: str, patterns: List[str]) -> str:
+        """Extract content using multiple patterns and clean the result."""
+        for pattern in patterns:
+            match = re.search(pattern, html, re.IGNORECASE | re.DOTALL)
+            if match:
+                content = match.group(1) if match.lastindex and match.lastindex >= 1 else match.group(0)
+                cleaned = self.clean_text(content)
+                if cleaned and len(cleaned) > 3:
+                    return cleaned
+        return ""
+
     def parse_ingredient_data(self, html: str, url: str) -> Dict:
         """Parse ingredient page HTML to extract comprehensive data."""
         ingredient_data = {
@@ -216,23 +256,22 @@ class TGSCIngredientScraper:
                 ingredient_data['fema_number'] = fema_match.group(1)
                 break
 
-        # Extract uses/applications - multiple patterns
+        # Extract uses/applications with better cleaning
         uses_patterns = [
-            r'Use\(?s?\)?[:\s]*([^<\n]{10,200})',
-            r'Application[:\s]*([^<\n]{10,200})',
-            r'Used\s+(?:in|for|as)[:\s]*([^<\n]{10,200})',
-            r'Function[:\s]*([^<\n]{10,200})',
-            r'Purpose[:\s]*([^<\n]{10,200})'
+            r'- ([^<>"]*?(?:agents?|ingredients?|conditioning|protecting)[^<>"]*?)(?:\.|"|/>)',
+            r'Use\(?s?\)?[:\s]*([^<>"]{10,200})(?:\.|"|<|$)',
+            r'Application[:\s]*([^<>"]{10,200})(?:\.|"|<|$)',
+            r'Used\s+(?:in|for|as)[:\s]*([^<>"]{10,200})(?:\.|"|<|$)',
+            r'Function[:\s]*([^<>"]{10,200})(?:\.|"|<|$)',
+            r'Purpose[:\s]*([^<>"]{10,200})(?:\.|"|<|$)'
         ]
         
-        for pattern in uses_patterns:
-            uses_match = re.search(pattern, html, re.IGNORECASE)
-            if uses_match:
-                uses_text = uses_match.group(1).strip()
-                if len(uses_text) > 5:  # Ensure we got meaningful text
-                    ingredient_data['uses'] = [use.strip() for use in uses_text.split(',') if use.strip()]
-                    ingredient_data['description'] = uses_text
-                    break
+        uses_desc = self.extract_clean_content(html, uses_patterns)
+        if uses_desc:
+            ingredient_data['description'] = uses_desc[:300]
+            # Split into individual uses
+            uses_list = [use.strip() for use in re.split(r'[,;]', uses_desc) if use.strip() and len(use.strip()) > 2]
+            ingredient_data['uses'] = uses_list[:5]
 
         # Botanical name - more comprehensive patterns
         botanical_patterns = [
@@ -320,111 +359,89 @@ class TGSCIngredientScraper:
                 ingredient_data['density'] = density_match.group(1)
                 break
 
-        # Solubility - new comprehensive patterns
+        # Solubility extraction with better patterns
         solubility_patterns = [
-            r'solubility[:\s]*([^<\n]{10,200})',
-            r'soluble[:\s]*(?:in)?[:\s]*([^<\n]{10,200})',
-            r'dissolves[:\s]*(?:in)?[:\s]*([^<\n]{10,200})',
-            r'sol\.[:\s]*([^<\n]{10,200})'
+            r'solubility[:\s]*([^<>"]{10,200})(?:\.|"|<|$)',
+            r'soluble[:\s]*(?:in)?[:\s]*([^<>"]{10,200})(?:\.|"|<|$)',
+            r'dissolves[:\s]*(?:in)?[:\s]*([^<>"]{10,200})(?:\.|"|<|$)',
+            r'sol\.[:\s]*([^<>"]{10,200})(?:\.|"|<|$)'
         ]
         
-        for pattern in solubility_patterns:
-            sol_match = re.search(pattern, html, re.IGNORECASE)
-            if sol_match:
-                solubility = sol_match.group(1).strip()
-                if len(solubility) > 5:
-                    ingredient_data['solubility'] = solubility[:200]
-                    break
+        solubility_desc = self.extract_clean_content(html, solubility_patterns)
+        if solubility_desc:
+            ingredient_data['solubility'] = solubility_desc[:200]
 
-        # Odor and flavor descriptions - enhanced patterns
+        # Odor and flavor descriptions - improved extraction
         odor_patterns = [
-            r'odor[:\s]*([^<\n]{5,300})',
-            r'odour[:\s]*([^<\n]{5,300})',
-            r'smell[:\s]*([^<\n]{5,300})',
-            r'scent[:\s]*([^<\n]{5,300})',
-            r'aroma[:\s]*([^<\n]{5,300})',
-            r'fragrance[:\s]*([^<\n]{5,300})'
+            r'Has (?:an? )?([^<>"]+?) type odor',
+            r'odor[:\s]*([^<>"]{5,200}?)(?:\s*\.|"|<|$)',
+            r'odour[:\s]*([^<>"]{5,200}?)(?:\s*\.|"|<|$)',
+            r'smell[:\s]*([^<>"]{5,200}?)(?:\s*\.|"|<|$)',
+            r'scent[:\s]*([^<>"]{5,200}?)(?:\s*\.|"|<|$)',
+            r'aroma[:\s]*([^<>"]{5,200}?)(?:\s*\.|"|<|$)',
+            r'fragrance[:\s]*([^<>"]{5,200}?)(?:\s*\.|"|<|$)'
         ]
         
-        for pattern in odor_patterns:
-            odor_match = re.search(pattern, html, re.IGNORECASE)
-            if odor_match:
-                odor_desc = odor_match.group(1).strip()
-                if len(odor_desc) > 5:
-                    ingredient_data['odor_description'] = odor_desc[:500]
-                    break
+        odor_desc = self.extract_clean_content(html, odor_patterns)
+        if odor_desc:
+            ingredient_data['odor_description'] = odor_desc[:300]
 
         flavor_patterns = [
-            r'flavor[:\s]*([^<\n]{5,300})',
-            r'flavour[:\s]*([^<\n]{5,300})',
-            r'taste[:\s]*([^<\n]{5,300})',
-            r'gustatory[:\s]*([^<\n]{5,300})'
+            r'Has (?:an? )?([^<>"]+?) type flavor',
+            r'flavor[:\s]*([^<>"]{5,200}?)(?:\s*\.|"|<|$)',
+            r'flavour[:\s]*([^<>"]{5,200}?)(?:\s*\.|"|<|$)',
+            r'taste[:\s]*([^<>"]{5,200}?)(?:\s*\.|"|<|$)',
+            r'gustatory[:\s]*([^<>"]{5,200}?)(?:\s*\.|"|<|$)'
         ]
         
-        for pattern in flavor_patterns:
-            flavor_match = re.search(pattern, html, re.IGNORECASE)
-            if flavor_match:
-                flavor_desc = flavor_match.group(1).strip()
-                if len(flavor_desc) > 5:
-                    ingredient_data['flavor_description'] = flavor_desc[:500]
-                    break
+        flavor_desc = self.extract_clean_content(html, flavor_patterns)
+        if flavor_desc:
+            ingredient_data['flavor_description'] = flavor_desc[:300]
 
-        # Extract synonyms - enhanced patterns
+        # Extract synonyms with better cleaning
         synonym_patterns = [
-            r'synonyms?[:\s]*([^<\n]{10,500})',
-            r'also known as[:\s]*([^<\n]{10,500})',
-            r'alternative names?[:\s]*([^<\n]{10,500})',
-            r'other names?[:\s]*([^<\n]{10,500})',
-            r'aliases?[:\s]*([^<\n]{10,500})'
+            r'synonyms?[:\s]*([^<>"]{10,300})(?:\.|"|<|$)',
+            r'also known as[:\s]*([^<>"]{10,300})(?:\.|"|<|$)',
+            r'alternative names?[:\s]*([^<>"]{10,300})(?:\.|"|<|$)',
+            r'other names?[:\s]*([^<>"]{10,300})(?:\.|"|<|$)',
+            r'aliases?[:\s]*([^<>"]{10,300})(?:\.|"|<|$)'
         ]
         
-        for pattern in synonym_patterns:
-            synonym_match = re.search(pattern, html, re.IGNORECASE)
-            if synonym_match:
-                synonym_section = synonym_match.group(1).strip()
-                if len(synonym_section) > 5:
-                    synonyms = [s.strip() for s in re.split(r'[,;|]', synonym_section) if s.strip() and len(s.strip()) > 2]
-                    ingredient_data['synonyms'] = synonyms[:10]  # Limit to top 10
-                    break
+        synonym_section = self.extract_clean_content(html, synonym_patterns)
+        if synonym_section:
+            synonyms = [s.strip() for s in re.split(r'[,;|]', synonym_section) if s.strip() and len(s.strip()) > 2]
+            ingredient_data['synonyms'] = synonyms[:10]
 
-        # Natural occurrence - enhanced patterns
+        # Natural occurrence extraction with cleaning
         occurrence_patterns = [
-            r'(?:found in|occurs in|natural occurrence)[:\s]*([^<\n]{10,300})',
-            r'(?:natural|naturally)\s+(?:found|occurs?)[:\s]*(?:in)?[:\s]*([^<\n]{10,300})',
-            r'source[:\s]*([^<\n]{10,300})',
-            r'derived from[:\s]*([^<\n]{10,300})',
-            r'obtained from[:\s]*([^<\n]{10,300})',
-            r'present in[:\s]*([^<\n]{10,300})'
+            r'(?:found in|occurs in|natural occurrence)[:\s]*([^<>"]{10,300})(?:\.|"|<|$)',
+            r'(?:natural|naturally)\s+(?:found|occurs?)[:\s]*(?:in)?[:\s]*([^<>"]{10,300})(?:\.|"|<|$)',
+            r'source[:\s]*([^<>"]{10,300})(?:\.|"|<|$)',
+            r'derived from[:\s]*([^<>"]{10,300})(?:\.|"|<|$)',
+            r'obtained from[:\s]*([^<>"]{10,300})(?:\.|"|<|$)',
+            r'present in[:\s]*([^<>"]{10,300})(?:\.|"|<|$)'
         ]
         
-        for pattern in occurrence_patterns:
-            occurrence_match = re.search(pattern, html, re.IGNORECASE)
-            if occurrence_match:
-                occurrence_text = occurrence_match.group(1).strip()
-                if len(occurrence_text) > 5:
-                    occurrences = [o.strip() for o in re.split(r'[,;|]', occurrence_text) if o.strip() and len(o.strip()) > 2]
-                    ingredient_data['natural_occurrence'] = occurrences[:15]
-                    break
+        occurrence_text = self.extract_clean_content(html, occurrence_patterns)
+        if occurrence_text:
+            occurrences = [o.strip() for o in re.split(r'[,;|]', occurrence_text) if o.strip() and len(o.strip()) > 2]
+            ingredient_data['natural_occurrence'] = occurrences[:10]
 
-        # Safety notes - new comprehensive patterns
+        # Safety notes extraction with cleaning
         safety_patterns = [
-            r'safety[:\s]*([^<\n]{10,300})',
-            r'hazard[:\s]*([^<\n]{10,300})',
-            r'warning[:\s]*([^<\n]{10,300})',
-            r'caution[:\s]*([^<\n]{10,300})',
-            r'precaution[:\s]*([^<\n]{10,300})',
-            r'toxicity[:\s]*([^<\n]{10,300})',
-            r'health effects?[:\s]*([^<\n]{10,300})',
-            r'side effects?[:\s]*([^<\n]{10,300})'
+            r'safety[:\s]*([^<>"]{10,300})(?:\.|"|<|$)',
+            r'hazard[:\s]*([^<>"]{10,300})(?:\.|"|<|$)',
+            r'warning[:\s]*([^<>"]{10,300})(?:\.|"|<|$)',
+            r'caution[:\s]*([^<>"]{10,300})(?:\.|"|<|$)',
+            r'precaution[:\s]*([^<>"]{10,300})(?:\.|"|<|$)',
+            r'toxicity[:\s]*([^<>"]{10,300})(?:\.|"|<|$)',
+            r'health effects?[:\s]*([^<>"]{10,300})(?:\.|"|<|$)',
+            r'side effects?[:\s]*([^<>"]{10,300})(?:\.|"|<|$)'
         ]
         
-        for pattern in safety_patterns:
-            safety_match = re.search(pattern, html, re.IGNORECASE)
-            if safety_match:
-                safety_text = safety_match.group(1).strip()
-                if len(safety_text) > 5:
-                    ingredient_data['safety_notes'] = safety_text[:300]
-                    break
+        safety_text = self.extract_clean_content(html, safety_patterns)
+        if safety_text:
+            ingredient_data['safety_notes'] = safety_text[:300]
 
         return ingredient_data
 
