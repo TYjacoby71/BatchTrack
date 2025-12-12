@@ -196,6 +196,7 @@ def get_ingredient_data(ingredient_name: str) -> Dict[str, Any]:
             response = client.chat.completions.create(
                 model=MODEL_NAME,
                 temperature=TEMPERATURE,
+                response_format={"type": "json_object"},
                 messages=[
                     {"role": "system", "content": SYSTEM_PROMPT},
                     {"role": "user", "content": user_prompt},
@@ -215,6 +216,7 @@ def get_ingredient_data(ingredient_name: str) -> Dict[str, Any]:
         except json.JSONDecodeError as exc:
             last_error = exc
             LOGGER.warning("JSON decoding failed for %s (attempt %s): %s", ingredient_name, attempt, exc)
+            LOGGER.warning("Raw content (first 200 chars): %s", content[:200] if 'content' in locals() else "No content available")
         except Exception as exc:  # pylint: disable=broad-except
             last_error = exc
             LOGGER.warning("OpenAI call failed for %s (attempt %s): %s", ingredient_name, attempt, exc)

@@ -313,6 +313,7 @@ class TermCollector:
                 response = client.chat.completions.create(
                     model=MODEL_NAME,
                     temperature=TEMPERATURE,
+                    response_format={"type": "json_object"},
                     messages=[
                         {"role": "system", "content": SYSTEM_PROMPT},
                         {"role": "user", "content": user_prompt},
@@ -329,6 +330,9 @@ class TermCollector:
                 if not isinstance(payload, dict):
                     raise ValueError("AI payload is not a JSON object")
                 return payload
+            except json.JSONDecodeError as exc:
+                LOGGER.warning("JSON decode failed for attempt %s. Raw content (first 200 chars): %s", attempt, content[:200] if 'content' in locals() else "No content available")
+                LOGGER.warning("JSON decode error: %s", exc)
             except Exception as exc:  # pylint: disable=broad-except
                 LOGGER.warning("Term generation attempt %s failed: %s", attempt, exc)
         return {}
