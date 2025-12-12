@@ -66,11 +66,6 @@ class TGSCIngredientScraper:
 
             if response.status_code == 200:
                 html = response.text
-                if save_filename:
-                    with open(f"{save_filename}.html", "w", errors="ignore", encoding="utf-8") as fp:
-                        fp.write(html)
-                    print(f"HTML content saved to {save_filename}.html")
-
                 time.sleep(self.delay_seconds)  # Rate limiting
                 return html
             else:
@@ -248,7 +243,7 @@ class TGSCIngredientScraper:
         print(f"{'='*60}")
 
         # Fetch category page
-        category_html = self.fetch_html(category_url, f"category_{category_name}")
+        category_html = self.fetch_html(category_url)
         if not category_html:
             print(f"❌ Failed to fetch category page: {category_name}")
             return []
@@ -357,11 +352,7 @@ def main():
             ingredients = scraper.scrape_category(category_name, category_url, max_ingredients=ingredients_to_scrape)
 
             if ingredients:
-                # Save category-specific file
-                category_filename = f"tgsc_{category_name}_ingredients.csv"
-                scraper.save_ingredients_csv(ingredients, category_filename)
-
-                # Add to master list
+                # Add to master list with category info
                 for ingredient in ingredients:
                     ingredient['category'] = category_name
                 all_ingredients.extend(ingredients)
@@ -371,29 +362,20 @@ def main():
             print(f"❌ Error scraping category {category_name}: {e}")
             continue
 
-    # Save master file
+    # Save only the master file directly to the target location
     if all_ingredients:
-        master_filename = "tgsc_all_ingredients.csv"
-        scraper.save_ingredients_csv(all_ingredients, master_filename)
-
-        # Copy to data sources directory
-        import shutil
+        # Create target directory and file path
         target_dir = Path(__file__).parent.parent / "ingredients" / "data_sources"
         target_file = target_dir / "tgsc_ingredients.csv"
-
+        
         target_dir.mkdir(parents=True, exist_ok=True)
-        shutil.copy2(master_filename, target_file)
-        print(f"📋 Copied master file to {target_file}")
+        scraper.save_ingredients_csv(all_ingredients, str(target_file))
+        print(f"📋 Saved ingredients to {target_file}")
         print("Ready for ingredient compilation!")
 
     print(f"\n🎊 SCRAPING COMPLETE!")
     print(f"📊 Total ingredients extracted: {len(all_ingredients)}")
-    print(f"📁 Files generated:")
-    for category in TGSC_INGREDIENT_CATEGORIES.keys():
-        # Only list generated files if they were potentially created
-        # This logic might need refinement if we break early
-        print(f"   - tgsc_{category}_ingredients.csv")
-    print(f"   - tgsc_all_ingredients.csv")
+    print(f"📁 File generated: {target_file}")
 
 
 if __name__ == "__main__":
