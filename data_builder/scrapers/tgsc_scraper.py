@@ -6,6 +6,15 @@ import requests
 from pathlib import Path
 from typing import Dict, List, Optional, Tuple
 
+# Working TGSC formula URLs that contain actual ingredient tables
+TGSC_FORMULA_URLS = [
+    "https://www.thegoodscentscompany.com/demos/dm1001001.html",  # Floral demo formulas
+    "https://www.thegoodscentscompany.com/demos/dm1002001.html",  # Citrus demo formulas  
+    "https://www.thegoodscentscompany.com/demos/dm1003001.html",  # Woody demo formulas
+    "https://www.thegoodscentscompany.com/demos/dm1004001.html",  # Oriental demo formulas
+    "https://www.thegoodscentscompany.com/demos/dm1005001.html",  # Fresh demo formulas
+]
+
 
 class TGSCScraper:
     """Scraper for The Good Scents Company fragrance demo formulas."""
@@ -202,3 +211,68 @@ class TGSCScraper:
         """Convenience method to scrape a single formula URL."""
         scraper = cls(url, user_agent, title)
         return scraper.scrape()
+
+
+def main():
+    """Main function to run TGSC scraper with working formula URLs."""
+    user_agent = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+    
+    successful_batches = []
+    failed_batches = []
+    
+    for i, url in enumerate(TGSC_FORMULA_URLS, 1):
+        batch_name = f"tgsc_batch_{i}"
+        
+        print(f"\n{'='*50}")
+        print(f"Scraping batch {i}: {url}")
+        print(f"{'='*50}")
+        
+        try:
+            scraper = TGSCScraper(url, user_agent, batch_name)
+            success = scraper.scrape()
+            
+            if success:
+                successful_batches.append(batch_name)
+                print(f"✅ Batch {i} completed successfully!")
+                print(f"Generated files:")
+                print(f"  - {batch_name}Information.csv")
+                print(f"  - {batch_name}Ingredients.csv")
+            else:
+                failed_batches.append(batch_name)
+                print(f"❌ Batch {i} failed - no formula data found")
+                
+        except Exception as e:
+            failed_batches.append(batch_name)
+            print(f"❌ Batch {i} failed with error: {e}")
+    
+    # Summary
+    print(f"\n{'='*50}")
+    print("SCRAPING SUMMARY")
+    print(f"{'='*50}")
+    print(f"Successful batches: {len(successful_batches)}")
+    print(f"Failed batches: {len(failed_batches)}")
+    
+    if successful_batches:
+        print(f"\nSuccessful: {', '.join(successful_batches)}")
+        
+        # Copy the first successful ingredients file to data sources
+        first_success = successful_batches[0]
+        source_file = f"{first_success}Ingredients.csv"
+        target_dir = Path("data_builder/ingredients/data_sources")
+        target_file = target_dir / "tgsc_ingredients.csv"
+        
+        import os
+        import shutil
+        if os.path.exists(source_file):
+            target_dir.mkdir(parents=True, exist_ok=True)
+            shutil.copy2(source_file, target_file)
+            print(f"\n📋 Copied {source_file} to {target_file}")
+            print("Ready for ingredient compilation!")
+        
+    if failed_batches:
+        print(f"\nFailed: {', '.join(failed_batches)}")
+        print("\nTip: Check if the URLs contain actual formula tables with ingredient percentages")
+
+
+if __name__ == "__main__":
+    main()
