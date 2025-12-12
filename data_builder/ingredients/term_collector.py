@@ -305,9 +305,12 @@ class TermCollector:
             start_after=start_after.replace("\"", ""),
             examples=json.dumps(examples, indent=2) if examples else "[]",
         )
+        
+        client = openai.OpenAI(api_key=openai.api_key)
+        
         for attempt in range(1, MAX_BATCH_RETRIES + 1):
             try:
-                response = openai.ChatCompletion.create(
+                response = client.chat.completions.create(
                     model=MODEL_NAME,
                     temperature=TEMPERATURE,
                     messages=[
@@ -315,7 +318,7 @@ class TermCollector:
                         {"role": "user", "content": user_prompt},
                     ],
                 )
-                content = response["choices"][0]["message"]["content"].strip()
+                content = response.choices[0].message.content.strip()
                 payload = json.loads(content)
                 if not isinstance(payload, dict):
                     raise ValueError("AI payload is not a JSON object")
