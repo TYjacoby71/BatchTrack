@@ -367,19 +367,7 @@ class TermCollector:
         path.write_text(json.dumps(ordered, indent=2), encoding="utf-8")
         LOGGER.info("Wrote %s physical forms to %s", len(ordered), path)
 
-    def write_individual_ingredient_files(self) -> None:
-        """Writes individual JSON files for each ingredient."""
-        OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
-        for term, priority in self.terms.items():
-            slug = self.slugify(term) # Corrected method call
-            file_path = OUTPUT_DIR / f"{slug}.json"
-            data = {
-                "name": term,
-                "priority": priority,
-                "physical_forms": sorted(list(self.physical_forms)), # This part needs to be defined based on ingredient context
-            }
-            file_path.write_text(json.dumps(data, indent=2), encoding="utf-8")
-        LOGGER.info("Wrote %s individual ingredient files to %s", len(self.terms), OUTPUT_DIR)
+    
 
 
 def parse_args(argv: List[str] | None = None) -> argparse.Namespace:
@@ -413,7 +401,6 @@ def main(argv: List[str] | None = None) -> None:
     collector.expand_with_ai()
     collector.write_terms_file(Path(args.terms_file))
     collector.write_forms_file(Path(args.forms_file))
-    collector.write_individual_ingredient_files() # Added call to the new method
 
 
 if __name__ == "__main__":
