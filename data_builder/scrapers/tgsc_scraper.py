@@ -135,6 +135,10 @@ class TGSCIngredientScraper:
             title = re.sub(r'\s*-\s*The Good Scents Company.*', '', title)
             title = re.sub(r'\s*Information.*', '', title)
             title = re.sub(r'\s*Catalog.*', '', title)
+            # Remove CAS numbers that might be concatenated with the name
+            title = re.sub(r'\s*\d{1,7}-\d{2}-\d\s*', ' ', title)
+            # Remove extra whitespace
+            title = re.sub(r'\s+', ' ', title)
             if title and len(title) > 2:
                 ingredient_data['common_name'] = title.strip()
 
@@ -151,6 +155,9 @@ class TGSCIngredientScraper:
                 match = re.search(pattern, html, re.IGNORECASE)
                 if match:
                     name = match.group(1).strip()
+                    # Clean CAS numbers from extracted names
+                    name = re.sub(r'\s*\d{1,7}-\d{2}-\d\s*', ' ', name)
+                    name = re.sub(r'\s+', ' ', name).strip()
                     if name and len(name) > 2 and not name.lower().startswith('the good'):
                         ingredient_data['common_name'] = name
                         break
