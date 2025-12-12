@@ -1,1 +1,202 @@
-[]
+[
+  {
+    "term": "Baking Soda",
+    "priority": 10
+  },
+  {
+    "term": "Cane Sugar",
+    "priority": 10
+  },
+  {
+    "term": "Almond Oil",
+    "priority": 9
+  },
+  {
+    "term": "Argan Oil",
+    "priority": 9
+  },
+  {
+    "term": "Avocado Oil",
+    "priority": 9
+  },
+  {
+    "term": "Brewer's Yeast",
+    "priority": 9
+  },
+  {
+    "term": "Cacao Butter",
+    "priority": 9
+  },
+  {
+    "term": "Castor Oil",
+    "priority": 9
+  },
+  {
+    "term": "Allantoin",
+    "priority": 8
+  },
+  {
+    "term": "Alpha Hydroxy Acid (AHA)",
+    "priority": 8
+  },
+  {
+    "term": "Ascorbic Acid",
+    "priority": 8
+  },
+  {
+    "term": "Bentonite",
+    "priority": 8
+  },
+  {
+    "term": "Bergamot",
+    "priority": 8
+  },
+  {
+    "term": "Beta Hydroxy Acid (BHA)",
+    "priority": 8
+  },
+  {
+    "term": "Blue Tansy",
+    "priority": 8
+  },
+  {
+    "term": "Candelilla Wax",
+    "priority": 8
+  },
+  {
+    "term": "Cannabis (Hemp)",
+    "priority": 8
+  },
+  {
+    "term": "Acai Berry",
+    "priority": 7
+  },
+  {
+    "term": "Apple Cider Vinegar",
+    "priority": 7
+  },
+  {
+    "term": "Arnica",
+    "priority": 7
+  },
+  {
+    "term": "Ashwagandha",
+    "priority": 7
+  },
+  {
+    "term": "Bamboo Extract",
+    "priority": 7
+  },
+  {
+    "term": "Basil",
+    "priority": 7
+  },
+  {
+    "term": "Bilberry",
+    "priority": 7
+  },
+  {
+    "term": "Biotin",
+    "priority": 7
+  },
+  {
+    "term": "Black Cumin Seed Oil",
+    "priority": 7
+  },
+  {
+    "term": "Black Tea",
+    "priority": 7
+  },
+  {
+    "term": "Borage Oil",
+    "priority": 7
+  },
+  {
+    "term": "Burdock Root",
+    "priority": 7
+  },
+  {
+    "term": "Cacao Nibs",
+    "priority": 7
+  },
+  {
+    "term": "Camellia Oil",
+    "priority": 7
+  },
+  {
+    "term": "Cardamom",
+    "priority": 7
+  },
+  {
+    "term": "Carnauba Wax",
+    "priority": 7
+  },
+  {
+    "term": "Carrot Seed",
+    "priority": 7
+  },
+  {
+    "term": "Agave Syrup",
+    "priority": 6
+  },
+  {
+    "term": "Apricot",
+    "priority": 6
+  },
+  {
+    "term": "Arrowroot",
+    "priority": 6
+  },
+  {
+    "term": "Beetroot",
+    "priority": 6
+  },
+  {
+    "term": "Black Pepper",
+    "priority": 6
+  },
+  {
+    "term": "Broccoli Seed Oil",
+    "priority": 6
+  },
+  {
+    "term": "Buttermilk Powder",
+    "priority": 6
+  },
+  {
+    "term": "Cajeput",
+    "priority": 6
+  },
+  {
+    "term": "Camphor",
+    "priority": 6
+  },
+  {
+    "term": "Canola Oil",
+    "priority": 6
+  },
+  {
+    "term": "Cayenne Pepper",
+    "priority": 6
+  },
+  {
+    "term": "Amber Resin",
+    "priority": 5
+  },
+  {
+    "term": "Brahmi",
+    "priority": 5
+  },
+  {
+    "term": "Birch Tar",
+    "priority": 4
+  },
+  {
+    "term": "Calamus",
+    "priority": 4
+  },
+  {
+    "term": "Catnip",
+    "priority": 4
+  }
+]
