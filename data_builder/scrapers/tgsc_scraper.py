@@ -339,7 +339,7 @@ def main():
         
         # Copy to data sources directory
         import shutil
-        target_dir = Path("data_builder/ingredients/data_sources")
+        target_dir = Path(__file__).parent.parent / "ingredients" / "data_sources"
         target_file = target_dir / "tgsc_ingredients.csv"
         
         target_dir.mkdir(parents=True, exist_ok=True)

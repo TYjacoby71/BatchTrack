@@ -28,7 +28,7 @@ NHP_API_KEY = os.getenv("NHP_API_KEY")  # Health Canada natural health products
 
 COSING_CSV_PATH = Path(os.getenv("COSING_CSV_PATH", DATA_DIR / "cosing.csv"))
 HSCG_CSV_PATH = Path(os.getenv("HSCG_CSV_PATH", DATA_DIR / "hscg_ingredients.csv"))
-TGSC_CSV_PATH = Path(os.getenv("TGSC_CSV_PATH", DATA_DIR / "tgsc_ingredients.csv"))
+TGSC_CSV_PATH = Path(os.getenv("TGSC_CSV_PATH", DATA_DIR / "tgsc_ingredients.csv")).resolve()
 NHP_JSON_PATH = Path(os.getenv("NHP_JSON_PATH", DATA_DIR / "health_canada_nhp.json"))
 
 SOURCE_ORDER = [

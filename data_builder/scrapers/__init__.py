@@ -1,6 +1,6 @@
 
 """Data scrapers for external sources."""
 
-from .tgsc_scraper import TGSCScraper
+from .tgsc_scraper import TGSCIngredientScraper
 
-__all__ = ["TGSCScraper"]
+__all__ = ["TGSCIngredientScraper"]
