@@ -14,7 +14,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any, Optional
 
-from flask import Flask, Response, request
+from flask import Flask, Response, request, send_file
 
 from . import database_manager
 
@@ -168,6 +168,7 @@ def create_app(db_path: Optional[Path] = None) -> Flask:
           <div>
             <button type="submit">Apply</button>
             <a href="/export.csv{_qs(page=None)}" style="margin-left: 10px;">Export CSV</a>
+            <a href="/download.db" style="margin-left: 10px;">Download DB</a>
           </div>
         </form>
         <div class="muted" style="margin-top: 8px;">
@@ -241,6 +242,24 @@ def create_app(db_path: Optional[Path] = None) -> Flask:
             out,
             mimetype="text/csv; charset=utf-8",
             headers={"Content-Disposition": "attachment; filename=ingredient_compiler_state.csv"},
+        )
+
+    @app.get("/download.db")
+    def download_db() -> Response:
+        """Download the raw SQLite state DB for backup."""
+        # Ensure tables exist so the DB file is created if missing.
+        database_manager.ensure_tables_exist()
+
+        path = Path(database_manager.DB_PATH).resolve()
+        if not path.exists():
+            return Response("State DB file not found.", status=404, mimetype="text/plain; charset=utf-8")
+
+        return send_file(
+            path,
+            as_attachment=True,
+            download_name="compiler_state.db",
+            mimetype="application/octet-stream",
+            conditional=True,
         )
 
     return app
