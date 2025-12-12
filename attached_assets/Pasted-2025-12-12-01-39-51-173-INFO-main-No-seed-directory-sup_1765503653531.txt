@@ -1,0 +1,35 @@
+2025-12-12 01:39:51,173 INFO [__main__] No seed directory supplied; relying entirely on AI generation.
+2025-12-12 01:39:51,174 INFO [__main__] Requesting 10 new terms after '<start>' (current total: 0/10)
+2025-12-12 01:39:51,174 WARNING [__main__] Term generation attempt 1 failed: 
+
+You tried to access openai.ChatCompletion, but this is no longer supported in openai>=1.0.0 - see the README at https://github.com/openai/openai-python for the API.
+
+You can run `openai migrate` to automatically upgrade your codebase to use the 1.0.0 interface. 
+
+Alternatively, you can pin your installation to the old version, e.g. `pip install openai==0.28`
+
+A detailed migration guide is available here: https://github.com/openai/openai-python/discussions/742
+
+2025-12-12 01:39:51,174 WARNING [__main__] Term generation attempt 2 failed: 
+
+You tried to access openai.ChatCompletion, but this is no longer supported in openai>=1.0.0 - see the README at https://github.com/openai/openai-python for the API.
+
+You can run `openai migrate` to automatically upgrade your codebase to use the 1.0.0 interface. 
+
+Alternatively, you can pin your installation to the old version, e.g. `pip install openai==0.28`
+
+A detailed migration guide is available here: https://github.com/openai/openai-python/discussions/742
+
+2025-12-12 01:39:51,174 WARNING [__main__] Term generation attempt 3 failed: 
+
+You tried to access openai.ChatCompletion, but this is no longer supported in openai>=1.0.0 - see the README at https://github.com/openai/openai-python for the API.
+
+You can run `openai migrate` to automatically upgrade your codebase to use the 1.0.0 interface. 
+
+Alternatively, you can pin your installation to the old version, e.g. `pip install openai==0.28`
+
+A detailed migration guide is available here: https://github.com/openai/openai-python/discussions/742
+
+2025-12-12 01:39:51,174 WARNING [__main__] AI returned no payload; breaking out
+2025-12-12 01:39:51,176 INFO [__main__] Wrote 0 prioritized terms to /home/runner/workspace/data_builder/ingredients/terms.json
+2025-12-12 01:39:51,177 INFO [__main__] Wrote 90 physical forms to /home/runner/workspace/data_builder/ingredients/output/physical_forms.json

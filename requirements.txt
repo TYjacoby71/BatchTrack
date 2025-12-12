@@ -48,3 +48,4 @@ locust
 redis==5.1.1
 flask-session
 openai>=1.0.0
+openai
