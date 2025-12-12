@@ -293,7 +293,8 @@ class TGSCIngredientScraper:
             'common_name', 'botanical_name', 'cas_number', 'einecs_number', 
             'fema_number', 'category', 'molecular_formula', 'molecular_weight',
             'boiling_point', 'melting_point', 'density', 'odor_description',
-            'flavor_description', 'synonyms', 'natural_occurrence', 'url'
+            'flavor_description', 'description', 'uses', 'safety_notes',
+            'solubility', 'synonyms', 'natural_occurrence', 'url'
         ]
 
         try:
@@ -302,11 +303,17 @@ class TGSCIngredientScraper:
                 writer.writeheader()
 
                 for ingredient in ingredients:
-                    # Convert lists to semicolon-separated strings
-                    row = ingredient.copy()
-                    for field in ['synonyms', 'natural_occurrence', 'uses']:
-                        if field in row and isinstance(row[field], list):
-                            row[field] = '; '.join(row[field])
+                    # Convert lists to semicolon-separated strings and filter to fieldnames
+                    row = {}
+                    for field in fieldnames:
+                        if field in ingredient:
+                            value = ingredient[field]
+                            if isinstance(value, list):
+                                row[field] = '; '.join(str(v) for v in value)
+                            else:
+                                row[field] = str(value) if value is not None else ''
+                        else:
+                            row[field] = ''
                     writer.writerow(row)
 
             print(f"💾 Saved {len(ingredients)} ingredients to {filename}")
