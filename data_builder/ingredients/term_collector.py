@@ -177,6 +177,7 @@ class TermCollector:
         include_ai: bool = True,
         seed_root: Optional[Path] = None,
         example_file: Optional[Path] = None,
+        terms_file: Optional[Path] = None,
     ) -> None:
         self.seed_root = seed_root if seed_root and seed_root.exists() else None
         self.target_count = target_count
@@ -192,6 +193,11 @@ class TermCollector:
                     self.prompt_examples.update(str(item).strip() for item in data if str(item).strip())
             except json.JSONDecodeError:
                 LOGGER.warning("Example file %s is not valid JSON; ignoring", example_file)
+
+        # If a terms file already exists, load it so the collector can resume
+        # from the last known term and avoid regenerating duplicates across runs.
+        if terms_file:
+            self.ingest_terms_file(terms_file)
 
     def _extract_priority(self, value) -> int:
         try:
@@ -222,6 +228,40 @@ class TermCollector:
         value = re.sub(r'[^\w\s-]', '', value).strip().lower()
         value = re.sub(r'[-\s]+', '-', value)
         return value
+
+    # ------------------------------------------------------------------
+    # Existing term ingestion (ratchet persistence)
+    # ------------------------------------------------------------------
+    def ingest_terms_file(self, terms_file: Path) -> None:
+        """Load an existing terms.json file to resume A→Z progression across runs."""
+        try:
+            if not terms_file.exists():
+                return
+            raw_text = terms_file.read_text(encoding="utf-8").strip()
+            if not raw_text:
+                return
+            data = json.loads(raw_text)
+            if not isinstance(data, list):
+                LOGGER.warning("Terms file %s is not a JSON list; ignoring", terms_file)
+                return
+            loaded = 0
+            for item in data:
+                if isinstance(item, str):
+                    term = item.strip()
+                    if term and self._register_term(term, DEFAULT_PRIORITY):
+                        loaded += 1
+                    continue
+                if isinstance(item, dict):
+                    term = str(item.get("term") or item.get("name") or "").strip()
+                    if not term:
+                        continue
+                    priority = item.get("priority") if "priority" in item else item.get("priority_score")
+                    if self._register_term(term, priority):
+                        loaded += 1
+            if loaded:
+                LOGGER.info("Loaded %s existing terms from %s", loaded, terms_file)
+        except Exception as exc:  # pylint: disable=broad-except
+            LOGGER.warning("Failed to ingest existing terms from %s: %s", terms_file, exc)
 
     # ------------------------------------------------------------------
     # Seed extraction
@@ -356,10 +396,13 @@ class TermCollector:
         path.parent.mkdir(parents=True, exist_ok=True)
         payload = [
             {"term": term, "priority": priority}
-            for term, priority in sorted(self.terms.items(), key=lambda item: (-item[1], item[0]))
+            # IMPORTANT: `terms.json` is the canonical master list and must be
+            # strict lexicographic order (A→Z, with punctuation like '.' first).
+            # Priority is metadata for the compiler, not an ordering dimension here.
+            for term, priority in sorted(self.terms.items(), key=lambda item: (item[0].casefold(), item[0]))
         ]
         path.write_text(json.dumps(payload, indent=2), encoding="utf-8")
-        LOGGER.info("Wrote %s prioritized terms to %s", len(payload), path)
+        LOGGER.info("Wrote %s terms to %s", len(payload), path)
 
     def write_forms_file(self, path: Path = PHYSICAL_FORMS_FILE) -> None:
         path.parent.mkdir(parents=True, exist_ok=True)
@@ -395,6 +438,7 @@ def main(argv: List[str] | None = None) -> None:
         include_ai=not args.skip_ai,
         seed_root=Path(args.seed_root).resolve() if args.seed_root else None,
         example_file=Path(args.example_file).resolve() if args.example_file else None,
+        terms_file=Path(args.terms_file).resolve() if args.terms_file else None,
     )
 
     collector.ingest_seed_directory()
