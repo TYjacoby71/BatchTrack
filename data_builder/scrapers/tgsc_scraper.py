@@ -1,3 +1,4 @@
+
 """TGSC (The Good Scents Company) scraper for ingredient data and attributes."""
 import csv
 import re
@@ -7,6 +8,8 @@ from typing import Dict, List, Optional, Tuple
 import time
 import urllib.parse
 from concurrent.futures import ThreadPoolExecutor, as_completed
+from bs4 import BeautifulSoup, NavigableString
+import html
 
 # Base URLs for different ingredient categories
 TGSC_BASE_URL = "https://www.thegoodscentscompany.com"
@@ -35,30 +38,6 @@ class TGSCIngredientScraper:
         self.session = requests.Session()
         self.session.headers.update(self.headers)
 
-    def searchsingle(self, start: str, end: str, content: str) -> str:
-        """Extract single match between start and end markers."""
-        if end != "" and start != "":
-            pattern = re.compile(f'{re.escape(start)}(.*?){re.escape(end)}', re.DOTALL | re.IGNORECASE)
-        elif end == "":
-            pattern = re.compile(re.escape(start) + r"\s*(.*)", re.IGNORECASE)
-        elif start == "":
-            pattern = re.compile(r"^(.*?)" + re.escape(end), re.IGNORECASE)
-
-        match = re.search(pattern, content)
-        return match.group(1).strip() if match else ""
-
-    def searchmultiple(self, start: str, end: str, content: str) -> List[str]:
-        """Extract multiple matches between start and end markers."""
-        if end != "" and start != "":
-            pattern = re.compile(f'{re.escape(start)}(.*?){re.escape(end)}', re.DOTALL | re.IGNORECASE)
-        elif end == "":
-            pattern = re.compile(re.escape(start) + r"\s*(.*)", re.IGNORECASE)
-        elif start == "":
-            pattern = re.compile(r"^(.*?)" + re.escape(end), re.IGNORECASE)
-
-        matches = pattern.findall(content)
-        return [match.strip() for match in matches]
-
     def fetch_html(self, url: str, save_filename: str = None) -> Optional[str]:
         """Fetch HTML content from URL with error handling and rate limiting."""
         try:
@@ -66,9 +45,9 @@ class TGSCIngredientScraper:
             response = self.session.get(url, timeout=30)
 
             if response.status_code == 200:
-                html = response.text
+                html_content = response.text
                 time.sleep(self.delay_seconds)  # Rate limiting
-                return html
+                return html_content
             else:
                 print(f"Failed to fetch {url}. Status code: {response.status_code}")
                 return None
@@ -103,48 +82,76 @@ class TGSCIngredientScraper:
 
         return ingredient_links
 
-    def clean_text(self, text: str) -> str:
-        """Clean extracted text by removing HTML entities, tags, and normalizing whitespace."""
+    def clean_extracted_text(self, text: str) -> str:
+        """Clean and normalize extracted text content."""
         if not text:
             return ""
         
-        import html
         # Decode HTML entities
         text = html.unescape(text)
         
-        # Remove HTML tags
-        text = re.sub(r'<[^>]+>', '', text)
-        
-        # Remove common scraping artifacts
-        text = re.sub(r'""">Search', '', text)
-        text = re.sub(r'=hp&amp;.*?"">Search', '', text)
-        text = re.sub(r'scompany\.com/data/[^"]*\.html[^"]*', '', text)
+        # Remove common scraping artifacts and noise
+        text = re.sub(r'""">Search.*?""', '', text)
+        text = re.sub(r'=hp&amp;.*?Search', '', text)
         text = re.sub(r'&amp;.*?Search', '', text)
+        text = re.sub(r'scompany\.com/data/[^"]*\.html[^"]*', '', text)
         text = re.sub(r'""">.*?</.*?>', '', text)
+        text = re.sub(r'<[^>]+>', '', text)  # Remove any remaining HTML tags
+        
+        # Remove search-related noise
+        text = re.sub(r'\bSearch\b', '', text, flags=re.IGNORECASE)
+        text = re.sub(r'\breferences?\b', '', text, flags=re.IGNORECASE)
+        text = re.sub(r'\bagents?\b(?!\s+(?:for|of|in))', '', text, flags=re.IGNORECASE)
         
         # Normalize whitespace
         text = re.sub(r'\s+', ' ', text)
         text = text.strip()
         
         # Filter out very short or meaningless text
-        if len(text) < 3 or text.lower() in ['search', 'references', 'agents', 'ing', 'and']:
+        if len(text) < 3 or text.lower() in ['search', 'references', 'agents', 'ing', 'and', 'the', 'of', 'a', 'an']:
             return ""
             
         return text
 
-    def extract_clean_content(self, html: str, patterns: List[str]) -> str:
-        """Extract content using multiple patterns and clean the result."""
+    def extract_text_from_soup(self, soup: BeautifulSoup, patterns: List[str], context_keywords: List[str] = None) -> str:
+        """Extract text using BeautifulSoup with contextual awareness."""
+        if context_keywords is None:
+            context_keywords = []
+        
+        # First try to find content by context keywords
+        if context_keywords:
+            for keyword in context_keywords:
+                # Look for text containing the keyword
+                elements = soup.find_all(text=re.compile(keyword, re.IGNORECASE))
+                for element in elements:
+                    if isinstance(element, NavigableString):
+                        parent = element.parent
+                        if parent:
+                            # Get the text content from the parent element
+                            text = parent.get_text(strip=True)
+                            # Try to extract the relevant part after the keyword
+                            for pattern in patterns:
+                                match = re.search(pattern, text, re.IGNORECASE | re.DOTALL)
+                                if match and match.groups():
+                                    content = match.group(1)
+                                    cleaned = self.clean_extracted_text(content)
+                                    if cleaned and len(cleaned) > 3:
+                                        return cleaned
+        
+        # Fall back to regex patterns on full text
+        full_text = soup.get_text()
         for pattern in patterns:
-            match = re.search(pattern, html, re.IGNORECASE | re.DOTALL)
-            if match:
-                content = match.group(1) if match.lastindex and match.lastindex >= 1 else match.group(0)
-                cleaned = self.clean_text(content)
+            match = re.search(pattern, full_text, re.IGNORECASE | re.DOTALL)
+            if match and match.groups():
+                content = match.group(1)
+                cleaned = self.clean_extracted_text(content)
                 if cleaned and len(cleaned) > 3:
                     return cleaned
+        
         return ""
 
-    def parse_ingredient_data(self, html: str, url: str) -> Dict:
-        """Parse ingredient page HTML to extract comprehensive data."""
+    def parse_ingredient_data(self, html_content: str, url: str) -> Dict:
+        """Parse ingredient page HTML to extract comprehensive data using BeautifulSoup."""
         ingredient_data = {
             'url': url,
             'common_name': '',
@@ -168,10 +175,13 @@ class TGSCIngredientScraper:
             'natural_occurrence': []
         }
 
+        # Parse HTML with BeautifulSoup
+        soup = BeautifulSoup(html_content, 'html.parser')
+
         # Extract common name from title
-        title_match = re.search(r'<title>([^<]+?)</title>', html, re.IGNORECASE)
-        if title_match:
-            title = title_match.group(1).strip()
+        title_tag = soup.find('title')
+        if title_tag:
+            title = title_tag.get_text().strip()
             # Clean up title - remove "The Good Scents Company" and other generic text
             title = re.sub(r'\s*-\s*The Good Scents Company.*', '', title)
             title = re.sub(r'\s*Information.*', '', title)
@@ -191,18 +201,10 @@ class TGSCIngredientScraper:
 
         # If no good title, try to extract from page content
         if not ingredient_data['common_name']:
-            # Look for ingredient name in various places in the HTML
-            name_patterns = [
-                r'<td><a[^>]*>([^<]+)</a>',  # Link text in table cells
-                r'<h1[^>]*>([^<]+)</h1>',
-                r'<h2[^>]*>([^<]+)</h2>',
-            ]
-
-            for pattern in name_patterns:
-                match = re.search(pattern, html, re.IGNORECASE)
-                if match:
-                    name = match.group(1).strip()
-
+            # Look for ingredient name in various places
+            for tag in soup.find_all(['h1', 'h2', 'h3']):
+                name = self.clean_extracted_text(tag.get_text())
+                if name and len(name) > 2 and not name.lower().startswith('the good'):
                     # Extract CAS number from name if present
                     cas_in_name = re.search(r'(\d{1,7}-\d{2}-\d)', name)
                     if cas_in_name and not ingredient_data['cas_number']:
@@ -211,25 +213,26 @@ class TGSCIngredientScraper:
                     # Clean CAS numbers from extracted names
                     name = re.sub(r'\s*\d{1,7}-\d{2}-\d\s*', ' ', name)
                     name = re.sub(r'\s+', ' ', name).strip()
-                    if name and len(name) > 2 and not name.lower().startswith('the good'):
+                    if name:
                         ingredient_data['common_name'] = name
                         break
 
-        # Extract CAS Number - multiple patterns
+        # Extract CAS Number
         cas_patterns = [
             r'CAS[:\s#-]*(\d{1,7}-\d{2}-\d)',
-            r'(\d{1,7}-\d{2}-\d)',  # Standalone CAS number
             r'Registry Number[:\s]*(\d{1,7}-\d{2}-\d)',
-            r'Chemical Abstracts[:\s]*(\d{1,7}-\d{2}-\d)'
+            r'Chemical Abstracts[:\s]*(\d{1,7}-\d{2}-\d)',
+            r'(\d{1,7}-\d{2}-\d)'  # Standalone CAS number
         ]
         
-        for pattern in cas_patterns:
-            cas_match = re.search(pattern, html, re.IGNORECASE)
-            if cas_match and not ingredient_data['cas_number']:
-                ingredient_data['cas_number'] = cas_match.group(1)
-                break
+        if not ingredient_data['cas_number']:
+            cas_text = self.extract_text_from_soup(soup, cas_patterns, ['CAS', 'Registry', 'Chemical'])
+            if cas_text:
+                cas_match = re.search(r'(\d{1,7}-\d{2}-\d)', cas_text)
+                if cas_match:
+                    ingredient_data['cas_number'] = cas_match.group(1)
 
-        # Extract EINECS Number - multiple patterns
+        # Extract EINECS Number
         einecs_patterns = [
             r'EINECS[:\s#-]*(\d{3}-\d{3}-\d)',
             r'EC[:\s#-]*(\d{3}-\d{3}-\d)',
@@ -237,209 +240,201 @@ class TGSCIngredientScraper:
             r'European Inventory[:\s]*(\d{3}-\d{3}-\d)'
         ]
         
-        for pattern in einecs_patterns:
-            einecs_match = re.search(pattern, html, re.IGNORECASE)
+        einecs_text = self.extract_text_from_soup(soup, einecs_patterns, ['EINECS', 'EC', 'ELINCS', 'European'])
+        if einecs_text:
+            einecs_match = re.search(r'(\d{3}-\d{3}-\d)', einecs_text)
             if einecs_match:
                 ingredient_data['einecs_number'] = einecs_match.group(1)
-                break
 
-        # Extract FEMA Number - multiple patterns
+        # Extract FEMA Number
         fema_patterns = [
             r'FEMA[:\s#-]*(\d+)',
             r'Flavor and Extract[:\s]*(\d+)',
             r'GRAS[:\s]*(\d+)'
         ]
         
-        for pattern in fema_patterns:
-            fema_match = re.search(pattern, html, re.IGNORECASE)
+        fema_text = self.extract_text_from_soup(soup, fema_patterns, ['FEMA', 'Flavor', 'GRAS'])
+        if fema_text:
+            fema_match = re.search(r'(\d+)', fema_text)
             if fema_match:
                 ingredient_data['fema_number'] = fema_match.group(1)
+
+        # Extract botanical name - look for italic text first
+        italic_elements = soup.find_all('i')
+        for italic in italic_elements:
+            text = self.clean_extracted_text(italic.get_text())
+            # Check if it looks like a botanical name (Genus species format)
+            botanical_match = re.match(r'^([A-Z][a-z]+\s+[a-z]+(?:\s+[a-z]+)?)$', text)
+            if botanical_match and len(text.split()) >= 2:
+                ingredient_data['botanical_name'] = text
                 break
 
-        # Extract uses/applications with better cleaning
-        uses_patterns = [
-            r'- ([^<>"]*?(?:agents?|ingredients?|conditioning|protecting)[^<>"]*?)(?:\.|"|/>)',
-            r'Use\(?s?\)?[:\s]*([^<>"]{10,200})(?:\.|"|<|$)',
-            r'Application[:\s]*([^<>"]{10,200})(?:\.|"|<|$)',
-            r'Used\s+(?:in|for|as)[:\s]*([^<>"]{10,200})(?:\.|"|<|$)',
-            r'Function[:\s]*([^<>"]{10,200})(?:\.|"|<|$)',
-            r'Purpose[:\s]*([^<>"]{10,200})(?:\.|"|<|$)'
-        ]
-        
-        uses_desc = self.extract_clean_content(html, uses_patterns)
-        if uses_desc:
-            ingredient_data['description'] = uses_desc[:300]
-            # Split into individual uses
-            uses_list = [use.strip() for use in re.split(r'[,;]', uses_desc) if use.strip() and len(use.strip()) > 2]
-            ingredient_data['uses'] = uses_list[:5]
+        # If no botanical name from italics, try other patterns
+        if not ingredient_data['botanical_name']:
+            botanical_patterns = [
+                r'botanical[:\s]*([A-Z][a-z]+\s+[a-z]+(?:\s+[a-z]+)?)',
+                r'species[:\s]*([A-Z][a-z]+\s+[a-z]+(?:\s+[a-z]+)?)',
+                r'Scientific name[:\s]*([A-Z][a-z]+\s+[a-z]+(?:\s+[a-z]+)?)',
+                r'Latin name[:\s]*([A-Z][a-z]+\s+[a-z]+(?:\s+[a-z]+)?)'
+            ]
+            
+            botanical_text = self.extract_text_from_soup(soup, botanical_patterns, ['botanical', 'species', 'Scientific', 'Latin'])
+            if botanical_text:
+                botanical_match = re.search(r'([A-Z][a-z]+\s+[a-z]+(?:\s+[a-z]+)?)', botanical_text)
+                if botanical_match:
+                    ingredient_data['botanical_name'] = botanical_match.group(1)
 
-        # Botanical name - more comprehensive patterns
-        botanical_patterns = [
-            r'<i>([A-Z][a-z]+\s+[a-z]+(?:\s+[a-z]+)?)</i>',  # Italic scientific names
-            r'botanical[:\s]*([A-Z][a-z]+\s+[a-z]+(?:\s+[a-z]+)?)',
-            r'species[:\s]*([A-Z][a-z]+\s+[a-z]+(?:\s+[a-z]+)?)',
-            r'Scientific name[:\s]*([A-Z][a-z]+\s+[a-z]+(?:\s+[a-z]+)?)',
-            r'Latin name[:\s]*([A-Z][a-z]+\s+[a-z]+(?:\s+[a-z]+)?)',
-            r'Genus[:\s]*([A-Z][a-z]+\s+[a-z]+(?:\s+[a-z]+)?)',
-            r'\b([A-Z][a-z]+\s+[a-z]+)\s+(?:extract|oil|essence)',  # From product names
-        ]
-
-        for pattern in botanical_patterns:
-            botanical = re.search(pattern, html, re.IGNORECASE)
-            if botanical:
-                botanical_name = botanical.group(1).strip()
-                # Validate it looks like a proper binomial name
-                if len(botanical_name.split()) >= 2 and botanical_name[0].isupper():
-                    ingredient_data['botanical_name'] = botanical_name
-                    break
-
-        # Molecular formula and weight - enhanced patterns
+        # Extract molecular information
         formula_patterns = [
             r'molecular formula[:\s]*([A-Z0-9]+)',
             r'formula[:\s]*([A-Z0-9]{3,})',
             r'chemical formula[:\s]*([A-Z0-9]+)'
         ]
         
-        for pattern in formula_patterns:
-            formula_match = re.search(pattern, html, re.IGNORECASE)
+        formula_text = self.extract_text_from_soup(soup, formula_patterns, ['molecular', 'formula', 'chemical'])
+        if formula_text:
+            formula_match = re.search(r'([A-Z0-9]{3,})', formula_text)
             if formula_match:
                 ingredient_data['molecular_formula'] = formula_match.group(1)
-                break
 
         weight_patterns = [
             r'molecular weight[:\s]*([0-9.,]+)',
             r'mol(?:ecular)?\s*wt[:\s]*([0-9.,]+)',
-            r'MW[:\s]*([0-9.,]+)',
-            r'weight[:\s]*([0-9.,]+)'
+            r'MW[:\s]*([0-9.,]+)'
         ]
         
-        for pattern in weight_patterns:
-            weight_match = re.search(pattern, html, re.IGNORECASE)
+        weight_text = self.extract_text_from_soup(soup, weight_patterns, ['molecular weight', 'mol wt', 'MW'])
+        if weight_text:
+            weight_match = re.search(r'([0-9.,]+)', weight_text)
             if weight_match:
                 ingredient_data['molecular_weight'] = weight_match.group(1)
-                break
 
-        # Physical properties - enhanced patterns
+        # Extract physical properties
         bp_patterns = [
-            r'boiling point[:\s]*([0-9.,°C°F-]+)',
-            r'b\.p\.?[:\s]*([0-9.,°C°F-]+)',
-            r'BP[:\s]*([0-9.,°C°F-]+)',
-            r'boils[:\s]*(?:at)?[:\s]*([0-9.,°C°F-]+)'
+            r'boiling point[:\s]*([0-9.,°C°F\s-]+)',
+            r'b\.?p\.?[:\s]*([0-9.,°C°F\s-]+)',
+            r'BP[:\s]*([0-9.,°C°F\s-]+)'
         ]
         
-        for pattern in bp_patterns:
-            bp_match = re.search(pattern, html, re.IGNORECASE)
+        bp_text = self.extract_text_from_soup(soup, bp_patterns, ['boiling point', 'b.p.', 'BP'])
+        if bp_text:
+            bp_match = re.search(r'([0-9.,°C°F\s-]+)', bp_text)
             if bp_match:
-                ingredient_data['boiling_point'] = bp_match.group(1)
-                break
+                ingredient_data['boiling_point'] = self.clean_extracted_text(bp_match.group(1))
 
         mp_patterns = [
-            r'melting point[:\s]*([0-9.,°C°F-]+)',
-            r'm\.p\.?[:\s]*([0-9.,°C°F-]+)',
-            r'MP[:\s]*([0-9.,°C°F-]+)',
-            r'melts[:\s]*(?:at)?[:\s]*([0-9.,°C°F-]+)'
+            r'melting point[:\s]*([0-9.,°C°F\s-]+)',
+            r'm\.?p\.?[:\s]*([0-9.,°C°F\s-]+)',
+            r'MP[:\s]*([0-9.,°C°F\s-]+)'
         ]
         
-        for pattern in mp_patterns:
-            mp_match = re.search(pattern, html, re.IGNORECASE)
+        mp_text = self.extract_text_from_soup(soup, mp_patterns, ['melting point', 'm.p.', 'MP'])
+        if mp_text:
+            mp_match = re.search(r'([0-9.,°C°F\s-]+)', mp_text)
             if mp_match:
-                ingredient_data['melting_point'] = mp_match.group(1)
-                break
+                ingredient_data['melting_point'] = self.clean_extracted_text(mp_match.group(1))
 
         density_patterns = [
-            r'density[:\s]*([0-9.,]+)',
-            r'specific gravity[:\s]*([0-9.,]+)',
-            r'd20[:\s]*([0-9.,]+)',
-            r'ρ[:\s]*([0-9.,]+)'
+            r'density[:\s]*([0-9.,\s]+)',
+            r'specific gravity[:\s]*([0-9.,\s]+)',
+            r'd20[:\s]*([0-9.,\s]+)',
+            r'ρ[:\s]*([0-9.,\s]+)'
         ]
         
-        for pattern in density_patterns:
-            density_match = re.search(pattern, html, re.IGNORECASE)
+        density_text = self.extract_text_from_soup(soup, density_patterns, ['density', 'specific gravity', 'd20'])
+        if density_text:
+            density_match = re.search(r'([0-9.,]+)', density_text)
             if density_match:
                 ingredient_data['density'] = density_match.group(1)
-                break
 
-        # Solubility extraction with better patterns
+        # Extract descriptive information
         solubility_patterns = [
-            r'solubility[:\s]*([^<>"]{10,200})(?:\.|"|<|$)',
-            r'soluble[:\s]*(?:in)?[:\s]*([^<>"]{10,200})(?:\.|"|<|$)',
-            r'dissolves[:\s]*(?:in)?[:\s]*([^<>"]{10,200})(?:\.|"|<|$)',
-            r'sol\.[:\s]*([^<>"]{10,200})(?:\.|"|<|$)'
+            r'solubility[:\s]*([^.]{10,200}?)(?:\.|$)',
+            r'soluble[:\s]*(?:in)?[:\s]*([^.]{10,200}?)(?:\.|$)',
+            r'dissolves[:\s]*(?:in)?[:\s]*([^.]{10,200}?)(?:\.|$)'
         ]
         
-        solubility_desc = self.extract_clean_content(html, solubility_patterns)
-        if solubility_desc:
-            ingredient_data['solubility'] = solubility_desc[:200]
+        solubility_text = self.extract_text_from_soup(soup, solubility_patterns, ['solubility', 'soluble', 'dissolves'])
+        if solubility_text:
+            ingredient_data['solubility'] = solubility_text[:200]
 
-        # Odor and flavor descriptions - improved extraction
+        # Extract odor descriptions
         odor_patterns = [
-            r'Has (?:an? )?([^<>"]+?) type odor',
-            r'odor[:\s]*([^<>"]{5,200}?)(?:\s*\.|"|<|$)',
-            r'odour[:\s]*([^<>"]{5,200}?)(?:\s*\.|"|<|$)',
-            r'smell[:\s]*([^<>"]{5,200}?)(?:\s*\.|"|<|$)',
-            r'scent[:\s]*([^<>"]{5,200}?)(?:\s*\.|"|<|$)',
-            r'aroma[:\s]*([^<>"]{5,200}?)(?:\s*\.|"|<|$)',
-            r'fragrance[:\s]*([^<>"]{5,200}?)(?:\s*\.|"|<|$)'
+            r'Has (?:an? )?([^.]{5,200}?) type odor',
+            r'odor[:\s]*([^.]{5,200}?)(?:\.|$)',
+            r'odour[:\s]*([^.]{5,200}?)(?:\.|$)',
+            r'scent[:\s]*([^.]{5,200}?)(?:\.|$)',
+            r'aroma[:\s]*([^.]{5,200}?)(?:\.|$)'
         ]
         
-        odor_desc = self.extract_clean_content(html, odor_patterns)
-        if odor_desc:
-            ingredient_data['odor_description'] = odor_desc[:300]
+        odor_text = self.extract_text_from_soup(soup, odor_patterns, ['odor', 'odour', 'scent', 'aroma'])
+        if odor_text:
+            ingredient_data['odor_description'] = odor_text[:300]
 
+        # Extract flavor descriptions
         flavor_patterns = [
-            r'Has (?:an? )?([^<>"]+?) type flavor',
-            r'flavor[:\s]*([^<>"]{5,200}?)(?:\s*\.|"|<|$)',
-            r'flavour[:\s]*([^<>"]{5,200}?)(?:\s*\.|"|<|$)',
-            r'taste[:\s]*([^<>"]{5,200}?)(?:\s*\.|"|<|$)',
-            r'gustatory[:\s]*([^<>"]{5,200}?)(?:\s*\.|"|<|$)'
+            r'Has (?:an? )?([^.]{5,200}?) type flavor',
+            r'flavor[:\s]*([^.]{5,200}?)(?:\.|$)',
+            r'flavour[:\s]*([^.]{5,200}?)(?:\.|$)',
+            r'taste[:\s]*([^.]{5,200}?)(?:\.|$)'
         ]
         
-        flavor_desc = self.extract_clean_content(html, flavor_patterns)
-        if flavor_desc:
-            ingredient_data['flavor_description'] = flavor_desc[:300]
+        flavor_text = self.extract_text_from_soup(soup, flavor_patterns, ['flavor', 'flavour', 'taste'])
+        if flavor_text:
+            ingredient_data['flavor_description'] = flavor_text[:300]
 
-        # Extract synonyms with better cleaning
-        synonym_patterns = [
-            r'synonyms?[:\s]*([^<>"]{10,300})(?:\.|"|<|$)',
-            r'also known as[:\s]*([^<>"]{10,300})(?:\.|"|<|$)',
-            r'alternative names?[:\s]*([^<>"]{10,300})(?:\.|"|<|$)',
-            r'other names?[:\s]*([^<>"]{10,300})(?:\.|"|<|$)',
-            r'aliases?[:\s]*([^<>"]{10,300})(?:\.|"|<|$)'
+        # Extract uses and applications
+        uses_patterns = [
+            r'Use\(?s?\)?[:\s]*([^.]{10,300}?)(?:\.|$)',
+            r'Application[:\s]*([^.]{10,300}?)(?:\.|$)',
+            r'Used\s+(?:in|for|as)[:\s]*([^.]{10,300}?)(?:\.|$)',
+            r'Function[:\s]*([^.]{10,300}?)(?:\.|$)'
         ]
         
-        synonym_section = self.extract_clean_content(html, synonym_patterns)
-        if synonym_section:
-            synonyms = [s.strip() for s in re.split(r'[,;|]', synonym_section) if s.strip() and len(s.strip()) > 2]
+        uses_text = self.extract_text_from_soup(soup, uses_patterns, ['Use', 'Application', 'Used', 'Function'])
+        if uses_text:
+            ingredient_data['description'] = uses_text[:300]
+            # Split into individual uses
+            uses_list = [use.strip() for use in re.split(r'[,;]', uses_text) if use.strip() and len(use.strip()) > 2]
+            ingredient_data['uses'] = uses_list[:5]
+
+        # Extract synonyms
+        synonym_patterns = [
+            r'synonyms?[:\s]*([^.]{10,300}?)(?:\.|$)',
+            r'also known as[:\s]*([^.]{10,300}?)(?:\.|$)',
+            r'alternative names?[:\s]*([^.]{10,300}?)(?:\.|$)',
+            r'other names?[:\s]*([^.]{10,300}?)(?:\.|$)'
+        ]
+        
+        synonym_text = self.extract_text_from_soup(soup, synonym_patterns, ['synonym', 'also known', 'alternative', 'other names'])
+        if synonym_text:
+            synonyms = [s.strip() for s in re.split(r'[,;|]', synonym_text) if s.strip() and len(s.strip()) > 2]
             ingredient_data['synonyms'] = synonyms[:10]
 
-        # Natural occurrence extraction with cleaning
+        # Extract natural occurrence
         occurrence_patterns = [
-            r'(?:found in|occurs in|natural occurrence)[:\s]*([^<>"]{10,300})(?:\.|"|<|$)',
-            r'(?:natural|naturally)\s+(?:found|occurs?)[:\s]*(?:in)?[:\s]*([^<>"]{10,300})(?:\.|"|<|$)',
-            r'source[:\s]*([^<>"]{10,300})(?:\.|"|<|$)',
-            r'derived from[:\s]*([^<>"]{10,300})(?:\.|"|<|$)',
-            r'obtained from[:\s]*([^<>"]{10,300})(?:\.|"|<|$)',
-            r'present in[:\s]*([^<>"]{10,300})(?:\.|"|<|$)'
+            r'(?:found in|occurs in|natural occurrence)[:\s]*([^.]{10,300}?)(?:\.|$)',
+            r'(?:natural|naturally)\s+(?:found|occurs?)[:\s]*(?:in)?[:\s]*([^.]{10,300}?)(?:\.|$)',
+            r'source[:\s]*([^.]{10,300}?)(?:\.|$)',
+            r'derived from[:\s]*([^.]{10,300}?)(?:\.|$)',
+            r'obtained from[:\s]*([^.]{10,300}?)(?:\.|$)'
         ]
         
-        occurrence_text = self.extract_clean_content(html, occurrence_patterns)
+        occurrence_text = self.extract_text_from_soup(soup, occurrence_patterns, ['found in', 'occurs', 'natural', 'source', 'derived', 'obtained'])
         if occurrence_text:
             occurrences = [o.strip() for o in re.split(r'[,;|]', occurrence_text) if o.strip() and len(o.strip()) > 2]
             ingredient_data['natural_occurrence'] = occurrences[:10]
 
-        # Safety notes extraction with cleaning
+        # Extract safety notes
         safety_patterns = [
-            r'safety[:\s]*([^<>"]{10,300})(?:\.|"|<|$)',
-            r'hazard[:\s]*([^<>"]{10,300})(?:\.|"|<|$)',
-            r'warning[:\s]*([^<>"]{10,300})(?:\.|"|<|$)',
-            r'caution[:\s]*([^<>"]{10,300})(?:\.|"|<|$)',
-            r'precaution[:\s]*([^<>"]{10,300})(?:\.|"|<|$)',
-            r'toxicity[:\s]*([^<>"]{10,300})(?:\.|"|<|$)',
-            r'health effects?[:\s]*([^<>"]{10,300})(?:\.|"|<|$)',
-            r'side effects?[:\s]*([^<>"]{10,300})(?:\.|"|<|$)'
+            r'safety[:\s]*([^.]{10,300}?)(?:\.|$)',
+            r'hazard[:\s]*([^.]{10,300}?)(?:\.|$)',
+            r'warning[:\s]*([^.]{10,300}?)(?:\.|$)',
+            r'caution[:\s]*([^.]{10,300}?)(?:\.|$)',
+            r'toxicity[:\s]*([^.]{10,300}?)(?:\.|$)'
         ]
         
-        safety_text = self.extract_clean_content(html, safety_patterns)
+        safety_text = self.extract_text_from_soup(soup, safety_patterns, ['safety', 'hazard', 'warning', 'caution', 'toxicity'])
         if safety_text:
             ingredient_data['safety_notes'] = safety_text[:300]
 
@@ -491,14 +486,16 @@ class TGSCIngredientScraper:
         cas_count = 0
         einecs_count = 0
         description_count = 0
+        botanical_count = 0
+        odor_count = 0
 
         # Scrape each ingredient
         for i, link in enumerate(ingredient_links_to_process, start=start_index + 1):
             print(f"\n[{i}/{len(all_ingredient_links)}] Processing: {link}")
 
-            html = self.fetch_html(link)
-            if html:
-                ingredient_data = self.parse_ingredient_data(html, link)
+            html_content = self.fetch_html(link)
+            if html_content:
+                ingredient_data = self.parse_ingredient_data(html_content, link)
                 if ingredient_data['common_name']:  # Only save if we got a name
                     ingredients_data.append(ingredient_data)
 
@@ -509,10 +506,16 @@ class TGSCIngredientScraper:
                         einecs_count += 1
                     if ingredient_data.get('description'):
                         description_count += 1
+                    if ingredient_data.get('botanical_name'):
+                        botanical_count += 1
+                    if ingredient_data.get('odor_description'):
+                        odor_count += 1
 
                     print(f"✅ Extracted: {ingredient_data['common_name']}")
                     if ingredient_data.get('cas_number'):
                         print(f"   CAS: {ingredient_data['cas_number']}")
+                    if ingredient_data.get('botanical_name'):
+                        print(f"   Botanical: {ingredient_data['botanical_name']}")
                 else:
                     print("⚠️  No name found - skipping")
             else:
@@ -520,13 +523,15 @@ class TGSCIngredientScraper:
 
         # Data quality summary
         print(f"\n📊 Data Quality Summary for {category_name}:")
-        print(f"   Total ingredients processed in this run: {len(ingredients_data)}")
+        print(f"   Total ingredients processed: {len(ingredients_data)}")
         if len(ingredients_data) > 0:
-            print(f"   CAS numbers found: {cas_count} ({cas_count/len(ingredients_data)*100:.1f}%)")
-            print(f"   EINECS numbers found: {einecs_count} ({einecs_count/len(ingredients_data)*100:.1f}%)")
-            print(f"   Descriptions found: {description_count} ({description_count/len(ingredients_data)*100:.1f}%)")
+            print(f"   CAS numbers: {cas_count} ({cas_count/len(ingredients_data)*100:.1f}%)")
+            print(f"   EINECS numbers: {einecs_count} ({einecs_count/len(ingredients_data)*100:.1f}%)")
+            print(f"   Descriptions: {description_count} ({description_count/len(ingredients_data)*100:.1f}%)")
+            print(f"   Botanical names: {botanical_count} ({botanical_count/len(ingredients_data)*100:.1f}%)")
+            print(f"   Odor descriptions: {odor_count} ({odor_count/len(ingredients_data)*100:.1f}%)")
 
-        print(f"\n🎉 Category {category_name} scrape complete: {len(ingredients_data)} ingredients extracted in this run")
+        print(f"\n🎉 Category {category_name} scrape complete: {len(ingredients_data)} ingredients extracted")
         return ingredients_data
     
     def get_last_scraped_url(self, category_name: str, csv_filepath: str) -> Optional[str]:
@@ -629,7 +634,7 @@ def main():
     target_file = target_dir / "tgsc_ingredients.csv"
     target_dir.mkdir(parents=True, exist_ok=True)
 
-    print("🚀 TGSC Ingredient Database Scraper (Parallel)")
+    print("🚀 TGSC Ingredient Database Scraper (Enhanced)")
     print("=" * 60)
     print(f"📊 Max ingredients per category: {args.max_ingredients}")
     print(f"⚡ Max parallel workers: {args.max_workers}")
