@@ -318,7 +318,13 @@ class TermCollector:
                         {"role": "user", "content": user_prompt},
                     ],
                 )
-                content = response.choices[0].message.content.strip()
+                content = response.choices[0].message.content
+                if not content or not content.strip():
+                    raise ValueError("OpenAI returned empty response content")
+                
+                content = content.strip()
+                LOGGER.debug("OpenAI response content: %s", content[:200] + "..." if len(content) > 200 else content)
+                
                 payload = json.loads(content)
                 if not isinstance(payload, dict):
                     raise ValueError("AI payload is not a JSON object")
