@@ -144,7 +144,7 @@ CONTEXT:
 - Use authoritative references (USP, FCC, cosmetic suppliers, herbal materia medica) when citing specs.
 - Use metric units. Shelf life must be expressed in DAYS (convert from months/years when needed). Temperature in Celsius.
 - All string values must be clear, sentence case, and free of marketing fluff.
-- Return strictly valid JSON (UTF-8, double quotes, no trailing commas). If you are uncertain, respond with {"error": "explanation"}.
+- Return strictly valid JSON (UTF-8, double quotes, no trailing commas). If you are uncertain, respond with {{"error": "explanation"}}.
 
 CONTROLLED VOCAB REMINDERS:
 - physical_form must be a short noun (e.g., "Powder", "Chips", "Pellets", "Whole", "Puree", "Pressed Cake").
