@@ -18,15 +18,43 @@ def convert_cosing_to_csv():
         return False
     
     try:
-        # Read the Excel file
-        print(f"Reading Excel file: {excel_file}")
-        df = pd.read_excel(excel_file)
+        # Try different engines to handle the Excel file
+        engines = ['xlrd', 'openpyxl']
+        df = None
+        
+        for engine in engines:
+            try:
+                print(f"Trying to read Excel file with {engine} engine...")
+                df = pd.read_excel(excel_file, engine=engine)
+                print(f"Successfully read with {engine} engine")
+                break
+            except Exception as engine_error:
+                print(f"Failed with {engine}: {engine_error}")
+                continue
+        
+        if df is None:
+            print("All engines failed. Trying to read as CSV in case it's misnamed...")
+            try:
+                df = pd.read_csv(excel_file, encoding='utf-8', on_bad_lines='skip')
+                print("Successfully read as CSV")
+            except Exception as csv_error:
+                print(f"CSV read also failed: {csv_error}")
+                return False
         
         # Display basic info about the data
         print(f"Shape: {df.shape}")
         print(f"Columns: {list(df.columns)}")
         print("\nFirst few rows:")
         print(df.head())
+        
+        # Check if we have the expected columns for CosIng
+        expected_cols = ['INCI Name', 'Synonyms']
+        missing_cols = [col for col in expected_cols if col not in df.columns]
+        if missing_cols:
+            print(f"Warning: Missing expected columns: {missing_cols}")
+            print("Available columns:")
+            for i, col in enumerate(df.columns):
+                print(f"  {i}: {col}")
         
         # Save as CSV
         df.to_csv(csv_file, index=False, encoding='utf-8')
