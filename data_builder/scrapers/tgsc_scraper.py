@@ -278,6 +278,11 @@ class TGSCIngredientScraper:
         # Limit ingredients per category
         ingredient_links = ingredient_links[:max_ingredients]
         ingredients_data = []
+        
+        # Data quality tracking
+        cas_count = 0
+        einecs_count = 0
+        description_count = 0
 
         # Scrape each ingredient
         for i, link in enumerate(ingredient_links, 1):
@@ -288,12 +293,30 @@ class TGSCIngredientScraper:
                 ingredient_data = self.parse_ingredient_data(html, link)
                 if ingredient_data['common_name']:  # Only save if we got a name
                     ingredients_data.append(ingredient_data)
+                    
+                    # Track data quality
+                    if ingredient_data.get('cas_number'):
+                        cas_count += 1
+                    if ingredient_data.get('einecs_number'):
+                        einecs_count += 1
+                    if ingredient_data.get('description'):
+                        description_count += 1
+                        
                     print(f"✅ Extracted: {ingredient_data['common_name']}")
+                    if ingredient_data.get('cas_number'):
+                        print(f"   CAS: {ingredient_data['cas_number']}")
                 else:
                     print("⚠️  No name found - skipping")
             else:
                 print("❌ Failed to fetch ingredient page")
 
+        # Data quality summary
+        print(f"\n📊 Data Quality Summary:")
+        print(f"   Total ingredients: {len(ingredients_data)}")
+        print(f"   CAS numbers found: {cas_count} ({cas_count/len(ingredients_data)*100:.1f}%)")
+        print(f"   EINECS numbers found: {einecs_count} ({einecs_count/len(ingredients_data)*100:.1f}%)")
+        print(f"   Descriptions found: {description_count} ({description_count/len(ingredients_data)*100:.1f}%)")
+        
         print(f"\n🎉 Category {category_name} complete: {len(ingredients_data)} ingredients extracted")
         return ingredients_data
 
