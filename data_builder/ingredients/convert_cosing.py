@@ -12,7 +12,12 @@ def convert_cosing_to_csv():
     # Use the uploaded CSV file directly
     input_file = "attached_assets/COSING_Ingredients-Fragrance_Inventory_v2_1765584408467.csv"
     output_file = "data_builder/ingredients/data_sources/cosing.csv"
-
+    
+    # Check if file exists and print debug info
+    print(f"🔍 Looking for file: {input_file}")
+    print(f"🔍 Current working directory: {os.getcwd()}")
+    print(f"🔍 File exists check: {os.path.exists(input_file)}")
+    
     if not os.path.exists(input_file):
         print(f"❌ Input file not found: {input_file}")
         return False
