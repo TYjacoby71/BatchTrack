@@ -10,8 +10,8 @@ from typing import List, Dict, Any
 def convert_cosing_to_csv():
     """Convert CosIng data from the uploaded CSV file to clean CSV format."""
 
-    # Use the uploaded CSV file directly - path relative to current working directory (data_builder/ingredients)
-    input_file = "../../attached_assets/COSING_Ingredients-Fragrance_Inventory_v2_1765584408467.csv"
+    # Use the uploaded CSV file directly - path relative to workspace root
+    input_file = "attached_assets/COSING_Ingredients-Fragrance_Inventory_v2_1765584408467.csv"
     output_file = "data_sources/cosing.csv"
 
     # Check if file exists and print debug info
