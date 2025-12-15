@@ -497,6 +497,8 @@ class TGSCIngredientScraper:
             if html_content:
                 ingredient_data = self.parse_ingredient_data(html_content, link)
                 if ingredient_data['common_name']:  # Only save if we got a name
+                    # Add category info immediately
+                    ingredient_data['category'] = category_name
                     ingredients_data.append(ingredient_data)
 
                     # Track data quality
@@ -537,15 +539,26 @@ class TGSCIngredientScraper:
     def get_last_scraped_url(self, category_name: str, csv_filepath: str) -> Optional[str]:
         """Reads the CSV and returns the URL of the last scraped item for a given category."""
         if not Path(csv_filepath).exists():
+            print(f"📄 CSV file doesn't exist yet: {csv_filepath}")
             return None
 
         try:
+            category_entries = []
             with open(csv_filepath, 'r', newline='', encoding='utf-8') as csvfile:
                 reader = csv.DictReader(csvfile)
-                # Filter by category and get the last entry
-                category_entries = [row for row in reader if row.get('category') == category_name]
-                if category_entries:
-                    return category_entries[-1].get('url')
+                # Collect all entries for this specific category
+                for row in reader:
+                    if row.get('category') == category_name and row.get('url'):
+                        category_entries.append(row)
+                        
+            if category_entries:
+                last_url = category_entries[-1].get('url')
+                print(f"📋 Found {len(category_entries)} existing {category_name} entries. Last URL: {last_url}")
+                return last_url
+            else:
+                print(f"📄 No existing entries found for category: {category_name}")
+                return None
+                
         except Exception as e:
             print(f"⚠️ Error reading {csv_filepath} for resume: {e}")
         return None
@@ -625,8 +638,13 @@ class TGSCIngredientScraper:
 
 def scrape_category_with_resume(scraper, category_name, category_url, max_ingredients, target_file):
     """Scrape a single category with resume capability."""
-    # Check for existing progress
+    # Check for existing progress - get the last scraped URL for this specific category
     last_scraped_url = scraper.get_last_scraped_url(category_name, str(target_file))
+    
+    if last_scraped_url:
+        print(f"🔄 Resuming {category_name} from: {last_scraped_url}")
+    else:
+        print(f"🆕 Starting {category_name} from beginning")
 
     try:
         ingredients = scraper.scrape_category(
@@ -637,7 +655,7 @@ def scrape_category_with_resume(scraper, category_name, category_url, max_ingred
         )
 
         if ingredients:
-            # Add category info
+            # Add category info to all scraped ingredients
             for ingredient in ingredients:
                 ingredient['category'] = category_name
 
@@ -703,33 +721,39 @@ def main():
             for category_name, category_url in TGSC_INGREDIENT_CATEGORIES.items()
         }
 
-        # Process completed tasks
+        # Process completed tasks and save immediately
         for future in as_completed(futures):
             category_name = futures[future]
             try:
                 category_name_result, ingredients = future.result()
                 if ingredients:
-                    # Remove existing ingredients from this category if resuming
-                    if args.resume:
-                        all_ingredients = [ing for ing in all_ingredients if ing.get('category') != category_name]
-
+                    # Save ingredients immediately to CSV as they complete
+                    scraper.save_ingredients_csv(ingredients, str(target_file))
+                    print(f"🎉 {category_name}: {len(ingredients)} ingredients completed and saved")
                     all_ingredients.extend(ingredients)
-                    print(f"🎉 {category_name}: {len(ingredients)} ingredients completed")
                 else:
                     print(f"⚠️  {category_name}: No new ingredients found")
             except Exception as e:
                 print(f"❌ {category_name}: Failed with error: {e}")
 
-    # Save consolidated results
+    # Final summary
     if all_ingredients:
-        scraper.save_ingredients_csv(all_ingredients, str(target_file))
-        print(f"📋 Saved {len(all_ingredients)} total ingredients to {target_file}")
+        print(f"📋 Total new ingredients added this run: {len(all_ingredients)}")
+        
+        # Count total ingredients in file
+        try:
+            with open(target_file, 'r', newline='', encoding='utf-8') as csvfile:
+                reader = csv.DictReader(csvfile)
+                total_in_file = sum(1 for _ in reader)
+                print(f"📊 Total ingredients in CSV file: {total_in_file}")
+        except:
+            pass
+            
         print("Ready for ingredient compilation!")
     else:
-        print("⚠️  No ingredients were scraped")
+        print("⚠️  No new ingredients were scraped this run")
 
     print(f"\n🎊 SCRAPING COMPLETE!")
-    print(f"📊 Total ingredients: {len(all_ingredients)}")
     print(f"📁 File: {target_file}")
 
 
