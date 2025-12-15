@@ -511,18 +511,26 @@ class TGSCIngredientScraper:
             return None
 
         try:
-            category_entries = []
+            # Use a set to track unique URLs for this category to avoid duplicates
+            category_urls = []
+            seen_urls = set()
+            
             with open(csv_filepath, 'r', newline='', encoding='utf-8') as csvfile:
                 reader = csv.DictReader(csvfile)
-                # Collect all entries for this specific category
+                # Collect unique URLs for this specific category in order
                 for row in reader:
-                    if row.get('category') == category_name and row.get('url'):
-                        category_entries.append(row)
+                    if (row.get('category') == category_name and 
+                        row.get('url') and 
+                        row.get('url') not in seen_urls):
+                        category_urls.append(row.get('url'))
+                        seen_urls.add(row.get('url'))
                         
-            if category_entries:
-                last_url = category_entries[-1].get('url')
+            if category_urls:
+                last_url = category_urls[-1]
+                print(f"🔄 Resuming {category_name} from: {last_url}")
                 return last_url
             else:
+                print(f"🆕 Starting fresh for {category_name}")
                 return None
                 
         except Exception as e:
@@ -709,26 +717,37 @@ def main():
 
         # Filter final ingredients with fresh duplicate check
         final_ingredients = []
+        skipped_count = 0
+        
         for ingredient in all_new_ingredients:
             ingredient_url = ingredient.get('url', '')
             ingredient_name = ingredient.get('common_name', '').lower().strip()
             ingredient_category = ingredient.get('category', '').lower().strip()
             name_category_key = f"{ingredient_name}_{ingredient_category}"
             
-            if (ingredient_url not in existing_urls and 
-                name_category_key not in existing_combinations and
-                ingredient_name):
-                final_ingredients.append(ingredient)
-                existing_combinations.add(name_category_key)  # Track within this final batch
+            # Skip if URL already exists or name+category combination exists
+            if ingredient_url in existing_urls:
+                skipped_count += 1
+                continue
+            elif name_category_key in existing_combinations:
+                print(f"⏭️  Skipping duplicate name+category: {ingredient.get('common_name', 'Unknown')}")
+                skipped_count += 1
+                continue
+            elif not ingredient_name:
+                skipped_count += 1
+                continue
             else:
-                if name_category_key in existing_combinations:
-                    print(f"⏭️  Skipping duplicate name+category: {ingredient.get('common_name', 'Unknown')}")
+                final_ingredients.append(ingredient)
+                existing_urls.add(ingredient_url)  # Track within this final batch
+                existing_combinations.add(name_category_key)  # Track within this final batch
 
         if final_ingredients:
             scraper.save_ingredients_csv(final_ingredients, str(target_file))
             print(f"✅ Successfully saved {len(final_ingredients)} unique ingredients")
+            if skipped_count > 0:
+                print(f"⏭️  Skipped {skipped_count} duplicates")
         else:
-            print("No new unique ingredients to save")
+            print(f"No new unique ingredients to save (skipped {skipped_count} duplicates)")
     else:
         print("No new ingredients to save")
 
