@@ -25,7 +25,7 @@ TGSC_INGREDIENT_CATEGORIES = {
     "concretes": f"{TGSC_BASE_URL}/con-az.html",
     "cosmetic_ingredients": f"{TGSC_BASE_URL}/cosmetix-a.html",
     "botanical_species": f"{TGSC_BASE_URL}/botaspes-a.html",
-    "fixed_oils": f"{TGSC_BASE_URL}/fixoilx-a.html",
+    "fixed_oils": f"{TGSC_BASE_URL}/fixoil-a.html",
     "resins_gums": f"{TGSC_BASE_URL}/resinx-a.html"
 }
 
@@ -43,7 +43,6 @@ class TGSCIngredientScraper:
     def fetch_html(self, url: str, save_filename: str = None) -> Optional[str]:
         """Fetch HTML content from URL with error handling and rate limiting."""
         try:
-            print(f"Fetching: {url}")
             response = self.session.get(url, timeout=30)
 
             if response.status_code == 200:
@@ -51,11 +50,11 @@ class TGSCIngredientScraper:
                 time.sleep(self.delay_seconds)  # Rate limiting
                 return html_content
             else:
-                print(f"Failed to fetch {url}. Status code: {response.status_code}")
+                print(f"Failed to fetch page. Status code: {response.status_code}")
                 return None
 
         except Exception as e:
-            print(f"Error fetching {url}: {e}")
+            print(f"Error fetching page: {e}")
             return None
 
     def extract_ingredient_links(self, category_html: str) -> List[str]:
@@ -442,60 +441,51 @@ class TGSCIngredientScraper:
 
         return ingredient_data
 
-    def scrape_category(self, category_name: str, category_url: str, max_ingredients: int = 50, resume_from_url: Optional[str] = None) -> List[Dict]:
+    def scrape_category(self, category_name: str, category_url: str, max_ingredients: int = 50, resume_from_url: Optional[str] = None) -> Tuple[List[Dict], Dict]:
         """Scrape all ingredients from a specific category, with resume capability."""
-        print(f"\n{'='*60}")
-        print(f"SCRAPING CATEGORY: {category_name.upper()}")
-        print(f"URL: {category_url}")
-        if resume_from_url:
-            print(f"Resuming from: {resume_from_url}")
-        print(f"{'='*60}")
-
         # Fetch category page
         category_html = self.fetch_html(category_url)
         if not category_html:
             print(f"❌ Failed to fetch category page: {category_name}")
-            return []
+            return [], {}
 
         # Extract ingredient links
         all_ingredient_links = self.extract_ingredient_links(category_html)
-        print(f"📋 Found {len(all_ingredient_links)} ingredient links")
 
         if not all_ingredient_links:
-            print("⚠️  No ingredient links found - checking page structure...")
-            return []
+            print(f"⚠️  No ingredient links found for {category_name}")
+            return [], {}
 
         # Determine start index for resuming
         start_index = 0
         if resume_from_url:
             try:
                 start_index = all_ingredient_links.index(resume_from_url) + 1
-                print(f"Resuming scrape at index: {start_index}")
             except ValueError:
-                print(f"Warning: Resume URL '{resume_from_url}' not found in category links. Starting from beginning.")
                 start_index = 0
         
         # Limit ingredients per category
         ingredient_links_to_process = all_ingredient_links[start_index : start_index + max_ingredients]
         
         if not ingredient_links_to_process:
-            print("No ingredients to scrape in this category for the current limit.")
-            return []
+            return [], {}
 
         ingredients_data = []
 
         # Data quality tracking
-        cas_count = 0
-        einecs_count = 0
-        description_count = 0
-        botanical_count = 0
-        odor_count = 0
+        quality_stats = {
+            'cas_count': 0,
+            'einecs_count': 0,
+            'description_count': 0,
+            'botanical_count': 0,
+            'odor_count': 0
+        }
 
         # Scrape each ingredient
         for i, link in enumerate(ingredient_links_to_process, start=start_index + 1):
-            print(f"\n[{i}/{len(all_ingredient_links)}] Processing: {link}")
+            print(f"[{i}/{len(all_ingredient_links)}] Processing {category_name}")
 
-            html_content = self.fetch_html(link)
+            html_content = self.fetch_html(link, save_filename=None)
             if html_content:
                 ingredient_data = self.parse_ingredient_data(html_content, link)
                 if ingredient_data['common_name']:  # Only save if we got a name
@@ -505,38 +495,17 @@ class TGSCIngredientScraper:
 
                     # Track data quality
                     if ingredient_data.get('cas_number'):
-                        cas_count += 1
+                        quality_stats['cas_count'] += 1
                     if ingredient_data.get('einecs_number'):
-                        einecs_count += 1
+                        quality_stats['einecs_count'] += 1
                     if ingredient_data.get('description'):
-                        description_count += 1
+                        quality_stats['description_count'] += 1
                     if ingredient_data.get('botanical_name'):
-                        botanical_count += 1
+                        quality_stats['botanical_count'] += 1
                     if ingredient_data.get('odor_description'):
-                        odor_count += 1
+                        quality_stats['odor_count'] += 1
 
-                    print(f"✅ Extracted: {ingredient_data['common_name']}")
-                    if ingredient_data.get('cas_number'):
-                        print(f"   CAS: {ingredient_data['cas_number']}")
-                    if ingredient_data.get('botanical_name'):
-                        print(f"   Botanical: {ingredient_data['botanical_name']}")
-                else:
-                    print("⚠️  No name found - skipping")
-            else:
-                print("❌ Failed to fetch ingredient page")
-
-        # Data quality summary
-        print(f"\n📊 Data Quality Summary for {category_name}:")
-        print(f"   Total ingredients processed: {len(ingredients_data)}")
-        if len(ingredients_data) > 0:
-            print(f"   CAS numbers: {cas_count} ({cas_count/len(ingredients_data)*100:.1f}%)")
-            print(f"   EINECS numbers: {einecs_count} ({einecs_count/len(ingredients_data)*100:.1f}%)")
-            print(f"   Descriptions: {description_count} ({description_count/len(ingredients_data)*100:.1f}%)")
-            print(f"   Botanical names: {botanical_count} ({botanical_count/len(ingredients_data)*100:.1f}%)")
-            print(f"   Odor descriptions: {odor_count} ({odor_count/len(ingredients_data)*100:.1f}%)")
-
-        print(f"\n🎉 Category {category_name} scrape complete: {len(ingredients_data)} ingredients extracted")
-        return ingredients_data
+        return ingredients_data, quality_stats
     
     def get_last_scraped_url(self, category_name: str, csv_filepath: str) -> Optional[str]:
         """Reads the CSV and returns the URL of the last scraped item for a given category."""
@@ -642,14 +611,9 @@ def scrape_category_with_resume(scraper, category_name, category_url, max_ingred
     """Scrape a single category with resume capability."""
     # Check for existing progress - get the last scraped URL for this specific category
     last_scraped_url = scraper.get_last_scraped_url(category_name, str(target_file))
-    
-    if last_scraped_url:
-        print(f"🔄 Resuming {category_name} from: {last_scraped_url}")
-    else:
-        print(f"🆕 Starting {category_name} from beginning")
 
     try:
-        ingredients = scraper.scrape_category(
+        ingredients, quality_stats = scraper.scrape_category(
             category_name, 
             category_url, 
             max_ingredients=max_ingredients,
@@ -661,11 +625,11 @@ def scrape_category_with_resume(scraper, category_name, category_url, max_ingred
             for ingredient in ingredients:
                 ingredient['category'] = category_name
 
-        return category_name, ingredients
+        return category_name, ingredients, quality_stats
 
     except Exception as e:
         print(f"❌ Error scraping category {category_name}: {e}")
-        return category_name, []
+        return category_name, [], {}
 
 def main():
     """Main function to scrape TGSC ingredient database with parallel processing."""
@@ -697,6 +661,7 @@ def main():
 
     # Track category results for final summary
     category_results = {}
+    quality_summary = {}
     total_new_ingredients = 0
 
     # Get initial counts for each category if file exists
@@ -735,7 +700,7 @@ def main():
         for future in as_completed(futures):
             category_name = futures[future]
             try:
-                category_name_result, ingredients = future.result()
+                category_name_result, ingredients, quality_stats = future.result()
                 new_count = len(ingredients) if ingredients else 0
                 initial_count = initial_counts.get(category_name, 0)
                 current_total = initial_count + new_count
@@ -744,17 +709,19 @@ def main():
                     'new': new_count,
                     'total': current_total
                 }
+                quality_summary[category_name] = quality_stats
                 total_new_ingredients += new_count
                 
                 if ingredients:
                     # Save ingredients immediately to CSV as they complete
                     scraper.save_ingredients_csv(ingredients, str(target_file))
-                    print(f"🎉 {category_name}: {new_count} ingredients completed and saved")
+                    print(f"✅ {category_name}: {new_count} ingredients completed and saved")
                 else:
                     print(f"⚠️  {category_name}: No new ingredients found")
             except Exception as e:
                 print(f"❌ {category_name}: Failed with error: {e}")
                 category_results[category_name] = {'new': 0, 'total': initial_counts.get(category_name, 0)}
+                quality_summary[category_name] = {}
 
     # Enhanced final summary
     print(f"\n🎊 SCRAPING COMPLETE!")
@@ -767,6 +734,21 @@ def main():
             if category_name in category_results:
                 result = category_results[category_name]
                 print(f"   {category_name}: {result['new']}, {result['total']}")
+        
+        # Aggregate data quality summary
+        total_cas = sum(stats.get('cas_count', 0) for stats in quality_summary.values())
+        total_einecs = sum(stats.get('einecs_count', 0) for stats in quality_summary.values())
+        total_descriptions = sum(stats.get('description_count', 0) for stats in quality_summary.values())
+        total_botanical = sum(stats.get('botanical_count', 0) for stats in quality_summary.values())
+        total_odor = sum(stats.get('odor_count', 0) for stats in quality_summary.values())
+        
+        if total_new_ingredients > 0:
+            print(f"\n📊 Data Quality Summary:")
+            print(f"   CAS numbers: {total_cas} ({total_cas/total_new_ingredients*100:.1f}%)")
+            print(f"   EINECS numbers: {total_einecs} ({total_einecs/total_new_ingredients*100:.1f}%)")
+            print(f"   Descriptions: {total_descriptions} ({total_descriptions/total_new_ingredients*100:.1f}%)")
+            print(f"   Botanical names: {total_botanical} ({total_botanical/total_new_ingredients*100:.1f}%)")
+            print(f"   Odor descriptions: {total_odor} ({total_odor/total_new_ingredients*100:.1f}%)")
         
         print(f"\nTotal new ingredients added: {total_new_ingredients}")
 
