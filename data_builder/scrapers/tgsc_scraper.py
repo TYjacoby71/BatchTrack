@@ -530,7 +530,7 @@ class TGSCIngredientScraper:
         return None
 
     def save_ingredients_csv(self, ingredients: List[Dict], filename: str):
-        """Save ingredients data to CSV file additively."""
+        """Save ingredients data to CSV file additively (no duplicate checking - handled by caller)."""
         if not ingredients:
             print("No ingredients to save")
             return
@@ -545,51 +545,6 @@ class TGSCIngredientScraper:
 
         # Check if file exists to determine if we need to write header
         file_exists = Path(filename).exists()
-        
-        # Load existing URLs to avoid duplicates
-        existing_urls = set()
-        if file_exists:
-            try:
-                with open(filename, 'r', newline='', encoding='utf-8') as csvfile:
-                    reader = csv.DictReader(csvfile)
-                    for row in reader:
-                        if row.get('url'):
-                            existing_urls.add(row['url'])
-            except Exception as e:
-                print(f"⚠️  Error reading existing CSV: {e}")
-
-        # Filter out ingredients that already exist (check both URL and name+category combination)
-        existing_combinations = set()
-        if file_exists:
-            try:
-                with open(filename, 'r', newline='', encoding='utf-8') as csvfile:
-                    reader = csv.DictReader(csvfile)
-                    for row in reader:
-                        # Create combination key of name + category for additional duplicate checking
-                        name_category_key = f"{row.get('common_name', '').lower().strip()}_{row.get('category', '').lower().strip()}"
-                        existing_combinations.add(name_category_key)
-            except Exception as e:
-                print(f"⚠️  Error reading existing combinations: {e}")
-
-        new_ingredients = []
-        for ingredient in ingredients:
-            ingredient_url = ingredient.get('url', '')
-            ingredient_name = ingredient.get('common_name', '').lower().strip()
-            ingredient_category = ingredient.get('category', '').lower().strip()
-            name_category_key = f"{ingredient_name}_{ingredient_category}"
-            
-            # Check both URL and name+category combination to prevent duplicates
-            if (ingredient_url not in existing_urls and 
-                name_category_key not in existing_combinations and
-                ingredient_name):  # Only add if has a name
-                new_ingredients.append(ingredient)
-                existing_combinations.add(name_category_key)  # Track to prevent duplicates within this batch
-            else:
-                if name_category_key in existing_combinations:
-                    print(f"⏭️  Skipping duplicate name+category: {ingredient.get('common_name', 'Unknown')}")
-
-        if not new_ingredients:
-            return
 
         try:
             # Open in append mode, or write mode if file doesn't exist
@@ -601,7 +556,7 @@ class TGSCIngredientScraper:
                 if not file_exists:
                     writer.writeheader()
 
-                for ingredient in new_ingredients:
+                for ingredient in ingredients:
                     # Convert lists to semicolon-separated strings and filter to fieldnames
                     row = {}
                     for field in fieldnames:
@@ -736,7 +691,44 @@ def main():
     # After the loop — write ONCE to prevent race conditions
     if all_new_ingredients:
         print(f"💾 Final save: Writing {len(all_new_ingredients)} new ingredients across all categories")
-        scraper.save_ingredients_csv(all_new_ingredients, str(target_file))
+        
+        # Re-load existing data one last time before final write to catch any recent writes
+        existing_urls = set()
+        existing_combinations = set()
+        if target_file.exists():
+            try:
+                with open(target_file, 'r', newline='', encoding='utf-8') as csvfile:
+                    reader = csv.DictReader(csvfile)
+                    for row in reader:
+                        if row.get('url'):
+                            existing_urls.add(row['url'])
+                        name_category_key = f"{row.get('common_name', '').lower().strip()}_{row.get('category', '').lower().strip()}"
+                        existing_combinations.add(name_category_key)
+            except Exception as e:
+                print(f"⚠️  Error reading existing data: {e}")
+
+        # Filter final ingredients with fresh duplicate check
+        final_ingredients = []
+        for ingredient in all_new_ingredients:
+            ingredient_url = ingredient.get('url', '')
+            ingredient_name = ingredient.get('common_name', '').lower().strip()
+            ingredient_category = ingredient.get('category', '').lower().strip()
+            name_category_key = f"{ingredient_name}_{ingredient_category}"
+            
+            if (ingredient_url not in existing_urls and 
+                name_category_key not in existing_combinations and
+                ingredient_name):
+                final_ingredients.append(ingredient)
+                existing_combinations.add(name_category_key)  # Track within this final batch
+            else:
+                if name_category_key in existing_combinations:
+                    print(f"⏭️  Skipping duplicate name+category: {ingredient.get('common_name', 'Unknown')}")
+
+        if final_ingredients:
+            scraper.save_ingredients_csv(final_ingredients, str(target_file))
+            print(f"✅ Successfully saved {len(final_ingredients)} unique ingredients")
+        else:
+            print("No new unique ingredients to save")
     else:
         print("No new ingredients to save")
 
