@@ -10,7 +10,7 @@ import urllib.parse
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from bs4 import BeautifulSoup, NavigableString
 import html
-import string
+import string  # Added for A-Z letters
 from queue import Queue
 import threading
 
@@ -20,15 +20,16 @@ TGSC_SEARCH_URL = f"{TGSC_BASE_URL}/search/fragrance.html"
 
 # Category endpoints for ingredient discovery (base without letter)
 TGSC_INGREDIENT_CATEGORIES = {
-    "essential_oils": f"{TGSC_BASE_URL}/essentlx.html",
-    "absolutes": f"{TGSC_BASE_URL}/abs.html",
-    "extracts": f"{TGSC_BASE_URL}/extractx.html",
-    "aromatic_ingredients": f"{TGSC_BASE_URL}/rawmatex.html",
-    "concretes": f"{TGSC_BASE_URL}/con.html",
-    "cosmetic_ingredients": f"{TGSC_BASE_URL}/cosmetix.html",
-    "botanical_species": f"{TGSC_BASE_URL}/botaspes.html",
-    "fixed_oils": f"{TGSC_BASE_URL}/fix.html",
-    "resins_gums": f"{TGSC_BASE_URL}/resinx.html"
+    "essential_oils": f"{TGSC_BASE_URL}/essentlx",
+    "absolutes": f"{TGSC_BASE_URL}/abs",
+    "extracts": f"{TGSC_BASE_URL}/extractx",
+    "aromatic_ingredients": f"{TGSC_BASE_URL}/rawmatex",
+    "all_ingredients": f"{TGSC_BASE_URL}/allprod",
+    "concretes": f"{TGSC_BASE_URL}/con",
+    "cosmetic_ingredients": f"{TGSC_BASE_URL}/cosmetix",
+    "botanical_species": f"{TGSC_BASE_URL}/botaspes",
+    "fixed_oils": f"{TGSC_BASE_URL}/fix",
+    "resins_gums": f"{TGSC_BASE_URL}/resinx"
 }
 
 class TGSCIngredientScraper:
@@ -105,45 +106,12 @@ class TGSCIngredientScraper:
         text = re.sub(r'\breferences?\b', '', text, flags=re.IGNORECASE)
         text = re.sub(r'\bagents?\b(?!\s+(?:for|of|in))', '', text, flags=re.IGNORECASE)
         
-        # Remove placeholder and template text commonly found on TGSC
-        placeholder_patterns = [
-            r'and/or flavor descriptions from others \(if found\)',
-            r'descriptions from others \(if found\)',
-            r'Information:',
-            r'Articles Notes',
-            r'Supplier Sponsors',
-            r'CAS Number:',
-            r'3D/inchi FDA UNII:',
-            r'XlogP3[:-]?',
-            r'PubMed:',
-            r'& Fragrances industries worldwide',
-            r'in Flavor & Fragrances industries worldwide',
-            r'd for fragrances or flavors',
-        ]
-        
-        for pattern in placeholder_patterns:
-            text = re.sub(pattern, '', text, flags=re.IGNORECASE)
-        
-        # Clean up chemical database references
-        text = re.sub(r'Articles: None found yet', '', text, flags=re.IGNORECASE)
-        text = re.sub(r'Articles: PubMed:[^;]*', '', text, flags=re.IGNORECASE)
-        
         # Normalize whitespace
         text = re.sub(r'\s+', ' ', text)
         text = text.strip()
         
-        # Filter out very short or meaningless text, and common placeholder phrases
-        meaningless_phrases = [
-            'search', 'references', 'agents', 'ing', 'and', 'the', 'of', 'a', 'an',
-            'information', 'articles', 'none found yet', 'supplier sponsors',
-            'd for fragrances or flavors', 'cas number', 'found yet', 'notes'
-        ]
-        
-        if (len(text) < 5 or 
-            text.lower() in meaningless_phrases or
-            text.lower().startswith('ld50') or  # Toxicity data without context
-            'GoogleAnalyticsObject' in text or  # JavaScript artifacts
-            text.count(';') > 3):  # Likely fragmented data
+        # Filter out very short or meaningless text
+        if len(text) < 3 or text.lower() in ['search', 'references', 'agents', 'ing', 'and', 'the', 'of', 'a', 'an']:
             return ""
             
         return text
@@ -393,34 +361,29 @@ class TGSCIngredientScraper:
         if solubility_text:
             ingredient_data['solubility'] = solubility_text[:200]
 
-        # Extract odor descriptions - be more selective
+        # Extract odor descriptions
         odor_patterns = [
-            r'Has (?:an? )?([^.]{10,200}?) type odor',
-            r'Odor Type:\s*([^.]{10,200}?)(?:\.|Odor|$)',
-            r'Odor Description:\s*([^.]{10,200}?)(?:\.|$)',
-            r'odor[:\s]*([^.]{10,200}?)(?:\.|$)',
-            r'odour[:\s]*([^.]{10,200}?)(?:\.|$)',
-            r'scent[:\s]*([^.]{10,200}?)(?:\.|$)',
-            r'aroma[:\s]*([^.]{10,200}?)(?:\.|$)'
+            r'Has (?:an? )?([^.]{5,200}?) type odor',
+            r'odor[:\s]*([^.]{5,200}?)(?:\.|$)',
+            r'odour[:\s]*([^.]{5,200}?)(?:\.|$)',
+            r'scent[:\s]*([^.]{5,200}?)(?:\.|$)',
+            r'aroma[:\s]*([^.]{5,200}?)(?:\.|$)'
         ]
         
-        odor_text = self.extract_text_from_soup(soup, odor_patterns, ['Odor Type', 'Odor Description', 'odor', 'odour', 'scent', 'aroma'])
-        # Only keep if it contains descriptive words, not just placeholders
-        if odor_text and not any(phrase in odor_text.lower() for phrase in ['type:', 'descriptions from others', 'if found', 'information']):
+        odor_text = self.extract_text_from_soup(soup, odor_patterns, ['odor', 'odour', 'scent', 'aroma'])
+        if odor_text:
             ingredient_data['odor_description'] = odor_text[:300]
 
-        # Extract flavor descriptions - be more selective  
+        # Extract flavor descriptions
         flavor_patterns = [
-            r'Has (?:an? )?([^.]{10,200}?) type flavor',
-            r'Flavor Type:\s*([^.]{10,200}?)(?:\.|Flavor|$)',
-            r'flavor[:\s]*([^.]{10,200}?)(?:\.|$)',
-            r'flavour[:\s]*([^.]{10,200}?)(?:\.|$)',
-            r'taste[:\s]*([^.]{10,200}?)(?:\.|$)'
+            r'Has (?:an? )?([^.]{5,200}?) type flavor',
+            r'flavor[:\s]*([^.]{5,200}?)(?:\.|$)',
+            r'flavour[:\s]*([^.]{5,200}?)(?:\.|$)',
+            r'taste[:\s]*([^.]{5,200}?)(?:\.|$)'
         ]
         
-        flavor_text = self.extract_text_from_soup(soup, flavor_patterns, ['Flavor Type', 'flavor', 'flavour', 'taste'])
-        # Only keep if it contains descriptive words, not just placeholders
-        if flavor_text and not any(phrase in flavor_text.lower() for phrase in ['descriptions from others', 'if found', 'information']):
+        flavor_text = self.extract_text_from_soup(soup, flavor_patterns, ['flavor', 'flavour', 'taste'])
+        if flavor_text:
             ingredient_data['flavor_description'] = flavor_text[:300]
 
         # Extract uses and applications
@@ -482,19 +445,15 @@ class TGSCIngredientScraper:
 
     def scrape_category(self, category_name: str, category_url: str, max_ingredients: int = 50, resume_from_url: Optional[str] = None) -> Tuple[List[Dict], Dict]:
         """Scrape all ingredients from a specific category, with resume capability."""
-        all_ingredient_links = []
-        
-        # TGSC requires letter parameters, so we'll try A-Z for each category
-        for letter in string.ascii_uppercase:
-            letter_url = f"{category_url}?letter={letter}"
-            category_html = self.fetch_html(letter_url)
-            if category_html:
-                # Extract ingredient links from this letter's page
-                letter_links = self.extract_ingredient_links(category_html)
-                all_ingredient_links.extend(letter_links)
-                if letter_links:
-                    print(f"📋 Found {len(letter_links)} ingredients for {category_name} letter '{letter}'")
-        
+        # Fetch category page
+        category_html = self.fetch_html(category_url)
+        if not category_html:
+            print(f"❌ Failed to fetch category page: {category_name}")
+            return [], {}
+
+        # Extract ingredient links
+        all_ingredient_links = self.extract_ingredient_links(category_html)
+
         if not all_ingredient_links:
             print(f"⚠️  No ingredient links found for {category_name}")
             return [], {}
@@ -750,7 +709,7 @@ def main():
     
     while categories_completed < total_categories:
         try:
-            result = results_queue.get(timeout=120)  # 2 minute timeout for results
+            result = results_queue.get(timeout=30)  # 30 second timeout for results
             category_name = result['category_name']
             ingredients = result.get('ingredients', [])
             quality_stats = result.get('quality_stats', {})
@@ -770,38 +729,9 @@ def main():
                 all_new_ingredients.extend(ingredients)
                 
             categories_completed += 1
-            print(f"✅ Progress: {categories_completed}/{total_categories} categories completed")
             
         except:  # Timeout waiting for results
-            print(f"⚠️ Timeout waiting for category results. Completed: {categories_completed}/{total_categories}")
-            # Don't break immediately - collect any remaining results in queue
-            remaining_attempts = 5
-            while remaining_attempts > 0 and categories_completed < total_categories:
-                try:
-                    result = results_queue.get(timeout=10)  # Shorter timeout for cleanup
-                    category_name = result['category_name']
-                    ingredients = result.get('ingredients', [])
-                    quality_stats = result.get('quality_stats', {})
-                    
-                    new_count = len(ingredients) if ingredients else 0
-                    initial_count = initial_counts.get(category_name, 0)
-                    current_total = initial_count + new_count
-                    
-                    category_results[category_name] = {
-                        'new': new_count,
-                        'total': current_total
-                    }
-                    quality_summary[category_name] = quality_stats
-                    total_new_ingredients += new_count
-                    
-                    if ingredients:
-                        all_new_ingredients.extend(ingredients)
-                        
-                    categories_completed += 1
-                    print(f"✅ Late completion: {categories_completed}/{total_categories} categories completed")
-                    
-                except:
-                    remaining_attempts -= 1
+            print("⚠️ Timeout waiting for category results")
             break
     
     # Signal workers to stop and wait for them
@@ -809,7 +739,7 @@ def main():
         work_queue.put(None)  # Poison pill
     
     for worker_thread in workers:
-        worker_thread.join(timeout=30)
+        worker_thread.join(timeout=10)
 
     # After the loop — write ONCE to prevent race conditions (engineer's fix)
     if all_new_ingredients:
@@ -852,16 +782,13 @@ def main():
     print(f"\n🎊 SCRAPING COMPLETE!")
     print(f"📁 File: {target_file}")
     print(f"\n📊 Total ingredients added: {total_new_ingredients}")
-    print(f"📊 Categories processed: {len(category_results)}/{len(TGSC_INGREDIENT_CATEGORIES)}")
     
     if category_results:
-        print("\n📋 Category breakdown:")
+        print("\nCategory breakdown:")
         for category_name in TGSC_INGREDIENT_CATEGORIES.keys():
             if category_name in category_results:
                 result = category_results[category_name]
-                print(f"   ✅ {category_name}: +{result['new']}, total: {result['total']}")
-            else:
-                print(f"   ❌ {category_name}: incomplete/timeout")
+                print(f"   {category_name}: +{result['new']}, total: {result['total']}")
         
         # Aggregate data quality summary
         total_cas = sum(stats.get('cas_count', 0) for stats in quality_summary.values())
@@ -877,8 +804,6 @@ def main():
             print(f"   Descriptions: {total_descriptions} ({total_descriptions/total_new_ingredients*100:.1f}%)")
             print(f"   Botanical names: {total_botanical} ({total_botanical/total_new_ingredients*100:.1f}%)")
             print(f"   Odor descriptions: {total_odor} ({total_odor/total_new_ingredients*100:.1f}%)")
-    else:
-        print("\n⚠️  No category results collected - possible timeout or worker issues")
 
 
 if __name__ == "__main__":
