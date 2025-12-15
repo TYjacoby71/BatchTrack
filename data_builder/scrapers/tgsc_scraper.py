@@ -692,6 +692,8 @@ def main():
             print(f"⚠️  Error loading existing data: {e}")
 
     # Process categories in parallel
+    all_new_ingredients = []
+    
     with ThreadPoolExecutor(max_workers=args.max_workers) as executor:
         # Submit all category tasks
         futures = {
@@ -706,7 +708,7 @@ def main():
             for category_name, category_url in TGSC_INGREDIENT_CATEGORIES.items()
         }
 
-        # Process completed tasks and save immediately
+        # Process completed tasks and collect all ingredients
         for future in as_completed(futures):
             category_name = futures[future]
             try:
@@ -723,12 +725,20 @@ def main():
                 total_new_ingredients += new_count
                 
                 if ingredients:
-                    # Save ingredients immediately to CSV as they complete
-                    scraper.save_ingredients_csv(ingredients, str(target_file))
+                    all_new_ingredients.extend(ingredients)
+                    print(f"📋 Collected {new_count} ingredients from {category_name}")
+                    
             except Exception as e:
                 print(f"❌ {category_name}: Failed with error: {e}")
                 category_results[category_name] = {'new': 0, 'total': initial_counts.get(category_name, 0)}
                 quality_summary[category_name] = {}
+
+    # After the loop — write ONCE to prevent race conditions
+    if all_new_ingredients:
+        print(f"💾 Final save: Writing {len(all_new_ingredients)} new ingredients across all categories")
+        scraper.save_ingredients_csv(all_new_ingredients, str(target_file))
+    else:
+        print("No new ingredients to save")
 
     # Enhanced final summary
     print(f"\n🎊 SCRAPING COMPLETE!")
