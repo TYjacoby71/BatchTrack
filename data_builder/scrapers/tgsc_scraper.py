@@ -20,16 +20,15 @@ TGSC_SEARCH_URL = f"{TGSC_BASE_URL}/search/fragrance.html"
 
 # Category endpoints for ingredient discovery (base without letter)
 TGSC_INGREDIENT_CATEGORIES = {
-    "essential_oils": f"{TGSC_BASE_URL}/essentlx",
-    "absolutes": f"{TGSC_BASE_URL}/abs",
-    "extracts": f"{TGSC_BASE_URL}/extractx",
-    "aromatic_ingredients": f"{TGSC_BASE_URL}/rawmatex",
-    "all_ingredients": f"{TGSC_BASE_URL}/allprod",
-    "concretes": f"{TGSC_BASE_URL}/con",
-    "cosmetic_ingredients": f"{TGSC_BASE_URL}/cosmetix",
-    "botanical_species": f"{TGSC_BASE_URL}/botaspes",
-    "fixed_oils": f"{TGSC_BASE_URL}/fix",
-    "resins_gums": f"{TGSC_BASE_URL}/resinx"
+    "essential_oils": f"{TGSC_BASE_URL}/essentlx.html",
+    "absolutes": f"{TGSC_BASE_URL}/abs.html",
+    "extracts": f"{TGSC_BASE_URL}/extractx.html",
+    "aromatic_ingredients": f"{TGSC_BASE_URL}/rawmatex.html",
+    "concretes": f"{TGSC_BASE_URL}/con.html",
+    "cosmetic_ingredients": f"{TGSC_BASE_URL}/cosmetix.html",
+    "botanical_species": f"{TGSC_BASE_URL}/botaspes.html",
+    "fixed_oils": f"{TGSC_BASE_URL}/fix.html",
+    "resins_gums": f"{TGSC_BASE_URL}/resinx.html"
 }
 
 class TGSCIngredientScraper:
@@ -487,7 +486,7 @@ class TGSCIngredientScraper:
         
         # TGSC requires letter parameters, so we'll try A-Z for each category
         for letter in string.ascii_uppercase:
-            letter_url = f"{category_url}.html?letter={letter}"
+            letter_url = f"{category_url}?letter={letter}"
             category_html = self.fetch_html(letter_url)
             if category_html:
                 # Extract ingredient links from this letter's page
@@ -495,20 +494,7 @@ class TGSCIngredientScraper:
                 all_ingredient_links.extend(letter_links)
                 if letter_links:
                     print(f"📋 Found {len(letter_links)} ingredients for {category_name} letter '{letter}'")
-            else:
-                # Try without .html extension
-                letter_url_alt = f"{category_url}?letter={letter}"
-                category_html = self.fetch_html(letter_url_alt)
-                if category_html:
-                    letter_links = self.extract_ingredient_links(category_html)
-                    all_ingredient_links.extend(letter_links)
-                    if letter_links:
-                        print(f"📋 Found {len(letter_links)} ingredients for {category_name} letter '{letter}'")
         
-        if not all_ingredient_links:
-            print(f"⚠️  No ingredient links found for {category_name}")
-            return [], {}
-
         if not all_ingredient_links:
             print(f"⚠️  No ingredient links found for {category_name}")
             return [], {}
