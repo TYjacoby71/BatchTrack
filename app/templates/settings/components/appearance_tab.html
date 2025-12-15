@@ -9,6 +9,7 @@
         async applyTheme(newTheme) {
           this.theme = newTheme;
           try {
+            // Apply theme immediately to DOM and localStorage
             if (newTheme && newTheme !== 'system') {
               document.documentElement.setAttribute('data-theme', newTheme);
               localStorage.setItem('bt_theme', newTheme);
@@ -16,17 +17,27 @@
               document.documentElement.removeAttribute('data-theme');
               localStorage.removeItem('bt_theme');
             }
-            // Persist for users that have preferences
-            const res = await fetch('/settings/api/user-preferences', {
-              method: 'POST',
-              headers: {
-                'Content-Type': 'application/json',
-                'X-CSRFToken': document.querySelector('meta[name=csrf-token]').getAttribute('content')
-              },
-              body: JSON.stringify({ theme: newTheme })
-            });
-            // No hard failure if not allowed (e.g., developers)
-          } catch (e) { /* ignore */ }
+            
+            // Try to persist to user preferences (may fail for anonymous users or developers)
+            try {
+              const res = await fetch('/settings/api/user-preferences', {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json',
+                  'X-CSRFToken': document.querySelector('meta[name=csrf-token]').getAttribute('content')
+                },
+                body: JSON.stringify({ theme: newTheme })
+              });
+              
+              if (!res.ok) {
+                console.log('Theme saved to localStorage only (user preferences not available)');
+              }
+            } catch (prefError) {
+              console.log('Theme saved to localStorage only (user preferences not available)');
+            }
+          } catch (e) { 
+            console.warn('Theme application failed:', e);
+          }
         }
       }">
         <div class="mb-3">

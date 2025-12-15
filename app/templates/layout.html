@@ -71,6 +71,15 @@
             margin: 0 auto;
         }
     </style>
+<script>
+    // Initialize theme immediately to prevent flash
+    (function() {
+      const savedTheme = localStorage.getItem('bt_theme');
+      if (savedTheme && savedTheme !== 'system') {
+        document.documentElement.setAttribute('data-theme', savedTheme);
+      }
+    })();
+  </script>
 </head>
 <body data-authenticated="{{ 'true' if current_user.is_authenticated else 'false' }}">
     <script>
