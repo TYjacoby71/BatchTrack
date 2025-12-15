@@ -1,0 +1,106 @@
+🚀 TGSC Ingredient Database Scraper (Enhanced)
+============================================================
+📊 Max ingredients per category: 2
+⚡ Max parallel workers: 3
+🔄 Resume mode: Disabled
+📄 No existing entries found for category: essential_oils
+📄 No existing entries found for category: absolutes
+📄 No existing entries found for category: extracts
+📄 No existing entries found for category: aromatic_ingredients
+📄 No existing entries found for category: concretes
+📄 No existing entries found for category: cosmetic_ingredients
+📄 No existing entries found for category: botanical_species
+📄 No existing entries found for category: fixed_oils
+📄 No existing entries found for category: resins_gums
+Failed to fetch page. Status code: 404
+Failed to fetch page. Status code: 404
+Failed to fetch page. Status code: 404
+Failed to fetch page. Status code: 404
+Failed to fetch page. Status code: 404
+Failed to fetch page. Status code: 404
+Failed to fetch page. Status code: 404
+Failed to fetch page. Status code: 404
+Failed to fetch page. Status code: 404
+Failed to fetch page. Status code: 404
+Failed to fetch page. Status code: 404
+Failed to fetch page. Status code: 404
+Failed to fetch page. Status code: 404
+Failed to fetch page. Status code: 404
+Failed to fetch page. Status code: 404
+Failed to fetch page. Status code: 404
+Failed to fetch page. Status code: 404
+Failed to fetch page. Status code: 404
+Failed to fetch page. Status code: 404
+Failed to fetch page. Status code: 404
+Failed to fetch page. Status code: 404
+Failed to fetch page. Status code: 404
+Failed to fetch page. Status code: 404
+Failed to fetch page. Status code: 404
+📋 Found 109 ingredients for essential_oils letter 'A'
+Failed to fetch page. Status code: 404
+Failed to fetch page. Status code: 404
+⚠️  No ingredient links found for absolutes
+✅ absolutes completed - no more items to scrape
+📋 Found 640 ingredients for extracts letter 'A'
+📋 Found 109 ingredients for essential_oils letter 'B'
+📋 Found 640 ingredients for extracts letter 'B'
+📋 Found 890 ingredients for aromatic_ingredients letter 'A'
+📋 Found 109 ingredients for essential_oils letter 'C'
+📋 Found 640 ingredients for extracts letter 'C'
+📋 Found 890 ingredients for aromatic_ingredients letter 'B'
+📋 Found 109 ingredients for essential_oils letter 'D'
+📋 Found 640 ingredients for extracts letter 'D'
+📋 Found 890 ingredients for aromatic_ingredients letter 'C'
+📋 Found 109 ingredients for essential_oils letter 'E'
+📋 Found 640 ingredients for extracts letter 'E'
+📋 Found 890 ingredients for aromatic_ingredients letter 'D'
+📋 Found 109 ingredients for essential_oils letter 'F'
+📋 Found 640 ingredients for extracts letter 'F'
+📋 Found 890 ingredients for aromatic_ingredients letter 'E'
+📋 Found 109 ingredients for essential_oils letter 'G'
+📋 Found 640 ingredients for extracts letter 'G'
+📋 Found 890 ingredients for aromatic_ingredients letter 'F'
+📋 Found 109 ingredients for essential_oils letter 'H'
+📋 Found 640 ingredients for extracts letter 'H'
+📋 Found 890 ingredients for aromatic_ingredients letter 'G'
+📋 Found 109 ingredients for essential_oils letter 'I'
+📋 Found 640 ingredients for extracts letter 'I'
+📋 Found 890 ingredients for aromatic_ingredients letter 'H'
+📋 Found 109 ingredients for essential_oils letter 'J'
+📋 Found 640 ingredients for extracts letter 'J'
+📋 Found 109 ingredients for essential_oils letter 'K'
+📋 Found 890 ingredients for aromatic_ingredients letter 'I'
+📋 Found 640 ingredients for extracts letter 'K'
+📋 Found 109 ingredients for essential_oils letter 'L'
+📋 Found 890 ingredients for aromatic_ingredients letter 'J'
+📋 Found 640 ingredients for extracts letter 'L'
+📋 Found 109 ingredients for essential_oils letter 'M'
+📋 Found 890 ingredients for aromatic_ingredients letter 'K'
+📋 Found 640 ingredients for extracts letter 'M'
+📋 Found 109 ingredients for essential_oils letter 'N'
+📋 Found 890 ingredients for aromatic_ingredients letter 'L'
+📋 Found 109 ingredients for essential_oils letter 'O'
+📋 Found 640 ingredients for extracts letter 'N'
+📋 Found 890 ingredients for aromatic_ingredients letter 'M'
+📋 Found 109 ingredients for essential_oils letter 'P'
+📋 Found 640 ingredients for extracts letter 'O'
+📋 Found 890 ingredients for aromatic_ingredients letter 'N'
+📋 Found 109 ingredients for essential_oils letter 'Q'
+📋 Found 640 ingredients for extracts letter 'P'
+📋 Found 890 ingredients for aromatic_ingredients letter 'O'
+📋 Found 109 ingredients for essential_oils letter 'R'
+📋 Found 640 ingredients for extracts letter 'Q'
+📋 Found 890 ingredients for aromatic_ingredients letter 'P'
+📋 Found 109 ingredients for essential_oils letter 'S'
+📋 Found 640 ingredients for extracts letter 'R'
+📋 Found 890 ingredients for aromatic_ingredients letter 'Q'
+⚠️ Timeout waiting for category results
+📋 Found 109 ingredients for essential_oils letter 'T'
+📋 Found 640 ingredients for extracts letter 'S'
+📋 Found 890 ingredients for aromatic_ingredients letter 'R'
+📋 Found 109 ingredients for essential_oils letter 'U'
+📋 Found 640 ingredients for extracts letter 'T'
+📋 Found 890 ingredients for aromatic_ingredients letter 'S'
+📋 Found 109 ingredients for essential_oils letter 'V'
+📋 Found 640 ingredients for extracts letter 'U'
+📋 Found 890 ingredients for aromatic_ingredients letter 'T'
