@@ -1,19 +1,55 @@
 [
   {
-    "term": "Cane Sugar",
+    "term": "Allspice",
+    "priority": 7
+  },
+  {
+    "term": "Almond Oil",
+    "priority": 9
+  },
+  {
+    "term": "Amaranth Seed",
+    "priority": 6
+  },
+  {
+    "term": "Amber Resin",
+    "priority": 5
+  },
+  {
+    "term": "Anise",
+    "priority": 7
+  },
+  {
+    "term": "Apple Cider Vinegar",
+    "priority": 8
+  },
+  {
+    "term": "Apricot Powder",
+    "priority": 4
+  },
+  {
+    "term": "Argan Oil",
     "priority": 10
   },
   {
-    "term": "Citric Acid",
-    "priority": 10
+    "term": "Arrowroot Starch",
+    "priority": 8
   },
   {
-    "term": "Coconut Oil",
-    "priority": 10
+    "term": "Ascorbic Acid",
+    "priority": 9
   },
   {
-    "term": "Epsom Salt",
-    "priority": 10
+    "term": "Babassu Oil",
+    "priority": 8
+  },
+  {
+    "term": "Bacopa Monnieri",
+    "priority": 4
+  },
+  {
+    "term": "Baobab Oil",
+    "priority": 7
   },
   {
     "term": "Barley Malt",
@@ -24,72 +60,32 @@
     "priority": 9
   },
   {
-    "term": "Bergamot",
-    "priority": 9
+    "term": "Bay Leaf",
+    "priority": 6
   },
   {
-    "term": "Cacao Butter",
-    "priority": 9
-  },
-  {
-    "term": "Castor Oil",
-    "priority": 9
-  },
-  {
-    "term": "Chamomile",
-    "priority": 9
-  },
-  {
-    "term": "Cocoa Butter",
-    "priority": 9
-  },
-  {
-    "term": "Elderberry",
-    "priority": 9
-  },
-  {
-    "term": "Babassu Oil",
-    "priority": 8
+    "term": "Beetroot Powder",
+    "priority": 7
   },
   {
     "term": "Bentonite Clay",
     "priority": 8
   },
   {
-    "term": "Black Tea",
-    "priority": 8
+    "term": "Bergamot",
+    "priority": 9
   },
   {
-    "term": "Brewer's Yeast",
-    "priority": 8
+    "term": "Beta-Carotene",
+    "priority": 6
   },
   {
-    "term": "Camellia Oil",
-    "priority": 8
+    "term": "Bilberry Extract",
+    "priority": 5
   },
   {
-    "term": "Cannabidiol (CBD)",
-    "priority": 8
-  },
-  {
-    "term": "Cedarwood",
-    "priority": 8
-  },
-  {
-    "term": "Cinnamon",
-    "priority": 8
-  },
-  {
-    "term": "Dead Sea Salt",
-    "priority": 8
-  },
-  {
-    "term": "Baobab Oil",
-    "priority": 7
-  },
-  {
-    "term": "Beetroot Powder",
-    "priority": 7
+    "term": "Birch Tar",
+    "priority": 4
   },
   {
     "term": "Black Cumin Seed Oil",
@@ -100,119 +96,163 @@
     "priority": 7
   },
   {
-    "term": "Borage",
-    "priority": 7
-  },
-  {
-    "term": "Caffeine",
-    "priority": 7
-  },
-  {
-    "term": "Candelilla Wax",
-    "priority": 7
-  },
-  {
-    "term": "Carnauba Wax",
-    "priority": 7
-  },
-  {
-    "term": "Charcoal",
-    "priority": 7
-  },
-  {
-    "term": "Clove",
-    "priority": 7
-  },
-  {
-    "term": "Corn Starch",
-    "priority": 7
-  },
-  {
-    "term": "Echinacea",
-    "priority": 7
-  },
-  {
-    "term": "Evening Primrose Oil",
-    "priority": 7
-  },
-  {
-    "term": "Bay Leaf",
-    "priority": 6
-  },
-  {
-    "term": "Beta-Carotene",
-    "priority": 6
+    "term": "Black Tea",
+    "priority": 8
   },
   {
     "term": "Blue Tansy",
     "priority": 6
   },
   {
+    "term": "Borage",
+    "priority": 7
+  },
+  {
+    "term": "Brewer's Yeast",
+    "priority": 8
+  },
+  {
     "term": "Burdock Root",
     "priority": 6
   },
   {
-    "term": "Carrot Seed",
-    "priority": 6
+    "term": "Cacao Butter",
+    "priority": 9
   },
   {
-    "term": "Clary Sage",
-    "priority": 6
-  },
-  {
-    "term": "Cypress",
-    "priority": 6
-  },
-  {
-    "term": "Dandelion Root",
-    "priority": 6
-  },
-  {
-    "term": "Bilberry Extract",
-    "priority": 5
-  },
-  {
-    "term": "Capsicum",
-    "priority": 5
-  },
-  {
-    "term": "Comfrey",
-    "priority": 5
-  },
-  {
-    "term": "Diastatic Malt Powder",
-    "priority": 5
-  },
-  {
-    "term": "Bacopa Monnieri",
-    "priority": 4
-  },
-  {
-    "term": "Birch Tar",
-    "priority": 4
+    "term": "Caffeine",
+    "priority": 7
   },
   {
     "term": "Calamus Root",
     "priority": 4
   },
   {
-    "term": "Copaiba Balsam",
-    "priority": 4
+    "term": "Camellia Oil",
+    "priority": 8
   },
   {
-    "term": "Damiana",
-    "priority": 4
+    "term": "Candelilla Wax",
+    "priority": 7
   },
   {
-    "term": "Elemi Oil",
-    "priority": 4
+    "term": "Cane Sugar",
+    "priority": 10
+  },
+  {
+    "term": "Cannabidiol (CBD)",
+    "priority": 8
+  },
+  {
+    "term": "Capsicum",
+    "priority": 5
+  },
+  {
+    "term": "Carnauba Wax",
+    "priority": 7
+  },
+  {
+    "term": "Carrot Seed",
+    "priority": 6
+  },
+  {
+    "term": "Castor Oil",
+    "priority": 9
   },
   {
     "term": "Catnip",
     "priority": 3
   },
   {
+    "term": "Cedarwood",
+    "priority": 8
+  },
+  {
+    "term": "Chamomile",
+    "priority": 9
+  },
+  {
+    "term": "Charcoal",
+    "priority": 7
+  },
+  {
+    "term": "Cinnamon",
+    "priority": 8
+  },
+  {
+    "term": "Citric Acid",
+    "priority": 10
+  },
+  {
+    "term": "Clary Sage",
+    "priority": 6
+  },
+  {
+    "term": "Clove",
+    "priority": 7
+  },
+  {
+    "term": "Cocoa Butter",
+    "priority": 9
+  },
+  {
+    "term": "Coconut Oil",
+    "priority": 10
+  },
+  {
+    "term": "Comfrey",
+    "priority": 5
+  },
+  {
+    "term": "Copaiba Balsam",
+    "priority": 4
+  },
+  {
+    "term": "Corn Starch",
+    "priority": 7
+  },
+  {
+    "term": "Cypress",
+    "priority": 6
+  },
+  {
+    "term": "Damiana",
+    "priority": 4
+  },
+  {
+    "term": "Dandelion Root",
+    "priority": 6
+  },
+  {
+    "term": "Dead Sea Salt",
+    "priority": 8
+  },
+  {
+    "term": "Diastatic Malt Powder",
+    "priority": 5
+  },
+  {
     "term": "Dragon's Blood Resin",
     "priority": 3
+  },
+  {
+    "term": "Echinacea",
+    "priority": 7
+  },
+  {
+    "term": "Elderberry",
+    "priority": 9
+  },
+  {
+    "term": "Elemi Oil",
+    "priority": 4
+  },
+  {
+    "term": "Epsom Salt",
+    "priority": 10
+  },
+  {
+    "term": "Evening Primrose Oil",
+    "priority": 7
   }
 ]
