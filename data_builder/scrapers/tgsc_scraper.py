@@ -18,18 +18,18 @@ import threading
 TGSC_BASE_URL = "https://www.thegoodscentscompany.com"
 TGSC_SEARCH_URL = f"{TGSC_BASE_URL}/search/fragrance.html"
 
-# Category endpoints for ingredient discovery (base without letter)
+# Category endpoints for ingredient discovery with proper URL patterns
 TGSC_INGREDIENT_CATEGORIES = {
-    "essential_oils": f"{TGSC_BASE_URL}/essentlx",
-    "absolutes": f"{TGSC_BASE_URL}/abs",
-    "extracts": f"{TGSC_BASE_URL}/extractx",
-    "aromatic_ingredients": f"{TGSC_BASE_URL}/rawmatex",
-    "all_ingredients": f"{TGSC_BASE_URL}/allprod",
-    "concretes": f"{TGSC_BASE_URL}/con",
-    "cosmetic_ingredients": f"{TGSC_BASE_URL}/cosmetix",
-    "botanical_species": f"{TGSC_BASE_URL}/botaspes",
-    "fixed_oils": f"{TGSC_BASE_URL}/fix",
-    "resins_gums": f"{TGSC_BASE_URL}/resinx"
+    "essential_oils": f"{TGSC_BASE_URL}/essentlx.html",
+    "absolutes": f"{TGSC_BASE_URL}/abs.html", 
+    "extracts": f"{TGSC_BASE_URL}/extractx.html",
+    "aromatic_ingredients": f"{TGSC_BASE_URL}/rawmatex.html",
+    "all_ingredients": f"{TGSC_BASE_URL}/allprod.html",
+    "concretes": f"{TGSC_BASE_URL}/con.html",
+    "cosmetic_ingredients": f"{TGSC_BASE_URL}/cosmetix.html",
+    "botanical_species": f"{TGSC_BASE_URL}/botaspes.html", 
+    "fixed_oils": f"{TGSC_BASE_URL}/fix.html",
+    "resins_gums": f"{TGSC_BASE_URL}/resinx.html"
 }
 
 class TGSCIngredientScraper:
@@ -444,36 +444,10 @@ class TGSCIngredientScraper:
         return ingredient_data
 
     def scrape_category(self, category_name: str, category_url: str, max_ingredients: int = 50, resume_from_url: Optional[str] = None) -> Tuple[List[Dict], Dict]:
-        """Scrape all ingredients from a specific category, with resume capability."""
-        # Fetch category page
-        category_html = self.fetch_html(category_url)
-        if not category_html:
-            print(f"❌ Failed to fetch category page: {category_name}")
-            return [], {}
-
-        # Extract ingredient links
-        all_ingredient_links = self.extract_ingredient_links(category_html)
-
-        if not all_ingredient_links:
-            print(f"⚠️  No ingredient links found for {category_name}")
-            return [], {}
-
-        # Determine start index for resuming
-        start_index = 0
-        if resume_from_url:
-            try:
-                start_index = all_ingredient_links.index(resume_from_url) + 1
-            except ValueError:
-                start_index = 0
-        
-        # Limit ingredients per category
-        ingredient_links_to_process = all_ingredient_links[start_index : start_index + max_ingredients]
-        
-        if not ingredient_links_to_process:
-            return [], {}
-
+        """Scrape all ingredients from a specific category, with alphabet pagination and resume capability."""
         ingredients_data = []
-
+        all_ingredient_links = []
+        
         # Data quality tracking
         quality_stats = {
             'cas_count': 0,
@@ -483,27 +457,100 @@ class TGSCIngredientScraper:
             'odor_count': 0
         }
 
-        # Scrape each ingredient
-        for i, link in enumerate(ingredient_links_to_process, start=start_index + 1):
-            html_content = self.fetch_html(link, save_filename=None)
-            if html_content:
-                ingredient_data = self.parse_ingredient_data(html_content, link)
-                if ingredient_data['common_name']:  # Only save if we got a name
-                    # Add category info immediately
-                    ingredient_data['category'] = category_name
-                    ingredients_data.append(ingredient_data)
+        # Try different URL patterns to find working ones
+        url_patterns = [
+            category_url,  # Try the original URL first
+            category_url.replace('.html', ''),  # Try without .html
+            f"{category_url}?letter=a",  # Try with alphabet pagination
+            f"{category_url.replace('.html', '')}a.html"  # Try letter-specific pattern
+        ]
+        
+        # Try each letter of the alphabet for this category
+        letters = list(string.ascii_lowercase)
+        
+        for letter in letters:
+            if len(ingredients_data) >= max_ingredients:
+                break
+                
+            # Try different URL patterns for each letter
+            letter_urls = [
+                f"{category_url.replace('.html', '')}{letter}.html",
+                f"{category_url.replace('.html', '')}/{letter}.html", 
+                f"{category_url}?letter={letter}",
+                f"{category_url}&letter={letter}",
+                f"{TGSC_BASE_URL}/data/{category_name}_{letter}.html"
+            ]
+            
+            category_html = None
+            working_url = None
+            
+            for url_pattern in letter_urls:
+                category_html = self.fetch_html(url_pattern)
+                if category_html and "404" not in category_html.lower():
+                    working_url = url_pattern
+                    print(f"✅ Found working URL pattern for {category_name} letter {letter}: {working_url}")
+                    break
+                    
+            if not category_html:
+                continue  # Try next letter
+                
+            # Extract ingredient links from this letter page
+            letter_ingredient_links = self.extract_ingredient_links(category_html)
+            
+            if letter_ingredient_links:
+                print(f"📋 Found {len(letter_ingredient_links)} ingredients for {category_name} letter {letter}")
+                all_ingredient_links.extend(letter_ingredient_links)
+                
+                # Process ingredients for this letter
+                for link in letter_ingredient_links:
+                    if len(ingredients_data) >= max_ingredients:
+                        break
+                        
+                    # Check if we should resume from this URL
+                    if resume_from_url and link != resume_from_url:
+                        continue
+                    elif resume_from_url and link == resume_from_url:
+                        resume_from_url = None  # Found resume point, start processing
+                        continue
+                        
+                    html_content = self.fetch_html(link, save_filename=None)
+                    if html_content:
+                        ingredient_data = self.parse_ingredient_data(html_content, link)
+                        if ingredient_data['common_name']:  # Only save if we got a name
+                            # Add category info immediately
+                            ingredient_data['category'] = category_name
+                            ingredients_data.append(ingredient_data)
+                            
+                            print(f"✅ Scraped: {ingredient_data['common_name']} ({len(ingredients_data)}/{max_ingredients})")
 
-                    # Track data quality
-                    if ingredient_data.get('cas_number'):
-                        quality_stats['cas_count'] += 1
-                    if ingredient_data.get('einecs_number'):
-                        quality_stats['einecs_count'] += 1
-                    if ingredient_data.get('description'):
-                        quality_stats['description_count'] += 1
-                    if ingredient_data.get('botanical_name'):
-                        quality_stats['botanical_count'] += 1
-                    if ingredient_data.get('odor_description'):
-                        quality_stats['odor_count'] += 1
+                            # Track data quality
+                            if ingredient_data.get('cas_number'):
+                                quality_stats['cas_count'] += 1
+                            if ingredient_data.get('einecs_number'):
+                                quality_stats['einecs_count'] += 1
+                            if ingredient_data.get('description'):
+                                quality_stats['description_count'] += 1
+                            if ingredient_data.get('botanical_name'):
+                                quality_stats['botanical_count'] += 1
+                            if ingredient_data.get('odor_description'):
+                                quality_stats['odor_count'] += 1
+
+        if not ingredients_data:
+            print(f"⚠️  No ingredients found for {category_name} - trying fallback search")
+            # Try a simple search approach as fallback
+            search_url = f"{TGSC_SEARCH_URL}?search={category_name.replace('_', '%20')}"
+            search_html = self.fetch_html(search_url)
+            if search_html:
+                fallback_links = self.extract_ingredient_links(search_html)[:max_ingredients]
+                for link in fallback_links:
+                    html_content = self.fetch_html(link)
+                    if html_content:
+                        ingredient_data = self.parse_ingredient_data(html_content, link)
+                        if ingredient_data['common_name']:
+                            ingredient_data['category'] = category_name
+                            ingredients_data.append(ingredient_data)
+                            if len(ingredients_data) >= max_ingredients:
+                                break
 
         return ingredients_data, quality_stats
     
