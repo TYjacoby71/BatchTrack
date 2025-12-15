@@ -245,6 +245,31 @@ def get_last_term() -> Optional[str]:
         return row[0] if row else None
 
 
+def get_last_term_for_initial(initial: str) -> Optional[str]:
+    """Return the last term (A..Z) for a given initial, or None if none exist.
+
+    Notes:
+    - Matching is case-insensitive for ASCII letters.
+    - Ordering is case-insensitive, then case-sensitive as a tiebreaker.
+    """
+    ensure_tables_exist()
+    letter = (initial or "").strip()[:1].upper()
+    if not letter:
+        return None
+
+    with get_session() as session:
+        row = (
+            session.execute(
+                select(TaskQueue.term)
+                .where(TaskQueue.term.collate("NOCASE").like(f"{letter}%"))
+                .order_by(TaskQueue.term.collate("NOCASE").desc(), TaskQueue.term.desc())
+                .limit(1)
+            )
+            .first()
+        )
+        return row[0] if row else None
+
+
 def upsert_term(term: str, priority: int) -> bool:
     """Upsert a single term and commit immediately.
 

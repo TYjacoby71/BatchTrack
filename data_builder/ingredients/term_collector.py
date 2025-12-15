@@ -29,6 +29,8 @@ SEED_PRIORITY = 7
 MIN_PRIORITY = 1
 MAX_PRIORITY = 10
 DEFAULT_CANDIDATE_POOL_SIZE = int(os.getenv("TERM_GENERATOR_CANDIDATE_POOL", "30"))
+MAX_SELECTION_ATTEMPTS = int(os.getenv("TERM_GENERATOR_SELECTION_ATTEMPTS", "12"))
+MAX_CANDIDATE_POOL_SIZE = int(os.getenv("TERM_GENERATOR_MAX_CANDIDATE_POOL", "120"))
 
 BASE_PHYSICAL_FORMS: Set[str] = {
     "Whole", "Slices", "Diced", "Chopped", "Minced", "Crushed", "Ground",
@@ -293,12 +295,24 @@ class TermCollector:
     # ------------------------------------------------------------------
     # Seed extraction
     # ------------------------------------------------------------------
+    @staticmethod
+    def _is_under(path: Path, base: Path) -> bool:
+        """Return True if path is within base (best-effort, cross-version)."""
+        try:
+            path.resolve().relative_to(base.resolve())
+            return True
+        except Exception:
+            return False
+
     def ingest_seed_directory(self) -> None:
         if not self.seed_root:
             LOGGER.info("No seed directory supplied; relying entirely on AI generation.")
             return
 
         for json_path in self.seed_root.rglob("*.json"):
+            # Stage 1 must not ingest stage 2 outputs (compiled ingredient files / lookups).
+            if self._is_under(json_path, OUTPUT_DIR):
+                continue
             try:
                 data = json.loads(json_path.read_text(encoding="utf-8"))
             except json.JSONDecodeError:
@@ -361,8 +375,76 @@ class TermCollector:
                 self.physical_forms.add(form.strip())
         return out
 
-    def seed_next_terms_to_db(self, count: int, candidate_pool_size: int = DEFAULT_CANDIDATE_POOL_SIZE) -> int:
-        """Generate the next N alphabetical terms and upsert each one immediately into the DB."""
+    @staticmethod
+    def _normalize_letters(value: str) -> List[str]:
+        letters: List[str] = []
+        raw = (value or "").strip().upper()
+        if not raw:
+            raw = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+        for ch in raw:
+            if "A" <= ch <= "Z" and ch not in letters:
+                letters.append(ch)
+        return letters or list("ABCDEFGHIJKLMNOPQRSTUVWXYZ")
+
+    def _select_next_term(
+        self,
+        *,
+        start_after: str,
+        required_initial: str,
+        candidate_pool_size: int,
+    ) -> Optional[Tuple[str, int]]:
+        """Ask the AI for candidates and select the next viable lexicographic term."""
+        selected: Optional[Tuple[str, int]] = None
+        start_fold = (start_after or "").casefold()
+        req_fold = (required_initial or "").strip()[:1].casefold()
+        if not req_fold:
+            return None
+
+        attempts = 0
+        pool_size = max(5, min(int(candidate_pool_size or DEFAULT_CANDIDATE_POOL_SIZE), MAX_CANDIDATE_POOL_SIZE))
+        while selected is None and attempts < MAX_SELECTION_ATTEMPTS:
+            attempts += 1
+            # Ramp pool size a bit if we're failing to find a viable term.
+            candidate_count = min(MAX_CANDIDATE_POOL_SIZE, max(5, pool_size + (attempts - 1) * 10))
+            examples = self._compose_examples(24)
+            candidates = self._iter_ai_candidates(
+                start_after=start_after,
+                required_initial=req_fold.upper(),
+                count=candidate_count,
+                examples=examples,
+            )
+
+            viable: List[Tuple[str, int]] = []
+            for term, priority in candidates:
+                if term.casefold() <= start_fold:
+                    continue
+                if term[:1].casefold() != req_fold:
+                    continue
+                if term in self.terms:
+                    continue
+                viable.append((term, priority))
+
+            if viable:
+                viable.sort(key=lambda item: (item[0].casefold(), item[0]))
+                selected = viable[0]
+
+        return selected
+
+    def seed_next_terms_to_db(
+        self,
+        *,
+        count: int,
+        mode: str = "single_letter",
+        letter: str = "",
+        letters: str = "",
+        candidate_pool_size: int = DEFAULT_CANDIDATE_POOL_SIZE,
+    ) -> int:
+        """Stage 1: Generate NEW terms and upsert each one immediately into the DB.
+
+        Modes:
+        - single_letter: generate `count` terms for one letter (default: inferred from DB, else "A")
+        - round_robin: generate `count` terms cycling through A..Z (or `letters`)
+        """
         if not self.include_ai:
             LOGGER.warning("OPENAI_API_KEY missing; skipping AI term generation")
             return 0
@@ -374,61 +456,64 @@ class TermCollector:
             return 0
 
         inserted = 0
-        for idx in range(count):
-            # Always consult the DB for the current source-of-truth last term.
-            start_after = database_manager.get_last_term() or ""
-            required_initial = (start_after.strip()[:1] or "A").upper()
+        normalized_mode = (mode or "single_letter").strip().lower()
+        normalized_count = max(0, int(count or 0))
+        if normalized_count == 0:
+            return 0
 
-            # Pull a small pool and choose the next lexicographic term under the constraints.
-            selected: Optional[Tuple[str, int]] = None
-            attempts = 0
-            while selected is None and attempts < MAX_BATCH_RETRIES:
-                attempts += 1
-                examples = self._compose_examples(24)
-                candidate_count = max(5, min(candidate_pool_size, 50))
-                candidates = self._iter_ai_candidates(
+        if normalized_mode == "round_robin":
+            letter_list = self._normalize_letters(letters)
+            for idx in range(normalized_count):
+                initial = letter_list[idx % len(letter_list)]
+                start_after = database_manager.get_last_term_for_initial(initial) or ""
+                selected = self._select_next_term(
                     start_after=start_after,
-                    required_initial=required_initial,
-                    count=candidate_count,
-                    examples=examples,
+                    required_initial=initial,
+                    candidate_pool_size=candidate_pool_size,
                 )
-                # Filter and select the smallest lexicographic candidate > start_after
-                start_fold = (start_after or "").casefold()
-                req_fold = required_initial.casefold()
-                viable: List[Tuple[str, int]] = []
-                for term, priority in candidates:
-                    if term.casefold() <= start_fold:
-                        continue
-                    if not term[:1].casefold() == req_fold:
-                        continue
-                    # Avoid local duplicates (also helps prompt examples remain diverse).
-                    if term in self.terms:
-                        continue
-                    viable.append((term, priority))
+                if selected is None:
+                    LOGGER.warning(
+                        "Unable to find next term for '%s' after '%s' on iteration %s/%s",
+                        initial,
+                        start_after or "<start>",
+                        idx + 1,
+                        normalized_count,
+                    )
+                    break
 
-                if viable:
-                    viable.sort(key=lambda item: (item[0].casefold(), item[0]))
-                    selected = viable[0]
-
-            if selected is None:
-                LOGGER.warning(
-                    "Unable to find a viable next term after '%s' (required_initial=%s) on iteration %s/%s",
-                    start_after or "<start>",
-                    required_initial,
-                    idx + 1,
-                    count,
+                term, priority = selected
+                was_inserted = database_manager.upsert_term(term, priority)
+                self._register_term(term, priority)
+                if was_inserted:
+                    inserted += 1
+                    LOGGER.info("Queued term %s/%s: %s (priority=%s)", idx + 1, normalized_count, term, priority)
+        else:
+            # Default: fill one letter deeply (helps avoid huge holes, especially for "A").
+            inferred = (database_manager.get_last_term() or "").strip()[:1].upper() or "A"
+            initial = ((letter or "").strip()[:1].upper() or inferred)
+            for idx in range(normalized_count):
+                start_after = database_manager.get_last_term_for_initial(initial) or ""
+                selected = self._select_next_term(
+                    start_after=start_after,
+                    required_initial=initial,
+                    candidate_pool_size=candidate_pool_size,
                 )
-                break
+                if selected is None:
+                    LOGGER.warning(
+                        "Unable to find next term for '%s' after '%s' on iteration %s/%s",
+                        initial,
+                        start_after or "<start>",
+                        idx + 1,
+                        normalized_count,
+                    )
+                    break
 
-            term, priority = selected
-            # Upsert immediately (single-row transaction) to prevent gaps on interruption.
-            was_inserted = database_manager.upsert_term(term, priority)
-            self._register_term(term, priority)
-            if was_inserted:
-                inserted += 1
-                LOGGER.info("Queued term %s/%s: %s (priority=%s)", idx + 1, count, term, priority)
-            else:
-                LOGGER.info("Term already present; advanced cursor anyway: %s", term)
+                term, priority = selected
+                was_inserted = database_manager.upsert_term(term, priority)
+                self._register_term(term, priority)
+                if was_inserted:
+                    inserted += 1
+                    LOGGER.info("Queued term %s/%s: %s (priority=%s)", idx + 1, normalized_count, term, priority)
 
         return inserted
 
@@ -526,8 +611,12 @@ class TermCollector:
 def parse_args(argv: List[str] | None = None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Generate the ingredient term queue via local + AI sources")
     parser.add_argument("--seed-root", default="", help="Optional directory to scan for seed data (leave blank to skip)")
+    parser.add_argument("--ingest-seeds", action="store_true", help="If set, scan --seed-root for seed terms (output/ is always ignored)")
     parser.add_argument("--example-file", default="", help="Optional JSON array of canonical example ingredients for prompt context")
     parser.add_argument("--count", type=int, default=250, help="How many NEW alphabetical terms to create and queue now")
+    parser.add_argument("--mode", choices=["single_letter", "round_robin"], default="single_letter", help="How to advance through the alphabet")
+    parser.add_argument("--letter", default="", help="When mode=single_letter, which letter to fill (default: inferred from DB, else A)")
+    parser.add_argument("--letters", default="", help="When mode=round_robin, which letters to cycle (default: A-Z)")
     parser.add_argument("--candidate-pool", type=int, default=DEFAULT_CANDIDATE_POOL_SIZE, help="Internal AI candidate pool size (kept small; not a DB batch)")
     parser.add_argument("--skip-ai", action="store_true", help="Only use repo seeds; do not call the AI API")
     parser.add_argument("--write-forms-file", action="store_true", help="Write the physical_forms.json output (optional)")
@@ -549,13 +638,20 @@ def main(argv: List[str] | None = None) -> None:
         terms_file=None,
     )
 
-    collector.ingest_seed_directory()
-    # Seed repo-discovered terms first (single upsert at end is fine for seeds).
-    if collector.terms:
-        collector.seed_queue_db()
+    # Optional seed ingestion (never reads stage-2 output/ files).
+    if args.ingest_seeds:
+        collector.ingest_seed_directory()
+        if collector.terms:
+            collector.seed_queue_db()
 
     # Then generate next alphabetical terms, committing each immediately.
-    collector.seed_next_terms_to_db(count=max(0, int(args.count or 0)), candidate_pool_size=max(5, int(args.candidate_pool or DEFAULT_CANDIDATE_POOL_SIZE)))
+    collector.seed_next_terms_to_db(
+        count=max(0, int(args.count or 0)),
+        mode=str(args.mode or "single_letter"),
+        letter=str(args.letter or ""),
+        letters=str(args.letters or ""),
+        candidate_pool_size=max(5, int(args.candidate_pool or DEFAULT_CANDIDATE_POOL_SIZE)),
+    )
 
     if args.write_forms_file:
         collector.write_forms_file(Path(args.forms_file))
