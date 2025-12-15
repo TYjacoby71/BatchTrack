@@ -16,21 +16,20 @@ This folder contains the autonomous tooling that compiles the ingredient library
 1. **Generate base ingredient terms (Phase 1).**
    ```bash
    python -m data_builder.ingredients.term_collector \
-     --target-count 5000 \   # minimum you want for this run; increase for long hauls
-     --batch-size 250 \      # or try --batch-size 10 for quick smoke tests
-     --terms-file data_builder/ingredients/terms.json \
-     --forms-file data_builder/ingredients/output/physical_forms.json
+     --count 5000             # how many NEW terms to queue now
    ```
-   - By default, relies solely on the built-in exemplar list plus the AI librarian. Pass `--seed-root <dir>` if you want to ingest legacy files for inspiration, or leave it blank to stay independent.
+   - Stage 1 uses `compiler_state.db` as the source of truth for resuming and ratcheting.
+   - Stage 1 round-robins by letter category: generates next A, then next B, then C ... through Z, repeating.
+   - By default, relies solely on the built-in exemplar list plus the AI librarian. If you want to ingest legacy seed files, pass `--ingest-seeds --seed-root <dir>`. The `output/` folder is always ignored.
    - Uses the AI API (unless `--skip-ai`) to create a strictly alphabetical roster of base ingredients, assign them to canonical categories, and enumerate the physical forms they appear in (including essential oils, extracts, lye solutions, tinctures, powders, dairy variants, etc.).
-   - Writes `terms.json` (each entry includes `{ "term": "...", "priority": 1-10 }`) and refreshes the `output/physical_forms.json` lookup.
-   - Re-run anytime with a higher `--target-count` if you want to extend the library (e.g., 10k, 15k). Each run resumes alphabetically from the last generated term.
+   - Queues terms directly into `compiler_state.db` (no `terms.json` required).
+   - Re-run anytime with a higher `--count` to extend the library. Each run resumes per-letter from the DB.
 
 2. **Initialize the processing queue.**
    ```bash
    python -m data_builder.ingredients.compiler --terms-file data_builder/ingredients/terms.json --max-ingredients 0
    ```
-   - `database_manager.initialize_queue()` ingests the term list into `compiler_state.db` with status `pending`, preserving each term’s 1–10 priority score.
+   - Legacy only: `database_manager.initialize_queue()` can ingest an external `terms.json` list into `compiler_state.db`.
 
 3. **Compile the library (Phase 2).**
    ```bash

@@ -230,6 +230,77 @@ def get_all_terms() -> List[Tuple[str, int]]:
         return [(term, priority) for term, priority in rows]
 
 
+def get_last_term() -> Optional[str]:
+    """Return the last term in lexicographic order (case-insensitive), or None."""
+    ensure_tables_exist()
+    with get_session() as session:
+        row = (
+            session.execute(
+                select(TaskQueue.term)
+                .order_by(TaskQueue.term.collate("NOCASE").desc(), TaskQueue.term.desc())
+                .limit(1)
+            )
+            .first()
+        )
+        return row[0] if row else None
+
+
+def get_last_term_for_initial(initial: str) -> Optional[str]:
+    """Return the last term (A..Z) for a given initial, or None if none exist.
+
+    Notes:
+    - Matching is case-insensitive for ASCII letters.
+    - Ordering is case-insensitive, then case-sensitive as a tiebreaker.
+    """
+    ensure_tables_exist()
+    letter = (initial or "").strip()[:1].upper()
+    if not letter:
+        return None
+
+    with get_session() as session:
+        row = (
+            session.execute(
+                select(TaskQueue.term)
+                .where(TaskQueue.term.collate("NOCASE").like(f"{letter}%"))
+                .order_by(TaskQueue.term.collate("NOCASE").desc(), TaskQueue.term.desc())
+                .limit(1)
+            )
+            .first()
+        )
+        return row[0] if row else None
+
+
+def upsert_term(term: str, priority: int) -> bool:
+    """Upsert a single term and commit immediately.
+
+    Returns:
+        True if a new term was inserted, False if it already existed (priority may still be updated).
+    """
+    ensure_tables_exist()
+    cleaned = (term or "").strip()
+    if not cleaned:
+        return False
+
+    normalized_priority = _sanitize_priority(priority)
+    with get_session() as session:
+        existing: Optional[TaskQueue] = session.get(TaskQueue, cleaned)
+        if existing is not None:
+            if normalized_priority > int(existing.priority or DEFAULT_PRIORITY):
+                existing.priority = normalized_priority
+                existing.last_updated = datetime.utcnow()
+            return False
+
+        session.add(
+            TaskQueue(
+                term=cleaned,
+                status="pending",
+                last_updated=datetime.utcnow(),
+                priority=normalized_priority,
+            )
+        )
+        return True
+
+
 def get_next_pending_task(min_priority: int = MIN_PRIORITY) -> Optional[tuple[str, int]]:
     """Return the next pending term honoring priority sorting."""
 
