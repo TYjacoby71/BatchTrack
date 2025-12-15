@@ -108,23 +108,31 @@ def update_lookup_files(payload: Dict[str, Any]) -> None:
 
     taxonomy_values = _load_taxonomy_map()
 
-    def _extend_taxonomy(key: str, values: Iterable[str]) -> None:
+    def _coerce_str_list(value: Any) -> List[str]:
+        if value is None:
+            return []
+        if isinstance(value, list):
+            return [v for v in value if isinstance(v, str)]
+        if isinstance(value, str):
+            return [value]
+        return []
+
+    def _extend_taxonomy(key: str, values: Any) -> None:
         bucket = taxonomy_values.setdefault(key, set())
-        for value in values:
+        for value in _coerce_str_list(values):
             if isinstance(value, str) and value.strip():
                 bucket.add(value.strip())
 
     # Item level tags
     for item in items:
-        _extend_taxonomy("function_tags", item.get("function_tags", []) or [])
-        _extend_taxonomy("applications", item.get("applications", []) or [])
-        _extend_taxonomy("safety_tags", item.get("safety_tags", []) or [])
+        _extend_taxonomy("function_tags", item.get("function_tags"))
+        _extend_taxonomy("applications", item.get("applications"))
+        _extend_taxonomy("safety_tags", item.get("safety_tags"))
 
     # Top-level taxonomy dictionary if present
     taxonomy_obj = ingredient.get("taxonomy", {}) or {}
     for key, values in taxonomy_obj.items():
-        if isinstance(values, list):
-            _extend_taxonomy(key, values)
+        _extend_taxonomy(key, values)
 
     _write_taxonomy_map(taxonomy_values)
 

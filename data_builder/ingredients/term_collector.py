@@ -208,6 +208,10 @@ class TermCollector:
         if seed_from_db:
             self.ingest_terms_from_db()
 
+        # Never regress lookup files: if a physical forms file already exists (likely enriched
+        # by the compiler), merge it in so a subsequent --write-forms-file doesn't wipe it.
+        self._ingest_existing_forms_file(PHYSICAL_FORMS_FILE)
+
     def _extract_priority(self, value) -> int:
         try:
             priority = int(value)
@@ -321,6 +325,23 @@ class TermCollector:
             self._collect_from_obj(data)
 
         LOGGER.info("Loaded %s seed terms from %s", len(self.terms), self.seed_root)
+
+    def _ingest_existing_forms_file(self, path: Path) -> None:
+        """Merge an existing physical_forms.json list into the in-memory set."""
+        try:
+            if not path.exists():
+                return
+            raw = path.read_text(encoding="utf-8").strip()
+            if not raw:
+                return
+            data = json.loads(raw)
+            if not isinstance(data, list):
+                return
+            for item in data:
+                if isinstance(item, str) and item.strip():
+                    self.physical_forms.add(item.strip())
+        except Exception as exc:  # pylint: disable=broad-except
+            LOGGER.debug("Skipping existing forms file ingest (%s): %s", path, exc)
 
     def _collect_from_obj(self, obj: Any) -> None:
         if isinstance(obj, dict):
@@ -537,6 +558,8 @@ class TermCollector:
 
     def write_forms_file(self, path: Path = PHYSICAL_FORMS_FILE) -> None:
         path.parent.mkdir(parents=True, exist_ok=True)
+        # Merge on-disk file (if any) to avoid wiping compiler-enriched values.
+        self._ingest_existing_forms_file(path)
         ordered = sorted(self.physical_forms)
         path.write_text(json.dumps(ordered, indent=2), encoding="utf-8")
         LOGGER.info("Wrote %s physical forms to %s", len(ordered), path)
