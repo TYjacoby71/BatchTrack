@@ -750,7 +750,7 @@ def main():
     
     while categories_completed < total_categories:
         try:
-            result = results_queue.get(timeout=30)  # 30 second timeout for results
+            result = results_queue.get(timeout=120)  # 2 minute timeout for results
             category_name = result['category_name']
             ingredients = result.get('ingredients', [])
             quality_stats = result.get('quality_stats', {})
@@ -770,9 +770,38 @@ def main():
                 all_new_ingredients.extend(ingredients)
                 
             categories_completed += 1
+            print(f"✅ Progress: {categories_completed}/{total_categories} categories completed")
             
         except:  # Timeout waiting for results
-            print("⚠️ Timeout waiting for category results")
+            print(f"⚠️ Timeout waiting for category results. Completed: {categories_completed}/{total_categories}")
+            # Don't break immediately - collect any remaining results in queue
+            remaining_attempts = 5
+            while remaining_attempts > 0 and categories_completed < total_categories:
+                try:
+                    result = results_queue.get(timeout=10)  # Shorter timeout for cleanup
+                    category_name = result['category_name']
+                    ingredients = result.get('ingredients', [])
+                    quality_stats = result.get('quality_stats', {})
+                    
+                    new_count = len(ingredients) if ingredients else 0
+                    initial_count = initial_counts.get(category_name, 0)
+                    current_total = initial_count + new_count
+                    
+                    category_results[category_name] = {
+                        'new': new_count,
+                        'total': current_total
+                    }
+                    quality_summary[category_name] = quality_stats
+                    total_new_ingredients += new_count
+                    
+                    if ingredients:
+                        all_new_ingredients.extend(ingredients)
+                        
+                    categories_completed += 1
+                    print(f"✅ Late completion: {categories_completed}/{total_categories} categories completed")
+                    
+                except:
+                    remaining_attempts -= 1
             break
     
     # Signal workers to stop and wait for them
@@ -780,7 +809,7 @@ def main():
         work_queue.put(None)  # Poison pill
     
     for worker_thread in workers:
-        worker_thread.join(timeout=10)
+        worker_thread.join(timeout=30)
 
     # After the loop — write ONCE to prevent race conditions (engineer's fix)
     if all_new_ingredients:
@@ -823,13 +852,16 @@ def main():
     print(f"\n🎊 SCRAPING COMPLETE!")
     print(f"📁 File: {target_file}")
     print(f"\n📊 Total ingredients added: {total_new_ingredients}")
+    print(f"📊 Categories processed: {len(category_results)}/{len(TGSC_INGREDIENT_CATEGORIES)}")
     
     if category_results:
-        print("\nCategory breakdown:")
+        print("\n📋 Category breakdown:")
         for category_name in TGSC_INGREDIENT_CATEGORIES.keys():
             if category_name in category_results:
                 result = category_results[category_name]
-                print(f"   {category_name}: +{result['new']}, total: {result['total']}")
+                print(f"   ✅ {category_name}: +{result['new']}, total: {result['total']}")
+            else:
+                print(f"   ❌ {category_name}: incomplete/timeout")
         
         # Aggregate data quality summary
         total_cas = sum(stats.get('cas_count', 0) for stats in quality_summary.values())
@@ -845,6 +877,8 @@ def main():
             print(f"   Descriptions: {total_descriptions} ({total_descriptions/total_new_ingredients*100:.1f}%)")
             print(f"   Botanical names: {total_botanical} ({total_botanical/total_new_ingredients*100:.1f}%)")
             print(f"   Odor descriptions: {total_odor} ({total_odor/total_new_ingredients*100:.1f}%)")
+    else:
+        print("\n⚠️  No category results collected - possible timeout or worker issues")
 
 
 if __name__ == "__main__":
