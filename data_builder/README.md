@@ -16,8 +16,7 @@ This folder contains the autonomous tooling that compiles the ingredient library
 1. **Generate base ingredient terms (Phase 1).**
    ```bash
    python -m data_builder.ingredients.term_collector \
-     --mode single_letter \   # fill one letter deeply (recommended)
-     --letter A \             # optional; defaults to inferred-from-DB, else A
+     --letter A \             # which letter bucket to fill
      --count 5000             # how many NEW terms to queue now
    ```
    - Stage 1 uses `compiler_state.db` as the source of truth for resuming and ratcheting.
@@ -25,16 +24,7 @@ This folder contains the autonomous tooling that compiles the ingredient library
    - Uses the AI API (unless `--skip-ai`) to create a strictly alphabetical roster of base ingredients, assign them to canonical categories, and enumerate the physical forms they appear in (including essential oils, extracts, lye solutions, tinctures, powders, dairy variants, etc.).
    - Queues terms directly into `compiler_state.db` (no `terms.json` required).
    - Re-run anytime with a higher `--count` to extend the library. Each run resumes from the last generated term (or last term per letter in parallel modes).
-
-   Round-robin across letters:
-   ```bash
-   python -m data_builder.ingredients.term_collector --mode round_robin --count 2600
-   ```
-
-   Parallel per-letter (faster, capped by `--workers`):
-   ```bash
-   python -m data_builder.ingredients.term_collector --mode parallel_letters --count 2600 --workers 6
-   ```
+   - To intentionally move on, run the next letter: `--letter B`, then `--letter C`, etc.
 
 2. **Initialize the processing queue.**
    ```bash
