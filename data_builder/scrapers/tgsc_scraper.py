@@ -1,3 +1,4 @@
+
 """TGSC (The Good Scents Company) scraper for ingredient data and attributes."""
 import csv
 import re
@@ -9,24 +10,23 @@ import urllib.parse
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from bs4 import BeautifulSoup, NavigableString
 import html
-import string  # Added for A-Z letters
 
 # Base URLs for different ingredient categories
 TGSC_BASE_URL = "https://www.thegoodscentscompany.com"
 TGSC_SEARCH_URL = f"{TGSC_BASE_URL}/search/fragrance.html"
 
-# Category endpoints for ingredient discovery (base without letter)
+# Category endpoints for ingredient discovery
 TGSC_INGREDIENT_CATEGORIES = {
-    "essential_oils": f"{TGSC_BASE_URL}/essentlx",
-    "absolutes": f"{TGSC_BASE_URL}/abs",
-    "extracts": f"{TGSC_BASE_URL}/extractx",
-    "aromatic_ingredients": f"{TGSC_BASE_URL}/rawmatex",
-    "all_ingredients": f"{TGSC_BASE_URL}/allprod",
-    "concretes": f"{TGSC_BASE_URL}/con",
-    "cosmetic_ingredients": f"{TGSC_BASE_URL}/cosmetix",
-    "botanical_species": f"{TGSC_BASE_URL}/botaspes",
-    "fixed_oils": f"{TGSC_BASE_URL}/fix",
-    "resins_gums": f"{TGSC_BASE_URL}/resinx"
+    "essential_oils": f"{TGSC_BASE_URL}/essentlx-a.html",
+    "absolutes": f"{TGSC_BASE_URL}/abs-az.html",
+    "extracts": f"{TGSC_BASE_URL}/extractx-a.html",
+    "aromatic_ingredients": f"{TGSC_BASE_URL}/rawmatex-a.html",
+    "all_ingredients": f"{TGSC_BASE_URL}/allprod-a.html",
+    "concretes": f"{TGSC_BASE_URL}/con-az.html",
+    "cosmetic_ingredients": f"{TGSC_BASE_URL}/cosmetix-a.html",
+    "botanical_species": f"{TGSC_BASE_URL}/botaspes-a.html",
+    "fixed_oils": f"{TGSC_BASE_URL}/fix-az.html",
+    "resins_gums": f"{TGSC_BASE_URL}/resinx-a.html"
 }
 
 
@@ -87,10 +87,10 @@ class TGSCIngredientScraper:
         """Clean and normalize extracted text content."""
         if not text:
             return ""
-
+        
         # Decode HTML entities
         text = html.unescape(text)
-
+        
         # Remove common scraping artifacts and noise
         text = re.sub(r'""">Search.*?""', '', text)
         text = re.sub(r'=hp&amp;.*?Search', '', text)
@@ -98,27 +98,27 @@ class TGSCIngredientScraper:
         text = re.sub(r'scompany\.com/data/[^"]*\.html[^"]*', '', text)
         text = re.sub(r'""">.*?</.*?>', '', text)
         text = re.sub(r'<[^>]+>', '', text)  # Remove any remaining HTML tags
-
+        
         # Remove search-related noise
         text = re.sub(r'\bSearch\b', '', text, flags=re.IGNORECASE)
         text = re.sub(r'\breferences?\b', '', text, flags=re.IGNORECASE)
         text = re.sub(r'\bagents?\b(?!\s+(?:for|of|in))', '', text, flags=re.IGNORECASE)
-
+        
         # Normalize whitespace
         text = re.sub(r'\s+', ' ', text)
         text = text.strip()
-
+        
         # Filter out very short or meaningless text
         if len(text) < 3 or text.lower() in ['search', 'references', 'agents', 'ing', 'and', 'the', 'of', 'a', 'an']:
             return ""
-
+            
         return text
 
     def extract_text_from_soup(self, soup: BeautifulSoup, patterns: List[str], context_keywords: List[str] = None) -> str:
         """Extract text using BeautifulSoup with contextual awareness."""
         if context_keywords is None:
             context_keywords = []
-
+        
         # First try to find content by context keywords
         if context_keywords:
             for keyword in context_keywords:
@@ -138,7 +138,7 @@ class TGSCIngredientScraper:
                                     cleaned = self.clean_extracted_text(content)
                                     if cleaned and len(cleaned) > 3:
                                         return cleaned
-
+        
         # Fall back to regex patterns on full text
         full_text = soup.get_text()
         for pattern in patterns:
@@ -148,7 +148,7 @@ class TGSCIngredientScraper:
                 cleaned = self.clean_extracted_text(content)
                 if cleaned and len(cleaned) > 3:
                     return cleaned
-
+        
         return ""
 
     def parse_ingredient_data(self, html_content: str, url: str) -> Dict:
@@ -225,7 +225,7 @@ class TGSCIngredientScraper:
             r'Chemical Abstracts[:\s]*(\d{1,7}-\d{2}-\d)',
             r'(\d{1,7}-\d{2}-\d)'  # Standalone CAS number
         ]
-
+        
         if not ingredient_data['cas_number']:
             cas_text = self.extract_text_from_soup(soup, cas_patterns, ['CAS', 'Registry', 'Chemical'])
             if cas_text:
@@ -240,7 +240,7 @@ class TGSCIngredientScraper:
             r'ELINCS[:\s#-]*(\d{3}-\d{3}-\d)',
             r'European Inventory[:\s]*(\d{3}-\d{3}-\d)'
         ]
-
+        
         einecs_text = self.extract_text_from_soup(soup, einecs_patterns, ['EINECS', 'EC', 'ELINCS', 'European'])
         if einecs_text:
             einecs_match = re.search(r'(\d{3}-\d{3}-\d)', einecs_text)
@@ -253,7 +253,7 @@ class TGSCIngredientScraper:
             r'Flavor and Extract[:\s]*(\d+)',
             r'GRAS[:\s]*(\d+)'
         ]
-
+        
         fema_text = self.extract_text_from_soup(soup, fema_patterns, ['FEMA', 'Flavor', 'GRAS'])
         if fema_text:
             fema_match = re.search(r'(\d+)', fema_text)
@@ -278,7 +278,7 @@ class TGSCIngredientScraper:
                 r'Scientific name[:\s]*([A-Z][a-z]+\s+[a-z]+(?:\s+[a-z]+)?)',
                 r'Latin name[:\s]*([A-Z][a-z]+\s+[a-z]+(?:\s+[a-z]+)?)'
             ]
-
+            
             botanical_text = self.extract_text_from_soup(soup, botanical_patterns, ['botanical', 'species', 'Scientific', 'Latin'])
             if botanical_text:
                 botanical_match = re.search(r'([A-Z][a-z]+\s+[a-z]+(?:\s+[a-z]+)?)', botanical_text)
@@ -291,7 +291,7 @@ class TGSCIngredientScraper:
             r'formula[:\s]*([A-Z0-9]{3,})',
             r'chemical formula[:\s]*([A-Z0-9]+)'
         ]
-
+        
         formula_text = self.extract_text_from_soup(soup, formula_patterns, ['molecular', 'formula', 'chemical'])
         if formula_text:
             formula_match = re.search(r'([A-Z0-9]{3,})', formula_text)
@@ -303,7 +303,7 @@ class TGSCIngredientScraper:
             r'mol(?:ecular)?\s*wt[:\s]*([0-9.,]+)',
             r'MW[:\s]*([0-9.,]+)'
         ]
-
+        
         weight_text = self.extract_text_from_soup(soup, weight_patterns, ['molecular weight', 'mol wt', 'MW'])
         if weight_text:
             weight_match = re.search(r'([0-9.,]+)', weight_text)
@@ -316,7 +316,7 @@ class TGSCIngredientScraper:
             r'b\.?p\.?[:\s]*([0-9.,°C°F\s-]+)',
             r'BP[:\s]*([0-9.,°C°F\s-]+)'
         ]
-
+        
         bp_text = self.extract_text_from_soup(soup, bp_patterns, ['boiling point', 'b.p.', 'BP'])
         if bp_text:
             bp_match = re.search(r'([0-9.,°C°F\s-]+)', bp_text)
@@ -328,7 +328,7 @@ class TGSCIngredientScraper:
             r'm\.?p\.?[:\s]*([0-9.,°C°F\s-]+)',
             r'MP[:\s]*([0-9.,°C°F\s-]+)'
         ]
-
+        
         mp_text = self.extract_text_from_soup(soup, mp_patterns, ['melting point', 'm.p.', 'MP'])
         if mp_text:
             mp_match = re.search(r'([0-9.,°C°F\s-]+)', mp_text)
@@ -341,7 +341,7 @@ class TGSCIngredientScraper:
             r'd20[:\s]*([0-9.,\s]+)',
             r'ρ[:\s]*([0-9.,\s]+)'
         ]
-
+        
         density_text = self.extract_text_from_soup(soup, density_patterns, ['density', 'specific gravity', 'd20'])
         if density_text:
             density_match = re.search(r'([0-9.,]+)', density_text)
@@ -354,7 +354,7 @@ class TGSCIngredientScraper:
             r'soluble[:\s]*(?:in)?[:\s]*([^.]{10,200}?)(?:\.|$)',
             r'dissolves[:\s]*(?:in)?[:\s]*([^.]{10,200}?)(?:\.|$)'
         ]
-
+        
         solubility_text = self.extract_text_from_soup(soup, solubility_patterns, ['solubility', 'soluble', 'dissolves'])
         if solubility_text:
             ingredient_data['solubility'] = solubility_text[:200]
@@ -367,7 +367,7 @@ class TGSCIngredientScraper:
             r'scent[:\s]*([^.]{5,200}?)(?:\.|$)',
             r'aroma[:\s]*([^.]{5,200}?)(?:\.|$)'
         ]
-
+        
         odor_text = self.extract_text_from_soup(soup, odor_patterns, ['odor', 'odour', 'scent', 'aroma'])
         if odor_text:
             ingredient_data['odor_description'] = odor_text[:300]
@@ -379,7 +379,7 @@ class TGSCIngredientScraper:
             r'flavour[:\s]*([^.]{5,200}?)(?:\.|$)',
             r'taste[:\s]*([^.]{5,200}?)(?:\.|$)'
         ]
-
+        
         flavor_text = self.extract_text_from_soup(soup, flavor_patterns, ['flavor', 'flavour', 'taste'])
         if flavor_text:
             ingredient_data['flavor_description'] = flavor_text[:300]
@@ -391,7 +391,7 @@ class TGSCIngredientScraper:
             r'Used\s+(?:in|for|as)[:\s]*([^.]{10,300}?)(?:\.|$)',
             r'Function[:\s]*([^.]{10,300}?)(?:\.|$)'
         ]
-
+        
         uses_text = self.extract_text_from_soup(soup, uses_patterns, ['Use', 'Application', 'Used', 'Function'])
         if uses_text:
             ingredient_data['description'] = uses_text[:300]
@@ -406,7 +406,7 @@ class TGSCIngredientScraper:
             r'alternative names?[:\s]*([^.]{10,300}?)(?:\.|$)',
             r'other names?[:\s]*([^.]{10,300}?)(?:\.|$)'
         ]
-
+        
         synonym_text = self.extract_text_from_soup(soup, synonym_patterns, ['synonym', 'also known', 'alternative', 'other names'])
         if synonym_text:
             synonyms = [s.strip() for s in re.split(r'[,;|]', synonym_text) if s.strip() and len(s.strip()) > 2]
@@ -420,7 +420,7 @@ class TGSCIngredientScraper:
             r'derived from[:\s]*([^.]{10,300}?)(?:\.|$)',
             r'obtained from[:\s]*([^.]{10,300}?)(?:\.|$)'
         ]
-
+        
         occurrence_text = self.extract_text_from_soup(soup, occurrence_patterns, ['found in', 'occurs', 'natural', 'source', 'derived', 'obtained'])
         if occurrence_text:
             occurrences = [o.strip() for o in re.split(r'[,;|]', occurrence_text) if o.strip() and len(o.strip()) > 2]
@@ -434,7 +434,7 @@ class TGSCIngredientScraper:
             r'caution[:\s]*([^.]{10,300}?)(?:\.|$)',
             r'toxicity[:\s]*([^.]{10,300}?)(?:\.|$)'
         ]
-
+        
         safety_text = self.extract_text_from_soup(soup, safety_patterns, ['safety', 'hazard', 'warning', 'caution', 'toxicity'])
         if safety_text:
             ingredient_data['safety_notes'] = safety_text[:300]
@@ -463,10 +463,10 @@ class TGSCIngredientScraper:
                 start_index = all_ingredient_links.index(resume_from_url) + 1
             except ValueError:
                 start_index = 0
-
+        
         # Limit ingredients per category
         ingredient_links_to_process = all_ingredient_links[start_index : start_index + max_ingredients]
-
+        
         if not ingredient_links_to_process:
             return [], {}
 
@@ -504,11 +504,10 @@ class TGSCIngredientScraper:
                         quality_stats['odor_count'] += 1
 
         return ingredients_data, quality_stats
-
+    
     def get_last_scraped_url(self, category_name: str, csv_filepath: str) -> Optional[str]:
         """Reads the CSV and returns the URL of the last scraped item for a given category."""
         if not Path(csv_filepath).exists():
-            print(f"📄 CSV file doesn't exist yet: {csv_filepath}")
             return None
 
         try:
@@ -519,21 +518,19 @@ class TGSCIngredientScraper:
                 for row in reader:
                     if row.get('category') == category_name and row.get('url'):
                         category_entries.append(row)
-
+                        
             if category_entries:
                 last_url = category_entries[-1].get('url')
-                print(f"📋 Found {len(category_entries)} existing {category_name} entries. Last URL: {last_url}")
                 return last_url
             else:
-                print(f"📄 No existing entries found for category: {category_name}")
                 return None
-
+                
         except Exception as e:
             print(f"⚠️ Error reading {csv_filepath} for resume: {e}")
         return None
 
     def save_ingredients_csv(self, ingredients: List[Dict], filename: str):
-        """Save ingredients data to CSV file additively."""
+        """Save ingredients data to CSV file additively (no duplicate checking - handled by caller)."""
         if not ingredients:
             print("No ingredients to save")
             return
@@ -549,59 +546,17 @@ class TGSCIngredientScraper:
         # Check if file exists to determine if we need to write header
         file_exists = Path(filename).exists()
 
-        # Load existing URLs to avoid duplicates
-        existing_urls = set()
-        if file_exists:
-            try:
-                with open(filename, 'r', newline='', encoding='utf-8') as csvfile:
-                    reader = csv.DictReader(csvfile)
-                    for row in reader:
-                        if row.get('url'):
-                            existing_urls.add(row['url'])
-            except Exception as e:
-                print(f"⚠️  Error reading existing CSV: {e}")
-
-        # Filter out ingredients that already exist (check both URL and name+category combination)
-        existing_combinations = set()
-        if file_exists:
-            try:
-                with open(filename, 'r', newline='', encoding='utf-8') as csvfile:
-                    reader = csv.DictReader(csvfile)
-                    for row in reader:
-                        # Create combination key of name + category for additional duplicate checking
-                        name_category_key = f"{row.get('common_name', '').lower().strip()}_{row.get('category', '').lower().strip()}"
-                        existing_combinations.add(name_category_key)
-            except Exception as e:
-                print(f"⚠️  Error reading existing combinations: {e}")
-
-        new_ingredients = []
-        for ingredient in ingredients:
-            ingredient_url = ingredient.get('url', '')
-            ingredient_name = ingredient.get('common_name', '').lower().strip()
-            ingredient_category = ingredient.get('category', '').lower().strip()
-            name_category_key = f"{ingredient_name}_{ingredient_category}"
-
-            # Check both URL and name+category combination to prevent duplicates
-            if (ingredient_url not in existing_urls and 
-                name_category_key not in existing_combinations and
-                ingredient_name):  # Only add if has a name
-                new_ingredients.append(ingredient)
-                # DO NOT add here — we removed this to fix duplication
-
-        if not new_ingredients:
-            return
-
         try:
             # Open in append mode, or write mode if file doesn't exist
             mode = 'a' if file_exists else 'w'
             with open(filename, mode, newline='', encoding='utf-8') as csvfile:
                 writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
-
+                
                 # Only write header if file is new
                 if not file_exists:
                     writer.writeheader()
 
-                for ingredient in new_ingredients:
+                for ingredient in ingredients:
                     # Convert lists to semicolon-separated strings and filter to fieldnames
                     row = {}
                     for field in fieldnames:
@@ -682,18 +637,18 @@ def main():
             with open(target_file, 'r', newline='', encoding='utf-8') as csvfile:
                 reader = csv.DictReader(csvfile)
                 existing_ingredients = list(reader)
-
+                
                 # Count existing ingredients per category
                 for ingredient in existing_ingredients:
                     category = ingredient.get('category', 'unknown')
                     initial_counts[category] = initial_counts.get(category, 0) + 1
-
+                    
         except Exception as e:
             print(f"⚠️  Error loading existing data: {e}")
 
     # Process categories in parallel
     all_new_ingredients = []
-
+    
     with ThreadPoolExecutor(max_workers=args.max_workers) as executor:
         # Submit all category tasks
         futures = {
@@ -716,18 +671,18 @@ def main():
                 new_count = len(ingredients) if ingredients else 0
                 initial_count = initial_counts.get(category_name, 0)
                 current_total = initial_count + new_count
-
+                
                 category_results[category_name] = {
                     'new': new_count,
                     'total': current_total
                 }
                 quality_summary[category_name] = quality_stats
                 total_new_ingredients += new_count
-
+                
                 if ingredients:
                     all_new_ingredients.extend(ingredients)
                     print(f"📋 Collected {new_count} ingredients from {category_name}")
-
+                    
             except Exception as e:
                 print(f"❌ {category_name}: Failed with error: {e}")
                 category_results[category_name] = {'new': 0, 'total': initial_counts.get(category_name, 0)}
@@ -736,29 +691,44 @@ def main():
     # After the loop — write ONCE to prevent race conditions
     if all_new_ingredients:
         print(f"💾 Final save: Writing {len(all_new_ingredients)} new ingredients across all categories")
-        # Re-load existing data one last time before final write
+        
+        # Re-load existing data one last time before final write to catch any recent writes
         existing_urls = set()
         existing_combinations = set()
         if target_file.exists():
-            with open(target_file, 'r', newline='', encoding='utf-8') as csvfile:
-                reader = csv.DictReader(csvfile)
-                for row in reader:
-                    if row.get('url'):
-                        existing_urls.add(row['url'])
-                    key = f"{row.get('common_name', '').lower().strip()}_{row.get('category', '').lower().strip()}"
-                    existing_combinations.add(key)
+            try:
+                with open(target_file, 'r', newline='', encoding='utf-8') as csvfile:
+                    reader = csv.DictReader(csvfile)
+                    for row in reader:
+                        if row.get('url'):
+                            existing_urls.add(row['url'])
+                        name_category_key = f"{row.get('common_name', '').lower().strip()}_{row.get('category', '').lower().strip()}"
+                        existing_combinations.add(name_category_key)
+            except Exception as e:
+                print(f"⚠️  Error reading existing data: {e}")
 
-        # Filter again with fresh data
+        # Filter final ingredients with fresh duplicate check
         final_ingredients = []
         for ingredient in all_new_ingredients:
-            url = ingredient.get('url', '')
-            name = ingredient.get('common_name', '').lower().strip()
-            cat = ingredient.get('category', '').lower().strip()
-            key = f"{name}_{cat}"
-            if url not in existing_urls and key not in existing_combinations and name:
+            ingredient_url = ingredient.get('url', '')
+            ingredient_name = ingredient.get('common_name', '').lower().strip()
+            ingredient_category = ingredient.get('category', '').lower().strip()
+            name_category_key = f"{ingredient_name}_{ingredient_category}"
+            
+            if (ingredient_url not in existing_urls and 
+                name_category_key not in existing_combinations and
+                ingredient_name):
                 final_ingredients.append(ingredient)
+                existing_combinations.add(name_category_key)  # Track within this final batch
+            else:
+                if name_category_key in existing_combinations:
+                    print(f"⏭️  Skipping duplicate name+category: {ingredient.get('common_name', 'Unknown')}")
 
-        scraper.save_ingredients_csv(final_ingredients, str(target_file))  # this now just writes (no duplicate logic needed)
+        if final_ingredients:
+            scraper.save_ingredients_csv(final_ingredients, str(target_file))
+            print(f"✅ Successfully saved {len(final_ingredients)} unique ingredients")
+        else:
+            print("No new unique ingredients to save")
     else:
         print("No new ingredients to save")
 
@@ -766,21 +736,21 @@ def main():
     print(f"\n🎊 SCRAPING COMPLETE!")
     print(f"📁 File: {target_file}")
     print(f"\n📊 Total ingredients added: {total_new_ingredients}")
-
+    
     if category_results:
         print("\nCategory breakdown:")
         for category_name in TGSC_INGREDIENT_CATEGORIES.keys():
             if category_name in category_results:
                 result = category_results[category_name]
                 print(f"   {category_name}: {result['new']}, {result['total']}")
-
+        
         # Aggregate data quality summary
         total_cas = sum(stats.get('cas_count', 0) for stats in quality_summary.values())
         total_einecs = sum(stats.get('einecs_count', 0) for stats in quality_summary.values())
         total_descriptions = sum(stats.get('description_count', 0) for stats in quality_summary.values())
         total_botanical = sum(stats.get('botanical_count', 0) for stats in quality_summary.values())
         total_odor = sum(stats.get('odor_count', 0) for stats in quality_summary.values())
-
+        
         if total_new_ingredients > 0:
             print(f"\n📊 Data Quality Summary:")
             print(f"   CAS numbers: {total_cas} ({total_cas/total_new_ingredients*100:.1f}%)")
@@ -788,7 +758,7 @@ def main():
             print(f"   Descriptions: {total_descriptions} ({total_descriptions/total_new_ingredients*100:.1f}%)")
             print(f"   Botanical names: {total_botanical} ({total_botanical/total_new_ingredients*100:.1f}%)")
             print(f"   Odor descriptions: {total_odor} ({total_odor/total_new_ingredients*100:.1f}%)")
-
+        
         print(f"\nTotal new ingredients added: {total_new_ingredients}")
 
 
