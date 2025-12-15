@@ -423,13 +423,14 @@ class TermCollector:
         self,
         *,
         count: int,
-        letter: str = "",
         candidate_pool_size: int = DEFAULT_CANDIDATE_POOL_SIZE,
     ) -> int:
         """Stage 1: Generate NEW terms and upsert each one immediately into the DB.
 
-        This builder is intentionally single-mode: fill one letter sequentially.
-        Default is "A" (override with --letter when you intentionally want to move on).
+        This builder is intentionally single-mode: round-robin by letter category.
+
+        It generates the next term for A, then B, then C ... through Z, repeating.
+        Each step uses the DB as the source-of-truth for the per-letter cursor.
         """
         if not self.include_ai:
             LOGGER.warning("OPENAI_API_KEY missing; skipping AI term generation")
@@ -446,8 +447,9 @@ class TermCollector:
         if normalized_count == 0:
             return 0
 
-        initial = ((letter or "").strip()[:1].upper() or "A")
+        letters = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
         for idx in range(normalized_count):
+            initial = letters[idx % len(letters)]
             start_after = database_manager.get_last_term_for_initial(initial) or ""
             selected = self._select_next_term(
                 start_after=start_after,
@@ -570,7 +572,6 @@ def parse_args(argv: List[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--ingest-seeds", action="store_true", help="If set, scan --seed-root for seed terms (output/ is always ignored)")
     parser.add_argument("--example-file", default="", help="Optional JSON array of canonical example ingredients for prompt context")
     parser.add_argument("--count", type=int, default=250, help="How many NEW alphabetical terms to create and queue now")
-    parser.add_argument("--letter", default="A", help="Which letter bucket to fill (default: A)")
     parser.add_argument("--candidate-pool", type=int, default=DEFAULT_CANDIDATE_POOL_SIZE, help="Internal AI candidate pool size (kept small; not a DB batch)")
     parser.add_argument("--skip-ai", action="store_true", help="Only use repo seeds; do not call the AI API")
     parser.add_argument("--write-forms-file", action="store_true", help="Write the physical_forms.json output (optional)")
@@ -601,7 +602,6 @@ def main(argv: List[str] | None = None) -> None:
     # Then generate next alphabetical terms, committing each immediately.
     collector.seed_next_terms_to_db(
         count=max(0, int(args.count or 0)),
-        letter=str(args.letter or ""),
         candidate_pool_size=max(5, int(args.candidate_pool or DEFAULT_CANDIDATE_POOL_SIZE)),
     )
 
