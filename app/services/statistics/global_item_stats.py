@@ -1,6 +1,8 @@
 from datetime import datetime
+
 from sqlalchemy import func
-from app.models import db, InventoryItem, InventoryLot
+
+from app.models import db, InventoryItem, InventoryLot, RecipeIngredient
 
 
 class GlobalItemStatsService:
@@ -8,6 +10,19 @@ class GlobalItemStatsService:
 	def get_rollup(global_item_id: int):
 		# Aggregate across all orgs for items linked to this global item
 		item_ids_subq = db.session.query(InventoryItem.id).filter(InventoryItem.global_item_id == global_item_id).subquery()
+
+		# Adoption counts
+		organizations = db.session.query(func.count(func.distinct(InventoryItem.organization_id))).filter(
+			InventoryItem.global_item_id == global_item_id,
+			InventoryItem.organization_id.isnot(None),
+		).scalar()
+
+		recipes = db.session.query(func.count(func.distinct(RecipeIngredient.recipe_id))).join(
+			InventoryItem, RecipeIngredient.inventory_item_id == InventoryItem.id
+		).filter(
+			InventoryItem.global_item_id == global_item_id,
+			RecipeIngredient.recipe_id.isnot(None),
+		).scalar()
 
 		# Average consumer cost (weighted by remaining or original quantity). Use lot unit_cost as proxy
 		avg_cost = db.session.query(func.avg(InventoryLot.unit_cost)).join(
@@ -38,6 +53,8 @@ class GlobalItemStatsService:
 		).scalar()
 
 		return {
+			'organizations': int(organizations or 0),
+			'recipes': int(recipes or 0),
 			'average_cost_per_unit': float(avg_cost) if avg_cost is not None else None,
 			'average_stock_age_days': float(age_days) if age_days is not None else None,
 			'average_expired_quantity': float(expired_qty) if expired_qty is not None else None,

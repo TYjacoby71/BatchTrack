@@ -27,6 +27,41 @@ _application_tag_cache = {}
 _category_tag_cache = {}
 
 
+def _resolve_seed_default_unit(category_name: str | None, item_name: str | None, current_unit: str | None) -> str | None:
+    """Heuristic to choose industry-standard default units for US-first seed data.
+
+    Goal: avoid always defaulting to base SI units (e.g., grams) when the common
+    purchasing/handling unit in the US is different (e.g., gallons for milk/water,
+    pounds for waxes/powders). This only applies when the current unit is empty
+    or is one of the common "base" defaults.
+    """
+    cat = (category_name or "").strip().lower()
+    name = (item_name or "").strip().lower()
+    unit = (current_unit or "").strip().lower() or None
+
+    base_defaults = {None, "", "gram", "g", "milliliter", "ml"}
+    if unit not in base_defaults:
+        return current_unit
+
+    # Explicit commodity heuristics first
+    if "milk" in name:
+        return "gallon"
+
+    # Category-level heuristics (US-first where it matches typical handling)
+    if "liquids (aqueous)" in cat or "aqueous solutions" in cat:
+        return "gallon"
+
+    if "waxes" in cat or " wax" in name:
+        return "lb"
+
+    if "flours" in cat or "starches" in cat or "powders" in cat:
+        return "lb"
+
+    # Keep base defaults for domains that commonly stay metric at craft scale
+    # (actives/preservatives/colorants/etc.)
+    return current_unit or "gram"
+
+
 def _slugify(value: str) -> str | None:
     if not value:
         return None
@@ -374,7 +409,8 @@ def seed_ingredients_from_files(selected_files):
                 global_item = existing_item
                 global_item.aliases = item_data.get('aliases', [])
                 global_item.density = item_data.get('density', category_data.get('default_density'))
-                global_item.default_unit = item_data.get('default_unit', 'gram')
+                seeded_unit = item_data.get('default_unit')
+                global_item.default_unit = _resolve_seed_default_unit(category.name, name, seeded_unit) or 'gram'
                 global_item.recommended_fragrance_load_pct = item_data.get('recommended_fragrance_load_pct')
                 global_item.recommended_shelf_life_days = item_data.get('recommended_shelf_life_days')
                 global_item.inci_name = item_data.get('inci_name')
@@ -401,7 +437,7 @@ def seed_ingredients_from_files(selected_files):
                     item_type='ingredient',
                     aliases=item_data.get('aliases', []),
                     density=item_data.get('density', category_data.get('default_density')),
-                    default_unit=item_data.get('default_unit', 'gram'),
+                    default_unit=_resolve_seed_default_unit(category.name, name, item_data.get('default_unit')) or 'gram',
                     recommended_fragrance_load_pct=item_data.get('recommended_fragrance_load_pct'),
                     recommended_shelf_life_days=item_data.get('recommended_shelf_life_days'),
                     inci_name=item_data.get('inci_name'),
