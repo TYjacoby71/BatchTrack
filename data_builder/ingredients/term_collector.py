@@ -8,7 +8,7 @@ import os
 import re
 import hashlib
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Set
+from typing import Any, Dict, List, Optional, Set, Tuple
 
 import openai
 
@@ -28,6 +28,7 @@ DEFAULT_PRIORITY = 5
 SEED_PRIORITY = 7
 MIN_PRIORITY = 1
 MAX_PRIORITY = 10
+DEFAULT_CANDIDATE_POOL_SIZE = int(os.getenv("TERM_GENERATOR_CANDIDATE_POOL", "30"))
 
 BASE_PHYSICAL_FORMS: Set[str] = {
     "Whole", "Slices", "Diced", "Chopped", "Minced", "Crushed", "Ground",
@@ -135,18 +136,21 @@ Return a strictly alphabetical list of NEW base ingredient names that have not a
 SOLUTION & EXTRACT GUIDANCE:
 - Include buffered solutions, stock lye solutions (e.g., 50% NaOH), mineral brines, herbal glycerites, tinctures, vinegars, and other make-ready raw solutions when they are handled as ingredients.
 - For botanicals with essential oils, hydrosols, absolutes, CO2 extracts, etc., treat the plant as the ingredient and enumerate those forms inside `common_forms`.
-- Treat {count} as a minimum for this batch. If more valid ingredients exist beyond that count, KEEP ADDING them until you naturally reach the response limit. The overarching library will eventually exceed 5,000 and may reach 15,000+, so never intentionally leave alphabetical gaps.
 
 For each ingredient, list the most common PHYSICAL FORMS (include essential oil/extract variants when applicable).
 
 CONSTRAINTS:
-- Provide AT LEAST {count} ingredient records (more is welcome if available).
+- Provide EXACTLY {count} ingredient records.
 - The first ingredient must be lexicographically GREATER than "{start_after}".
 - Alphabetize A-Z.
 - Avoid duplicates of the provided examples.
 - Use concise proper names (e.g., "Calendula", "Magnesium Hydroxide").
 - Assign a relevance score from 1-10 (integer) where 10 = essential for small-batch makers and 1 = niche or situational.
-- If absolutely no valid ingredients remain, return an empty list.
+- If no valid ingredients remain under the constraints, return an empty list.
+
+ANTI-GAP RULE (IMPORTANT):
+- All returned ingredient names MUST start with "{required_initial}" (case-insensitive).
+- This prevents skipping ahead to later letters when many earlier-letter ingredients remain.
 
 OUTPUT FORMAT:
 Return JSON only:
@@ -174,8 +178,6 @@ class TermCollector:
 
     def __init__(
         self,
-        target_count: int,
-        batch_size: int,
         include_ai: bool = True,
         seed_root: Optional[Path] = None,
         example_file: Optional[Path] = None,
@@ -183,8 +185,6 @@ class TermCollector:
         seed_from_db: bool = True,
     ) -> None:
         self.seed_root = seed_root if seed_root and seed_root.exists() else None
-        self.target_count = target_count
-        self.batch_size = batch_size
         self.include_ai = include_ai and bool(openai.api_key)
         self.terms: Dict[str, int] = {}
         self.physical_forms: Set[str] = set(BASE_PHYSICAL_FORMS) | EXAMPLE_PHYSICAL_FORMS
@@ -331,46 +331,106 @@ class TermCollector:
     # ------------------------------------------------------------------
     # AI Expansion
     # ------------------------------------------------------------------
-    def expand_with_ai(self) -> None:
-        if not self.include_ai:
-            LOGGER.warning("OPENAI_API_KEY missing; skipping AI term generation")
-            return
-
-        while len(self.terms) < self.target_count:
-            start_after = sorted(self.terms.keys())[-1] if self.terms else ""
-            batch_size = min(self.batch_size, self.target_count - len(self.terms))
-            LOGGER.info(
-                "Requesting %s new terms after '%s' (current total: %s/%s)",
-                batch_size,
-                start_after or "<start>",
-                len(self.terms),
-                self.target_count,
-            )
-            examples = self._compose_examples(24)
-            payload = self._request_ai_batch(batch_size, start_after, examples)
-            if not payload:
-                LOGGER.warning("AI returned no payload; breaking out")
-                break
-            new_terms = 0
-            for record in payload.get("ingredients", []):
-                name = record.get("name")
-                if not isinstance(name, str):
-                    continue
-                cleaned = name.strip()
-                if not cleaned:
-                    continue
-                priority = record.get("priority_score")
-                if self._register_term(cleaned, priority):
-                    new_terms += 1
-                for form in record.get("common_forms", []) or []:
-                    if isinstance(form, str) and form.strip():
-                        self.physical_forms.add(form.strip())
-            for form in payload.get("physical_forms", []) or []:
+    def _iter_ai_candidates(
+        self,
+        *,
+        start_after: str,
+        required_initial: str,
+        count: int,
+        examples: List[str],
+    ) -> List[Tuple[str, int]]:
+        """Request a small candidate pool from the AI and return (term, priority) tuples."""
+        payload = self._request_ai_batch(count=count, start_after=start_after, required_initial=required_initial, examples=examples)
+        if not payload:
+            return []
+        out: List[Tuple[str, int]] = []
+        for record in payload.get("ingredients", []) or []:
+            name = record.get("name")
+            if not isinstance(name, str):
+                continue
+            cleaned = name.strip()
+            if not cleaned:
+                continue
+            priority = self._extract_priority(record.get("priority_score"))
+            out.append((cleaned, priority))
+            for form in record.get("common_forms", []) or []:
                 if isinstance(form, str) and form.strip():
                     self.physical_forms.add(form.strip())
-            LOGGER.info("Ingested %s brand-new ingredients", new_terms)
-            if new_terms == 0:
+        for form in payload.get("physical_forms", []) or []:
+            if isinstance(form, str) and form.strip():
+                self.physical_forms.add(form.strip())
+        return out
+
+    def seed_next_terms_to_db(self, count: int, candidate_pool_size: int = DEFAULT_CANDIDATE_POOL_SIZE) -> int:
+        """Generate the next N alphabetical terms and upsert each one immediately into the DB."""
+        if not self.include_ai:
+            LOGGER.warning("OPENAI_API_KEY missing; skipping AI term generation")
+            return 0
+
+        try:
+            from . import database_manager
+        except Exception as exc:  # pragma: no cover
+            LOGGER.warning("DB manager unavailable; cannot seed queue DB: %s", exc)
+            return 0
+
+        inserted = 0
+        for idx in range(count):
+            # Always consult the DB for the current source-of-truth last term.
+            start_after = database_manager.get_last_term() or ""
+            required_initial = (start_after.strip()[:1] or "A").upper()
+
+            # Pull a small pool and choose the next lexicographic term under the constraints.
+            selected: Optional[Tuple[str, int]] = None
+            attempts = 0
+            while selected is None and attempts < MAX_BATCH_RETRIES:
+                attempts += 1
+                examples = self._compose_examples(24)
+                candidate_count = max(5, min(candidate_pool_size, 50))
+                candidates = self._iter_ai_candidates(
+                    start_after=start_after,
+                    required_initial=required_initial,
+                    count=candidate_count,
+                    examples=examples,
+                )
+                # Filter and select the smallest lexicographic candidate > start_after
+                start_fold = (start_after or "").casefold()
+                req_fold = required_initial.casefold()
+                viable: List[Tuple[str, int]] = []
+                for term, priority in candidates:
+                    if term.casefold() <= start_fold:
+                        continue
+                    if not term[:1].casefold() == req_fold:
+                        continue
+                    # Avoid local duplicates (also helps prompt examples remain diverse).
+                    if term in self.terms:
+                        continue
+                    viable.append((term, priority))
+
+                if viable:
+                    viable.sort(key=lambda item: (item[0].casefold(), item[0]))
+                    selected = viable[0]
+
+            if selected is None:
+                LOGGER.warning(
+                    "Unable to find a viable next term after '%s' (required_initial=%s) on iteration %s/%s",
+                    start_after or "<start>",
+                    required_initial,
+                    idx + 1,
+                    count,
+                )
                 break
+
+            term, priority = selected
+            # Upsert immediately (single-row transaction) to prevent gaps on interruption.
+            was_inserted = database_manager.upsert_term(term, priority)
+            self._register_term(term, priority)
+            if was_inserted:
+                inserted += 1
+                LOGGER.info("Queued term %s/%s: %s (priority=%s)", idx + 1, count, term, priority)
+            else:
+                LOGGER.info("Term already present; advanced cursor anyway: %s", term)
+
+        return inserted
 
     def _compose_examples(self, limit: int) -> List[str]:
         live_samples = sorted(self.terms.keys())[: limit // 2]
@@ -378,10 +438,11 @@ class TermCollector:
         combined = curated + live_samples
         return combined[:limit]
 
-    def _request_ai_batch(self, count: int, start_after: str, examples: List[str]) -> Dict[str, Any]:
+    def _request_ai_batch(self, *, count: int, start_after: str, required_initial: str, examples: List[str]) -> Dict[str, Any]:
         user_prompt = TERMS_PROMPT.format(
             count=count,
             start_after=start_after.replace("\"", ""),
+            required_initial=(required_initial or "").replace("\"", ""),
             examples=json.dumps(examples, indent=2) if examples else "[]",
         )
 
@@ -466,14 +527,11 @@ def parse_args(argv: List[str] | None = None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Generate the ingredient term queue via local + AI sources")
     parser.add_argument("--seed-root", default="", help="Optional directory to scan for seed data (leave blank to skip)")
     parser.add_argument("--example-file", default="", help="Optional JSON array of canonical example ingredients for prompt context")
-    parser.add_argument("--target-count", type=int, default=5000, help="Desired total number of base ingredients")
-    parser.add_argument("--batch-size", type=int, default=250, help="AI batch size per request")
-    parser.add_argument("--terms-file", default=str(TERMS_FILE), help="Optional legacy JSON destination for term list (term + priority)")
-    parser.add_argument("--write-terms-file", action="store_true", help="Write the legacy terms.json output (otherwise prefer DB + per-term stubs)")
-    parser.add_argument("--stubs-dir", default=str(TERM_STUBS_DIR), help="Directory to write per-term stub JSON files")
-    parser.add_argument("--no-db-seed", action="store_true", help="Do not upsert terms into compiler_state.db")
-    parser.add_argument("--forms-file", default=str(PHYSICAL_FORMS_FILE), help="Destination file for physical forms list")
+    parser.add_argument("--count", type=int, default=250, help="How many NEW alphabetical terms to create and queue now")
+    parser.add_argument("--candidate-pool", type=int, default=DEFAULT_CANDIDATE_POOL_SIZE, help="Internal AI candidate pool size (kept small; not a DB batch)")
     parser.add_argument("--skip-ai", action="store_true", help="Only use repo seeds; do not call the AI API")
+    parser.add_argument("--write-forms-file", action="store_true", help="Write the physical_forms.json output (optional)")
+    parser.add_argument("--forms-file", default=str(PHYSICAL_FORMS_FILE), help="Destination file for physical forms list")
     return parser.parse_args(argv)
 
 
@@ -485,22 +543,22 @@ def main(argv: List[str] | None = None) -> None:
     args = parse_args(argv)
 
     collector = TermCollector(
-        target_count=args.target_count,
-        batch_size=args.batch_size,
         include_ai=not args.skip_ai,
         seed_root=Path(args.seed_root).resolve() if args.seed_root else None,
         example_file=Path(args.example_file).resolve() if args.example_file else None,
-        terms_file=Path(args.terms_file).resolve() if args.terms_file else None,
+        terms_file=None,
     )
 
     collector.ingest_seed_directory()
-    collector.expand_with_ai()
-    if not args.no_db_seed:
+    # Seed repo-discovered terms first (single upsert at end is fine for seeds).
+    if collector.terms:
         collector.seed_queue_db()
-    collector.write_term_stubs(Path(args.stubs_dir))
-    if args.write_terms_file:
-        collector.write_terms_file(Path(args.terms_file))
-    collector.write_forms_file(Path(args.forms_file))
+
+    # Then generate next alphabetical terms, committing each immediately.
+    collector.seed_next_terms_to_db(count=max(0, int(args.count or 0)), candidate_pool_size=max(5, int(args.candidate_pool or DEFAULT_CANDIDATE_POOL_SIZE)))
+
+    if args.write_forms_file:
+        collector.write_forms_file(Path(args.forms_file))
 
 
 if __name__ == "__main__":
