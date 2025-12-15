@@ -1,10 +1,11 @@
 import json
 from typing import Optional
 
-from flask import Blueprint, render_template, request, redirect, url_for, current_app
+from flask import Blueprint, render_template, request, redirect, url_for, current_app, flash
 from flask_login import current_user
-from app.models import GlobalItem
+from app.models import GlobalItem, InventoryItem
 from app.services.statistics import AnalyticsDataService
+from app.services.inventory_adjustment import create_inventory_item
 from app.utils.seo import slugify_value
 from app.extensions import limiter, cache
 from app.utils.cache_utils import should_bypass_cache, stable_cache_key
@@ -239,6 +240,58 @@ def global_item_detail(item_id: int, slug: Optional[str] = None):
         page_og_image=metadata.get('hero_image'),
         slugify=slugify_value,
     )
+
+
+@global_library_bp.route('/global-items/<int:item_id>/save-to-inventory')
+@limiter.limit("6000/hour;300/minute")
+def save_global_item_to_inventory(item_id: int):
+    """Save a public global item into the authenticated user's inventory.
+
+    If unauthenticated, redirect to a lightweight free-account signup flow and
+    then return here to complete the save.
+    """
+    gi = GlobalItem.query.filter(
+        GlobalItem.is_archived != True,
+        GlobalItem.id == item_id,
+    ).first_or_404()
+
+    if not current_user.is_authenticated:
+        next_path = url_for('global_library_bp.save_global_item_to_inventory', item_id=item_id)
+        return redirect(url_for('auth.quick_signup', next=next_path, global_item_id=item_id))
+
+    org_id = getattr(current_user, "organization_id", None)
+    if not org_id:
+        flash("No organization found for your account.", "error")
+        return redirect(url_for('app_routes.dashboard'))
+
+    existing = InventoryItem.query.filter(
+        InventoryItem.organization_id == org_id,
+        InventoryItem.global_item_id == item_id,
+        InventoryItem.is_archived.is_(False),
+    ).first()
+    if existing:
+        flash(f"{gi.name} is already in your inventory.", "info")
+        return redirect(url_for('inventory.view_inventory', id=existing.id))
+
+    form_data = {
+        "name": gi.name,
+        "type": gi.item_type,
+        "global_item_id": str(gi.id),
+        "quantity": "0",
+    }
+    success, message, created_id = create_inventory_item(
+        form_data=form_data,
+        organization_id=org_id,
+        created_by=getattr(current_user, "id", None),
+        auto_commit=True,
+    )
+
+    if success and created_id:
+        flash(f"Saved {gi.name} to your inventory.", "success")
+        return redirect(url_for('inventory.view_inventory', id=created_id))
+
+    flash(message or "Unable to save this item to your inventory right now.", "error")
+    return redirect(url_for('inventory.list_inventory'))
 
 
 @global_library_bp.route('/global-items/<int:item_id>/stats')

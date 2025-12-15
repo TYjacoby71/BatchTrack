@@ -1,0 +1,49 @@
+{% extends "layout.html" %}
+
+{% block content %}
+<div class="py-4">
+  <div class="row justify-content-center">
+    <div class="col-md-7 col-lg-6">
+      <div class="card shadow-sm">
+        <div class="card-header">
+          <h3 class="mb-0">Create your free account</h3>
+          {% if global_item_name %}
+            <div class="text-muted small mt-1">Then we’ll save <strong>{{ global_item_name }}</strong> to your inventory.</div>
+          {% endif %}
+        </div>
+        <div class="card-body">
+          <form method="POST" action="{{ url_for('auth.quick_signup') }}">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <input type="hidden" name="next" value="{{ next_url }}">
+            <input type="hidden" name="global_item_id" value="{{ global_item_id }}">
+            <input type="hidden" name="global_item_name" value="{{ global_item_name }}">
+
+            <div class="mb-3">
+              <label class="form-label" for="name">Name</label>
+              <input class="form-control" id="name" name="name" type="text" value="{{ prefill_name or '' }}" autocomplete="name" required>
+            </div>
+
+            <div class="mb-3">
+              <label class="form-label" for="email">Email</label>
+              <input class="form-control" id="email" name="email" type="email" value="{{ prefill_email or '' }}" autocomplete="email" required>
+            </div>
+
+            <div class="mb-3">
+              <label class="form-label" for="password">Password</label>
+              <input class="form-control" id="password" name="password" type="password" minlength="8" autocomplete="new-password" required>
+              <div class="form-text">At least 8 characters.</div>
+            </div>
+
+            <button type="submit" class="btn btn-primary w-100">Create free account</button>
+          </form>
+
+          <div class="text-muted small mt-3">
+            Already have an account? <a href="{{ url_for('auth.login', next=next_url) }}">Log in</a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
