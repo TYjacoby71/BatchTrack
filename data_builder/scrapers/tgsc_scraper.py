@@ -25,7 +25,7 @@ TGSC_INGREDIENT_CATEGORIES = {
     "concretes": f"{TGSC_BASE_URL}/con-az.html",
     "cosmetic_ingredients": f"{TGSC_BASE_URL}/cosmetix-a.html",
     "botanical_species": f"{TGSC_BASE_URL}/botaspes-a.html",
-    "fixed_oils": f"{TGSC_BASE_URL}/fixedoilx-a.html",
+    "fixed_oils": f"{TGSC_BASE_URL}/fix-az.html",
     "resins_gums": f"{TGSC_BASE_URL}/resinx-a.html"
 }
 
