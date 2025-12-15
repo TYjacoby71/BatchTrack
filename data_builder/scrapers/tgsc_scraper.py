@@ -508,7 +508,6 @@ class TGSCIngredientScraper:
     def get_last_scraped_url(self, category_name: str, csv_filepath: str) -> Optional[str]:
         """Reads the CSV and returns the URL of the last scraped item for a given category."""
         if not Path(csv_filepath).exists():
-            print(f"📄 CSV file doesn't exist yet: {csv_filepath}")
             return None
 
         try:
@@ -522,10 +521,8 @@ class TGSCIngredientScraper:
                         
             if category_entries:
                 last_url = category_entries[-1].get('url')
-                print(f"📋 Found {len(category_entries)} existing {category_name} entries. Last URL: {last_url}")
                 return last_url
             else:
-                print(f"📄 No existing entries found for category: {category_name}")
                 return None
                 
         except Exception as e:
@@ -558,7 +555,6 @@ class TGSCIngredientScraper:
                     for row in reader:
                         if row.get('url'):
                             existing_urls.add(row['url'])
-                print(f"📋 Found {len(existing_urls)} existing ingredients in CSV")
             except Exception as e:
                 print(f"⚠️  Error reading existing CSV: {e}")
 
@@ -589,13 +585,10 @@ class TGSCIngredientScraper:
                 new_ingredients.append(ingredient)
                 existing_combinations.add(name_category_key)  # Track to prevent duplicates within this batch
             else:
-                if ingredient_url in existing_urls:
-                    print(f"⏭️  Skipping duplicate URL: {ingredient.get('common_name', 'Unknown')}")
-                elif name_category_key in existing_combinations:
+                if name_category_key in existing_combinations:
                     print(f"⏭️  Skipping duplicate name+category: {ingredient.get('common_name', 'Unknown')}")
 
         if not new_ingredients:
-            print("No new ingredients to add")
             return
 
         try:
@@ -621,10 +614,6 @@ class TGSCIngredientScraper:
                         else:
                             row[field] = ''
                     writer.writerow(row)
-
-            print(f"💾 Added {len(new_ingredients)} new ingredients to {filename}")
-            total_count = len(existing_urls) + len(new_ingredients)
-            print(f"📊 Total ingredients in file: {total_count}")
 
         except Exception as e:
             print(f"❌ Error saving CSV: {e}")
@@ -693,7 +682,6 @@ def main():
             with open(target_file, 'r', newline='', encoding='utf-8') as csvfile:
                 reader = csv.DictReader(csvfile)
                 existing_ingredients = list(reader)
-                print(f"📋 Loaded {len(existing_ingredients)} existing ingredients")
                 
                 # Count existing ingredients per category
                 for ingredient in existing_ingredients:
