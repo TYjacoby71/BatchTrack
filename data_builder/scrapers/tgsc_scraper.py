@@ -695,16 +695,24 @@ def main():
     print(f"⚡ Max parallel workers: {args.max_workers}")
     print(f"🔄 Resume mode: {'Enabled' if args.resume else 'Disabled'}")
 
-    all_ingredients = []
+    # Track category results for final summary
+    category_results = {}
+    total_new_ingredients = 0
 
-    # Load existing data if resuming
-    if args.resume and target_file.exists():
+    # Get initial counts for each category if file exists
+    initial_counts = {}
+    if target_file.exists():
         try:
             with open(target_file, 'r', newline='', encoding='utf-8') as csvfile:
                 reader = csv.DictReader(csvfile)
                 existing_ingredients = list(reader)
-                all_ingredients.extend(existing_ingredients)
                 print(f"📋 Loaded {len(existing_ingredients)} existing ingredients")
+                
+                # Count existing ingredients per category
+                for ingredient in existing_ingredients:
+                    category = ingredient.get('category', 'unknown')
+                    initial_counts[category] = initial_counts.get(category, 0) + 1
+                    
         except Exception as e:
             print(f"⚠️  Error loading existing data: {e}")
 
@@ -728,35 +736,39 @@ def main():
             category_name = futures[future]
             try:
                 category_name_result, ingredients = future.result()
+                new_count = len(ingredients) if ingredients else 0
+                initial_count = initial_counts.get(category_name, 0)
+                current_total = initial_count + new_count
+                
+                category_results[category_name] = {
+                    'new': new_count,
+                    'total': current_total
+                }
+                total_new_ingredients += new_count
+                
                 if ingredients:
                     # Save ingredients immediately to CSV as they complete
                     scraper.save_ingredients_csv(ingredients, str(target_file))
-                    print(f"🎉 {category_name}: {len(ingredients)} ingredients completed and saved")
-                    all_ingredients.extend(ingredients)
+                    print(f"🎉 {category_name}: {new_count} ingredients completed and saved")
                 else:
                     print(f"⚠️  {category_name}: No new ingredients found")
             except Exception as e:
                 print(f"❌ {category_name}: Failed with error: {e}")
+                category_results[category_name] = {'new': 0, 'total': initial_counts.get(category_name, 0)}
 
-    # Final summary
-    if all_ingredients:
-        print(f"📋 Total new ingredients added this run: {len(all_ingredients)}")
-        
-        # Count total ingredients in file
-        try:
-            with open(target_file, 'r', newline='', encoding='utf-8') as csvfile:
-                reader = csv.DictReader(csvfile)
-                total_in_file = sum(1 for _ in reader)
-                print(f"📊 Total ingredients in CSV file: {total_in_file}")
-        except:
-            pass
-            
-        print("Ready for ingredient compilation!")
-    else:
-        print("⚠️  No new ingredients were scraped this run")
-
+    # Enhanced final summary
     print(f"\n🎊 SCRAPING COMPLETE!")
     print(f"📁 File: {target_file}")
+    print(f"\n📊 Total ingredients added: {total_new_ingredients}")
+    
+    if category_results:
+        print("\nCategory breakdown:")
+        for category_name in TGSC_INGREDIENT_CATEGORIES.keys():
+            if category_name in category_results:
+                result = category_results[category_name]
+                print(f"   {category_name}: {result['new']}, {result['total']}")
+        
+        print(f"\nTotal new ingredients added: {total_new_ingredients}")
 
 
 if __name__ == "__main__":
