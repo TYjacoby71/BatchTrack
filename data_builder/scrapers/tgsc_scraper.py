@@ -106,12 +106,45 @@ class TGSCIngredientScraper:
         text = re.sub(r'\breferences?\b', '', text, flags=re.IGNORECASE)
         text = re.sub(r'\bagents?\b(?!\s+(?:for|of|in))', '', text, flags=re.IGNORECASE)
         
+        # Remove placeholder and template text commonly found on TGSC
+        placeholder_patterns = [
+            r'and/or flavor descriptions from others \(if found\)',
+            r'descriptions from others \(if found\)',
+            r'Information:',
+            r'Articles Notes',
+            r'Supplier Sponsors',
+            r'CAS Number:',
+            r'3D/inchi FDA UNII:',
+            r'XlogP3[:-]?',
+            r'PubMed:',
+            r'& Fragrances industries worldwide',
+            r'in Flavor & Fragrances industries worldwide',
+            r'd for fragrances or flavors',
+        ]
+        
+        for pattern in placeholder_patterns:
+            text = re.sub(pattern, '', text, flags=re.IGNORECASE)
+        
+        # Clean up chemical database references
+        text = re.sub(r'Articles: None found yet', '', text, flags=re.IGNORECASE)
+        text = re.sub(r'Articles: PubMed:[^;]*', '', text, flags=re.IGNORECASE)
+        
         # Normalize whitespace
         text = re.sub(r'\s+', ' ', text)
         text = text.strip()
         
-        # Filter out very short or meaningless text
-        if len(text) < 3 or text.lower() in ['search', 'references', 'agents', 'ing', 'and', 'the', 'of', 'a', 'an']:
+        # Filter out very short or meaningless text, and common placeholder phrases
+        meaningless_phrases = [
+            'search', 'references', 'agents', 'ing', 'and', 'the', 'of', 'a', 'an',
+            'information', 'articles', 'none found yet', 'supplier sponsors',
+            'd for fragrances or flavors', 'cas number', 'found yet', 'notes'
+        ]
+        
+        if (len(text) < 5 or 
+            text.lower() in meaningless_phrases or
+            text.lower().startswith('ld50') or  # Toxicity data without context
+            'GoogleAnalyticsObject' in text or  # JavaScript artifacts
+            text.count(';') > 3):  # Likely fragmented data
             return ""
             
         return text
@@ -361,29 +394,34 @@ class TGSCIngredientScraper:
         if solubility_text:
             ingredient_data['solubility'] = solubility_text[:200]
 
-        # Extract odor descriptions
+        # Extract odor descriptions - be more selective
         odor_patterns = [
-            r'Has (?:an? )?([^.]{5,200}?) type odor',
-            r'odor[:\s]*([^.]{5,200}?)(?:\.|$)',
-            r'odour[:\s]*([^.]{5,200}?)(?:\.|$)',
-            r'scent[:\s]*([^.]{5,200}?)(?:\.|$)',
-            r'aroma[:\s]*([^.]{5,200}?)(?:\.|$)'
+            r'Has (?:an? )?([^.]{10,200}?) type odor',
+            r'Odor Type:\s*([^.]{10,200}?)(?:\.|Odor|$)',
+            r'Odor Description:\s*([^.]{10,200}?)(?:\.|$)',
+            r'odor[:\s]*([^.]{10,200}?)(?:\.|$)',
+            r'odour[:\s]*([^.]{10,200}?)(?:\.|$)',
+            r'scent[:\s]*([^.]{10,200}?)(?:\.|$)',
+            r'aroma[:\s]*([^.]{10,200}?)(?:\.|$)'
         ]
         
-        odor_text = self.extract_text_from_soup(soup, odor_patterns, ['odor', 'odour', 'scent', 'aroma'])
-        if odor_text:
+        odor_text = self.extract_text_from_soup(soup, odor_patterns, ['Odor Type', 'Odor Description', 'odor', 'odour', 'scent', 'aroma'])
+        # Only keep if it contains descriptive words, not just placeholders
+        if odor_text and not any(phrase in odor_text.lower() for phrase in ['type:', 'descriptions from others', 'if found', 'information']):
             ingredient_data['odor_description'] = odor_text[:300]
 
-        # Extract flavor descriptions
+        # Extract flavor descriptions - be more selective  
         flavor_patterns = [
-            r'Has (?:an? )?([^.]{5,200}?) type flavor',
-            r'flavor[:\s]*([^.]{5,200}?)(?:\.|$)',
-            r'flavour[:\s]*([^.]{5,200}?)(?:\.|$)',
-            r'taste[:\s]*([^.]{5,200}?)(?:\.|$)'
+            r'Has (?:an? )?([^.]{10,200}?) type flavor',
+            r'Flavor Type:\s*([^.]{10,200}?)(?:\.|Flavor|$)',
+            r'flavor[:\s]*([^.]{10,200}?)(?:\.|$)',
+            r'flavour[:\s]*([^.]{10,200}?)(?:\.|$)',
+            r'taste[:\s]*([^.]{10,200}?)(?:\.|$)'
         ]
         
-        flavor_text = self.extract_text_from_soup(soup, flavor_patterns, ['flavor', 'flavour', 'taste'])
-        if flavor_text:
+        flavor_text = self.extract_text_from_soup(soup, flavor_patterns, ['Flavor Type', 'flavor', 'flavour', 'taste'])
+        # Only keep if it contains descriptive words, not just placeholders
+        if flavor_text and not any(phrase in flavor_text.lower() for phrase in ['descriptions from others', 'if found', 'information']):
             ingredient_data['flavor_description'] = flavor_text[:300]
 
         # Extract uses and applications
