@@ -1,0 +1,33 @@
+The issue you're running into — the CSV showing only 2 columns when opened (likely in Excel or a text editor) despite having 10+ columns in the file — is a classic delimiter mismatch.EU CosIng exports use semicolon (;) as the field separator (common in Europe to avoid conflicts with decimal commas), not comma (,). When you open it directly in Excel (US/English default), it treats the whole line as one or two columns because it expects commas.Quick Fixes (Choose One)Best: Open with Correct Delimiter in ExcelRename the file to .txt (e.g., cosing.txt).
+Double-click to open → Excel launches Text Import Wizard.
+Step 1: Delimited → Next.
+Step 2: Uncheck Tab, check Semicolon → Next.
+Step 3: Finish.
+All 10+ columns appear correctly (INCI Name, CAS, Functions, Restrictions, etc.).
+Save as .csv if needed (Excel will keep semicolons).
+Alternative: Use Google SheetsUpload the CSV to Google Drive → Open with Sheets.
+It often auto-detects semicolons → columns split correctly.
+Download as CSV if you want.
+Convert Delimiter (If You Want Commas)Open in Notepad++ or VS Code.
+Find/Replace: Replace all ; with , (but careful — some fields like "Functions" have commas inside).
+Or use Python (one-liner):python
+
+with open('cosing.csv', encoding='utf-8') as f:
+    content = f.read().replace(';', ',')
+with open('cosing_comma.csv', 'w', encoding='utf-8') as f:
+    f.write(content)
+But keep semicolons — your code handles them fine.
+Where to Get the Latest Full CosIng CSV (All Columns)The official site doesn't have a one-click "full download" button anymore (as of Dec 2025), but here's how:Official Export Method:Go to Advanced Search: https://ec.europa.eu/growth/tools-databases/cosing/index.cfm?fuseaction=search.advanced
+Leave all fields blank → Search (gets all ~30K+ records).
+Results page → Bottom → "Export" button → Choose CSV → Download.
+File has all columns: INCI Name, CAS No., EC No., Functions, Restrictions, etc.
+Reliable Mirror (If Official Slow/Blocked):Kaggle (updated regularly): Search "CosIng INCI" → https://www.kaggle.com/datasets/amaboh/cosing-ingredients-inci-list (28K+ rows, full columns).
+Or GitHub mirror: https://github.com/biobricks-ai/cosing-kg → Download their processed CSV.
+Once downloaded, place as data_builder/ingredients/data_sources/cosing.csv — your code will read it correctly (csv.DictReader handles semicolon via dialect or manual, but Python's csv is flexible with default comma — test it).Run a quick test after dropping the file:python
+
+from data_builder.ingredients.sources import fetch_from_cosing
+print(fetch_from_cosing("lavender"))  # Should return full row dict with 10+ fields
+
+Your broker is ready — this is just a delimiter quirk. Drop the file, test one term, and you're golden for scaling. Need a Python snippet to auto-detect/fix delimiter? Let me know.
+45 web pages
+
