@@ -210,6 +210,66 @@ def view_fault_log():
         flash(f'Error loading fault log: {str(e)}', 'error')
         return render_template('fault_log.html', faults=[])
 
+@app_routes_bp.route('/api/vendor-signup', methods=['POST'])
+@limiter.limit("10 per minute")
+def vendor_signup():
+    """Handle vendor signup submissions"""
+    try:
+        from app.utils.json_store import read_json_file, write_json_file
+        import os
+        from datetime import datetime
+        
+        data = request.get_json()
+        if not data:
+            return jsonify({'success': False, 'error': 'No data provided'}), 400
+        
+        # Validate required fields
+        required_fields = ['item_name', 'item_id', 'company_name', 'contact_name', 'email']
+        for field in required_fields:
+            if not data.get(field):
+                return jsonify({'success': False, 'error': f'Missing required field: {field}'}), 400
+        
+        # Validate email format
+        import re
+        email_pattern = r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$'
+        if not re.match(email_pattern, data['email']):
+            return jsonify({'success': False, 'error': 'Invalid email format'}), 400
+        
+        # Ensure data directory exists
+        data_dir = 'data'
+        os.makedirs(data_dir, exist_ok=True)
+        
+        # Read existing vendor signups
+        vendor_file = os.path.join(data_dir, 'vendor_signups.json')
+        vendor_signups = read_json_file(vendor_file, default=[])
+        
+        # Add new signup
+        signup_data = {
+            'id': len(vendor_signups) + 1,
+            'item_name': data['item_name'],
+            'item_id': data['item_id'],
+            'company_name': data['company_name'],
+            'contact_name': data['contact_name'],
+            'email': data['email'],
+            'phone': data.get('phone', ''),
+            'website': data.get('website', ''),
+            'message': data.get('message', ''),
+            'timestamp': datetime.utcnow().isoformat(),
+            'status': 'pending'
+        }
+        
+        vendor_signups.append(signup_data)
+        
+        # Save updated list
+        write_json_file(vendor_file, vendor_signups)
+        
+        return jsonify({'success': True, 'message': 'Vendor signup submitted successfully'})
+        
+    except Exception as e:
+        logger.error(f"Vendor signup error: {e}")
+        return jsonify({'success': False, 'error': 'Internal server error'}), 500
+
+
 @app_routes_bp.route('/api/server-time')
 def get_server_time():
     """Get current server time in UTC and user's timezone, also auto-complete expired timers"""

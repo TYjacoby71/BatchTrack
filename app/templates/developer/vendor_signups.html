@@ -1,0 +1,103 @@
+
+{% extends 'layout.html' %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+  <div>
+    <nav aria-label="breadcrumb">
+      <ol class="breadcrumb mb-0">
+        <li class="breadcrumb-item"><a href="{{ url_for('developer.dashboard') }}">Developer</a></li>
+        <li class="breadcrumb-item active" aria-current="page">Vendor Signups</li>
+      </ol>
+    </nav>
+    <h2 class="mt-2">Vendor Signups</h2>
+    <p class="text-muted mb-0">Vendors interested in supplying global items</p>
+  </div>
+  <a href="{{ url_for('developer.dashboard') }}" class="btn btn-outline-secondary">
+    <i class="fas fa-arrow-left"></i> Back to Dashboard
+  </a>
+</div>
+
+<div class="card">
+  <div class="card-header d-flex justify-content-between align-items-center">
+    <h5 class="mb-0">Vendor Signups ({{ signups|length }})</h5>
+  </div>
+  <div class="card-body p-0">
+    {% if signups %}
+      <div class="table-responsive">
+        <table class="table table-hover mb-0">
+          <thead class="table-light">
+            <tr>
+              <th>Date</th>
+              <th>Item</th>
+              <th>Company</th>
+              <th>Contact</th>
+              <th>Email</th>
+              <th>Phone</th>
+              <th>Website</th>
+              <th>Message</th>
+              <th>Status</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for signup in signups %}
+            <tr>
+              <td>
+                <small>{{ signup.timestamp[:10] if signup.timestamp else '—' }}</small>
+              </td>
+              <td>
+                <strong>{{ signup.item_name or '—' }}</strong>
+                <small class="d-block text-muted">ID: {{ signup.item_id or '—' }}</small>
+              </td>
+              <td>{{ signup.company_name or '—' }}</td>
+              <td>{{ signup.contact_name or '—' }}</td>
+              <td>
+                {% if signup.email %}
+                  <a href="mailto:{{ signup.email }}">{{ signup.email }}</a>
+                {% else %}
+                  —
+                {% endif %}
+              </td>
+              <td>
+                {% if signup.phone %}
+                  <a href="tel:{{ signup.phone }}">{{ signup.phone }}</a>
+                {% else %}
+                  —
+                {% endif %}
+              </td>
+              <td>
+                {% if signup.website %}
+                  <a href="{{ signup.website }}" target="_blank" rel="noopener">{{ signup.website }}</a>
+                {% else %}
+                  —
+                {% endif %}
+              </td>
+              <td>
+                {% if signup.message %}
+                  <span title="{{ signup.message }}">{{ signup.message[:50] }}{% if signup.message|length > 50 %}...{% endif %}</span>
+                {% else %}
+                  —
+                {% endif %}
+              </td>
+              <td>
+                <span class="badge bg-{{ 'warning' if signup.status == 'pending' else 'success' }}">
+                  {{ signup.status|title or 'Pending' }}
+                </span>
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    {% else %}
+      <div class="text-center py-5">
+        <div class="text-muted">
+          <i class="fas fa-store fa-3x mb-3"></i>
+          <h4>No vendor signups yet</h4>
+          <p>Vendor signups will appear here when vendors express interest in supplying items.</p>
+        </div>
+      </div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}
