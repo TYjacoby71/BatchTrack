@@ -480,14 +480,20 @@ class TGSCIngredientScraper:
             'odor_count': 0
         }
 
+        # Category name normalization mapping
+        category_mapping = {
+            'resins_gums': 'resins_natural'
+        }
+
         # Scrape each ingredient
         for i, link in enumerate(ingredient_links_to_process, start=start_index + 1):
             html_content = self.fetch_html(link, save_filename=None)
             if html_content:
                 ingredient_data = self.parse_ingredient_data(html_content, link)
                 if ingredient_data['common_name']:  # Only save if we got a name
-                    # Add category info immediately
-                    ingredient_data['category'] = category_name
+                    # Add category info with mapping
+                    mapped_category = category_mapping.get(category_name, category_name)
+                    ingredient_data['category'] = mapped_category
                     ingredients_data.append(ingredient_data)
 
                     # Track data quality
