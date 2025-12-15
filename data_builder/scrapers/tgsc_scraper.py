@@ -25,7 +25,7 @@ TGSC_INGREDIENT_CATEGORIES = {
     "concretes": f"{TGSC_BASE_URL}/con-az.html",
     "cosmetic_ingredients": f"{TGSC_BASE_URL}/cosmetix-a.html",
     "botanical_species": f"{TGSC_BASE_URL}/botaspes-a.html",
-    "fixed_oils": f"{TGSC_BASE_URL}/fixoil-a.html",
+    "fixed_oils": f"{TGSC_BASE_URL}/fixedoilx-a.html",
     "resins_gums": f"{TGSC_BASE_URL}/resinx-a.html"
 }
 
@@ -483,8 +483,6 @@ class TGSCIngredientScraper:
 
         # Scrape each ingredient
         for i, link in enumerate(ingredient_links_to_process, start=start_index + 1):
-            print(f"[{i}/{len(all_ingredient_links)}] Processing {category_name}")
-
             html_content = self.fetch_html(link, save_filename=None)
             if html_content:
                 ingredient_data = self.parse_ingredient_data(html_content, link)
@@ -564,13 +562,37 @@ class TGSCIngredientScraper:
             except Exception as e:
                 print(f"⚠️  Error reading existing CSV: {e}")
 
-        # Filter out ingredients that already exist
+        # Filter out ingredients that already exist (check both URL and name+category combination)
+        existing_combinations = set()
+        if file_exists:
+            try:
+                with open(filename, 'r', newline='', encoding='utf-8') as csvfile:
+                    reader = csv.DictReader(csvfile)
+                    for row in reader:
+                        # Create combination key of name + category for additional duplicate checking
+                        name_category_key = f"{row.get('common_name', '').lower().strip()}_{row.get('category', '').lower().strip()}"
+                        existing_combinations.add(name_category_key)
+            except Exception as e:
+                print(f"⚠️  Error reading existing combinations: {e}")
+
         new_ingredients = []
         for ingredient in ingredients:
-            if ingredient.get('url') not in existing_urls:
+            ingredient_url = ingredient.get('url', '')
+            ingredient_name = ingredient.get('common_name', '').lower().strip()
+            ingredient_category = ingredient.get('category', '').lower().strip()
+            name_category_key = f"{ingredient_name}_{ingredient_category}"
+            
+            # Check both URL and name+category combination to prevent duplicates
+            if (ingredient_url not in existing_urls and 
+                name_category_key not in existing_combinations and
+                ingredient_name):  # Only add if has a name
                 new_ingredients.append(ingredient)
+                existing_combinations.add(name_category_key)  # Track to prevent duplicates within this batch
             else:
-                print(f"⏭️  Skipping duplicate: {ingredient.get('common_name', 'Unknown')}")
+                if ingredient_url in existing_urls:
+                    print(f"⏭️  Skipping duplicate URL: {ingredient.get('common_name', 'Unknown')}")
+                elif name_category_key in existing_combinations:
+                    print(f"⏭️  Skipping duplicate name+category: {ingredient.get('common_name', 'Unknown')}")
 
         if not new_ingredients:
             print("No new ingredients to add")
@@ -715,9 +737,6 @@ def main():
                 if ingredients:
                     # Save ingredients immediately to CSV as they complete
                     scraper.save_ingredients_csv(ingredients, str(target_file))
-                    print(f"✅ {category_name}: {new_count} ingredients completed and saved")
-                else:
-                    print(f"⚠️  {category_name}: No new ingredients found")
             except Exception as e:
                 print(f"❌ {category_name}: Failed with error: {e}")
                 category_results[category_name] = {'new': 0, 'total': initial_counts.get(category_name, 0)}
