@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import argparse
+import concurrent.futures
 import json
 import logging
 import os
@@ -31,6 +32,7 @@ MAX_PRIORITY = 10
 DEFAULT_CANDIDATE_POOL_SIZE = int(os.getenv("TERM_GENERATOR_CANDIDATE_POOL", "30"))
 MAX_SELECTION_ATTEMPTS = int(os.getenv("TERM_GENERATOR_SELECTION_ATTEMPTS", "12"))
 MAX_CANDIDATE_POOL_SIZE = int(os.getenv("TERM_GENERATOR_MAX_CANDIDATE_POOL", "120"))
+DEFAULT_PARALLEL_WORKERS = int(os.getenv("TERM_GENERATOR_WORKERS", "6"))
 
 BASE_PHYSICAL_FORMS: Set[str] = {
     "Whole", "Slices", "Diced", "Chopped", "Minced", "Crushed", "Ground",
@@ -438,12 +440,14 @@ class TermCollector:
         letter: str = "",
         letters: str = "",
         candidate_pool_size: int = DEFAULT_CANDIDATE_POOL_SIZE,
+        workers: int = DEFAULT_PARALLEL_WORKERS,
     ) -> int:
         """Stage 1: Generate NEW terms and upsert each one immediately into the DB.
 
         Modes:
         - single_letter: generate `count` terms for one letter (default: inferred from DB, else "A")
         - round_robin: generate `count` terms cycling through A..Z (or `letters`)
+        - parallel_letters: generate `count` terms distributed across letters, in parallel (workers capped)
         """
         if not self.include_ai:
             LOGGER.warning("OPENAI_API_KEY missing; skipping AI term generation")
@@ -460,6 +464,60 @@ class TermCollector:
         normalized_count = max(0, int(count or 0))
         if normalized_count == 0:
             return 0
+
+        if normalized_mode == "parallel_letters":
+            letter_list = self._normalize_letters(letters)
+            if not letter_list:
+                letter_list = list("ABCDEFGHIJKLMNOPQRSTUVWXYZ")
+
+            base = normalized_count // len(letter_list)
+            remainder = normalized_count % len(letter_list)
+            per_letter_counts = {
+                ch: (base + (1 if i < remainder else 0))
+                for i, ch in enumerate(letter_list)
+            }
+
+            max_workers = max(1, min(int(workers or DEFAULT_PARALLEL_WORKERS), len(letter_list)))
+
+            def _worker(initial: str, n: int) -> int:
+                if n <= 0:
+                    return 0
+                # Use a dedicated collector per worker to avoid shared mutable state.
+                # DB remains the source-of-truth for the per-letter cursor.
+                local = TermCollector(
+                    include_ai=True,
+                    seed_root=None,
+                    example_file=None,
+                    terms_file=None,
+                    seed_from_db=True,
+                )
+                return local.seed_next_terms_to_db(
+                    count=n,
+                    mode="single_letter",
+                    letter=initial,
+                    candidate_pool_size=candidate_pool_size,
+                )
+
+            LOGGER.info(
+                "Seeding %s terms across %s letters with up to %s workers",
+                normalized_count,
+                len(letter_list),
+                max_workers,
+            )
+
+            with concurrent.futures.ThreadPoolExecutor(max_workers=max_workers) as pool:
+                futures = {
+                    pool.submit(_worker, initial, n): initial
+                    for initial, n in per_letter_counts.items()
+                    if n > 0
+                }
+                for fut in concurrent.futures.as_completed(futures):
+                    initial = futures[fut]
+                    try:
+                        inserted += int(fut.result() or 0)
+                    except Exception as exc:  # pylint: disable=broad-except
+                        LOGGER.warning("Parallel worker for %s failed: %s", initial, exc)
+            return inserted
 
         if normalized_mode == "round_robin":
             letter_list = self._normalize_letters(letters)
@@ -614,10 +672,11 @@ def parse_args(argv: List[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--ingest-seeds", action="store_true", help="If set, scan --seed-root for seed terms (output/ is always ignored)")
     parser.add_argument("--example-file", default="", help="Optional JSON array of canonical example ingredients for prompt context")
     parser.add_argument("--count", type=int, default=250, help="How many NEW alphabetical terms to create and queue now")
-    parser.add_argument("--mode", choices=["single_letter", "round_robin"], default="single_letter", help="How to advance through the alphabet")
+    parser.add_argument("--mode", choices=["single_letter", "round_robin", "parallel_letters"], default="single_letter", help="How to advance through the alphabet")
     parser.add_argument("--letter", default="", help="When mode=single_letter, which letter to fill (default: inferred from DB, else A)")
     parser.add_argument("--letters", default="", help="When mode=round_robin, which letters to cycle (default: A-Z)")
     parser.add_argument("--candidate-pool", type=int, default=DEFAULT_CANDIDATE_POOL_SIZE, help="Internal AI candidate pool size (kept small; not a DB batch)")
+    parser.add_argument("--workers", type=int, default=DEFAULT_PARALLEL_WORKERS, help="When mode=parallel_letters, maximum concurrent letter workers")
     parser.add_argument("--skip-ai", action="store_true", help="Only use repo seeds; do not call the AI API")
     parser.add_argument("--write-forms-file", action="store_true", help="Write the physical_forms.json output (optional)")
     parser.add_argument("--forms-file", default=str(PHYSICAL_FORMS_FILE), help="Destination file for physical forms list")
@@ -651,6 +710,7 @@ def main(argv: List[str] | None = None) -> None:
         letter=str(args.letter or ""),
         letters=str(args.letters or ""),
         candidate_pool_size=max(5, int(args.candidate_pool or DEFAULT_CANDIDATE_POOL_SIZE)),
+        workers=max(1, int(args.workers or DEFAULT_PARALLEL_WORKERS)),
     )
 
     if args.write_forms_file:
