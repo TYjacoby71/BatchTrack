@@ -551,7 +551,7 @@ class TGSCIngredientScraper:
         return None
 
     def save_ingredients_csv(self, ingredients: List[Dict], filename: str):
-        """Save ingredients data to CSV file."""
+        """Save ingredients data to CSV file additively."""
         if not ingredients:
             print("No ingredients to save")
             return
@@ -564,12 +564,45 @@ class TGSCIngredientScraper:
             'solubility', 'synonyms', 'natural_occurrence', 'url'
         ]
 
-        try:
-            with open(filename, 'w', newline='', encoding='utf-8') as csvfile:
-                writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
-                writer.writeheader()
+        # Check if file exists to determine if we need to write header
+        file_exists = Path(filename).exists()
+        
+        # Load existing URLs to avoid duplicates
+        existing_urls = set()
+        if file_exists:
+            try:
+                with open(filename, 'r', newline='', encoding='utf-8') as csvfile:
+                    reader = csv.DictReader(csvfile)
+                    for row in reader:
+                        if row.get('url'):
+                            existing_urls.add(row['url'])
+                print(f"📋 Found {len(existing_urls)} existing ingredients in CSV")
+            except Exception as e:
+                print(f"⚠️  Error reading existing CSV: {e}")
 
-                for ingredient in ingredients:
+        # Filter out ingredients that already exist
+        new_ingredients = []
+        for ingredient in ingredients:
+            if ingredient.get('url') not in existing_urls:
+                new_ingredients.append(ingredient)
+            else:
+                print(f"⏭️  Skipping duplicate: {ingredient.get('common_name', 'Unknown')}")
+
+        if not new_ingredients:
+            print("No new ingredients to add")
+            return
+
+        try:
+            # Open in append mode, or write mode if file doesn't exist
+            mode = 'a' if file_exists else 'w'
+            with open(filename, mode, newline='', encoding='utf-8') as csvfile:
+                writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
+                
+                # Only write header if file is new
+                if not file_exists:
+                    writer.writeheader()
+
+                for ingredient in new_ingredients:
                     # Convert lists to semicolon-separated strings and filter to fieldnames
                     row = {}
                     for field in fieldnames:
@@ -583,7 +616,9 @@ class TGSCIngredientScraper:
                             row[field] = ''
                     writer.writerow(row)
 
-            print(f"💾 Saved {len(ingredients)} ingredients to {filename}")
+            print(f"💾 Added {len(new_ingredients)} new ingredients to {filename}")
+            total_count = len(existing_urls) + len(new_ingredients)
+            print(f"📊 Total ingredients in file: {total_count}")
 
         except Exception as e:
             print(f"❌ Error saving CSV: {e}")
