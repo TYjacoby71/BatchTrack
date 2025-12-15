@@ -123,7 +123,7 @@ class TGSCIngredientScraper:
         if context_keywords:
             for keyword in context_keywords:
                 # Look for text containing the keyword
-                elements = soup.find_all(text=re.compile(keyword, re.IGNORECASE))
+                elements = soup.find_all(string=re.compile(keyword, re.IGNORECASE))
                 for element in elements:
                     if isinstance(element, NavigableString):
                         parent = element.parent
