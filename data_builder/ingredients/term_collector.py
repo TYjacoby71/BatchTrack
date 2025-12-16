@@ -31,6 +31,15 @@ MAX_PRIORITY = 10
 DEFAULT_CANDIDATE_POOL_SIZE = int(os.getenv("TERM_GENERATOR_CANDIDATE_POOL", "30"))
 MAX_SELECTION_ATTEMPTS = int(os.getenv("TERM_GENERATOR_SELECTION_ATTEMPTS", "12"))
 MAX_CANDIDATE_POOL_SIZE = int(os.getenv("TERM_GENERATOR_MAX_CANDIDATE_POOL", "120"))
+# Optional: sample additional AI candidate pools with category hints to increase recall
+# (helps close "gaps" at the cost of extra API calls).
+CATEGORY_HINTS_PER_ATTEMPT = int(os.getenv("TERM_GENERATOR_CATEGORY_HINTS_PER_ATTEMPT", "0"))
+CATEGORY_HINT_POOL_SIZE = int(os.getenv("TERM_GENERATOR_CATEGORY_HINT_POOL_SIZE", "10"))
+
+try:  # pragma: no cover - best effort, avoids hard dependency
+    from .ai_worker import INGREDIENT_CATEGORIES as CATEGORY_HINTS
+except Exception:  # pragma: no cover
+    CATEGORY_HINTS: List[str] = []
 
 BASE_PHYSICAL_FORMS: Set[str] = {
     "Whole", "Slices", "Diced", "Chopped", "Minced", "Crushed", "Ground",
@@ -136,6 +145,10 @@ DEFINITIONS:
 TASK:
 Return a strictly alphabetical list of NEW base ingredient names that have not appeared previously. Every entry must be unique, discoverable in supplier catalogs, and relevant to at least one target industry: soapmaking, personal care, artisan food & beverage, herbal apothecary, candles, cosmetics, confectionery, or fermentation.
 
+CATEGORY FOCUS (OPTIONAL):
+- If `category_hint` is provided, prefer bases commonly sold under that broad supplier category.
+- `category_hint` is only a search hint. The output `category` field must still be chosen from the allowed enum.
+
 SOLUTION & EXTRACT GUIDANCE:
 - Solutions, extracts, distillates, isolates, essential oils, hydrosols, absolutes, CO2 extracts, glycerites, tinctures, infusions, decoctions, vinegars, and other preparations are PHYSICAL FORMS.
 - If a candidate name is a preparation/form (e.g., "Acerola Extract", "Witch Hazel Distillate", "Lavender Essential Oil", "Sodium Hydroxide 50% Solution"), do NOT add it as a base; instead, treat it as a `common_forms` entry for the appropriate base and choose a different new base name.
@@ -158,6 +171,7 @@ CONSTRAINTS:
 OUTPUT FORMAT:
 Return JSON only:
 {{
+  "category_hint_used": "string | null",
   "ingredients": [
     {{
       "name": "string",
@@ -226,6 +240,19 @@ def _looks_like_form_not_base(term: str) -> bool:
     if "(" in cleaned or ")" in cleaned:
         return True
     return any(pattern.search(cleaned) for pattern in _FORM_LIKE_PATTERNS)
+
+
+def _select_category_hints(initial: str, start_after: str, limit: int) -> List[str]:
+    """Choose a stable rotating subset of CATEGORY_HINTS for this cursor."""
+    limit = max(0, int(limit or 0))
+    if limit == 0 or not CATEGORY_HINTS:
+        return []
+    # Stable seed so repeated runs for same cursor rotate predictably.
+    seed = f"{(initial or '').upper()}|{(start_after or '').casefold()}"
+    digest = int(hashlib.sha1(seed.encode("utf-8")).hexdigest()[:8], 16)
+    start_idx = digest % len(CATEGORY_HINTS)
+    ordered = CATEGORY_HINTS[start_idx:] + CATEGORY_HINTS[:start_idx]
+    return ordered[: min(limit, len(ordered))]
 
 
 class TermCollector:
@@ -426,9 +453,16 @@ class TermCollector:
         required_initial: str,
         count: int,
         examples: List[str],
+        category_hint: Optional[str] = None,
     ) -> List[Tuple[str, int]]:
         """Request a small candidate pool from the AI and return (term, priority) tuples."""
-        payload = self._request_ai_batch(count=count, start_after=start_after, required_initial=required_initial, examples=examples)
+        payload = self._request_ai_batch(
+            count=count,
+            start_after=start_after,
+            required_initial=required_initial,
+            examples=examples,
+            category_hint=category_hint,
+        )
         if not payload:
             return []
         out: List[Tuple[str, int]] = []
@@ -470,12 +504,29 @@ class TermCollector:
             # Ramp pool size a bit if we're failing to find a viable term.
             candidate_count = min(MAX_CANDIDATE_POOL_SIZE, max(5, pool_size + (attempts - 1) * 10))
             examples = self._compose_examples(24)
-            candidates = self._iter_ai_candidates(
+            candidates: List[Tuple[str, int]] = []
+            # Baseline, uncategorized candidate pool.
+            candidates.extend(self._iter_ai_candidates(
                 start_after=start_after,
                 required_initial=req_fold.upper(),
                 count=candidate_count,
                 examples=examples,
-            )
+                category_hint=None,
+            ))
+
+            # Optional: add a few small category-hinted pools to improve recall and reduce gaps.
+            per_attempt = max(0, int(CATEGORY_HINTS_PER_ATTEMPT or 0))
+            if per_attempt:
+                hints = _select_category_hints(required_initial, start_after, per_attempt)
+                hinted_count = max(5, min(int(CATEGORY_HINT_POOL_SIZE or 10), MAX_CANDIDATE_POOL_SIZE))
+                for hint in hints:
+                    candidates.extend(self._iter_ai_candidates(
+                        start_after=start_after,
+                        required_initial=req_fold.upper(),
+                        count=hinted_count,
+                        examples=examples,
+                        category_hint=hint,
+                    ))
 
             viable: List[Tuple[str, int]] = []
             for term, priority in candidates:
@@ -557,13 +608,23 @@ class TermCollector:
         combined = curated + live_samples
         return combined[:limit]
 
-    def _request_ai_batch(self, *, count: int, start_after: str, required_initial: str, examples: List[str]) -> Dict[str, Any]:
+    def _request_ai_batch(
+        self,
+        *,
+        count: int,
+        start_after: str,
+        required_initial: str,
+        examples: List[str],
+        category_hint: Optional[str] = None,
+    ) -> Dict[str, Any]:
         user_prompt = TERMS_PROMPT.format(
             count=count,
             start_after=start_after.replace("\"", ""),
             required_initial=(required_initial or "").replace("\"", ""),
             examples=json.dumps(examples, indent=2) if examples else "[]",
         )
+        if category_hint:
+            user_prompt = f"{user_prompt}\n\ncategory_hint: {category_hint}\n"
 
         client = openai.OpenAI(api_key=openai.api_key)
 
