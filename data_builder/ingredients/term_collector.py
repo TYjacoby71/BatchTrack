@@ -1,4 +1,4 @@
-"""AI-assisted collector that builds the seed ingredient queue and lookup forms."""
+"""AI-assisted collector that builds the seed ingredient queue (stage 1)."""
 from __future__ import annotations
 
 import argparse
@@ -31,45 +31,41 @@ MAX_PRIORITY = 10
 DEFAULT_CANDIDATE_POOL_SIZE = int(os.getenv("TERM_GENERATOR_CANDIDATE_POOL", "30"))
 MAX_SELECTION_ATTEMPTS = int(os.getenv("TERM_GENERATOR_SELECTION_ATTEMPTS", "12"))
 MAX_CANDIDATE_POOL_SIZE = int(os.getenv("TERM_GENERATOR_MAX_CANDIDATE_POOL", "120"))
-# Optional: sample additional AI candidate pools with category hints to increase recall
-# (helps close "gaps" at the cost of extra API calls).
-CATEGORY_HINTS_PER_ATTEMPT = int(os.getenv("TERM_GENERATOR_CATEGORY_HINTS_PER_ATTEMPT", "0"))
-CATEGORY_HINT_POOL_SIZE = int(os.getenv("TERM_GENERATOR_CATEGORY_HINT_POOL_SIZE", "10"))
+# Stage 1 cursor mode:
+# - legacy: per-letter cursor (A..Z)
+# - category cursor: per-(seed_category, letter) cursor
+USE_CATEGORY_CURSOR = os.getenv("TERM_GENERATOR_USE_CATEGORY_CURSOR", "1").strip() not in {"0", "false", "False"}
 
-REPO_ROOT = BASE_DIR.parent.parent
-SEED_CATEGORY_DIR = REPO_ROOT / "app" / "seeders" / "globallist" / "ingredients" / "categories"
-
-
-def _load_category_hints() -> List[str]:
-    """Load canonical ingredient category names from seed files (preferred)."""
-    hints: List[str] = []
-
-    if SEED_CATEGORY_DIR.exists():
-        for path in sorted(SEED_CATEGORY_DIR.glob("*.json")):
-            try:
-                data = json.loads(path.read_text(encoding="utf-8"))
-            except Exception:  # pylint: disable=broad-except
-                continue
-            if not isinstance(data, dict):
-                continue
-            name = str(data.get("category_name") or "").strip()
-            if name:
-                hints.append(name)
-
-    # Fallback to builder/compiler categories if seed files aren't present.
-    if not hints:
-        try:  # pragma: no cover - best effort, avoids hard dependency
-            from .ai_worker import INGREDIENT_CATEGORIES as fallback  # type: ignore
-        except Exception:  # pragma: no cover
-            fallback = []
-        hints.extend([str(item).strip() for item in (fallback or []) if str(item).strip()])
-
-    # Deterministic, unique ordering.
-    deduped = sorted({hint for hint in hints if hint})
-    return deduped
-
-
-CATEGORY_HINTS: List[str] = _load_category_hints()
+# Canonical seed categories (hard-coded; terms are tagged with one of these at generation time).
+# IMPORTANT: do not read seed files at runtime; Stage 1 should be self-contained.
+SEED_INGREDIENT_CATEGORIES: List[str] = [
+    "Active Ingredients (Cosmetics)",
+    "Aqueous Solutions & Blends",
+    "Botanicals (Dried)",
+    "Butters (Solid Fats)",
+    "Clays",
+    "Colorants & Pigments",
+    "Cultures, SCOBYs & Fermentation",
+    "Essential Oils",
+    "Extracts (Alcohols & Solvents)",
+    "Flours & Powders (Organic)",
+    "Fragrance Oils",
+    "Fruits, Nuts & Seeds (Whole/Chopped)",
+    "Herbs & Spices (Dried Botanicals)",
+    "Hydrosols & Floral Waters",
+    "Liquid Extracts (Aqueous/Glycerine)",
+    "Liquids (Aqueous)",
+    "Miscellaneous",
+    "Oils (Carrier & Fixed)",
+    "Polymers (Synthetic)",
+    "Preservatives & Additives",
+    "Resins (Natural)",
+    "Salts & Minerals (Crystalline)",
+    "Starches & Thickeners",
+    "Sugars & Syrups",
+    "Surfactants & Emulsifiers",
+    "Waxes",
+]
 
 BASE_PHYSICAL_FORMS: Set[str] = {
     "Whole", "Slices", "Diced", "Chopped", "Minced", "Crushed", "Ground",
@@ -163,64 +159,40 @@ SYSTEM_PROMPT = (
 )
 
 TERMS_PROMPT = """
-You build the authoritative master ingredient index.
+You are running Stage 1 (Term Builder). Your ONLY job is to propose NEW base ingredient terms.
 
-DEFINITIONS:
-- An INGREDIENT (aka base) is the canonical purchasable raw material name you would index in a supplier catalog such as "Lavender", "Shea Butter", "Cane Sugar", "Citric Acid", "Apple Juice", "Applesauce", "Oat Milk".
-- An ITEM is the combination of INGREDIENT + PHYSICAL FORM (e.g., Lavender Buds, Lavender Essential Oil).
-- IMPORTANT: ONLY return base ingredient names in `ingredients[].name`. NEVER return a physical form / preparation as the base name.
-- Focus on botanicals, minerals, clays, waxes, fats, sugars, acids, fermentation adjuncts, resins, essential oils, extracts, isolates, and other raw materials used by small-batch makers.
-- EXCLUDE: packaging, containers, utensils, finished products, synthetic fragrances without a backing raw material, equipment, and vague marketing terms.
+DEFINITIONS (Stage 1):
+- A BASE INGREDIENT TERM is a purchasable raw material name that can appear as a single supplier line-item (e.g., "Oat Milk", "Apple Juice", "Applesauce", "Shea Butter").
+- Do NOT output preparations/forms/variants as separate base terms (e.g., "Acerola Extract", "Lavender Essential Oil", "50% Sodium Hydroxide Solution", "Granulated Honey", "2% Milk").
+
+TARGET CURSOR:
+- seed_category: "{seed_category}"
+- required_initial: "{required_initial}" (case-insensitive)
+- start_after: "{start_after}"
 
 TASK:
-Return a strictly alphabetical list of NEW base ingredient names that have not appeared previously. Every entry must be unique, discoverable in supplier catalogs, and relevant to at least one target industry: soapmaking, personal care, artisan food & beverage, herbal apothecary, candles, cosmetics, confectionery, or fermentation.
+Return EXACTLY {count} NEW base ingredient terms for the given seed_category that:
+- start with required_initial
+- are lexicographically GREATER than start_after
+- are strictly alphabetized A→Z in the response
 
-CATEGORY FOCUS (OPTIONAL):
-- If `category_hint` is provided, prefer bases commonly sold under that broad supplier category.
-- `category_hint` is only a search hint. The output `category` field must still be chosen from the allowed enum.
-
-SOLUTION & EXTRACT GUIDANCE:
-- Solutions, extracts, distillates, isolates, essential oils, hydrosols, absolutes, CO2 extracts, glycerites, tinctures, infusions, decoctions, vinegars, and other preparations are PHYSICAL FORMS.
-- If a candidate name is a preparation/form (e.g., "Acerola Extract", "Witch Hazel Distillate", "Lavender Essential Oil", "Sodium Hydroxide 50% Solution"), do NOT add it as a base; instead, treat it as a `common_forms` entry for the appropriate base and choose a different new base name.
-- For botanicals with essential oils/hydrosols/absolutes/CO2 extracts, treat the plant as the ingredient and enumerate those preparations inside `common_forms`.
-- Fixed oils/butters/waxes are valid bases as written (e.g., "Olive Oil", "Shea Butter", "Beeswax") and should still list their refinements in `common_forms` (e.g., "Refined", "Unrefined", "Bleached", "Deodorized").
-
-For each ingredient, list the most common PHYSICAL FORMS in `common_forms` (Powder, Whole, Juice, Concentrate, Oil, Butter, Wax, etc.).
-Note: labeling/grade variations (e.g., 2%, raw, filtered, unsweetened) are handled downstream by the compiler; do not output a separate variations list here.
-
-CONSTRAINTS:
-- Provide EXACTLY {count} ingredient records.
-- Every ingredient name MUST start with "{required_initial}" (case-insensitive).
-- Every ingredient name MUST be lexicographically GREATER than "{start_after}".
-- Alphabetize A-Z within the response.
-- Avoid duplicates of the provided examples.
-- Use concise proper names (e.g., "Calendula", "Magnesium Hydroxide").
-- Assign a relevance score from 1-10 (integer) where 10 = essential for small-batch makers and 1 = niche or situational.
-- If no valid ingredients remain under the constraints, return an empty list.
+IMPORTANT (NEXT-TERM INTENT):
+- Prefer the *very next* alphabetical base ingredient(s) in this seed_category after start_after.
+- If you are unsure of the exact next term, return the closest plausible next terms without skipping far ahead.
 
 OUTPUT FORMAT:
 Return JSON only:
-{{
-  "category_hint_used": "string | null",
-  "ingredients": [
-    {{
+{
+  "seed_category": "{seed_category}",
+  "terms": [
+    {
       "name": "string",
-      "category": "one of: Botanical, Mineral, Animal-Derived, Fermentation, Chemical, Resin, Wax, Fatty Acid, Sugar, Acid, Salt, Aroma",
-      "industries": ["Soap", "Cosmetic", "Candle", "Confection", "Beverage", "Herbal", "Baking", "Fermentation", "Aromatherapy"],
-      "common_forms": ["Powder", "Essential Oil", ...],
-      "notes": "1-sentence rationale",
-      "priority_score": 1-10 integer (10 = highest relevance/urgency for makers)
-    }}
-  ],
-  "physical_forms": ["unique physical forms referenced"]
-}}
+      "priority_score": 1-10 integer
+    }
+  ]
+}
 
-EXAMPLES TO EMULATE:
-- Good base vs bad base:
-  - Good: "Acerola Cherry" with common_forms: ["Whole Dried", "Powder", "Extract", "Juice"]
-  - Bad: "Acerola Extract" as a separate base name (this must be a form under "Acerola Cherry")
-  - Good: "Apple Juice" (base) with common_forms: ["Juice", "Concentrate"]
-  - Good: "Oat Milk" (base) with common_forms: ["Liquid"]
+EXAMPLES (do not repeat these):
 {examples}
 """
 
@@ -272,17 +244,11 @@ def _looks_like_form_not_base(term: str) -> bool:
     return any(pattern.search(cleaned) for pattern in _FORM_LIKE_PATTERNS)
 
 
-def _select_category_hints(initial: str, start_after: str, limit: int) -> List[str]:
-    """Choose a stable rotating subset of CATEGORY_HINTS for this cursor."""
-    limit = max(0, int(limit or 0))
-    if limit == 0 or not CATEGORY_HINTS:
-        return []
-    # Stable seed so repeated runs for same cursor rotate predictably.
-    seed = f"{(initial or '').upper()}|{(start_after or '').casefold()}"
-    digest = int(hashlib.sha1(seed.encode("utf-8")).hexdigest()[:8], 16)
-    start_idx = digest % len(CATEGORY_HINTS)
-    ordered = CATEGORY_HINTS[start_idx:] + CATEGORY_HINTS[:start_idx]
-    return ordered[: min(limit, len(ordered))]
+def _select_seed_category(letter_index: int) -> str:
+    """Pick a deterministic seed category (stable round-robin)."""
+    if not SEED_INGREDIENT_CATEGORIES:
+        return "Miscellaneous"
+    return SEED_INGREDIENT_CATEGORIES[letter_index % len(SEED_INGREDIENT_CATEGORIES)]
 
 
 class TermCollector:
@@ -483,7 +449,7 @@ class TermCollector:
         required_initial: str,
         count: int,
         examples: List[str],
-        category_hint: Optional[str] = None,
+        seed_category: str,
     ) -> List[Tuple[str, int]]:
         """Request a small candidate pool from the AI and return (term, priority) tuples."""
         payload = self._request_ai_batch(
@@ -491,12 +457,12 @@ class TermCollector:
             start_after=start_after,
             required_initial=required_initial,
             examples=examples,
-            category_hint=category_hint,
+            seed_category=seed_category,
         )
         if not payload:
             return []
         out: List[Tuple[str, int]] = []
-        for record in payload.get("ingredients", []) or []:
+        for record in payload.get("terms", []) or []:
             name = record.get("name")
             if not isinstance(name, str):
                 continue
@@ -505,12 +471,6 @@ class TermCollector:
                 continue
             priority = self._extract_priority(record.get("priority_score"))
             out.append((cleaned, priority))
-            for form in record.get("common_forms", []) or []:
-                if isinstance(form, str) and form.strip():
-                    self.physical_forms.add(form.strip())
-        for form in payload.get("physical_forms", []) or []:
-            if isinstance(form, str) and form.strip():
-                self.physical_forms.add(form.strip())
         return out
 
     def _select_next_term(
@@ -518,6 +478,7 @@ class TermCollector:
         *,
         start_after: str,
         required_initial: str,
+        seed_category: str,
         candidate_pool_size: int,
     ) -> Optional[Tuple[str, int]]:
         """Ask the AI for candidates and select the next viable lexicographic term."""
@@ -534,29 +495,13 @@ class TermCollector:
             # Ramp pool size a bit if we're failing to find a viable term.
             candidate_count = min(MAX_CANDIDATE_POOL_SIZE, max(5, pool_size + (attempts - 1) * 10))
             examples = self._compose_examples(24)
-            candidates: List[Tuple[str, int]] = []
-            # Baseline, uncategorized candidate pool.
-            candidates.extend(self._iter_ai_candidates(
+            candidates = self._iter_ai_candidates(
                 start_after=start_after,
                 required_initial=req_fold.upper(),
                 count=candidate_count,
                 examples=examples,
-                category_hint=None,
-            ))
-
-            # Optional: add a few small category-hinted pools to improve recall and reduce gaps.
-            per_attempt = max(0, int(CATEGORY_HINTS_PER_ATTEMPT or 0))
-            if per_attempt:
-                hints = _select_category_hints(required_initial, start_after, per_attempt)
-                hinted_count = max(5, min(int(CATEGORY_HINT_POOL_SIZE or 10), MAX_CANDIDATE_POOL_SIZE))
-                for hint in hints:
-                    candidates.extend(self._iter_ai_candidates(
-                        start_after=start_after,
-                        required_initial=req_fold.upper(),
-                        count=hinted_count,
-                        examples=examples,
-                        category_hint=hint,
-                    ))
+                seed_category=seed_category,
+            )
 
             viable: List[Tuple[str, int]] = []
             for term, priority in candidates:
@@ -605,18 +550,28 @@ class TermCollector:
             return 0
 
         letters = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+        categories = SEED_INGREDIENT_CATEGORIES or ["Miscellaneous"]
         for idx in range(normalized_count):
-            initial = letters[idx % len(letters)]
-            start_after = database_manager.get_last_term_for_initial(initial) or ""
+            if USE_CATEGORY_CURSOR:
+                # Iterate by (letter, category) so every letter advances across all categories.
+                initial = letters[(idx // len(categories)) % len(letters)]
+                seed_category = categories[idx % len(categories)]
+                start_after = database_manager.get_last_term_for_initial_and_seed_category(initial, seed_category) or ""
+            else:
+                initial = letters[idx % len(letters)]
+                seed_category = "Miscellaneous"
+                start_after = database_manager.get_last_term_for_initial(initial) or ""
             selected = self._select_next_term(
                 start_after=start_after,
                 required_initial=initial,
+                seed_category=seed_category,
                 candidate_pool_size=candidate_pool_size,
             )
             if selected is None:
                 LOGGER.warning(
-                    "Unable to find next term for '%s' after '%s' on iteration %s/%s",
+                    "Unable to find next term for (%s, %s) after '%s' on iteration %s/%s",
                     initial,
+                    seed_category,
                     start_after or "<start>",
                     idx + 1,
                     normalized_count,
@@ -624,11 +579,18 @@ class TermCollector:
                 break
 
             term, priority = selected
-            was_inserted = database_manager.upsert_term(term, priority)
+            was_inserted = database_manager.upsert_term(term, priority, seed_category=seed_category)
             self._register_term(term, priority)
             if was_inserted:
                 inserted += 1
-                LOGGER.info("Queued term %s/%s: %s (priority=%s)", idx + 1, normalized_count, term, priority)
+                LOGGER.info(
+                    "Queued term %s/%s: %s [%s] (priority=%s)",
+                    idx + 1,
+                    normalized_count,
+                    term,
+                    seed_category,
+                    priority,
+                )
 
         return inserted
 
@@ -644,17 +606,16 @@ class TermCollector:
         count: int,
         start_after: str,
         required_initial: str,
+        seed_category: str,
         examples: List[str],
-        category_hint: Optional[str] = None,
     ) -> Dict[str, Any]:
         user_prompt = TERMS_PROMPT.format(
             count=count,
             start_after=start_after.replace("\"", ""),
             required_initial=(required_initial or "").replace("\"", ""),
+            seed_category=(seed_category or "").replace("\"", ""),
             examples=json.dumps(examples, indent=2) if examples else "[]",
         )
-        if category_hint:
-            user_prompt = f"{user_prompt}\n\ncategory_hint: {category_hint}\n"
 
         client = openai.OpenAI(api_key=openai.api_key)
 

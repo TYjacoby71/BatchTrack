@@ -42,6 +42,9 @@ class TaskQueue(Base):
     status = Column(String, nullable=False, default="pending")
     last_updated = Column(DateTime, nullable=False, default=datetime.utcnow)
     priority = Column(Integer, nullable=False, default=DEFAULT_PRIORITY)
+    # Stage 1 seed category cursor (optional). When set, the term builder can ratchet by
+    # (seed_category, initial) instead of just initial.
+    seed_category = Column(String, nullable=True, default=None)
 
 
 VALID_STATUSES = {"pending", "processing", "completed", "error"}
@@ -52,6 +55,7 @@ def ensure_tables_exist() -> None:
 
     Base.metadata.create_all(engine)
     _ensure_priority_column()
+    _ensure_seed_category_column()
 
 
 def _ensure_priority_column() -> None:
@@ -64,6 +68,17 @@ def _ensure_priority_column() -> None:
                 {"default": DEFAULT_PRIORITY},
             )
             LOGGER.info("Added priority column to task_queue")
+
+
+def _ensure_seed_category_column() -> None:
+    with engine.connect() as conn:
+        columns = conn.execute(text("PRAGMA table_info(task_queue)")).fetchall()
+        column_names = {row[1] for row in columns}
+        if "seed_category" not in column_names:
+            conn.execute(
+                text("ALTER TABLE task_queue ADD COLUMN seed_category TEXT"),
+            )
+            LOGGER.info("Added seed_category column to task_queue")
 
 
 @contextmanager
@@ -270,7 +285,31 @@ def get_last_term_for_initial(initial: str) -> Optional[str]:
         return row[0] if row else None
 
 
-def upsert_term(term: str, priority: int) -> bool:
+def get_last_term_for_initial_and_seed_category(initial: str, seed_category: str) -> Optional[str]:
+    """Return the last term for a given initial constrained to a seed_category."""
+    ensure_tables_exist()
+    letter = (initial or "").strip()[:1].upper()
+    category = (seed_category or "").strip()
+    if not letter or not category:
+        return None
+
+    with get_session() as session:
+        row = (
+            session.execute(
+                select(TaskQueue.term)
+                .where(
+                    TaskQueue.seed_category == category,
+                    TaskQueue.term.collate("NOCASE").like(f"{letter}%"),
+                )
+                .order_by(TaskQueue.term.collate("NOCASE").desc(), TaskQueue.term.desc())
+                .limit(1)
+            )
+            .first()
+        )
+        return row[0] if row else None
+
+
+def upsert_term(term: str, priority: int, *, seed_category: str | None = None) -> bool:
     """Upsert a single term and commit immediately.
 
     Returns:
@@ -282,12 +321,16 @@ def upsert_term(term: str, priority: int) -> bool:
         return False
 
     normalized_priority = _sanitize_priority(priority)
+    cleaned_category = (seed_category or "").strip() or None
     with get_session() as session:
         existing: Optional[TaskQueue] = session.get(TaskQueue, cleaned)
         if existing is not None:
             if normalized_priority > int(existing.priority or DEFAULT_PRIORITY):
                 existing.priority = normalized_priority
                 existing.last_updated = datetime.utcnow()
+            # Backfill seed_category if missing or changed.
+            if cleaned_category and (existing.seed_category or "").strip() != cleaned_category:
+                existing.seed_category = cleaned_category
             return False
 
         session.add(
@@ -296,6 +339,7 @@ def upsert_term(term: str, priority: int) -> bool:
                 status="pending",
                 last_updated=datetime.utcnow(),
                 priority=normalized_priority,
+                seed_category=cleaned_category,
             )
         )
         return True

@@ -139,7 +139,12 @@ TASK: Build the complete ingredient dossier for: "{ingredient}".
 CONTEXT:
 - Audience: artisanal formulators in soap, confections, cosmetics, herbalism, fermentation, aromatherapy, and small-batch baking.
 - Scope: RAW INGREDIENTS ONLY. Never include packaging, containers, utensils, or finished consumer goods.
-- For each ingredient, enumerate every common PHYSICAL FORM (solid, powder, puree, resin, etc.) used in craft production. Create a dedicated `items` entry for every form.
+- Item model: An ITEM is the combination of BASE INGREDIENT + VARIATION.
+  - VARIATION is the purchasable/spec distinction (e.g., Refined vs Unrefined, 2% vs Whole, Filtered vs Unfiltered, Organic, Deodorized, 50% Solution).
+  - PHYSICAL FORM is still required and must remain a short noun (e.g., Powder, Oil, Liquid, Granules). Do not encode variations into physical_form.
+  - Represent the variation primarily in `item_name` (e.g., "Honey (Granulated)", "Milk (2%)", "Sodium Hydroxide (50% Solution)").
+  - If the base is normally sold in multiple forms (powder vs liquid vs whole), create separate items per form and use variation text in item_name as needed.
+- Create a dedicated `items` entry for each common purchasable variation and/or physical form used in craft production.
 - Populate every applicable attribute in the schema. Use "unknown" only when absolutely no data exists.
 - Use authoritative references (USP, FCC, cosmetic suppliers, herbal materia medica) when citing specs.
 - Use metric units. Shelf life must be expressed in DAYS (convert from months/years when needed). Temperature in Celsius.
@@ -153,8 +158,8 @@ CONTROLLED VOCAB REMINDERS:
 - ingredient.category must be one of: {categories}
 
 FORM & SOLUTION GUIDANCE:
-- Always include dairy variants (e.g., whole milk, 2% milk, skim milk powder) and note their distinct forms.
-- Include buffered/stock solutions (e.g., 50% Sodium Hydroxide Solution, 20% Potassium Carbonate Solution) when common in production.
+- Always include common dairy *variations* (e.g., whole milk, 2% milk, skim milk, skim milk powder) as distinct items.
+- Include buffered/stock solutions (e.g., 50% Sodium Hydroxide Solution, 20% Potassium Carbonate Solution) as distinct items; encode the %/strength in item_name.
 - Essential oils, hydrosols, absolutes, CO2 extracts, glycerites, tinctures, macerations, and infusions should be represented as distinct forms under the parent ingredient.
 - When an ingredient should display without a suffix (Water, Ice, Steam), set `form_bypass`=true so the interface shows just "Water" or "Ice" while still recording the underlying physical_form.
 - More generally, if the best default item is identical to the base common_name (e.g., "Water", "Apples"), set `item_name` exactly to the common_name and set `form_bypass`=true so the UI shows the base without a redundant suffix.
