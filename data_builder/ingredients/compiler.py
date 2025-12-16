@@ -22,6 +22,7 @@ BASE_DIR = Path(__file__).resolve().parent
 OUTPUT_DIR = BASE_DIR / "output"
 INGREDIENT_DIR = OUTPUT_DIR / "ingredients"
 PHYSICAL_FORMS_FILE = OUTPUT_DIR / "physical_forms.json"
+VARIATIONS_FILE = OUTPUT_DIR / "variations.json"
 TAXONOMY_FILE = OUTPUT_DIR / "taxonomies.json"
 DEFAULT_TERMS_FILE = BASE_DIR / "terms.json"
 DEFAULT_SLEEP_SECONDS = float(os.getenv("COMPILER_SLEEP_SECONDS", "3"))
@@ -93,7 +94,7 @@ def validate_payload(payload: Dict[str, Any]) -> Dict[str, Any]:
 
 
 def update_lookup_files(payload: Dict[str, Any]) -> None:
-    """Refresh the supporting lookup files for physical forms and taxonomies."""
+    """Refresh the supporting lookup files for physical forms, variations, and taxonomies."""
 
     ingredient = payload.get("ingredient", {})
     items: List[Dict[str, Any]] = ingredient.get("items", []) or []
@@ -105,6 +106,14 @@ def update_lookup_files(payload: Dict[str, Any]) -> None:
         if isinstance(form, str) and form.strip():
             existing_forms.add(form.strip())
     _write_json_list(PHYSICAL_FORMS_FILE, existing_forms)
+
+    # Variations (separate from physical_form)
+    existing_variations = _load_json_list(VARIATIONS_FILE)
+    for item in items:
+        variation = item.get("variation")
+        if isinstance(variation, str) and variation.strip():
+            existing_variations.add(variation.strip())
+    _write_json_list(VARIATIONS_FILE, existing_variations)
 
     taxonomy_values = _load_taxonomy_map()
 
@@ -162,7 +171,10 @@ def process_next_term(sleep_seconds: float, min_priority: int) -> bool:
             raise RuntimeError(payload.get("error") if isinstance(payload, dict) else "Unknown AI failure")
 
         ingredient = validate_payload(payload)
-        slug = slugify(ingredient.get("common_name", term))
+        # Enforce base-term stability: the queued term is the canonical base name.
+        if isinstance(ingredient.get("common_name"), str) and ingredient.get("common_name") != term:
+            ingredient["common_name"] = term
+        slug = slugify(term)
         save_payload(payload, slug)
         update_lookup_files(payload)
         database_manager.update_task_status(term, "completed")

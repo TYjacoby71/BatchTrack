@@ -74,7 +74,8 @@ Return JSON using this schema (all strings trimmed, booleans only true/false, li
     "items": [
       {
         "item_name": "Shea Butter (Refined)",
-        "physical_form": "choose from common forms such as Butter, Powder, Chips, Pellets, Granules, Crystals, Oil, Resin, Wax, Paste, Slab, Whole, Slices, Shavings, Ribbon, Nibs, Shreds, Flakes, Gel, Puree, Juice, Concentrate, Syrup",
+        "variation": "string (e.g., Refined, Unrefined, Cold Pressed, 2%, Filtered, Essential Oil, CO2 Extract, Tincture, 50% Solution; empty string if none)",
+        "physical_form": "short noun for physical state (e.g., Oil, Liquid, Powder, Granules, Crystals, Whole, Butter, Wax, Resin, Gel, Paste, Syrup, Concentrate)",
         "synonyms": ["aka", ...],
         "applications": ["Soap", "Bath Bomb", "Chocolate", "Lotion", "Candle"],
         "function_tags": ["Stabilizer", "Fragrance", "Colorant", "Binder", "Fuel"],
@@ -101,7 +102,8 @@ Return JSON using this schema (all strings trimmed, booleans only true/false, li
           "supply_risks": ["Seasonal Harvest"],
           "sustainability_notes": "Tree nut resource"
         },
-        "form_bypass": true | false  // when true, display should use item_name alone (e.g., Water, Ice)
+        "form_bypass": true | false,  // when true, display should use item_name alone (e.g., Water, Ice)
+        "variation_bypass": true | false  // when true, UI can omit displaying variation (useful when variation is implicit)
       }
     ],
     "taxonomy": {
@@ -164,6 +166,12 @@ FORM & SOLUTION GUIDANCE:
 - When an ingredient should display without a suffix (Water, Ice, Steam), set `form_bypass`=true so the interface shows just "Water" or "Ice" while still recording the underlying physical_form.
 - More generally, if the best default item is identical to the base common_name (e.g., "Water", "Apples"), set `item_name` exactly to the common_name and set `form_bypass`=true so the UI shows the base without a redundant suffix.
 - When no better industry name exists, use a concise solution label such as "Potassium Carbonate Solution (20%)" or simply "Brine Solution".
+
+VARIATION vs PHYSICAL_FORM (IMPORTANT):
+- Put "Essential Oil", "CO2 Extract", "Absolute", "Hydrosol", "Tincture", "Glycerite", "% Solution", "Cold Pressed", "Refined", "Filtered", etc. in `variation`.
+- Keep `physical_form` as the physical state noun only (Oil, Liquid, Powder, Whole, Granules, Crystals, Butter, Wax, Resin, Gel, Paste, Syrup, Concentrate).
+- `item_name` should generally be: "{common_name} ({variation})" when variation is non-empty.
+- If `variation` is empty, `item_name` may just be "{common_name}" and you can set `variation_bypass`=true.
 
 SCHEMA (required):
 {schema}
