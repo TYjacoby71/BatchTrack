@@ -101,6 +101,26 @@ class SourceTerm(Base):
     source = Column(String, nullable=False)
 
 
+class NormalizedTerm(Base):
+    """Normalized base ingredient term extracted from sources (pre-compile)."""
+
+    __tablename__ = "normalized_terms"
+
+    term = Column(String, primary_key=True)
+    seed_category = Column(String, nullable=True, default=None)
+
+    botanical_name = Column(String, nullable=True, default=None)
+    inci_name = Column(String, nullable=True, default=None)
+    cas_number = Column(String, nullable=True, default=None)
+
+    # A concise canonical description if available from sources.
+    description = Column(Text, nullable=True, default=None)
+
+    # Full aggregated source payload (small, merged) for inspection.
+    sources_json = Column(Text, nullable=False, default="{}")
+    normalized_at = Column(DateTime, nullable=False, default=datetime.utcnow)
+
+
 VALID_STATUSES = {"pending", "processing", "completed", "error"}
 
 
@@ -606,6 +626,41 @@ def get_next_source_term(seed_category: str, initial: str, start_after: str) -> 
             q = q.filter(SourceTerm.name.collate("NOCASE") > after)
         row = q.order_by(SourceTerm.name.collate("NOCASE").asc(), SourceTerm.name.asc()).first()
         return row[0] if row else None
+
+
+def upsert_normalized_terms(rows: Iterable[dict[str, Any]]) -> int:
+    """Upsert normalized term records; returns count newly inserted."""
+    ensure_tables_exist()
+    inserted = 0
+    with get_session() as session:
+        existing = {r[0] for r in session.query(NormalizedTerm.term).all()}
+        for row in rows:
+            term = (row.get("term") or "").strip()
+            if not term:
+                continue
+            if term in existing:
+                # Update existing row (keep it fresh).
+                record: Optional[NormalizedTerm] = session.get(NormalizedTerm, term)
+                if record is None:
+                    continue
+            else:
+                record = NormalizedTerm(term=term)
+                session.add(record)
+                existing.add(term)
+                inserted += 1
+
+            record.seed_category = (row.get("seed_category") or "").strip() or None
+            record.botanical_name = (row.get("botanical_name") or "").strip() or None
+            record.inci_name = (row.get("inci_name") or "").strip() or None
+            record.cas_number = (row.get("cas_number") or "").strip() or None
+            desc = row.get("description")
+            if isinstance(desc, str) and desc.strip():
+                record.description = desc.strip()
+            sources_json = row.get("sources_json")
+            if isinstance(sources_json, str) and sources_json.strip():
+                record.sources_json = sources_json
+            record.normalized_at = datetime.utcnow()
+    return inserted
 
 
 def queue_is_empty() -> bool:

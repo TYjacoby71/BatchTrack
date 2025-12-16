@@ -73,6 +73,23 @@ def create_app(db_path: Optional[Path] = None) -> Flask:
                 .all()
             )
 
+            page_terms = [r.term for r in rows]
+            ingredient_rows = (
+                session.query(database_manager.IngredientRecord)
+                .filter(database_manager.IngredientRecord.term.in_(page_terms))
+                .all()
+            )
+            ingredients_by_term = {r.term: r for r in ingredient_rows}
+            item_rows = (
+                session.query(database_manager.IngredientItemRecord)
+                .filter(database_manager.IngredientItemRecord.ingredient_term.in_(page_terms))
+                .order_by(database_manager.IngredientItemRecord.ingredient_term.asc(), database_manager.IngredientItemRecord.item_name.asc())
+                .all()
+            )
+            items_by_term: dict[str, list[database_manager.IngredientItemRecord]] = {}
+            for item in item_rows:
+                items_by_term.setdefault(item.ingredient_term, []).append(item)
+
             # Summary counts
             summary = database_manager.get_queue_summary()
 
@@ -87,10 +104,47 @@ def create_app(db_path: Optional[Path] = None) -> Flask:
             parts = [f"{k}={args[k]}" for k in args]
             return "?" + "&".join(parts) if parts else ""
 
+        def _render_term_cell(term: str) -> str:
+            ingredient = ingredients_by_term.get(term)
+            items = items_by_term.get(term, [])
+            if not ingredient and not items:
+                return term
+            core_bits = []
+            if ingredient:
+                if ingredient.category:
+                    core_bits.append(f"<div class='muted'><b>category</b>: {ingredient.category}</div>")
+                if ingredient.botanical_name:
+                    core_bits.append(f"<div class='muted'><b>botanical</b>: {ingredient.botanical_name}</div>")
+                if ingredient.inci_name:
+                    core_bits.append(f"<div class='muted'><b>inci</b>: {ingredient.inci_name}</div>")
+                if ingredient.cas_number:
+                    core_bits.append(f"<div class='muted'><b>cas</b>: {ingredient.cas_number}</div>")
+                if ingredient.short_description:
+                    core_bits.append(f"<div class='muted'><b>short</b>: {ingredient.short_description}</div>")
+            items_html = ""
+            if items:
+                rows_html = "".join(
+                    "<tr>"
+                    f"<td>{i.item_name}</td>"
+                    f"<td>{i.variation or ''}</td>"
+                    f"<td>{i.physical_form or ''}</td>"
+                    "</tr>"
+                    for i in items
+                )
+                items_html = (
+                    "<div style='margin-top:8px;'><b>Items</b></div>"
+                    "<table style='margin-top:6px; width:100%; border-collapse:collapse;'>"
+                    "<thead><tr><th>item_name</th><th>variation</th><th>physical_form</th></tr></thead>"
+                    f"<tbody>{rows_html}</tbody>"
+                    "</table>"
+                )
+            details = "".join(core_bits) + items_html
+            return f"<details><summary>{term}</summary><div style='margin-top:6px;'>{details}</div></details>"
+
         # Minimal HTML (no templates) to keep footprint tiny.
         table_rows = "\n".join(
             "<tr>"
-            f"<td>{r.term}</td>"
+            f"<td>{_render_term_cell(r.term)}</td>"
             f"<td>{r.term}</td>"
             f"<td>{getattr(r, 'seed_category', '') or ''}</td>"
             f"<td>{'true' if _to_bool_compiled(r.status) else 'false'}</td>"
@@ -169,7 +223,9 @@ def create_app(db_path: Optional[Path] = None) -> Flask:
           <div>
             <button type="submit">Apply</button>
             <a href="/export.csv{_qs(page=None)}" style="margin-left: 10px;">Export CSV</a>
+            <a href="/normalized_terms.csv" style="margin-left: 10px;">Normalized terms CSV</a>
             <a href="/download.db" style="margin-left: 10px;">Download DB</a>
+            <a href="/cursors.csv" style="margin-left: 10px;">Cursor CSV</a>
           </div>
         </form>
         <div class="muted" style="margin-top: 8px;">
@@ -311,6 +367,38 @@ def create_app(db_path: Optional[Path] = None) -> Flask:
             out,
             mimetype="text/csv; charset=utf-8",
             headers={"Content-Disposition": "attachment; filename=cursor_progress.csv"},
+        )
+
+    @app.get("/normalized_terms.csv")
+    def export_normalized_terms_csv() -> Response:
+        """Export normalized base terms from normalized_terms table."""
+        database_manager.ensure_tables_exist()
+        with database_manager.get_session() as session:
+            rows = session.query(database_manager.NormalizedTerm).order_by(database_manager.NormalizedTerm.term.asc()).all()
+
+        buf = io.StringIO()
+        writer = csv.DictWriter(
+            buf,
+            fieldnames=["term", "seed_category", "botanical_name", "inci_name", "cas_number", "description", "normalized_at"],
+        )
+        writer.writeheader()
+        for r in rows:
+            writer.writerow(
+                {
+                    "term": r.term,
+                    "seed_category": r.seed_category or "",
+                    "botanical_name": r.botanical_name or "",
+                    "inci_name": r.inci_name or "",
+                    "cas_number": r.cas_number or "",
+                    "description": r.description or "",
+                    "normalized_at": _serialize_dt(r.normalized_at),
+                }
+            )
+        out = buf.getvalue()
+        return Response(
+            out,
+            mimetype="text/csv; charset=utf-8",
+            headers={"Content-Disposition": "attachment; filename=normalized_terms.csv"},
         )
 
     return app
