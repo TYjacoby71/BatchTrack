@@ -57,10 +57,10 @@ EXAMPLE_INGREDIENTS: List[str] = [
     "Alkanet Root",
     "Aloe Vera",
     "Apricot Kernel Oil",
-    "Arrowroot Powder",
+    "Arrowroot",
     "Beeswax",
     "Bentonite Clay",
-    "Blue Cornflower",
+    "Cornflower",
     "Calendula",
     "Candelilla Wax",
     "Cane Sugar",
@@ -69,25 +69,25 @@ EXAMPLE_INGREDIENTS: List[str] = [
     "Epsom Salt",
     "Gluconic Acid",
     "Glycerin",
-    "Grapefruit Essential Oil",
+    "Grapefruit",
     "Green Tea",
-    "Honey Powder",
+    "Honey",
     "Jojoba Oil",
     "Kaolin Clay",
     "Kombucha Starter",
     "Lanolin",
     "Lavender",
-    "Lye Solution (50% NaOH)",
+    "Sodium Hydroxide",
     "Madder Root",
     "Magnesium Hydroxide",
     "Neem Oil",
-    "Orange Peel",
+    "Orange",
     "Pink Himalayan Salt",
-    "Potassium Carbonate Solution",
+    "Potassium Carbonate",
     "Propolis",
-    "Rosemary Oleoresin",
+    "Rosemary",
     "Sassafras Bark",
-    "Sea Buckthorn Pulp",
+    "Sea Buckthorn",
     "Shea Butter",
     "Sodium Bicarbonate",
     "Soy Lecithin",
@@ -96,9 +96,9 @@ EXAMPLE_INGREDIENTS: List[str] = [
     "Turmeric",
     "Vanilla Bean",
     "White Willow Bark",
-    "Witch Hazel Distillate",
+    "Witch Hazel",
     "Xanthan Gum",
-    "Ylang Ylang Essential Oil",
+    "Ylang Ylang",
     "Zinc Oxide",
 ]
 
@@ -112,7 +112,7 @@ EXAMPLE_PHYSICAL_FORMS: Set[str] = {
     "Tincture",
     "Oil Infusion",
     "Pressed Cake",
-    "Macreate",
+    "Macerate",
     "Lye Solution",
     "Stock Solution",
 }
@@ -127,8 +127,9 @@ TERMS_PROMPT = """
 You build the authoritative master ingredient index.
 
 DEFINITIONS:
-- An INGREDIENT (aka base) is the abstract raw material such as "Lavender", "Shea Butter", "Cane Sugar", "Citric Acid".
-- An ITEM is the combination of INGREDIENT + PHYSICAL FORM (e.g., Lavender Buds, Lavender Essential Oil). ONLY return base ingredient names here.
+- An INGREDIENT (aka base) is the canonical raw material name you would index in a supplier catalog such as "Lavender", "Shea Butter", "Cane Sugar", "Citric Acid".
+- An ITEM is the combination of INGREDIENT + PHYSICAL FORM (e.g., Lavender Buds, Lavender Essential Oil).
+- IMPORTANT: ONLY return base ingredient names in `ingredients[].name`. NEVER return a physical form / preparation as the base name.
 - Focus on botanicals, minerals, clays, waxes, fats, sugars, acids, fermentation adjuncts, resins, essential oils, extracts, isolates, and other raw materials used by small-batch makers.
 - EXCLUDE: packaging, containers, utensils, finished products, synthetic fragrances without a backing raw material, equipment, and vague marketing terms.
 
@@ -136,23 +137,22 @@ TASK:
 Return a strictly alphabetical list of NEW base ingredient names that have not appeared previously. Every entry must be unique, discoverable in supplier catalogs, and relevant to at least one target industry: soapmaking, personal care, artisan food & beverage, herbal apothecary, candles, cosmetics, confectionery, or fermentation.
 
 SOLUTION & EXTRACT GUIDANCE:
-- Include buffered solutions, stock lye solutions (e.g., 50% NaOH), mineral brines, herbal glycerites, tinctures, vinegars, and other make-ready raw solutions when they are handled as ingredients.
-- For botanicals with essential oils, hydrosols, absolutes, CO2 extracts, etc., treat the plant as the ingredient and enumerate those forms inside `common_forms`.
+- Solutions, extracts, distillates, isolates, essential oils, hydrosols, absolutes, CO2 extracts, glycerites, tinctures, infusions, decoctions, vinegars, and other preparations are PHYSICAL FORMS.
+- If a candidate name is a preparation/form (e.g., "Acerola Extract", "Witch Hazel Distillate", "Lavender Essential Oil", "Sodium Hydroxide 50% Solution"), do NOT add it as a base; instead, treat it as a `common_forms` entry for the appropriate base and choose a different new base name.
+- For botanicals with essential oils/hydrosols/absolutes/CO2 extracts, treat the plant as the ingredient and enumerate those preparations inside `common_forms`.
+- Fixed oils/butters/waxes are valid bases as written (e.g., "Olive Oil", "Shea Butter", "Beeswax") and should still list their refinements in `common_forms` (e.g., "Refined", "Unrefined", "Bleached", "Deodorized").
 
 For each ingredient, list the most common PHYSICAL FORMS (include essential oil/extract variants when applicable).
 
 CONSTRAINTS:
 - Provide EXACTLY {count} ingredient records.
-- The first ingredient must be lexicographically GREATER than "{start_after}".
-- Alphabetize A-Z.
+- Every ingredient name MUST start with "{required_initial}" (case-insensitive).
+- Every ingredient name MUST be lexicographically GREATER than "{start_after}".
+- Alphabetize A-Z within the response.
 - Avoid duplicates of the provided examples.
 - Use concise proper names (e.g., "Calendula", "Magnesium Hydroxide").
 - Assign a relevance score from 1-10 (integer) where 10 = essential for small-batch makers and 1 = niche or situational.
 - If no valid ingredients remain under the constraints, return an empty list.
-
-ANTI-GAP RULE (IMPORTANT):
-- All returned ingredient names MUST start with "{required_initial}" (case-insensitive).
-- This prevents skipping ahead to later letters when many earlier-letter ingredients remain.
 
 OUTPUT FORMAT:
 Return JSON only:
@@ -171,8 +171,48 @@ Return JSON only:
 }}
 
 EXAMPLES TO EMULATE:
+- Good base vs bad base:
+  - Good: "Acerola Cherry" with common_forms: ["Whole Dried", "Powder", "Extract", "Juice"]
+  - Bad: "Acerola Extract" as a separate base name (this must be a form under "Acerola Cherry")
 {examples}
 """
+
+
+# ------------------------------------------------------------------
+# Term validation / de-dup (defense-in-depth against "forms as bases")
+# ------------------------------------------------------------------
+_FORM_LIKE_PATTERNS: Tuple[re.Pattern[str], ...] = tuple(
+    re.compile(pattern, flags=re.IGNORECASE)
+    for pattern in (
+        r"\bessential\s+oil\b",
+        r"\bhydrosol\b",
+        r"\babsolute\b",
+        r"\bco2\b",
+        r"\boleoresin\b",
+        r"\bdistillate\b",
+        r"\btincture\b",
+        r"\bglycerite\b",
+        r"\binfusion\b",
+        r"\bdecoction\b",
+        r"\bmacerat(?:e|ion)\b",
+        r"\bextract\b",
+        r"\bisolate\b",
+        r"\bsolution\b",
+        r"\bbrine\b",
+        r"\b\d+(\.\d+)?\s*%\b",
+    )
+)
+
+
+def _looks_like_form_not_base(term: str) -> bool:
+    """Return True if `term` appears to be a prepared form (not a canonical base)."""
+    cleaned = (term or "").strip()
+    if not cleaned:
+        return True
+    # Avoid "X (something)" style variants at the term level; those belong in items/synonyms.
+    if "(" in cleaned or ")" in cleaned:
+        return True
+    return any(pattern.search(cleaned) for pattern in _FORM_LIKE_PATTERNS)
 
 
 class TermCollector:
@@ -429,6 +469,8 @@ class TermCollector:
                 if term.casefold() <= start_fold:
                     continue
                 if term[:1].casefold() != req_fold:
+                    continue
+                if _looks_like_form_not_base(term):
                     continue
                 if term in self.terms:
                     continue
