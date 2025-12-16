@@ -99,8 +99,7 @@ Return JSON using this schema (all strings trimmed, booleans only true/false, li
           "iodine_value": 10,
           "melting_point_celsius": {"min": 30, "max": 35},
           "flash_point_celsius": 200,
-          "ph_range": {"min": 5, "max": 7},
-          "usage_rate_percent": {"leave_on_max": 5, "rinse_off_max": 15}
+          "ph_range": {"min": 5, "max": 7}
         },
         "sourcing": {
           "common_origins": ["Ghana", "Ivory Coast"],
@@ -237,8 +236,7 @@ Return JSON using this schema (all strings trimmed; lists sorted alphabetically)
         "iodine_value": 10,
         "melting_point_celsius": {"min": 30, "max": 35},
         "flash_point_celsius": 200,
-        "ph_range": {"min": 5, "max": 7},
-        "usage_rate_percent": {"leave_on_max": 5, "rinse_off_max": 15}
+        "ph_range": {"min": 5, "max": 7}
       },
       "sourcing": {
         "common_origins": ["string"],

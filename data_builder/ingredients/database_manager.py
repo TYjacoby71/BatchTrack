@@ -89,6 +89,35 @@ class IngredientItemRecord(Base):
     # Full item JSON for the rest of attributes.
     item_json = Column(Text, nullable=False, default="{}")
 
+    # Common scalar/range fields promoted for querying (nullable where absent).
+    shelf_life_days = Column(Integer, nullable=True, default=None)
+
+    storage_temp_c_min = Column(Integer, nullable=True, default=None)
+    storage_temp_c_max = Column(Integer, nullable=True, default=None)
+    storage_humidity_max = Column(Integer, nullable=True, default=None)
+
+    sap_naoh = Column(String, nullable=True, default=None)
+    sap_koh = Column(String, nullable=True, default=None)
+    iodine_value = Column(String, nullable=True, default=None)
+    flash_point_c = Column(String, nullable=True, default=None)
+
+    melting_point_c_min = Column(String, nullable=True, default=None)
+    melting_point_c_max = Column(String, nullable=True, default=None)
+
+    ph_min = Column(String, nullable=True, default=None)
+    ph_max = Column(String, nullable=True, default=None)
+
+
+class IngredientItemValue(Base):
+    """Normalized list values for item attributes (tags, applications, origins, etc.)."""
+
+    __tablename__ = "ingredient_item_values"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    item_id = Column(Integer, ForeignKey("ingredient_items.id"), nullable=False)
+    field = Column(String, nullable=False)  # e.g. applications, function_tags, certifications, synonyms
+    value = Column(String, nullable=False)
+
 
 class SourceTerm(Base):
     """Deterministic candidate term extracted from external CSV sources."""
@@ -130,6 +159,7 @@ def ensure_tables_exist() -> None:
     Base.metadata.create_all(engine)
     _ensure_priority_column()
     _ensure_seed_category_column()
+    _ensure_ingredient_item_columns()
 
 
 def _ensure_priority_column() -> None:
@@ -153,6 +183,34 @@ def _ensure_seed_category_column() -> None:
                 text("ALTER TABLE task_queue ADD COLUMN seed_category TEXT"),
             )
             LOGGER.info("Added seed_category column to task_queue")
+
+
+def _ensure_ingredient_item_columns() -> None:
+    """Add promoted scalar/range columns to ingredient_items if missing."""
+    with engine.connect() as conn:
+        columns = conn.execute(text("PRAGMA table_info(ingredient_items)")).fetchall()
+        column_names = {row[1] for row in columns}
+
+        additions = [
+            ("shelf_life_days", "INTEGER"),
+            ("storage_temp_c_min", "INTEGER"),
+            ("storage_temp_c_max", "INTEGER"),
+            ("storage_humidity_max", "INTEGER"),
+            ("sap_naoh", "TEXT"),
+            ("sap_koh", "TEXT"),
+            ("iodine_value", "TEXT"),
+            ("flash_point_c", "TEXT"),
+            ("melting_point_c_min", "TEXT"),
+            ("melting_point_c_max", "TEXT"),
+            ("ph_min", "TEXT"),
+            ("ph_max", "TEXT"),
+        ]
+
+        for name, col_type in additions:
+            if name in column_names:
+                continue
+            conn.execute(text(f"ALTER TABLE ingredient_items ADD COLUMN {name} {col_type}"))
+            LOGGER.info("Added %s column to ingredient_items", name)
 
 
 def _coerce_bool(value: Any, default: bool = False) -> bool:
@@ -569,19 +627,80 @@ def upsert_compiled_ingredient(term: str, payload: dict, *, seed_category: str |
             cleaned_item["variation"] = variation
             cleaned_item["physical_form"] = physical_form
             cleaned_item["item_name"] = derived_item_name
+            # Discard usage_rate_percent (requested).
+            specs = cleaned_item.get("specifications")
+            if isinstance(specs, dict) and "usage_rate_percent" in specs:
+                specs.pop("usage_rate_percent", None)
+                cleaned_item["specifications"] = specs
             item_json = json.dumps(cleaned_item, ensure_ascii=False, sort_keys=True)
 
-            session.add(
-                IngredientItemRecord(
-                    ingredient_term=cleaned,
-                    item_name=derived_item_name,
-                    variation=variation,
-                    physical_form=physical_form,
-                    form_bypass=form_bypass,
-                    variation_bypass=variation_bypass,
-                    item_json=item_json,
-                )
+            # Promote common scalar/range fields.
+            shelf_life_days = cleaned_item.get("shelf_life_days")
+            shelf_life_days = int(shelf_life_days) if isinstance(shelf_life_days, (int, float)) else None
+
+            storage = cleaned_item.get("storage") if isinstance(cleaned_item.get("storage"), dict) else {}
+            temp = storage.get("temperature_celsius") if isinstance(storage.get("temperature_celsius"), dict) else {}
+            humidity = storage.get("humidity_percent") if isinstance(storage.get("humidity_percent"), dict) else {}
+            st_min = temp.get("min")
+            st_max = temp.get("max")
+            hm = humidity.get("max")
+            st_min = int(st_min) if isinstance(st_min, (int, float)) else None
+            st_max = int(st_max) if isinstance(st_max, (int, float)) else None
+            hm = int(hm) if isinstance(hm, (int, float)) else None
+
+            specs = cleaned_item.get("specifications") if isinstance(cleaned_item.get("specifications"), dict) else {}
+            mp = specs.get("melting_point_celsius") if isinstance(specs.get("melting_point_celsius"), dict) else {}
+            ph = specs.get("ph_range") if isinstance(specs.get("ph_range"), dict) else {}
+
+            item_row = IngredientItemRecord(
+                ingredient_term=cleaned,
+                item_name=derived_item_name,
+                variation=variation,
+                physical_form=physical_form,
+                form_bypass=form_bypass,
+                variation_bypass=variation_bypass,
+                item_json=item_json,
+                shelf_life_days=shelf_life_days,
+                storage_temp_c_min=st_min,
+                storage_temp_c_max=st_max,
+                storage_humidity_max=hm,
+                sap_naoh=str(specs.get("sap_naoh")) if specs.get("sap_naoh") not in (None, "") else None,
+                sap_koh=str(specs.get("sap_koh")) if specs.get("sap_koh") not in (None, "") else None,
+                iodine_value=str(specs.get("iodine_value")) if specs.get("iodine_value") not in (None, "") else None,
+                flash_point_c=str(specs.get("flash_point_celsius")) if specs.get("flash_point_celsius") not in (None, "") else None,
+                melting_point_c_min=str(mp.get("min")) if mp.get("min") not in (None, "") else None,
+                melting_point_c_max=str(mp.get("max")) if mp.get("max") not in (None, "") else None,
+                ph_min=str(ph.get("min")) if ph.get("min") not in (None, "") else None,
+                ph_max=str(ph.get("max")) if ph.get("max") not in (None, "") else None,
             )
+            session.add(item_row)
+            session.flush()  # obtain item_row.id for child values
+
+            def _add_values(field: str, values: Any) -> None:
+                if not values:
+                    return
+                if isinstance(values, str):
+                    vals = [values]
+                elif isinstance(values, list):
+                    vals = [v for v in values if isinstance(v, str)]
+                else:
+                    return
+                for v in vals:
+                    vv = v.strip()
+                    if not vv:
+                        continue
+                    session.add(IngredientItemValue(item_id=item_row.id, field=field, value=vv))
+
+            _add_values("synonyms", cleaned_item.get("synonyms"))
+            _add_values("applications", cleaned_item.get("applications"))
+            _add_values("function_tags", cleaned_item.get("function_tags"))
+            _add_values("safety_tags", cleaned_item.get("safety_tags"))
+            _add_values("sds_hazards", cleaned_item.get("sds_hazards"))
+
+            sourcing = cleaned_item.get("sourcing") if isinstance(cleaned_item.get("sourcing"), dict) else {}
+            _add_values("certifications", sourcing.get("certifications"))
+            _add_values("common_origins", sourcing.get("common_origins"))
+            _add_values("supply_risks", sourcing.get("supply_risks"))
 
 
 def upsert_source_terms(rows: Iterable[tuple[str, str, str]]) -> int:
