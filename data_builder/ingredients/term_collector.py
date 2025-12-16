@@ -36,10 +36,40 @@ MAX_CANDIDATE_POOL_SIZE = int(os.getenv("TERM_GENERATOR_MAX_CANDIDATE_POOL", "12
 CATEGORY_HINTS_PER_ATTEMPT = int(os.getenv("TERM_GENERATOR_CATEGORY_HINTS_PER_ATTEMPT", "0"))
 CATEGORY_HINT_POOL_SIZE = int(os.getenv("TERM_GENERATOR_CATEGORY_HINT_POOL_SIZE", "10"))
 
-try:  # pragma: no cover - best effort, avoids hard dependency
-    from .ai_worker import INGREDIENT_CATEGORIES as CATEGORY_HINTS
-except Exception:  # pragma: no cover
-    CATEGORY_HINTS: List[str] = []
+REPO_ROOT = BASE_DIR.parent.parent
+SEED_CATEGORY_DIR = REPO_ROOT / "app" / "seeders" / "globallist" / "ingredients" / "categories"
+
+
+def _load_category_hints() -> List[str]:
+    """Load canonical ingredient category names from seed files (preferred)."""
+    hints: List[str] = []
+
+    if SEED_CATEGORY_DIR.exists():
+        for path in sorted(SEED_CATEGORY_DIR.glob("*.json")):
+            try:
+                data = json.loads(path.read_text(encoding="utf-8"))
+            except Exception:  # pylint: disable=broad-except
+                continue
+            if not isinstance(data, dict):
+                continue
+            name = str(data.get("category_name") or "").strip()
+            if name:
+                hints.append(name)
+
+    # Fallback to builder/compiler categories if seed files aren't present.
+    if not hints:
+        try:  # pragma: no cover - best effort, avoids hard dependency
+            from .ai_worker import INGREDIENT_CATEGORIES as fallback  # type: ignore
+        except Exception:  # pragma: no cover
+            fallback = []
+        hints.extend([str(item).strip() for item in (fallback or []) if str(item).strip()])
+
+    # Deterministic, unique ordering.
+    deduped = sorted({hint for hint in hints if hint})
+    return deduped
+
+
+CATEGORY_HINTS: List[str] = _load_category_hints()
 
 BASE_PHYSICAL_FORMS: Set[str] = {
     "Whole", "Slices", "Diced", "Chopped", "Minced", "Crushed", "Ground",
