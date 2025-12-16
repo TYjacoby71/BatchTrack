@@ -265,6 +265,54 @@ def create_app(db_path: Optional[Path] = None) -> Flask:
             conditional=True,
         )
 
+    @app.get("/cursors.csv")
+    def export_cursors_csv() -> Response:
+        """Export cursor progress per (seed_category, letter)."""
+        letters = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+        # Best-effort: keep in sync with stage-1 categories.
+        try:
+            from .term_collector import SEED_INGREDIENT_CATEGORIES  # type: ignore
+            categories = list(SEED_INGREDIENT_CATEGORIES)
+        except Exception:  # pragma: no cover
+            with database_manager.get_session() as session:
+                categories = sorted({(r[0] or "").strip() for r in session.query(database_manager.TaskQueue.seed_category).all() if (r[0] or "").strip()})
+        if not categories:
+            categories = ["(unset)"]
+
+        buf = io.StringIO()
+        writer = csv.DictWriter(buf, fieldnames=["seed_category", "initial", "last_term", "pending_count", "completed_count"])
+        writer.writeheader()
+
+        with database_manager.get_session() as session:
+            for cat in categories:
+                for initial in letters:
+                    base = session.query(database_manager.TaskQueue).filter(database_manager.TaskQueue.term.ilike(f"{initial}%"))
+                    if cat != "(unset)":
+                        base = base.filter(database_manager.TaskQueue.seed_category == cat)
+                    last = (
+                        base.order_by(database_manager.TaskQueue.term.collate("NOCASE").desc(), database_manager.TaskQueue.term.desc())
+                        .with_entities(database_manager.TaskQueue.term)
+                        .first()
+                    )
+                    pending_count = base.filter(database_manager.TaskQueue.status == "pending").count()
+                    completed_count = base.filter(database_manager.TaskQueue.status == "completed").count()
+                    writer.writerow(
+                        {
+                            "seed_category": cat,
+                            "initial": initial,
+                            "last_term": last[0] if last else "",
+                            "pending_count": pending_count,
+                            "completed_count": completed_count,
+                        }
+                    )
+
+        out = buf.getvalue()
+        return Response(
+            out,
+            mimetype="text/csv; charset=utf-8",
+            headers={"Content-Disposition": "attachment; filename=cursor_progress.csv"},
+        )
+
     return app
 
 

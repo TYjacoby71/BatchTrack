@@ -7,6 +7,7 @@ import logging
 import os
 import re
 import hashlib
+import csv
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Set, Tuple
 
@@ -18,6 +19,7 @@ OUTPUT_DIR = BASE_DIR / "output"
 TERMS_FILE = BASE_DIR / "terms.json"
 PHYSICAL_FORMS_FILE = OUTPUT_DIR / "physical_forms.json"
 TERM_STUBS_DIR = OUTPUT_DIR / "term_stubs"
+DATA_SOURCES_DIR = BASE_DIR / "data_sources"
 openai.api_key = os.environ.get("OPENAI_API_KEY")
 if not openai.api_key:
     LOGGER.warning("OPENAI_API_KEY is not set; term_collector will run in repository-only mode unless --skip-ai is provided.")
@@ -35,36 +37,36 @@ MAX_CANDIDATE_POOL_SIZE = int(os.getenv("TERM_GENERATOR_MAX_CANDIDATE_POOL", "12
 # - legacy: per-letter cursor (A..Z)
 # - category cursor: per-(seed_category, letter) cursor
 USE_CATEGORY_CURSOR = os.getenv("TERM_GENERATOR_USE_CATEGORY_CURSOR", "1").strip() not in {"0", "false", "False"}
+USE_SOURCE_TERMS = os.getenv("TERM_GENERATOR_USE_SOURCE_TERMS", "1").strip() not in {"0", "false", "False"}
+INGEST_SOURCE_TERMS = os.getenv("TERM_GENERATOR_INGEST_SOURCE_TERMS", "0").strip() in {"1", "true", "True"}
 
-# Canonical seed categories (hard-coded; terms are tagged with one of these at generation time).
-# IMPORTANT: do not read seed files at runtime; Stage 1 should be self-contained.
+# Canonical base-level categories (hard-coded; Stage 1 cursor is (seed_category, letter)).
+# IMPORTANT: these categories are "pure bases" (avoid base+form names like "Frankincense Resin").
 SEED_INGREDIENT_CATEGORIES: List[str] = [
-    "Active Ingredients (Cosmetics)",
-    "Aqueous Solutions & Blends",
-    "Botanicals (Dried)",
-    "Butters (Solid Fats)",
+    "Fruits & Berries",
+    "Vegetables",
+    "Grains",
+    "Nuts",
+    "Seeds",
+    "Spices",
+    "Culinary Herbs",
+    "Medicinal Herbs",
+    "Flowers",
+    "Roots",
+    "Barks",
+    "Sugars",
+    "Liquid Sweeteners",
+    "Acids",
+    "Salts",
+    "Minerals",
     "Clays",
-    "Colorants & Pigments",
-    "Cultures, SCOBYs & Fermentation",
-    "Essential Oils",
-    "Extracts (Alcohols & Solvents)",
-    "Flours & Powders (Organic)",
-    "Fragrance Oils",
-    "Fruits, Nuts & Seeds (Whole/Chopped)",
-    "Herbs & Spices (Dried Botanicals)",
-    "Hydrosols & Floral Waters",
-    "Liquid Extracts (Aqueous/Glycerine)",
-    "Liquids (Aqueous)",
-    "Miscellaneous",
-    "Oils (Carrier & Fixed)",
-    "Polymers (Synthetic)",
-    "Preservatives & Additives",
-    "Resins (Natural)",
-    "Salts & Minerals (Crystalline)",
-    "Starches & Thickeners",
-    "Sugars & Syrups",
-    "Surfactants & Emulsifiers",
+    "Plants for Oils",
+    "Plants for Butters",
     "Waxes",
+    "Resins",
+    "Gums",
+    "Colorants",
+    "Fermentation Starters",
 ]
 
 BASE_PHYSICAL_FORMS: Set[str] = {
@@ -162,8 +164,13 @@ TERMS_PROMPT = """
 You are running Stage 1 (Term Builder). Your ONLY job is to propose NEW base ingredient terms.
 
 DEFINITIONS (Stage 1):
-- A BASE INGREDIENT TERM is a purchasable raw material name that can appear as a single supplier line-item (e.g., "Oat Milk", "Apple Juice", "Applesauce", "Shea Butter").
-- Do NOT output preparations/forms/variants as separate base terms (e.g., "Acerola Extract", "Lavender Essential Oil", "50% Sodium Hydroxide Solution", "Granulated Honey", "2% Milk").
+- A BASE INGREDIENT TERM is the canonical base name (usually 1–2 words) used to group purchasable items and their variants.
+- The base is typically the plant/mineral/salt/sugar/acid/clay/etc. root name (e.g., "Apple", "Acerola Cherry", "Cinnamon", "Frankincense", "Kaolin", "Citric Acid").
+- Do NOT output base+form names for these categories:
+  - Resins: output "Frankincense", NOT "Frankincense Resin"
+  - Plants for Oils: output "Cinnamon", NOT "Cinnamon Essential Oil"
+  - Plants for Butters: output "Shea", NOT "Shea Butter"
+- Do NOT output preparations/forms/variants as base terms (e.g., "Extract", "Essential Oil", "CO2 Extract", "Hydrosol", "% Solution", "Granulated", "2%").
 
 TARGET CURSOR:
 - seed_category: "{seed_category}"
@@ -179,6 +186,11 @@ Return EXACTLY {count} NEW base ingredient terms for the given seed_category tha
 IMPORTANT (NEXT-TERM INTENT):
 - Prefer the *very next* alphabetical base ingredient(s) in this seed_category after start_after.
 - If you are unsure of the exact next term, return the closest plausible next terms without skipping far ahead.
+
+STYLE RULES:
+- Use concise proper names; avoid descriptors like "organic", "raw", "powder", "oil", "extract", "resin".
+- Multi-word is allowed when needed (e.g., "Sea Buckthorn", "Pink Himalayan Salt", "Marshmallow Root").
+- Never include parentheticals.
 
 OUTPUT FORMAT:
 Return JSON only:
@@ -244,6 +256,104 @@ def _looks_like_form_not_base(term: str) -> bool:
     return any(pattern.search(cleaned) for pattern in _FORM_LIKE_PATTERNS)
 
 
+def _normalize_source_name(value: str) -> str:
+    """Best-effort normalization for source-derived names into base terms."""
+    cleaned = (value or "").strip().strip('"').strip()
+    cleaned = cleaned.rstrip(",").strip()
+    cleaned = re.sub(r"\s+", " ", cleaned).strip()
+    if not cleaned:
+        return ""
+    # Drop obvious preparation suffixes (keep base).
+    cleaned = re.sub(
+        r"\b(essential\s+oil|co2\s+extract|absolute|hydrosol|distillate|tincture|glycerite|extract|resin|gum|butter|oil)\b",
+        "",
+        cleaned,
+        flags=re.IGNORECASE,
+    )
+    cleaned = re.sub(r"\s+", " ", cleaned).strip(" -_/").strip()
+    # Title-case-ish: keep internal capitalization if present.
+    return cleaned
+
+
+def _guess_seed_category_from_name(name: str) -> str:
+    """Heuristic mapper into SEED_INGREDIENT_CATEGORIES."""
+    n = (name or "").strip().lower()
+    if not n:
+        return "Medicinal Herbs"
+    if any(word in n for word in ("starter", "scoby", "kefir", "culture", "yogurt", "kombucha", "sourdough")):
+        return "Fermentation Starters"
+    if "clay" in n:
+        return "Clays"
+    if any(word in n for word in ("salt", "epsom")):
+        return "Salts"
+    if any(word in n for word in ("acid", "vinegar")):
+        return "Acids"
+    if any(word in n for word in ("sugar",)):
+        return "Sugars"
+    if any(word in n for word in ("honey", "molasses", "maple", "agave", "syrup")):
+        return "Liquid Sweeteners"
+    if any(word in n for word in ("mica", "spirulina", "annatto", "charcoal", "oxide", "ultramarine")):
+        return "Colorants"
+    if "gum" in n or "xanthan" in n or "guar" in n:
+        return "Gums"
+    if any(word in n for word in ("frankincense", "myrrh", "damar", "copal", "benzoin")):
+        return "Resins"
+    if any(word in n for word in ("wax", "beeswax", "candelilla", "carnauba")):
+        return "Waxes"
+    if any(word in n for word in ("root",)):
+        return "Roots"
+    if any(word in n for word in ("bark",)):
+        return "Barks"
+    if any(word in n for word in ("flower", "rose", "lavender", "hibiscus", "jasmine")):
+        return "Flowers"
+    if any(word in n for word in ("cinnamon", "turmeric", "ginger", "clove", "vanilla", "pepper")):
+        return "Spices"
+    # Default to medicinal herbs as broadest plant bucket.
+    return "Medicinal Herbs"
+
+
+def _ingest_source_terms_to_db() -> int:
+    """Extract candidate bases from bundled CSVs and upsert into source_terms."""
+    try:
+        from . import database_manager
+    except Exception:  # pragma: no cover
+        return 0
+
+    rows: List[tuple[str, str, str]] = []
+    tgsc_path = DATA_SOURCES_DIR / "tgsc_ingredients.csv"
+    cosing_path = DATA_SOURCES_DIR / "cosing.csv"
+
+    if tgsc_path.exists():
+        with tgsc_path.open("r", encoding="utf-8", newline="") as handle:
+            reader = csv.DictReader(handle)
+            for row in reader:
+                raw = (row.get("common_name") or "").strip()
+                base = _normalize_source_name(raw)
+                if not base:
+                    continue
+                if _looks_like_form_not_base(base):
+                    continue
+                cat = _guess_seed_category_from_name(base)
+                rows.append((base, cat, "tgsc"))
+
+    if cosing_path.exists():
+        with cosing_path.open("r", encoding="utf-8", newline="") as handle:
+            reader = csv.DictReader(handle)
+            for row in reader:
+                raw = (row.get("INCI name") or row.get("INCI Name") or "").strip()
+                base = _normalize_source_name(raw)
+                if not base:
+                    continue
+                if _looks_like_form_not_base(base):
+                    continue
+                cat = _guess_seed_category_from_name(base)
+                rows.append((base, cat, "cosing"))
+
+    if not rows:
+        return 0
+    return database_manager.upsert_source_terms(rows)
+
+
 def _select_seed_category(letter_index: int) -> str:
     """Pick a deterministic seed category (stable round-robin)."""
     if not SEED_INGREDIENT_CATEGORIES:
@@ -283,6 +393,15 @@ class TermCollector:
         # Prefer the queue DB as the true source-of-truth for resuming across runs.
         if seed_from_db:
             self.ingest_terms_from_db()
+
+        # Optional: ingest deterministic source terms into the DB for source-first ratcheting.
+        if INGEST_SOURCE_TERMS:
+            try:
+                inserted = _ingest_source_terms_to_db()
+                if inserted:
+                    LOGGER.info("Ingested %s source-derived candidate terms into DB.", inserted)
+            except Exception as exc:  # pylint: disable=broad-except
+                LOGGER.warning("Source term ingest failed: %s", exc)
 
         # Never regress lookup files: if a physical forms file already exists (likely enriched
         # by the compiler), merge it in so a subsequent --write-forms-file doesn't wipe it.
@@ -490,6 +609,17 @@ class TermCollector:
 
         attempts = 0
         pool_size = max(5, min(int(candidate_pool_size or DEFAULT_CANDIDATE_POOL_SIZE), MAX_CANDIDATE_POOL_SIZE))
+
+        # Source-first: if we have a deterministic next candidate from data sources, take it.
+        if USE_SOURCE_TERMS:
+            try:
+                from . import database_manager
+                next_source = database_manager.get_next_source_term(seed_category, required_initial, start_after)
+                if next_source and not _looks_like_form_not_base(next_source) and next_source not in self.terms:
+                    return next_source, SEED_PRIORITY
+            except Exception:  # pragma: no cover
+                pass
+
         while selected is None and attempts < MAX_SELECTION_ATTEMPTS:
             attempts += 1
             # Ramp pool size a bit if we're failing to find a viable term.

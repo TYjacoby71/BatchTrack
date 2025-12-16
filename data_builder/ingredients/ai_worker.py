@@ -19,6 +19,12 @@ MODEL_NAME = os.getenv("OPENAI_MODEL", "gpt-4-turbo-preview")
 TEMPERATURE = float(os.getenv("OPENAI_TEMPERATURE", "0.1"))
 MAX_RETRIES = int(os.getenv("AI_MAX_RETRIES", "3"))
 RETRY_BACKOFF_SECONDS = float(os.getenv("AI_RETRY_BACKOFF", "3"))
+MULTI_PROMPT_MODE = os.getenv("AI_WORKER_MULTI_PROMPT", "1").strip() not in {"0", "false", "False"}
+
+try:  # pragma: no cover
+    from . import sources
+except Exception:  # pragma: no cover
+    sources = None  # type: ignore
 
 INGREDIENT_CATEGORIES = [
     "Aqueous Solutions & Blends", 
@@ -181,6 +187,173 @@ OUTPUT CONTRACT:
 - If ingredient is out of scope or data unavailable, return {error_object} with a precise message.
 """
 
+CORE_SCHEMA_SPEC = r"""
+Return JSON using this schema (all strings trimmed):
+{
+  "ingredient_core": {
+    "category": "one of the approved ingredient categories",
+    "botanical_name": "string",
+    "inci_name": "string",
+    "cas_number": "string",
+    "short_description": "string",
+    "detailed_description": "string",
+    "origin": {
+      "regions": ["string"],
+      "source_material": "string",
+      "processing_methods": ["Cold Pressed", "Solvent Extracted", ...]
+    },
+    "primary_functions": ["Emollient", "Humectant", ...],
+    "regulatory_notes": ["string"],
+    "documentation": {
+      "references": [{"title": "string", "url": "string", "notes": "string"}],
+      "last_verified": "ISO-8601 date"
+    }
+  },
+  "data_quality": {"confidence": 0-1 float, "caveats": ["string"]}
+}
+"""
+
+ITEMS_SCHEMA_SPEC = r"""
+Return JSON using this schema (all strings trimmed; lists sorted alphabetically):
+{
+  "items": [
+    {
+      "variation": "string",
+      "physical_form": "short noun (Powder, Oil, Liquid, Granules, Crystals, Whole, Butter, Wax, Resin, Gel, Paste, Syrup, Concentrate)",
+      "synonyms": ["aka", ...],
+      "applications": ["Soap", "Bath Bomb", "Chocolate", "Lotion", "Candle"],
+      "function_tags": ["Stabilizer", "Fragrance", "Colorant", "Binder", "Fuel"],
+      "safety_tags": ["string"],
+      "shelf_life_days": 30-3650,
+      "sds_hazards": ["string"],
+      "storage": {
+        "temperature_celsius": {"min": 5, "max": 25},
+        "humidity_percent": {"max": 60},
+        "special_instructions": "string"
+      },
+      "specifications": {
+        "sap_naoh": 0.128,
+        "sap_koh": 0.18,
+        "iodine_value": 10,
+        "melting_point_celsius": {"min": 30, "max": 35},
+        "flash_point_celsius": 200,
+        "ph_range": {"min": 5, "max": 7},
+        "usage_rate_percent": {"leave_on_max": 5, "rinse_off_max": 15}
+      },
+      "sourcing": {
+        "common_origins": ["string"],
+        "certifications": ["string"],
+        "supply_risks": ["string"],
+        "sustainability_notes": "string"
+      },
+      "form_bypass": true | false,
+      "variation_bypass": true | false
+    }
+  ],
+  "data_quality": {"confidence": 0-1 float, "caveats": ["string"]}
+}
+"""
+
+TAXONOMY_SCHEMA_SPEC = r"""
+Return JSON using this schema (lists sorted alphabetically):
+{
+  "taxonomy": {
+    "scent_profile": ["string"],
+    "color_profile": ["string"],
+    "texture_profile": ["string"],
+    "compatible_processes": ["string"],
+    "incompatible_processes": ["string"]
+  }
+}
+"""
+
+
+def _call_openai_json(client: openai.OpenAI, system_prompt: str, user_prompt: str) -> Dict[str, Any]:
+    response = client.chat.completions.create(
+        model=MODEL_NAME,
+        temperature=TEMPERATURE,
+        response_format={"type": "json_object"},
+        messages=[
+            {"role": "system", "content": system_prompt},
+            {"role": "user", "content": user_prompt},
+        ],
+    )
+    content = response.choices[0].message.content
+    if not content or not content.strip():
+        raise ValueError("OpenAI returned empty response content")
+    payload = json.loads(content.strip())
+    if not isinstance(payload, dict):
+        raise ValueError("AI response was not a JSON object")
+    return payload
+
+
+def _render_metadata_blob(term: str) -> str:
+    if sources is None:
+        return "{}"
+    try:
+        meta = sources.fetch_metadata(term)
+        return json.dumps(meta, ensure_ascii=False, indent=2, sort_keys=True) if meta else "{}"
+    except Exception:  # pragma: no cover
+        return "{}"
+
+
+def _render_core_prompt(term: str) -> str:
+    meta = _render_metadata_blob(term)
+    return f"""
+You are Stage 2A (Compiler Core). Build canonical core fields for the base ingredient term: "{term}".
+
+Rules:
+- Do NOT invent marketing language. Be concise and factual.
+- Use the provided external metadata as hints when available.
+- ingredient_core.category MUST be one of: {", ".join(INGREDIENT_CATEGORIES)}
+
+External metadata (may be empty):
+{meta}
+
+SCHEMA:
+{CORE_SCHEMA_SPEC}
+"""
+
+
+def _render_items_prompt(term: str, ingredient_core: Dict[str, Any]) -> str:
+    meta = _render_metadata_blob(term)
+    core_blob = json.dumps(ingredient_core, ensure_ascii=False, indent=2, sort_keys=True)
+    return f"""
+You are Stage 2B (Compiler Items). Create purchasable ITEM variants for base ingredient: "{term}".
+
+Rules:
+- ITEM = base + variation + physical_form. Variation must capture: Essential Oil / CO2 Extract / Absolute / Hydrosol / Extract / Tincture / Glycerite / % Solution / Refined / Unrefined / Cold Pressed / Filtered, etc.
+- physical_form must be a short noun (Powder, Oil, Liquid, Granules, Crystals, Whole, Butter, Wax, Resin, Gel, Paste, Syrup, Concentrate). Do NOT put "Essential Oil" in physical_form.
+- If variation is empty, set variation_bypass=true.
+- Return multiple items when common (at least 1).
+
+Ingredient core (context):
+{core_blob}
+
+External metadata (may be empty):
+{meta}
+
+SCHEMA:
+{ITEMS_SCHEMA_SPEC}
+"""
+
+
+def _render_taxonomy_prompt(term: str, ingredient_core: Dict[str, Any], items: list[dict]) -> str:
+    core_blob = json.dumps(ingredient_core, ensure_ascii=False, indent=2, sort_keys=True)
+    items_blob = json.dumps(items[:6], ensure_ascii=False, indent=2, sort_keys=True)
+    return f"""
+You are Stage 2C (Compiler Taxonomy). Generate taxonomy tags for base ingredient: "{term}".
+
+Context (core):
+{core_blob}
+
+Context (sample items):
+{items_blob}
+
+SCHEMA:
+{TAXONOMY_SCHEMA_SPEC}
+"""
+
 
 def _render_prompt(ingredient_name: str) -> str:
     return PROMPT_TEMPLATE.format(
@@ -200,40 +373,59 @@ def get_ingredient_data(ingredient_name: str) -> Dict[str, Any]:
     if not openai.api_key:
         raise RuntimeError("OPENAI_API_KEY environment variable is not configured")
 
-    user_prompt = _render_prompt(ingredient_name)
+    term = ingredient_name.strip()
+    user_prompt = _render_prompt(term)
     last_error: Exception | None = None
 
     client = openai.OpenAI(api_key=openai.api_key)
 
     for attempt in range(1, MAX_RETRIES + 1):
         try:
-            response = client.chat.completions.create(
-                model=MODEL_NAME,
-                temperature=TEMPERATURE,
-                response_format={"type": "json_object"},
-                messages=[
-                    {"role": "system", "content": SYSTEM_PROMPT},
-                    {"role": "user", "content": user_prompt},
-                ],
-            )
-            content = response.choices[0].message.content
-            if not content or not content.strip():
-                raise ValueError("OpenAI returned empty response content")
-            
-            content = content.strip()
-            LOGGER.debug("OpenAI response content: %s", content[:200] + "..." if len(content) > 200 else content)
-            
-            payload = json.loads(content)
-            if not isinstance(payload, dict):
-                raise ValueError("AI response was not a JSON object")
-            return payload
+            if not MULTI_PROMPT_MODE:
+                return _call_openai_json(client, SYSTEM_PROMPT, user_prompt)
+
+            # Stage 2A: core
+            core_payload = _call_openai_json(client, SYSTEM_PROMPT, _render_core_prompt(term))
+            ingredient_core = core_payload.get("ingredient_core") if isinstance(core_payload.get("ingredient_core"), dict) else {}
+
+            # Stage 2B: items
+            items_payload = _call_openai_json(client, SYSTEM_PROMPT, _render_items_prompt(term, ingredient_core))
+            items = items_payload.get("items") if isinstance(items_payload.get("items"), list) else []
+
+            # Stage 2C: taxonomy
+            taxonomy_payload = _call_openai_json(client, SYSTEM_PROMPT, _render_taxonomy_prompt(term, ingredient_core, items))
+            taxonomy = taxonomy_payload.get("taxonomy") if isinstance(taxonomy_payload.get("taxonomy"), dict) else {}
+
+            # Assemble final payload matching the full schema.
+            ingredient: Dict[str, Any] = dict(ingredient_core)
+            ingredient["common_name"] = term
+            ingredient["items"] = items
+            ingredient["taxonomy"] = taxonomy
+
+            # Documentation may be missing; keep shape stable.
+            if "documentation" not in ingredient:
+                ingredient["documentation"] = {"references": [], "last_verified": "unknown"}
+
+            confidence = core_payload.get("data_quality", {}).get("confidence") if isinstance(core_payload.get("data_quality"), dict) else None
+            if not isinstance(confidence, (int, float)):
+                confidence = 0.7
+            caveats: list[str] = []
+            for blob in (core_payload, items_payload):
+                dq = blob.get("data_quality") if isinstance(blob.get("data_quality"), dict) else {}
+                for c in dq.get("caveats", []) if isinstance(dq.get("caveats"), list) else []:
+                    if isinstance(c, str) and c.strip():
+                        caveats.append(c.strip())
+
+            return {
+                "ingredient": ingredient,
+                "data_quality": {"confidence": float(confidence), "caveats": sorted(set(caveats))},
+            }
         except json.JSONDecodeError as exc:
             last_error = exc
-            LOGGER.warning("JSON decoding failed for %s (attempt %s): %s", ingredient_name, attempt, exc)
-            LOGGER.warning("Raw content (first 200 chars): %s", content[:200] if 'content' in locals() else "No content available")
+            LOGGER.warning("JSON decoding failed for %s (attempt %s): %s", term, attempt, exc)
         except Exception as exc:  # pylint: disable=broad-except
             last_error = exc
-            LOGGER.warning("OpenAI call failed for %s (attempt %s): %s", ingredient_name, attempt, exc)
+            LOGGER.warning("OpenAI call failed for %s (attempt %s): %s", term, attempt, exc)
 
         time.sleep(RETRY_BACKOFF_SECONDS * attempt)
 

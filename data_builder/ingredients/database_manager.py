@@ -90,6 +90,17 @@ class IngredientItemRecord(Base):
     item_json = Column(Text, nullable=False, default="{}")
 
 
+class SourceTerm(Base):
+    """Deterministic candidate term extracted from external CSV sources."""
+
+    __tablename__ = "source_terms"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    name = Column(String, nullable=False)
+    seed_category = Column(String, nullable=False)
+    source = Column(String, nullable=False)
+
+
 VALID_STATUSES = {"pending", "processing", "completed", "error"}
 
 
@@ -497,6 +508,23 @@ def upsert_compiled_ingredient(term: str, payload: dict, *, seed_category: str |
         # Replace items (deterministic; avoids partial merges).
         session.query(IngredientItemRecord).filter(IngredientItemRecord.ingredient_term == cleaned).delete()
 
+        variation_forms = {
+            "Essential Oil",
+            "CO2 Extract",
+            "Absolute",
+            "Hydrosol",
+            "Tincture",
+            "Glycerite",
+            "Distillate",
+            "Oleoresin",
+            "Alcohol Extract",
+            "Vinegar Extract",
+            "Powdered Extract",
+            "Supercritical Extract",
+            "Lye Solution",
+            "Stock Solution",
+        }
+
         for raw_item in items:
             if not isinstance(raw_item, dict):
                 continue
@@ -506,6 +534,10 @@ def upsert_compiled_ingredient(term: str, payload: dict, *, seed_category: str |
                 variation = _extract_parenthetical_variation(str(raw_item.get("item_name") or ""), cleaned)
 
             physical_form = (raw_item.get("physical_form") or "").strip()
+            # If the model put a variation into physical_form, fix it here.
+            if physical_form in variation_forms and not variation:
+                variation = physical_form
+                physical_form = "Oil" if "Oil" in variation else "Liquid"
             form_bypass = _coerce_bool(raw_item.get("form_bypass"), default=False)
             variation_bypass = _coerce_bool(raw_item.get("variation_bypass"), default=False)
 
@@ -530,6 +562,50 @@ def upsert_compiled_ingredient(term: str, payload: dict, *, seed_category: str |
                     item_json=item_json,
                 )
             )
+
+
+def upsert_source_terms(rows: Iterable[tuple[str, str, str]]) -> int:
+    """Upsert (name, seed_category, source) into source_terms; returns newly inserted count."""
+    ensure_tables_exist()
+    inserted = 0
+    with get_session() as session:
+        existing = set(session.query(SourceTerm.name, SourceTerm.seed_category, SourceTerm.source).all())
+        for name, seed_category, source in rows:
+            cleaned = (name or "").strip()
+            cat = (seed_category or "").strip()
+            src = (source or "").strip()
+            if not cleaned or not cat or not src:
+                continue
+            key = (cleaned, cat, src)
+            if key in existing:
+                continue
+            session.add(SourceTerm(name=cleaned, seed_category=cat, source=src))
+            existing.add(key)
+            inserted += 1
+    return inserted
+
+
+def get_next_source_term(seed_category: str, initial: str, start_after: str) -> Optional[str]:
+    """Return next deterministic source term for (seed_category, initial) after start_after."""
+    ensure_tables_exist()
+    cat = (seed_category or "").strip()
+    letter = (initial or "").strip()[:1]
+    after = (start_after or "").strip()
+    if not cat or not letter:
+        return None
+
+    with get_session() as session:
+        q = (
+            session.query(SourceTerm.name)
+            .filter(
+                SourceTerm.seed_category == cat,
+                SourceTerm.name.collate("NOCASE").like(f"{letter.upper()}%"),
+            )
+        )
+        if after:
+            q = q.filter(SourceTerm.name.collate("NOCASE") > after)
+        row = q.order_by(SourceTerm.name.collate("NOCASE").asc(), SourceTerm.name.asc()).first()
+        return row[0] if row else None
 
 
 def queue_is_empty() -> bool:
