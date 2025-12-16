@@ -92,6 +92,7 @@ def create_app(db_path: Optional[Path] = None) -> Flask:
             "<tr>"
             f"<td>{r.term}</td>"
             f"<td>{r.term}</td>"
+            f"<td>{getattr(r, 'seed_category', '') or ''}</td>"
             f"<td>{'true' if _to_bool_compiled(r.status) else 'false'}</td>"
             f"<td>{r.priority}</td>"
             f"<td>{r.status}</td>"
@@ -185,6 +186,7 @@ def create_app(db_path: Optional[Path] = None) -> Flask:
         <tr>
           <th>name</th>
           <th>id</th>
+          <th>seed_category</th>
           <th>is_compiled</th>
           <th>priority</th>
           <th>status</th>
@@ -222,7 +224,7 @@ def create_app(db_path: Optional[Path] = None) -> Flask:
         buf = io.StringIO()
         writer = csv.DictWriter(
             buf,
-            fieldnames=["name", "id", "is_compiled", "priority", "status", "last_updated"],
+            fieldnames=["name", "id", "seed_category", "is_compiled", "priority", "status", "last_updated"],
         )
         writer.writeheader()
         for r in rows:
@@ -230,6 +232,7 @@ def create_app(db_path: Optional[Path] = None) -> Flask:
                 {
                     "name": r.term,
                     "id": r.term,
+                    "seed_category": getattr(r, "seed_category", "") or "",
                     "is_compiled": "true" if _to_bool_compiled(r.status) else "false",
                     "priority": r.priority,
                     "status": r.status,

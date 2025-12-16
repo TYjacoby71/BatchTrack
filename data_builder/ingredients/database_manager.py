@@ -4,12 +4,13 @@ from __future__ import annotations
 import json
 import logging
 import os
+import re
 from contextlib import contextmanager
 from datetime import datetime
 from pathlib import Path
-from typing import Iterable, List, Optional, Tuple
+from typing import Any, Iterable, List, Optional, Tuple
 
-from sqlalchemy import Column, DateTime, Integer, String, create_engine, select, text
+from sqlalchemy import Boolean, Column, DateTime, ForeignKey, Integer, String, Text, create_engine, select, text
 from sqlalchemy.orm import Session, declarative_base, sessionmaker
 
 LOGGER = logging.getLogger(__name__)
@@ -47,6 +48,48 @@ class TaskQueue(Base):
     seed_category = Column(String, nullable=True, default=None)
 
 
+class IngredientRecord(Base):
+    """Compiled ingredient payload (stage 2 output), keyed by queued base term."""
+
+    __tablename__ = "ingredients"
+
+    term = Column(String, primary_key=True)
+    seed_category = Column(String, nullable=True, default=None)
+
+    category = Column(String, nullable=True, default=None)
+    botanical_name = Column(String, nullable=True, default=None)
+    inci_name = Column(String, nullable=True, default=None)
+    cas_number = Column(String, nullable=True, default=None)
+    short_description = Column(Text, nullable=True, default=None)
+    detailed_description = Column(Text, nullable=True, default=None)
+
+    payload_json = Column(Text, nullable=False, default="{}")
+    compiled_at = Column(DateTime, nullable=False, default=datetime.utcnow)
+
+
+class IngredientItemRecord(Base):
+    """Compiled purchasable item for a base ingredient (base + variation + physical_form)."""
+
+    __tablename__ = "ingredient_items"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    ingredient_term = Column(String, ForeignKey("ingredients.term"), nullable=False)
+
+    # Derived (not trusted from AI).
+    item_name = Column(String, nullable=False)
+
+    # Split fields.
+    variation = Column(String, nullable=True, default="")
+    physical_form = Column(String, nullable=True, default="")
+
+    # Display helpers.
+    form_bypass = Column(Boolean, nullable=False, default=False)
+    variation_bypass = Column(Boolean, nullable=False, default=False)
+
+    # Full item JSON for the rest of attributes.
+    item_json = Column(Text, nullable=False, default="{}")
+
+
 VALID_STATUSES = {"pending", "processing", "completed", "error"}
 
 
@@ -79,6 +122,35 @@ def _ensure_seed_category_column() -> None:
                 text("ALTER TABLE task_queue ADD COLUMN seed_category TEXT"),
             )
             LOGGER.info("Added seed_category column to task_queue")
+
+
+def _coerce_bool(value: Any, default: bool = False) -> bool:
+    if isinstance(value, bool):
+        return value
+    if isinstance(value, (int, float)):
+        return bool(value)
+    if isinstance(value, str):
+        return value.strip().lower() in {"1", "true", "yes", "y", "on"}
+    return default
+
+
+def _extract_parenthetical_variation(item_name: str, base: str) -> str:
+    """Best-effort: parse 'Base (Variation)' -> 'Variation'."""
+    if not item_name or not base:
+        return ""
+    escaped = re.escape(base.strip())
+    match = re.match(rf"^{escaped}\s*\((.+)\)\s*$", item_name.strip())
+    return (match.group(1).strip() if match else "")
+
+
+def _derive_item_name(base: str, variation: str, variation_bypass: bool) -> str:
+    base_clean = (base or "").strip()
+    var_clean = (variation or "").strip()
+    if not base_clean:
+        return ""
+    if not var_clean or variation_bypass:
+        return base_clean
+    return f"{base_clean} ({var_clean})"
 
 
 @contextmanager
@@ -345,7 +417,7 @@ def upsert_term(term: str, priority: int, *, seed_category: str | None = None) -
         return True
 
 
-def get_next_pending_task(min_priority: int = MIN_PRIORITY) -> Optional[tuple[str, int]]:
+def get_next_pending_task(min_priority: int = MIN_PRIORITY) -> Optional[tuple[str, int, str | None]]:
     """Return the next pending term honoring priority sorting."""
 
     ensure_tables_exist()
@@ -360,7 +432,7 @@ def get_next_pending_task(min_priority: int = MIN_PRIORITY) -> Optional[tuple[st
             .first()
         )
         if task:
-            return task.term, task.priority
+            return task.term, task.priority, (task.seed_category or None)
         return None
 
 
@@ -377,6 +449,87 @@ def update_task_status(term: str, status: str) -> None:
             raise LookupError(f"Task '{term}' does not exist in the queue.")
         task.status = status
         task.last_updated = datetime.utcnow()
+
+
+def upsert_compiled_ingredient(term: str, payload: dict, *, seed_category: str | None = None) -> None:
+    """Persist the compiled ingredient + items into the DB (replaces JSON files)."""
+    ensure_tables_exist()
+    cleaned = (term or "").strip()
+    if not cleaned:
+        raise ValueError("term is required")
+    if not isinstance(payload, dict):
+        raise ValueError("payload must be a dict")
+
+    ingredient = payload.get("ingredient") if isinstance(payload.get("ingredient"), dict) else {}
+    # Enforce stability: queued term is canonical base.
+    ingredient["common_name"] = cleaned
+    payload["ingredient"] = ingredient
+
+    cleaned_category = (seed_category or "").strip() or None
+    category = (ingredient.get("category") or "").strip() or None
+    botanical_name = (ingredient.get("botanical_name") or "").strip() or None
+    inci_name = (ingredient.get("inci_name") or "").strip() or None
+    cas_number = (ingredient.get("cas_number") or "").strip() or None
+    short_description = ingredient.get("short_description")
+    detailed_description = ingredient.get("detailed_description")
+
+    payload_json = json.dumps(payload, ensure_ascii=False, sort_keys=True)
+    items = ingredient.get("items") if isinstance(ingredient.get("items"), list) else []
+
+    with get_session() as session:
+        record: Optional[IngredientRecord] = session.get(IngredientRecord, cleaned)
+        if record is None:
+            record = IngredientRecord(term=cleaned)
+            session.add(record)
+
+        record.seed_category = cleaned_category
+        record.category = category
+        record.botanical_name = botanical_name
+        record.inci_name = inci_name
+        record.cas_number = cas_number
+        if isinstance(short_description, str):
+            record.short_description = short_description.strip()
+        if isinstance(detailed_description, str):
+            record.detailed_description = detailed_description.strip()
+        record.payload_json = payload_json
+        record.compiled_at = datetime.utcnow()
+
+        # Replace items (deterministic; avoids partial merges).
+        session.query(IngredientItemRecord).filter(IngredientItemRecord.ingredient_term == cleaned).delete()
+
+        for raw_item in items:
+            if not isinstance(raw_item, dict):
+                continue
+
+            variation = (raw_item.get("variation") or "").strip()
+            if not variation:
+                variation = _extract_parenthetical_variation(str(raw_item.get("item_name") or ""), cleaned)
+
+            physical_form = (raw_item.get("physical_form") or "").strip()
+            form_bypass = _coerce_bool(raw_item.get("form_bypass"), default=False)
+            variation_bypass = _coerce_bool(raw_item.get("variation_bypass"), default=False)
+
+            derived_item_name = _derive_item_name(cleaned, variation, variation_bypass)
+            if not derived_item_name:
+                continue
+
+            cleaned_item = dict(raw_item)
+            cleaned_item["variation"] = variation
+            cleaned_item["physical_form"] = physical_form
+            cleaned_item["item_name"] = derived_item_name
+            item_json = json.dumps(cleaned_item, ensure_ascii=False, sort_keys=True)
+
+            session.add(
+                IngredientItemRecord(
+                    ingredient_term=cleaned,
+                    item_name=derived_item_name,
+                    variation=variation,
+                    physical_form=physical_form,
+                    form_bypass=form_bypass,
+                    variation_bypass=variation_bypass,
+                    item_json=item_json,
+                )
+            )
 
 
 def queue_is_empty() -> bool:

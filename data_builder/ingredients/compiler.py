@@ -26,6 +26,7 @@ VARIATIONS_FILE = OUTPUT_DIR / "variations.json"
 TAXONOMY_FILE = OUTPUT_DIR / "taxonomies.json"
 DEFAULT_TERMS_FILE = BASE_DIR / "terms.json"
 DEFAULT_SLEEP_SECONDS = float(os.getenv("COMPILER_SLEEP_SECONDS", "3"))
+WRITE_INGREDIENT_FILES = os.getenv("COMPILER_WRITE_INGREDIENT_FILES", "0").strip() in {"1", "true", "True"}
 
 
 def slugify(value: str) -> str:
@@ -161,7 +162,7 @@ def process_next_term(sleep_seconds: float, min_priority: int) -> bool:
         LOGGER.info("No pending tasks found at priority >= %s; compiler is finished.", min_priority)
         return False
 
-    term, priority = task
+    term, priority, seed_category = task
     LOGGER.info("Processing term: %s (priority %s)", term, priority)
     database_manager.update_task_status(term, "processing")
 
@@ -171,14 +172,16 @@ def process_next_term(sleep_seconds: float, min_priority: int) -> bool:
             raise RuntimeError(payload.get("error") if isinstance(payload, dict) else "Unknown AI failure")
 
         ingredient = validate_payload(payload)
-        # Enforce base-term stability: the queued term is the canonical base name.
-        if isinstance(ingredient.get("common_name"), str) and ingredient.get("common_name") != term:
-            ingredient["common_name"] = term
-        slug = slugify(term)
-        save_payload(payload, slug)
+        # Persist compiled payload into the DB (source of truth).
+        database_manager.upsert_compiled_ingredient(term, payload, seed_category=seed_category)
+
+        # Optional legacy artifact: write one JSON file per ingredient (disabled by default).
+        if WRITE_INGREDIENT_FILES:
+            slug = slugify(term)
+            save_payload(payload, slug)
         update_lookup_files(payload)
         database_manager.update_task_status(term, "completed")
-        LOGGER.info("Successfully saved %s -> %s", term, slug)
+        LOGGER.info("Successfully compiled %s", term)
     except Exception as exc:  # pylint: disable=broad-except
         database_manager.update_task_status(term, "error")
         LOGGER.exception("Failed to process %s: %s", term, exc)
