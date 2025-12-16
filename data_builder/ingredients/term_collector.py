@@ -142,9 +142,8 @@ SOLUTION & EXTRACT GUIDANCE:
 - For botanicals with essential oils/hydrosols/absolutes/CO2 extracts, treat the plant as the ingredient and enumerate those preparations inside `common_forms`.
 - Fixed oils/butters/waxes are valid bases as written (e.g., "Olive Oil", "Shea Butter", "Beeswax") and should still list their refinements in `common_forms` (e.g., "Refined", "Unrefined", "Bleached", "Deodorized").
 
-For each ingredient:
-- List the most common PHYSICAL FORMS in `common_forms` (Powder, Whole, Juice, Concentrate, Oil, Butter, Wax, etc.).
-- List common purchasable / labeling VARIATIONS in `common_variations` (Raw, Filtered, Unfiltered, Unsweetened, Sweetened, 2%, Whole, Skim, Refined, Unrefined, Organic, Deodorized, etc.).
+For each ingredient, list the most common PHYSICAL FORMS in `common_forms` (Powder, Whole, Juice, Concentrate, Oil, Butter, Wax, etc.).
+Note: labeling/grade variations (e.g., 2%, raw, filtered, unsweetened) are handled downstream by the compiler; do not output a separate variations list here.
 
 CONSTRAINTS:
 - Provide EXACTLY {count} ingredient records.
@@ -165,21 +164,19 @@ Return JSON only:
       "category": "one of: Botanical, Mineral, Animal-Derived, Fermentation, Chemical, Resin, Wax, Fatty Acid, Sugar, Acid, Salt, Aroma",
       "industries": ["Soap", "Cosmetic", "Candle", "Confection", "Beverage", "Herbal", "Baking", "Fermentation", "Aromatherapy"],
       "common_forms": ["Powder", "Essential Oil", ...],
-      "common_variations": ["Raw", "Filtered", "2%", ...],
       "notes": "1-sentence rationale",
       "priority_score": 1-10 integer (10 = highest relevance/urgency for makers)
     }}
   ],
-  "physical_forms": ["unique physical forms referenced"],
-  "variations": ["unique variations referenced"]
+  "physical_forms": ["unique physical forms referenced"]
 }}
 
 EXAMPLES TO EMULATE:
 - Good base vs bad base:
   - Good: "Acerola Cherry" with common_forms: ["Whole Dried", "Powder", "Extract", "Juice"]
   - Bad: "Acerola Extract" as a separate base name (this must be a form under "Acerola Cherry")
-  - Good: "Apple Juice" (base) with common_forms: ["Juice", "Concentrate"] and common_variations: ["Filtered", "Unfiltered"]
-  - Good: "Oat Milk" (base) with common_forms: ["Liquid"] and common_variations: ["Unsweetened", "Barista", "2%"]
+  - Good: "Apple Juice" (base) with common_forms: ["Juice", "Concentrate"]
+  - Good: "Oat Milk" (base) with common_forms: ["Liquid"]
 {examples}
 """
 
@@ -246,8 +243,6 @@ class TermCollector:
         self.include_ai = include_ai and bool(openai.api_key)
         self.terms: Dict[str, int] = {}
         self.physical_forms: Set[str] = set(BASE_PHYSICAL_FORMS) | EXAMPLE_PHYSICAL_FORMS
-        # Captures "variations" (raw/filtered/2%/etc.) without polluting physical_forms.json.
-        self.variations: Set[str] = set()
         self.prompt_examples: Set[str] = set(EXAMPLE_INGREDIENTS)
         if example_file and example_file.exists():
             try:
@@ -449,15 +444,9 @@ class TermCollector:
             for form in record.get("common_forms", []) or []:
                 if isinstance(form, str) and form.strip():
                     self.physical_forms.add(form.strip())
-            for variation in record.get("common_variations", []) or []:
-                if isinstance(variation, str) and variation.strip():
-                    self.variations.add(variation.strip())
         for form in payload.get("physical_forms", []) or []:
             if isinstance(form, str) and form.strip():
                 self.physical_forms.add(form.strip())
-        for variation in payload.get("variations", []) or []:
-            if isinstance(variation, str) and variation.strip():
-                self.variations.add(variation.strip())
         return out
 
     def _select_next_term(
