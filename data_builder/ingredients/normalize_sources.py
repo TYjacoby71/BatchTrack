@@ -97,14 +97,138 @@ FERMENTATION_KEYWORDS = {
     "ferment",
 }
 
+# High-confidence primary category dictionaries (SOP Ingredient Categories).
+# Keep these conservative; prefer false-negative over false-positive.
+GRAIN_KEYWORDS = {
+    "grain",
+    "flour",
+    "starch",
+    "malt",
+    "bran",
+    "oat",
+    "wheat",
+    "rice",
+    "corn",
+    "maize",
+    "barley",
+    "rye",
+    "sorghum",
+    "millet",
+    "buckwheat",
+    "quinoa",
+    "amaranth",
+    "tapioca",
+    "cassava",
+}
+NUT_KEYWORDS = {
+    "almond",
+    "cashew",
+    "hazelnut",
+    "macadamia",
+    "pecan",
+    "pistachio",
+    "walnut",
+    "brazil nut",
+    "pine nut",
+}
+SEED_KEYWORDS = {
+    "chia",
+    "flax",
+    "linseed",
+    "sesame",
+    "sunflower",
+    "pumpkin seed",
+    "poppy",
+    "hemp",
+    "mustard seed",
+}
+SPICE_KEYWORDS = {
+    "cinnamon",
+    "clove",
+    "nutmeg",
+    "mace",
+    "vanilla",
+    "pepper",
+    "paprika",
+    "turmeric",
+    "ginger",
+    "cardamom",
+    "cumin",
+    "coriander",
+    "fennel",
+    "anise",
+    "allspice",
+    "saffron",
+}
+FLOWER_KEYWORDS = {"rose", "lavender", "hibiscus", "jasmine", "ylang", "neroli"}
+FRUIT_KEYWORDS = {
+    "apple",
+    "lemon",
+    "orange",
+    "lime",
+    "grapefruit",
+    "berry",
+    "strawberry",
+    "raspberry",
+    "blueberry",
+    "elderberry",
+    "acerola",
+    "rosehip",
+    "mango",
+    "banana",
+    "pineapple",
+    "coconut",
+}
+VEGETABLE_KEYWORDS = {"cucumber", "carrot", "beet", "beetroot", "pumpkin", "tomato", "potato", "onion", "garlic"}
+ACID_KEYWORDS = {"acid", "vinegar", "ascorbic", "citric", "lactic", "acetic", "malic", "tartaric"}
+SALT_KEYWORDS = {"salt", "chloride", "sulfate", "sulphate", "phosphate", "carbonate", "bicarbonate"}
+CLAY_KEYWORDS = {"kaolin", "bentonite", "montmorillonite", "rhassoul", "ghassoul", "illite"}
+MINERAL_KEYWORDS_STRONG = {
+    "zinc",
+    "magnesium",
+    "calcium",
+    "sodium",
+    "potassium",
+    "iron",
+    "copper",
+    "manganese",
+    "silica",
+    "oxide",
+    "hydroxide",
+    "mica",
+    "ultramarine",
+}
+SUGAR_KEYWORDS = {"sugar", "dextrose", "glucose", "fructose", "sucrose"}
+LIQUID_SWEETENER_KEYWORDS = {"honey", "molasses", "maple", "agave", "syrup"}
+
+# Very high-confidence synthetic markers (avoid aggressive classification).
+SYNTHETIC_MARKERS = {
+    "peg-",
+    "ppg-",
+    "polyquaternium",
+    "acrylates",
+    "copolymer",
+    "dimethicone",
+    "siloxane",
+    "quaternium-",
+    "isodeceth",
+    "ceteareth",
+}
+
 
 def guess_origin(term: str, botanical_name: str, sources: list[dict]) -> str:
     t = (term or "").strip().lower()
+    # Synthetic markers
+    raw_blob = " ".join([(s.get("raw_name") or "") + " " + (s.get("description") or "") for s in sources]).lower()
+    if any(m in t for m in SYNTHETIC_MARKERS) or any(m in raw_blob for m in SYNTHETIC_MARKERS):
+        return "Synthetic"
+
     if any(k in t for k in MINERAL_KEYWORDS):
         return "Mineral/Earth"
     if any(k in t for k in FERMENTATION_KEYWORDS):
         return "Fermentation"
-    if any(k in t for k in MARINE_KEYWORDS):
+    # Marine indicators (term + raw text)
+    if any(k in t for k in MARINE_KEYWORDS) or any(k in raw_blob for k in MARINE_KEYWORDS) or "alga" in raw_blob:
         return "Marine-Derived"
     if any(k in t for k in ANIMAL_BYPRODUCT_KEYWORDS):
         return "Animal-Byproduct"
@@ -163,6 +287,71 @@ DERIVED_FROM_MAP = {
 
 def guess_derived_from(term: str) -> str:
     return DERIVED_FROM_MAP.get(term, "")
+
+
+def guess_primary_category(term: str, inci_name: str, description: str, sources: list[dict]) -> str:
+    """Deterministic primary ingredient category (16) using conservative signals."""
+    t = (term or "").lower()
+    inci = (inci_name or "").lower()
+    desc = (description or "").lower()
+    raw = " ".join([(s.get("raw_name") or "") for s in sources]).lower()
+    blob = " ".join([t, inci, desc, raw])
+
+    # Clays
+    if any(k in blob for k in CLAY_KEYWORDS) or "clay" in blob:
+        return "Clays"
+
+    # Salts vs Minerals: if explicitly salt/epsom -> Salts, else minerals.
+    if "epsom" in blob or " salt" in blob or blob.endswith(" salt"):
+        return "Salts"
+    if any(k in blob for k in SALT_KEYWORDS) and any(k in blob for k in MINERAL_KEYWORDS_STRONG):
+        # inorganic salts are more "Salts" for makers
+        return "Salts"
+    if any(k in blob for k in MINERAL_KEYWORDS_STRONG):
+        return "Minerals"
+
+    # Acids
+    if any(k in blob for k in ACID_KEYWORDS):
+        return "Acids"
+
+    # Sweeteners/sugars
+    if any(k in blob for k in LIQUID_SWEETENER_KEYWORDS):
+        return "Liquid Sweeteners"
+    if any(k in blob for k in SUGAR_KEYWORDS):
+        return "Sugars"
+
+    # Grains/starches
+    if any(k in blob for k in GRAIN_KEYWORDS):
+        return "Grains"
+
+    # Nuts/seeds
+    if any(k in blob for k in NUT_KEYWORDS):
+        return "Nuts"
+    if any(k in blob for k in SEED_KEYWORDS):
+        return "Seeds"
+
+    # Spices
+    if any(k in blob for k in SPICE_KEYWORDS):
+        return "Spices"
+
+    # Fruits/vegetables
+    if any(k in blob for k in FRUIT_KEYWORDS):
+        return "Fruits & Berries"
+    if any(k in blob for k in VEGETABLE_KEYWORDS):
+        return "Vegetables"
+
+    # Flowers
+    if any(k in blob for k in FLOWER_KEYWORDS) or " flower" in blob:
+        return "Flowers"
+
+    # Roots/barks
+    if " root" in blob or blob.endswith("root"):
+        return "Roots"
+    if " bark" in blob or blob.endswith("bark"):
+        return "Barks"
+
+    # Default bucket
+    return "Herbs"
 
 
 def normalize_base_name(raw: str) -> str:
@@ -322,7 +511,12 @@ def normalize_sources(tgsc_path: Path, cosing_path: Path) -> List[Dict[str, Any]
     out: List[Dict[str, Any]] = []
     for term in sorted(merged.keys(), key=lambda s: (s.casefold(), s)):
         rec = merged[term]
-        ingredient_category = guess_seed_category(term)
+        ingredient_category = guess_primary_category(
+            term=term,
+            inci_name=rec.get("inci_name", ""),
+            description=rec.get("description", ""),
+            sources=rec.get("sources", []),
+        )
         botanical = rec["botanical_name"]
         origin = guess_origin(term, botanical, rec["sources"])
         refinement = guess_refinement(term, rec["sources"])
