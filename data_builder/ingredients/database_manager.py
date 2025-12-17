@@ -611,6 +611,24 @@ def _derive_item_display_name(
     return name
 
 
+def derive_item_display_name(
+    *,
+    base_term: str,
+    variation: str,
+    variation_bypass: bool,
+    physical_form: str,
+    form_bypass: bool,
+) -> str:
+    """Public wrapper for SOP item name generation (used by portal edits)."""
+    return _derive_item_display_name(
+        base_term=base_term,
+        variation=variation,
+        variation_bypass=variation_bypass,
+        physical_form=physical_form,
+        form_bypass=form_bypass,
+    )
+
+
 @contextmanager
 def get_session() -> Iterable[Session]:
     """Provide a transactional scope around a series of operations."""

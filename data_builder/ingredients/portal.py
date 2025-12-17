@@ -16,6 +16,7 @@ from typing import Any, Optional
 
 from flask import Flask, Response, request, send_file
 from flask import redirect
+from markupsafe import escape
 
 from . import database_manager
 
@@ -489,6 +490,176 @@ def create_app(db_path: Optional[Path] = None) -> Flask:
                 database_manager.IngredientItemRecord.variation == name,
             ).update({"approved": False, "status": "rejected", "needs_review_reason": f"Rejected variation: {name}"})
         return redirect("/admin/variations")
+
+    @app.get("/ingredient/<path:term>")
+    def ingredient_detail(term: str) -> str:
+        database_manager.ensure_tables_exist()
+        cleaned = (term or "").strip()
+        if not cleaned:
+            return "Missing term"
+
+        with database_manager.get_session() as session:
+            ing = session.get(database_manager.IngredientRecord, cleaned)
+            if ing is None:
+                return f"<html><body><a href='/'>← Back</a><h2>{escape(cleaned)}</h2><p class='muted'>No compiled ingredient record.</p></body></html>"
+
+            items = (
+                session.query(database_manager.IngredientItemRecord)
+                .filter(database_manager.IngredientItemRecord.ingredient_term == cleaned)
+                .order_by(database_manager.IngredientItemRecord.item_name.asc())
+                .all()
+            )
+
+        item_rows = "".join(
+            "<tr>"
+            f"<td>{escape(str(i.id))}</td>"
+            f"<td>{escape(i.item_name)}</td>"
+            f"<td>{escape(i.variation or '')}</td>"
+            f"<td>{escape(i.physical_form or '')}</td>"
+            f"<td>{escape(i.status)}</td>"
+            f"<td>{escape(i.needs_review_reason or '')}</td>"
+            f"<td><a href='/item/{i.id}/edit'>edit</a></td>"
+            "</tr>"
+            for i in items
+        ) or "<tr><td colspan='7' class='muted'>No items.</td></tr>"
+
+        return f"""
+<!doctype html>
+<html>
+  <head><meta charset="utf-8"/><title>Ingredient • {escape(cleaned)}</title></head>
+  <body style="font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif; margin: 24px;">
+    <h2>{escape(cleaned)}</h2>
+    <div><a href="/">← Back</a></div>
+    <h3>Base</h3>
+    <div class="muted"><b>ingredient_category</b>: {escape(getattr(ing, 'ingredient_category', '') or '')}</div>
+    <div class="muted"><b>origin</b>: {escape(getattr(ing, 'origin', '') or '')}</div>
+    <div class="muted"><b>refinement_level</b>: {escape(getattr(ing, 'refinement_level', '') or '')}</div>
+    <div class="muted"><b>derived_from</b>: {escape(getattr(ing, 'derived_from', '') or '')}</div>
+    <div class="muted"><b>inci</b>: {escape(getattr(ing, 'inci_name', '') or '')}</div>
+    <div class="muted"><b>cas</b>: {escape(getattr(ing, 'cas_number', '') or '')}</div>
+
+    <h3 style="margin-top:18px;">Items</h3>
+    <table border="1" cellpadding="6" cellspacing="0" style="border-collapse:collapse; width:100%;">
+      <thead>
+        <tr>
+          <th>id</th><th>item_name</th><th>variation</th><th>physical_form</th><th>status</th><th>needs_review_reason</th><th></th>
+        </tr>
+      </thead>
+      <tbody>
+        {item_rows}
+      </tbody>
+    </table>
+  </body>
+</html>
+"""
+
+    @app.route("/item/<int:item_id>/edit", methods=["GET", "POST"])
+    def edit_item(item_id: int):  # type: ignore[no-untyped-def]
+        database_manager.ensure_tables_exist()
+        with database_manager.get_session() as session:
+            item = session.get(database_manager.IngredientItemRecord, item_id)
+            if item is None:
+                return Response("Item not found", status=404)
+            ing = session.get(database_manager.IngredientRecord, item.ingredient_term)
+            if ing is None:
+                return Response("Ingredient not found", status=404)
+
+            if request.method == "POST":
+                variation = (request.form.get("variation") or "").strip()
+                physical_form = (request.form.get("physical_form") or "").strip()
+                variation_bypass = (request.form.get("variation_bypass") or "").strip().lower() in {"1", "true", "yes", "on"}
+                form_bypass = (request.form.get("form_bypass") or "").strip().lower() in {"1", "true", "yes", "on"}
+                status = (request.form.get("status") or item.status or "active").strip().lower()
+                if status not in {"active", "quarantine", "rejected"}:
+                    status = "active"
+                needs_review_reason = (request.form.get("needs_review_reason") or "").strip() or None
+
+                # Validate physical form against curated enum; blank if invalid.
+                if physical_form and physical_form not in database_manager.PHYSICAL_FORMS:
+                    physical_form = ""
+
+                # Variation approval check; quarantine if unapproved.
+                approved = True
+                vrow = session.get(database_manager.VariationTerm, variation) if variation else None
+                if variation and vrow is not None and not bool(vrow.approved):
+                    approved = False
+                    status = "quarantine"
+                    needs_review_reason = needs_review_reason or f"Unapproved variation: {variation}"
+                if not physical_form:
+                    approved = False
+                    status = "quarantine"
+                    needs_review_reason = needs_review_reason or "Missing/invalid physical_form"
+
+                # Apply edits.
+                item.variation = variation
+                item.physical_form = physical_form
+                item.variation_bypass = variation_bypass
+                item.form_bypass = form_bypass
+                item.approved = approved
+                item.status = status
+                item.needs_review_reason = needs_review_reason
+
+                # Regenerate display name deterministically.
+                item.item_name = database_manager.derive_item_display_name(
+                    base_term=ing.term,
+                    variation=variation,
+                    variation_bypass=variation_bypass,
+                    physical_form=physical_form,
+                    form_bypass=form_bypass,
+                )
+
+                return redirect(f"/ingredient/{ing.term}")
+
+        # GET render
+        checked_v = "checked" if item.variation_bypass else ""
+        checked_f = "checked" if item.form_bypass else ""
+
+        return f"""
+<!doctype html>
+<html>
+  <head><meta charset="utf-8"/><title>Edit Item • {escape(str(item_id))}</title></head>
+  <body style="font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif; margin: 24px;">
+    <h2>Edit Item</h2>
+    <div><a href="/ingredient/{escape(ing.term)}">← Back to ingredient</a></div>
+    <div class="muted"><b>base</b>: {escape(ing.term)}</div>
+    <div class="muted"><b>current item_name</b>: {escape(item.item_name)}</div>
+    <form method="post" style="margin-top: 12px;">
+      <div style="margin-bottom: 10px;">
+        <label>Variation<br/>
+          <input name="variation" value="{escape(item.variation or '')}" style="width: 420px;" />
+        </label>
+      </div>
+      <div style="margin-bottom: 10px;">
+        <label>Physical form<br/>
+          <input name="physical_form" value="{escape(item.physical_form or '')}" style="width: 220px;" />
+        </label>
+        <div class="muted">Must match curated enum; invalid values will blank + quarantine.</div>
+      </div>
+      <div style="margin-bottom: 10px;">
+        <label><input type="checkbox" name="variation_bypass" value="1" {checked_v}/> Variation bypass</label>
+      </div>
+      <div style="margin-bottom: 10px;">
+        <label><input type="checkbox" name="form_bypass" value="1" {checked_f}/> Form bypass</label>
+      </div>
+      <div style="margin-bottom: 10px;">
+        <label>Status<br/>
+          <select name="status">
+            <option value="active" {"selected" if item.status=="active" else ""}>active</option>
+            <option value="quarantine" {"selected" if item.status=="quarantine" else ""}>quarantine</option>
+            <option value="rejected" {"selected" if item.status=="rejected" else ""}>rejected</option>
+          </select>
+        </label>
+      </div>
+      <div style="margin-bottom: 10px;">
+        <label>Needs review reason<br/>
+          <input name="needs_review_reason" value="{escape(item.needs_review_reason or '')}" style="width: 640px;" />
+        </label>
+      </div>
+      <button type="submit">Save</button>
+    </form>
+  </body>
+</html>
+"""
 
     return app
 
