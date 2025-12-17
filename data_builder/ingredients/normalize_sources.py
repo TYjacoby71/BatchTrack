@@ -18,12 +18,14 @@ from typing import Any, Dict, Iterable, List, Tuple
 try:  # pragma: no cover - allow running as a script
     from . import database_manager
     from .taxonomy_constants import INGREDIENT_CATEGORIES_PRIMARY
+    from .taxonomy_constants import ORIGINS, REFINEMENT_LEVELS
 except ImportError:  # pragma: no cover
     import sys
 
     sys.path.append(str(Path(__file__).resolve().parents[2]))
     from data_builder.ingredients import database_manager  # type: ignore
     from data_builder.ingredients.taxonomy_constants import INGREDIENT_CATEGORIES_PRIMARY  # type: ignore
+    from data_builder.ingredients.taxonomy_constants import ORIGINS, REFINEMENT_LEVELS  # type: ignore
 
 LOGGER = logging.getLogger(__name__)
 
@@ -45,6 +47,122 @@ _DROP_TOKENS_RE = re.compile(
 
 _PUNCT_RE = re.compile(r"[^\w\s\-\&/]", flags=re.UNICODE)
 _SPACE_RE = re.compile(r"\s+")
+
+# ---------------------------------------------------------------------------
+# High-confidence dictionaries for deterministic origin inference
+# Keep these conservative to stay under ~5% error.
+# ---------------------------------------------------------------------------
+ANIMAL_BYPRODUCT_KEYWORDS = {
+    "beeswax",
+    "lanolin",
+    "shellac",
+    "gelatin",
+    "collagen",
+}
+ANIMAL_DERIVED_KEYWORDS = {
+    "tallow",
+    "lard",
+    "milk",
+    "butter",
+    "whey",
+    "casein",
+    "honey",  # animal-derived (bee product)
+}
+MARINE_KEYWORDS = {
+    "kelp",
+    "algae",
+    "seaweed",
+    "carrageenan",
+    "agar",
+    "spirulina",
+}
+MINERAL_KEYWORDS = {
+    "oxide",
+    "hydroxide",
+    "carbonate",
+    "chloride",
+    "sulfate",
+    "phosphate",
+    "mica",
+    "kaolin",
+    "bentonite",
+    "clay",
+}
+FERMENTATION_KEYWORDS = {
+    "xanthan",
+    "yeast",
+    "scoby",
+    "kefir",
+    "culture",
+    "ferment",
+}
+
+
+def guess_origin(term: str, botanical_name: str, sources: list[dict]) -> str:
+    t = (term or "").strip().lower()
+    if any(k in t for k in MINERAL_KEYWORDS):
+        return "Mineral/Earth"
+    if any(k in t for k in FERMENTATION_KEYWORDS):
+        return "Fermentation"
+    if any(k in t for k in MARINE_KEYWORDS):
+        return "Marine-Derived"
+    if any(k in t for k in ANIMAL_BYPRODUCT_KEYWORDS):
+        return "Animal-Byproduct"
+    if any(k in t for k in ANIMAL_DERIVED_KEYWORDS):
+        return "Animal-Derived"
+    if botanical_name:
+        return "Plant-Derived"
+    # Conservative default: plant-derived for most maker bases.
+    return "Plant-Derived"
+
+
+def guess_refinement(term: str, sources: list[dict]) -> str:
+    t = (term or "").strip().lower()
+    raw_names = " ".join([(s.get("raw_name") or "") for s in sources]).lower()
+    tgsc_cats = " ".join([(s.get("category") or "") for s in sources]).lower()
+
+    # Fermented
+    if any(k in t for k in FERMENTATION_KEYWORDS) or "ferment" in raw_names:
+        return "Fermented"
+
+    # Extracted/Distilled signals (from source category or raw name)
+    if any(k in raw_names for k in ("essential oil", "co2", "absolute", "concrete", "hydrosol", "tincture", "extract")):
+        return "Extracted/Distilled"
+    if any(k in tgsc_cats for k in ("essential_oils", "absolutes", "extracts", "concretes")):
+        return "Extracted/Distilled"
+
+    # Milled/Ground signals
+    if any(k in t for k in ("flour", "starch")) or any(k in raw_names for k in ("flour", "starch")):
+        return "Milled/Ground"
+
+    # Extracted fat (butters)
+    if "butter" in t or "butter" in raw_names:
+        return "Extracted Fat"
+
+    # Oils are often extracted fats; treat as Extracted Fat for makers.
+    if " oil" in f" {t} " or " oil" in f" {raw_names} ":
+        return "Extracted Fat"
+
+    # Minerals generally "Raw/Unprocessed" or "Other"; keep Other conservative
+    if any(k in t for k in MINERAL_KEYWORDS):
+        return "Other"
+
+    return "Other"
+
+
+# Conservative derived-from dictionary (high-confidence only).
+DERIVED_FROM_MAP = {
+    "Wheat Flour": "Wheat",
+    "Rice Flour": "Rice",
+    "Oat Flour": "Oat",
+    "Corn Starch": "Corn",
+    "Potato Starch": "Potato",
+    "Tapioca Starch": "Cassava",
+}
+
+
+def guess_derived_from(term: str) -> str:
+    return DERIVED_FROM_MAP.get(term, "")
 
 
 def normalize_base_name(raw: str) -> str:
@@ -204,15 +322,24 @@ def normalize_sources(tgsc_path: Path, cosing_path: Path) -> List[Dict[str, Any]
     out: List[Dict[str, Any]] = []
     for term in sorted(merged.keys(), key=lambda s: (s.casefold(), s)):
         rec = merged[term]
+        ingredient_category = guess_seed_category(term)
+        botanical = rec["botanical_name"]
+        origin = guess_origin(term, botanical, rec["sources"])
+        refinement = guess_refinement(term, rec["sources"])
+        derived_from = guess_derived_from(term)
         sources_json = json.dumps({"sources": rec["sources"]}, ensure_ascii=False, sort_keys=True)
         out.append(
             {
                 "term": rec["term"],
-                "seed_category": rec["seed_category"],
+                "seed_category": ingredient_category,
                 "botanical_name": rec["botanical_name"],
                 "inci_name": rec["inci_name"],
                 "cas_number": rec["cas_number"],
                 "description": rec["description"],
+                "ingredient_category": ingredient_category,
+                "origin": origin,
+                "refinement_level": refinement,
+                "derived_from": derived_from,
                 "sources_json": sources_json,
                 "source_count": len(rec["sources"]),
             }
@@ -225,6 +352,10 @@ def write_csv(path: Path, rows: List[Dict[str, Any]]) -> None:
     fieldnames = [
         "term",
         "seed_category",
+        "ingredient_category",
+        "origin",
+        "refinement_level",
+        "derived_from",
         "botanical_name",
         "inci_name",
         "cas_number",

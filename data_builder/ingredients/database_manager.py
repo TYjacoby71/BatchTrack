@@ -375,6 +375,12 @@ class NormalizedTerm(Base):
     # A concise canonical description if available from sources.
     description = Column(Text, nullable=True, default=None)
 
+    # Deterministic SOP fields (best-effort; may be refined by compiler).
+    ingredient_category = Column(String, nullable=True, default=None)
+    origin = Column(String, nullable=True, default=None)
+    refinement_level = Column(String, nullable=True, default=None)
+    derived_from = Column(String, nullable=True, default=None)
+
     # Full aggregated source payload (small, merged) for inspection.
     sources_json = Column(Text, nullable=False, default="{}")
     normalized_at = Column(DateTime, nullable=False, default=datetime.utcnow)
@@ -391,6 +397,7 @@ def ensure_tables_exist() -> None:
     _ensure_seed_category_column()
     _ensure_ingredient_item_columns()
     _ensure_ingredient_columns()
+    _ensure_normalized_term_columns()
     _seed_taxonomy_tables()
 
 
@@ -516,6 +523,23 @@ def _seed_taxonomy_tables() -> None:
                     session.add(MasterCategoryRule(master_category=mc, source_type=st, source_value=sv))
     except Exception as exc:  # pylint: disable=broad-except
         LOGGER.debug("Skipping taxonomy seeding: %s", exc)
+
+
+def _ensure_normalized_term_columns() -> None:
+    with engine.connect() as conn:
+        columns = conn.execute(text("PRAGMA table_info(normalized_terms)")).fetchall()
+        column_names = {row[1] for row in columns}
+        additions = [
+            ("ingredient_category", "TEXT"),
+            ("origin", "TEXT"),
+            ("refinement_level", "TEXT"),
+            ("derived_from", "TEXT"),
+        ]
+        for name, col_type in additions:
+            if name in column_names:
+                continue
+            conn.execute(text(f"ALTER TABLE normalized_terms ADD COLUMN {name} {col_type}"))
+            LOGGER.info("Added %s column to normalized_terms", name)
 
 
 def _coerce_bool(value: Any, default: bool = False) -> bool:
@@ -1154,6 +1178,10 @@ def upsert_normalized_terms(rows: Iterable[dict[str, Any]]) -> int:
             desc = row.get("description")
             if isinstance(desc, str) and desc.strip():
                 record.description = desc.strip()
+            record.ingredient_category = (row.get("ingredient_category") or "").strip() or None
+            record.origin = (row.get("origin") or "").strip() or None
+            record.refinement_level = (row.get("refinement_level") or "").strip() or None
+            record.derived_from = (row.get("derived_from") or "").strip() or None
             sources_json = row.get("sources_json")
             if isinstance(sources_json, str) and sources_json.strip():
                 record.sources_json = sources_json
