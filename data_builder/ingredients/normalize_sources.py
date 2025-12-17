@@ -17,11 +17,13 @@ from typing import Any, Dict, Iterable, List, Tuple
 
 try:  # pragma: no cover - allow running as a script
     from . import database_manager
+    from .taxonomy_constants import INGREDIENT_CATEGORIES_PRIMARY
 except ImportError:  # pragma: no cover
     import sys
 
     sys.path.append(str(Path(__file__).resolve().parents[2]))
     from data_builder.ingredients import database_manager  # type: ignore
+    from data_builder.ingredients.taxonomy_constants import INGREDIENT_CATEGORIES_PRIMARY  # type: ignore
 
 LOGGER = logging.getLogger(__name__)
 
@@ -80,12 +82,13 @@ def normalize_base_name(raw: str) -> str:
 
 
 def guess_seed_category(term: str) -> str:
-    """Heuristic mapping into stage-1 seed categories."""
+    """Heuristic mapping into SOP primary Ingredient Categories (16)."""
     n = (term or "").strip().lower()
     if not n:
-        return "Medicinal Herbs"
+        return "Herbs"
     if any(w in n for w in ("starter", "scoby", "kefir", "culture", "yogurt", "kombucha", "sourdough")):
-        return "Fermentation Starters"
+        # Primary category doesn't include Fermentation Starters; default to Herbs for now.
+        return "Herbs"
     if "clay" in n:
         return "Clays"
     if any(w in n for w in ("salt", "epsom")):
@@ -96,14 +99,8 @@ def guess_seed_category(term: str) -> str:
         return "Sugars"
     if any(w in n for w in ("honey", "molasses", "maple", "agave", "syrup")):
         return "Liquid Sweeteners"
-    if any(w in n for w in ("mica", "spirulina", "annatto", "charcoal", "oxide", "ultramarine")):
-        return "Colorants"
-    if "gum" in n or any(w in n for w in ("xanthan", "guar")):
-        return "Gums"
-    if any(w in n for w in ("frankincense", "myrrh", "damar", "copal", "benzoin")):
-        return "Resins"
-    if any(w in n for w in ("wax", "beeswax", "candelilla", "carnauba")):
-        return "Waxes"
+    if any(w in n for w in ("oxide", "mica", "ultramarine")):
+        return "Minerals"
     if "root" in n:
         return "Roots"
     if "bark" in n:
@@ -112,7 +109,8 @@ def guess_seed_category(term: str) -> str:
         return "Flowers"
     if any(w in n for w in ("cinnamon", "turmeric", "ginger", "clove", "vanilla", "pepper")):
         return "Spices"
-    return "Medicinal Herbs"
+    # Default to Herbs as the broadest plant bucket.
+    return "Herbs"
 
 
 def _load_tgsc(path: Path) -> Iterable[Dict[str, Any]]:

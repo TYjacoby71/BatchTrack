@@ -15,6 +15,167 @@ from sqlalchemy.orm import Session, declarative_base, sessionmaker
 
 LOGGER = logging.getLogger(__name__)
 
+from .taxonomy_constants import (
+    INGREDIENT_CATEGORIES_PRIMARY,
+    MASTER_CATEGORIES,
+    ORIGINS,
+    PHYSICAL_FORMS,
+    REFINEMENT_LEVELS,
+    VARIATIONS_CURATED,
+)
+
+_PRIMARY_TO_MASTER_MAP = {
+    "Acids": "Acids & PH Adjusters",
+    "Grains": "Grains & Starches",
+}
+
+
+def _guess_origin(ingredient: dict, term: str) -> str:
+    value = (ingredient.get("origin") or "").strip()
+    if value in ORIGINS:
+        return value
+    t = (term or "").lower()
+    if any(k in t for k in ("oxide", "hydroxide", "carbonate", "chloride", "sulfate", "phosphate", "mica", "clay")):
+        return "Mineral/Earth"
+    if any(k in t for k in ("yeast", "xanthan", "culture", "scoby", "kefir")):
+        return "Fermentation"
+    if ingredient.get("botanical_name"):
+        return "Plant-Derived"
+    return "Plant-Derived"
+
+
+def _guess_primary_category(term: str, fallback: str | None = None) -> str:
+    if fallback and fallback in INGREDIENT_CATEGORIES_PRIMARY:
+        return fallback
+    t = (term or "").lower()
+    if any(k in t for k in ("salt", "epsom")):
+        return "Salts"
+    if "clay" in t:
+        return "Clays"
+    if any(k in t for k in ("acid", "vinegar")):
+        return "Acids"
+    if "sugar" in t:
+        return "Sugars"
+    if any(k in t for k in ("honey", "molasses", "maple", "agave", "syrup")):
+        return "Liquid Sweeteners"
+    if any(k in t for k in ("oat", "wheat", "rice", "corn", "barley", "starch", "flour")):
+        return "Grains"
+    if any(k in t for k in ("almond", "walnut", "hazelnut", "macadamia", "peanut")):
+        return "Nuts"
+    if any(k in t for k in ("chia", "sesame", "flax", "pumpkin seed", "poppy")):
+        return "Seeds"
+    if any(k in t for k in ("cinnamon", "turmeric", "ginger", "clove", "vanilla", "pepper")):
+        return "Spices"
+    if any(k in t for k in ("rose", "lavender", "hibiscus", "jasmine")):
+        return "Flowers"
+    if "root" in t:
+        return "Roots"
+    if "bark" in t:
+        return "Barks"
+    return "Herbs"
+
+
+def _coerce_refinement(value: str | None) -> str:
+    v = (value or "").strip()
+    return v if v in REFINEMENT_LEVELS else "Other"
+
+
+def _coerce_primary_category(value: str | None, term: str, seed_category: str | None) -> str:
+    v = (value or "").strip()
+    if v in INGREDIENT_CATEGORIES_PRIMARY:
+        return v
+    # Map older seed categories into primary.
+    mapped = None
+    if seed_category:
+        sc = seed_category.strip()
+        if sc in {"Culinary Herbs", "Medicinal Herbs", "Plants for Oils", "Plants for Butters"}:
+            mapped = "Herbs"
+        elif sc == "Roots & Barks" or sc == "Roots":
+            mapped = "Roots"
+        elif sc == "Barks":
+            mapped = "Barks"
+        elif sc == "Minerals":
+            mapped = "Minerals"
+        elif sc == "Salts":
+            mapped = "Salts"
+        elif sc == "Clays":
+            mapped = "Clays"
+        elif sc == "Acids":
+            mapped = "Acids"
+        elif sc == "Sugars":
+            mapped = "Sugars"
+        elif sc == "Liquid Sweeteners":
+            mapped = "Liquid Sweeteners"
+        elif sc == "Grains":
+            mapped = "Grains"
+        elif sc == "Seeds":
+            mapped = "Seeds"
+        elif sc == "Nuts":
+            mapped = "Nuts"
+        elif sc == "Spices":
+            mapped = "Spices"
+        elif sc == "Flowers":
+            mapped = "Flowers"
+        elif sc == "Vegetables":
+            mapped = "Vegetables"
+        elif sc == "Fruits & Berries":
+            mapped = "Fruits & Berries"
+    return _guess_primary_category(term, mapped)
+
+
+def _derive_master_categories(
+    ingredient_category: str,
+    items: list[dict],
+) -> list[str]:
+    out: set[str] = set()
+    # base -> master
+    base_mc = _PRIMARY_TO_MASTER_MAP.get(ingredient_category, ingredient_category)
+    if base_mc in MASTER_CATEGORIES:
+        out.add(base_mc)
+    # from items
+    for it in items:
+        if not isinstance(it, dict):
+            continue
+        form = (it.get("physical_form") or "").strip()
+        var = (it.get("variation") or "").strip()
+        tags = it.get("function_tags") if isinstance(it.get("function_tags"), list) else []
+
+        # master from form
+        if form == "Oil":
+            out.update({"Oils & Fats", "Carriers"})
+        if form == "Butter":
+            out.add("Butters")
+        if form == "Wax":
+            out.add("Waxes")
+        if form == "Hydrosol":
+            out.add("Hydrosols")
+        if form in {"Resin", "Gum"}:
+            out.add("Resins & Gums")
+
+        # master from variation
+        if var in {"Essential", "Steam-Distilled"}:
+            out.add("Essential Oils")
+        if var == "CO2 Extracted":
+            out.add("Extracts")
+
+        # master from function tags
+        for t in tags:
+            if not isinstance(t, str):
+                continue
+            tt = t.strip().lower()
+            if tt == "colorant":
+                out.add("Colorants & Pigmants")
+            if tt in {"preservative", "antioxidant"}:
+                out.add("Preservatives & Antioxidants")
+            if tt in {"surfactant"}:
+                out.add("Surfactants & Cleansers")
+            if tt in {"emulsifier", "stabilizer"}:
+                out.add("Emulsifiers & Stabilizers")
+            if tt in {"thickener"}:
+                out.add("Thickeners & Gelling Agents")
+
+    # keep only curated names
+    return sorted([m for m in out if m in MASTER_CATEGORIES])
 BASE_DIR = Path(__file__).resolve().parent
 DEFAULT_DB_PATH = BASE_DIR / "compiler_state.db"
 DB_PATH = Path(os.environ.get("COMPILER_DB_PATH", DEFAULT_DB_PATH))
@@ -56,12 +217,28 @@ class IngredientRecord(Base):
     term = Column(String, primary_key=True)
     seed_category = Column(String, nullable=True, default=None)
 
+    # Primary ingredient category (single-select from curated Ingredient Categories).
+    ingredient_category = Column(String, nullable=True, default=None)
+    # Origin (required by SOP; stored as string enum).
+    origin = Column(String, nullable=True, default=None)
+    # Refinement (required by SOP; stored as string enum).
+    refinement_level = Column(String, nullable=True, default=None)
+    # Optional: natural source / precursor if base is derived.
+    derived_from = Column(String, nullable=True, default=None)
+
+    # Legacy/secondary category (from compiler category set, kept for compatibility).
     category = Column(String, nullable=True, default=None)
     botanical_name = Column(String, nullable=True, default=None)
     inci_name = Column(String, nullable=True, default=None)
     cas_number = Column(String, nullable=True, default=None)
     short_description = Column(Text, nullable=True, default=None)
     detailed_description = Column(Text, nullable=True, default=None)
+    usage_restrictions = Column(Text, nullable=True, default=None)
+    prohibited_flag = Column(Boolean, nullable=False, default=False)
+    gras_status = Column(Boolean, nullable=False, default=False)
+    ifra_category = Column(String, nullable=True, default=None)
+    allergen_flag = Column(Boolean, nullable=False, default=False)
+    colorant_flag = Column(Boolean, nullable=False, default=False)
 
     payload_json = Column(Text, nullable=False, default="{}")
     compiled_at = Column(DateTime, nullable=False, default=datetime.utcnow)
@@ -107,6 +284,10 @@ class IngredientItemRecord(Base):
     ph_min = Column(String, nullable=True, default=None)
     ph_max = Column(String, nullable=True, default=None)
 
+    # Optional usage rates when present (kept, not required).
+    usage_leave_on_max = Column(String, nullable=True, default=None)
+    usage_rinse_off_max = Column(String, nullable=True, default=None)
+
 
 class IngredientItemValue(Base):
     """Normalized list values for item attributes (tags, applications, origins, etc.)."""
@@ -117,6 +298,68 @@ class IngredientItemValue(Base):
     item_id = Column(Integer, ForeignKey("ingredient_items.id"), nullable=False)
     field = Column(String, nullable=False)  # e.g. applications, function_tags, certifications, synonyms
     value = Column(String, nullable=False)
+
+
+class IngredientMasterCategory(Base):
+    """Join table for ingredient -> master category (UX multi-select group)."""
+
+    __tablename__ = "ingredient_master_categories"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    ingredient_term = Column(String, ForeignKey("ingredients.term"), nullable=False)
+    master_category = Column(String, nullable=False)
+
+
+class VariationTerm(Base):
+    """Curated variation vocabulary (grows with review)."""
+
+    __tablename__ = "variations"
+
+    name = Column(String, primary_key=True)
+    approved = Column(Boolean, nullable=False, default=True)
+
+
+class PhysicalFormTerm(Base):
+    """Curated physical form enum (~40)."""
+
+    __tablename__ = "physical_forms"
+
+    name = Column(String, primary_key=True)
+
+
+class RefinementLevelTerm(Base):
+    """Curated refinement level enum."""
+
+    __tablename__ = "refinement_levels"
+
+    name = Column(String, primary_key=True)
+
+
+class MasterCategoryTerm(Base):
+    """Curated master category list (UX dropdown)."""
+
+    __tablename__ = "master_categories"
+
+    name = Column(String, primary_key=True)
+
+
+class IngredientCategoryTerm(Base):
+    """Curated primary ingredient categories (base-level)."""
+
+    __tablename__ = "ingredient_categories"
+
+    name = Column(String, primary_key=True)
+
+
+class MasterCategoryRule(Base):
+    """Mapping rules: how master categories are derived from other fields."""
+
+    __tablename__ = "master_category_rules"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    master_category = Column(String, nullable=False)
+    source_type = Column(String, nullable=False)  # ingredient_category|variation|physical_form|function_tag|application
+    source_value = Column(String, nullable=False)
 
 
 class SourceTerm(Base):
@@ -160,6 +403,8 @@ def ensure_tables_exist() -> None:
     _ensure_priority_column()
     _ensure_seed_category_column()
     _ensure_ingredient_item_columns()
+    _ensure_ingredient_columns()
+    _seed_taxonomy_tables()
 
 
 def _ensure_priority_column() -> None:
@@ -204,6 +449,8 @@ def _ensure_ingredient_item_columns() -> None:
             ("melting_point_c_max", "TEXT"),
             ("ph_min", "TEXT"),
             ("ph_max", "TEXT"),
+            ("usage_leave_on_max", "TEXT"),
+            ("usage_rinse_off_max", "TEXT"),
         ]
 
         for name, col_type in additions:
@@ -211,6 +458,93 @@ def _ensure_ingredient_item_columns() -> None:
                 continue
             conn.execute(text(f"ALTER TABLE ingredient_items ADD COLUMN {name} {col_type}"))
             LOGGER.info("Added %s column to ingredient_items", name)
+
+
+def _ensure_ingredient_columns() -> None:
+    """Add SOP-required columns to ingredients if missing."""
+    with engine.connect() as conn:
+        columns = conn.execute(text("PRAGMA table_info(ingredients)")).fetchall()
+        column_names = {row[1] for row in columns}
+        additions = [
+            ("ingredient_category", "TEXT"),
+            ("origin", "TEXT"),
+            ("refinement_level", "TEXT"),
+            ("derived_from", "TEXT"),
+            ("usage_restrictions", "TEXT"),
+            ("prohibited_flag", "INTEGER NOT NULL DEFAULT 0"),
+            ("gras_status", "INTEGER NOT NULL DEFAULT 0"),
+            ("ifra_category", "TEXT"),
+            ("allergen_flag", "INTEGER NOT NULL DEFAULT 0"),
+            ("colorant_flag", "INTEGER NOT NULL DEFAULT 0"),
+        ]
+        for name, col_type in additions:
+            if name in column_names:
+                continue
+            conn.execute(text(f"ALTER TABLE ingredients ADD COLUMN {name} {col_type}"))
+            LOGGER.info("Added %s column to ingredients", name)
+
+
+def _seed_taxonomy_tables() -> None:
+    """Seed curated taxonomy lookup tables (idempotent)."""
+    try:
+        with get_session() as session:
+            # Ingredient categories
+            existing = {r[0] for r in session.query(IngredientCategoryTerm.name).all()}
+            for name in INGREDIENT_CATEGORIES_PRIMARY:
+                if name not in existing:
+                    session.add(IngredientCategoryTerm(name=name))
+
+            # Master categories
+            existing = {r[0] for r in session.query(MasterCategoryTerm.name).all()}
+            for name in MASTER_CATEGORIES:
+                if name not in existing:
+                    session.add(MasterCategoryTerm(name=name))
+
+            # Refinement levels
+            existing = {r[0] for r in session.query(RefinementLevelTerm.name).all()}
+            for name in REFINEMENT_LEVELS:
+                if name not in existing:
+                    session.add(RefinementLevelTerm(name=name))
+
+            # Physical forms
+            existing = {r[0] for r in session.query(PhysicalFormTerm.name).all()}
+            for name in PHYSICAL_FORMS:
+                if name not in existing:
+                    session.add(PhysicalFormTerm(name=name))
+
+            # Variations
+            existing = {r[0] for r in session.query(VariationTerm.name).all()}
+            for name in VARIATIONS_CURATED:
+                if name not in existing:
+                    session.add(VariationTerm(name=name, approved=True))
+
+            # Master category rules: default identity mapping from ingredient_category -> master_category
+            existing_rules = {
+                (r.master_category, r.source_type, r.source_value)
+                for r in session.query(MasterCategoryRule).all()
+            }
+            for name in INGREDIENT_CATEGORIES_PRIMARY:
+                key = (name, "ingredient_category", name)
+                if key not in existing_rules and name in MASTER_CATEGORIES:
+                    session.add(MasterCategoryRule(master_category=name, source_type="ingredient_category", source_value=name))
+            # Basic form/variation mappings for UX master categories
+            basic = [
+                ("Oils & Fats", "physical_form", "Oil"),
+                ("Butters", "physical_form", "Butter"),
+                ("Waxes", "physical_form", "Wax"),
+                ("Hydrosols", "physical_form", "Hydrosol"),
+                ("Resins & Gums", "physical_form", "Resin"),
+                ("Resins & Gums", "physical_form", "Gum"),
+                ("Extracts", "variation", "CO2 Extracted"),
+                ("Essential Oils", "variation", "Steam-Distilled"),
+                ("Essential Oils", "variation", "Essential"),
+            ]
+            for mc, st, sv in basic:
+                key = (mc, st, sv)
+                if key not in existing_rules and mc in MASTER_CATEGORIES:
+                    session.add(MasterCategoryRule(master_category=mc, source_type=st, source_value=sv))
+    except Exception as exc:  # pylint: disable=broad-except
+        LOGGER.debug("Skipping taxonomy seeding: %s", exc)
 
 
 def _coerce_bool(value: Any, default: bool = False) -> bool:
@@ -233,13 +567,34 @@ def _extract_parenthetical_variation(item_name: str, base: str) -> str:
 
 
 def _derive_item_name(base: str, variation: str, variation_bypass: bool) -> str:
-    base_clean = (base or "").strip()
-    var_clean = (variation or "").strip()
+    raise RuntimeError("_derive_item_name signature changed; use _derive_item_display_name")
+
+
+def _derive_item_display_name(
+    *,
+    base_term: str,
+    variation: str,
+    variation_bypass: bool,
+    physical_form: str,
+    form_bypass: bool,
+) -> str:
+    """SOP item name generation: base + (variation) + form suffix."""
+    base_clean = (base_term or "").strip()
     if not base_clean:
         return ""
-    if not var_clean or variation_bypass:
-        return base_clean
-    return f"{base_clean} ({var_clean})"
+    name = base_clean
+
+    var_clean = (variation or "").strip()
+    if var_clean and not variation_bypass:
+        name = f"{name} ({var_clean})"
+
+    form_clean = (physical_form or "").strip()
+    if form_clean and not form_bypass:
+        # Avoid double-appending if already present (e.g., variation includes 'Essential Oil' and form is Oil).
+        if form_clean.casefold() not in name.casefold():
+            name = f"{name} {form_clean}"
+
+    return name
 
 
 @contextmanager
@@ -561,6 +916,17 @@ def upsert_compiled_ingredient(term: str, payload: dict, *, seed_category: str |
     cas_number = (ingredient.get("cas_number") or "").strip() or None
     short_description = ingredient.get("short_description")
     detailed_description = ingredient.get("detailed_description")
+    ingredient_category_raw = (ingredient.get("ingredient_category") or "").strip() or None
+    origin = _guess_origin(ingredient, cleaned)
+    refinement_level = _coerce_refinement(ingredient.get("refinement_level"))
+    ingredient_category = _coerce_primary_category(ingredient_category_raw, cleaned, cleaned_category)
+    derived_from = (ingredient.get("derived_from") or "").strip() or None
+    usage_restrictions = ingredient.get("usage_restrictions")
+    prohibited_flag = _coerce_bool(ingredient.get("prohibited_flag"), default=False)
+    gras_status = _coerce_bool(ingredient.get("gras_status"), default=False)
+    ifra_category = (ingredient.get("ifra_category") or "").strip() or None
+    allergen_flag = _coerce_bool(ingredient.get("allergen_flag"), default=False)
+    colorant_flag = _coerce_bool(ingredient.get("colorant_flag"), default=False)
 
     payload_json = json.dumps(payload, ensure_ascii=False, sort_keys=True)
     items = ingredient.get("items") if isinstance(ingredient.get("items"), list) else []
@@ -576,6 +942,17 @@ def upsert_compiled_ingredient(term: str, payload: dict, *, seed_category: str |
         record.botanical_name = botanical_name
         record.inci_name = inci_name
         record.cas_number = cas_number
+        record.ingredient_category = ingredient_category
+        record.origin = origin
+        record.refinement_level = refinement_level
+        record.derived_from = derived_from
+        if isinstance(usage_restrictions, str):
+            record.usage_restrictions = usage_restrictions.strip()
+        record.prohibited_flag = prohibited_flag
+        record.gras_status = gras_status
+        record.ifra_category = ifra_category
+        record.allergen_flag = allergen_flag
+        record.colorant_flag = colorant_flag
         if isinstance(short_description, str):
             record.short_description = short_description.strip()
         if isinstance(detailed_description, str):
@@ -583,8 +960,17 @@ def upsert_compiled_ingredient(term: str, payload: dict, *, seed_category: str |
         record.payload_json = payload_json
         record.compiled_at = datetime.utcnow()
 
-        # Replace items (deterministic; avoids partial merges).
+        # Replace items + item values + ingredient master categories (deterministic).
+        existing_item_ids = [
+            r[0]
+            for r in session.query(IngredientItemRecord.id)
+            .filter(IngredientItemRecord.ingredient_term == cleaned)
+            .all()
+        ]
+        if existing_item_ids:
+            session.query(IngredientItemValue).filter(IngredientItemValue.item_id.in_(existing_item_ids)).delete(synchronize_session=False)
         session.query(IngredientItemRecord).filter(IngredientItemRecord.ingredient_term == cleaned).delete()
+        session.query(IngredientMasterCategory).filter(IngredientMasterCategory.ingredient_term == cleaned).delete()
 
         variation_forms = {
             "Essential Oil",
@@ -616,10 +1002,25 @@ def upsert_compiled_ingredient(term: str, payload: dict, *, seed_category: str |
             if physical_form in variation_forms and not variation:
                 variation = physical_form
                 physical_form = "Oil" if "Oil" in variation else "Liquid"
+            # Enforce curated physical forms (otherwise keep empty for review).
+            if physical_form and physical_form not in PHYSICAL_FORMS:
+                physical_form = ""
+
+            # Track/approve variation vocabulary.
+            if variation:
+                existing_var = session.get(VariationTerm, variation)
+                if existing_var is None:
+                    session.add(VariationTerm(name=variation, approved=(variation in VARIATIONS_CURATED)))
             form_bypass = _coerce_bool(raw_item.get("form_bypass"), default=False)
             variation_bypass = _coerce_bool(raw_item.get("variation_bypass"), default=False)
 
-            derived_item_name = _derive_item_name(cleaned, variation, variation_bypass)
+            derived_item_name = _derive_item_display_name(
+                base_term=cleaned,
+                variation=variation,
+                variation_bypass=variation_bypass,
+                physical_form=physical_form,
+                form_bypass=form_bypass,
+            )
             if not derived_item_name:
                 continue
 
@@ -627,11 +1028,6 @@ def upsert_compiled_ingredient(term: str, payload: dict, *, seed_category: str |
             cleaned_item["variation"] = variation
             cleaned_item["physical_form"] = physical_form
             cleaned_item["item_name"] = derived_item_name
-            # Discard usage_rate_percent (requested).
-            specs = cleaned_item.get("specifications")
-            if isinstance(specs, dict) and "usage_rate_percent" in specs:
-                specs.pop("usage_rate_percent", None)
-                cleaned_item["specifications"] = specs
             item_json = json.dumps(cleaned_item, ensure_ascii=False, sort_keys=True)
 
             # Promote common scalar/range fields.
@@ -651,6 +1047,7 @@ def upsert_compiled_ingredient(term: str, payload: dict, *, seed_category: str |
             specs = cleaned_item.get("specifications") if isinstance(cleaned_item.get("specifications"), dict) else {}
             mp = specs.get("melting_point_celsius") if isinstance(specs.get("melting_point_celsius"), dict) else {}
             ph = specs.get("ph_range") if isinstance(specs.get("ph_range"), dict) else {}
+            usage = specs.get("usage_rate_percent") if isinstance(specs.get("usage_rate_percent"), dict) else {}
 
             item_row = IngredientItemRecord(
                 ingredient_term=cleaned,
@@ -672,6 +1069,8 @@ def upsert_compiled_ingredient(term: str, payload: dict, *, seed_category: str |
                 melting_point_c_max=str(mp.get("max")) if mp.get("max") not in (None, "") else None,
                 ph_min=str(ph.get("min")) if ph.get("min") not in (None, "") else None,
                 ph_max=str(ph.get("max")) if ph.get("max") not in (None, "") else None,
+                usage_leave_on_max=str(usage.get("leave_on_max")) if usage.get("leave_on_max") not in (None, "") else None,
+                usage_rinse_off_max=str(usage.get("rinse_off_max")) if usage.get("rinse_off_max") not in (None, "") else None,
             )
             session.add(item_row)
             session.flush()  # obtain item_row.id for child values
@@ -692,7 +1091,12 @@ def upsert_compiled_ingredient(term: str, payload: dict, *, seed_category: str |
                     session.add(IngredientItemValue(item_id=item_row.id, field=field, value=vv))
 
             _add_values("synonyms", cleaned_item.get("synonyms"))
-            _add_values("applications", cleaned_item.get("applications"))
+            # SOP: applications must have at least 1. If missing, store Unknown.
+            applications = cleaned_item.get("applications")
+            if not applications:
+                applications = ["Unknown"]
+                cleaned_item["applications"] = applications
+            _add_values("applications", applications)
             _add_values("function_tags", cleaned_item.get("function_tags"))
             _add_values("safety_tags", cleaned_item.get("safety_tags"))
             _add_values("sds_hazards", cleaned_item.get("sds_hazards"))
@@ -701,6 +1105,10 @@ def upsert_compiled_ingredient(term: str, payload: dict, *, seed_category: str |
             _add_values("certifications", sourcing.get("certifications"))
             _add_values("common_origins", sourcing.get("common_origins"))
             _add_values("supply_risks", sourcing.get("supply_risks"))
+
+        # Derive and persist ingredient master categories (UX group).
+        for mc in _derive_master_categories(ingredient_category, items):
+            session.add(IngredientMasterCategory(ingredient_term=cleaned, master_category=mc))
 
 
 def upsert_source_terms(rows: Iterable[tuple[str, str, str]]) -> int:

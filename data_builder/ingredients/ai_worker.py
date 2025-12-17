@@ -11,6 +11,14 @@ import openai
 
 LOGGER = logging.getLogger(__name__)
 
+from .taxonomy_constants import (
+    INGREDIENT_CATEGORIES_PRIMARY,
+    ORIGINS,
+    PHYSICAL_FORMS,
+    REFINEMENT_LEVELS,
+    VARIATIONS_CURATED,
+)
+
 openai.api_key = os.environ.get("OPENAI_API_KEY")
 if not openai.api_key:
     LOGGER.warning("OPENAI_API_KEY is not set; ai_worker will fail until configured.")
@@ -149,8 +157,8 @@ CONTEXT:
 - Item model: An ITEM is the combination of BASE INGREDIENT + VARIATION.
   - VARIATION is the purchasable/spec distinction (e.g., Refined vs Unrefined, 2% vs Whole, Filtered vs Unfiltered, Organic, Deodorized, 50% Solution).
   - PHYSICAL FORM is still required and must remain a short noun (e.g., Powder, Oil, Liquid, Granules). Do not encode variations into physical_form.
-  - Represent the variation primarily in `item_name` (e.g., "Honey (Granulated)", "Milk (2%)", "Sodium Hydroxide (50% Solution)").
-  - If the base is normally sold in multiple forms (powder vs liquid vs whole), create separate items per form and use variation text in item_name as needed.
+  - Do NOT generate a final display name; the system will derive item_name in code from (base + variation + physical_form + bypass flags).
+  - If the base is normally sold in multiple forms (powder vs liquid vs whole), create separate items per form and specify variation/form fields appropriately.
 - Create a dedicated `items` entry for each common purchasable variation and/or physical form used in craft production.
 - Populate every applicable attribute in the schema. Use "unknown" only when absolutely no data exists.
 - Use authoritative references (USP, FCC, cosmetic suppliers, herbal materia medica) when citing specs.
@@ -176,7 +184,7 @@ VARIATION vs PHYSICAL_FORM (IMPORTANT):
 - Put "Essential Oil", "CO2 Extract", "Absolute", "Hydrosol", "Tincture", "Glycerite", "% Solution", "Cold Pressed", "Refined", "Filtered", etc. in `variation`.
 - Keep `physical_form` as the physical state noun only (Oil, Liquid, Powder, Whole, Granules, Crystals, Butter, Wax, Resin, Gel, Paste, Syrup, Concentrate).
 - `item_name` should generally be: "{common_name} ({variation})" when variation is non-empty.
-- If `variation` is empty, `item_name` may just be "{common_name}" and you can set `variation_bypass`=true.
+- Do NOT emit `item_name` as a source-of-truth; code will derive it. If `variation` is empty, set `variation_bypass`=true.
 
 SCHEMA (required):
 {schema}
@@ -190,13 +198,23 @@ CORE_SCHEMA_SPEC = r"""
 Return JSON using this schema (all strings trimmed):
 {
   "ingredient_core": {
+    "origin": "one of: Plant-Derived, Animal-Derived, Animal-Byproduct, Mineral/Earth, Synthetic, Fermentation, Marine-Derived",
+    "ingredient_category": "one of the curated Ingredient Categories (base-level primary): Fruits & Berries, Vegetables, Grains, Nuts, Seeds, Spices, Herbs, Flowers, Roots, Barks, Clays, Minerals, Salts, Sugars, Liquid Sweeteners, Acids",
+    "refinement_level": "one of: Raw/Unprocessed, Minimally Processed, Extracted/Distilled, Milled/Ground, Fermented, Synthesized, Extracted Fat, Other",
+    "derived_from": "string (optional; natural source if base is derived)",
     "category": "one of the approved ingredient categories",
     "botanical_name": "string",
     "inci_name": "string",
     "cas_number": "string",
     "short_description": "string",
     "detailed_description": "string",
-    "origin": {
+    "usage_restrictions": "string",
+    "prohibited_flag": true | false,
+    "gras_status": true | false,
+    "ifra_category": "string",
+    "allergen_flag": true | false,
+    "colorant_flag": true | false,
+    "origin_details": {
       "regions": ["string"],
       "source_material": "string",
       "processing_methods": ["Cold Pressed", "Solvent Extracted", ...]
@@ -218,7 +236,7 @@ Return JSON using this schema (all strings trimmed; lists sorted alphabetically)
   "items": [
     {
       "variation": "string",
-      "physical_form": "short noun (Powder, Oil, Liquid, Granules, Crystals, Whole, Butter, Wax, Resin, Gel, Paste, Syrup, Concentrate)",
+      "physical_form": "one of the curated Physical Forms enum",
       "synonyms": ["aka", ...],
       "applications": ["Soap", "Bath Bomb", "Chocolate", "Lotion", "Candle"],
       "function_tags": ["Stabilizer", "Fragrance", "Colorant", "Binder", "Fuel"],
@@ -236,7 +254,8 @@ Return JSON using this schema (all strings trimmed; lists sorted alphabetically)
         "iodine_value": 10,
         "melting_point_celsius": {"min": 30, "max": 35},
         "flash_point_celsius": 200,
-        "ph_range": {"min": 5, "max": 7}
+        "ph_range": {"min": 5, "max": 7},
+        "usage_rate_percent": {"leave_on_max": 5, "rinse_off_max": 15}
       },
       "sourcing": {
         "common_origins": ["string"],
@@ -297,10 +316,16 @@ def _render_metadata_blob(term: str) -> str:
 
 def _render_core_prompt(term: str) -> str:
     meta = _render_metadata_blob(term)
+    origins = ", ".join(ORIGINS)
+    primaries = ", ".join(INGREDIENT_CATEGORIES_PRIMARY)
+    refinements = ", ".join(REFINEMENT_LEVELS)
     return f"""
 You are Stage 2A (Compiler Core). Build canonical core fields for the base ingredient term: "{term}".
 
 Rules:
+- origin is REQUIRED and must be one of: {origins}
+- ingredient_category is REQUIRED and must be one of: {primaries}
+- refinement_level is REQUIRED and must be one of: {refinements}
 - Do NOT invent marketing language. Be concise and factual.
 - Use the provided external metadata as hints when available.
 - ingredient_core.category MUST be one of: {", ".join(INGREDIENT_CATEGORIES)}
@@ -316,12 +341,16 @@ SCHEMA:
 def _render_items_prompt(term: str, ingredient_core: Dict[str, Any]) -> str:
     meta = _render_metadata_blob(term)
     core_blob = json.dumps(ingredient_core, ensure_ascii=False, indent=2, sort_keys=True)
+    forms = ", ".join(PHYSICAL_FORMS)
+    variations = ", ".join(VARIATIONS_CURATED)
     return f"""
 You are Stage 2B (Compiler Items). Create purchasable ITEM variants for base ingredient: "{term}".
 
 Rules:
 - ITEM = base + variation + physical_form. Variation must capture: Essential Oil / CO2 Extract / Absolute / Hydrosol / Extract / Tincture / Glycerite / % Solution / Refined / Unrefined / Cold Pressed / Filtered, etc.
-- physical_form must be a short noun (Powder, Oil, Liquid, Granules, Crystals, Whole, Butter, Wax, Resin, Gel, Paste, Syrup, Concentrate). Do NOT put "Essential Oil" in physical_form.
+- physical_form must be one of: {forms}
+- variation should usually be chosen from this curated list when applicable: {variations}
+- applications must include at least 1 value.
 - If variation is empty, set variation_bypass=true.
 - Return multiple items when common (at least 1).
 

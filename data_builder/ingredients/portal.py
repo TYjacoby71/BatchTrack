@@ -111,6 +111,14 @@ def create_app(db_path: Optional[Path] = None) -> Flask:
                 return term
             core_bits = []
             if ingredient:
+                if getattr(ingredient, "ingredient_category", None):
+                    core_bits.append(f"<div class='muted'><b>ingredient_category</b>: {ingredient.ingredient_category}</div>")
+                if getattr(ingredient, "origin", None):
+                    core_bits.append(f"<div class='muted'><b>origin</b>: {ingredient.origin}</div>")
+                if getattr(ingredient, "refinement_level", None):
+                    core_bits.append(f"<div class='muted'><b>refinement</b>: {ingredient.refinement_level}</div>")
+                if getattr(ingredient, "derived_from", None):
+                    core_bits.append(f"<div class='muted'><b>derived_from</b>: {ingredient.derived_from}</div>")
                 if ingredient.category:
                     core_bits.append(f"<div class='muted'><b>category</b>: {ingredient.category}</div>")
                 if ingredient.botanical_name:
