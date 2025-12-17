@@ -205,6 +205,7 @@ LIQUID_SWEETENER_KEYWORDS = {"honey", "molasses", "maple", "agave", "syrup"}
 SYNTHETIC_MARKERS = {
     "peg-",
     "ppg-",
+    "pvp",
     "polyquaternium",
     "acrylates",
     "copolymer",
@@ -213,6 +214,9 @@ SYNTHETIC_MARKERS = {
     "quaternium-",
     "isodeceth",
     "ceteareth",
+    "laureth",
+    "pareth",
+    "polysorbate",
 }
 
 
@@ -240,14 +244,43 @@ def guess_origin(term: str, botanical_name: str, sources: list[dict]) -> str:
     return "Plant-Derived"
 
 
-def guess_refinement(term: str, sources: list[dict]) -> str:
+def guess_refinement(*, term: str, inci_name: str, origin: str, sources: list[dict]) -> str:
     t = (term or "").strip().lower()
+    inci = (inci_name or "").strip().lower()
     raw_names = " ".join([(s.get("raw_name") or "") for s in sources]).lower()
     tgsc_cats = " ".join([(s.get("category") or "") for s in sources]).lower()
 
     # Fermented
     if any(k in t for k in FERMENTATION_KEYWORDS) or "ferment" in raw_names:
         return "Fermented"
+
+    # Synthesized: if we already believe it's synthetic, treat refinement as Synthesized.
+    # This is intentionally early so we don't label synthetic items as "Other".
+    if origin == "Synthetic":
+        return "Synthesized"
+    # Also treat strong synthetic markers in INCI/raw text as synthesized.
+    synthetic_blob = " ".join([t, inci, raw_names])
+    if any(m in synthetic_blob for m in SYNTHETIC_MARKERS) or any(
+        k in synthetic_blob
+        for k in (
+            "quaternium",
+            "edta",
+            "polyurethane",
+            "polyester",
+            "siloxane",
+            "dimethicon",
+            "acrylate",
+            "copolymer",
+            "paraben",
+            "phenoxyethanol",
+            "octinoxate",
+            "methoxycinnamate",
+            "laureth",
+            "pareth",
+            "ceteareth",
+        )
+    ):
+        return "Synthesized"
 
     # Extracted/Distilled signals (from source category or raw name)
     if any(k in raw_names for k in ("essential oil", "co2", "absolute", "concrete", "hydrosol", "tincture", "extract")):
@@ -258,6 +291,8 @@ def guess_refinement(term: str, sources: list[dict]) -> str:
     # Milled/Ground signals
     if any(k in t for k in ("flour", "starch")) or any(k in raw_names for k in ("flour", "starch")):
         return "Milled/Ground"
+    if any(k in raw_names for k in ("powder", "ground", "milled", "micronized")):
+        return "Milled/Ground"
 
     # Extracted fat (butters)
     if "butter" in t or "butter" in raw_names:
@@ -267,9 +302,17 @@ def guess_refinement(term: str, sources: list[dict]) -> str:
     if " oil" in f" {t} " or " oil" in f" {raw_names} ":
         return "Extracted Fat"
 
-    # Minerals generally "Raw/Unprocessed" or "Other"; keep Other conservative
-    if any(k in t for k in MINERAL_KEYWORDS):
-        return "Other"
+    # Plant parts that are typically minimally processed (dried/cut) when sold as raw materials.
+    if any(k in raw_names for k in ("leaf", "bark", "root", "flower", "buds", "seed", "needle", "stem", "herb")):
+        if any(k in raw_names for k in ("dried", "dehydrated", "chopped", "crushed", "sliced", "diced", "flakes", "shreds", "ribbons")):
+            return "Minimally Processed"
+        # If we have a clear plant part but no explicit processing token, still treat as minimally processed
+        # (most catalog forms are harvested + dried/handled).
+        return "Minimally Processed"
+
+    # Minerals/clays/salts: generally mined + cleaned; map to Raw/Unprocessed for refinement taxonomy.
+    if origin == "Mineral/Earth" or any(k in t for k in MINERAL_KEYWORDS):
+        return "Raw/Unprocessed"
 
     return "Other"
 
@@ -544,7 +587,7 @@ def normalize_sources(tgsc_path: Path, cosing_path: Path) -> List[Dict[str, Any]
         )
         botanical = rec["botanical_name"]
         origin = guess_origin(term, botanical, rec["sources"])
-        refinement = guess_refinement(term, rec["sources"])
+        refinement = guess_refinement(term=term, inci_name=rec.get("inci_name", ""), origin=origin, sources=rec["sources"])
         derived_from = guess_derived_from(term)
 
         override = OVERRIDE_EXACT.get(term.strip().lower())
@@ -559,7 +602,10 @@ def normalize_sources(tgsc_path: Path, cosing_path: Path) -> List[Dict[str, Any]
             95 if origin in {"Mineral/Earth", "Synthetic", "Fermentation"} else 70
         )
         ref_conf = 100 if override and "refinement_level" in override else (
-            90 if refinement in {"Extracted/Distilled", "Extracted Fat", "Fermented", "Milled/Ground"} else 55
+            90
+            if refinement
+            in {"Extracted/Distilled", "Extracted Fat", "Fermented", "Milled/Ground", "Synthesized"}
+            else (70 if refinement in {"Raw/Unprocessed", "Minimally Processed"} else 55)
         )
         derived_conf = 100 if derived_from else 0
         overall_conf = int(min(cat_conf, origin_conf, ref_conf) if derived_conf == 0 else min(cat_conf, origin_conf, ref_conf, derived_conf))
