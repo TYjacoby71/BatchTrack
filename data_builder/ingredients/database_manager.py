@@ -250,6 +250,11 @@ class IngredientItemRecord(Base):
     form_bypass = Column(Boolean, nullable=False, default=False)
     variation_bypass = Column(Boolean, nullable=False, default=False)
 
+    # Moderation controls: quarantine unapproved/hallucinated items without losing tokens.
+    approved = Column(Boolean, nullable=False, default=True)
+    status = Column(String, nullable=False, default="active")  # active|quarantine|rejected
+    needs_review_reason = Column(Text, nullable=True, default=None)
+
     # Full item JSON for the rest of attributes.
     item_json = Column(Text, nullable=False, default="{}")
 
@@ -451,6 +456,9 @@ def _ensure_ingredient_item_columns() -> None:
             ("ph_max", "TEXT"),
             ("usage_leave_on_max", "TEXT"),
             ("usage_rinse_off_max", "TEXT"),
+            ("approved", "INTEGER NOT NULL DEFAULT 1"),
+            ("status", "TEXT NOT NULL DEFAULT 'active'"),
+            ("needs_review_reason", "TEXT"),
         ]
 
         for name, col_type in additions:
@@ -1055,6 +1063,21 @@ def upsert_compiled_ingredient(term: str, payload: dict, *, seed_category: str |
             ph = specs.get("ph_range") if isinstance(specs.get("ph_range"), dict) else {}
             usage = specs.get("usage_rate_percent") if isinstance(specs.get("usage_rate_percent"), dict) else {}
 
+            # Quarantine: keep compiled data, but require approval if variation isn't approved or form is missing.
+            approved = True
+            status = "active"
+            reasons: list[str] = []
+            if variation:
+                vrow = session.get(VariationTerm, variation)
+                if vrow is not None and not bool(vrow.approved):
+                    approved = False
+                    status = "quarantine"
+                    reasons.append(f"Unapproved variation: {variation}")
+            if not physical_form:
+                approved = False
+                status = "quarantine"
+                reasons.append("Missing/invalid physical_form")
+
             item_row = IngredientItemRecord(
                 ingredient_term=cleaned,
                 item_name=derived_item_name,
@@ -1062,6 +1085,9 @@ def upsert_compiled_ingredient(term: str, payload: dict, *, seed_category: str |
                 physical_form=physical_form,
                 form_bypass=form_bypass,
                 variation_bypass=variation_bypass,
+                approved=approved,
+                status=status,
+                needs_review_reason="; ".join(reasons) if reasons else None,
                 item_json=item_json,
                 shelf_life_days=shelf_life_days,
                 storage_temp_c_min=st_min,

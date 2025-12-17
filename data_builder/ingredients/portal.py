@@ -15,6 +15,7 @@ from pathlib import Path
 from typing import Any, Optional
 
 from flask import Flask, Response, request, send_file
+from flask import redirect
 
 from . import database_manager
 
@@ -48,6 +49,7 @@ def create_app(db_path: Optional[Path] = None) -> Flask:
     def index() -> str:
         q = (request.args.get("q") or "").strip()
         status = (request.args.get("status") or "").strip().lower()
+        show_quarantine = (request.args.get("show_quarantine") or "").strip().lower() in {"1", "true", "yes", "y", "on"}
         min_priority = _parse_int(request.args.get("min_priority"), 1)
         max_priority = _parse_int(request.args.get("max_priority"), 10)
         page = max(1, _parse_int(request.args.get("page"), 1))
@@ -83,6 +85,7 @@ def create_app(db_path: Optional[Path] = None) -> Flask:
             item_rows = (
                 session.query(database_manager.IngredientItemRecord)
                 .filter(database_manager.IngredientItemRecord.ingredient_term.in_(page_terms))
+                .filter(True if show_quarantine else database_manager.IngredientItemRecord.status == "active")
                 .order_by(database_manager.IngredientItemRecord.ingredient_term.asc(), database_manager.IngredientItemRecord.item_name.asc())
                 .all()
             )
@@ -234,8 +237,13 @@ def create_app(db_path: Optional[Path] = None) -> Flask:
             <a href="/normalized_terms.csv" style="margin-left: 10px;">Normalized terms CSV</a>
             <a href="/download.db" style="margin-left: 10px;">Download DB</a>
             <a href="/cursors.csv" style="margin-left: 10px;">Cursor CSV</a>
+            <a href="/admin/variations" style="margin-left: 10px;">Admin: Variations</a>
           </div>
         </form>
+        <div class="muted" style="margin-top: 8px;">
+          Quarantine items are {"shown" if show_quarantine else "hidden"}.
+          <a href="{_qs(show_quarantine='0' if show_quarantine else '1')}">Toggle</a>
+        </div>
         <div class="muted" style="margin-top: 8px;">
           Showing {len(rows)} of {total}. Page {page}.
           {"<a href='" + prev_link + "'>Prev</a>" if prev_link else ""}
@@ -408,6 +416,79 @@ def create_app(db_path: Optional[Path] = None) -> Flask:
             mimetype="text/csv; charset=utf-8",
             headers={"Content-Disposition": "attachment; filename=normalized_terms.csv"},
         )
+
+    @app.get("/admin/variations")
+    def admin_variations() -> str:
+        """List unapproved variations and counts of impacted items."""
+        database_manager.ensure_tables_exist()
+        with database_manager.get_session() as session:
+            vars_ = session.query(database_manager.VariationTerm).order_by(database_manager.VariationTerm.name.asc()).all()
+            # Count items referencing each variation
+            counts = {
+                v: session.query(database_manager.IngredientItemRecord).filter(database_manager.IngredientItemRecord.variation == v).count()
+                for v in {r.name for r in vars_}
+            }
+        rows = []
+        for v in vars_:
+            rows.append(
+                "<tr>"
+                f"<td>{v.name}</td>"
+                f"<td>{'true' if v.approved else 'false'}</td>"
+                f"<td>{counts.get(v.name, 0)}</td>"
+                f"<td><a href='/admin/variations/approve?name={v.name}'>approve</a> | "
+                f"<a href='/admin/variations/reject?name={v.name}'>reject</a></td>"
+                "</tr>"
+            )
+        table = "\n".join(rows) if rows else "<tr><td colspan='4' class='muted'>No variations.</td></tr>"
+        return f"""
+<!doctype html>
+<html>
+  <head><meta charset="utf-8"/><title>Admin • Variations</title></head>
+  <body style="font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif; margin: 24px;">
+    <h2>Variations</h2>
+    <div><a href="/">← Back</a></div>
+    <p class="muted">Unapproved variations cause items to be quarantined until approved.</p>
+    <table border="1" cellpadding="6" cellspacing="0">
+      <thead><tr><th>name</th><th>approved</th><th>item_count</th><th>actions</th></tr></thead>
+      <tbody>{table}</tbody>
+    </table>
+  </body>
+</html>
+"""
+
+    @app.get("/admin/variations/approve")
+    def approve_variation() -> Response:
+        name = (request.args.get("name") or "").strip()
+        if not name:
+            return Response("Missing name", status=400)
+        database_manager.ensure_tables_exist()
+        with database_manager.get_session() as session:
+            v = session.get(database_manager.VariationTerm, name)
+            if v is None:
+                return Response("Not found", status=404)
+            v.approved = True
+            # Promote quarantined items with this variation to active if form is valid.
+            session.query(database_manager.IngredientItemRecord).filter(
+                database_manager.IngredientItemRecord.variation == name,
+                database_manager.IngredientItemRecord.status == "quarantine",
+            ).update({"approved": True, "status": "active", "needs_review_reason": None})
+        return redirect("/admin/variations")
+
+    @app.get("/admin/variations/reject")
+    def reject_variation() -> Response:
+        name = (request.args.get("name") or "").strip()
+        if not name:
+            return Response("Missing name", status=400)
+        database_manager.ensure_tables_exist()
+        with database_manager.get_session() as session:
+            v = session.get(database_manager.VariationTerm, name)
+            if v is None:
+                return Response("Not found", status=404)
+            v.approved = False
+            session.query(database_manager.IngredientItemRecord).filter(
+                database_manager.IngredientItemRecord.variation == name,
+            ).update({"approved": False, "status": "rejected", "needs_review_reason": f"Rejected variation: {name}"})
+        return redirect("/admin/variations")
 
     return app
 
