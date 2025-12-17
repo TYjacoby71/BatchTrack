@@ -130,6 +130,16 @@ VARIATIONS_CURATED: list[str] = [
     "Slow-Rise",
     "Active Dry",
     "Fresh",
+    # Structural variations used for master-category derivation / item modeling.
+    # These are distinct from physical_form and may appear as the purchasable "type".
+    "Oil",
+    "Butter",
+    "Wax",
+    "Essential Oil",
+    "CO2 Extract",
+    "Extract",
+    "Absolute",
+    "Concrete",
 ]
 
 PHYSICAL_FORMS: list[str] = [
@@ -173,5 +183,55 @@ PHYSICAL_FORMS: list[str] = [
     "Crystals",
     "Isolate",
     "Emulsion",
+]
+
+# Seeded rules that connect existing vocab into the Master Categories (UX group).
+# Each tuple: (master_category, source_type, source_value)
+# source_type in: ingredient_category | variation | physical_form | function_tag | application
+MASTER_CATEGORY_RULE_SEED: list[tuple[str, str, str]] = [
+    # Ingredient category -> master category (identity, with a couple of remaps)
+    ("Fruits & Berries", "ingredient_category", "Fruits & Berries"),
+    ("Vegetables", "ingredient_category", "Vegetables"),
+    ("Grains & Starches", "ingredient_category", "Grains"),
+    ("Nuts", "ingredient_category", "Nuts"),
+    ("Seeds", "ingredient_category", "Seeds"),
+    ("Spices", "ingredient_category", "Spices"),
+    ("Herbs", "ingredient_category", "Herbs"),
+    ("Flowers", "ingredient_category", "Flowers"),
+    ("Roots", "ingredient_category", "Roots"),
+    ("Barks", "ingredient_category", "Barks"),
+    ("Clays", "ingredient_category", "Clays"),
+    ("Minerals", "ingredient_category", "Minerals"),
+    ("Salts", "ingredient_category", "Salts"),
+    ("Sugars", "ingredient_category", "Sugars"),
+    ("Liquid Sweeteners", "ingredient_category", "Liquid Sweeteners"),
+    ("Acids & PH Adjusters", "ingredient_category", "Acids"),
+
+    # Physical forms -> master categories
+    ("Oils & Fats", "physical_form", "Oil"),
+    ("Carriers", "physical_form", "Oil"),
+    ("Butters", "physical_form", "Butter"),
+    ("Waxes", "physical_form", "Wax"),
+    ("Hydrosols", "physical_form", "Hydrosol"),
+    ("Resins & Gums", "physical_form", "Resin"),
+    ("Resins & Gums", "physical_form", "Gum"),
+
+    # Variations -> master categories
+    ("Essential Oils", "variation", "Essential Oil"),
+    ("Essential Oils", "variation", "Steam-Distilled"),
+    ("Extracts", "variation", "CO2 Extracted"),
+    ("Extracts", "variation", "CO2 Extract"),
+    ("Extracts", "variation", "Extract"),
+    ("Absolutes", "variation", "Absolute"),
+    ("Concretes", "variation", "Concrete"),
+
+    # Function tags -> master categories
+    ("Colorants & Pigmants", "function_tag", "Colorant"),
+    ("Preservatives & Antioxidants", "function_tag", "Preservative"),
+    ("Preservatives & Antioxidants", "function_tag", "Antioxidant"),
+    ("Surfactants & Cleansers", "function_tag", "Surfactant"),
+    ("Emulsifiers & Stabilizers", "function_tag", "Emulsifier"),
+    ("Emulsifiers & Stabilizers", "function_tag", "Stabilizer"),
+    ("Thickeners & Gelling Agents", "function_tag", "Thickener"),
 ]
 

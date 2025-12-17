@@ -18,16 +18,53 @@ LOGGER = logging.getLogger(__name__)
 from .taxonomy_constants import (
     INGREDIENT_CATEGORIES_PRIMARY,
     MASTER_CATEGORIES,
+    MASTER_CATEGORY_RULE_SEED,
     ORIGINS,
     PHYSICAL_FORMS,
     REFINEMENT_LEVELS,
     VARIATIONS_CURATED,
 )
 
-_PRIMARY_TO_MASTER_MAP = {
-    "Acids": "Acids & PH Adjusters",
-    "Grains": "Grains & Starches",
-}
+def _derive_master_categories_from_rules(
+    session: Session,
+    *,
+    ingredient_category: str,
+    items: list[dict],
+) -> list[str]:
+    """Derive master categories using the DB rules table (data-driven)."""
+    rules: dict[tuple[str, str], set[str]] = {}
+    for r in session.query(MasterCategoryRule).all():
+        rules.setdefault((r.source_type, r.source_value), set()).add(r.master_category)
+
+    out: set[str] = set()
+
+    # Base-level category
+    for mc in rules.get(("ingredient_category", ingredient_category), set()):
+        out.add(mc)
+
+    # Item-derived
+    for it in items:
+        if not isinstance(it, dict):
+            continue
+        form = (it.get("physical_form") or "").strip()
+        var = (it.get("variation") or "").strip()
+
+        for mc in rules.get(("physical_form", form), set()):
+            out.add(mc)
+        for mc in rules.get(("variation", var), set()):
+            out.add(mc)
+
+        for tag in (it.get("function_tags") or []) if isinstance(it.get("function_tags"), list) else []:
+            if isinstance(tag, str):
+                for mc in rules.get(("function_tag", tag.strip()), set()):
+                    out.add(mc)
+
+        for app in (it.get("applications") or []) if isinstance(it.get("applications"), list) else []:
+            if isinstance(app, str):
+                for mc in rules.get(("application", app.strip()), set()):
+                    out.add(mc)
+
+    return sorted([m for m in out if m in MASTER_CATEGORIES])
 
 
 def _guess_origin(ingredient: dict, term: str) -> str:
@@ -123,59 +160,9 @@ def _coerce_primary_category(value: str | None, term: str, seed_category: str | 
     return _guess_primary_category(term, mapped)
 
 
-def _derive_master_categories(
-    ingredient_category: str,
-    items: list[dict],
-) -> list[str]:
-    out: set[str] = set()
-    # base -> master
-    base_mc = _PRIMARY_TO_MASTER_MAP.get(ingredient_category, ingredient_category)
-    if base_mc in MASTER_CATEGORIES:
-        out.add(base_mc)
-    # from items
-    for it in items:
-        if not isinstance(it, dict):
-            continue
-        form = (it.get("physical_form") or "").strip()
-        var = (it.get("variation") or "").strip()
-        tags = it.get("function_tags") if isinstance(it.get("function_tags"), list) else []
-
-        # master from form
-        if form == "Oil":
-            out.update({"Oils & Fats", "Carriers"})
-        if form == "Butter":
-            out.add("Butters")
-        if form == "Wax":
-            out.add("Waxes")
-        if form == "Hydrosol":
-            out.add("Hydrosols")
-        if form in {"Resin", "Gum"}:
-            out.add("Resins & Gums")
-
-        # master from variation
-        if var in {"Essential", "Steam-Distilled"}:
-            out.add("Essential Oils")
-        if var == "CO2 Extracted":
-            out.add("Extracts")
-
-        # master from function tags
-        for t in tags:
-            if not isinstance(t, str):
-                continue
-            tt = t.strip().lower()
-            if tt == "colorant":
-                out.add("Colorants & Pigmants")
-            if tt in {"preservative", "antioxidant"}:
-                out.add("Preservatives & Antioxidants")
-            if tt in {"surfactant"}:
-                out.add("Surfactants & Cleansers")
-            if tt in {"emulsifier", "stabilizer"}:
-                out.add("Emulsifiers & Stabilizers")
-            if tt in {"thickener"}:
-                out.add("Thickeners & Gelling Agents")
-
-    # keep only curated names
-    return sorted([m for m in out if m in MASTER_CATEGORIES])
+def _derive_master_categories(ingredient_category: str, items: list[dict]) -> list[str]:
+    """Deprecated: use _derive_master_categories_from_rules within a DB session."""
+    return []
 BASE_DIR = Path(__file__).resolve().parent
 DEFAULT_DB_PATH = BASE_DIR / "compiler_state.db"
 DB_PATH = Path(os.environ.get("COMPILER_DB_PATH", DEFAULT_DB_PATH))
@@ -518,28 +505,12 @@ def _seed_taxonomy_tables() -> None:
                 if name not in existing:
                     session.add(VariationTerm(name=name, approved=True))
 
-            # Master category rules: default identity mapping from ingredient_category -> master_category
             existing_rules = {
                 (r.master_category, r.source_type, r.source_value)
                 for r in session.query(MasterCategoryRule).all()
             }
-            for name in INGREDIENT_CATEGORIES_PRIMARY:
-                key = (name, "ingredient_category", name)
-                if key not in existing_rules and name in MASTER_CATEGORIES:
-                    session.add(MasterCategoryRule(master_category=name, source_type="ingredient_category", source_value=name))
-            # Basic form/variation mappings for UX master categories
-            basic = [
-                ("Oils & Fats", "physical_form", "Oil"),
-                ("Butters", "physical_form", "Butter"),
-                ("Waxes", "physical_form", "Wax"),
-                ("Hydrosols", "physical_form", "Hydrosol"),
-                ("Resins & Gums", "physical_form", "Resin"),
-                ("Resins & Gums", "physical_form", "Gum"),
-                ("Extracts", "variation", "CO2 Extracted"),
-                ("Essential Oils", "variation", "Steam-Distilled"),
-                ("Essential Oils", "variation", "Essential"),
-            ]
-            for mc, st, sv in basic:
+            # Seed data-driven rules from curated constants.
+            for mc, st, sv in MASTER_CATEGORY_RULE_SEED:
                 key = (mc, st, sv)
                 if key not in existing_rules and mc in MASTER_CATEGORIES:
                     session.add(MasterCategoryRule(master_category=mc, source_type=st, source_value=sv))
@@ -1107,7 +1078,7 @@ def upsert_compiled_ingredient(term: str, payload: dict, *, seed_category: str |
             _add_values("supply_risks", sourcing.get("supply_risks"))
 
         # Derive and persist ingredient master categories (UX group).
-        for mc in _derive_master_categories(ingredient_category, items):
+        for mc in _derive_master_categories_from_rules(session, ingredient_category=ingredient_category, items=items):
             session.add(IngredientMasterCategory(ingredient_term=cleaned, master_category=mc))
 
 
