@@ -380,6 +380,12 @@ class NormalizedTerm(Base):
     origin = Column(String, nullable=True, default=None)
     refinement_level = Column(String, nullable=True, default=None)
     derived_from = Column(String, nullable=True, default=None)
+    # Confidence scores (0-100) for deterministic assignments.
+    ingredient_category_confidence = Column(Integer, nullable=True, default=None)
+    origin_confidence = Column(Integer, nullable=True, default=None)
+    refinement_confidence = Column(Integer, nullable=True, default=None)
+    derived_from_confidence = Column(Integer, nullable=True, default=None)
+    overall_confidence = Column(Integer, nullable=True, default=None)
 
     # Full aggregated source payload (small, merged) for inspection.
     sources_json = Column(Text, nullable=False, default="{}")
@@ -534,6 +540,11 @@ def _ensure_normalized_term_columns() -> None:
             ("origin", "TEXT"),
             ("refinement_level", "TEXT"),
             ("derived_from", "TEXT"),
+            ("ingredient_category_confidence", "INTEGER"),
+            ("origin_confidence", "INTEGER"),
+            ("refinement_confidence", "INTEGER"),
+            ("derived_from_confidence", "INTEGER"),
+            ("overall_confidence", "INTEGER"),
         ]
         for name, col_type in additions:
             if name in column_names:
@@ -1182,11 +1193,53 @@ def upsert_normalized_terms(rows: Iterable[dict[str, Any]]) -> int:
             record.origin = (row.get("origin") or "").strip() or None
             record.refinement_level = (row.get("refinement_level") or "").strip() or None
             record.derived_from = (row.get("derived_from") or "").strip() or None
+            for key in (
+                "ingredient_category_confidence",
+                "origin_confidence",
+                "refinement_confidence",
+                "derived_from_confidence",
+                "overall_confidence",
+            ):
+                val = row.get(key)
+                try:
+                    setattr(record, key, int(val) if val is not None and str(val).strip() != "" else None)
+                except Exception:
+                    setattr(record, key, None)
             sources_json = row.get("sources_json")
             if isinstance(sources_json, str) and sources_json.strip():
                 record.sources_json = sources_json
             record.normalized_at = datetime.utcnow()
     return inserted
+
+
+def get_normalized_term(term: str) -> Optional[dict[str, Any]]:
+    """Fetch normalized term record as a dict for compiler prefill."""
+    ensure_tables_exist()
+    cleaned = (term or "").strip()
+    if not cleaned:
+        return None
+    with get_session() as session:
+        row: Optional[NormalizedTerm] = session.get(NormalizedTerm, cleaned)
+        if row is None:
+            return None
+        return {
+            "term": row.term,
+            "seed_category": row.seed_category,
+            "ingredient_category": row.ingredient_category,
+            "origin": row.origin,
+            "refinement_level": row.refinement_level,
+            "derived_from": row.derived_from,
+            "botanical_name": row.botanical_name,
+            "inci_name": row.inci_name,
+            "cas_number": row.cas_number,
+            "description": row.description,
+            "ingredient_category_confidence": row.ingredient_category_confidence,
+            "origin_confidence": row.origin_confidence,
+            "refinement_confidence": row.refinement_confidence,
+            "derived_from_confidence": row.derived_from_confidence,
+            "overall_confidence": row.overall_confidence,
+            "sources_json": row.sources_json,
+        }
 
 
 def queue_is_empty() -> bool:

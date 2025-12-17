@@ -354,6 +354,31 @@ def guess_primary_category(term: str, inci_name: str, description: str, sources:
     return "Herbs"
 
 
+# ---------------------------------------------------------------------------
+# Override dictionary (highest-confidence assignments)
+# ---------------------------------------------------------------------------
+OVERRIDE_EXACT: dict[str, dict[str, str]] = {
+    # clays
+    "kaolin": {"ingredient_category": "Clays", "origin": "Mineral/Earth", "refinement_level": "Other"},
+    "bentonite": {"ingredient_category": "Clays", "origin": "Mineral/Earth", "refinement_level": "Other"},
+    # animal/byproduct staples
+    "beeswax": {"origin": "Animal-Byproduct", "refinement_level": "Extracted Fat"},
+    "lanolin": {"origin": "Animal-Byproduct", "refinement_level": "Extracted Fat"},
+    # acids
+    "citric acid": {"ingredient_category": "Acids", "origin": "Plant-Derived", "refinement_level": "Other"},
+    "lactic acid": {"ingredient_category": "Acids", "origin": "Fermentation", "refinement_level": "Fermented"},
+    # salts/minerals staples
+    "sodium bicarbonate": {"ingredient_category": "Salts", "origin": "Mineral/Earth", "refinement_level": "Other"},
+    "magnesium hydroxide": {"ingredient_category": "Minerals", "origin": "Mineral/Earth", "refinement_level": "Other"},
+}
+
+
+def _confidence_from_signals(*, is_override: bool, score: int) -> int:
+    if is_override:
+        return 100
+    return max(0, min(100, int(score)))
+
+
 def normalize_base_name(raw: str) -> str:
     """Convert a messy source name into a canonical base term (best-effort)."""
     if not raw:
@@ -521,6 +546,24 @@ def normalize_sources(tgsc_path: Path, cosing_path: Path) -> List[Dict[str, Any]
         origin = guess_origin(term, botanical, rec["sources"])
         refinement = guess_refinement(term, rec["sources"])
         derived_from = guess_derived_from(term)
+
+        override = OVERRIDE_EXACT.get(term.strip().lower())
+        if override:
+            ingredient_category = override.get("ingredient_category", ingredient_category)
+            origin = override.get("origin", origin)
+            refinement = override.get("refinement_level", refinement)
+
+        # Confidence (coarse, deterministic)
+        cat_conf = 100 if override and "ingredient_category" in override else (85 if ingredient_category != "Herbs" else 55)
+        origin_conf = 100 if override and "origin" in override else (
+            95 if origin in {"Mineral/Earth", "Synthetic", "Fermentation"} else 70
+        )
+        ref_conf = 100 if override and "refinement_level" in override else (
+            90 if refinement in {"Extracted/Distilled", "Extracted Fat", "Fermented", "Milled/Ground"} else 55
+        )
+        derived_conf = 100 if derived_from else 0
+        overall_conf = int(min(cat_conf, origin_conf, ref_conf) if derived_conf == 0 else min(cat_conf, origin_conf, ref_conf, derived_conf))
+
         sources_json = json.dumps({"sources": rec["sources"]}, ensure_ascii=False, sort_keys=True)
         out.append(
             {
@@ -534,6 +577,11 @@ def normalize_sources(tgsc_path: Path, cosing_path: Path) -> List[Dict[str, Any]
                 "origin": origin,
                 "refinement_level": refinement,
                 "derived_from": derived_from,
+                "ingredient_category_confidence": cat_conf,
+                "origin_confidence": origin_conf,
+                "refinement_confidence": ref_conf,
+                "derived_from_confidence": derived_conf,
+                "overall_confidence": overall_conf,
                 "sources_json": sources_json,
                 "source_count": len(rec["sources"]),
             }
@@ -550,6 +598,11 @@ def write_csv(path: Path, rows: List[Dict[str, Any]]) -> None:
         "origin",
         "refinement_level",
         "derived_from",
+        "ingredient_category_confidence",
+        "origin_confidence",
+        "refinement_confidence",
+        "derived_from_confidence",
+        "overall_confidence",
         "botanical_name",
         "inci_name",
         "cas_number",

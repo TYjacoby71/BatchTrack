@@ -167,7 +167,8 @@ def process_next_term(sleep_seconds: float, min_priority: int) -> bool:
     database_manager.update_task_status(term, "processing")
 
     try:
-        payload = ai_worker.get_ingredient_data(term)
+        normalized = database_manager.get_normalized_term(term) or {}
+        payload = ai_worker.get_ingredient_data(term, base_context=normalized)
         if not isinstance(payload, dict) or payload.get("error"):
             raise RuntimeError(payload.get("error") if isinstance(payload, dict) else "Unknown AI failure")
 

@@ -314,15 +314,18 @@ def _render_metadata_blob(term: str) -> str:
         return "{}"
 
 
-def _render_core_prompt(term: str) -> str:
+def _render_core_prompt(term: str, base_context: Dict[str, Any]) -> str:
     meta = _render_metadata_blob(term)
     origins = ", ".join(ORIGINS)
     primaries = ", ".join(INGREDIENT_CATEGORIES_PRIMARY)
     refinements = ", ".join(REFINEMENT_LEVELS)
+    base_blob = json.dumps(base_context, ensure_ascii=False, indent=2, sort_keys=True)
     return f"""
 You are Stage 2A (Compiler Core). Build canonical core fields for the base ingredient term: "{term}".
 
 Rules:
+- You MUST NOT change the base identity fields if they are provided: term/common_name, inci_name, cas_number, botanical_name.
+- You may SUGGEST overrides for origin / ingredient_category / refinement_level if the provided values look wrong.
 - origin is REQUIRED and must be one of: {origins}
 - ingredient_category is REQUIRED and must be one of: {primaries}
 - refinement_level is REQUIRED and must be one of: {refinements}
@@ -333,14 +336,18 @@ Rules:
 External metadata (may be empty):
 {meta}
 
+Normalized base context (do not contradict):
+{base_blob}
+
 SCHEMA:
 {CORE_SCHEMA_SPEC}
 """
 
 
-def _render_items_prompt(term: str, ingredient_core: Dict[str, Any]) -> str:
+def _render_items_prompt(term: str, ingredient_core: Dict[str, Any], base_context: Dict[str, Any]) -> str:
     meta = _render_metadata_blob(term)
     core_blob = json.dumps(ingredient_core, ensure_ascii=False, indent=2, sort_keys=True)
+    base_blob = json.dumps(base_context, ensure_ascii=False, indent=2, sort_keys=True)
     forms = ", ".join(PHYSICAL_FORMS)
     variations = ", ".join(VARIATIONS_CURATED)
     return f"""
@@ -356,6 +363,9 @@ Rules:
 
 Ingredient core (context):
 {core_blob}
+
+Normalized base context (context):
+{base_blob}
 
 External metadata (may be empty):
 {meta}
@@ -391,7 +401,7 @@ def _render_prompt(ingredient_name: str) -> str:
     )
 
 
-def get_ingredient_data(ingredient_name: str) -> Dict[str, Any]:
+def get_ingredient_data(ingredient_name: str, base_context: Dict[str, Any] | None = None) -> Dict[str, Any]:
     """Fetch structured data for a single ingredient via the OpenAI API."""
 
     if not ingredient_name or not ingredient_name.strip():
@@ -401,6 +411,7 @@ def get_ingredient_data(ingredient_name: str) -> Dict[str, Any]:
         raise RuntimeError("OPENAI_API_KEY environment variable is not configured")
 
     term = ingredient_name.strip()
+    base_context = base_context or {}
     user_prompt = _render_prompt(term)
     last_error: Exception | None = None
 
@@ -412,11 +423,11 @@ def get_ingredient_data(ingredient_name: str) -> Dict[str, Any]:
                 return _call_openai_json(client, SYSTEM_PROMPT, user_prompt)
 
             # Stage 2A: core
-            core_payload = _call_openai_json(client, SYSTEM_PROMPT, _render_core_prompt(term))
+            core_payload = _call_openai_json(client, SYSTEM_PROMPT, _render_core_prompt(term, base_context))
             ingredient_core = core_payload.get("ingredient_core") if isinstance(core_payload.get("ingredient_core"), dict) else {}
 
             # Stage 2B: items
-            items_payload = _call_openai_json(client, SYSTEM_PROMPT, _render_items_prompt(term, ingredient_core))
+            items_payload = _call_openai_json(client, SYSTEM_PROMPT, _render_items_prompt(term, ingredient_core, base_context))
             items = items_payload.get("items") if isinstance(items_payload.get("items"), list) else []
 
             # Stage 2C: taxonomy
@@ -424,8 +435,13 @@ def get_ingredient_data(ingredient_name: str) -> Dict[str, Any]:
             taxonomy = taxonomy_payload.get("taxonomy") if isinstance(taxonomy_payload.get("taxonomy"), dict) else {}
 
             # Assemble final payload matching the full schema.
+            # Merge rule: base_context wins for identity fields (term, inci, cas, botanical).
             ingredient: Dict[str, Any] = dict(ingredient_core)
             ingredient["common_name"] = term
+            for k in ("botanical_name", "inci_name", "cas_number"):
+                v = (base_context.get(k) or "").strip() if isinstance(base_context.get(k), str) else base_context.get(k)
+                if v:
+                    ingredient[k] = v
             ingredient["items"] = items
             ingredient["taxonomy"] = taxonomy
 
