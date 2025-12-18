@@ -61,7 +61,7 @@ mode = "sequential"
 
 [[workflows.workflow.tasks]]
 task = "shell.exec"
-args = "PYTHONPATH=. DATA_BUILDER_PORT=5051 python3 -m data_builder_service"
+args = "PYTHONPATH=. DATA_BUILDER_PORT=5051 python3 -m data_builder.service"
 
 
 

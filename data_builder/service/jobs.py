@@ -35,7 +35,7 @@ def _now_iso() -> str:
 
 
 def _jobs_dir() -> Path:
-    base = Path(os.environ.get("DATA_BUILDER_SERVICE_LOG_DIR", "logs/data_builder_service"))
+    base = Path(os.environ.get("DATA_BUILDER_SERVICE_LOG_DIR", "logs/data_builder/service"))
     base.mkdir(parents=True, exist_ok=True)
     return base
 

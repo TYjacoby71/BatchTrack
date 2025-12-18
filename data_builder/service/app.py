@@ -126,7 +126,7 @@ def create_data_builder_app() -> Flask:
 
     @app.get("/health")
     def health():
-        return jsonify({"ok": True, "service": "data_builder_service"})
+        return jsonify({"ok": True, "service": "data_builder.service"})
 
     @app.get("/")
     def index():

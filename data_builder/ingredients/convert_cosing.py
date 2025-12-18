@@ -12,7 +12,14 @@ def convert_cosing_to_csv():
 
     # Use the uploaded CSV file directly - path relative to workspace root
     input_file = "attached_assets/COSING_Ingredients-Fragrance_Inventory_v2_1765584408467.csv"
-    output_file = "data_sources/cosing.csv"
+    try:
+        from data_builder import paths as builder_paths  # type: ignore
+
+        builder_paths.ensure_layout()
+        output_file = str(builder_paths.DATA_SOURCES_DIR / "cosing.csv")
+    except Exception:
+        # Fallback to repository-relative default.
+        output_file = "data_builder/data_sources/cosing.csv"
 
     # Check if file exists and print debug info
     print(f"🔍 Looking for file: {input_file}")

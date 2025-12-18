@@ -14,12 +14,27 @@ from typing import Any, Dict, List, Optional, Set, Tuple
 import openai
 
 LOGGER = logging.getLogger(__name__)
-BASE_DIR = Path(__file__).resolve().parent
-OUTPUT_DIR = BASE_DIR / "output"
-TERMS_FILE = BASE_DIR / "terms.json"
-PHYSICAL_FORMS_FILE = OUTPUT_DIR / "physical_forms.json"
-TERM_STUBS_DIR = OUTPUT_DIR / "term_stubs"
-DATA_SOURCES_DIR = BASE_DIR / "data_sources"
+
+# Centralized path layout (supports both module and direct script execution).
+try:  # pragma: no cover
+    from data_builder import paths as builder_paths  # type: ignore
+except Exception:  # pragma: no cover
+    builder_paths = None  # type: ignore
+
+if builder_paths is not None:
+    builder_paths.ensure_layout()
+    OUTPUT_DIR = builder_paths.OUTPUTS_DIR
+    TERMS_FILE = builder_paths.TERMS_FILE
+    PHYSICAL_FORMS_FILE = builder_paths.PHYSICAL_FORMS_FILE
+    TERM_STUBS_DIR = builder_paths.TERM_STUBS_DIR
+    DATA_SOURCES_DIR = builder_paths.DATA_SOURCES_DIR
+else:
+    BUILDER_ROOT = Path(__file__).resolve().parents[1]
+    OUTPUT_DIR = BUILDER_ROOT / "outputs"
+    TERMS_FILE = BUILDER_ROOT / "data_sources" / "terms.json"
+    PHYSICAL_FORMS_FILE = OUTPUT_DIR / "physical_forms.json"
+    TERM_STUBS_DIR = OUTPUT_DIR / "term_stubs"
+    DATA_SOURCES_DIR = BUILDER_ROOT / "data_sources"
 openai.api_key = os.environ.get("OPENAI_API_KEY")
 if not openai.api_key:
     LOGGER.warning("OPENAI_API_KEY is not set; term_collector will run in repository-only mode unless --skip-ai is provided.")
@@ -899,7 +914,7 @@ class TermCollector:
 def parse_args(argv: List[str] | None = None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Generate the ingredient term queue via local + AI sources")
     parser.add_argument("--seed-root", default="", help="Optional directory to scan for seed data (leave blank to skip)")
-    parser.add_argument("--ingest-seeds", action="store_true", help="If set, scan --seed-root for seed terms (output/ is always ignored)")
+    parser.add_argument("--ingest-seeds", action="store_true", help="If set, scan --seed-root for seed terms (outputs/ is always ignored)")
     parser.add_argument("--example-file", default="", help="Optional JSON array of canonical example ingredients for prompt context")
     parser.add_argument("--count", type=int, default=250, help="How many NEW alphabetical terms to create and queue now")
     parser.add_argument("--candidate-pool", type=int, default=DEFAULT_CANDIDATE_POOL_SIZE, help="Internal AI candidate pool size (kept small; not a DB batch)")
@@ -923,7 +938,7 @@ def main(argv: List[str] | None = None) -> None:
         terms_file=None,
     )
 
-    # Optional seed ingestion (never reads stage-2 output/ files).
+    # Optional seed ingestion (never reads stage-2 outputs/ files).
     if args.ingest_seeds:
         collector.ingest_seed_directory()
         if collector.terms:

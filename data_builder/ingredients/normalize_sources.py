@@ -1,7 +1,7 @@
 """Deterministically normalize source CSVs into base ingredient terms.
 
 Outputs:
-- data_builder/ingredients/output/normalized_terms.csv
+- data_builder/outputs/normalized_terms.csv
 - Upserts normalized term records into compiler_state.db (normalized_terms table)
 """
 
@@ -29,10 +29,22 @@ except ImportError:  # pragma: no cover
 
 LOGGER = logging.getLogger(__name__)
 
-BASE_DIR = Path(__file__).resolve().parent
-DATA_SOURCES_DIR = BASE_DIR / "data_sources"
-OUTPUT_DIR = BASE_DIR / "output"
-OUTPUT_CSV = OUTPUT_DIR / "normalized_terms.csv"
+# Centralized path layout (supports both module and direct script execution).
+try:  # pragma: no cover
+    from data_builder import paths as builder_paths  # type: ignore
+except Exception:  # pragma: no cover
+    builder_paths = None  # type: ignore
+
+if builder_paths is not None:
+    builder_paths.ensure_layout()
+    DATA_SOURCES_DIR = builder_paths.DATA_SOURCES_DIR
+    OUTPUT_DIR = builder_paths.OUTPUTS_DIR
+    OUTPUT_CSV = builder_paths.NORMALIZED_TERMS_CSV
+else:
+    BUILDER_ROOT = Path(__file__).resolve().parents[1]
+    DATA_SOURCES_DIR = BUILDER_ROOT / "data_sources"
+    OUTPUT_DIR = BUILDER_ROOT / "outputs"
+    OUTPUT_CSV = OUTPUT_DIR / "normalized_terms.csv"
 
 
 _DROP_TOKENS_RE = re.compile(
