@@ -164,14 +164,8 @@ def _derive_master_categories(ingredient_category: str, items: list[dict]) -> li
     """Deprecated: use _derive_master_categories_from_rules within a DB session."""
     return []
 BASE_DIR = Path(__file__).resolve().parent
-# Ensure the database is always within the data_builder directory
 DEFAULT_DB_PATH = BASE_DIR / "compiler_state.db"
-DB_PATH = Path(os.environ.get("COMPILER_DB_PATH", DEFAULT_DB_PATH)).resolve()
-
-# Validate that the database path is within the data_builder directory
-if not str(DB_PATH).startswith(str(BASE_DIR.parent)):
-    print(f"Warning: Database path {DB_PATH} is outside data_builder directory")
-    DB_PATH = DEFAULT_DB_PATH
+DB_PATH = Path(os.environ.get("COMPILER_DB_PATH", DEFAULT_DB_PATH))
 DATABASE_URL = f"sqlite:///{DB_PATH}"
 
 engine = create_engine(
