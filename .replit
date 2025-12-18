@@ -1,5 +1,6 @@
 # BatchTrack Flask Application
-entrypoint = "main.py"
+entrypoint = "run.py"
+run = "python run.py"
 modules = ["python-3.11"]
 
 [agent]
