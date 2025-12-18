@@ -39,6 +39,8 @@ MAX_CANDIDATE_POOL_SIZE = int(os.getenv("TERM_GENERATOR_MAX_CANDIDATE_POOL", "12
 USE_CATEGORY_CURSOR = os.getenv("TERM_GENERATOR_USE_CATEGORY_CURSOR", "1").strip() not in {"0", "false", "False"}
 USE_SOURCE_TERMS = os.getenv("TERM_GENERATOR_USE_SOURCE_TERMS", "1").strip() not in {"0", "false", "False"}
 INGEST_SOURCE_TERMS = os.getenv("TERM_GENERATOR_INGEST_SOURCE_TERMS", "0").strip() in {"1", "true", "True"}
+TERM_GENERATOR_MODE = os.getenv("TERM_GENERATOR_MODE", "gapfill").strip().lower()
+GAPFILL_MAX_TRIES_PER_LETTER = int(os.getenv("TERM_GENERATOR_GAPFILL_MAX_TRIES", "5"))
 
 # Canonical base-level categories (hard-coded; Stage 1 cursor is (seed_category, letter)).
 # IMPORTANT: these categories are "pure bases" (avoid base+form names like "Frankincense Resin").
@@ -657,17 +659,15 @@ class TermCollector:
         count: int,
         candidate_pool_size: int = DEFAULT_CANDIDATE_POOL_SIZE,
     ) -> int:
-        """Stage 1: Generate NEW terms and upsert each one immediately into the DB.
+        """Stage 1: Seed NEW base terms into the task queue.
 
-        This builder is intentionally single-mode: round-robin by letter category.
+        Default mode is deterministic gap-fill from the normalized (curated) term list.
 
-        It generates the next term for A, then B, then C ... through Z, repeating.
-        Each step uses the DB as the source-of-truth for the per-letter cursor.
+        Modes:
+        - gapfill (default): pick random gaps per letter from the existing queue and insert the
+          next missing normalized term that fits that gap. No AI calls.
+        - ai (legacy): AI proposes next terms per cursor (kept for backwards compatibility).
         """
-        if not self.include_ai:
-            LOGGER.warning("OPENAI_API_KEY missing; skipping AI term generation")
-            return 0
-
         try:
             from . import database_manager
         except Exception as exc:  # pragma: no cover
@@ -680,6 +680,76 @@ class TermCollector:
             return 0
 
         letters = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+
+        # ------------------------------------------------------------------
+        # Mode: deterministic gap-fill (preferred).
+        # ------------------------------------------------------------------
+        if TERM_GENERATOR_MODE != "ai":
+            max_tries = max(1, int(GAPFILL_MAX_TRIES_PER_LETTER or 5))
+            # Keep going until we insert `count` new terms, or until a full A→Z pass yields nothing.
+            while inserted < normalized_count:
+                inserted_this_pass = 0
+                for initial in letters:
+                    tries = 0
+                    while tries < max_tries and inserted < normalized_count:
+                        tries += 1
+                        start_term = database_manager.get_random_term_for_initial(initial)
+                        start_after = start_term or ""
+                        end_before = (
+                            database_manager.get_next_term_for_initial_after(initial, start_after)
+                            if start_term
+                            else database_manager.get_next_term_for_initial_after(initial, "")
+                        )
+
+                        candidate = database_manager.get_next_missing_normalized_term_between(
+                            initial=initial,
+                            start_after=start_after,
+                            end_before=end_before,
+                        )
+                        if not candidate:
+                            continue
+                        term = candidate["term"]
+                        seed_category = candidate.get("seed_category") or None
+                        if _looks_like_form_not_base(term):
+                            continue
+
+                        priority = SEED_PRIORITY
+                        was_inserted = database_manager.upsert_term(term, priority, seed_category=seed_category)
+                        self._register_term(term, priority)
+                        if was_inserted:
+                            inserted += 1
+                            inserted_this_pass += 1
+                            LOGGER.info(
+                                "Gapfill queued %s/%s: %s [%s] between '%s' and '%s' (tries=%s/%s)",
+                                inserted,
+                                normalized_count,
+                                term,
+                                seed_category or "n/a",
+                                start_after or "<start>",
+                                end_before or "<end>",
+                                tries,
+                                max_tries,
+                            )
+                            break  # move to next letter after a successful insert
+                    # After max_tries, move to next letter (even if nothing inserted).
+
+                if inserted_this_pass == 0:
+                    LOGGER.warning(
+                        "Gapfill made no progress in a full A→Z pass; stopping early at %s/%s inserted.",
+                        inserted,
+                        normalized_count,
+                    )
+                    break
+
+            return inserted
+
+        # ------------------------------------------------------------------
+        # Mode: legacy AI cursoring (kept for backwards compatibility).
+        # ------------------------------------------------------------------
+        if not self.include_ai:
+            LOGGER.warning("OPENAI_API_KEY missing; skipping AI term generation (TERM_GENERATOR_MODE=ai)")
+            return 0
+
         categories = SEED_INGREDIENT_CATEGORIES or ["Miscellaneous"]
         for idx in range(normalized_count):
             if USE_CATEGORY_CURSOR:

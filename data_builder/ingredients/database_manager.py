@@ -10,7 +10,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any, Iterable, List, Optional, Tuple
 
-from sqlalchemy import Boolean, Column, DateTime, ForeignKey, Integer, String, Text, create_engine, select, text
+from sqlalchemy import Boolean, Column, DateTime, ForeignKey, Integer, String, Text, create_engine, exists, func, select, text
 from sqlalchemy.orm import Session, declarative_base, sessionmaker
 
 LOGGER = logging.getLogger(__name__)
@@ -855,6 +855,92 @@ def get_last_term_for_initial_and_seed_category(initial: str, seed_category: str
             .first()
         )
         return row[0] if row else None
+
+
+def get_random_term_for_initial(initial: str) -> Optional[str]:
+    """Return a random queued term for the given initial (A..Z), or None if none exist."""
+    ensure_tables_exist()
+    letter = (initial or "").strip()[:1].upper()
+    if not letter:
+        return None
+    with get_session() as session:
+        row = (
+            session.execute(
+                select(TaskQueue.term)
+                .where(TaskQueue.term.collate("NOCASE").like(f"{letter}%"))
+                .order_by(func.random())
+                .limit(1)
+            )
+            .first()
+        )
+        return row[0] if row else None
+
+
+def get_next_term_for_initial_after(initial: str, start_after: str) -> Optional[str]:
+    """Return the next queued term for `initial` strictly after `start_after` (NOCASE)."""
+    ensure_tables_exist()
+    letter = (initial or "").strip()[:1].upper()
+    if not letter:
+        return None
+    after = (start_after or "").strip()
+    with get_session() as session:
+        row = (
+            session.execute(
+                select(TaskQueue.term)
+                .where(
+                    TaskQueue.term.collate("NOCASE").like(f"{letter}%"),
+                    TaskQueue.term.collate("NOCASE") > after,
+                )
+                .order_by(TaskQueue.term.collate("NOCASE").asc(), TaskQueue.term.asc())
+                .limit(1)
+            )
+            .first()
+        )
+        return row[0] if row else None
+
+
+def get_next_missing_normalized_term_between(
+    *,
+    initial: str,
+    start_after: str,
+    end_before: str | None,
+) -> Optional[dict[str, str]]:
+    """Return the next normalized term (from curated sources) not yet queued, constrained to a gap.
+
+    Args:
+        initial: Letter bucket (A..Z)
+        start_after: Lower bound (exclusive)
+        end_before: Upper bound (exclusive). If None, treat as open-ended within the letter.
+    """
+    ensure_tables_exist()
+    letter = (initial or "").strip()[:1].upper()
+    if not letter:
+        return None
+    lower = (start_after or "").strip()
+    upper = (end_before or "").strip() if end_before else None
+
+    with get_session() as session:
+        query = (
+            select(NormalizedTerm.term, NormalizedTerm.seed_category)
+            .where(
+                NormalizedTerm.term.collate("NOCASE").like(f"{letter}%"),
+                NormalizedTerm.term.collate("NOCASE") > lower,
+            )
+            .where(~exists(select(1).where(TaskQueue.term == NormalizedTerm.term)))
+        )
+        if upper:
+            query = query.where(NormalizedTerm.term.collate("NOCASE") < upper)
+
+        row = (
+            session.execute(
+                query.order_by(NormalizedTerm.term.collate("NOCASE").asc(), NormalizedTerm.term.asc()).limit(1)
+            )
+            .first()
+        )
+        if not row:
+            return None
+        term, seed_category = row
+        return {"term": str(term), "seed_category": (str(seed_category) if seed_category else "")}
 
 
 def upsert_term(term: str, priority: int, *, seed_category: str | None = None) -> bool:
