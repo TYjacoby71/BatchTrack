@@ -6,7 +6,7 @@ from flask_login import login_required, current_user
 from .system_roles import system_roles_bp
 from .subscription_tiers import subscription_tiers_bp
 from .addons import addons_bp
-from app.utils.decorators import require_developer, require_user
+from app.utils.permissions import permission_required
 from app.utils.json_store import read_json_file, write_json_file
 import os
 import datetime
@@ -27,7 +27,7 @@ from . import views  # noqa: F401,E402
 
 @developer_bp.route('/vendor-signups')
 @limiter.limit("100 per minute")
-@require_developer
+@permission_required('developer.access')
 def vendor_signups():
     """View vendor signups"""
     from app.utils.json_store import read_json_file
@@ -44,7 +44,7 @@ def vendor_signups():
 
 @developer_bp.route('/waitlist-statistics')
 @limiter.limit("100 per minute")
-@require_developer
+@permission_required('developer.access')
 def waitlist_statistics():
     """
     This is a placeholder for the waitlist statistics view.
