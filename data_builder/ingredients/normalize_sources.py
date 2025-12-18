@@ -393,8 +393,9 @@ def guess_primary_category(term: str, inci_name: str, description: str, sources:
     if " bark" in blob or blob.endswith("bark"):
         return "Barks"
 
-    # Default bucket
-    return "Herbs"
+    # No high-confidence category match.
+    # Leave blank instead of defaulting (Herbs is not a safe fallback for a high-level sort key).
+    return ""
 
 
 # ---------------------------------------------------------------------------
@@ -597,7 +598,8 @@ def normalize_sources(tgsc_path: Path, cosing_path: Path) -> List[Dict[str, Any]
             refinement = override.get("refinement_level", refinement)
 
         # Confidence (coarse, deterministic)
-        cat_conf = 100 if override and "ingredient_category" in override else (85 if ingredient_category != "Herbs" else 55)
+        # If ingredient_category is blank, don't pretend confidence; also don't let it cap overall_confidence.
+        cat_conf = 100 if override and "ingredient_category" in override else (85 if ingredient_category else 0)
         origin_conf = 100 if override and "origin" in override else (
             95 if origin in {"Mineral/Earth", "Synthetic", "Fermentation"} else 70
         )
@@ -608,13 +610,20 @@ def normalize_sources(tgsc_path: Path, cosing_path: Path) -> List[Dict[str, Any]
             else (70 if refinement in {"Raw/Unprocessed", "Minimally Processed"} else 55)
         )
         derived_conf = 100 if derived_from else 0
-        overall_conf = int(min(cat_conf, origin_conf, ref_conf) if derived_conf == 0 else min(cat_conf, origin_conf, ref_conf, derived_conf))
+        # overall_confidence should reflect the weakest *known* field.
+        # Do not cap overall_confidence with unknown (0) values.
+        parts = [c for c in (cat_conf, origin_conf, ref_conf) if c > 0]
+        if derived_conf > 0:
+            parts.append(derived_conf)
+        overall_conf = int(min(parts) if parts else 0)
 
         sources_json = json.dumps({"sources": rec["sources"]}, ensure_ascii=False, sort_keys=True)
         out.append(
             {
                 "term": rec["term"],
-                "seed_category": ingredient_category,
+                # seed_category is an internal cursor bucket used for iteration.
+                # Prefer the ingredient_category if present, otherwise fall back to a heuristic seed bucket.
+                "seed_category": ingredient_category or guess_seed_category(term),
                 "botanical_name": rec["botanical_name"],
                 "inci_name": rec["inci_name"],
                 "cas_number": rec["cas_number"],
