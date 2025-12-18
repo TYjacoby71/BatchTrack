@@ -1,0 +1,201 @@
+{
+  "data_quality": {
+    "caveats": [
+      "Specific chemical properties like SAP values, iodine value, and pH range for Echinacea are not well-documented in available literature."
+    ],
+    "confidence": 0.9
+  },
+  "ingredient": {
+    "botanical_name": "Echinacea purpurea",
+    "cas_number": "90028-20-9",
+    "category": "Herbs & Spices (Dried Botanicals)",
+    "common_name": "Echinacea",
+    "detailed_description": "Echinacea, a genus of herbaceous plants in the daisy family, is native to North America. It has been traditionally used by indigenous tribes for various medicinal purposes. Echinacea purpurea, one of the most commonly used species, is recognized for its ability to support the immune system and reduce symptoms of colds, flu, and other infections. It is also applied topically for wounds and skin problems. In artisanal crafting, it finds applications in soaps, cosmetics, and herbal remedies due to its therapeutic properties.",
+    "documentation": {
+      "last_verified": "2023-12-01",
+      "references": [
+        {
+          "notes": "Provides an overview of Echinacea's medicinal properties and applications.",
+          "title": "Herbal Medicine: Biomolecular and Clinical Aspects. 2nd edition.",
+          "url": "https://www.ncbi.nlm.nih.gov/books/NBK92773/"
+        }
+      ]
+    },
+    "inci_name": "ECHINACEA PURPUREA EXTRACT",
+    "items": [
+      {
+        "applications": [
+          "Lotion",
+          "Cream",
+          "Balm",
+          "Serum",
+          "Scrub",
+          "Herbal Tincture",
+          "Bath Bomb",
+          "Skincare"
+        ],
+        "form_bypass": false,
+        "function_tags": [
+          "Antioxidant",
+          "Preservative"
+        ],
+        "item_name": "Echinacea Powder",
+        "physical_form": "Powder",
+        "safety_tags": [],
+        "sds_hazards": [],
+        "shelf_life_days": 730,
+        "sourcing": {
+          "certifications": [
+            "Organic"
+          ],
+          "common_origins": [
+            "United States",
+            "Canada"
+          ],
+          "supply_risks": [
+            "Seasonal variations may affect availability."
+          ],
+          "sustainability_notes": "Sustainable harvesting practices are important to prevent overharvesting."
+        },
+        "specifications": {
+          "flash_point_celsius": "unknown",
+          "iodine_value": "unknown",
+          "melting_point_celsius": {
+            "max": "unknown",
+            "min": "unknown"
+          },
+          "ph_range": {
+            "max": "unknown",
+            "min": "unknown"
+          },
+          "sap_koh": "unknown",
+          "sap_naoh": "unknown",
+          "usage_rate_percent": {
+            "leave_on_max": "unknown",
+            "rinse_off_max": "unknown"
+          }
+        },
+        "storage": {
+          "humidity_percent": {
+            "max": 60
+          },
+          "special_instructions": "Store in a cool, dry place away from direct sunlight.",
+          "temperature_celsius": {
+            "max": 25,
+            "min": 5
+          }
+        },
+        "synonyms": [
+          "Echinacea purpurea powder"
+        ]
+      },
+      {
+        "applications": [
+          "Herbal Tincture",
+          "Skincare",
+          "Serum"
+        ],
+        "form_bypass": false,
+        "function_tags": [
+          "Antioxidant",
+          "Preservative"
+        ],
+        "item_name": "Echinacea Tincture",
+        "physical_form": "Liquid",
+        "safety_tags": [],
+        "sds_hazards": [],
+        "shelf_life_days": 1825,
+        "sourcing": {
+          "certifications": [
+            "Organic"
+          ],
+          "common_origins": [
+            "United States",
+            "Canada"
+          ],
+          "supply_risks": [
+            "Seasonal variations may affect availability."
+          ],
+          "sustainability_notes": "Sustainable harvesting practices are important to prevent overharvesting."
+        },
+        "specifications": {
+          "flash_point_celsius": "unknown",
+          "iodine_value": "unknown",
+          "melting_point_celsius": {
+            "max": "unknown",
+            "min": "unknown"
+          },
+          "ph_range": {
+            "max": "unknown",
+            "min": "unknown"
+          },
+          "sap_koh": "unknown",
+          "sap_naoh": "unknown",
+          "usage_rate_percent": {
+            "leave_on_max": "unknown",
+            "rinse_off_max": "unknown"
+          }
+        },
+        "storage": {
+          "humidity_percent": {
+            "max": 60
+          },
+          "special_instructions": "Store in a cool, dark place.",
+          "temperature_celsius": {
+            "max": 25,
+            "min": 5
+          }
+        },
+        "synonyms": [
+          "Echinacea extract"
+        ]
+      }
+    ],
+    "origin": {
+      "processing_methods": [
+        "Dried",
+        "Cold Pressed",
+        "Solvent Extracted"
+      ],
+      "regions": [
+        "North America"
+      ],
+      "source_material": "Flower, Root"
+    },
+    "primary_functions": [
+      "Antioxidant",
+      "Preservative"
+    ],
+    "regulatory_notes": [
+      "Generally recognized as safe (GRAS) when used in accordance with good manufacturing practices."
+    ],
+    "short_description": "Echinacea, known for its immune-boosting and anti-inflammatory properties, is widely used in herbal medicine.",
+    "taxonomy": {
+      "color_profile": [
+        "Brown",
+        "Green"
+      ],
+      "compatible_processes": [
+        "Cold Process Soap",
+        "Hot Process Soap",
+        "Lotion",
+        "Cream",
+        "Balm",
+        "Serum",
+        "Scrub",
+        "Herbal Tincture",
+        "Bath Bomb",
+        "Skincare"
+      ],
+      "incompatible_processes": [],
+      "scent_profile": [
+        "Earthy",
+        "Mild"
+      ],
+      "texture_profile": [
+        "Fine",
+        "Liquid"
+      ]
+    }
+  }
+}

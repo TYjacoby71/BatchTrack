@@ -1,0 +1,668 @@
+<script>
+(() => {
+  const debounce = (fn, wait = 250) => {
+    let timeout;
+    return (...args) => {
+      clearTimeout(timeout);
+      timeout = setTimeout(() => fn.apply(null, args), wait);
+    };
+  };
+
+  const safeParse = (raw) => {
+    if (!raw) return null;
+    try {
+      return JSON.parse(raw);
+    } catch (_) {
+      return null;
+    }
+  };
+
+  let containerOptionsCache = null;
+
+  const itemTypeSelect = document.getElementById('itemType');
+  const ingredientWorkflow = document.getElementById('ingredientWorkflow');
+  const ingredientCategorySection = document.getElementById('ingredientCategorySection');
+  const defaultUnitSection = document.getElementById('defaultUnitSection');
+  const densitySection = document.getElementById('densitySection');
+  const containerFields = document.getElementById('containerFields');
+  const perishableSection = document.getElementById('perishableSection');
+  const shelfLifeSection = document.getElementById('shelfLifeSection');
+  const ingredientProperties = document.getElementById('ingredientProperties');
+  const ingredientOnlyEls = document.querySelectorAll('[data-ingredient-only]');
+  const perishableCheckbox = document.getElementById('default_is_perishable');
+  const globalNameInput = document.getElementById('globalItemNameInput');
+  const globalNameHelp = document.getElementById('globalItemNameHelp');
+
+  const containerMaterialInput = document.getElementById('containerMaterial');
+  const capacityInput = document.querySelector('input[name="capacity"]');
+  const capacityUnitInput = document.querySelector('input[name="capacity_unit"]');
+  const containerTypeInput = document.getElementById('containerType');
+  const containerStyleInput = document.getElementById('containerStyle');
+  const containerColorInput = document.getElementById('containerColor');
+
+  const ingredientModeRadios = document.querySelectorAll('input[name="ingredient_mode"]');
+  const ingredientExistingSection = document.querySelector('.ingredient-existing-fields');
+  const ingredientNewSection = document.querySelector('.ingredient-new-fields');
+  const newIngredientNameInput = document.querySelector('input[name="new_ingredient_name"]');
+  const newIngredientSuggestions = document.getElementById('newIngredientSuggestions');
+
+  const physicalModeRadios = document.querySelectorAll('input[name="physical_form_mode"]');
+  const physicalExistingSection = document.querySelector('.physical-form-existing-fields');
+  const physicalNewSection = document.querySelector('.physical-form-new-fields');
+  const newPhysicalInput = document.getElementById('newPhysicalFormInput');
+  const newPhysicalFormSuggestions = document.getElementById('newPhysicalFormSuggestions');
+
+  const ingredientInput = document.getElementById('existingIngredientInput');
+  const ingredientHidden = document.getElementById('existingIngredientSelect');
+  const ingredientResults = document.getElementById('ingredientDefinitionResults');
+  const ingredientSummary = document.getElementById('ingredientDefinitionSummary');
+  const defaultIngredientSummaryText = 'Select an ingredient to review metadata and existing forms before creating a new one.';
+
+  const physicalInput = document.getElementById('physicalFormSearchInput');
+  const physicalHidden = document.getElementById('existingPhysicalFormSelect');
+  const physicalResults = document.getElementById('physicalFormSuggestions');
+
+  const existingFormsContainer = document.getElementById('existingFormsContainer');
+  const existingFormsList = document.getElementById('existingFormsList');
+  const existingFormsTitle = document.getElementById('existingFormsTitle');
+
+  const ingredientCategorySelect = ingredientCategorySection ? ingredientCategorySection.querySelector('select[name="ingredient_category_id"]') : null;
+
+  const stateEl = document.getElementById('globalItemFormState');
+  const formState = {
+    ingredient: safeParse(stateEl?.dataset.selectedIngredient) || null,
+    physicalForm: safeParse(stateEl?.dataset.selectedPhysicalForm) || null,
+    itemType: itemTypeSelect ? itemTypeSelect.value : 'ingredient',
+  };
+  const initialForms = safeParse(stateEl?.dataset.existingItems) || [];
+  if (formState.ingredient) {
+    updateExistingFormsList(initialForms, formState.ingredient.name);
+  }
+
+  function updateExistingFormsList(forms, ingredientName) {
+    if (!existingFormsContainer || !existingFormsList) return;
+    if (!ingredientName) {
+      existingFormsContainer.classList.add('d-none');
+      existingFormsList.innerHTML = '';
+      return;
+    }
+    existingFormsContainer.classList.remove('d-none');
+    if (existingFormsTitle) {
+      existingFormsTitle.textContent = `Existing forms for ${ingredientName}:`;
+    }
+    existingFormsList.innerHTML = '';
+    if (!forms.length) {
+      const li = document.createElement('li');
+      li.className = 'text-muted';
+      li.textContent = existingFormsContainer.dataset.emptyText || 'No forms registered for this ingredient yet.';
+      existingFormsList.appendChild(li);
+      return;
+    }
+    forms.forEach((form) => {
+      const li = document.createElement('li');
+      const link = document.createElement('a');
+      link.className = 'link-dark text-decoration-underline';
+      const params = new URLSearchParams();
+      if (formState.ingredient?.id) {
+        params.set('ingredient_id', formState.ingredient.id);
+      }
+      if (form.physical_form_id) {
+        params.set('physical_form_id', form.physical_form_id);
+      }
+      link.href = `/developer/global-items/create?${params.toString()}`;
+      link.textContent = 'Edit';
+      li.textContent = `${form.physical_form_name || 'Unknown form'} — `;
+      li.appendChild(link);
+      existingFormsList.appendChild(li);
+    });
+  }
+
+  function toggleInputs(section, enabled) {
+    if (!section) return;
+    const fields = section.querySelectorAll('input, select, textarea');
+    fields.forEach((field) => {
+      field.disabled = !enabled;
+    });
+  }
+
+  function toggleIngredientMode() {
+    const mode = document.querySelector('input[name="ingredient_mode"]:checked');
+    if (!mode) return;
+    const useExisting = mode.value === 'existing';
+    if (ingredientExistingSection) {
+      ingredientExistingSection.classList.toggle('d-none', !useExisting);
+      toggleInputs(ingredientExistingSection, useExisting);
+    }
+    if (ingredientNewSection) {
+      ingredientNewSection.classList.toggle('d-none', useExisting);
+      toggleInputs(ingredientNewSection, !useExisting);
+    }
+    if (!useExisting) {
+      formState.ingredient = null;
+      if (ingredientHidden) ingredientHidden.value = '';
+      updateIngredientSummaryContent(null);
+      updateExistingFormsList([], null);
+    } else if (newIngredientSuggestions) {
+      newIngredientSuggestions.classList.add('d-none');
+    }
+    updateGeneratedName();
+  }
+
+  function togglePhysicalMode() {
+    const mode = document.querySelector('input[name="physical_form_mode"]:checked');
+    if (!mode) return;
+    const useExisting = mode.value === 'existing';
+    if (physicalExistingSection) {
+      physicalExistingSection.classList.toggle('d-none', !useExisting);
+      toggleInputs(physicalExistingSection, useExisting);
+    }
+    if (physicalNewSection) {
+      physicalNewSection.classList.toggle('d-none', useExisting);
+      toggleInputs(physicalNewSection, !useExisting);
+    }
+    if (!useExisting) {
+      formState.physicalForm = null;
+      if (physicalHidden) physicalHidden.value = '';
+    }
+    if (useExisting && newPhysicalFormSuggestions) {
+      newPhysicalFormSuggestions.classList.add('d-none');
+    }
+    updateGeneratedName();
+  }
+
+  function updateShelfLifeVisibility() {
+    if (!shelfLifeSection) return;
+    const shouldShow = perishableCheckbox && perishableCheckbox.checked && formState.itemType === 'ingredient';
+    shelfLifeSection.style.display = shouldShow ? 'block' : 'none';
+  }
+
+  function loadContainerOptions() {
+    fetch('/api/containers/options')
+      .then((response) => response.json())
+      .then((data) => {
+        if (data.success) {
+          containerOptionsCache = data.options;
+          populateContainerDropdowns();
+        }
+      })
+      .catch(() => {
+        containerOptionsCache = {
+          materials: ['Glass', 'Plastic', 'Aluminum', 'Tin', 'Steel'],
+          types: ['Jar', 'Bottle', 'Tin', 'Tube', 'Pouch'],
+          styles: ['Boston Round', 'Straight Sided', 'Wide Mouth', 'Pump', 'Spray'],
+          colors: ['Clear', 'Amber', 'Blue', 'Green', 'White', 'Black'],
+        };
+        populateContainerDropdowns();
+      });
+  }
+
+  function populateSelect(selectEl, values, placeholder) {
+    if (!selectEl) return;
+    const selected = selectEl.dataset ? selectEl.dataset.selected : null;
+    selectEl.innerHTML = `<option value="">${placeholder}</option>`;
+    values.forEach((value) => {
+      const opt = document.createElement('option');
+      opt.value = value;
+      opt.textContent = value;
+      selectEl.appendChild(opt);
+    });
+    if (selected) {
+      selectEl.value = selected;
+    }
+  }
+
+  function populateContainerDropdowns() {
+    if (!containerOptionsCache) return;
+    populateSelect(containerMaterialInput, containerOptionsCache.materials, 'Select Material');
+    populateSelect(containerTypeInput, containerOptionsCache.types, 'Select Type');
+    populateSelect(containerStyleInput, containerOptionsCache.styles, 'Select Style');
+    populateSelect(containerColorInput, containerOptionsCache.colors, 'Select Color');
+  }
+
+  function setContainerRequirements(isRequired) {
+    [
+      containerMaterialInput,
+      capacityInput,
+      capacityUnitInput,
+      containerTypeInput,
+      containerStyleInput,
+      containerColorInput,
+    ].forEach((field) => {
+      if (!field) return;
+      field.required = isRequired;
+    });
+  }
+
+  function setIngredientOnlyVisibility(show) {
+    ingredientOnlyEls.forEach((el) => {
+      el.style.display = show ? '' : 'none';
+      const inputs = el.querySelectorAll('input, select, textarea');
+      inputs.forEach((input) => {
+        input.disabled = !show;
+      });
+    });
+  }
+
+  function setNameLock(selectedType) {
+    if (!globalNameInput) return;
+    const lockTypes = (globalNameInput.dataset.lockTypes || '')
+      .split(',')
+      .map((t) => t.trim())
+      .filter(Boolean);
+    const shouldLock = lockTypes.includes(selectedType);
+    globalNameInput.readOnly = shouldLock;
+    if (globalNameHelp) {
+      globalNameHelp.textContent = shouldLock
+        ? 'Names update automatically for this item type based on the selections above.'
+        : 'Provide a descriptive name for this item.';
+    }
+  }
+
+  function updateFormBasedOnType() {
+    const selectedType = itemTypeSelect ? itemTypeSelect.value : 'ingredient';
+    formState.itemType = selectedType;
+
+    if (ingredientWorkflow) {
+      ingredientWorkflow.classList.toggle('d-none', selectedType !== 'ingredient');
+    }
+    if (ingredientCategorySection) {
+      ingredientCategorySection.style.display = selectedType === 'ingredient' ? 'block' : 'none';
+    }
+    if (defaultUnitSection) {
+      const showDefaultUnit = ['ingredient', 'packaging', 'consumable'].includes(selectedType);
+      defaultUnitSection.style.display = showDefaultUnit ? 'block' : 'none';
+    }
+    if (densitySection) {
+      densitySection.style.display = selectedType === 'ingredient' ? 'block' : 'none';
+    }
+    if (containerFields) {
+      containerFields.style.display = selectedType === 'container' ? 'block' : 'none';
+      if (selectedType === 'container') {
+        if (!containerOptionsCache) {
+          loadContainerOptions();
+        } else {
+          populateContainerDropdowns();
+        }
+      }
+    }
+    if (perishableSection) {
+      perishableSection.style.display = selectedType === 'ingredient' ? 'block' : 'none';
+    }
+    if (ingredientProperties) {
+      ingredientProperties.style.display = selectedType === 'ingredient' ? 'block' : 'none';
+    }
+    setIngredientOnlyVisibility(selectedType === 'ingredient');
+    setContainerRequirements(selectedType === 'container');
+    setNameLock(selectedType);
+    updateShelfLifeVisibility();
+    updateGeneratedName();
+  }
+
+  function formatCapacity(value) {
+    if (value === null || value === undefined || value === '') return '';
+    const numeric = Number(value);
+    if (Number.isNaN(numeric)) return value;
+    return numeric % 1 === 0 ? numeric.toString() : numeric.toFixed(2);
+  }
+
+  function buildContainerName() {
+    const capacity = formatCapacity(capacityInput ? capacityInput.value : '');
+    const unit = capacityUnitInput ? (capacityUnitInput.value || '') : '';
+    const material = containerMaterialInput ? containerMaterialInput.value : '';
+    const type = containerTypeInput ? containerTypeInput.value : '';
+    const style = containerStyleInput ? containerStyleInput.value : '';
+    const color = containerColorInput ? containerColorInput.value : '';
+    const parts = [];
+    if (capacity) {
+      parts.push(`${capacity}${unit ? ` ${unit}` : ''}`.trim());
+    }
+    const descriptors = [material, type, style].filter(Boolean);
+    if (descriptors.length) {
+      parts.push(descriptors.join(' ').trim());
+    }
+    if (color) {
+      parts.push(color);
+    }
+    return parts.filter(Boolean).join(', ');
+  }
+
+  function buildIngredientName() {
+    let ingredientName = '';
+    const ingredientMode = document.querySelector('input[name="ingredient_mode"]:checked');
+    if (ingredientMode && ingredientMode.value === 'existing') {
+      ingredientName = formState.ingredient?.name || ingredientInput?.value?.trim() || '';
+    } else if (newIngredientNameInput) {
+      ingredientName = newIngredientNameInput.value.trim();
+    }
+
+    let physicalName = '';
+    const physicalMode = document.querySelector('input[name="physical_form_mode"]:checked');
+    if (physicalMode && physicalMode.value === 'existing') {
+      physicalName = formState.physicalForm?.name || physicalInput?.value?.trim() || '';
+    } else if (newPhysicalInput) {
+      physicalName = newPhysicalInput.value.trim();
+    }
+
+    if (ingredientName && physicalName) {
+      return `${ingredientName}, ${physicalName}`;
+    }
+    return ingredientName;
+  }
+
+  function updateGeneratedName() {
+    if (!globalNameInput) return;
+    const lockTypes = (globalNameInput.dataset.lockTypes || '')
+      .split(',')
+      .map((t) => t.trim())
+      .filter(Boolean);
+    if (!lockTypes.includes(formState.itemType)) {
+      return;
+    }
+    let computed = '';
+    if (formState.itemType === 'ingredient') {
+      computed = buildIngredientName();
+    } else if (formState.itemType === 'container') {
+      computed = buildContainerName();
+    }
+    if (computed) {
+      globalNameInput.value = computed;
+    }
+  }
+
+  async function fetchJSON(url) {
+    const response = await fetch(url, { credentials: 'same-origin' });
+    if (!response.ok) {
+      throw new Error(`Request failed (${response.status})`);
+    }
+    return response.json();
+  }
+
+  function updateIngredientSummaryContent(details) {
+    if (!ingredientSummary) return;
+    if (!details) {
+      ingredientSummary.textContent = defaultIngredientSummaryText;
+      return;
+    }
+    const summaryBits = [];
+    if (details.inci_name) summaryBits.push(`<strong>INCI:</strong> ${details.inci_name}`);
+    if (details.cas_number) summaryBits.push(`<strong>CAS:</strong> ${details.cas_number}`);
+    if (details.ingredient_category_name) summaryBits.push(`<strong>Category:</strong> ${details.ingredient_category_name}`);
+    ingredientSummary.innerHTML = summaryBits.join('<br>') || 'Metadata not available.';
+  }
+
+  const renderPhysicalResults = (results) => {
+    if (!physicalResults) return;
+    physicalResults.innerHTML = '';
+    const query = physicalInput ? physicalInput.value.trim() : '';
+    if (!results.length) {
+      if (query.length === 0) {
+        physicalResults.classList.add('d-none');
+        return;
+      }
+      const empty = document.createElement('div');
+      empty.className = 'list-group-item text-muted';
+      empty.textContent = 'No matching physical forms.';
+      physicalResults.appendChild(empty);
+      physicalResults.classList.remove('d-none');
+      return;
+    }
+    results.forEach((form) => {
+      const item = document.createElement('button');
+      item.type = 'button';
+      item.className = 'list-group-item list-group-item-action text-start';
+      item.innerHTML = `<div class="fw-semibold">${form.name}</div><div class="small text-muted">${form.slug || ''}</div>`;
+      item.addEventListener('click', () => {
+        selectPhysicalForm(form);
+      });
+      physicalResults.appendChild(item);
+    });
+    physicalResults.classList.remove('d-none');
+  };
+
+  const searchPhysicalForms = debounce(async () => {
+    const query = physicalInput ? physicalInput.value.trim() : '';
+    if (!query) {
+      renderPhysicalResults([]);
+      if (physicalHidden) physicalHidden.value = '';
+      formState.physicalForm = null;
+      updateGeneratedName();
+      return;
+    }
+    try {
+      const data = await fetchJSON(`/api/ingredients/physical-forms/search?q=${encodeURIComponent(query)}`);
+      renderPhysicalResults(data.results || []);
+    } catch (err) {
+      console.warn('Failed to search physical forms', err);
+    }
+  }, 200);
+
+  function attachDefinitionTypeahead() {
+    if (
+      !ingredientInput ||
+      !ingredientResults ||
+      typeof window.attachMergedInventoryGlobalTypeahead !== 'function'
+    ) {
+      return;
+    }
+
+    window.attachMergedInventoryGlobalTypeahead({
+      inputEl: ingredientInput,
+      listEl: ingredientResults,
+      giHiddenEl: ingredientHidden,
+      searchType: 'ingredient_definition',
+      includeInventory: false,
+      includeGlobal: false,
+      requireHidden: false,
+      onSelection: (picked) => {
+        selectIngredientDefinition({
+          id: picked.id,
+          name: picked.name || picked.text,
+          inci_name: picked.inci_name,
+          cas_number: picked.cas_number,
+          ingredient_category_id: picked.ingredient_category_id,
+          ingredient_category_name: picked.ingredient_category_name,
+        });
+      },
+    });
+
+    ingredientInput.addEventListener('input', () => {
+      if (ingredientInput.value.trim()) {
+        return;
+      }
+      formState.ingredient = null;
+      if (ingredientHidden) ingredientHidden.value = '';
+      updateIngredientSummaryContent(null);
+      updateExistingFormsList([], null);
+      updateGeneratedName();
+    });
+  }
+
+  function attachNewIngredientPreviewTypeahead() {
+    if (
+      !newIngredientNameInput ||
+      !newIngredientSuggestions ||
+      typeof window.attachMergedInventoryGlobalTypeahead !== 'function'
+    ) {
+      return;
+    }
+
+    window.attachMergedInventoryGlobalTypeahead({
+      inputEl: newIngredientNameInput,
+      listEl: newIngredientSuggestions,
+      searchType: 'ingredient_definition',
+      includeInventory: false,
+      includeGlobal: false,
+      requireHidden: false,
+      onSelection: (picked) => {
+        const existingRadio = document.getElementById('ingredientModeExisting');
+        if (existingRadio) {
+          existingRadio.checked = true;
+          toggleIngredientMode();
+        }
+        selectIngredientDefinition({
+          id: picked.id,
+          name: picked.name || picked.text,
+          inci_name: picked.inci_name,
+          cas_number: picked.cas_number,
+          ingredient_category_id: picked.ingredient_category_id,
+          ingredient_category_name: picked.ingredient_category_name,
+        });
+      },
+    });
+  }
+
+  async function selectIngredientDefinition(definition) {
+    if (ingredientInput) {
+      ingredientInput.value = definition.name;
+    }
+    if (ingredientHidden) {
+      ingredientHidden.value = definition.id;
+    }
+    updateIngredientSummaryContent(definition);
+    formState.ingredient = definition;
+    if (ingredientResults) ingredientResults.classList.add('d-none');
+    if (ingredientCategorySelect && definition.ingredient_category_id) {
+      ingredientCategorySelect.value = definition.ingredient_category_id;
+    }
+    updateGeneratedName();
+    try {
+      const payload = await fetchJSON(`/api/ingredients/definitions/${definition.id}/forms`);
+      const resolvedIngredient = payload.ingredient || definition;
+      updateIngredientSummaryContent(resolvedIngredient);
+      updateExistingFormsList(payload.items || [], resolvedIngredient?.name || definition.name);
+    } catch (err) {
+      console.warn('Failed to load existing forms', err);
+    }
+  }
+
+  function selectPhysicalForm(form) {
+    if (physicalInput) {
+      physicalInput.value = form.name;
+    }
+    if (physicalHidden) {
+      physicalHidden.value = form.id;
+    }
+    formState.physicalForm = form;
+    if (physicalResults) physicalResults.classList.add('d-none');
+    updateGeneratedName();
+  }
+
+  const searchNewPhysicalForms = debounce(async () => {
+    if (!newPhysicalInput) return;
+    const query = newPhysicalInput.value.trim();
+    if (!query) {
+      if (newPhysicalFormSuggestions) {
+        newPhysicalFormSuggestions.classList.add('d-none');
+        newPhysicalFormSuggestions.innerHTML = '';
+      }
+      return;
+    }
+    try {
+      const data = await fetchJSON(`/api/ingredients/physical-forms/search?q=${encodeURIComponent(query)}`);
+      renderNewPhysicalFormSuggestions(data.results || []);
+    } catch (err) {
+      console.warn('Failed to search physical forms', err);
+    }
+  }, 200);
+
+  function renderNewPhysicalFormSuggestions(results) {
+    if (!newPhysicalFormSuggestions) return;
+    newPhysicalFormSuggestions.innerHTML = '';
+    if (!results.length) {
+      newPhysicalFormSuggestions.classList.add('d-none');
+      return;
+    }
+    results.forEach((form) => {
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'list-group-item list-group-item-action text-start';
+      btn.innerHTML = `<div class="fw-semibold">${form.name}</div><div class="small text-muted">${form.slug || ''}</div>`;
+      btn.addEventListener('click', () => {
+        const existingRadio = document.getElementById('physicalFormExisting');
+        if (existingRadio) {
+          existingRadio.checked = true;
+          togglePhysicalMode();
+        }
+        selectPhysicalForm(form);
+        newPhysicalFormSuggestions.classList.add('d-none');
+      });
+      newPhysicalFormSuggestions.appendChild(btn);
+    });
+    newPhysicalFormSuggestions.classList.remove('d-none');
+  }
+
+  function bindTypeahead(inputEl, resultsEl, searchFn) {
+    if (!inputEl || !resultsEl) return;
+    inputEl.addEventListener('input', () => {
+      searchFn();
+    });
+  }
+
+  function attachNewPhysicalFormTypeahead() {
+    if (!newPhysicalInput || !newPhysicalFormSuggestions) return;
+    newPhysicalInput.addEventListener('input', () => {
+      searchNewPhysicalForms();
+    });
+  }
+
+  document.addEventListener('click', (event) => {
+    if (ingredientResults && !ingredientResults.contains(event.target) && event.target !== ingredientInput) {
+      ingredientResults.classList.add('d-none');
+    }
+    if (physicalResults && !physicalResults.contains(event.target) && event.target !== physicalInput) {
+      physicalResults.classList.add('d-none');
+    }
+    if (newIngredientSuggestions && !newIngredientSuggestions.contains(event.target) && event.target !== newIngredientNameInput) {
+      newIngredientSuggestions.classList.add('d-none');
+    }
+    if (newPhysicalFormSuggestions && !newPhysicalFormSuggestions.contains(event.target) && event.target !== newPhysicalInput) {
+      newPhysicalFormSuggestions.classList.add('d-none');
+    }
+  });
+
+  if (itemTypeSelect) {
+    updateFormBasedOnType();
+    itemTypeSelect.addEventListener('change', updateFormBasedOnType);
+  }
+
+  if (perishableCheckbox) {
+    perishableCheckbox.addEventListener('change', updateShelfLifeVisibility);
+    updateShelfLifeVisibility();
+  }
+
+  if (ingredientModeRadios.length > 0) {
+    toggleIngredientMode();
+    ingredientModeRadios.forEach((radio) => radio.addEventListener('change', toggleIngredientMode));
+  }
+
+  if (physicalModeRadios.length > 0) {
+    togglePhysicalMode();
+    physicalModeRadios.forEach((radio) => radio.addEventListener('change', togglePhysicalMode));
+  }
+
+  attachDefinitionTypeahead();
+  attachNewIngredientPreviewTypeahead();
+  attachNewPhysicalFormTypeahead();
+
+  if (physicalInput && physicalResults) {
+    bindTypeahead(physicalInput, physicalResults, searchPhysicalForms);
+  }
+
+  if (newIngredientNameInput) {
+    newIngredientNameInput.addEventListener('input', updateGeneratedName);
+  }
+  if (newPhysicalInput) {
+    newPhysicalInput.addEventListener('input', updateGeneratedName);
+  }
+
+  [containerMaterialInput, capacityInput, capacityUnitInput, containerTypeInput, containerStyleInput, containerColorInput]
+    .filter(Boolean)
+    .forEach((input) => {
+      input.addEventListener('input', updateGeneratedName);
+    });
+
+  window.addEventListener('DOMContentLoaded', () => {
+    updateGeneratedName();
+  });
+})();
+</script>

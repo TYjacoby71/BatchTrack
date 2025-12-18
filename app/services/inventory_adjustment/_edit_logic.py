@@ -256,8 +256,7 @@ def update_inventory_item(item_id: int, form_data: dict) -> tuple[bool, str]:
                     except (ValueError, TypeError):
                         return False, f"Invalid numeric value for {field_name.replace('_', ' ')}"
 
-            if 'recommended_usage_rate' in form_data:
-                item.recommended_usage_rate = (form_data.get('recommended_usage_rate') or '').strip() or None
+            
             if 'recommended_fragrance_load_pct' in form_data:
                 item.recommended_fragrance_load_pct = (form_data.get('recommended_fragrance_load_pct') or '').strip() or None
             if 'inci_name' in form_data:

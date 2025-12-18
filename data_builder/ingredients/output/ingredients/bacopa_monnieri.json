@@ -1,0 +1,230 @@
+{
+  "data_quality": {
+    "caveats": [
+      "SAP values, iodine value, melting point, flash point, and pH range are not specified due to the nature of the ingredient and its primary use in non-soap applications."
+    ],
+    "confidence": 0.8
+  },
+  "ingredient": {
+    "botanical_name": "Bacopa monnieri",
+    "cas_number": "93164-89-7",
+    "category": "Herbs & Spices (Dried Botanicals)",
+    "common_name": "Bacopa Monnieri",
+    "detailed_description": "Bacopa Monnieri, commonly known as Brahmi, is a perennial, creeping herb native to the wetlands of southern and Eastern India, Australia, Europe, Africa, Asia, and North and South America. It is widely used in Ayurveda for its potential to improve memory and cognitive functions. Bacopa contains a variety of active compounds, including bacosides, which are believed to be responsible for its therapeutic effects.",
+    "documentation": {
+      "last_verified": "2023-12-01",
+      "references": [
+        {
+          "notes": "Comprehensive review of Bacopa monnieri's pharmacological effects.",
+          "title": "Bacopa monnieri: An overview of its potential in preventive and therapeutic applications",
+          "url": "https://www.ncbi.nlm.nih.gov/pmc/articles/PMC5448442/"
+        }
+      ]
+    },
+    "inci_name": "BACOPA MONNIERI EXTRACT",
+    "items": [
+      {
+        "applications": [
+          "Herbal Tincture",
+          "Tea",
+          "Supplement"
+        ],
+        "form_bypass": false,
+        "function_tags": [
+          "Flavor"
+        ],
+        "item_name": "Bacopa Monnieri Dried Leaves",
+        "physical_form": "Whole",
+        "safety_tags": [
+          "Consult before use if pregnant or nursing"
+        ],
+        "sds_hazards": [],
+        "shelf_life_days": 730,
+        "sourcing": {
+          "certifications": [
+            "Organic"
+          ],
+          "common_origins": [
+            "India"
+          ],
+          "supply_risks": [
+            "Seasonal variations may affect availability"
+          ],
+          "sustainability_notes": "Considered a sustainable herb when harvested responsibly"
+        },
+        "specifications": {
+          "flash_point_celsius": "unknown",
+          "iodine_value": "unknown",
+          "melting_point_celsius": "unknown",
+          "ph_range": "unknown",
+          "sap_koh": "unknown",
+          "sap_naoh": "unknown",
+          "usage_rate_percent": "unknown"
+        },
+        "storage": {
+          "humidity_percent": {
+            "max": 60
+          },
+          "special_instructions": "Store in a cool, dry place away from direct sunlight.",
+          "temperature_celsius": {
+            "max": 30,
+            "min": 10
+          }
+        },
+        "synonyms": [
+          "Brahmi",
+          "Water hyssop"
+        ]
+      },
+      {
+        "applications": [
+          "Supplement",
+          "Skincare",
+          "Haircare"
+        ],
+        "form_bypass": false,
+        "function_tags": [
+          "Antioxidant"
+        ],
+        "item_name": "Bacopa Monnieri Powder",
+        "physical_form": "Powder",
+        "safety_tags": [
+          "Consult before use if pregnant or nursing"
+        ],
+        "sds_hazards": [],
+        "shelf_life_days": 730,
+        "sourcing": {
+          "certifications": [
+            "Organic"
+          ],
+          "common_origins": [
+            "India"
+          ],
+          "supply_risks": [
+            "Seasonal variations may affect availability"
+          ],
+          "sustainability_notes": "Considered a sustainable herb when harvested responsibly"
+        },
+        "specifications": {
+          "flash_point_celsius": "unknown",
+          "iodine_value": "unknown",
+          "melting_point_celsius": "unknown",
+          "ph_range": "unknown",
+          "sap_koh": "unknown",
+          "sap_naoh": "unknown",
+          "usage_rate_percent": "unknown"
+        },
+        "storage": {
+          "humidity_percent": {
+            "max": 60
+          },
+          "special_instructions": "Store in a cool, dry place away from direct sunlight.",
+          "temperature_celsius": {
+            "max": 30,
+            "min": 10
+          }
+        },
+        "synonyms": [
+          "Brahmi Powder"
+        ]
+      },
+      {
+        "applications": [
+          "Skincare",
+          "Haircare",
+          "Supplement"
+        ],
+        "form_bypass": false,
+        "function_tags": [
+          "Antioxidant"
+        ],
+        "item_name": "Bacopa Monnieri Extract",
+        "physical_form": "Liquid",
+        "safety_tags": [
+          "Consult before use if pregnant or nursing"
+        ],
+        "sds_hazards": [],
+        "shelf_life_days": 365,
+        "sourcing": {
+          "certifications": [
+            "Organic"
+          ],
+          "common_origins": [
+            "India"
+          ],
+          "supply_risks": [
+            "Seasonal variations may affect availability"
+          ],
+          "sustainability_notes": "Considered a sustainable herb when harvested responsibly"
+        },
+        "specifications": {
+          "flash_point_celsius": "unknown",
+          "iodine_value": "unknown",
+          "melting_point_celsius": "unknown",
+          "ph_range": "unknown",
+          "sap_koh": "unknown",
+          "sap_naoh": "unknown",
+          "usage_rate_percent": "unknown"
+        },
+        "storage": {
+          "humidity_percent": {
+            "max": 60
+          },
+          "special_instructions": "Store in a cool, dry place away from direct sunlight.",
+          "temperature_celsius": {
+            "max": 30,
+            "min": 10
+          }
+        },
+        "synonyms": [
+          "Brahmi Extract"
+        ]
+      }
+    ],
+    "origin": {
+      "processing_methods": [
+        "Dried",
+        "Extracted"
+      ],
+      "regions": [
+        "India",
+        "Australia",
+        "Europe",
+        "Africa",
+        "Asia",
+        "North America",
+        "South America"
+      ],
+      "source_material": "Leaves"
+    },
+    "primary_functions": [
+      "Antioxidant",
+      "Flavor"
+    ],
+    "regulatory_notes": [
+      "Generally recognized as safe (GRAS) when used as a flavoring agent"
+    ],
+    "short_description": "A traditional Ayurvedic herb known for its cognitive-enhancing properties.",
+    "taxonomy": {
+      "color_profile": [
+        "Green",
+        "Brown"
+      ],
+      "compatible_processes": [
+        "Infusion",
+        "Extraction",
+        "Drying"
+      ],
+      "incompatible_processes": [],
+      "scent_profile": [
+        "Earthy",
+        "Herbal"
+      ],
+      "texture_profile": [
+        "Dry",
+        "Powdery",
+        "Liquid"
+      ]
+    }
+  }
+}

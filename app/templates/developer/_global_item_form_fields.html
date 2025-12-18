@@ -1,0 +1,472 @@
+{% set form_values = form_data or {} %}
+{% set has_form_values = form_values|length > 0 %}
+{% set is_edit = item is defined and item %}
+{% if has_form_values %}
+  {% set current_item_type = form_values.get('item_type', 'ingredient') %}
+{% elif is_edit %}
+  {% set current_item_type = item.item_type %}
+{% else %}
+  {% set current_item_type = 'ingredient' %}
+{% endif %}
+
+{% if has_form_values %}
+  {% set ingredient_mode = form_values.get('ingredient_mode', 'existing') %}
+{% elif selected_ingredient %}
+  {% set ingredient_mode = 'existing' %}
+{% else %}
+  {% set ingredient_mode = 'new' %}
+{% endif %}
+
+{% if has_form_values %}
+  {% set physical_form_mode = form_values.get('physical_form_mode', 'existing') %}
+{% elif selected_physical_form %}
+  {% set physical_form_mode = 'existing' %}
+{% else %}
+  {% set physical_form_mode = 'new' %}
+{% endif %}
+
+{% set selected_category = form_values.get('ingredient_category_id') %}
+{% if not selected_category %}
+  {% if selected_ingredient and selected_ingredient.ingredient_category_id %}
+    {% set selected_category = selected_ingredient.ingredient_category_id|string %}
+  {% elif is_edit and item.ingredient_category_id %}
+    {% set selected_category = item.ingredient_category_id|string %}
+  {% else %}
+    {% set selected_category = '' %}
+  {% endif %}
+{% endif %}
+
+{% set ingredient_context = selected_ingredient and {
+  'id': selected_ingredient.id,
+  'name': selected_ingredient.name,
+  'inci_name': selected_ingredient.inci_name,
+  'cas_number': selected_ingredient.cas_number,
+  'ingredient_category_id': selected_ingredient.ingredient_category_id,
+  'ingredient_category_name': selected_ingredient.category.name if selected_ingredient and selected_ingredient.category else None
+} %}
+{% set physical_form_context = selected_physical_form and {
+  'id': selected_physical_form.id,
+  'name': selected_physical_form.name,
+  'slug': selected_physical_form.slug
+} %}
+{% set existing_items_context = [] %}
+{% for existing in existing_items %}
+  {% set _ = existing_items_context.append({
+    'id': existing.id,
+    'name': existing.name,
+    'physical_form_name': existing.physical_form.name if existing.physical_form else 'Unknown form',
+    'physical_form_id': existing.physical_form_id
+  }) %}
+{% endfor %}
+
+{% set default_unit_value = form_values.get('default_unit', item.default_unit if is_edit else '') %}
+{% set density_value = form_values.get('density', '%.3f'|format(item.density) if is_edit and item.density is not none else '') %}
+{% set capacity_value = form_values.get('capacity', item.capacity if is_edit and item.capacity is not none else '') %}
+{% set capacity_unit_value = form_values.get('capacity_unit', item.capacity_unit if is_edit else '') %}
+{% set container_material_value = form_values.get('container_material', item.container_material if is_edit else '') %}
+{% set container_type_value = form_values.get('container_type', item.container_type if is_edit else '') %}
+{% set container_style_value = form_values.get('container_style', item.container_style if is_edit else '') %}
+{% set container_color_value = form_values.get('container_color', item.container_color if is_edit else '') %}
+
+{% set default_is_perishable_checked = (
+  form_values.get('default_is_perishable') in ['on', 'true', 'True', '1']
+  if has_form_values
+  else (item.default_is_perishable if is_edit else False)
+) %}
+{% set is_active_checked = (
+  form_values.get('is_active_ingredient') in ['on', 'true', 'True', '1']
+  if has_form_values
+  else (item.is_active_ingredient if is_edit else False)
+) %}
+
+{% set perishable_section_style = '' if default_is_perishable_checked else 'display:none;' %}
+{% set recommended_shelf_value = form_values.get('recommended_shelf_life_days', item.recommended_shelf_life_days if is_edit and item.recommended_shelf_life_days is not none else '') %}
+
+{% set ingredient_workflow_class = '' if current_item_type == 'ingredient' else 'd-none' %}
+{% set ingredient_category_style = 'display:block;' if current_item_type == 'ingredient' else 'display:none;' %}
+{% set default_unit_style = 'display:block;' if current_item_type in ['ingredient', 'packaging', 'consumable'] else 'display:none;' %}
+{% set density_section_style = 'display:block;' if current_item_type == 'ingredient' else 'display:none;' %}
+{% set container_fields_style = 'display:block;' if current_item_type == 'container' else 'display:none;' %}
+{% set ingredient_properties_style = 'display:block;' if current_item_type == 'ingredient' else 'display:none;' %}
+
+<div class="mb-4">
+  <label class="form-label">Item Type</label>
+  <select name="item_type" id="itemType" class="form-select">
+    {% for t in ['ingredient', 'container', 'packaging', 'consumable'] %}
+      {% set label = t.title() %}
+      <option value="{{ t }}" {% if current_item_type == t %}selected{% endif %}>{{ label }}</option>
+    {% endfor %}
+  </select>
+  <small class="text-muted">Only developer accounts can add or modify global items. Select “Ingredient” to expose the layered workflow.</small>
+</div>
+
+<div id="ingredientWorkflow" class="{{ ingredient_workflow_class }}">
+  <div id="globalItemFormState"
+       data-selected-ingredient='{{ ingredient_context|tojson }}'
+       data-selected-physical-form='{{ physical_form_context|tojson }}'
+       data-existing-items='{{ existing_items_context|tojson }}'></div>
+  <div class="card border-0 shadow-sm mb-4">
+    <div class="card-header bg-light">
+      <h5 class="mb-0">Step 1 — Ingredient Definition</h5>
+    </div>
+    <div class="card-body">
+      <div class="form-check">
+        <input class="form-check-input" type="radio" name="ingredient_mode" id="ingredientModeExisting" value="existing" {% if ingredient_mode == 'existing' %}checked{% endif %}>
+        <label class="form-check-label fw-semibold" for="ingredientModeExisting">
+          Use existing ingredient definition
+        </label>
+      </div>
+      <div class="ingredient-existing-fields ms-4 mt-3">
+        <div class="row g-2 align-items-start">
+          <div class="col-lg-7">
+            <div class="position-relative">
+              <input type="text"
+                     id="existingIngredientInput"
+                     class="form-control ingredient-definition-typeahead"
+                     placeholder="Search for an ingredient..."
+                     autocomplete="off"
+                     value="{% if selected_ingredient %}{{ selected_ingredient.name }}{% endif %}">
+              <input type="hidden" name="existing_ingredient_id" id="existingIngredientSelect" value="{% if selected_ingredient %}{{ selected_ingredient.id }}{% elif form_values.get('existing_ingredient_id') %}{{ form_values.get('existing_ingredient_id') }}{% endif %}">
+            </div>
+            <div class="list-group mt-2 d-none" id="ingredientDefinitionResults" data-empty-message="Start typing to search ingredient definitions."></div>
+          </div>
+          <div class="col-lg-5">
+            <div class="small text-muted" id="ingredientDefinitionSummary">
+              {% if selected_ingredient %}
+                <div><strong>INCI:</strong> {{ selected_ingredient.inci_name or '—' }}</div>
+                <div><strong>CAS:</strong> {{ selected_ingredient.cas_number or '—' }}</div>
+                <div><strong>Category:</strong> {{ selected_ingredient.category.name if selected_ingredient.category else '—' }}</div>
+              {% else %}
+                Select an ingredient to review metadata and any existing forms before creating a new one.
+              {% endif %}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="form-check mt-3">
+        <input class="form-check-input" type="radio" name="ingredient_mode" id="ingredientModeNew" value="new" {% if ingredient_mode == 'new' %}checked{% endif %}>
+        <label class="form-check-label fw-semibold" for="ingredientModeNew">
+          Define a new ingredient
+        </label>
+      </div>
+      <div class="ingredient-new-fields ms-4 mt-3">
+        <div class="row g-3">
+          <div class="col-md-6">
+            <label class="form-label">Ingredient Name *</label>
+            <div class="position-relative">
+              <input type="text"
+                     name="new_ingredient_name"
+                     id="newIngredientNameInput"
+                     class="form-control"
+                     placeholder="e.g. Lavender"
+                     value="{{ form_values.get('new_ingredient_name', '') }}"
+                     autocomplete="off">
+              <div id="newIngredientSuggestions"
+                   class="list-group position-absolute w-100 d-none"
+                   data-empty-message="No matching definitions."
+                   style="z-index: 1060; max-height: 240px; overflow-y: auto; top: 100%; left: 0; margin-top: 2px; background-color: var(--color-surface, #fff); border: 1px solid var(--color-border, #dee2e6); border-radius: 0.375rem;">
+              </div>
+            </div>
+          </div>
+          <div class="col-md-6">
+            <label class="form-label">INCI Name</label>
+            <input type="text" name="new_ingredient_inci" class="form-control" placeholder="e.g. Calendula Officinalis Flower" value="{{ form_values.get('new_ingredient_inci', '') }}">
+          </div>
+          <div class="col-md-6">
+            <label class="form-label">CAS Number</label>
+            <input type="text" name="new_ingredient_cas" class="form-control" placeholder="e.g. 8008-79-5" value="{{ form_values.get('new_ingredient_cas', '') }}">
+          </div>
+          <div class="col-12">
+            <label class="form-label">Ingredient Description</label>
+            <textarea name="new_ingredient_description" rows="2" class="form-control" placeholder="Short description or sourcing notes">{{ form_values.get('new_ingredient_description', '') }}</textarea>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <div class="alert alert-info small shadow-sm mb-4 {% if not selected_ingredient %}d-none{% endif %}" id="existingFormsContainer" data-empty-text="No forms registered for this ingredient yet.">
+    <div class="fw-semibold" id="existingFormsTitle">
+      {% if selected_ingredient %}
+        Existing forms for {{ selected_ingredient.name }}:
+      {% else %}
+        Existing forms
+      {% endif %}
+    </div>
+    <ul class="mb-0 ps-3" id="existingFormsList">
+      {% if selected_ingredient and existing_items %}
+        {% for existing in existing_items %}
+          <li>
+            {{ existing.physical_form.name if existing.physical_form else 'Unknown form' }}
+            — <a href="{{ url_for('developer.create_global_item', ingredient_id=selected_ingredient.id, physical_form_id=existing.physical_form_id) }}" class="link-dark text-decoration-underline">Edit</a>
+          </li>
+        {% endfor %}
+      {% else %}
+        <li class="text-muted">No forms registered for this ingredient yet.</li>
+      {% endif %}
+    </ul>
+  </div>
+
+  <div class="card border-0 shadow-sm mb-4">
+    <div class="card-header bg-light">
+      <h5 class="mb-0">Step 2 — Physical Form</h5>
+    </div>
+    <div class="card-body">
+      <div class="form-check">
+        <input class="form-check-input" type="radio" name="physical_form_mode" id="physicalFormExisting" value="existing" {% if physical_form_mode == 'existing' %}checked{% endif %}>
+        <label class="form-check-label fw-semibold" for="physicalFormExisting">
+          Link to existing physical form
+        </label>
+      </div>
+      <div class="physical-form-existing-fields ms-4 mt-3">
+        <div class="row g-2 align-items-start">
+          <div class="col-lg-7">
+            <div class="position-relative">
+              <input type="text"
+                     id="physicalFormSearchInput"
+                     class="form-control"
+                     placeholder="Search physical forms..."
+                     autocomplete="off"
+                     value="{% if selected_physical_form %}{{ selected_physical_form.name }}{% endif %}">
+              <input type="hidden" name="existing_physical_form_id" id="existingPhysicalFormSelect" value="{% if selected_physical_form %}{{ selected_physical_form.id }}{% elif form_values.get('existing_physical_form_id') %}{{ form_values.get('existing_physical_form_id') }}{% endif %}">
+            </div>
+            <div class="list-group mt-2 d-none" id="physicalFormSuggestions" data-empty-message="Start typing to search curated physical forms."></div>
+          </div>
+          <div class="col-lg-5 small text-muted">
+            Select a curated form. Need to add one? <a href="{{ url_for('developer.manage_ingredient_attributes') }}" class="text-decoration-underline">Manage physical forms</a>.
+          </div>
+        </div>
+      </div>
+
+      <div class="form-check mt-3">
+        <input class="form-check-input" type="radio" name="physical_form_mode" id="physicalFormNew" value="new" {% if physical_form_mode == 'new' %}checked{% endif %}>
+        <label class="form-check-label fw-semibold" for="physicalFormNew">
+          Define a new physical form
+        </label>
+      </div>
+      <div class="physical-form-new-fields ms-4 mt-3">
+        <div class="row g-3">
+          <div class="col-md-6">
+            <label class="form-label">Physical Form Name *</label>
+            <div class="position-relative">
+              <input type="text"
+                     name="new_physical_form_name"
+                     id="newPhysicalFormInput"
+                     class="form-control"
+                     placeholder="e.g. Whole Bud"
+                     value="{{ form_values.get('new_physical_form_name', '') }}"
+                     autocomplete="off">
+              <div id="newPhysicalFormSuggestions"
+                   class="list-group position-absolute w-100 d-none"
+                   data-empty-message="No existing physical forms yet."
+                   style="z-index: 1060; max-height: 240px; overflow-y: auto; top: 100%; left: 0; margin-top: 2px; background-color: var(--color-surface, #fff); border: 1px solid var(--color-border, #dee2e6); border-radius: 0.375rem;">
+              </div>
+            </div>
+            <small class="text-muted d-block mt-1">Names auto-generate slugs; double-check the curated list before adding a new entry.</small>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="card border-0 shadow-sm">
+  <div class="card-header bg-light d-flex justify-content-between align-items-center">
+    <h5 class="mb-0">Global Item Details</h5>
+    {% if is_edit %}
+      <span class="badge bg-warning text-dark">Editing existing item</span>
+    {% endif %}
+  </div>
+  <div class="card-body">
+    <div class="row g-3">
+      <div class="col-md-4" id="ingredientCategorySection" style="{{ ingredient_category_style }}">
+        <label class="form-label">Ingredient Category</label>
+        <div class="input-group">
+          <select name="ingredient_category_id" class="form-select">
+            <option value="">Select Category</option>
+            {% for category in global_ingredient_categories %}
+              <option value="{{ category.id }}" {% if selected_category and selected_category|string == category.id|string %}selected{% endif %}>{{ category.name }}</option>
+            {% endfor %}
+          </select>
+          <a href="{{ url_for('developer.reference_categories') }}" class="btn btn-outline-secondary" title="Manage Global Categories">
+            <i class="fas fa-cog"></i>
+          </a>
+        </div>
+      </div>
+      <div class="col-md-4" id="defaultUnitSection" style="{{ default_unit_style }}">
+        <label class="form-label">Default Unit</label>
+        <select name="default_unit" class="form-select">
+          <option value="">Select Unit</option>
+          {% for unit in get_global_unit_list() %}
+            <option value="{{ unit.name }}" {% if default_unit_value == unit.name %}selected{% endif %}>{{ unit.name }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="col-md-4" id="densitySection" style="{{ density_section_style }}">
+        <label class="form-label">Density (g/ml)</label>
+        <input type="number" step="0.001" name="density" class="form-control" placeholder="e.g. 0.920" value="{{ density_value }}">
+      </div>
+    </div>
+
+    <div class="row g-3 mt-1" id="containerFields" style="{{ container_fields_style }}">
+      <div class="col-12"><hr><h5 class="text-muted">Container Properties</h5></div>
+      <div class="col-md-3">
+        <label class="form-label">Material</label>
+        <select name="container_material" id="containerMaterial" class="form-select" data-selected="{{ container_material_value }}">
+          <option value="">Select Material</option>
+        </select>
+      </div>
+      <div class="col-md-3">
+        <label class="form-label">Capacity</label>
+        <input type="number" step="0.01" name="capacity" class="form-control" placeholder="e.g. 120" value="{{ capacity_value }}">
+      </div>
+      <div class="col-md-3">
+        <label class="form-label">Capacity Unit</label>
+        <input type="text" name="capacity_unit" class="form-control" placeholder="e.g. ml, oz, count" value="{{ capacity_unit_value }}">
+      </div>
+      <div class="col-md-3">
+        <label class="form-label">Container Type</label>
+        <select name="container_type" id="containerType" class="form-select" data-selected="{{ container_type_value }}">
+          <option value="">Select Type</option>
+        </select>
+      </div>
+      <div class="col-md-3">
+        <label class="form-label">Container Style</label>
+        <select name="container_style" id="containerStyle" class="form-select" data-selected="{{ container_style_value }}">
+          <option value="">Select Style</option>
+        </select>
+      </div>
+      <div class="col-md-3">
+        <label class="form-label">Container Color (optional)</label>
+        <select name="container_color" id="containerColor" class="form-select" data-selected="{{ container_color_value }}">
+          <option value="">Select Color</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="row g-3 mt-3">
+      <div class="col-md-3" id="perishableSection" data-ingredient-only style="{% if current_item_type == 'ingredient' %}display:block;{% else %}display:none;{% endif %}">
+        <div class="form-check mt-4">
+          <input type="checkbox" class="form-check-input" id="default_is_perishable" name="default_is_perishable" {% if default_is_perishable_checked %}checked{% endif %}>
+          <label for="default_is_perishable" class="form-check-label">Perishable by default</label>
+        </div>
+      </div>
+      <div class="col-md-3" id="shelfLifeSection" style="{{ perishable_section_style }}">
+        <label class="form-label">Recommended Shelf Life (days)</label>
+        <input type="number" name="recommended_shelf_life_days" class="form-control" value="{{ recommended_shelf_value }}">
+      </div>
+      <div class="col-md-3" data-ingredient-only>
+        <label class="form-label">Aliases (comma-separated)</label>
+        <input type="text" name="aliases" class="form-control" placeholder="Alternative names" value="{% if has_form_values %}{{ form_values.get('aliases', '') }}{% elif is_edit and item.aliases %}{{ item.aliases | join(', ') }}{% endif %}">
+      </div>
+      <div class="col-md-3" data-ingredient-only>
+        <label class="form-label">Certifications (comma-separated)</label>
+        <input type="text" name="certifications" class="form-control" placeholder="e.g. Organic, Fair Trade" value="{% if has_form_values %}{{ form_values.get('certifications', '') }}{% elif is_edit and item.certifications %}{{ item.certifications | join(', ') }}{% endif %}">
+      </div>
+    </div>
+
+    <div id="ingredientProperties" style="{{ ingredient_properties_style }}">
+      <div class="row g-3 mt-4">
+        <div class="col-12"><hr><h5 class="text-muted">Ingredient Attributes</h5></div>
+        <div class="col-md-3">
+          <div class="form-check mt-2">
+            <input type="checkbox" class="form-check-input" id="is_active_ingredient" name="is_active_ingredient" {% if is_active_checked %}checked{% endif %}>
+            <label class="form-check-label" for="is_active_ingredient">Active Ingredient</label>
+          </div>
+        </div>
+        <div class="col-md-3">
+          <label class="form-label">Fragrance Load %</label>
+          <input type="text" name="recommended_fragrance_load_pct" class="form-control" placeholder="e.g. 6% - 10%" value="{{ form_values.get('recommended_fragrance_load_pct', item.recommended_fragrance_load_pct if is_edit else '') }}">
+        </div>
+        <div class="col-md-3">
+          <label class="form-label">Saponification Value</label>
+          <input type="number" step="0.1" name="saponification_value" class="form-control" value="{{ form_values.get('saponification_value', item.saponification_value if is_edit and item.saponification_value is not none else '') }}">
+        </div>
+        <div class="col-md-3">
+          <label class="form-label">Iodine Value</label>
+          <input type="number" step="0.1" name="iodine_value" class="form-control" value="{{ form_values.get('iodine_value', item.iodine_value if is_edit and item.iodine_value is not none else '') }}">
+        </div>
+        <div class="col-md-3">
+          <label class="form-label">Melting Point (°C)</label>
+          <input type="number" step="0.1" name="melting_point_c" class="form-control" value="{{ form_values.get('melting_point_c', item.melting_point_c if is_edit and item.melting_point_c is not none else '') }}">
+        </div>
+        <div class="col-md-3">
+          <label class="form-label">Flash Point (°C)</label>
+          <input type="number" step="0.1" name="flash_point_c" class="form-control" value="{{ form_values.get('flash_point_c', item.flash_point_c if is_edit and item.flash_point_c is not none else '') }}">
+        </div>
+        <div class="col-md-3">
+          <label class="form-label">pH Value</label>
+          <input type="number" step="0.1" name="ph_value" class="form-control" value="{{ form_values.get('ph_value', item.ph_value if is_edit else '') }}">
+        </div>
+        <div class="col-md-3">
+          <label class="form-label">Moisture Content (%)</label>
+          <input type="number" step="0.1" name="moisture_content_percent" class="form-control" value="{{ form_values.get('moisture_content_percent', item.moisture_content_percent if is_edit and item.moisture_content_percent is not none else '') }}">
+        </div>
+        <div class="col-md-3">
+          <label class="form-label">Comedogenic Rating</label>
+          {% set selected_comedogenic = form_values.get('comedogenic_rating', item.comedogenic_rating if is_edit and item.comedogenic_rating is not none else '') %}
+          <select name="comedogenic_rating" class="form-select">
+            <option value="" {% if not selected_comedogenic %}selected{% endif %}>Select Rating</option>
+            {% for rating in range(6) %}
+              <option value="{{ rating }}" {% if selected_comedogenic|string == rating|string %}selected{% endif %}>
+                {{ rating }} - {% if rating == 0 %}Non-comedogenic{% elif rating == 1 %}Very low{% elif rating == 2 %}Low{% elif rating == 3 %}Moderate{% elif rating == 4 %}High{% else %}Very high{% endif %}
+              </option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="col-md-3">
+          <label class="form-label">Protein Content (%)</label>
+          <input type="number" step="0.01" name="protein_content_pct" class="form-control" value="{{ form_values.get('protein_content_pct', item.protein_content_pct if is_edit and item.protein_content_pct is not none else '') }}">
+        </div>
+        <div class="col-md-3">
+          <label class="form-label">Brewing Color (SRM)</label>
+          <input type="number" step="0.1" name="brewing_color_srm" class="form-control" value="{{ form_values.get('brewing_color_srm', item.brewing_color_srm if is_edit and item.brewing_color_srm is not none else '') }}">
+        </div>
+        <div class="col-md-3">
+          <label class="form-label">Brewing Potential (SG)</label>
+          <input type="number" step="0.001" name="brewing_potential_sg" class="form-control" value="{{ form_values.get('brewing_potential_sg', item.brewing_potential_sg if is_edit and item.brewing_potential_sg is not none else '') }}">
+        </div>
+        <div class="col-md-3">
+          <label class="form-label">Diastatic Power (Lintner)</label>
+          <input type="number" step="0.1" name="brewing_diastatic_power_lintner" class="form-control" value="{{ form_values.get('brewing_diastatic_power_lintner', item.brewing_diastatic_power_lintner if is_edit and item.brewing_diastatic_power_lintner is not none else '') }}">
+        </div>
+        <div class="col-md-4">
+          <label class="form-label">Function Tags</label>
+          <input type="text" name="function_tags" class="form-control" placeholder="e.g. Humectant, Emulsifier" value="{% if has_form_values %}{{ form_values.get('function_tags', '') }}{% elif is_edit and item.functions %}{{ item.functions | map(attribute='name') | join(', ') }}{% endif %}">
+          <small class="text-muted">Comma-separated functions for ingredient behavior.</small>
+        </div>
+        <div class="col-md-4">
+          <label class="form-label">Application Tags</label>
+          <input type="text" name="application_tags" class="form-control" placeholder="e.g. Cold Process Soap, Lotion" value="{% if has_form_values %}{{ form_values.get('application_tags', '') }}{% elif is_edit and item.applications %}{{ item.applications | map(attribute='name') | join(', ') }}{% endif %}">
+          <small class="text-muted">Comma-separated uses or product types.</small>
+        </div>
+        <div class="col-md-4">
+          <label class="form-label">Category Tags</label>
+          <input type="text" name="category_tags" class="form-control" placeholder="Override default category tags" value="{% if has_form_values %}{{ form_values.get('category_tags', '') }}{% elif is_edit and item.category_tags %}{{ item.category_tags | map(attribute='name') | join(', ') }}{% endif %}">
+          <small class="text-muted">Defaults to reference category when left blank.</small>
+        </div>
+        <div class="col-12">
+          <label class="form-label">Fatty Acid Profile (JSON)</label>
+          <textarea name="fatty_acid_profile" rows="3" class="form-control" placeholder='{"oleic": 40, "linoleic": 8}'>{% if has_form_values %}{{ form_values.get('fatty_acid_profile', '') }}{% elif is_edit and item.fatty_acid_profile %}{{ item.fatty_acid_profile | tojson }}{% endif %}</textarea>
+        </div>
+      </div>
+    </div>
+    <div class="row g-3 mt-4">
+      <div class="col-12">
+        <label class="form-label">Generated Item Name *</label>
+        <input type="text"
+               name="name"
+               id="globalItemNameInput"
+               class="form-control"
+               value="{{ form_values.get('name', item.name if is_edit else '') }}"
+               data-lock-types="ingredient,container"
+               data-current-type="{{ current_item_type }}"
+               {% if current_item_type in ['ingredient', 'container'] %}readonly{% endif %}
+               required>
+        <small class="text-muted" id="globalItemNameHelp">Names update automatically for ingredients and containers based on the definitions above.</small>
+      </div>
+    </div>
+  </div>
+</div>

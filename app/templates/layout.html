@@ -71,6 +71,15 @@
             margin: 0 auto;
         }
     </style>
+<script>
+    // Initialize theme immediately to prevent flash
+    (function() {
+      const savedTheme = localStorage.getItem('bt_theme');
+      if (savedTheme && savedTheme !== 'system') {
+        document.documentElement.setAttribute('data-theme', savedTheme);
+      }
+    })();
+  </script>
 </head>
 <body data-authenticated="{{ 'true' if current_user.is_authenticated else 'false' }}">
     <script>
@@ -207,6 +216,9 @@
                     </a></li>
                     <li><a class="dropdown-item" href="{{ url_for('developer.container_management') }}">
                         <i class="fas fa-box-open"></i> Container Management
+                    </a></li>
+                    <li><a class="dropdown-item" href="{{ url_for('developer.manage_ingredient_attributes') }}">
+                        <i class="fas fa-layer-group"></i> Physical Forms
                     </a></li>
                     <li><hr class="dropdown-divider"></li>
                     <!-- Analytics -->

@@ -1,0 +1,190 @@
+{
+  "data_quality": {
+    "caveats": [
+      "SAP values, iodine value, melting point, flash point, and pH range data unavailable for specific forms."
+    ],
+    "confidence": 0.8
+  },
+  "ingredient": {
+    "botanical_name": "Acorus calamus",
+    "cas_number": "84775-39-3",
+    "category": "Herbs & Spices (Dried Botanicals)",
+    "common_name": "Calamus Root",
+    "detailed_description": "Calamus root, derived from the Acorus calamus plant, is a perennial herb found in wet, marshy environments across Asia, North America, and parts of Europe. Traditionally used in herbal medicine, aromatherapy, and as a flavoring agent, its applications have expanded to include small-batch brewing, confectionery, and cosmetics. The root contains essential oils, tannins, and other compounds contributing to its bitter taste and aromatic properties.",
+    "documentation": {
+      "last_verified": "2023-12-01",
+      "references": [
+        {
+          "notes": "Comprehensive review of medicinal properties and applications.",
+          "title": "Acorus calamus - An Overview of the Medicinal Evidence",
+          "url": "https://example.com"
+        }
+      ]
+    },
+    "inci_name": "ACORUS CALAMUS ROOT",
+    "items": [
+      {
+        "applications": [
+          "Herbal Tincture",
+          "Hydro-distillation",
+          "Aromatherapy"
+        ],
+        "form_bypass": false,
+        "function_tags": [
+          "Fragrance",
+          "Flavor"
+        ],
+        "item_name": "Calamus Root (Whole)",
+        "physical_form": "Whole",
+        "safety_tags": [
+          "Not for internal use in high doses"
+        ],
+        "sds_hazards": [
+          "Irritant"
+        ],
+        "shelf_life_days": 1095,
+        "sourcing": {
+          "certifications": [
+            "Organic available"
+          ],
+          "common_origins": [
+            "India",
+            "China",
+            "USA"
+          ],
+          "supply_risks": [
+            "Seasonal variation"
+          ],
+          "sustainability_notes": "Considered invasive in some regions"
+        },
+        "specifications": {
+          "flash_point_celsius": "unknown",
+          "iodine_value": "unknown",
+          "melting_point_celsius": "unknown",
+          "ph_range": "unknown",
+          "sap_koh": "unknown",
+          "sap_naoh": "unknown",
+          "usage_rate_percent": "unknown"
+        },
+        "storage": {
+          "humidity_percent": {
+            "max": 60
+          },
+          "special_instructions": "Store in a cool, dry place away from direct sunlight.",
+          "temperature_celsius": {
+            "max": 25,
+            "min": 5
+          }
+        },
+        "synonyms": [
+          "Sweet flag",
+          "Beewort"
+        ]
+      },
+      {
+        "applications": [
+          "Confection",
+          "Baked Good",
+          "Herbal Tincture"
+        ],
+        "form_bypass": false,
+        "function_tags": [
+          "Flavor",
+          "Bittering Agent"
+        ],
+        "item_name": "Calamus Root Powder",
+        "physical_form": "Powder",
+        "safety_tags": [
+          "Not for internal use in high doses"
+        ],
+        "sds_hazards": [
+          "Irritant"
+        ],
+        "shelf_life_days": 730,
+        "sourcing": {
+          "certifications": [
+            "Organic available"
+          ],
+          "common_origins": [
+            "India",
+            "China",
+            "USA"
+          ],
+          "supply_risks": [
+            "Seasonal variation"
+          ],
+          "sustainability_notes": "Considered invasive in some regions"
+        },
+        "specifications": {
+          "flash_point_celsius": "unknown",
+          "iodine_value": "unknown",
+          "melting_point_celsius": "unknown",
+          "ph_range": "unknown",
+          "sap_koh": "unknown",
+          "sap_naoh": "unknown",
+          "usage_rate_percent": "unknown"
+        },
+        "storage": {
+          "humidity_percent": {
+            "max": 60
+          },
+          "special_instructions": "Keep in a tightly sealed container in a cool, dry place.",
+          "temperature_celsius": {
+            "max": 25,
+            "min": 5
+          }
+        },
+        "synonyms": [
+          "Sweet flag powder",
+          "Beewort powder"
+        ]
+      }
+    ],
+    "origin": {
+      "processing_methods": [
+        "Dried",
+        "Powdered",
+        "Cold Pressed"
+      ],
+      "regions": [
+        "Asia",
+        "North America",
+        "Europe"
+      ],
+      "source_material": "Root"
+    },
+    "primary_functions": [
+      "Fragrance",
+      "Flavor",
+      "Bittering Agent"
+    ],
+    "regulatory_notes": [
+      "Not for internal use in high doses",
+      "Subject to regulation in certain jurisdictions"
+    ],
+    "short_description": "Calamus root, from the Acorus calamus plant, is known for its aromatic, bitter qualities.",
+    "taxonomy": {
+      "color_profile": [
+        "Brown"
+      ],
+      "compatible_processes": [
+        "Cold Process Soap",
+        "Hot Process Soap",
+        "Herbal Tincture",
+        "Hydro-distillation",
+        "Small Batch Brewing"
+      ],
+      "incompatible_processes": [
+        "High-heat cooking"
+      ],
+      "scent_profile": [
+        "Earthy",
+        "Woody"
+      ],
+      "texture_profile": [
+        "Fibrous",
+        "Powdery"
+      ]
+    }
+  }
+}

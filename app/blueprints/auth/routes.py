@@ -6,7 +6,7 @@ from wtforms.validators import DataRequired
 from werkzeug.security import generate_password_hash
 from . import auth_bp
 from ...extensions import db
-from ...models import User, Organization, Role, Permission
+from ...models import User, Organization, Role, Permission, GlobalItem
 from ...models.subscription_tier import SubscriptionTier # Import SubscriptionTier here
 from ...utils.timezone_utils import TimezoneUtils
 from ...utils.permissions import require_permission
@@ -20,6 +20,7 @@ from ...services.session_service import SessionService
 from ...services.signup_service import SignupService
 from ...services.billing_service import BillingService
 from datetime import datetime, timedelta
+import re
 
 logger = logging.getLogger(__name__)
 
@@ -138,6 +139,160 @@ def login():
             return render_template('pages/auth/login.html', form=form)
 
     return render_template('pages/auth/login.html', form=form, oauth_available=OAuthService.is_oauth_configured())
+
+
+def _safe_next_path(value: str | None):
+    """Only allow relative, non-protocol next URLs."""
+    if not value or not isinstance(value, str):
+        return None
+    value = value.strip()
+    if not value:
+        return None
+    if value.startswith("/") and not value.startswith("//"):
+        return value
+    return None
+
+
+def _generate_username_from_email(email: str) -> str:
+    base = (email or "user").split("@")[0]
+    base = re.sub(r"[^a-zA-Z0-9]+", "", base) or "user"
+    candidate = base
+    counter = 1
+    while User.query.filter_by(username=candidate).first():
+        candidate = f"{base}{counter}"
+        counter += 1
+    return candidate
+
+
+@auth_bp.route('/quick-signup', methods=['GET', 'POST'])
+@limiter.limit("600/minute")
+def quick_signup():
+    """Lightweight, free-account signup used by public global item pages."""
+    if current_user.is_authenticated:
+        next_url = _safe_next_path(request.args.get("next")) or url_for("inventory.list_inventory")
+        return redirect(next_url)
+
+    if request.method == 'POST':
+        next_url = _safe_next_path(request.form.get("next")) or url_for("inventory.list_inventory")
+        global_item_id = (request.form.get("global_item_id") or "").strip()
+
+        full_name = (request.form.get("name") or "").strip()
+        email = (request.form.get("email") or "").strip().lower()
+        password = (request.form.get("password") or "").strip()
+
+        if not email or "@" not in email:
+            flash("Please enter a valid email address.", "error")
+            return render_template(
+                "pages/auth/quick_signup.html",
+                next_url=next_url,
+                global_item_id=global_item_id,
+                global_item_name=(request.form.get("global_item_name") or "").strip(),
+                prefill_name=full_name,
+                prefill_email=email,
+            )
+
+        if not password or len(password) < 8:
+            flash("Password must be at least 8 characters.", "error")
+            return render_template(
+                "pages/auth/quick_signup.html",
+                next_url=next_url,
+                global_item_id=global_item_id,
+                global_item_name=(request.form.get("global_item_name") or "").strip(),
+                prefill_name=full_name,
+                prefill_email=email,
+            )
+
+        existing_by_email = User.query.filter_by(email=email).first()
+        if existing_by_email:
+            flash("An account with that email already exists. Please log in to continue.", "info")
+            return redirect(url_for("auth.login", next=next_url))
+
+        # Split full name into first/last (best-effort)
+        first_name = ""
+        last_name = ""
+        if full_name:
+            parts = full_name.split()
+            first_name = parts[0]
+            last_name = " ".join(parts[1:]) if len(parts) > 1 else ""
+
+        try:
+            # Free tier by default (fallback to any billing-exempt tier).
+            tier = SubscriptionTier.find_by_identifier("free") or SubscriptionTier.find_by_identifier("exempt")
+
+            org_name = f"{first_name or 'New'}'s Workspace"
+            org = Organization(
+                name=org_name,
+                contact_email=email,
+                is_active=True,
+                signup_source="global_library",
+                subscription_status="active",
+                billing_status="active",
+            )
+            if tier:
+                org.subscription_tier_id = tier.id
+            db.session.add(org)
+            db.session.flush()
+
+            username = _generate_username_from_email(email)
+            user = User(
+                username=username,
+                email=email,
+                first_name=first_name,
+                last_name=last_name,
+                organization_id=org.id,
+                user_type="customer",
+                is_organization_owner=True,
+                is_active=True,
+                email_verified=True,
+                last_login=TimezoneUtils.utc_now(),
+            )
+            user.set_password(password)
+            db.session.add(user)
+            db.session.flush()
+
+            org_owner_role = Role.query.filter_by(name='organization_owner', is_system_role=True).first()
+            if org_owner_role:
+                user.assign_role(org_owner_role)
+
+            db.session.commit()
+
+            login_user(user)
+            SessionService.rotate_user_session(user)
+            session['onboarding_welcome'] = True
+
+            return redirect(next_url)
+        except Exception as exc:
+            db.session.rollback()
+            logger.error("Quick signup failed: %s", exc, exc_info=True)
+            flash("Unable to create your account right now. Please try again.", "error")
+            return render_template(
+                "pages/auth/quick_signup.html",
+                next_url=next_url,
+                global_item_id=global_item_id,
+                global_item_name=(request.form.get("global_item_name") or "").strip(),
+                prefill_name=full_name,
+                prefill_email=email,
+            )
+
+    # GET
+    next_url = _safe_next_path(request.args.get("next")) or url_for("inventory.list_inventory")
+    global_item_id = (request.args.get("global_item_id") or "").strip()
+    global_item_name = ""
+    try:
+        if global_item_id and global_item_id.isdigit():
+            gi = db.session.get(GlobalItem, int(global_item_id))
+            global_item_name = getattr(gi, "name", "") if gi else ""
+    except Exception:
+        global_item_name = ""
+
+    return render_template(
+        "pages/auth/quick_signup.html",
+        next_url=next_url,
+        global_item_id=global_item_id,
+        global_item_name=global_item_name,
+        prefill_name="",
+        prefill_email="",
+    )
 
 @auth_bp.route('/oauth/google')
 @limiter.limit("1200/minute")

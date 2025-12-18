@@ -1,7 +1,7 @@
-
 from sqlalchemy import event
 
 from ..extensions import db
+from ..utils.seo import slugify_value
 from ..utils.timezone_utils import TimezoneUtils
 from .db_dialect import is_postgres
 from app.services.cache_invalidation import invalidate_global_library_cache
@@ -19,7 +19,7 @@ class GlobalItem(db.Model):
     # Category relationship - proper FK to IngredientCategory
     ingredient_category_id = db.Column(db.Integer, db.ForeignKey('ingredient_category.id'), nullable=True, index=True)
     ingredient_id = db.Column(db.Integer, db.ForeignKey('ingredient.id'), nullable=True, index=True)
-    physical_form_id = db.Column(db.Integer, db.ForeignKey('physical_form.id'), nullable=True, index=True)
+    variation_id = db.Column(db.Integer, db.ForeignKey('variation.id'), nullable=True, index=True)
 
     # Perishable information
     default_is_perishable = db.Column(db.Boolean, nullable=True, default=False)
@@ -77,10 +77,70 @@ class GlobalItem(db.Model):
         'IngredientDefinition',
         backref=db.backref('global_items', lazy='dynamic'),
     )
-    physical_form = db.relationship(
-        'PhysicalForm',
+    variation = db.relationship(
+        'Variation',
         backref=db.backref('global_items', lazy='dynamic'),
+        foreign_keys=[variation_id],
     )
+
+    @property
+    def physical_form(self):
+        """Backwards-compatible accessor referencing the variation's physical form."""
+        return self.variation.physical_form if getattr(self, "variation", None) else None
+
+    @physical_form.setter
+    def physical_form(self, value):
+        """Allow legacy code paths to continue assigning physical forms directly."""
+        if value is None:
+            self.variation = None
+            return
+
+        from app.models.ingredient_reference import PhysicalForm, Variation
+
+        if isinstance(value, Variation):
+            self.variation = value
+            return
+
+        if not isinstance(value, PhysicalForm):
+            raise TypeError("physical_form must be a PhysicalForm or Variation instance")
+
+        variation = (
+            Variation.query.filter_by(physical_form_id=value.id)
+            .order_by(Variation.id.asc())
+            .first()
+        )
+        if not variation:
+            slug = slugify_value(value.slug or value.name or "variation")
+            variation = Variation(
+                name=value.name or slug or f"variation-{value.id}",
+                slug=slug or f"variation-{value.id}",
+                physical_form=value,
+                description=value.description,
+                is_active=value.is_active,
+            )
+            db.session.add(variation)
+        self.variation = variation
+
+    @property
+    def physical_form_id(self):
+        """Expose variation's physical form id for compatibility."""
+        physical_form = self.physical_form
+        return physical_form.id if physical_form else None
+
+    @physical_form_id.setter
+    def physical_form_id(self, value):
+        if value in (None, ""):
+            self.variation = None
+            return
+        from app.models.ingredient_reference import PhysicalForm
+
+        try:
+            form_obj = PhysicalForm.query.get(int(value))
+        except (TypeError, ValueError):
+            form_obj = None
+        if not form_obj:
+            raise ValueError("Invalid physical form id")
+        self.physical_form = form_obj
     functions = db.relationship(
         'FunctionTag',
         secondary='global_item_function_tag',
@@ -103,8 +163,6 @@ class GlobalItem(db.Model):
     _table_args = [
         db.UniqueConstraint('name', 'item_type', name='_global_item_name_type_uc'),
         db.Index('ix_global_item_archive_type_name', 'is_archived', 'item_type', 'name'),
-        db.Index('ix_global_item_ingredient_id', 'ingredient_id'),
-        db.Index('ix_global_item_physical_form_id', 'physical_form_id'),
     ]
     if _IS_PG:
         _table_args.append(

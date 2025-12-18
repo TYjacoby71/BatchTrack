@@ -1,0 +1,249 @@
+{
+  "data_quality": {
+    "caveats": [
+      "Shelf life can vary based on storage conditions and purity of the product."
+    ],
+    "confidence": 0.95
+  },
+  "ingredient": {
+    "botanical_name": "",
+    "cas_number": "77-92-9",
+    "category": "Preservatives & Additives",
+    "common_name": "Citric Acid",
+    "detailed_description": "Citric acid is a natural preservative and is also used to add an acidic, sour taste to foods and soft drinks. In biochemistry, it is important in the citric acid cycle, and therefore occurs in the metabolism of virtually all living things. It can also be used as an environmentally benign cleaning agent.",
+    "documentation": {
+      "last_verified": "2023-12-01",
+      "references": [
+        {
+          "notes": "Confirms citric acid's status as Generally Recognized As Safe (GRAS) for food use.",
+          "title": "FDA GRAS Notice for Citric Acid",
+          "url": "https://www.fda.gov"
+        },
+        {
+          "notes": "Details on the approval of citric acid (E330) as a food additive in the EU.",
+          "title": "European Food Safety Authority (EFSA) on Citric Acid as a food additive",
+          "url": "https://www.efsa.europa.eu"
+        }
+      ]
+    },
+    "inci_name": "CITRIC ACID",
+    "items": [
+      {
+        "applications": [
+          "Cold Process Soap",
+          "Hot Process Soap",
+          "Melt & Pour Soap",
+          "Lotion",
+          "Cream",
+          "Balm",
+          "Serum",
+          "Scrub",
+          "Chocolate",
+          "Confection",
+          "Baked Good",
+          "Beverage",
+          "Fermented Beverage",
+          "Bath Bomb",
+          "Shower Steamer",
+          "Skincare",
+          "Cleaner",
+          "Detergent"
+        ],
+        "form_bypass": false,
+        "function_tags": [
+          "Preservative",
+          "Flavor",
+          "Chelator",
+          "Buffer",
+          "Antioxidant"
+        ],
+        "item_name": "Citric Acid (Anhydrous)",
+        "physical_form": "Powder",
+        "safety_tags": [
+          "Eye irritant",
+          "Skin irritant in high concentrations"
+        ],
+        "sds_hazards": [
+          "Irritant"
+        ],
+        "shelf_life_days": 730,
+        "sourcing": {
+          "certifications": [
+            "Food Grade",
+            "Kosher",
+            "Halal"
+          ],
+          "common_origins": [
+            "China",
+            "United States"
+          ],
+          "supply_risks": [
+            "Dependent on agricultural conditions"
+          ],
+          "sustainability_notes": "Biodegradable and derived from renewable resources"
+        },
+        "specifications": {
+          "flash_point_celsius": 100,
+          "iodine_value": 0,
+          "melting_point_celsius": {
+            "max": 154,
+            "min": 153
+          },
+          "ph_range": {
+            "max": 3,
+            "min": 2
+          },
+          "sap_koh": 0,
+          "sap_naoh": 0,
+          "usage_rate_percent": {
+            "leave_on_max": 2,
+            "rinse_off_max": 5
+          }
+        },
+        "storage": {
+          "humidity_percent": {
+            "max": 75
+          },
+          "special_instructions": "Store in a cool, dry place in a tightly sealed container.",
+          "temperature_celsius": {
+            "max": 30,
+            "min": 0
+          }
+        },
+        "synonyms": [
+          "2-Hydroxy-1,2,3-propanetricarboxylic acid"
+        ]
+      },
+      {
+        "applications": [
+          "Cold Process Soap",
+          "Hot Process Soap",
+          "Melt & Pour Soap",
+          "Lotion",
+          "Cream",
+          "Balm",
+          "Serum",
+          "Scrub",
+          "Chocolate",
+          "Confection",
+          "Baked Good",
+          "Beverage",
+          "Fermented Beverage",
+          "Bath Bomb",
+          "Shower Steamer",
+          "Skincare",
+          "Cleaner",
+          "Detergent"
+        ],
+        "form_bypass": false,
+        "function_tags": [
+          "Preservative",
+          "Flavor",
+          "Chelator",
+          "Buffer",
+          "Antioxidant"
+        ],
+        "item_name": "Citric Acid (Monohydrate)",
+        "physical_form": "Crystals",
+        "safety_tags": [
+          "Eye irritant",
+          "Skin irritant in high concentrations"
+        ],
+        "sds_hazards": [
+          "Irritant"
+        ],
+        "shelf_life_days": 730,
+        "sourcing": {
+          "certifications": [
+            "Food Grade",
+            "Kosher",
+            "Halal"
+          ],
+          "common_origins": [
+            "China",
+            "United States"
+          ],
+          "supply_risks": [
+            "Dependent on agricultural conditions"
+          ],
+          "sustainability_notes": "Biodegradable and derived from renewable resources"
+        },
+        "specifications": {
+          "flash_point_celsius": 100,
+          "iodine_value": 0,
+          "melting_point_celsius": {
+            "max": 75,
+            "min": 70
+          },
+          "ph_range": {
+            "max": 3,
+            "min": 2
+          },
+          "sap_koh": 0,
+          "sap_naoh": 0,
+          "usage_rate_percent": {
+            "leave_on_max": 2,
+            "rinse_off_max": 5
+          }
+        },
+        "storage": {
+          "humidity_percent": {
+            "max": 75
+          },
+          "special_instructions": "Store in a cool, dry place in a tightly sealed container.",
+          "temperature_celsius": {
+            "max": 30,
+            "min": 0
+          }
+        },
+        "synonyms": [
+          "Citric Acid Hydrate"
+        ]
+      }
+    ],
+    "origin": {
+      "processing_methods": [
+        "Fermentation"
+      ],
+      "regions": [
+        "Global"
+      ],
+      "source_material": "Molasses, Citrus Fruits"
+    },
+    "primary_functions": [
+      "Preservative",
+      "Flavor",
+      "Chelator",
+      "Buffer",
+      "Antioxidant"
+    ],
+    "regulatory_notes": [
+      "Generally recognized as safe (GRAS) by the FDA",
+      "Food grade",
+      "E330 in Europe"
+    ],
+    "short_description": "A weak organic acid used in various forms across multiple applications.",
+    "taxonomy": {
+      "color_profile": [
+        "White"
+      ],
+      "compatible_processes": [
+        "Cold Process Soap",
+        "Hot Process Soap",
+        "Melt & Pour Soap",
+        "Lotion Making",
+        "Baking",
+        "Candy Making",
+        "Beverage Production",
+        "Fermentation",
+        "Bath Bomb Making"
+      ],
+      "incompatible_processes": [],
+      "scent_profile": [],
+      "texture_profile": [
+        "Powdery",
+        "Crystalline"
+      ]
+    }
+  }
+}

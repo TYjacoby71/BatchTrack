@@ -104,8 +104,12 @@ class ConversionEngine:
                 'requires_attention': False
             }
 
-        from_u = Unit.query.filter_by(name=from_unit).first()
-        to_u = Unit.query.filter_by(name=to_unit).first()
+        from_u = Unit.query.filter(
+            (Unit.name == from_unit) | (Unit.symbol == from_unit)
+        ).first()
+        to_u = Unit.query.filter(
+            (Unit.name == to_unit) | (Unit.symbol == to_unit)
+        ).first()
 
         if not from_u:
             base_result = {
@@ -211,27 +215,24 @@ class ConversionEngine:
 
         # 3. Same-type base conversion (volume → volume, weight → weight)
         elif from_u.unit_type == to_u.unit_type:
-            if from_unit == to_unit:
-                converted = amount
-            else:
-                try:
-                    from_multiplier = float(from_u.conversion_factor) if from_u.conversion_factor else 1.0
-                    to_multiplier = float(to_u.conversion_factor) if to_u.conversion_factor else 1.0
-                    base_amount = amount * from_multiplier
-                    converted = base_amount / to_multiplier
-                except (ValueError, TypeError, ZeroDivisionError) as e:
-                    return {
-                        'success': False,
-                        'converted_value': None,
-                        'error_code': 'CONVERSION_ERROR',
-                        'error_data': {'from_unit': from_unit, 'to_unit': to_unit, 'message': str(e)},
-                        'conversion_type': 'failed',
-                        'density_used': None,
-                        'from': from_unit,
-                        'to': to_unit,
-                        'requires_attention': False
-                    }
-            conversion_type = 'direct'
+            try:
+                from_multiplier = float(from_u.conversion_factor) if from_u.conversion_factor else 1.0
+                to_multiplier = float(to_u.conversion_factor) if to_u.conversion_factor else 1.0
+                base_amount = amount * from_multiplier
+                converted = base_amount / to_multiplier
+                conversion_type = 'direct'
+            except (ValueError, TypeError, ZeroDivisionError) as e:
+                return {
+                    'success': False,
+                    'converted_value': None,
+                    'error_code': 'CONVERSION_ERROR',
+                    'error_data': {'from_unit': from_unit, 'to_unit': to_unit, 'message': str(e)},
+                    'conversion_type': 'failed',
+                    'density_used': None,
+                    'from': from_unit,
+                    'to': to_unit,
+                    'requires_attention': False
+                }
 
         # 4. Cross-type: volume ↔ weight
         elif {'volume', 'weight'} <= {from_u.unit_type, to_u.unit_type}:

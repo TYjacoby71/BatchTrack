@@ -1,0 +1,89 @@
+🚀 TGSC Ingredient Database Scraper
+==================================================
+📊 Max ingredients to scrape: 10
+
+============================================================
+SCRAPING CATEGORY: ESSENTIAL_OILS
+URL: https://www.thegoodscentscompany.com/categories/essential-oils.html
+============================================================
+Fetching: https://www.thegoodscentscompany.com/categories/essential-oils.html
+Failed to fetch https://www.thegoodscentscompany.com/categories/essential-oils.html. Status code: 404
+❌ Failed to fetch category page: essential_oils
+
+============================================================
+SCRAPING CATEGORY: ABSOLUTES
+URL: https://www.thegoodscentscompany.com/categories/absolutes.html
+============================================================
+Fetching: https://www.thegoodscentscompany.com/categories/absolutes.html
+Failed to fetch https://www.thegoodscentscompany.com/categories/absolutes.html. Status code: 404
+❌ Failed to fetch category page: absolutes
+
+============================================================
+SCRAPING CATEGORY: EXTRACTS
+URL: https://www.thegoodscentscompany.com/categories/extracts.html
+============================================================
+Fetching: https://www.thegoodscentscompany.com/categories/extracts.html
+Failed to fetch https://www.thegoodscentscompany.com/categories/extracts.html. Status code: 404
+❌ Failed to fetch category page: extracts
+
+============================================================
+SCRAPING CATEGORY: AROMATIC_CHEMICALS
+URL: https://www.thegoodscentscompany.com/categories/aromatic-chemicals.html
+============================================================
+Fetching: https://www.thegoodscentscompany.com/categories/aromatic-chemicals.html
+Failed to fetch https://www.thegoodscentscompany.com/categories/aromatic-chemicals.html. Status code: 404
+❌ Failed to fetch category page: aromatic_chemicals
+
+============================================================
+SCRAPING CATEGORY: FIXED_OILS
+URL: https://www.thegoodscentscompany.com/categories/fixed-oils.html
+============================================================
+Fetching: https://www.thegoodscentscompany.com/categories/fixed-oils.html
+Failed to fetch https://www.thegoodscentscompany.com/categories/fixed-oils.html. Status code: 404
+❌ Failed to fetch category page: fixed_oils
+
+============================================================
+SCRAPING CATEGORY: RESINS_BALSAMS
+URL: https://www.thegoodscentscompany.com/categories/resins-balsams.html
+============================================================
+Fetching: https://www.thegoodscentscompany.com/categories/resins-balsams.html
+Failed to fetch https://www.thegoodscentscompany.com/categories/resins-balsams.html. Status code: 404
+❌ Failed to fetch category page: resins_balsams
+
+============================================================
+SCRAPING CATEGORY: BOTANICALS
+URL: https://www.thegoodscentscompany.com/categories/botanicals.html
+============================================================
+Fetching: https://www.thegoodscentscompany.com/categories/botanicals.html
+Failed to fetch https://www.thegoodscentscompany.com/categories/botanicals.html. Status code: 404
+❌ Failed to fetch category page: botanicals
+
+============================================================
+SCRAPING CATEGORY: SOLVENTS
+URL: https://www.thegoodscentscompany.com/categories/solvents.html
+============================================================
+Fetching: https://www.thegoodscentscompany.com/categories/solvents.html
+Failed to fetch https://www.thegoodscentscompany.com/categories/solvents.html. Status code: 404
+❌ Failed to fetch category page: solvents
+
+============================================================
+SCRAPING CATEGORY: FRAGRANCE_COMPOUNDS
+URL: https://www.thegoodscentscompany.com/categories/fragrance-compounds.html
+============================================================
+Fetching: https://www.thegoodscentscompany.com/categories/fragrance-compounds.html
+Failed to fetch https://www.thegoodscentscompany.com/categories/fragrance-compounds.html. Status code: 404
+❌ Failed to fetch category page: fragrance_compounds
+
+🎊 SCRAPING COMPLETE!
+📊 Total ingredients extracted: 0
+📁 Files generated:
+   - tgsc_essential_oils_ingredients.csv
+   - tgsc_absolutes_ingredients.csv
+   - tgsc_extracts_ingredients.csv
+   - tgsc_aromatic_chemicals_ingredients.csv
+   - tgsc_fixed_oils_ingredients.csv
+   - tgsc_resins_balsams_ingredients.csv
+   - tgsc_botanicals_ingredients.csv
+   - tgsc_solvents_ingredients.csv
+   - tgsc_fragrance_compounds_ingredients.csv
+   - tgsc_all_ingredients.csv

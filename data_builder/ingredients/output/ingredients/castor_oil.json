@@ -1,0 +1,208 @@
+{
+  "data_quality": {
+    "caveats": [
+      "Supply risks and sustainability notes are generalized and may vary by specific region and supplier."
+    ],
+    "confidence": 0.9
+  },
+  "ingredient": {
+    "botanical_name": "Ricinus communis",
+    "cas_number": "8001-79-4",
+    "category": "Oils (Carrier & Fixed)",
+    "common_name": "Castor Oil",
+    "detailed_description": "Castor Oil is a thick, viscous liquid extracted from the seeds of the Ricinus communis plant. It is known for its unique composition, primarily consisting of ricinoleic acid. This oil is widely used across various industries due to its moisturizing, lubricating, and conditioning properties. It serves as an emollient, humectant, and can be used as a carrier oil in aromatherapy and cosmetic formulations.",
+    "documentation": {
+      "last_verified": "2023-12-01",
+      "references": [
+        {
+          "notes": "Provides detailed specifications and standards for pharmaceutical grade castor oil.",
+          "title": "USP Monograph on Castor Oil",
+          "url": "https://example.com"
+        }
+      ]
+    },
+    "inci_name": "Ricinus Communis (Castor) Seed Oil",
+    "items": [
+      {
+        "applications": [
+          "Cold Process Soap",
+          "Hot Process Soap",
+          "Lotion",
+          "Cream",
+          "Balm",
+          "Serum",
+          "Lip Balm",
+          "Haircare",
+          "Skincare"
+        ],
+        "form_bypass": false,
+        "function_tags": [
+          "Emollient",
+          "Humectant"
+        ],
+        "item_name": "Castor Oil (Cold Pressed)",
+        "physical_form": "Oil",
+        "safety_tags": [],
+        "sds_hazards": [],
+        "shelf_life_days": 730,
+        "sourcing": {
+          "certifications": [
+            "Organic",
+            "Non-GMO"
+          ],
+          "common_origins": [
+            "India",
+            "Brazil"
+          ],
+          "supply_risks": [
+            "Seasonal Variability"
+          ],
+          "sustainability_notes": "Renewable resource but requires responsible sourcing to ensure environmental sustainability."
+        },
+        "specifications": {
+          "flash_point_celsius": 313,
+          "iodine_value": 82,
+          "melting_point_celsius": {
+            "max": -18,
+            "min": -10
+          },
+          "ph_range": {
+            "max": 7,
+            "min": 5
+          },
+          "sap_koh": 0.18,
+          "sap_naoh": 0.128,
+          "usage_rate_percent": {
+            "leave_on_max": 100,
+            "rinse_off_max": 100
+          }
+        },
+        "storage": {
+          "humidity_percent": {
+            "max": 60
+          },
+          "special_instructions": "Store in a cool, dry place away from direct sunlight.",
+          "temperature_celsius": {
+            "max": 25,
+            "min": 15
+          }
+        },
+        "synonyms": [
+          "Virgin Castor Oil"
+        ]
+      },
+      {
+        "applications": [
+          "Cold Process Soap",
+          "Hot Process Soap",
+          "Lotion",
+          "Cream",
+          "Balm",
+          "Serum",
+          "Lip Balm",
+          "Haircare",
+          "Skincare"
+        ],
+        "form_bypass": false,
+        "function_tags": [
+          "Emollient",
+          "Humectant"
+        ],
+        "item_name": "Castor Oil (Deodorized)",
+        "physical_form": "Oil",
+        "safety_tags": [],
+        "sds_hazards": [],
+        "shelf_life_days": 730,
+        "sourcing": {
+          "certifications": [
+            "Organic",
+            "Non-GMO"
+          ],
+          "common_origins": [
+            "India",
+            "Brazil"
+          ],
+          "supply_risks": [
+            "Seasonal Variability"
+          ],
+          "sustainability_notes": "Deodorization process reduces the characteristic odor, making it more versatile for cosmetic applications."
+        },
+        "specifications": {
+          "flash_point_celsius": 313,
+          "iodine_value": 82,
+          "melting_point_celsius": {
+            "max": -18,
+            "min": -10
+          },
+          "ph_range": {
+            "max": 7,
+            "min": 5
+          },
+          "sap_koh": 0.18,
+          "sap_naoh": 0.128,
+          "usage_rate_percent": {
+            "leave_on_max": 100,
+            "rinse_off_max": 100
+          }
+        },
+        "storage": {
+          "humidity_percent": {
+            "max": 60
+          },
+          "special_instructions": "Store in a cool, dry place away from direct sunlight.",
+          "temperature_celsius": {
+            "max": 25,
+            "min": 15
+          }
+        },
+        "synonyms": [
+          "Refined Castor Oil"
+        ]
+      }
+    ],
+    "origin": {
+      "processing_methods": [
+        "Cold Pressed",
+        "Expeller Pressed",
+        "Solvent Extracted"
+      ],
+      "regions": [
+        "India",
+        "Africa",
+        "Brazil"
+      ],
+      "source_material": "Seeds"
+    },
+    "primary_functions": [
+      "Emollient",
+      "Humectant"
+    ],
+    "regulatory_notes": [
+      "IFRA safe",
+      "Food grade"
+    ],
+    "short_description": "A natural vegetable oil obtained from the seeds of the Ricinus communis plant.",
+    "taxonomy": {
+      "color_profile": [
+        "Pale Yellow",
+        "Clear"
+      ],
+      "compatible_processes": [
+        "Cold Process Soap",
+        "Hot Process",
+        "Lotion Formulation",
+        "Lip Balm Formulation",
+        "Haircare Products",
+        "Skincare Products"
+      ],
+      "incompatible_processes": [],
+      "scent_profile": [
+        "Nutty"
+      ],
+      "texture_profile": [
+        "Thick",
+        "Viscous"
+      ]
+    }
+  }
+}

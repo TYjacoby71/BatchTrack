@@ -1,0 +1,202 @@
+{
+  "data_quality": {
+    "caveats": [
+      "Variability in fatty acid composition due to cultivation conditions and processing methods."
+    ],
+    "confidence": 0.9
+  },
+  "ingredient": {
+    "botanical_name": "Oenothera biennis",
+    "cas_number": "90028-66-3",
+    "category": "Oils (Carrier & Fixed)",
+    "common_name": "Evening Primrose Oil",
+    "detailed_description": "Evening Primrose Oil is a carrier oil obtained from the seeds of the Oenothera biennis plant. It is rich in omega-6 fatty acids, including linoleic acid and gamma-linolenic acid, making it highly valued for its nourishing and moisturizing properties in various artisanal formulations. It is commonly used in skincare, haircare, and dietary supplements.",
+    "documentation": {
+      "last_verified": "2023-12-01",
+      "references": [
+        {
+          "notes": "Comprehensive overview of evening primrose oil's properties and uses in various formulations.",
+          "title": "Evening Primrose Oil: Properties and Applications",
+          "url": "https://example.com/evening-primrose-oil-properties"
+        }
+      ]
+    },
+    "inci_name": "Oenothera Biennis Oil",
+    "items": [
+      {
+        "applications": [
+          "Lotion",
+          "Cream",
+          "Balm",
+          "Serum",
+          "Scrub",
+          "Lip Balm",
+          "Haircare",
+          "Skincare"
+        ],
+        "form_bypass": false,
+        "function_tags": [
+          "Emollient",
+          "Humectant"
+        ],
+        "item_name": "Evening Primrose Oil (Cold Pressed)",
+        "physical_form": "Oil",
+        "safety_tags": [],
+        "sds_hazards": [],
+        "shelf_life_days": 730,
+        "sourcing": {
+          "certifications": [
+            "Organic",
+            "Non-GMO"
+          ],
+          "common_origins": [
+            "China",
+            "Canada"
+          ],
+          "supply_risks": [
+            "Seasonal variation"
+          ],
+          "sustainability_notes": "Sustainable cultivation practices are encouraged to ensure the longevity of evening primrose populations."
+        },
+        "specifications": {
+          "flash_point_celsius": 250,
+          "iodine_value": 135,
+          "melting_point_celsius": {
+            "max": -4,
+            "min": -5
+          },
+          "ph_range": {
+            "max": 7,
+            "min": 5
+          },
+          "sap_koh": 0.19,
+          "sap_naoh": 0.135,
+          "usage_rate_percent": {
+            "leave_on_max": 10,
+            "rinse_off_max": 100
+          }
+        },
+        "storage": {
+          "humidity_percent": {
+            "max": 60
+          },
+          "special_instructions": "Store in a cool, dark place",
+          "temperature_celsius": {
+            "max": 25,
+            "min": 10
+          }
+        },
+        "synonyms": []
+      },
+      {
+        "applications": [
+          "Dietary Supplement",
+          "Skincare",
+          "Haircare"
+        ],
+        "form_bypass": false,
+        "function_tags": [
+          "Emollient",
+          "Humectant"
+        ],
+        "item_name": "Evening Primrose Oil (Solvent Extracted)",
+        "physical_form": "Oil",
+        "safety_tags": [
+          "Refine after extraction to remove solvent residues"
+        ],
+        "sds_hazards": [
+          "Residual solvents"
+        ],
+        "shelf_life_days": 730,
+        "sourcing": {
+          "certifications": [
+            "Non-GMO"
+          ],
+          "common_origins": [
+            "China",
+            "Canada"
+          ],
+          "supply_risks": [
+            "Seasonal variation",
+            "Solvent extraction process requires careful handling and disposal"
+          ],
+          "sustainability_notes": "Sustainable cultivation and extraction practices are crucial for environmental protection."
+        },
+        "specifications": {
+          "flash_point_celsius": 250,
+          "iodine_value": 135,
+          "melting_point_celsius": {
+            "max": -4,
+            "min": -5
+          },
+          "ph_range": {
+            "max": 7,
+            "min": 5
+          },
+          "sap_koh": 0.19,
+          "sap_naoh": 0.135,
+          "usage_rate_percent": {
+            "leave_on_max": 10,
+            "rinse_off_max": 100
+          }
+        },
+        "storage": {
+          "humidity_percent": {
+            "max": 60
+          },
+          "special_instructions": "Store in a cool, dark place, ensure refined properly to remove any solvent residues",
+          "temperature_celsius": {
+            "max": 25,
+            "min": 10
+          }
+        },
+        "synonyms": []
+      }
+    ],
+    "origin": {
+      "processing_methods": [
+        "Cold Pressed",
+        "Solvent Extracted"
+      ],
+      "regions": [
+        "North America",
+        "Europe"
+      ],
+      "source_material": "Seeds"
+    },
+    "primary_functions": [
+      "Emollient",
+      "Humectant"
+    ],
+    "regulatory_notes": [
+      "IFRA safe",
+      "Food grade"
+    ],
+    "short_description": "A carrier oil extracted from the seeds of the evening primrose plant.",
+    "taxonomy": {
+      "color_profile": [
+        "Yellow",
+        "Light Yellow"
+      ],
+      "compatible_processes": [
+        "Cold Process Soap",
+        "Hot Process Soap",
+        "Lotion",
+        "Cream",
+        "Balm",
+        "Serum",
+        "Scrub",
+        "Lip Balm",
+        "Haircare",
+        "Skincare"
+      ],
+      "incompatible_processes": [],
+      "scent_profile": [
+        "Nutty"
+      ],
+      "texture_profile": [
+        "Liquid"
+      ]
+    }
+  }
+}

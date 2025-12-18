@@ -3,8 +3,10 @@ from __future__ import annotations
 from typing import Dict, List, Optional
 
 from sqlalchemy import func
+from sqlalchemy.orm import joinedload
 
 from app.models import GlobalItem, InventoryItem
+from app.models.ingredient_reference import Variation
 
 
 class InventorySearchService:
@@ -59,6 +61,12 @@ class InventorySearchService:
             InventoryItem.organization_id == organization_id,
             InventoryItem.is_archived != True,  # noqa: E712
         )
+        query = query.options(
+            joinedload(InventoryItem.global_item).joinedload(GlobalItem.ingredient),
+            joinedload(InventoryItem.global_item)
+            .joinedload(GlobalItem.variation)
+            .joinedload(Variation.physical_form),
+        )
         query = query.filter(~InventoryItem.type.in_(("product", "product-reserved")))
         if inventory_type:
             query = query.filter(func.lower(InventoryItem.type) == inventory_type)
@@ -89,7 +97,28 @@ class InventorySearchService:
             "type": item.type,
             "source": "inventory",
             "unit": item.unit,
+            "default_unit": item.unit,
+            "global_item_id": getattr(item, "global_item_id", None),
+            "default_is_perishable": bool(getattr(item, "is_perishable", False)),
+            "density": item.density,
         }
+        ingredient_obj = None
+        variation_obj = None
+        physical_form_obj = None
+        if getattr(item, "global_item", None):
+            ingredient_obj = getattr(item.global_item, "ingredient", None)
+            variation_obj = getattr(item.global_item, "variation", None)
+            if variation_obj:
+                physical_form_obj = getattr(variation_obj, "physical_form", None)
+        payload["ingredient_id"] = getattr(ingredient_obj, "id", None)
+        payload["ingredient_name"] = (
+            getattr(ingredient_obj, "name", None) or item.name
+        )
+        payload["variation_id"] = getattr(variation_obj, "id", None)
+        payload["variation_name"] = getattr(variation_obj, "name", None)
+        payload["physical_form_id"] = getattr(physical_form_obj, "id", None)
+        payload["physical_form_name"] = getattr(physical_form_obj, "name", None)
+
         if item.type == "container":
             payload.update(
                 {

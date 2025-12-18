@@ -1,0 +1,213 @@
+{
+  "data_quality": {
+    "caveats": [
+      "Variability in physical properties may occur due to natural product variations."
+    ],
+    "confidence": 0.9
+  },
+  "ingredient": {
+    "botanical_name": "Theobroma cacao",
+    "cas_number": "8002-31-1",
+    "category": "Butters (Solid Fats)",
+    "common_name": "Cocoa Butter",
+    "detailed_description": "Cocoa butter is a pale-yellow, edible vegetable fat extracted from the cocoa bean. It is used to make chocolate, as well as some ointments, toiletries, and pharmaceuticals. Cocoa butter has a cocoa flavor and aroma. Its melting point is just below human body temperature.",
+    "documentation": {
+      "last_verified": "2023-12-01",
+      "references": [
+        {
+          "notes": "Confirms cocoa butter's status as generally recognized as safe.",
+          "title": "FDA GRAS Notice for Cocoa Butter",
+          "url": "https://www.fda.gov"
+        }
+      ]
+    },
+    "inci_name": "Theobroma Cacao (Cocoa) Seed Butter",
+    "items": [
+      {
+        "applications": [
+          "Chocolate",
+          "Confection",
+          "Lotion",
+          "Cream",
+          "Balm",
+          "Lip Balm",
+          "Skincare"
+        ],
+        "form_bypass": false,
+        "function_tags": [
+          "Emollient",
+          "Antioxidant",
+          "Stabilizer"
+        ],
+        "item_name": "Cocoa Butter (Unrefined)",
+        "physical_form": "Butter",
+        "safety_tags": [],
+        "sds_hazards": [],
+        "shelf_life_days": 730,
+        "sourcing": {
+          "certifications": [
+            "Organic",
+            "Fair Trade"
+          ],
+          "common_origins": [
+            "Ivory Coast",
+            "Ghana",
+            "Ecuador"
+          ],
+          "supply_risks": [
+            "Seasonal Harvest",
+            "Labor Practices"
+          ],
+          "sustainability_notes": "Sustainable sourcing is important due to environmental and social concerns."
+        },
+        "specifications": {
+          "flash_point_celsius": 260,
+          "iodine_value": 34,
+          "melting_point_celsius": {
+            "max": 35,
+            "min": 32
+          },
+          "ph_range": {
+            "max": 6,
+            "min": 5
+          },
+          "sap_koh": 0.192,
+          "sap_naoh": 0.137,
+          "usage_rate_percent": {
+            "leave_on_max": 100,
+            "rinse_off_max": 100
+          }
+        },
+        "storage": {
+          "humidity_percent": {
+            "max": 50
+          },
+          "special_instructions": "Store in a cool, dry place away from direct sunlight.",
+          "temperature_celsius": {
+            "max": 25,
+            "min": 15
+          }
+        },
+        "synonyms": [
+          "Raw Cocoa Butter"
+        ]
+      },
+      {
+        "applications": [
+          "Chocolate",
+          "Confection",
+          "Lotion",
+          "Cream",
+          "Balm",
+          "Lip Balm",
+          "Skincare"
+        ],
+        "form_bypass": false,
+        "function_tags": [
+          "Emollient",
+          "Antioxidant",
+          "Stabilizer"
+        ],
+        "item_name": "Cocoa Butter (Deodorized)",
+        "physical_form": "Butter",
+        "safety_tags": [],
+        "sds_hazards": [],
+        "shelf_life_days": 730,
+        "sourcing": {
+          "certifications": [
+            "Organic",
+            "Fair Trade"
+          ],
+          "common_origins": [
+            "Ivory Coast",
+            "Ghana",
+            "Ecuador"
+          ],
+          "supply_risks": [
+            "Seasonal Harvest",
+            "Labor Practices"
+          ],
+          "sustainability_notes": "Deodorized variants may have less impact on scent profiles of final products."
+        },
+        "specifications": {
+          "flash_point_celsius": 260,
+          "iodine_value": 34,
+          "melting_point_celsius": {
+            "max": 35,
+            "min": 32
+          },
+          "ph_range": {
+            "max": 6,
+            "min": 5
+          },
+          "sap_koh": 0.192,
+          "sap_naoh": 0.137,
+          "usage_rate_percent": {
+            "leave_on_max": 100,
+            "rinse_off_max": 100
+          }
+        },
+        "storage": {
+          "humidity_percent": {
+            "max": 50
+          },
+          "special_instructions": "Store in a cool, dry place away from direct sunlight.",
+          "temperature_celsius": {
+            "max": 25,
+            "min": 15
+          }
+        },
+        "synonyms": [
+          "Refined Cocoa Butter"
+        ]
+      }
+    ],
+    "origin": {
+      "processing_methods": [
+        "Cold Pressed",
+        "Expeller Pressed",
+        "Solvent Extracted"
+      ],
+      "regions": [
+        "West Africa",
+        "South America",
+        "Southeast Asia"
+      ],
+      "source_material": "Cocoa bean"
+    },
+    "primary_functions": [
+      "Emollient",
+      "Antioxidant",
+      "Stabilizer"
+    ],
+    "regulatory_notes": [
+      "Generally recognized as safe (GRAS) by the FDA",
+      "Food grade"
+    ],
+    "short_description": "A natural fat derived from the cocoa bean.",
+    "taxonomy": {
+      "color_profile": [
+        "Pale Yellow",
+        "Ivory"
+      ],
+      "compatible_processes": [
+        "Cold Process Soap",
+        "Hot Process Soap",
+        "Melt & Pour Soap",
+        "Lotion Making",
+        "Chocolate Making",
+        "Balm Formulation"
+      ],
+      "incompatible_processes": [
+        "High-heat applications without proper formulation"
+      ],
+      "scent_profile": [
+        "Cocoa"
+      ],
+      "texture_profile": [
+        "Solid",
+        "Creamy"
+      ]
+    }
+  }
+}

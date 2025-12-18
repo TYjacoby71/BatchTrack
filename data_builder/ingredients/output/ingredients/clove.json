@@ -1,0 +1,267 @@
+{
+  "data_quality": {
+    "caveats": [
+      "SAP values, iodine value, melting point, and pH range for clove and its derivatives are not widely documented."
+    ],
+    "confidence": 0.9
+  },
+  "ingredient": {
+    "botanical_name": "Syzygium aromaticum",
+    "cas_number": "84961-50-2",
+    "category": "Herbs & Spices (Dried Botanicals)",
+    "common_name": "Clove",
+    "detailed_description": "Clove is a popular spice with a strong, pungent flavor and aroma. It is used in various culinary, cosmetic, and medicinal applications. Cloves are known for their high content of eugenol, which contributes to their characteristic scent and flavor. They are harvested primarily in Indonesia and Madagascar.",
+    "documentation": {
+      "last_verified": "2023-12-01",
+      "references": [
+        {
+          "notes": "Comprehensive review on clove's botany, uses, and chemical composition.",
+          "title": "Clove: Botany, Uses and Phytochemistry",
+          "url": "https://www.researchgate.net/publication/261357331_Clove_Syzygium_aromaticum_Botany_Uses_and_Phytochemistry"
+        }
+      ]
+    },
+    "inci_name": "Eugenia Caryophyllus",
+    "items": [
+      {
+        "applications": [
+          "Confection",
+          "Baked Good",
+          "Beverage",
+          "Herbal Tincture",
+          "Perfume"
+        ],
+        "form_bypass": false,
+        "function_tags": [
+          "Flavor",
+          "Fragrance",
+          "Antioxidant"
+        ],
+        "item_name": "Clove Whole",
+        "physical_form": "Whole",
+        "safety_tags": [],
+        "sds_hazards": [],
+        "shelf_life_days": 1095,
+        "sourcing": {
+          "certifications": [
+            "Organic",
+            "Fair Trade"
+          ],
+          "common_origins": [
+            "Indonesia",
+            "Madagascar"
+          ],
+          "supply_risks": [
+            "Seasonal Harvest"
+          ],
+          "sustainability_notes": "Sustainable farming practices are encouraged to preserve resources."
+        },
+        "specifications": {
+          "flash_point_celsius": "unknown",
+          "iodine_value": "unknown",
+          "melting_point_celsius": {
+            "max": "unknown",
+            "min": "unknown"
+          },
+          "ph_range": {
+            "max": "unknown",
+            "min": "unknown"
+          },
+          "sap_koh": "unknown",
+          "sap_naoh": "unknown",
+          "usage_rate_percent": {
+            "leave_on_max": "unknown",
+            "rinse_off_max": "unknown"
+          }
+        },
+        "storage": {
+          "humidity_percent": {
+            "max": 60
+          },
+          "special_instructions": "Store in a cool, dry place away from direct sunlight.",
+          "temperature_celsius": {
+            "max": 25,
+            "min": 0
+          }
+        },
+        "synonyms": [
+          "Whole clove buds"
+        ]
+      },
+      {
+        "applications": [
+          "Confection",
+          "Baked Good",
+          "Beverage",
+          "Herbal Tincture",
+          "Perfume",
+          "Skincare",
+          "Soap"
+        ],
+        "form_bypass": false,
+        "function_tags": [
+          "Flavor",
+          "Fragrance",
+          "Antioxidant"
+        ],
+        "item_name": "Clove Powder",
+        "physical_form": "Powder",
+        "safety_tags": [],
+        "sds_hazards": [],
+        "shelf_life_days": 730,
+        "sourcing": {
+          "certifications": [
+            "Organic",
+            "Fair Trade"
+          ],
+          "common_origins": [
+            "Indonesia",
+            "Madagascar"
+          ],
+          "supply_risks": [
+            "Seasonal Harvest"
+          ],
+          "sustainability_notes": "Sustainable farming practices are encouraged to preserve resources."
+        },
+        "specifications": {
+          "flash_point_celsius": "unknown",
+          "iodine_value": "unknown",
+          "melting_point_celsius": {
+            "max": "unknown",
+            "min": "unknown"
+          },
+          "ph_range": {
+            "max": "unknown",
+            "min": "unknown"
+          },
+          "sap_koh": "unknown",
+          "sap_naoh": "unknown",
+          "usage_rate_percent": {
+            "leave_on_max": "unknown",
+            "rinse_off_max": "unknown"
+          }
+        },
+        "storage": {
+          "humidity_percent": {
+            "max": 60
+          },
+          "special_instructions": "Store in a cool, dry place away from direct sunlight.",
+          "temperature_celsius": {
+            "max": 25,
+            "min": 0
+          }
+        },
+        "synonyms": [
+          "Ground clove"
+        ]
+      },
+      {
+        "applications": [
+          "Perfume",
+          "Aromatherapy",
+          "Soap",
+          "Skincare",
+          "Balm"
+        ],
+        "form_bypass": false,
+        "function_tags": [
+          "Fragrance",
+          "Antioxidant"
+        ],
+        "item_name": "Clove Essential Oil",
+        "physical_form": "Oil",
+        "safety_tags": [
+          "Dermal Limit 0.5%"
+        ],
+        "sds_hazards": [
+          "Irritant"
+        ],
+        "shelf_life_days": 1825,
+        "sourcing": {
+          "certifications": [
+            "Organic"
+          ],
+          "common_origins": [
+            "Indonesia",
+            "Madagascar"
+          ],
+          "supply_risks": [
+            "Seasonal Harvest"
+          ],
+          "sustainability_notes": "Essential oil production requires significant plant material, emphasizing the need for sustainable practices."
+        },
+        "specifications": {
+          "flash_point_celsius": 93,
+          "iodine_value": "unknown",
+          "melting_point_celsius": {
+            "max": "unknown",
+            "min": "unknown"
+          },
+          "ph_range": {
+            "max": "unknown",
+            "min": "unknown"
+          },
+          "sap_koh": "unknown",
+          "sap_naoh": "unknown",
+          "usage_rate_percent": {
+            "leave_on_max": 0.5,
+            "rinse_off_max": "unknown"
+          }
+        },
+        "storage": {
+          "humidity_percent": {
+            "max": 60
+          },
+          "special_instructions": "Store in a cool, dark place in an airtight container.",
+          "temperature_celsius": {
+            "max": 25,
+            "min": 15
+          }
+        },
+        "synonyms": [
+          "Clove bud oil"
+        ]
+      }
+    ],
+    "origin": {
+      "processing_methods": [
+        "Dried"
+      ],
+      "regions": [
+        "Indonesia",
+        "Madagascar"
+      ],
+      "source_material": "Flower buds"
+    },
+    "primary_functions": [
+      "Fragrance",
+      "Flavor",
+      "Antioxidant"
+    ],
+    "regulatory_notes": [
+      "Generally recognized as safe (GRAS)"
+    ],
+    "short_description": "Clove is a spice made from the dried flower buds of the clove tree.",
+    "taxonomy": {
+      "color_profile": [
+        "Brown"
+      ],
+      "compatible_processes": [
+        "Cold Process Soap",
+        "Hot Process Soap",
+        "Baking",
+        "Confectionery",
+        "Aromatherapy"
+      ],
+      "incompatible_processes": [],
+      "scent_profile": [
+        "Spicy",
+        "Warm"
+      ],
+      "texture_profile": [
+        "Hard",
+        "Fine Powder"
+      ]
+    }
+  }
+}

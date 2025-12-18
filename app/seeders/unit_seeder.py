@@ -21,7 +21,8 @@ def seed_units():
         {"name": "ton", "symbol": "ton", "unit_type": "weight", "base_unit": "gram", "conversion_factor": 907184.74, "is_custom": False, "is_mapped": True, "created_by": None},
 
         # Volume Units
-        {"name": "milliliter", "symbol": "mL", "unit_type": "volume", "base_unit": "ml", "conversion_factor": 1.0, "is_custom": False, "is_mapped": True, "created_by": None},
+        {"name": "milliliter", "symbol": "ml", "unit_type": "volume", "base_unit": "ml", "conversion_factor": 1.0, "is_custom": False, "is_mapped": True, "created_by": None},
+        {"name": "ml", "symbol": "ml", "unit_type": "volume", "base_unit": "ml", "conversion_factor": 1.0, "is_custom": False, "is_mapped": True, "created_by": None},
         {"name": "liter", "symbol": "L", "unit_type": "volume", "base_unit": "ml", "conversion_factor": 1000.0, "is_custom": False, "is_mapped": True, "created_by": None},
         {"name": "tsp", "symbol": "tsp", "unit_type": "volume", "base_unit": "ml", "conversion_factor": 4.92892, "is_custom": False, "is_mapped": True, "created_by": None},
         {"name": "tbsp", "symbol": "tbsp", "unit_type": "volume", "base_unit": "ml", "conversion_factor": 14.7868, "is_custom": False, "is_mapped": True, "created_by": None},

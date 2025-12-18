@@ -1,14 +1,22 @@
 import json
 from typing import Optional
 
-from flask import Blueprint, render_template, request, redirect, url_for, current_app
-from app.models import db, GlobalItem
+from flask import Blueprint, render_template, request, redirect, url_for, current_app, flash
+from flask_login import current_user
+from app.models import GlobalItem, InventoryItem
 from app.services.statistics import AnalyticsDataService
-from app.models.category import IngredientCategory
+from app.services.inventory_adjustment import create_inventory_item
 from app.utils.seo import slugify_value
 from app.extensions import limiter, cache
 from app.utils.cache_utils import should_bypass_cache, stable_cache_key
 from app.services.cache_invalidation import global_library_cache_key
+from app.services.global_item_listing_service import (
+    DEFAULT_PER_PAGE_OPTIONS as GLOBAL_LIBRARY_PER_PAGE_OPTIONS,
+    DEFAULT_SCOPE as GLOBAL_LIBRARY_DEFAULT_SCOPE,
+    SCOPE_LABELS as GLOBAL_SCOPE_LABELS,
+    VALID_SCOPES as GLOBAL_LIBRARY_VALID_SCOPES,
+    fetch_global_item_listing,
+)
 
 global_library_bp = Blueprint('global_library_bp', __name__)
 
@@ -23,88 +31,122 @@ def global_library():
       - category: ingredient category name (only when type=ingredient)
       - search: free text search across name and aka names
     """
-    item_type = request.args.get('type', '').strip()
-    category_filter = request.args.get('category', '').strip()
-    search_query = request.args.get('search', '').strip()
+    scope_param = (request.args.get('scope') or request.args.get('type') or '').strip()
+    search_query = (request.args.get('search') or '').strip()
+    raw_category = (request.args.get('category') or '').strip()
+    show_columns = request.args.get('show_columns') == 'true'
+    page = request.args.get('page', type=int) or 1
+    if page < 1:
+        page = 1
+    per_page_input = request.args.get('page_size', type=int)
+    per_page_value = (
+        per_page_input
+        if per_page_input in GLOBAL_LIBRARY_PER_PAGE_OPTIONS
+        else GLOBAL_LIBRARY_PER_PAGE_OPTIONS[0]
+    )
 
-    # Base query: active (not archived) items
-    query = GlobalItem.query.filter(GlobalItem.is_archived != True)
+    normalized_scope = (scope_param or GLOBAL_LIBRARY_DEFAULT_SCOPE).lower() or GLOBAL_LIBRARY_DEFAULT_SCOPE
+    if normalized_scope not in GLOBAL_LIBRARY_VALID_SCOPES:
+        normalized_scope = GLOBAL_LIBRARY_DEFAULT_SCOPE
+    category_key = raw_category if normalized_scope == "ingredient" else ""
 
     cache_payload = {
-        "item_type": item_type or "",
-        "category": category_filter or "",
-        "search": search_query or "",
+        "scope": normalized_scope,
+        "category": category_key,
+        "search": search_query,
+        "page": page,
+        "page_size": per_page_value,
     }
     raw_cache_key = stable_cache_key("global_library", cache_payload)
     cache_key = global_library_cache_key(raw_cache_key)
 
-    if should_bypass_cache():
+    bypass_cache = should_bypass_cache()
+    if bypass_cache:
         cache.delete(cache_key)
     else:
         cached_page = cache.get(cache_key)
         if cached_page is not None:
             return cached_page
 
-    # Filter by item type if provided
-    if item_type:
-        query = query.filter(GlobalItem.item_type == item_type)
+    listing = fetch_global_item_listing(
+        scope=scope_param,
+        search_query=search_query,
+        category_filter=raw_category,
+        page=page,
+        per_page=per_page_input,
+        per_page_options=GLOBAL_LIBRARY_PER_PAGE_OPTIONS,
+    )
 
-    # Filter by ingredient category name if provided and type is ingredient
-    if category_filter and item_type == 'ingredient':
-        query = query.join(IngredientCategory, GlobalItem.ingredient_category_id == IngredientCategory.id).filter(
-            IngredientCategory.name == category_filter
-        )
+    active_scope = listing["scope"]
+    selected_category = raw_category if active_scope == "ingredient" else ""
 
-    # Apply search across name and aliases
-    if search_query:
-        term = f"%{search_query}%"
-        try:
-            # Try alias table first for scalable search
-            from app.models import GlobalItem as _GI
-            from sqlalchemy import or_, exists, and_
-            alias_tbl = db.Table('global_item_alias', db.metadata, autoload_with=db.engine)
-            query = query.filter(
-                or_(
-                    _GI.name.ilike(term),
-                    exists().where(and_(alias_tbl.c.global_item_id == _GI.id, alias_tbl.c.alias.ilike(term)))
-                )
-            )
-        except Exception:
-            query = query.filter(GlobalItem.name.ilike(term))
+    def _shared_query_params(target_scope: str | None = None) -> dict[str, str]:
+        params: dict[str, str] = {}
+        params["scope"] = target_scope or active_scope
+        if search_query:
+            params["search"] = search_query
+        if listing["per_page"] != GLOBAL_LIBRARY_PER_PAGE_OPTIONS[0]:
+            params["page_size"] = str(listing["per_page"])
+        if selected_category and (
+            (target_scope == "ingredient")
+            or (target_scope is None and active_scope == "ingredient")
+        ):
+            params["category"] = selected_category
+        if show_columns:
+            params["show_columns"] = "true"
+        return params
 
-    items = query.order_by(GlobalItem.item_type.asc(), GlobalItem.name.asc()).limit(200).all()
+    def build_page_url(page_number: int) -> str:
+        params = _shared_query_params()
+        params["page"] = str(page_number)
+        return url_for('global_library_bp.global_library', **params)
 
-    # Get global ingredient categories for the filter dropdown (only for ingredients)
-    categories = []
-    if item_type == 'ingredient':
-        global_categories = IngredientCategory.query.filter_by(
-            organization_id=None,
-            is_active=True,
-            is_global_category=True
-        ).order_by(IngredientCategory.name).all()
-        categories = [cat.name for cat in global_categories]
+    def build_scope_url(target_scope: str) -> str:
+        params = _shared_query_params(target_scope)
+        params.pop("page", None)
+        params["scope"] = target_scope
+        return url_for('global_library_bp.global_library', **params)
 
+    clear_filters_url = url_for('global_library_bp.global_library', scope=active_scope)
     canonical_url = url_for('global_library_bp.global_library', _external=True)
     description_bits = [
         "Search the BatchTrack global inventory library.",
         "Browse ingredients, containers, packaging, and consumables with authoritative specs.",
     ]
-    if item_type:
-        description_bits.insert(0, f"{item_type.capitalize()} from the BatchTrack library.")
+    if active_scope:
+        description_bits.insert(0, f"{GLOBAL_SCOPE_LABELS.get(active_scope, active_scope.title())} in the BatchTrack library.")
+
+    can_manage = current_user.is_authenticated and getattr(current_user, "user_type", "") == "developer"
 
     rendered = render_template(
-        'library/global_items_public.html',
-        items=items,
-        categories=categories,
-        selected_type=item_type,
-        selected_category=category_filter,
+        'library/global_items_list.html',
+        items=listing["items"],
+        grouped_items=listing["grouped_items"],
+        categories=listing["categories"],
+        active_scope=active_scope,
+        scope_labels=GLOBAL_SCOPE_LABELS,
+        selected_category=selected_category,
         search_query=search_query,
+        pagination=listing["pagination"],
+        per_page=listing["per_page"],
+        per_page_options=GLOBAL_LIBRARY_PER_PAGE_OPTIONS,
+        build_page_url=build_page_url,
+        build_scope_url=build_scope_url,
+        first_item_index=listing["first_item_index"],
+        last_item_index=listing["last_item_index"],
+        clear_filters_url=clear_filters_url,
+        show_dev_controls=can_manage,
+        show_hidden_columns=can_manage and show_columns,
+        is_public_view=True,
         slugify=slugify_value,
+        developer_link_base=url_for('developer.global_item_detail', item_id=0)[:-1] if can_manage else None,
         page_title="Global Item Library — BatchTrack",
         page_description=" ".join(description_bits),
         canonical_url=canonical_url,
     )
-    cache.set(cache_key, rendered, timeout=current_app.config.get("GLOBAL_LIBRARY_CACHE_TTL", 300))
+
+    if not bypass_cache:
+        cache.set(cache_key, rendered, timeout=current_app.config.get("GLOBAL_LIBRARY_CACHE_TTL", 300))
     return rendered
 
 
@@ -198,6 +240,58 @@ def global_item_detail(item_id: int, slug: Optional[str] = None):
         page_og_image=metadata.get('hero_image'),
         slugify=slugify_value,
     )
+
+
+@global_library_bp.route('/global-items/<int:item_id>/save-to-inventory')
+@limiter.limit("6000/hour;300/minute")
+def save_global_item_to_inventory(item_id: int):
+    """Save a public global item into the authenticated user's inventory.
+
+    If unauthenticated, redirect to a lightweight free-account signup flow and
+    then return here to complete the save.
+    """
+    gi = GlobalItem.query.filter(
+        GlobalItem.is_archived != True,
+        GlobalItem.id == item_id,
+    ).first_or_404()
+
+    if not current_user.is_authenticated:
+        next_path = url_for('global_library_bp.save_global_item_to_inventory', item_id=item_id)
+        return redirect(url_for('auth.quick_signup', next=next_path, global_item_id=item_id))
+
+    org_id = getattr(current_user, "organization_id", None)
+    if not org_id:
+        flash("No organization found for your account.", "error")
+        return redirect(url_for('app_routes.dashboard'))
+
+    existing = InventoryItem.query.filter(
+        InventoryItem.organization_id == org_id,
+        InventoryItem.global_item_id == item_id,
+        InventoryItem.is_archived.is_(False),
+    ).first()
+    if existing:
+        flash(f"{gi.name} is already in your inventory.", "info")
+        return redirect(url_for('inventory.view_inventory', id=existing.id))
+
+    form_data = {
+        "name": gi.name,
+        "type": gi.item_type,
+        "global_item_id": str(gi.id),
+        "quantity": "0",
+    }
+    success, message, created_id = create_inventory_item(
+        form_data=form_data,
+        organization_id=org_id,
+        created_by=getattr(current_user, "id", None),
+        auto_commit=True,
+    )
+
+    if success and created_id:
+        flash(f"Saved {gi.name} to your inventory.", "success")
+        return redirect(url_for('inventory.view_inventory', id=created_id))
+
+    flash(message or "Unable to save this item to your inventory right now.", "error")
+    return redirect(url_for('inventory.list_inventory'))
 
 
 @global_library_bp.route('/global-items/<int:item_id>/stats')

@@ -1,0 +1,153 @@
+{
+  "data_quality": {
+    "caveats": [
+      "Seasonal variability in oil composition"
+    ],
+    "confidence": 0.9
+  },
+  "ingredient": {
+    "botanical_name": "Nigella sativa",
+    "cas_number": "90064-32-7",
+    "category": "Oils (Carrier & Fixed)",
+    "common_name": "Black Cumin Seed Oil",
+    "detailed_description": "Black Cumin Seed Oil, derived from the seeds of the Nigella sativa plant, is a highly regarded carrier oil in various artisanal and traditional practices. It is known for its unique composition, including thymoquinone, which contributes to its antioxidant, anti-inflammatory, and antimicrobial properties. This oil is widely used in skincare, haircare, herbalism, and culinary applications due to its nourishing and healing benefits.",
+    "documentation": {
+      "last_verified": "2023-12-01",
+      "references": [
+        {
+          "notes": "Comprehensive review on Nigella sativa",
+          "title": "Nigella sativa: A comprehensive review of its traditional use, phytochemical composition, pharmacological activities, and clinical evidence",
+          "url": "https://www.sciencedirect.com/science/article/abs/pii/S0378874117308649"
+        }
+      ]
+    },
+    "inci_name": "Nigella Sativa Seed Oil",
+    "items": [
+      {
+        "applications": [
+          "Lotion",
+          "Cream",
+          "Balm",
+          "Serum",
+          "Scrub",
+          "Perfume",
+          "Lip Balm",
+          "Haircare",
+          "Skincare",
+          "Confection",
+          "Baked Good",
+          "Beverage",
+          "Herbal Tincture"
+        ],
+        "form_bypass": false,
+        "function_tags": [
+          "Emollient",
+          "Antioxidant",
+          "Preservative"
+        ],
+        "item_name": "Black Cumin Seed Oil (Cold Pressed)",
+        "physical_form": "Oil",
+        "safety_tags": [
+          "Dermal Limit 1%",
+          "Avoid during pregnancy"
+        ],
+        "sds_hazards": [
+          "None"
+        ],
+        "shelf_life_days": 730,
+        "sourcing": {
+          "certifications": [
+            "Organic",
+            "Cold Pressed"
+          ],
+          "common_origins": [
+            "Egypt",
+            "India",
+            "Turkey"
+          ],
+          "supply_risks": [
+            "Seasonal variability"
+          ],
+          "sustainability_notes": "Sustainable farming practices encouraged"
+        },
+        "specifications": {
+          "flash_point_celsius": 250,
+          "iodine_value": 110,
+          "melting_point_celsius": {
+            "max": 5,
+            "min": -5
+          },
+          "ph_range": {
+            "max": 6,
+            "min": 4
+          },
+          "sap_koh": 0.189,
+          "sap_naoh": 0.134,
+          "usage_rate_percent": {
+            "leave_on_max": 10,
+            "rinse_off_max": 20
+          }
+        },
+        "storage": {
+          "humidity_percent": {
+            "max": 60
+          },
+          "special_instructions": "Store in a cool, dark place",
+          "temperature_celsius": {
+            "max": 25,
+            "min": 15
+          }
+        },
+        "synonyms": [
+          "Black Seed Oil",
+          "Kalonji Oil"
+        ]
+      }
+    ],
+    "origin": {
+      "processing_methods": [
+        "Cold Pressed"
+      ],
+      "regions": [
+        "Middle East",
+        "South Asia",
+        "North Africa"
+      ],
+      "source_material": "Seeds"
+    },
+    "primary_functions": [
+      "Emollient",
+      "Antioxidant",
+      "Preservative"
+    ],
+    "regulatory_notes": [
+      "Generally recognized as safe (GRAS) for food use",
+      "IFRA safe"
+    ],
+    "short_description": "A carrier oil extracted from the seeds of the Nigella sativa plant.",
+    "taxonomy": {
+      "color_profile": [
+        "Amber",
+        "Yellow"
+      ],
+      "compatible_processes": [
+        "Cold Process Soap",
+        "Hot Process Soap",
+        "Lotion Making",
+        "Serum Formulation",
+        "Herbal Tinctures",
+        "Culinary Infusion"
+      ],
+      "incompatible_processes": [
+        "High-heat applications"
+      ],
+      "scent_profile": [
+        "Spicy",
+        "Earthy"
+      ],
+      "texture_profile": [
+        "Liquid"
+      ]
+    }
+  }
+}
