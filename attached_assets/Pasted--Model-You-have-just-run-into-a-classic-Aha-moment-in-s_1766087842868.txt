@@ -1,0 +1,68 @@
+
+Model
+You have just run into a classic, "Aha!" moment in software development. What you're experiencing is confusing, but it's a very common set of problems when you have a monorepo with two different, independent applications inside it.
+Let's break down both of your observations. They are related but have different causes and solutions.
+Problem 1: "When I hit the shell, I think I'm interacting between both databases."
+Diagnosis: You are 100% correct. Your shell is getting confused because it doesn't know which application's context you want to work in.
+When you run a command like flask shell or any command that uses your application's environment (like flask db upgrade), it looks for a Flask application to run. In a monorepo, it might find the wrong one or get confused by the two different sets of requirements.txt and environment variables.
+The Definitive Solution: Virtual Environments and Explicit Paths
+You must treat your app/ and your data_builder/ as two completely separate projects that just happen to live in the same parent folder. The key to this is using separate Python virtual environments.
+The Correct Workflow:
+Create Two Virtual Environments:
+In your main project folder (/batchtrack/), create a virtual environment for your main app:
+code
+Bash
+python -m venv venv_app
+Create another one for your data builder:
+code
+Bash
+python -m venv venv_builder
+Install Dependencies Separately:
+Activate the app environment and install its requirements:
+code
+Bash
+source venv_app/bin/activate
+pip install -r app/requirements.txt
+Activate the builder environment and install its requirements:
+code
+Bash
+source venv_builder/bin/activate
+pip install -r data_builder/requirements.txt
+Work in One Context at a Time:
+To work on your main app: First, activate its environment: source venv_app/bin/activate. Now, when you run flask shell, it will only see the Flask app's dependencies and will connect to your main PostgreSQL database, because that's what's configured for the main app.
+To work on your data builder: First, activate its environment: source venv_builder/bin/activate. Now, when you run python data_builder/compiler.py, it will use the openai and pandas libraries and will connect to your SQLite state.db, because that's what the builder script is programmed to do.
+By activating the correct virtual environment, you are explicitly telling your shell, "For the next set of commands, I am working as a 'BatchTrack App Developer'" or "I am working as a 'Data Builder Operator'." This completely eliminates the confusion.
+Problem 2: "When I refresh Replit, one of the scrapers runs immediately."
+Diagnosis: This is a classic configuration issue in Replit (and other cloud environments like Heroku or Render). Replit needs to know what command to run when the environment starts up. You have likely configured the "Run" button or the startup command to execute one of your scraping scripts.
+The Definitive Solution: Configure Replit's .replit File
+Replit is controlled by a hidden configuration file called .replit. This file tells the environment what to do when you press the big "Run" button or when the container starts.
+Find the .replit File:
+In your Replit workspace, look for the file list on the left.
+Click the three-dot menu (...) at the top of the file list and select "Show hidden files."
+You will now see a file named .replit. Click on it to open it.
+Identify the run Command:
+Inside this file, you will see a line that looks something like this:
+code
+Toml
+# .replit file
+entrypoint = "main.py"
+run = "python data_builder/scrapers/some_scraper.py"
+That run = "..." line is your problem. It's telling Replit, "Every single time this environment starts, immediately run this scraping script."
+Fix the run Command:
+Option A (Best for Development): Change the run command to start your main Flask web application instead. This is likely what you want Replit to do most of the time.
+code
+Toml
+# .replit file
+run = "flask run --host=0.0.0.0"
+Now, when you refresh or press "Run," it will start your web server, not the scraper.
+Option B (Disable Auto-run): You can just clear out the run command.
+code
+Toml
+# .replit file
+run = ""
+Now, pressing "Run" will do nothing. This gives you full manual control.
+How to Run Scripts Manually:
+With the auto-run fixed, you should use the "Shell" tab in Replit for everything else.
+To run your compiler, you would open the shell and manually type: python data_builder/compiler.py.
+To start your web server, you would type: flask run --host=0.0.0.0.
+This gives you explicit control over what runs and when. The "Run" button is just a shortcut, and right now, it's pointing at the wrong thing. By reconfiguring your .replit file, you take back control and stop the unwanted script from running on every refresh.
