@@ -22,9 +22,11 @@ BASE_DIR = Path(__file__).resolve().parent
 OUTPUT_DIR = BASE_DIR / "output"
 INGREDIENT_DIR = OUTPUT_DIR / "ingredients"
 PHYSICAL_FORMS_FILE = OUTPUT_DIR / "physical_forms.json"
+VARIATIONS_FILE = OUTPUT_DIR / "variations.json"
 TAXONOMY_FILE = OUTPUT_DIR / "taxonomies.json"
 DEFAULT_TERMS_FILE = BASE_DIR / "terms.json"
 DEFAULT_SLEEP_SECONDS = float(os.getenv("COMPILER_SLEEP_SECONDS", "3"))
+WRITE_INGREDIENT_FILES = os.getenv("COMPILER_WRITE_INGREDIENT_FILES", "0").strip() in {"1", "true", "True"}
 
 
 def slugify(value: str) -> str:
@@ -93,7 +95,7 @@ def validate_payload(payload: Dict[str, Any]) -> Dict[str, Any]:
 
 
 def update_lookup_files(payload: Dict[str, Any]) -> None:
-    """Refresh the supporting lookup files for physical forms and taxonomies."""
+    """Refresh the supporting lookup files for physical forms, variations, and taxonomies."""
 
     ingredient = payload.get("ingredient", {})
     items: List[Dict[str, Any]] = ingredient.get("items", []) or []
@@ -105,6 +107,14 @@ def update_lookup_files(payload: Dict[str, Any]) -> None:
         if isinstance(form, str) and form.strip():
             existing_forms.add(form.strip())
     _write_json_list(PHYSICAL_FORMS_FILE, existing_forms)
+
+    # Variations (separate from physical_form)
+    existing_variations = _load_json_list(VARIATIONS_FILE)
+    for item in items:
+        variation = item.get("variation")
+        if isinstance(variation, str) and variation.strip():
+            existing_variations.add(variation.strip())
+    _write_json_list(VARIATIONS_FILE, existing_variations)
 
     taxonomy_values = _load_taxonomy_map()
 
@@ -152,21 +162,27 @@ def process_next_term(sleep_seconds: float, min_priority: int) -> bool:
         LOGGER.info("No pending tasks found at priority >= %s; compiler is finished.", min_priority)
         return False
 
-    term, priority = task
+    term, priority, seed_category = task
     LOGGER.info("Processing term: %s (priority %s)", term, priority)
     database_manager.update_task_status(term, "processing")
 
     try:
-        payload = ai_worker.get_ingredient_data(term)
+        normalized = database_manager.get_normalized_term(term) or {}
+        payload = ai_worker.get_ingredient_data(term, base_context=normalized)
         if not isinstance(payload, dict) or payload.get("error"):
             raise RuntimeError(payload.get("error") if isinstance(payload, dict) else "Unknown AI failure")
 
         ingredient = validate_payload(payload)
-        slug = slugify(ingredient.get("common_name", term))
-        save_payload(payload, slug)
+        # Persist compiled payload into the DB (source of truth).
+        database_manager.upsert_compiled_ingredient(term, payload, seed_category=seed_category)
+
+        # Optional legacy artifact: write one JSON file per ingredient (disabled by default).
+        if WRITE_INGREDIENT_FILES:
+            slug = slugify(term)
+            save_payload(payload, slug)
         update_lookup_files(payload)
         database_manager.update_task_status(term, "completed")
-        LOGGER.info("Successfully saved %s -> %s", term, slug)
+        LOGGER.info("Successfully compiled %s", term)
     except Exception as exc:  # pylint: disable=broad-except
         database_manager.update_task_status(term, "error")
         LOGGER.exception("Failed to process %s: %s", term, exc)

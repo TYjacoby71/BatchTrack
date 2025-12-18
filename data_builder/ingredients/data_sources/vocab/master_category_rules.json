@@ -1,0 +1,187 @@
+[
+  {
+    "master_category": "Fruits & Berries",
+    "source_type": "ingredient_category",
+    "source_value": "Fruits & Berries"
+  },
+  {
+    "master_category": "Vegetables",
+    "source_type": "ingredient_category",
+    "source_value": "Vegetables"
+  },
+  {
+    "master_category": "Grains & Starches",
+    "source_type": "ingredient_category",
+    "source_value": "Grains"
+  },
+  {
+    "master_category": "Nuts",
+    "source_type": "ingredient_category",
+    "source_value": "Nuts"
+  },
+  {
+    "master_category": "Seeds",
+    "source_type": "ingredient_category",
+    "source_value": "Seeds"
+  },
+  {
+    "master_category": "Spices",
+    "source_type": "ingredient_category",
+    "source_value": "Spices"
+  },
+  {
+    "master_category": "Herbs",
+    "source_type": "ingredient_category",
+    "source_value": "Herbs"
+  },
+  {
+    "master_category": "Flowers",
+    "source_type": "ingredient_category",
+    "source_value": "Flowers"
+  },
+  {
+    "master_category": "Roots",
+    "source_type": "ingredient_category",
+    "source_value": "Roots"
+  },
+  {
+    "master_category": "Barks",
+    "source_type": "ingredient_category",
+    "source_value": "Barks"
+  },
+  {
+    "master_category": "Clays",
+    "source_type": "ingredient_category",
+    "source_value": "Clays"
+  },
+  {
+    "master_category": "Minerals",
+    "source_type": "ingredient_category",
+    "source_value": "Minerals"
+  },
+  {
+    "master_category": "Salts",
+    "source_type": "ingredient_category",
+    "source_value": "Salts"
+  },
+  {
+    "master_category": "Sugars",
+    "source_type": "ingredient_category",
+    "source_value": "Sugars"
+  },
+  {
+    "master_category": "Liquid Sweeteners",
+    "source_type": "ingredient_category",
+    "source_value": "Liquid Sweeteners"
+  },
+  {
+    "master_category": "Acids & PH Adjusters",
+    "source_type": "ingredient_category",
+    "source_value": "Acids"
+  },
+  {
+    "master_category": "Oils & Fats",
+    "source_type": "physical_form",
+    "source_value": "Oil"
+  },
+  {
+    "master_category": "Carriers",
+    "source_type": "physical_form",
+    "source_value": "Oil"
+  },
+  {
+    "master_category": "Butters",
+    "source_type": "physical_form",
+    "source_value": "Butter"
+  },
+  {
+    "master_category": "Waxes",
+    "source_type": "physical_form",
+    "source_value": "Wax"
+  },
+  {
+    "master_category": "Hydrosols",
+    "source_type": "physical_form",
+    "source_value": "Hydrosol"
+  },
+  {
+    "master_category": "Resins & Gums",
+    "source_type": "physical_form",
+    "source_value": "Resin"
+  },
+  {
+    "master_category": "Resins & Gums",
+    "source_type": "physical_form",
+    "source_value": "Gum"
+  },
+  {
+    "master_category": "Essential Oils",
+    "source_type": "variation",
+    "source_value": "Essential Oil"
+  },
+  {
+    "master_category": "Essential Oils",
+    "source_type": "variation",
+    "source_value": "Steam-Distilled"
+  },
+  {
+    "master_category": "Extracts",
+    "source_type": "variation",
+    "source_value": "CO2 Extracted"
+  },
+  {
+    "master_category": "Extracts",
+    "source_type": "variation",
+    "source_value": "CO2 Extract"
+  },
+  {
+    "master_category": "Extracts",
+    "source_type": "variation",
+    "source_value": "Extract"
+  },
+  {
+    "master_category": "Absolutes",
+    "source_type": "variation",
+    "source_value": "Absolute"
+  },
+  {
+    "master_category": "Concretes",
+    "source_type": "variation",
+    "source_value": "Concrete"
+  },
+  {
+    "master_category": "Colorants & Pigmants",
+    "source_type": "function_tag",
+    "source_value": "Colorant"
+  },
+  {
+    "master_category": "Preservatives & Antioxidants",
+    "source_type": "function_tag",
+    "source_value": "Preservative"
+  },
+  {
+    "master_category": "Preservatives & Antioxidants",
+    "source_type": "function_tag",
+    "source_value": "Antioxidant"
+  },
+  {
+    "master_category": "Surfactants & Cleansers",
+    "source_type": "function_tag",
+    "source_value": "Surfactant"
+  },
+  {
+    "master_category": "Emulsifiers & Stabilizers",
+    "source_type": "function_tag",
+    "source_value": "Emulsifier"
+  },
+  {
+    "master_category": "Emulsifiers & Stabilizers",
+    "source_type": "function_tag",
+    "source_value": "Stabilizer"
+  },
+  {
+    "master_category": "Thickeners & Gelling Agents",
+    "source_type": "function_tag",
+    "source_value": "Thickener"
+  }
+]

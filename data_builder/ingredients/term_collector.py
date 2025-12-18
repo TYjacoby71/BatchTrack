@@ -1,4 +1,4 @@
-"""AI-assisted collector that builds the seed ingredient queue and lookup forms."""
+"""AI-assisted collector that builds the seed ingredient queue (stage 1)."""
 from __future__ import annotations
 
 import argparse
@@ -7,6 +7,7 @@ import logging
 import os
 import re
 import hashlib
+import csv
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Set, Tuple
 
@@ -18,6 +19,7 @@ OUTPUT_DIR = BASE_DIR / "output"
 TERMS_FILE = BASE_DIR / "terms.json"
 PHYSICAL_FORMS_FILE = OUTPUT_DIR / "physical_forms.json"
 TERM_STUBS_DIR = OUTPUT_DIR / "term_stubs"
+DATA_SOURCES_DIR = BASE_DIR / "data_sources"
 openai.api_key = os.environ.get("OPENAI_API_KEY")
 if not openai.api_key:
     LOGGER.warning("OPENAI_API_KEY is not set; term_collector will run in repository-only mode unless --skip-ai is provided.")
@@ -31,6 +33,43 @@ MAX_PRIORITY = 10
 DEFAULT_CANDIDATE_POOL_SIZE = int(os.getenv("TERM_GENERATOR_CANDIDATE_POOL", "30"))
 MAX_SELECTION_ATTEMPTS = int(os.getenv("TERM_GENERATOR_SELECTION_ATTEMPTS", "12"))
 MAX_CANDIDATE_POOL_SIZE = int(os.getenv("TERM_GENERATOR_MAX_CANDIDATE_POOL", "120"))
+# Stage 1 cursor mode:
+# - legacy: per-letter cursor (A..Z)
+# - category cursor: per-(seed_category, letter) cursor
+USE_CATEGORY_CURSOR = os.getenv("TERM_GENERATOR_USE_CATEGORY_CURSOR", "1").strip() not in {"0", "false", "False"}
+USE_SOURCE_TERMS = os.getenv("TERM_GENERATOR_USE_SOURCE_TERMS", "1").strip() not in {"0", "false", "False"}
+INGEST_SOURCE_TERMS = os.getenv("TERM_GENERATOR_INGEST_SOURCE_TERMS", "0").strip() in {"1", "true", "True"}
+TERM_GENERATOR_MODE = os.getenv("TERM_GENERATOR_MODE", "gapfill").strip().lower()
+GAPFILL_MAX_TRIES_PER_LETTER = int(os.getenv("TERM_GENERATOR_GAPFILL_MAX_TRIES", "5"))
+
+# Canonical base-level categories (hard-coded; Stage 1 cursor is (seed_category, letter)).
+# IMPORTANT: these categories are "pure bases" (avoid base+form names like "Frankincense Resin").
+SEED_INGREDIENT_CATEGORIES: List[str] = [
+    "Fruits & Berries",
+    "Vegetables",
+    "Grains",
+    "Nuts",
+    "Seeds",
+    "Spices",
+    "Culinary Herbs",
+    "Medicinal Herbs",
+    "Flowers",
+    "Roots",
+    "Barks",
+    "Sugars",
+    "Liquid Sweeteners",
+    "Acids",
+    "Salts",
+    "Minerals",
+    "Clays",
+    "Plants for Oils",
+    "Plants for Butters",
+    "Waxes",
+    "Resins",
+    "Gums",
+    "Colorants",
+    "Fermentation Starters",
+]
 
 BASE_PHYSICAL_FORMS: Set[str] = {
     "Whole", "Slices", "Diced", "Chopped", "Minced", "Crushed", "Ground",
@@ -57,10 +96,10 @@ EXAMPLE_INGREDIENTS: List[str] = [
     "Alkanet Root",
     "Aloe Vera",
     "Apricot Kernel Oil",
-    "Arrowroot Powder",
+    "Arrowroot",
     "Beeswax",
     "Bentonite Clay",
-    "Blue Cornflower",
+    "Cornflower",
     "Calendula",
     "Candelilla Wax",
     "Cane Sugar",
@@ -69,25 +108,25 @@ EXAMPLE_INGREDIENTS: List[str] = [
     "Epsom Salt",
     "Gluconic Acid",
     "Glycerin",
-    "Grapefruit Essential Oil",
+    "Grapefruit",
     "Green Tea",
-    "Honey Powder",
+    "Honey",
     "Jojoba Oil",
     "Kaolin Clay",
     "Kombucha Starter",
     "Lanolin",
     "Lavender",
-    "Lye Solution (50% NaOH)",
+    "Sodium Hydroxide",
     "Madder Root",
     "Magnesium Hydroxide",
     "Neem Oil",
-    "Orange Peel",
+    "Orange",
     "Pink Himalayan Salt",
-    "Potassium Carbonate Solution",
+    "Potassium Carbonate",
     "Propolis",
-    "Rosemary Oleoresin",
+    "Rosemary",
     "Sassafras Bark",
-    "Sea Buckthorn Pulp",
+    "Sea Buckthorn",
     "Shea Butter",
     "Sodium Bicarbonate",
     "Soy Lecithin",
@@ -96,9 +135,9 @@ EXAMPLE_INGREDIENTS: List[str] = [
     "Turmeric",
     "Vanilla Bean",
     "White Willow Bark",
-    "Witch Hazel Distillate",
+    "Witch Hazel",
     "Xanthan Gum",
-    "Ylang Ylang Essential Oil",
+    "Ylang Ylang",
     "Zinc Oxide",
 ]
 
@@ -112,7 +151,7 @@ EXAMPLE_PHYSICAL_FORMS: Set[str] = {
     "Tincture",
     "Oil Infusion",
     "Pressed Cake",
-    "Macreate",
+    "Macerate",
     "Lye Solution",
     "Stock Solution",
 }
@@ -124,55 +163,204 @@ SYSTEM_PROMPT = (
 )
 
 TERMS_PROMPT = """
-You build the authoritative master ingredient index.
+You are running Stage 1 (Term Builder). Your ONLY job is to propose NEW base ingredient terms.
 
-DEFINITIONS:
-- An INGREDIENT (aka base) is the abstract raw material such as "Lavender", "Shea Butter", "Cane Sugar", "Citric Acid".
-- An ITEM is the combination of INGREDIENT + PHYSICAL FORM (e.g., Lavender Buds, Lavender Essential Oil). ONLY return base ingredient names here.
-- Focus on botanicals, minerals, clays, waxes, fats, sugars, acids, fermentation adjuncts, resins, essential oils, extracts, isolates, and other raw materials used by small-batch makers.
-- EXCLUDE: packaging, containers, utensils, finished products, synthetic fragrances without a backing raw material, equipment, and vague marketing terms.
+DEFINITIONS (Stage 1):
+- A BASE INGREDIENT TERM is the canonical base name (usually 1–2 words) used to group purchasable items and their variants.
+- The base is typically the plant/mineral/salt/sugar/acid/clay/etc. root name (e.g., "Apple", "Acerola Cherry", "Cinnamon", "Frankincense", "Kaolin", "Citric Acid").
+- Do NOT output base+form names for these categories:
+  - Resins: output "Frankincense", NOT "Frankincense Resin"
+  - Plants for Oils: output "Cinnamon", NOT "Cinnamon Essential Oil"
+  - Plants for Butters: output "Shea", NOT "Shea Butter"
+- Do NOT output preparations/forms/variants as base terms (e.g., "Extract", "Essential Oil", "CO2 Extract", "Hydrosol", "% Solution", "Granulated", "2%").
+
+TARGET CURSOR:
+- seed_category: "{seed_category}"
+- required_initial: "{required_initial}" (case-insensitive)
+- start_after: "{start_after}"
 
 TASK:
-Return a strictly alphabetical list of NEW base ingredient names that have not appeared previously. Every entry must be unique, discoverable in supplier catalogs, and relevant to at least one target industry: soapmaking, personal care, artisan food & beverage, herbal apothecary, candles, cosmetics, confectionery, or fermentation.
+Return EXACTLY {count} NEW base ingredient terms for the given seed_category that:
+- start with required_initial
+- are lexicographically GREATER than start_after
+- are strictly alphabetized A→Z in the response
 
-SOLUTION & EXTRACT GUIDANCE:
-- Include buffered solutions, stock lye solutions (e.g., 50% NaOH), mineral brines, herbal glycerites, tinctures, vinegars, and other make-ready raw solutions when they are handled as ingredients.
-- For botanicals with essential oils, hydrosols, absolutes, CO2 extracts, etc., treat the plant as the ingredient and enumerate those forms inside `common_forms`.
+IMPORTANT (NEXT-TERM INTENT):
+- Prefer the *very next* alphabetical base ingredient(s) in this seed_category after start_after.
+- If you are unsure of the exact next term, return the closest plausible next terms without skipping far ahead.
 
-For each ingredient, list the most common PHYSICAL FORMS (include essential oil/extract variants when applicable).
-
-CONSTRAINTS:
-- Provide EXACTLY {count} ingredient records.
-- The first ingredient must be lexicographically GREATER than "{start_after}".
-- Alphabetize A-Z.
-- Avoid duplicates of the provided examples.
-- Use concise proper names (e.g., "Calendula", "Magnesium Hydroxide").
-- Assign a relevance score from 1-10 (integer) where 10 = essential for small-batch makers and 1 = niche or situational.
-- If no valid ingredients remain under the constraints, return an empty list.
-
-ANTI-GAP RULE (IMPORTANT):
-- All returned ingredient names MUST start with "{required_initial}" (case-insensitive).
-- This prevents skipping ahead to later letters when many earlier-letter ingredients remain.
+STYLE RULES:
+- Use concise proper names; avoid descriptors like "organic", "raw", "powder", "oil", "extract", "resin".
+- Multi-word is allowed when needed (e.g., "Sea Buckthorn", "Pink Himalayan Salt", "Marshmallow Root").
+- Never include parentheticals.
 
 OUTPUT FORMAT:
 Return JSON only:
-{{
-  "ingredients": [
-    {{
+{
+  "seed_category": "{seed_category}",
+  "terms": [
+    {
       "name": "string",
-      "category": "one of: Botanical, Mineral, Animal-Derived, Fermentation, Chemical, Resin, Wax, Fatty Acid, Sugar, Acid, Salt, Aroma",
-      "industries": ["Soap", "Cosmetic", "Candle", "Confection", "Beverage", "Herbal", "Baking", "Fermentation", "Aromatherapy"],
-      "common_forms": ["Powder", "Essential Oil", ...],
-      "notes": "1-sentence rationale",
-      "priority_score": 1-10 integer (10 = highest relevance/urgency for makers)
-    }}
-  ],
-  "physical_forms": ["unique physical forms referenced"]
-}}
+      "priority_score": 1-10 integer
+    }
+  ]
+}
 
-EXAMPLES TO EMULATE:
+EXAMPLES (do not repeat these):
 {examples}
 """
+
+
+# ------------------------------------------------------------------
+# Term validation / de-dup (defense-in-depth against "forms as bases")
+# ------------------------------------------------------------------
+_FORM_LIKE_PATTERNS: Tuple[re.Pattern[str], ...] = tuple(
+    re.compile(pattern, flags=re.IGNORECASE)
+    for pattern in (
+        r"\bessential\s+oil\b",
+        r"\bhydrosol\b",
+        r"\babsolute\b",
+        r"\bco2\b",
+        r"\boleoresin\b",
+        r"\bdistillate\b",
+        r"\btincture\b",
+        r"\bglycerite\b",
+        r"\binfusion\b",
+        r"\bdecoction\b",
+        r"\bmacerat(?:e|ion)\b",
+        r"\bextract\b",
+        r"\bisolate\b",
+        r"\bsolution\b",
+        r"\bbrine\b",
+        r"\b\d+(\.\d+)?\s*%\b",
+        # Variation-ish adjectives that should not appear as standalone bases.
+        r"\bgranulated\b",
+        r"\bpowdered\b",
+        r"\brefined\b",
+        r"\bunrefined\b",
+        r"\bdeodorized\b",
+        r"\bfiltered\b",
+        r"\bunfiltered\b",
+        r"\bunsweetened\b",
+        r"\bsweetened\b",
+    )
+)
+
+
+def _looks_like_form_not_base(term: str) -> bool:
+    """Return True if `term` appears to be a prepared form (not a canonical base)."""
+    cleaned = (term or "").strip()
+    if not cleaned:
+        return True
+    # Avoid "X (something)" style variants at the term level; those belong in items/synonyms.
+    if "(" in cleaned or ")" in cleaned:
+        return True
+    return any(pattern.search(cleaned) for pattern in _FORM_LIKE_PATTERNS)
+
+
+def _normalize_source_name(value: str) -> str:
+    """Best-effort normalization for source-derived names into base terms."""
+    cleaned = (value or "").strip().strip('"').strip()
+    cleaned = cleaned.rstrip(",").strip()
+    cleaned = re.sub(r"\s+", " ", cleaned).strip()
+    if not cleaned:
+        return ""
+    # Drop obvious preparation suffixes (keep base).
+    cleaned = re.sub(
+        r"\b(essential\s+oil|co2\s+extract|absolute|hydrosol|distillate|tincture|glycerite|extract|resin|gum|butter|oil)\b",
+        "",
+        cleaned,
+        flags=re.IGNORECASE,
+    )
+    cleaned = re.sub(r"\s+", " ", cleaned).strip(" -_/").strip()
+    # Title-case-ish: keep internal capitalization if present.
+    return cleaned
+
+
+def _guess_seed_category_from_name(name: str) -> str:
+    """Heuristic mapper into SEED_INGREDIENT_CATEGORIES."""
+    n = (name or "").strip().lower()
+    if not n:
+        return "Medicinal Herbs"
+    if any(word in n for word in ("starter", "scoby", "kefir", "culture", "yogurt", "kombucha", "sourdough")):
+        return "Fermentation Starters"
+    if "clay" in n:
+        return "Clays"
+    if any(word in n for word in ("salt", "epsom")):
+        return "Salts"
+    if any(word in n for word in ("acid", "vinegar")):
+        return "Acids"
+    if any(word in n for word in ("sugar",)):
+        return "Sugars"
+    if any(word in n for word in ("honey", "molasses", "maple", "agave", "syrup")):
+        return "Liquid Sweeteners"
+    if any(word in n for word in ("mica", "spirulina", "annatto", "charcoal", "oxide", "ultramarine")):
+        return "Colorants"
+    if "gum" in n or "xanthan" in n or "guar" in n:
+        return "Gums"
+    if any(word in n for word in ("frankincense", "myrrh", "damar", "copal", "benzoin")):
+        return "Resins"
+    if any(word in n for word in ("wax", "beeswax", "candelilla", "carnauba")):
+        return "Waxes"
+    if any(word in n for word in ("root",)):
+        return "Roots"
+    if any(word in n for word in ("bark",)):
+        return "Barks"
+    if any(word in n for word in ("flower", "rose", "lavender", "hibiscus", "jasmine")):
+        return "Flowers"
+    if any(word in n for word in ("cinnamon", "turmeric", "ginger", "clove", "vanilla", "pepper")):
+        return "Spices"
+    # Default to medicinal herbs as broadest plant bucket.
+    return "Medicinal Herbs"
+
+
+def _ingest_source_terms_to_db() -> int:
+    """Extract candidate bases from bundled CSVs and upsert into source_terms."""
+    try:
+        from . import database_manager
+    except Exception:  # pragma: no cover
+        return 0
+
+    rows: List[tuple[str, str, str]] = []
+    tgsc_path = DATA_SOURCES_DIR / "tgsc_ingredients.csv"
+    cosing_path = DATA_SOURCES_DIR / "cosing.csv"
+
+    if tgsc_path.exists():
+        with tgsc_path.open("r", encoding="utf-8", newline="") as handle:
+            reader = csv.DictReader(handle)
+            for row in reader:
+                raw = (row.get("common_name") or "").strip()
+                base = _normalize_source_name(raw)
+                if not base:
+                    continue
+                if _looks_like_form_not_base(base):
+                    continue
+                cat = _guess_seed_category_from_name(base)
+                rows.append((base, cat, "tgsc"))
+
+    if cosing_path.exists():
+        with cosing_path.open("r", encoding="utf-8", newline="") as handle:
+            reader = csv.DictReader(handle)
+            for row in reader:
+                raw = (row.get("INCI name") or row.get("INCI Name") or "").strip()
+                base = _normalize_source_name(raw)
+                if not base:
+                    continue
+                if _looks_like_form_not_base(base):
+                    continue
+                cat = _guess_seed_category_from_name(base)
+                rows.append((base, cat, "cosing"))
+
+    if not rows:
+        return 0
+    return database_manager.upsert_source_terms(rows)
+
+
+def _select_seed_category(letter_index: int) -> str:
+    """Pick a deterministic seed category (stable round-robin)."""
+    if not SEED_INGREDIENT_CATEGORIES:
+        return "Miscellaneous"
+    return SEED_INGREDIENT_CATEGORIES[letter_index % len(SEED_INGREDIENT_CATEGORIES)]
 
 
 class TermCollector:
@@ -207,6 +395,15 @@ class TermCollector:
         # Prefer the queue DB as the true source-of-truth for resuming across runs.
         if seed_from_db:
             self.ingest_terms_from_db()
+
+        # Optional: ingest deterministic source terms into the DB for source-first ratcheting.
+        if INGEST_SOURCE_TERMS:
+            try:
+                inserted = _ingest_source_terms_to_db()
+                if inserted:
+                    LOGGER.info("Ingested %s source-derived candidate terms into DB.", inserted)
+            except Exception as exc:  # pylint: disable=broad-except
+                LOGGER.warning("Source term ingest failed: %s", exc)
 
         # Never regress lookup files: if a physical forms file already exists (likely enriched
         # by the compiler), merge it in so a subsequent --write-forms-file doesn't wipe it.
@@ -373,13 +570,20 @@ class TermCollector:
         required_initial: str,
         count: int,
         examples: List[str],
+        seed_category: str,
     ) -> List[Tuple[str, int]]:
         """Request a small candidate pool from the AI and return (term, priority) tuples."""
-        payload = self._request_ai_batch(count=count, start_after=start_after, required_initial=required_initial, examples=examples)
+        payload = self._request_ai_batch(
+            count=count,
+            start_after=start_after,
+            required_initial=required_initial,
+            examples=examples,
+            seed_category=seed_category,
+        )
         if not payload:
             return []
         out: List[Tuple[str, int]] = []
-        for record in payload.get("ingredients", []) or []:
+        for record in payload.get("terms", []) or []:
             name = record.get("name")
             if not isinstance(name, str):
                 continue
@@ -388,12 +592,6 @@ class TermCollector:
                 continue
             priority = self._extract_priority(record.get("priority_score"))
             out.append((cleaned, priority))
-            for form in record.get("common_forms", []) or []:
-                if isinstance(form, str) and form.strip():
-                    self.physical_forms.add(form.strip())
-        for form in payload.get("physical_forms", []) or []:
-            if isinstance(form, str) and form.strip():
-                self.physical_forms.add(form.strip())
         return out
 
     def _select_next_term(
@@ -401,6 +599,7 @@ class TermCollector:
         *,
         start_after: str,
         required_initial: str,
+        seed_category: str,
         candidate_pool_size: int,
     ) -> Optional[Tuple[str, int]]:
         """Ask the AI for candidates and select the next viable lexicographic term."""
@@ -412,6 +611,17 @@ class TermCollector:
 
         attempts = 0
         pool_size = max(5, min(int(candidate_pool_size or DEFAULT_CANDIDATE_POOL_SIZE), MAX_CANDIDATE_POOL_SIZE))
+
+        # Source-first: if we have a deterministic next candidate from data sources, take it.
+        if USE_SOURCE_TERMS:
+            try:
+                from . import database_manager
+                next_source = database_manager.get_next_source_term(seed_category, required_initial, start_after)
+                if next_source and not _looks_like_form_not_base(next_source) and next_source not in self.terms:
+                    return next_source, SEED_PRIORITY
+            except Exception:  # pragma: no cover
+                pass
+
         while selected is None and attempts < MAX_SELECTION_ATTEMPTS:
             attempts += 1
             # Ramp pool size a bit if we're failing to find a viable term.
@@ -422,6 +632,7 @@ class TermCollector:
                 required_initial=req_fold.upper(),
                 count=candidate_count,
                 examples=examples,
+                seed_category=seed_category,
             )
 
             viable: List[Tuple[str, int]] = []
@@ -429,6 +640,8 @@ class TermCollector:
                 if term.casefold() <= start_fold:
                     continue
                 if term[:1].casefold() != req_fold:
+                    continue
+                if _looks_like_form_not_base(term):
                     continue
                 if term in self.terms:
                     continue
@@ -446,17 +659,15 @@ class TermCollector:
         count: int,
         candidate_pool_size: int = DEFAULT_CANDIDATE_POOL_SIZE,
     ) -> int:
-        """Stage 1: Generate NEW terms and upsert each one immediately into the DB.
+        """Stage 1: Seed NEW base terms into the task queue.
 
-        This builder is intentionally single-mode: round-robin by letter category.
+        Default mode is deterministic gap-fill from the normalized (curated) term list.
 
-        It generates the next term for A, then B, then C ... through Z, repeating.
-        Each step uses the DB as the source-of-truth for the per-letter cursor.
+        Modes:
+        - gapfill (default): pick random gaps per letter from the existing queue and insert the
+          next missing normalized term that fits that gap. No AI calls.
+        - ai (legacy): AI proposes next terms per cursor (kept for backwards compatibility).
         """
-        if not self.include_ai:
-            LOGGER.warning("OPENAI_API_KEY missing; skipping AI term generation")
-            return 0
-
         try:
             from . import database_manager
         except Exception as exc:  # pragma: no cover
@@ -469,18 +680,98 @@ class TermCollector:
             return 0
 
         letters = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+
+        # ------------------------------------------------------------------
+        # Mode: deterministic gap-fill (preferred).
+        # ------------------------------------------------------------------
+        if TERM_GENERATOR_MODE != "ai":
+            max_tries = max(1, int(GAPFILL_MAX_TRIES_PER_LETTER or 5))
+            # Keep going until we insert `count` new terms, or until a full A→Z pass yields nothing.
+            while inserted < normalized_count:
+                inserted_this_pass = 0
+                for initial in letters:
+                    tries = 0
+                    while tries < max_tries and inserted < normalized_count:
+                        tries += 1
+                        start_term = database_manager.get_random_term_for_initial(initial)
+                        start_after = start_term or ""
+                        end_before = (
+                            database_manager.get_next_term_for_initial_after(initial, start_after)
+                            if start_term
+                            else database_manager.get_next_term_for_initial_after(initial, "")
+                        )
+
+                        candidate = database_manager.get_next_missing_normalized_term_between(
+                            initial=initial,
+                            start_after=start_after,
+                            end_before=end_before,
+                        )
+                        if not candidate:
+                            continue
+                        term = candidate["term"]
+                        seed_category = candidate.get("seed_category") or None
+                        if _looks_like_form_not_base(term):
+                            continue
+
+                        priority = SEED_PRIORITY
+                        was_inserted = database_manager.upsert_term(term, priority, seed_category=seed_category)
+                        self._register_term(term, priority)
+                        if was_inserted:
+                            inserted += 1
+                            inserted_this_pass += 1
+                            LOGGER.info(
+                                "Gapfill queued %s/%s: %s [%s] between '%s' and '%s' (tries=%s/%s)",
+                                inserted,
+                                normalized_count,
+                                term,
+                                seed_category or "n/a",
+                                start_after or "<start>",
+                                end_before or "<end>",
+                                tries,
+                                max_tries,
+                            )
+                            break  # move to next letter after a successful insert
+                    # After max_tries, move to next letter (even if nothing inserted).
+
+                if inserted_this_pass == 0:
+                    LOGGER.warning(
+                        "Gapfill made no progress in a full A→Z pass; stopping early at %s/%s inserted.",
+                        inserted,
+                        normalized_count,
+                    )
+                    break
+
+            return inserted
+
+        # ------------------------------------------------------------------
+        # Mode: legacy AI cursoring (kept for backwards compatibility).
+        # ------------------------------------------------------------------
+        if not self.include_ai:
+            LOGGER.warning("OPENAI_API_KEY missing; skipping AI term generation (TERM_GENERATOR_MODE=ai)")
+            return 0
+
+        categories = SEED_INGREDIENT_CATEGORIES or ["Miscellaneous"]
         for idx in range(normalized_count):
-            initial = letters[idx % len(letters)]
-            start_after = database_manager.get_last_term_for_initial(initial) or ""
+            if USE_CATEGORY_CURSOR:
+                # Iterate by (letter, category) so every letter advances across all categories.
+                initial = letters[(idx // len(categories)) % len(letters)]
+                seed_category = categories[idx % len(categories)]
+                start_after = database_manager.get_last_term_for_initial_and_seed_category(initial, seed_category) or ""
+            else:
+                initial = letters[idx % len(letters)]
+                seed_category = "Miscellaneous"
+                start_after = database_manager.get_last_term_for_initial(initial) or ""
             selected = self._select_next_term(
                 start_after=start_after,
                 required_initial=initial,
+                seed_category=seed_category,
                 candidate_pool_size=candidate_pool_size,
             )
             if selected is None:
                 LOGGER.warning(
-                    "Unable to find next term for '%s' after '%s' on iteration %s/%s",
+                    "Unable to find next term for (%s, %s) after '%s' on iteration %s/%s",
                     initial,
+                    seed_category,
                     start_after or "<start>",
                     idx + 1,
                     normalized_count,
@@ -488,11 +779,18 @@ class TermCollector:
                 break
 
             term, priority = selected
-            was_inserted = database_manager.upsert_term(term, priority)
+            was_inserted = database_manager.upsert_term(term, priority, seed_category=seed_category)
             self._register_term(term, priority)
             if was_inserted:
                 inserted += 1
-                LOGGER.info("Queued term %s/%s: %s (priority=%s)", idx + 1, normalized_count, term, priority)
+                LOGGER.info(
+                    "Queued term %s/%s: %s [%s] (priority=%s)",
+                    idx + 1,
+                    normalized_count,
+                    term,
+                    seed_category,
+                    priority,
+                )
 
         return inserted
 
@@ -502,11 +800,20 @@ class TermCollector:
         combined = curated + live_samples
         return combined[:limit]
 
-    def _request_ai_batch(self, *, count: int, start_after: str, required_initial: str, examples: List[str]) -> Dict[str, Any]:
+    def _request_ai_batch(
+        self,
+        *,
+        count: int,
+        start_after: str,
+        required_initial: str,
+        seed_category: str,
+        examples: List[str],
+    ) -> Dict[str, Any]:
         user_prompt = TERMS_PROMPT.format(
             count=count,
             start_after=start_after.replace("\"", ""),
             required_initial=(required_initial or "").replace("\"", ""),
+            seed_category=(seed_category or "").replace("\"", ""),
             examples=json.dumps(examples, indent=2) if examples else "[]",
         )
 
