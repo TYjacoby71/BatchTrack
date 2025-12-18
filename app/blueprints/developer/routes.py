@@ -42,17 +42,17 @@ def vendor_signups():
     return render_template('developer/vendor_signups.html', signups=signups)
 
 
-@developer_bp.route('/waitlist-statistics')
+@developer_bp.route('/waitlist-signups')
 @limiter.limit("100 per minute")
 @permission_required('developer.access')
-def waitlist_statistics():
+def waitlist_signups_view():
     """
-    This is a placeholder for the waitlist statistics view.
-    This route should be implemented to display waitlist statistics.
+    This is a placeholder for the waitlist signups view.
+    This route should be implemented to display waitlist signups.
     """
     # In a real application, you would read from a database or JSON file
     # and render a template.
-    return "Waitlist Statistics - Not Implemented Yet"
+    return "Waitlist Signups - Not Implemented Yet"
 
 
 # --- Vendor Signup Functionality ---
