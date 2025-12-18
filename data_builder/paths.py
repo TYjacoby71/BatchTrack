@@ -31,7 +31,10 @@ COMPILER_STATE_DB = DATABASE_DIR / "compiler_state.db"
 
 def ensure_layout() -> None:
     DATA_SOURCES_DIR.mkdir(parents=True, exist_ok=True)
-    OUTPUTS_DIR.mkdir(parents=True, exist_ok=True)
+    # OUTPUTS_DIR may be a symlink (e.g. pointing at legacy ingredients/output).
+    # Avoid mkdir() on an existing symlink; ensure leaf dirs instead.
+    if not OUTPUTS_DIR.exists():
+        OUTPUTS_DIR.mkdir(parents=True, exist_ok=True)
     DATABASE_DIR.mkdir(parents=True, exist_ok=True)
     INGREDIENTS_OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
     TERM_STUBS_DIR.mkdir(parents=True, exist_ok=True)
