@@ -25,11 +25,11 @@
         <p class="text-muted small">{{ section.note }}</p>
         {% endif %}
         <div class="list-group">
-          {% for item in section.section_items %}
+          {% for item in section.rows %}
           <div class="list-group-item d-flex flex-column flex-md-row gap-3 justify-content-between align-items-start">
             <div>
               <div class="fw-semibold">
-                {{ item.display_key }}
+                {{ item.key }}
                 {% if not item.required %}<span class="badge bg-secondary ms-2">Optional</span>{% endif %}
                 {% if item.is_secret %}<span class="badge bg-warning text-dark ms-2">Secret</span>{% endif %}
               </div>
