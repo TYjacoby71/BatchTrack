@@ -541,6 +541,12 @@ def integrations_checklist():
         "notes": "POS/Shopify integration is stubbed. Enable later via a dedicated adapter.",
     }
 
+    # Create config matrix from launch_env_sections for the table
+    config_matrix = []
+    for section in launch_env_sections:
+        for row in section.get('rows', []):
+            config_matrix.append(row)
+
     return render_template(
         "developer/integrations.html",
         email_provider=email_provider,
@@ -558,7 +564,8 @@ def integrations_checklist():
         oauth_status=oauth_status,
         whop_status=whop_status,
         rate_limiters=rate_limiters,
-        config_sections=launch_env_sections,
+        launch_env_sections=launch_env_sections,
+        config_matrix=config_matrix,
     )
 
 
