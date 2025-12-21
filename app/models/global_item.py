@@ -29,6 +29,7 @@ class GlobalItem(db.Model):
 
     # Regulatory / labeling
     inci_name = db.Column(db.String(256), nullable=True)
+    cas_number = db.Column(db.String(64), nullable=True)
     certifications = db.Column(db.JSON, nullable=True)
 
     # Container/packaging specific fields

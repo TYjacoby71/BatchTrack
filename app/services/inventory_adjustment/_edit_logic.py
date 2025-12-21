@@ -261,6 +261,8 @@ def update_inventory_item(item_id: int, form_data: dict) -> tuple[bool, str]:
                 item.recommended_fragrance_load_pct = (form_data.get('recommended_fragrance_load_pct') or '').strip() or None
             if 'inci_name' in form_data:
                 item.inci_name = (form_data.get('inci_name') or '').strip() or None
+            if 'cas_number' in form_data:
+                item.cas_number = (form_data.get('cas_number') or '').strip() or None
 
             if 'fatty_acid_profile' in form_data:
                 raw_profile = (form_data.get('fatty_acid_profile') or '').strip()

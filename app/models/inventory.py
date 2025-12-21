@@ -67,6 +67,7 @@ class InventoryItem(ScopedModelMixin, db.Model):
     comedogenic_rating = db.Column(db.Integer, nullable=True)
     recommended_fragrance_load_pct = db.Column(db.String(64), nullable=True)
     inci_name = db.Column(db.String(256), nullable=True)
+    cas_number = db.Column(db.String(64), nullable=True)
     protein_content_pct = db.Column(db.Float, nullable=True)
     brewing_color_srm = db.Column(db.Float, nullable=True)
     brewing_potential_sg = db.Column(db.Float, nullable=True)

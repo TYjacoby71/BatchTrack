@@ -102,17 +102,34 @@ def public_global_item_search():
         for gi in items:
             ingredient_obj = gi.ingredient if getattr(gi, 'ingredient', None) else None
             ingredient_category_obj = ingredient_obj.category if ingredient_obj and getattr(ingredient_obj, 'category', None) else None
-            physical_form_obj = gi.physical_form if getattr(gi, 'physical_form', None) else None
+            variation_obj = gi.variation if getattr(gi, 'variation', None) else None
+            physical_form_obj = (
+                variation_obj.physical_form
+                if variation_obj and getattr(variation_obj, 'physical_form', None)
+                else (gi.physical_form if getattr(gi, 'physical_form', None) else None)
+            )
             ingredient_payload = None
             if ingredient_obj:
                 ingredient_payload = {
                     'id': ingredient_obj.id,
                     'name': ingredient_obj.name,
                     'slug': ingredient_obj.slug,
+                    # Definition-level values are defaults; item-level values live on GlobalItem.
                     'inci_name': ingredient_obj.inci_name,
                     'cas_number': ingredient_obj.cas_number,
                     'ingredient_category_id': ingredient_obj.ingredient_category_id,
                     'ingredient_category_name': ingredient_category_obj.name if ingredient_category_obj else None,
+                }
+            variation_payload = None
+            if variation_obj:
+                variation_payload = {
+                    'id': variation_obj.id,
+                    'name': variation_obj.name,
+                    'slug': variation_obj.slug,
+                    'default_unit': variation_obj.default_unit,
+                    'form_bypass': variation_obj.form_bypass,
+                    'physical_form_id': variation_obj.physical_form_id,
+                    'physical_form_name': physical_form_obj.name if physical_form_obj else None,
                 }
             physical_form_payload = None
             if physical_form_obj:
@@ -126,7 +143,9 @@ def public_global_item_search():
             category_tag_names = [tag.name for tag in getattr(gi, 'category_tags', [])]
 
             display_name = gi.name
-            if ingredient_payload and physical_form_payload:
+            if ingredient_payload and variation_payload and not variation_payload.get('form_bypass'):
+                display_name = f"{ingredient_payload['name']}, {variation_payload['name']}"
+            elif ingredient_payload and physical_form_payload:
                 display_name = f"{ingredient_payload['name']} ({physical_form_payload['name']})"
             elif ingredient_payload:
                 display_name = ingredient_payload['name']
@@ -139,6 +158,10 @@ def public_global_item_search():
                 'raw_name': gi.name,
                 'item_type': gi.item_type,
                 'ingredient': ingredient_payload,
+                'variation': variation_payload,
+                'variation_id': variation_payload['id'] if variation_payload else None,
+                'variation_name': variation_payload['name'] if variation_payload else None,
+                'variation_slug': variation_payload['slug'] if variation_payload else None,
                 'physical_form': physical_form_payload,
                 'functions': function_names,
                 'applications': application_names,
@@ -151,6 +174,7 @@ def public_global_item_search():
                 'recommended_fragrance_load_pct': gi.recommended_fragrance_load_pct,
                 'is_active_ingredient': gi.is_active_ingredient,
                 'inci_name': gi.inci_name,
+                'cas_number': getattr(gi, 'cas_number', None),
                 'protein_content_pct': gi.protein_content_pct,
                 'brewing_color_srm': gi.brewing_color_srm,
                 'brewing_potential_sg': gi.brewing_potential_sg,
@@ -189,6 +213,10 @@ def public_global_item_search():
                     'item_type': gi.item_type,
                     'ingredient_id': ingredient_payload['id'] if ingredient_payload else None,
                     'ingredient_name': ingredient_payload['name'] if ingredient_payload else None,
+                    'variation': variation_payload,
+                    'variation_id': variation_payload['id'] if variation_payload else None,
+                    'variation_name': variation_payload['name'] if variation_payload else None,
+                    'variation_slug': variation_payload['slug'] if variation_payload else None,
                     'physical_form': physical_form_payload,
                     'physical_form_name': physical_form_payload['name'] if physical_form_payload else None,
                     'default_unit': gi.default_unit,
@@ -202,6 +230,7 @@ def public_global_item_search():
                     'functions': function_names,
                     'applications': application_names,
                     'inci_name': gi.inci_name,
+                    'cas_number': getattr(gi, 'cas_number', None),
                     'protein_content_pct': gi.protein_content_pct,
                     'brewing_color_srm': gi.brewing_color_srm,
                     'brewing_potential_sg': gi.brewing_potential_sg,

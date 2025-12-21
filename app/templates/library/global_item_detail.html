@@ -14,6 +14,24 @@
       <span class="badge bg-light text-dark border">{{ item.ingredient_category.name }}</span>
       {% endif %}
     </div>
+    {% if item.item_type == 'ingredient' %}
+      <div class="mb-3 text-muted">
+        {% if item.ingredient %}
+          <div><strong>Ingredient:</strong> {{ item.ingredient.name }}</div>
+        {% endif %}
+        {% if item.variation %}
+          <div><strong>Variation:</strong> {{ item.variation.name }}</div>
+        {% elif item.physical_form %}
+          <div><strong>Form:</strong> {{ item.physical_form.name }}</div>
+        {% endif %}
+        {% if item.inci_name %}
+          <div><strong>INCI:</strong> {{ item.inci_name }}</div>
+        {% endif %}
+        {% if item.cas_number %}
+          <div><strong>CAS:</strong> {{ item.cas_number }}</div>
+        {% endif %}
+      </div>
+    {% endif %}
     <p class="lead text-muted mb-4">
       Save this item to your inventory to track suppliers, costs, and usage across recipes.
     </p>

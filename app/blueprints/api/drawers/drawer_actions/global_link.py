@@ -129,6 +129,7 @@ def global_link_confirm():
                 
                 inventory_item.recommended_fragrance_load_pct = global_item.recommended_fragrance_load_pct
                 inventory_item.inci_name = global_item.inci_name
+                inventory_item.cas_number = getattr(global_item, 'cas_number', None)
                 inventory_item.protein_content_pct = global_item.protein_content_pct
                 inventory_item.brewing_color_srm = global_item.brewing_color_srm
                 inventory_item.brewing_potential_sg = global_item.brewing_potential_sg

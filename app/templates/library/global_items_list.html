@@ -100,7 +100,7 @@
             <tr>
               <th scope="col">Ingredient definition</th>
               <th scope="col">Global item</th>
-              <th scope="col">Physical form</th>
+              <th scope="col">Variation</th>
               <th scope="col">Category</th>
               <th scope="col">Perishable</th>
               {% if show_hidden_columns %}
@@ -116,12 +116,7 @@
                 <td>
                   {% if gi.ingredient %}
                     <div class="fw-semibold">{{ gi.ingredient.name }}</div>
-                    <div class="text-muted small">
-                      {% if gi.ingredient.inci_name %}INCI {{ gi.ingredient.inci_name }}{% endif %}
-                      {% if gi.ingredient.cas_number %}
-                        <span class="ms-1">CAS {{ gi.ingredient.cas_number }}</span>
-                      {% endif %}
-                    </div>
+                    <div class="text-muted small">#{{ gi.ingredient.id }}</div>
                   {% else %}
                     <span class="text-muted">Unlinked definition</span>
                   {% endif %}
@@ -129,11 +124,28 @@
                 <td>
                   <div class="fw-semibold">{{ gi.name }}</div>
                   <div class="text-muted small">#{{ gi.id }}</div>
+                  <div class="text-muted small">
+                    {% if gi.inci_name %}INCI {{ gi.inci_name }}{% endif %}
+                    {% if gi.cas_number %}
+                      <span class="ms-1">CAS {{ gi.cas_number }}</span>
+                    {% endif %}
+                  </div>
                   {% if show_hidden_columns and gi.aliases %}
                     <div class="text-muted small">Aliases: {{ gi.aliases|join(', ') }}</div>
                   {% endif %}
                 </td>
-                <td>{{ gi.physical_form.name if gi.physical_form else '—' }}</td>
+                <td>
+                  {% if gi.variation %}
+                    {{ gi.variation.name }}
+                    {% if gi.variation.physical_form %}
+                      <div class="text-muted small">{{ gi.variation.physical_form.name }}</div>
+                    {% endif %}
+                  {% elif gi.physical_form %}
+                    {{ gi.physical_form.name }}
+                  {% else %}
+                    —
+                  {% endif %}
+                </td>
                 <td>{{ gi.ingredient_category.name if gi.ingredient_category else '—' }}</td>
                 <td>
                   {% if gi.default_is_perishable %}

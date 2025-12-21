@@ -405,6 +405,7 @@ def global_item_edit(item_id):
         "recommended_fragrance_load_pct": item.recommended_fragrance_load_pct,
         "is_active_ingredient": item.is_active_ingredient,
         "inci_name": item.inci_name,
+        "cas_number": getattr(item, "cas_number", None),
         "protein_content_pct": item.protein_content_pct,
         "brewing_color_srm": item.brewing_color_srm,
         "brewing_potential_sg": item.brewing_potential_sg,
@@ -440,6 +441,10 @@ def global_item_edit(item_id):
     item.recommended_fragrance_load_pct = form_data.get("recommended_fragrance_load_pct") or None
     item.is_active_ingredient = form_data.get("is_active_ingredient") == "on"
     item.inci_name = form_data.get("inci_name") or None
+    try:
+        item.cas_number = (form_data.get("cas_number") or "").strip() or None
+    except Exception:
+        pass
 
     protein = form_data.get("protein_content_pct")
     item.protein_content_pct = float(protein) if protein not in (None, "") else None
@@ -723,6 +728,10 @@ def create_global_item():
                 form_data.get("recommended_fragrance_load_pct", "").strip() or None
             )
             new_item.inci_name = form_data.get("inci_name", "").strip() or None
+            try:
+                new_item.cas_number = (form_data.get("cas_number") or "").strip() or None
+            except Exception:
+                new_item.cas_number = None
 
             protein_content = form_data.get("protein_content_pct", "").strip()
             if protein_content:
