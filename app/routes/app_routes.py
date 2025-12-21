@@ -216,6 +216,7 @@ def vendor_signup():
     """Handle vendor signup submissions"""
     try:
         from app.utils.json_store import read_json_file, write_json_file
+        from app.utils.timezone_utils import TimezoneUtils
         import os
         from datetime import datetime
         
@@ -254,7 +255,7 @@ def vendor_signup():
             'phone': data.get('phone', ''),
             'website': data.get('website', ''),
             'message': data.get('message', ''),
-            'timestamp': datetime.utcnow().isoformat(),
+            'timestamp': TimezoneUtils.utc_now().isoformat(),
             'status': 'pending'
         }
         
