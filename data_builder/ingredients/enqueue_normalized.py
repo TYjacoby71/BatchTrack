@@ -16,8 +16,17 @@ from . import database_manager
 
 LOGGER = logging.getLogger(__name__)
 
-BASE_DIR = Path(__file__).resolve().parent
-DEFAULT_NORMALIZED_CSV = BASE_DIR / "output" / "normalized_terms.csv"
+# Centralized path layout (supports both module and direct script execution).
+try:  # pragma: no cover
+    from data_builder import paths as builder_paths  # type: ignore
+except Exception:  # pragma: no cover
+    builder_paths = None  # type: ignore
+
+if builder_paths is not None:
+    builder_paths.ensure_layout()
+    DEFAULT_NORMALIZED_CSV = builder_paths.NORMALIZED_TERMS_CSV
+else:
+    DEFAULT_NORMALIZED_CSV = Path(__file__).resolve().parents[1] / "outputs" / "normalized_terms.csv"
 
 
 def _seed_from_db(limit: int | None) -> int:

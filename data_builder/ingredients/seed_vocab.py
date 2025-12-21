@@ -15,8 +15,17 @@ from . import database_manager
 
 LOGGER = logging.getLogger(__name__)
 
-BASE_DIR = Path(__file__).resolve().parent
-VOCAB_DIR = BASE_DIR / "data_sources" / "vocab"
+# Centralized path layout (supports both module and direct script execution).
+try:  # pragma: no cover
+    from data_builder import paths as builder_paths  # type: ignore
+except Exception:  # pragma: no cover
+    builder_paths = None  # type: ignore
+
+if builder_paths is not None:
+    builder_paths.ensure_layout()
+    VOCAB_DIR = builder_paths.VOCAB_DIR
+else:
+    VOCAB_DIR = Path(__file__).resolve().parents[1] / "data_sources" / "vocab"
 
 
 def _read_json(path: Path):

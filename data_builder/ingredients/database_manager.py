@@ -163,9 +163,18 @@ def _coerce_primary_category(value: str | None, term: str, seed_category: str | 
 def _derive_master_categories(ingredient_category: str, items: list[dict]) -> list[str]:
     """Deprecated: use _derive_master_categories_from_rules within a DB session."""
     return []
-BASE_DIR = Path(__file__).resolve().parent
-DEFAULT_DB_PATH = BASE_DIR / "compiler_state.db"
-DB_PATH = Path(os.environ.get("COMPILER_DB_PATH", DEFAULT_DB_PATH))
+try:  # pragma: no cover
+    from data_builder import paths as builder_paths  # type: ignore
+except Exception:  # pragma: no cover
+    builder_paths = None  # type: ignore
+
+if builder_paths is not None:
+    builder_paths.ensure_layout()
+    DEFAULT_DB_PATH = builder_paths.COMPILER_STATE_DB
+else:
+    DEFAULT_DB_PATH = Path(__file__).resolve().parents[1] / "database" / "compiler_state.db"
+DEFAULT_DB_PATH.parent.mkdir(parents=True, exist_ok=True)
+DB_PATH = Path(os.environ.get("COMPILER_DB_PATH", str(DEFAULT_DB_PATH)))
 DATABASE_URL = f"sqlite:///{DB_PATH}"
 
 engine = create_engine(
