@@ -392,7 +392,7 @@ def new_product():
             return redirect(url_for('products.new_product'))
 
         # Check if product already exists (check both new Product model and legacy ProductSKU)
-        from ...models.product import Product, ProductVariant
+        from ...models.product import Product
         existing_product = Product.query.filter_by(
             name=name,
             organization_id=current_user.organization_id
@@ -409,41 +409,25 @@ def new_product():
             return redirect(url_for('products.new_product'))
 
         try:
-            # Step 1: Create the main Product
-            product = Product(
-                name=name,
-                category_id=int(category_id),
-                low_stock_threshold=float(low_stock_threshold) if low_stock_threshold else 0,
-                organization_id=current_user.organization_id,
-                created_by=current_user.id
-            )
-            db.session.add(product)
-            db.session.flush()  # Get the product ID
-
-            # Step 2: Create the base ProductVariant named "Base"
-            variant = ProductVariant(
-                product_id=product.id,
-                name='Base',
-                description='Default base variant',
-                organization_id=current_user.organization_id,
-                created_by=current_user.id
-            )
-            db.session.add(variant)
-            db.session.flush()  # Get the variant ID
-
-            # Step 3: Create a base SKU using ProductService
+            # Use ProductService to create the entire hierarchy
             from ...services.product_service import ProductService
             base_sku = ProductService.get_or_create_sku(
-                product_name=product.name,
-                variant_name=variant.name,
+                product_name=name,
+                variant_name='Base',
                 size_label='Bulk',
                 unit='oz'  # Default unit
             )
 
+            # Set the category_id and low_stock_threshold on the created product
+            if base_sku.product:
+                base_sku.product.category_id = int(category_id)
+                base_sku.product.low_stock_threshold = float(low_stock_threshold) if low_stock_threshold else 0
+                base_sku.low_stock_threshold = float(low_stock_threshold) if low_stock_threshold else 0
+
             db.session.commit()
 
             flash('Product created successfully.', 'success')
-            return redirect(url_for('products.view_product', product_id=product.id))
+            return redirect(url_for('products.view_product', product_id=base_sku.product.id))
 
         except Exception as e:
             db.session.rollback()
