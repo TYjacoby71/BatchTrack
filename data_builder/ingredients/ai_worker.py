@@ -183,7 +183,7 @@ FORM & SOLUTION GUIDANCE:
 VARIATION vs PHYSICAL_FORM (IMPORTANT):
 - Put "Essential Oil", "CO2 Extract", "Absolute", "Hydrosol", "Tincture", "Glycerite", "% Solution", "Cold Pressed", "Refined", "Filtered", etc. in `variation`.
 - Keep `physical_form` as the physical state noun only (Oil, Liquid, Powder, Whole, Granules, Crystals, Butter, Wax, Resin, Gel, Paste, Syrup, Concentrate).
-- `item_name` should generally be: "{common_name} ({variation})" when variation is non-empty.
+- `item_name` should generally be: "{common_name} (variation)" when variation is non-empty.
 - Do NOT emit `item_name` as a source-of-truth; code will derive it. If `variation` is empty, set `variation_bypass`=true.
 
 SCHEMA (required):
