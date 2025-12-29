@@ -1,5 +1,6 @@
 # BatchTrack Flask Application
 entrypoint = "main.py"
+run = "python3 main.py"
 modules = ["python-3.11"]
 
 [agent]
@@ -28,6 +29,10 @@ externalPort = 80
 localPort = 8089
 externalPort = 5000
 
+[[ports]]
+localPort = 5051
+externalPort = 5051
+
 [workflows]
 runButton = "Run Flask Debug"
 
@@ -48,6 +53,15 @@ mode = "sequential"
 [[workflows.workflow.tasks]]
 task = "shell.exec"
 args = "python run.py"
+
+[[workflows.workflow]]
+name = "Run Data Builder (UI)"
+author = 39427985
+mode = "sequential"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "PYTHONPATH=. DATA_BUILDER_PORT=5051 python3 -m data_builder.service"
 
 
 

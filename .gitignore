@@ -61,8 +61,11 @@ local_settings.py
 db.sqlite3
 db.sqlite3-journal
 
-# Local compiler state (generated)
-data_builder/ingredients/compiler_state.db
+# Data builder generated artifacts / state
+data_builder/outputs/
+data_builder/ingredients/output/
+data_builder/database/*.db
+data_builder/database/*.sqlite*
 
 # Flask stuff:
 instance/

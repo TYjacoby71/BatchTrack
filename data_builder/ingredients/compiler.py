@@ -18,13 +18,29 @@ except ImportError:  # pragma: no cover
     import database_manager  # type: ignore
 
 LOGGER = logging.getLogger("data_builder.ingredients.compiler")
-BASE_DIR = Path(__file__).resolve().parent
-OUTPUT_DIR = BASE_DIR / "output"
-INGREDIENT_DIR = OUTPUT_DIR / "ingredients"
-PHYSICAL_FORMS_FILE = OUTPUT_DIR / "physical_forms.json"
-VARIATIONS_FILE = OUTPUT_DIR / "variations.json"
-TAXONOMY_FILE = OUTPUT_DIR / "taxonomies.json"
-DEFAULT_TERMS_FILE = BASE_DIR / "terms.json"
+
+# Centralized path layout (supports both module and direct script execution).
+try:  # pragma: no cover - import path helper when running as a package
+    from data_builder import paths as builder_paths  # type: ignore
+except Exception:  # pragma: no cover - direct script execution fallback
+    builder_paths = None  # type: ignore
+
+if builder_paths is not None:
+    builder_paths.ensure_layout()
+    OUTPUT_DIR = builder_paths.OUTPUTS_DIR
+    INGREDIENT_DIR = builder_paths.INGREDIENTS_OUTPUT_DIR
+    PHYSICAL_FORMS_FILE = builder_paths.PHYSICAL_FORMS_FILE
+    VARIATIONS_FILE = builder_paths.VARIATIONS_FILE
+    TAXONOMY_FILE = builder_paths.TAXONOMIES_FILE
+    DEFAULT_TERMS_FILE = builder_paths.TERMS_FILE
+else:
+    BUILDER_ROOT = Path(__file__).resolve().parents[1]
+    OUTPUT_DIR = BUILDER_ROOT / "outputs"
+    INGREDIENT_DIR = OUTPUT_DIR / "ingredients"
+    PHYSICAL_FORMS_FILE = OUTPUT_DIR / "physical_forms.json"
+    VARIATIONS_FILE = OUTPUT_DIR / "variations.json"
+    TAXONOMY_FILE = OUTPUT_DIR / "taxonomies.json"
+    DEFAULT_TERMS_FILE = BUILDER_ROOT / "data_sources" / "terms.json"
 DEFAULT_SLEEP_SECONDS = float(os.getenv("COMPILER_SLEEP_SECONDS", "3"))
 WRITE_INGREDIENT_FILES = os.getenv("COMPILER_WRITE_INGREDIENT_FILES", "0").strip() in {"1", "true", "True"}
 
