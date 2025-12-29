@@ -429,6 +429,16 @@ def new_product():
                 created_by=current_user.id
             )
             db.session.add(variant)
+            db.session.flush()  # Get the variant ID
+
+            # Step 3: Create a base SKU using ProductService
+            from ...services.product_service import ProductService
+            base_sku = ProductService.get_or_create_sku(
+                product_name=product.name,
+                variant_name=variant.name,
+                size_label='Bulk',
+                unit='oz'  # Default unit
+            )
 
             db.session.commit()
 
