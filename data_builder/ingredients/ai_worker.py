@@ -483,6 +483,7 @@ SCHEMA:
 
 def _render_prompt(ingredient_name: str) -> str:
     return PROMPT_TEMPLATE.format(
+        common_name=ingredient_name.strip(),
         ingredient=ingredient_name.strip(),
         schema=JSON_SCHEMA_SPEC,
         error_object=json.dumps(ERROR_OBJECT),
