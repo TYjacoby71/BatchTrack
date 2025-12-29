@@ -209,6 +209,10 @@
                     <label for="editInciName">INCI Name</label>
                     <input type="text" class="form-control" id="editInciName" name="inci_name" value="{{ item.inci_name or '' }}" placeholder="e.g. Butyrospermum Parkii Butter">
                   </div>
+                  <div class="form-group col-md-6" id="casNumberField" style="display:none;">
+                    <label for="editCasNumber">CAS Number</label>
+                    <input type="text" class="form-control" id="editCasNumber" name="cas_number" value="{{ item.cas_number or '' }}" placeholder="e.g. 8006-64-2">
+                  </div>
                 </div>
                 <div class="form-row">
                   <div class="form-group col-md-4" id="proteinContentField" style="display:none;">
@@ -485,6 +489,7 @@ document.addEventListener('DOMContentLoaded', function() {
       'recommendedUsageField',
       'recommendedFragranceField',
       'inciNameField',
+      'casNumberField',
       'proteinContentField',
       'brewingColorField',
       'brewingPotentialField',

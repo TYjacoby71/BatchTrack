@@ -8,6 +8,7 @@ from .subscription_tiers import subscription_tiers_bp
 from .addons import addons_bp
 from app.utils.permissions import permission_required
 from app.utils.json_store import read_json_file, write_json_file
+from app.utils.timezone_utils import TimezoneUtils
 import os
 import datetime
 
@@ -75,7 +76,7 @@ def api_vendor_signup():
         'vendor_url': data.get('vendor_url'),
         'contact_email': data.get('contact_email'),
         'message': data.get('message', ''),
-        'timestamp': datetime.datetime.utcnow().isoformat()
+        'timestamp': TimezoneUtils.utc_now().isoformat()
     }
 
     vendor_file = os.path.join('data', 'vendor_signups.json')
