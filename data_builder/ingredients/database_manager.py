@@ -456,6 +456,10 @@ class SourceItem(Base):
     definition_display_name = Column(Text, nullable=True, default=None)
     item_display_name = Column(Text, nullable=True, default=None)
 
+    # Deterministic derived tags for UI grouping / filtering (pre-compile).
+    derived_function_tags_json = Column(Text, nullable=False, default="[]")
+    derived_master_categories_json = Column(Text, nullable=False, default="[]")
+
     raw_name = Column(Text, nullable=False)
     inci_name = Column(Text, nullable=True, default=None)
     cas_number = Column(String, nullable=True, default=None)
@@ -589,6 +593,8 @@ def _ensure_source_item_columns() -> None:
                 ("cas_numbers_json", "TEXT NOT NULL DEFAULT '[]'"),
                 ("definition_display_name", "TEXT"),
                 ("item_display_name", "TEXT"),
+                ("derived_function_tags_json", "TEXT NOT NULL DEFAULT '[]'"),
+                ("derived_master_categories_json", "TEXT NOT NULL DEFAULT '[]'"),
             ]
             for name, col_type in additions:
                 if name in column_names:

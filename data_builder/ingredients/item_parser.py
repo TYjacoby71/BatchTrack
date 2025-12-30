@@ -434,6 +434,8 @@ def extract_variation_and_physical_form(raw_name: str) -> tuple[str, str]:
         return "Amine Oxide", "Liquid"
     if re.search(r"\bbetaine\b", t):
         return "Betaine", "Liquid"
+    if re.search(r"\bsultaine\b", t) or re.search(r"\bhydroxysultaine\b", t):
+        return "Sultaine", "Liquid"
     if re.search(r"\bglucoside\b", t):
         return "Glucoside", "Liquid"
     if re.search(r"\bisethionate\b", t):
@@ -442,6 +444,16 @@ def extract_variation_and_physical_form(raw_name: str) -> tuple[str, str]:
         return "Sarcosinate", "Liquid"
     if re.search(r"\btaurate\b", t) or t.endswith("taurate"):
         return "Taurate", "Liquid"
+    if re.search(r"\blactylate\b", t):
+        return "Lactylate", "Solid"
+    if re.search(r"\bamphoacetate\b", t) or re.search(r"\bamphodiacetate\b", t):
+        return "Amphoacetate", "Liquid"
+    if re.search(r"\bglutamate\b", t):
+        return "Glutamate", "Solid"
+    if re.search(r"\bglycinate\b", t):
+        return "Glycinate", "Solid"
+    if re.search(r"\balaninate\b", t):
+        return "Alaninate", "Solid"
     # Many INCI salts are concatenated (e.g., "cumenesulfonate", "lignosulfonate").
     if re.search(r"sulfonate$", t) or re.search(r"\bsulfonate\b", t):
         return "Sulfonate", "Solid"
