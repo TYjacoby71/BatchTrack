@@ -465,6 +465,67 @@ class SourceItem(Base):
     ingested_at = Column(DateTime, nullable=False, default=datetime.utcnow)
 
 
+class SourceCatalogItem(Base):
+    """Merged, de-duplicated item record across source datasets.
+
+    Merge order (intent):
+    - Start with CosIng as authoritative for INCI/CAS/EC + function + restriction + update date.
+    - Overlay TGSC for common_name + physchem + odor/flavor + synonyms + URL when matched.
+
+    Guardrail:
+    - Never populate common_name from INCI. common_name should come from a source that
+      explicitly provides a common/trade/common name (e.g. TGSC), otherwise leave null
+      and allow the compiler to fill/alias later.
+    """
+
+    __tablename__ = "source_catalog_items"
+
+    # Canonical identity key, typically "cas:<CAS>" or "ec:<EC>" or "inci:<normalized inci>".
+    key = Column(String, primary_key=True)
+
+    # Shared identifiers
+    inci_name = Column(Text, nullable=True, default=None)
+    cas_number = Column(String, nullable=True, default=None)
+    ec_number = Column(String, nullable=True, default=None)
+
+    # Common name (never set from INCI)
+    common_name = Column(Text, nullable=True, default=None)
+
+    # --- CosIng fields ---
+    cosing_ref_nos_json = Column(Text, nullable=False, default="[]")  # JSON list of ref nos
+    cosing_inn_name = Column(Text, nullable=True, default=None)
+    cosing_ph_eur_name = Column(Text, nullable=True, default=None)
+    cosing_description = Column(Text, nullable=True, default=None)
+    cosing_restriction = Column(Text, nullable=True, default=None)
+    cosing_functions_raw = Column(Text, nullable=True, default=None)
+    cosing_functions_json = Column(Text, nullable=False, default="[]")  # JSON list
+    cosing_update_date = Column(String, nullable=True, default=None)
+
+    # --- TGSC fields ---
+    tgsc_category = Column(String, nullable=True, default=None)
+    tgsc_botanical_name = Column(Text, nullable=True, default=None)
+    tgsc_einecs_number = Column(String, nullable=True, default=None)
+    tgsc_fema_number = Column(String, nullable=True, default=None)
+    tgsc_molecular_formula = Column(String, nullable=True, default=None)
+    tgsc_molecular_weight = Column(String, nullable=True, default=None)
+    tgsc_boiling_point = Column(String, nullable=True, default=None)
+    tgsc_melting_point = Column(String, nullable=True, default=None)
+    tgsc_density = Column(String, nullable=True, default=None)
+    tgsc_odor_description = Column(Text, nullable=True, default=None)
+    tgsc_flavor_description = Column(Text, nullable=True, default=None)
+    tgsc_description = Column(Text, nullable=True, default=None)
+    tgsc_uses = Column(Text, nullable=True, default=None)
+    tgsc_safety_notes = Column(Text, nullable=True, default=None)
+    tgsc_solubility = Column(Text, nullable=True, default=None)
+    tgsc_synonyms = Column(Text, nullable=True, default=None)
+    tgsc_natural_occurrence = Column(Text, nullable=True, default=None)
+    tgsc_url = Column(Text, nullable=True, default=None)
+
+    # Provenance
+    sources_json = Column(Text, nullable=False, default="{}")  # merged source refs
+    merged_at = Column(DateTime, nullable=False, default=datetime.utcnow)
+
+
 VALID_STATUSES = {"pending", "processing", "completed", "error"}
 
 
@@ -479,6 +540,7 @@ def ensure_tables_exist() -> None:
     _ensure_normalized_term_columns()
     _seed_taxonomy_tables()
     _ensure_source_item_indexes()
+    _ensure_source_catalog_indexes()
 
 
 def _ensure_source_item_indexes() -> None:
@@ -488,6 +550,18 @@ def _ensure_source_item_indexes() -> None:
             conn.execute(text("CREATE INDEX IF NOT EXISTS ix_source_items_source ON source_items(source)"))
             conn.execute(text("CREATE INDEX IF NOT EXISTS ix_source_items_status ON source_items(status)"))
             conn.execute(text("CREATE INDEX IF NOT EXISTS ix_source_items_derived_term ON source_items(derived_term)"))
+    except Exception:  # pragma: no cover
+        return
+
+
+def _ensure_source_catalog_indexes() -> None:
+    """Best-effort indexing for source_catalog_items (SQLite-safe)."""
+    try:
+        with engine.connect() as conn:
+            conn.execute(text("CREATE INDEX IF NOT EXISTS ix_source_catalog_cas ON source_catalog_items(cas_number)"))
+            conn.execute(text("CREATE INDEX IF NOT EXISTS ix_source_catalog_ec ON source_catalog_items(ec_number)"))
+            conn.execute(text("CREATE INDEX IF NOT EXISTS ix_source_catalog_inci ON source_catalog_items(inci_name)"))
+            conn.execute(text("CREATE INDEX IF NOT EXISTS ix_source_catalog_common ON source_catalog_items(common_name)"))
     except Exception:  # pragma: no cover
         return
 
