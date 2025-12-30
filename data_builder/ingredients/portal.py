@@ -9,6 +9,7 @@ from __future__ import annotations
 import argparse
 import csv
 import io
+import json
 import os
 from datetime import datetime
 from pathlib import Path
@@ -36,6 +37,24 @@ def _serialize_dt(value: Any) -> str:
     if isinstance(value, datetime):
         return value.isoformat()
     return str(value or "")
+
+
+def _safe_pretty_json(raw: Any) -> str:
+    """Pretty-print JSON for UI display (never raises)."""
+    try:
+        if raw is None:
+            return ""
+        if isinstance(raw, (dict, list)):
+            return json.dumps(raw, ensure_ascii=False, indent=2, sort_keys=True)
+        if isinstance(raw, str):
+            text = raw.strip()
+            if not text:
+                return ""
+            parsed = json.loads(text)
+            return json.dumps(parsed, ensure_ascii=False, indent=2, sort_keys=True)
+        return json.dumps(raw, ensure_ascii=False, indent=2, sort_keys=True)
+    except Exception:
+        return str(raw or "")
 
 
 def create_app(db_path: Optional[Path] = None) -> Flask:
@@ -94,6 +113,24 @@ def create_app(db_path: Optional[Path] = None) -> Flask:
             for item in item_rows:
                 items_by_term.setdefault(item.ingredient_term, []).append(item)
 
+            # Pull normalized list attributes for displayed items (applications, function_tags, etc.)
+            item_ids = [i.id for i in item_rows if getattr(i, "id", None) is not None]
+            value_rows = []
+            if item_ids:
+                value_rows = (
+                    session.query(database_manager.IngredientItemValue)
+                    .filter(database_manager.IngredientItemValue.item_id.in_(item_ids))
+                    .order_by(
+                        database_manager.IngredientItemValue.item_id.asc(),
+                        database_manager.IngredientItemValue.field.asc(),
+                        database_manager.IngredientItemValue.value.asc(),
+                    )
+                    .all()
+                )
+            values_by_item: dict[int, dict[str, list[str]]] = {}
+            for vr in value_rows:
+                values_by_item.setdefault(vr.item_id, {}).setdefault(vr.field, []).append(vr.value)
+
             # Summary counts
             summary = database_manager.get_queue_summary()
             source_summary = database_manager.get_source_item_summary()
@@ -108,6 +145,62 @@ def create_app(db_path: Optional[Path] = None) -> Flask:
             # stable ordering not required
             parts = [f"{k}={args[k]}" for k in args]
             return "?" + "&".join(parts) if parts else ""
+
+        def _render_item_block(i: database_manager.IngredientItemRecord) -> str:
+            scalars = [
+                ("status", getattr(i, "status", "") or ""),
+                ("approved", "true" if bool(getattr(i, "approved", False)) else "false"),
+                ("needs_review_reason", getattr(i, "needs_review_reason", "") or ""),
+                ("shelf_life_days", getattr(i, "shelf_life_days", None)),
+                ("ph_min", getattr(i, "ph_min", None)),
+                ("ph_max", getattr(i, "ph_max", None)),
+                ("flash_point_c", getattr(i, "flash_point_c", None)),
+                ("melting_point_c_min", getattr(i, "melting_point_c_min", None)),
+                ("melting_point_c_max", getattr(i, "melting_point_c_max", None)),
+                ("sap_naoh", getattr(i, "sap_naoh", None)),
+                ("sap_koh", getattr(i, "sap_koh", None)),
+                ("iodine_value", getattr(i, "iodine_value", None)),
+                ("usage_leave_on_max", getattr(i, "usage_leave_on_max", None)),
+                ("usage_rinse_off_max", getattr(i, "usage_rinse_off_max", None)),
+                ("storage_temp_c_min", getattr(i, "storage_temp_c_min", None)),
+                ("storage_temp_c_max", getattr(i, "storage_temp_c_max", None)),
+                ("storage_humidity_max", getattr(i, "storage_humidity_max", None)),
+            ]
+            scalars = [(k, v) for k, v in scalars if v not in (None, "", "None")]
+            scalar_html = "".join(
+                f"<div class='muted'><b>{escape(k)}</b>: {escape(str(v))}</div>" for k, v in scalars
+            )
+
+            tags = values_by_item.get(int(i.id), {}) if getattr(i, "id", None) is not None else {}
+            tag_html = ""
+            if tags:
+                sections = []
+                for field, values in tags.items():
+                    if not values:
+                        continue
+                    preview = ", ".join([escape(v) for v in values[:16]])
+                    suffix = f" … (+{len(values) - 16})" if len(values) > 16 else ""
+                    sections.append(f"<div class='muted'><b>{escape(field)}</b>: {preview}{suffix}</div>")
+                tag_html = "".join(sections)
+
+            pretty = _safe_pretty_json(getattr(i, "item_json", "") or "")
+            json_html = (
+                "<div style='margin-top:8px;'><b>item_json</b></div>"
+                "<pre style='white-space:pre-wrap; font-size:12px; background:#fafafa; border:1px solid #eee; padding:10px; border-radius:8px;'>"
+                f"{escape(pretty)}"
+                "</pre>"
+                if pretty
+                else "<div class='muted' style='margin-top:8px;'>No item_json</div>"
+            )
+
+            return (
+                "<details style='margin-top:6px;'>"
+                f"<summary><b>{escape(i.item_name)}</b> "
+                f"<span class='muted'>(variation: {escape(i.variation or '')}, form: {escape(i.physical_form or '')})</span>"
+                "</summary>"
+                f"<div style='margin-top:8px;'>{scalar_html}{tag_html}{json_html}</div>"
+                "</details>"
+            )
 
         def _render_term_cell(term: str) -> str:
             ingredient = ingredients_by_term.get(term)
@@ -136,20 +229,9 @@ def create_app(db_path: Optional[Path] = None) -> Flask:
                     core_bits.append(f"<div class='muted'><b>short</b>: {ingredient.short_description}</div>")
             items_html = ""
             if items:
-                rows_html = "".join(
-                    "<tr>"
-                    f"<td>{i.item_name}</td>"
-                    f"<td>{i.variation or ''}</td>"
-                    f"<td>{i.physical_form or ''}</td>"
-                    "</tr>"
-                    for i in items
-                )
                 items_html = (
                     "<div style='margin-top:8px;'><b>Items</b></div>"
-                    "<table style='margin-top:6px; width:100%; border-collapse:collapse;'>"
-                    "<thead><tr><th>item_name</th><th>variation</th><th>physical_form</th></tr></thead>"
-                    f"<tbody>{rows_html}</tbody>"
-                    "</table>"
+                    + "".join(_render_item_block(i) for i in items)
                 )
             details = "".join(core_bits) + items_html
             return f"<details><summary>{term}</summary><div style='margin-top:6px;'>{details}</div></details>"
@@ -515,6 +597,62 @@ def create_app(db_path: Optional[Path] = None) -> Flask:
                 .order_by(database_manager.IngredientItemRecord.item_name.asc())
                 .all()
             )
+            item_ids = [i.id for i in items if getattr(i, "id", None) is not None]
+            value_rows = []
+            if item_ids:
+                value_rows = (
+                    session.query(database_manager.IngredientItemValue)
+                    .filter(database_manager.IngredientItemValue.item_id.in_(item_ids))
+                    .order_by(
+                        database_manager.IngredientItemValue.item_id.asc(),
+                        database_manager.IngredientItemValue.field.asc(),
+                        database_manager.IngredientItemValue.value.asc(),
+                    )
+                    .all()
+                )
+            values_by_item: dict[int, dict[str, list[str]]] = {}
+            for vr in value_rows:
+                values_by_item.setdefault(vr.item_id, {}).setdefault(vr.field, []).append(vr.value)
+
+        def _render_item_attrs(i: database_manager.IngredientItemRecord) -> str:
+            tags = values_by_item.get(int(i.id), {}) if getattr(i, "id", None) is not None else {}
+            tag_lines = []
+            for field, values in tags.items():
+                if not values:
+                    continue
+                preview = ", ".join(values[:18])
+                suffix = f" … (+{len(values) - 18})" if len(values) > 18 else ""
+                tag_lines.append(f"{field}: {preview}{suffix}")
+            tag_blob = "\n".join(tag_lines)
+
+            pretty = _safe_pretty_json(getattr(i, "item_json", "") or "")
+            promoted = (
+                f"shelf_life_days={getattr(i,'shelf_life_days', None)}, "
+                f"ph_min={getattr(i,'ph_min', None)}, ph_max={getattr(i,'ph_max', None)}, "
+                f"usage_leave_on_max={getattr(i,'usage_leave_on_max', None)}, usage_rinse_off_max={getattr(i,'usage_rinse_off_max', None)}"
+            )
+
+            pretty_html = (
+                "<pre style='white-space:pre-wrap; font-size:12px; background:#fafafa; border:1px solid #eee; padding:10px; border-radius:8px;'>"
+                f"{escape(pretty)}"
+                "</pre>"
+                if pretty
+                else ""
+            )
+            tags_html = (
+                "<pre style='white-space:pre-wrap; font-size:12px; background:#fff; border:1px solid #eee; padding:10px; border-radius:8px;'>"
+                f"{escape(tag_blob)}"
+                "</pre>"
+                if tag_blob
+                else ""
+            )
+            return (
+                "<details>"
+                "<summary>view</summary>"
+                f"<div class='muted'><b>promoted</b>: {escape(promoted)}</div>"
+                f"{pretty_html}{tags_html}"
+                "</details>"
+            )
 
         item_rows = "".join(
             "<tr>"
@@ -524,10 +662,11 @@ def create_app(db_path: Optional[Path] = None) -> Flask:
             f"<td>{escape(i.physical_form or '')}</td>"
             f"<td>{escape(i.status)}</td>"
             f"<td>{escape(i.needs_review_reason or '')}</td>"
+            f"<td>{_render_item_attrs(i)}</td>"
             f"<td><a href='/item/{i.id}/edit'>edit</a></td>"
             "</tr>"
             for i in items
-        ) or "<tr><td colspan='7' class='muted'>No items.</td></tr>"
+        ) or "<tr><td colspan='8' class='muted'>No items.</td></tr>"
 
         return f"""
 <!doctype html>
@@ -548,7 +687,7 @@ def create_app(db_path: Optional[Path] = None) -> Flask:
     <table border="1" cellpadding="6" cellspacing="0" style="border-collapse:collapse; width:100%;">
       <thead>
         <tr>
-          <th>id</th><th>item_name</th><th>variation</th><th>physical_form</th><th>status</th><th>needs_review_reason</th><th></th>
+          <th>id</th><th>item_name</th><th>variation</th><th>physical_form</th><th>status</th><th>needs_review_reason</th><th>attributes</th><th></th>
         </tr>
       </thead>
       <tbody>
