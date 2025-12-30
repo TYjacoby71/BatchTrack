@@ -109,7 +109,9 @@ def derive_display_names(*, limit: int = 0) -> dict[str, int]:
     # Build cross-ref maps from merged catalog.
     cas_to_common: dict[str, str] = {}
     cas_to_inci: dict[str, str] = {}
-    inci_to_common: dict[str, str] = {}
+    # NOTE: INCI->common overlay is intentionally NOT used here because it can produce
+    # incorrect mappings when TGSC rows get merged onto an INCI string loosely.
+    # We only trust common_name when it was obtained via strong identity linkage (CAS).
 
     with database_manager.get_session() as session:
         for item in session.query(database_manager.SourceCatalogItem).yield_per(1000):
@@ -119,8 +121,6 @@ def derive_display_names(*, limit: int = 0) -> dict[str, int]:
             if cas:
                 cas_to_common.setdefault(cas, common)
                 cas_to_inci.setdefault(cas, inci)
-            if inci:
-                inci_to_common.setdefault(_norm_inci(inci), common)
 
         q = session.query(database_manager.SourceItem)
         if limit and int(limit) > 0:
@@ -152,21 +152,23 @@ def derive_display_names(*, limit: int = 0) -> dict[str, int]:
                 if c:
                     common = c
                     break
-            if not common and inci_norm:
-                common = _clean(inci_to_common.get(inci_norm, ""))
 
             # Base label priority:
             # 1) catalog common_name (stripped of variation suffix)
-            # 2) catalog inci_name / source inci_name (for chemical-like)
-            # 3) derived_term (parser)
+            # 2) INCI label for chemical-like identities; otherwise derived_term
+            # 3) derived_term (parser) / raw_name fallback
             # 4) raw_name (last resort)
             derived_term = _clean(row.derived_term)
             base = ""
             if common:
                 base = _base_from_common_name(common, variation)
             elif _clean(row.inci_name):
-                # Keep INCI label as base for chemical-like or when no common name exists.
-                base = _clean(row.inci_name)
+                # Keep INCI label as base for chemical-like; for botanicals prefer derived_term.
+                inci_label = _clean(row.inci_name)
+                if _is_chemical_like(inci_label):
+                    base = inci_label
+                else:
+                    base = derived_term or inci_label
             elif derived_term:
                 base = derived_term
             else:

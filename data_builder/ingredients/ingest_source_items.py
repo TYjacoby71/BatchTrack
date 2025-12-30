@@ -206,6 +206,15 @@ def ingest_sources(
         ingredient_category = infer_primary_category(definition, origin, raw_name=raw) if definition else ""
         refinement_level = infer_refinement(definition or raw, raw)
         variation, physical_form = extract_variation_and_physical_form(raw)
+        # CosIng provides descriptions that explicitly distinguish volatile (essential) oils.
+        # If the INCI contains "... OIL" but is not a seed/nut/kernel oil, and the description
+        # says "volatile oil", treat as Essential Oil deterministically.
+        if source == "cosing" and " oil" in raw.lower():
+            lower = raw.lower()
+            if not any(tok in lower for tok in ("seed oil", "kernel oil", "nut oil")):
+                desc = (payload.get("Chem/IUPAC Name / Description") or "").strip().lower()
+                if "volatile oil" in desc:
+                    variation, physical_form = "Essential Oil", "Oil"
 
         status = "linked" if definition else "orphan"
         reason = None

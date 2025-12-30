@@ -388,6 +388,14 @@ def extract_variation_and_physical_form(raw_name: str) -> tuple[str, str]:
     if "solution" in t or re.search(r"\b\d{1,3}\s*%(\s*w/w)?\b", t):
         return "Solution", "Liquid"
 
+    # Food-like forms (important for makers; common in TGSC/other sources)
+    if " puree" in f" {t} " or " purée" in f" {t} " or t.endswith(" puree") or t.endswith(" purée"):
+        return "Puree", "Liquid"
+    if " juice" in f" {t} " or t.endswith(" juice"):
+        return "Juice", "Liquid"
+    if " pulp" in f" {t} " or t.endswith(" pulp"):
+        return "Pulp", "Paste"
+
     # Oil variants (plant parts)
     for part in ("seed", "kernel", "nut", "leaf", "needle", "cone", "bark", "wood", "flower", "herb", "root", "rhizome", "stem"):
         token = f"{part} oil"
