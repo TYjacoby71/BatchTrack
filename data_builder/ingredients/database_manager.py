@@ -451,6 +451,11 @@ class SourceItem(Base):
     content_hash = Column(String, nullable=True, default=None)
     is_composite = Column(Boolean, nullable=False, default=False)
 
+    # Derived display fields (maker-facing names; deterministic).
+    # These are computed from merged catalog signals + derived variation/form.
+    definition_display_name = Column(Text, nullable=True, default=None)
+    item_display_name = Column(Text, nullable=True, default=None)
+
     raw_name = Column(Text, nullable=False)
     inci_name = Column(Text, nullable=True, default=None)
     cas_number = Column(String, nullable=True, default=None)
@@ -582,6 +587,8 @@ def _ensure_source_item_columns() -> None:
                 ("content_hash", "TEXT"),
                 ("is_composite", "INTEGER NOT NULL DEFAULT 0"),
                 ("cas_numbers_json", "TEXT NOT NULL DEFAULT '[]'"),
+                ("definition_display_name", "TEXT"),
+                ("item_display_name", "TEXT"),
             ]
             for name, col_type in additions:
                 if name in column_names:
