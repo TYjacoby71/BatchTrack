@@ -44,9 +44,10 @@ def _first_cas(value: str) -> str:
     v = (value or "").strip()
     if not v:
         return ""
-    # Some rows contain multiple CAS values separated by commas.
-    first = v.split(",")[0].strip()
-    return first
+    # Some rows contain multiple CAS values separated by commas or slashes.
+    import re
+    m = re.search(r"\b(\d{2,7}-\d{2}-\d)\b", v)
+    return m.group(1) if m else ""
 
 
 def _iter_cosing_rows(path: Path) -> Iterable[Dict[str, Any]]:
@@ -54,7 +55,12 @@ def _iter_cosing_rows(path: Path) -> Iterable[Dict[str, Any]]:
         return []
     with path.open("r", encoding="utf-8", newline="") as handle:
         reader = csv.DictReader(handle)
-        for row in reader:
+        for idx, row in enumerate(reader, start=1):
+            # Preserve 1:1 row traceability
+            cosing_ref = (row.get("COSING Ref No") or "").strip()
+            row["__rownum__"] = idx
+            row["__cosing_ref__"] = cosing_ref
+            row["__source_row_id__"] = cosing_ref or f"row:{idx}"
             yield row
 
 
@@ -63,7 +69,11 @@ def _iter_tgsc_rows(path: Path) -> Iterable[Dict[str, Any]]:
         return []
     with path.open("r", encoding="utf-8", newline="") as handle:
         reader = csv.DictReader(handle)
-        for row in reader:
+        for idx, row in enumerate(reader, start=1):
+            url = (row.get("url") or "").strip()
+            row["__rownum__"] = idx
+            row["__tgsc_url__"] = url
+            row["__source_row_id__"] = url or f"row:{idx}"
             yield row
 
 
@@ -158,6 +168,7 @@ def ingest_sources(
     sample_size: Optional[int] = None,
     seed: Optional[int] = None,
     include: Optional[list[str]] = None,
+    write_terms: bool = True,
 ) -> tuple[int, int]:
     """Ingest source items and derived normalized terms.
 
@@ -184,7 +195,24 @@ def ingest_sources(
         if not definition:
             reason = "Unable to derive definition term from source item"
 
-        key = _sha_key(source, raw, (inci_name or ""), (cas_number or ""))
+        # 1:1 traceability key: tie to the *source row id* (not content), so we never collapse
+        # distinct source rows into one item.
+        source_row_id = str(payload.get("__source_row_id__") or "").strip()
+        source_row_number = payload.get("__rownum__")
+        source_ref = (
+            (payload.get("__cosing_ref__") or "").strip()
+            if source == "cosing"
+            else (payload.get("__tgsc_url__") or "").strip()
+        )
+        key = _sha_key(source, source_row_id or f"row:{source_row_number or ''}", raw)
+        content_hash = _sha_key(source, raw, (inci_name or ""), (cas_number or ""))
+
+        # Flag composites/mixtures for review (no AI, no compilation).
+        blob = raw.lower()
+        is_composite = any(tok in blob for tok in ("/", "copolymer", "crosspolymer", "blend", "mixture"))
+        if is_composite and status != "orphan":
+            status = "review"
+            reason = (reason + "; " if reason else "") + "Composite/mixture-like source name"
         # csv.DictReader may use a None key for overflow columns; JSON cannot sort mixed key types.
         safe_payload: dict[str, Any] = {}
         extras: list[Any] = []
@@ -202,6 +230,11 @@ def ingest_sources(
             {
                 "key": key,
                 "source": source,
+                "source_row_id": source_row_id or None,
+                "source_row_number": int(source_row_number) if source_row_number is not None else None,
+                "source_ref": source_ref or None,
+                "content_hash": content_hash,
+                "is_composite": bool(is_composite),
                 "raw_name": raw,
                 "inci_name": (inci_name or "").strip() or None,
                 "cas_number": (cas_number or "").strip() or None,
@@ -217,7 +250,7 @@ def ingest_sources(
             }
         )
 
-        if definition:
+        if write_terms and definition:
             # Seed category for cursoring can use ingredient_category for now (data_builder only).
             rec = normalized_terms.setdefault(
                 definition,
@@ -277,7 +310,9 @@ def ingest_sources(
             _register_item(source="tgsc", raw_name=name, inci_name="", cas_number=cas, payload=row)
 
     inserted_items = database_manager.upsert_source_items(source_rows)
-    inserted_terms = database_manager.upsert_normalized_terms(list(normalized_terms.values()))
+    inserted_terms = 0
+    if write_terms:
+        inserted_terms = database_manager.upsert_normalized_terms(list(normalized_terms.values()))
     return inserted_items, inserted_terms
 
 
@@ -289,6 +324,7 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--sample", type=int, default=0, help="Random sample size (combined across sources)")
     parser.add_argument("--seed", type=int, default=0, help="Random seed for --sample")
     parser.add_argument("--include", action="append", default=[], help="Force-include rows whose name contains this substring (case-insensitive). Can be repeated.")
+    parser.add_argument("--no-terms", action="store_true", help="Do not upsert normalized_terms (items-only ingestion).")
     return parser.parse_args(argv)
 
 
@@ -307,6 +343,7 @@ def main(argv: list[str] | None = None) -> None:
         sample_size=sample_size,
         seed=seed,
         include=list(args.include or []),
+        write_terms=not bool(args.no_terms),
     )
     LOGGER.info("Inserted %s new source_items and %s new normalized_terms.", inserted_items, inserted_terms)
 

@@ -392,6 +392,12 @@ def extract_variation_and_physical_form(raw_name: str) -> tuple[str, str]:
     # Essential oil / absolute / concrete are treated as variation; physical_form still Oil/Liquid.
     if "essential oil" in t:
         return "Essential Oil", "Oil"
+    if "ferment filtrate" in t:
+        return "Ferment Filtrate", "Liquid"
+    if "ferment lysate" in t or "ferment-lysate" in t:
+        return "Ferment Lysate", "Liquid"
+    if "ferment" in t and "filtrate" in t:
+        return "Ferment Filtrate", "Liquid"
     if "co2 extract" in t or "co₂ extract" in t:
         return "CO2 Extract", "Liquid"
     if "absolute" in t:
@@ -404,6 +410,8 @@ def extract_variation_and_physical_form(raw_name: str) -> tuple[str, str]:
         return "Tincture", "Liquid"
     if "glycerite" in t:
         return "Glycerite", "Liquid"
+    if "oleyl esters" in t:
+        return "Oleyl Esters", "Liquid"
     if "extract" in t:
         return "Extract", "Liquid"
 

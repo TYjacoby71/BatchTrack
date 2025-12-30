@@ -439,10 +439,18 @@ class SourceItem(Base):
 
     __tablename__ = "source_items"
 
-    # Deterministic content-addressed key to avoid duplicates across runs.
+    # Deterministic key for this *source row* (1:1 traceability).
     key = Column(String, primary_key=True)
 
     source = Column(String, nullable=False)  # cosing|tgsc|...
+    # Stable per-source row identity (e.g., CosIng Ref No, TGSC URL, or row index fallback).
+    source_row_id = Column(String, nullable=True, default=None)
+    source_row_number = Column(Integer, nullable=True, default=None)
+    source_ref = Column(Text, nullable=True, default=None)  # e.g., CosIng Ref No / TGSC URL
+    # Content-address fingerprint to support downstream dedupe/reconciliation.
+    content_hash = Column(String, nullable=True, default=None)
+    is_composite = Column(Boolean, nullable=False, default=False)
+
     raw_name = Column(Text, nullable=False)
     inci_name = Column(Text, nullable=True, default=None)
     cas_number = Column(String, nullable=True, default=None)
@@ -540,6 +548,7 @@ def ensure_tables_exist() -> None:
     _ensure_normalized_term_columns()
     _seed_taxonomy_tables()
     _ensure_source_item_indexes()
+    _ensure_source_item_columns()
     _ensure_source_catalog_indexes()
 
 
@@ -550,6 +559,31 @@ def _ensure_source_item_indexes() -> None:
             conn.execute(text("CREATE INDEX IF NOT EXISTS ix_source_items_source ON source_items(source)"))
             conn.execute(text("CREATE INDEX IF NOT EXISTS ix_source_items_status ON source_items(status)"))
             conn.execute(text("CREATE INDEX IF NOT EXISTS ix_source_items_derived_term ON source_items(derived_term)"))
+            conn.execute(text("CREATE INDEX IF NOT EXISTS ix_source_items_source_row_id ON source_items(source_row_id)"))
+            conn.execute(text("CREATE INDEX IF NOT EXISTS ix_source_items_content_hash ON source_items(content_hash)"))
+    except Exception:  # pragma: no cover
+        return
+
+
+def _ensure_source_item_columns() -> None:
+    """Add traceability/quality columns to source_items if missing."""
+    try:
+        with engine.connect() as conn:
+            columns = conn.execute(text("PRAGMA table_info(source_items)")).fetchall()
+            column_names = {row[1] for row in columns}
+
+            additions = [
+                ("source_row_id", "TEXT"),
+                ("source_row_number", "INTEGER"),
+                ("source_ref", "TEXT"),
+                ("content_hash", "TEXT"),
+                ("is_composite", "INTEGER NOT NULL DEFAULT 0"),
+            ]
+            for name, col_type in additions:
+                if name in column_names:
+                    continue
+                conn.execute(text(f"ALTER TABLE source_items ADD COLUMN {name} {col_type}"))
+                LOGGER.info("Added %s column to source_items", name)
     except Exception:  # pragma: no cover
         return
 
@@ -1582,6 +1616,11 @@ def upsert_source_items(rows: Iterable[dict[str, Any]]) -> int:
             item = SourceItem(
                 key=key,
                 source=(row.get("source") or "").strip() or "unknown",
+                source_row_id=(row.get("source_row_id") or "").strip() or None,
+                source_row_number=row.get("source_row_number"),
+                source_ref=(row.get("source_ref") or "").strip() or None,
+                content_hash=(row.get("content_hash") or "").strip() or None,
+                is_composite=bool(row.get("is_composite")) if row.get("is_composite") is not None else False,
                 raw_name=raw_name,
                 inci_name=(row.get("inci_name") or "").strip() or None,
                 cas_number=(row.get("cas_number") or "").strip() or None,
