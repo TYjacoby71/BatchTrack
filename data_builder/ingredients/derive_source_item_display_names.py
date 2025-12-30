@@ -150,6 +150,13 @@ def derive_display_names(*, limit: int = 0) -> dict[str, int]:
             for cas in cas_list:
                 c = _clean(cas_to_common.get(cas, ""))
                 if c:
+                    # Guardrail: CAS can be shared/ambiguous for natural materials.
+                    # If this SourceItem has an INCI name, only trust the catalog common_name
+                    # when the catalog INCI for that CAS matches this INCI.
+                    if inci_norm:
+                        cat_inci = _norm_inci(_clean(cas_to_inci.get(cas, ""))) if _clean(cas_to_inci.get(cas, "")) else ""
+                        if cat_inci and cat_inci != inci_norm:
+                            continue
                     common = c
                     break
 
