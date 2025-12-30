@@ -460,6 +460,9 @@ class SourceItem(Base):
     derived_variation = Column(String, nullable=True, default=None)
     derived_physical_form = Column(String, nullable=True, default=None)
 
+    # CAS list support (some sources provide multiple CAS numbers per row).
+    cas_numbers_json = Column(Text, nullable=False, default="[]")
+
     # Deterministic best-effort taxonomy (may be blank if unknown)
     origin = Column(String, nullable=True, default=None)
     ingredient_category = Column(String, nullable=True, default=None)
@@ -578,6 +581,7 @@ def _ensure_source_item_columns() -> None:
                 ("source_ref", "TEXT"),
                 ("content_hash", "TEXT"),
                 ("is_composite", "INTEGER NOT NULL DEFAULT 0"),
+                ("cas_numbers_json", "TEXT NOT NULL DEFAULT '[]'"),
             ]
             for name, col_type in additions:
                 if name in column_names:
@@ -1624,6 +1628,7 @@ def upsert_source_items(rows: Iterable[dict[str, Any]]) -> int:
                 raw_name=raw_name,
                 inci_name=(row.get("inci_name") or "").strip() or None,
                 cas_number=(row.get("cas_number") or "").strip() or None,
+                cas_numbers_json=(row.get("cas_numbers_json") or "[]"),
                 derived_term=(row.get("derived_term") or "").strip() or None,
                 derived_variation=(row.get("derived_variation") or "").strip() or None,
                 derived_physical_form=(row.get("derived_physical_form") or "").strip() or None,

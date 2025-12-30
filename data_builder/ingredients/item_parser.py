@@ -392,12 +392,25 @@ def extract_variation_and_physical_form(raw_name: str) -> tuple[str, str]:
     # Essential oil / absolute / concrete are treated as variation; physical_form still Oil/Liquid.
     if "essential oil" in t:
         return "Essential Oil", "Oil"
+    # Common physical material forms
+    if " butter" in f" {t} " or t.endswith(" butter"):
+        return "Butter", "Butter"
+    if " wax" in f" {t} " or t.endswith(" wax") or " cera" in f" {t} ":
+        return "Wax", "Wax"
+    if " esters" in f" {t} " or t.endswith(" esters"):
+        # Esters are often liquids/waxes; keep as Liquid for now (safe for UI gating).
+        return "Esters", "Liquid"
+    if " oleyl esters" in t:
+        return "Oleyl Esters", "Liquid"
+
     if "ferment filtrate" in t:
         return "Ferment Filtrate", "Liquid"
     if "ferment lysate" in t or "ferment-lysate" in t:
         return "Ferment Lysate", "Liquid"
     if "ferment" in t and "filtrate" in t:
         return "Ferment Filtrate", "Liquid"
+    if "ferment" in t:
+        return "Ferment", "Liquid"
     if "co2 extract" in t or "co₂ extract" in t:
         return "CO2 Extract", "Liquid"
     if "absolute" in t:
@@ -410,8 +423,6 @@ def extract_variation_and_physical_form(raw_name: str) -> tuple[str, str]:
         return "Tincture", "Liquid"
     if "glycerite" in t:
         return "Glycerite", "Liquid"
-    if "oleyl esters" in t:
-        return "Oleyl Esters", "Liquid"
     if "extract" in t:
         return "Extract", "Liquid"
 

@@ -44,10 +44,27 @@ def _first_cas(value: str) -> str:
     v = (value or "").strip()
     if not v:
         return ""
-    # Some rows contain multiple CAS values separated by commas or slashes.
     import re
     m = re.search(r"\b(\d{2,7}-\d{2}-\d)\b", v)
     return m.group(1) if m else ""
+
+
+def _cas_list(value: str) -> list[str]:
+    """Extract all CAS tokens from a field (supports '/' separated lists)."""
+    import re
+    v = (value or "").strip()
+    if not v:
+        return []
+    tokens = re.findall(r"\b(\d{2,7}-\d{2}-\d)\b", v)
+    # de-dupe while preserving order
+    seen = set()
+    out: list[str] = []
+    for t in tokens:
+        if t in seen:
+            continue
+        seen.add(t)
+        out.append(t)
+    return out
 
 
 def _iter_cosing_rows(path: Path) -> Iterable[Dict[str, Any]]:
@@ -205,7 +222,9 @@ def ingest_sources(
             else (payload.get("__tgsc_url__") or "").strip()
         )
         key = _sha_key(source, source_row_id or f"row:{source_row_number or ''}", raw)
-        content_hash = _sha_key(source, raw, (inci_name or ""), (cas_number or ""))
+        cas_numbers = _cas_list(cas_number or "")
+        primary_cas = cas_numbers[0] if cas_numbers else ""
+        content_hash = _sha_key(source, raw, (inci_name or ""), (primary_cas or ""))
 
         # Flag composites/mixtures for review (no AI, no compilation).
         blob = raw.lower()
@@ -237,7 +256,9 @@ def ingest_sources(
                 "is_composite": bool(is_composite),
                 "raw_name": raw,
                 "inci_name": (inci_name or "").strip() or None,
-                "cas_number": (cas_number or "").strip() or None,
+                # Keep primary CAS in cas_number for compatibility, but store all for cross-referencing.
+                "cas_number": primary_cas or None,
+                "cas_numbers_json": json.dumps(cas_numbers, ensure_ascii=False),
                 "derived_term": definition or None,
                 "derived_variation": variation or None,
                 "derived_physical_form": physical_form or None,
@@ -300,14 +321,14 @@ def ingest_sources(
             inci = (row.get("INCI name") or row.get("INCI Name") or "").strip()
             if not inci:
                 continue
-            cas = _first_cas((row.get("CAS No") or "").strip())
-            _register_item(source="cosing", raw_name=inci, inci_name=inci, cas_number=cas, payload=row)
+            cas_raw = (row.get("CAS No") or "").strip()
+            _register_item(source="cosing", raw_name=inci, inci_name=inci, cas_number=cas_raw, payload=row)
         else:
             name = (row.get("common_name") or row.get("name") or "").strip()
             if not name:
                 continue
-            cas = _first_cas((row.get("cas_number") or "").strip())
-            _register_item(source="tgsc", raw_name=name, inci_name="", cas_number=cas, payload=row)
+            cas_raw = (row.get("cas_number") or "").strip()
+            _register_item(source="tgsc", raw_name=name, inci_name="", cas_number=cas_raw, payload=row)
 
     inserted_items = database_manager.upsert_source_items(source_rows)
     inserted_terms = 0
