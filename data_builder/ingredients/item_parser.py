@@ -22,8 +22,9 @@ from .taxonomy_constants import (
 _SPACE_RE = re.compile(r"\s+")
 _PUNCT_RE = re.compile(r"[^\w\s\-\&/()]", flags=re.UNICODE)
 
-# Rough Latin binomial detector (Genus species). Case-insensitive.
-_BINOMIAL_RE = re.compile(r"^\s*([A-Z][a-z]+)\s+([a-z]{2,})\b")
+# Rough Latin binomial detector (Genus species).
+# Must tolerate ALL CAPS INCI rows (e.g., "LAVANDULA ANGUSTIFOLIA ...").
+_BINOMIAL_RE = re.compile(r"^\s*([A-Za-z]{2,})\s+([A-Za-z]{2,})\b")
 _PAREN_COMMON_RE = re.compile(r"\(([^)]+)\)")
 
 # Common plant-part tokens seen in INCI/TGSC
@@ -164,10 +165,12 @@ def derive_definition_term(raw_name: str) -> str:
     lowered = cleaned.lower()
 
     # If we have a Latin binomial at the start, prefer a common name in parentheses when present.
-    m = _BINOMIAL_RE.match(_title_case_soft(cleaned))
+    m = _BINOMIAL_RE.match(cleaned)
     if m:
-        genus = m.group(1)
-        species = m.group(2)
+        genus_raw = m.group(1)
+        species_raw = m.group(2)
+        genus = genus_raw[:1].upper() + genus_raw[1:].lower() if genus_raw else ""
+        species = (species_raw or "").lower()
         common_match = _PAREN_COMMON_RE.search(cleaned)
         if common_match:
             common_raw = _clean(common_match.group(1))
@@ -198,6 +201,9 @@ def derive_definition_term(raw_name: str) -> str:
             tokens.pop()
             continue
         break
+    # If we just stripped a form (e.g., "... seed oil" -> "... seed"), drop trailing plant-part token too.
+    if tokens and tokens[-1] in _PLANT_PART_TOKENS:
+        tokens.pop()
     base = " ".join(tokens).strip()
     if not base:
         base = lowered
@@ -222,16 +228,23 @@ def infer_origin(raw_name: str) -> str:
         return "Synthetic"
 
     # Botanical signals: Latin-ish binomial or plant parts
-    if _BINOMIAL_RE.match(_title_case_soft(cleaned)) or any(p in t for p in _PLANT_PART_TOKENS):
+    if _BINOMIAL_RE.match(cleaned) or any(p in t for p in _PLANT_PART_TOKENS):
         return "Plant-Derived"
 
     # Conservative default: Plant-Derived (matches historic behavior).
     return "Plant-Derived"
 
 
-def infer_primary_category(definition_term: str, origin: str) -> str:
-    """Best-effort ingredient category under an origin (single-select)."""
+def infer_primary_category(definition_term: str, origin: str, raw_name: str = "") -> str:
+    """Best-effort ingredient category under an origin (single-select).
+
+    `raw_name` is optional context from the source item string (useful for cases
+    where the definition term is intentionally shorter, e.g., "Jojoba" derived
+    from "Jojoba Seed Oil").
+    """
     t = (definition_term or "").lower()
+    raw = (raw_name or "").lower()
+    blob = f"{t} {raw}".strip()
     o = (origin or "").strip()
 
     if o == "Synthetic":
@@ -281,20 +294,25 @@ def infer_primary_category(definition_term: str, origin: str) -> str:
         return "Minerals"
 
     # Plant-derived (default)
-    if any(k in t for k in ("salt", "chloride")):
+    if any(k in blob for k in ("salt", "chloride")):
         return "Salts"
-    if "acid" in t:
+    if "acid" in blob:
         return "Acids"
-    if "sugar" in t:
+    if "sugar" in blob:
         return "Sugars"
-    if any(k in t for k in ("honey", "molasses", "maple", "agave", "syrup")):
+    if any(k in blob for k in ("honey", "molasses", "maple", "agave", "syrup")):
         return "Liquid Sweeteners"
-    if any(k in t for k in _GRAIN_KEYWORDS) or any(k in t for k in ("starch", "flour", "malt", "bran")):
+    if any(k in blob for k in _GRAIN_KEYWORDS) or any(k in blob for k in ("starch", "flour", "malt", "bran")):
         return "Grains"
-    if any(k in t for k in ("almond", "walnut", "hazelnut", "macadamia", "pecan", "pistachio", "cashew")):
+    if any(k in blob for k in ("almond", "walnut", "hazelnut", "macadamia", "pecan", "pistachio", "cashew")):
         return "Nuts"
-    if any(k in t for k in ("chia", "sesame", "flax", "linseed", "sunflower", "pumpkin seed", "poppy")):
+    if any(k in blob for k in ("chia", "sesame", "flax", "linseed", "sunflower", "pumpkin seed", "poppy")):
         return "Seeds"
+    # Seed/kernel/nut oils should classify as Seeds/Nuts even when the definition is the plant name.
+    if "seed oil" in blob or "kernel oil" in blob:
+        return "Seeds"
+    if "nut oil" in blob:
+        return "Nuts"
     if any(k in t for k in ("cinnamon", "turmeric", "ginger", "clove", "vanilla", "pepper", "cardamom", "cumin")):
         return "Spices"
     if any(k in t for k in ("rose", "lavender", "hibiscus", "jasmine", "neroli")):

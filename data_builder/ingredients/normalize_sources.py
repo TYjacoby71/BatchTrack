@@ -62,7 +62,7 @@ def normalize_to_terms(*, cosing_path: Path, tgsc_path: Path, limit: Optional[in
             return
 
         origin = infer_origin(raw)
-        ingredient_category = infer_primary_category(term, origin)
+        ingredient_category = infer_primary_category(term, origin, raw_name=raw)
         refinement_level = infer_refinement(term, raw)
 
         # Track sources (for inspection)
