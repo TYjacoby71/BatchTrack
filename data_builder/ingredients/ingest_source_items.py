@@ -21,7 +21,13 @@ from pathlib import Path
 from typing import Any, Dict, Iterable, List, Optional
 
 from . import database_manager
-from .item_parser import derive_definition_term, infer_origin, infer_primary_category, infer_refinement
+from .item_parser import (
+    derive_definition_term,
+    extract_variation_and_physical_form,
+    infer_origin,
+    infer_primary_category,
+    infer_refinement,
+)
 
 LOGGER = logging.getLogger(__name__)
 
@@ -171,6 +177,7 @@ def ingest_sources(
         origin = infer_origin(raw)
         ingredient_category = infer_primary_category(definition, origin, raw_name=raw) if definition else ""
         refinement_level = infer_refinement(definition or raw, raw)
+        variation, physical_form = extract_variation_and_physical_form(raw)
 
         status = "linked" if definition else "orphan"
         reason = None
@@ -199,6 +206,8 @@ def ingest_sources(
                 "inci_name": (inci_name or "").strip() or None,
                 "cas_number": (cas_number or "").strip() or None,
                 "derived_term": definition or None,
+                "derived_variation": variation or None,
+                "derived_physical_form": physical_form or None,
                 "origin": origin,
                 "ingredient_category": ingredient_category or None,
                 "refinement_level": refinement_level or None,

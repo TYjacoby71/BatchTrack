@@ -346,6 +346,59 @@ def infer_refinement(definition_term: str, raw_name: str) -> str:
     return "Minimally Processed"
 
 
+def extract_variation_and_physical_form(raw_name: str) -> tuple[str, str]:
+    """Extract (variation, physical_form) from a source item string.
+
+    This is intentionally conservative and focuses on high-signal, common patterns
+    that appear in CosIng/TGSC rows.
+
+    Examples:
+    - "SIMMONDSIA CHINENSIS SEED OIL" -> ("Seed Oil", "Oil")
+    - "JOJOBA SEED OIL" -> ("Seed Oil", "Oil")
+    - "LAVANDULA ANGUSTIFOLIA HERB OIL" -> ("Herb Oil", "Oil")
+    """
+    cleaned = _clean(raw_name)
+    t = cleaned.lower()
+    if not t:
+        return "", ""
+
+    # Normalize repeated whitespace/hyphens already handled by _clean.
+
+    # Oil variants (plant parts)
+    for part in ("seed", "kernel", "nut", "leaf", "needle", "cone", "bark", "wood", "flower", "herb", "root", "rhizome", "stem"):
+        token = f"{part} oil"
+        if token in t:
+            return _title_case_soft(token), "Oil"
+
+    # Essential oil / absolute / concrete are treated as variation; physical_form still Oil/Liquid.
+    if "essential oil" in t:
+        return "Essential Oil", "Oil"
+    if "co2 extract" in t or "co₂ extract" in t:
+        return "CO2 Extract", "Liquid"
+    if "absolute" in t:
+        return "Absolute", "Liquid"
+    if "concrete" in t:
+        return "Concrete", "Solid"
+    if "hydrosol" in t or " flower water" in t or t.endswith(" water"):
+        return "Hydrosol", "Hydrosol"
+    if "tincture" in t:
+        return "Tincture", "Liquid"
+    if "glycerite" in t:
+        return "Glycerite", "Liquid"
+    if "extract" in t:
+        return "Extract", "Liquid"
+
+    # Powders / flours
+    if " powder" in f" {t} " or t.endswith(" powder"):
+        return "Powder", "Powder"
+    if " flour" in f" {t} " or t.endswith(" flour"):
+        return "Flour", "Powder"
+    if " starch" in f" {t} " or t.endswith(" starch"):
+        return "Starch", "Powder"
+
+    return "", ""
+
+
 @dataclass(frozen=True)
 class ParsedItem:
     raw_name: str
